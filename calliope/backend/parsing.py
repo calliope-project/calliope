@@ -28,6 +28,7 @@ class ConstraintExpression(TypedDict):
     id: Union[int, Tuple[str, int]]
     where: List[str]
     expression: pp.ParseResults
+    components: NotRequired[Dict[str, pp.ParseResults]]
 
 
 def process_constraint(constraints, constraint_name):
@@ -278,10 +279,6 @@ class ParsedConstraint:
 
         eq_components.difference_update(invalid_components)
 
-        #component_combinations = list(
-        #    itertools.product(*[[component_dict["id"] for component in eq_components for component_dict in #parsed_components[component]]])
-        #)
-
         component_combinations = list(
             itertools.product(*[parsed_components[k] for k in eq_components])
         )
@@ -300,27 +297,14 @@ class ParsedConstraint:
             equation_data (ConstraintExpression):
                 Original equation data dictionary with reference to components.
             component_product (List[ConstraintExpression]):
-                List of component data dictionaries to use in updating the equation data
+                List of component data dictionaries to use in updating the equation data.
 
         Returns:
             ConstraintExpression:
-                Updated equation dictionary with no reference to components
+                Updated equation dictionary with unique ID and component equation
+                expressions attached under the key `components`.
         """
         component_ids = [component["id"] for component in component_product]
-        # This works to stop the main expression changing when updating the copy,
-        # But the result isn't evaluatable. It has lost a level of parse action,
-        # to evaluate the equation.
-        eq_expression = equation_data["expression"][0].value.copy()
-        eq_expression = self._replace_components(eq_expression, component_product)
-
-        # This works to ensure the final result is evaluatable, but the main expression changes
-        # when updating the copy.
-        # eq_expression = equation_data["expression"].copy() <- since the copys don't do anything, might as well not have them.
-        # eq_expression[0].value = equation_data["expression"][0].value.copy() <- since the copys don't do anything, might as well not have them.
-        # eq_expression[0].value = self._replace_components(eq_expression[0].value, component_product)
-
-        # Replace all components at their indexes with the component expression
-        eq_expression = self._replace_components(eq_expression, component_product)
 
         component_wheres = [equation_data["where"]]
         for component in component_product:
@@ -329,35 +313,9 @@ class ParsedConstraint:
         return {
             "id": (equation_data["id"], *component_ids),
             "where": component_wheres,
-            "expression": eq_expression,
+            "expression": equation_data["expression"],
+            "components": {
+                component["id"][0]: component["expression"]
+                for component in component_product
+            },
         }
-
-    def _replace_components(
-        self, eq_expr: pp.ParseResults, component_exprs: ConstraintExpression
-    ) -> pp.ParseResults:
-        """
-        Recursively iterate through equation expression to find and replace component
-        references with expressions.
-
-        Args:
-            eq_expr (pp.ParseResults): Equation expression with references to components
-            component_exprs (ConstraintExpression): Component data dictionary
-
-        Returns:
-            pp.ParseResults: Equation expression with no reference to components
-        """
-
-        component_names = [component["id"][0] for component in component_exprs]
-        for idx, expression_element in enumerate(eq_expr):
-            if (
-                isinstance(expression_element, equation_parser.EvalComponent)
-                and expression_element.name in component_names
-            ):
-                component_product_idx = component_names.index(expression_element.name)
-                eq_expr[idx] = component_exprs[component_product_idx]["expression"][0]
-
-            elif isinstance(expression_element, (equation_parser.ArithmeticOperator)):
-                eq_expr[idx].value = self._replace_components(
-                    expression_element.value.copy(), component_exprs
-                )
-        return eq_expr

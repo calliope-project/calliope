@@ -196,6 +196,7 @@ class TestParsingEquationComponent:
             return constraint_obj_with_sets._parse_where_expression(
                 expression_parser, expression_list, "my_expr", **kwargs
             )
+
         return _parsed_equation_list
 
     @pytest.fixture
@@ -203,10 +204,13 @@ class TestParsingEquationComponent:
         def _parsed_component_dict(n_foo, n_bar):
             components = constraint_string_with_components(n_foo, n_bar)["components"]
 
-            return {c_name: constraint_obj_with_sets._parse_where_expression(
-                component_parser, c_list, "component", c_name)
+            return {
+                c_name: constraint_obj_with_sets._parse_where_expression(
+                    component_parser, c_list, "component", c_name
+                )
                 for c_name, c_list in components.items()
             }
+
         return _parsed_component_dict
 
     @pytest.mark.parametrize(
@@ -280,7 +284,9 @@ class TestParsingEquationComponent:
         id_prefix,
     ):
         expression_dict = constraint_expression_dict("foo == 1", ["bar"])
-        parsed_list = parsed_equation_list([expression_dict] * n_dicts, id_prefix=id_prefix)
+        parsed_list = parsed_equation_list(
+            [expression_dict] * n_dicts, id_prefix=id_prefix
+        )
 
         for expr_num in range(n_dicts):
             assert parsed_list[expr_num]["id"] == (id_prefix, expr_num)
@@ -392,27 +398,82 @@ class TestParsingEquationComponent:
         parsed_component_dict,
         constraint_expression_dict,
     ):
-        equation_ = parsed_equation_list([constraint_expression_dict("$foo == $bar + $baz")])
+        equation_ = parsed_equation_list(
+            [constraint_expression_dict("$foo == $bar + $baz")]
+        )
         component_product = constraint_obj_with_sets._get_component_product(
             equation_[0], parsed_component_dict(1, 2)
         )
         assert len(component_product) == 2
-        assert constraint_obj_with_sets._errors == ["Undefined component(s) found in equation #0: {'baz'}"]
+        assert constraint_obj_with_sets._errors == [
+            "Undefined component(s) found in equation #0: {'baz'}"
+        ]
 
-    @pytest.mark.parametrize(["component_equation", "expected"], [("$foo == $bar", False) , ("$foo < $bar", True), ("$foo + 10 > $bar", True)])
+    @pytest.mark.parametrize(
+        ["equation_", "expected"],
+        [("$foo == $bar", False), ("$foo < $bar", True), ("$foo + 10 > $bar", True)],
+    )
     def test_combine_components_with_equation(
-        self, constraint_obj_with_sets, parsed_equation_list, parsed_component_dict, constraint_expression_dict, component_equation, expected
+        self,
+        constraint_obj_with_sets,
+        parsed_equation_list,
+        parsed_component_dict,
+        constraint_expression_dict,
+        equation_,
+        expected,
     ):
         component_dict = parsed_component_dict(1, 1)
         component_product = [component_dict["foo"][0], component_dict["bar"][0]]
-        equation_ = parsed_equation_list([constraint_expression_dict(component_equation)])[0]
-        combined_expression_dict = constraint_obj_with_sets._combine_components_with_equation(equation_, component_product)
+        equation_ = parsed_equation_list([constraint_expression_dict(equation_)])[0]
 
-        found_components = constraint_obj_with_sets._find_components(combined_expression_dict["expression"].value)
-        assert not found_components
-        assert combined_expression_dict["expression"][0].eval() is expected
-        assert constraint_obj_with_sets._find_components(equation_["expression"])
+        combined_expression_dict = (
+            constraint_obj_with_sets._combine_components_with_equation(
+                equation_, component_product
+            )
+        )
+        component_sub_dict = combined_expression_dict["components"]
+        assert not set(component_sub_dict.keys()).symmetric_difference(["foo", "bar"])
+        assert (
+            combined_expression_dict["expression"][0].eval(
+                component_exprs=component_sub_dict
+            )
+            is expected
+        )
 
+    @pytest.mark.parametrize(
+        ["equation_", "expected"],
+        [("$foo == $bar", False), ("$foo < $bar", True), ("$foo * 20 >= $bar", True)],
+    )
+    def test_combine_components_with_equation_multi(
+        self,
+        constraint_obj_with_sets,
+        parsed_equation_list,
+        parsed_component_dict,
+        constraint_expression_dict,
+        equation_,
+        expected,
+    ):
+        component_dict = parsed_component_dict(2, 2)
 
-    def test_replace_components(self):
-        pass
+        equation_ = parsed_equation_list([constraint_expression_dict(equation_)])[0]
+        component_product = constraint_obj_with_sets._get_component_product(
+            equation_, component_dict
+        )
+        combined_expression_list = [
+            constraint_obj_with_sets._combine_components_with_equation(
+                equation_, component_
+            )
+            for component_ in component_product
+        ]
+        # All IDs should be unique
+        assert len(set(expr["id"] for expr in combined_expression_list)) == 4
+
+        for constraint_eq in combined_expression_list:
+            component_sub_dict = constraint_eq["components"]
+            assert not set(component_sub_dict.keys()).symmetric_difference(
+                ["foo", "bar"]
+            )
+            assert (
+                constraint_eq["expression"][0].eval(component_exprs=component_sub_dict)
+                is expected
+            )

@@ -232,8 +232,11 @@ class EvalComponent:
     def __repr__(self):
         return "COMPONENT:" + str(self.name)
 
-    def eval(self, **kwargs):
-        return {"component": self.name}
+    def eval(self, component_exprs=None, **kwargs):
+        if component_exprs is not None:
+            return component_exprs[self.name][0].eval()
+        else:
+            return {"component": self.name}
 
 
 class EvalUnindexedParameterOrVariable:
