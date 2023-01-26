@@ -220,11 +220,6 @@ class EvalUnindexedParameterOrVariable:
             tokens (pp.ParseResults):
                 Has one parsed element containing the paramater/variable name (str).
         """
-
-    # TODO: decide whether to loop this into "EvalIndexedParameterOrVariable" directly?
-    # ^ tried and the parser doesn't like it. Better to have them share a validation
-    # function that checks the param/var name against the model
-    def __init__(self, tokens):
         self.name = tokens[0]
 
     def __repr__(self):
