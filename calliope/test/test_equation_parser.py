@@ -97,9 +97,9 @@ def helper_function_one_parser_in_args(identifier, request):
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def eval_kwargs():
-    return {"helper_func_dict": HELPER_FUNCS, "test": True}
+    return {"helper_func_dict": HELPER_FUNCS, "test": True, "errors": []}
 
 
 @pytest.fixture
@@ -449,9 +449,10 @@ class TestEquationParserElements:
     )
     def test_missing_function(self, string_val, helper_function, eval_kwargs):
         parsed_ = helper_function.parse_string(string_val, parse_all=True)
-        with pytest.raises(pyparsing.ParseException) as excinfo:
-            parsed_[0].eval(**eval_kwargs)
-        assert check_error_or_warning(excinfo, "Invalid helper function defined")
+        error_catcher = []
+        eval_kwargs["errors"] = error_catcher
+        parsed_[0].eval(**eval_kwargs)
+        assert check_error_or_warning(error_catcher, "Invalid helper function defined")
 
     @pytest.mark.parametrize(
         "string_val",
@@ -634,7 +635,7 @@ class TestEquationParserComparison:
     def expected_right(self, var_right):
         return self.EXPR_PARAMS_AND_EXPECTED_EVAL[var_right]
 
-    @pytest.fixture(params=["<", "<=", ">", ">=", "=="])
+    @pytest.fixture(params=["<=", ">=", "=="])
     def operator(self, request):
         return request.param
 
@@ -664,16 +665,16 @@ class TestEquationParserComparison:
     @pytest.mark.parametrize(
         ["equation_string", "expected"],
         [
-            ("1<2", True),
-            ("1 > 2", False),
+            ("1<=2", True),
+            ("1 >= 2", False),
             ("1  ==  2", False),
             ("(1) <= (2)", True),
             ("1 >= 2", False),
             ("1 >= 2", False),
-            ("1 * 3 < 1e2", True),
+            ("1 * 3 <= 1e2", True),
             ("-1 >= -0.1 / 2", False),
             ("2**2 == 4 * 1 / 1 * 1**1", True),
-            ("(1 + 3) * 2 > 9 + -1", False),
+            ("(1 + 3) * 2 >= 10 + -1", False),
         ],
     )
     def test_evaluation(self, equation_string, expected, equation_comparison, eval_kwargs):
@@ -685,9 +686,11 @@ class TestEquationParserComparison:
     @pytest.mark.parametrize(
         "equation_string",
         [
-            "1 + 2 <",  # missing RHS
+            "1 + 2 =<",  # missing RHS
             "== 1 + 2 ",  # missing LHS
             "1 = 2",  # unallowed operator
+            "1 < 2",  # unallowed operator
+            "2 > 1",  # unallowed operator
             "1 (<= 2)",  # weird brackets
             "foo.bar <= 2",  # unparsable string
         ],

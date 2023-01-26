@@ -29,6 +29,7 @@ from typing import Tuple, List, Union, Any, Callable, Dict
 
 import pyparsing as pp
 
+from calliope.exceptions import ModelError
 
 pp.ParserElement.enablePackrat()
 
@@ -56,8 +57,9 @@ class EvalSignOp:
         return str(f"{self.sign}_{self.value}")
 
     def eval(self, **kwargs):
-        mult = {"+": 1, "-": -1}[self.sign]
-        return mult * self.value.eval(**kwargs)
+        # TODO: mult_ should initialise using a Gurobi/Pyomo expression object
+        mult_ = {"+": 1, "-": -1}[self.sign]
+        return mult_ * self.value.eval(**kwargs)
 
 
 class EvalPowerOp:
@@ -70,10 +72,11 @@ class EvalPowerOp:
         return str(self.value)
 
     def eval(self, **kwargs):
-        res = self.value[-1].eval(**kwargs)
+        # TODO: res_ should initialise using a Gurobi/Pyomo expression object
+        res_ = self.value[-1].eval(**kwargs)
         for val in self.value[-3::-2]:
-            res = val.eval(**kwargs) ** res
-        return res
+            res_ = val.eval(**kwargs) ** res_
+        return res_
 
 
 class EvalMultOp:
@@ -86,13 +89,14 @@ class EvalMultOp:
         return str(self.value)
 
     def eval(self, **kwargs):
-        prod = self.value[0].eval(**kwargs)
+        # TODO: prod_ should initialise using a Gurobi/Pyomo expression object
+        prod_ = self.value[0].eval(**kwargs)
         for op, val in operatorOperands(self.value[1:]):
             if op == "*":
-                prod *= val.eval(**kwargs)
+                prod_ *= val.eval(**kwargs)
             if op == "/":
-                prod /= val.eval(**kwargs)
-        return prod
+                prod_ /= val.eval(**kwargs)
+        return prod_
 
 
 class EvalAddOp:
@@ -105,25 +109,22 @@ class EvalAddOp:
         return str(self.value)
 
     def eval(self, **kwargs):
-        sum = self.value[0].eval(**kwargs)
+        # TODO: sum_ should initialise using a Gurobi/Pyomo expression object
+        sum_ = self.value[0].eval(**kwargs)
         for op, val in operatorOperands(self.value[1:]):
             if op == "+":
-                sum += val.eval(**kwargs)
+                sum_ += val.eval(**kwargs)
             if op == "-":
-                sum -= val.eval(**kwargs)
-        return sum
+                sum_ -= val.eval(**kwargs)
+        return sum_
 
 
 class EvalComparisonOp:
     "Class to evaluate comparison expressions"
 
     opMap = {
-        "<": lambda a, b: a < b,
         "<=": lambda a, b: a <= b,
-        ">": lambda a, b: a > b,
         ">=": lambda a, b: a >= b,
-        "!=": lambda a, b: a != b,
-        "=": lambda a, b: a == b,  # FIXME
         "==": lambda a, b: a == b,
     }
 
@@ -229,7 +230,7 @@ class EvalHelperFuncName:
         return str(self.name)
 
     def eval(
-        self, helper_func_dict: Dict[str, Callable], test: bool = False, **kwargs
+        self, helper_func_dict: Dict[str, Callable], errors: List[str], test: bool = False, **kwargs
     ) -> Union[str, Callable]:
         """
 
@@ -240,9 +241,9 @@ class EvalHelperFuncName:
                 collecting the helper function from the dictionary of functions.
                 Defaults to False.
 
-        Raises:
-            pp.ParseException:
-                If parsed helper function name is not in `helper_func_dict`.
+            errors (List[str]):
+                If parsed helper function name is not in `helper_func_dict`, add error
+                message to list which will be raised later.
 
         Returns:
             Union[str, Callable]:
@@ -251,16 +252,14 @@ class EvalHelperFuncName:
                 taking the user-defined input arguments.
                 If test=True, only the helper function name is returned.
         """
+
         if self.name not in helper_func_dict.keys():
-            # FIXME: Maybe shouldn't be a parse exception since it happens on evaluation
-            # calliope.exceptions.ModelError? KeyError?
-            raise pp.ParseException(
-                self.instring, self.loc, "Invalid helper function defined"
-            )
-        if test:
-            return str(self.name)
+            errors.append(f"({self.instring}): Invalid helper function defined")
         else:
-            return helper_func_dict[self.name](**kwargs)
+            if test:
+                return str(self.name)
+            else:
+                return helper_func_dict[self.name](**kwargs)
 
 
 class EvalIndexedParameterOrVariable:
@@ -526,6 +525,27 @@ def unindexed_param_parser(generic_identifier: pp.ParserElement) -> pp.ParserEle
     return unindexed_param_or_var
 
 
+def setup_base_parser_elements() -> Tuple[pp.ParserElement, pp.ParserElement]:
+    """
+    Setup parser elements that will be components of other parsers.
+
+    Returns:
+        number [pp.ParserElement]:
+            Parser for numbers (integer, float, scientific notation, "inf"/".inf").
+        generic_identifier (pp.ParserElement):
+            Parser for valid python variables without leading underscore and not called "inf".
+            This parser has no parse action.
+    """
+
+    inf_kw = pp.Combine(pp.Opt(pp.Suppress(".")) + pp.Keyword("inf", caseless=True))
+    number = pp.pyparsing_common.number | inf_kw
+    generic_identifier = ~inf_kw + pp.Word(pp.alphas, pp.alphanums + "_")
+
+    number.set_parse_action(EvalNumber)
+
+    return number, generic_identifier
+
+
 def arithmetic_parser(
     helper_function: pp.ParserElement, indexed_param_or_var: pp.ParserElement, component: pp.ParserElement, unindexed_param_or_var: pp.ParserElement, number: pp.ParserElement
 ) -> pp.ParserElement:
@@ -577,7 +597,7 @@ def arithmetic_parser(
 def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement:
     """
     Parsing grammar to combine equation elements either side of a comparison operator
-    (< <= > >= ==).
+    (<= >= ==).
 
     Whitespace is ignored on parsing (i.e., "1+foo==$bar" is equivalent to "1 + 1 == $bar").
 
@@ -590,7 +610,7 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
             Parser for strings of the form "LHS OPERATOR RHS".
     """
 
-    comparison_operators = pp.oneOf("< <= > >= ==")
+    comparison_operators = pp.oneOf("<= >= ==")
     equation_comparison = pp.infixNotation(
         arithmetic,
         [
@@ -600,23 +620,3 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
 
     return equation_comparison
 
-
-def setup_base_parser_elements() -> Tuple[pp.ParserElement, pp.ParserElement]:
-    """
-    Setup parser elements that will be components of other parsers.
-
-    Returns:
-        number [pp.ParserElement]:
-            Parser for numbers (integer, float, scientific notation, "inf"/".inf").
-        generic_identifier (pp.ParserElement):
-            Parser for valid python variables without leading underscore and not called "inf".
-            This parser has no parse action.
-    """
-
-    inf_kw = pp.Combine(pp.Opt(pp.Suppress(".")) + pp.Keyword("inf", caseless=True))
-    number = pp.pyparsing_common.number | inf_kw
-    generic_identifier = ~inf_kw + pp.Word(pp.alphas, pp.alphanums + "_")
-
-    number.set_parse_action(EvalNumber)
-
-    return number, generic_identifier
