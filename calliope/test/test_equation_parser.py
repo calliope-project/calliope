@@ -235,10 +235,9 @@ class TestEquationParserElements:
     @pytest.mark.parametrize(
         ["string_val", "expected"],
         [
-            (
-                "$foo",
-                "foo",
-            ),  # keeping to ensure something weird doesn't happen with the constant (e.g. is accidentally overwritten)
+            # keeping explicit reference to "$" to ensure something weird doesn't happen
+            # with the constant (e.g. is accidentally overwritten)
+            ("$foo", "foo"),
             (f"{COMPONENT_CLASSIFIER}foo", "foo"),
             (f"{COMPONENT_CLASSIFIER}Foo_Bar_1", "Foo_Bar_1"),
         ],
