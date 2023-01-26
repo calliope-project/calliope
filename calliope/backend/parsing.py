@@ -87,20 +87,21 @@ class ParsedConstraint:
                 List of dimensions in calliope.Model._model_data
         """
         foreach_parser = self._foreach_parser()
-
+        sets = dict()
         for string_ in self._unparsed["foreach"]:
             error_handler = partial(self._add_error, string_, "foreach")
             parsed_ = self._parse_string(foreach_parser, string_, "foreach")
             if parsed_ is not None:
-                parsed_dict = parsed_.as_dict()
-                set_iterator = parsed_dict["set_iterator"]
-                set_name = parsed_dict["set_name"]
-                if set_iterator in self.sets.keys():
+                set_iterator, set_name = parsed_.as_list()
+                if set_iterator in sets.keys():
                     error_handler(f"Found duplicate set iterator `{set_iterator}`.")
                 if set_name not in model_data_dims:
                     error_handler(f"`{set_name}` not a valid model set name.")
-                else:
-                    self.sets[set_iterator] = parsed_dict["set_name"]
+
+                sets[set_iterator] = set_name
+
+        if self._is_valid:
+            self.sets = sets
 
         return None
 
@@ -124,15 +125,17 @@ class ParsedConstraint:
         try:
             parsed = parser.parse_string(parse_string, parse_all=True)
         except pp.ParseException as excinfo:
-            self._is_valid = False
             parsed = None
             self._add_error(parse_string, string_type, excinfo)
 
         return parsed
 
     def _add_error(self, instring: str, string_type: str, error_message: str) -> None:
-        """Add error message to the list self._errors following a predefined structure of
+        """
+        Add error message to the list self._errors following a predefined structure of
         `(string_type, instring): error`, e.g. `(foreach, a in A): Found duplicate set iterator`.
+
+        Also set self._is_valid flag to False since at least one error has been caught.
 
         Args:
             instring (str): String being parsed where the error was caught.
@@ -141,4 +144,5 @@ class ParsedConstraint:
                 e.g., "foreach", "equations", "components".
             error_message (str): Description of error.
         """
+        self._is_valid = False
         self._errors.append(f"({string_type}, {instring}): {error_message}")

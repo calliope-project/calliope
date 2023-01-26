@@ -59,8 +59,8 @@ class TestParsingForEach:
         params=[
             ("[a in A]", ["a"], ["A"], []),
             ("[a in A, a1 in A1]", ["a", "a1"], ["A", "A1"], []),
-            ("[a in A, a_2 in A_2]", ["a"], ["A"], ["A_1"]),
-            ("[a in A, a_2 in A_2, foo in foos]", ["a"], ["A"], ["A_2", "foos"]),
+            ("[a in A, a_2 in A_2]", [], [], ["A_2"]),
+            ("[a in A, a_2 in A_2, foo in foos]", [], [], ["A_2", "foos"]),
         ]
     )
     def constraint_data(self, request, dummy_model_data):
