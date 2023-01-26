@@ -25,7 +25,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ##
 
-from typing import Tuple, List
+from typing import Tuple, List, Union, Any, Callable, Dict
 
 import pyparsing as pp
 
@@ -36,32 +36,55 @@ COMPONENT_CLASSIFIER = "$"
 
 
 class EvalFunction:
-    def __init__(self, tokens):
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed helper function strings of the form
+        helper_function_name(*args, **kwargs).
+
+        Args:
+            tokens (pp.ParseResults):
+                Has a dictionary component with the parsed elements:
+                helper_function_name (pp.ParseResults), args (list), kwargs (dict).
+        """
         token_dict = tokens.as_dict()
         self.name = token_dict["helper_function_name"]
         self.args = token_dict["args"]
         self.kwargs = token_dict["kwargs"]
 
     def __repr__(self):
+        """Return string representation of the parsed grammar"""
         return f"{str(self.name)}(args={self.args}, kwargs={self.kwargs})"
 
-    def eval(self, **kwargs):
+    def eval(self, test: bool = False, **kwargs) -> Union[Any, Dict]:
+        """
+
+        Args:
+            test (bool, optional):
+                If True, return a dictionary with parsed components rather than
+                calling the helper function with the defined args and kwargs.
+                Defaults to False.
+
+        Returns:
+            Union[Any, Dict]:
+                Either the defined helper function is called, or only a dictionary with
+                parsed components is returned (if test=True).
+        """
         args_ = []
         for arg in self.args:
             if not isinstance(arg, list):
-                args_.append(arg.eval())
+                args_.append(arg.eval(test=test, **kwargs))
             else:  # evaluate nested function
-                args_.append(arg[0].eval(**kwargs))
+                args_.append(arg[0].eval(test=test, **kwargs))
 
         kwargs_ = {}
         for kwarg_name, kwarg_val in self.kwargs.items():
             if not isinstance(kwarg_val, list):
-                kwargs_[kwarg_name] = kwarg_val.eval()
+                kwargs_[kwarg_name] = kwarg_val.eval(test=test, **kwargs)
             else:  # evaluate nested function
-                kwargs_[kwarg_name] = kwarg_val[0].eval(**kwargs)
+                kwargs_[kwarg_name] = kwarg_val[0].eval(test=test, **kwargs)
 
-        helper_function = self.name.eval(**kwargs)
-        if kwargs.get("test", False):
+        helper_function = self.name.eval(test=test, **kwargs)
+        if test:
             return {
                 "function": helper_function,
                 "args": args_,
@@ -72,55 +95,132 @@ class EvalFunction:
 
 
 class EvalHelperFuncName:
-    def __init__(self, instring, loc, tokens):
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed helper function names.
+        This is a unique parse action so that we can catch invalid helper functions
+        most safely.
+
+        Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used, but comes with `instring` when setting the parse action.
+            tokens (pp.ParseResults):
+                Has one parsed element: helper_function_name (str).
+        """
         self.name = tokens[0]
         self.instring = instring
         self.loc = loc
 
     def __repr__(self):
+        """Return string representation of the parsed grammar"""
         return str(self.name)
 
-    def eval(self, helper_func_dict, **kwargs):
+    def eval(
+        self, helper_func_dict: Dict[str, Callable], test: bool = False, **kwargs
+    ) -> Union[str, Callable]:
+        """
+
+        Args:
+            helper_func_dict (Dict[str, Callable]): Allowed helper functions.
+            test (bool, optional):
+                If True, return a string with the helper function name rather than
+                collecting the helper function from the dictionary of functions.
+                Defaults to False.
+
+        Raises:
+            pp.ParseException:
+                If parsed helper function name is not in `helper_func_dict`.
+
+        Returns:
+            Union[str, Callable]:
+                Helper functions are expected to be two-tiered, with the first level
+                taking the generic eval kwargs (e.g. model_data) and the second level
+                taking the user-defined input arguments.
+                If test=True, only the helper function name is returned.
+        """
         if self.name not in helper_func_dict.keys():
             # FIXME: Maybe shouldn't be a parse exception since it happens on evaluation
             # calliope.exceptions.ModelError? KeyError?
             raise pp.ParseException(
                 self.instring, self.loc, "Invalid helper function defined"
             )
-        if kwargs.get("test", False):
+        if test:
             return str(self.name)
         else:
             return helper_func_dict[self.name](**kwargs)
 
 
 class EvalIndexedParameterOrVariable:
-    def __init__(self, tokens):
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed indexed parameters or decision variables
+        of the form param_or_var[*index_items].
+
+        Args:
+            tokens (pp.ParseResults):
+                Has a dictionary component with the parsed elements:
+                param_or_var_name (str), index_items (list of strings).
+        """
         token_dict = tokens.as_dict()
         self.name = token_dict["param_or_var_name"][0]
-        self.args = token_dict["index_items"]
-
-    def my_func(self):
-        return str(self.name).title()
+        self.index_items = token_dict["index_items"]
 
     def __repr__(self):
+        """Return string representation of the parsed grammar"""
         return "INDEXED_PARAM_OR_VAR:" + str(self.name)
 
-    def eval(self, **kwargs):
-        return {"param_or_var_name": self.name, "dimensions": self.args}
+    def eval(self, **kwargs) -> Dict[str, Union[str, List[str]]]:
+        """
+
+        Returns:
+            Dict[str, Union[str, List[str]]]:
+                Separated key:val pairs for parameter/variable name and index items
+                TODO: make this a return only in testing and grab the actual
+                parameter/variable from model_data/backend_model on evaluation.
+        """
+        return {"param_or_var_name": self.name, "dimensions": self.index_items}
 
 
 class EvalComponent:
-    def __init__(self, tokens):
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed expression components of the form
+        `$component`.
+
+        Args:
+            tokens (pp.ParseResults):
+                Has one parsed element containing the component name (str).
+        """
         self.name = tokens[0]
 
     def __repr__(self):
+        """Return string representation of the parsed grammar"""
         return "COMPONENT:" + str(self.name)
 
-    def eval(self, **kwargs):
+    def eval(self, **kwargs) -> Dict[str, str]:
+        """
+
+        Returns:
+            Dict[str, str]:
+                TODO: make this a return only in testing and evaluate the actual
+                component expression contents on evaluation.
+        """
         return {"component": self.name}
 
 
 class EvalUnindexedParameterOrVariable:
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed unindexed parameters or decision variables
+        of the form `param_or_var`.
+
+        Args:
+            tokens (pp.ParseResults):
+                Has one parsed element containing the paramater/variable name (str).
+        """
+
     # TODO: decide whether to loop this into "EvalIndexedParameterOrVariable" directly?
     # ^ tried and the parser doesn't like it. Better to have them share a validation
     # function that checks the param/var name against the model
@@ -128,20 +228,42 @@ class EvalUnindexedParameterOrVariable:
         self.name = tokens[0]
 
     def __repr__(self):
+        """Return string representation of the parsed grammar"""
         return "UNINDEXED_PARAM_OR_VAR:" + str(self.name)
 
-    def eval(self, **kwargs):
+    def eval(self, **kwargs) -> Dict[str, str]:
+        """
+
+        Returns:
+            Dict[str, str]:
+                TODO: make this a return only in testing and grab the actual
+                parameter/variable from model_data/backend_model on evaluation.
+        """
         return {"param_or_var_name": self.name}
 
 
 class EvalNumber:
-    def __init__(self, tokens):
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed numbers described as integers (1),
+        floats (1.), or in scientific notation (1e1). Also capture infinity (inf/.inf).
+
+        Args:
+            tokens (pp.ParseResults):
+                Has one parsed element containing the number (str).
+        """
         self.value = tokens[0]
 
     def __repr__(self):
+        """Return string representation of the parsed grammar"""
         return "NUM:" + str(self.value)
 
-    def eval(self, **kwargs):
+    def eval(self, **kwargs) -> float:
+        """
+
+        Returns:
+            float: Input string as a float, even if given as an integer.
+        """
         return float(self.value)
 
 
@@ -278,7 +400,8 @@ def component_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
 
 def unindexed_param_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
     """
-    Create copy of generic identifier to set a parse action on later.
+    Create a copy of the generic identifier and set a parse action to find the string in
+    the list of input paramaters or optimisation decision variables.
 
     Args:
         generic_identifier (pp.ParserElement):
