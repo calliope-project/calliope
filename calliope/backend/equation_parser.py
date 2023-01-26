@@ -46,7 +46,12 @@ def operatorOperands(tokenlist):
             break
 
 
-class EvalSignOp:
+class ArithmeticOperator:
+    def __init__(self):
+        pass
+
+
+class EvalSignOp(ArithmeticOperator):
     "Class to evaluate expressions with a leading + or - sign"
 
     def __init__(self, tokens):
@@ -60,7 +65,7 @@ class EvalSignOp:
         return mult * self.value.eval(**kwargs)
 
 
-class EvalPowerOp:
+class EvalPowerOp(ArithmeticOperator):
     "Class to evaluate multiplication and division expressions"
 
     def __init__(self, tokens):
@@ -76,7 +81,7 @@ class EvalPowerOp:
         return res
 
 
-class EvalMultOp:
+class EvalMultOp(ArithmeticOperator):
     "Class to evaluate multiplication and division expressions"
 
     def __init__(self, tokens):
@@ -95,7 +100,7 @@ class EvalMultOp:
         return prod
 
 
-class EvalAddOp:
+class EvalAddOp(ArithmeticOperator):
     "Class to evaluate addition and subtraction expressions"
 
     def __init__(self, tokens):
@@ -247,13 +252,13 @@ class EvalUnindexedParameterOrVariable:
 
 class EvalNumber:
     def __init__(self, tokens):
-        self.value = tokens[0]
+        self.val = tokens[0]
 
     def __repr__(self):
-        return "NUM:" + str(self.value)
+        return "NUM:" + str(self.val)
 
     def eval(self, **kwargs):
-        return float(self.value)
+        return float(self.val)
 
 
 def helper_function_parser(
@@ -355,6 +360,8 @@ def indexed_param_or_var_parser(
 
     def _missing_iterator(instring, loc, expr, err):
         # TODO: pass this to the ParsedConstraint error catcher to handle
+        # Can't be pyparsing ParseException as it then gets suppressed by pyparsing
+        # in favour of an equivalent error but with a different message.
         raise KeyError(err)
 
     lspar = pp.Suppress("[")
@@ -420,7 +427,11 @@ def unindexed_param_parser(generic_identifier: pp.ParserElement) -> pp.ParserEle
 
 
 def arithmetic_parser(
-    helper_function: pp.ParserElement, indexed_param_or_var: pp.ParserElement, component: pp.ParserElement, unindexed_param_or_var: pp.ParserElement, number: pp.ParserElement
+    helper_function: pp.ParserElement,
+    indexed_param_or_var: pp.ParserElement,
+    component: pp.ParserElement,
+    unindexed_param_or_var: pp.ParserElement,
+    number: pp.ParserElement,
 ) -> pp.ParserElement:
     """
     Parsing grammar to combine equation elements using basic arithmetic (+, -, *, /, **).
@@ -515,30 +526,30 @@ def setup_base_parser_elements() -> Tuple[pp.ParserElement, pp.ParserElement]:
     return number, generic_identifier
 
 
-def generate_equation_parser(set_iterators):
+def generate_arithmetic_parser(set_iterators):
 
     number, identifier = setup_base_parser_elements()
-
     unindexed_param = unindexed_param_parser(identifier)
-
     indexed_param = indexed_param_or_var_parser(identifier, set_iterators)
-
     component = component_parser(identifier)
-
     helper_function = helper_function_parser(
         identifier,
         allowed_parser_elements_in_args=[
             indexed_param,
             component,
             unindexed_param,
-            number
-        ]
+            number,
+        ],
     )
-
     arithmetic = arithmetic_parser(
         helper_function, indexed_param, component, unindexed_param, number
     )
 
+    return arithmetic
+
+
+def generate_equation_parser(set_iterators):
+    arithmetic = generate_arithmetic_parser(set_iterators)
     equation_comparison = equation_comparison_parser(arithmetic)
 
     return equation_comparison

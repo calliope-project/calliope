@@ -233,12 +233,14 @@ class TestEquationParserElements:
             "foo[FOO]",  # capitalised set iterator
             "foo[fo]",  # missing part of valid set iterator name
             "foo[]",  # missing set iterators
-            "foo[foo, baz]",  # one set iterator is valid, but not the other
+            "foo[foo, bar, baz]",  # one set iterator is valid, but not the other
+            "foo[baz, foo]",  # one set iterator is valid, but not the other
         ],
     )
     def test_fail_missing_iterator_indexed_param(self, indexed_param, string_val):
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError) as excinfo:
             indexed_param.parse_string(string_val, parse_all=True)
+        assert check_error_or_warning(excinfo, "Expected foo | bar")
 
     @pytest.mark.parametrize(
         "string_val",
@@ -528,7 +530,9 @@ class TestEquationParserArithmetic:
         ["sign", "sign_name"],
         [("+", "add"), ("-", "sub"), ("*", "mul"), ("/", "truediv"), ("**", "pow")],
     )
-    def test_addition_multiplication(self, float1, float2, sign, sign_name, arithmetic, eval_kwargs):
+    def test_addition_multiplication(
+        self, float1, float2, sign, sign_name, arithmetic, eval_kwargs
+    ):
         string_ = f"{float1} {sign} {float2}"
         parsed_ = arithmetic.parse_string(string_, parse_all=True)
         evaluated_ = parsed_[0].eval(**eval_kwargs)
@@ -650,7 +654,7 @@ class TestEquationParserComparison:
         expected_right,
         operator,
         equation_comparison,
-        eval_kwargs
+        eval_kwargs,
     ):
 
         parsed_constraint = equation_comparison.parse_string(
@@ -678,12 +682,14 @@ class TestEquationParserComparison:
         ],
     )
     # "equation_comparison" and "generate_equation" should yield the same result
-    @pytest.mark.parametrize("func_string", ["equation_comparison", "generate_equation"])
-    def test_evaluation(self, equation_string, expected, func_string, eval_kwargs, request):
+    @pytest.mark.parametrize(
+        "func_string", ["equation_comparison", "generate_equation"]
+    )
+    def test_evaluation(
+        self, equation_string, expected, func_string, eval_kwargs, request
+    ):
         parser_func = request.getfixturevalue(func_string)
-        parsed_equation = parser_func.parse_string(
-            equation_string, parse_all=True
-        )
+        parsed_equation = parser_func.parse_string(equation_string, parse_all=True)
         assert parsed_equation[0].eval(**eval_kwargs) is expected
 
     @pytest.mark.parametrize(
@@ -697,7 +703,9 @@ class TestEquationParserComparison:
         ],
     )
     # "equation_comparison" and "generate_equation" should yield the same result
-    @pytest.mark.parametrize("func_string", ["equation_comparison", "generate_equation"])
+    @pytest.mark.parametrize(
+        "func_string", ["equation_comparison", "generate_equation"]
+    )
     def test_fail_evaluation(self, equation_string, func_string, request):
         parser_func = request.getfixturevalue(func_string)
         with pytest.raises(pyparsing.ParseException):
