@@ -29,17 +29,6 @@ def dummy_model_data():
     d = {
         "A": {"dims": ("A"), "data": [1, 2]},
         "A1": {"dims": ("A1"), "data": [10, 20, 30]},
-        "foo": {"dims": ("A", "A1"), "data": [["a", "b", "c"], ["d", "e", "f"]]},
-        "bar": {"dims": ("A"), "data": [100, 200]},
-    }
-    return xr.Dataset.from_dict(d)
-
-
-@pytest.fixture
-def dummy_model_data():
-    d = {
-        "A": {"dims": ("A"), "data": [1, 2]},
-        "A1": {"dims": ("A1"), "data": [10, 20, 30]},
         "A_1": {"dims": ("A_1"), "data": [-1, -2, -3]},
         "techs": {"dims": ("techs"), "data": ["foo1", "bar1", "foobar1"]},
         "foo": {"dims": ("A", "A1"), "data": [["a", "b", "c"], ["d", "e", "f"]]},
