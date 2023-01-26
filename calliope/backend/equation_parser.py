@@ -215,7 +215,9 @@ def helper_function_parser(
     return helper_function
 
 
-def indexed_param_or_var_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
+def indexed_param_or_var_parser(
+    generic_identifier: pp.ParserElement,
+) -> pp.ParserElement:
     """
     Parsing grammar to process strings representing indexed model parameters or variables,
     e.g. "resource[node, tech]".
