@@ -1,4 +1,4 @@
-from typing import Dict, KeysView, List
+from typing import Dict, KeysView, List, Optional
 
 from typing_extensions import NotRequired, TypedDict, Required
 
@@ -21,86 +21,114 @@ class Constraint(TypedDict):
     index_items: NotRequired[List[Dict[str, str]]]
 
 
-def process_constraint(constraints, constraint_name):
-    constraint = constraints[constraint_name]
-    constraint_equations = parse_constraint_equations(constraint, constraint_name)
-    return {"name": constraint_name, "equations": constraint_equations}
-
-
-def parse_constraint_equations(constraint, constraint_name):
-    """
-    Builds the equations for a given constraint.
-
-    Returns
-    -------
-    expanded_equations : list of equation dicts
-
-    """
-    parsed_constraint = ParsedConstraint(constraint, constraint_name)
-
-    return None
-
-
-# TODO: wrap in exception capture to pass more readable message about parsing errors to the user?
-def parse_foreach(foreach_string: str) -> ForEach:
-    """
-    Extract information on the sets to loop over for a constraint and the
-    name assigned to the set items in the constraint equation expression(s).
-
-    Args:
-        foreach_string (str): String of the form "A in B"
-
-    Returns:
-        ForEach: Dictionary with separated set_iterator and set_name {"set_iterator": "A", "set_name": "B"}
-    """
-    set_iterator = pp.pyparsing_common.identifier.set_results_name("set_iterator")
-    set_name = set_iterator.copy().set_results_name("set_name")
-    dim_expr = set_iterator + pp.Suppress("in") + set_name
-    parsed_string = dim_expr.parse_string(foreach_string, parseAll=True).asDict()
-    return parsed_string
-
-
 class ParsedConstraint:
-    def __init__(
-        self, constraint: Constraint, constraint_name: str, model_data: xr.Dataset
-    ) -> None:
+    def __init__(self, constraint: Constraint, constraint_name: str) -> None:
         """Parse a constraint defined in a dictionary of strings loaded from YAML into a series of Python objects that can be passed onto a solver interface like Pyomo or Gurobipy.
 
         Args:
             constraint (Constraint): Dictionary of the form:
                 foreach: List[str]  <- sets over which to iterate the constraint, e.g. ["timestep in timesteps"], where "timesteps" is the set and "timestep" is the reference to the set iterator in the constraint equation(s)
-                where: List[str]  <- conditions defining which items in the product of all sets to apply the constraint to
-                equation: String  <- if no other conditions, single constraint equation of the form LHS OPERATOR RHS, e.g. "energy_cap[node, tech] >= my_parameter[tech] * 2"
-                equations: List[Dict]  <- if different equations for different conditions, list them here with an additional "where" statement and an associated expression: {"where": [...], "expression": "..."}
-                components: Dict[List[Dict]]  <- if applying the same expression to multiple equations in the constraint, store them here with optional conditions on their exact composition, e.g. "$energy_prod" in an equation would refer to a component {"energy_prod": [{"where": [...], "expression": "..."}, ...]}
+                where: List[str]  <- conditions defining which items in the product of all sets to apply the constraint to  FIXME: not implemented.
+                equation: String  <- if no other conditions, single constraint equation of the form LHS OPERATOR RHS, e.g. "energy_cap[node, tech] >= my_parameter[tech] * 2"  FIXME: not implemented.
+                equations: List[Dict]  <- if different equations for different conditions, list them here with an additional "where" statement and an associated expression: {"where": [...], "expression": "..."}  FIXME: not implemented.
+                components: Dict[List[Dict]]  <- if applying the same expression to multiple equations in the constraint, store them here with optional conditions on their exact composition, e.g. "$energy_prod" in an equation would refer to a component {"energy_prod": [{"where": [...], "expression": "..."}, ...]}  FIXME: not implemented.
                 index_items: Dict[List[Dict]]  <- if indexing a parameter/variable separately to the set iterators given in "foreach", define them here. FIXME: not implemented.
             constraint_name (str): Name of constraint.
-            model_data (xr.Dataset): Calliope processed model dataset with all necessary parameters, sets, and run configuration options defined.
         """
         self.name = constraint_name
         self._unparsed = constraint
-        self._warnings = (
-            []
-        )  # capture warnings and errors to dump after processing, to make it easier for a user to fix the constraint YAML.
-        self._errors = (
-            []
-        )  # capture warnings and errors to dump after processing, to make it easier for a user to fix the constraint YAML.
 
-        self.get_sets(constraint, model_data.dims.keys())
+        # capture warnings and errors to dump after processing,
+        # to make it easier for a user to fix the constraint YAML.
+        self._warnings = []
+        self._errors = []
 
-    def get_sets(self, constraint: Constraint, model_data_dims: KeysView[str]) -> None:
-        """Process "foreach" key in constraint to access the set iterators and the identifier for set items in the constraint equation expessions
+        # Initialise data variables
+        self.sets = dict()
+
+        # Initialise switches
+        self._is_valid = True
+
+    def parse_strings(self, model_data: xr.Dataset) -> None:
+        """
+        Parse all elements of the constraint: "foreach", "equation(s)", "component".
 
         Args:
-            constraint (Constraint): Dictionary describing the constraint definition
-            model_data_dims (KeysView[str]): List of dimensions in calliope.Model._model_data
-        """
-        self.sets = [parse_foreach(_string) for _string in constraint["foreach"]]
-        self.set_names = [_set["set_name"] for _set in self.sets]
-        self.set_iterators = [_set["set_iterator"] for _set in self.sets]
+            model_data (xr.Dataset):
+                Calliope processed model dataset with all necessary parameters, sets,
+                and run configuration options defined.
 
-        unknown_sets = set(self.set_names).difference(model_data_dims)
-        if unknown_sets:
-            self._errors.append(
-                f"Constraint sets {set(unknown_sets)} must be given as dimensions in the model dataset"
-            )
+        """
+
+        self._get_sets_from_foreach(model_data.dims.keys())
+
+        return None
+
+    @staticmethod
+    def _foreach_parser() -> pp.ParserElement:
+        """
+        Returns:
+            pp.ParserElement: Parsing grammar for strings of the form "A in B".
+        """
+        in_ = pp.Keyword("in", caseless=True)
+        generic_identifier = pp.Combine(~in_ + pp.pyparsing_common.identifier)
+
+        set_iterator = generic_identifier.set_results_name("set_iterator")
+        set_name = generic_identifier.set_results_name("set_name")
+        return set_iterator + pp.Suppress(in_) + set_name
+
+    def _get_sets_from_foreach(self, model_data_dims: KeysView[str]) -> None:
+        """
+        Process "foreach" key in constraint to access the set iterators and the
+        identifier for set items in the constraint equation expessions
+
+        Args:
+            model_data_dims (KeysView[str]):
+                List of dimensions in calliope.Model._model_data
+        """
+        foreach_parser = self._foreach_parser()
+
+        for string_ in self._unparsed["foreach"]:
+            parsed_ = self._parse_string(foreach_parser, string_, "foreach")
+            if parsed_ is not None:
+                parsed_dict = parsed_.as_dict()
+                set_iterator = parsed_dict["set_iterator"]
+                set_name = parsed_dict["set_name"]
+                if set_iterator in self.sets.keys():
+                    self._errors.append(
+                        f"(foreach, {string_}): Found duplicate set iterator `{set_iterator}`."
+                    )
+                if set_name not in model_data_dims:
+                    self._errors.append(
+                        f"(foreach, {string_}): `{set_name}` not a valid model set name."
+                    )
+                else:
+                    self.sets[set_iterator] = parsed_dict["set_name"]
+
+        return None
+
+    def _parse_string(
+        self, parser: pp.ParserElement, parse_string: str, string_type: str
+    ) -> Optional[pp.ParseResults]:
+        """
+        Parse equation string according to predefined string parsing grammar
+        given by `self.parser`
+
+        Args:
+            parser (pp.ParserElement): Parsing grammar.
+            parse_string (str): String to parse according to parser grammar.
+            string_type (str): For error reporting, the constraint dict key corresponding to the parse_string.
+
+        Returns:
+            Optional[pp.ParseResults]:
+                Parsed string or, if any parsing errors are caught, NoneType.
+                Errors will be logged to `self._errors` to raise later.
+        """
+        try:
+            parsed = parser.parse_string(parse_string, parse_all=True)
+        except pp.ParseException as excinfo:
+            self._is_valid = False
+            parsed = None
+            self._errors.append(f"({string_type}, {parse_string}): {excinfo}")
+
+        return parsed
