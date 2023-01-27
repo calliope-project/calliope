@@ -12,19 +12,6 @@ from calliope.backend import equation_parser
 pp.ParserElement.enablePackrat()
 
 
-def _inheritance(model_data, **kwargs):
-    def __inheritance(tech_group):
-        # Only for base tech inheritance
-        return model_data.inheritance.str.endswith(tech_group)
-
-    return __inheritance
-
-
-VALID_HELPER_FUNCTIONS = {
-    "inheritance": _inheritance,
-}
-
-
 def operatorOperands(tokenlist):  # TODO: get from equation_parser.py
     "Generator to extract operators and operands in pairs"
 
@@ -43,14 +30,11 @@ class EvalNotOp:
         self.sign, self.value = tokens[0]
 
     def __repr__(self):
-        return str(f"{self.sign}_{self.value}")
+        return str(f"{self.sign} {self.value}")
 
     def eval(self, **kwargs):
         evaluated_ = self.value.eval(**kwargs)
-        if isinstance(evaluated_, bool):
-            return not evaluated_
-        else:
-            return ~evaluated_
+        return ~evaluated_
 
 
 class EvalAndOrOp:
@@ -66,55 +50,10 @@ class EvalAndOrOp:
         new_imask = self.value[0].eval(**kwargs)
         for op, val in operatorOperands(self.value[1:]):
             if op == "and":
-                new_imask = functools.reduce(
-                    operator.and_, [new_imask, val.eval(**kwargs)]
-                )
+                new_imask = operator.and_(new_imask, val.eval(**kwargs))
             if op == "or":
-                new_imask = functools.reduce(
-                    operator.or_, [new_imask, val.eval(**kwargs)]
-                )
+                new_imask = operator.or_(new_imask, val.eval(**kwargs))
         return new_imask
-
-
-class DataVarParser:
-    def __init__(self, instring, loc, tokens):
-        self.data_var = tokens[0]
-        self.instring = instring
-        self.loc = loc
-
-    def __repr__(self):
-        return f"DATA_VAR:{self.config_group}{self.config_option}"
-
-    @staticmethod
-    def _data_var_exists(model_data_var):
-        # mask by NaN and INF/-INF values = False, otherwise True
-        with pd.option_context("mode.use_inf_as_na", True):
-            return model_data_var.where(pd.notnull(model_data_var)).notnull()
-
-    def eval(self, model_data, apply_imask=True, **kwargs):
-
-        if self.data_var not in model_data.data_vars.keys():
-            return False
-
-        if apply_imask:
-            return self._data_var_exists(model_data[self.data_var])
-        else:
-            return model_data[self.data_var]
-
-
-def data_var_parser(generic_identifier: pp.ParserElement):
-    protected_variables = (
-        pp.Keyword("node_tech") | pp.Keyword("carrier") | pp.Keyword("inheritance")
-    )
-    protected_strings = (
-        pp.Keyword("and", caseless=True)
-        | pp.Keyword("or", caseless=True)
-        | pp.Keyword("not", caseless=True)
-    )
-    data_var = ~(protected_variables | protected_strings) + generic_identifier
-    data_var.set_parse_action(DataVarParser)
-
-    return data_var
 
 
 class ConfigOptionParser:
@@ -140,12 +79,92 @@ class ConfigOptionParser:
             # a "strict" arg
             config_val = config_dict.get_key(self.config_option, np.nan)
 
-            if not isinstance(config_val, (int, float, str, bool)):
+            if not isinstance(config_val, (int, float, str, bool, np.bool_)):
                 raise TypeError(
                     f"Cannot subset by comparison to `{self.config_group}` option `{self.config_option}` of type `{type(config_val).__name__}`"
                 )
             else:
                 return config_val
+
+
+class DataVarParser:
+    def __init__(self, instring, loc, tokens):
+        self.data_var = tokens[0]
+        self.instring = instring
+        self.loc = loc
+
+    def __repr__(self):
+        return f"DATA_VAR:{self.config_group}{self.config_option}"
+
+    @staticmethod
+    def _data_var_exists(model_data_var):
+        # mask by NaN and INF/-INF values = False, otherwise True
+        with pd.option_context("mode.use_inf_as_na", True):
+            return model_data_var.where(pd.notnull(model_data_var)).notnull()
+
+    def eval(self, model_data, apply_imask=True, **kwargs):
+
+        if self.data_var not in model_data.data_vars.keys():
+            return np.False_
+
+        if apply_imask:
+            return self._data_var_exists(model_data[self.data_var])
+        else:
+            return model_data[self.data_var]
+
+class ComparisonParser:
+    def __init__(self, tokens):
+        self.var_or_config = tokens[0]
+        self.val_to_compare = tokens[1]
+
+    def __repr__(self):
+        return f"{self.var_or_config}={self.val_to_compare}"
+
+    def eval(self, model_data, **kwargs):
+        return np.bool_(
+            self.var_or_config.eval(apply_imask=False, model_data=model_data)
+            == self.val_to_compare.eval()
+        )
+
+
+class BoolOperandParser:
+    def __init__(self, tokens):
+        self.val = tokens[0].lower()
+
+    def __repr__(self):
+        return f"BOOL:{self.val}"
+
+    def eval(self, **kwargs):
+        if self.val == "true":
+            return np.True_
+        elif self.val == "false":
+            return np.False_
+
+
+class GenericStringParser:
+    def __init__(self, tokens):
+        self.val = tokens[0]
+
+    def __repr__(self):
+        return f"STRING:{self.val}"
+
+    def eval(self, **kwargs):
+        return str(self.val)
+
+
+def data_var_parser(generic_identifier: pp.ParserElement):
+    protected_variables = (
+        pp.Keyword("node_tech") | pp.Keyword("carrier") | pp.Keyword("inheritance")
+    )
+    protected_strings = (
+        pp.Keyword("and", caseless=True)
+        | pp.Keyword("or", caseless=True)
+        | pp.Keyword("not", caseless=True)
+    )
+    data_var = ~(protected_variables | protected_strings) + generic_identifier
+    data_var.set_parse_action(DataVarParser)
+
+    return data_var
 
 
 def config_option_parser(generic_identifier: pp.ParserElement):
@@ -161,31 +180,6 @@ def config_option_parser(generic_identifier: pp.ParserElement):
     return data_var
 
 
-class ComparisonParser:
-    def __init__(self, tokens):
-        self.var_or_config = tokens[0]
-        self.val_to_compare = tokens[1]
-
-    def __repr__(self):
-        return f"{self.var_or_config}={self.val_to_compare}"
-
-    def eval(self, model_data, **kwargs):
-        return (
-            self.var_or_config.eval(apply_imask=False, model_data=model_data)
-            == self.val_to_compare.eval()
-        )
-
-
-class BoolOperandParser:
-    def __init__(self, tokens):
-        self.val = tokens[0]
-
-    def __repr__(self):
-        return f"BOOL:{self.val}"
-
-    def eval(self, **kwargs):
-        return self.val.lower() == "true"
-
 
 def bool_parser():
     TRUE = pp.Keyword("True", caseless=True)
@@ -194,17 +188,6 @@ def bool_parser():
     bool_operand.set_parse_action(BoolOperandParser)
 
     return bool_operand
-
-
-class GenericStringParser:
-    def __init__(self, tokens):
-        self.val = tokens[0]
-
-    def __repr__(self):
-        return f"STRING:{self.val}"
-
-    def eval(self, **kwargs):
-        return str(self.val)
 
 
 def evaluatable_string_parser(generic_identifier):

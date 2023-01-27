@@ -19,6 +19,16 @@ from calliope.core.util.dataset import reorganise_xarray_dimensions
 from calliope.backend.subset_parser import parse_where_string
 
 
+def _inheritance(model_data, tech_group):
+    # Only for base tech inheritance
+    return model_data.inheritance.str.endswith(tech_group)
+
+
+VALID_HELPER_FUNCTIONS = {
+    "inheritance": _inheritance,
+}
+
+
 def create_valid_subset(model_data, name, config):
     """
     Returns the subset for which a given constraint, variable or
@@ -102,16 +112,6 @@ def _subset_imask(set_name, set_config, imask):
                 > 0
             )
     return imask
-
-
-def _inheritance(model_data, tech_group):
-    # Only for base tech inheritance
-    return model_data.inheritance.str.endswith(tech_group)
-
-
-VALID_HELPER_FUNCTIONS = {
-    "inheritance": _inheritance,
-}
 
 
 def _imask_foreach(model_data, foreach):

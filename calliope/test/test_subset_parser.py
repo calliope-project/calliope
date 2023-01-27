@@ -183,7 +183,7 @@ class TestParserElements:
     ):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
         evaluated_ = parsed_[0].eval(model_data=dummy_model_data)
-        assert evaluated_ is False
+        assert not evaluated_
 
     @pytest.mark.parametrize(
         ["config_string", "expected_val"],
@@ -240,7 +240,7 @@ class TestParserElements:
         )
 
     @pytest.mark.parametrize(
-        ["bool_string", "expected"],
+        ["bool_string", "expected_true"],
         [
             ("true", True),
             ("TRUE", True),
@@ -250,9 +250,9 @@ class TestParserElements:
             ("False", False),
         ],
     )
-    def test_boolean_parser(self, bool_operand, bool_string, expected):
+    def test_boolean_parser(self, bool_operand, bool_string, expected_true):
         parsed_ = bool_operand.parse_string(bool_string, parse_all=True)
-        parsed_[0].eval() is expected
+        assert parsed_[0].eval() if expected_true else not parsed_[0].eval()
 
     @pytest.mark.parametrize(
         "bool_string", ["tru e", "_TRUE", "True_", "false1", "1false", "1", "foo"]
@@ -262,23 +262,23 @@ class TestParserElements:
             bool_operand.parse_string(bool_string, parse_all=True)
         assert check_error_or_warning(excinfo, "Expected")
 
-    @pytest.mark.parametrize("string_", ["foo", "foo_bar", "FOO", "foo10", "foo_10"])
-    def test_evaluatable_string_parser(self, evaluatable_string, string_):
-        parsed_ = evaluatable_string.parse_string(string_, parse_all=True)
-        parsed_[0].eval() == string_
+    @pytest.mark.parametrize("instring", ["foo", "foo_bar", "FOO", "foo10", "foo_10"])
+    def test_evaluatable_string_parser(self, evaluatable_string, instring):
+        parsed_ = evaluatable_string.parse_string(instring, parse_all=True)
+        parsed_[0].eval() == instring
 
     @pytest.mark.parametrize(
-        "string_", ["_foo", "1foo", ".foo", "$foo", "__foo__", "foo bar", "foo-bar"]
+        "instring", ["_foo", "1foo", ".foo", "$foo", "__foo__", "foo bar", "foo-bar"]
     )
-    def test_evaluatable_string_parser_malformed(self, evaluatable_string, string_):
+    def test_evaluatable_string_parser_malformed(self, evaluatable_string, instring):
         with pytest.raises(pyparsing.ParseException) as excinfo:
-            evaluatable_string.parse_string(string_, parse_all=True)
+            evaluatable_string.parse_string(instring, parse_all=True)
         assert check_error_or_warning(excinfo, "Expected")
 
-    @pytest.mark.parametrize("string_", ["inf", ".inf"])
-    def test_evaluatable_string_parser_protected(self, evaluatable_string, string_):
+    @pytest.mark.parametrize("instring", ["inf", ".inf"])
+    def test_evaluatable_string_parser_protected(self, evaluatable_string, instring):
         with pytest.raises(pyparsing.ParseException) as excinfo:
-            evaluatable_string.parse_string(string_, parse_all=True)
+            evaluatable_string.parse_string(instring, parse_all=True)
         assert check_error_or_warning(excinfo, "Found unwanted token")
 
     @pytest.mark.parametrize(
@@ -300,10 +300,10 @@ class TestParserElements:
         parsed_ = comparison.parse_string(comparison_string, parse_all=True)
         evaluated_ = parsed_[0].eval(model_data=dummy_model_data)
         assert evaluated_.dtype.kind == "b"
-        assert evaluated_.sum() is n_true
+        assert evaluated_.sum() == n_true
 
     @pytest.mark.parametrize(
-        ["config_string", "comparison_val", "expected"],
+        ["config_string", "comparison_val", "expected_true"],
         [
             ("run.foo", "True", True),
             ("run.foo", "False", False),
@@ -318,11 +318,12 @@ class TestParserElements:
         ],
     )
     def test_comparison_parser_var(
-        self, comparison, dummy_model_data, config_string, comparison_val, expected
+        self, comparison, dummy_model_data, config_string, comparison_val, expected_true
     ):
         comparison_string = f"{config_string}={comparison_val}"
         parsed_ = comparison.parse_string(comparison_string, parse_all=True)
-        assert parsed_[0].eval(model_data=dummy_model_data) is expected
+        evaluated_ = parsed_[0].eval(model_data=dummy_model_data)
+        assert evaluated_ if expected_true else not evaluated_
 
     @pytest.mark.parametrize(
         "comparison_string",
@@ -344,7 +345,7 @@ class TestParserElements:
 
 class TestParserMasking:
     @pytest.mark.parametrize(
-        ["imasking_string", "expected"],
+        ["instring", "expected"],
         [
             ("all_inf", "all_false"),
             ("run.foo=True", True),
@@ -356,16 +357,16 @@ class TestParserMasking:
         ],
     )
     def test_no_aggregation(
-        self, parse_imasking_where_string, dummy_model_data, imasking_string, expected
+        self, parse_imasking_where_string, dummy_model_data, instring, expected
     ):
-        evaluated_ = parse_imasking_where_string(imasking_string)
-        if imasking_string in dummy_model_data.data_vars:
+        evaluated_ = parse_imasking_where_string(instring)
+        if instring in dummy_model_data.data_vars:
             assert evaluated_.equals(dummy_model_data[expected])
         else:
             assert evaluated_ == expected
 
     @pytest.mark.parametrize(
-        ["imasking_string", "expected"],
+        ["instring", "expected_true"],
         [
             ("run.foo=True and model.a_b=0", True),
             ("run.foo=False And model.a_b=0", False),
@@ -374,12 +375,12 @@ class TestParserMasking:
             ("run.foo=1  and  model.a_b=0", True),
         ],
     )
-    def test_imasking_and(self, parse_imasking_where_string, imasking_string, expected):
-        evaluated_ = parse_imasking_where_string(imasking_string)
-        assert evaluated_ == expected
+    def test_imasking_and(self, parse_imasking_where_string, instring, expected_true):
+        evaluated_ = parse_imasking_where_string(instring)
+        assert evaluated_ if expected_true else not evaluated_
 
     @pytest.mark.parametrize(
-        ["imasking_string", "expected"],
+        ["instring", "expected_true"],
         [
             ("run.foo=True or model.a_b=0", True),
             ("run.foo=False Or model.a_b=0", True),
@@ -388,12 +389,12 @@ class TestParserMasking:
             ("run.foo=1 or model.a_b=0", True),
         ],
     )
-    def test_imasking_or(self, parse_imasking_where_string, imasking_string, expected):
-        evaluated_ = parse_imasking_where_string(imasking_string)
-        assert evaluated_ == expected
+    def test_imasking_or(self, parse_imasking_where_string, instring, expected_true):
+        evaluated_ = parse_imasking_where_string(instring)
+        assert evaluated_ if expected_true else not evaluated_
 
     @pytest.mark.parametrize(
-        ["imasking_string", "expected"],
+        ["instring", "expected_true"],
         [
             ("not run.foo=True", False),
             ("Not run.foo=False and model.a_b=0", True),
@@ -402,12 +403,12 @@ class TestParserMasking:
             ("run.foo=False or not model.a_b=0", False),
         ],
     )
-    def test_imasking_not(self, parse_imasking_where_string, imasking_string, expected):
-        evaluated_ = parse_imasking_where_string(imasking_string)
-        assert evaluated_ == expected
+    def test_imasking_not(self, parse_imasking_where_string, instring, expected_true):
+        evaluated_ = parse_imasking_where_string(instring)
+        assert evaluated_ if expected_true else not evaluated_
 
     @pytest.mark.parametrize(
-        ["imasking_string", "expected"],
+        ["instring", "expected"],
         [
             ("all_inf and all_nan", "all_false"),
             ("all_inf or not all_nan", "all_true"),
@@ -416,14 +417,14 @@ class TestParserMasking:
         ],
     )
     def test_imasking_arrays(
-        self, parse_imasking_where_string, dummy_model_data, imasking_string, expected
+        self, parse_imasking_where_string, dummy_model_data, instring, expected
     ):
-        evaluated_ = parse_imasking_where_string(imasking_string)
+        evaluated_ = parse_imasking_where_string(instring)
         if isinstance(evaluated_, xr.DataArray):
             assert evaluated_.equals(dummy_model_data[expected])
 
     @pytest.mark.parametrize(
-        ["imasking_string", "expected"],
+        ["instring", "expected"],
         [
             ("all_inf and all_nan or run.foo=True", "all_true"),
             ("all_inf and (all_nan or run.foo=True)", "all_false"),
@@ -435,14 +436,14 @@ class TestParserMasking:
         ],
     )
     def test_mixed_imasking(
-        self, parse_imasking_where_string, dummy_model_data, imasking_string, expected
+        self, parse_imasking_where_string, dummy_model_data, instring, expected
     ):
-        evaluated_ = parse_imasking_where_string(imasking_string)
+        evaluated_ = parse_imasking_where_string(instring)
         if isinstance(evaluated_, xr.DataArray):
             assert evaluated_.equals(dummy_model_data[expected])
 
     @pytest.mark.parametrize(
-        "imasking_string",
+        "instring",
         [
             "and",
             "or",
@@ -457,7 +458,7 @@ class TestParserMasking:
             "run.foo=True andnot all_inf",
         ],
     )
-    def test_imasking_malformed(self, imasking, imasking_string):
+    def test_imasking_malformed(self, imasking, instring):
         with pytest.raises(pyparsing.ParseException) as excinfo:
-            imasking.parse_string(imasking_string, parse_all=True)
+            imasking.parse_string(instring, parse_all=True)
         assert check_error_or_warning(excinfo, "Expected")
