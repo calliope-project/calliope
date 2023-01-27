@@ -111,7 +111,7 @@ class TestSubsets:
         ("tech_group", "result"), (("foo", 0), ("bar", 2), ("baz", 1))
     )
     def test_inheritance(self, model_data, tech_group, result):
-        imask = _inheritance(model_data, tech_group)
+        imask = _inheritance(model_data)(tech_group)
         assert imask.sum() == result
 
     @pytest.mark.parametrize(

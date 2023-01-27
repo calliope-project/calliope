@@ -3,7 +3,7 @@ import numpy as np
 import pyparsing
 import xarray as xr
 
-from calliope.backend import equation_parser, subset_parser
+from calliope.backend import equation_parser, subset_parser, subsets
 from calliope.test.common.util import check_error_or_warning
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.observed_dict import UpdateObserverDict
@@ -119,15 +119,21 @@ def imasking(helper_function, data_var, comparison):
     return subset_parser.imasking_parser(helper_function, data_var, comparison)
 
 
+@pytest.fixture(scope="function")
+def eval_kwargs(dummy_model_data):
+    return {
+        "model_data": dummy_model_data,
+        "helper_func_dict": subsets.VALID_HELPER_FUNCTIONS,
+        "test": True,
+        "errors": [],
+    }
+
+
 @pytest.fixture
-def parse_imasking_where_string(dummy_model_data, imasking):
+def parse_imasking_where_string(eval_kwargs, imasking):
     def _parse_imasking_where_string(imasking_string):
         parsed_ = imasking.parse_string(imasking_string, parse_all=True)
-        return parsed_[0].eval(
-            model_data=dummy_model_data,
-            helper_func_dict=subset_parser.VALID_HELPER_FUNCTIONS,
-            test=True,
-        )
+        return parsed_[0].eval(**eval_kwargs)
 
     return _parse_imasking_where_string
 
@@ -137,11 +143,13 @@ class TestParserElements:
         ["data_var_string", "expected"],
         [("with_inf", "with_inf"), ("all_inf", "all_inf"), ("all_nan", "all_nan")],
     )
-    def test_data_var(self, data_var, dummy_model_data, data_var_string, expected):
+    def test_data_var(
+        self, data_var, dummy_model_data, data_var_string, expected, eval_kwargs
+    ):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
         assert (
             parsed_[0]
-            .eval(model_data=dummy_model_data, apply_imask=False)
+            .eval(apply_imask=False, **eval_kwargs)
             .equals(dummy_model_data[expected])
         )
 
@@ -154,15 +162,21 @@ class TestParserElements:
         ],
     )
     def test_data_var_with_imask(
-        self, data_var, dummy_model_data, data_var_string, expected
+        self, data_var, dummy_model_data, data_var_string, expected, eval_kwargs
     ):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
+
+        # apply_imask=True is the default, but we also test being explicit.
         assert (
             parsed_[0]
-            .eval(model_data=dummy_model_data)
+            .eval(apply_imask=True, **eval_kwargs)
             .equals(dummy_model_data[expected])
         )
+        assert parsed_[0].eval(**eval_kwargs).equals(dummy_model_data[expected])
 
+    @pytest.mark.xfail(
+        reason="No longer protected; there doesn't seem a reason to keep this."
+    )
     @pytest.mark.parametrize("data_var_string", ["carrier", "node_tech", "inheritance"])
     def test_data_var_fail_protected(self, data_var, data_var_string):
         with pytest.raises(pyparsing.ParseException) as excinfo:
@@ -179,10 +193,10 @@ class TestParserElements:
 
     @pytest.mark.parametrize("data_var_string", ["foo", "with_INF", "all_infs"])
     def test_data_var_fail_not_in_model(
-        self, data_var, dummy_model_data, data_var_string
+        self, data_var, dummy_model_data, data_var_string, eval_kwargs
     ):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
-        evaluated_ = parsed_[0].eval(model_data=dummy_model_data)
+        evaluated_ = parsed_[0].eval(**eval_kwargs)
         assert not evaluated_
 
     @pytest.mark.parametrize(
@@ -195,17 +209,17 @@ class TestParserElements:
         ],
     )
     def test_config_option_valid(
-        self, config_option, dummy_model_data, config_string, expected_val
+        self, config_option, config_string, expected_val, eval_kwargs
     ):
         parsed_ = config_option.parse_string(config_string, parse_all=True)
-        assert parsed_[0].eval(model_data=dummy_model_data) == expected_val
+        assert parsed_[0].eval(**eval_kwargs) == expected_val
 
     @pytest.mark.parametrize("config_string", ["run.a", "run.a.b", "model.a.b.c"])
     def test_config_option_missing_but_valid(
-        self, config_option, dummy_model_data, config_string
+        self, config_option, config_string, eval_kwargs
     ):
         parsed_ = config_option.parse_string(config_string, parse_all=True)
-        assert np.isnan(parsed_[0].eval(model_data=dummy_model_data))
+        assert np.isnan(parsed_[0].eval(**eval_kwargs))
 
     @pytest.mark.parametrize(
         "config_string", ["run.", "run.", "RUN", "r un.foo", "model,a_b", "scenarios"]
@@ -217,26 +231,26 @@ class TestParserElements:
 
     @pytest.mark.parametrize("config_string", ["foo.bar", "all_inf.is_result"])
     def test_config_missing_config_group(
-        self, config_option, dummy_model_data, config_string
+        self, config_option, eval_kwargs, config_string
     ):
         parsed_ = config_option.parse_string(config_string, parse_all=True)
-        with pytest.raises(pyparsing.ParseException) as excinfo:
-            parsed_[0].eval(model_data=dummy_model_data)
-        assert check_error_or_warning(excinfo, "Invalid configuration group")
+        parsed_[0].eval(**eval_kwargs)
+        assert check_error_or_warning(
+            eval_kwargs["errors"], "Invalid configuration group"
+        )
 
     @pytest.mark.parametrize(
         ["config_string", "type_"], [("model.b_a", "list"), ("run.bar", "AttrDict")]
     )
     def test_config_fail_datatype(
-        self, config_option, dummy_model_data, config_string, type_
+        self, config_option, eval_kwargs, config_string, type_
     ):
         config_group, config_keys = config_string.split(".")
         parsed_ = config_option.parse_string(config_string, parse_all=True)
-        with pytest.raises(TypeError) as excinfo:
-            parsed_[0].eval(model_data=dummy_model_data)
+        parsed_[0].eval(**eval_kwargs)
         assert check_error_or_warning(
-            excinfo,
-            f"Cannot subset by comparison to `{config_group}_config` option `{config_keys}` of type `{type_}`",
+            eval_kwargs["errors"],
+            f"Configuration option resolves to invalid type `{type_}`",
         )
 
     @pytest.mark.parametrize(
@@ -294,11 +308,11 @@ class TestParserElements:
         ],
     )
     def test_comparison_parser_var(
-        self, comparison, dummy_model_data, var_string, comparison_val, n_true
+        self, comparison, eval_kwargs, var_string, comparison_val, n_true
     ):
         comparison_string = f"{var_string}={comparison_val}"
         parsed_ = comparison.parse_string(comparison_string, parse_all=True)
-        evaluated_ = parsed_[0].eval(model_data=dummy_model_data)
+        evaluated_ = parsed_[0].eval(**eval_kwargs)
         assert evaluated_.dtype.kind == "b"
         assert evaluated_.sum() == n_true
 
@@ -318,11 +332,11 @@ class TestParserElements:
         ],
     )
     def test_comparison_parser_var(
-        self, comparison, dummy_model_data, config_string, comparison_val, expected_true
+        self, comparison, eval_kwargs, config_string, comparison_val, expected_true
     ):
         comparison_string = f"{config_string}={comparison_val}"
         parsed_ = comparison.parse_string(comparison_string, parse_all=True)
-        evaluated_ = parsed_[0].eval(model_data=dummy_model_data)
+        evaluated_ = parsed_[0].eval(**eval_kwargs)
         assert evaluated_ if expected_true else not evaluated_
 
     @pytest.mark.parametrize(

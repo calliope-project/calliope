@@ -17,11 +17,15 @@ import ast
 import xarray as xr
 from calliope.core.util.dataset import reorganise_xarray_dimensions
 from calliope.backend.subset_parser import parse_where_string
+from calliope.exceptions import print_warnings_and_raise_errors
 
 
-def _inheritance(model_data, tech_group):
-    # Only for base tech inheritance
-    return model_data.inheritance.str.endswith(tech_group)
+def _inheritance(model_data, **kwargs):
+    def __inheritance(tech_group):
+        # Only for base tech inheritance
+        return model_data.inheritance.str.endswith(tech_group)
+
+    return __inheritance
 
 
 VALID_HELPER_FUNCTIONS = {
@@ -56,10 +60,14 @@ def create_valid_subset(model_data, name, config):
         return None
     # Add "where" info as imasks
     where_string = config.get_key("where", default=[])
+    parsing_errors = []
     if where_string:
         where_string_evaluated = parse_where_string(where_string).eval(
-            model_data=model_data, helper_func_dict=VALID_HELPER_FUNCTIONS
+            model_data=model_data,
+            helper_func_dict=VALID_HELPER_FUNCTIONS,
+            errors=parsing_errors,
         )
+        print_warnings_and_raise_errors(errors=parsing_errors)
         imask = imask & where_string_evaluated
 
     # Add imask based on subsets
