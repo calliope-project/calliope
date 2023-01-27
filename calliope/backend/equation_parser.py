@@ -36,115 +36,116 @@ pp.ParserElement.enablePackrat()
 COMPONENT_CLASSIFIER = "$"
 
 
-def operatorOperands(tokenlist):
-    "Generator to extract operators and operands in pairs"
+class EvalArithmeticOp:
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed arithmetic expressions.
 
-    it = iter(tokenlist)
-    while 1:
-        try:
-            yield (next(it), next(it))
-        except StopIteration:
-            break
+        Args:
+            tokens (pp.ParseResults):
+                Contains a list of the form [operand (pp.ParseResults), operator (str),
+                operand (pp.ParseResults), operator (str), ...].
+        """
+        self.value = tokens[0]
+
+    def __repr__(self):
+        "Return string representation of the parsed grammar"
+        first_operand = self.value[0].__repr__()
+        operand_operator_pairs = " ".join(
+            op + " " + val.__repr__()
+            for op, val in self.operatorOperands(self.value[1:])
+        )
+        arithmetic_string = f"({first_operand} {operand_operator_pairs})"
+        return arithmetic_string
+
+    def operatorOperands(self, tokenlist: list) -> Tuple[str, pp.ParseResults]:
+        "Generator to extract operators and operands in pairs"
+
+        it = iter(tokenlist)
+        while 1:
+            try:
+                yield (next(it), next(it))
+            except StopIteration:
+                break
+
+    def eval(self, **kwargs) -> Union[float, Any]:
+        """
+        Returns:
+            Union[float, Any]:
+                If all operands are numeric, returns float, otherwise returns an
+                expression to use in an optimisation model constraint.
+        """
+        # TODO: should initialise using a Gurobi/Pyomo expression object
+        val = self.value[0].eval(**kwargs)
+        for operator, operand in self.operatorOperands(self.value[1:]):
+            evaluated_operand = operand.eval(**kwargs)
+            if operator == "**":
+                val = val**evaluated_operand
+            elif operator == "*":
+                val *= evaluated_operand
+            elif operator == "/":
+                val /= evaluated_operand
+            elif operator == "+":
+                val += evaluated_operand
+            elif operator == "-":
+                val -= evaluated_operand
+
+        return val
 
 
 class EvalSignOp:
-    "Class to evaluate expressions with a leading + or - sign"
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed expressions with a leading + or - sign".
 
-    def __init__(self, tokens):
+        Args:
+            tokens (pp.ParseResults):
+                Contains a list of the form [sign (str), operand (pp.ParseResults)].
+        """
         self.sign, self.value = tokens[0]
 
     def __repr__(self):
-        return str(f"{self.sign}_{self.value}")
+        "Return string representation of the parsed grammar"
+        return str(f"{self.sign}{self.value.__repr__()}")
 
-    def eval(self, **kwargs):
+    def eval(self, **kwargs) -> Any:
         # TODO: mult_ should initialise using a Gurobi/Pyomo expression object
         mult_ = {"+": 1, "-": -1}[self.sign]
         return mult_ * self.value.eval(**kwargs)
 
 
-class EvalPowerOp:
-    "Class to evaluate multiplication and division expressions"
-
-    def __init__(self, tokens):
-        self.value = tokens[0]
-
-    def __repr__(self):
-        return str(self.value)
-
-    def eval(self, **kwargs):
-        # TODO: res_ should initialise using a Gurobi/Pyomo expression object
-        res_ = self.value[-1].eval(**kwargs)
-        for val in self.value[-3::-2]:
-            res_ = val.eval(**kwargs) ** res_
-        return res_
-
-
-class EvalMultOp:
-    "Class to evaluate multiplication and division expressions"
-
-    def __init__(self, tokens):
-        self.value = tokens[0]
-
-    def __repr__(self):
-        return str(self.value)
-
-    def eval(self, **kwargs):
-        # TODO: prod_ should initialise using a Gurobi/Pyomo expression object
-        prod_ = self.value[0].eval(**kwargs)
-        for op, val in operatorOperands(self.value[1:]):
-            if op == "*":
-                prod_ *= val.eval(**kwargs)
-            if op == "/":
-                prod_ /= val.eval(**kwargs)
-        return prod_
-
-
-class EvalAddOp:
-    "Class to evaluate addition and subtraction expressions"
-
-    def __init__(self, tokens):
-        self.value = tokens[0]
-
-    def __repr__(self):
-        return str(self.value)
-
-    def eval(self, **kwargs):
-        # TODO: sum_ should initialise using a Gurobi/Pyomo expression object
-        sum_ = self.value[0].eval(**kwargs)
-        for op, val in operatorOperands(self.value[1:]):
-            if op == "+":
-                sum_ += val.eval(**kwargs)
-            if op == "-":
-                sum_ -= val.eval(**kwargs)
-        return sum_
-
-
 class EvalComparisonOp:
-    "Class to evaluate comparison expressions"
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed equations of the form LHS OPERATOR RHS.
 
-    opMap = {
-        "<=": lambda a, b: a <= b,
-        ">=": lambda a, b: a >= b,
-        "==": lambda a, b: a == b,
-    }
+        Args:
+            tokens (pp.ParseResults):
+                Contains a list with an RHS (pp.ParseResults), operator (str), and LHS (pp.ParseResults).
+        """
 
-    def __init__(self, tokens):
-        self.value = tokens[0]
+        self.lhs, self.op, self.rhs = tokens
 
     def __repr__(self):
-        return str(self.value)
+        "Return string representation of the parsed grammar"
+        return f"{self.lhs.__repr__()} {self.op} {self.rhs.__repr__()}"
 
-    def eval(self, **kwargs):
-        val1 = self.value[0].eval(**kwargs)
-        for op, val in operatorOperands(self.value[1:]):
-            fn = self.opMap[op]
-            val2 = val.eval(**kwargs)
-            if not fn(val1, val2):
-                break
-            val1 = val2
-        else:
-            return True
-        return False
+    def eval(self, **kwargs) -> Union[bool, Any]:
+        """
+        Returns:
+            Union[bool, Any]:
+                If LHS and RHS are numeric, returns bool, otherwise returns an equation
+                to use as an optimisation model constraint.
+        """
+        lhs = self.lhs.eval(**kwargs)
+        rhs = self.rhs.eval(**kwargs)
+
+        if self.op == "<=":
+            return lhs <= rhs
+        elif self.op == ">=":
+            return lhs >= rhs
+        elif self.op == "==":
+            return lhs == rhs
 
 
 class EvalFunction:
@@ -164,7 +165,7 @@ class EvalFunction:
         self.kwargs = token_dict["kwargs"]
 
     def __repr__(self):
-        """Return string representation of the parsed grammar"""
+        "Return string representation of the parsed grammar"
         return f"{str(self.name)}(args={self.args}, kwargs={self.kwargs})"
 
     def eval(self, test: bool = False, **kwargs) -> Union[Any, Dict]:
@@ -226,11 +227,15 @@ class EvalHelperFuncName:
         self.loc = loc
 
     def __repr__(self):
-        """Return string representation of the parsed grammar"""
+        "Return string representation of the parsed grammar"
         return str(self.name)
 
     def eval(
-        self, helper_func_dict: Dict[str, Callable], errors: List[str], test: bool = False, **kwargs
+        self,
+        helper_func_dict: Dict[str, Callable],
+        errors: List[str],
+        test: bool = False,
+        **kwargs,
     ) -> Union[str, Callable]:
         """
 
@@ -278,12 +283,11 @@ class EvalIndexedParameterOrVariable:
         self.index_items = token_dict["index_items"]
 
     def __repr__(self):
-        """Return string representation of the parsed grammar"""
+        "Return string representation of the parsed grammar"
         return "INDEXED_PARAM_OR_VAR:" + str(self.name)
 
     def eval(self, **kwargs) -> Dict[str, Union[str, List[str]]]:
         """
-
         Returns:
             Dict[str, Union[str, List[str]]]:
                 Separated key:val pairs for parameter/variable name and index items
@@ -306,12 +310,11 @@ class EvalComponent:
         self.name = tokens[0]
 
     def __repr__(self):
-        """Return string representation of the parsed grammar"""
+        "Return string representation of the parsed grammar"
         return "COMPONENT:" + str(self.name)
 
     def eval(self, **kwargs) -> Dict[str, str]:
         """
-
         Returns:
             Dict[str, str]:
                 TODO: make this a return only in testing and evaluate the actual
@@ -333,12 +336,11 @@ class EvalUnindexedParameterOrVariable:
         self.name = tokens[0]
 
     def __repr__(self):
-        """Return string representation of the parsed grammar"""
+        "Return string representation of the parsed grammar"
         return "UNINDEXED_PARAM_OR_VAR:" + str(self.name)
 
     def eval(self, **kwargs) -> Dict[str, str]:
         """
-
         Returns:
             Dict[str, str]:
                 TODO: make this a return only in testing and grab the actual
@@ -360,12 +362,11 @@ class EvalNumber:
         self.value = tokens[0]
 
     def __repr__(self):
-        """Return string representation of the parsed grammar"""
+        "Return string representation of the parsed grammar"
         return "NUM:" + str(self.value)
 
     def eval(self, **kwargs) -> float:
         """
-
         Returns:
             float: Input string as a float, even if given as an integer.
         """
@@ -547,7 +548,11 @@ def setup_base_parser_elements() -> Tuple[pp.ParserElement, pp.ParserElement]:
 
 
 def arithmetic_parser(
-    helper_function: pp.ParserElement, indexed_param_or_var: pp.ParserElement, component: pp.ParserElement, unindexed_param_or_var: pp.ParserElement, number: pp.ParserElement
+    helper_function: pp.ParserElement,
+    indexed_param_or_var: pp.ParserElement,
+    component: pp.ParserElement,
+    unindexed_param_or_var: pp.ParserElement,
+    number: pp.ParserElement,
 ) -> pp.ParserElement:
     """
     Parsing grammar to combine equation elements using basic arithmetic (+, -, *, /, **).
@@ -571,9 +576,8 @@ def arithmetic_parser(
         pp.ParserElement:
             Parser for strings which use arithmetic operations to combine other parser elements.
     """
-    signop = pp.oneOf("+ -")
-    multop = pp.oneOf("* /")
-    plusop = pp.oneOf("+ -")
+    signop = pp.oneOf(["+", "-"])
+    multop = pp.oneOf(["*", "/"])
     expop = pp.Literal("**")
 
     arithmetic = pp.infixNotation(
@@ -585,9 +589,9 @@ def arithmetic_parser(
         | unindexed_param_or_var,
         [
             (signop, 1, pp.opAssoc.RIGHT, EvalSignOp),
-            (expop, 2, pp.opAssoc.LEFT, EvalPowerOp),
-            (multop, 2, pp.opAssoc.LEFT, EvalMultOp),
-            (plusop, 2, pp.opAssoc.LEFT, EvalAddOp),
+            (expop, 2, pp.opAssoc.LEFT, EvalArithmeticOp),
+            (multop, 2, pp.opAssoc.LEFT, EvalArithmeticOp),
+            (signop, 2, pp.opAssoc.LEFT, EvalArithmeticOp),
         ],
     )
 
@@ -610,13 +614,8 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
             Parser for strings of the form "LHS OPERATOR RHS".
     """
 
-    comparison_operators = pp.oneOf("<= >= ==")
-    equation_comparison = pp.infixNotation(
-        arithmetic,
-        [
-            (comparison_operators, 2, pp.opAssoc.LEFT, EvalComparisonOp),
-        ],
-    )
+    comparison_operators = pp.oneOf(["<=", ">=", "=="])
+    equation_comparison = arithmetic + comparison_operators + arithmetic
+    equation_comparison.set_parse_action(EvalComparisonOp)
 
     return equation_comparison
-

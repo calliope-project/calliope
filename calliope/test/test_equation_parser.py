@@ -528,7 +528,9 @@ class TestEquationParserArithmetic:
         ["sign", "sign_name"],
         [("+", "add"), ("-", "sub"), ("*", "mul"), ("/", "truediv"), ("**", "pow")],
     )
-    def test_addition_multiplication(self, float1, float2, sign, sign_name, arithmetic, eval_kwargs):
+    def test_addition_multiplication(
+        self, float1, float2, sign, sign_name, arithmetic, eval_kwargs
+    ):
         string_ = f"{float1} {sign} {float2}"
         parsed_ = arithmetic.parse_string(string_, parse_all=True)
         evaluated_ = parsed_[0].eval(**eval_kwargs)
@@ -553,6 +555,7 @@ class TestEquationParserArithmetic:
             ("1+2*2", 5),
             ("-1 - 2", -3),
             ("-1 + 2**-2", -0.75),
+            ("2**2**2-1", 15),
             ("2 * 3 + -2 - -3", 7),
             ("100 / 10 + 3 * 5 - 2**3 + -5", 12),
             ("(1e5 * 10 / 1000 - 16**0.5) + (10 + 100) * (10) - 1/2", 2095.5),
@@ -650,7 +653,7 @@ class TestEquationParserComparison:
         expected_right,
         operator,
         equation_comparison,
-        eval_kwargs
+        eval_kwargs,
     ):
 
         parsed_constraint = equation_comparison.parse_string(
@@ -658,9 +661,9 @@ class TestEquationParserComparison:
         )
         evaluated_expression = parsed_constraint[0]
 
-        assert evaluated_expression.value[0].eval(**eval_kwargs) == expected_left
-        assert evaluated_expression.value[2].eval(**eval_kwargs) == expected_right
-        assert evaluated_expression.value[1] == operator
+        assert evaluated_expression.lhs.eval(**eval_kwargs) == expected_left
+        assert evaluated_expression.rhs.eval(**eval_kwargs) == expected_right
+        assert evaluated_expression.op == operator
 
     @pytest.mark.parametrize(
         ["equation_string", "expected"],
@@ -677,7 +680,9 @@ class TestEquationParserComparison:
             ("(1 + 3) * 2 >= 10 + -1", False),
         ],
     )
-    def test_evaluation(self, equation_string, expected, equation_comparison, eval_kwargs):
+    def test_evaluation(
+        self, equation_string, expected, equation_comparison, eval_kwargs
+    ):
         parsed_equation = equation_comparison.parse_string(
             equation_string, parse_all=True
         )
@@ -693,6 +698,7 @@ class TestEquationParserComparison:
             "2 > 1",  # unallowed operator
             "1 (<= 2)",  # weird brackets
             "foo.bar <= 2",  # unparsable string
+            "1 <= foo <= 2",  # Too many operators
         ],
     )
     def test_fail_evaluation(self, equation_string, equation_comparison):
