@@ -29,7 +29,6 @@ from typing import Tuple, List, Union, Any, Callable, Dict
 
 import pyparsing as pp
 
-from calliope.exceptions import ModelError
 
 pp.ParserElement.enablePackrat()
 
