@@ -99,7 +99,7 @@ def helper_function_one_parser_in_args(identifier, request):
 
 @pytest.fixture(scope="function")
 def eval_kwargs():
-    return {"helper_func_dict": HELPER_FUNCS, "test": True, "errors": []}
+    return {"helper_func_dict": HELPER_FUNCS, "test": True, "errors": [], "iterator_dict": {}, "index_item_dict": {}}
 
 
 @pytest.fixture
@@ -217,11 +217,15 @@ class TestEquationParserElements:
             ("Foo_Bar_1[foo, bar]", ["Foo_Bar_1", ["foo", "bar"]]),
             ("foo[foo,bar]", ["foo", ["foo", "bar"]]),
             ("foo[ foo ,  bar  ]", ["foo", ["foo", "bar"]]),
+            ("foo[techs=tech]", ["foo", [{"tech": "techs"}]]),
+            ("foo[techs=tech, bar]", ["foo", [{"tech": "techs"}, "bar"]]),
+            ("foo[bar, techs=tech]", ["foo", ["bar", {"tech": "techs"}]]),
+            ("foo[techs=tech, nodes=node]", ["foo", [{"tech": "techs"}, {"node": "nodes"}]]),
         ],
     )
-    def test_indexed_param(self, indexed_param, string_val, expected):
+    def test_indexed_param(self, indexed_param, eval_kwargs, string_val, expected):
         parsed_ = indexed_param.parse_string(string_val, parse_all=True)
-        assert parsed_[0].eval() == {
+        assert parsed_[0].eval(**eval_kwargs) == {
             "param_or_var_name": expected[0],
             "dimensions": expected[1],
         }

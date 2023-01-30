@@ -306,7 +306,8 @@ class EvalIndexedParameterOrVariable(EvalString):
                 TODO: make this a return only in testing and grab the actual
                 parameter/variable from model_data/backend_model on evaluation.
         """
-        return {"param_or_var_name": self.name, "dimensions": self.index_items}
+        index_items = [index_item.eval(**kwargs) for index_item in self.index_items]
+        return {"param_or_var_name": self.name, "dimensions": index_items}
 
 
 class EvalIterators(EvalString):
@@ -376,10 +377,10 @@ class EvalIndexItems(EvalString):
         if test:
             item_name = {self.set_item: self.set_name}
         else:
-            index_item: str = index_item_dict[self.name].eval(**kwargs)
+            index_item: str = index_item_dict[self.set_item].eval(**kwargs)
             if index_item not in kwargs["model_data"][self.set_name]:
                 kwargs["errors"].append(
-                    f"Index item `{self.name}` evaluates to a set item not found in `{self.set_name}`"
+                    f"Index item `{self.set_item}` evaluates to a set item not found in `{self.set_name}`"
                 )
                 item_name = None
             else:
