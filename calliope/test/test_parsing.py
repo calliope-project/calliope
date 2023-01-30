@@ -9,6 +9,9 @@ from calliope.backend import parsing, equation_parser
 from calliope.test.common.util import check_error_or_warning
 
 
+SET_NAMES = ["A", "A1"]
+
+
 def string_to_dict(yaml_string):
     yaml_loader = yaml.YAML(typ="safe", pure=True)
     return yaml_loader.load(StringIO(yaml_string))
@@ -25,8 +28,12 @@ def constraint_string(equation_expr):
 
 
 def constraint_string_with_components(n_foo, n_bar):
-    foos = ", ".join([f"{{where: [], expression: '{i + 1}'}}" for i in range(n_foo)])
-    bars = ", ".join([f"{{where: [], expression: '{i + 1}0'}}" for i in range(n_bar)])
+    foos = ", ".join(
+        [f"{{where: ['{i}'], expression: '{i + 1}'}}" for i in range(n_foo)]
+    )
+    bars = ", ".join(
+        [f"{{where: ['{i * 10}'], expression: '{i + 1}0'}}" for i in range(n_bar)]
+    )
     setup_string = f"""
     foreach: [a in A, a1 in A1]
     where: []
@@ -56,6 +63,50 @@ def dummy_model_data():
 def dummy_constraint_obj():
     constraint_data = constraint_string("1 == 1")
     return parsing.ParsedConstraint(constraint_data, "foo")
+
+
+@pytest.fixture
+def expression_parser():
+    return equation_parser.generate_equation_parser()
+
+
+@pytest.fixture
+def index_item_parser():
+    return equation_parser.generate_index_item_parser()
+
+
+@pytest.fixture
+def component_parser():
+    return equation_parser.generate_arithmetic_parser()
+
+
+@pytest.fixture(scope="function")
+def constraint_obj_with_sets():
+    constraint_obj = parsing.ParsedConstraint(constraint_string("foo == 1"), "foo")
+    constraint_obj._get_sets_from_foreach(SET_NAMES)
+
+    return constraint_obj
+
+
+@pytest.fixture
+def constraint_expression_dict():
+    def _constraint_expression_dict(parse_string, where_list=None):
+        expression_dict = {"expression": parse_string}
+        if where_list is not None:
+            expression_dict["where"] = where_list
+        return expression_dict
+
+    return _constraint_expression_dict
+
+
+@pytest.fixture
+def parsed_equation_list(constraint_obj_with_sets, expression_parser):
+    def _parsed_equation_list(expression_list, **kwargs):
+        return constraint_obj_with_sets._parse_where_expression(
+            expression_parser, expression_list, "my_expr", **kwargs
+        )
+
+    return _parsed_equation_list
 
 
 class TestParsingForEach:
@@ -165,68 +216,7 @@ class TestParsingForEach:
         )
 
 
-class TestParsingEquationComponent:
-    SET_NAMES = ["A", "A1"]
-
-    @pytest.fixture
-    def expression_parser(self):
-        return equation_parser.generate_equation_parser()
-
-    @pytest.fixture
-    def component_parser(self):
-        return equation_parser.generate_arithmetic_parser()
-
-    @pytest.fixture(scope="function")
-    def constraint_obj_with_sets(self):
-        constraint_obj = parsing.ParsedConstraint(constraint_string("foo == 1"), "foo")
-        constraint_obj._get_sets_from_foreach(self.SET_NAMES)
-
-        return constraint_obj
-
-    @pytest.fixture(scope="function")
-    def constraint_obj_with_components_and_sets(self):
-        def _constraint_obj_with_components_and_sets(n_foos, n_bars):
-            constraint_obj = parsing.ParsedConstraint(
-                constraint_string_with_components(n_foos, n_bars), "foo"
-            )
-            constraint_obj._get_sets_from_foreach(self.SET_NAMES)
-            return constraint_obj
-
-        return _constraint_obj_with_components_and_sets
-
-    @pytest.fixture
-    def constraint_expression_dict(self):
-        def _constraint_expression_dict(parse_string, where_list=None):
-            expression_dict = {"expression": parse_string}
-            if where_list is not None:
-                expression_dict["where"] = where_list
-            return expression_dict
-
-        return _constraint_expression_dict
-
-    @pytest.fixture
-    def parsed_equation_list(self, constraint_obj_with_sets, expression_parser):
-        def _parsed_equation_list(expression_list, **kwargs):
-            return constraint_obj_with_sets._parse_where_expression(
-                expression_parser, expression_list, "my_expr", **kwargs
-            )
-
-        return _parsed_equation_list
-
-    @pytest.fixture
-    def parsed_component_dict(self, constraint_obj_with_sets, component_parser):
-        def _parsed_component_dict(n_foo, n_bar):
-            components = constraint_string_with_components(n_foo, n_bar)["components"]
-
-            return {
-                c_name: constraint_obj_with_sets._parse_where_expression(
-                    component_parser, c_list, "component", c_name
-                )
-                for c_name, c_list in components.items()
-            }
-
-        return _parsed_component_dict
-
+class TestParsingEquations:
     @pytest.mark.parametrize(
         "parse_string",
         [
@@ -367,6 +357,22 @@ class TestParsingEquationComponent:
             ["(my_expr, foo = 1): Expected", "(my_expr, foo = 2): Expected"],
         )
 
+
+class TestParsingEquationComponent:
+    @pytest.fixture
+    def parsed_component_dict(self, constraint_obj_with_sets, component_parser):
+        def _parsed_component_dict(n_foo, n_bar):
+            components = constraint_string_with_components(n_foo, n_bar)["components"]
+
+            return {
+                c_name: constraint_obj_with_sets._parse_where_expression(
+                    component_parser, c_list, "component", c_name
+                )
+                for c_name, c_list in components.items()
+            }
+
+        return _parsed_component_dict
+
     @pytest.mark.parametrize(
         "parse_string",
         [
@@ -383,13 +389,16 @@ class TestParsingEquationComponent:
         self, expression_parser, constraint_obj_with_sets, parse_string
     ):
         parsed = expression_parser.parse_string(parse_string, parse_all=True)
-        eq_element_list = [parsed[0].lhs, parsed[0].rhs]
-        found_components = constraint_obj_with_sets._find_components(eq_element_list)
+        found_components = constraint_obj_with_sets._find_items_in_expression(
+            parsed[0].value,
+            equation_parser.EvalComponent,
+            (equation_parser.EvalOperatorOperand),
+        )
         assert found_components == set(["foo", "bar"])
 
     @pytest.mark.parametrize("n_foos", [0, 1, 2])
     @pytest.mark.parametrize("n_bars", [0, 1, 2])
-    def test_get_component_product(
+    def test_get_expression_group_product(
         self,
         constraint_obj_with_sets,
         parsed_component_dict,
@@ -399,13 +408,13 @@ class TestParsingEquationComponent:
         n_bars,
     ):
         equation_ = parsed_equation_list([constraint_expression_dict("$foo == $bar")])
-        component_product = constraint_obj_with_sets._get_component_product(
-            equation_[0], parsed_component_dict(n_foos, n_bars)
-        )
+        component_product = list(constraint_obj_with_sets._get_expression_group_product(
+            equation_[0], parsed_component_dict(n_foos, n_bars), "components"
+        ))
         assert len(component_product) == n_foos * n_bars
         assert not constraint_obj_with_sets._errors
 
-    def test_get_component_product_missing_component(
+    def test_get_expression_group_product_missing_component(
         self,
         constraint_obj_with_sets,
         parsed_equation_list,
@@ -415,20 +424,20 @@ class TestParsingEquationComponent:
         equation_ = parsed_equation_list(
             [constraint_expression_dict("$foo == $bar + $baz")]
         )
-        component_product = constraint_obj_with_sets._get_component_product(
-            equation_[0], parsed_component_dict(1, 2)
+        component_product = constraint_obj_with_sets._get_expression_group_product(
+            equation_[0], parsed_component_dict(1, 2), "components"
         )
-        assert len(component_product) == 2
+        assert len(list(component_product)) == 2
         assert check_error_or_warning(
             constraint_obj_with_sets._errors,
-            "Undefined component(s) found in equation: {'baz'}",
+            "Undefined components found in equation: {'baz'}",
         )
 
     @pytest.mark.parametrize(
         ["equation_", "expected"],
         [("$foo == $bar", False), ("$foo <= $bar", True), ("$foo + 10 >= $bar", True)],
     )
-    def test_combine_components_with_equation(
+    def test_add_exprs_to_equation_data(
         self,
         constraint_obj_with_sets,
         parsed_equation_list,
@@ -441,10 +450,8 @@ class TestParsingEquationComponent:
         component_product = [component_dict["foo"][0], component_dict["bar"][0]]
         equation_ = parsed_equation_list([constraint_expression_dict(equation_)])[0]
 
-        combined_expression_dict = (
-            constraint_obj_with_sets._combine_components_with_equation(
-                equation_, component_product
-            )
+        combined_expression_dict = constraint_obj_with_sets._add_exprs_to_equation_data(
+            equation_, component_product, "components"
         )
         component_sub_dict = combined_expression_dict["components"]
         assert not set(component_sub_dict.keys()).symmetric_difference(["foo", "bar"])
@@ -459,7 +466,7 @@ class TestParsingEquationComponent:
         ["equation_", "expected"],
         [("$foo == $bar", False), ("$foo <= $bar", True), ("$foo * 20 >= $bar", True)],
     )
-    def test_combine_components_with_equation_multi(
+    def test_add_exprs_to_equation_data_multi(
         self,
         constraint_obj_with_sets,
         parsed_equation_list,
@@ -471,12 +478,12 @@ class TestParsingEquationComponent:
         component_dict = parsed_component_dict(2, 2)
 
         equation_ = parsed_equation_list([constraint_expression_dict(equation_)])[0]
-        component_product = constraint_obj_with_sets._get_component_product(
-            equation_, component_dict
+        component_product = constraint_obj_with_sets._get_expression_group_product(
+            equation_, component_dict, "components"
         )
         combined_expression_list = [
-            constraint_obj_with_sets._combine_components_with_equation(
-                equation_, component_
+            constraint_obj_with_sets._add_exprs_to_equation_data(
+                equation_, component_, "components"
             )
             for component_ in component_product
         ]
@@ -494,3 +501,223 @@ class TestParsingEquationComponent:
                 )
                 is expected
             )
+
+    def test_add_sub_exprs_per_equation_expr(
+        self,
+        constraint_obj_with_sets,
+        parsed_equation_list,
+        parsed_component_dict,
+        constraint_expression_dict,
+    ):
+        equation_list = parsed_equation_list(
+            [
+                constraint_expression_dict("$foo == 1"),  # contributes 3
+                constraint_expression_dict("$bar == 1"),  # contributes 2
+                constraint_expression_dict("$foo == $bar"),  # contributes 6
+                constraint_expression_dict("$foo == ($bar * $foo)**2"),  # contributes 6
+            ]
+        )
+
+        final_equation_list = constraint_obj_with_sets._add_sub_exprs_per_equation_expr(
+            equations=equation_list,
+            expression_dict=parsed_component_dict(3, 2),
+            expression_group="components",
+        )
+        assert len(final_equation_list) == 17
+        assert len(set(eq_["id"] for eq_ in final_equation_list)) == len(
+            final_equation_list
+        )
+
+
+class TestParsingEquationIndexItems:
+    def constraint_string_with_idx_items(self, n_tech1, n_tech2):
+        techs1 = ", ".join(
+            [f"{{where: ['{i}'], expression: foo}}" for i in range(n_tech1)]
+        )
+        techs2 = ", ".join(
+            [f"{{where: ['{i * 10}'], expression: bar}}" for i in range(n_tech2)]
+        )
+        setup_string = f"""
+        foreach: [a in A, a1 in A1]
+        where: []
+        equation: "foo[techs=tech1] == bar[techs=tech2]"
+        index_items:
+            tech1: [{techs1}]
+            tech2: [{techs2}]
+        """
+
+        return string_to_dict(setup_string)
+
+    def constraint_string_with_components_and_idx_items(self, equation_expr):
+        setup_string = f"""
+        foreach: [a in A, a1 in A1]
+        where: [0]
+        equations:
+            - expression: {equation_expr}
+              where: [x]
+        components:
+            foo:
+                - expression: 1 + foo
+                  where: [a]
+                - expression: 2 + foo[techs=tech2]
+                  where: [b]
+            bar:
+                - expression: 1 + foo[techs=tech1]
+                  where: [c]
+                - expression: 2 + foo[techs=tech2]
+                  where: [d]
+        index_items:
+            tech1:
+                - expression: dummy_func_1(wind)
+                  where: [1]
+                - expression: dummy_func_1(pv)
+                  where: [2]
+            tech2:
+                - expression: lookup_table[a]
+                  where: [3]
+                - expression: lookup_table[a1]
+                  where: [4]
+        """
+
+        return string_to_dict(setup_string)
+
+    @pytest.fixture
+    def parsed_index_item_dict(self, constraint_obj_with_sets, index_item_parser):
+        def _parsed_index_item_dict(n_1, n_2):
+            index_items = self.constraint_string_with_idx_items(n_1, n_2)["index_items"]
+
+            return {
+                idx_name: constraint_obj_with_sets._parse_where_expression(
+                    index_item_parser, idx_list, "index_items", idx_name
+                )
+                for idx_name, idx_list in index_items.items()
+            }
+
+        return _parsed_index_item_dict
+
+    @pytest.fixture
+    def parsed_index_item_component_dict(
+        self, constraint_obj_with_sets, index_item_parser, component_parser
+    ):
+        def _parsed_index_item_component_dict(expr):
+            unparsed_ = self.constraint_string_with_components_and_idx_items(expr)
+            return {
+                expr_group: {
+                    expr_name: constraint_obj_with_sets._parse_where_expression(
+                        index_item_parser
+                        if expr_group == "index_items"
+                        else component_parser,
+                        expr_list,
+                        expr_group,
+                        expr_name,
+                    )
+                    for expr_name, expr_list in unparsed_[expr_group].items()
+                }
+                for expr_group in ["index_items", "components"]
+            }
+
+        return _parsed_index_item_component_dict
+
+    @pytest.mark.parametrize(
+        "parse_string",
+        [
+            "foo[techs=tech1] == bar[techs=tech2]",
+            "foo[techs=tech1] + bar[techs=tech2] >= 1",
+            "foo[techs=tech1] * bar[techs=tech2] == 1",
+            "(foo[techs=tech1] * 1) + bar[techs=tech2] == 1",
+            "(1**bar[techs=tech2]) <= foo[techs=tech1] + bar[techs=tech2]",
+            "(1 / bar[techs=tech2]) <= foo[techs=tech1]",
+            "(foo[techs=tech1] - bar[techs=tech2]) * (foo[techs=tech1] + bar[techs=tech2]) <= 2",
+        ],
+    )
+    def test_find_index_items(
+        self, expression_parser, constraint_obj_with_sets, parse_string
+    ):
+        parsed = expression_parser.parse_string(parse_string, parse_all=True)
+        found_index_items = constraint_obj_with_sets._find_items_in_expression(
+            parsed[0].value,
+            equation_parser.EvalIndexItems,
+            (equation_parser.EvalOperatorOperand, equation_parser.EvalIndexedParameterOrVariable),
+        )
+        assert found_index_items == set(["tech1", "tech2"])
+
+    @pytest.mark.parametrize("n_1", [0, 1, 2])
+    @pytest.mark.parametrize("n_2", [0, 1, 2])
+    def test_get_expression_group_product(
+        self,
+        constraint_obj_with_sets,
+        parsed_index_item_dict,
+        parsed_equation_list,
+        constraint_expression_dict,
+        n_1,
+        n_2,
+    ):
+        equation_ = parsed_equation_list(
+            [constraint_expression_dict("foo[techs=tech1] == bar[techs=tech2]")]
+        )
+        product_ = list(constraint_obj_with_sets._get_expression_group_product(
+            equation_[0], parsed_index_item_dict(n_1, n_2), "index_items"
+        ))
+        assert len(product_) == n_1 * n_2
+        assert not constraint_obj_with_sets._errors
+
+    def test_get_expression_group_product_missing_index_items(
+        self,
+        constraint_obj_with_sets,
+        parsed_equation_list,
+        parsed_index_item_dict,
+        constraint_expression_dict,
+    ):
+        equation_ = parsed_equation_list(
+            [
+                constraint_expression_dict(
+                    "foo[techs=tech1] == bar[techs=tech2, nodes=node1]"
+                )
+            ]
+        )
+        index_item_product = constraint_obj_with_sets._get_expression_group_product(
+            equation_[0], parsed_index_item_dict(1, 2), "index_items"
+        )
+        assert len(list(index_item_product)) == 2
+        assert check_error_or_warning(
+            constraint_obj_with_sets._errors,
+            "Undefined index_items found in equation: {'node1'}",
+        )
+
+    @pytest.mark.parametrize(
+        ["eq_string", "expected_n_equations"],
+        [
+            ("1 == bar[techs=tech2]", 2),
+            ("$foo == bar[techs=tech2]", 4),
+            ("$bar == 1", 4),
+            ("$bar == bar[techs=tech2]", 6),
+            ("$bar + $foo == bar[techs=tech2]", 12),
+            ("$bar + $foo == bar[techs=tech2] + foo[techs=tech1]", 16),
+        ],
+    )
+    def test_index_items_and_components(
+        self,
+        constraint_obj_with_sets,
+        parsed_equation_list,
+        parsed_index_item_component_dict,
+        constraint_expression_dict,
+        eq_string,
+        expected_n_equations,
+    ):
+        equation_list = parsed_equation_list([constraint_expression_dict(eq_string)])
+
+        component_equation_list = (
+            constraint_obj_with_sets._add_sub_exprs_per_equation_expr(
+                equations=equation_list,
+                expression_dict=parsed_index_item_component_dict("")["components"],
+                expression_group="components",
+            )
+        )
+        index_item_and_component_equation_list = (
+            constraint_obj_with_sets._add_sub_exprs_per_equation_expr(
+                equations=component_equation_list,
+                expression_dict=parsed_index_item_component_dict("")["index_items"],
+                expression_group="index_items",
+            )
+        )
+        assert len(index_item_and_component_equation_list) == expected_n_equations

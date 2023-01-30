@@ -1,5 +1,5 @@
 import itertools
-from typing import KeysView, Optional
+from typing import KeysView, Optional, Union, Literal
 from typing_extensions import NotRequired, TypedDict, Required
 from functools import partial
 
@@ -93,36 +93,44 @@ class ParsedConstraint:
         else:
             equation_expression_list = self._unparsed["equations"]
 
-        equation_list = self._parse_where_expression(
+        equations = self._parse_where_expression(
             expression_parser=equation_parser.generate_equation_parser(),
             expression_list=equation_expression_list,
-            string_type="equations",
+            expression_group="equations",
         )
 
         component_dict = {
             c_name: self._parse_where_expression(
                 expression_parser=equation_parser.generate_arithmetic_parser(),
                 expression_list=c_list,
-                string_type="components",
+                expression_group="components",
                 id_prefix=c_name,
             )
             for c_name, c_list in self._unparsed.get("components", {}).items()
         }
-        parsed_equations = []
-        for eq_dict in equation_list:
-            if eq_dict["expression"] is None:
-                break
+        index_item_dict = {
+            idx_name: self._parse_where_expression(
+                expression_parser=equation_parser.generate_index_item_parser(),
+                expression_list=idx_list,
+                expression_group="index_items",
+                id_prefix=idx_name,
+            )
+            for idx_name, idx_list in self._unparsed.get("index_items", {}).items()
+        }
 
-            component_product = self._get_component_product(eq_dict, component_dict)
-            for component_combination in component_product:
-                eq_dict_with_component_exprs = self._combine_components_with_equation(
-                    eq_dict, component_combination
+        if self._is_valid:
+            equations_with_components = self._add_sub_exprs_per_equation_expr(
+                equations, component_dict, "components"
+            )
+            equations_with_components_and_index_items = (
+                self._add_sub_exprs_per_equation_expr(
+                    equations_with_components, index_item_dict, "index_items"
                 )
-                parsed_equations.append(eq_dict_with_component_exprs)
+            )
 
         if self._is_valid:
             self.sets = sets
-            self.equations = parsed_equations
+            self.equations = equations_with_components_and_index_items
 
         return None
 
@@ -164,8 +172,30 @@ class ParsedConstraint:
 
         return sets
 
+    def _add_error(
+        self, instring: str, expression_group: str, error_message: str
+    ) -> None:
+        """
+        Add error message to the list self._errors following a predefined structure of
+        `(expression_group, instring): error`, e.g. `(foreach, a in A): Found duplicate set iterator`.
+
+        Also set self._is_valid flag to False since at least one error has been caught.
+
+        Args:
+            instring (str): String being parsed where the error was caught.
+            expression_group (str):
+                Location in the constraint definition where the string was defined,
+                e.g., "foreach", "equations", "components".
+            error_message (str): Description of error.
+        """
+        self._is_valid = False
+        self._errors.add(f"({expression_group}, {instring}): {error_message}")
+
     def _parse_string(
-        self, parser: pp.ParserElement, parse_string: str, string_type: str
+        self,
+        parser: pp.ParserElement,
+        parse_string: str,
+        expression_group: Literal["foreach", "equations", "components", "index_items"],
     ) -> Optional[pp.ParseResults]:
         """
         Parse equation string according to predefined string parsing grammar
@@ -174,7 +204,7 @@ class ParsedConstraint:
         Args:
             parser (pp.ParserElement): Parsing grammar.
             parse_string (str): String to parse according to parser grammar.
-            string_type (str): For error reporting, the constraint dict key corresponding to the parse_string.
+            expression_group (str): For error reporting, the constraint dict key corresponding to the parse_string.
 
         Returns:
             Optional[pp.ParseResults]:
@@ -185,7 +215,7 @@ class ParsedConstraint:
             parsed = parser.parse_string(parse_string, parse_all=True)
         except (pp.ParseException, KeyError) as excinfo:
             parsed = None
-            self._add_error(parse_string, string_type, excinfo)
+            self._add_error(parse_string, expression_group, excinfo)
 
         return parsed
 
@@ -193,7 +223,7 @@ class ParsedConstraint:
         self,
         expression_parser: pp.ParserElement,
         expression_list: list[dict],
-        string_type: str,
+        expression_group: Literal["foreach", "equations", "components", "index_items"],
         id_prefix: Optional[str] = None,
     ) -> list[ConstraintDict]:
         """
@@ -205,7 +235,7 @@ class ParsedConstraint:
             expression_list (list[dict]):
                 list of constraint equations or components with arithmetic expression
                 string and optional where string.
-            string_type (str):
+            expression_group (str):
                 For error reporting, the constraint dict key corresponding to the parse_string.
             id_prefix (Optional[str]):
                 If provided, will extend the ID from a number corresponding to the
@@ -221,117 +251,166 @@ class ParsedConstraint:
                 "id": idx if id_prefix is None else (id_prefix, idx),
                 "where": expression_data.get("where", []),
                 "expression": self._parse_string(
-                    expression_parser, expression_data["expression"], string_type
+                    expression_parser, expression_data["expression"], expression_group
                 ),
             }
             for idx, expression_data in enumerate(expression_list)
         ]
 
-    def _find_components(self, parser_elements: pp.ParseResults) -> set[str]:
+    def _find_items_in_expression(
+        self,
+        parser_elements: Union[list, pp.ParseResults],
+        to_find: type[equation_parser.EvalString],
+        valid_eval_classes=tuple[type(equation_parser.EvalString)],
+    ) -> set[str]:
         """
-        Recursively find components defined in an equation expression.
+        Recursively find components / index items defined in an equation expression.
 
         Args:
             parser_elements (pp.ParseResults): list of parser elements to check.
+            to_find (type[equation_parser.EvalString]): type of equation element to search for
+            valid_eval_classes (tuple[type(equation_parser.EvalString)]):
+                Other expression elements that can be recursively searched
 
         Returns:
-            set[str]: All unique component names.
+            set[str]: All unique component / index item names.
         """
-        components = []
+        items = []
+        recursive_func = partial(
+            self._find_items_in_expression,
+            to_find=to_find,
+            valid_eval_classes=valid_eval_classes,
+        )
         for parser_element in parser_elements:
-            if isinstance(parser_element, equation_parser.EvalComponent):
-                components.append(parser_element.name)
+            if isinstance(parser_element, to_find):
+                items.append(parser_element.name)
 
-            elif isinstance(parser_element, (equation_parser.EvalOperatorOperand)):
-                components.extend(self._find_components(parser_element.value))
-        return set(components)
+            elif isinstance(parser_element, pp.ParseResults):
+                items.extend(recursive_func(parser_elements=parser_element))
 
-    def _get_component_product(
+            elif isinstance(parser_element, valid_eval_classes):
+                items.extend(recursive_func(parser_elements=parser_element.value))
+        return set(items)
+
+    def _get_expression_group_product(
         self,
         equation_data: ConstraintDict,
-        parsed_components: list[ConstraintDict],
+        parsed_items: dict[list[ConstraintDict]],
+        expression_group: Literal["components", "index_items"],
     ) -> list[list[ConstraintDict]]:
         """
         Find all components referenced in an equation expression and return a
         product of the component data.
 
         Args:
-            parser (pp.ParserElement): Parser for arithmetic grammar.
             equation_data (ConstraintDict): Equation data dictionary.
+            parsed_items (dict[list[ConstraintDict]]):
+                Dictionary of expressions to replace within the equation data dictionary.
+            expression_group (Literal["components", "index_items"]):
+                Name of expression group that the parsed_items dict is referencing.
 
         Returns:
             list[list[ConstraintDict]]:
-                Each nested list contains a unique product of component data dictionaries.
+                Each nested list contains a unique product of parsed_item dictionaries.
         """
-        eq_expression = equation_data["expression"][0]
-        eq_components = set(
-            self._find_components([eq_expression.lhs, eq_expression.rhs])
+        eq_expr = equation_data["expression"][0]
+        valid_eval_classes = (
+            equation_parser.EvalOperatorOperand,
+            equation_parser.EvalFunction,
         )
+        elements = eq_expr.value.as_list()
+        if expression_group == "components":
+            to_find = equation_parser.EvalComponent
 
-        invalid_components = eq_components.difference(parsed_components.keys())
-        if invalid_components:
+        elif expression_group == "index_items":
+            elements += list(equation_data.get("components", {}).values())
+            to_find = equation_parser.EvalIndexItems
+            valid_eval_classes += (equation_parser.EvalIndexedParameterOrVariable,)
+
+        eq_items = self._find_items_in_expression(elements, to_find, valid_eval_classes)
+
+        invalid_items = eq_items.difference(parsed_items.keys())
+        if invalid_items:
             self._add_error(
-                eq_expression.__repr__(),
+                eq_expr.__repr__(),
                 "equation",
-                f"Undefined component(s) found in equation: {invalid_components}",
+                f"Undefined {expression_group} found in equation: {invalid_items}",
             )
 
-        eq_components.difference_update(invalid_components)
+        eq_items.difference_update(invalid_items)
 
-        component_combinations = list(
-            itertools.product(*[parsed_components[k] for k in eq_components])
-        )
+        return itertools.product(*[parsed_items[k] for k in eq_items])
 
-        return component_combinations
-
-    def _combine_components_with_equation(
+    def _add_exprs_to_equation_data(
         self,
         equation_data: ConstraintDict,
-        component_product: list[ConstraintDict],
+        expression_combination: list[ConstraintDict],
+        expression_group: Literal["components", "index_items"],
     ) -> ConstraintDict:
-        """Create new equations with components replaced by their underlying data.
-        The new equation has an updated ID, `where` list, and expression.
+        """
+        Create new equation dictionaries with evaluatable expressions for components or index items.
+        The new equation dict has an updated ID, `where` list, and an additional key
+        with the expression in.
 
         Args:
             equation_data (ConstraintDict):
-                Original equation data dictionary with reference to components.
-            component_product (list[ConstraintDict]):
-                list of component data dictionaries to use in updating the equation data.
+                Original equation data dictionary with reference to the expression group.
+            expression_combination (list[ConstraintDict]):
+                list of data dictionaries to use in updating the equation data.
+            expression_group (str): Name of the source of replacement expressions.
 
         Returns:
             ConstraintDict:
-                Updated equation dictionary with unique ID and component equation
-                expressions attached under the key `components`.
+                Updated equation dictionary with unique ID and equation
+                expressions attached under the key given by expression_group.
         """
-        component_ids = [component["id"] for component in component_product]
+        new_equation_data = equation_data.copy()
 
-        component_wheres = [equation_data["where"]]
-        for component in component_product:
-            component_wheres.extend(["and", component["where"]])
+        expr_ids = [expr["id"] for expr in expression_combination]
+        expr_wheres = [new_equation_data.pop("where")]
+        for expr in expression_combination:
+            expr_wheres.extend(["and", expr["where"]])
 
-        return {
-            "id": (equation_data["id"], *component_ids),
-            "where": component_wheres,
-            "expression": equation_data["expression"],
-            "components": {
-                component["id"][0]: component["expression"]
-                for component in component_product
-            },
+        new_equation_data[expression_group] = {
+            expr["id"][0]: expr["expression"] for expr in expression_combination
         }
 
-    def _add_error(self, instring: str, string_type: str, error_message: str) -> None:
-        """
-        Add error message to the list self._errors following a predefined structure of
-        `(string_type, instring): error`, e.g. `(foreach, a in A): Found duplicate set iterator`.
+        return {
+            "id": (new_equation_data.pop("id"), *expr_ids),
+            "where": expr_wheres,
+            expression_group: {
+                expr["id"][0]: expr["expression"] for expr in expression_combination
+            },
+            **new_equation_data,
+        }
 
-        Also set self._is_valid flag to False since at least one error has been caught.
+    def _add_sub_exprs_per_equation_expr(
+        self,
+        equations: list[ConstraintDict],
+        expression_dict: dict[str, list[ConstraintDict]],
+        expression_group: Literal["components", "index_items"],
+    ) -> list[ConstraintDict]:
+        """
+        Build new list of equation dictionaries with nested expression group information.
 
         Args:
-            instring (str): String being parsed where the error was caught.
-            string_type (str):
-                Location in the constraint definition where the string was defined,
-                e.g., "foreach", "equations", "components".
-            error_message (str): Description of error.
+            equations (list[ConstraintDict]):
+                List of original equation data dictionaries with reference to the expression group.
+            expression_dict (dict[str, list[ConstraintDict]]):
+
+            expression_group (Literal[&quot;components&quot;, &quot;index_items&quot;]): _description_
+
+        Returns:
+            List[ConstraintDict]: _description_
         """
-        self._is_valid = False
-        self._errors.add(f"({string_type}, {instring}): {error_message}")
+        updated_equations = []
+        for equation_dict in equations:
+            component_product = self._get_expression_group_product(
+                equation_dict, expression_dict, expression_group
+            )
+            for component_combination in component_product:
+                updated_equation_dict = self._add_exprs_to_equation_data(
+                    equation_dict, component_combination, expression_group
+                )
+                updated_equations.append(updated_equation_dict)
+        return updated_equations
