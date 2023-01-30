@@ -88,7 +88,8 @@ class ConfigOptionParser:
 
             if not isinstance(config_val, (int, float, str, bool, np.bool_)):
                 errors.append(
-                    f"(where, {self.instring}): Configuration option resolves to invalid type `{type(config_val).__name__}`, expected a number, string, or boolean."
+                    f"(where, {self.instring}): Configuration option resolves to invalid "
+                    "type `{type(config_val).__name__}`, expected a number, string, or boolean."
                 )
             else:
                 return config_val
