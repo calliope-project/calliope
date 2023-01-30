@@ -26,7 +26,6 @@
 ##
 
 from typing import Callable, Any, Union
-import operator
 
 import pyparsing as pp
 
@@ -78,17 +77,17 @@ class EvalOperatorOperand:
         """
         # TODO: should initialise using a Gurobi/Pyomo expression object
         val = self.value[0].eval(**kwargs)
-        for operator, operand in self.operatorOperands(self.value[1:]):
+        for operator_, operand in self.operatorOperands(self.value[1:]):
             evaluated_operand = operand.eval(**kwargs)
-            if operator == "**":
+            if operator_ == "**":
                 val = val**evaluated_operand
-            elif operator == "*":
+            elif operator_ == "*":
                 val *= evaluated_operand
-            elif operator == "/":
+            elif operator_ == "/":
                 val /= evaluated_operand
-            elif operator == "+":
+            elif operator_ == "+":
                 val += evaluated_operand
-            elif operator == "-":
+            elif operator_ == "-":
                 val -= evaluated_operand
 
         return val
