@@ -70,6 +70,7 @@ class ParsedConstraint:
 
         # Initialise data variables
         self.sets = dict()
+        self.equations: list[ConstraintDict] = []
 
         # Initialise switches
         self._is_valid = True
@@ -85,7 +86,43 @@ class ParsedConstraint:
 
         """
 
-        self._get_sets_from_foreach(model_data.dims.keys())
+        sets = self._get_sets_from_foreach(model_data.dims.keys())
+
+        if "equation" in self._unparsed.keys():
+            equation_expression_list = [{"expression": self._unparsed["equation"]}]
+        else:
+            equation_expression_list = self._unparsed["equations"]
+
+        equation_list = self._parse_where_expression(
+            expression_parser=equation_parser.generate_equation_parser(),
+            expression_list=equation_expression_list,
+            string_type="equations",
+        )
+
+        component_dict = {
+            c_name: self._parse_where_expression(
+                expression_parser=equation_parser.generate_arithmetic_parser(),
+                expression_list=c_list,
+                string_type="components",
+                id_prefix=c_name,
+            )
+            for c_name, c_list in self._unparsed.get("components", {}).items()
+        }
+        parsed_equations = []
+        for eq_dict in equation_list:
+            if eq_dict["expression"] is None:
+                break
+
+            component_product = self._get_component_product(eq_dict, component_dict)
+            for component_combination in component_product:
+                eq_dict_with_component_exprs = self._combine_components_with_equation(
+                    eq_dict, component_combination
+                )
+                parsed_equations.append(eq_dict_with_component_exprs)
+
+        if self._is_valid:
+            self.sets = sets
+            self.equations = parsed_equations
 
         return None
 
@@ -125,10 +162,7 @@ class ParsedConstraint:
 
                 sets[set_iterator] = set_name
 
-        if self._is_valid:
-            self.sets = sets
-
-        return None
+        return sets
 
     def _parse_string(
         self, parser: pp.ParserElement, parse_string: str, string_type: str

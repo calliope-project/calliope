@@ -61,25 +61,29 @@ def dummy_constraint_obj():
 class TestParsingForEach:
     @pytest.fixture(
         params=[
-            ("[a in A]", ["a"], ["A"], []),
-            ("[a in A, a1 in A1]", ["a", "a1"], ["A", "A1"], []),
-            ("[a in A, a_2 in A_2]", [], [], ["A_2"]),
-            ("[a in A, a_2 in A_2, foo in foos]", [], [], ["A_2", "foos"]),
+            ("[a in A]", {"a": "A"}, []),
+            ("[a in A, a1 in A1]", {"a": "A", "a1": "A1"}, []),
+            ("[a in A, a_2 in A_2]", {"a": "A", "a_2": "A_2"}, ["A_2"]),
+            (
+                "[a in A, a_2 in A_2, foo in foos]",
+                {"a": "A", "a_2": "A_2", "foo": "foos"},
+                ["A_2", "foos"],
+            ),
         ]
     )
     def constraint_data(self, request, dummy_model_data):
-        foreach_string, set_iterators, set_names, missing_sets = request.param
+        foreach_string, expected_sets, missing_sets = request.param
         setup_string = f"""
         foreach: {foreach_string}
         where: []
-        equation: foo{set_iterators} == 0
+        equation: foo == 0
         """
         constraint_obj = parsing.ParsedConstraint(string_to_dict(setup_string), "foo")
-        constraint_obj._get_sets_from_foreach(dummy_model_data.dims)
+        sets = constraint_obj._get_sets_from_foreach(dummy_model_data.dims)
         return (
             constraint_obj,
-            set_iterators,
-            set_names,
+            sets,
+            expected_sets,
             missing_sets,
         )
 
@@ -130,13 +134,12 @@ class TestParsingForEach:
 
     def test_parse_foreach_to_sets(self, constraint_data):
         (
-            constraint_obj,
-            expected_set_iterator,
-            expected_set_names,
+            _,
+            sets,
+            expected_sets,
             _,
         ) = constraint_data
-        assert set(constraint_obj.sets.keys()) == set(expected_set_iterator)
-        assert set(constraint_obj.sets.values()) == set(expected_set_names)
+        assert sets == expected_sets
 
     def test_parse_foreach_to_sets_unknown_set(self, constraint_data):
         constraint_obj, _, _, missing_sets = constraint_data
@@ -418,7 +421,7 @@ class TestParsingEquationComponent:
         assert len(component_product) == 2
         assert check_error_or_warning(
             constraint_obj_with_sets._errors,
-            "Undefined component(s) found in equation: {'baz'}"
+            "Undefined component(s) found in equation: {'baz'}",
         )
 
     @pytest.mark.parametrize(
