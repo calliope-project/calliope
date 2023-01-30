@@ -142,7 +142,7 @@ class TestParsingForEach:
         constraint_obj, _, _, missing_sets = constraint_data
 
         if len(missing_sets) == 0:
-            assert constraint_obj._errors == []
+            assert not constraint_obj._errors
         else:
             assert check_error_or_warning(
                 constraint_obj._errors, "not a valid model set name."
@@ -164,15 +164,14 @@ class TestParsingForEach:
 
 class TestParsingEquationComponent:
     SET_NAMES = ["A", "A1"]
-    SET_ITERATORS = ["a", "a1"]
 
     @pytest.fixture
     def expression_parser(self):
-        return equation_parser.generate_equation_parser(self.SET_ITERATORS)
+        return equation_parser.generate_equation_parser()
 
     @pytest.fixture
     def component_parser(self):
-        return equation_parser.generate_arithmetic_parser(self.SET_ITERATORS)
+        return equation_parser.generate_arithmetic_parser()
 
     @pytest.fixture(scope="function")
     def constraint_obj_with_sets(self):
@@ -229,7 +228,6 @@ class TestParsingEquationComponent:
         "parse_string",
         [
             "foo + bar == 1",
-            "foo - $bar + baz[a, a1] < 1",
             "foo - $bar + baz[a, a1] <= 1",
             "-1**foo + dummy_func_1(2) + baz[a, a1] >= foobar",
         ],
@@ -241,7 +239,7 @@ class TestParsingEquationComponent:
             expression_parser, parse_string, "foo"
         )
         assert isinstance(parsed_, pp.ParseResults)
-        assert constraint_obj_with_sets._errors == []
+        assert not constraint_obj_with_sets._errors
 
     @pytest.mark.parametrize(
         "parse_string",
@@ -258,7 +256,7 @@ class TestParsingEquationComponent:
 
     @pytest.mark.parametrize(
         "parse_string",
-        ["foo == 1", "$foo + (bar + foobar[a1])**2 > (dummy_func_1(foo) + 1)"],
+        ["foo == 1", "$foo + (bar + foobar[a1])**2 >= (dummy_func_1(foo) + 1)"],
     )
     @pytest.mark.parametrize(
         ["where_list", "expected_where_list"],
@@ -370,7 +368,7 @@ class TestParsingEquationComponent:
         "parse_string",
         [
             "$foo == $bar",
-            "$foo + $bar > 1",
+            "$foo + $bar >= 1",
             "$foo * $bar == 1",
             "($foo * 1) + $bar == 1",
             "(1**$bar) <= $foo + $bar",
@@ -382,7 +380,8 @@ class TestParsingEquationComponent:
         self, expression_parser, constraint_obj_with_sets, parse_string
     ):
         parsed = expression_parser.parse_string(parse_string, parse_all=True)
-        found_components = constraint_obj_with_sets._find_components(parsed[0].value)
+        eq_element_list = [parsed[0].lhs, parsed[0].rhs]
+        found_components = constraint_obj_with_sets._find_components(eq_element_list)
         assert found_components == set(["foo", "bar"])
 
     @pytest.mark.parametrize("n_foos", [0, 1, 2])
@@ -401,7 +400,7 @@ class TestParsingEquationComponent:
             equation_[0], parsed_component_dict(n_foos, n_bars)
         )
         assert len(component_product) == n_foos * n_bars
-        assert constraint_obj_with_sets._errors == []
+        assert not constraint_obj_with_sets._errors
 
     def test_get_component_product_missing_component(
         self,
@@ -417,13 +416,14 @@ class TestParsingEquationComponent:
             equation_[0], parsed_component_dict(1, 2)
         )
         assert len(component_product) == 2
-        assert constraint_obj_with_sets._errors == [
-            "Undefined component(s) found in equation #0: {'baz'}"
-        ]
+        assert check_error_or_warning(
+            constraint_obj_with_sets._errors,
+            "Undefined component(s) found in equation: {'baz'}"
+        )
 
     @pytest.mark.parametrize(
         ["equation_", "expected"],
-        [("$foo == $bar", False), ("$foo < $bar", True), ("$foo + 10 > $bar", True)],
+        [("$foo == $bar", False), ("$foo <= $bar", True), ("$foo + 10 >= $bar", True)],
     )
     def test_combine_components_with_equation(
         self,
@@ -447,14 +447,14 @@ class TestParsingEquationComponent:
         assert not set(component_sub_dict.keys()).symmetric_difference(["foo", "bar"])
         assert (
             combined_expression_dict["expression"][0].eval(
-                component_exprs=component_sub_dict
+                component_expressions=component_sub_dict
             )
             is expected
         )
 
     @pytest.mark.parametrize(
         ["equation_", "expected"],
-        [("$foo == $bar", False), ("$foo < $bar", True), ("$foo * 20 >= $bar", True)],
+        [("$foo == $bar", False), ("$foo <= $bar", True), ("$foo * 20 >= $bar", True)],
     )
     def test_combine_components_with_equation_multi(
         self,
@@ -486,6 +486,8 @@ class TestParsingEquationComponent:
                 ["foo", "bar"]
             )
             assert (
-                constraint_eq["expression"][0].eval(component_exprs=component_sub_dict)
+                constraint_eq["expression"][0].eval(
+                    component_expressions=component_sub_dict
+                )
                 is expected
             )

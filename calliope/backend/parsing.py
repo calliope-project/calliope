@@ -65,8 +65,8 @@ class ParsedConstraint:
 
         # capture warnings and errors to dump after processing,
         # to make it easier for a user to fix the constraint YAML.
-        self._warnings = []
-        self._errors = []
+        self._warnings = set()
+        self._errors = set()
 
         # Initialise data variables
         self.sets = dict()
@@ -208,7 +208,7 @@ class ParsedConstraint:
             if isinstance(parser_element, equation_parser.EvalComponent):
                 components.append(parser_element.name)
 
-            elif isinstance(parser_element, (equation_parser.ArithmeticOperator)):
+            elif isinstance(parser_element, (equation_parser.EvalOperatorOperand)):
                 components.extend(self._find_components(parser_element.value))
         return set(components)
 
@@ -229,14 +229,17 @@ class ParsedConstraint:
             list[list[ConstraintDict]]:
                 Each nested list contains a unique product of component data dictionaries.
         """
-
-        eq_components = set(self._find_components(equation_data["expression"][0].value))
+        eq_expression = equation_data["expression"][0]
+        eq_components = set(
+            self._find_components([eq_expression.lhs, eq_expression.rhs])
+        )
 
         invalid_components = eq_components.difference(parsed_components.keys())
         if invalid_components:
-            self._errors.append(
-                "Undefined component(s) found in equation "
-                f"#{equation_data['id']}: {invalid_components}"
+            self._add_error(
+                eq_expression.__repr__(),
+                "equation",
+                f"Undefined component(s) found in equation: {invalid_components}",
             )
 
         eq_components.difference_update(invalid_components)
@@ -297,4 +300,4 @@ class ParsedConstraint:
             error_message (str): Description of error.
         """
         self._is_valid = False
-        self._errors.append(f"({string_type}, {instring}): {error_message}")
+        self._errors.add(f"({string_type}, {instring}): {error_message}")

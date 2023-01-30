@@ -39,7 +39,7 @@ def unindexed_param(identifier):
 
 @pytest.fixture
 def indexed_param(identifier):
-    return equation_parser.indexed_param_or_var_parser(identifier, ["foo", "bar"])
+    return equation_parser.indexed_param_or_var_parser(identifier)
 
 
 @pytest.fixture
@@ -97,9 +97,9 @@ def helper_function_one_parser_in_args(identifier, request):
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def eval_kwargs():
-    return {"helper_func_dict": HELPER_FUNCS, "test": True}
+    return {"helper_func_dict": HELPER_FUNCS, "test": True, "errors": []}
 
 
 @pytest.fixture
@@ -116,7 +116,7 @@ def equation_comparison(arithmetic):
 
 @pytest.fixture
 def generate_equation():
-    return equation_parser.generate_equation_parser(["foo", "bar"])
+    return equation_parser.generate_equation_parser()
 
 
 class TestEquationParserElements:
@@ -237,6 +237,9 @@ class TestEquationParserElements:
             "foo[baz, foo]",  # one set iterator is valid, but not the other
         ],
     )
+    @pytest.mark.xfail(
+        reason="Moved check for missing iterator out of equation parsing"
+    )
     def test_fail_missing_iterator_indexed_param(self, indexed_param, string_val):
         with pytest.raises(KeyError) as excinfo:
             indexed_param.parse_string(string_val, parse_all=True)
@@ -247,6 +250,8 @@ class TestEquationParserElements:
         [
             "foo [bar]",  # space between param name and set iterator reference
             "foo[foo bar]",  # missing delimination
+            "foo[]",  # missing set iterator
+            "[bar]",  # missing set name
             "foo(bar)",  # incorrect brackets
         ],
     )
@@ -257,10 +262,9 @@ class TestEquationParserElements:
     @pytest.mark.parametrize(
         ["string_val", "expected"],
         [
-            (
-                "$foo",
-                "foo",
-            ),  # keeping to ensure something weird doesn't happen with the constant (e.g. is accidentally overwritten)
+            # keeping explicit reference to "$" to ensure something weird doesn't happen
+            # with the constant (e.g. is accidentally overwritten)
+            ("$foo", "foo"),
             (f"{COMPONENT_CLASSIFIER}foo", "foo"),
             (f"{COMPONENT_CLASSIFIER}Foo_Bar_1", "Foo_Bar_1"),
         ],
@@ -452,9 +456,10 @@ class TestEquationParserElements:
     )
     def test_missing_function(self, string_val, helper_function, eval_kwargs):
         parsed_ = helper_function.parse_string(string_val, parse_all=True)
-        with pytest.raises(pyparsing.ParseException) as excinfo:
-            parsed_[0].eval(**eval_kwargs)
-        assert check_error_or_warning(excinfo, "Invalid helper function defined")
+        error_catcher = []
+        eval_kwargs["errors"] = error_catcher
+        parsed_[0].eval(**eval_kwargs)
+        assert check_error_or_warning(error_catcher, "Invalid helper function defined")
 
     @pytest.mark.parametrize(
         "string_val",
@@ -557,6 +562,7 @@ class TestEquationParserArithmetic:
             ("1+2*2", 5),
             ("-1 - 2", -3),
             ("-1 + 2**-2", -0.75),
+            ("2**2**2-1", 15),
             ("2 * 3 + -2 - -3", 7),
             ("100 / 10 + 3 * 5 - 2**3 + -5", 12),
             ("(1e5 * 10 / 1000 - 16**0.5) + (10 + 100) * (10) - 1/2", 2095.5),
@@ -639,7 +645,7 @@ class TestEquationParserComparison:
     def expected_right(self, var_right):
         return self.EXPR_PARAMS_AND_EXPECTED_EVAL[var_right]
 
-    @pytest.fixture(params=["<", "<=", ">", ">=", "=="])
+    @pytest.fixture(params=["<=", ">=", "=="])
     def operator(self, request):
         return request.param
 
@@ -662,23 +668,23 @@ class TestEquationParserComparison:
         )
         evaluated_expression = parsed_constraint[0]
 
-        assert evaluated_expression.value[0].eval(**eval_kwargs) == expected_left
-        assert evaluated_expression.value[2].eval(**eval_kwargs) == expected_right
-        assert evaluated_expression.value[1] == operator
+        assert evaluated_expression.lhs.eval(**eval_kwargs) == expected_left
+        assert evaluated_expression.rhs.eval(**eval_kwargs) == expected_right
+        assert evaluated_expression.op == operator
 
     @pytest.mark.parametrize(
         ["equation_string", "expected"],
         [
-            ("1<2", True),
-            ("1 > 2", False),
+            ("1<=2", True),
+            ("1 >= 2", False),
             ("1  ==  2", False),
             ("(1) <= (2)", True),
             ("1 >= 2", False),
             ("1 >= 2", False),
-            ("1 * 3 < 1e2", True),
+            ("1 * 3 <= 1e2", True),
             ("-1 >= -0.1 / 2", False),
             ("2**2 == 4 * 1 / 1 * 1**1", True),
-            ("(1 + 3) * 2 > 9 + -1", False),
+            ("(1 + 3) * 2 >= 10 + -1", False),
         ],
     )
     # "equation_comparison" and "generate_equation" should yield the same result
@@ -695,11 +701,14 @@ class TestEquationParserComparison:
     @pytest.mark.parametrize(
         "equation_string",
         [
-            "1 + 2 <",  # missing RHS
+            "1 + 2 =<",  # missing RHS
             "== 1 + 2 ",  # missing LHS
             "1 = 2",  # unallowed operator
+            "1 < 2",  # unallowed operator
+            "2 > 1",  # unallowed operator
             "1 (<= 2)",  # weird brackets
             "foo.bar <= 2",  # unparsable string
+            "1 <= foo <= 2",  # Too many operators
         ],
     )
     # "equation_comparison" and "generate_equation" should yield the same result

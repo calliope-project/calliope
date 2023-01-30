@@ -25,7 +25,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ##
 
-from typing import Tuple, List
+from typing import Callable, Any, Union, Optional
 
 import pyparsing as pp
 
@@ -35,149 +35,171 @@ pp.ParserElement.enablePackrat()
 COMPONENT_CLASSIFIER = "$"
 
 
-def operatorOperands(tokenlist):
-    "Generator to extract operators and operands in pairs"
+class EvalOperatorOperand:
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed expressions with operands separated
+        by an operator (OPERAND OPERATOR OPERAND OPERATOR OPERAND ...)
 
-    it = iter(tokenlist)
-    while 1:
-        try:
-            yield (next(it), next(it))
-        except StopIteration:
-            break
+        Args:
+            tokens (pp.ParseResults):
+                Contains a list of the form [operand (pp.ParseResults), operator (str),
+                operand (pp.ParseResults), operator (str), ...].
+        """
+        self.value = tokens[0]
+
+    def __repr__(self):
+        "Return string representation of the parsed grammar"
+        first_operand = self.value[0].__repr__()
+        operand_operator_pairs = " ".join(
+            op + " " + val.__repr__()
+            for op, val in self.operatorOperands(self.value[1:])
+        )
+        arithmetic_string = f"({first_operand} {operand_operator_pairs})"
+        return arithmetic_string
+
+    def operatorOperands(self, tokenlist: list) -> tuple[str, pp.ParseResults]:
+        "Generator to extract operators and operands in pairs"
+
+        it = iter(tokenlist)
+        while 1:
+            try:
+                yield (next(it), next(it))
+            except StopIteration:
+                break
+
+    def eval(self, **kwargs) -> Any:
+        """
+        Returns:
+            Any:
+                If all operands are numeric, returns float, otherwise returns an
+                expression to use in an optimisation model constraint.
+        """
+        # TODO: should initialise using a Gurobi/Pyomo expression object
+        val = self.value[0].eval(**kwargs)
+        for operator_, operand in self.operatorOperands(self.value[1:]):
+            evaluated_operand = operand.eval(**kwargs)
+            if operator_ == "**":
+                val = val**evaluated_operand
+            elif operator_ == "*":
+                val *= evaluated_operand
+            elif operator_ == "/":
+                val /= evaluated_operand
+            elif operator_ == "+":
+                val += evaluated_operand
+            elif operator_ == "-":
+                val -= evaluated_operand
+
+        return val
 
 
-class ArithmeticOperator:
-    def __init__(self):
-        pass
+class EvalSignOp:
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed expressions with a leading + or - sign.
 
-
-class EvalSignOp(ArithmeticOperator):
-    "Class to evaluate expressions with a leading + or - sign"
-
-    def __init__(self, tokens):
+        Args:
+            tokens (pp.ParseResults):
+                Contains a list of the form [sign (str), operand (pp.ParseResults)].
+        """
         self.sign, self.value = tokens[0]
 
     def __repr__(self):
-        return str(f"{self.sign}_{self.value}")
+        "Return string representation of the parsed grammar"
+        return str(f"({self.sign}){self.value.__repr__()}")
 
-    def eval(self, **kwargs):
-        mult = {"+": 1, "-": -1}[self.sign]
-        return mult * self.value.eval(**kwargs)
-
-
-class EvalPowerOp(ArithmeticOperator):
-    "Class to evaluate multiplication and division expressions"
-
-    def __init__(self, tokens):
-        self.value = tokens[0]
-
-    def __repr__(self):
-        return str(self.value)
-
-    def eval(self, **kwargs):
-        res = self.value[-1].eval(**kwargs)
-        for val in self.value[-3::-2]:
-            res = val.eval(**kwargs) ** res
-        return res
-
-
-class EvalMultOp(ArithmeticOperator):
-    "Class to evaluate multiplication and division expressions"
-
-    def __init__(self, tokens):
-        self.value = tokens[0]
-
-    def __repr__(self):
-        return str(self.value)
-
-    def eval(self, **kwargs):
-        prod = self.value[0].eval(**kwargs)
-        for op, val in operatorOperands(self.value[1:]):
-            if op == "*":
-                prod *= val.eval(**kwargs)
-            if op == "/":
-                prod /= val.eval(**kwargs)
-        return prod
-
-
-class EvalAddOp(ArithmeticOperator):
-    "Class to evaluate addition and subtraction expressions"
-
-    def __init__(self, tokens):
-        self.value = tokens[0]
-
-    def __repr__(self):
-        return str(self.value)
-
-    def eval(self, **kwargs):
-        sum = self.value[0].eval(**kwargs)
-        for op, val in operatorOperands(self.value[1:]):
-            if op == "+":
-                sum += val.eval(**kwargs)
-            if op == "-":
-                sum -= val.eval(**kwargs)
-        return sum
+    def eval(self, **kwargs) -> Any:
+        val = self.value.eval(**kwargs)
+        if self.sign == "+":
+            return val
+        elif self.sign == "-":
+            return -1 * val
 
 
 class EvalComparisonOp:
-    "Class to evaluate comparison expressions"
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed equations of the form LHS OPERATOR RHS.
 
-    opMap = {
-        "<": lambda a, b: a < b,
-        "<=": lambda a, b: a <= b,
-        ">": lambda a, b: a > b,
-        ">=": lambda a, b: a >= b,
-        "!=": lambda a, b: a != b,
-        "=": lambda a, b: a == b,  # FIXME
-        "==": lambda a, b: a == b,
-    }
+        Args:
+            tokens (pp.ParseResults):
+                Contains a list with an RHS (pp.ParseResults), operator (str), and LHS (pp.ParseResults).
+        """
 
-    def __init__(self, tokens):
-        self.value = tokens[0]
+        self.lhs, self.op, self.rhs = tokens
 
     def __repr__(self):
-        return str(self.value)
+        "Return string representation of the parsed grammar"
+        return f"{self.lhs.__repr__()} {self.op} {self.rhs.__repr__()}"
 
-    def eval(self, **kwargs):
-        val1 = self.value[0].eval(**kwargs)
-        for op, val in operatorOperands(self.value[1:]):
-            fn = self.opMap[op]
-            val2 = val.eval(**kwargs)
-            if not fn(val1, val2):
-                break
-            val1 = val2
-        else:
-            return True
-        return False
+    def eval(self, **kwargs) -> Any:
+        """
+        Returns:
+            Any:
+                If LHS and RHS are numeric, returns bool, otherwise returns an equation
+                to use as an optimisation model constraint.
+        """
+        lhs = self.lhs.eval(**kwargs)
+        rhs = self.rhs.eval(**kwargs)
+
+        if self.op == "<=":
+            return lhs <= rhs
+        elif self.op == ">=":
+            return lhs >= rhs
+        elif self.op == "==":
+            return lhs == rhs
 
 
 class EvalFunction:
-    def __init__(self, tokens):
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed helper function strings of the form
+        helper_function_name(*args, **kwargs).
+
+        Args:
+            tokens (pp.ParseResults):
+                Has a dictionary component with the parsed elements:
+                helper_function_name (pp.ParseResults), args (list), kwargs (dict).
+        """
         token_dict = tokens.as_dict()
         self.name = token_dict["helper_function_name"]
         self.args = token_dict["args"]
         self.kwargs = token_dict["kwargs"]
 
     def __repr__(self):
+        "Return string representation of the parsed grammar"
         return f"{str(self.name)}(args={self.args}, kwargs={self.kwargs})"
 
-    def eval(self, **kwargs):
+    def eval(self, test: bool = False, **kwargs) -> Any:
+        """
+
+        Args:
+            test (bool, optional):
+                If True, return a dictionary with parsed components rather than
+                calling the helper function with the defined args and kwargs.
+                Defaults to False.
+
+        Returns:
+            Any:
+                Either the defined helper function is called, or only a dictionary with
+                parsed components is returned (if test=True).
+        """
         args_ = []
         for arg in self.args:
             if not isinstance(arg, list):
-                args_.append(arg.eval())
+                args_.append(arg.eval(test=test, **kwargs))
             else:  # evaluate nested function
-                args_.append(arg[0].eval(**kwargs))
+                args_.append(arg[0].eval(test=test, **kwargs))
 
         kwargs_ = {}
         for kwarg_name, kwarg_val in self.kwargs.items():
             if not isinstance(kwarg_val, list):
-                kwargs_[kwarg_name] = kwarg_val.eval()
+                kwargs_[kwarg_name] = kwarg_val.eval(test=test, **kwargs)
             else:  # evaluate nested function
-                kwargs_[kwarg_name] = kwarg_val[0].eval(**kwargs)
+                kwargs_[kwarg_name] = kwarg_val[0].eval(test=test, **kwargs)
 
-        helper_function = self.name.eval(**kwargs)
-        if kwargs.get("test", False):
+        helper_function = self.name.eval(test=test, **kwargs)
+        if test:
             return {
                 "function": helper_function,
                 "args": args_,
@@ -188,85 +210,186 @@ class EvalFunction:
 
 
 class EvalHelperFuncName:
-    def __init__(self, instring, loc, tokens):
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed helper function names.
+        This is a unique parse action so that we can catch invalid helper functions
+        most safely.
+
+        Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used, but comes with `instring` when setting the parse action.
+            tokens (pp.ParseResults):
+                Has one parsed element: helper_function_name (str).
+        """
         self.name = tokens[0]
         self.instring = instring
         self.loc = loc
 
     def __repr__(self):
+        "Return string representation of the parsed grammar"
         return str(self.name)
 
-    def eval(self, helper_func_dict, **kwargs):
+    def eval(
+        self,
+        helper_func_dict: dict[str, Callable],
+        errors: list[str],
+        test: bool = False,
+        **kwargs,
+    ) -> Union[str, Callable]:
+        """
+
+        Args:
+            helper_func_dict (dict[str, Callable]): Allowed helper functions.
+            test (bool, optional):
+                If True, return a string with the helper function name rather than
+                collecting the helper function from the dictionary of functions.
+                Defaults to False.
+
+            errors (list[str]):
+                If parsed helper function name is not in `helper_func_dict`, add error
+                message to list which will be raised later.
+
+        Returns:
+            str, Callable:
+                Helper functions are expected to be two-tiered, with the first level
+                taking the generic eval kwargs (e.g. model_data) and the second level
+                taking the user-defined input arguments.
+                If test=True, only the helper function name is returned.
+        """
+
         if self.name not in helper_func_dict.keys():
-            # FIXME: Maybe shouldn't be a parse exception since it happens on evaluation
-            # calliope.exceptions.ModelError? KeyError?
-            raise pp.ParseException(
-                self.instring, self.loc, "Invalid helper function defined"
-            )
-        if kwargs.get("test", False):
-            return str(self.name)
+            errors.append(f"({self.instring}): Invalid helper function defined")
         else:
-            return helper_func_dict[self.name](**kwargs)
+            if test:
+                return str(self.name)
+            else:
+                return helper_func_dict[self.name](**kwargs)
 
 
 class EvalIndexedParameterOrVariable:
-    def __init__(self, tokens):
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed indexed parameters or decision variables
+        of the form param_or_var[*index_items].
+
+        Args:
+            tokens (pp.ParseResults):
+                Has a dictionary component with the parsed elements:
+                param_or_var_name (str), index_items (list of strings).
+        """
         token_dict = tokens.as_dict()
         self.name = token_dict["param_or_var_name"][0]
-        self.args = token_dict["index_items"]
-
-    def my_func(self):
-        return str(self.name).title()
+        self.index_items = token_dict["index_items"]
 
     def __repr__(self):
+        "Return string representation of the parsed grammar"
         return "INDEXED_PARAM_OR_VAR:" + str(self.name)
 
-    def eval(self, **kwargs):
-        return {"param_or_var_name": self.name, "dimensions": self.args}
+    def eval(self, **kwargs) -> dict[str, Union[str, list[str]]]:
+        """
+        Returns:
+            dict[str, str | list[str]]:
+                Separated key:val pairs for parameter/variable name and index items
+                TODO: make this a return only in testing and grab the actual
+                parameter/variable from model_data/backend_model on evaluation.
+        """
+        return {"param_or_var_name": self.name, "dimensions": self.index_items}
 
 
 class EvalComponent:
-    def __init__(self, tokens):
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed expression components of the form
+        `$component`.
+
+        Args:
+            tokens (pp.ParseResults):
+                Has one parsed element containing the component name (str).
+        """
         self.name = tokens[0]
 
     def __repr__(self):
+        "Return string representation of the parsed grammar"
         return "COMPONENT:" + str(self.name)
 
-    def eval(self, component_exprs=None, **kwargs):
-        if component_exprs is not None:
-            return component_exprs[self.name][0].eval()
+    def eval(
+        self,
+        component_expressions: Optional[dict[str, pp.ParseResults]] = None,
+        **kwargs,
+    ) -> Any:
+        """
+        Args:
+            component_expressions (Optional[dict[str, pp.ParseResults]]):
+                Dictionary mapping the component name to a parsed equation expression.
+                Default is None.
+
+        Returns:
+            Any: If component_expressions dictionary is given, find the expression matching
+            the component name and evaluate it.
+            If not given, return a dictionary giving the component name.
+        """
+        if component_expressions is not None:
+            return component_expressions[self.name][0].eval()
         else:
             return {"component": self.name}
 
 
 class EvalUnindexedParameterOrVariable:
-    # TODO: decide whether to loop this into "EvalIndexedParameterOrVariable" directly?
-    # ^ tried and the parser doesn't like it. Better to have them share a validation
-    # function that checks the param/var name against the model
-    def __init__(self, tokens):
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed unindexed parameters or decision variables
+        of the form `param_or_var`.
+
+        Args:
+            tokens (pp.ParseResults):
+                Has one parsed element containing the paramater/variable name (str).
+        """
         self.name = tokens[0]
 
     def __repr__(self):
+        "Return string representation of the parsed grammar"
         return "UNINDEXED_PARAM_OR_VAR:" + str(self.name)
 
-    def eval(self, **kwargs):
+    def eval(self, **kwargs) -> dict[str, str]:
+        """
+        Returns:
+            dict[str, str]:
+                TODO: make this a return only in testing and grab the actual
+                parameter/variable from model_data/backend_model on evaluation.
+        """
         return {"param_or_var_name": self.name}
 
 
 class EvalNumber:
-    def __init__(self, tokens):
-        self.val = tokens[0]
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed numbers described as integers (1),
+        floats (1.), or in scientific notation (1e1). Also capture infinity (inf/.inf).
+
+        Args:
+            tokens (pp.ParseResults):
+                Has one parsed element containing the number (str).
+        """
+        self.value = tokens[0]
 
     def __repr__(self):
-        return "NUM:" + str(self.val)
+        "Return string representation of the parsed grammar"
+        return "NUM:" + str(self.value)
 
-    def eval(self, **kwargs):
-        return float(self.val)
+    def eval(self, **kwargs) -> float:
+        """
+        Returns:
+            float: Input string as a float, even if given as an integer.
+        """
+        return float(self.value)
 
 
 def helper_function_parser(
     generic_identifier: pp.ParserElement,
-    allowed_parser_elements_in_args: List[pp.ParserElement],
+    allowed_parser_elements_in_args: list[pp.ParserElement],
     allow_function_in_function: bool = True,
 ) -> pp.ParserElement:
     """
@@ -286,7 +409,7 @@ def helper_function_parser(
         generic_identifier (pp.ParserElement):
             Parser for valid python variables without leading underscore and not called "inf".
             This parser has no parse action.
-        allowed_parser_elements_in_args (List[pp.ParserElement]):
+        allowed_parser_elements_in_args (list[pp.ParserElement]):
             List of parser elements that can be arguments in the function (e.g., "number", "indexed_param_or_var").
         allow_function_in_function (bool, optional):
             If True, allows functions to be defined inside functions.
@@ -313,7 +436,7 @@ def helper_function_parser(
     arg_values = pp.MatchFirst(allowed_parser_elements_in_args) + pp.NotAny("=")
 
     # define function arguments
-    arglist = pp.delimitedList(arg_values.copy())
+    arglist = pp.delimited_list(arg_values.copy())
     args = pp.Group(arglist).set_results_name("args")
 
     # define function keyword arguments
@@ -335,7 +458,7 @@ def helper_function_parser(
 
 
 def indexed_param_or_var_parser(
-    generic_identifier: pp.ParserElement, set_iterators: List[str]
+    generic_identifier: pp.ParserElement,
 ) -> pp.ParserElement:
     """
     Parsing grammar to process strings representing indexed model parameters or variables,
@@ -352,8 +475,6 @@ def indexed_param_or_var_parser(
         generic_identifier (pp.ParserElement):
             Parser for valid python variables without leading underscore and not called "inf".
             This parser has no parse action.
-        set_iterators (List[str]):
-            Allowed set iterators on which the parameters can be indexed, e.g. ["node", "tech"].
 
     Returns:
         pp.ParserElement:
@@ -361,23 +482,12 @@ def indexed_param_or_var_parser(
             of index items as separate entries on.
     """
 
-    def _missing_iterator(instring, loc, expr, err):
-        # TODO: pass this to the ParsedConstraint error catcher to handle
-        # Can't be pyparsing ParseException as it then gets suppressed by pyparsing
-        # in favour of an equivalent error but with a different message.
-        raise KeyError(err)
-
     lspar = pp.Suppress("[")
     rspar = pp.Suppress("]")
 
-    indexed_param_name = generic_identifier.set_results_name("param_or_var_name")
+    indexed_param_name = generic_identifier("param_or_var_name")
 
-    set_iterator = pp.one_of(set_iterators, as_keyword=True)
-    set_iterator.set_fail_action(_missing_iterator)
-
-    index_items = pp.Group(pp.delimitedList(set_iterator)).set_results_name(
-        "index_items"
-    )
+    index_items = pp.Group(pp.delimited_list(generic_identifier))("index_items")
     indexed_param_or_var = pp.Combine(indexed_param_name + lspar) + index_items + rspar
 
     indexed_param_or_var.set_parse_action(EvalIndexedParameterOrVariable)
@@ -410,7 +520,8 @@ def component_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
 
 def unindexed_param_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
     """
-    Create copy of generic identifier to set a parse action on later.
+    Create a copy of the generic identifier and set a parse action to find the string in
+    the list of input paramaters or optimisation decision variables.
 
     Args:
         generic_identifier (pp.ParserElement):
@@ -427,6 +538,27 @@ def unindexed_param_parser(generic_identifier: pp.ParserElement) -> pp.ParserEle
     unindexed_param_or_var.set_parse_action(EvalUnindexedParameterOrVariable)
 
     return unindexed_param_or_var
+
+
+def setup_base_parser_elements() -> tuple[pp.ParserElement, pp.ParserElement]:
+    """
+    Setup parser elements that will be components of other parsers.
+
+    Returns:
+        number (pp.ParserElement):
+            Parser for numbers (integer, float, scientific notation, "inf"/".inf").
+        generic_identifier (pp.ParserElement):
+            Parser for valid python variables without leading underscore and not called "inf".
+            This parser has no parse action.
+    """
+
+    inf_kw = pp.Combine(pp.Opt(pp.Suppress(".")) + pp.Keyword("inf", caseless=True))
+    number = pp.pyparsing_common.number | inf_kw
+    generic_identifier = ~inf_kw + pp.Word(pp.alphas, pp.alphanums + "_")
+
+    number.set_parse_action(EvalNumber)
+
+    return number, generic_identifier
 
 
 def arithmetic_parser(
@@ -458,9 +590,8 @@ def arithmetic_parser(
         pp.ParserElement:
             Parser for strings which use arithmetic operations to combine other parser elements.
     """
-    signop = pp.oneOf("+ -")
-    multop = pp.oneOf("* /")
-    plusop = pp.oneOf("+ -")
+    signop = pp.oneOf(["+", "-"])
+    multop = pp.oneOf(["*", "/"])
     expop = pp.Literal("**")
 
     arithmetic = pp.infixNotation(
@@ -472,9 +603,9 @@ def arithmetic_parser(
         | unindexed_param_or_var,
         [
             (signop, 1, pp.opAssoc.RIGHT, EvalSignOp),
-            (expop, 2, pp.opAssoc.LEFT, EvalPowerOp),
-            (multop, 2, pp.opAssoc.LEFT, EvalMultOp),
-            (plusop, 2, pp.opAssoc.LEFT, EvalAddOp),
+            (expop, 2, pp.opAssoc.LEFT, EvalOperatorOperand),
+            (multop, 2, pp.opAssoc.LEFT, EvalOperatorOperand),
+            (signop, 2, pp.opAssoc.LEFT, EvalOperatorOperand),
         ],
     )
 
@@ -484,7 +615,7 @@ def arithmetic_parser(
 def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement:
     """
     Parsing grammar to combine equation elements either side of a comparison operator
-    (< <= > >= ==).
+    (<= >= ==).
 
     Whitespace is ignored on parsing (i.e., "1+foo==$bar" is equivalent to "1 + 1 == $bar").
 
@@ -497,43 +628,18 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
             Parser for strings of the form "LHS OPERATOR RHS".
     """
 
-    comparison_operators = pp.oneOf("< <= > >= ==")
-    equation_comparison = pp.infixNotation(
-        arithmetic,
-        [
-            (comparison_operators, 2, pp.opAssoc.LEFT, EvalComparisonOp),
-        ],
-    )
+    comparison_operators = pp.oneOf(["<=", ">=", "=="])
+    equation_comparison = arithmetic + comparison_operators + arithmetic
+    equation_comparison.set_parse_action(EvalComparisonOp)
 
     return equation_comparison
 
 
-def setup_base_parser_elements() -> Tuple[pp.ParserElement, pp.ParserElement]:
-    """
-    Setup parser elements that will be components of other parsers.
-
-    Returns:
-        number [pp.ParserElement]:
-            Parser for numbers (integer, float, scientific notation, "inf"/".inf").
-        generic_identifier (pp.ParserElement):
-            Parser for valid python variables without leading underscore and not called "inf".
-            This parser has no parse action.
-    """
-
-    inf_kw = pp.Combine(pp.Opt(pp.Suppress(".")) + pp.Keyword("inf", caseless=True))
-    number = pp.pyparsing_common.number | inf_kw
-    generic_identifier = ~inf_kw + pp.Word(pp.alphas, pp.alphanums + "_")
-
-    number.set_parse_action(EvalNumber)
-
-    return number, generic_identifier
-
-
-def generate_arithmetic_parser(set_iterators):
+def generate_arithmetic_parser():
 
     number, identifier = setup_base_parser_elements()
     unindexed_param = unindexed_param_parser(identifier)
-    indexed_param = indexed_param_or_var_parser(identifier, set_iterators)
+    indexed_param = indexed_param_or_var_parser(identifier)
     component = component_parser(identifier)
     helper_function = helper_function_parser(
         identifier,
@@ -547,12 +653,11 @@ def generate_arithmetic_parser(set_iterators):
     arithmetic = arithmetic_parser(
         helper_function, indexed_param, component, unindexed_param, number
     )
-
     return arithmetic
 
 
-def generate_equation_parser(set_iterators):
-    arithmetic = generate_arithmetic_parser(set_iterators)
+def generate_equation_parser():
+    arithmetic = generate_arithmetic_parser()
     equation_comparison = equation_comparison_parser(arithmetic)
 
     return equation_comparison
