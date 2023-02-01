@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Optional
 import operator
 
 import pyparsing as pp
@@ -93,6 +93,7 @@ class ConfigOptionParser:
                 )
             else:
                 return config_val
+        return None
 
 
 class DataVarParser:
@@ -188,9 +189,10 @@ class BoolOperandParser:
     def eval(self, **kwargs) -> np.bool_:
         "evaluate string to numpy boolean object."
         if self.val == "true":
-            return np.True_
+            bool_val = np.True_
         elif self.val == "false":
-            return np.False_
+            bool_val = np.False_
+        return bool_val
 
 
 class GenericStringParser:
