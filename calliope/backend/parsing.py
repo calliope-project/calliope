@@ -1,5 +1,5 @@
 import itertools
-from typing import KeysView, Optional, Union, Literal
+from typing import KeysView, Optional, Union, Literal, Iterable
 from typing_extensions import NotRequired, TypedDict, Required
 from functools import partial
 
@@ -10,22 +10,29 @@ from calliope.backend import equation_parser
 from calliope.exceptions import print_warnings_and_raise_errors
 
 
-class ForEach(TypedDict):
-    set_iterator: str
-    set_name: str
+class UnparsedEquationDict(TypedDict):
+    where: NotRequired[list]
+    expression: str
 
 
-# TODO: decide if this should simply be typed as a dict and all the details are left in a YAML schema
 class ConstraintDict(TypedDict):
     foreach: Required[list]
-    where: list[str]
+    where: list
     equation: NotRequired[str]
-    equations: NotRequired[list[str]]
-    components: NotRequired[list[dict[str, str]]]
-    index_items: NotRequired[list[dict[str, str]]]
+    equations: NotRequired[list[UnparsedEquationDict]]
+    components: NotRequired[dict[str, list[UnparsedEquationDict]]]
+    index_items: NotRequired[dict[str, list[UnparsedEquationDict]]]
 
 
-def raise_parsing_errors(self, constraints: list) -> None:
+class ParsedEquationDict(TypedDict):
+    id: Union[int, tuple[str, int]]
+    where: list
+    expression: Optional[pp.ParseResults]
+    components: NotRequired[dict[str, pp.ParseResults]]
+    index_items: NotRequired[dict[str, pp.ParseResults]]
+
+
+def raise_parsing_errors(constraints: list) -> None:
     errors_ = []
     warnings_ = []
     for constraint in constraints:
@@ -65,12 +72,12 @@ class ParsedConstraint:
 
         # capture warnings and errors to dump after processing,
         # to make it easier for a user to fix the constraint YAML.
-        self._warnings = set()
-        self._errors = set()
+        self._warnings: set = set()
+        self._errors: set = set()
 
         # Initialise data variables
-        self.sets = dict()
-        self.equations: list[ConstraintDict] = []
+        self.sets: dict = dict()
+        self.equations: list[ParsedEquationDict] = []
 
         # Initialise switches
         self._is_valid = True
@@ -87,6 +94,7 @@ class ParsedConstraint:
         """
 
         sets = self._get_sets_from_foreach(model_data.dims.keys())
+        equation_expression_list: list[UnparsedEquationDict]
 
         if "equation" in self._unparsed.keys():
             equation_expression_list = [{"expression": self._unparsed["equation"]}]
@@ -147,17 +155,17 @@ class ParsedConstraint:
         set_name = generic_identifier.set_results_name("set_name")
         return set_iterator + pp.Suppress(in_) + set_name
 
-    def _get_sets_from_foreach(self, model_data_dims: KeysView[str]) -> None:
+    def _get_sets_from_foreach(self, model_data_dims: KeysView) -> dict[str, str]:
         """
         Process "foreach" key in constraint to access the set iterators and the
         identifier for set items in the constraint equation expessions
 
         Args:
-            model_data_dims (KeysView[str]):
+            model_data_dims (KeysView):
                 list of dimensions in calliope.Model._model_data
         """
         foreach_parser = self._foreach_parser()
-        sets = dict()
+        sets: dict = dict()
         for string_ in self._unparsed["foreach"]:
             error_handler = partial(self._add_error, string_, "foreach")
             parsed_ = self._parse_string(foreach_parser, string_, "foreach")
@@ -215,17 +223,17 @@ class ParsedConstraint:
             parsed = parser.parse_string(parse_string, parse_all=True)
         except (pp.ParseException, KeyError) as excinfo:
             parsed = None
-            self._add_error(parse_string, expression_group, excinfo)
+            self._add_error(parse_string, expression_group, str(excinfo))
 
         return parsed
 
     def _parse_where_expression(
         self,
         expression_parser: pp.ParserElement,
-        expression_list: list[dict],
+        expression_list: list[UnparsedEquationDict],
         expression_group: Literal["foreach", "equations", "components", "index_items"],
         id_prefix: Optional[str] = None,
-    ) -> list[ConstraintDict]:
+    ) -> list[ParsedEquationDict]:
         """
         Align user-defined constraint equations/components by parsing expressions,
         specifying a default "where" string if not defined,
@@ -261,7 +269,7 @@ class ParsedConstraint:
         self,
         parser_elements: Union[list, pp.ParseResults],
         to_find: type[equation_parser.EvalString],
-        valid_eval_classes=tuple[type(equation_parser.EvalString)],
+        valid_eval_classes=tuple[type[equation_parser.EvalString]],
     ) -> set[str]:
         """
         Recursively find components / index items defined in an equation expression.
@@ -275,7 +283,7 @@ class ParsedConstraint:
         Returns:
             set[str]: All unique component / index item names.
         """
-        items = []
+        items: list = []
         recursive_func = partial(
             self._find_items_in_expression,
             to_find=to_find,
@@ -294,10 +302,10 @@ class ParsedConstraint:
 
     def _get_expression_group_product(
         self,
-        equation_data: ConstraintDict,
-        parsed_items: dict[list[ConstraintDict]],
+        equation_data: ParsedEquationDict,
+        parsed_items: dict[str, list[ParsedEquationDict]],
         expression_group: Literal["components", "index_items"],
-    ) -> list[list[ConstraintDict]]:
+    ) -> itertools.product:
         """
         Find all components referenced in an equation expression and return a
         product of the component data.
@@ -313,18 +321,18 @@ class ParsedConstraint:
             list[list[ConstraintDict]]:
                 Each nested list contains a unique product of parsed_item dictionaries.
         """
-        eq_expr = equation_data["expression"][0]
-        valid_eval_classes = (
+        eq_expr: pp.ParseResults = equation_data["expression"]  # type: ignore
+        valid_eval_classes: tuple = (
             equation_parser.EvalOperatorOperand,
             equation_parser.EvalFunction,
         )
-        elements = eq_expr.value.as_list()
+        elements: list = eq_expr.value.as_list()
         if expression_group == "components":
             to_find = equation_parser.EvalComponent
 
         elif expression_group == "index_items":
             elements += list(equation_data.get("components", {}).values())
-            to_find = equation_parser.EvalIndexItems
+            to_find = equation_parser.EvalIndexItems  # type: ignore
             valid_eval_classes += (equation_parser.EvalIndexedParameterOrVariable,)
 
         eq_items = self._find_items_in_expression(elements, to_find, valid_eval_classes)
@@ -343,10 +351,10 @@ class ParsedConstraint:
 
     def _add_exprs_to_equation_data(
         self,
-        equation_data: ConstraintDict,
-        expression_combination: list[ConstraintDict],
+        equation_data: ParsedEquationDict,
+        expression_combination: Iterable[ParsedEquationDict],
         expression_group: Literal["components", "index_items"],
-    ) -> ConstraintDict:
+    ) -> ParsedEquationDict:
         """
         Create new equation dictionaries with evaluatable expressions for components or index items.
         The new equation dict has an updated ID, `where` list, and an additional key
@@ -367,18 +375,13 @@ class ParsedConstraint:
         new_equation_data = equation_data.copy()
 
         expr_ids = [expr["id"] for expr in expression_combination]
-        expr_wheres = [new_equation_data.pop("where")]
+        new_equation_data["where"] = [new_equation_data["where"]]
         for expr in expression_combination:
-            expr_wheres.extend(["and", expr["where"]])
-
-        new_equation_data[expression_group] = {
-            expr["id"][0]: expr["expression"] for expr in expression_combination
-        }
+            new_equation_data["where"].extend(["and", expr["where"]])
 
         return {
             "id": (new_equation_data.pop("id"), *expr_ids),
-            "where": expr_wheres,
-            expression_group: {
+            expression_group: {  # type: ignore
                 expr["id"][0]: expr["expression"] for expr in expression_combination
             },
             **new_equation_data,
@@ -386,10 +389,10 @@ class ParsedConstraint:
 
     def _add_sub_exprs_per_equation_expr(
         self,
-        equations: list[ConstraintDict],
-        expression_dict: dict[str, list[ConstraintDict]],
+        equations: list[ParsedEquationDict],
+        expression_dict: dict[str, list[ParsedEquationDict]],
         expression_group: Literal["components", "index_items"],
-    ) -> list[ConstraintDict]:
+    ) -> list[ParsedEquationDict]:
         """
         Build new list of equation dictionaries with nested expression group information.
 

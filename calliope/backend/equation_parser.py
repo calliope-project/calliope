@@ -25,7 +25,7 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ##
 
-from typing import Callable, Any, Union, Optional
+from typing import Callable, Any, Union, Optional, Iterator
 
 import pyparsing as pp
 
@@ -39,7 +39,7 @@ class EvalString:
     "Parent class for all string evaluation classes"
 
     def __init__(self, tokens: pp.ParseResults) -> None:
-        self.value = tokens
+        self.token_dict: dict = tokens.as_dict()
 
 
 class EvalOperatorOperand(EvalString):
@@ -65,7 +65,7 @@ class EvalOperatorOperand(EvalString):
         arithmetic_string = f"({first_operand} {operand_operator_pairs})"
         return arithmetic_string
 
-    def operatorOperands(self, tokenlist: list) -> tuple[str, pp.ParseResults]:
+    def operatorOperands(self, tokenlist: list) -> Iterator[tuple[str, pp.ParseResults]]:
         "Generator to extract operators and operands in pairs"
 
         it = iter(tokenlist)
@@ -170,9 +170,9 @@ class EvalFunction(EvalString):
                 helper_function_name (pp.ParseResults), args (list), kwargs (dict).
         """
         token_dict = tokens.as_dict()
-        self.name = token_dict["helper_function_name"]
-        self.args = token_dict["args"]
-        self.kwargs = token_dict["kwargs"]
+        self.name: pp.ParseResults = token_dict["helper_function_name"]
+        self.args: list = token_dict["args"]
+        self.kwargs: dict = token_dict["kwargs"]
         self.value = tokens
 
     def __repr__(self):
@@ -233,7 +233,7 @@ class EvalHelperFuncName(EvalString):
             tokens (pp.ParseResults):
                 Has one parsed element: helper_function_name (str).
         """
-        self.name = self.value = tokens[0]
+        self.name = self.value = tokens[0]  # type: str
         self.instring = instring
         self.loc = loc
 
@@ -247,7 +247,7 @@ class EvalHelperFuncName(EvalString):
         errors: list[str],
         test: bool = False,
         **kwargs,
-    ) -> Union[str, Callable]:
+    ) -> Optional[Union[str, Callable, Any]]:
         """
 
         Args:
@@ -276,6 +276,7 @@ class EvalHelperFuncName(EvalString):
                 return str(self.name)
             else:
                 return helper_func_dict[self.name](**kwargs)
+        return None
 
 
 class EvalIndexedParameterOrVariable(EvalString):
@@ -374,6 +375,7 @@ class EvalIndexItems(EvalString):
                 If the index item exists and not a test, a set item of relevant type for the set.
                 Otherwise, None.
         """
+        item_name: Any
         if test:
             item_name = {self.set_item: self.set_name}
         else:

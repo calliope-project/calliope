@@ -99,7 +99,13 @@ def helper_function_one_parser_in_args(identifier, request):
 
 @pytest.fixture(scope="function")
 def eval_kwargs():
-    return {"helper_func_dict": HELPER_FUNCS, "test": True, "errors": [], "iterator_dict": {}, "index_item_dict": {}}
+    return {
+        "helper_func_dict": HELPER_FUNCS,
+        "test": True,
+        "errors": [],
+        "iterator_dict": {},
+        "index_item_dict": {},
+    }
 
 
 @pytest.fixture
@@ -220,7 +226,10 @@ class TestEquationParserElements:
             ("foo[techs=tech]", ["foo", [{"tech": "techs"}]]),
             ("foo[techs=tech, bar]", ["foo", [{"tech": "techs"}, "bar"]]),
             ("foo[bar, techs=tech]", ["foo", ["bar", {"tech": "techs"}]]),
-            ("foo[techs=tech, nodes=node]", ["foo", [{"tech": "techs"}, {"node": "nodes"}]]),
+            (
+                "foo[techs=tech, nodes=node]",
+                ["foo", [{"tech": "techs"}, {"node": "nodes"}]],
+            ),
         ],
     )
     def test_indexed_param(self, indexed_param, eval_kwargs, string_val, expected):
