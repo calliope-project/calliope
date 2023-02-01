@@ -442,7 +442,7 @@ class TestParsingEquationFindItemsInExpression:
     def test_find_components(self, expression_parser, constraint_obj, parse_string):
         parsed = expression_parser.parse_string(parse_string, parse_all=True)
         found_components = constraint_obj._find_items_in_expression(
-            parsed[0].value,
+            [parsed[0].lhs, parsed[0].rhs],
             equation_parser.EvalComponent,
             (equation_parser.EvalOperatorOperand),
         )
@@ -463,7 +463,7 @@ class TestParsingEquationFindItemsInExpression:
     def test_find_index_items(self, expression_parser, constraint_obj, parse_string):
         parsed = expression_parser.parse_string(parse_string, parse_all=True)
         found_index_items = constraint_obj._find_items_in_expression(
-            parsed[0].value,
+            [parsed[0].lhs, parsed[0].rhs],
             equation_parser.EvalIndexItems,
             (
                 equation_parser.EvalOperatorOperand,

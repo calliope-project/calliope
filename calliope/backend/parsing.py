@@ -326,7 +326,7 @@ class ParsedConstraint:
             equation_parser.EvalOperatorOperand,
             equation_parser.EvalFunction,
         )
-        elements: list = eq_expr.value.as_list()
+        elements: list = [eq_expr[0].lhs, eq_expr[0].rhs]
         if expression_group == "components":
             to_find = equation_parser.EvalComponent
 

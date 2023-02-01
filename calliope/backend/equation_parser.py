@@ -38,8 +38,8 @@ COMPONENT_CLASSIFIER = "$"
 class EvalString:
     "Parent class for all string evaluation classes"
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
-        self.token_dict: dict = tokens.as_dict()
+    def __init__(self) -> None:
+        self.name: Optional[str]
 
 
 class EvalOperatorOperand(EvalString):
@@ -132,9 +132,7 @@ class EvalComparisonOp(EvalString):
             tokens (pp.ParseResults):
                 Contains a list with an RHS (pp.ParseResults), operator (str), and LHS (pp.ParseResults).
         """
-
         self.lhs, self.op, self.rhs = tokens
-        self.value = tokens
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
@@ -170,14 +168,13 @@ class EvalFunction(EvalString):
                 helper_function_name (pp.ParseResults), args (list), kwargs (dict).
         """
         token_dict = tokens.as_dict()
-        self.name: pp.ParseResults = token_dict["helper_function_name"]
+        self.func_name: pp.ParseResults = token_dict["helper_function_name"]
         self.args: list = token_dict["args"]
         self.kwargs: dict = token_dict["kwargs"]
-        self.value = tokens
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
-        return f"{str(self.name)}(args={self.args}, kwargs={self.kwargs})"
+        return f"{str(self.func_name)}(args={self.args}, kwargs={self.kwargs})"
 
     def eval(self, test: bool = False, **kwargs) -> Any:
         """
@@ -207,7 +204,7 @@ class EvalFunction(EvalString):
             else:  # evaluate nested function
                 kwargs_[kwarg_name] = kwarg_val[0].eval(test=test, **kwargs)
 
-        helper_function = self.name.eval(test=test, **kwargs)
+        helper_function = self.func_name.eval(test=test, **kwargs)
         if test:
             return {
                 "function": helper_function,
@@ -291,8 +288,8 @@ class EvalIndexedParameterOrVariable(EvalString):
                 param_or_var_name (str), index_items (list of strings).
         """
         token_dict = tokens.as_dict()
-        self.name = token_dict["param_or_var_name"][0]
-        self.index_items = token_dict["index_items"]
+        self.name: str = token_dict["param_or_var_name"][0]
+        self.index_items: pp.ParseResults = token_dict["index_items"]
         self.value = tokens
 
     def __repr__(self):
@@ -401,7 +398,7 @@ class EvalComponent(EvalString):
             tokens (pp.ParseResults):
                 Has one parsed element containing the component name (str).
         """
-        self.name = self.value = tokens[0]
+        self.name: str = tokens[0]
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
@@ -439,7 +436,7 @@ class EvalUnindexedParameterOrVariable(EvalString):
             tokens (pp.ParseResults):
                 Has one parsed element containing the paramater/variable name (str).
         """
-        self.name = self.value = tokens[0]
+        self.name: str = tokens[0]
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
