@@ -1,23 +1,38 @@
 import itertools
 from typing import KeysView, Optional, Union, Literal, Iterable
 from typing_extensions import NotRequired, TypedDict, Required
-from functools import partial
+import functools
+import operator
 
 import pyparsing as pp
 import xarray as xr
+import pandas as pd
 
-from calliope.backend import equation_parser
+from calliope.backend import equation_parser, subset_parser
 from calliope.exceptions import print_warnings_and_raise_errors
 
 
+def _inheritance(model_data, **kwargs):
+    def __inheritance(tech_group):
+        # Only for base tech inheritance
+        return model_data.inheritance.str.endswith(tech_group)
+
+    return __inheritance
+
+
+VALID_HELPER_FUNCTIONS = {
+    "inheritance": _inheritance,
+}
+
+
 class UnparsedEquationDict(TypedDict):
-    where: NotRequired[list]
+    where: NotRequired[str]
     expression: str
 
 
 class ConstraintDict(TypedDict):
     foreach: Required[list]
-    where: list
+    where: str
     equation: NotRequired[str]
     equations: NotRequired[list[UnparsedEquationDict]]
     components: NotRequired[dict[str, list[UnparsedEquationDict]]]
@@ -26,7 +41,7 @@ class ConstraintDict(TypedDict):
 
 class ParsedEquationDict(TypedDict):
     id: Union[int, tuple[str, int]]
-    where: list
+    where: list[Optional[pp.ParseResults]]
     expression: Optional[pp.ParseResults]
     components: NotRequired[dict[str, pp.ParseResults]]
     index_items: NotRequired[dict[str, pp.ParseResults]]
@@ -78,6 +93,7 @@ class ParsedConstraint:
         # Initialise data variables
         self.sets: dict = dict()
         self.equations: list[ParsedEquationDict] = []
+        self.top_level_where: Optional[pp.ParseResults] = None
 
         # Initialise switches
         self._is_valid = True
@@ -94,6 +110,11 @@ class ParsedConstraint:
         """
 
         sets = self._get_sets_from_foreach(model_data.dims.keys())
+        top_level_where = self._parse_string(
+            subset_parser.generate_where_string_parser(),
+            self._unparsed.get("where", "True"),
+            "where",
+        )
         equation_expression_list: list[UnparsedEquationDict]
 
         if "equation" in self._unparsed.keys():
@@ -139,8 +160,17 @@ class ParsedConstraint:
         if self._is_valid:
             self.sets = sets
             self.equations = equations_with_components_and_index_items
+            self.top_level_where = top_level_where
 
         return None
+
+    def build_constraint(self, model_data):
+        if not self._is_valid:
+            return None
+        for constraint_equation in self.equations:
+            imask = self._create_valid_subset(model_data, constraint_equation)
+            if not self._is_valid:
+                return None
 
     @staticmethod
     def _foreach_parser() -> pp.ParserElement:
@@ -167,7 +197,7 @@ class ParsedConstraint:
         foreach_parser = self._foreach_parser()
         sets: dict = dict()
         for string_ in self._unparsed["foreach"]:
-            error_handler = partial(self._add_error, string_, "foreach")
+            error_handler = functools.partial(self._add_error, string_, "foreach")
             parsed_ = self._parse_string(foreach_parser, string_, "foreach")
             if parsed_ is not None:
                 set_iterator, set_name = parsed_.as_list()
@@ -203,7 +233,9 @@ class ParsedConstraint:
         self,
         parser: pp.ParserElement,
         parse_string: str,
-        expression_group: Literal["foreach", "equations", "components", "index_items"],
+        expression_group: Literal[
+            "foreach", "where", "equations", "components", "index_items"
+        ],
     ) -> Optional[pp.ParseResults]:
         """
         Parse equation string according to predefined string parsing grammar
@@ -257,7 +289,13 @@ class ParsedConstraint:
         return [
             {
                 "id": idx if id_prefix is None else (id_prefix, idx),
-                "where": expression_data.get("where", []),
+                "where": [
+                    self._parse_string(
+                        subset_parser.generate_where_string_parser(),
+                        expression_data.get("where", "True"),
+                        "where",
+                    )
+                ],
                 "expression": self._parse_string(
                     expression_parser, expression_data["expression"], expression_group
                 ),
@@ -284,7 +322,7 @@ class ParsedConstraint:
             set[str]: All unique component / index item names.
         """
         items: list = []
-        recursive_func = partial(
+        recursive_func = functools.partial(
             self._find_items_in_expression,
             to_find=to_find,
             valid_eval_classes=valid_eval_classes,
@@ -374,13 +412,15 @@ class ParsedConstraint:
         """
         new_equation_data = equation_data.copy()
 
-        expr_ids = [expr["id"] for expr in expression_combination]
-        new_equation_data["where"] = [new_equation_data["where"]]
-        for expr in expression_combination:
-            new_equation_data["where"].extend(["and", expr["where"]])
-
         return {
-            "id": (new_equation_data.pop("id"), *expr_ids),
+            "id": (
+                new_equation_data.pop("id"),
+                *[expr["id"] for expr in expression_combination],
+            ),
+            "where": [
+                *new_equation_data.pop("where"),
+                *[expr["where"][0] for expr in expression_combination],
+            ],
             expression_group: {  # type: ignore
                 expr["id"][0]: expr["expression"] for expr in expression_combination
             },
@@ -417,3 +457,90 @@ class ParsedConstraint:
                 )
                 updated_equations.append(updated_equation_dict)
         return updated_equations
+
+    def _create_valid_subset(
+        self, model_data: xr.Dataset, equation_dict: ParsedEquationDict
+    ) -> Optional[pd.Index]:
+        """
+        Returns the subset for which a given constraint, variable or
+        expression is valid, based on the given configuration. See `config/subsets.yaml` for
+        the configuration definitions.
+
+        Parameters
+        ----------
+
+        model_data : xarray.Dataset (calliope.Model._model_data)
+        name : str
+            Name of the constraint, variable or expression
+        config : dict
+            Configuration for the constraint, variable or expression
+
+        Returns
+        -------
+        valid_subset : pandas.MultiIndex
+
+        """
+
+        # Start with a mask that is True where the tech exists at a node (across all timesteps and for a each carrier and cost, where appropriate)
+        imask_foreach = self._imask_foreach(model_data)
+
+        evaluated_wheres = [
+            where[0].eval(
+                model_data=model_data,
+                helper_func_dict=VALID_HELPER_FUNCTIONS,
+                errors=self._errors,
+                imask=imask_foreach,
+            )
+            for where in [self.top_level_where, *equation_dict["where"]]
+        ]
+        imask = functools.reduce(operator.and_, [imask_foreach, *evaluated_wheres])
+
+        # Only build and return imask if there are some non-zero elements
+        if imask.sum() != 0:
+            # Squeeze out any unwanted dimensions
+            if len(imask.dims) > len(self.sets):
+                unwanted_dims = [i for i in imask.dims if i not in self.sets.values()]
+                imask = (imask.sum(unwanted_dims) > 0).astype(bool)
+            if len(imask.dims) < len(self.sets):
+                raise ValueError(f"Missing dimension(s) in imask for set {self.name}")
+
+            valid_subset = self._get_subset_as_index(imask)
+        else:
+            self._is_valid = False
+            valid_subset = None
+
+        return valid_subset
+
+    def _get_subset_as_index(self, imask: xr.DataArray):
+        if len(imask.dims) == 1:
+            return imask[imask].coords.to_index()
+        else:
+            mask_stacked = imask.stack(dim_0=imask.dims)
+            return (
+                mask_stacked[mask_stacked]
+                .coords.to_index()
+                .reorder_levels(self.sets.values())
+            )
+
+    def _imask_foreach(self, model_data: xr.Dataset) -> xr.DataArray:
+        set_names = self.sets.values()
+        # Start with (carrier, node, tech) and go from there
+        initial_imask = model_data.carrier.notnull() * model_data.node_tech.notnull()
+        # Squeeze out any of (carrier, node, tech) not in foreach
+        reduced_imask = (
+            initial_imask.sum([i for i in initial_imask.dims if i not in set_names]) > 0
+        )
+        # Add other dimensions (costs, timesteps, etc.)
+        imask = functools.reduce(
+            operator.and_,
+            [
+                reduced_imask,
+                *[
+                    model_data[i].notnull()
+                    for i in set_names
+                    if i not in reduced_imask.dims
+                ],
+            ],
+        )
+
+        return imask

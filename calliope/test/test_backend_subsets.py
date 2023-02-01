@@ -94,18 +94,6 @@ class TestSubsets:
 
         return _evaluated_imask_where
 
-    @pytest.mark.parametrize(
-        "foreach",
-        set(
-            chain.from_iterable(
-                combinations(BASE_DIMS, i) for i in range(1, len(BASE_DIMS))
-            )
-        ),
-    )
-    def test_foreach_constraint(self, model_data, foreach):
-        imask = _imask_foreach(model_data, foreach)
-
-        assert sorted(imask.dims) == sorted(foreach)
 
     @pytest.mark.parametrize(
         ("tech_group", "result"), (("foo", 0), ("bar", 2), ("baz", 1))
@@ -114,15 +102,6 @@ class TestSubsets:
         imask = _inheritance(model_data)(tech_group)
         assert imask.sum() == result
 
-    @pytest.mark.parametrize(
-        "foreach", (["techs"], ["nodes", "techs"], ["nodes", "techs", "carriers"])
-    )
-    def test_get_valid_subset(self, model_data, foreach):
-        imask = _imask_foreach(model_data, foreach)
-        idx = _get_valid_subset(imask)
-        assert isinstance(idx, pd.Index)
-        assert len(idx) == imask.sum()
-        assert all(imask.loc[i] == 1 for i in idx)  # 1 represents boolean True here
 
     def test_subset_imask_no_squeeze(self, model_data, imask_subset_config):
         """
@@ -153,21 +132,6 @@ class TestSubsets:
         assert imask_subset.dims == ("techs",)
         assert imask_subset.equals(imask.loc[{"nodes": "foo"}].drop_vars("nodes"))
 
-    def test_subset_imask_non_iterable_subset(self, model_data, imask_subset_config):
-        """
-        Subset using a string, when a non-string iterable is required
-        """
-        foreach = ["nodes", "techs"]
-        imask = _imask_foreach(model_data, foreach)
-
-        with pytest.raises(TypeError) as excinfo:
-            _subset_imask(
-                "foo", AttrDict({"foreach": foreach, "subset.nodes": "bar"}), imask
-            )
-        assert check_error_or_warning(
-            excinfo,
-            "set `foo` must subset over an iterable, instead got non-iterable `bar` for subset `nodes`",
-        )
 
     @pytest.mark.parametrize("model_name", ("urban_scale", "national_scale", "milp"))
     def test_create_valid_subset(self, model_name):

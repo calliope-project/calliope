@@ -33,6 +33,7 @@ def dummy_model_data():
                 ["nodes", "techs"],
                 [[1.0, np.nan, 1.0, 3], [np.inf, 2.0, True, np.nan]],
             ),
+            "only_techs": (["techs"], [np.nan, 1, 2, 3]),
             "all_inf": (["nodes", "techs"], np.ones((2, 4)) * np.inf, {"is_result": 1}),
             "all_nan": (["nodes", "techs"], np.ones((2, 4)) * np.nan),
             "all_false": (["nodes", "techs"], np.zeros((2, 4)).astype(bool)),
@@ -40,6 +41,23 @@ def dummy_model_data():
             "with_inf_as_bool": (
                 ["nodes", "techs"],
                 [[True, False, True, True], [False, True, True, False]],
+            ),
+            "with_inf_as_bool_and_subset_on_bar_in_nodes": (
+                ["nodes", "techs"],
+                [[False, False, False, False], [False, True, True, False]],
+            ),
+            "with_inf_as_bool_or_subset_on_bar_in_nodes": (
+                ["nodes", "techs"],
+                [[True, False, True, True], [True, True, True, True]],
+            ),
+            "only_techs_as_bool": (["techs"], [False, True, True, True]),
+            "with_inf_and_only_techs_as_bool": (
+                ["nodes", "techs"],
+                [[False, False, True, True], [False, True, True, False]],
+            ),
+            "with_inf_or_only_techs_as_bool": (
+                ["nodes", "techs"],
+                [[True, True, True, True], [False, True, True, True]],
             ),
             "inheritance": (
                 ["nodes", "techs"],
@@ -51,6 +69,7 @@ def dummy_model_data():
         },
         attrs={"scenarios": ["foo"]},
     )
+    model_data["only_techs"]
     UpdateObserverDict(
         initial_dict=AttrDict(
             {"foo": True, "bar": {"foobar": "baz"}, "foobar": {"baz": {"foo": np.inf}}}
@@ -108,6 +127,11 @@ def comparison(evaluatable_string, number, bool_operand, config_option, data_var
 
 
 @pytest.fixture
+def subset(identifier, evaluatable_string, number):
+    return subset_parser.subset_parser(identifier, evaluatable_string, number)
+
+
+@pytest.fixture
 def helper_function(number, identifier, evaluatable_string):
     return equation_parser.helper_function_parser(
         identifier, allowed_parser_elements_in_args=[evaluatable_string, number]
@@ -115,8 +139,8 @@ def helper_function(number, identifier, evaluatable_string):
 
 
 @pytest.fixture
-def imasking(helper_function, data_var, comparison):
-    return subset_parser.imasking_parser(helper_function, data_var, comparison)
+def imasking(helper_function, data_var, comparison, subset):
+    return subset_parser.imasking_parser(helper_function, data_var, comparison, subset)
 
 
 @pytest.fixture(scope="function")
@@ -125,17 +149,19 @@ def eval_kwargs(dummy_model_data):
         "model_data": dummy_model_data,
         "helper_func_dict": subsets.VALID_HELPER_FUNCTIONS,
         "test": True,
-        "errors": [],
+        "errors": set(),
+        "warnings": set(),
+        "imask": dummy_model_data["all_true"],
     }
 
 
 @pytest.fixture
-def parse_imasking_where_string(eval_kwargs, imasking):
-    def _parse_imasking_where_string(imasking_string):
+def parse_where_string(eval_kwargs, imasking):
+    def _parse_where_string(imasking_string):
         parsed_ = imasking.parse_string(imasking_string, parse_all=True)
         return parsed_[0].eval(**eval_kwargs)
 
-    return _parse_imasking_where_string
+    return _parse_where_string
 
 
 class TestParserElements:
@@ -307,7 +333,7 @@ class TestParserElements:
             ("with_inf", 3, 1),
         ],
     )
-    def test_comparison_parser_var(
+    def test_comparison_parser_data_var(
         self, comparison, eval_kwargs, var_string, comparison_val, n_true
     ):
         comparison_string = f"{var_string}={comparison_val}"
@@ -331,7 +357,7 @@ class TestParserElements:
             ("model.a_b", 1, False),
         ],
     )
-    def test_comparison_parser_var(
+    def test_comparison_parser_model_config(
         self, comparison, eval_kwargs, config_string, comparison_val, expected_true
     ):
         comparison_string = f"{config_string}={comparison_val}"
@@ -356,6 +382,37 @@ class TestParserElements:
             comparison.parse_string(comparison_string, parse_all=True)
         assert check_error_or_warning(excinfo, "Expected")
 
+    @pytest.mark.parametrize(
+        ["subset_string", "expected_subset"],
+        [
+            ("[bar]", ["bar"]),
+            ("[foo, bar]", ["foo", "bar"]),
+            ("[ 1 ]", [1]),
+            ("[1., 2e2]", [1.0, 200]),
+            ("[1, bar]", [1.0, "bar"]),
+        ],
+    )
+    def test_subsetting_parser(self, subset, subset_string, expected_subset):
+        parsed_ = subset.parse_string(f"{subset_string} in foo", parse_all=True)
+        assert parsed_[0].set_name == "foo"
+        assert [i.eval() for i in parsed_[0].subset] == expected_subset
+
+    @pytest.mark.parametrize(
+        "subset_string",
+        [
+            "[bar] infoo",  # missing whitespace
+            "[bar] in",  # missing set name
+            "foo in [bar]",  # Wrong order of subset and set name
+            "[foo=bar] in foo",  # comparison string in subset
+            "[inheritance(a)] in foo"  # helper function in subset
+            "(bar) in foo",  # wrong brackets
+        ],
+    )
+    def test_subsetting_parser_malformed(self, subset, subset_string):
+        with pytest.raises(pyparsing.ParseException) as excinfo:
+            subset.parse_string(f"{subset_string} in foo", parse_all=True)
+        assert check_error_or_warning(excinfo, "Expected")
+
 
 class TestParserMasking:
     @pytest.mark.parametrize(
@@ -371,9 +428,9 @@ class TestParserMasking:
         ],
     )
     def test_no_aggregation(
-        self, parse_imasking_where_string, dummy_model_data, instring, expected
+        self, parse_where_string, dummy_model_data, instring, expected
     ):
-        evaluated_ = parse_imasking_where_string(instring)
+        evaluated_ = parse_where_string(instring)
         if instring in dummy_model_data.data_vars:
             assert evaluated_.equals(dummy_model_data[expected])
         else:
@@ -389,8 +446,8 @@ class TestParserMasking:
             ("run.foo=1  and  model.a_b=0", True),
         ],
     )
-    def test_imasking_and(self, parse_imasking_where_string, instring, expected_true):
-        evaluated_ = parse_imasking_where_string(instring)
+    def test_imasking_and(self, parse_where_string, instring, expected_true):
+        evaluated_ = parse_where_string(instring)
         assert evaluated_ if expected_true else not evaluated_
 
     @pytest.mark.parametrize(
@@ -403,8 +460,8 @@ class TestParserMasking:
             ("run.foo=1 or model.a_b=0", True),
         ],
     )
-    def test_imasking_or(self, parse_imasking_where_string, instring, expected_true):
-        evaluated_ = parse_imasking_where_string(instring)
+    def test_imasking_or(self, parse_where_string, instring, expected_true):
+        evaluated_ = parse_where_string(instring)
         assert evaluated_ if expected_true else not evaluated_
 
     @pytest.mark.parametrize(
@@ -417,8 +474,8 @@ class TestParserMasking:
             ("run.foo=False or not model.a_b=0", False),
         ],
     )
-    def test_imasking_not(self, parse_imasking_where_string, instring, expected_true):
-        evaluated_ = parse_imasking_where_string(instring)
+    def test_imasking_not(self, parse_where_string, instring, expected_true):
+        evaluated_ = parse_where_string(instring)
         assert evaluated_ if expected_true else not evaluated_
 
     @pytest.mark.parametrize(
@@ -428,14 +485,47 @@ class TestParserMasking:
             ("all_inf or not all_nan", "all_true"),
             ("not all_inf and not all_nan", "all_true"),
             ("with_inf or all_inf or all_nan", "with_inf_as_bool"),
+            ("with_inf and only_techs", "with_inf_and_only_techs_as_bool"),
+            ("with_inf or only_techs", "with_inf_or_only_techs_as_bool"),
+            ("only_techs and with_inf", "with_inf_and_only_techs_as_bool"),
+            ("only_techs or with_inf", "with_inf_or_only_techs_as_bool"),
         ],
     )
     def test_imasking_arrays(
-        self, parse_imasking_where_string, dummy_model_data, instring, expected
+        self, parse_where_string, dummy_model_data, instring, expected
     ):
-        evaluated_ = parse_imasking_where_string(instring)
-        if isinstance(evaluated_, xr.DataArray):
-            assert evaluated_.equals(dummy_model_data[expected])
+        evaluated_ = parse_where_string(instring)
+        assert evaluated_.transpose(*dummy_model_data[expected].dims).equals(
+            dummy_model_data[expected]
+        )
+
+    @pytest.mark.parametrize(
+        ["instring", "expected"],
+        [
+            ("[foo, bar] in nodes", "all_true"),
+            (
+                "with_inf and [bar] in nodes",
+                "with_inf_as_bool_and_subset_on_bar_in_nodes",
+            ),
+            (
+                "with_inf and ([bar] in nodes)",
+                "with_inf_as_bool_and_subset_on_bar_in_nodes",
+            ),
+            (
+                "with_inf or [bar] in nodes",
+                "with_inf_as_bool_or_subset_on_bar_in_nodes",
+            ),
+            (
+                "with_inf or ([bar] in nodes)",
+                "with_inf_as_bool_or_subset_on_bar_in_nodes",
+            ),
+        ],
+    )
+    def test_imasking_arrays_subsetting(
+        self, parse_where_string, dummy_model_data, instring, expected
+    ):
+        evaluated_ = parse_where_string(instring)
+        assert evaluated_.equals(dummy_model_data[expected])
 
     @pytest.mark.parametrize(
         ["instring", "expected"],
@@ -450,9 +540,9 @@ class TestParserMasking:
         ],
     )
     def test_mixed_imasking(
-        self, parse_imasking_where_string, dummy_model_data, instring, expected
+        self, parse_where_string, dummy_model_data, instring, expected
     ):
-        evaluated_ = parse_imasking_where_string(instring)
+        evaluated_ = parse_where_string(instring)
         if isinstance(evaluated_, xr.DataArray):
             assert evaluated_.equals(dummy_model_data[expected])
 

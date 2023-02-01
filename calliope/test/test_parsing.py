@@ -1,12 +1,24 @@
 from io import StringIO
+from itertools import chain, combinations
 
 import pytest
 import ruamel.yaml as yaml
 import pyparsing as pp
 import xarray as xr
+import numpy as np
+import pandas as pd
 
 from calliope.backend import parsing, equation_parser
-from calliope.test.common.util import check_error_or_warning
+from calliope.test.common.util import (
+    check_error_or_warning,
+    subsets_config,
+)
+
+from calliope.core.util.observed_dict import UpdateObserverDict
+from calliope import AttrDict
+import calliope
+
+BASE_DIMS = ["nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"]
 
 
 def string_to_dict(yaml_string):
@@ -27,11 +39,55 @@ def dummy_model_data():
     return xr.Dataset.from_dict(d)
 
 
+@pytest.fixture
+def model_data():
+    model_data = xr.Dataset(
+        coords={
+            dim: ["foo", "bar"]
+            if dim != "techs"
+            else ["foo", "bar", "foobar", "foobaz"]
+            for dim in BASE_DIMS
+        },
+        data_vars={
+            "node_tech": (
+                ["nodes", "techs"],
+                np.random.choice(a=[np.nan, True], size=(2, 4)),
+            ),
+            "carrier": (
+                ["carrier_tiers", "carriers", "techs"],
+                np.random.choice(a=[np.nan, True], size=(2, 2, 4)),
+            ),
+            "with_inf": (
+                ["nodes", "techs"],
+                [[1.0, np.nan, 1.0, 3], [np.inf, 2.0, True, np.nan]],
+            ),
+            "all_inf": (["nodes", "techs"], np.ones((2, 4)) * np.inf),
+            "all_nan": (["nodes", "techs"], np.ones((2, 4)) * np.nan),
+            "inheritance": (
+                ["nodes", "techs"],
+                [
+                    ["foo.bar", "boo", "baz", "boo"],
+                    ["bar", "ar", "baz.boo", "foo.boo"],
+                ],
+            ),
+        },
+    )
+    UpdateObserverDict(
+        initial_dict=AttrDict({"foo": True, "baz": {"bar": "foobar"}}),
+        name="run_config",
+        observer=model_data,
+    )
+    UpdateObserverDict(
+        initial_dict={"foz": 0}, name="model_config", observer=model_data
+    )
+    return model_data
+
+
 @pytest.fixture(scope="function")
 def constraint_obj():
     setup_string = """
     foreach: [a in A, a1 in A1]
-    where: "1 == 1"
+    equation: "1 == 1"
     """
     constraint_data = string_to_dict(setup_string)
     return parsing.ParsedConstraint(constraint_data, "foo")
@@ -54,10 +110,10 @@ def component_parser():
 
 @pytest.fixture
 def expression_generator():
-    def _expression_generator(parse_string, where_list=None):
+    def _expression_generator(parse_string, where_string=None):
         expression_dict = {"expression": parse_string}
-        if where_list is not None:
-            expression_dict["where"] = where_list
+        if where_string is not None:
+            expression_dict["where"] = where_string
         return expression_dict
 
     return _expression_generator
@@ -88,10 +144,10 @@ def parse_components_and_index_items(
 def parsed_component_dict(constraint_obj, component_parser):
     def _parsed_component_dict(n_foo, n_bar):
         foos = ", ".join(
-            [f"{{where: ['{i}'], expression: '{i + 1}'}}" for i in range(n_foo)]
+            [f"{{where: foo, expression: '{i + 1}'}}" for i in range(n_foo)]
         )
         bars = ", ".join(
-            [f"{{where: ['{i * 10}'], expression: '{i + 1}0'}}" for i in range(n_bar)]
+            [f"{{where: bar, expression: '{i + 1}0'}}" for i in range(n_bar)]
         )
         setup_string = f"""
         foo: [{foos}]
@@ -111,10 +167,10 @@ def parsed_component_dict(constraint_obj, component_parser):
 def parsed_index_item_dict(constraint_obj, index_item_parser):
     def _parsed_component_dict(n_tech1, n_tech2):
         techs1 = ", ".join(
-            [f"{{where: ['{i}'], expression: foo}}" for i in range(n_tech1)]
+            [f"{{where: techs, expression: foo}}" for i in range(n_tech1)]
         )
         techs2 = ", ".join(
-            [f"{{where: ['{i * 10}'], expression: bar}}" for i in range(n_tech2)]
+            [f"{{where: techs, expression: bar}}" for i in range(n_tech2)]
         )
         setup_string = f"""
         tech1: [{techs1}]
@@ -136,26 +192,26 @@ def parsed_idx_item_component_dict(constraint_obj, index_item_parser, component_
         "components": """
         foo:
             - expression: 1 + foo
-              where: [a]
+              where: foo1
             - expression: 2 + foo[techs=tech2]
-              where: [b]
+              where: foo2
         bar:
             - expression: 1 + foo[techs=tech1]
-              where: [c]
+              where: bar1
             - expression: 2 + foo[techs=tech2]
-              where: [d]
+              where: bar2
         """,
         "index_items": """
         tech1:
             - expression: dummy_func_1(wind)
-              where: [1]
+              where: techs1
             - expression: dummy_func_1(pv)
-              where: [2]
+              where: techs2
         tech2:
             - expression: lookup_table[a]
-              where: [3]
+              where: techs3
             - expression: lookup_table[a1]
-              where: [4]
+              where: techs4
         """,
     }
 
@@ -319,12 +375,11 @@ class TestParsedConstraintParseWhereExpression:
         ["foo == 1", "$foo + (bar + foobar[a1])**2 >= (dummy_func_1(foo) + 1)"],
     )
     @pytest.mark.parametrize(
-        ["where_list", "expected_where_list"],
+        ["where_string", "expected_where_eval"],
         [
-            (None, []),
-            ([], []),
-            (["bar"], ["bar"]),
-            (["bar", "and", "foobar"], ["bar", "and", "foobar"]),
+            (None, True),
+            ("False", False),
+            ("True or False", True),
         ],
     )
     def test_parse_where_expression(
@@ -333,16 +388,16 @@ class TestParsedConstraintParseWhereExpression:
         expression_parser,
         expression_generator,
         parse_string,
-        where_list,
-        expected_where_list,
+        where_string,
+        expected_where_eval,
     ):
 
-        expression_dict = expression_generator(parse_string, where_list)
+        expression_dict = expression_generator(parse_string, where_string)
         parsed_list = constraint_obj._parse_where_expression(
             expression_parser, [expression_dict], "foo"
         )
 
-        assert parsed_list[0]["where"] == expected_where_list
+        assert parsed_list[0]["where"][0][0].eval() == expected_where_eval
         assert isinstance(parsed_list[0]["expression"], pp.ParseResults)
 
     @pytest.mark.parametrize("n_dicts", [1, 2, 3])
@@ -354,7 +409,7 @@ class TestParsedConstraintParseWhereExpression:
         n_dicts,
         id_prefix,
     ):
-        expression_dict = expression_generator("foo == 1", ["bar"])
+        expression_dict = expression_generator("foo == 1", "bar")
         parsed_list = parse_where_expression(
             [expression_dict] * n_dicts, id_prefix=id_prefix
         )
@@ -684,4 +739,64 @@ class TestParsedConstraintAddSubExprsPerEquationExpr:
                 expression_group="index_items",
             )
         )
+
         assert len(index_item_and_component_equation_list) == expected_n_equations
+        assert all(
+            len(i["where"]) == len(i["index_items"]) + len(i["components"]) + 1
+            for i in index_item_and_component_equation_list
+        )
+
+
+class TestParsedConstraintGetSubsetAsIndex:
+
+    @pytest.mark.parametrize(
+        "foreach", (["techs"], ["nodes", "techs"], ["nodes", "techs", "carriers"])
+    )
+    def test_get_subset_as_index(self, model_data, constraint_obj, foreach):
+        constraint_obj.sets = {f"{i}": foreach_ for i, foreach_ in enumerate(foreach)}
+        imask = constraint_obj._imask_foreach(model_data)
+        idx = constraint_obj._get_subset_as_index(imask)
+        imask_transposed = imask.transpose(*constraint_obj.sets.values())
+        assert isinstance(idx, pd.Index)
+        assert len(idx) == imask.sum()
+        assert all(imask_transposed.loc[i] == 1 for i in idx)  # 1 represents boolean True here
+
+
+class TestParsedConstraintImaskForeach:
+
+    @pytest.mark.parametrize(
+        "foreach",
+        set(
+            chain.from_iterable(
+                combinations(BASE_DIMS, i) for i in range(1, len(BASE_DIMS))
+            )
+        ),
+    )
+    def test_foreach_constraint(self, model_data, constraint_obj, foreach):
+        constraint_obj.sets = {f"{i}": foreach_ for i, foreach_ in enumerate(foreach)}
+        imask = constraint_obj._imask_foreach(model_data)
+
+        assert sorted(imask.dims) == sorted(foreach)
+
+
+class TestParsedConstraintCreateValidSubset:
+    @pytest.mark.skip(reason="subsets.yaml needs updating with constraint syntax")
+    @pytest.mark.parametrize("model_name", ("urban_scale", "national_scale", "milp"))
+    def test_create_valid_subset(self, model_name):
+        model = getattr(calliope.examples, model_name)()
+
+
+        for name, constraint_data in subsets_config["constraints"].items():
+            model_constraint_obj = parsing.ParsedConstraint(constraint_data, name)
+            model_constraint_obj.parse_strings(model._model_data)
+
+            model_constraint_obj._create_valid_subset(model._model_data)
+            if subset is None:
+                continue
+            if "timesteps" in subset.names:
+                subset = subset.droplevel("timesteps").unique()
+            # FIXME: simplified comparison since constraint_sets.yaml isn't completely cleaned
+            # up to match current representation of set elements
+            assert len(
+                constraint_sets[f"{model_name}.{object_type}.{name}"]
+            ) == len(subset)
