@@ -15,9 +15,22 @@ import re
 import ast
 
 import xarray as xr
-import pandas as pd
-from calliope.core.attrdict import AttrDict
 from calliope.core.util.dataset import reorganise_xarray_dimensions
+from calliope.backend.subset_parser import parse_where_string
+from calliope.exceptions import print_warnings_and_raise_errors
+
+
+def _inheritance(model_data, **kwargs):
+    def __inheritance(tech_group):
+        # Only for base tech inheritance
+        return model_data.inheritance.str.endswith(tech_group)
+
+    return __inheritance
+
+
+VALID_HELPER_FUNCTIONS = {
+    "inheritance": _inheritance,
+}
 
 
 def create_valid_subset(model_data, name, config):
@@ -46,9 +59,16 @@ def create_valid_subset(model_data, name, config):
     if imask is False:  # i.e. not all of 'foreach' are in model_data
         return None
     # Add "where" info as imasks
-    where_array = config.get_key("where", default=[])
-    if where_array:
-        imask = _imask_where(model_data, name, where_array, imask, "and_")
+    where_string = config.get_key("where", default=[])
+    parsing_errors = []
+    if where_string:
+        where_string_evaluated = parse_where_string(where_string).eval(
+            model_data=model_data,
+            helper_func_dict=VALID_HELPER_FUNCTIONS,
+            errors=parsing_errors,
+        )
+        print_warnings_and_raise_errors(errors=parsing_errors)
+        imask = imask & where_string_evaluated
 
     # Add imask based on subsets
     imask = _subset_imask(name, config, imask)
@@ -70,30 +90,6 @@ def create_valid_subset(model_data, name, config):
 
     else:
         return None
-
-
-def _param_exists(model_data, param):
-    # mask by NaN and INF/-INF values = False, otherwise True
-    with pd.option_context("mode.use_inf_as_na", True):
-        if isinstance(model_data.get(param), xr.DataArray):
-            _da = model_data.get(param)
-            return _da.where(pd.notnull(_da)).notnull()
-        else:
-            return False
-
-
-def _val_is(model_data, param, val):
-    if param.startswith(("model.", "run.")):
-        group = param.split(".")[0]
-        config = AttrDict.from_yaml_string(model_data.attrs[f"{group}_config"])
-        # TODO: update to str.removeprefix() in Python 3.9+
-        imask = config.get_key(param[len(f"{group}.") :], None) == ast.literal_eval(val)
-    elif param in model_data.data_vars.keys():
-        imask = model_data[param] == ast.literal_eval(val)
-    else:
-        return False
-
-    return imask
 
 
 def _get_valid_subset(imask):
@@ -123,87 +119,6 @@ def _subset_imask(set_name, set_config, imask):
                 )
                 > 0
             )
-    return imask
-
-
-def _inheritance(model_data, tech_group):
-    # Only for base tech inheritance
-    return model_data.inheritance.str.endswith(tech_group)
-
-
-VALID_HELPER_FUNCTIONS = {
-    "inheritance": _inheritance,
-}
-
-
-def _imask_where(
-    model_data, set_name, where_array, initial_imask=None, initial_operator=None
-):
-    """
-    Example mask: [cost_purchase, and, [param(energy_cap_max), or, not inheritance(supply_plus)]]
-    i.e. a list of "param(...)", "inheritance(...)" and operators.
-    Sublists will be handled recursively.
-    "not" before param/inheritance will invert the mask
-    """
-    imasks = []
-    operators = []
-
-    def __is_function(imask_string):
-        return re.search(r"(\w+)\((\w+)\)", imask_string)
-
-    def __is_equals_statement(imask_string):
-        return re.search(r"([\w\.]+)\=([\'\w\.\:\,]+)", imask_string)
-
-    for i in where_array:
-        if isinstance(i, list):
-            imasks.append(_imask_where(model_data, set_name, i))
-        elif i in ["or", "and"]:
-            operators.append(i)
-        else:
-            # If it's not one of the operators, it is either a function, a val=foo, or
-            # a val on its own (indicating the value should just exist)
-
-            _not = False
-            if i.startswith("not "):
-                _not = True
-                i = i.replace("not ", "")
-            if __is_function(i) is not None:
-                func, val = __is_function(i).groups()
-                imask = VALID_HELPER_FUNCTIONS[func](model_data, val)
-            elif __is_equals_statement(i) is not None:
-                param, val = __is_equals_statement(i).groups()
-                imask = _val_is(model_data, param, val)
-            elif i in model_data.data_vars.keys():
-                imask = _param_exists(model_data, i)
-            else:
-                imask = False  # TODO: this should differntiate between a valid parameter not being in model_data and an e.g. incorrectly spelled parameter
-            # Separately check whether the condition should be inverted
-            if _not is True:
-                imask = ~imask
-            imasks.append(imask)
-    if len(imasks) - 1 != len(operators):
-        raise ValueError(
-            f"'where' array for set `{set_name}` must be a list of statements comma separated by {{and, or}} operators."
-        )
-    # Run through and combine all imasks using defined operators
-    imask = imasks[0]
-    for i in range(len(imasks) - 1):
-        imask = _combine_imasks(imask, imasks[i + 1], operators[i])
-
-    if initial_imask is not None and initial_operator is not None:
-        imask = _combine_imasks(imask, initial_imask, initial_operator)
-
-    return imask
-
-
-def _combine_imasks(curr_imask, new_imask, _operator):
-    if _operator in ["or", "or_"]:
-        _operator = "or_"
-    elif _operator in ["and", "and_"]:
-        _operator = "and_"
-    else:
-        raise ValueError(f"Operator `{_operator}` not recognised")
-    imask = functools.reduce(getattr(operator, _operator), [curr_imask, new_imask])
     return imask
 
 
