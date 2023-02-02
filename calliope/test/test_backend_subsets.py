@@ -94,14 +94,12 @@ class TestSubsets:
 
         return _evaluated_imask_where
 
-
     @pytest.mark.parametrize(
         ("tech_group", "result"), (("foo", 0), ("bar", 2), ("baz", 1))
     )
     def test_inheritance(self, model_data, tech_group, result):
         imask = _inheritance(model_data)(tech_group)
         assert imask.sum() == result
-
 
     def test_subset_imask_no_squeeze(self, model_data, imask_subset_config):
         """
@@ -131,7 +129,6 @@ class TestSubsets:
         imask_subset = _subset_imask("foo", imask_subset_config(foreach), imask)
         assert imask_subset.dims == ("techs",)
         assert imask_subset.equals(imask.loc[{"nodes": "foo"}].drop_vars("nodes"))
-
 
     @pytest.mark.parametrize("model_name", ("urban_scale", "national_scale", "milp"))
     def test_create_valid_subset(self, model_name):

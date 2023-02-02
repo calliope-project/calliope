@@ -18,7 +18,8 @@ from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope import AttrDict
 import calliope
 
-BASE_DIMS = ["nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"]
+BASE_DIMS = {"carriers", "carrier_tiers", "nodes", "techs"}
+ALL_DIMS = {"nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"}
 
 
 def string_to_dict(yaml_string):
@@ -46,23 +47,47 @@ def model_data():
             dim: ["foo", "bar"]
             if dim != "techs"
             else ["foo", "bar", "foobar", "foobaz"]
-            for dim in BASE_DIMS
+            for dim in ALL_DIMS
         },
         data_vars={
             "node_tech": (
                 ["nodes", "techs"],
-                np.random.choice(a=[np.nan, True], size=(2, 4)),
+                np.random.choice(a=[np.nan, True], p=[0.05, 0.95], size=(2, 4)),
             ),
             "carrier": (
                 ["carrier_tiers", "carriers", "techs"],
-                np.random.choice(a=[np.nan, True], size=(2, 2, 4)),
+                np.random.choice(a=[np.nan, True], p=[0.05, 0.95], size=(2, 2, 4)),
             ),
             "with_inf": (
                 ["nodes", "techs"],
                 [[1.0, np.nan, 1.0, 3], [np.inf, 2.0, True, np.nan]],
             ),
-            "all_inf": (["nodes", "techs"], np.ones((2, 4)) * np.inf),
+            "only_techs": (["techs"], [np.nan, 1, 2, 3]),
+            "all_inf": (["nodes", "techs"], np.ones((2, 4)) * np.inf, {"is_result": 1}),
             "all_nan": (["nodes", "techs"], np.ones((2, 4)) * np.nan),
+            "all_false": (["nodes", "techs"], np.zeros((2, 4)).astype(bool)),
+            "all_true": (["nodes", "techs"], np.ones((2, 4)).astype(bool)),
+            "with_inf_as_bool": (
+                ["nodes", "techs"],
+                [[True, False, True, True], [False, True, True, False]],
+            ),
+            "with_inf_as_bool_and_subset_on_bar_in_nodes": (
+                ["nodes", "techs"],
+                [[False, False, False, False], [False, True, True, False]],
+            ),
+            "with_inf_as_bool_or_subset_on_bar_in_nodes": (
+                ["nodes", "techs"],
+                [[True, False, True, True], [True, True, True, True]],
+            ),
+            "only_techs_as_bool": (["techs"], [False, True, True, True]),
+            "with_inf_and_only_techs_as_bool": (
+                ["nodes", "techs"],
+                [[False, False, True, True], [False, True, True, False]],
+            ),
+            "with_inf_or_only_techs_as_bool": (
+                ["nodes", "techs"],
+                [[True, True, True, True], [False, True, True, True]],
+            ),
             "inheritance": (
                 ["nodes", "techs"],
                 [
@@ -71,14 +96,18 @@ def model_data():
                 ],
             ),
         },
+        attrs={"scenarios": ["foo"]},
     )
+    model_data["only_techs"]
     UpdateObserverDict(
-        initial_dict=AttrDict({"foo": True, "baz": {"bar": "foobar"}}),
+        initial_dict=AttrDict(
+            {"foo": True, "bar": {"foobar": "baz"}, "foobar": {"baz": {"foo": np.inf}}}
+        ),
         name="run_config",
         observer=model_data,
     )
     UpdateObserverDict(
-        initial_dict={"foz": 0}, name="model_config", observer=model_data
+        initial_dict={"a_b": 0, "b_a": [1, 2]}, name="model_config", observer=model_data
     )
     return model_data
 
@@ -748,55 +777,140 @@ class TestParsedConstraintAddSubExprsPerEquationExpr:
 
 
 class TestParsedConstraintGetSubsetAsIndex:
-
     @pytest.mark.parametrize(
         "foreach", (["techs"], ["nodes", "techs"], ["nodes", "techs", "carriers"])
     )
     def test_get_subset_as_index(self, model_data, constraint_obj, foreach):
         constraint_obj.sets = {f"{i}": foreach_ for i, foreach_ in enumerate(foreach)}
         imask = constraint_obj._imask_foreach(model_data)
-        idx = constraint_obj._get_subset_as_index(imask)
-        imask_transposed = imask.transpose(*constraint_obj.sets.values())
+        reduced_imask = imask.sum(set(imask.dims).difference(foreach)) > 0
+        idx = constraint_obj._get_subset_as_index(reduced_imask)
+        imask_transposed = reduced_imask.transpose(*foreach)
         assert isinstance(idx, pd.Index)
-        assert len(idx) == imask.sum()
-        assert all(imask_transposed.loc[i] == 1 for i in idx)  # 1 represents boolean True here
+        for i in imask_transposed.coords.to_index():
+            if i in idx:
+                assert imask_transposed.loc[i]
+            else:
+                assert not imask_transposed.loc[i]
 
 
 class TestParsedConstraintImaskForeach:
-
     @pytest.mark.parametrize(
         "foreach",
+        set(
+            chain.from_iterable(
+                combinations(ALL_DIMS, i) for i in range(1, len(ALL_DIMS))
+            )
+        ),
+    )
+    def test_imask_foreach_all_permutations(self, model_data, constraint_obj, foreach):
+        constraint_obj.sets = {f"{i}": foreach_ for i, foreach_ in enumerate(foreach)}
+        imask = constraint_obj._imask_foreach(model_data)
+
+        assert not BASE_DIMS.difference(imask.dims)
+        assert not set(foreach).difference(imask.dims)
+
+
+class TestParsedConstraintCreateConstraintIndex:
+    def apply_where_to_levels(self, constraint_obj, where_string, level):
+        parsed_where = constraint_obj._parse_where_string({"where": where_string})
+        true_where = constraint_obj._parse_where_string({"where": "True"})
+        if level == "top_level_where":
+            constraint_obj.top_level_where = parsed_where
+        else:
+            constraint_obj.top_level_where = true_where
+        if level == "equation_dict":
+            equation_dict = {"where": [true_where, parsed_where]}
+        else:
+            equation_dict = {"where": [true_where, true_where]}
+        return equation_dict
+
+    @pytest.mark.parametrize(
+        "subsets",
         set(
             chain.from_iterable(
                 combinations(BASE_DIMS, i) for i in range(1, len(BASE_DIMS))
             )
         ),
     )
-    def test_foreach_constraint(self, model_data, constraint_obj, foreach):
-        constraint_obj.sets = {f"{i}": foreach_ for i, foreach_ in enumerate(foreach)}
-        imask = constraint_obj._imask_foreach(model_data)
+    def test_create_constraint_index_no_subset(self, model_data, constraint_obj, subsets):
+        constraint_obj.sets = {i: subset for i, subset in enumerate(subsets)}
+        equation_dict = self.apply_where_to_levels(constraint_obj, "True", "top_level_where")
 
-        assert sorted(imask.dims) == sorted(foreach)
+        expected_imask = constraint_obj._imask_foreach(model_data)
+        expected_imask = expected_imask.sum(BASE_DIMS.difference(subsets)) > 0
+        expected_imask_idx = constraint_obj._get_subset_as_index(expected_imask)
+        imask_idx = constraint_obj._create_constraint_index(model_data, equation_dict)
+        assert imask_idx.symmetric_difference(expected_imask_idx).empty
 
+    @pytest.mark.parametrize("false_location", ["top_level_where", "equation_dict"])
+    def test_create_constraint_index_definitely_empty(
+        self, model_data, constraint_obj, false_location
+    ):
+        constraint_obj.sets = {"node": "nodes", "tech": "techs"}
+        equation_dict = self.apply_where_to_levels(
+            constraint_obj, "False", false_location
+        )
+        imask = constraint_obj._create_constraint_index(model_data, equation_dict)
+        assert imask is None
 
-class TestParsedConstraintCreateValidSubset:
+    @pytest.mark.parametrize(
+        ["where_string", "expected_imasker"],
+        [
+            ("with_inf", "with_inf_as_bool"),
+            ("only_techs", "only_techs_as_bool"),
+            ("with_inf and only_techs", "with_inf_and_only_techs_as_bool"),
+            ("with_inf or only_techs", "with_inf_or_only_techs_as_bool"),
+            ("with_inf or only_techs", "with_inf_or_only_techs_as_bool"),
+            (
+                "with_inf and [bar] in nodes",
+                "with_inf_as_bool_and_subset_on_bar_in_nodes",
+            ),
+        ],
+    )
+    @pytest.mark.parametrize("level_", ["top_level_where", "equation_dict"])
+    def test_create_constraint_index_one_level_where(
+        self, model_data, constraint_obj, where_string, expected_imasker, level_
+    ):
+        constraint_obj.sets = {"node": "nodes", "tech": "techs"}
+        equation_dict = self.apply_where_to_levels(constraint_obj, where_string, level_)
+
+        initial_expected_imask = constraint_obj._imask_foreach(model_data)
+        added_imask = initial_expected_imask & model_data[expected_imasker]
+        expected = constraint_obj._get_subset_as_index(
+            added_imask.sum(BASE_DIMS.difference(["nodes", "techs"])) > 0
+        )
+
+        imask = constraint_obj._create_constraint_index(model_data, equation_dict)
+        assert imask.difference(expected).empty
+
+    @pytest.mark.parametrize("level_", ["top_level_where", "equation_dict"])
+    def test_create_constraint_index_trim_dimension(
+        self, model_data, constraint_obj, level_
+    ):
+        constraint_obj.sets = {"node": "nodes", "tech": "techs"}
+        equation_dict = self.apply_where_to_levels(
+            constraint_obj, "[foo] in carrier_tiers", level_
+        )
+        imask = constraint_obj._create_constraint_index(model_data, equation_dict)
+        assert not imask.names.difference(["nodes", "techs"])
+
     @pytest.mark.skip(reason="subsets.yaml needs updating with constraint syntax")
     @pytest.mark.parametrize("model_name", ("urban_scale", "national_scale", "milp"))
-    def test_create_valid_subset(self, model_name):
+    def test_create_constraint_index(self, model_name):
         model = getattr(calliope.examples, model_name)()
-
 
         for name, constraint_data in subsets_config["constraints"].items():
             model_constraint_obj = parsing.ParsedConstraint(constraint_data, name)
             model_constraint_obj.parse_strings(model._model_data)
 
-            model_constraint_obj._create_valid_subset(model._model_data)
+            model_constraint_obj._create_constraint_index(model._model_data)
             if subset is None:
                 continue
             if "timesteps" in subset.names:
                 subset = subset.droplevel("timesteps").unique()
             # FIXME: simplified comparison since constraint_sets.yaml isn't completely cleaned
             # up to match current representation of set elements
-            assert len(
-                constraint_sets[f"{model_name}.{object_type}.{name}"]
-            ) == len(subset)
+            assert len(constraint_sets[f"{model_name}.{object_type}.{name}"]) == len(
+                subset
+            )
