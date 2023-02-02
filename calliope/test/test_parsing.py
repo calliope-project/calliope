@@ -833,9 +833,13 @@ class TestParsedConstraintCreateConstraintIndex:
             )
         ),
     )
-    def test_create_constraint_index_no_subset(self, model_data, constraint_obj, subsets):
+    def test_create_constraint_index_no_subset(
+        self, model_data, constraint_obj, subsets
+    ):
         constraint_obj.sets = {i: subset for i, subset in enumerate(subsets)}
-        equation_dict = self.apply_where_to_levels(constraint_obj, "True", "top_level_where")
+        equation_dict = self.apply_where_to_levels(
+            constraint_obj, "True", "top_level_where"
+        )
 
         expected_imask = constraint_obj._imask_foreach(model_data)
         expected_imask = expected_imask.sum(BASE_DIMS.difference(subsets)) > 0

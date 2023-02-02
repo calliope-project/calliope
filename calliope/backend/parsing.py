@@ -9,7 +9,7 @@ import xarray as xr
 import pandas as pd
 
 from calliope.backend import equation_parser, subset_parser
-from calliope.exceptions import print_warnings_and_raise_errors
+from calliope.exceptions import print_warnings_and_raise_errors, ModelError
 
 
 def _inheritance(model_data, **kwargs):
@@ -167,10 +167,19 @@ class ParsedConstraint:
     def build_constraint(self, model_data):
         if not self._is_valid or not self._is_active:
             return None
+        constr_index: pd.Series = pd.Series()
         for equation_dict in self.equations:
-            constraint_index = self._create_constraint_index(model_data, equation_dict)
-            if not self._is_valid:
-                return None
+            sub_constraint_index = self._create_constraint_index(
+                model_data, equation_dict
+            )
+            constr_index[sub_constraint_index] = equation_dict["id"]
+
+        duplicated_index_items = constr_index.index[constr_index.index.duplicated()]
+        if not duplicated_index_items.empty:
+            raise ModelError(
+                "Duplicate index items found in constraint "
+                f"`{self.name}`:\n{duplicated_index_items}"
+            )
 
     @staticmethod
     def _foreach_parser() -> pp.ParserElement:
@@ -500,7 +509,9 @@ class ParsedConstraint:
             )
             for where in [self.top_level_where, *equation_dict["where"]]
         ]
-        imask: xr.DataArray = functools.reduce(operator.and_, [imask_foreach, *evaluated_wheres])
+        imask: xr.DataArray = functools.reduce(
+            operator.and_, [imask_foreach, *evaluated_wheres]
+        )
 
         if imask.any():
             # Squeeze out any unwanted dimensions
