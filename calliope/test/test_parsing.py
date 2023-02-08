@@ -112,14 +112,19 @@ def model_data():
     return model_data
 
 
+class ComponentObj(parsing.ParsedBackendComponent):
+    def parse_strings(self) -> None:
+        return super().parse_strings()
+
+
 @pytest.fixture(scope="function")
-def constraint_obj():
+def component_obj():
     setup_string = """
     foreach: [a in A, a1 in A1]
-    equation: "1 == 1"
+    equation: 1 == 1
     """
-    constraint_data = string_to_dict(setup_string)
-    return parsing.ParsedConstraint(constraint_data, "foo")
+    variable_data = string_to_dict(setup_string)
+    return ComponentObj(variable_data, "foo")
 
 
 @pytest.fixture
@@ -138,6 +143,11 @@ def component_parser():
 
 
 @pytest.fixture
+def foreach_parser():
+    return equation_parser.foreach_parser()
+
+
+@pytest.fixture
 def expression_generator():
     def _expression_generator(parse_string, where_string=None):
         expression_dict = {"expression": parse_string}
@@ -149,9 +159,9 @@ def expression_generator():
 
 
 @pytest.fixture
-def parse_where_expression(constraint_obj, expression_parser):
+def parse_where_expression(component_obj, expression_parser):
     def _parse_where_expression(expression_list, **kwargs):
-        return constraint_obj._parse_where_expression(
+        return component_obj._parse_where_expression(
             expression_parser, expression_list, "my_expr", **kwargs
         )
 
@@ -159,10 +169,10 @@ def parse_where_expression(constraint_obj, expression_parser):
 
 
 def parse_components_and_index_items(
-    parser, expression_list, expression_group, constraint_obj
+    parser, expression_list, expression_group, component_obj
 ):
     return {
-        _name: constraint_obj._parse_where_expression(
+        _name: component_obj._parse_where_expression(
             parser, _list, expression_group, _name
         )
         for _name, _list in expression_list.items()
@@ -170,7 +180,7 @@ def parse_components_and_index_items(
 
 
 @pytest.fixture
-def parsed_component_dict(constraint_obj, component_parser):
+def parsed_component_dict(component_obj, component_parser):
     def _parsed_component_dict(n_foo, n_bar):
         foos = ", ".join(
             [f"{{where: foo, expression: '{i + 1}'}}" for i in range(n_foo)]
@@ -186,21 +196,17 @@ def parsed_component_dict(constraint_obj, component_parser):
         components = string_to_dict(setup_string)
 
         return parse_components_and_index_items(
-            component_parser, components, "components", constraint_obj
+            component_parser, components, "components", component_obj
         )
 
     return _parsed_component_dict
 
 
 @pytest.fixture
-def parsed_index_item_dict(constraint_obj, index_item_parser):
+def parsed_index_item_dict(component_obj, index_item_parser):
     def _parsed_component_dict(n_tech1, n_tech2):
-        techs1 = ", ".join(
-            [f"{{where: techs, expression: foo}}" for i in range(n_tech1)]
-        )
-        techs2 = ", ".join(
-            [f"{{where: techs, expression: bar}}" for i in range(n_tech2)]
-        )
+        techs1 = ", ".join(["{where: techs, expression: foo}" for i in range(n_tech1)])
+        techs2 = ", ".join(["{where: techs, expression: bar}" for i in range(n_tech2)])
         setup_string = f"""
         tech1: [{techs1}]
         tech2: [{techs2}]
@@ -209,14 +215,14 @@ def parsed_index_item_dict(constraint_obj, index_item_parser):
         index_items = string_to_dict(setup_string)
 
         return parse_components_and_index_items(
-            index_item_parser, index_items, "index_items", constraint_obj
+            index_item_parser, index_items, "index_items", component_obj
         )
 
     return _parsed_component_dict
 
 
 @pytest.fixture
-def parsed_idx_item_component_dict(constraint_obj, index_item_parser, component_parser):
+def parsed_idx_item_component_dict(component_obj, index_item_parser, component_parser):
     string_dict = {
         "components": """
         foo:
@@ -247,105 +253,26 @@ def parsed_idx_item_component_dict(constraint_obj, index_item_parser, component_
     parser = {"index_items": index_item_parser, "components": component_parser}
     return (
         parse_components_and_index_items(
-            parser[expr], string_to_dict(string_dict[expr]), expr, constraint_obj
+            parser[expr], string_to_dict(string_dict[expr]), expr, component_obj
         )
         for expr in ["components", "index_items"]
     )
 
 
 class TestParsedConstraintForEach:
-    @pytest.fixture
-    def foreach_parser(self, constraint_obj):
-        return constraint_obj._foreach_parser()
-
-    @pytest.fixture(
-        params=[
-            ("[a in A]", {"a": "A"}, []),
-            ("[a in A, b in A]", {"a": "A", "b": "A"}, []),
-            ("[a in A, a1 in A1]", {"a": "A", "a1": "A1"}, []),
-            ("[a in A, a_2 in A_2]", {"a": "A", "a_2": "A_2"}, ["A_2"]),
-            (
-                "[a in A, a_2 in A_2, foo in foos]",
-                {"a": "A", "a_2": "A_2", "foo": "foos"},
-                ["A_2", "foos"],
-            ),
-        ]
-    )
-    def foreach_constraint_data(self, request, dummy_model_data):
-        foreach_string, expected_sets, missing_sets = request.param
-        setup_string = f"""
-        foreach: {foreach_string}
-        where: []
-        equation: foo == 0
-        """
-        constraint_obj = parsing.ParsedConstraint(string_to_dict(setup_string), "foo")
-        sets = constraint_obj._get_sets_from_foreach(dummy_model_data.dims)
-        return (
-            constraint_obj,
-            sets,
-            expected_sets,
-            missing_sets,
-        )
-
     @pytest.mark.parametrize(
-        ("input_string", "expected_result"),
+        ["foreach_string", "expected"],
         [
-            ("a in A", ["a", "A"]),
-            ("a1 in A1", ["a1", "A1"]),
-            ("a_1 in A_1", ["a_1", "A_1"]),
-            # TODO: decide if this should be allowed:
-            ("techs in techs", ["techs", "techs"]),
+            (["a in A"], {"a": "A"}),
+            (["a in A", "b in A"], {"a": "A", "b": "A"}),
+            (["a in A", "a1 in A1"], {"a": "A", "a1": "A1"}),
+            (["a in A", "a_2 in A_2"], {"a": "A", "a_2": "A_2"}),
+            (["a in A", "a_2 in A_2", "1 in 2"], {"a": "A", "a_2": "A_2"}),
         ],
     )
-    def test_parse_foreach(self, foreach_parser, input_string, expected_result):
-        parsed_string = foreach_parser.parse_string(input_string, parse_all=True)
-        assert parsed_string.as_dict() == {
-            "set_iterator": expected_result[0],
-            "set_name": expected_result[1],
-        }
-
-    @pytest.mark.parametrize(
-        "input_string",
-        [
-            "1 in foo",  # number as iterator
-            "foo in 1",  # number as set name
-            "1 in 2",  # numbers for both
-            "in B",  # missing iterator
-            "in",  # missing iterator and set name
-            "foo bar",  # missing "in"
-            "foo.bar in B",  # unallowed character in iterator .
-            "a in foo.bar",  # unallowed character in set name .
-            "ainA",  # missing whitespace
-            "1a in 2b",  # invalid python identifiers
-            "a in A b in B",  # missing deliminator between two set items
-            "a in in A",  # duplicated "in"
-            "a in in"  # Cannot have "in" as a set iterator/name
-            "in in A"  # Cannot have "in" as a set iterator/name
-            "in in in",  # Cannot have "in" as a set iterator/name
-        ],
-    )
-    def test_parse_foreach_fail(self, foreach_parser, input_string):
-        with pytest.raises(pp.ParseException):
-            foreach_parser.parse_string(input_string, parse_all=True)
-
-    def test_get_sets_from_foreach(self, foreach_constraint_data):
-        (
-            _,
-            sets,
-            expected_sets,
-            _,
-        ) = foreach_constraint_data
-        assert sets == expected_sets
-
-    def test_get_sets_from_foreach_unknown_set(self, foreach_constraint_data):
-        constraint_obj, _, _, missing_sets = foreach_constraint_data
-
-        if len(missing_sets) == 0:
-            assert not constraint_obj._errors
-        else:
-            assert check_error_or_warning(
-                constraint_obj._errors, "not a valid model set name."
-            )
+    def test_get_sets_from_foreach(self, component_obj, foreach_string, expected):
+        sets = component_obj._get_sets_from_foreach(foreach_string)
+        assert sets == expected
 
     def test_get_sets_from_foreach_duplicate_iterators(self):
         setup_string = """
@@ -353,23 +280,23 @@ class TestParsedConstraintForEach:
         where: []
         equation: foo == 0
         """
-        constraint_obj = parsing.ParsedConstraint(string_to_dict(setup_string), "foo")
-        constraint_obj._get_sets_from_foreach(["A", "A1"])
+        component_obj = ComponentObj(string_to_dict(setup_string), "foo")
+        component_obj._get_sets_from_foreach(component_obj._unparsed["foreach"])
         assert check_error_or_warning(
-            constraint_obj._errors,
+            component_obj._errors,
             "(foreach, a in A1): Found duplicate set iterator `a`",
         )
 
 
-class TestParsedConstraintAddError:
-    def test_add_error_no_errors(self, constraint_obj):
-        assert constraint_obj._is_valid
-        assert not constraint_obj._errors
+class TestParsedConstraintAddParseError:
+    def test_add_parse_error_no_errors(self, component_obj):
+        assert component_obj._is_valid
+        assert not component_obj._errors
 
-    def test_add_error(self, constraint_obj):
-        constraint_obj._add_error("foo", "bar", "foobar")
-        assert not constraint_obj._is_valid
-        assert constraint_obj._errors == {"(bar, foo): foobar"}
+    def test_add_parse_error(self, component_obj):
+        component_obj._add_parse_error("foo", "bar", "foobar")
+        assert not component_obj._is_valid
+        assert component_obj._errors == {"(bar, foo): foobar"}
 
 
 class TestParsedConstraintParseString:
@@ -381,21 +308,21 @@ class TestParsedConstraintParseString:
             "-1**foo + dummy_func_1(2) + baz[a, a1] >= foobar",
         ],
     )
-    def test_parse_string(self, constraint_obj, expression_parser, parse_string):
-        parsed_ = constraint_obj._parse_string(expression_parser, parse_string, "foo")
+    def test_parse_string(self, component_obj, expression_parser, parse_string):
+        parsed_ = component_obj._parse_string(expression_parser, parse_string, "foo")
         assert isinstance(parsed_, pp.ParseResults)
-        assert not constraint_obj._errors
+        assert not component_obj._errors
 
     @pytest.mark.parametrize(
         "parse_string",
         ["foo bar == 1", "foo - $bar + baz[foobar] = 1", "1foo == 1", "_foo >= foobar"],
     )
     def test_parse_string_malformed(
-        self, constraint_obj, expression_parser, parse_string
+        self, component_obj, expression_parser, parse_string
     ):
-        parsed_ = constraint_obj._parse_string(expression_parser, parse_string, "foo")
+        parsed_ = component_obj._parse_string(expression_parser, parse_string, "foo")
         assert parsed_ is None
-        assert check_error_or_warning(constraint_obj._errors, "Expected")
+        assert check_error_or_warning(component_obj._errors, "Expected")
 
 
 class TestParsedConstraintParseWhereExpression:
@@ -413,7 +340,7 @@ class TestParsedConstraintParseWhereExpression:
     )
     def test_parse_where_expression(
         self,
-        constraint_obj,
+        component_obj,
         expression_parser,
         expression_generator,
         parse_string,
@@ -422,7 +349,7 @@ class TestParsedConstraintParseWhereExpression:
     ):
 
         expression_dict = expression_generator(parse_string, where_string)
-        parsed_list = constraint_obj._parse_where_expression(
+        parsed_list = component_obj._parse_where_expression(
             expression_parser, [expression_dict], "foo"
         )
 
@@ -456,23 +383,23 @@ class TestParsedConstraintParseWhereExpression:
         expression_dict = expression_generator("foo == 1", "bar")
         parsed_list = parse_where_expression([expression_dict] * n_dicts)
         for expr_num in range(n_dicts):
-            assert parsed_list[expr_num]["id"] == expr_num
+            assert parsed_list[expr_num]["id"] == (expr_num,)
 
     def test_parse_where_expression_error(
-        self, constraint_obj, parse_where_expression, expression_generator
+        self, component_obj, parse_where_expression, expression_generator
     ):
         expression_dict = expression_generator("foo = 1")
         parsed_list = parse_where_expression([expression_dict])
 
         assert parsed_list[0]["expression"] is None
         assert check_error_or_warning(
-            constraint_obj._errors, "(my_expr, foo = 1): Expected"
+            component_obj._errors, "(my_expr, foo = 1): Expected"
         )
 
     @pytest.mark.parametrize("error_position", [0, 1])
     def test_parse_where_expression_one_error(
         self,
-        constraint_obj,
+        component_obj,
         parse_where_expression,
         expression_generator,
         error_position,
@@ -487,13 +414,13 @@ class TestParsedConstraintParseWhereExpression:
             parsed_list[error_position - 1]["expression"], pp.ParseResults
         )
 
-        assert len(constraint_obj._errors) == 1
+        assert len(component_obj._errors) == 1
         assert check_error_or_warning(
-            constraint_obj._errors, "(my_expr, foo = 1): Expected"
+            component_obj._errors, "(my_expr, foo = 1): Expected"
         )
 
     def test_parse_where_expression_two_error(
-        self, constraint_obj, parse_where_expression, expression_generator
+        self, component_obj, parse_where_expression, expression_generator
     ):
         expression_list = [
             expression_generator("foo = 1"),
@@ -503,9 +430,9 @@ class TestParsedConstraintParseWhereExpression:
 
         assert all(parsed_list[i]["expression"] is None for i in range(2))
 
-        assert len(constraint_obj._errors) == 2
+        assert len(component_obj._errors) == 2
         assert check_error_or_warning(
-            constraint_obj._errors,
+            component_obj._errors,
             ["(my_expr, foo = 1): Expected", "(my_expr, foo = 2): Expected"],
         )
 
@@ -523,9 +450,9 @@ class TestParsingEquationFindItemsInExpression:
             "($foo - $bar) * ($foo + $bar) <= 2",
         ],
     )
-    def test_find_components(self, expression_parser, constraint_obj, parse_string):
+    def test_find_components(self, expression_parser, component_obj, parse_string):
         parsed = expression_parser.parse_string(parse_string, parse_all=True)
-        found_components = constraint_obj._find_items_in_expression(
+        found_components = component_obj._find_items_in_expression(
             [parsed[0].lhs, parsed[0].rhs],
             equation_parser.EvalComponent,
             (equation_parser.EvalOperatorOperand),
@@ -544,9 +471,9 @@ class TestParsingEquationFindItemsInExpression:
             "(foo[techs=tech1] - bar[techs=tech2]) * (foo[techs=tech1] + bar[techs=tech2]) <= 2",
         ],
     )
-    def test_find_index_items(self, expression_parser, constraint_obj, parse_string):
+    def test_find_index_items(self, expression_parser, component_obj, parse_string):
         parsed = expression_parser.parse_string(parse_string, parse_all=True)
-        found_index_items = constraint_obj._find_items_in_expression(
+        found_index_items = component_obj._find_items_in_expression(
             [parsed[0].lhs, parsed[0].rhs],
             equation_parser.EvalIndexItems,
             (
@@ -562,7 +489,7 @@ class TestParsedConstraintGetExpressionGroupProduct:
     @pytest.mark.parametrize("n_bars", [0, 1, 2])
     def test_get_expression_group_product_components(
         self,
-        constraint_obj,
+        component_obj,
         parsed_component_dict,
         parse_where_expression,
         expression_generator,
@@ -571,27 +498,27 @@ class TestParsedConstraintGetExpressionGroupProduct:
     ):
         equation_list = parse_where_expression([expression_generator("$foo == $bar")])
         component_product = list(
-            constraint_obj._get_expression_group_product(
+            component_obj._get_expression_group_product(
                 equation_list[0], parsed_component_dict(n_foos, n_bars), "components"
             )
         )
         assert len(component_product) == n_foos * n_bars
-        assert not constraint_obj._errors
+        assert not component_obj._errors
 
     def test_get_expression_group_product_missing_component(
         self,
-        constraint_obj,
+        component_obj,
         parse_where_expression,
         parsed_component_dict,
         expression_generator,
     ):
         equation_ = parse_where_expression([expression_generator("$foo == $bar + $ba")])
-        component_product = constraint_obj._get_expression_group_product(
+        component_product = component_obj._get_expression_group_product(
             equation_[0], parsed_component_dict(1, 2), "components"
         )
         assert len(list(component_product)) == 2
         assert check_error_or_warning(
-            constraint_obj._errors, "Undefined components found in equation: {'ba'}"
+            component_obj._errors, "Undefined components found in equation: {'ba'}"
         )
 
     @pytest.mark.parametrize(
@@ -600,7 +527,7 @@ class TestParsedConstraintGetExpressionGroupProduct:
     )
     def test_add_exprs_to_equation_data_multi(
         self,
-        constraint_obj,
+        component_obj,
         parse_where_expression,
         parsed_component_dict,
         expression_generator,
@@ -610,11 +537,11 @@ class TestParsedConstraintGetExpressionGroupProduct:
         component_dict = parsed_component_dict(2, 2)
 
         equation_dict = parse_where_expression([expression_generator(equation_)])[0]
-        component_product = constraint_obj._get_expression_group_product(
+        component_product = component_obj._get_expression_group_product(
             equation_dict, component_dict, "components"
         )
         combined_expression_list = [
-            constraint_obj._add_exprs_to_equation_data(
+            component_obj._add_exprs_to_equation_data(
                 equation_dict, component_, "components"
             )
             for component_ in component_product
@@ -628,9 +555,7 @@ class TestParsedConstraintGetExpressionGroupProduct:
                 ["foo", "bar"]
             )
             assert (
-                constraint_eq["expression"][0].eval(
-                    component_expressions=component_sub_dict
-                )
+                constraint_eq["expression"][0].eval(component_dict=component_sub_dict)
                 is expected
             )
 
@@ -638,7 +563,7 @@ class TestParsedConstraintGetExpressionGroupProduct:
     @pytest.mark.parametrize("n_2", [0, 1, 2])
     def test_get_expression_group_product_index_items(
         self,
-        constraint_obj,
+        component_obj,
         parsed_index_item_dict,
         parse_where_expression,
         expression_generator,
@@ -649,16 +574,16 @@ class TestParsedConstraintGetExpressionGroupProduct:
             [expression_generator("foo[techs=tech1] == bar[techs=tech2]")]
         )
         product_ = list(
-            constraint_obj._get_expression_group_product(
+            component_obj._get_expression_group_product(
                 equation_[0], parsed_index_item_dict(n_1, n_2), "index_items"
             )
         )
         assert len(product_) == n_1 * n_2
-        assert not constraint_obj._errors
+        assert not component_obj._errors
 
     def test_get_expression_group_product_missing_index_items(
         self,
-        constraint_obj,
+        component_obj,
         parse_where_expression,
         parsed_index_item_dict,
         expression_generator,
@@ -666,12 +591,12 @@ class TestParsedConstraintGetExpressionGroupProduct:
         equation_ = parse_where_expression(
             [expression_generator("foo[techs=tech1] == bar[techs=tech2, nodes=node1]")]
         )
-        index_item_product = constraint_obj._get_expression_group_product(
+        index_item_product = component_obj._get_expression_group_product(
             equation_[0], parsed_index_item_dict(1, 2), "index_items"
         )
         assert len(list(index_item_product)) == 2
         assert check_error_or_warning(
-            constraint_obj._errors,
+            component_obj._errors,
             "Undefined index_items found in equation: {'node1'}",
         )
 
@@ -683,7 +608,7 @@ class TestParsedConstraintAddExprsToEquationData:
     )
     def test_add_exprs_to_equation_data(
         self,
-        constraint_obj,
+        component_obj,
         parse_where_expression,
         parsed_component_dict,
         expression_generator,
@@ -694,14 +619,14 @@ class TestParsedConstraintAddExprsToEquationData:
         component_product = [component_dict["foo"][0], component_dict["bar"][0]]
         equation_list = parse_where_expression([expression_generator(equation_)])[0]
 
-        combined_expression_dict = constraint_obj._add_exprs_to_equation_data(
+        combined_expression_dict = component_obj._add_exprs_to_equation_data(
             equation_list, component_product, "components"
         )
         component_sub_dict = combined_expression_dict["components"]
         assert not set(component_sub_dict.keys()).symmetric_difference(["foo", "bar"])
         assert (
             combined_expression_dict["expression"][0].eval(
-                component_expressions=component_sub_dict
+                component_dict=component_sub_dict
             )
             is expected
         )
@@ -710,7 +635,7 @@ class TestParsedConstraintAddExprsToEquationData:
 class TestParsedConstraintAddSubExprsPerEquationExpr:
     def test_add_sub_exprs_per_equation_expr_components(
         self,
-        constraint_obj,
+        component_obj,
         parse_where_expression,
         parsed_component_dict,
         expression_generator,
@@ -724,7 +649,7 @@ class TestParsedConstraintAddSubExprsPerEquationExpr:
             ]
         )
 
-        final_equation_list = constraint_obj._add_sub_exprs_per_equation_expr(
+        final_equation_list = component_obj._add_sub_exprs_per_equation_expr(
             equations=equation_list,
             expression_dict=parsed_component_dict(3, 2),
             expression_group="components",
@@ -747,7 +672,7 @@ class TestParsedConstraintAddSubExprsPerEquationExpr:
     )
     def test_add_sub_exprs_per_equation_expr_components_and_index_items(
         self,
-        constraint_obj,
+        component_obj,
         parse_where_expression,
         parsed_idx_item_component_dict,
         expression_generator,
@@ -756,13 +681,13 @@ class TestParsedConstraintAddSubExprsPerEquationExpr:
     ):
         equation_list = parse_where_expression([expression_generator(eq_string)])
         components, index_items = parsed_idx_item_component_dict
-        component_equation_list = constraint_obj._add_sub_exprs_per_equation_expr(
+        component_equation_list = component_obj._add_sub_exprs_per_equation_expr(
             equations=equation_list,
             expression_dict=components,
             expression_group="components",
         )
         index_item_and_component_equation_list = (
-            constraint_obj._add_sub_exprs_per_equation_expr(
+            component_obj._add_sub_exprs_per_equation_expr(
                 equations=component_equation_list,
                 expression_dict=index_items,
                 expression_group="index_items",
@@ -780,11 +705,11 @@ class TestParsedConstraintGetSubsetAsIndex:
     @pytest.mark.parametrize(
         "foreach", (["techs"], ["nodes", "techs"], ["nodes", "techs", "carriers"])
     )
-    def test_get_subset_as_index(self, model_data, constraint_obj, foreach):
-        constraint_obj.sets = {f"{i}": foreach_ for i, foreach_ in enumerate(foreach)}
-        imask = constraint_obj._imask_foreach(model_data)
+    def test_get_subset_as_index(self, model_data, component_obj, foreach):
+        component_obj.sets = {f"{i}": foreach_ for i, foreach_ in enumerate(foreach)}
+        imask = component_obj._imask_foreach(model_data)
         reduced_imask = imask.sum(set(imask.dims).difference(foreach)) > 0
-        idx = constraint_obj._get_subset_as_index(reduced_imask)
+        idx = component_obj._get_subset_as_index(reduced_imask)
         imask_transposed = reduced_imask.transpose(*foreach)
         assert isinstance(idx, pd.Index)
         for i in imask_transposed.coords.to_index():
@@ -803,22 +728,22 @@ class TestParsedConstraintImaskForeach:
             )
         ),
     )
-    def test_imask_foreach_all_permutations(self, model_data, constraint_obj, foreach):
-        constraint_obj.sets = {f"{i}": foreach_ for i, foreach_ in enumerate(foreach)}
-        imask = constraint_obj._imask_foreach(model_data)
+    def test_imask_foreach_all_permutations(self, model_data, component_obj, foreach):
+        component_obj.sets = {f"{i}": foreach_ for i, foreach_ in enumerate(foreach)}
+        imask = component_obj._imask_foreach(model_data)
 
         assert not BASE_DIMS.difference(imask.dims)
         assert not set(foreach).difference(imask.dims)
 
 
 class TestParsedConstraintCreateConstraintIndex:
-    def apply_where_to_levels(self, constraint_obj, where_string, level):
-        parsed_where = constraint_obj._parse_where_string({"where": where_string})
-        true_where = constraint_obj._parse_where_string({"where": "True"})
+    def apply_where_to_levels(self, component_obj, where_string, level):
+        parsed_where = component_obj._parse_where_string({"where": where_string})
+        true_where = component_obj._parse_where_string({"where": "True"})
         if level == "top_level_where":
-            constraint_obj.top_level_where = parsed_where
+            component_obj.top_level_where = parsed_where
         else:
-            constraint_obj.top_level_where = true_where
+            component_obj.top_level_where = true_where
         if level == "equation_dict":
             equation_dict = {"where": [true_where, parsed_where]}
         else:
@@ -833,29 +758,33 @@ class TestParsedConstraintCreateConstraintIndex:
             )
         ),
     )
-    def test_create_constraint_index_no_subset(
-        self, model_data, constraint_obj, subsets
+    def test_create_subset_from_where_no_subset(
+        self, model_data, component_obj, subsets
     ):
-        constraint_obj.sets = {i: subset for i, subset in enumerate(subsets)}
+        component_obj.sets = {i: subset for i, subset in enumerate(subsets)}
         equation_dict = self.apply_where_to_levels(
-            constraint_obj, "True", "top_level_where"
+            component_obj, "True", "top_level_where"
         )
 
-        expected_imask = constraint_obj._imask_foreach(model_data)
+        expected_imask = component_obj._imask_foreach(model_data)
         expected_imask = expected_imask.sum(BASE_DIMS.difference(subsets)) > 0
-        expected_imask_idx = constraint_obj._get_subset_as_index(expected_imask)
-        imask_idx = constraint_obj._create_constraint_index(model_data, equation_dict)
+        expected_imask_idx = component_obj._get_subset_as_index(expected_imask)
+        imask_idx = component_obj._create_subset_from_where(
+            model_data, equation_dict["where"]
+        )
         assert imask_idx.symmetric_difference(expected_imask_idx).empty
 
     @pytest.mark.parametrize("false_location", ["top_level_where", "equation_dict"])
-    def test_create_constraint_index_definitely_empty(
-        self, model_data, constraint_obj, false_location
+    def test_create_subset_from_where_definitely_empty(
+        self, model_data, component_obj, false_location
     ):
-        constraint_obj.sets = {"node": "nodes", "tech": "techs"}
+        component_obj.sets = {"node": "nodes", "tech": "techs"}
         equation_dict = self.apply_where_to_levels(
-            constraint_obj, "False", false_location
+            component_obj, "False", false_location
         )
-        imask = constraint_obj._create_constraint_index(model_data, equation_dict)
+        imask = component_obj._create_subset_from_where(
+            model_data, equation_dict["where"]
+        )
         assert imask is None
 
     @pytest.mark.parametrize(
@@ -873,42 +802,46 @@ class TestParsedConstraintCreateConstraintIndex:
         ],
     )
     @pytest.mark.parametrize("level_", ["top_level_where", "equation_dict"])
-    def test_create_constraint_index_one_level_where(
-        self, model_data, constraint_obj, where_string, expected_imasker, level_
+    def test_create_subset_from_where_one_level_where(
+        self, model_data, component_obj, where_string, expected_imasker, level_
     ):
-        constraint_obj.sets = {"node": "nodes", "tech": "techs"}
-        equation_dict = self.apply_where_to_levels(constraint_obj, where_string, level_)
+        component_obj.sets = {"node": "nodes", "tech": "techs"}
+        equation_dict = self.apply_where_to_levels(component_obj, where_string, level_)
 
-        initial_expected_imask = constraint_obj._imask_foreach(model_data)
+        initial_expected_imask = component_obj._imask_foreach(model_data)
         added_imask = initial_expected_imask & model_data[expected_imasker]
-        expected = constraint_obj._get_subset_as_index(
+        expected = component_obj._get_subset_as_index(
             added_imask.sum(BASE_DIMS.difference(["nodes", "techs"])) > 0
         )
 
-        imask = constraint_obj._create_constraint_index(model_data, equation_dict)
+        imask = component_obj._create_subset_from_where(
+            model_data, equation_dict["where"]
+        )
         assert imask.difference(expected).empty
 
     @pytest.mark.parametrize("level_", ["top_level_where", "equation_dict"])
-    def test_create_constraint_index_trim_dimension(
-        self, model_data, constraint_obj, level_
+    def test_create_subset_from_where_trim_dimension(
+        self, model_data, component_obj, level_
     ):
-        constraint_obj.sets = {"node": "nodes", "tech": "techs"}
+        component_obj.sets = {"node": "nodes", "tech": "techs"}
         equation_dict = self.apply_where_to_levels(
-            constraint_obj, "[foo] in carrier_tiers", level_
+            component_obj, "[foo] in carrier_tiers", level_
         )
-        imask = constraint_obj._create_constraint_index(model_data, equation_dict)
+        imask = component_obj._create_subset_from_where(
+            model_data, equation_dict["where"]
+        )
         assert not imask.names.difference(["nodes", "techs"])
 
     @pytest.mark.skip(reason="subsets.yaml needs updating with constraint syntax")
     @pytest.mark.parametrize("model_name", ("urban_scale", "national_scale", "milp"))
-    def test_create_constraint_index(self, model_name):
+    def test_create_subset_from_where(self, model_name):
         model = getattr(calliope.examples, model_name)()
 
         for name, constraint_data in subsets_config["constraints"].items():
-            model_constraint_obj = parsing.ParsedConstraint(constraint_data, name)
-            model_constraint_obj.parse_strings(model._model_data)
+            model_component_obj = ComponentObj(constraint_data, name)
+            model_component_obj.parse_strings(model._model_data)
 
-            model_constraint_obj._create_constraint_index(model._model_data)
+            model_component_obj._create_subset_from_where(model._model_data)
             if subset is None:
                 continue
             if "timesteps" in subset.names:
