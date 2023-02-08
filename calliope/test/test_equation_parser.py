@@ -7,6 +7,7 @@ import pyparsing
 
 from calliope.backend import equation_parser
 from calliope.test.common.util import check_error_or_warning
+from calliope import exceptions
 
 
 COMPONENT_CLASSIFIER = equation_parser.COMPONENT_CLASSIFIER
@@ -101,10 +102,12 @@ def helper_function_one_parser_in_args(identifier, request):
 def eval_kwargs():
     return {
         "helper_func_dict": HELPER_FUNCS,
-        "test": True,
-        "errors": [],
+        "as_dict": True,
         "iterator_dict": {},
         "index_item_dict": {},
+        "component_dict": {},
+        "sets": {"bar": "bars", "foo": "foos"},
+        "equation_name": "foobar",
     }
 
 
@@ -187,7 +190,7 @@ class TestEquationParserElements:
         if parser == "identifier":
             assert parsed_[0] == string_val
         elif parser == "unindexed_param":
-            assert parsed_[0].eval() == {"param_or_var_name": string_val}
+            assert parsed_[0].eval(as_dict=True) == {"param_or_var_name": string_val}
 
     @pytest.mark.parametrize(
         "string_val",
@@ -219,16 +222,16 @@ class TestEquationParserElements:
     @pytest.mark.parametrize(
         ["string_val", "expected"],
         [
-            ("foo[bar]", ["foo", ["bar"]]),
-            ("Foo_Bar_1[foo, bar]", ["Foo_Bar_1", ["foo", "bar"]]),
-            ("foo[foo,bar]", ["foo", ["foo", "bar"]]),
-            ("foo[ foo ,  bar  ]", ["foo", ["foo", "bar"]]),
-            ("foo[techs=tech]", ["foo", [{"tech": "techs"}]]),
-            ("foo[techs=tech, bar]", ["foo", [{"tech": "techs"}, "bar"]]),
-            ("foo[bar, techs=tech]", ["foo", ["bar", {"tech": "techs"}]]),
+            ("foo[bar]", ["foo", {"bar": "bars"}]),
+            ("Foo_Bar_1[foo, bar]", ["Foo_Bar_1", {"foo": "foos", "bar": "bars"}]),
+            ("foo[foo,bar]", ["foo", {"foo": "foos", "bar": "bars"}]),
+            ("foo[ foo ,  bar  ]", ["foo", {"foo": "foos", "bar": "bars"}]),
+            ("foo[techs=tech]", ["foo", {"tech": "techs"}]),
+            ("foo[techs=tech, bar]", ["foo", {"tech": "techs", "bar": "bars"}]),
+            ("foo[bar, techs=tech]", ["foo", {"bar": "bars", "tech": "techs"}]),
             (
                 "foo[techs=tech, nodes=node]",
-                ["foo", [{"tech": "techs"}, {"node": "nodes"}]],
+                ["foo", {"tech": "techs", "node": "nodes"}],
             ),
         ],
     )
@@ -284,7 +287,7 @@ class TestEquationParserElements:
     )
     def test_component(self, component, string_val, expected):
         parsed_ = component.parse_string(string_val, parse_all=True)
-        assert parsed_[0].eval() == {"component": expected}
+        assert parsed_[0].eval(as_dict=True) == {"component": expected}
 
     @pytest.mark.parametrize(
         "string_val",
@@ -354,7 +357,10 @@ class TestEquationParserElements:
                 "dummy_func_1(1, foo[bar])",
                 {
                     "function": "dummy_func_1",
-                    "args": [1, {"param_or_var_name": "foo", "dimensions": ["bar"]}],
+                    "args": [
+                        1,
+                        {"param_or_var_name": "foo", "dimensions": {"bar": "bars"}},
+                    ],
                     "kwargs": {},
                 },
             ),
@@ -381,7 +387,9 @@ class TestEquationParserElements:
                 "dummy_func_1(foo[bar])",
                 {
                     "function": "dummy_func_1",
-                    "args": [{"param_or_var_name": "foo", "dimensions": ["bar"]}],
+                    "args": [
+                        {"param_or_var_name": "foo", "dimensions": {"bar": "bars"}}
+                    ],
                     "kwargs": {},
                 },
             ),
@@ -391,7 +399,7 @@ class TestEquationParserElements:
                     "function": "dummy_func_1",
                     "args": [1],
                     "kwargs": {
-                        "x": {"param_or_var_name": "foo", "dimensions": ["bar"]}
+                        "x": {"param_or_var_name": "foo", "dimensions": {"bar": "bars"}}
                     },
                 },
             ),
@@ -419,7 +427,10 @@ class TestEquationParserElements:
                         {
                             "function": "dummy_func_2",
                             "args": [
-                                {"param_or_var_name": "foo", "dimensions": ["bar"]}
+                                {
+                                    "param_or_var_name": "foo",
+                                    "dimensions": {"bar": "bars"},
+                                }
                             ],
                             "kwargs": {"y": {"component": "foo"}},
                         }
@@ -437,11 +448,17 @@ class TestEquationParserElements:
                             "function": "dummy_func_2",
                             "args": [
                                 1,
-                                {"param_or_var_name": "foo", "dimensions": ["bar"]},
+                                {
+                                    "param_or_var_name": "foo",
+                                    "dimensions": {"bar": "bars"},
+                                },
                             ],
                             "kwargs": {},
                         },
-                        {"param_or_var_name": "foo", "dimensions": ["foo", "bar"]},
+                        {
+                            "param_or_var_name": "foo",
+                            "dimensions": {"foo": "foos", "bar": "bars"},
+                        },
                         {"component": "foo"},
                         1,
                         {"param_or_var_name": "bar"},
@@ -469,10 +486,11 @@ class TestEquationParserElements:
     )
     def test_missing_function(self, string_val, helper_function, eval_kwargs):
         parsed_ = helper_function.parse_string(string_val, parse_all=True)
-        error_catcher = []
-        eval_kwargs["errors"] = error_catcher
-        parsed_[0].eval(**eval_kwargs)
-        assert check_error_or_warning(error_catcher, "Invalid helper function defined")
+
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            parsed_[0].eval(**eval_kwargs)
+
+        assert check_error_or_warning(excinfo, "Invalid helper function defined")
 
     @pytest.mark.parametrize(
         "string_val",
@@ -625,14 +643,17 @@ class TestEquationParserComparison:
         "2**2": 4,
         ".inf": np.inf,
         "param_1": {"param_or_var_name": "param_1"},
-        "foo[foo, bar]": {"param_or_var_name": "foo", "dimensions": ["foo", "bar"]},
-        "foo[bar]": {"param_or_var_name": "foo", "dimensions": ["bar"]},
+        "foo[foo, bar]": {
+            "param_or_var_name": "foo",
+            "dimensions": {"foo": "foos", "bar": "bars"},
+        },
+        "foo[bar]": {"param_or_var_name": "foo", "dimensions": {"bar": "bars"}},
         "$foo": {"component": "foo"},
         "dummy_func_1(1, foo[bar], $foo, x=dummy_func_2(1, y=2), foo=bar)": {
             "function": "dummy_func_1",
             "args": [
                 1,
-                {"param_or_var_name": "foo", "dimensions": ["bar"]},
+                {"param_or_var_name": "foo", "dimensions": {"bar": "bars"}},
                 {"component": "foo"},
             ],
             "kwargs": {
