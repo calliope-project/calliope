@@ -10,9 +10,15 @@ Implements the core Model class.
 """
 import logging
 import warnings
+import textwrap
+from typing import TypedDict, Callable, TypeVar, Union, Optional
+from contextlib import contextmanager
+import os
 
 import xarray as xr
+import pandas as pd
 
+import calliope
 from calliope.postprocess import results as postprocess_results
 from calliope.core import io
 from calliope.preprocess import (
@@ -25,8 +31,13 @@ from calliope.core.util.logging import log_time
 from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
+from calliope.backend.parsing import ParsedConstraint, ParsedVariable, ParsedObjective
+from calliope.backend import backends
 
 logger = logging.getLogger(__name__)
+
+
+T = TypeVar("T", bound=Union[ParsedVariable, ParsedConstraint, ParsedObjective])
 
 
 def read_netcdf(path):
@@ -44,7 +55,25 @@ class Model(object):
 
     """
 
-    def __init__(self, config, model_data=None, debug=False, *args, **kwargs):
+    BACKENDS: dict[str, type[backends.BackendModel]] = {
+        "pyomo": backends.PyomoBackendModel
+    }
+
+    DEFAULTS = AttrDict.from_yaml(
+        os.path.join(os.path.dirname(calliope.__file__), "config", "defaults.yaml")
+    )
+    BACKEND_COMPONENTS = AttrDict.from_yaml(
+        os.path.join(os.path.dirname(calliope.__file__), "config", "constraints.yaml")
+    )
+
+    def __init__(
+        self,
+        config: Optional[Union[str, dict]],
+        model_data: Optional[xr.Dataset] = None,
+        debug: bool = False,
+        *args,
+        **kwargs,
+    ):
         """
         Returns a new Model from either the path to a YAML model
         configuration file or a dict fully specifying the model.
@@ -61,7 +90,7 @@ class Model(object):
             a model previously saved to a NetCDF file.
 
         """
-        self._timings = {}
+        self._timings: dict = {}
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
         log_time(logger, self._timings, "model_creation", comment="Model: initialising")
@@ -81,6 +110,26 @@ class Model(object):
                 "Input configuration must either be a string or a dictionary."
             )
         self._check_future_deprecation_warnings()
+        parsed_variables = self._generate_parsing_components(
+            unparsed=self.component_config["variables"],
+            component_type="variables",
+            parse_class=ParsedVariable,
+        )
+        parsed_constraints = self._generate_parsing_components(
+            unparsed=self.component_config["constraints"],
+            component_type="constraints",
+            parse_class=ParsedConstraint,
+        )
+        parsed_objectives = self._generate_parsing_components(
+            unparsed=self.component_config["objectives"],
+            component_type="objectives",
+            parse_class=ParsedObjective,
+        )
+        self.parsed_components: backends.ParsedComponents = {
+            "variables": parsed_variables,
+            "constraints": parsed_constraints,
+            "objectives": parsed_objectives,
+        }
 
     def _init_from_model_run(self, model_run, debug_data, debug):
         self._model_run = model_run
@@ -128,6 +177,31 @@ class Model(object):
         self.subsets = UpdateObserverDict(
             initial_dict=model_run.get("subsets").as_dict_flat(),
             name="subsets",
+            observer=self._model_data,
+        )
+        self.component_config = UpdateObserverDict(
+            initial_dict=self.BACKEND_COMPONENTS,
+            name="component_config",
+            observer=self._model_data,
+        )
+        default_tech_dict = self.DEFAULTS.techs.default_tech
+        default_cost_dict = {
+            "cost_{}".format(k): v
+            for k, v in default_tech_dict.costs.default_cost.items()
+        }
+        default_node_dict = self.DEFAULTS.nodes.default_node
+
+        defaults = AttrDict(
+            {
+                **default_tech_dict.constraints.as_dict(),
+                **default_tech_dict.switches.as_dict(),
+                **default_cost_dict,
+                **default_node_dict.as_dict(),
+            }
+        )
+        self.defaults = UpdateObserverDict(
+            initial_dict=defaults,
+            name="defaults",
             observer=self._model_data,
         )
 
@@ -178,6 +252,16 @@ class Model(object):
             observer=self._model_data,
             flat=True,
         )
+        self.defaults = UpdateObserverDict(
+            initial_yaml_string=self._model_data.attrs.get("defaults", "{}"),
+            name="defaults",
+            observer=self._model_data,
+        )
+        self.component_config = UpdateObserverDict(
+            initial_yaml_string=self._model_data.attrs.get("component_config", "{}"),
+            name="component_config",
+            observer=self._model_data,
+        )
 
         results = self._model_data.filter_by_attrs(is_result=1)
         if len(results.data_vars) > 0:
@@ -188,6 +272,127 @@ class Model(object):
             "model_data_loaded",
             comment="Model: loaded model_data",
         )
+
+    def _generate_parsing_components(
+        self, unparsed: dict, component_type: str, parse_class: type[T]
+    ) -> dict[str, T]:
+
+        errors_: list[str] = []
+        parsed_components: dict[str, T] = dict()
+        for component_name, component_config in unparsed.items():
+            parsed_ = parse_class(component_config, component_name)
+            parsed_.parse_strings()
+            parsed_components.update({component_name: parsed_})
+            if parsed_._is_valid:
+                continue
+            errors_.append(
+                f"({component_type}, {component_name}):\n"
+                + textwrap.indent("\n".join(sorted(list(set(parsed_._errors)))), " * ")
+            )
+        exceptions.print_warnings_and_raise_errors(
+            errors=errors_, during="string parsing"
+        )
+        return parsed_components
+
+    def build(self, backend_interface: str = "pyomo") -> None:
+
+        with self.model_data_string_datetime():
+            backend = self.BACKENDS[backend_interface](  # type: ignore
+                parsed_components=self.parsed_components, defaults=self.defaults
+            )
+
+            for set_name, set_data in self._model_data.coords.items():
+                backend.add_set(set_name, set_data)
+            for param_name, param_data in self._model_data.data_vars.items():
+                backend.add_parameter(param_name, param_data)
+            for parsed_variable in self.parsed_components["variables"].values():
+                subset_ = parsed_variable.evaluate_subset(self._model_data, [])
+                backend.add_variable(
+                    parsed_variable.name,
+                    subset_,
+                    parsed_variable._unparsed["bounds"],
+                    parsed_variable._unparsed["domain"],
+                )
+            for parsed_constraint in self.parsed_components["constraints"].values():
+                for constraint_equation in parsed_constraint.equations:
+                    name_ = parsed_constraint.evaluate_name(constraint_equation["id"])
+                    rule_ = parsed_constraint.evaluate_rule(
+                        constraint_equation, backend
+                    )
+                    subset_ = parsed_constraint.evaluate_subset(
+                        self._model_data, constraint_equation["where"], name_
+                    )
+                    backend.add_constraint(name_, rule_, subset_)
+
+            for parsed_objective in self.parsed_components["objectives"].values():
+                rule_ = self._get_valid_objective_rule(parsed_objective)
+                backend.add_objective(
+                    parsed_objective.name,
+                    rule_,
+                    parsed_objective._unparsed["domain"],
+                    parsed_objective._unparsed["sense"],
+                )
+            self.backend = backend
+
+    def _get_valid_objective_rule(self, parsed_objective: ParsedObjective) -> Callable:
+        valid_rules = []
+        for eq in parsed_objective.equations:
+            subset_ = parsed_objective.evaluate_subset(self._model_data, eq["where"])
+            if subset_:
+                rule_ = parsed_objective.evaluate_rule(eq, self.backend)
+                valid_rules.append(rule_)
+        if len(valid_rules) > 1:
+            raise exceptions.BackendError(
+                f"More than one {parsed_objective.name} objective is valid for this "
+                "optimisation problem; only one is allowed."
+            )
+        else:
+            return valid_rules[0]
+
+    @contextmanager
+    def model_data_string_datetime(self):
+        self._datetime_to_string()
+        try:
+            yield
+        finally:
+            self._string_to_datetime(self._model_data)
+
+    def _datetime_to_string(self) -> None:
+        """
+        Convert from datetime to string xarray dataarrays, to reduce the memory
+        footprint of converting datetimes from numpy.datetime64 -> pandas.Timestamp
+        when creating the pyomo model object.
+
+        """
+        datetime_data = set()
+        for attr in ["coords", "data_vars"]:
+            for set_name, set_data in getattr(self._model_data, attr).items():
+                if set_data.dtype.kind == "M":
+                    attrs = self._model_data[set_name].attrs
+                    self._model_data[set_name] = self._model_data[set_name].dt.strftime(
+                        "%Y-%m-%d %H:%M"
+                    )
+                    self._model_data[set_name].attrs = attrs
+                    datetime_data.add((attr, set_name))
+
+        self._datetime_data = datetime_data
+
+        return None
+
+    def _string_to_datetime(self, da: xr.DataArray) -> None:
+        """
+        Convert from string to datetime xarray dataarrays, reverting the process
+        undertaken in datetime_to_string
+
+        """
+        for attr, set_name in self._datetime_data:
+            if attr == "coords" and set_name in da:
+                da.coords[set_name] = da[set_name].astype("datetime64[ns]")
+            elif set_name in da:
+                da[set_name] = xr.apply_ufunc(
+                    pd.to_datetime, da[set_name], keep_attrs=True
+                )
+        return None
 
     def run(self, force_rerun=False, **kwargs):
         """

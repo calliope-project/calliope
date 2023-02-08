@@ -371,22 +371,6 @@ class ModelDataFactory:
         attr_dict["applied_overrides"] = model_run["applied_overrides"]
         attr_dict["scenario"] = model_run["scenario"]
 
-        default_tech_dict = checks.DEFAULTS.techs.default_tech
-        default_cost_dict = {
-            "cost_{}".format(k): v
-            for k, v in default_tech_dict.costs.default_cost.items()
-        }
-        default_node_dict = checks.DEFAULTS.nodes.default_node
-
-        attr_dict["defaults"] = AttrDict(
-            {
-                **default_tech_dict.constraints.as_dict(),
-                **default_tech_dict.switches.as_dict(),
-                **default_cost_dict,
-                **default_node_dict.as_dict(),
-            }
-        ).to_yaml()
-
         self.model_data.attrs = attr_dict
 
     def _clean_unused_techs_nodes_and_carriers(self):
