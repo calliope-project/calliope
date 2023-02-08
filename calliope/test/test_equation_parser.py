@@ -3,7 +3,7 @@ import random
 
 import pytest
 import numpy as np
-import pyparsing
+import pyparsing as pp
 
 from calliope.backend import equation_parser
 from calliope.test.common.util import check_error_or_warning
@@ -49,21 +49,18 @@ def component(identifier):
 
 
 @pytest.fixture
-def helper_function(number, indexed_param, component, unindexed_param, identifier):
-    return equation_parser.helper_function_parser(
-        identifier,
-        allowed_parser_elements_in_args=[
-            indexed_param,
-            component,
-            unindexed_param,
-            number,
-        ],
-    )
+def foreach():
+    return equation_parser.foreach_parser()
 
 
 @pytest.fixture
-def helper_function_no_nesting(
-    number, indexed_param, component, unindexed_param, identifier
+def foreach_list(foreach):
+    return pp.Suppress("[") + pp.Group(pp.delimited_list(foreach)) + pp.Suppress("]")
+
+
+@pytest.fixture
+def helper_function(
+    number, indexed_param, component, unindexed_param, identifier, foreach_list
 ):
     return equation_parser.helper_function_parser(
         identifier,
@@ -72,6 +69,23 @@ def helper_function_no_nesting(
             component,
             unindexed_param,
             number,
+            foreach_list,
+        ],
+    )
+
+
+@pytest.fixture
+def helper_function_no_nesting(
+    number, indexed_param, component, unindexed_param, identifier, foreach_list
+):
+    return equation_parser.helper_function_parser(
+        identifier,
+        allowed_parser_elements_in_args=[
+            indexed_param,
+            component,
+            unindexed_param,
+            number,
+            foreach_list,
         ],
         allow_function_in_function=False,
     )
@@ -79,10 +93,11 @@ def helper_function_no_nesting(
 
 @pytest.fixture(
     params=[
-        ("number", "1.0", ["$foo", "foo", "foo[bar]"]),
-        ("indexed_param", "foo[bar]", ["1.0", "foo", "$foo"]),
-        ("component", "$foo", ["1.0", "foo", "foo[bar]"]),
-        ("unindexed_param", "foo", ["1.0", "$foo", "foo[bar]"]),
+        ("number", "1.0", ["$foo", "foo", "foo[bar]", "[foo in foos]"]),
+        ("indexed_param", "foo[bar]", ["1.0", "foo", "$foo", "[foo in foos]"]),
+        ("component", "$foo", ["1.0", "foo", "foo[bar]", "[foo in foos]"]),
+        ("unindexed_param", "foo", ["1.0", "$foo", "foo[bar]", "[foo in foos]"]),
+        ("foreach_list", "[foo in foos]", ["1.0", "$foo", "foo[bar]", "foo"]),
     ]
 )
 def helper_function_one_parser_in_args(identifier, request):
@@ -115,6 +130,32 @@ def eval_kwargs():
 def arithmetic(helper_function, number, indexed_param, component, unindexed_param):
     return equation_parser.arithmetic_parser(
         helper_function, indexed_param, component, unindexed_param, number
+    )
+
+
+@pytest.fixture
+def helper_function_allow_arithmetic(
+    number,
+    indexed_param,
+    component,
+    unindexed_param,
+    identifier,
+    arithmetic,
+    foreach_list,
+):
+    arithmetic = pp.Forward()
+    helper_func = equation_parser.helper_function_parser(
+        identifier,
+        allowed_parser_elements_in_args=[arithmetic, foreach_list],
+        allow_function_in_function=False,
+    )
+    return equation_parser.arithmetic_parser(
+        helper_func,
+        indexed_param,
+        component,
+        unindexed_param,
+        number,
+        arithmetic=arithmetic,
     )
 
 
@@ -170,7 +211,7 @@ class TestEquationParserElements:
         ],
     )
     def test_fail_numbers(self, number, string_val):
-        with pytest.raises(pyparsing.ParseException):
+        with pytest.raises(pp.ParseException):
             number.parse_string(string_val, parse_all=True)
 
     @pytest.mark.parametrize(
@@ -216,7 +257,7 @@ class TestEquationParserElements:
     @pytest.mark.parametrize("parser", ["identifier", "unindexed_param"])
     def test_fail_identifiers(self, string_val, parser, request):
         parser_ = request.getfixturevalue(parser)
-        with pytest.raises(pyparsing.ParseException):
+        with pytest.raises(pp.ParseException):
             parser_.parse_string(string_val, parse_all=True)
 
     @pytest.mark.parametrize(
@@ -272,7 +313,7 @@ class TestEquationParserElements:
         ],
     )
     def test_fail_string_issues_indexed_param(self, indexed_param, string_val):
-        with pytest.raises(pyparsing.ParseException):
+        with pytest.raises(pp.ParseException):
             indexed_param.parse_string(string_val, parse_all=True)
 
     @pytest.mark.parametrize(
@@ -303,7 +344,7 @@ class TestEquationParserElements:
         ],
     )
     def test_fail_component(self, component, string_val):
-        with pytest.raises(pyparsing.ParseException):
+        with pytest.raises(pp.ParseException):
             component.parse_string(string_val, parse_all=True)
 
     @pytest.mark.parametrize(
@@ -506,7 +547,7 @@ class TestEquationParserElements:
         ],
     )
     def test_function_malformed_string(self, helper_function, string_val):
-        with pytest.raises(pyparsing.ParseException) as excinfo:
+        with pytest.raises(pp.ParseException) as excinfo:
             helper_function.parse_string(string_val, parse_all=True)
         assert check_error_or_warning(excinfo, "Expected")
 
@@ -521,7 +562,7 @@ class TestEquationParserElements:
     def test_function_nesting_not_allowed_invalid_string(
         self, helper_function_no_nesting, args
     ):
-        with pytest.raises(pyparsing.ParseException) as excinfo:
+        with pytest.raises(pp.ParseException) as excinfo:
             helper_function_no_nesting.parse_string(
                 f"dummy_func_1({args})", parse_all=True
             )
@@ -546,9 +587,83 @@ class TestEquationParserElements:
         parser_, valid_string, invalid_string = helper_function_one_parser_in_args
 
         for string_ in invalid_string:
-            with pytest.raises(pyparsing.ParseException) as excinfo:
+            with pytest.raises(pp.ParseException) as excinfo:
                 parser_.parse_string(helper_func_string.format(string_), parse_all=True)
             assert check_error_or_warning(excinfo, "Expected")
+
+    @pytest.mark.parametrize(
+        ("input_string", "expected_result"),
+        [
+            ("a in A", ["a", "A"]),
+            ("a1 in A1", ["a1", "A1"]),
+            ("a_1 in A_1", ["a_1", "A_1"]),
+            # TODO: decide if this should be allowed:
+            ("techs in techs", ["techs", "techs"]),
+        ],
+    )
+    def test_parse_foreach(self, foreach, input_string, expected_result):
+        parsed_string = foreach.parse_string(input_string, parse_all=True)
+        assert parsed_string[0].as_dict() == {
+            "set_iterator": expected_result[0],
+            "set_name": expected_result[1],
+        }
+
+    @pytest.mark.parametrize(
+        "input_string",
+        [
+            "1 in foo",  # number as iterator
+            "foo in 1",  # number as set name
+            "1 in 2",  # numbers for both
+            "in B",  # missing iterator
+            "in",  # missing iterator and set name
+            "foo bar",  # missing "in"
+            "foo.bar in B",  # unallowed character in iterator .
+            "a in foo.bar",  # unallowed character in set name .
+            "ainA",  # missing whitespace
+            "1a in 2b",  # invalid python identifiers
+            "a in A b in B",  # missing deliminator between two set items
+            "a in in A",  # duplicated "in"
+            "a in in"  # Cannot have "in" as a set iterator/name
+            "in in A"  # Cannot have "in" as a set iterator/name
+            "in in in",  # Cannot have "in" as a set iterator/name
+        ],
+    )
+    def test_parse_foreach_fail(self, foreach, input_string):
+        with pytest.raises(pp.ParseException):
+            foreach.parse_string(input_string, parse_all=True)
+
+    @pytest.mark.parametrize(
+        ("input_string", "expected_result"),
+        [
+            ("[a in A]", [["a", "A"]]),
+            ("[a in A, a1 in A1]", [["a", "A"], ["a1", "A1"]]),
+        ],
+    )
+    def test_parse_foreach_list(self, foreach_list, input_string, expected_result):
+        parsed_string = foreach_list.parse_string(input_string, parse_all=True)
+        assert all(
+            parsed_string[0][idx].as_dict()
+            == {
+                "set_iterator": expected_[0],
+                "set_name": expected_[1],
+            }
+            for idx, expected_ in enumerate(expected_result)
+        )
+
+    @pytest.mark.parametrize(
+        "input_string",
+        [
+            "a in A",  # no closing brackets
+            "(a in A)",  # wrong brackets
+            "[a in A",  # missing one bracket
+            "a in A]",  # missing one bracket
+            "[ainA, b in B]",  # missing whitespace
+            "[a in A; b in B]",  # wrong delimiter
+        ],
+    )
+    def test_parse_foreach_list_fail(self, foreach_list, input_string):
+        with pytest.raises(pp.ParseException):
+            foreach_list.parse_string(input_string, parse_all=True)
 
 
 class TestEquationParserArithmetic:
@@ -566,11 +681,15 @@ class TestEquationParserArithmetic:
         ["sign", "sign_name"],
         [("+", "add"), ("-", "sub"), ("*", "mul"), ("/", "truediv"), ("**", "pow")],
     )
+    @pytest.mark.parametrize(
+        "func_string", ["arithmetic", "helper_function_allow_arithmetic"]
+    )
     def test_addition_multiplication(
-        self, float1, float2, sign, sign_name, arithmetic, eval_kwargs
+        self, float1, float2, sign, sign_name, eval_kwargs, func_string, request
     ):
+        parser_func = request.getfixturevalue(func_string)
         string_ = f"{float1} {sign} {float2}"
-        parsed_ = arithmetic.parse_string(string_, parse_all=True)
+        parsed_ = parser_func.parse_string(string_, parse_all=True)
         evaluated_ = parsed_[0].eval(**eval_kwargs)
         if np.isinf(float1) and np.isinf(float2) and sign in ["-", "/"]:
             assert np.isnan(evaluated_)
@@ -578,9 +697,13 @@ class TestEquationParserArithmetic:
             assert evaluated_ == getattr(operator, sign_name)(float1, float2)
 
     @pytest.mark.parametrize(["sign", "sign_name"], [("+", "pos"), ("-", "neg")])
-    def test_sign(self, float1, sign, sign_name, arithmetic, eval_kwargs):
+    @pytest.mark.parametrize(
+        "func_string", ["arithmetic", "helper_function_allow_arithmetic"]
+    )
+    def test_sign(self, float1, sign, sign_name, eval_kwargs, func_string, request):
+        parser_func = request.getfixturevalue(func_string)
         string_ = f"{sign}{float1}"
-        parsed_ = arithmetic.parse_string(string_, parse_all=True)
+        parsed_ = parser_func.parse_string(string_, parse_all=True)
         evaluated_ = parsed_[0].eval(**eval_kwargs)
         if np.isinf(float1):
             assert np.isinf(evaluated_)
@@ -599,8 +722,12 @@ class TestEquationParserArithmetic:
             ("(1e5 * 10 / 1000 - 16**0.5) + (10 + 100) * (10) - 1/2", 2095.5),
         ],
     )
-    def test_mashup(self, equation_string, expected, arithmetic, eval_kwargs):
-        parsed_ = arithmetic.parse_string(equation_string, parse_all=True)
+    @pytest.mark.parametrize(
+        "func_string", ["arithmetic", "helper_function_allow_arithmetic"]
+    )
+    def test_mashup(self, equation_string, expected, eval_kwargs, func_string, request):
+        parser_func = request.getfixturevalue(func_string)
+        parsed_ = parser_func.parse_string(equation_string, parse_all=True)
         assert parsed_[0].eval(**eval_kwargs) == expected
 
     @pytest.mark.parametrize("number_", numbers)
@@ -610,6 +737,9 @@ class TestEquationParserArithmetic:
     @pytest.mark.parametrize(
         "helper_function_", ["foo(1)", "bar1(foo, $foo, bar[foo], x=1)"]
     )
+    @pytest.mark.parametrize(
+        "func_string", ["arithmetic", "helper_function_allow_arithmetic"]
+    )
     def test_non_numbers(
         self,
         number_,
@@ -617,7 +747,8 @@ class TestEquationParserArithmetic:
         unindexed_param_,
         indexed_param_,
         helper_function_,
-        arithmetic,
+        func_string,
+        request,
     ):
         items = [
             number_,
@@ -626,11 +757,42 @@ class TestEquationParserArithmetic:
             indexed_param_,
             helper_function_,
         ]
+        parser_func = request.getfixturevalue(func_string)
         random.shuffle(items)
         equation_string = f"({items[0]} / {items[1]}) + {items[1]} - {items[2]} * {items[3]}**-{items[4]}"
         # We can't evaluate this since not all elements evaluate to numbers.
         # Here we simply test that parsing is successful
-        arithmetic.parse_string(equation_string, parse_all=True)
+        parser_func.parse_string(equation_string, parse_all=True)
+
+    @pytest.mark.parametrize(
+        "string_", ["1 + 2", "1 * 2", "x=1/2", "foo + 1, x=1", "foo, x=1+1"]
+    )
+    def test_helper_function_no_arithmetic(self, helper_function, string_):
+        helper_func_string = f"foobar({string_})"
+        with pytest.raises(pp.ParseException):
+            helper_function.parse_string(helper_func_string, parse_all=True)
+
+    @pytest.mark.parametrize(
+        ["string_", "expected"],
+        [
+            ("1 + 2", {"args": [3], "kwargs": {}}),
+            ("1 * 2", {"args": [2], "kwargs": {}}),
+            ("x=1/2", {"args": [], "kwargs": {"x": 0.5}}),
+            (
+                "foo, x=1+1",
+                {"args": [{"param_or_var_name": "foo"}], "kwargs": {"x": 2}},
+            ),
+        ],
+    )
+    def test_helper_function_allow_arithmetic(
+        self, helper_function_allow_arithmetic, eval_kwargs, string_, expected
+    ):
+        helper_func_string = f"dummy_func_1({string_})"
+        parsed = helper_function_allow_arithmetic.parse_string(
+            helper_func_string, parse_all=True
+        )
+        evaluated = parsed[0].eval(**eval_kwargs)
+        assert evaluated == {"function": "dummy_func_1", **expected}
 
 
 class TestEquationParserComparison:
@@ -751,5 +913,5 @@ class TestEquationParserComparison:
     )
     def test_fail_evaluation(self, equation_string, func_string, request):
         parser_func = request.getfixturevalue(func_string)
-        with pytest.raises(pyparsing.ParseException):
+        with pytest.raises(pp.ParseException):
             parser_func.parse_string(equation_string, parse_all=True)
