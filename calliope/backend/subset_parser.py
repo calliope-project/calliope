@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Union, Optional
 import operator
 
@@ -163,7 +165,20 @@ class ComparisonParser(equation_parser.EvalComparisonOp):
             BOOLEANTYPE: Same shape as LHS.
         """
         kwargs["apply_imask"] = False
-        comparison = self.lhs.eval(**kwargs) == self.rhs.eval()
+        lhs = self.lhs.eval(**kwargs)
+        rhs = self.rhs.eval(**kwargs)
+
+        if self.op == "<=":
+            comparison = lhs <= rhs
+        elif self.op == ">=":
+            comparison = lhs >= rhs
+        if self.op == "<":
+            comparison = lhs < rhs
+        elif self.op == ">":
+            comparison = lhs > rhs
+        elif self.op == "=":
+            comparison = lhs == rhs
+
         if isinstance(comparison, bool):
             # enables the "~" operator to later invert `comparison` if required.
             comparison = np.bool_(comparison)
@@ -336,9 +351,10 @@ def comparison_parser(
         pp.ParserElement:
             Parser which will return a bool/boolean array as a result of the comparison.
     """
+    comparison_operators = pp.oneOf(["<", ">", "=", ">=", "<="])
     comparison_expression = (
         (config_option | data_var)
-        + "="
+        + comparison_operators
         + (bool_operand | number | evaluatable_identifier)
     )
     comparison_expression.set_parse_action(ComparisonParser)
