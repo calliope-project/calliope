@@ -38,7 +38,7 @@ def get_param(backend_model, var, dims):
         logger.debug(
             "get_param: var {} and dims {} leading to default lookup".format(var, dims)
         )
-        return backend_model.__calliope_defaults[var]
+        return backend_model.__calliope_defaults.get(var, None)
     except KeyError:  # try removing timestep
         try:
             if len(dims) > 2:
@@ -51,7 +51,7 @@ def get_param(backend_model, var, dims):
                     var, dims
                 )
             )
-            return backend_model.__calliope_defaults[var]
+            return backend_model.__calliope_defaults.get(var, None)
 
 
 def get_previous_timestep(timesteps, timestep):

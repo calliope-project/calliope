@@ -63,10 +63,13 @@ def create_valid_subset(model_data, name, config):
     parsing_errors = []
     parser = generate_where_string_parser()
     if where_string:
-        where_string_evaluated = parser.parse_string(where_string, parse_all=True).eval(
+        where_string_evaluated = parser.parse_string(where_string, parse_all=True)[
+            0
+        ].eval(
             model_data=model_data,
             helper_func_dict=VALID_HELPER_FUNCTIONS,
             errors=parsing_errors,
+            imask=imask,
         )
         print_warnings_and_raise_errors(errors=parsing_errors)
         imask = imask & where_string_evaluated

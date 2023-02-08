@@ -46,7 +46,9 @@ constraints:
 
     balance_conversion_plus_non_primary:
         foreach: [nodes, techs, carrier_tiers, timesteps]
-        where: "inheritance(conversion_plus) AND [in_2, out_2, in_3, out_3] in carrier_tiers"
+        where: "inheritance(conversion_plus)"
+        subset:
+            carrier_tiers: [in_2, out_2, in_3, out_3]
 
     conversion_plus_prod_con_to_zero:
         foreach: [nodes, techs, carriers, carrier_tiers, timesteps]
@@ -58,15 +60,21 @@ constraints:
 
     carrier_production_max:
         foreach: [nodes, techs, carriers, timesteps]
-        where: "carrier AND NOT inheritance(conversion_plus) AND NOT cap_method=integer AND allowed_carrier_prod=True AND [out] in carrier_tiers"
+        where: "carrier AND NOT inheritance(conversion_plus) AND NOT cap_method=integer AND allowed_carrier_prod=True"
+        subset:
+            carrier_tiers: [out]
 
     carrier_production_min:
         foreach: [nodes, techs, carriers, timesteps]
-        where: "carrier AND energy_cap_min_use AND NOT inheritance(conversion_plus) AND NOT cap_method=integer AND allowed_carrier_prod=True AND [out] in carrier_tiers"
+        where: "carrier AND energy_cap_min_use AND NOT inheritance(conversion_plus) AND NOT cap_method=integer AND allowed_carrier_prod=True"
+        subset:
+            carrier_tiers: [out]
 
     carrier_consumption_max:
         foreach: [nodes, techs, carriers, timesteps]
-        where: "carrier AND (inheritance(transmission) OR inheritance(demand) OR inheritance(storage)) AND (NOT cap_method=integer OR inheritance(demand)) AND allowed_carrier_con=True AND [in] in carrier_tiers"
+        where: "carrier AND (inheritance(transmission) OR inheritance(demand) OR inheritance(storage)) AND (NOT cap_method=integer OR inheritance(demand)) AND allowed_carrier_con=True"
+        subset:
+            carrier_tiers: [in]
 
     resource_max:
         foreach: [nodes, techs, timesteps]
@@ -225,13 +233,17 @@ variables:
 
     carrier_prod:
         foreach: [nodes, techs, carriers, timesteps]
-        where: "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers"
+        where: "carrier AND allowed_carrier_prod=True"
+        subset:
+            carrier_tiers: [out, out_2, out_3]
         domain: NonNegativeReals
 
     carrier_con:
         foreach: [nodes, techs, carriers, timesteps]
-        where: "carrier AND allowed_carrier_con=True AND [in, in_2, in_3] in carrier_tiers"
+        where: "carrier AND allowed_carrier_con=True"
         domain: NonPositiveReals
+        subset:
+            carrier_tiers: [in, in_2, in_3]
 
     resource_area:
         foreach: [nodes, techs]
@@ -301,7 +313,7 @@ variables:
 
     units:
         foreach: [nodes, techs]
-        where: "cap_method=integer' AND NOT run.mode=operate"
+        where: "cap_method=integer AND NOT run.mode=operate"
         domain: NonNegativeIntegers
         bounds:
             min: units_min
