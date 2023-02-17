@@ -429,7 +429,12 @@ def generate_where_string_parser() -> pp.ParserElement:
         generic_identifier, allowed_parser_elements_in_args=[evaluatable_string, number]
     )
     comparison = comparison_parser(
-        evaluatable_string, number, helper_function, bool_operand, config_option, data_var
+        evaluatable_string,
+        number,
+        helper_function,
+        bool_operand,
+        config_option,
+        data_var,
     )
     subset = subset_parser(generic_identifier, evaluatable_string, number)
     return imasking_parser(bool_operand, helper_function, data_var, comparison, subset)

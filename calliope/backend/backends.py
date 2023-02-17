@@ -168,7 +168,9 @@ class PyomoBackendModel(BackendModel):
         self.constraints = self.instance.constraints = pmo.constraint_dict()
         self.objectives = self.instance.objectives = pmo.objective_dict()
 
-    def generate_backend_dataset(self, model_data: xr.Dataset, defaults: dict, run_config: UpdateObserverDict) -> None:
+    def generate_backend_dataset(
+        self, model_data: xr.Dataset, defaults: dict, run_config: UpdateObserverDict
+    ) -> None:
         dataset = xr.Dataset(model_data.coords)
         for param_name, param_data in model_data.data_vars.items():
             default_val = defaults.get(param_name, np.nan)
@@ -195,8 +197,12 @@ class PyomoBackendModel(BackendModel):
                     ),
                 )
             else:
-                dataset["objective_" + option_name] = self.add_parameter("objective_" + option_name, xr.DataArray(option_val))
-        dataset["bigM"] = self.add_parameter("bigM", xr.DataArray(run_config.get("bigM", 1e10)))
+                dataset["objective_" + option_name] = self.add_parameter(
+                    "objective_" + option_name, xr.DataArray(option_val)
+                )
+        dataset["bigM"] = self.add_parameter(
+            "bigM", xr.DataArray(run_config.get("bigM", 1e10))
+        )
 
         self.dataset = dataset
 
@@ -211,7 +217,10 @@ class PyomoBackendModel(BackendModel):
         self._raise_error_on_preexistence(parameter_name, "parameters")
 
         parameter_da = self.apply_func(
-            self._to_pyomo_param, parameter_values, default=default, use_inf_as_na=use_inf_as_na
+            self._to_pyomo_param,
+            parameter_values,
+            default=default,
+            use_inf_as_na=use_inf_as_na,
         )
         if not parameter_values.shape and parameter_da.isnull().all():
             parameter_da = parameter_da.astype(float)
@@ -234,7 +243,9 @@ class PyomoBackendModel(BackendModel):
     ) -> xr.DataArray:
         self._raise_error_on_preexistence(parsed_component.name, component_type_group)
         component_type = component_type_group.removesuffix("s")
-        top_level_imask = parsed_component.evaluate_where(model_data, self.defaults, self)
+        top_level_imask = parsed_component.evaluate_where(
+            model_data, self.defaults, self
+        )
         component_da = xr.DataArray().where(top_level_imask).astype(np.dtype("O"))
 
         if not top_level_imask.any():
@@ -242,15 +253,15 @@ class PyomoBackendModel(BackendModel):
 
         for element in parsed_component.equations:
 
-            imask = element.evaluate_where(model_data, self.defaults, self, top_level_imask)
+            imask = element.evaluate_where(
+                model_data, self.defaults, self, top_level_imask
+            )
             if not imask.any():
                 continue
 
             expr = element.evaluate_expression(model_data, self)
             if component_da.where(imask).notnull().any():
-                subset_overlap = (
-                    component_da.where(imask).to_series().dropna().index
-                )
+                subset_overlap = component_da.where(imask).to_series().dropna().index
 
                 raise BackendError(
                     f"Trying to set two equations for the same index of {component_type}"
@@ -263,10 +274,12 @@ class PyomoBackendModel(BackendModel):
                     imask,
                     xr.DataArray(lhs).squeeze(drop=True),
                     xr.DataArray(rhs).squeeze(drop=True),
-                    op=op
+                    op=op,
                 )
             elif component_type_group == "expressions":
-                to_fill = self.apply_func(self._to_pyomo_expression, imask, expr.squeeze(drop=True))
+                to_fill = self.apply_func(
+                    self._to_pyomo_expression, imask, expr.squeeze(drop=True)
+                )
 
             component_da = component_da.fillna(to_fill)
         return component_da.rename(parsed_component.name).assign_attrs(
@@ -287,7 +300,9 @@ class PyomoBackendModel(BackendModel):
         if constraint_da.shape == 0:
             self.instance.constraints[parsed_constraint.name] = constraint_da.item()
         else:
-            self.instance.constraints[parsed_constraint.name] = pmo.constraint_dict(self.to_dict(constraint_da))
+            self.instance.constraints[parsed_constraint.name] = pmo.constraint_dict(
+                self.to_dict(constraint_da)
+            )
         return constraint_da
 
     def add_expression(
@@ -310,13 +325,21 @@ class PyomoBackendModel(BackendModel):
 
     def apply_func(self, func: Callable, *args, **kwargs) -> xr.DataArray:
         return xr.apply_ufunc(
-            func, *args, kwargs=kwargs, vectorize=True, keep_attrs=True, output_dtypes=[np.dtype("O")]
+            func,
+            *args,
+            kwargs=kwargs,
+            vectorize=True,
+            keep_attrs=True,
+            output_dtypes=[np.dtype("O")],
         )
 
     def to_dict(self, da: xr.DataArray) -> dict:
         da_stack = da.stack(all_dims=da.dims).dropna("all_dims")
         da_dict = da_stack.to_dict()
-        return {da_dict["coords"]["all_dims"]["data"][i]: data for i, data in enumerate(da_dict["data"])}
+        return {
+            da_dict["coords"]["all_dims"]["data"][i]: data
+            for i, data in enumerate(da_dict["data"])
+        }
 
     def add_variable(
         self,
@@ -324,7 +347,7 @@ class PyomoBackendModel(BackendModel):
         parsed_variable: parsing.ParsedVariable,
     ) -> None:
 
-        #self._raise_error_on_preexistence(parsed_variable.name, "variables")
+        # self._raise_error_on_preexistence(parsed_variable.name, "variables")
 
         imask = parsed_variable.evaluate_where(model_data, self.defaults, self)
 
@@ -334,9 +357,13 @@ class PyomoBackendModel(BackendModel):
         domain_type = getattr(pmo, f"{domain.title()}Set")
 
         ub, lb = self._get_capacity_bounds(parsed_variable.bounds, imask)
-        variable_da = self.apply_func(self._to_pyomo_variable, imask, ub, lb, domain_type=domain_type)
+        variable_da = self.apply_func(
+            self._to_pyomo_variable, imask, ub, lb, domain_type=domain_type
+        )
 
-        self.instance.variables[parsed_variable.name] = pmo.variable_dict(self.to_dict(variable_da))
+        self.instance.variables[parsed_variable.name] = pmo.variable_dict(
+            self.to_dict(variable_da)
+        )
 
         return variable_da.rename(parsed_variable.name).assign_attrs({"variable": 1})
 
@@ -525,7 +552,9 @@ class PyomoBackendModel(BackendModel):
             return pmo.expression(val)
 
     @staticmethod
-    def _to_pyomo_variable(mask: Union[bool, np.bool_], ub: Any, lb: Any, *, domain_type: str) -> Union[type[pmo.variable], float]:
+    def _to_pyomo_variable(
+        mask: Union[bool, np.bool_], ub: Any, lb: Any, *, domain_type: str
+    ) -> Union[type[pmo.variable], float]:
         if mask:
             return pmo.variable(ub=ub, lb=lb, domain_type=domain_type)
         else:

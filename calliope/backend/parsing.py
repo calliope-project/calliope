@@ -24,7 +24,6 @@ VALID_HELPER_FUNCTIONS: dict[str, Callable] = {
     "get_connected_link": helper_functions.get_connected_link,
     "get_timestep": helper_functions.get_timestep,
     "roll": helper_functions.roll,
-
 }
 
 
@@ -153,16 +152,22 @@ class ParsedBackendEquation:
         for expr in expression_group_combination:
             new_where_list.extend(expr.where)
         new_name = f"{self.name}-{'-'.join([expr.name for expr in expression_group_combination])}"
-        expression_group_dict = {expression_group_name: {
+        expression_group_dict = {
+            expression_group_name: {
                 expr.name.split(":")[0]: expr.expression
                 for expr in expression_group_combination
-        }}
+            }
+        }
         return ParsedBackendEquation(
             equation_name=new_name,
             sets=self.sets,
             expression=self.expression,
             where_list=new_where_list,
-            **{"components": self.components, "index_slices": self.index_slices, **expression_group_dict},
+            **{
+                "components": self.components,
+                "index_slices": self.index_slices,
+                **expression_group_dict,
+            },
         )
 
     def evaluate_where(
@@ -220,7 +225,9 @@ class ParsedBackendEquation:
 
         return functools.reduce(operator.and_, all_imasks)
 
-    def evaluate_expression(self, model_data: xr.Dataset, backend_interface: BackendModel):
+    def evaluate_expression(
+        self, model_data: xr.Dataset, backend_interface: BackendModel
+    ):
         return self.expression[0].eval(
             equation_name=self.name,
             index_slice_dict=self.index_slices,

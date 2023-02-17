@@ -633,7 +633,9 @@ class TestEquationParserArithmetic:
     @pytest.mark.parametrize("number_", numbers)
     @pytest.mark.parametrize("component_", ["$foo", "$bar1"])
     @pytest.mark.parametrize("unsliced_param_", ["foo", "bar1"])
-    @pytest.mark.parametrize("sliced_param_", ["foo[bars=bar]", "bar1[foos=foo, bars=bar]"])
+    @pytest.mark.parametrize(
+        "sliced_param_", ["foo[bars=bar]", "bar1[foos=foo, bars=bar]"]
+    )
     @pytest.mark.parametrize(
         "helper_function_", ["foo(1)", "bar1(foo, $foo, bar[foos=foo], x=1)"]
     )

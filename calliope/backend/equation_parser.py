@@ -326,7 +326,8 @@ class EvalSlicedParameterOrVariable(EvalString):
             return {"param_or_var_name": self.name, "dimensions": index_slice_names}
         elif eval_kwargs.get("backend_dataset", None) is not None:
             index_slices = self.merge_dicts_into_one(
-                idx_item.eval(as_dict=False, **eval_kwargs) for idx_item in self.index_slices
+                idx_item.eval(as_dict=False, **eval_kwargs)
+                for idx_item in self.index_slices
             )
             return eval_kwargs["backend_dataset"][self.name].sel(**index_slices)
         else:
@@ -750,7 +751,9 @@ def generate_index_slice_parser():
     sliced_param = sliced_param_or_var_parser(identifier)
     evaluatable_identifier = identifier.copy().set_parse_action(GenericStringParser)
     id_list = (
-        pp.Suppress("[") + pp.Group(pp.delimited_list(evaluatable_identifier)) + pp.Suppress("]")
+        pp.Suppress("[")
+        + pp.Group(pp.delimited_list(evaluatable_identifier))
+        + pp.Suppress("]")
     )
 
     helper_function = helper_function_parser(

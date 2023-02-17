@@ -298,12 +298,13 @@ class Model(object):
 
     def build(self, backend_interface: str = "pyomo") -> None:
 
-
         with self.model_data_string_datetime():
             backend = self.BACKENDS[backend_interface](  # type: ignore
                 parsed_components=self.parsed_components, defaults=self.defaults
             )
-            backend.generate_backend_dataset(self._model_data, self.defaults, self.run_config)
+            backend.generate_backend_dataset(
+                self._model_data, self.defaults, self.run_config
+            )
 
             for parsed_variable in self.parsed_components["variables"].values():
                 backend.dataset[parsed_variable.name] = backend.add_variable(
