@@ -24,11 +24,9 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ##
-
-from typing import Callable, Any, Union, Optional, Iterator, Iterable
-from abc import ABC
+from typing import Callable, Any, Union, Optional, Iterator
+from abc import ABC, abstractmethod
 import pyparsing as pp
-import pandas as pd
 
 from calliope.exceptions import BackendError
 
@@ -42,6 +40,10 @@ class EvalString(ABC):
 
     def __init__(self) -> None:
         self.name: Optional[str]
+
+    @abstractmethod
+    def eval(self, **kwargs):
+        pass
 
 
 class EvalOperatorOperand(EvalString):
@@ -94,13 +96,13 @@ class EvalOperatorOperand(EvalString):
             if operator_ == "**":
                 val = val**evaluated_operand
             elif operator_ == "*":
-                val *= evaluated_operand
+                val = val * evaluated_operand
             elif operator_ == "/":
-                val /= evaluated_operand
+                val = val / evaluated_operand
             elif operator_ == "+":
-                val += evaluated_operand
+                val = val + evaluated_operand
             elif operator_ == "-":
-                val -= evaluated_operand
+                val = val - evaluated_operand
 
         return val
 
@@ -155,12 +157,7 @@ class EvalComparisonOp(EvalString):
         lhs = self.lhs.eval(**eval_kwargs)
         rhs = self.rhs.eval(**eval_kwargs)
 
-        if self.op == "<=":
-            return lhs <= rhs
-        elif self.op == ">=":
-            return lhs >= rhs
-        elif self.op == "==":
-            return lhs == rhs
+        return lhs, self.op, rhs
 
 
 class EvalFunction(EvalString):
@@ -200,17 +197,21 @@ class EvalFunction(EvalString):
         """
         args_ = []
         for arg in self.args:
-            if not isinstance(arg, list):
-                args_.append(arg.eval(**eval_kwargs))
-            else:  # evaluate nested function
+            if isinstance(arg, pp.ParseResults):
                 args_.append(arg[0].eval(**eval_kwargs))
+            try:
+                args_.append(arg.eval(**eval_kwargs))
+            except AttributeError:
+                args_.append(arg)
 
         kwargs_ = {}
         for kwarg_name, kwarg_val in self.kwargs.items():
-            if not isinstance(kwarg_val, list):
-                kwargs_[kwarg_name] = kwarg_val.eval(**eval_kwargs)
-            else:  # evaluate nested function
+            if isinstance(kwarg_val, pp.ParseResults):
                 kwargs_[kwarg_name] = kwarg_val[0].eval(**eval_kwargs)
+            try:
+                kwargs_[kwarg_name] = kwarg_val.eval(**eval_kwargs)
+            except AttributeError:
+                kwargs_[kwarg_name] = kwarg_val
 
         helper_function = self.func_name.eval(**eval_kwargs)
         if eval_kwargs.get("as_dict"):
@@ -220,7 +221,8 @@ class EvalFunction(EvalString):
                 "kwargs": kwargs_,
             }
         else:
-            return helper_function(*args_, **kwargs_)
+            eval_func = helper_function(*args_, **kwargs_)
+            return eval_func
 
 
 class EvalHelperFuncName(EvalString):
@@ -262,10 +264,6 @@ class EvalHelperFuncName(EvalString):
                 collecting the helper function from the dictionary of functions.
                 Defaults to False.
 
-            errors (list[str]):
-                If parsed helper function name is not in `helper_func_dict`, add error
-                message to list which will be raised later.
-
         Returns:
             str, Callable:
                 Helper functions are expected to be two-tiered, with the first level
@@ -285,39 +283,32 @@ class EvalHelperFuncName(EvalString):
                 return helper_func_dict[self.name](**eval_kwargs)
 
 
-class EvalIndexedParameterOrVariable(EvalString):
+class EvalSlicedParameterOrVariable(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
-        Parse action to process successfully parsed indexed parameters or decision variables
-        of the form param_or_var[*index_items].
+        Parse action to process successfully parsed sliced parameters or decision variables
+        of the form param_or_var[*index_slices].
 
         Args:
             tokens (pp.ParseResults):
                 Has a dictionary component with the parsed elements:
-                param_or_var_name (str), index_items (list of strings).
+                param_or_var_name (str), index_slices (list of strings).
         """
         token_dict = tokens.as_dict()
         self.name: str = token_dict["param_or_var_name"][0]
-        self.index_items: pp.ParseResults = token_dict["index_items"]
+        self.index_slices: pp.ParseResults = token_dict["index_slices"]
         self.values = tokens
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
-        return "INDEXED_PARAM_OR_VAR:" + str(self.name)
+        return "SLICED_PARAM_OR_VAR:" + str(self.name)
 
-    def reorder_index_items(
-        self, set_order: Iterable[str], index_item_names: dict[str, str]
-    ) -> list[pp.ParseResults]:
-
-        index_item_names_df = pd.Series(index_item_names)
-        index_item_mapper = {idx.name: idx for idx in self.index_items}
-
-        args = []
-        for set_name in set_order:
-            set_items = index_item_names_df[index_item_names_df == set_name].index
-            for set_item in set_items:
-                args.append(index_item_mapper[set_item])
-        return args
+    @staticmethod
+    def merge_dicts_into_one(dicts):
+        final_dict = dict()
+        for dict_ in dicts:
+            final_dict.update(dict_)
+        return final_dict
 
     def eval(self, **eval_kwargs) -> Any:
         """
@@ -327,69 +318,25 @@ class EvalIndexedParameterOrVariable(EvalString):
         """
         as_dict = eval_kwargs.pop("as_dict", False)
 
-        index_item_names = dict()
-        for index_item in self.index_items:
-            index_item_names.update(index_item.eval(as_dict=True, **eval_kwargs))
+        index_slice_names = self.merge_dicts_into_one(
+            idx_item.eval(as_dict=True, **eval_kwargs) for idx_item in self.index_slices
+        )
 
         if as_dict:
-            return {"param_or_var_name": self.name, "dimensions": index_item_names}
-        elif eval_kwargs.get("backend_interface", None) is not None:
-            set_order = eval_kwargs["backend_interface"]._lookup_param_or_var_set_names[
-                self.name
-            ]
-            if set_order is None:
-                raise BackendError(
-                    f"Cannot index unindexed parameter/variable `{self.name}` over {self.index_items}"
-                )
-            args = self.reorder_index_items(set_order, index_item_names)
-            return eval_kwargs["backend_interface"].get_parameter_or_variable(
-                self.name, tuple(arg.eval(as_dict=False, **eval_kwargs) for arg in args)
+            return {"param_or_var_name": self.name, "dimensions": index_slice_names}
+        elif eval_kwargs.get("backend_dataset", None) is not None:
+            index_slices = self.merge_dicts_into_one(
+                idx_item.eval(as_dict=False, **eval_kwargs) for idx_item in self.index_slices
             )
+            return eval_kwargs["backend_dataset"][self.name].sel(**index_slices)
         else:
             return None
 
 
-class EvalIterators(EvalString):
+class EvalIndexSlices(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
-        Parse action to process successfully parsed set iterators from an indexed
-        paramater or variable.
-
-        Args:
-            tokens (pp.ParseResults):
-                Has a single item: index item name (str).
-        """
-        self.name = self.value = tokens[0]
-        self.values = tokens
-
-    def __repr__(self):
-        "Return string representation of the parsed grammar"
-        return "ITERATOR:" + str(self.name)
-
-    def eval(
-        self, sets: dict, iterator_dict: dict, as_dict: bool = False, **eval_kwargs
-    ) -> Any:
-        """
-        Args:
-            iterator_dict (dict):
-                Mapping from indexing item to constraint generator for-loop iterator.
-            test (bool): If True, return
-
-        Returns:
-            Any: Either an iterator or a string referring to a set item.
-        """
-        if as_dict:
-            item_name = {self.name: sets[self.name]}
-        else:
-            item_name = iterator_dict[self.name]
-
-        return item_name
-
-
-class EvalIndexItems(EvalString):
-    def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed index items from an indexed
+        Parse action to process successfully parsed index items from an sliced
         paramater or variable.
 
         Args:
@@ -406,12 +353,12 @@ class EvalIndexItems(EvalString):
 
     def eval(
         self,
-        index_item_dict: Optional[dict[str, pp.ParseResults]] = None,
+        index_slice_dict: Optional[dict[str, pp.ParseResults]] = None,
         **eval_kwargs,
     ) -> Any:
         """
         Args:
-            index_item_dict (dict): Mapping from indexing item to evaluatable parsed expression.
+            index_slice_dict (dict): Mapping from indexing item to evaluatable parsed expression.
             as_dict (bool): Set to true to simplify the output to not recursively evaluate and instead return input tokens as a dictionary.
 
         Returns:
@@ -423,18 +370,11 @@ class EvalIndexItems(EvalString):
         if eval_kwargs.get("as_dict"):
             return {self.set_item: self.set_name}
         elif (
-            eval_kwargs.get("backend_interface", None) is not None
-            and index_item_dict is not None
+            eval_kwargs.get("backend_dataset", None) is not None
+            and index_slice_dict is not None
         ):
-            index_item: str = index_item_dict[self.set_item][0].eval(**eval_kwargs)
-            if index_item not in eval_kwargs["backend_interface"].get_set(
-                self.set_name
-            ):
-                raise BackendError(
-                    f"Index item `{self.set_item}` evaluates to a set item not found in `{self.set_name}`"
-                )
-            else:
-                return index_item
+            index_slice: str = index_slice_dict[self.set_item][0].eval(**eval_kwargs)
+            return {self.set_name: index_slice}
 
 
 class EvalComponent(EvalString):
@@ -476,10 +416,10 @@ class EvalComponent(EvalString):
             return component_dict[self.name][0].eval(**eval_kwargs)
 
 
-class EvalUnindexedParameterOrVariable(EvalString):
+class EvalUnslicedParameterOrVariable(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
-        Parse action to process successfully parsed unindexed parameters or decision variables
+        Parse action to process successfully parsed unsliced parameters or decision variables
         of the form `param_or_var`.
 
         Args:
@@ -491,7 +431,7 @@ class EvalUnindexedParameterOrVariable(EvalString):
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
-        return "UNINDEXED_PARAM_OR_VAR:" + str(self.name)
+        return "UNSLICED_PARAM_OR_VAR:" + str(self.name)
 
     def eval(self, as_dict: bool = False, **eval_kwargs) -> Any:
         """
@@ -501,8 +441,8 @@ class EvalUnindexedParameterOrVariable(EvalString):
         """
         if as_dict:
             return {"param_or_var_name": self.name}
-        elif eval_kwargs.get("backend_interface", None) is not None:
-            return eval_kwargs["backend_interface"].get_parameter_or_variable(self.name)
+        elif eval_kwargs.get("backend_dataset", None) is not None:
+            return eval_kwargs["backend_dataset"][self.name]
 
 
 class EvalNumber(EvalString):
@@ -530,10 +470,31 @@ class EvalNumber(EvalString):
         return float(self.value)
 
 
+class GenericStringParser(EvalString):
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed generic strings.
+        This is required since we call "eval()" on all elements of the where string,
+        so even arbitrary strings (used in comparison operations) need to be evaluatable.
+
+        Args:
+            tokens (pp.ParseResults): Has one parsed element: string name (str).
+        """
+        self.val = tokens[0]
+
+    def __repr__(self):
+        "Return string representation of the parsed grammar"
+        return f"STRING:{self.val}"
+
+    def eval(self, **kwargs) -> str:
+        "Return input as string."
+        return str(self.val)
+
+
 def helper_function_parser(
     generic_identifier: pp.ParserElement,
     allowed_parser_elements_in_args: list[pp.ParserElement],
-    allow_function_in_function: bool = True,
+    allow_function_in_function: bool = False,
 ) -> pp.ParserElement:
     """
     Parsing grammar to process helper functions of the form `helper_function(*args, **eval_kwargs)`.
@@ -553,7 +514,7 @@ def helper_function_parser(
             Parser for valid python variables without leading underscore and not called "inf".
             This parser has no parse action.
         allowed_parser_elements_in_args (list[pp.ParserElement]):
-            List of parser elements that can be arguments in the function (e.g., "number", "indexed_param_or_var").
+            List of parser elements that can be arguments in the function (e.g., "number", "sliced_param_or_var").
         allow_function_in_function (bool, optional):
             If True, allows functions to be defined inside functions.
             Nested functions are evaluated from the greatest level of nesting up to the main helper function.
@@ -574,7 +535,7 @@ def helper_function_parser(
     helper_function_name.set_parse_action(EvalHelperFuncName)
 
     if allow_function_in_function:
-        allowed_parser_elements_in_args.insert(0, pp.Group(helper_function))
+        allowed_parser_elements_in_args.insert(0, helper_function)
 
     arg_values = pp.MatchFirst(allowed_parser_elements_in_args) + pp.NotAny("=")
 
@@ -600,11 +561,11 @@ def helper_function_parser(
     return helper_function
 
 
-def indexed_param_or_var_parser(
+def sliced_param_or_var_parser(
     generic_identifier: pp.ParserElement,
 ) -> pp.ParserElement:
     """
-    Parsing grammar to process strings representing indexed model parameters or variables,
+    Parsing grammar to process strings representing sliced model parameters or variables,
     e.g. "resource[node, tech]".
 
     If a parameter, must be a data variable in the Model._model_data xarray dataset.
@@ -628,19 +589,17 @@ def indexed_param_or_var_parser(
     lspar = pp.Suppress("[")
     rspar = pp.Suppress("]")
 
-    indexed_param_name = generic_identifier("param_or_var_name")
+    sliced_param_name = generic_identifier("param_or_var_name")
 
-    iterator = generic_identifier.copy()
-    iterator.set_parse_action(EvalIterators)
-    index_item = pp.Group(generic_identifier + pp.Suppress("=") + generic_identifier)
-    index_item.set_parse_action(EvalIndexItems)
+    index_slice = pp.Group(generic_identifier + pp.Suppress("=") + generic_identifier)
+    index_slice.set_parse_action(EvalIndexSlices)
 
-    index_items = pp.Group(pp.delimited_list(index_item | iterator))("index_items")
+    index_slices = pp.Group(pp.delimited_list(index_slice))("index_slices")
 
-    indexed_param_or_var = pp.Combine(indexed_param_name + lspar) + index_items + rspar
-    indexed_param_or_var.set_parse_action(EvalIndexedParameterOrVariable)
+    sliced_param_or_var = pp.Combine(sliced_param_name + lspar) + index_slices + rspar
+    sliced_param_or_var.set_parse_action(EvalSlicedParameterOrVariable)
 
-    return indexed_param_or_var
+    return sliced_param_or_var
 
 
 def component_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
@@ -666,7 +625,7 @@ def component_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
     return component
 
 
-def unindexed_param_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
+def unsliced_param_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
     """
     Create a copy of the generic identifier and set a parse action to find the string in
     the list of input paramaters or optimisation decision variables.
@@ -678,14 +637,14 @@ def unindexed_param_parser(generic_identifier: pp.ParserElement) -> pp.ParserEle
 
     Returns:
         pp.ParserElement:
-            Copy of input parser with added parse action to lookup an unindexed
+            Copy of input parser with added parse action to lookup an unsliced
             parameter/variable value
     """
 
-    unindexed_param_or_var = generic_identifier.copy()
-    unindexed_param_or_var.set_parse_action(EvalUnindexedParameterOrVariable)
+    unsliced_param_or_var = generic_identifier.copy()
+    unsliced_param_or_var.set_parse_action(EvalUnslicedParameterOrVariable)
 
-    return unindexed_param_or_var
+    return unsliced_param_or_var
 
 
 def setup_base_parser_elements() -> tuple[pp.ParserElement, pp.ParserElement]:
@@ -711,9 +670,9 @@ def setup_base_parser_elements() -> tuple[pp.ParserElement, pp.ParserElement]:
 
 def arithmetic_parser(
     helper_function: pp.ParserElement,
-    indexed_param_or_var: pp.ParserElement,
+    sliced_param_or_var: pp.ParserElement,
     component: pp.ParserElement,
-    unindexed_param_or_var: pp.ParserElement,
+    unsliced_param_or_var: pp.ParserElement,
     number: pp.ParserElement,
     arithmetic: pp.Forward = pp.Forward(),
 ) -> pp.ParserElement:
@@ -726,12 +685,12 @@ def arithmetic_parser(
     Args:
         helper_function (pp.ParserElement):
             Parsing grammar to process helper functions of the form `helper_function(*args, **eval_kwargs)`.
-        indexed_param_or_var (pp.ParserElement):
-            Parser for indexed parameters or variables, e.g. "foo[bar]"
+        sliced_param_or_var (pp.ParserElement):
+            Parser for sliced parameters or variables, e.g. "foo[bar]"
         component (pp.ParserElement):
             Parser for constraint components, e.g. "$foo"
-        unindexed_param_or_var (pp.ParserElement):
-            Parser for unindezed parameters or variables, e.g. "foo"
+        unsliced_param_or_var (pp.ParserElement):
+            Parser for unsliced parameters or variables, e.g. "foo"
         number (pp.ParserElement):
             Parser for numbers (integer, float, scientific notation, "inf"/".inf").
 
@@ -746,10 +705,10 @@ def arithmetic_parser(
     arithmetic <<= pp.infixNotation(
         # the order matters if two could capture the same string, e.g. "inf".
         helper_function
-        | indexed_param_or_var
+        | sliced_param_or_var
         | component
         | number
-        | unindexed_param_or_var,
+        | unsliced_param_or_var,
         [
             (signop, 1, pp.opAssoc.RIGHT, EvalSignOp),
             (expop, 2, pp.opAssoc.LEFT, EvalOperatorOperand),
@@ -784,58 +743,48 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
     return equation_comparison
 
 
-def foreach_parser() -> pp.ParserElement:
-    """
-    Returns:
-        pp.ParserElement: Parsing grammar for strings of the form "A in B".
-    """
-    in_ = pp.Keyword("in", caseless=True)
-    generic_identifier = pp.Combine(~in_ + pp.pyparsing_common.identifier)
-
-    set_iterator = generic_identifier.set_results_name("set_iterator")
-    set_name = generic_identifier.set_results_name("set_name")
-    return pp.Group(set_iterator + pp.Suppress(in_) + set_name)
-
-
-def generate_index_item_parser():
+def generate_index_slice_parser():
 
     number, identifier = setup_base_parser_elements()
-    unindexed_param = unindexed_param_parser(identifier)
-    indexed_param = indexed_param_or_var_parser(identifier)
+    unsliced_param = unsliced_param_parser(identifier)
+    sliced_param = sliced_param_or_var_parser(identifier)
+    evaluatable_identifier = identifier.copy().set_parse_action(GenericStringParser)
+    id_list = (
+        pp.Suppress("[") + pp.Group(pp.delimited_list(evaluatable_identifier)) + pp.Suppress("]")
+    )
 
     helper_function = helper_function_parser(
         identifier,
         allowed_parser_elements_in_args=[
-            indexed_param,
-            unindexed_param,
+            sliced_param,
+            unsliced_param,
             number,
         ],
     )
 
-    return helper_function | indexed_param | unindexed_param
+    return helper_function | id_list | evaluatable_identifier
 
 
 def generate_arithmetic_parser():
 
     number, identifier = setup_base_parser_elements()
-    unindexed_param = unindexed_param_parser(identifier)
-    indexed_param = indexed_param_or_var_parser(identifier)
+    unsliced_param = unsliced_param_parser(identifier)
+    sliced_param = sliced_param_or_var_parser(identifier)
     component = component_parser(identifier)
-    foreach = foreach_parser()
     foreach_list = (
-        pp.Suppress("[") + pp.Group(pp.delimited_list(foreach)) + pp.Suppress("]")
+        pp.Suppress("[") + pp.Group(pp.delimited_list(identifier)) + pp.Suppress("]")
     )
 
     arithmetic = pp.Forward()
     helper_function = helper_function_parser(
         identifier,
-        allowed_parser_elements_in_args=[foreach_list, arithmetic],
+        allowed_parser_elements_in_args=[arithmetic, foreach_list],
     )
     arithmetic = arithmetic_parser(
         helper_function,
-        indexed_param,
+        sliced_param,
         component,
-        unindexed_param,
+        unsliced_param,
         number,
         arithmetic=arithmetic,
     )

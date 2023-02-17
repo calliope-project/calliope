@@ -14,6 +14,7 @@ import textwrap
 from typing import TypedDict, Callable, TypeVar, Union, Optional
 from contextlib import contextmanager
 import os
+import datetime
 
 import xarray as xr
 import pandas as pd
@@ -31,13 +32,21 @@ from calliope.core.util.logging import log_time
 from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
-from calliope.backend.parsing import ParsedConstraint, ParsedVariable, ParsedObjective
+from calliope.backend.parsing import (
+    ParsedConstraint,
+    ParsedVariable,
+    ParsedObjective,
+    ParsedExpression,
+)
 from calliope.backend import backends
 
 logger = logging.getLogger(__name__)
 
 
-T = TypeVar("T", bound=Union[ParsedVariable, ParsedConstraint, ParsedObjective])
+T = TypeVar(
+    "T",
+    bound=Union[ParsedVariable, ParsedConstraint, ParsedObjective, ParsedExpression],
+)
 
 
 def read_netcdf(path):
@@ -112,21 +121,23 @@ class Model(object):
         self._check_future_deprecation_warnings()
         parsed_variables = self._generate_parsing_components(
             unparsed=self.component_config["variables"],
-            component_type="variables",
             parse_class=ParsedVariable,
+        )
+        parsed_expression = self._generate_parsing_components(
+            unparsed=self.component_config["expressions"],
+            parse_class=ParsedExpression,
         )
         parsed_constraints = self._generate_parsing_components(
             unparsed=self.component_config["constraints"],
-            component_type="constraints",
             parse_class=ParsedConstraint,
         )
         parsed_objectives = self._generate_parsing_components(
             unparsed=self.component_config["objectives"],
-            component_type="objectives",
             parse_class=ParsedObjective,
         )
         self.parsed_components: backends.ParsedComponents = {
             "variables": parsed_variables,
+            "expressions": parsed_expression,
             "constraints": parsed_constraints,
             "objectives": parsed_objectives,
         }
@@ -189,14 +200,16 @@ class Model(object):
             "cost_{}".format(k): v
             for k, v in default_tech_dict.costs.default_cost.items()
         }
-        default_node_dict = self.DEFAULTS.nodes.default_node
+        default_node_dict = {
+            "available_area": self.DEFAULTS.nodes.default_node.available_area
+        }
 
         defaults = AttrDict(
             {
                 **default_tech_dict.constraints.as_dict(),
                 **default_tech_dict.switches.as_dict(),
                 **default_cost_dict,
-                **default_node_dict.as_dict(),
+                **default_node_dict,
             }
         )
         self.defaults = UpdateObserverDict(
@@ -274,80 +287,42 @@ class Model(object):
         )
 
     def _generate_parsing_components(
-        self, unparsed: dict, component_type: str, parse_class: type[T]
+        self, unparsed: dict, parse_class: type[T]
     ) -> dict[str, T]:
 
-        errors_: list[str] = []
         parsed_components: dict[str, T] = dict()
         for component_name, component_config in unparsed.items():
             parsed_ = parse_class(component_config, component_name)
-            parsed_.parse_strings()
             parsed_components.update({component_name: parsed_})
-            if parsed_._is_valid:
-                continue
-            errors_.append(
-                f"({component_type}, {component_name}):\n"
-                + textwrap.indent("\n".join(sorted(list(set(parsed_._errors)))), " * ")
-            )
-        exceptions.print_warnings_and_raise_errors(
-            errors=errors_, during="string parsing"
-        )
         return parsed_components
 
     def build(self, backend_interface: str = "pyomo") -> None:
+
 
         with self.model_data_string_datetime():
             backend = self.BACKENDS[backend_interface](  # type: ignore
                 parsed_components=self.parsed_components, defaults=self.defaults
             )
+            backend.generate_backend_dataset(self._model_data, self.defaults, self.run_config)
 
-            for set_name, set_data in self._model_data.coords.items():
-                backend.add_set(set_name, set_data)
-            for param_name, param_data in self._model_data.data_vars.items():
-                backend.add_parameter(param_name, param_data)
             for parsed_variable in self.parsed_components["variables"].values():
-                subset_ = parsed_variable.evaluate_subset(self._model_data, [])
-                backend.add_variable(
-                    parsed_variable.name,
-                    subset_,
-                    parsed_variable._unparsed["bounds"],
-                    parsed_variable._unparsed["domain"],
+                backend.dataset[parsed_variable.name] = backend.add_variable(
+                    self._model_data, parsed_variable
                 )
+            for parsed_expression in self.parsed_components["expressions"].values():
+                backend.dataset[parsed_expression.name] = backend.add_expression(
+                    self._model_data, parsed_expression
+                )
+
             for parsed_constraint in self.parsed_components["constraints"].values():
-                for constraint_equation in parsed_constraint.equations:
-                    name_ = parsed_constraint.evaluate_name(constraint_equation["id"])
-                    rule_ = parsed_constraint.evaluate_rule(
-                        constraint_equation, backend
-                    )
-                    subset_ = parsed_constraint.evaluate_subset(
-                        self._model_data, constraint_equation["where"], name_
-                    )
-                    backend.add_constraint(name_, rule_, subset_)
+                backend.add_constraint(self._model_data, parsed_constraint)
 
             for parsed_objective in self.parsed_components["objectives"].values():
-                rule_ = self._get_valid_objective_rule(parsed_objective)
-                backend.add_objective(
-                    parsed_objective.name,
-                    rule_,
-                    parsed_objective._unparsed["domain"],
-                    parsed_objective._unparsed["sense"],
+                backend.dataset[parsed_objective.name] = backend.add_objective(
+                    self._model_data, parsed_objective
                 )
-            self.backend = backend
 
-    def _get_valid_objective_rule(self, parsed_objective: ParsedObjective) -> Callable:
-        valid_rules = []
-        for eq in parsed_objective.equations:
-            subset_ = parsed_objective.evaluate_subset(self._model_data, eq["where"])
-            if subset_:
-                rule_ = parsed_objective.evaluate_rule(eq, self.backend)
-                valid_rules.append(rule_)
-        if len(valid_rules) > 1:
-            raise exceptions.BackendError(
-                f"More than one {parsed_objective.name} objective is valid for this "
-                "optimisation problem; only one is allowed."
-            )
-        else:
-            return valid_rules[0]
+            self.backend = backend
 
     @contextmanager
     def model_data_string_datetime(self):

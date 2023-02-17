@@ -5,19 +5,26 @@ from typing import Optional, Union, Literal, Iterable, Callable, TypeVar, Generi
 from typing_extensions import NotRequired, TypedDict, Required
 import functools
 import operator
-from abc import ABC, abstractmethod
+from abc import ABC
 
 import pyparsing as pp
 import xarray as xr
-import pandas as pd
+import numpy as np
 
 from calliope.backend import equation_parser, subset_parser
 from calliope.backend.backends import BackendModel
-from calliope.exceptions import BackendError
+from calliope import exceptions
 from calliope.backend import helper_functions
 
-VALID_HELPER_FUNCTIONS = {
+VALID_HELPER_FUNCTIONS: dict[str, Callable] = {
     "inheritance": helper_functions.inheritance,
+    "sum": helper_functions.backend_sum,
+    "squeeze_carriers": helper_functions.squeeze_carriers,
+    "squeeze_primary_carriers": helper_functions.squeeze_primary_carriers,
+    "get_connected_link": helper_functions.get_connected_link,
+    "get_timestep": helper_functions.get_timestep,
+    "roll": helper_functions.roll,
+
 }
 
 
@@ -32,15 +39,7 @@ class UnparsedConstraintDict(TypedDict):
     equation: NotRequired[str]
     equations: NotRequired[list[UnparsedEquationDict]]
     components: NotRequired[dict[str, list[UnparsedEquationDict]]]
-    index_items: NotRequired[dict[str, list[UnparsedEquationDict]]]
-
-
-class ParsedEquationDict(TypedDict):
-    id: tuple
-    where: list[Optional[pp.ParseResults]]
-    expression: Optional[pp.ParseResults]
-    components: NotRequired[dict[str, pp.ParseResults]]
-    index_items: NotRequired[dict[str, pp.ParseResults]]
+    index_slices: NotRequired[dict[str, list[UnparsedEquationDict]]]
 
 
 class UnparsedVariableBoundDict(TypedDict):
@@ -53,8 +52,8 @@ class UnparsedVariableBoundDict(TypedDict):
 class UnparsedVariableDict(TypedDict):
     foreach: list[str]
     where: str
-    domain: str
-    bounds: NotRequired[UnparsedVariableBoundDict]
+    domain: NotRequired[str]
+    bounds: UnparsedVariableBoundDict
 
 
 class UnparsedObjectiveDict(TypedDict):
@@ -71,205 +70,136 @@ T = TypeVar(
 )
 
 
-class ParsedBackendComponent(ABC, Generic[T]):
-    def __init__(self, unparsed_data: T, component_name: str) -> None:
-        """
-        Parse an optimisation problem configuration - defined in a dictionary of strings
-        loaded from YAML - into a series of Python objects that can be passed onto a solver
-        interface like Pyomo or Gurobipy.
-        """
-        self.name: str = component_name
-        self._unparsed = unparsed_data
-
-        # capture errors to dump after processing,
-        # to make it easier for a user to fix the constraint YAML.
-        self._errors: set = set()
-
-        # Add objects that are used by shared functions
-        self.sets: dict = dict()
-        self.top_level_where: Optional[pp.ParseResults] = None
-        self.index = pd.Series(dtype=str)
-        self.equations: list[ParsedEquationDict] = []
-
-        # Initialise switches
-        self._is_valid: bool = True
-        self._is_active: bool = True
-
-    def evaluate_name(self, equation_id: Optional[tuple]) -> str:
-        """
-        Transform equation ID tuple into a string that could act as a valid python identifier.
-
-        Args:
-            equation_id (Optional[tuple]): If given, of the form (int, (str, int), ...).
-
-        Returns:
-            str: stringified equation ID tuple prepended with the component name.
-        """
-        id_ = "" if equation_id is None else "_" + self._name_component(equation_id)
-        return self.name + id_
-
-    def evaluate_subset(
-        self,
-        model_data: xr.Dataset,
-        equation_where: list[Optional[pp.ParseResults]],
-        equation_name: Optional[str] = None,
-    ) -> Optional[pd.Index]:
-        """
-        Get subset of product of "foreach" sets that matches the "where" string conditions.
-
-        Args:
-            model_data (xr.Dataset): Calliope model data
-            equation_where (list[Optional[pp.ParseResults]]): List of parsed "where" strings
-            equation_name (Optional[str], optional): s
-                String to name subset items in self.index.
-                Defaults to None, in which case self.name is used.
-
-        Returns:
-            Optional[pd.Index]:
-                If no valid index items are found in the set product, return None.
-        """
-
-        subset_ = self._create_subset_from_where(model_data, equation_where)
-
-        if equation_name is None:
-            equation_name = self.name
-        self.index = pd.concat(
-            [self.index, pd.Series(index=subset_, data=equation_name, dtype=str)]
-        )
-
-        return subset_
-
-    def evaluate_rule(
+class ParsedBackendEquation:
+    def __init__(
         self,
         equation_name: str,
-        equation_dict: ParsedEquationDict,
-        backend_interface: BackendModel,
-    ) -> Callable:
-        """
-        Create constraint rule function to be called by the backend interface in
-        generating constraints
-
-        Args:
-            equation_name (str): For use in raising exeptions.
-            equation_dict (ParsedEquationDict): Provides parsed strings to evaluate.
-            backend_interface (BackendModel): Provides interface to the backend on evalution.
-
-        Returns:
-            Callable:
-                Function that can be called with the constraint set iterators as arguments.
-                Will return a constraint equation.
-        """
-
-        def _rule(_, *args):
-            iterator_dict = {
-                list(self.sets.keys())[idx]: arg for idx, arg in enumerate(args)
-            }
-            return equation_dict["expression"][0].eval(
-                equation_name=equation_name,
-                iterator_dict=iterator_dict,
-                index_item_dict=equation_dict["index_items"],
-                component_dict=equation_dict["components"],
-                backend_interface=backend_interface,
-                helper_func_dict=VALID_HELPER_FUNCTIONS,
-                sets=self.sets,
-                as_dict=False,
-            )
-
-        return _rule
-
-    @abstractmethod
-    def parse_strings(self) -> None:
-        pass
-
-    def _add_parse_error(
-        self, instring: str, expression_group: str, error_message: str
+        sets: list[str],
+        expression: pp.ParseResults,
+        where_list: list[pp.ParseResults],
+        components: Optional[dict[str, pp.ParseResults]] = None,
+        index_slices: Optional[dict[str, pp.ParseResults]] = None,
     ) -> None:
-        """
-        Add error message to the list self._errors following a predefined structure of
-        `(expression_group, instring): error`, e.g. `(foreach, a in A): Found duplicate set iterator`.
+        self.name = equation_name
+        self.where = where_list
+        self.expression = expression
+        self.components = components if components is not None else dict()
+        self.index_slices = index_slices if index_slices is not None else dict()
+        self.sets = sets
 
-        Also set self._is_valid flag to False since at least one error has been caught.
+    def find_components(self) -> set[str]:
+        valid_eval_classes: tuple = (
+            equation_parser.EvalOperatorOperand,
+            equation_parser.EvalFunction,
+        )
+        elements: list = [self.expression[0].values]
+        to_find = equation_parser.EvalComponent
+
+        return self._find_items_in_expression(elements, to_find, valid_eval_classes)
+
+    def find_index_slices(self) -> set[str]:
+
+        valid_eval_classes = (
+            equation_parser.EvalOperatorOperand,
+            equation_parser.EvalFunction,
+            equation_parser.EvalSlicedParameterOrVariable,
+        )
+        elements = [self.expression[0].values, *list(self.components.values())]
+        to_find = equation_parser.EvalIndexSlices
+
+        return self._find_items_in_expression(elements, to_find, valid_eval_classes)
+
+    @staticmethod
+    def _find_items_in_expression(
+        parser_elements: Union[list, pp.ParseResults],
+        to_find: type[equation_parser.EvalString],
+        valid_eval_classes=tuple[type[equation_parser.EvalString]],
+    ) -> set[str]:
+        """
+        Recursively find components / index items defined in an equation expression.
 
         Args:
-            instring (str): String being parsed where the error was caught.
-            expression_group (str):
-                Location in the constraint definition where the string was defined,
-                e.g., "foreach", "equations", "components".
-            error_message (str): Description of error.
-        """
-        self._is_valid = False
-        self._errors.add(f"({expression_group}, {instring}): {error_message}")
-
-    def _create_subset_from_where(
-        self, model_data: xr.Dataset, where_list: list[Optional[pp.ParseResults]]
-    ) -> Optional[pd.Index]:
-        """
-        Returns the subset of combined constraint set items (given by "foreach")
-        valid on evaluation of equation "where" strings.
-
-        Args:
-            model_data (xr.Dataset): Calliope model dataset.
-            where_list (list[Optional[pp.ParseResults]]): List of parsed "where" strings.
+            parser_elements (pp.ParseResults): list of parser elements to check.
+            to_find (type[equation_parser.EvalString]): type of equation element to search for
+            valid_eval_classes (tuple[type(equation_parser.EvalString)]):
+                Other expression elements that can be recursively searched
 
         Returns:
-            Optional[pd.Index]: If no valid subset of set product, returns None.
+            set[str]: All unique component / index item names.
         """
+        items: list = []
+        recursive_func = functools.partial(
+            ParsedBackendEquation._find_items_in_expression,
+            to_find=to_find,
+            valid_eval_classes=valid_eval_classes,
+        )
+        for parser_element in parser_elements:
+            if isinstance(parser_element, to_find):
+                items.append(parser_element.name)
 
-        # Start with a mask that is True where the tech exists at a node
-        # (across all timesteps and for a each carrier and cost, where appropriate)
-        imask_foreach: xr.DataArray = self._imask_foreach(model_data)
+            elif isinstance(parser_element, (pp.ParseResults, list)):
+                items.extend(recursive_func(parser_elements=parser_element))
 
+            elif isinstance(parser_element, valid_eval_classes):
+                items.extend(recursive_func(parser_elements=parser_element.values))
+        return set(items)
+
+    def add_expression_group_combination(
+        self,
+        expression_group_name: Literal["components", "index_slices"],
+        expression_group_combination: Iterable[ParsedBackendEquation],
+    ):
+        new_where_list = [*self.where]
+        for expr in expression_group_combination:
+            new_where_list.extend(expr.where)
+        new_name = f"{self.name}-{'-'.join([expr.name for expr in expression_group_combination])}"
+        expression_group_dict = {expression_group_name: {
+                expr.name.split(":")[0]: expr.expression
+                for expr in expression_group_combination
+        }}
+        return ParsedBackendEquation(
+            equation_name=new_name,
+            sets=self.sets,
+            expression=self.expression,
+            where_list=new_where_list,
+            **{"components": self.components, "index_slices": self.index_slices, **expression_group_dict},
+        )
+
+    def evaluate_where(
+        self,
+        model_data: xr.Dataset,
+        defaults: dict,
+        initial_imask: Union[np.bool_, xr.DataArray] = np.True_,
+    ) -> Union[np.bool_, xr.DataArray]:
+        foreach_imask = self._evaluate_foreach(model_data)
         evaluated_wheres = [
             where[0].eval(  # type: ignore
                 model_data=model_data,
                 helper_func_dict=VALID_HELPER_FUNCTIONS,
-                errors=self._errors,
-                imask=imask_foreach,
+                imask=foreach_imask,
+                defaults=defaults,
             )
-            for where in [self.top_level_where, *where_list]
+            for where in self.where
         ]
 
         imask: xr.DataArray = functools.reduce(
-            operator.and_, [imask_foreach, *evaluated_wheres]
+            operator.and_, [foreach_imask, initial_imask, *evaluated_wheres]
         )
 
-        if imask.any():
+        if isinstance(imask, xr.DataArray):
             # Squeeze out any unwanted dimensions
-            unwanted_dims = set(imask.dims).difference(self.sets.values())
+            unwanted_dims = set(imask.dims).difference(self.sets)
             imask = (imask.sum(unwanted_dims) > 0).astype(bool)
-            subset_index = self._get_subset_as_index(imask)
-        else:
-            self._is_valid = False
-            subset_index = None
 
-        return subset_index
+        return imask
 
-    def _get_subset_as_index(self, imask: xr.DataArray) -> pd.Index:
-        """
-        Dump index items from a boolean imasking array for all points in the array that are set to True.
-
-        Args:
-            imask (xr.DataArray):
-                Boolean imasking array with same number of dimensions as the length of `self.sets`.
-
-        Returns:
-            pd.Index: Index or MultiIndex listing all valid combinations of set items.
-        """
-        if len(imask.dims) == 1:
-            return imask[imask].coords.to_index()
-        else:
-            mask_stacked = imask.stack(dim_0=imask.dims)
-            return (
-                mask_stacked[mask_stacked]  # type: ignore
-                .coords.to_index()
-                .reorder_levels(self.sets.values())
-            )
-
-    def _imask_foreach(self, model_data: xr.Dataset) -> xr.DataArray:
+    def _evaluate_foreach(self, model_data: xr.Dataset) -> xr.DataArray:
         """
         Generate a multi-dimensional imasking array based on the sets
         over which the constraint is to be built (defined by "foreach").
-        Irrespective of the sets defined by "foreach", this array will always include ["nodes", "techs", "carriers", "carrier_tiers"] to ensure only valid combinations of technologies consuming/producing specific carriers at specific nodes are included in later imasking.
+        Irrespective of the sets defined by "foreach", this array will always include
+        ["nodes", "techs", "carriers", "carrier_tiers"] to ensure only valid combinations
+        of technologies consuming/producing specific carriers at specific nodes are included in later imasking.
 
         Args:
             model_data (xr.Dataset): Calliope model dataset.
@@ -280,9 +210,9 @@ class ParsedBackendComponent(ABC, Generic[T]):
         # Start with (carriers, carrier_tiers, nodes, techs) and go from there
         initial_imask = model_data.carrier.notnull() * model_data.node_tech.notnull()
         # Add other dimensions (costs, timesteps, etc.)
-        add_dims = set(self.sets.values()).difference(initial_imask.dims)
+        add_dims = set(self.sets).difference(initial_imask.dims)
         if add_dims.difference(model_data.dims):
-            raise BackendError(
+            raise exceptions.BackendError(
                 "Unidentified model set name(s) defined: "
                 f"`{add_dims.difference(model_data.dims)}`."
             )
@@ -290,12 +220,109 @@ class ParsedBackendComponent(ABC, Generic[T]):
 
         return functools.reduce(operator.and_, all_imasks)
 
+    def evaluate_expression(self, model_data: xr.Dataset, backend_interface: BackendModel):
+        return self.expression[0].eval(
+            equation_name=self.name,
+            index_slice_dict=self.index_slices,
+            component_dict=self.components,
+            backend_interface=backend_interface,
+            backend_dataset=backend_interface.dataset,
+            helper_func_dict=VALID_HELPER_FUNCTIONS,
+            model_data=model_data,
+            as_dict=False,
+        )
+
+
+class ParsedBackendComponent(ABC, Generic[T]):
+    def __init__(self, unparsed_data: T, component_name: str) -> None:
+        """
+        Parse an optimisation problem configuration - defined in a dictionary of strings
+        loaded from YAML - into a series of Python objects that can be passed onto a solver
+        interface like Pyomo or Gurobipy.
+        """
+        self.name: str = component_name
+        self._unparsed: dict = dict(unparsed_data)
+
+        # capture errors to dump after processing,
+        # to make it easier for a user to fix the constraint YAML.
+        self._errors: set = set()
+
+        # Add objects that are used by shared functions
+        self.sets: list[str] = unparsed_data.get("foreach", [])  # type:ignore
+        top_level_where = self.parse_where_string(self._unparsed.get("where", "True"))
+        if top_level_where is not None:
+            self.where: list[pp.ParseResults] = [top_level_where]
+        else:
+            self.where = []
+        self.equations: list[ParsedBackendEquation] = []
+
+        # Initialise switches
+        self._is_valid: bool = True
+        self._is_active: bool = True
+
+    def parse_equations(
+        self, equation_expression_parser
+    ) -> list[ParsedBackendEquation]:
+        equation_expression_list: list[UnparsedEquationDict]
+        if "equation" in self._unparsed.keys():
+            equation_expression_list = [{"expression": self._unparsed["equation"]}]
+        else:
+            equation_expression_list = self._unparsed.get("equations", [])
+
+        equations = self.generate_expression_list(
+            expression_parser=equation_expression_parser,
+            expression_list=equation_expression_list,
+            expression_group="equations",
+            id_prefix=self.name,
+        )
+
+        component_dict = {
+            c_name: self.generate_expression_list(
+                expression_parser=equation_parser.generate_arithmetic_parser(),
+                expression_list=c_list,
+                expression_group="components",
+                id_prefix=c_name,
+            )
+            for c_name, c_list in self._unparsed.get("components", {}).items()
+        }
+        index_slice_dict = {
+            idx_name: self.generate_expression_list(
+                expression_parser=equation_parser.generate_index_slice_parser(),
+                expression_list=idx_list,
+                expression_group="index_slices",
+                id_prefix=idx_name,
+            )
+            for idx_name, idx_list in self._unparsed.get("index_slices", {}).items()
+        }
+
+        if not self._is_valid:
+            exceptions.print_warnings_and_raise_errors(
+                errors=self._errors, during="string parsing"
+            )
+
+        equations_with_components = []
+        for equation in equations:
+            equations_with_components.extend(
+                self.extend_equation_list_with_expression_group(
+                    equation, component_dict, "components"
+                )
+            )
+        equations_with_components_and_index_slices: list[ParsedBackendEquation] = []
+        for equation in equations_with_components:
+            equations_with_components_and_index_slices.extend(
+                self.extend_equation_list_with_expression_group(
+                    equation, index_slice_dict, "index_slices"
+                )
+            )
+
+        return equations_with_components_and_index_slices
+
     def _parse_string(
         self,
         parser: pp.ParserElement,
         parse_string: str,
         expression_group: Literal[
-            "foreach", "where", "equations", "components", "index_items"
+            "foreach", "where", "equations", "components", "index_slices"
         ],
     ) -> Optional[pp.ParseResults]:
         """
@@ -316,15 +343,13 @@ class ParsedBackendComponent(ABC, Generic[T]):
             parsed = parser.parse_string(parse_string, parse_all=True)
         except (pp.ParseException, KeyError) as excinfo:
             parsed = None
-            self._add_parse_error(parse_string, expression_group, str(excinfo))
+            self._is_valid = False
+            self._errors.add(f"({expression_group}, {parse_string}): {str(excinfo)}")
 
         return parsed
 
-    def _parse_where_string(
-        self,
-        equation_dict: Union[
-            UnparsedEquationDict, UnparsedConstraintDict, UnparsedVariableDict
-        ],
+    def parse_where_string(
+        self, where_string: str = "True"
     ) -> Optional[pp.ParseResults]:
         """Parse a "where" string of the form "CONDITION OPERATOR CONDITION", where the
         operator can be "and"/"or"/"not and"/"not or".
@@ -340,52 +365,15 @@ class ParsedBackendComponent(ABC, Generic[T]):
                 they will be logged to `self._errors` to raise later.
         """
         parser = subset_parser.generate_where_string_parser()
-        where_string = equation_dict.get("where", "True")
         return self._parse_string(parser, where_string, "where")
 
-    def _name_component(self, equation_id: Union[tuple, int]) -> str:
-        final_string_list: list[str] = []
-
-        if isinstance(equation_id, int):
-            constraint_name = str(equation_id)
-        else:
-            for i in equation_id:
-                if isinstance(i, tuple):
-                    final_string_list.append(self._name_component(i))
-                else:
-                    final_string_list.append(str(i))
-            constraint_name = "_".join(final_string_list)
-        return constraint_name
-
-    def _get_sets_from_foreach(self, foreach_list: list[str]) -> dict[str, str]:
-        """
-        Process "foreach" key in constraint to access the set iterators and the
-        identifier for set items in the constraint equation expessions.
-        """
-        foreach_parser = equation_parser.foreach_parser()
-        sets: dict = dict()
-        for string_ in foreach_list:
-            parsed_ = self._parse_string(foreach_parser, string_, "foreach")
-            if parsed_ is not None:
-                set_iterator, set_name = parsed_[0].as_list()
-                if set_iterator in sets.keys():
-                    self._add_parse_error(
-                        string_,
-                        "foreach",
-                        f"Found duplicate set iterator `{set_iterator}`.",
-                    )
-
-                sets[set_iterator] = set_name
-
-        return sets
-
-    def _parse_where_expression(
+    def generate_expression_list(
         self,
         expression_parser: pp.ParserElement,
         expression_list: list[UnparsedEquationDict],
-        expression_group: Literal["foreach", "equations", "components", "index_items"],
-        id_prefix: Optional[str] = None,
-    ) -> list[ParsedEquationDict]:
+        expression_group: Literal["equations", "components", "index_slices"],
+        id_prefix: str = "",
+    ) -> list[ParsedBackendEquation]:
         """
         Align user-defined constraint equations/components by parsing expressions,
         specifying a default "where" string if not defined,
@@ -405,59 +393,30 @@ class ParsedBackendComponent(ABC, Generic[T]):
             list[UnparsedConstraintDict]:
                 Aligned expression dictionaries with parsed expression strings.
         """
+        parsed_equation_list = []
+        for idx, expression_data in enumerate(expression_list):
+            parsed_expression = self._parse_string(
+                expression_parser, expression_data["expression"], expression_group
+            )
+            parsed_where = self.parse_where_string(expression_data.get("where", "True"))
+            if parsed_expression is not None and parsed_where is not None:
+                parsed_equation_list.append(
+                    ParsedBackendEquation(
+                        equation_name=":".join(filter(None, [id_prefix, str(idx)])),
+                        sets=self.sets,
+                        where_list=[parsed_where],
+                        expression=parsed_expression,
+                    )
+                )
 
-        return [
-            {
-                "id": tuple([idx]) if id_prefix is None else tuple([id_prefix, idx]),
-                "where": [self._parse_where_string(expression_data)],
-                "expression": self._parse_string(
-                    expression_parser, expression_data["expression"], expression_group
-                ),
-            }
-            for idx, expression_data in enumerate(expression_list)
-        ]
+        return parsed_equation_list
 
-    def _find_items_in_expression(
+    def extend_equation_list_with_expression_group(
         self,
-        parser_elements: Union[list, pp.ParseResults],
-        to_find: type[equation_parser.EvalString],
-        valid_eval_classes=tuple[type[equation_parser.EvalString]],
-    ) -> set[str]:
-        """
-        Recursively find components / index items defined in an equation expression.
-
-        Args:
-            parser_elements (pp.ParseResults): list of parser elements to check.
-            to_find (type[equation_parser.EvalString]): type of equation element to search for
-            valid_eval_classes (tuple[type(equation_parser.EvalString)]):
-                Other expression elements that can be recursively searched
-
-        Returns:
-            set[str]: All unique component / index item names.
-        """
-        items: list = []
-        recursive_func = functools.partial(
-            self._find_items_in_expression,
-            to_find=to_find,
-            valid_eval_classes=valid_eval_classes,
-        )
-        for parser_element in parser_elements:
-            if isinstance(parser_element, to_find):
-                items.append(parser_element.name)
-
-            elif isinstance(parser_element, pp.ParseResults):
-                items.extend(recursive_func(parser_elements=parser_element))
-
-            elif isinstance(parser_element, valid_eval_classes):
-                items.extend(recursive_func(parser_elements=parser_element.values))
-        return set(items)
-
-    def _get_expression_group_product(
-        self,
-        equation_data: ParsedEquationDict,
-        parsed_items: dict[str, list[ParsedEquationDict]],
-        expression_group: Literal["components", "index_items"],
-    ) -> itertools.product:
+        parsed_equation: ParsedBackendEquation,
+        parsed_items: dict[str, list[ParsedBackendEquation]],
+        expression_group: Literal["components", "index_slices"],
+    ) -> list[ParsedBackendEquation]:
         """
         Find all components referenced in an equation expression and return a
         product of the component data.
@@ -466,114 +425,39 @@ class ParsedBackendComponent(ABC, Generic[T]):
             equation_data (UnparsedConstraintDict): Equation data dictionary.
             parsed_items (dict[list[UnparsedConstraintDict]]):
                 Dictionary of expressions to replace within the equation data dictionary.
-            expression_group (Literal["components", "index_items"]):
+            expression_group (Literal["components", "index_slices"]):
                 Name of expression group that the parsed_items dict is referencing.
 
         Returns:
             list[list[UnparsedConstraintDict]]:
                 Each nested list contains a unique product of parsed_item dictionaries.
         """
-        eq_expr: pp.ParseResults = equation_data["expression"]  # type: ignore
-        valid_eval_classes: tuple = (
-            equation_parser.EvalOperatorOperand,
-            equation_parser.EvalFunction,
-        )
-        elements: list = [eq_expr[0].values]
         if expression_group == "components":
-            to_find = equation_parser.EvalComponent
+            equation_items = parsed_equation.find_components()
+        elif expression_group == "index_slices":
+            equation_items = parsed_equation.find_index_slices()
+        if not equation_items:
+            return [parsed_equation]
 
-        elif expression_group == "index_items":
-            elements += list(equation_data.get("components", {}).values())
-            to_find = equation_parser.EvalIndexItems  # type: ignore
-            valid_eval_classes += (equation_parser.EvalIndexedParameterOrVariable,)
-
-        eq_items = self._find_items_in_expression(elements, to_find, valid_eval_classes)
-
-        invalid_items = eq_items.difference(parsed_items.keys())
+        invalid_items = equation_items.difference(parsed_items.keys())
         if invalid_items:
-            self._add_parse_error(
-                eq_expr.__repr__(),
-                "equation",
-                f"Undefined {expression_group} found in equation: {invalid_items}",
+            raise KeyError(
+                f"({parsed_equation.expression.__repr__()}, equation): Undefined {expression_group} found in equation: {invalid_items}"
             )
 
-        eq_items.difference_update(invalid_items)
+        parsed_item_product = itertools.product(
+            *[parsed_items[k] for k in equation_items]
+        )
 
-        return itertools.product(*[parsed_items[k] for k in eq_items])
-
-    def _add_exprs_to_equation_data(
-        self,
-        equation_data: ParsedEquationDict,
-        expression_combination: Iterable[ParsedEquationDict],
-        expression_group: Literal["components", "index_items"],
-    ) -> ParsedEquationDict:
-        """
-        Create new equation dictionaries with evaluatable expressions for components or index items.
-        The new equation dict has an updated ID, `where` list, and an additional key
-        with the expression in.
-
-        Args:
-            equation_data (UnparsedConstraintDict):
-                Original equation data dictionary with reference to the expression group.
-            expression_combination (list[UnparsedConstraintDict]):
-                list of data dictionaries to use in updating the equation data.
-            expression_group (str): Name of the source of replacement expressions.
-
-        Returns:
-            UnparsedConstraintDict:
-                Updated equation dictionary with unique ID and equation
-                expressions attached under the key given by expression_group.
-        """
-        new_equation_data = equation_data.copy()
-
-        return {
-            "id": (
-                *new_equation_data.pop("id"),
-                *[expr["id"] for expr in expression_combination],
-            ),
-            "where": [
-                *new_equation_data.pop("where"),
-                *[expr["where"][0] for expr in expression_combination],
-            ],
-            expression_group: {  # type: ignore
-                expr["id"][0]: expr["expression"] for expr in expression_combination
-            },
-            **new_equation_data,
-        }
-
-    def _add_sub_exprs_per_equation_expr(
-        self,
-        equations: list[ParsedEquationDict],
-        expression_dict: dict[str, list[ParsedEquationDict]],
-        expression_group: Literal["components", "index_items"],
-    ) -> list[ParsedEquationDict]:
-        """
-        Build new list of equation dictionaries with nested expression group information.
-
-        Args:
-            equations (list[UnparsedConstraintDict]):
-                List of original equation data dictionaries with reference to the expression group.
-            expression_dict (dict[str, list[UnparsedConstraintDict]]):
-
-            expression_group (Literal[&quot;components&quot;, &quot;index_items&quot;]): _description_
-
-        Returns:
-            List[UnparsedConstraintDict]: _description_
-        """
-        updated_equations = []
-        for equation_dict in equations:
-            component_product = self._get_expression_group_product(
-                equation_dict, expression_dict, expression_group
+        return [
+            parsed_equation.add_expression_group_combination(
+                expression_group, parsed_item_combination
             )
-            for component_combination in component_product:
-                updated_equation_dict = self._add_exprs_to_equation_data(
-                    equation_dict, component_combination, expression_group
-                )
-                updated_equations.append(updated_equation_dict)
-        return updated_equations
+            for parsed_item_combination in parsed_item_product
+        ]
 
 
-class ParsedConstraint(ParsedBackendComponent):
+class ParsedConstraint(ParsedBackendComponent, ParsedBackendEquation):
     def __init__(
         self, constraint: UnparsedConstraintDict, constraint_name: str
     ) -> None:
@@ -582,77 +466,20 @@ class ParsedConstraint(ParsedBackendComponent):
         Args:
             constraint (UnparsedConstraintDict): Dictionary of the form:
                 foreach: list[str]  <- sets over which to iterate the constraint, e.g. ["timestep in timesteps"], where "timesteps" is the set and "timestep" is the reference to the set iterator in the constraint equation(s)
-                where: list[str]  <- conditions defining which items in the product of all sets to apply the constraint to  FIXME: not implemented.
-                equation: String  <- if no other conditions, single constraint equation of the form LHS OPERATOR RHS, e.g. "energy_cap[node, tech] >= my_parameter[tech] * 2"  FIXME: not implemented.
-                equations: list[dict]  <- if different equations for different conditions, list them here with an additional "where" statement and an associated expression: {"where": [...], "expression": "..."}  FIXME: not implemented.
-                components: dict[list[dict]]  <- if applying the same expression to multiple equations in the constraint, store them here with optional conditions on their exact composition, e.g. "$energy_prod" in an equation would refer to a component {"energy_prod": [{"where": [...], "expression": "..."}, ...]}  FIXME: not implemented.
-                index_items: dict[list[dict]]  <- if indexing a parameter/variable separately to the set iterators given in "foreach", define them here. FIXME: not implemented.
+                where: list[str]  <- conditions defining which items in the product of all sets to apply the constraint to
+                equation: String  <- if no other conditions, single constraint equation of the form LHS OPERATOR RHS, e.g. "energy_cap[node, tech] >= my_parameter[tech] * 2"
+                equations: list[dict]  <- if different equations for different conditions, list them here with an additional "where" statement and an associated expression: {"where": [...], "expression": "..."}
+                components: dict[list[dict]]  <- if applying the same expression to multiple equations in the constraint, store them here with optional conditions on their exact composition, e.g. "$energy_prod" in an equation would refer to a component {"energy_prod": [{"where": [...], "expression": "..."}, ...]}
+                index_slices: dict[list[dict]]  <- if indexing a parameter/variable separately to the set iterators given in "foreach", define them here.
             constraint_name (str): Name of constraint.
         """
         ParsedBackendComponent.__init__(self, constraint, constraint_name)
-
-    def parse_strings(self) -> None:
-        """
-        Parse all elements of the constraint: "foreach", "equation(s)", "component".
-
-        Args:
-            model_data (xr.Dataset):
-                Calliope processed model dataset with all necessary parameters, sets,
-                and run configuration options defined.
-
-        """
-        sets = self._get_sets_from_foreach(self._unparsed["foreach"])
-        top_level_where = self._parse_where_string(self._unparsed)
-        equation_expression_list: list[UnparsedEquationDict]
-        if "equation" in self._unparsed.keys():
-            equation_expression_list = [{"expression": self._unparsed["equation"]}]
-        else:
-            equation_expression_list = self._unparsed["equations"]
-
-        equations = self._parse_where_expression(
-            expression_parser=equation_parser.generate_equation_parser(),
-            expression_list=equation_expression_list,
-            expression_group="equations",
+        self.equations = self.parse_equations(
+            equation_parser.generate_equation_parser()
         )
 
-        component_dict = {
-            c_name: self._parse_where_expression(
-                expression_parser=equation_parser.generate_arithmetic_parser(),
-                expression_list=c_list,
-                expression_group="components",
-                id_prefix=c_name,
-            )
-            for c_name, c_list in self._unparsed.get("components", {}).items()
-        }
-        index_item_dict = {
-            idx_name: self._parse_where_expression(
-                expression_parser=equation_parser.generate_index_item_parser(),
-                expression_list=idx_list,
-                expression_group="index_items",
-                id_prefix=idx_name,
-            )
-            for idx_name, idx_list in self._unparsed.get("index_items", {}).items()
-        }
 
-        if self._is_valid:
-            equations_with_components = self._add_sub_exprs_per_equation_expr(
-                equations, component_dict, "components"
-            )
-            equations_with_components_and_index_items = (
-                self._add_sub_exprs_per_equation_expr(
-                    equations_with_components, index_item_dict, "index_items"
-                )
-            )
-
-        if self._is_valid:
-            self.sets = sets
-            self.equations = equations_with_components_and_index_items
-            self.top_level_where = top_level_where
-
-        return None
-
-
-class ParsedVariable(ParsedBackendComponent):
+class ParsedVariable(ParsedBackendComponent, ParsedBackendEquation):
     def __init__(self, variable: UnparsedVariableDict, variable_name: str) -> None:
         """Parse a variable configuration dictionary.
 
@@ -669,29 +496,10 @@ class ParsedVariable(ParsedBackendComponent):
             variable_name (str): Name of variable.
         """
         ParsedBackendComponent.__init__(self, variable, variable_name)
-
-    def parse_strings(self) -> None:
-        """
-        Parse all elements of the variable: "foreach", "where".
-
-        Args:
-            model_data (xr.Dataset):
-                Calliope processed model dataset with all necessary parameters, sets,
-                and run configuration options defined.
-
-        """
-
-        sets = self._get_sets_from_foreach(self._unparsed["foreach"])
-        top_level_where = self._parse_where_string(self._unparsed)
-
-        if self._is_valid:
-            self.sets = sets
-            self.top_level_where = top_level_where
-
-        return None
+        self.bounds = self._unparsed["bounds"]
 
 
-class ParsedObjective(ParsedBackendComponent):
+class ParsedObjective(ParsedBackendComponent, ParsedBackendEquation):
     def __init__(self, objective: UnparsedObjectiveDict, objective_name: str) -> None:
         """Parse an objective configuration dictionary.
 
@@ -701,44 +509,24 @@ class ParsedObjective(ParsedBackendComponent):
             objective_name (str): Name of objective.
         """
         ParsedBackendComponent.__init__(self, objective, objective_name)
-
-    def parse_strings(self) -> None:
-        """
-        Parse all elements of the objective: "equation(s)", "component".
-
-        """
-        equation_expression_list: list[UnparsedEquationDict]
-        base_where_dict: UnparsedEquationDict = {"where": "True", "expression": ""}
-        top_level_where = self._parse_where_string(base_where_dict)
-
-        if "equation" in self._unparsed.keys():
-            equation_expression_list = [{"expression": self._unparsed["equation"]}]
-        else:
-            equation_expression_list = self._unparsed["equations"]
-
-        equations = self._parse_where_expression(
-            expression_parser=equation_parser.generate_arithmetic_parser(),
-            expression_list=equation_expression_list,
-            expression_group="equations",
+        self.equations: list[ParsedBackendEquation] = self.parse_equations(
+            equation_parser.generate_arithmetic_parser()
         )
+        self.sense = self._unparsed["sense"]
 
-        component_dict = {
-            c_name: self._parse_where_expression(
-                expression_parser=equation_parser.generate_arithmetic_parser(),
-                expression_list=c_list,
-                expression_group="components",
-                id_prefix=c_name,
-            )
-            for c_name, c_list in self._unparsed.get("components", {}).items()
-        }
 
-        if self._is_valid:
-            equations_with_components = self._add_sub_exprs_per_equation_expr(
-                equations, component_dict, "components"
-            )
+class ParsedExpression(ParsedBackendComponent, ParsedBackendEquation):
+    def __init__(
+        self, expression: UnparsedConstraintDict, expression_name: str
+    ) -> None:
+        """Parse an objective configuration dictionary.
 
-        if self._is_valid:
-            self.equations = equations_with_components
-            self.top_level_where = top_level_where
-
-        return None
+        Args:
+            variable (UnparsedObjectiveDict): Dictionary of the form:
+                equations: list[str]
+            objective_name (str): Name of objective.
+        """
+        ParsedBackendComponent.__init__(self, expression, expression_name)
+        self.equations = self.parse_equations(
+            equation_parser.generate_arithmetic_parser()
+        )

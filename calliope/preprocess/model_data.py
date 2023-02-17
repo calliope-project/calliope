@@ -107,6 +107,9 @@ class ModelDataFactory:
             )
 
         self.model_data = time.add_max_demand_timesteps(self.model_data)
+        self.model_data["annualisation_weight"] = (
+            self.model_data.timestep_resolution * self.model_data.timestep_weights
+        ).sum() / 8760
 
     def _clean_model_data(self):
         self.model_data = dataset.reorganise_xarray_dimensions(self.model_data)
