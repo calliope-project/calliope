@@ -6,6 +6,7 @@ netcdf4 >= 1.2.2
 numpy ~= 1.23.5
 pandas ~= 1.5.2
 pyomo ~= 6.4.4
+pyparsing ~= 3.0.9
 ruamel.yaml ~= 0.17.21
 scikit-learn ~= 1.2.0
 xarray ~= 2022.3.0
