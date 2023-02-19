@@ -58,7 +58,9 @@ class EvalOperatorOperand:
         arithmetic_string = f"({first_operand} {operand_operator_pairs})"
         return arithmetic_string
 
-    def operatorOperands(self, tokenlist: list) -> Iterator[tuple[str, pp.ParseResults]]:
+    def operatorOperands(
+        self, tokenlist: list
+    ) -> Iterator[tuple[str, pp.ParseResults]]:
         "Generator to extract operators and operands in pairs"
 
         it = iter(tokenlist)
