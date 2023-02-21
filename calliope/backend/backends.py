@@ -244,7 +244,7 @@ class PyomoBackendModel(BackendModel):
         self._raise_error_on_preexistence(parsed_component.name, component_type_group)
         component_type = component_type_group.removesuffix("s")
         top_level_imask = parsed_component.evaluate_where(
-            model_data, self.defaults, self
+            model_data, self.defaults
         )
         component_da = xr.DataArray().where(top_level_imask).astype(np.dtype("O"))
 
@@ -254,7 +254,7 @@ class PyomoBackendModel(BackendModel):
         for element in parsed_component.equations:
 
             imask = element.evaluate_where(
-                model_data, self.defaults, self, top_level_imask
+                model_data, self.defaults, top_level_imask
             )
             if not imask.any():
                 continue
@@ -349,7 +349,7 @@ class PyomoBackendModel(BackendModel):
 
         # self._raise_error_on_preexistence(parsed_variable.name, "variables")
 
-        imask = parsed_variable.evaluate_where(model_data, self.defaults, self)
+        imask = parsed_variable.evaluate_where(model_data, self.defaults)
 
         if imask is None:
             return None
@@ -376,7 +376,7 @@ class PyomoBackendModel(BackendModel):
         sense_dict = {"minimize": 1, "maximize": -1}
         n_valid_exprs = 0
         for equation in parsed_objective.equations:
-            imask = equation.evaluate_where(model_data, self.defaults, self)
+            imask = equation.evaluate_where(model_data, self.defaults)
             if imask.any():
                 expr = equation.evaluate_expression(model_data, self).item()
                 n_valid_exprs += 1
