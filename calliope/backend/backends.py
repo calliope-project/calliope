@@ -243,9 +243,7 @@ class PyomoBackendModel(BackendModel):
     ) -> xr.DataArray:
         self._raise_error_on_preexistence(parsed_component.name, component_type_group)
         component_type = component_type_group.removesuffix("s")
-        top_level_imask = parsed_component.evaluate_where(
-            model_data, self.defaults
-        )
+        top_level_imask = parsed_component.evaluate_where(model_data, self.defaults)
         component_da = xr.DataArray().where(top_level_imask).astype(np.dtype("O"))
 
         if not top_level_imask.any():
@@ -253,9 +251,7 @@ class PyomoBackendModel(BackendModel):
 
         for element in parsed_component.equations:
 
-            imask = element.evaluate_where(
-                model_data, self.defaults, top_level_imask
-            )
+            imask = element.evaluate_where(model_data, self.defaults, top_level_imask)
             if not imask.any():
                 continue
 

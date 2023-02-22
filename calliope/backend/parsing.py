@@ -98,10 +98,12 @@ class ParsedBackendEquation:
 
     def find_index_slices(self) -> set[str]:
 
-        valid_eval_classes = (
-            equation_parser.EvalOperatorOperand,
-            equation_parser.EvalFunction,
-            equation_parser.EvalSlicedParameterOrVariable,
+        valid_eval_classes = tuple(
+            [
+                equation_parser.EvalOperatorOperand,
+                equation_parser.EvalFunction,
+                equation_parser.EvalSlicedParameterOrVariable,
+            ]
         )
         elements = [self.expression[0].values, *list(self.components.values())]
         to_find = equation_parser.EvalIndexSlices
@@ -112,7 +114,7 @@ class ParsedBackendEquation:
     def _find_items_in_expression(
         parser_elements: Union[list, pp.ParseResults],
         to_find: type[equation_parser.EvalString],
-        valid_eval_classes=tuple[type[equation_parser.EvalString]],
+        valid_eval_classes: tuple[type[equation_parser.EvalString], ...],
     ) -> set[str]:
         """
         Recursively find components / index items defined in an equation expression.
