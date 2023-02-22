@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import itertools
 from typing import KeysView, Optional, Union, Literal, Iterable
 from typing_extensions import NotRequired, TypedDict, Required
@@ -84,7 +86,7 @@ class ParsedConstraint:
 
     def parse_strings(self, model_data: xr.Dataset) -> None:
         """
-        Parse all elements of the constraint: "foreach", "equation(s)", "component".
+        Parse all elements of the constraint: "foreach", "equation(s)", "components", "index items".
 
         Args:
             model_data (xr.Dataset):
@@ -193,7 +195,7 @@ class ParsedConstraint:
             instring (str): String being parsed where the error was caught.
             expression_group (str):
                 Location in the constraint definition where the string was defined,
-                e.g., "foreach", "equations", "components".
+                e.g., "foreach", "equations", "components", "index items".
             error_message (str): Description of error.
         """
         self._is_valid = False
