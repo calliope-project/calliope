@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Dict, KeysView, List, Optional
 from typing_extensions import NotRequired, TypedDict, Required
 from functools import partial
