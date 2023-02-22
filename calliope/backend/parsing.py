@@ -271,7 +271,7 @@ class ParsedConstraint:
         self,
         parser_elements: Union[list, pp.ParseResults],
         to_find: type[equation_parser.EvalString],
-        valid_eval_classes=tuple[type[equation_parser.EvalString]],
+        valid_eval_classes: tuple[type[equation_parser.EvalString], ...],
     ) -> set[str]:
         """
         Recursively find components / index items defined in an equation expression.
