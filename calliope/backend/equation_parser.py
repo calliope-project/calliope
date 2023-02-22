@@ -24,7 +24,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ##
-
+from __future__ import annotations
 from typing import Callable, Any, Union, Optional, Iterator
 
 import pyparsing as pp
@@ -65,7 +65,9 @@ class EvalOperatorOperand(EvalString):
         arithmetic_string = f"({first_operand} {operand_operator_pairs})"
         return arithmetic_string
 
-    def operatorOperands(self, tokenlist: list) -> Iterator[tuple[str, pp.ParseResults]]:
+    def operatorOperands(
+        self, tokenlist: list
+    ) -> Iterator[tuple[str, pp.ParseResults]]:
         "Generator to extract operators and operands in pairs"
 
         it = iter(tokenlist)
@@ -288,9 +290,8 @@ class EvalIndexedParameterOrVariable(EvalString):
                 param_or_var_name (str), index_items (list of strings).
         """
         token_dict = tokens.as_dict()
-        self.name: str = token_dict["param_or_var_name"][0]
-        self.index_items: pp.ParseResults = token_dict["index_items"]
-        self.value = tokens
+        self.name = token_dict["param_or_var_name"][0]
+        self.index_items = token_dict["index_items"]
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
