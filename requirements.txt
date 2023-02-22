@@ -1,9 +1,9 @@
 click ~= 8.1
-ipython >= 7
-ipdb >= 0.13
-jinja2 >= 2.10
-natsort >= 5
-netcdf4 >= 1.2.2
+ipython >= 7, < 9
+ipdb >= 0.13, < 1.0
+jinja2 >= 2.10, < 4
+natsort >= 5, < 9
+netcdf4 >= 1.2.2, < 1.6.2
 numpy ~= 1.23.5
 pandas ~= 1.5.2
 plotly ~= 3.10.0
