@@ -292,6 +292,7 @@ class EvalIndexedParameterOrVariable(EvalString):
         token_dict = tokens.as_dict()
         self.name = token_dict["param_or_var_name"][0]
         self.index_items = token_dict["index_items"]
+        self.value = tokens
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
