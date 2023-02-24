@@ -228,7 +228,7 @@ class ParsedBackendEquation:
         return functools.reduce(operator.and_, all_imasks)
 
     def evaluate_expression(
-        self, model_data: xr.Dataset, backend_interface: BackendModel
+        self, model_data: xr.Dataset, backend_interface: BackendModel, imask: xr.DataArray
     ):
         return self.expression[0].eval(
             equation_name=self.name,
@@ -238,6 +238,7 @@ class ParsedBackendEquation:
             backend_dataset=backend_interface.dataset,
             helper_func_dict=VALID_HELPER_FUNCTIONS,
             model_data=model_data,
+            imask=imask,
             as_dict=False,
         )
 

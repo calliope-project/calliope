@@ -316,7 +316,9 @@ class Model(object):
                 )
 
             for parsed_constraint in self.parsed_components["constraints"].values():
-                backend.add_constraint(self._model_data, parsed_constraint)
+                backend.dataset[parsed_constraint.name] = backend.add_constraint(
+                    self._model_data, parsed_constraint
+                )
 
             for parsed_objective in self.parsed_components["objectives"].values():
                 backend.dataset[parsed_objective.name] = backend.add_objective(

@@ -26,7 +26,9 @@
 ##
 from typing import Callable, Any, Union, Optional, Iterator
 from abc import ABC, abstractmethod
+
 import pyparsing as pp
+import xarray as xr
 
 from calliope.exceptions import BackendError
 
@@ -82,17 +84,20 @@ class EvalOperatorOperand(EvalString):
             except StopIteration:
                 break
 
-    def eval(self, **eval_kwargs) -> Any:
+    def eval(self, apply_imask: bool = True, **eval_kwargs) -> Any:
         """
         Returns:
             Any:
                 If all operands are numeric, returns float, otherwise returns an
                 expression to use in an optimisation model constraint.
         """
-        # TODO: should initialise using a Gurobi/Pyomo expression object
-        val = self.value[0].eval(**eval_kwargs)
+        val = xr.DataArray(self.value[0].eval(**eval_kwargs))
+        if apply_imask:
+            val = val.where(eval_kwargs["imask"])
         for operator_, operand in self.operatorOperands(self.value[1:]):
-            evaluated_operand = operand.eval(**eval_kwargs)
+            evaluated_operand = xr.DataArray(operand.eval(**eval_kwargs))
+            if apply_imask:
+                evaluated_operand = evaluated_operand.where(eval_kwargs["imask"])
             if operator_ == "**":
                 val = val**evaluated_operand
             elif operator_ == "*":
@@ -196,6 +201,7 @@ class EvalFunction(EvalString):
                 parsed components is returned (if test=True).
         """
         args_ = []
+        eval_kwargs["apply_imask"] = False
         for arg in self.args:
             if isinstance(arg, pp.ParseResults):
                 args_.append(arg[0].eval(**eval_kwargs))
