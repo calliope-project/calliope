@@ -102,15 +102,15 @@ def capacity_factor(results, model_data, systemwide=False):
 
     if systemwide:
         prod_sum = (results["carrier_prod"] * model_data.timestep_weights).sum(
-            dim=["timesteps", "nodes"]
+            dim=["timesteps", "nodes"], min_count=1
         )
 
-        cap_sum = energy_cap.sum(dim="nodes")
+        cap_sum = energy_cap.where(lambda x: x > 0).sum(dim="nodes", min_count=1)
         time_sum = (model_data.timestep_resolution * model_data.timestep_weights).sum()
 
-        capacity_factors = prod_sum / (cap_sum * time_sum)
+        capacity_factors = (prod_sum / (cap_sum * time_sum)).fillna(0)
     else:
-        capacity_factors = (results["carrier_prod"] / energy_cap).fillna(0)
+        capacity_factors = (results["carrier_prod"] / energy_cap.where(lambda x: x > 0)).fillna(0)
 
     return capacity_factors
 
@@ -144,23 +144,23 @@ def systemwide_levelised_cost(results, model_data, total=False):
     """
     # Here we scale production by timestep weight
     carrier_prod = results["carrier_prod"] * model_data.timestep_weights
-    cost = results["cost"].sum(dim="nodes")
-    carrier_prod = carrier_prod.sum(dim=["timesteps", "nodes"])
+    cost = results["cost"].sum(dim="nodes", min_count=1)
+    carrier_prod = (results["carrier_prod"] * model_data.timestep_weights).sum(dim=["timesteps", "nodes"], min_count=1)
 
     if total:
         # cost is the total cost of the system
         # carrier_prod is only the carrier_prod of supply and conversion technologies
         allowed_techs = ("supply", "supply_plus", "conversion", "conversion_plus")
         valid_techs = model_data.inheritance.to_series().str.endswith(allowed_techs)
-        cost = cost.sum(dim="techs")
+        cost = cost.sum(dim="techs", min_count=1)
         carrier_prod = carrier_prod.loc[{"techs": valid_techs[valid_techs].index}].sum(
-            dim="techs"
+            dim="techs", min_count=1
         )
 
     levelised_cost = []
 
     for carrier in carrier_prod["carriers"].values:
-        levelised_cost.append(cost / carrier_prod.loc[{"carriers": carrier}])
+        levelised_cost.append(cost / carrier_prod.loc[{"carriers": carrier}].where(lambda x: x > 0))
 
     return xr.concat(levelised_cost, dim="carriers")
 

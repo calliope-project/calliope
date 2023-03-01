@@ -132,7 +132,7 @@ constraints:
         where: "include_storage=True AND NOT model.time.function_options.storage_inter_cluster=True"
         equation: storage - storage_cap <= 0
 
-    storage_discharge_depth:
+    storage_discharge_depth_limit:
         foreach: [nodes, techs, timesteps]
         where: "include_storage=True AND storage_discharge_depth"
         equation: storage - storage_discharge_depth * storage_cap >= 0
@@ -265,7 +265,7 @@ constraints:
         where: "export_carrier AND export=True"
         equation: carrier_prod >= carrier_export
 
-    export_max:
+    carrier_export_max:
         foreach: [nodes, techs, carriers, timesteps]
         where: "export_max AND export_carrier AND export=True"
         equations:
@@ -468,7 +468,7 @@ variables:
 
     units:
         foreach: [nodes, techs]
-        where: "cap_method=integer' AND NOT run.mode=operate"
+        where: "cap_method=integer AND NOT run.mode=operate"
         bounds:
             min: units_min
             max: units_max

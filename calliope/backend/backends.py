@@ -1,34 +1,28 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-import re
+import typing
 from typing import (
     Any,
-    SupportsFloat,
     Callable,
     Optional,
     Literal,
-    TypedDict,
     TypeVar,
     Generic,
     Union,
-    Iterable,
 )
-import functools
+
 import os
 from contextlib import redirect_stdout, redirect_stderr
 import logging
 
 import xarray as xr
 import pandas as pd
-import pyomo.core as po
 import pyomo.environ as pe
 import pyomo.kernel as pmo
 from pyomo.opt import SolverFactory
-
 from pyomo.common.tempfiles import TempfileManager
 import numpy as np
-from pandas.api.types import is_numeric_dtype
 
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
@@ -37,93 +31,238 @@ from calliope.backend import parsing
 from calliope.core.util.observed_dict import UpdateObserverDict
 
 
-class ParsedComponents(TypedDict):
-    variables: dict[str, parsing.ParsedVariable]
-    constraints: dict[str, parsing.ParsedConstraint]
-    objectives: dict[str, parsing.ParsedObjective]
-    expressions: dict[str, parsing.ParsedExpression]
-
-
 T = TypeVar("T")
+_COMPONENTS_T = Literal[
+    "variables", "constraints", "objectives", "parameters", "expressions"
+]
+
+logger = logging.getLogger(__name__)
 
 
 class BackendModel(ABC, Generic[T]):
-    logger = logging.getLogger(__name__)
+    _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
 
-    def __init__(
-        self, parsed_components: ParsedComponents, defaults: dict, instance: T
-    ):
+    def __init__(self, defaults: dict, instance: T):
+        """Abstract base class for interfaces to solvers.
+
+        Args:
+            defaults (dict): Calliope input parameter defaults.
+            instance (T): Interface model instance.
+        """
 
         self.defaults = defaults.copy()
-        self.parsed_components = parsed_components
 
-        self.instance = instance
-        self.dataset = xr.Dataset()
-
-        self._datetime_data: set
-        self._warnings: set = set()
-        self._lookup_constraint_components: dict[str, pd.Series]
-        self._lookup_param_or_var_set_names: dict[str, Optional[tuple]]
+        self._instance = instance
+        self._dataset = xr.Dataset()
 
     @abstractmethod
     def add_parameter(
-        self, parameter_name: str, parameter_values: xr.DataArray
+        self,
+        parameter_name: str,
+        parameter_values: xr.DataArray,
+        default: Any = np.nan,
+        use_inf_as_na: bool = False,
     ) -> None:
+        """
+        Add input parameter to backend model in-place.
+        If the backend interface allows for mutable parameter objects, they will be
+        generated, otherwise a copy of the model input dataset will be used.
+        In either case, NaN values are filled with the given parameter default value.
+
+        Args:
+            parameter_name (str): Name of parameter.
+            parameter_values (xr.DataArray): Array of parameter values.
+            default (Any, optional):
+                Default value to fill NaN entries in parameter values array.
+                Defaults to np.nan.
+            use_inf_as_na (bool, optional):
+                If True, will consider np.inf parameter value entries as np.nan and
+                consequently try to fill those entries with the parameter default value.
+                Defaults to False.
+        """
         pass
 
     @abstractmethod
     def add_constraint(
         self,
-        constraint_name: str,
-        constraint_rule: Callable,
-        constraint_subset: pd.Index,
+        model_data: xr.Dataset,
+        parsed_constraint: parsing.ParsedConstraint,
     ) -> None:
+        """
+        Add constraint equation to backend model in-place.
+        Resulting backend dataset entries will be constraint objects.
+
+        Args:
+            model_data (xr.Dataset):
+                Calliope model data with which to create a constraint mask - only those
+                dataset entries in the mask will be generated.
+            parsed_constraint (parsing.ParsedConstraint):
+                Parsed YAML constraint dictionary entry, ready for evaluation.
+        """
+        pass
+
+    @abstractmethod
+    def add_expression(
+        self,
+        model_data: xr.Dataset,
+        parsed_expression: parsing.ParsedExpression,
+    ) -> None:
+        """
+        Add expression (arithmetic combination of parameters and/or decision variables)
+        to backend model in-place.
+        Resulting backend dataset entries will be linear expression objects.
+
+        Args:
+            model_data (xr.Dataset):
+                Calliope model data with which to create a constraint mask - only those
+                dataset entries in the mask will be generated.
+            parsed_expression (parsing.ParsedExpression):
+                Parsed YAML expression dictionary entry, ready for evaluation.
+        """
         pass
 
     @abstractmethod
     def add_variable(
         self,
-        variable_name: str,
-        variable_subset: Optional[pd.Index],
-        bounds_dict: dict[str, SupportsFloat],
-        domain: str,
+        model_data: xr.Dataset,
+        parsed_variable: parsing.ParsedVariable,
     ) -> None:
+        """
+        Add decision variable to backend model in-place.
+        Resulting backend dataset entries will be decision variable objects.
+
+        Args:
+            model_data (xr.Dataset):
+                Calliope model data with which to create a constraint mask - only those
+                dataset entries in the mask will be generated.
+            parsed_variable (parsing.ParsedVariable):
+                Parsed YAML variable dictionary entry, ready for evaluation.
+        """
         pass
 
     @abstractmethod
     def add_objective(
         self,
-        objective_name: str,
-        objective_rule: Callable,
-        domain: str,
-        sense: Literal["minimise", "maximise"] = "minimise",
+        model_data: xr.Dataset,
+        parsed_objective: parsing.ParsedObjective,
     ) -> None:
+        """
+        Add objective arithmetic to backend model in-place.
+        Resulting backend dataset entry will be a single, unindexed objective object.
+
+        Args:
+            model_data (xr.Dataset):
+                Calliope model data with which to create a constraint mask - only those
+                dataset entries in the mask will be generated.
+            parsed_objective (parsing.ParsedObjective):
+                Parsed YAML objective dictionary entry, ready for evaluation.
+        """
         pass
 
     @abstractmethod
     def get_parameter(
-        self, parameter_name: str, index_lookup: Optional[tuple] = None
-    ) -> Any:
+        self, parameter_name: str, as_backend_objs: bool = True
+    ) -> Optional[xr.DataArray]:
+        """
+        Extract parameter from backend dataset.
+
+        Args:
+            parameter_name (str): Name of parameter.
+            TODO: hide this and create a method to edit parameter values
+                  (to handle interfaces with non-mutable params)
+            as_backend_objs (bool, optional):
+                If True, will keep the array entries as backend interface objects,
+                which can be updated to update the underlying model.
+                Otherwise, parameter values are given directly, with default values in place of NaNs.
+                Defaults to True.
+
+        Returns:
+            Optional[xr.DataArray]: If parameter is not in backend dataset, will return None.
+        """
         pass
 
     @abstractmethod
-    def get_constraint(self, constraint_name: str) -> Optional[pd.DataFrame]:
+    def get_constraint(
+        self,
+        constraint_name: str,
+        as_backend_objs: bool = True,
+        eval_body: bool = False,
+    ) -> Optional[Union[pd.DataFrame, xr.DataArray]]:
+        """
+        Get constraint data as either a table of details or as an array of backend interface objects.
+        Can be used to inspect and debug built constraints.
+
+        Args:
+            constraint_name (str): Name of constraint, as given in YAML constraint key.
+            TODO: hide this and create a method to edit constraints that handles differences in interface APIs.
+            as_backend_objs (bool, optional):
+                If True, will keep the array entries as backend interface objects,
+                which can be updated to change the underlying model.
+                Otherwise, constraint body, and lower and upper bounds are given in a table.
+                Defaults to True.
+            eval_body (bool, optional):
+                If True and as_backend_objs is False, will attempt to evaluate the constraint body.
+                If the model has been optimised, this attempt will produce a numeric value to see where the constraint sits between the lower or upper bound.
+                If the model has not yet been optimised, this attempt will fall back on the same as
+                if `eval_body` was set to False, i.e. a string representation of the linear expression in the constraint body.
+                Defaults to False.
+
+        Returns:
+            Optional[Union[pd.DataFrame, xr.DataArray]]:
+                If constraint is not in backend dataset, will return None.
+                If as_backend_objs is True, will return an xr.DataArray.
+                Otherwise, a table with index entries corresponding to constraint indices
+                and columns for constraint body, and upper and lower bounds will be given.
+        """
         pass
 
     @abstractmethod
     def get_variable(
-        self, variable_name: str, index_lookup: Optional[tuple] = None
-    ) -> Any:
+        self, variable_name: str, as_backend_objs: bool = True
+    ) -> Optional[xr.DataArray]:
+        """Extract decision variable array from backend dataset
+
+        Args:
+            variable_name (str): Name of variable.
+            TODO: hide this and create a method to edit variables that handles differences in interface APIs.
+            as_backend_objs (bool, optional):
+                If True, will keep the array entries as backend interface objects,
+                which can be updated to update the underlying model.
+                Otherwise, variable values are given directly.
+                If the model has not been successfully optimised, variable values will all be None.
+                Defaults to True.
+
+        Returns:
+            Optional[xr.DataArray]: If decision variable is not in backend dataset, will return None.
+        """
         pass
 
-    @functools.cache
-    def get_parameter_or_variable(
-        self, obj_name: str, subset: Optional[pd.Index] = None
-    ) -> Any:
-        if obj_name in self.variables.keys():
-            return self.get_variable(obj_name, subset)
-        else:
-            return self.get_parameter(obj_name, subset)
+    @abstractmethod
+    def get_expression(
+        self, expression_name: str, as_backend_objs: bool = True, eval_body: bool = True
+    ) -> Optional[xr.DataArray]:
+        """Exrtact expression array from backend dataset
+
+        Args:
+            expression_name (str): Name of expression
+            TODO: hide this and create a method to edit expressions that handles differences in interface APIs.
+            as_backend_objs (bool, optional):
+                If True, will keep the array entries as backend interface objects,
+                which can be updated to update the underlying model.
+                Otherwise, expression values are given directly.
+                If the model has not been successfully optimised, expression values will all be provided as strings.
+                Defaults to True.
+            eval_body (bool, optional):
+                If True and as_backend_objs is False, will attempt to evaluate the expression.
+                If the model has been optimised, this attempt will produce a numeric value.
+                If the model has not yet been optimised, this attempt will fall back on the same as
+                if `eval_body` was set to False, i.e. a string representation of the linear expression.
+                Defaults to True.
+
+        Returns:
+            Optional[xr.DataArray]: If expression is not in backend dataset, will return None.
+        """
+        pass
 
     @abstractmethod
     def solve(
@@ -135,53 +274,77 @@ class BackendModel(ABC, Generic[T]):
         warmstart: bool = False,
         **solve_kwargs,
     ):
+        """
+        Optimise built model. If solution is optimal, interface objects
+        (decision variables, expressions, constraints, objective) can be successfully
+        evaluated for their values at optimality.
+
+        Args:
+            solver (str): Name of solver to optimise with.
+            solver_io (Optional[str], optional):
+                If chosen solver has a python interface, set to "python" for potential
+                performance gains, otherwise should be left as None. Defaults to None.
+            solver_options (Optional[dict], optional):
+                Solver options/parameters to pass directly to solver.
+                See solver documentation for available parameters that can be influenced.
+                Defaults to None.
+            save_logs (Optional[str], optional):
+                If given, solver logs and built LP file will be saved to this filepath.
+                Defaults to None.
+            warmstart (bool, optional):
+                If True, and the chosen solver is capable of implementing it, an existing
+                optimal solution will be used to warmstart the next solve run.
+                Defaults to False.
+        """
         pass
 
-    def load_results(self):
+    def load_results(self) -> xr.Dataset:
+        """
+        Evaluate backend decision variables, expressions, and parameters (if not in inputs)
+        after a successful model run.
 
+        Returns:
+            xr.Dataset: Dataset of optimal solution results (all numeric data).
+        """
         all_variables = {
-            var.name: self.get_variable(var.name, as_array=True)
-            for var in self.variables
+            name_: self.get_variable(name_, as_backend_objs=False)
+            for name_, var in self.variables.items() if var.notnull().any()
+        }
+        all_expressions = {
+            name_: self.get_expression(name_, as_backend_objs=False, eval_body=True)
+            for name_, expr in self.expressions.items() if expr.notnull().any()
         }
 
-        results = self._string_to_datetime(xr.Dataset(all_variables))
+        results = xr.Dataset({**all_variables, **all_expressions})
 
         return results
 
-    def _raise_error_on_preexistence(self, obj: str, obj_type: str):
-        if obj in getattr(self, obj_type).keys():
-            raise BackendError(
-                f"Trying to add already existing {obj_type} {obj} to backend model."
-            )
-
-
-class PyomoBackendModel(BackendModel):
-    def __init__(self, parsed_components: ParsedComponents, defaults: dict):
-        BackendModel.__init__(
-            self,
-            parsed_components=parsed_components,
-            defaults=defaults,
-            instance=pmo.block(),
-        )
-        self.parameters = self.instance.parameters = pmo.parameter_dict()
-        self.variables = self.instance.variables = pmo.variable_dict()
-        self.expressions = self.instance.expressions = pmo.expression_dict()
-        self.constraints = self.instance.constraints = pmo.constraint_dict()
-        self.objectives = self.instance.objectives = pmo.objective_list()
-
-    def generate_backend_dataset(
+    def add_all_parameters(
         self, model_data: xr.Dataset, defaults: dict, run_config: UpdateObserverDict
     ) -> None:
-        dataset = xr.Dataset(model_data.coords)
+        """
+        Add all parameters to backend dataset in-place, including those in the run configuration.
+        If model data does not include a parameter, their default values will be added here
+        as unindexed backend dataset parameters.
+
+        TODO: Move the decision on which run config params to generate as backend params
+              earlier in the process.
+        Parameters in "objective_options" and the bigM parameter will be added from
+        run configuration.
+
+        Args:
+            model_data (xr.Dataset): Input model data.
+            defaults (dict): Parameter defaults.
+            run_config (UpdateObserverDict): Run configuration dictionary.
+        """
+
         for param_name, param_data in model_data.data_vars.items():
             default_val = defaults.get(param_name, np.nan)
-            dataset[param_name] = self.add_parameter(
-                param_name, param_data, default_val
-            )
+            self.add_parameter(param_name, param_data, default_val)
         for param_name, default_val in defaults.items():
-            if param_name in dataset:
+            if param_name in self.parameters.keys():
                 continue
-            dataset[param_name] = self.add_parameter(
+            self.add_parameter(
                 param_name, xr.DataArray(default_val), use_inf_as_na=False
             )
 
@@ -191,21 +354,130 @@ class PyomoBackendModel(BackendModel):
                 objective_cost_class = {
                     k: v for k, v in option_val.items() if k in model_data.costs
                 }
-                dataset["objective_cost_class"] = self.add_parameter(
+                self.add_parameter(
                     "objective_cost_class",
                     xr.DataArray.from_series(
                         pd.Series(objective_cost_class).rename_axis(index="costs")
                     ),
                 )
             else:
-                dataset["objective_" + option_name] = self.add_parameter(
-                    "objective_" + option_name, xr.DataArray(option_val)
-                )
-        dataset["bigM"] = self.add_parameter(
-            "bigM", xr.DataArray(run_config.get("bigM", 1e10))
+                self.add_parameter("objective_" + option_name, xr.DataArray(option_val))
+        self.add_parameter("bigM", xr.DataArray(run_config.get("bigM", 1e10)))
+
+    def apply_func(self, func: Callable, *args, **kwargs) -> xr.DataArray:
+        """
+        Apply a function to every element of an arbitrary number of xarray DataArrays.
+
+        Args:
+            func (Callable):
+                Un-vectorized function to call.
+                Number of accepted args should equal len(args).
+                Number of accepted kwargs should equal len(kwargs).
+            args (xr.DataArray):
+                xarray DataArrays which will be broadcast together and then iterated over
+                to apply the function.
+            kwargs (dict[str, Any]):
+                Additional keyword arguments to pass to `func`.
+
+        Returns:
+            xr.DataArray: Array with func applied to all elements.
+        """
+        return xr.apply_ufunc(
+            func,
+            *args,
+            kwargs=kwargs,
+            vectorize=True,
+            keep_attrs=True,
+            output_dtypes=[np.dtype("O")],
         )
 
-        self.dataset = dataset
+    def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
+        """
+        We do not allow any overlap of backend object names since they all have to
+        co-exist in the backend dataset.
+        I.e., users cannot overwrite any backend component with another
+        (of the same type or otherwise).
+
+        Args:
+            key (str): Backend object name
+            obj_type (str): Object type (one of )
+
+        Raises:
+            BackendError: _description_
+        """
+        if key in self._dataset.keys():
+            if key in getattr(self, obj_type):
+                raise BackendError(
+                    f"Trying to add already existing `{key}` to backend model {obj_type}."
+                )
+            else:
+                other_obj_type = [
+                    k.removesuffix("s")
+                    for k, v in self._dataset[key].attrs.items()
+                    if k in self._VALID_COMPONENTS and v == 1
+                ][0]
+                raise BackendError(
+                    f"Trying to add already existing *{other_obj_type}* `{key}` "
+                    f"as a backend model *{obj_type.removesuffix('s')}*."
+                )
+
+    @staticmethod
+    def _clean_arrays(*args) -> None:
+        """
+        Preemptively delete objects with large memory footprints that might otherwise
+        stick around longer than necessary.
+        """
+        del args
+
+    def _add_to_dataset(self, name: str, da: xr.DataArray, obj_type: _COMPONENTS_T):
+        """
+        Add array of backend objects to backend dataset in-place.
+
+        Args:
+            name (str): Name of entry in dataset.
+            da (xr.DataArray): Data to add.
+            obj_type (str): Type of backend objects in the array.
+        """
+        self._dataset[name] = da.assign_attrs({obj_type: 1})
+
+    @property
+    def constraints(self):
+        "Slice of backend dataset to show only built constraints"
+        return self._dataset.filter_by_attrs(constraints=1)
+
+    @property
+    def variables(self):
+        "Slice of backend dataset to show only built variables"
+        return self._dataset.filter_by_attrs(variables=1)
+
+    @property
+    def parameters(self):
+        "Slice of backend dataset to show only built parameters"
+        return self._dataset.filter_by_attrs(parameters=1)
+
+    @property
+    def expressions(self):
+        "Slice of backend dataset to show only built expressions"
+        return self._dataset.filter_by_attrs(expressions=1)
+
+    @property
+    def objectives(self):
+        "Slice of backend dataset to show only built objectives"
+        return self._dataset.filter_by_attrs(objectives=1)
+
+
+class PyomoBackendModel(BackendModel):
+    def __init__(self, defaults: dict):
+        BackendModel.__init__(
+            self,
+            defaults=defaults,
+            instance=pmo.block(),
+        )
+        self._instance.parameters = pmo.parameter_dict()
+        self._instance.variables = pmo.variable_dict()
+        self._instance.expressions = pmo.expression_dict()
+        self._instance.constraints = pmo.constraint_dict()
+        self._instance.objectives = pmo.objective_list()
 
     def add_parameter(
         self,
@@ -213,11 +485,12 @@ class PyomoBackendModel(BackendModel):
         parameter_values: xr.DataArray,
         default: Any = np.nan,
         use_inf_as_na: bool = False,
-    ) -> xr.DataArray:
+    ) -> None:
 
         self._raise_error_on_preexistence(parameter_name, "parameters")
 
-        self.instance.parameters[parameter_name] = pmo.parameter_list()
+        self._create_pyomo_list(parameter_name, "parameters")
+
         parameter_da = self.apply_func(
             self._to_pyomo_param,
             parameter_values,
@@ -228,141 +501,82 @@ class PyomoBackendModel(BackendModel):
         if not parameter_values.shape and parameter_da.isnull().all():
             parameter_da = parameter_da.astype(float)
 
-        if parameter_da.isnull().all():
-            return parameter_da
-
-        return parameter_da
-
-    def _add_constraint_or_expression(
-        self,
-        model_data: xr.Dataset,
-        parsed_component: Union[parsing.ParsedConstraint, parsing.ParsedExpression],
-        component_type_group: Literal["constraints", "expressions"],
-    ) -> xr.DataArray:
-        self._raise_error_on_preexistence(parsed_component.name, component_type_group)
-        component_type = component_type_group.removesuffix("s")
-        top_level_imask = parsed_component.evaluate_where(model_data, self.defaults)
-        component_da = xr.DataArray().where(top_level_imask).astype(np.dtype("O"))
-
-        if not top_level_imask.any():
-            return xr.DataArray(None)
-        if component_type_group == "constraints":
-            self.instance.constraints[parsed_component.name] = pmo.constraint_list()
-        elif component_type_group == "expressions":
-            self.instance.expressions[parsed_component.name] = pmo.expression_list()
-        for element in parsed_component.equations:
-
-            imask = element.evaluate_where(model_data, self.defaults, top_level_imask)
-            if not imask.any():
-                continue
-
-            expr = element.evaluate_expression(model_data, self, imask)
-            if component_da.where(imask).notnull().any():
-                subset_overlap = component_da.where(imask).to_series().dropna().index
-
-                raise BackendError(
-                    f"Trying to set two equations for the same index of {component_type}"
-                    f"`{parsed_component.name}`:\n{subset_overlap}"
-                )
-            if component_type_group == "constraints":
-                lhs, op, rhs = expr
-                to_fill = self.apply_func(
-                    self._to_pyomo_constraint,
-                    imask,
-                    xr.DataArray(lhs).squeeze(drop=True),
-                    xr.DataArray(rhs).squeeze(drop=True),
-                    op=op,
-                    name=parsed_component.name,
-                )
-                del lhs
-                del rhs
-            elif component_type_group == "expressions":
-                to_fill = self.apply_func(
-                    self._to_pyomo_expression,
-                    imask,
-                    expr.squeeze(drop=True),
-                    name=parsed_component.name,
-                )
-                del expr
-
-            component_da = component_da.fillna(to_fill)
-        return component_da.rename(parsed_component.name).assign_attrs(
-            {component_type: 1}
-        )
+        self._add_to_dataset(parameter_name, parameter_da, "parameters")
 
     def add_constraint(
         self,
         model_data: xr.Dataset,
         parsed_constraint: parsing.ParsedConstraint,
-    ) -> Optional[xr.DataArray]:
-        constraint_da = self._add_constraint_or_expression(
-            model_data, parsed_constraint, "constraints"
+    ) -> None:
+        def _constraint_setter(
+            imask: xr.DataArray, expr: tuple[xr.DataArray, str, xr.DataArray]
+        ) -> xr.DataArray:
+            lhs, op, rhs = expr
+            to_fill = self.apply_func(
+                self._to_pyomo_constraint,
+                imask,
+                xr.DataArray(lhs).squeeze(drop=True),
+                xr.DataArray(rhs).squeeze(drop=True),
+                op=op,
+                name=parsed_constraint.name,
+            )
+            self._clean_arrays(lhs, rhs)
+            return to_fill
+
+        self._add_constraint_or_expression(
+            model_data, parsed_constraint, _constraint_setter, "constraints"
         )
-        if constraint_da.notnull().any():
-            return constraint_da
 
     def add_expression(
         self,
         model_data: xr.Dataset,
         parsed_expression: parsing.ParsedExpression,
-    ) -> Optional[xr.DataArray]:
-        expression_da = self._add_constraint_or_expression(
-            model_data, parsed_expression, "expressions"
+    ) -> None:
+        def _expression_setter(imask: xr.DataArray, expr: xr.DataArray) -> xr.DataArray:
+            to_fill = self.apply_func(
+                self._to_pyomo_expression,
+                imask,
+                expr.squeeze(drop=True),
+                name=parsed_expression.name,
+            )
+            self._clean_arrays(expr)
+            return to_fill
+
+        self._add_constraint_or_expression(
+            model_data, parsed_expression, _expression_setter, "expressions"
         )
-        if expression_da.notnull().any():
-            return expression_da
-
-    def apply_func(self, func: Callable, *args, **kwargs) -> xr.DataArray:
-        return xr.apply_ufunc(
-            func,
-            *args,
-            kwargs=kwargs,
-            vectorize=True,
-            keep_attrs=True,
-            output_dtypes=[np.dtype("O")],
-        )
-
-    def to_dict(self, da: xr.DataArray) -> dict:
-        da_stack = da.stack(all_dims=da.dims).dropna("all_dims")
-        da_dict = da_stack.to_dict()
-        return {
-            da_dict["coords"]["all_dims"]["data"][i]: data
-            for i, data in enumerate(da_dict["data"])
-        }
-
-    def to_list(self, da: xr.DataArray) -> Iterable:
-        da_stack = da.stack(all_dims=da.dims).dropna("all_dims")
-        return da_stack.values
 
     def add_variable(
         self,
         model_data: xr.Dataset,
         parsed_variable: parsing.ParsedVariable,
-    ) -> xr.DataArray:
+    ) -> None:
 
         # self._raise_error_on_preexistence(parsed_variable.name, "variables")
 
         imask = parsed_variable.evaluate_where(model_data, self.defaults)
 
         if imask is None or not imask.any():
-            return xr.DataArray(None)
-        self.instance.variables[parsed_variable.name] = pmo.variable_list()
-        domain = parsed_variable._unparsed.get("domain", "real")
-        domain_type = getattr(pmo, f"{domain.title()}Set")
+            variable_da = xr.DataArray(None)
+        else:
+            self._create_pyomo_list(parsed_variable.name, "variables")
 
-        ub, lb = self._get_capacity_bounds(
-            parsed_variable.bounds, name=parsed_variable.name
-        )
-        variable_da = self.apply_func(
-            self._to_pyomo_variable,
-            imask,
-            ub,
-            lb,
-            name=parsed_variable.name,
-            domain_type=domain_type,
-        )
+            domain = parsed_variable._unparsed.get("domain", "real")
+            domain_type = getattr(pmo, f"{domain.title()}Set")
 
-        return variable_da.rename(parsed_variable.name).assign_attrs({"variable": 1})
+            ub, lb = self._get_capacity_bounds(
+                parsed_variable.bounds, name=parsed_variable.name
+            )
+            variable_da = self.apply_func(
+                self._to_pyomo_variable,
+                imask,
+                ub,
+                lb,
+                name=parsed_variable.name,
+                domain_type=domain_type,
+            )
+
+        self._add_to_dataset(parsed_variable.name, variable_da, "variables")
 
     def add_objective(
         self,
@@ -384,62 +598,58 @@ class PyomoBackendModel(BackendModel):
             )
 
         objective = pmo.objective(expr, sense=sense_dict[parsed_objective.sense])
-        self.instance.objectives.append(objective)
+        self._instance.objectives.append(objective)
 
-        return (
-            xr.DataArray(objective)
-            .rename(parsed_objective.name)
-            .assign_attrs({"objective": 1})
+        self._add_to_dataset(
+            parsed_objective.name, xr.DataArray(objective), "objectives"
         )
 
     def get_parameter(
-        self, parameter_name: str, subset: Optional[xr.DataArray] = None
+        self, parameter_name: str, as_backend_objs: bool = True
     ) -> Optional[xr.DataArray]:
-        parameter = self.dataset.get(parameter_name)
-        if parameter is not None and subset is not None:
-            parameter = parameter.where(subset)
-        return parameter
-
-    def get_parameter_array(self, parameter_name: str) -> Optional[xr.DataArray]:
-        parameter = self.get_parameter(parameter_name)
-        if isinstance(parameter, xr.DataArray):
-            return self.apply_func(self._from_pyomo_obj, parameter)
+        parameter = self.parameters.get(parameter_name, None)
+        if isinstance(parameter, xr.DataArray) and not as_backend_objs:
+            return self.apply_func(self._from_pyomo_param, parameter)
         else:
             return parameter
 
     def get_constraint(
-        self, constraint_name: str, eval_body: bool = False
+        self,
+        constraint_name: str,
+        as_backend_objs: bool = True,
+        eval_body: bool = False,
     ) -> Optional[pd.DataFrame]:
-        if constraint_name not in self.instance.constraints.keys():
-            return None
-        constraint_dict = dict()
-        for idx, sub_constraint in self.instance.constraints[constraint_name].items():
-            lb = sub_constraint.lb
-            ub = sub_constraint.ub
-            if eval_body:
-                try:
-                    body = sub_constraint.body()
-                except ValueError:
-                    body = sub_constraint.body.to_string()
-            else:
-                body = sub_constraint.body.to_string()
-            constraint_dict[idx] = {"lb": lb, "body": body, "ub": ub}
-        return pd.DataFrame(constraint_dict).T
+        constraint = self.constraints.get(constraint_name, None)
+        if isinstance(constraint, xr.DataArray) and not as_backend_objs:
+            constraint = (
+                constraint.to_series()
+                .dropna()
+                .apply(self._from_pyomo_constraint, eval_body=eval_body)
+            )
+        return constraint
 
     def get_variable(
-        self, variable_name: str, subset: Optional[xr.DataArray] = None
+        self, variable_name: str, as_backend_objs: bool = True
     ) -> Optional[xr.DataArray]:
-        variable = self.dataset.get(variable_name)
-        if variable is not None and subset is not None:
-            variable = variable.where(subset)
-        return variable
+        variable = self.variables.get(variable_name, None)
+        if isinstance(variable, xr.DataArray) and not as_backend_objs:
+            return self.apply_func(self._from_pyomo_param, variable)
+        else:
+            return variable
 
-    def get_variable_array(self, variable_name: str) -> Optional[xr.DataArray]:
-        variable = self.get_variable(variable_name)
-        if variable is not None:
-            return self.apply_func(self._from_pyomo_obj, variable)
-
-        return variable
+    def get_expression(
+        self,
+        expression_name: str,
+        as_backend_objs: bool = True,
+        eval_body: bool = False,
+    ) -> Optional[xr.DataArray]:
+        expression = self.expressions.get(expression_name, None)
+        if isinstance(expression, xr.DataArray) and not as_backend_objs:
+            return self.apply_func(
+                self._from_pyomo_expr, expression, eval_body=eval_body
+            )
+        else:
+            return expression
 
     def solve(
         self,
@@ -450,11 +660,6 @@ class PyomoBackendModel(BackendModel):
         warmstart: bool = False,
         **solve_kwargs,
     ):
-        """
-        Solve a Pyomo model using the chosen solver and all necessary solver options
-
-        Returns a Pyomo results object
-        """
         opt = SolverFactory(solver, solver_io=solver_io)
 
         if solver_options:
@@ -472,38 +677,136 @@ class PyomoBackendModel(BackendModel):
             )
             warmstart = False
 
-        with redirect_stdout(LogWriter(self.logger, "debug", strip=True)):
-            with redirect_stderr(LogWriter(self.logger, "error", strip=True)):
+        with redirect_stdout(LogWriter(logger, "debug", strip=True)):  # type: ignore
+            with redirect_stderr(LogWriter(logger, "error", strip=True)):  # type: ignore
                 # Ignore most of gurobipy's logging, as it's output is
                 # already captured through STDOUT
                 logging.getLogger("gurobipy").setLevel(logging.ERROR)
-                results = opt.solve(self.instance, tee=True, **solve_kwargs)
+                results = opt.solve(self._instance, tee=True, **solve_kwargs)
 
         termination = results.solver[0].termination_condition
 
         if termination == pe.TerminationCondition.optimal:
-            self.instance.load_solution(results.solution[0])
+            self._instance.load_solution(results.solution[0])
 
         else:
-            self.logger.critical("Problem status:")
+            logger.critical("Problem status:")
             for line in str(results.problem[0]).split("\n"):
-                self.logger.critical(line)
-            self.logger.critical("Solver status:")
+                logger.critical(line)
+            logger.critical("Solver status:")
             for line in str(results.solver[0]).split("\n"):
-                self.logger.critical(line)
+                logger.critical(line)
 
             BackendWarning("Model solution was non-optimal.")
 
         return str(termination)
 
-    def _get_capacity_bounds(self, bounds: dict, name):
+    def _create_pyomo_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+        """Attach an empty pyomo kernel list object to the pyomo model object.
+
+        Args:
+            key (str): Name of object
+            component_type (str): Object type
+
+        Raises:
+            BackendError: Cannot overwrite object of same name and type.
+        """
+        component_dict = getattr(self._instance, component_type)
+        if key in component_dict:
+            raise BackendError(
+                f"Trying to add already existing `{key}` to backend model {component_type}."
+            )
+        else:
+            singular_component = component_type.removesuffix("s")
+            component_dict[key] = getattr(pmo, f"{singular_component}_list")()
+
+    def _add_constraint_or_expression(
+        self,
+        model_data: xr.Dataset,
+        parsed_component: Union[parsing.ParsedConstraint, parsing.ParsedExpression],
+        component_setter: Callable,
+        component_type: Literal["constraints", "expressions"],
+    ) -> None:
+        """Generalised function to add a constraint or expression array to the model.
+
+        Args:
+            model_data (xr.Dataset): Calliope model input data
+            parsed_component (Union[parsing.ParsedConstraint, parsing.ParsedExpression]):
+                Parsed YAML expression dictionary entry, ready for evaluation.
+            component_setter (Callable):
+                Function to combine evaluated xarray DataArrays into
+                constraint/expression objects.
+                Will receive outputs of `evaluate_where` and `evalaute_expression` as inputs.
+            component_type (Literal[constraints, expressions])
+
+
+        Raises:
+            BackendError:
+                The sub-equations of the parsed component cannot generate component
+                objects on duplicate index entries.
+        """
+        self._raise_error_on_preexistence(parsed_component.name, component_type)
+        top_level_imask = parsed_component.evaluate_where(model_data, self.defaults)
+
+        if not top_level_imask.any():
+            component_da = xr.DataArray(None)
+        else:
+            component_da = xr.DataArray().where(top_level_imask).astype(np.dtype("O"))
+
+            self._create_pyomo_list(parsed_component.name, component_type)
+
+            for element in parsed_component.equations:
+                imask = element.evaluate_where(
+                    model_data, self.defaults, top_level_imask
+                )
+                if not imask.any():
+                    continue
+                if component_da.where(imask).notnull().any():
+                    subset_overlap = (
+                        component_da.where(imask).to_series().dropna().index
+                    )
+
+                    raise BackendError(
+                        "Trying to set two equations for the same index of "
+                        f"{component_type.removesuffix('s')} `{parsed_component.name}`:\n{subset_overlap}"
+                    )
+
+                expr = element.evaluate_expression(model_data, self, imask)
+                to_fill = component_setter(imask, expr)
+                component_da = component_da.fillna(to_fill)
+
+            if component_da.isnull().all():
+                component_da = xr.DataArray(None)
+
+        self._add_to_dataset(parsed_component.name, component_da, component_type)
+
+    def _get_capacity_bounds(
+        self, bounds: dict, name: str
+    ) -> tuple[xr.DataArray, xr.DataArray]:
+        """
+        Generate arrays corresponding to upper and lower bounds of a decision variable.
+        If `equals` is given, then everywhere it is not None/np.nan it will be applied
+        as the simultaneous upper and lower bound. Everywhere it is None/np.nan, it will
+        be filled by `min` (for lower bound) and `max` (for upper bound).
+        Upper and lower bounds will be scaled by `scale`, if `scale` is not None/np.nan.
+
+        Args:
+            bounds (dict): Dictionary of optional keys `min`, `max`, `equals`, and `scale`.
+            name (str): Name of decision variable.
+
+        Returns:
+            tuple[xr.DataArray, xr.DataArray]:
+                (upper bounds, lower bounds). Where unbounded, the array entry will be None.
+        """
+
         def __get_bound(bound):
             this_bound = bounds.get(bound, None)
             if isinstance(this_bound, str):
                 return self.get_parameter(this_bound)
             else:
-                name_ = f"TEMP:{name}_{bound}"
-                self.instance.parameters[name_] = pmo.parameter_list()
+                # TODO: decide if this parameter should be added to the backend dataset too
+                name_ = f"{name}_{bound}"
+                self._create_pyomo_list(name_, "parameters")
                 return xr.DataArray(self._to_pyomo_param(this_bound, name=name_))
 
         scale = __get_bound("scale")
@@ -520,21 +823,68 @@ class PyomoBackendModel(BackendModel):
         return ub.fillna(None), lb.fillna(None)
 
     def _to_pyomo_param(
-        self, val: Any, *, name, default: Any = np.nan, use_inf_as_na: bool = True
-    ) -> Union[type[ObjParameter], np.nan]:
+        self, val: Any, *, name: str, default: Any = np.nan, use_inf_as_na: bool = True
+    ) -> Union[type[ObjParameter], float]:
+        """
+        Utility function to generate a pyomo parameter for every element of an
+        xarray DataArray.
+        Output objects are of the type ObjParameter(pmo.parameter) since they need a
+        "dtype" property to be handled by xarray.
+
+        If not np.nan/None, output objects are also added to the backend model object in-place.
+
+
+        Args:
+            val (Any): Value to turn into a mutable pyomo parameter
+            name (str): Name of parameter
+            default (Any, optional): Default value if `val` is None/np.nan. Defaults to np.nan.
+            use_inf_as_na (bool, optional): If True, see np.inf as np.nan. Defaults to True.
+
+        Returns:
+            Union[type[ObjParameter], float]:
+                If both `val` and `default` are np.nan/None, return np.nan.
+                Otherwise return ObjParameter(val/default).
+        """
         with pd.option_context("mode.use_inf_as_na", use_inf_as_na):
             if pd.isnull(val):
                 if pd.isnull(default):
                     param = np.nan
                 else:
                     param = ObjParameter(default)
-                    self.instance.parameters[name].append(param)
+                    self._instance.parameters[name].append(param)
             else:
                 param = ObjParameter(val)
-                self.instance.parameters[name].append(param)
+                self._instance.parameters[name].append(param)
             return param
 
-    def _to_pyomo_constraint(self, mask, lhs, rhs, *, op, name):
+    def _to_pyomo_constraint(
+        self,
+        mask: Union[bool, np.bool_],
+        lhs: Any,
+        rhs: Any,
+        *,
+        op: Literal["==", ">=", "<="],
+        name: str,
+    ) -> Union[type[pmo.constraint], float]:
+        """
+        Utility function to generate a pyomo constraint for every element of an
+        xarray DataArray.
+
+        If not np.nan/None, output objects are also added to the backend model object in-place.
+
+        Args:
+            mask (Union[bool, np.bool_]): If True, add constraint, otherwise return np.nan
+            lhs (Any): Equation left-hand-side expression
+            rhs (Any): Equation right-hand-side expression
+            name (str): Name of constraint
+            op (Literal[, optional): Operator to compare `lhs` and `rhs`. Defaults to =", ">=", "<="].
+
+        Returns:
+            Union[type[pmo.constraint], float]:
+                If mask is True, return np.nan.
+                Otherwise return pmo_constraint(expr=lhs op rhs).
+        """
+
         if not mask:
             return np.nan
         elif op == "==":
@@ -543,39 +893,158 @@ class PyomoBackendModel(BackendModel):
             constraint = pmo.constraint(expr=lhs <= rhs)
         elif op == ">=":
             constraint = pmo.constraint(expr=lhs >= rhs)
-        self.instance.constraints[name].append(constraint)
+        self._instance.constraints[name].append(constraint)
         return constraint
 
     def _to_pyomo_expression(
-        self, mask, val: Any, *, name
+        self, mask: Union[bool, np.bool_], expr: Any, *, name: str
     ) -> Union[type[pmo.expression], float]:
-        if not mask:
-            return np.nan
+        """
+        Utility function to generate a pyomo expression for every element of an
+        xarray DataArray.
+
+        If not np.nan/None, output objects are also added to the backend model object in-place.
+
+
+        Args:
+            mask (Union[bool, np.bool_]): If True, add expression, otherwise return np.nan.
+            expr (Any): Linear expression to add.
+            name (str): Expression name.
+
+        Returns:
+            Union[type[pmo.expression], float]:
+                If mask is True, return np.nan.
+                Otherwise return pmo_expression(expr).
+        """
+        if mask:
+            expr_obj = pmo.expression(expr)
+            self._instance.expressions[name].append(expr_obj)
+            return expr_obj
         else:
-            expr = pmo.expression(val)
-            self.instance.expressions[name].append(expr)
-            return expr
+            return np.nan
 
     def _to_pyomo_variable(
-        self, mask: Union[bool, np.bool_], ub: Any, lb: Any, *, name, domain_type: str
+        self,
+        mask: Union[bool, np.bool_],
+        ub: Any,
+        lb: Any,
+        *,
+        name: str,
+        domain_type: Literal["RealSet", "IntegerSet"],
     ) -> Union[type[pmo.variable], float]:
+        """
+        Utility function to generate a pyomo decision variable for every element of an
+        xarray DataArray.
+
+        If not np.nan/None, output objects are also added to the backend model object in-place.
+
+        Args:
+            mask (Union[bool, np.bool_]): If True, add variable, otherwise return np.nan.
+            ub (Any): Upper bound to apply to the variable.
+            lb (Any): Lower bound to apply to the variable.
+            name (str): Name of variable.
+            domain_type (Literal["RealSet", "IntegerSet"]):
+                Domain over which variables are valid (real = continuous, integer = integer/binary)
+
+        Returns:
+            Union[type[pmo.variable], float]:
+                If mask is True, return np.nan.
+                Otherwise return pmo_variable(ub=ub, lb=lb, domain_type=domain_type).
+        """
         if mask:
             var = pmo.variable(ub=ub, lb=lb, domain_type=domain_type)
-            self.instance.variables[name].append(var)
+            self._instance.variables[name].append(var)
             return var
         else:
             return np.nan
 
     @staticmethod
-    def _from_pyomo_obj(val: Any) -> Any:
+    def _from_pyomo_param(
+        val: Union[ObjParameter, pmo.expression, pmo.variable, float]
+    ) -> Any:
+        """
+        Evaluate value of Pyomo object.
+        If the input object is a parameter, a numeric/string value will be given.
+        If the input object is an expression or variable, a numeric value will be given
+        only if the backend model has been successfully optimised, otherwise evaluation will return None.
+
+        Args:
+            val (Union[ObjParameter, pmo.expression, pmo.variable, np.nan]):
+                Item to be evaluated.
+
+        Returns:
+            Any: If the input is nullable, return np.nan, otherwise evaluate the "value" method of the object.
+        """
         if pd.isnull(val):
             return np.nan
         else:
-            return val.value
+            return val.value  # type: ignore
+
+    @staticmethod
+    def _from_pyomo_constraint(
+        val: pmo.constraint, *, eval_body: bool = False
+    ) -> pd.Series:
+        """Evaluate Pyomo constraint object.
+
+        Args:
+            val (pmo.constraint): constraint object to be evaluated
+            eval_body (bool, optional):
+                If True, attempt to evaluate the constraint object `body`, which will evaluate the
+                linear expression contained in the constraint body and produce a numeric value.
+                This will only succeed if the backend model has been successfully optimised,
+                otherwise a string representation of the linear expression will be returned
+                (same as eval_body=False). Defaults to False.
+
+        Returns:
+            pd.Series: Array of upper bound (ub), body, and lower bound (lb).
+        """
+        if pd.isnull(val):
+            vals = [np.nan, np.nan, np.nan]
+        else:
+            if eval_body:
+                try:
+                    body = val.body()
+                except ValueError:
+                    body = val.body.to_string()
+            else:
+                body = val.body.to_string()
+            vals = [val.lb, body, val.ub]
+        return pd.Series(data=vals, index=["lb", "body", "ub"])
+
+    @staticmethod
+    def _from_pyomo_expr(val: pmo.constraint, *, eval_body: bool = False) -> Any:
+        """Evaluate Pyomo expression object.
+
+        Args:
+            val (pmo.constraint): expression object to be evaluated
+            eval_body (bool, optional):
+                If True, attempt to evaluate the expression object, which will produce a numeric value.
+                This will only succeed if the backend model has been successfully optimised,
+                otherwise a string representation of the linear expression will be returned
+                (same as eval_body=False). Defaults to False.
+
+        Returns:
+            Any: If the input is nullable, return np.nan, otherwise a numeric value
+            (eval_body=True and problem is optimised) or a string.
+        """
+        if pd.isnull(val):
+            return np.nan
+        else:
+            if eval_body:
+                expr = val()
+                if expr is None:
+                    return val.to_string()
+                else:
+                    return expr
+            else:
+                return val.to_string()
 
 
 class ObjParameter(pmo.parameter):
-    """A non-negative variable."""
+    """
+    A pyomo parameter with added `dtype` property.
+    A pyomo parameter is `a object for storing a mutable, numeric value that can be used to build a symbolic expression`.
+    """
 
     __slots__ = ()
 
@@ -588,10 +1057,3 @@ class ObjParameter(pmo.parameter):
     @property
     def dtype(self):
         return "O"
-
-    @dtype.setter
-    def dtype(self, dtype):
-        if dtype < 0:
-            raise ValueError("lower bound must be non-negative")
-        # calls the base class property setter
-        pmo.parameter.dtype.fset(self, dtype)

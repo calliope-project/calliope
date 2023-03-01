@@ -10,11 +10,9 @@ Implements the core Model class.
 """
 import logging
 import warnings
-import textwrap
-from typing import TypedDict, Callable, TypeVar, Union, Optional
+from typing import TypedDict, Literal, TypeVar, Union, Optional
 from contextlib import contextmanager
 import os
-import datetime
 
 import xarray as xr
 import pandas as pd
@@ -49,6 +47,13 @@ T = TypeVar(
 )
 
 
+class ParsedComponents(TypedDict):
+    variables: dict[str, ParsedVariable]
+    constraints: dict[str, ParsedConstraint]
+    objectives: dict[str, ParsedObjective]
+    expressions: dict[str, ParsedExpression]
+
+
 def read_netcdf(path):
     """
     Return a Model object reconstructed from model data in a NetCDF file.
@@ -64,16 +69,9 @@ class Model(object):
 
     """
 
-    BACKENDS: dict[str, type[backends.BackendModel]] = {
+    _BACKENDS: dict[str, type[backends.BackendModel]] = {
         "pyomo": backends.PyomoBackendModel
     }
-
-    DEFAULTS = AttrDict.from_yaml(
-        os.path.join(os.path.dirname(calliope.__file__), "config", "defaults.yaml")
-    )
-    BACKEND_COMPONENTS = AttrDict.from_yaml(
-        os.path.join(os.path.dirname(calliope.__file__), "config", "constraints.yaml")
-    )
 
     def __init__(
         self,
@@ -135,7 +133,8 @@ class Model(object):
             unparsed=self.component_config["objectives"],
             parse_class=ParsedObjective,
         )
-        self.parsed_components: backends.ParsedComponents = {
+
+        self.parsed_components: ParsedComponents = {
             "variables": parsed_variables,
             "expressions": parsed_expression,
             "constraints": parsed_constraints,
@@ -165,7 +164,6 @@ class Model(object):
             self._debug_data = debug_data
             self._model_data_pre_time = data_pre_time
             self._model_data_stripped_keys = stripped_keys
-        self.inputs = self._model_data.filter_by_attrs(is_result=0)
         log_time(
             logger,
             self._timings,
@@ -190,34 +188,24 @@ class Model(object):
             name="subsets",
             observer=self._model_data,
         )
+
+        component_config = AttrDict.from_yaml(
+            os.path.join(
+                os.path.dirname(calliope.__file__), "config", "constraints.yaml"
+            )
+        )
         self.component_config = UpdateObserverDict(
-            initial_dict=self.BACKEND_COMPONENTS,
+            initial_dict=component_config.as_dict_flat(),
             name="component_config",
             observer=self._model_data,
         )
-        default_tech_dict = self.DEFAULTS.techs.default_tech
-        default_cost_dict = {
-            "cost_{}".format(k): v
-            for k, v in default_tech_dict.costs.default_cost.items()
-        }
-        default_node_dict = {
-            "available_area": self.DEFAULTS.nodes.default_node.available_area
-        }
-
-        defaults = AttrDict(
-            {
-                **default_tech_dict.constraints.as_dict(),
-                **default_tech_dict.switches.as_dict(),
-                **default_cost_dict,
-                **default_node_dict,
-            }
-        )
         self.defaults = UpdateObserverDict(
-            initial_dict=defaults,
+            initial_dict=self._generate_default_dict(),
             name="defaults",
             observer=self._model_data,
         )
 
+        self.inputs = self._model_data.filter_by_attrs(is_result=0)
         log_time(
             logger,
             self._timings,
@@ -247,8 +235,6 @@ class Model(object):
         )
 
     def _add_model_data_methods(self):
-        self.inputs = self._model_data.filter_by_attrs(is_result=0)
-        self.results = self._model_data.filter_by_attrs(is_result=1)
         self.model_config = UpdateObserverDict(
             initial_yaml_string=self._model_data.attrs.get("model_config", "{}"),
             name="model_config",
@@ -274,8 +260,10 @@ class Model(object):
             initial_yaml_string=self._model_data.attrs.get("component_config", "{}"),
             name="component_config",
             observer=self._model_data,
+            flat=True
         )
 
+        self.inputs = self._model_data.filter_by_attrs(is_result=0)
         results = self._model_data.filter_by_attrs(is_result=1)
         if len(results.data_vars) > 0:
             self.results = results
@@ -289,6 +277,18 @@ class Model(object):
     def _generate_parsing_components(
         self, unparsed: dict, parse_class: type[T]
     ) -> dict[str, T]:
+        """Parse optimisation model component (constraints, variables,etc.) string definitions.
+
+        Args:
+            unparsed (dict[str, dict]):
+                Raw component definitions, direct from YAML.
+                Keys are component names, values are dictionaries with component-specific entries
+            parse_class (type[T]): Parsing class of component type to parse
+            (e.g., for a constraint: parsing.ParsedConstraint)
+
+        Returns:
+            dict[str, T]: Keys match input keys and values are of the provided `parse_class` type.
+        """
 
         parsed_components: dict[str, T] = dict()
         for component_name, component_config in unparsed.items():
@@ -296,71 +296,138 @@ class Model(object):
             parsed_components.update({component_name: parsed_})
         return parsed_components
 
-    def build(self, backend_interface: str = "pyomo") -> None:
+    def _generate_default_dict(self) -> AttrDict:
+        """Process input parameter default YAML configuration file into a dictionary of
+        defaults that match parameter names in the processed model dataset
+        (e.g., costs are prepended with `cost_`).
+
+        Returns:
+            AttrDict: Flat dictionary of `parameter_name`:`parameter_default` pairs.
+        """
+        raw_defaults = AttrDict.from_yaml(
+            os.path.join(os.path.dirname(calliope.__file__), "config", "defaults.yaml")
+        )
+        default_tech_dict = raw_defaults.techs.default_tech
+        default_cost_dict = {
+            "cost_{}".format(k): v
+            for k, v in default_tech_dict.costs.default_cost.items()
+        }
+        default_node_dict = {
+            "available_area": raw_defaults.nodes.default_node.available_area
+        }
+
+        return AttrDict(
+            {
+                **default_tech_dict.constraints.as_dict(),
+                **default_tech_dict.switches.as_dict(),
+                **default_cost_dict,
+                **default_node_dict,
+            }
+        )
+
+    def build(self, backend_interface: Literal["pyomo"] = "pyomo") -> None:
+        """Build description of the optimisation problem in the chosen backend interface.
+
+        Args:
+            backend_interface (Literal["pyomo"], optional):
+                Backend interface in which to build the problem. Defaults to "pyomo".
+        """
 
         with self.model_data_string_datetime():
-            backend = self.BACKENDS[backend_interface](  # type: ignore
-                parsed_components=self.parsed_components, defaults=self.defaults
-            )
-            backend.generate_backend_dataset(
-                self._model_data, self.defaults, self.run_config
+            # FIXME: remove defaults as input arg (currently required by parsed "where" evalaution)
+            # Maybe move it to being attached to the parsed component objects directly.
+            backend = self._BACKENDS[backend_interface](
+                defaults=self.defaults
+            )  # type:ignore
+            backend.add_all_parameters(self.inputs, self.defaults, self.run_config)
+            log_time(
+                logger,
+                self._timings,
+                "backend_parameters_generated",
+                comment="Model: Generated optimisation problem parameters",
             )
 
             for parsed_variable in self.parsed_components["variables"].values():
-                backend.dataset[parsed_variable.name] = backend.add_variable(
-                    self._model_data, parsed_variable
-                )
+                backend.add_variable(self.inputs, parsed_variable)
+            log_time(
+                logger,
+                self._timings,
+                "backend_variables_generated",
+                comment="Model: Generated optimisation problem decision variables",
+            )
+
             for parsed_expression in self.parsed_components["expressions"].values():
-                backend.dataset[parsed_expression.name] = backend.add_expression(
-                    self._model_data, parsed_expression
-                )
+                backend.add_expression(self.inputs, parsed_expression)
+            log_time(
+                logger,
+                self._timings,
+                "backend_expressions_generated",
+                comment="Model: Generated optimisation problem expressions",
+            )
 
             for parsed_constraint in self.parsed_components["constraints"].values():
-                backend.dataset[parsed_constraint.name] = backend.add_constraint(
-                    self._model_data, parsed_constraint
-                )
-
+                backend.add_constraint(self.inputs, parsed_constraint)
+            log_time(
+                logger,
+                self._timings,
+                "backend_expressions_generated",
+                comment="Model: Generated optimisation problem constraints",
+            )
             for parsed_objective in self.parsed_components["objectives"].values():
-                backend.dataset[parsed_objective.name] = backend.add_objective(
-                    self._model_data, parsed_objective
-                )
+                backend.add_objective(self.inputs, parsed_objective)
+            log_time(
+                logger,
+                self._timings,
+                "backend_expressions_generated",
+                comment="Model: Generated optimisation problem objective",
+            )
 
             self.backend = backend
 
     @contextmanager
     def model_data_string_datetime(self):
+        """
+        Temporarily turn model data input timeseries objects into strings with maximum
+        resolution of minutes.
+        """
         self._datetime_to_string()
         try:
             yield
         finally:
-            self._string_to_datetime(self._model_data)
+            self._string_to_datetime(self.inputs)
 
     def _datetime_to_string(self) -> None:
         """
-        Convert from datetime to string xarray dataarrays, to reduce the memory
+        Convert model data inputs from datetime to string xarray dataarrays, to reduce the memory
         footprint of converting datetimes from numpy.datetime64 -> pandas.Timestamp
         when creating the pyomo model object.
-
         """
         datetime_data = set()
         for attr in ["coords", "data_vars"]:
-            for set_name, set_data in getattr(self._model_data, attr).items():
+            for set_name, set_data in getattr(self.inputs, attr).items():
                 if set_data.dtype.kind == "M":
-                    attrs = self._model_data[set_name].attrs
-                    self._model_data[set_name] = self._model_data[set_name].dt.strftime(
+                    attrs = self.inputs[set_name].attrs
+                    self.inputs[set_name] = self.inputs[set_name].dt.strftime(
                         "%Y-%m-%d %H:%M"
                     )
-                    self._model_data[set_name].attrs = attrs
+                    self.inputs[set_name].attrs = attrs
                     datetime_data.add((attr, set_name))
 
         self._datetime_data = datetime_data
 
         return None
 
-    def _string_to_datetime(self, da: xr.DataArray) -> None:
+    def _string_to_datetime(self, da: xr.Dataset) -> None:
         """
         Convert from string to datetime xarray dataarrays, reverting the process
-        undertaken in datetime_to_string
+        undertaken in `_datetime_to_string`. Operation is undertaken in-place.
+
+        Without running `_datetime_to_string` earlier, this function will not function
+        as expected since it will not be able to identify which coordinates should be
+        converted to datetime format.
+
+        Args:
+            da (xr.Dataset): Dataset in which to convert timeseries data arrays.
 
         """
         for attr, set_name in self._datetime_data:
@@ -372,15 +439,35 @@ class Model(object):
                 )
         return None
 
-    def run(self, force_rerun=False, **kwargs):
+    def run(self, force_rerun: bool = False, warmstart: bool = False) -> None:
         """
-        Run the model. If ``force_rerun`` is True, any existing results
-        will be overwritten.
+        Run the built optimisation problem.
 
-        Additional kwargs are passed to the backend.
+        Args:
+            force_rerun (bool, optional):
+                If ``force_rerun`` is True, any existing results will be overwritten.
+                Defaults to False.
+            warmstart (bool, optional):
+                If True and the optimisation problem has already been run in this session
+                (i.e., `force_rerun` is not True), the next optimisation will be run with
+                decision variables initially set to their previously optimal values.
+                If the optimisation problem is similar to the previous run, this can
+                decrease the solution time.
+                Warmstart will not work with some solvers (e.g., CBC, GLPK).
+                Defaults to False.
 
+        Raises:
+            exceptions.ModelError: Optimisation problem must already be built.
+            exceptions.ModelError: Cannot run the model if there are already results loaded, unless `force_rerun` is True.
+            exceptions.ModelError: Some preprocessing steps will stop a run mode of "operate" from being possible.
         """
         # Check that results exist and are non-empty
+        if not hasattr(self, "backend"):
+            raise exceptions.ModelError(
+                "You must build the optimisation problem (`.build()`) "
+                "before you can run it."
+            )
+
         if hasattr(self, "results") and self.results.data_vars and not force_rerun:
             raise exceptions.ModelError(
                 "This model object already has results. "
@@ -397,12 +484,18 @@ class Model(object):
                 "there exist non-uniform timesteps (e.g. from time masking)"
             )
 
-        results, self._backend_model, self._backend_model_opt, interface = run_backend(
-            self._model_data, self._timings, **kwargs
+        termination_condition = self.backend.solve(
+            solver=self.run_config["solver"],
+            solver_io=self.run_config.get("solver_io", None),
+            solver_options=self.run_config.get("solver_options", None),
+            save_logs=self.run_config.get("save_logs", None),
+            warmstart=warmstart,
         )
+        results = self.backend.load_results()
+        self._string_to_datetime(results)
 
         # Add additional post-processed result variables to results
-        if results.attrs.get("termination_condition", None) in ["optimal", "feasible"]:
+        if termination_condition in ["optimal", "feasible"]:
             results = postprocess_results.postprocess_model_results(
                 results, self._model_data, self._timings
             )
@@ -411,8 +504,6 @@ class Model(object):
             [results, self._model_data], compat="override", combine_attrs="no_conflicts"
         )
         self._add_model_data_methods()
-
-        self.backend = interface(self)
 
     def get_formatted_array(self, var):
         """

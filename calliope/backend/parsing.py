@@ -79,6 +79,26 @@ class ParsedBackendEquation:
         components: Optional[dict[str, pp.ParseResults]] = None,
         index_slices: Optional[dict[str, pp.ParseResults]] = None,
     ) -> None:
+        """
+        Object for storing a parsed equation expression and corresponding "where" string,
+        with methods to evaluate those elements.
+
+        Args:
+            equation_name (str): Name of equation.
+            sets (list[str]):
+                Model data sets with which to create the initial multi-dimensional masking array
+                of the evaluated "where" string.
+            expression (pp.ParseResults):
+                Parsed arithmetic/equation expression.
+            where_list (list[pp.ParseResults]):
+                List of parsed where strings.
+            components (Optional[dict[str, pp.ParseResults]], optional):
+                Dictionary of parsed components with which to replace references to components
+                on evaluation of the parsed expression. Defaults to None.
+            index_slices (Optional[dict[str, pp.ParseResults]], optional):
+                Dictionary of parsed index slices with which to replace references to index slices
+                on evaluation of the parsed expression / components. Defaults to None.
+        """
         self.name = equation_name
         self.where = where_list
         self.expression = expression
@@ -87,6 +107,11 @@ class ParsedBackendEquation:
         self.sets = sets
 
     def find_components(self) -> set[str]:
+        """Identify all the references to components in the parsed expression.
+
+        Returns:
+            set[str]: Unique component references.
+        """
         valid_eval_classes: tuple = (
             equation_parser.EvalOperatorOperand,
             equation_parser.EvalFunction,
@@ -97,6 +122,13 @@ class ParsedBackendEquation:
         return self._find_items_in_expression(elements, to_find, valid_eval_classes)
 
     def find_index_slices(self) -> set[str]:
+        """
+        Identify all the references to index slices in the parsed expression or in the
+        parsed components.
+
+        Returns:
+            set[str]: Unique index slice references.
+        """
 
         valid_eval_classes = tuple(
             [
@@ -149,7 +181,22 @@ class ParsedBackendEquation:
         self,
         expression_group_name: Literal["components", "index_slices"],
         expression_group_combination: Iterable[ParsedBackendEquation],
-    ):
+    ) -> ParsedBackendEquation:
+        """
+        Add dictionary of parsed components/index slices to a copy of self, updating
+        the name and where list of self in the process.
+
+        Args:
+            expression_group_name (Literal[components, index_slices]):
+                Which of `components`/`index slices` is being added.
+            expression_group_combination (Iterable[ParsedBackendEquation]):
+                All items of expression_group_name to be added.
+
+        Returns:
+            ParsedBackendEquation:
+                Copy of self with added component/index slice dictionary and updated name
+                and where list to include those corresponding to the dictionary entries.
+        """
         new_where_list = [*self.where]
         for expr in expression_group_combination:
             new_where_list.extend(expr.where)
@@ -177,7 +224,7 @@ class ParsedBackendEquation:
         model_data: xr.Dataset,
         defaults: dict,
         initial_imask: Union[np.bool_, xr.DataArray] = np.True_,
-    ) -> Union[np.bool_, xr.DataArray]:
+    ) -> xr.DataArray:
         foreach_imask = self._evaluate_foreach(model_data)
         evaluated_wheres = [
             where[0].eval(  # type: ignore
@@ -197,6 +244,8 @@ class ParsedBackendEquation:
             # Squeeze out any unwanted dimensions
             unwanted_dims = set(imask.dims).difference(self.sets)
             imask = (imask.sum(unwanted_dims) > 0).astype(bool)
+        else:
+            imask = xr.DataArray(imask)
 
         return imask
 
@@ -228,14 +277,17 @@ class ParsedBackendEquation:
         return functools.reduce(operator.and_, all_imasks)
 
     def evaluate_expression(
-        self, model_data: xr.Dataset, backend_interface: BackendModel, imask: xr.DataArray
+        self,
+        model_data: xr.Dataset,
+        backend_interface: BackendModel,
+        imask: xr.DataArray,
     ):
         return self.expression[0].eval(
             equation_name=self.name,
             index_slice_dict=self.index_slices,
             component_dict=self.components,
             backend_interface=backend_interface,
-            backend_dataset=backend_interface.dataset,
+            backend_dataset=backend_interface._dataset,
             helper_func_dict=VALID_HELPER_FUNCTIONS,
             model_data=model_data,
             imask=imask,
@@ -244,12 +296,13 @@ class ParsedBackendEquation:
 
 
 class ParsedBackendComponent(ABC, Generic[T]):
+    """
+    Parse an optimisation problem configuration - defined in a dictionary of strings
+    loaded from YAML - into a series of Python objects that can be passed onto a solver
+    interface like Pyomo or Gurobipy.
+    """
+
     def __init__(self, unparsed_data: T, component_name: str) -> None:
-        """
-        Parse an optimisation problem configuration - defined in a dictionary of strings
-        loaded from YAML - into a series of Python objects that can be passed onto a solver
-        interface like Pyomo or Gurobipy.
-        """
         self.name: str = component_name
         self._unparsed: dict = dict(unparsed_data)
 
