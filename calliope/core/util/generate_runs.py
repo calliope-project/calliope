@@ -69,7 +69,6 @@ def generate_runs(model_file, scenarios=None, additional_args=None, override_dic
 def generate_bash_script(
     out_file, model_file, scenarios, additional_args=None, override_dict=None, **kwargs
 ):
-
     commands = generate_runs(model_file, scenarios, additional_args, override_dict)
 
     base_string = "    {i}) {cmd} ;;\n"
@@ -119,7 +118,6 @@ def generate_bsub_script(
     cluster_threads=1,
     **kwargs,
 ):
-
     # We also need to generate the bash script to run on the cluster
     bash_out_file = out_file + ".array.sh"
     bash_out_file_basename = os.path.basename(bash_out_file)
@@ -205,7 +203,6 @@ def generate_sbatch_script(
 def generate_windows_script(
     out_file, model_file, scenarios, additional_args=None, override_dict=None, **kwargs
 ):
-
     commands = generate_runs(model_file, scenarios, additional_args, override_dict)
 
     # \r\n are Windows line endings

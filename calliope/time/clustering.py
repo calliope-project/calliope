@@ -214,7 +214,6 @@ def get_closest_days_from_clusters(data, mean_data, clusters, daily_timesteps):
     chosen_days = {}
 
     for cluster in sorted(clusters.unique()):
-
         subset_t = [
             t
             for t in mean_data.timesteps.values
@@ -297,7 +296,6 @@ def map_clusters_to_data(
         ).set_index("dates")["counts"]
 
     elif how == "closest":
-
         new_data, chosen_ts = get_closest_days_from_clusters(
             data, new_data, clusters, daily_timesteps
         )
@@ -449,7 +447,6 @@ def hartigan_n_clusters(X, threshold=10):
     HK = threshold + 1
 
     while n_clusters <= len_input and HK > threshold:
-
         kmeans = sk_cluster.KMeans(n_clusters=n_clusters).fit(X)
         kmeans_plus_one = sk_cluster.KMeans(n_clusters=n_clusters + 1).fit(X)
 

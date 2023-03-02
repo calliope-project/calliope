@@ -596,7 +596,6 @@ class TestEquationParserArithmetic:
 
 
 class TestEquationParserComparison:
-
     EXPR_PARAMS_AND_EXPECTED_EVAL = {
         0: 0.0,
         -1: -1.0,
@@ -655,7 +654,6 @@ class TestEquationParserComparison:
         equation_comparison,
         eval_kwargs,
     ):
-
         parsed_constraint = equation_comparison.parse_string(
             single_equation_simple, parse_all=True
         )

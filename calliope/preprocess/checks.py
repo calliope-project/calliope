@@ -56,7 +56,6 @@ def check_overrides(config_model, override):
     if any(["coordinates" in k for k in config_model.as_dict_flat().keys()]) and any(
         ["coordinates" in k for k in override.as_dict_flat().keys()]
     ):
-
         # get keys that might be deleted and incumbent coordinate system
         config_keys = [
             k for k in config_model.as_dict_flat().keys() if "coordinates." in k
@@ -324,7 +323,6 @@ def check_initial(config_model):
     allowed_from_file = DEFAULTS.model.file_allowed
     for k, v in config_model.as_dict_flat().items():
         if "file=" in str(v):
-
             possible_identifiers = k.split(".")
             is_time_varying = any("_time_varying" in i for i in possible_identifiers)
             if is_time_varying:

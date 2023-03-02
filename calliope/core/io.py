@@ -56,7 +56,6 @@ def _pop_serialised_list(attribute_dict, serialised_items):
 
 
 def save_netcdf(model_data, path, model=None):
-
     original_model_data_attrs = model_data.attrs
     model_data_attrs = model_data.attrs.copy()
 

@@ -249,7 +249,6 @@ class TestClustering:
         }
 
     def test_predefined_clusters(self, predefined_cluster_override):
-
         model = build_test_model(predefined_cluster_override, scenario="simple_supply")
 
         assert np.array_equal(

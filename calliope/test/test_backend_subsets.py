@@ -64,7 +64,9 @@ class TestSubsets:
                 ),
             },
         )
-        model_data.attrs["run_config"] = AttrDict({"foo": True, "baz": {"bar": "foobar"}})
+        model_data.attrs["run_config"] = AttrDict(
+            {"foo": True, "baz": {"bar": "foobar"}}
+        )
         model_data.attrs["model_config"] = AttrDict({"foz": 0})
 
         return model_data
@@ -287,7 +289,6 @@ class TestSubsets:
         model = getattr(calliope.examples, model_name)()
 
         for object_type in ["constraints", "expressions"]:
-
             valid_subsets = {
                 name: create_valid_subset(model._model_data, name, config)
                 for name, config in subsets_config[object_type].items()

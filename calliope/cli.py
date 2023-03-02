@@ -74,7 +74,6 @@ _fail_when_infeasible = click.option(
 def format_exceptions(
     debug=False, pdb=False, profile=False, profile_filename=None, start_time=None
 ):
-
     try:
         if profile:
             import cProfile
@@ -271,7 +270,6 @@ def run(
     )
 
     with format_exceptions(debug, pdb, profile, profile_filename, start_time):
-
         model = _run_setup_model(model_file, scenario, model_format, override_dict)
         click.secho(model.info() + "\n")
 
@@ -361,7 +359,6 @@ def generate_runs(
     quiet,
     pdb,
 ):
-
     _cli_start(debug, quiet)
 
     kwargs = dict(
@@ -393,7 +390,6 @@ def generate_runs(
 def generate_scenarios(
     model_file, out_file, overrides, scenario_name_prefix, debug, quiet, pdb
 ):
-
     _cli_start(debug, quiet)
 
     with format_exceptions(debug, pdb):

@@ -746,7 +746,6 @@ class TestChecks:
     )
     @pytest.mark.xfail(reason="Planning to remove group constraints")
     def test_inexistent_group_constraint_loc_tech(self, loc_tech):
-
         override = {"group_constraints.mygroup": {"energy_cap_max": 100, **loc_tech}}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
@@ -763,7 +762,6 @@ class TestChecks:
 
     @pytest.mark.xfail(reason="Planning to remove group constraints")
     def test_inexistent_group_constraint_empty_loc_tech(self):
-
         override = {
             "group_constraints.mygroup": {"energy_cap_max": 100, "locs": ["foo"]}
         }
@@ -1538,7 +1536,6 @@ class TestChecks:
         ],
     )
     def test_warn_on_no_weight(self, override):
-
         with pytest.warns(exceptions.ModelWarning) as warn:
             model = build_model(
                 model_file="weighted_obj_func.yaml", override_dict=override
@@ -1598,7 +1595,6 @@ class TestChecks:
 
     @pytest.mark.skip(reason="check is now taken care of in typedconfig")
     def test_warn_on_undefined_cost_classes(self):
-
         with pytest.warns(exceptions.ModelWarning) as warn:
             build_model(
                 model_file="weighted_obj_func.yaml",
