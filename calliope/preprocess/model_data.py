@@ -385,7 +385,7 @@ class ModelDataFactory:
                 **default_cost_dict,
                 **default_node_dict.as_dict(),
             }
-        ).to_yaml()
+        )
 
         self.model_data.attrs = attr_dict
 

@@ -88,7 +88,7 @@ class TestChecks:
         elif on is True:
             assert not check_warn
         assert (
-            AttrDict.from_yaml_string(m._model_data.attrs["run_config"]).cyclic_storage
+            m._model_data.attrs["run_config"].cyclic_storage
             is False
         )
 

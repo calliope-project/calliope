@@ -422,6 +422,6 @@ class TestModelData:
         attr_dict["calliope_version"] == __version__
         assert attr_dict["applied_overrides"] == "foo"
         assert attr_dict["scenario"] == "bar"
-        assert "\ncost_energy_cap" in attr_dict["defaults"]
-        assert "\nenergy_cap_max" in attr_dict["defaults"]
-        assert "\navailable_area" in attr_dict["defaults"]
+        assert "cost_energy_cap" in attr_dict["defaults"]
+        assert "energy_cap_max" in attr_dict["defaults"]
+        assert "available_area" in attr_dict["defaults"]

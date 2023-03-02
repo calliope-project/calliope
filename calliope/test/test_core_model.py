@@ -18,9 +18,7 @@ class TestModel:
         return model
 
     def test_info(self, national_scale_example):
-        model = national_scale_example
-
-        model.info()
+        national_scale_example.info()
 
     def test_info_minimal_model(self):
         this_path = os.path.dirname(__file__)
@@ -30,3 +28,7 @@ class TestModel:
         model = calliope.Model(model_location)
 
         model.info()
+
+    def test_update_observed_dict(self, national_scale_example):
+        national_scale_example.model_config.name = "foo"
+        assert national_scale_example._model_data.attrs["model_config"].name == "foo"
