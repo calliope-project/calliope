@@ -29,7 +29,6 @@ def check_operate_params(model_data):
         serious issues that should raise a ModelError
 
     """
-    defaults = model_data.attrs["defaults"]
     run_config = model_data.attrs["run_config"]
 
     warnings, errors = [], []
