@@ -35,7 +35,14 @@ pp.ParserElement.enablePackrat()
 COMPONENT_CLASSIFIER = "$"
 
 
-class EvalOperatorOperand:
+class EvalString:
+    "Parent class for all string evaluation classes"
+
+    def __init__(self) -> None:
+        self.name: Optional[str]
+
+
+class EvalOperatorOperand(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed expressions with operands separated
@@ -95,7 +102,7 @@ class EvalOperatorOperand:
         return val
 
 
-class EvalSignOp:
+class EvalSignOp(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed expressions with a leading + or - sign.
@@ -118,7 +125,7 @@ class EvalSignOp:
             return -1 * val
 
 
-class EvalComparisonOp:
+class EvalComparisonOp(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed equations of the form LHS OPERATOR RHS.
@@ -127,7 +134,6 @@ class EvalComparisonOp:
             tokens (pp.ParseResults):
                 Contains a list with an RHS (pp.ParseResults), operator (str), and LHS (pp.ParseResults).
         """
-
         self.lhs, self.op, self.rhs = tokens
 
     def __repr__(self):
@@ -152,7 +158,7 @@ class EvalComparisonOp:
             return lhs == rhs
 
 
-class EvalFunction:
+class EvalFunction(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed helper function strings of the form
@@ -211,7 +217,7 @@ class EvalFunction:
             return helper_function(*args_, **kwargs_)
 
 
-class EvalHelperFuncName:
+class EvalHelperFuncName(EvalString):
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed helper function names.
@@ -272,7 +278,7 @@ class EvalHelperFuncName:
         return None
 
 
-class EvalIndexedParameterOrVariable:
+class EvalIndexedParameterOrVariable(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed indexed parameters or decision variables
@@ -286,6 +292,7 @@ class EvalIndexedParameterOrVariable:
         token_dict = tokens.as_dict()
         self.name = token_dict["param_or_var_name"][0]
         self.index_items = token_dict["index_items"]
+        self.value = tokens
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
@@ -299,10 +306,91 @@ class EvalIndexedParameterOrVariable:
                 TODO: make this a return only in testing and grab the actual
                 parameter/variable from model_data/backend_model on evaluation.
         """
-        return {"param_or_var_name": self.name, "dimensions": self.index_items}
+        index_items = [index_item.eval(**kwargs) for index_item in self.index_items]
+        return {"param_or_var_name": self.name, "dimensions": index_items}
 
 
-class EvalComponent:
+class EvalIterators(EvalString):
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed set iterators from an indexed
+        paramater or variable.
+
+        Args:
+            tokens (pp.ParseResults):
+                Has a single item: index item name (str).
+        """
+        self.name = self.value = tokens[0]
+
+    def __repr__(self):
+        "Return string representation of the parsed grammar"
+        return "ITERATOR:" + str(self.name)
+
+    def eval(self, iterator_dict: dict, test: bool = False, **kwargs) -> Any:
+        """
+        Args:
+            iterator_dict (dict):
+                Mapping from indexing item to constraint generator for-loop iterator.
+            test (bool): If True, return
+
+        Returns:
+            Any: Either an iterator or a string referring to a set item.
+        """
+        if test:
+            item_name = self.name
+        else:
+            item_name = iterator_dict[self.name]
+
+        return item_name
+
+
+class EvalIndexItems(EvalString):
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed index items from an indexed
+        paramater or variable.
+
+        Args:
+            tokens (pp.ParseResults):
+                Has a two list item: set name (str) and set item (str).
+        """
+        self.set_name, self.set_item = tokens[0]
+        self.name = self.set_item
+        self.value = tokens
+
+    def __repr__(self):
+        "Return string representation of the parsed grammar"
+        return f"{self.set_name.upper()}:{self.set_item}"
+
+    def eval(self, index_item_dict: dict, test: bool = False, **kwargs) -> Any:
+        """
+        Args:
+            index_item_dict (dict): Mapping from indexing item to evaluatable parsed expression.
+            test (bool): Set to true to simplify the output to not recursively evaluate and instead return input tokens as a dictionary.
+
+        Returns:
+            Any:
+                If a test run, a dictionary with set name and set item.
+                If the index item exists and not a test, a set item of relevant type for the set.
+                Otherwise, None.
+        """
+        item_name: Any
+        if test:
+            item_name = {self.set_item: self.set_name}
+        else:
+            index_item: str = index_item_dict[self.set_item].eval(**kwargs)
+            if index_item not in kwargs["model_data"][self.set_name]:
+                kwargs["errors"].append(
+                    f"Index item `{self.set_item}` evaluates to a set item not found in `{self.set_name}`"
+                )
+                item_name = None
+            else:
+                item_name = index_item
+
+        return item_name
+
+
+class EvalComponent(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed expression components of the form
@@ -318,17 +406,29 @@ class EvalComponent:
         "Return string representation of the parsed grammar"
         return "COMPONENT:" + str(self.name)
 
-    def eval(self, **kwargs) -> dict[str, str]:
+    def eval(
+        self,
+        component_expressions: Optional[dict[str, pp.ParseResults]] = None,
+        **kwargs,
+    ) -> Any:
         """
+        Args:
+            component_expressions (Optional[dict[str, pp.ParseResults]]):
+                Dictionary mapping the component name to a parsed equation expression.
+                Default is None.
+
         Returns:
-            dict[str, str]:
-                TODO: make this a return only in testing and evaluate the actual
-                component expression contents on evaluation.
+            Any: If component_expressions dictionary is given, find the expression matching
+            the component name and evaluate it.
+            If not given, return a dictionary giving the component name.
         """
-        return {"component": self.name}
+        if component_expressions is not None:
+            return component_expressions[self.name][0].eval()
+        else:
+            return {"component": self.name}
 
 
-class EvalUnindexedParameterOrVariable:
+class EvalUnindexedParameterOrVariable(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed unindexed parameters or decision variables
@@ -354,7 +454,7 @@ class EvalUnindexedParameterOrVariable:
         return {"param_or_var_name": self.name}
 
 
-class EvalNumber:
+class EvalNumber(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed numbers described as integers (1),
@@ -478,9 +578,14 @@ def indexed_param_or_var_parser(
 
     indexed_param_name = generic_identifier("param_or_var_name")
 
-    index_items = pp.Group(pp.delimited_list(generic_identifier))("index_items")
-    indexed_param_or_var = pp.Combine(indexed_param_name + lspar) + index_items + rspar
+    iterator = generic_identifier.copy()
+    iterator.set_parse_action(EvalIterators)
+    index_item = pp.Group(generic_identifier + pp.Suppress("=") + generic_identifier)
+    index_item.set_parse_action(EvalIndexItems)
 
+    index_items = pp.Group(pp.delimited_list(index_item | iterator))("index_items")
+
+    indexed_param_or_var = pp.Combine(indexed_param_name + lspar) + index_items + rspar
     indexed_param_or_var.set_parse_action(EvalIndexedParameterOrVariable)
 
     return indexed_param_or_var
@@ -622,5 +727,51 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
     comparison_operators = pp.oneOf(["<=", ">=", "=="])
     equation_comparison = arithmetic + comparison_operators + arithmetic
     equation_comparison.set_parse_action(EvalComparisonOp)
+
+    return equation_comparison
+
+
+def generate_index_item_parser():
+
+    number, identifier = setup_base_parser_elements()
+    unindexed_param = unindexed_param_parser(identifier)
+    indexed_param = indexed_param_or_var_parser(identifier)
+
+    helper_function = helper_function_parser(
+        identifier,
+        allowed_parser_elements_in_args=[
+            indexed_param,
+            unindexed_param,
+            number,
+        ],
+    )
+
+    return helper_function | indexed_param | unindexed_param
+
+
+def generate_arithmetic_parser():
+
+    number, identifier = setup_base_parser_elements()
+    unindexed_param = unindexed_param_parser(identifier)
+    indexed_param = indexed_param_or_var_parser(identifier)
+    component = component_parser(identifier)
+    helper_function = helper_function_parser(
+        identifier,
+        allowed_parser_elements_in_args=[
+            indexed_param,
+            component,
+            unindexed_param,
+            number,
+        ],
+    )
+    arithmetic = arithmetic_parser(
+        helper_function, indexed_param, component, unindexed_param, number
+    )
+    return arithmetic
+
+
+def generate_equation_parser():
+    arithmetic = generate_arithmetic_parser()
+    equation_comparison = equation_comparison_parser(arithmetic)
 
     return equation_comparison
