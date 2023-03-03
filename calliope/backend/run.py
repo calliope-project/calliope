@@ -16,7 +16,6 @@ from calliope.backend.pyomo import interface as pyomo_interface
 from calliope.backend.pyomo import model as run_pyomo
 from calliope.core import io
 from calliope.core.attrdict import AttrDict
-from calliope.core.util.observed_dict import UpdateObserverDict
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +39,7 @@ def run(model_data, timings, build_only=False):
 
     INTERFACE = {"pyomo": pyomo_interface}
 
-    run_config = AttrDict.from_yaml_string(model_data.attrs["run_config"])
+    run_config = model_data.attrs["run_config"]
 
     if run_config["mode"] == "plan":
         results, backend, opt = run_plan(
@@ -84,7 +83,6 @@ def run_plan(
     persistent=True,
     opt=None,
 ):
-
     log_time(logger, timings, "run_start", comment="Backend: starting model run")
 
     warmstart = False
@@ -103,11 +101,8 @@ def run_plan(
         if allow_warmstart:
             warmstart = True
 
-    run_config = UpdateObserverDict(
-        initial_yaml_string=model_data.attrs["run_config"],
-        name="run_config",
-        observer=model_data,
-    )
+    run_config = model_data.attrs["run_config"]
+
     solver = run_config["solver"]
     solver_io = run_config.get("solver_io", None)
     solver_options = run_config.get("solver_options", None)
@@ -454,12 +449,7 @@ def run_operate(model_data, run_config, timings, backend, build_only):
         comment="Backend: starting model run in operational mode",
     )
 
-    defaults = UpdateObserverDict(
-        initial_yaml_string=model_data.attrs["defaults"],
-        name="defaults",
-        observer=model_data,
-        flat=True,
-    )
+    defaults = model_data.attrs["defaults"]
 
     # New param defaults = old maximum param defaults (e.g. energy_cap gets default from energy_cap_max)
     operate_params = {

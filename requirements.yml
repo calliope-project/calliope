@@ -4,14 +4,14 @@ channels:
     - conda-forge
 
 dependencies:
-    - bottleneck
+    - bottleneck < 2
     - coverage >= 4.4
-    - codecov
+    - codecov < 3
     - glpk = 5.0
-    - hdf5
-    - libnetcdf
-    - pre-commit
-    - pytest-cov
-    - pytest-xdist  # pytest distributed testing plugin
-    - pytest
+    - hdf5 < 2
+    - libnetcdf < 5
+    - pre-commit < 4
+    - pytest-cov < 5
+    - pytest-xdist < 4 # pytest distributed testing plugin
+    - pytest < 8
 

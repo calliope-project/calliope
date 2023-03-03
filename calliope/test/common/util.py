@@ -53,7 +53,7 @@ def check_error_or_warning(error_warning, test_string_or_strings):
         )
     elif hasattr(error_warning, "value"):
         output = str(error_warning.value)
-    elif isinstance(error_warning, list):
+    elif isinstance(error_warning, (list, set)):
         output = ",".join(error_warning)
 
     if isinstance(test_string_or_strings, list):

@@ -60,7 +60,9 @@ def warn(message, _class=ModelWarning):
     warnings.warn(message, _class)
 
 
-def print_warnings_and_raise_errors(warnings=None, errors=None):
+def print_warnings_and_raise_errors(
+    warnings=None, errors=None, during="model processing"
+):
     """
     Print warnings and raise ModelError from errors.
 
@@ -72,13 +74,13 @@ def print_warnings_and_raise_errors(warnings=None, errors=None):
     """
     if warnings:
         warn(
-            "Possible issues found during model processing:\n"
+            f"Possible issues found during {during}:\n"
             + textwrap.indent("\n".join(sorted(list(set(warnings)))), " * ")
         )
 
     if errors:
         raise ModelError(
-            "Errors during model processing:\n"
+            f"Errors during {during}:\n"
             + textwrap.indent("\n".join(sorted(list(set(errors)))), " * ")
         )
 

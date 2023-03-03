@@ -294,7 +294,6 @@ def get_parents(tech_id, model_config):
 
 
 def process_techs(config_model):
-
     default_palette_cycler = itertools.cycle(range(len(_DEFAULT_PALETTE)))
 
     result = AttrDict()
@@ -302,7 +301,6 @@ def process_techs(config_model):
     debug_comments = AttrDict()
 
     for tech_id, tech_config in config_model.techs.items():
-
         # If a tech specifies ``exists: false``, we skip it entirely
         if not tech_config.get("exists", True):
             continue
@@ -504,7 +502,6 @@ def check_timeseries_dataframes(timeseries_dataframes):
 
 
 def load_timeseries_from_dataframe(timeseries_dataframes, tskey):
-
     # If `df=` is called, timeseries_dataframes must be entered
     if timeseries_dataframes is None:
         raise exceptions.ModelError(
@@ -554,7 +551,6 @@ def _get_names(config):
 
 
 def process_timeseries_data(config_model, model_run, timeseries_dataframes):
-
     timeseries_data = config_model.model.get("timeseries_data", None)
 
     dtformat = config_model.model["timeseries_dateformat"]
