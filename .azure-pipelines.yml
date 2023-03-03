@@ -160,7 +160,12 @@ steps:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
 
-  - script: |
-      bash <(curl -s https://codecov.io/bash)
+  - bash: |
+      curl -Os https://uploader.codecov.io/latest/linux/codecov
+
+      chmod +x codecov
+      ./codecov -t ${CODECOV_TOKEN}
     displayName: Send results to Codecov
     condition: eq( variables['CODECOV'], 'True' )
+    env:
+      CODECOV_TOKEN: $(CodecovToken)
