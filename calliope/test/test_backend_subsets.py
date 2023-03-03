@@ -17,7 +17,6 @@ from calliope.backend.subsets import (
     _combine_imasks,
     _imask_foreach,
 )
-from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope import AttrDict
 from calliope.test.common.util import (
     check_error_or_warning,
@@ -65,14 +64,11 @@ class TestSubsets:
                 ),
             },
         )
-        UpdateObserverDict(
-            initial_dict=AttrDict({"foo": True, "baz": {"bar": "foobar"}}),
-            name="run_config",
-            observer=model_data,
+        model_data.attrs["run_config"] = AttrDict(
+            {"foo": True, "baz": {"bar": "foobar"}}
         )
-        UpdateObserverDict(
-            initial_dict={"foz": 0}, name="model_config", observer=model_data
-        )
+        model_data.attrs["model_config"] = AttrDict({"foz": 0})
+
         return model_data
 
     @pytest.fixture
@@ -293,7 +289,6 @@ class TestSubsets:
         model = getattr(calliope.examples, model_name)()
 
         for object_type in ["constraints", "expressions"]:
-
             valid_subsets = {
                 name: create_valid_subset(model._model_data, name, config)
                 for name, config in subsets_config[object_type].items()

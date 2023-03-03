@@ -167,9 +167,8 @@ def rerun_pyomo_model(model_data, backend_model, opt):
     new_model : calliope.Model
         New calliope model, including both inputs and results, but no backend interface.
     """
-    backend_model.__calliope_run_config = calliope.AttrDict.from_yaml_string(
-        model_data.attrs["run_config"]
-    )
+    backend_model.__calliope_run_config = model_data.attrs["run_config"]
+
     timings = {}
     log_time(logger, timings, "model_creation")
     inputs = access_pyomo_model_inputs(backend_model)

@@ -9,7 +9,7 @@ dependencies:
     - codecov < 3
     - glpk = 5.0
     - hdf5 < 2
-    - libnetcdf < 4.9
+    - libnetcdf < 5
     - pre-commit < 4
     - pytest-cov < 5
     - pytest-xdist < 4 # pytest distributed testing plugin

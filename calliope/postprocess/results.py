@@ -43,7 +43,7 @@ def postprocess_model_results(results, model_data, timings):
     """
     log_time(logger, timings, "post_process_start", comment="Postprocessing: started")
 
-    run_config = AttrDict.from_yaml_string(model_data.attrs["run_config"])
+    run_config = model_data.attrs["run_config"]
     results["capacity_factor"] = capacity_factor(results, model_data)
     results["systemwide_capacity_factor"] = capacity_factor(
         results, model_data, systemwide=True

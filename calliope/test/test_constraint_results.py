@@ -146,7 +146,6 @@ class TestModelSettings:
         return run_model(True, 15)
 
     def test_unmet_demand_zero(self, model_no_unmet):
-
         # Feasible case, but unmet_demand/unused_supply is not deleted
         for i in ["unmet_demand", "unused_supply"]:
             assert hasattr(model_no_unmet._backend_model, i)
@@ -155,7 +154,6 @@ class TestModelSettings:
         assert (model_no_unmet._model_data["unmet_demand"] == 0).all()
 
     def test_unmet_demand_nonzero(self, model_unmet_demand):
-
         # Infeasible case, unmet_demand is required
         assert hasattr(model_unmet_demand._backend_model, "unmet_demand")
         assert hasattr(model_unmet_demand._backend_model, "unused_supply")

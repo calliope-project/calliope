@@ -294,7 +294,6 @@ class TestAddConstraint:
         """Must include 'backend_model' as first function argument"""
 
         def energy_cap_time_varying_rule(backend, node, tech, timestep):
-
             return (
                 backend.energy_cap[node, tech]
                 <= backend.energy_cap[node, tech]
@@ -317,7 +316,6 @@ class TestAddConstraint:
         def energy_cap_time_varying_rule(
             backend_model, node, tech, timestep, extra_arg
         ):
-
             return (
                 backend_model.energy_cap[node, tech]
                 <= backend_model.energy_cap[node, tech]
@@ -340,7 +338,6 @@ class TestAddConstraint:
         """Constraint sets must be backend model sets"""
 
         def energy_cap_time_varying_rule(backend_model, node, tech, not_a_set):
-
             return (
                 backend_model.energy_cap[node, tech]
                 <= backend_model.energy_cap[node, tech]

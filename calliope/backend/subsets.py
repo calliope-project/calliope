@@ -85,7 +85,7 @@ def _param_exists(model_data, param):
 def _val_is(model_data, param, val):
     if param.startswith(("model.", "run.")):
         group = param.split(".")[0]
-        config = AttrDict.from_yaml_string(model_data.attrs[f"{group}_config"])
+        config = model_data.attrs[f"{group}_config"]
         # TODO: update to str.removeprefix() in Python 3.9+
         imask = config.get_key(param[len(f"{group}.") :], None) == ast.literal_eval(val)
     elif param in model_data.data_vars.keys():

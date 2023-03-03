@@ -2,6 +2,7 @@ import os
 import tempfile
 
 import pytest  # noqa: F401
+import xarray as xr
 
 import calliope
 from calliope import exceptions
@@ -11,22 +12,88 @@ class TestIO:
     @pytest.fixture(scope="module")
     def model(self):
         model = calliope.examples.national_scale()
+        model._model_data = model._model_data.assign_attrs(
+            foo_true=True,
+            foo_false=False,
+            foo_none=None,
+            foo_dict={"foo": {"a": 1}},
+            foo_attrdict=calliope.AttrDict({"foo": {"a": 1}}),
+        )
         model.run()
         return model
 
-    def test_save_netcdf(self, model):
-        bool_attrs = [
-            k for k, v in model._model_data.attrs.items() if isinstance(v, bool)
-        ]
+    @pytest.fixture(scope="module")
+    def model_file(self, tmpdir_factory, model):
+        out_path = tmpdir_factory.mktemp("data").join("model.nc")
+        model.to_netcdf(out_path)
+        return out_path
 
-        with tempfile.TemporaryDirectory() as tempdir:
-            out_path = os.path.join(tempdir, "model.nc")
-            model.to_netcdf(out_path)
-            assert os.path.isfile(out_path)
+    @pytest.fixture(scope="module")
+    def model_from_file(self, model_file):
+        return calliope.read_netcdf(model_file)
 
+    @pytest.fixture(scope="module")
+    def model_from_file_no_processing(self, model_file):
+        return xr.open_dataset(model_file)
+
+    def test_save_netcdf(self, model_file):
+        assert os.path.isfile(model_file)
+
+    @pytest.mark.parametrize(
+        ["attr", "expected_type", "expected_val"],
+        [
+            ("foo_true", bool, True),
+            ("foo_false", bool, False),
+            ("foo_none", type(None), None),
+            ("foo_dict", dict, {"foo": {"a": 1}}),
+            ("foo_attrdict", calliope.AttrDict, calliope.AttrDict({"foo": {"a": 1}})),
+        ],
+    )
+    @pytest.mark.parametrize("model_name", ["model", "model_from_file"])
+    def test_serialised_attrs(
+        self, request, attr, expected_type, expected_val, model_name
+    ):
+        model = request.getfixturevalue(model_name)
         # Ensure that boolean attrs have not changed
-        for k in bool_attrs:
-            assert isinstance(model._model_data.attrs[k], bool)
+
+        assert isinstance(model._model_data.attrs[attr], expected_type)
+        if expected_val is None:
+            assert model._model_data.attrs[attr] is None
+        else:
+            assert model._model_data.attrs[attr] == expected_val
+
+    @pytest.mark.parametrize(
+        "serialised_list", ["serialised_bools", "serialised_nones", "serialised_dicts"]
+    )
+    @pytest.mark.parametrize("model_name", ["model", "model_from_file"])
+    def test_serialised_list_popped(self, request, serialised_list, model_name):
+        model = request.getfixturevalue(model_name)
+        assert serialised_list not in model._model_data.attrs.keys()
+
+    @pytest.mark.parametrize(
+        ["serialised_list", "list_elements"],
+        [
+            ("serialised_bools", ["foo_true", "foo_false"]),
+            ("serialised_nones", ["foo_none", "scenario"]),
+            (
+                "serialised_dicts",
+                [
+                    "foo_dict",
+                    "foo_attrdict",
+                    "defaults",
+                    "subsets",
+                    "model_config",
+                    "run_config",
+                ],
+            ),
+        ],
+    )
+    def test_serialised_list(
+        self, model_from_file_no_processing, serialised_list, list_elements
+    ):
+        assert not set(
+            model_from_file_no_processing.attrs[serialised_list]
+        ).symmetric_difference(list_elements)
 
     def test_save_csv_dir_mustnt_exist(self, model):
         with tempfile.TemporaryDirectory() as tempdir:
@@ -76,18 +143,20 @@ class TestIO:
             with pytest.warns(exceptions.ModelWarning):
                 model.to_csv(out_path, dropna=False)
 
-    def test_solve_save_read_netcdf(self, model):
-        with tempfile.TemporaryDirectory() as tempdir:
-            out_path = os.path.join(tempdir, "model.nc")
-            model.to_netcdf(out_path)
-            assert os.path.isfile(out_path)
+    @pytest.mark.parametrize("attr", ["run_config", "model_config", "subsets"])
+    def test_dicts_as_model_attrs_and_property(self, model_from_file, attr):
+        assert attr in model_from_file._model_data.attrs.keys()
+        assert hasattr(model_from_file, attr)
 
-            model_from_disk = calliope.read_netcdf(out_path)
-            for attr in ["results", "inputs", "run_config", "model_config"]:
-                assert hasattr(model_from_disk, attr)
+    def test_defaults_as_model_attrs_not_property(self, model_from_file):
+        assert "defaults" in model_from_file._model_data.attrs.keys()
+        assert not hasattr(model_from_file, "defaults")
+
+    @pytest.mark.parametrize("attr", ["results", "inputs"])
+    def test_filtered_dataset_as_property(self, model_from_file, attr):
+        assert hasattr(model_from_file, attr)
 
     def test_save_read_solve_save_netcdf(self, model):
-
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = os.path.join(tempdir, "model.nc")
             model.to_netcdf(out_path)
