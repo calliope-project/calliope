@@ -75,7 +75,9 @@ def dummy_model_data():
     )
     model_data.attrs["model_config"] = AttrDict({"a_b": 0, "b_a": [1, 2]})
 
-    model_data.attrs["defaults"] = AttrDict({"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100})
+    model_data.attrs["defaults"] = AttrDict(
+        {"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100}
+    )
 
     return model_data
 
@@ -124,9 +126,16 @@ def helper_function(number, identifier, evaluatable_string):
 
 
 @pytest.fixture
-def comparison(evaluatable_string, number, helper_function, bool_operand, config_option, data_var):
+def comparison(
+    evaluatable_string, number, helper_function, bool_operand, config_option, data_var
+):
     return subset_parser.comparison_parser(
-        evaluatable_string, number, helper_function, bool_operand, config_option, data_var
+        evaluatable_string,
+        number,
+        helper_function,
+        bool_operand,
+        config_option,
+        data_var,
     )
 
 
@@ -137,7 +146,9 @@ def subset(identifier, evaluatable_string, number):
 
 @pytest.fixture
 def imasking(bool_operand, helper_function, data_var, comparison, subset):
-    return subset_parser.imasking_parser(bool_operand, helper_function, data_var, comparison, subset)
+    return subset_parser.imasking_parser(
+        bool_operand, helper_function, data_var, comparison, subset
+    )
 
 
 @pytest.fixture(scope="function")
@@ -149,7 +160,7 @@ def eval_kwargs(dummy_model_data):
         "errors": set(),
         "warnings": set(),
         "imask": dummy_model_data["all_true"],
-        "defaults": dummy_model_data.attrs["defaults"]
+        "defaults": dummy_model_data.attrs["defaults"],
     }
 
 
@@ -258,13 +269,10 @@ class TestParserElements:
     def test_config_missing_config_group(
         self, config_option, eval_kwargs, config_string
     ):
-
         parsed_ = config_option.parse_string(config_string, parse_all=True)
         with pytest.raises(BackendError) as excinfo:
             parsed_[0].eval(**eval_kwargs)
-        assert check_error_or_warning(
-            excinfo, "Invalid configuration group"
-        )
+        assert check_error_or_warning(excinfo, "Invalid configuration group")
 
     @pytest.mark.parametrize(
         ["config_string", "type_"], [("model.b_a", "list"), ("run.bar", "AttrDict")]

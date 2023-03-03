@@ -67,7 +67,9 @@ class TestSubsets:
             {"foo": True, "baz": {"bar": "foobar"}}
         )
         model_data.attrs["model_config"] = AttrDict({"foz": 0})
-        model_data.attrs["defaults"] = AttrDict({"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100})
+        model_data.attrs["defaults"] = AttrDict(
+            {"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100}
+        )
 
         return model_data
 
@@ -86,9 +88,14 @@ class TestSubsets:
     @pytest.fixture
     def evaluated_imask_where(self, model_data):
         def _evaluated_imask_where(where_string):
-            return generate_where_string_parser().parse_string(where_string, parse_all=True)[0].eval(
-                model_data=model_data, helper_func_dict=VALID_HELPER_FUNCTIONS,
-                defaults=model_data.attrs["defaults"]
+            return (
+                generate_where_string_parser()
+                .parse_string(where_string, parse_all=True)[0]
+                .eval(
+                    model_data=model_data,
+                    helper_func_dict=VALID_HELPER_FUNCTIONS,
+                    defaults=model_data.attrs["defaults"],
+                )
             )
 
         return _evaluated_imask_where
