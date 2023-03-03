@@ -313,7 +313,7 @@ variables:
 
     units:
         foreach: [nodes, techs]
-        where: "cap_method=integer' AND NOT run.mode=operate"
+        where: "cap_method=integer AND NOT run.mode=operate"
         domain: NonNegativeIntegers
         bounds:
             min: units_min

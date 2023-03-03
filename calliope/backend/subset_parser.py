@@ -1,4 +1,6 @@
-from typing import Union, Optional
+from __future__ import annotations
+
+from typing import Union
 import operator
 
 import pyparsing as pp
@@ -6,8 +8,8 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 
-from calliope.core.attrdict import AttrDict
 from calliope.backend import equation_parser
+from calliope.exceptions import BackendError
 
 pp.ParserElement.enablePackrat()
 
@@ -40,7 +42,7 @@ class EvalAndOr(equation_parser.EvalOperatorOperand):
         return val
 
 
-class ConfigOptionParser:
+class ConfigOptionParser(equation_parser.EvalString):
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed configuration option names.
@@ -63,40 +65,39 @@ class ConfigOptionParser:
         return f"CONFIG:{self.config_group}.{self.config_option}"
 
     def eval(
-        self, model_data: xr.Dataset, errors: list[str], **kwargs
-    ) -> Optional[Union[int, float, str, bool, np.bool_]]:
+        self, model_data: xr.Dataset, **kwargs
+    ) -> Union[int, float, str, bool, np.bool_]:
         """
         If the parsed configuration group and configuration option are valid then
         return the option value, otherwise add to provided errors list inplace.
 
         Args:
             model_data (xr.Dataset): Calliope model data.
-            errors (list[str]): Errors list to add to if required (will be raised later).
 
         Returns:
             Optional[Union[int, float, str, bool, np.bool_]]: Configuration option value.
         """
         if self.config_group not in model_data.attrs:
-            errors.append(
+            raise BackendError(
                 f"(where, {self.instring}): Invalid configuration group defined"
             )
         else:
-            config_dict = AttrDict.from_yaml_string(model_data.attrs[self.config_group])
+            config_dict = model_data.attrs[self.config_group]
             # TODO: either remove the default key return or make it optional with
             # a "strict" arg
             config_val = config_dict.get_key(self.config_option, np.nan)
 
             if not isinstance(config_val, (int, float, str, bool, np.bool_)):
-                errors.append(
+                raise BackendError(
                     f"(where, {self.instring}): Configuration option resolves to invalid "
-                    "type `{type(config_val).__name__}`, expected a number, string, or boolean."
+                    f"type `{type(config_val).__name__}`, expected a number, string, or boolean."
                 )
             else:
                 return config_val
         return None
 
 
-class DataVarParser:
+class DataVarParser(equation_parser.EvalString):
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed model data variable names.
@@ -124,7 +125,7 @@ class DataVarParser:
             return model_data_var.where(pd.notnull(model_data_var)).notnull()
 
     def eval(
-        self, model_data: xr.Dataset, apply_imask: bool = True, **kwargs
+        self, model_data: xr.Dataset, defaults: dict, apply_imask: bool = True, **kwargs
     ) -> Union[np.bool_, xr.DataArray]:
         """
         Get parsed model data variable from the Calliope model dataset.
@@ -141,13 +142,13 @@ class DataVarParser:
             Union[np.bool_, xr.DataArray]:
                 False if data variable not in model data, array otherwise.
         """
-        if self.data_var not in model_data.data_vars.keys():
+        if self.data_var not in model_data:
             return np.False_
 
         if apply_imask:
             return self._data_var_exists(model_data[self.data_var])
         else:
-            return model_data[self.data_var]
+            return model_data[self.data_var].fillna(defaults.get(self.data_var))
 
 
 class ComparisonParser(equation_parser.EvalComparisonOp):
@@ -165,14 +166,55 @@ class ComparisonParser(equation_parser.EvalComparisonOp):
             BOOLEANTYPE: Same shape as LHS.
         """
         kwargs["apply_imask"] = False
-        comparison = self.lhs.eval(**kwargs) == self.rhs.eval()
+        lhs = self.lhs.eval(**kwargs)
+        rhs = self.rhs.eval(**kwargs)
+
+        if self.op == "<=":
+            comparison = lhs <= rhs
+        elif self.op == ">=":
+            comparison = lhs >= rhs
+        if self.op == "<":
+            comparison = lhs < rhs
+        elif self.op == ">":
+            comparison = lhs > rhs
+        elif self.op == "=":
+            comparison = lhs == rhs
+
         if isinstance(comparison, bool):
             # enables the "~" operator to later invert `comparison` if required.
             comparison = np.bool_(comparison)
         return comparison
 
 
-class BoolOperandParser:
+class SubsetParser(equation_parser.EvalString):
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed dimension subsetting.
+
+        Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used, but comes with `instring` when setting the parse action.
+            tokens (pp.ParseResults):
+                Has two parsed elements: model set name (str), set items (Any).
+        """
+        self.subset, self.set_name = tokens
+        self.instring = instring
+        self.loc = loc
+
+    def __repr__(self):
+        "Return string representation of the parsed grammar"
+        return f"SUBSET:{self.set_name}{self.subset}"
+
+    def eval(self, imask: xr.DataArray, **kwargs) -> xr.DataArray:
+        new_imask = imask.copy(deep=True)
+        subset = [i.eval(**kwargs) for i in self.subset]
+        new_imask.loc[{self.set_name: ~imask[self.set_name].isin(subset)}] = False
+        return new_imask
+
+
+class BoolOperandParser(equation_parser.EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed boolean strings.
@@ -235,6 +277,8 @@ def data_var_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
         pp.Keyword("and", caseless=True)
         | pp.Keyword("or", caseless=True)
         | pp.Keyword("not", caseless=True)
+        | pp.Keyword("true", caseless=True)
+        | pp.Keyword("false", caseless=True)
     )
     data_var = ~protected_strings + generic_identifier
     data_var.set_parse_action(DataVarParser)
@@ -289,6 +333,7 @@ def evaluatable_string_parser(generic_identifier: pp.ParserElement) -> pp.Parser
 def comparison_parser(
     evaluatable_identifier: pp.ParserElement,
     number: pp.ParserElement,
+    helper_function: pp.ParserElement,
     bool_operand: pp.ParserElement,
     config_option: pp.ParserElement,
     data_var: pp.ParserElement,
@@ -308,20 +353,56 @@ def comparison_parser(
         pp.ParserElement:
             Parser which will return a bool/boolean array as a result of the comparison.
     """
+    comparison_operators = pp.oneOf(["<", ">", "=", ">=", "<="])
     comparison_expression = (
         (config_option | data_var)
-        + "="
-        + (bool_operand | number | evaluatable_identifier)
+        + comparison_operators
+        + (helper_function | bool_operand | number | evaluatable_identifier)
     )
     comparison_expression.set_parse_action(ComparisonParser)
 
     return comparison_expression
 
 
+def subset_parser(
+    generic_identifier: pp.ParserElement,
+    evaluatable_identifier: pp.ParserElement,
+    number: pp.ParserElement,
+) -> pp.ParserElement:
+    """Parsing grammar to process comparisons of the form "variable_or_config=comparator"
+
+    Args:
+        evaluatable_identifier (pp.ParserElement): parser for evaluatable generic strings
+        number (pp.ParserElement):
+            Parser for numbers (integer, float, scientific notation, "inf"/".inf")
+        bool_operand (pp.ParserElement): Parser for boolean strings
+        config_option (pp.ParserElement):
+            Parser for attribute dictionary keys of the form "x.y.z"
+        data_var (pp.ParserElement): Parser for Calliope model dataset variable names.
+
+    Returns:
+        pp.ParserElement:
+            Parser which will return a bool/boolean array as a result of the comparison.
+    """
+    subset = pp.Group(pp.delimited_list(number | evaluatable_identifier))
+    subset_expression = (
+        pp.Suppress("[")
+        + subset
+        + pp.Suppress("]")
+        + pp.Suppress("in")
+        + generic_identifier
+    )
+    subset_expression.set_parse_action(SubsetParser)
+
+    return subset_expression
+
+
 def imasking_parser(
+    bool_operand: pp.ParserElement,
     helper_function: pp.ParserElement,
     data_var: pp.ParserElement,
     comparison_parser: pp.ParserElement,
+    subset: pp.ParserElement,
 ) -> pp.ParserElement:
     """
     Parsing grammar to combine bools/boolean arrays using (case agnostic) AND/OR operators
@@ -341,7 +422,7 @@ def imasking_parser(
     andorop = pp.Keyword("and", caseless=True) | pp.Keyword("or", caseless=True)
 
     imask_rules = pp.infixNotation(
-        helper_function | comparison_parser | data_var,
+        helper_function | comparison_parser | subset | data_var | bool_operand,
         [
             (notop, 1, pp.opAssoc.RIGHT, EvalNot),
             (andorop, 2, pp.opAssoc.LEFT, EvalAndOr),
@@ -351,7 +432,7 @@ def imasking_parser(
     return imask_rules
 
 
-def parse_where_string(parse_string: str) -> pp.ParseResults:
+def generate_where_string_parser() -> pp.ParserElement:
     """
     Args:
         parse_string (str): Constraint subsetting "where" string.
@@ -364,13 +445,16 @@ def parse_where_string(parse_string: str) -> pp.ParseResults:
     config_option = config_option_parser(generic_identifier)
     bool_operand = bool_parser()
     evaluatable_string = evaluatable_string_parser(generic_identifier)
-    comparison = comparison_parser(
-        evaluatable_string, number, bool_operand, config_option, data_var
-    )
     helper_function = equation_parser.helper_function_parser(
         generic_identifier, allowed_parser_elements_in_args=[evaluatable_string, number]
     )
-    parser = imasking_parser(helper_function, data_var, comparison)
-    parsed = parser.parse_string(parse_string, parse_all=True)
-
-    return parsed[0]
+    comparison = comparison_parser(
+        evaluatable_string,
+        number,
+        helper_function,
+        bool_operand,
+        config_option,
+        data_var,
+    )
+    subset = subset_parser(generic_identifier, evaluatable_string, number)
+    return imasking_parser(bool_operand, helper_function, data_var, comparison, subset)

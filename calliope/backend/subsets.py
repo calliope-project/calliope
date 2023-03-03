@@ -16,7 +16,7 @@ import ast
 
 import xarray as xr
 from calliope.core.util.dataset import reorganise_xarray_dimensions
-from calliope.backend.subset_parser import parse_where_string
+from calliope.backend.subset_parser import generate_where_string_parser
 from calliope.exceptions import print_warnings_and_raise_errors
 
 
@@ -62,10 +62,12 @@ def create_valid_subset(model_data, name, config):
     where_string = config.get_key("where", default=[])
     parsing_errors = []
     if where_string:
-        where_string_evaluated = parse_where_string(where_string).eval(
+        parsed_string = generate_where_string_parser().parse_string(where_string, parse_all=True)
+        where_string_evaluated = parsed_string[0].eval(
             model_data=model_data,
             helper_func_dict=VALID_HELPER_FUNCTIONS,
             errors=parsing_errors,
+            defaults=model_data.attrs["defaults"]
         )
         print_warnings_and_raise_errors(errors=parsing_errors)
         imask = imask & where_string_evaluated
