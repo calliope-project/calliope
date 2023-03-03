@@ -156,7 +156,6 @@ class Model(object):
         self._add_observed_dict("model_config")
         self._add_observed_dict("run_config")
         self._add_observed_dict("subsets")
-        self._add_observed_dict("defaults")
 
         results = self._model_data.filter_by_attrs(is_result=1)
         if len(results.data_vars) > 0:

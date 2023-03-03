@@ -144,11 +144,15 @@ class TestIO:
                 model.to_csv(out_path, dropna=False)
 
     @pytest.mark.parametrize(
-        "attr", ["run_config", "model_config", "subsets", "defaults"]
+        "attr", ["run_config", "model_config", "subsets"]
     )
     def test_dicts_as_model_attrs_and_property(self, model_from_file, attr):
         assert attr in model_from_file._model_data.attrs.keys()
         assert hasattr(model_from_file, attr)
+
+    def test_defaults_as_model_attrs_not_property(self, model_from_file):
+        assert "defaults" in model_from_file._model_data.attrs.keys()
+        assert not hasattr(model_from_file, "defaults")
 
     @pytest.mark.parametrize("attr", ["results", "inputs"])
     def test_filtered_dataset_as_property(self, model_from_file, attr):
