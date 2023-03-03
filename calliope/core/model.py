@@ -187,11 +187,11 @@ class Model(object):
                 dict_to_add = self._model_data.attrs[name]
             except KeyError:
                 raise exceptions.ModelError(
-                    f"The {name} dictionary must be an attribute of the model dataset to build the model. If loading the from a NetCDF file, ensure you are loading a valid Calliope model."
+                    f"Expected the model property `{name}` to be a dictionary attribute of the model dataset. If you are loading the model from a NetCDF file, ensure it is a valid Calliope model."
                 )
         if not isinstance(dict_to_add, dict):
             raise TypeError(
-                f"Attempted to add dictionary property `{name}` to model, but received argument of type {type(dict_to_add).__name__}"
+                f"Attempted to add dictionary property `{name}` to model, but received argument of type `{type(dict_to_add).__name__}`"
             )
         else:
             dict_to_add = AttrDict(dict_to_add)
