@@ -29,6 +29,7 @@ Internal changes
 
 |changed| Costs are now Pyomo expressions rather than decision variables.
 
+|changed| When a model is loaded into an active session, configuration dictionaries are stored as dictionaries instead of seralised YAML strings in the model data attributes dictionary. Serialisation and de-serialisation only occur on saving and loading from NetCDF, respectively.
 
 0.6.10 (2023-01-18)
 -------------------
