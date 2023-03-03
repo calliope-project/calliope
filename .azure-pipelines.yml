@@ -160,10 +160,7 @@ steps:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
 
-  - bash: |
-      source activate calliope
-      codecov
+  - script: |
+      bash <(curl -s https://codecov.io/bash)
     displayName: Send results to Codecov
     condition: eq( variables['CODECOV'], 'True' )
-    env:
-      CODECOV_TOKEN: $(CodecovToken)
