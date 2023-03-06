@@ -6,7 +6,7 @@ import xarray as xr
 from calliope.backend import equation_parser, subset_parser, subsets
 from calliope.test.common.util import check_error_or_warning
 from calliope.core.attrdict import AttrDict
-from calliope.core.util.observed_dict import UpdateObserverDict
+from calliope.exceptions import BackendError
 
 
 COMPONENT_CLASSIFIER = equation_parser.COMPONENT_CLASSIFIER
@@ -66,20 +66,23 @@ def dummy_model_data():
                     ["bar", "ar", "baz.boo", "foo.boo"],
                 ],
             ),
+            "boo_inheritance_bool": (
+                ["nodes", "techs"],
+                [[False, True, False, True], [False, False, True, True]],
+            ),
         },
         attrs={"scenarios": ["foo"]},
     )
-    model_data["only_techs"]
-    UpdateObserverDict(
-        initial_dict=AttrDict(
-            {"foo": True, "bar": {"foobar": "baz"}, "foobar": {"baz": {"foo": np.inf}}}
-        ),
-        name="run_config",
-        observer=model_data,
+
+    model_data.attrs["run_config"] = AttrDict(
+        {"foo": True, "bar": {"foobar": "baz"}, "foobar": {"baz": {"foo": np.inf}}}
     )
-    UpdateObserverDict(
-        initial_dict={"a_b": 0, "b_a": [1, 2]}, name="model_config", observer=model_data
+    model_data.attrs["model_config"] = AttrDict({"a_b": 0, "b_a": [1, 2]})
+
+    model_data.attrs["defaults"] = AttrDict(
+        {"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100}
     )
+
     return model_data
 
 
@@ -120,9 +123,23 @@ def evaluatable_string(identifier):
 
 
 @pytest.fixture
-def comparison(evaluatable_string, number, bool_operand, config_option, data_var):
+def helper_function(number, identifier, evaluatable_string):
+    return equation_parser.helper_function_parser(
+        identifier, allowed_parser_elements_in_args=[evaluatable_string, number]
+    )
+
+
+@pytest.fixture
+def comparison(
+    evaluatable_string, number, helper_function, bool_operand, config_option, data_var
+):
     return subset_parser.comparison_parser(
-        evaluatable_string, number, bool_operand, config_option, data_var
+        evaluatable_string,
+        number,
+        helper_function,
+        bool_operand,
+        config_option,
+        data_var,
     )
 
 
@@ -132,15 +149,10 @@ def subset(identifier, evaluatable_string, number):
 
 
 @pytest.fixture
-def helper_function(number, identifier, evaluatable_string):
-    return equation_parser.helper_function_parser(
-        identifier, allowed_parser_elements_in_args=[evaluatable_string, number]
+def imasking(bool_operand, helper_function, data_var, comparison, subset):
+    return subset_parser.imasking_parser(
+        bool_operand, helper_function, data_var, comparison, subset
     )
-
-
-@pytest.fixture
-def imasking(helper_function, data_var, comparison, subset):
-    return subset_parser.imasking_parser(helper_function, data_var, comparison, subset)
 
 
 @pytest.fixture(scope="function")
@@ -152,6 +164,7 @@ def eval_kwargs(dummy_model_data):
         "errors": set(),
         "warnings": set(),
         "imask": dummy_model_data["all_true"],
+        "defaults": dummy_model_data.attrs["defaults"],
     }
 
 
@@ -173,10 +186,11 @@ class TestParserElements:
         self, data_var, dummy_model_data, data_var_string, expected, eval_kwargs
     ):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
+        default = dummy_model_data.attrs["defaults"][expected]
         assert (
             parsed_[0]
             .eval(apply_imask=False, **eval_kwargs)
-            .equals(dummy_model_data[expected])
+            .equals(dummy_model_data[expected].fillna(default))
         )
 
     @pytest.mark.parametrize(
@@ -260,10 +274,9 @@ class TestParserElements:
         self, config_option, eval_kwargs, config_string
     ):
         parsed_ = config_option.parse_string(config_string, parse_all=True)
-        parsed_[0].eval(**eval_kwargs)
-        assert check_error_or_warning(
-            eval_kwargs["errors"], "Invalid configuration group"
-        )
+        with pytest.raises(BackendError) as excinfo:
+            parsed_[0].eval(**eval_kwargs)
+        assert check_error_or_warning(excinfo, "Invalid configuration group")
 
     @pytest.mark.parametrize(
         ["config_string", "type_"], [("model.b_a", "list"), ("run.bar", "AttrDict")]
@@ -271,11 +284,11 @@ class TestParserElements:
     def test_config_fail_datatype(
         self, config_option, eval_kwargs, config_string, type_
     ):
-        config_group, config_keys = config_string.split(".")
         parsed_ = config_option.parse_string(config_string, parse_all=True)
-        parsed_[0].eval(**eval_kwargs)
+        with pytest.raises(BackendError) as excinfo:
+            parsed_[0].eval(**eval_kwargs)
         assert check_error_or_warning(
-            eval_kwargs["errors"],
+            excinfo,
             f"Configuration option resolves to invalid type `{type_}`",
         )
 
@@ -331,6 +344,7 @@ class TestParserElements:
             ("all_nan", ".inf", 0),
             ("with_inf", ".inf", 1),
             ("with_inf", 3, 1),
+            ("with_inf", 100, 2),  # NaNs filled with default val
         ],
     )
     def test_comparison_parser_data_var(
@@ -340,6 +354,24 @@ class TestParserElements:
         parsed_ = comparison.parse_string(comparison_string, parse_all=True)
         evaluated_ = parsed_[0].eval(**eval_kwargs)
         assert evaluated_.dtype.kind == "b"
+        assert evaluated_.sum() == n_true
+
+    @pytest.mark.parametrize(
+        ["operator", "comparison_val", "n_true"],
+        [
+            ("=", ".inf", 1),
+            ("<", 3, 4),
+            ("<=", 3, 5),
+            (">", 1, 5),
+            (">=", 1, 8),
+        ],
+    )
+    def test_comparison_parser_data_var_different_ops(
+        self, comparison, eval_kwargs, operator, comparison_val, n_true
+    ):
+        comparison_string = f"with_inf{operator}{comparison_val}"
+        parsed_ = comparison.parse_string(comparison_string, parse_all=True)
+        evaluated_ = parsed_[0].eval(**eval_kwargs)
         assert evaluated_.sum() == n_true
 
     @pytest.mark.parametrize(
@@ -413,6 +445,21 @@ class TestParserElements:
             subset.parse_string(f"{subset_string} in foo", parse_all=True)
         assert check_error_or_warning(excinfo, "Expected")
 
+    @pytest.mark.parametrize(
+        ["parser_name", "parse_string", "expected"],
+        [
+            ("data_var", "foo", "DATA_VAR:foo"),
+            ("config_option", "model.bar", "CONFIG:model_config.bar"),
+            ("bool_operand", "TRUE", "BOOL:true"),
+            ("comparison", "model.bar=True", "CONFIG:model_config.bar=BOOL:true"),
+            ("subset", "[foo, 1] in foos", "SUBSET:foos[STRING:foo, NUM:1]"),
+        ],
+    )
+    def test_repr(self, request, parser_name, parse_string, expected):
+        parser = request.getfixturevalue(parser_name)
+        parsed_ = parser.parse_string(parse_string, parse_all=True)
+        assert str(parsed_[0]) == expected
+
 
 class TestParserMasking:
     @pytest.mark.parametrize(
@@ -420,18 +467,14 @@ class TestParserMasking:
         [
             ("all_inf", "all_false"),
             ("run.foo=True", True),
-            (
-                "inheritance(boo)",
-                {"function": "inheritance", "args": ["boo"], "kwargs": {}},
-            )
-            # [[False, True, True, True], [False, False, True, True]]
+            ("inheritance(boo)", "boo_inheritance_bool"),
         ],
     )
     def test_no_aggregation(
         self, parse_where_string, dummy_model_data, instring, expected
     ):
         evaluated_ = parse_where_string(instring)
-        if instring in dummy_model_data.data_vars:
+        if expected in dummy_model_data.data_vars:
             assert evaluated_.equals(dummy_model_data[expected])
         else:
             assert evaluated_ == expected

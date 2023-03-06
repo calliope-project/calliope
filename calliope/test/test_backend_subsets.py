@@ -14,8 +14,8 @@ from calliope.backend.subsets import (
     _imask_foreach,
     VALID_HELPER_FUNCTIONS,
 )
-from calliope.backend.subset_parser import parse_where_string
-from calliope.core.util.observed_dict import UpdateObserverDict
+from calliope.backend.subset_parser import generate_where_string_parser
+
 from calliope import AttrDict
 from calliope.test.common.util import (
     check_error_or_warning,
@@ -63,14 +63,14 @@ class TestSubsets:
                 ),
             },
         )
-        UpdateObserverDict(
-            initial_dict=AttrDict({"foo": True, "baz": {"bar": "foobar"}}),
-            name="run_config",
-            observer=model_data,
+        model_data.attrs["run_config"] = AttrDict(
+            {"foo": True, "baz": {"bar": "foobar"}}
         )
-        UpdateObserverDict(
-            initial_dict={"foz": 0}, name="model_config", observer=model_data
+        model_data.attrs["model_config"] = AttrDict({"foz": 0})
+        model_data.attrs["defaults"] = AttrDict(
+            {"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100}
         )
+
         return model_data
 
     @pytest.fixture
@@ -88,8 +88,14 @@ class TestSubsets:
     @pytest.fixture
     def evaluated_imask_where(self, model_data):
         def _evaluated_imask_where(where_string):
-            return parse_where_string(where_string).eval(
-                model_data=model_data, helper_func_dict=VALID_HELPER_FUNCTIONS
+            return (
+                generate_where_string_parser()
+                .parse_string(where_string, parse_all=True)[0]
+                .eval(
+                    model_data=model_data,
+                    helper_func_dict=VALID_HELPER_FUNCTIONS,
+                    defaults=model_data.attrs["defaults"],
+                )
             )
 
         return _evaluated_imask_where
@@ -100,6 +106,16 @@ class TestSubsets:
     def test_inheritance(self, model_data, tech_group, result):
         imask = _inheritance(model_data)(tech_group)
         assert imask.sum() == result
+
+    @pytest.mark.parametrize(
+        "foreach", (["techs"], ["nodes", "techs"], ["nodes", "techs", "carriers"])
+    )
+    def test_get_valid_subset(self, model_data, foreach):
+        imask = _imask_foreach(model_data, foreach)
+        idx = _get_valid_subset(imask)
+        assert isinstance(idx, pd.Index)
+        assert len(idx) == imask.sum()
+        assert all(imask.loc[i] == 1 for i in idx)  # 1 represents boolean True here
 
     def test_subset_imask_no_squeeze(self, model_data, imask_subset_config):
         """
@@ -130,12 +146,27 @@ class TestSubsets:
         assert imask_subset.dims == ("techs",)
         assert imask_subset.equals(imask.loc[{"nodes": "foo"}].drop_vars("nodes"))
 
+    def test_subset_imask_non_iterable_subset(self, model_data, imask_subset_config):
+        """
+        Subset using a string, when a non-string iterable is required
+        """
+        foreach = ["nodes", "techs"]
+        imask = _imask_foreach(model_data, foreach)
+
+        with pytest.raises(TypeError) as excinfo:
+            _subset_imask(
+                "foo", AttrDict({"foreach": foreach, "subset.nodes": "bar"}), imask
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "set `foo` must subset over an iterable, instead got non-iterable `bar` for subset `nodes`",
+        )
+
     @pytest.mark.parametrize("model_name", ("urban_scale", "national_scale", "milp"))
     def test_create_valid_subset(self, model_name):
         model = getattr(calliope.examples, model_name)()
 
         for object_type in ["constraints", "expressions"]:
-
             valid_subsets = {
                 name: create_valid_subset(model._model_data, name, config)
                 for name, config in subsets_config[object_type].items()

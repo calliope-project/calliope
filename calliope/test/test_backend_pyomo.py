@@ -87,10 +87,7 @@ class TestChecks:
             assert check_warn
         elif on is True:
             assert not check_warn
-        assert (
-            AttrDict.from_yaml_string(m._model_data.attrs["run_config"]).cyclic_storage
-            is False
-        )
+        assert m._model_data.attrs["run_config"].cyclic_storage is False
 
     @pytest.mark.parametrize(
         "param", [("energy_eff"), ("resource_eff"), ("parasitic_eff")]
@@ -1770,7 +1767,6 @@ class TestMILPConstraints:
 
 
 class TestConversionConstraints:
-
     # conversion.py
     def test_loc_techs_balance_conversion_constraint(self):
         """

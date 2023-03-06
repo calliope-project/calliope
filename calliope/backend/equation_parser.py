@@ -24,6 +24,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ##
+from __future__ import annotations
 
 from typing import Callable, Any, Union, Optional, Iterator, Iterable
 from abc import ABC
@@ -31,6 +32,7 @@ import pyparsing as pp
 import pandas as pd
 
 from calliope.exceptions import BackendError
+
 
 pp.ParserElement.enablePackrat()
 
@@ -303,12 +305,11 @@ class EvalIndexedParameterOrVariable(EvalString):
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
-        return "INDEXED_PARAM_OR_VAR:" + str(self.name)
+        return f"INDEXED_PARAM_OR_VAR:{self.name}{self.index_items}"
 
     def reorder_index_items(
         self, set_order: Iterable[str], index_item_names: dict[str, str]
     ) -> list[pp.ParseResults]:
-
         index_item_names_df = pd.Series(index_item_names)
         index_item_mapper = {idx.name: idx for idx in self.index_items}
 
@@ -798,7 +799,6 @@ def foreach_parser() -> pp.ParserElement:
 
 
 def generate_index_item_parser():
-
     number, identifier = setup_base_parser_elements()
     unindexed_param = unindexed_param_parser(identifier)
     indexed_param = indexed_param_or_var_parser(identifier)
@@ -816,7 +816,6 @@ def generate_index_item_parser():
 
 
 def generate_arithmetic_parser():
-
     number, identifier = setup_base_parser_elements()
     unindexed_param = unindexed_param_parser(identifier)
     indexed_param = indexed_param_or_var_parser(identifier)

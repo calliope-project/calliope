@@ -199,7 +199,6 @@ def extreme_diff(
 
 
 def _extreme(arr, how="max", length="1D", n=1, groupby_length=None, padding=None):
-
     if groupby_length:
         groupby = pd.Grouper(freq=groupby_length)
         group_indices = []

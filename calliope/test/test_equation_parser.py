@@ -665,6 +665,30 @@ class TestEquationParserElements:
         with pytest.raises(pp.ParseException):
             foreach_list.parse_string(input_string, parse_all=True)
 
+    @pytest.mark.parametrize(
+        ["parser_name", "parse_string", "expected"],
+        [
+            ("number", "1", "NUM:1"),
+            ("number", "inf", "NUM:inf"),
+            ("unindexed_param", "foo", "UNINDEXED_PARAM_OR_VAR:foo"),
+            (
+                "indexed_param",
+                "foo[bar, foos=foo]",
+                "INDEXED_PARAM_OR_VAR:foo[ITERATOR:bar, FOOS:foo]",
+            ),
+            ("component", "$foo", "COMPONENT:foo"),
+            (
+                "helper_function",
+                "dummy_func_1(1, x=foo)",
+                "dummy_func_1(args=[NUM:1], kwargs={'x': UNINDEXED_PARAM_OR_VAR:foo})",
+            ),
+        ],
+    )
+    def test_repr(self, request, parser_name, parse_string, expected):
+        parser = request.getfixturevalue(parser_name)
+        parsed_ = parser.parse_string(parse_string, parse_all=True)
+        assert str(parsed_[0]) == expected
+
 
 class TestEquationParserArithmetic:
     numbers = [2, 100, 0.02, "1e2", "2e-2", "inf"]
@@ -794,9 +818,17 @@ class TestEquationParserArithmetic:
         evaluated = parsed[0].eval(**eval_kwargs)
         assert evaluated == {"function": "dummy_func_1", **expected}
 
+    def test_repr(self, arithmetic):
+        parse_string = "1 + foo - foo[bar, foos=foo] + (foo / $foo) ** -2"
+        expected = (
+            "(NUM:1 + UNINDEXED_PARAM_OR_VAR:foo - INDEXED_PARAM_OR_VAR:foo[ITERATOR:bar, FOOS:foo]"
+            " + ((UNINDEXED_PARAM_OR_VAR:foo / COMPONENT:foo) ** (-)NUM:2))"
+        )
+        parsed_ = arithmetic.parse_string(parse_string, parse_all=True)
+        assert str(parsed_[0]) == expected
+
 
 class TestEquationParserComparison:
-
     EXPR_PARAMS_AND_EXPECTED_EVAL = {
         0: 0.0,
         -1: -1.0,
@@ -858,7 +890,6 @@ class TestEquationParserComparison:
         equation_comparison,
         eval_kwargs,
     ):
-
         parsed_constraint = equation_comparison.parse_string(
             single_equation_simple, parse_all=True
         )
@@ -915,3 +946,12 @@ class TestEquationParserComparison:
         parser_func = request.getfixturevalue(func_string)
         with pytest.raises(pp.ParseException):
             parser_func.parse_string(equation_string, parse_all=True)
+
+    def test_repr(self, equation_comparison):
+        parse_string = "1 + foo - foo[bar, foos=foo] >= (foo / $foo) ** -2"
+        expected = (
+            "(NUM:1 + UNINDEXED_PARAM_OR_VAR:foo - INDEXED_PARAM_OR_VAR:foo[ITERATOR:bar, FOOS:foo])"
+            " >= ((UNINDEXED_PARAM_OR_VAR:foo / COMPONENT:foo) ** (-)NUM:2)"
+        )
+        parsed_ = equation_comparison.parse_string(parse_string, parse_all=True)
+        assert str(parsed_[0]) == expected

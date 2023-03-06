@@ -74,13 +74,15 @@ class TestGetParam:
         """
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.run()
-        with pytest.raises(KeyError):
-            get_param(
-                m._backend_model,
-                "random_param",
-                ("b", "test_demand_elec", m._backend_model.timesteps[1]),
-            )
-            get_param(m._backend_model, "random_param", ("b", "test_supply_elec"))
+        foo = get_param(
+            m._backend_model,
+            "random_param",
+            ("b", "test_demand_elec", m._backend_model.timesteps[1]),
+        )
+        assert foo is None
+
+        bar = get_param(m._backend_model, "random_param", ("b", "test_supply_elec"))
+        assert bar is None
 
 
 class TestGetDomain:

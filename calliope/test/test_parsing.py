@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from io import StringIO
 from itertools import chain, combinations
 
@@ -14,7 +16,6 @@ from calliope.test.common.util import (
     subsets_config,
 )
 
-from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope import AttrDict
 import calliope
 
@@ -98,17 +99,15 @@ def model_data():
         },
         attrs={"scenarios": ["foo"]},
     )
-    model_data["only_techs"]
-    UpdateObserverDict(
-        initial_dict=AttrDict(
-            {"foo": True, "bar": {"foobar": "baz"}, "foobar": {"baz": {"foo": np.inf}}}
-        ),
-        name="run_config",
-        observer=model_data,
+    model_data.attrs["run_config"] = AttrDict(
+        {"foo": True, "bar": {"foobar": "baz"}, "foobar": {"baz": {"foo": np.inf}}}
     )
-    UpdateObserverDict(
-        initial_dict={"a_b": 0, "b_a": [1, 2]}, name="model_config", observer=model_data
+    model_data.attrs["model_config"] = AttrDict({"a_b": 0, "b_a": [1, 2]})
+
+    model_data.attrs["defaults"] = AttrDict(
+        {"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100}
     )
+
     return model_data
 
 
@@ -287,6 +286,30 @@ class TestParsedConstraintForEach:
             "(foreach, a in A1): Found duplicate set iterator `a`",
         )
 
+    @pytest.mark.parametrize(
+        "input_string",
+        [
+            "1 in foo",  # number as iterator
+            "foo in 1",  # number as set name
+            "1 in 2",  # numbers for both
+            "in B",  # missing iterator
+            "in",  # missing iterator and set name
+            "foo bar",  # missing "in"
+            "foo.bar in B",  # unallowed character in iterator .
+            "a in foo.bar",  # unallowed character in set name .
+            "ainA",  # missing whitespace
+            "1a in 2b",  # invalid python identifiers
+            "a in A b in B",  # missing deliminator between two set items
+            "a in in A",  # duplicated "in"
+            "a in in"  # Cannot have "in" as a set iterator/name
+            "in in A"  # Cannot have "in" as a set iterator/name
+            "in in in",  # Cannot have "in" as a set iterator/name
+        ],
+    )
+    def test_parse_foreach_fail(self, foreach_parser, input_string):
+        with pytest.raises(pp.ParseException):
+            foreach_parser.parse_string(input_string, parse_all=True)
+
 
 class TestParsedConstraintAddParseError:
     def test_add_parse_error_no_errors(self, component_obj):
@@ -347,7 +370,6 @@ class TestParsedConstraintParseWhereExpression:
         where_string,
         expected_where_eval,
     ):
-
         expression_dict = expression_generator(parse_string, where_string)
         parsed_list = component_obj._parse_where_expression(
             expression_parser, [expression_dict], "foo"

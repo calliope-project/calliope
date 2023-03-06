@@ -9,10 +9,7 @@ Checks for model consistency and possible errors when preparing run in the backe
 
 """
 import numpy as np
-import pandas as pd
-import xarray as xr
 from calliope.core.attrdict import AttrDict
-from calliope.core.util.observed_dict import UpdateObserverDict
 
 
 def check_operate_params(model_data):
@@ -32,17 +29,7 @@ def check_operate_params(model_data):
         serious issues that should raise a ModelError
 
     """
-    defaults = UpdateObserverDict(
-        initial_yaml_string=model_data.attrs["defaults"],
-        name="defaults",
-        observer=model_data,
-        flat=True,
-    )
-    run_config = UpdateObserverDict(
-        initial_yaml_string=model_data.attrs["run_config"],
-        name="run_config",
-        observer=model_data,
-    )
+    run_config = model_data.attrs["run_config"]
 
     warnings, errors = [], []
     comments = AttrDict()

@@ -7,7 +7,6 @@ from calliope.test.common.util import check_error_or_warning
 
 class TestDeprecationWarnings:
     def test_get_formatted_array_deprecationwarning(self):
-
         model = build_model(scenario="simple_supply,one_day,investment_costs")
         model.run()
 

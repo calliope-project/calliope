@@ -8,7 +8,6 @@ def inheritance(model_data, **kwargs):
 
 def backend_sum(backend_interface, **kwargs):
     def _backend_sum(to_sum, *, over):
-
         return backend_interface.sum(to_sum)
 
     return _backend_sum

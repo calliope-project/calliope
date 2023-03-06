@@ -225,6 +225,7 @@ class ParsedBackendComponent(ABC, Generic[T]):
                 helper_func_dict=VALID_HELPER_FUNCTIONS,
                 errors=self._errors,
                 imask=imask_foreach,
+                defaults=model_data.attrs["defaults"],
             )
             for where in [self.top_level_where, *where_list]
         ]
