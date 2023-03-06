@@ -340,6 +340,7 @@ class TestParserElements:
             ("all_nan", ".inf", 0),
             ("with_inf", ".inf", 1),
             ("with_inf", 3, 1),
+            ("with_inf", 100, 2),  # NaNs filled with default val
         ],
     )
     def test_comparison_parser_data_var(
@@ -349,6 +350,24 @@ class TestParserElements:
         parsed_ = comparison.parse_string(comparison_string, parse_all=True)
         evaluated_ = parsed_[0].eval(**eval_kwargs)
         assert evaluated_.dtype.kind == "b"
+        assert evaluated_.sum() == n_true
+
+    @pytest.mark.parametrize(
+        ["operator", "comparison_val", "n_true"],
+        [
+            ("=", ".inf", 1),
+            ("<", 3, 4),
+            ("<=", 3, 5),
+            (">", 1, 5),
+            (">=", 1, 8),
+        ],
+    )
+    def test_comparison_parser_data_var_different_ops(
+        self, comparison, eval_kwargs, operator, comparison_val, n_true
+    ):
+        comparison_string = f"with_inf{operator}{comparison_val}"
+        parsed_ = comparison.parse_string(comparison_string, parse_all=True)
+        evaluated_ = parsed_[0].eval(**eval_kwargs)
         assert evaluated_.sum() == n_true
 
     @pytest.mark.parametrize(
@@ -422,6 +441,18 @@ class TestParserElements:
             subset.parse_string(f"{subset_string} in foo", parse_all=True)
         assert check_error_or_warning(excinfo, "Expected")
 
+    @pytest.mark.parametrize(
+        ["parser_name", "parse_string", "expected"],
+        [("data_var", "foo", "DATA_VAR:foo"),
+          ("config_option", "model.bar", "CONFIG:model_config.bar"),
+          ("bool_operand", "TRUE", "BOOL:true"),
+          ("comparison", "model.bar=True", "CONFIG:model_config.bar=BOOL:true"),
+          ("subset", "[foo, 1] in foos", "SUBSET:foos[STRING:foo, NUM:1]")]
+    )
+    def test_repr(self, request, parser_name, parse_string, expected):
+        parser = request.getfixturevalue(parser_name)
+        parsed_ = parser.parse_string(parse_string, parse_all=True)
+        assert str(parsed_[0]) == expected
 
 class TestParserMasking:
     @pytest.mark.parametrize(

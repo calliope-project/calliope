@@ -94,7 +94,6 @@ class ConfigOptionParser(equation_parser.EvalString):
                 )
             else:
                 return config_val
-        return None
 
 
 class DataVarParser(equation_parser.EvalString):
