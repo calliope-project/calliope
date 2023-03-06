@@ -27,7 +27,6 @@ from calliope.core.util import dataset
 
 
 class ModelDataFactory:
-
     UNWANTED_TECH_KEYS = [
         "allowed_constraints",
         "required_constraints",

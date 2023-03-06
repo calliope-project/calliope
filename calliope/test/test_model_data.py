@@ -215,14 +215,12 @@ class TestModelData:
     def test_reformat_model_run_dict_values_as_dim(
         self, model_data, model_run_dict, nesting, expected_data_dict
     ):
-
         data_dict = model_data._reformat_model_run_dict(
             model_run_dict, nesting, get_method="get", values_as_dimension=True
         )
         assert data_dict == expected_data_dict
 
     def test_reformat_model_run_dict_no_match(self, model_data):
-
         data_dict = model_data._reformat_model_run_dict(
             {"A.techs.B": 2}, ["foo"], get_method="get"
         )
@@ -274,7 +272,6 @@ class TestModelData:
         assert df.values[0] == list(data_dict.values())[0]
 
     def test_model_run_dict_to_dataset_no_match(self, caplog, model_data):
-
         with caplog.at_level(logging.INFO):
             model_data._model_run_dict_to_dataset(
                 "foo", "node", ["foobar"], ["nodes", "foobar"]
@@ -306,7 +303,6 @@ class TestModelData:
         ],
     )
     def test_update_link_tech_names(self, model_data, data, idx, cols, out_idx):
-
         df = pd.DataFrame(data=data, index=idx, columns=cols)
         new_df = model_data._update_link_tech_names(df)
         assert new_df.index.difference(out_idx).empty
@@ -422,6 +418,6 @@ class TestModelData:
         attr_dict["calliope_version"] == __version__
         assert attr_dict["applied_overrides"] == "foo"
         assert attr_dict["scenario"] == "bar"
-        assert "\ncost_energy_cap" in attr_dict["defaults"]
-        assert "\nenergy_cap_max" in attr_dict["defaults"]
-        assert "\navailable_area" in attr_dict["defaults"]
+        assert "cost_energy_cap" in attr_dict["defaults"]
+        assert "energy_cap_max" in attr_dict["defaults"]
+        assert "available_area" in attr_dict["defaults"]

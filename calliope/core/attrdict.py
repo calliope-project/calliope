@@ -13,6 +13,7 @@ used for managing model configuration.
 import io
 from pathlib import Path
 import logging
+import copy
 
 import numpy as np
 import ruamel.yaml as ruamel_yaml
@@ -82,6 +83,10 @@ class AttrDict(dict):
     def copy(self):
         """Override copy method so that it returns an AttrDict"""
         return AttrDict(self.as_dict().copy())
+
+    def __deepcopy__(self, memo):
+        """Override copy method so that it returns an AttrDict"""
+        return AttrDict(copy.deepcopy(self.as_dict(), memo))
 
     def init_from_dict(self, d):
         """

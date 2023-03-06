@@ -28,7 +28,6 @@ from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
 from calliope.core.util.logging import LogWriter
 from calliope.backend import parsing
-from calliope.core.util.observed_dict import UpdateObserverDict
 
 
 T = TypeVar("T")
@@ -320,7 +319,7 @@ class BackendModel(ABC, Generic[T]):
         return results
 
     def add_all_parameters(
-        self, model_data: xr.Dataset, defaults: dict, run_config: UpdateObserverDict
+        self, model_data: xr.Dataset, defaults: dict, run_config: dict
     ) -> None:
         """
         Add all parameters to backend dataset in-place, including those in the run configuration.

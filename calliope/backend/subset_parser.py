@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union, Optional
+from typing import Union
 import operator
 
 import pyparsing as pp
@@ -95,7 +95,6 @@ class ConfigOptionParser(equation_parser.EvalString):
                 )
             else:
                 return config_val
-        return None
 
 
 class DataVarParser(equation_parser.EvalString):

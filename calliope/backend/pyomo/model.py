@@ -50,12 +50,8 @@ def build_sets(model_data, backend_model):
 def build_params(model_data, backend_model):
     # "Parameters"
 
-    backend_model.__calliope_defaults = AttrDict.from_yaml_string(
-        model_data.attrs["defaults"]
-    )
-    backend_model.__calliope_run_config = AttrDict.from_yaml_string(
-        model_data.attrs["run_config"]
-    )
+    backend_model.__calliope_defaults = model_data.attrs["defaults"]
+    backend_model.__calliope_run_config = model_data.attrs["run_config"]
 
     for k, v in model_data.data_vars.items():
         if v.attrs["is_result"] == 0 or (
@@ -180,7 +176,7 @@ def generate_model(model_data):
     # remove pandas datetime from xarrays, to reduce memory usage on creating pyomo objects
     model_data = datetime_to_string(backend_model, model_data)
 
-    subsets_config = AttrDict.from_yaml_string(model_data.attrs["subsets"])
+    subsets_config = model_data.attrs["subsets"]
     build_sets(model_data, backend_model)
     build_params(model_data, backend_model)
     build_variables(backend_model, model_data, subsets_config["variables"])
@@ -279,7 +275,7 @@ def get_result_array(backend_model, model_data):
     the backend (instead of being passed by calliope.Model().inputs) are also
     added to calliope.Model()._model_data in-place.
     """
-    subsets_config = AttrDict.from_yaml_string(model_data.attrs["subsets"])
+    subsets_config = model_data.attrs["subsets"]
 
     def _get_dim_order(foreach):
         return tuple([i for i in model_data.dims.keys() if i in foreach])

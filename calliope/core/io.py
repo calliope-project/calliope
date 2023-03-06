@@ -12,9 +12,11 @@ Functions to read and save model results.
 import os
 
 import xarray as xr
+import numpy as np
 
 from calliope._version import __version__
 from calliope import exceptions
+from calliope.core.attrdict import AttrDict
 
 
 def read_netcdf(path):
@@ -31,6 +33,12 @@ def read_netcdf(path):
                     calliope_version, __version__
                 )
             )
+    for attr in _pop_serialised_list(model_data.attrs, "serialised_dicts"):
+        model_data.attrs[attr] = AttrDict.from_yaml_string(model_data.attrs[attr])
+    for attr in _pop_serialised_list(model_data.attrs, "serialised_bools"):
+        model_data.attrs[attr] = bool(model_data.attrs[attr])
+    for attr in _pop_serialised_list(model_data.attrs, "serialised_nones"):
+        model_data.attrs[attr] = None
 
     # FIXME some checks for consistency
     # use check_dataset from the checks module
@@ -39,9 +47,15 @@ def read_netcdf(path):
     return model_data
 
 
-def save_netcdf(model_data, path, model=None):
-    encoding = {k: {"zlib": True, "complevel": 4} for k in model_data.data_vars}
+def _pop_serialised_list(attribute_dict, serialised_items):
+    serialised_ = attribute_dict.pop(serialised_items, [])
+    if not isinstance(serialised_, (list, np.ndarray)):
+        return [serialised_]
+    else:
+        return serialised_
 
+
+def save_netcdf(model_data, path, model=None):
     original_model_data_attrs = model_data.attrs
     model_data_attrs = model_data.attrs.copy()
 
@@ -54,21 +68,30 @@ def save_netcdf(model_data, path, model=None):
         if hasattr(model, "_debug_data"):
             model_data_attrs["_debug_data"] = model._debug_data.to_yaml()
 
+    # Convert dicts attrs to yaml strings
+    dict_attrs = [k for k, v in model_data_attrs.items() if isinstance(v, dict)]
+    model_data_attrs["serialised_dicts"] = dict_attrs
+    for k in dict_attrs:
+        model_data_attrs[k] = AttrDict(model_data_attrs[k]).to_yaml()
+
     # Convert boolean attrs to ints
     bool_attrs = [k for k, v in model_data_attrs.items() if isinstance(v, bool)]
+    model_data_attrs["serialised_bools"] = bool_attrs
     for k in bool_attrs:
         model_data_attrs[k] = int(model_data_attrs[k])
 
     # Convert None attrs to 'None'
     none_attrs = [k for k, v in model_data_attrs.items() if v is None]
+    model_data_attrs["serialised_nones"] = none_attrs
     for k in none_attrs:
         model_data_attrs[k] = "None"
 
-    # Convert `object` dtype coords to string
-    # FIXME: remove once xarray issue https://github.com/pydata/xarray/issues/2404 is resolved
-    for k, v in model_data.coords.items():
-        if v.dtype == "O":
-            model_data[k] = v.astype("<U{}".format(max([len(i.item()) for i in v])))
+    encoding = {
+        k: {"zlib": False}
+        if v.dtype.kind in ["U", "O"]
+        else {"zlib": True, "complevel": 4}
+        for k, v in model_data.data_vars.items()
+    }
 
     try:
         model_data.attrs = model_data_attrs

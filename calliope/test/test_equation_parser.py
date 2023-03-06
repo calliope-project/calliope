@@ -114,12 +114,12 @@ def eval_kwargs():
         "helper_func_dict": HELPER_FUNCS,
         "as_dict": True,
         "iterator_dict": {},
-        "index_item_dict": {},
+        "index_slice_dict": {},
         "component_dict": {},
         "sets": {"bar": "bars", "foo": "foos"},
         "equation_name": "foobar",
+        "apply_imask": False
     }
-
 
 @pytest.fixture
 def arithmetic(helper_function, number, sliced_param, component, unsliced_param):
@@ -696,9 +696,17 @@ class TestEquationParserArithmetic:
         evaluated = parsed[0].eval(**eval_kwargs)
         assert evaluated == {"function": "dummy_func_1", **expected}
 
+    def test_repr(self, arithmetic):
+        parse_string = "1 + foo - foo[foos=foo] + (foo / $foo) ** -2"
+        expected = (
+            "(NUM:1 + UNSLICED_PARAM_OR_VAR:foo - SLICED_PARAM_OR_VAR:foo[FOOS:foo]"
+            " + ((UNSLICED_PARAM_OR_VAR:foo / COMPONENT:foo) ** (-)NUM:2))"
+        )
+        parsed_ = arithmetic.parse_string(parse_string, parse_all=True)
+        assert str(parsed_[0]) == expected
+
 
 class TestEquationParserComparison:
-
     EXPR_PARAMS_AND_EXPECTED_EVAL = {
         0: 0.0,
         -1: -1.0,
@@ -760,7 +768,6 @@ class TestEquationParserComparison:
         equation_comparison,
         eval_kwargs,
     ):
-
         parsed_constraint = equation_comparison.parse_string(
             single_equation_simple, parse_all=True
         )
@@ -823,3 +830,12 @@ class TestEquationParserComparison:
         parser_func = request.getfixturevalue(func_string)
         with pytest.raises(pp.ParseException):
             parser_func.parse_string(equation_string, parse_all=True)
+
+    def test_repr(self, equation_comparison):
+        parse_string = "1 + foo - foo[bar, foos=foo] >= (foo / $foo) ** -2"
+        expected = (
+            "(NUM:1 + UNSLICED_PARAM_OR_VAR:foo - SLICED_PARAM_OR_VAR:foo[ITERATOR:bar, FOOS:foo])"
+            " >= ((UNSLICED_PARAM_OR_VAR:foo / COMPONENT:foo) ** (-)NUM:2)"
+        )
+        parsed_ = equation_comparison.parse_string(parse_string, parse_all=True)
+        assert str(parsed_[0]) == expected

@@ -8,13 +8,9 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 
-from calliope.backend import parsing, equation_parser, subset_parser
-from calliope.test.common.util import (
-    check_error_or_warning,
-    subsets_config,
-)
+from calliope.backend import parsing, equation_parser, subset_parser, backends
+from calliope.test.common.util import check_error_or_warning
 
-from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope import AttrDict
 import calliope
 
@@ -46,7 +42,7 @@ def model_data():
         coords={
             dim: ["foo", "bar"]
             if dim != "techs"
-            else ["foo", "bar", "foobar", "foobaz"]
+            else ["foobar", "foobaz", "barfoo", "bazfoo"]
             for dim in ALL_DIMS
         },
         data_vars={
@@ -98,17 +94,15 @@ def model_data():
         },
         attrs={"scenarios": ["foo"]},
     )
-    model_data["only_techs"]
-    UpdateObserverDict(
-        initial_dict=AttrDict(
-            {"foo": True, "bar": {"foobar": "baz"}, "foobar": {"baz": {"foo": np.inf}}}
-        ),
-        name="run_config",
-        observer=model_data,
+    model_data.attrs["run_config"] = AttrDict(
+        {"foo": True, "bar": {"foobar": "baz"}, "foobar": {"baz": {"foo": np.inf}}}
     )
-    UpdateObserverDict(
-        initial_dict={"a_b": 0, "b_a": [1, 2]}, name="model_config", observer=model_data
+    model_data.attrs["model_config"] = AttrDict({"a_b": 0, "b_a": [1, 2]})
+
+    model_data.attrs["defaults"] = AttrDict(
+        {"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100}
     )
+
     return model_data
 
 
@@ -289,6 +283,20 @@ def equation_index_slice_obj(index_slice_parser, where_parser):
         )
 
     return _equation_index_slice_obj
+
+
+def apply_where_to_levels(component_obj, where_string, level):
+    parsed_where = component_obj._parse_where_string({"where": where_string})
+    true_where = component_obj._parse_where_string({"where": "True"})
+    if level == "top_level_where":
+        component_obj.top_level_where = parsed_where
+    else:
+        component_obj.top_level_where = true_where
+    if level == "equation_dict":
+        equation_dict = {"where": [true_where, parsed_where]}
+    else:
+        equation_dict = {"where": [true_where, true_where]}
+    return equation_dict
 
 
 class TestParsedComponent:
@@ -747,6 +755,13 @@ class TestParsedBackendEquation:
         assert not BASE_DIMS.difference(imask.dims)
         assert not set(foreach).difference(imask.dims)
 
+    def test_imask_foreach_unidentified_name(self, model_data, equation_obj):
+        equation_obj.sets = ["nodes", "techs", "foos"]
+        with pytest.raises(calliope.exceptions.BackendError) as excinfo:
+            equation_obj._evaluate_foreach(model_data)
+        assert check_error_or_warning(
+            excinfo, "Unidentified model set name(s) defined: `{'foos'}`"
+        )
     def apply_where_to_levels(self, component_obj, where_string, level):
         parsed_where = component_obj._parse_where_string({"where": where_string})
         true_where = component_obj._parse_where_string({"where": "True"})
@@ -759,6 +774,7 @@ class TestParsedBackendEquation:
         else:
             equation_dict = {"where": [true_where, true_where]}
         return equation_dict
+
 
     @pytest.mark.parametrize(
         "foreach",
@@ -848,3 +864,168 @@ class TestParsedBackendEquation:
         imask = equation_obj.evaluate_where(model_data, defaults={})
 
         assert not set(imask.dims).difference(["nodes", "techs"])
+
+class TestEvaluateRule:
+    @pytest.fixture
+    def backend_interface(self):
+        return backends.PyomoBackendModel()
+
+    @pytest.mark.parametrize(
+        ["equation_string", "expected"],
+        [("2 == 1", False), ("1 == 1", True), ("2 >= 1", True)],
+    )
+    def test_evaluate_rule(
+        self,
+        component_obj,
+        expression_generator,
+        parse_where_expression,
+        backend_interface,
+        equation_string,
+        expected,
+    ):
+        expression_dict = expression_generator(equation_string, "bar")
+        parsed_dict = parse_where_expression([expression_dict])[0]
+        parsed_dict["index_items"] = {}
+        parsed_dict["components"] = {}
+        rule_func = component_obj.evaluate_rule(
+            "foobar", parsed_dict, backend_interface
+        )
+        evaluated_ = rule_func("dummy")
+        assert evaluated_ == expected
+
+
+class TestEvaluateSubset:
+    @pytest.fixture
+    def expected_subset(self, model_data):
+        return (
+            (
+                (
+                    (model_data.carrier.notnull() * model_data.node_tech.notnull()).sum(
+                        ["carriers", "carrier_tiers"]
+                    )
+                    > 0
+                )
+                * model_data.with_inf_as_bool
+            )
+            .to_series()
+            .where(lambda x: x)
+            .dropna()
+            .index.reorder_levels(["nodes", "techs"])
+        )
+
+    def test_evaluate_subset_no_name(self, component_obj, model_data, expected_subset):
+        component_obj.sets = {"node": "nodes", "tech": "techs"}
+        equation_dict = apply_where_to_levels(
+            component_obj, "with_inf", "top_level_where"
+        )
+        subset_ = component_obj.evaluate_subset(model_data, equation_dict["where"])
+
+        assert subset_.symmetric_difference(expected_subset).empty
+
+        assert component_obj.index.equals(
+            pd.Series(index=subset_, data="foo", dtype=str)
+        )
+
+    def test_evaluate_subset_name(self, component_obj, model_data, expected_subset):
+        component_obj.sets = {"node": "nodes", "tech": "techs"}
+        equation_dict = apply_where_to_levels(
+            component_obj, "with_inf", "top_level_where"
+        )
+        subset_ = component_obj.evaluate_subset(
+            model_data, equation_dict["where"], "foobar"
+        )
+
+        assert subset_.symmetric_difference(expected_subset).empty
+        assert component_obj.index.equals(
+            pd.Series(index=subset_, data="foobar", dtype=str)
+        )
+
+    def test_evaluate_multiple_subset(self, component_obj, model_data):
+        component_obj.sets = {"node": "nodes", "tech": "techs"}
+        equation_dict_with = apply_where_to_levels(
+            component_obj, "with_inf", "equation_dict"
+        )
+        equation_dict_not_with = apply_where_to_levels(
+            component_obj, "not with_inf", "equation_dict"
+        )
+        equation_dict_all = apply_where_to_levels(
+            component_obj, "True", "equation_dict"
+        )
+        component_obj.evaluate_subset(model_data, equation_dict_with["where"])
+        component_obj.evaluate_subset(model_data, equation_dict_not_with["where"])
+
+        subset_all = component_obj._create_subset_from_where(
+            model_data, equation_dict_all["where"]
+        )
+
+        assert not component_obj.index.index.duplicated().any()
+        assert (component_obj.index == "foo").all()
+        assert component_obj.index.index.symmetric_difference(subset_all).empty
+
+
+class TestParsedConstraint:
+    @pytest.fixture
+    def constraint_obj(self):
+        dict_ = {
+            "foreach": ["tech in techs"],
+            "where": "with_inf",
+            "equation": "$foo == 1",
+            "components": {
+                "foo": [
+                    {"expression": "bar + 2", "where": "False"},
+                    {"expression": "bar + 1", "where": "True"},
+                ]
+            },
+        }
+        return parsing.ParsedConstraint(dict_, "foo")
+
+    def test_parse_constraint_dict(self, constraint_obj, model_data):
+        constraint_obj.parse_strings()
+
+        assert constraint_obj.sets == {"tech": "techs"}
+        assert len(constraint_obj.equations) == 2
+        assert (
+            constraint_obj.evaluate_subset(
+                model_data, constraint_obj.equations[0]["where"]
+            )
+            is None
+        )
+
+
+class TestParsedVariable:
+    @pytest.fixture
+    def variable_obj(self):
+        dict_ = {"foreach": ["tech in techs"], "where": "False"}
+
+        return parsing.ParsedVariable(dict_, "foo")
+
+    def test_parse_variable_dict(self, variable_obj, model_data):
+        variable_obj.parse_strings()
+
+        assert variable_obj.sets == {"tech": "techs"}
+        assert len(variable_obj.equations) == 0
+        assert variable_obj.evaluate_subset(model_data, []) is None
+
+
+class TestParsedObjective:
+    @pytest.fixture
+    def objective_obj(self):
+        dict_ = {
+            "equations": [
+                {"expression": "bar + 2", "where": "False"},
+                {"expression": "bar + 1", "where": "True"},
+            ]
+        }
+
+        return parsing.ParsedObjective(dict_, "foo")
+
+    def test_parse_objective_dict(self, objective_obj, model_data):
+        objective_obj.parse_strings()
+        assert objective_obj.sets == {}
+        assert len(objective_obj.equations) == 2
+        assert (
+            objective_obj.evaluate_subset(
+                model_data, objective_obj.equations[0]["where"]
+            )
+            is None
+        )

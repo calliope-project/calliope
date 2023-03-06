@@ -24,6 +24,8 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ##
+from __future__ import annotations
+
 from typing import Callable, Any, Union, Optional, Iterator
 from abc import ABC, abstractmethod
 
@@ -681,7 +683,7 @@ def arithmetic_parser(
     component: pp.ParserElement,
     unsliced_param_or_var: pp.ParserElement,
     number: pp.ParserElement,
-    arithmetic: pp.Forward = pp.Forward(),
+    arithmetic: Optional[pp.Forward] = None
 ) -> pp.ParserElement:
     """
     Parsing grammar to combine equation elements using basic arithmetic (+, -, *, /, **).
@@ -708,6 +710,8 @@ def arithmetic_parser(
     signop = pp.oneOf(["+", "-"])
     multop = pp.oneOf(["*", "/"])
     expop = pp.Literal("**")
+    if arithmetic is None:
+        arithmetic = pp.Forward()
 
     arithmetic <<= pp.infixNotation(
         # the order matters if two could capture the same string, e.g. "inf".

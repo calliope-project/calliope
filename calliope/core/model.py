@@ -27,7 +27,6 @@ from calliope.preprocess import (
 from calliope.preprocess.model_data import ModelDataFactory
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
-from calliope.core.util.observed_dict import UpdateObserverDict
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
 from calliope.backend.parsing import (
@@ -175,35 +174,18 @@ class Model(object):
         model_config = {
             k: v for k, v in model_run.get("model", {}).items() if k != "file_allowed"
         }
-        self.model_config = UpdateObserverDict(
-            initial_dict=model_config, name="model_config", observer=self._model_data
-        )
-        self.run_config = UpdateObserverDict(
-            initial_dict=model_run.get("run", {}),
-            name="run_config",
-            observer=self._model_data,
-        )
-        self.subsets = UpdateObserverDict(
-            initial_dict=model_run.get("subsets").as_dict_flat(),
-            name="subsets",
-            observer=self._model_data,
-        )
+
+        self._add_observed_dict("model_config", model_config)
+        self._add_observed_dict("run_config", model_run["run"])
+        self._add_observed_dict("subsets", model_run["subsets"])
+        self._add_observed_dict("defaults", self._generate_default_dict())
 
         component_config = AttrDict.from_yaml(
             os.path.join(
                 os.path.dirname(calliope.__file__), "config", "constraints.yaml"
             )
         )
-        self.component_config = UpdateObserverDict(
-            initial_dict=component_config.as_dict_flat(),
-            name="component_config",
-            observer=self._model_data,
-        )
-        self.defaults = UpdateObserverDict(
-            initial_dict=self._generate_default_dict(),
-            name="defaults",
-            observer=self._model_data,
-        )
+        self._add_observed_dict("component_config", component_config)
 
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         log_time(
@@ -235,33 +217,12 @@ class Model(object):
         )
 
     def _add_model_data_methods(self):
-        self.model_config = UpdateObserverDict(
-            initial_yaml_string=self._model_data.attrs.get("model_config", "{}"),
-            name="model_config",
-            observer=self._model_data,
-        )
-        self.run_config = UpdateObserverDict(
-            initial_yaml_string=self._model_data.attrs.get("run_config", "{}"),
-            name="run_config",
-            observer=self._model_data,
-        )
-        self.subsets = UpdateObserverDict(
-            initial_yaml_string=self._model_data.attrs.get("subsets", "{}"),
-            name="subsets",
-            observer=self._model_data,
-            flat=True,
-        )
-        self.defaults = UpdateObserverDict(
-            initial_yaml_string=self._model_data.attrs.get("defaults", "{}"),
-            name="defaults",
-            observer=self._model_data,
-        )
-        self.component_config = UpdateObserverDict(
-            initial_yaml_string=self._model_data.attrs.get("component_config", "{}"),
-            name="component_config",
-            observer=self._model_data,
-            flat=True
-        )
+        self.inputs = self._model_data.filter_by_attrs(is_result=0)
+        self.results = self._model_data.filter_by_attrs(is_result=1)
+        self._add_observed_dict("model_config")
+        self._add_observed_dict("run_config")
+        self._add_observed_dict("subsets")
+        self._add_observed_dict("component_config")
 
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         results = self._model_data.filter_by_attrs(is_result=1)
@@ -273,6 +234,36 @@ class Model(object):
             "model_data_loaded",
             comment="Model: loaded model_data",
         )
+
+    def _add_observed_dict(self, name: str, dict_to_add: Optional[dict] = None) -> None:
+        """
+        Add the same dictionary as property of model object and an attribute of the model xarray dataset.
+
+        Args:
+            name (str):
+                Name of dictionary which will be set as the model property name and (if necessary) the dataset attribute name.
+            dict_to_add (Optional[dict], optional):
+                If given, set as both the model property and the dataset attribute, otherwise set an existing dataset attribute as a model property of the same name. Defaults to None.
+
+        Raises:
+            exceptions.ModelError: If `dict_to_add` is not given, it must be an attribute of model data.
+            TypeError: `dict_to_add` must be a dictionary.
+        """
+        if dict_to_add is None:
+            try:
+                dict_to_add = self._model_data.attrs[name]
+            except KeyError:
+                raise exceptions.ModelError(
+                    f"Expected the model property `{name}` to be a dictionary attribute of the model dataset. If you are loading the model from a NetCDF file, ensure it is a valid Calliope model."
+                )
+        if not isinstance(dict_to_add, dict):
+            raise TypeError(
+                f"Attempted to add dictionary property `{name}` to model, but received argument of type `{type(dict_to_add).__name__}`"
+            )
+        else:
+            dict_to_add = AttrDict(dict_to_add)
+        self._model_data.attrs[name] = dict_to_add
+        setattr(self, name, dict_to_add)
 
     def _generate_parsing_components(
         self, unparsed: dict, parse_class: type[T]
