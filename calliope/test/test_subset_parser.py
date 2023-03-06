@@ -443,16 +443,19 @@ class TestParserElements:
 
     @pytest.mark.parametrize(
         ["parser_name", "parse_string", "expected"],
-        [("data_var", "foo", "DATA_VAR:foo"),
-          ("config_option", "model.bar", "CONFIG:model_config.bar"),
-          ("bool_operand", "TRUE", "BOOL:true"),
-          ("comparison", "model.bar=True", "CONFIG:model_config.bar=BOOL:true"),
-          ("subset", "[foo, 1] in foos", "SUBSET:foos[STRING:foo, NUM:1]")]
+        [
+            ("data_var", "foo", "DATA_VAR:foo"),
+            ("config_option", "model.bar", "CONFIG:model_config.bar"),
+            ("bool_operand", "TRUE", "BOOL:true"),
+            ("comparison", "model.bar=True", "CONFIG:model_config.bar=BOOL:true"),
+            ("subset", "[foo, 1] in foos", "SUBSET:foos[STRING:foo, NUM:1]"),
+        ],
     )
     def test_repr(self, request, parser_name, parse_string, expected):
         parser = request.getfixturevalue(parser_name)
         parsed_ = parser.parse_string(parse_string, parse_all=True)
         assert str(parsed_[0]) == expected
+
 
 class TestParserMasking:
     @pytest.mark.parametrize(
