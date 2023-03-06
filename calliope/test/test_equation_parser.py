@@ -532,6 +532,30 @@ class TestEquationParserElements:
                 parser_.parse_string(helper_func_string.format(string_), parse_all=True)
             assert check_error_or_warning(excinfo, "Expected")
 
+    @pytest.mark.parametrize(
+        ["parser_name", "parse_string", "expected"],
+        [
+            ("number", "1", "NUM:1"),
+            ("number", "inf", "NUM:inf"),
+            ("unindexed_param", "foo", "UNINDEXED_PARAM_OR_VAR:foo"),
+            (
+                "indexed_param",
+                "foo[bar, foos=foo]",
+                "INDEXED_PARAM_OR_VAR:foo[ITERATOR:bar, FOOS:foo]",
+            ),
+            ("component", "$foo", "COMPONENT:foo"),
+            (
+                "helper_function",
+                "dummy_func_1(1, x=foo)",
+                "dummy_func_1(args=[NUM:1], kwargs={'x': UNINDEXED_PARAM_OR_VAR:foo})",
+            ),
+        ],
+    )
+    def test_repr(self, request, parser_name, parse_string, expected):
+        parser = request.getfixturevalue(parser_name)
+        parsed_ = parser.parse_string(parse_string, parse_all=True)
+        assert str(parsed_[0]) == expected
+
 
 class TestEquationParserArithmetic:
     numbers = [2, 100, 0.02, "1e2", "2e-2", "inf"]
@@ -613,6 +637,15 @@ class TestEquationParserArithmetic:
         # We can't evaluate this since not all elements evaluate to numbers.
         # Here we simply test that parsing is successful
         arithmetic.parse_string(equation_string, parse_all=True)
+
+    def test_repr(self, arithmetic):
+        parse_string = "1 + foo - foo[bar, foos=foo] + (foo / $foo) ** -2"
+        expected = (
+            "(NUM:1 + UNINDEXED_PARAM_OR_VAR:foo - INDEXED_PARAM_OR_VAR:foo[ITERATOR:bar, FOOS:foo]"
+            " + ((UNINDEXED_PARAM_OR_VAR:foo / COMPONENT:foo) ** (-)NUM:2))"
+        )
+        parsed_ = arithmetic.parse_string(parse_string, parse_all=True)
+        assert str(parsed_[0]) == expected
 
 
 class TestEquationParserComparison:
@@ -730,3 +763,12 @@ class TestEquationParserComparison:
         parser_func = request.getfixturevalue(func_string)
         with pytest.raises(pyparsing.ParseException):
             parser_func.parse_string(equation_string, parse_all=True)
+
+    def test_repr(self, equation_comparison):
+        parse_string = "1 + foo - foo[bar, foos=foo] >= (foo / $foo) ** -2"
+        expected = (
+            "(NUM:1 + UNINDEXED_PARAM_OR_VAR:foo - INDEXED_PARAM_OR_VAR:foo[ITERATOR:bar, FOOS:foo])"
+            " >= ((UNINDEXED_PARAM_OR_VAR:foo / COMPONENT:foo) ** (-)NUM:2)"
+        )
+        parsed_ = equation_comparison.parse_string(parse_string, parse_all=True)
+        assert str(parsed_[0]) == expected

@@ -296,7 +296,7 @@ class EvalIndexedParameterOrVariable(EvalString):
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
-        return "INDEXED_PARAM_OR_VAR:" + str(self.name)
+        return f"INDEXED_PARAM_OR_VAR:{self.name}{self.index_items}"
 
     def eval(self, **kwargs) -> dict[str, Union[str, list[str]]]:
         """
