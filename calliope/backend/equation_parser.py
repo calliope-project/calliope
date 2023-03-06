@@ -296,7 +296,7 @@ class EvalIndexedParameterOrVariable(EvalString):
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
-        return "INDEXED_PARAM_OR_VAR:" + str(self.name)
+        return f"INDEXED_PARAM_OR_VAR:{self.name}{self.index_items}"
 
     def eval(self, **kwargs) -> dict[str, Union[str, list[str]]]:
         """
@@ -732,7 +732,6 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
 
 
 def generate_index_item_parser():
-
     number, identifier = setup_base_parser_elements()
     unindexed_param = unindexed_param_parser(identifier)
     indexed_param = indexed_param_or_var_parser(identifier)
@@ -750,7 +749,6 @@ def generate_index_item_parser():
 
 
 def generate_arithmetic_parser():
-
     number, identifier = setup_base_parser_elements()
     unindexed_param = unindexed_param_parser(identifier)
     indexed_param = indexed_param_or_var_parser(identifier)

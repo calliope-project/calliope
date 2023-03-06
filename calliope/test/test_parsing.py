@@ -337,7 +337,6 @@ class TestParsedConstraintParseWhereExpression:
         where_list,
         expected_where_list,
     ):
-
         expression_dict = expression_generator(parse_string, where_list)
         parsed_list = constraint_obj._parse_where_expression(
             expression_parser, [expression_dict], "foo"
