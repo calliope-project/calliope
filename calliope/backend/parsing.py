@@ -143,7 +143,7 @@ class ParsedBackendComponent(ABC, Generic[T]):
         self,
         equation_name: str,
         equation_dict: ParsedEquationDict,
-        backend_interface: BackendModel
+        backend_interface: BackendModel,
     ) -> Callable:
         """
         Create constraint rule function to be called by the backend interface in
