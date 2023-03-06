@@ -42,7 +42,7 @@ class EvalAndOr(equation_parser.EvalOperatorOperand):
         return val
 
 
-class ConfigOptionParser(equation_parser.EvalString):
+class ConfigOptionParser:
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed configuration option names.
@@ -96,7 +96,7 @@ class ConfigOptionParser(equation_parser.EvalString):
                 return config_val
 
 
-class DataVarParser(equation_parser.EvalString):
+class DataVarParser:
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed model data variable names.
@@ -185,7 +185,7 @@ class ComparisonParser(equation_parser.EvalComparisonOp):
         return comparison
 
 
-class SubsetParser(equation_parser.EvalString):
+class SubsetParser:
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed dimension subsetting.
@@ -213,7 +213,7 @@ class SubsetParser(equation_parser.EvalString):
         return new_imask
 
 
-class BoolOperandParser(equation_parser.EvalString):
+class BoolOperandParser:
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed boolean strings.

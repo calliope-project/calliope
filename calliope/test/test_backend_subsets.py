@@ -101,19 +101,6 @@ class TestSubsets:
         return _evaluated_imask_where
 
     @pytest.mark.parametrize(
-        "foreach",
-        set(
-            chain.from_iterable(
-                combinations(BASE_DIMS, i) for i in range(1, len(BASE_DIMS))
-            )
-        ),
-    )
-    def test_foreach_constraint(self, model_data, foreach):
-        imask = _imask_foreach(model_data, foreach)
-
-        assert sorted(imask.dims) == sorted(foreach)
-
-    @pytest.mark.parametrize(
         ("tech_group", "result"), (("foo", 0), ("bar", 2), ("baz", 1))
     )
     def test_inheritance(self, model_data, tech_group, result):

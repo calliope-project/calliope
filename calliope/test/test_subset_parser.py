@@ -66,6 +66,10 @@ def dummy_model_data():
                     ["bar", "ar", "baz.boo", "foo.boo"],
                 ],
             ),
+            "boo_inheritance_bool": (
+                ["nodes", "techs"],
+                [[False, True, False, True], [False, False, True, True]],
+            ),
         },
         attrs={"scenarios": ["foo"]},
     )
@@ -463,18 +467,14 @@ class TestParserMasking:
         [
             ("all_inf", "all_false"),
             ("run.foo=True", True),
-            (
-                "inheritance(boo)",
-                {"function": "inheritance", "args": ["boo"], "kwargs": {}},
-            )
-            # [[False, True, True, True], [False, False, True, True]]
+            ("inheritance(boo)", "boo_inheritance_bool"),
         ],
     )
     def test_no_aggregation(
         self, parse_where_string, dummy_model_data, instring, expected
     ):
         evaluated_ = parse_where_string(instring)
-        if instring in dummy_model_data.data_vars:
+        if expected in dummy_model_data.data_vars:
             assert evaluated_.equals(dummy_model_data[expected])
         else:
             assert evaluated_ == expected
