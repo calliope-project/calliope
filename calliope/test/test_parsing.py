@@ -11,13 +11,8 @@ import numpy as np
 import pandas as pd
 
 from calliope.backend import parsing, equation_parser
-from calliope.test.common.util import (
-    check_error_or_warning,
-    subsets_config,
-)
-
+from calliope.test.common.util import check_error_or_warning
 from calliope import AttrDict
-import calliope
 
 BASE_DIMS = {"carriers", "carrier_tiers", "nodes", "techs"}
 ALL_DIMS = {"nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"}
