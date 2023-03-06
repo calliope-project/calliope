@@ -853,23 +853,3 @@ class TestParsedConstraintCreateConstraintIndex:
             model_data, equation_dict["where"]
         )
         assert not imask.names.difference(["nodes", "techs"])
-
-    @pytest.mark.skip(reason="subsets.yaml needs updating with constraint syntax")
-    @pytest.mark.parametrize("model_name", ("urban_scale", "national_scale", "milp"))
-    def test_create_subset_from_where(self, model_name):
-        model = getattr(calliope.examples, model_name)()
-
-        for name, constraint_data in subsets_config["constraints"].items():
-            model_component_obj = ComponentObj(constraint_data, name)
-            model_component_obj.parse_strings(model._model_data)
-
-            model_component_obj._create_subset_from_where(model._model_data)
-            if subset is None:
-                continue
-            if "timesteps" in subset.names:
-                subset = subset.droplevel("timesteps").unique()
-            # FIXME: simplified comparison since constraint_sets.yaml isn't completely cleaned
-            # up to match current representation of set elements
-            assert len(constraint_sets[f"{model_name}.{object_type}.{name}"]) == len(
-                subset
-            )

@@ -10,6 +10,3 @@ class BackendModel:
 
     def get_set(self):
         pass
-
-    def get_parameter_or_variable(self):
-        pass
