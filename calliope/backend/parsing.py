@@ -95,7 +95,7 @@ class ParsedBackendComponent(ABC, Generic[T]):
         self._is_valid: bool = True
         self._is_active: bool = True
 
-    def evaluate_name(self, equation_id: Optional[tuple]) -> str:
+    def evaluate_name(self, equation_id: Optional[tuple] = None) -> str:
         """
         Transform equation ID tuple into a string that could act as a valid python identifier.
 
@@ -143,7 +143,7 @@ class ParsedBackendComponent(ABC, Generic[T]):
         self,
         equation_name: str,
         equation_dict: ParsedEquationDict,
-        backend_interface: BackendModel,
+        backend_interface: BackendModel
     ) -> Callable:
         """
         Create constraint rule function to be called by the backend interface in
@@ -422,7 +422,7 @@ class ParsedBackendComponent(ABC, Generic[T]):
         self,
         parser_elements: Union[list, pp.ParseResults],
         to_find: type[equation_parser.EvalString],
-        valid_eval_classes=tuple[type[equation_parser.EvalString]],
+        valid_eval_classes: tuple[type[equation_parser.EvalString], ...],
     ) -> set[str]:
         """
         Recursively find components / index items defined in an equation expression.
