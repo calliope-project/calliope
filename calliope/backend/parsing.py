@@ -222,16 +222,13 @@ class ParsedBackendEquation:
     def evaluate_where(
         self,
         model_data: xr.Dataset,
-        defaults: dict,
         initial_imask: Union[np.bool_, xr.DataArray] = np.True_,
     ) -> xr.DataArray:
         foreach_imask = self._evaluate_foreach(model_data)
         evaluated_wheres = [
             where[0].eval(  # type: ignore
                 model_data=model_data,
-                helper_func_dict=VALID_HELPER_FUNCTIONS,
-                imask=foreach_imask,
-                defaults=defaults,
+                helper_func_dict=VALID_HELPER_FUNCTIONS
             )
             for where in self.where
         ]

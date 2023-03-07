@@ -8,7 +8,6 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 
-from calliope.core.attrdict import AttrDict
 from calliope.backend import equation_parser
 from calliope.exceptions import BackendError
 
@@ -43,7 +42,7 @@ class EvalAndOr(equation_parser.EvalOperatorOperand):
         return val
 
 
-class ConfigOptionParser(equation_parser.EvalString):
+class ConfigOptionParser:
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed configuration option names.
@@ -83,7 +82,7 @@ class ConfigOptionParser(equation_parser.EvalString):
                 f"(where, {self.instring}): Invalid configuration group defined"
             )
         else:
-            config_dict = AttrDict.from_yaml_string(model_data.attrs[self.config_group])
+            config_dict = model_data.attrs[self.config_group]
             # TODO: either remove the default key return or make it optional with
             # a "strict" arg
             config_val = config_dict.get_key(self.config_option, np.nan)
@@ -97,7 +96,7 @@ class ConfigOptionParser(equation_parser.EvalString):
                 return config_val
 
 
-class DataVarParser(equation_parser.EvalString):
+class DataVarParser:
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed model data variable names.
@@ -125,7 +124,7 @@ class DataVarParser(equation_parser.EvalString):
             return model_data_var.where(pd.notnull(model_data_var)).notnull()
 
     def eval(
-        self, model_data: xr.Dataset, defaults: dict, apply_imask: bool = True, **kwargs
+        self, model_data: xr.Dataset, apply_imask: bool = True, **kwargs
     ) -> Union[np.bool_, xr.DataArray]:
         """
         Get parsed model data variable from the Calliope model dataset.
@@ -148,7 +147,8 @@ class DataVarParser(equation_parser.EvalString):
         if apply_imask:
             return self._data_var_exists(model_data[self.data_var])
         else:
-            return model_data[self.data_var].fillna(defaults.get(self.data_var))
+            default = model_data.attrs["defaults"].get(self.data_var)
+            return model_data[self.data_var].fillna(default)
 
 
 class ComparisonParser(equation_parser.EvalComparisonOp):
@@ -186,7 +186,7 @@ class ComparisonParser(equation_parser.EvalComparisonOp):
         return comparison
 
 
-class SubsetParser(equation_parser.EvalString):
+class SubsetParser:
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed dimension subsetting.
@@ -207,14 +207,12 @@ class SubsetParser(equation_parser.EvalString):
         "Return string representation of the parsed grammar"
         return f"SUBSET:{self.set_name}{self.subset}"
 
-    def eval(self, imask: xr.DataArray, **kwargs) -> xr.DataArray:
-        new_imask = imask.copy(deep=True)
+    def eval(self, model_data: xr.Dataset, **kwargs) -> xr.DataArray:
         subset = [i.eval(**kwargs) for i in self.subset]
-        new_imask.loc[{self.set_name: ~imask[self.set_name].isin(subset)}] = False
-        return new_imask
+        return model_data[self.set_name].isin(subset)
 
 
-class BoolOperandParser(equation_parser.EvalString):
+class BoolOperandParser:
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed boolean strings.

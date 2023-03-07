@@ -36,6 +36,12 @@ class TestIO:
     def model_from_file_no_processing(self, model_file):
         return xr.open_dataset(model_file)
 
+    @pytest.fixture(scope="module")
+    def model_csv_dir(self, tmpdir_factory, model):
+        out_path = tmpdir_factory.mktemp("data")
+        model.to_csv(os.path.join(out_path, "csvs"))
+        return os.path.join(out_path, "csvs")
+
     def test_save_netcdf(self, model_file):
         assert os.path.isfile(model_file)
 
@@ -84,6 +90,7 @@ class TestIO:
                     "subsets",
                     "model_config",
                     "run_config",
+                    "component_config"
                 ],
             ),
         ],
@@ -110,16 +117,14 @@ class TestIO:
             ]
         ),
     )
-    def test_save_csv(self, model, file_name):
-        with tempfile.TemporaryDirectory() as tempdir:
-            out_path = os.path.join(tempdir, "out_dir")
-            model.to_csv(out_path)
-            assert os.path.isfile(os.path.join(out_path, file_name))
+    def test_save_csv(self, model_csv_dir, file_name):
+        assert os.path.isfile(os.path.join(model_csv_dir, file_name))
 
-            with open(
-                os.path.join(out_path, "inputs_energy_cap_max_systemwide.csv"), "r"
-            ) as f:
-                assert "demand_power" not in f.read()
+    def test_csv_contents(self, model_csv_dir):
+        with open(
+            os.path.join(model_csv_dir, "inputs_energy_cap_max_systemwide.csv"), "r"
+        ) as f:
+            assert "demand_power" not in f.read()
 
     def test_save_csv_no_dropna(self, model):
         with tempfile.TemporaryDirectory() as tempdir:

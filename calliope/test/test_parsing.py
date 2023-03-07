@@ -100,7 +100,7 @@ def model_data():
     model_data.attrs["model_config"] = AttrDict({"a_b": 0, "b_a": [1, 2]})
 
     model_data.attrs["defaults"] = AttrDict(
-        {"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100}
+        {"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100, "only_techs": 5}
     )
 
     return model_data
@@ -285,19 +285,116 @@ def equation_index_slice_obj(index_slice_parser, where_parser):
     return _equation_index_slice_obj
 
 
-def apply_where_to_levels(component_obj, where_string, level):
-    parsed_where = component_obj._parse_where_string({"where": where_string})
-    true_where = component_obj._parse_where_string({"where": "True"})
-    if level == "top_level_where":
-        component_obj.top_level_where = parsed_where
-    else:
-        component_obj.top_level_where = true_where
-    if level == "equation_dict":
-        equation_dict = {"where": [true_where, parsed_where]}
-    else:
-        equation_dict = {"where": [true_where, true_where]}
-    return equation_dict
+@pytest.fixture
+def dummy_backend_interface(model_data):
+    class DummyBackendModel(backends.BackendModel):
+            def __init__(self):
 
+                backends.BackendModel.__init__(
+                    self,
+                    defaults=model_data.attrs["defaults"],
+                    instance=None,
+                )
+
+                self._dataset = model_data.copy(deep=True)
+                self._dataset["with_inf"] = self._dataset["with_inf"].fillna(self.defaults["with_inf"])
+                self._dataset["only_techs"] = self._dataset["only_techs"].fillna(self.defaults["only_techs"])
+
+            def add_parameter(self):
+                pass
+
+            def add_constraint(self):
+                pass
+
+            def add_expression(self):
+                pass
+
+            def add_variable(self):
+                pass
+
+            def add_objective(self):
+                pass
+
+            def get_parameter(self):
+                pass
+
+            def get_constraint(self):
+                pass
+
+            def get_variable(self):
+                pass
+
+            def get_expression(self):
+                pass
+
+            def solve(self):
+                pass
+
+    return DummyBackendModel()
+
+
+@pytest.fixture(scope="function")
+def evaluatable_component_obj():
+    def _evaluatable_component_obj(equation_expressions):
+        if isinstance(equation_expressions, list):
+            equations = f"equations: {equation_expressions}"
+        elif isinstance(equation_expressions, str):
+            equations = f"equation: {equation_expressions}"
+        setup_string = f"""
+        foreach: [techs, nodes]
+        where: with_inf
+        {equations}
+        components:
+            foo: [{{expression: with_inf * 2, where: only_techs}}]
+        index_slices:
+            tech: [{{expression: barfoo, where: "[bar] in nodes"}}]
+        """
+        component_dict = string_to_dict(setup_string)
+        class DummyParsedBackendComponent(parsing.ParsedBackendComponent, parsing.ParsedBackendEquation):
+            def __init__(self, dict_, name):
+                parsing.ParsedBackendComponent.__init__(self, dict_, name)
+                self.equations = self.parse_equations(
+                    equation_parser.generate_equation_parser()
+                )
+        return DummyParsedBackendComponent(component_dict, "foo")
+
+    return _evaluatable_component_obj
+
+
+@pytest.fixture(params=[
+    ("with_inf <= 100", 7),  # all vals except .inf meet criterion
+    ("with_inf == 100", 2),  # only default vals meet criterion
+    ("$foo <= 100", 4),   # only non-default + non-inf values meet criterion (+ only_techs masks one valid value)
+    ("$foo == 100", 0),  # no expressions are valid
+    ("only_techs + with_inf[techs=tech] == 2", 1)
+])
+def evaluate_component_where(evaluatable_component_obj, model_data, request):
+    component_obj = evaluatable_component_obj(request.param[0])
+    top_level_imask = component_obj.evaluate_where(model_data)
+    equation_imask = component_obj.equations[0].evaluate_where(
+        model_data, initial_imask=top_level_imask
+    )
+
+    return component_obj, equation_imask, request.param[1]
+
+
+@pytest.fixture
+def evaluate_component_expression(
+    evaluate_component_where, model_data, dummy_backend_interface
+):
+    component_obj, equation_imask, n_true = evaluate_component_where
+    return component_obj.equations[0].evaluate_expression(
+        model_data, dummy_backend_interface, equation_imask
+    ), n_true
+
+def apply_comparison(comparison_tuple):
+    lhs, op, rhs = comparison_tuple
+    if op == "==":
+        return lhs == rhs
+    if op == ">=":
+        return lhs >= rhs
+    if op == "<=":
+        return lhs <= rhs
 
 class TestParsedComponent:
     @pytest.mark.parametrize(
@@ -492,15 +589,11 @@ class TestParsedComponent:
             assert not set(component_sub_dict.keys()).symmetric_difference(
                 ["foo", "bar"]
             )
-            lhs, op, rhs = constraint_eq.expression[0].eval(
-                component_dict=component_sub_dict
+            comparison_tuple = constraint_eq.expression[0].eval(
+                component_dict=component_sub_dict, apply_imask=False
             )
-            comparison_dict = {
-                "==": lhs == rhs,
-                ">=": lhs >= rhs,
-                "<=": lhs <= rhs,
-            }
-            assert comparison_dict[op] is expected
+
+            assert apply_comparison(comparison_tuple) == expected
 
     @pytest.mark.parametrize("n_1", [0, 1, 2])
     @pytest.mark.parametrize("n_2", [0, 1, 2])
@@ -762,18 +855,6 @@ class TestParsedBackendEquation:
         assert check_error_or_warning(
             excinfo, "Unidentified model set name(s) defined: `{'foos'}`"
         )
-    def apply_where_to_levels(self, component_obj, where_string, level):
-        parsed_where = component_obj._parse_where_string({"where": where_string})
-        true_where = component_obj._parse_where_string({"where": "True"})
-        if level == "top_level_where":
-            component_obj.where = parsed_where
-        else:
-            component_obj.where = true_where
-        if level == "equation_dict":
-            equation_dict = {"where": [true_where, parsed_where]}
-        else:
-            equation_dict = {"where": [true_where, true_where]}
-        return equation_dict
 
 
     @pytest.mark.parametrize(
@@ -792,7 +873,7 @@ class TestParsedBackendEquation:
             )
             > 0
         )
-        imask = equation_obj.evaluate_where(model_data, defaults={})
+        imask = equation_obj.evaluate_where(model_data)
 
         assert expected_imask.reindex_like(imask).equals(imask)
 
@@ -804,7 +885,7 @@ class TestParsedBackendEquation:
         equation_obj.where.insert(
             false_location, where_parser.parse_string("False", parse_all=True)
         )
-        imask = equation_obj.evaluate_where(model_data, defaults={})
+        imask = equation_obj.evaluate_where(model_data)
 
         assert not imask.all()
 
@@ -837,15 +918,15 @@ class TestParsedBackendEquation:
             equation_obj.where = [
                 where_parser.parse_string(where_string, parse_all=True)
             ]
-            imask = equation_obj.evaluate_where(model_data, defaults={})
+            imask = equation_obj.evaluate_where(model_data)
         if level_ == "initial_imask":
             equation_obj.where = [
                 where_parser.parse_string(where_string, parse_all=True)
             ]
-            initial_imask = equation_obj.evaluate_where(model_data, defaults={})
+            initial_imask = equation_obj.evaluate_where(model_data)
             equation_obj.where = [where_parser.parse_string("True", parse_all=True)]
             imask = equation_obj.evaluate_where(
-                model_data, defaults={}, initial_imask=initial_imask
+                model_data, initial_imask=initial_imask
             )
 
         initial_expected_imask = equation_obj._evaluate_foreach(model_data)
@@ -861,150 +942,65 @@ class TestParsedBackendEquation:
         equation_obj.where = [
             where_parser.parse_string("[foo] in carrier_tiers", parse_all=True)
         ]
-        imask = equation_obj.evaluate_where(model_data, defaults={})
+        imask = equation_obj.evaluate_where(model_data)
 
         assert not set(imask.dims).difference(["nodes", "techs"])
 
-class TestEvaluateRule:
-    @pytest.fixture
-    def backend_interface(self):
-        return backends.PyomoBackendModel()
 
-    @pytest.mark.parametrize(
-        ["equation_string", "expected"],
-        [("2 == 1", False), ("1 == 1", True), ("2 >= 1", True)],
-    )
-    def test_evaluate_rule(
-        self,
-        component_obj,
-        expression_generator,
-        parse_where_expression,
-        backend_interface,
-        equation_string,
-        expected,
-    ):
-        expression_dict = expression_generator(equation_string, "bar")
-        parsed_dict = parse_where_expression([expression_dict])[0]
-        parsed_dict["index_items"] = {}
-        parsed_dict["components"] = {}
-        rule_func = component_obj.evaluate_rule(
-            "foobar", parsed_dict, backend_interface
-        )
-        evaluated_ = rule_func("dummy")
-        assert evaluated_ == expected
-
-
-class TestEvaluateSubset:
-    @pytest.fixture
-    def expected_subset(self, model_data):
-        return (
-            (
-                (
-                    (model_data.carrier.notnull() * model_data.node_tech.notnull()).sum(
-                        ["carriers", "carrier_tiers"]
-                    )
-                    > 0
-                )
-                * model_data.with_inf_as_bool
-            )
-            .to_series()
-            .where(lambda x: x)
-            .dropna()
-            .index.reorder_levels(["nodes", "techs"])
-        )
-
-    def test_evaluate_subset_no_name(self, component_obj, model_data, expected_subset):
-        component_obj.sets = {"node": "nodes", "tech": "techs"}
-        equation_dict = apply_where_to_levels(
-            component_obj, "with_inf", "top_level_where"
-        )
-        subset_ = component_obj.evaluate_subset(model_data, equation_dict["where"])
-
-        assert subset_.symmetric_difference(expected_subset).empty
-
-        assert component_obj.index.equals(
-            pd.Series(index=subset_, data="foo", dtype=str)
-        )
-
-    def test_evaluate_subset_name(self, component_obj, model_data, expected_subset):
-        component_obj.sets = {"node": "nodes", "tech": "techs"}
-        equation_dict = apply_where_to_levels(
-            component_obj, "with_inf", "top_level_where"
-        )
-        subset_ = component_obj.evaluate_subset(
-            model_data, equation_dict["where"], "foobar"
-        )
-
-        assert subset_.symmetric_difference(expected_subset).empty
-        assert component_obj.index.equals(
-            pd.Series(index=subset_, data="foobar", dtype=str)
-        )
-
-    def test_evaluate_multiple_subset(self, component_obj, model_data):
-        component_obj.sets = {"node": "nodes", "tech": "techs"}
-        equation_dict_with = apply_where_to_levels(
-            component_obj, "with_inf", "equation_dict"
-        )
-        equation_dict_not_with = apply_where_to_levels(
-            component_obj, "not with_inf", "equation_dict"
-        )
-        equation_dict_all = apply_where_to_levels(
-            component_obj, "True", "equation_dict"
-        )
-        component_obj.evaluate_subset(model_data, equation_dict_with["where"])
-        component_obj.evaluate_subset(model_data, equation_dict_not_with["where"])
-
-        subset_all = component_obj._create_subset_from_where(
-            model_data, equation_dict_all["where"]
-        )
-
-        assert not component_obj.index.index.duplicated().any()
-        assert (component_obj.index == "foo").all()
-        assert component_obj.index.index.symmetric_difference(subset_all).empty
-
+    def test_evaluate_expression(self, evaluate_component_expression):
+        comparison_tuple, n_true = evaluate_component_expression
+        # we can't check for equality since the random generation of NaNs in model_data carrier/node_tech
+        # might nullify an otherwise valid item.
+        assert apply_comparison(comparison_tuple).sum() <= n_true
 
 class TestParsedConstraint:
     @pytest.fixture
     def constraint_obj(self):
         dict_ = {
-            "foreach": ["tech in techs"],
+            "foreach": ["techs"],
             "where": "with_inf",
             "equation": "$foo == 1",
             "components": {
                 "foo": [
-                    {"expression": "bar + 2", "where": "False"},
-                    {"expression": "bar + 1", "where": "True"},
+                    {"expression": "only_techs + 2", "where": "False"},
+                    {"expression": "only_techs / 3", "where": "True"},
                 ]
             },
         }
         return parsing.ParsedConstraint(dict_, "foo")
 
-    def test_parse_constraint_dict(self, constraint_obj, model_data):
-        constraint_obj.parse_strings()
+    def test_parse_constraint_dict_sets(self, constraint_obj):
+        assert constraint_obj.sets == ["techs"]
 
-        assert constraint_obj.sets == {"tech": "techs"}
+    def test_parse_constraint_dict_n_equations(self, constraint_obj):
         assert len(constraint_obj.equations) == 2
-        assert (
-            constraint_obj.evaluate_subset(
-                model_data, constraint_obj.equations[0]["where"]
-            )
-            is None
-        )
+
+    def test_parse_constraint_dict_empty_eq1(self, constraint_obj, model_data):
+        assert not constraint_obj.equations[0].evaluate_where(model_data).any()
+
+    def test_parse_constraint_dict_evalaute_eq2(self, constraint_obj, model_data, dummy_backend_interface):
+
+        valid_imask = constraint_obj.equations[1].evaluate_where(model_data)
+        comparison_tuple = constraint_obj.equations[1].evaluate_expression(model_data, dummy_backend_interface, valid_imask)
+        assert apply_comparison(comparison_tuple).sum() == 1
+
 
 
 class TestParsedVariable:
     @pytest.fixture
     def variable_obj(self):
-        dict_ = {"foreach": ["tech in techs"], "where": "False"}
+        dict_ = {"foreach": ["techs"], "where": "False", "bounds": {}}
 
         return parsing.ParsedVariable(dict_, "foo")
 
-    def test_parse_variable_dict(self, variable_obj, model_data):
-        variable_obj.parse_strings()
+    def test_parse_variable_dict_sets(self, variable_obj):
+        assert variable_obj.sets == ["techs"]
 
-        assert variable_obj.sets == {"tech": "techs"}
+    def test_parse_variable_dict_n_equations(self, variable_obj):
         assert len(variable_obj.equations) == 0
-        assert variable_obj.evaluate_subset(model_data, []) is None
+
+    def test_parse_variable_dict_empty_eq1(self, variable_obj, model_data):
+        assert not variable_obj.evaluate_where(model_data).any()
 
 
 class TestParsedObjective:
@@ -1013,19 +1009,24 @@ class TestParsedObjective:
         dict_ = {
             "equations": [
                 {"expression": "bar + 2", "where": "False"},
-                {"expression": "bar + 1", "where": "True"},
-            ]
+                {"expression": "sum(only_techs, over=[techs]) + 1", "where": "True"},
+            ],
+            "sense": "minimize"
         }
 
         return parsing.ParsedObjective(dict_, "foo")
 
-    def test_parse_objective_dict(self, objective_obj, model_data):
-        objective_obj.parse_strings()
-        assert objective_obj.sets == {}
+    def test_parse_objective_dict_sets(self, objective_obj):
+        assert objective_obj.sets == []
+
+    def test_parse_objective_dict_n_equations(self, objective_obj):
         assert len(objective_obj.equations) == 2
-        assert (
-            objective_obj.evaluate_subset(
-                model_data, objective_obj.equations[0]["where"]
-            )
-            is None
-        )
+
+    def test_parse_objective_dict_empty_eq1(self, objective_obj, model_data):
+        assert not objective_obj.equations[0].evaluate_where(model_data).any()
+
+    def test_parse_objective_dict_evalaute_eq2(self, objective_obj, model_data, dummy_backend_interface):
+
+        valid_imask = objective_obj.equations[1].evaluate_where(model_data)
+        objective_expression = objective_obj.equations[1].evaluate_expression(model_data, dummy_backend_interface, valid_imask)
+        assert objective_expression.sum() == 12

@@ -59,8 +59,12 @@ def build_params(model_data, backend_model):
             and backend_model.__calliope_run_config["mode"] == "operate"
         ):
             with pd.option_context("mode.use_inf_as_na", True):
+                if not v.shape:
+                    vals = v.item()
+                else:
+                    vals = v.to_series().dropna().to_dict()
                 _kwargs = {
-                    "initialize": v.to_series().dropna().to_dict(),
+                    "initialize": vals,
                     "mutable": True,
                     "within": getattr(po, get_domain(v)),
                 }

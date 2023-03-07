@@ -38,6 +38,7 @@ def dummy_model_data():
             "all_nan": (["nodes", "techs"], np.ones((2, 4)) * np.nan),
             "all_false": (["nodes", "techs"], np.zeros((2, 4)).astype(bool)),
             "all_true": (["nodes", "techs"], np.ones((2, 4)).astype(bool)),
+            "nodes_true": (["nodes"], [True, True]),
             "with_inf_as_bool": (
                 ["nodes", "techs"],
                 [[True, False, True, True], [False, True, True, False]],
@@ -163,8 +164,6 @@ def eval_kwargs(dummy_model_data):
         "test": True,
         "errors": set(),
         "warnings": set(),
-        "imask": dummy_model_data["all_true"],
-        "defaults": dummy_model_data.attrs["defaults"],
     }
 
 
@@ -545,7 +544,7 @@ class TestParserMasking:
     @pytest.mark.parametrize(
         ["instring", "expected"],
         [
-            ("[foo, bar] in nodes", "all_true"),
+            ("[foo, bar] in nodes", "nodes_true"),
             (
                 "with_inf and [bar] in nodes",
                 "with_inf_as_bool_and_subset_on_bar_in_nodes",

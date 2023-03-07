@@ -13,6 +13,7 @@ import os
 
 import xarray as xr
 import numpy as np
+import pandas as pd
 
 from calliope._version import __version__
 from calliope import exceptions
@@ -121,13 +122,18 @@ def save_csv(model_data, path, dropna=True):
             "Model termination condition was not optimal, saving inputs only."
         )
 
-    for var in data_vars:
-        in_out = "results" if model_data[var].attrs["is_result"] else "inputs"
-        out_path = os.path.join(path, "{}_{}.csv".format(in_out, var))
-        series = model_data[var].to_series()
+    for var_name, var in data_vars.items():
+        in_out = "results" if var.attrs["is_result"] else "inputs"
+        out_path = os.path.join(path, "{}_{}.csv".format(in_out, var_name))
+        if not var.shape:
+            series = pd.Series(var.item())
+            keep_index = False
+        else:
+            series = var.to_series()
+            keep_index = True
         if dropna:
             series = series.dropna()
-        series.to_csv(out_path, header=True)
+        series.to_csv(out_path, header=True, index=keep_index)
 
 
 def save_lp(model, path):

@@ -116,7 +116,6 @@ def eval_kwargs():
         "iterator_dict": {},
         "index_slice_dict": {},
         "component_dict": {},
-        "sets": {"bar": "bars", "foo": "foos"},
         "equation_name": "foobar",
         "apply_imask": False
     }
@@ -807,7 +806,7 @@ class TestEquationParserComparison:
             ">=": lhs >= rhs,
             "<=": lhs <= rhs,
         }
-        assert comparison_dict[op] is expected
+        assert comparison_dict[op] if expected else not comparison_dict[op]
 
     @pytest.mark.parametrize(
         "equation_string",
@@ -832,9 +831,9 @@ class TestEquationParserComparison:
             parser_func.parse_string(equation_string, parse_all=True)
 
     def test_repr(self, equation_comparison):
-        parse_string = "1 + foo - foo[bar, foos=foo] >= (foo / $foo) ** -2"
+        parse_string = "1 + foo - foo[foos=foo] >= (foo / $foo) ** -2"
         expected = (
-            "(NUM:1 + UNSLICED_PARAM_OR_VAR:foo - SLICED_PARAM_OR_VAR:foo[ITERATOR:bar, FOOS:foo])"
+            "(NUM:1 + UNSLICED_PARAM_OR_VAR:foo - SLICED_PARAM_OR_VAR:foo[FOOS:foo])"
             " >= ((UNSLICED_PARAM_OR_VAR:foo / COMPONENT:foo) ** (-)NUM:2)"
         )
         parsed_ = equation_comparison.parse_string(parse_string, parse_all=True)

@@ -86,14 +86,16 @@ class EvalOperatorOperand(EvalString):
             except StopIteration:
                 break
 
-    def eval(self, apply_imask: bool = True, **eval_kwargs) -> Any:
+    def eval(self, **eval_kwargs) -> Any:
         """
         Returns:
             Any:
                 If all operands are numeric, returns float, otherwise returns an
                 expression to use in an optimisation model constraint.
         """
+        apply_imask = eval_kwargs.get("apply_imask", True)
         val = xr.DataArray(self.value[0].eval(**eval_kwargs))
+
         if apply_imask:
             val = val.where(eval_kwargs["imask"])
         for operator_, operand in self.operatorOperands(self.value[1:]):
@@ -309,7 +311,7 @@ class EvalSlicedParameterOrVariable(EvalString):
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
-        return "SLICED_PARAM_OR_VAR:" + str(self.name)
+        return f"SLICED_PARAM_OR_VAR:{self.name}{self.index_slices}"
 
     @staticmethod
     def merge_dicts_into_one(dicts):

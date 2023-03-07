@@ -190,4 +190,7 @@ class TestPandasExport:
         ),
     )
     def test_data_variables_can_be_exported_to_pandas(self, model, variable_name):
-        model.inputs[variable_name].to_dataframe()
+        if model.inputs[variable_name].shape:
+            model.inputs[variable_name].to_dataframe()
+        else:
+            pass

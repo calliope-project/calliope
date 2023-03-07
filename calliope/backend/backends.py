@@ -553,7 +553,7 @@ class PyomoBackendModel(BackendModel):
 
         # self._raise_error_on_preexistence(parsed_variable.name, "variables")
 
-        imask = parsed_variable.evaluate_where(model_data, self.defaults)
+        imask = parsed_variable.evaluate_where(model_data)
 
         if imask is None or not imask.any():
             variable_da = xr.DataArray(None)
@@ -586,7 +586,7 @@ class PyomoBackendModel(BackendModel):
         sense_dict = {"minimize": 1, "maximize": -1}
         n_valid_exprs = 0
         for equation in parsed_objective.equations:
-            imask = equation.evaluate_where(model_data, self.defaults)
+            imask = equation.evaluate_where(model_data)
             if imask.any():
                 expr = equation.evaluate_expression(model_data, self, imask).item()
                 n_valid_exprs += 1
@@ -745,7 +745,7 @@ class PyomoBackendModel(BackendModel):
                 objects on duplicate index entries.
         """
         self._raise_error_on_preexistence(parsed_component.name, component_type)
-        top_level_imask = parsed_component.evaluate_where(model_data, self.defaults)
+        top_level_imask = parsed_component.evaluate_where(model_data)
 
         if not top_level_imask.any():
             component_da = xr.DataArray(None)
@@ -755,9 +755,7 @@ class PyomoBackendModel(BackendModel):
             self._create_pyomo_list(parsed_component.name, component_type)
 
             for element in parsed_component.equations:
-                imask = element.evaluate_where(
-                    model_data, self.defaults, top_level_imask
-                )
+                imask = element.evaluate_where(model_data, top_level_imask)
                 if not imask.any():
                     continue
                 if component_da.where(imask).notnull().any():

@@ -13,6 +13,7 @@ import warnings
 from typing import TypedDict, Literal, TypeVar, Union, Optional
 from contextlib import contextmanager
 import os
+import datetime
 
 import xarray as xr
 import pandas as pd
@@ -283,6 +284,7 @@ class Model(object):
 
         parsed_components: dict[str, T] = dict()
         for component_name, component_config in unparsed.items():
+            print(component_name, datetime.datetime.now().strftime("%H:%M:%S.%f"))
             parsed_ = parse_class(component_config, component_name)
             parsed_components.update({component_name: parsed_})
         return parsed_components
@@ -430,7 +432,7 @@ class Model(object):
                 )
         return None
 
-    def run(self, force_rerun: bool = False, warmstart: bool = False) -> None:
+    def solve(self, force_rerun: bool = False, warmstart: bool = False) -> None:
         """
         Run the built optimisation problem.
 
@@ -496,6 +498,48 @@ class Model(object):
         )
         self._add_model_data_methods()
 
+    def run(self, force_rerun=False, **kwargs):
+        """
+        Run the model. If ``force_rerun`` is True, any existing results
+        will be overwritten.
+
+        Additional kwargs are passed to the backend.
+
+        """
+        # Check that results exist and are non-empty
+        if hasattr(self, "results") and self.results.data_vars and not force_rerun:
+            raise exceptions.ModelError(
+                "This model object already has results. "
+                "Use model.run(force_rerun=True) to force"
+                "the results to be overwritten with a new run."
+            )
+
+        if (
+            self.run_config["mode"] == "operate"
+            and not self._model_data.attrs["allow_operate_mode"]
+        ):
+            raise exceptions.ModelError(
+                "Unable to run this model in operational mode, probably because "
+                "there exist non-uniform timesteps (e.g. from time masking)"
+            )
+
+        results, self._backend_model, self._backend_model_opt, interface = run_backend(
+            self._model_data, self._timings, **kwargs
+        )
+
+        # Add additional post-processed result variables to results
+        if results.attrs.get("termination_condition", None) in ["optimal", "feasible"]:
+            results = postprocess_results.postprocess_model_results(
+                results, self._model_data, self._timings
+            )
+        self._model_data.attrs.update(results.attrs)
+        self._model_data = xr.merge(
+            [results, self._model_data], compat="override", combine_attrs="no_conflicts"
+        )
+        self._add_model_data_methods()
+
+        self.backend = interface(self)
+
     def get_formatted_array(self, var):
         """
         Return an xr.DataArray with nodes, techs, and carriers as
@@ -509,7 +553,7 @@ class Model(object):
         """
         warnings.warn(
             "get_formatted_array() is deprecated and will be removed in a "
-            "future version. Use `model.results.variable` instead.",
+            "future version. Use `model.results[var]` instead.",
             DeprecationWarning,
         )
         if var not in self._model_data.data_vars:
