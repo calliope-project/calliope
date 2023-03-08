@@ -40,7 +40,6 @@ def model_file():
     "ignore:(?s).*All technologies were requested:calliope.exceptions.ModelWarning"
 )
 class TestBuildGroupConstraints:
-
     metadata_yaml = os.path.join(
         os.path.dirname(__file__),
         "common",
@@ -59,7 +58,6 @@ class TestBuildGroupConstraints:
     def test_build_group_constraint(
         self, scenario, constraints, group_names, loc_techs
     ):
-
         scenario_model = build_model(
             model_file=os.path.join("model_config_group", "base_model.yaml"),
             scenario=scenario,
@@ -131,7 +129,6 @@ class TestGroupConstraints:
         assert expensive_generation == 0
 
     def test_group_constraint_with_several_constraints_infeasible(self):
-
         model = build_model(
             model_file="group_constraint_general.yaml",
             scenario="several_infeasible_group_constraints",
@@ -140,7 +137,6 @@ class TestGroupConstraints:
         assert model._model_data.termination_condition != "optimal"
 
     def test_group_constraint_with_several_constraints_feasible(self):
-
         model = build_model(
             model_file="group_constraint_general.yaml",
             scenario="several_feasible_group_constraints",
@@ -163,7 +159,6 @@ class TestGroupConstraints:
         ],
     )
     def test_group_constraint_with_several_carriers(self, scenario, message):
-
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             build_model(model_file="group_constraint_general.yaml", scenario=scenario)
 

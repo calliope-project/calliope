@@ -757,7 +757,6 @@ class TestChecks:
         )
 
     def test_inexistent_group_constraint_empty_loc_tech(self):
-
         override = {
             "group_constraints.mygroup": {"energy_cap_max": 100, "locs": ["foo"]}
         }
@@ -1521,7 +1520,6 @@ class TestChecks:
         ],
     )
     def test_warn_on_no_weight(self, override):
-
         with pytest.warns(exceptions.ModelWarning) as warn:
             model = build_model(
                 model_file="weighted_obj_func.yaml", override_dict=override
@@ -1580,7 +1578,6 @@ class TestChecks:
 class TestChecksWithWarning:
     # This warning is ignored in the main class since it comes up on almost every function
     def test_warn_on_undefined_cost_classes(self):
-
         with pytest.warns(exceptions.ModelWarning) as warn:
             build_model(
                 model_file="weighted_obj_func.yaml",
@@ -1597,7 +1594,6 @@ class TestChecksWithWarning:
     "ignore:(?s).*Cost classes `{'monetary'}` are defined in the objective options but not defined elsewhere in the model:calliope.exceptions.ModelWarning"
 )
 class TestDataset:
-
     # FIXME: What are we testing here?
     def test_inconsistent_timesteps(self):
         """
@@ -1723,7 +1719,6 @@ class TestDataset:
         assert model1.model_data.attrs["allow_operate_mode"] == 0
 
     def test_15min_timesteps(self):
-
         override = {
             "techs.test_demand_elec.constraints.resource": "file=demand_elec_15mins.csv",
         }

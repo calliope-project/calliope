@@ -203,7 +203,6 @@ def _production_data(model, timesteps, timestep):
     # links associated data, like prod, carrier, transmission_type
     # [ [prod, carrier, transmission_type], [] ..]
     for location in locs_techs_carriers_production.locs.values:
-
         for carrier in locs_techs_carriers_production.carriers.values:
             techs_production = locs_techs_carriers_production.sel(
                 carriers=carrier, locs=location

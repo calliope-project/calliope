@@ -106,7 +106,6 @@ class TestIO:
             assert model_from_disk._model_data.force_resource.dtype.kind == "f"
 
     def test_save_read_solve_save_netcdf(self, model):
-
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = os.path.join(tempdir, "model.nc")
             model.to_netcdf(out_path)

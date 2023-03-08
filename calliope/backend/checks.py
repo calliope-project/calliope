@@ -141,7 +141,6 @@ def check_operate_params(model_data):
 
             # force resource overrides capacity constraints, so set capacity constraints to infinity
             if _get_param(loc_tech, "force_resource"):
-
                 if not _is_in(loc_tech, "loc_techs_store"):
                     # set resource_area to inf if the resource is linked to energy_cap using energy_per_cap
                     if (

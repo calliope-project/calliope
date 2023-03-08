@@ -80,7 +80,6 @@ def run_plan(
     persistent=True,
     opt=None,
 ):
-
     log_time(logger, timings, "run_start", comment="Backend: starting model run")
 
     warmstart = False

@@ -8,67 +8,66 @@ from calliope import AttrDict
 
 
 @pytest.fixture(scope="class")
-def model():
-    return build_model({}, "simple_supply,two_hours,investment_costs")
-
-
-@pytest.fixture(scope="class")
-def defaults(model):
-    return AttrDict.from_yaml_string(model._model_data.attrs["defaults"])
+def defaults(simple_supply):
+    return AttrDict.from_yaml_string(simple_supply._model_data.attrs["defaults"])
 
 
 class TestGetParam:
-    def test_get_param_with_timestep_existing(self):
+    def test_get_param_with_timestep_existing(self, simple_supply):
         """ """
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.run()
         param = get_param(
-            m._backend_model,
+            simple_supply._backend_model,
             "resource",
-            ("1::test_demand_elec", m._backend_model.timesteps.at(1)),
+            ("1::test_demand_elec", simple_supply._backend_model.timesteps.at(1)),
         )
         assert po.value(param) == -5  # see demand_elec.csv
 
-    def test_get_param_no_timestep_existing(self):
+    def test_get_param_no_timestep_existing(self, simple_supply):
         """ """
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.run()
         param = get_param(
-            m._backend_model,
+            simple_supply._backend_model,
             "energy_eff",
-            ("1::test_supply_elec", m._backend_model.timesteps.at(1)),
+            ("1::test_supply_elec", simple_supply._backend_model.timesteps.at(1)),
         )
         assert po.value(param) == 0.9  # see test model.yaml
 
-    def test_get_param_no_timestep_possible(self):
+    def test_get_param_no_timestep_possible(self, simple_supply):
         """ """
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.run()
-        param = get_param(m._backend_model, "energy_cap_max", ("1::test_supply_elec"))
+        param = get_param(
+            simple_supply._backend_model, "energy_cap_max", ("1::test_supply_elec")
+        )
         assert po.value(param) == 10  # see test model.yaml
 
         param = get_param(
-            m._backend_model, "cost_energy_cap", ("monetary", "0::test_supply_elec")
+            simple_supply._backend_model,
+            "cost_energy_cap",
+            ("monetary", "0::test_supply_elec"),
         )
         assert po.value(param) == 10
 
-    def test_get_param_from_default(self):
+    def test_get_param_from_default(self, simple_supply_and_supply_plus):
         """ """
-        m = build_model({}, "simple_supply_and_supply_plus,two_hours,investment_costs")
-        m.run()
-
         param = get_param(
-            m._backend_model,
+            simple_supply_and_supply_plus._backend_model,
             "parasitic_eff",
-            ("1::test_supply_plus", m._backend_model.timesteps.at(1)),
+            (
+                "1::test_supply_plus",
+                simple_supply_and_supply_plus._backend_model.timesteps.at(1),
+            ),
         )
         assert po.value(param) == 1  # see defaults.yaml
 
-        param = get_param(m._backend_model, "resource_cap_min", ("0::test_supply_plus"))
+        param = get_param(
+            simple_supply_and_supply_plus._backend_model,
+            "resource_cap_min",
+            ("0::test_supply_plus"),
+        )
         assert po.value(param) == 0  # see defaults.yaml
 
         param = get_param(
-            m._backend_model, "cost_resource_cap", ("monetary", "1::test_supply_plus")
+            simple_supply_and_supply_plus._backend_model,
+            "cost_resource_cap",
+            ("monetary", "1::test_supply_plus"),
         )
         assert po.value(param) == 0  # see defaults.yaml
 
@@ -76,14 +75,14 @@ class TestGetParam:
         "dims",
         [("1::test_demand_elec", "2005-01-01 00:00:00"), ("1::test_supply_elec")],
     )
-    def test_get_param_no_default_defined(self, dims):
+    def test_get_param_no_default_defined(self, dims, simple_supply):
         """
         If a default is not defined, return po.Param.NoValue
         """
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.run()
-
-        assert get_param(m._backend_model, "random_param", dims) == po.Param.NoValue
+        assert (
+            get_param(simple_supply._backend_model, "random_param", dims)
+            == po.Param.NoValue
+        )
 
 
 class TestGetDomain:
@@ -97,8 +96,11 @@ class TestGetDomain:
             ("names", "Any"),
         ),
     )
-    def test_dtypes(self, model, defaults, var, domain):
-        assert get_domain(model._model_data[var], defaults.get(var, None)) == domain
+    def test_dtypes(self, simple_supply, defaults, var, domain):
+        assert (
+            get_domain(simple_supply._model_data[var], defaults.get(var, None))
+            == domain
+        )
 
 
 class TestValueValidity:
