@@ -8,6 +8,8 @@ model.py
 Implements the core Model class.
 
 """
+from __future__ import annotations
+
 import logging
 import warnings
 from typing import TypedDict, Literal, TypeVar, Union, Optional
