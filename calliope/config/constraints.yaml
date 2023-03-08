@@ -159,9 +159,9 @@ constraints:
         foreach: [nodes, techs, carriers, timesteps]
         where: "resource AND inheritance(supply)"
         equations:
-            - where: "force_resource AND energy_eff > 0"
+            - where: "force_resource=True AND energy_eff > 0"
               expression: "carrier_prod / energy_eff == $available_resource"
-            - where: "not force_resource AND energy_eff > 0"
+            - where: "NOT force_resource=True AND energy_eff > 0"
               expression: "carrier_prod / energy_eff <= $available_resource"
             - where: "energy_eff = 0"
               expression: "carrier_prod == 0"
@@ -176,16 +176,16 @@ constraints:
 
     balance_supply_min_use:
         foreach: [nodes, techs, carriers, timesteps]
-        where: "resource AND inheritance(supply) AND resource_min_use AND energy_eff>0 AND NOT force_resource"
+        where: "resource AND inheritance(supply) AND resource_min_use AND energy_eff>0 AND NOT force_resource=True"
         equation: "resource_min_use <= carrier_prod / energy_eff"
 
     balance_demand:
         foreach: [nodes, techs, carriers, timesteps]
         where: "inheritance(demand)"
         equations:
-            - where: "force_resource"
+            - where: "force_resource=True"
               expression: "$carrier_con == $required_resource"
-            - where: "not force_resource"
+            - where: "NOT force_resource=True"
               expression: "$carrier_con >= $required_resource"
         components:
             carrier_con:
@@ -230,9 +230,9 @@ constraints:
         foreach: [nodes, techs, timesteps]
         where: "resource AND inheritance(supply_plus)"
         equations:
-            - where: "force_resource"
+            - where: "force_resource=True"
               expression: "resource_con == $available_resource"
-            - where: "NOT force_resource"
+            - where: "NOT force_resource=True"
               expression: "resource_con <= $available_resource"
         components:
             available_resource: *available_resource
