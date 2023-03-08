@@ -2,6 +2,7 @@ import pytest
 
 from calliope.test.common.util import build_test_model as build_model
 
+
 @pytest.fixture(scope="session")
 def simple_supply():
     m = build_model({}, "simple_supply,two_hours,investment_costs")
