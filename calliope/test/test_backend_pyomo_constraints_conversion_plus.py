@@ -34,29 +34,38 @@ class TestBuildConversionPlusConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, "balance_conversion_plus_primary_constraint")
 
-    def test_loc_techs_carrier_production_max_conversion_plus_constraint(self, simple_conversion_plus):
+    def test_loc_techs_carrier_production_max_conversion_plus_constraint(
+        self, simple_conversion_plus
+    ):
         """
         i for i in sets.loc_techs_conversion_plus
         if i not in sets.loc_techs_milp
         """
         assert hasattr(
-            simple_conversion_plus._backend_model, "carrier_production_max_conversion_plus_constraint"
+            simple_conversion_plus._backend_model,
+            "carrier_production_max_conversion_plus_constraint",
         )
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_loc_techs_carrier_production_max_conversion_plus_milp_constraint(self, conversion_plus_milp):
+    def test_loc_techs_carrier_production_max_conversion_plus_milp_constraint(
+        self, conversion_plus_milp
+    ):
         assert not hasattr(
-            conversion_plus_milp._backend_model, "carrier_production_max_conversion_plus_constraint"
+            conversion_plus_milp._backend_model,
+            "carrier_production_max_conversion_plus_constraint",
         )
 
-    def test_loc_techs_carrier_production_min_conversion_plus_constraint(self, simple_conversion_plus):
+    def test_loc_techs_carrier_production_min_conversion_plus_constraint(
+        self, simple_conversion_plus
+    ):
         """
         i for i in sets.loc_techs_conversion_plus
         if constraint_exists(model_run, i, 'constraints.energy_cap_min_use')
         and i not in sets.loc_techs_milp
         """
         assert not hasattr(
-            simple_conversion_plus._backend_model, "carrier_production_min_conversion_plus_constraint"
+            simple_conversion_plus._backend_model,
+            "carrier_production_min_conversion_plus_constraint",
         )
 
         m = build_model(
@@ -69,9 +78,12 @@ class TestBuildConversionPlusConstraints:
         )
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_loc_techs_carrier_production_min_conversion_plus_milp_constraint(self, conversion_plus_milp):
+    def test_loc_techs_carrier_production_min_conversion_plus_milp_constraint(
+        self, conversion_plus_milp
+    ):
         assert not hasattr(
-            conversion_plus_milp._backend_model, "carrier_production_min_conversion_plus_constraint"
+            conversion_plus_milp._backend_model,
+            "carrier_production_min_conversion_plus_constraint",
         )
 
         m = build_model(
@@ -150,10 +162,13 @@ class TestBuildConversionPlusConstraints:
             m._backend_model, "balance_conversion_plus_non_primary_constraint"
         )
 
-    def test_loc_tech_carrier_tiers_conversion_plus_zero_ratio_constraint(self, simple_conversion_plus):
+    def test_loc_tech_carrier_tiers_conversion_plus_zero_ratio_constraint(
+        self, simple_conversion_plus
+    ):
         """ """
         assert not hasattr(
-            simple_conversion_plus._backend_model, "conversion_plus_prod_con_to_zero_constraint"
+            simple_conversion_plus._backend_model,
+            "conversion_plus_prod_con_to_zero_constraint",
         )
 
         m = build_model(

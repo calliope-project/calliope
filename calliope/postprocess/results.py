@@ -110,7 +110,9 @@ def capacity_factor(results, model_data, systemwide=False):
 
         capacity_factors = (prod_sum / (cap_sum * time_sum)).fillna(0)
     else:
-        capacity_factors = (results["carrier_prod"] / energy_cap.where(lambda x: x > 0)).fillna(0)
+        capacity_factors = (
+            results["carrier_prod"] / energy_cap.where(lambda x: x > 0)
+        ).fillna(0)
 
     return capacity_factors
 
@@ -145,7 +147,9 @@ def systemwide_levelised_cost(results, model_data, total=False):
     # Here we scale production by timestep weight
     carrier_prod = results["carrier_prod"] * model_data.timestep_weights
     cost = results["cost"].sum(dim="nodes", min_count=1)
-    carrier_prod = (results["carrier_prod"] * model_data.timestep_weights).sum(dim=["timesteps", "nodes"], min_count=1)
+    carrier_prod = (results["carrier_prod"] * model_data.timestep_weights).sum(
+        dim=["timesteps", "nodes"], min_count=1
+    )
 
     if total:
         # cost is the total cost of the system
@@ -160,7 +164,9 @@ def systemwide_levelised_cost(results, model_data, total=False):
     levelised_cost = []
 
     for carrier in carrier_prod["carriers"].values:
-        levelised_cost.append(cost / carrier_prod.loc[{"carriers": carrier}].where(lambda x: x > 0))
+        levelised_cost.append(
+            cost / carrier_prod.loc[{"carriers": carrier}].where(lambda x: x > 0)
+        )
 
     return xr.concat(levelised_cost, dim="carriers")
 

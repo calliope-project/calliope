@@ -288,47 +288,50 @@ def equation_index_slice_obj(index_slice_parser, where_parser):
 @pytest.fixture
 def dummy_backend_interface(model_data):
     class DummyBackendModel(backends.BackendModel):
-            def __init__(self):
+        def __init__(self):
+            backends.BackendModel.__init__(
+                self,
+                defaults=model_data.attrs["defaults"],
+                instance=None,
+            )
 
-                backends.BackendModel.__init__(
-                    self,
-                    defaults=model_data.attrs["defaults"],
-                    instance=None,
-                )
+            self._dataset = model_data.copy(deep=True)
+            self._dataset["with_inf"] = self._dataset["with_inf"].fillna(
+                self.defaults["with_inf"]
+            )
+            self._dataset["only_techs"] = self._dataset["only_techs"].fillna(
+                self.defaults["only_techs"]
+            )
 
-                self._dataset = model_data.copy(deep=True)
-                self._dataset["with_inf"] = self._dataset["with_inf"].fillna(self.defaults["with_inf"])
-                self._dataset["only_techs"] = self._dataset["only_techs"].fillna(self.defaults["only_techs"])
+        def add_parameter(self):
+            pass
 
-            def add_parameter(self):
-                pass
+        def add_constraint(self):
+            pass
 
-            def add_constraint(self):
-                pass
+        def add_expression(self):
+            pass
 
-            def add_expression(self):
-                pass
+        def add_variable(self):
+            pass
 
-            def add_variable(self):
-                pass
+        def add_objective(self):
+            pass
 
-            def add_objective(self):
-                pass
+        def get_parameter(self):
+            pass
 
-            def get_parameter(self):
-                pass
+        def get_constraint(self):
+            pass
 
-            def get_constraint(self):
-                pass
+        def get_variable(self):
+            pass
 
-            def get_variable(self):
-                pass
+        def get_expression(self):
+            pass
 
-            def get_expression(self):
-                pass
-
-            def solve(self):
-                pass
+        def solve(self):
+            pass
 
     return DummyBackendModel()
 
@@ -350,24 +353,33 @@ def evaluatable_component_obj():
             tech: [{{expression: barfoo, where: "[bar] in nodes"}}]
         """
         component_dict = string_to_dict(setup_string)
-        class DummyParsedBackendComponent(parsing.ParsedBackendComponent, parsing.ParsedBackendEquation):
+
+        class DummyParsedBackendComponent(
+            parsing.ParsedBackendComponent, parsing.ParsedBackendEquation
+        ):
             def __init__(self, dict_, name):
                 parsing.ParsedBackendComponent.__init__(self, dict_, name)
                 self.equations = self.parse_equations(
                     equation_parser.generate_equation_parser()
                 )
+
         return DummyParsedBackendComponent(component_dict, "foo")
 
     return _evaluatable_component_obj
 
 
-@pytest.fixture(params=[
-    ("with_inf <= 100", 7),  # all vals except .inf meet criterion
-    ("with_inf == 100", 2),  # only default vals meet criterion
-    ("$foo <= 100", 4),   # only non-default + non-inf values meet criterion (+ only_techs masks one valid value)
-    ("$foo == 100", 0),  # no expressions are valid
-    ("only_techs + with_inf[techs=tech] == 2", 1)
-])
+@pytest.fixture(
+    params=[
+        ("with_inf <= 100", 7),  # all vals except .inf meet criterion
+        ("with_inf == 100", 2),  # only default vals meet criterion
+        (
+            "$foo <= 100",
+            4,
+        ),  # only non-default + non-inf values meet criterion (+ only_techs masks one valid value)
+        ("$foo == 100", 0),  # no expressions are valid
+        ("only_techs + with_inf[techs=tech] == 2", 1),
+    ]
+)
 def evaluate_component_where(evaluatable_component_obj, model_data, request):
     component_obj = evaluatable_component_obj(request.param[0])
     top_level_imask = component_obj.evaluate_where(model_data)
@@ -383,9 +395,13 @@ def evaluate_component_expression(
     evaluate_component_where, model_data, dummy_backend_interface
 ):
     component_obj, equation_imask, n_true = evaluate_component_where
-    return component_obj.equations[0].evaluate_expression(
-        model_data, dummy_backend_interface, equation_imask
-    ), n_true
+    return (
+        component_obj.equations[0].evaluate_expression(
+            model_data, dummy_backend_interface, equation_imask
+        ),
+        n_true,
+    )
+
 
 def apply_comparison(comparison_tuple):
     lhs, op, rhs = comparison_tuple
@@ -395,6 +411,7 @@ def apply_comparison(comparison_tuple):
         return lhs >= rhs
     if op == "<=":
         return lhs <= rhs
+
 
 class TestParsedComponent:
     @pytest.mark.parametrize(
@@ -442,7 +459,6 @@ class TestParsedComponent:
         where_string,
         expected_where_eval,
     ):
-
         expression_dict = expression_generator(parse_string, where_string)
         parsed_list = component_obj.generate_expression_list(
             expression_parser, [expression_dict], "foo"
@@ -856,7 +872,6 @@ class TestParsedBackendEquation:
             excinfo, "Unidentified model set name(s) defined: `{'foos'}`"
         )
 
-
     @pytest.mark.parametrize(
         "foreach",
         set(
@@ -925,9 +940,7 @@ class TestParsedBackendEquation:
             ]
             initial_imask = equation_obj.evaluate_where(model_data)
             equation_obj.where = [where_parser.parse_string("True", parse_all=True)]
-            imask = equation_obj.evaluate_where(
-                model_data, initial_imask=initial_imask
-            )
+            imask = equation_obj.evaluate_where(model_data, initial_imask=initial_imask)
 
         initial_expected_imask = equation_obj._evaluate_foreach(model_data)
         added_imask = initial_expected_imask & model_data[expected_imasker]
@@ -946,12 +959,12 @@ class TestParsedBackendEquation:
 
         assert not set(imask.dims).difference(["nodes", "techs"])
 
-
     def test_evaluate_expression(self, evaluate_component_expression):
         comparison_tuple, n_true = evaluate_component_expression
         # we can't check for equality since the random generation of NaNs in model_data carrier/node_tech
         # might nullify an otherwise valid item.
         assert apply_comparison(comparison_tuple).sum() <= n_true
+
 
 class TestParsedConstraint:
     @pytest.fixture
@@ -978,12 +991,14 @@ class TestParsedConstraint:
     def test_parse_constraint_dict_empty_eq1(self, constraint_obj, model_data):
         assert not constraint_obj.equations[0].evaluate_where(model_data).any()
 
-    def test_parse_constraint_dict_evalaute_eq2(self, constraint_obj, model_data, dummy_backend_interface):
-
+    def test_parse_constraint_dict_evalaute_eq2(
+        self, constraint_obj, model_data, dummy_backend_interface
+    ):
         valid_imask = constraint_obj.equations[1].evaluate_where(model_data)
-        comparison_tuple = constraint_obj.equations[1].evaluate_expression(model_data, dummy_backend_interface, valid_imask)
+        comparison_tuple = constraint_obj.equations[1].evaluate_expression(
+            model_data, dummy_backend_interface, valid_imask
+        )
         assert apply_comparison(comparison_tuple).sum() == 1
-
 
 
 class TestParsedVariable:
@@ -1011,7 +1026,7 @@ class TestParsedObjective:
                 {"expression": "bar + 2", "where": "False"},
                 {"expression": "sum(only_techs, over=[techs]) + 1", "where": "True"},
             ],
-            "sense": "minimize"
+            "sense": "minimize",
         }
 
         return parsing.ParsedObjective(dict_, "foo")
@@ -1025,8 +1040,11 @@ class TestParsedObjective:
     def test_parse_objective_dict_empty_eq1(self, objective_obj, model_data):
         assert not objective_obj.equations[0].evaluate_where(model_data).any()
 
-    def test_parse_objective_dict_evalaute_eq2(self, objective_obj, model_data, dummy_backend_interface):
-
+    def test_parse_objective_dict_evalaute_eq2(
+        self, objective_obj, model_data, dummy_backend_interface
+    ):
         valid_imask = objective_obj.equations[1].evaluate_where(model_data)
-        objective_expression = objective_obj.equations[1].evaluate_expression(model_data, dummy_backend_interface, valid_imask)
+        objective_expression = objective_obj.equations[1].evaluate_expression(
+            model_data, dummy_backend_interface, valid_imask
+        )
         assert objective_expression.sum() == 12

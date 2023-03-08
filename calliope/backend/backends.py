@@ -307,11 +307,13 @@ class BackendModel(ABC, Generic[T]):
         """
         all_variables = {
             name_: self.get_variable(name_, as_backend_objs=False)
-            for name_, var in self.variables.items() if var.notnull().any()
+            for name_, var in self.variables.items()
+            if var.notnull().any()
         }
         all_expressions = {
             name_: self.get_expression(name_, as_backend_objs=False, eval_body=True)
-            for name_, expr in self.expressions.items() if expr.notnull().any()
+            for name_, expr in self.expressions.items()
+            if expr.notnull().any()
         }
 
         results = xr.Dataset({**all_variables, **all_expressions})
@@ -349,7 +351,6 @@ class BackendModel(ABC, Generic[T]):
 
         for option_name, option_val in run_config["objective_options"].items():
             if option_name == "cost_class":
-
                 objective_cost_class = {
                     k: v for k, v in option_val.items() if k in model_data.costs
                 }
@@ -485,7 +486,6 @@ class PyomoBackendModel(BackendModel):
         default: Any = np.nan,
         use_inf_as_na: bool = False,
     ) -> None:
-
         self._raise_error_on_preexistence(parameter_name, "parameters")
 
         self._create_pyomo_list(parameter_name, "parameters")
@@ -550,7 +550,6 @@ class PyomoBackendModel(BackendModel):
         model_data: xr.Dataset,
         parsed_variable: parsing.ParsedVariable,
     ) -> None:
-
         # self._raise_error_on_preexistence(parsed_variable.name, "variables")
 
         imask = parsed_variable.evaluate_where(model_data)

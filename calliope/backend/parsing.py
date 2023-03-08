@@ -227,8 +227,7 @@ class ParsedBackendEquation:
         foreach_imask = self._evaluate_foreach(model_data)
         evaluated_wheres = [
             where[0].eval(  # type: ignore
-                model_data=model_data,
-                helper_func_dict=VALID_HELPER_FUNCTIONS
+                model_data=model_data, helper_func_dict=VALID_HELPER_FUNCTIONS
             )
             for where in self.where
         ]

@@ -685,7 +685,7 @@ def arithmetic_parser(
     component: pp.ParserElement,
     unsliced_param_or_var: pp.ParserElement,
     number: pp.ParserElement,
-    arithmetic: Optional[pp.Forward] = None
+    arithmetic: Optional[pp.Forward] = None,
 ) -> pp.ParserElement:
     """
     Parsing grammar to combine equation elements using basic arithmetic (+, -, *, /, **).
@@ -757,7 +757,6 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
 
 
 def generate_index_slice_parser():
-
     number, identifier = setup_base_parser_elements()
     unsliced_param = unsliced_param_parser(identifier)
     sliced_param = sliced_param_or_var_parser(identifier)
@@ -781,7 +780,6 @@ def generate_index_slice_parser():
 
 
 def generate_arithmetic_parser():
-
     number, identifier = setup_base_parser_elements()
     unsliced_param = unsliced_param_parser(identifier)
     sliced_param = sliced_param_or_var_parser(identifier)

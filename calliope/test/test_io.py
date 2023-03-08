@@ -90,7 +90,7 @@ class TestIO:
                     "subsets",
                     "model_config",
                     "run_config",
-                    "component_config"
+                    "component_config",
                 ],
             ),
         ],

@@ -117,8 +117,9 @@ def eval_kwargs():
         "index_slice_dict": {},
         "component_dict": {},
         "equation_name": "foobar",
-        "apply_imask": False
+        "apply_imask": False,
     }
+
 
 @pytest.fixture
 def arithmetic(helper_function, number, sliced_param, component, unsliced_param):
