@@ -18,7 +18,7 @@ class TestGetParam:
         param = get_param(
             simple_supply._backend_model,
             "resource",
-            ("1::test_demand_elec", m._backend_model.timesteps.at(1)),
+            ("1::test_demand_elec", simple_supply._backend_model.timesteps.at(1)),
         )
         assert po.value(param) == -5  # see demand_elec.csv
 
@@ -27,7 +27,7 @@ class TestGetParam:
         param = get_param(
             simple_supply._backend_model,
             "energy_eff",
-            ("1::test_supply_elec", m._backend_model.timesteps.at(1)),
+            ("1::test_supply_elec", simple_supply._backend_model.timesteps.at(1)),
         )
         assert po.value(param) == 0.9  # see test model.yaml
 
