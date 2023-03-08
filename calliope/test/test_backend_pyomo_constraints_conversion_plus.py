@@ -6,14 +6,19 @@ from calliope.test.common.util import check_variable_exists
 
 class TestBuildConversionPlusConstraints:
     # conversion_plus.py
-    def test_loc_techs_balance_conversion_plus_primary_constraint(self, simple_supply, simple_conversion_plus):
+    def test_loc_techs_balance_conversion_plus_primary_constraint(
+        self, simple_supply, simple_conversion_plus
+    ):
         """
         sets.loc_techs_conversion_plus,
         """
         assert not hasattr(
             simple_supply._backend_model, "balance_conversion_plus_primary_constraint"
         )
-        assert hasattr(simple_conversion_plus._backend_model, "balance_conversion_plus_primary_constraint")
+        assert hasattr(
+            simple_conversion_plus._backend_model,
+            "balance_conversion_plus_primary_constraint",
+        )
 
         m = build_model(
             {
@@ -39,29 +44,38 @@ class TestBuildConversionPlusConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, "balance_conversion_plus_primary_constraint")
 
-    def test_loc_techs_carrier_production_max_conversion_plus_constraint(self, simple_conversion_plus):
+    def test_loc_techs_carrier_production_max_conversion_plus_constraint(
+        self, simple_conversion_plus
+    ):
         """
         i for i in sets.loc_techs_conversion_plus
         if i not in sets.loc_techs_milp
         """
         assert hasattr(
-            simple_conversion_plus._backend_model, "carrier_production_max_conversion_plus_constraint"
+            simple_conversion_plus._backend_model,
+            "carrier_production_max_conversion_plus_constraint",
         )
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_loc_techs_carrier_production_max_conversion_plus_milp_constraint(self, conversion_plus_milp)
+    def test_loc_techs_carrier_production_max_conversion_plus_milp_constraint(
+        self, conversion_plus_milp
+    ):
         assert not hasattr(
-            conversion_plus_milp._backend_model, "carrier_production_max_conversion_plus_constraint"
+            conversion_plus_milp._backend_model,
+            "carrier_production_max_conversion_plus_constraint",
         )
 
-    def test_loc_techs_carrier_production_min_conversion_plus_constraint(self, simple_conversion_plus):
+    def test_loc_techs_carrier_production_min_conversion_plus_constraint(
+        self, simple_conversion_plus
+    ):
         """
         i for i in sets.loc_techs_conversion_plus
         if constraint_exists(model_run, i, 'constraints.energy_cap_min_use')
         and i not in sets.loc_techs_milp
         """
         assert not hasattr(
-            simple_conversion_plus._backend_model, "carrier_production_min_conversion_plus_constraint"
+            simple_conversion_plus._backend_model,
+            "carrier_production_min_conversion_plus_constraint",
         )
 
         m = build_model(
@@ -74,9 +88,12 @@ class TestBuildConversionPlusConstraints:
         )
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_loc_techs_carrier_production_min_conversion_plus_milp_constraint(self, conversion_plus_milp):
+    def test_loc_techs_carrier_production_min_conversion_plus_milp_constraint(
+        self, conversion_plus_milp
+    ):
         assert not hasattr(
-            conversion_plus_milp._backend_model, "carrier_production_min_conversion_plus_constraint"
+            conversion_plus_milp._backend_model,
+            "carrier_production_min_conversion_plus_constraint",
         )
 
         m = build_model(
@@ -88,7 +105,9 @@ class TestBuildConversionPlusConstraints:
             m._backend_model, "carrier_production_min_conversion_plus_constraint"
         )
 
-    def test_loc_techs_cost_var_conversion_plus_constraint(self, simple_conversion_plus):
+    def test_loc_techs_cost_var_conversion_plus_constraint(
+        self, simple_conversion_plus
+    ):
         """
         sets.loc_techs_om_cost_conversion_plus,
         """
@@ -109,7 +128,9 @@ class TestBuildConversionPlusConstraints:
         assert not hasattr(m._backend_model, "cost_var_conversion_plus_constraint")
 
         # no variable costs for conversion_plus = no constraint
-        assert not hasattr(simple_conversion_plus._backend_model, "cost_var_conversion_plus_constraint")
+        assert not hasattr(
+            simple_conversion_plus._backend_model, "cost_var_conversion_plus_constraint"
+        )
 
         # om_prod creates constraint and populates it with carrier_prod driven cost
         m = build_model(
@@ -139,12 +160,17 @@ class TestBuildConversionPlusConstraints:
             m._backend_model, "cost_var_conversion_plus_constraint", "carrier_prod"
         )
 
-    def test_loc_techs_balance_conversion_plus_in_2_constraint(self, simple_conversion_plus):
+    def test_loc_techs_balance_conversion_plus_in_2_constraint(
+        self, simple_conversion_plus
+    ):
         """
         sets.loc_techs_in_2,
         """
 
-        assert not hasattr(simple_conversion_plus._backend_model, "balance_conversion_plus_in_2_constraint")
+        assert not hasattr(
+            simple_conversion_plus._backend_model,
+            "balance_conversion_plus_in_2_constraint",
+        )
 
         m = build_model(
             {
@@ -170,11 +196,16 @@ class TestBuildConversionPlusConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, "balance_conversion_plus_in_2_constraint")
 
-    def test_loc_techs_balance_conversion_plus_in_3_constraint(self, simple_conversion_plus):
+    def test_loc_techs_balance_conversion_plus_in_3_constraint(
+        self, simple_conversion_plus
+    ):
         """
         sets.loc_techs_in_3,
         """
-        assert not hasattr(simple_conversion_plus._backend_model, "balance_conversion_plus_in_3_constraint")
+        assert not hasattr(
+            simple_conversion_plus._backend_model,
+            "balance_conversion_plus_in_3_constraint",
+        )
 
         m = build_model(
             {
@@ -212,11 +243,16 @@ class TestBuildConversionPlusConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, "balance_conversion_plus_out_2_constraint")
 
-    def test_loc_techs_balance_conversion_plus_out_3_constraint(self, simple_conversion_plus):
+    def test_loc_techs_balance_conversion_plus_out_3_constraint(
+        self, simple_conversion_plus
+    ):
         """
         sets.loc_techs_out_3,
         """
-        assert not hasattr(simple_conversion_plus._backend_model, "balance_conversion_plus_out_3_constraint")
+        assert not hasattr(
+            simple_conversion_plus._backend_model,
+            "balance_conversion_plus_out_3_constraint",
+        )
 
         m = build_model(
             {"techs.test_conversion_plus.essentials.carrier_out_3": "coal"},
@@ -232,10 +268,13 @@ class TestBuildConversionPlusConstraints:
         m.run(build_only=True)
         assert hasattr(m._backend_model, "balance_conversion_plus_out_3_constraint")
 
-    def test_loc_tech_carrier_tiers_conversion_plus_zero_ratio_constraint(self, simple_conversion_plus):
+    def test_loc_tech_carrier_tiers_conversion_plus_zero_ratio_constraint(
+        self, simple_conversion_plus
+    ):
         """ """
         assert not hasattr(
-            simple_conversion_plus._backend_model, "conversion_plus_prod_con_to_zero_constraint"
+            simple_conversion_plus._backend_model,
+            "conversion_plus_prod_con_to_zero_constraint",
         )
 
         m = build_model(
