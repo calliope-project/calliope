@@ -117,29 +117,6 @@ class Model(object):
                 "Input configuration must either be a string or a dictionary."
             )
         self._check_future_deprecation_warnings()
-        parsed_variables = self._generate_parsing_components(
-            unparsed=self.component_config["variables"],
-            parse_class=ParsedVariable,
-        )
-        parsed_expression = self._generate_parsing_components(
-            unparsed=self.component_config["expressions"],
-            parse_class=ParsedExpression,
-        )
-        parsed_constraints = self._generate_parsing_components(
-            unparsed=self.component_config["constraints"],
-            parse_class=ParsedConstraint,
-        )
-        parsed_objectives = self._generate_parsing_components(
-            unparsed=self.component_config["objectives"],
-            parse_class=ParsedObjective,
-        )
-
-        self.parsed_components: ParsedComponents = {
-            "variables": parsed_variables,
-            "expressions": parsed_expression,
-            "constraints": parsed_constraints,
-            "objectives": parsed_objectives,
-        }
 
     def _init_from_model_run(self, model_run, debug_data, debug):
         self._model_run = model_run
@@ -325,6 +302,29 @@ class Model(object):
             backend_interface (Literal["pyomo"], optional):
                 Backend interface in which to build the problem. Defaults to "pyomo".
         """
+        parsed_variables = self._generate_parsing_components(
+            unparsed=self.component_config["variables"],
+            parse_class=ParsedVariable,
+        )
+        parsed_expression = self._generate_parsing_components(
+            unparsed=self.component_config["expressions"],
+            parse_class=ParsedExpression,
+        )
+        parsed_constraints = self._generate_parsing_components(
+            unparsed=self.component_config["constraints"],
+            parse_class=ParsedConstraint,
+        )
+        parsed_objectives = self._generate_parsing_components(
+            unparsed=self.component_config["objectives"],
+            parse_class=ParsedObjective,
+        )
+
+        parsed_components: ParsedComponents = {
+            "variables": parsed_variables,
+            "expressions": parsed_expression,
+            "constraints": parsed_constraints,
+            "objectives": parsed_objectives,
+        }
 
         with self.model_data_string_datetime():
             # FIXME: remove defaults as input arg (currently required by parsed "where" evalaution)
@@ -340,7 +340,7 @@ class Model(object):
                 comment="Model: Generated optimisation problem parameters",
             )
 
-            for parsed_variable in self.parsed_components["variables"].values():
+            for parsed_variable in parsed_components["variables"].values():
                 backend.add_variable(self.inputs, parsed_variable)
             log_time(
                 logger,
@@ -349,7 +349,7 @@ class Model(object):
                 comment="Model: Generated optimisation problem decision variables",
             )
 
-            for parsed_expression in self.parsed_components["expressions"].values():
+            for parsed_expression in parsed_components["expressions"].values():
                 backend.add_expression(self.inputs, parsed_expression)
             log_time(
                 logger,
@@ -358,20 +358,20 @@ class Model(object):
                 comment="Model: Generated optimisation problem expressions",
             )
 
-            for parsed_constraint in self.parsed_components["constraints"].values():
+            for parsed_constraint in parsed_components["constraints"].values():
                 backend.add_constraint(self.inputs, parsed_constraint)
             log_time(
                 logger,
                 self._timings,
-                "backend_expressions_generated",
+                "backend_constraints_generated",
                 comment="Model: Generated optimisation problem constraints",
             )
-            for parsed_objective in self.parsed_components["objectives"].values():
+            for parsed_objective in parsed_components["objectives"].values():
                 backend.add_objective(self.inputs, parsed_objective)
             log_time(
                 logger,
                 self._timings,
-                "backend_expressions_generated",
+                "backend_objectives_generated",
                 comment="Model: Generated optimisation problem objective",
             )
 
