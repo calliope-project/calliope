@@ -51,9 +51,6 @@ pool:
 strategy:
   maxParallel: 10  # free limit is 10 parallel jobs
   matrix:
-    linux-py3.8:
-      IMAGE_NAME: ubuntu-latest
-      PYTHON_VERSION: 3.8
     linux-py3.9:
       IMAGE_NAME: ubuntu-latest
       PYTHON_VERSION: 3.9
