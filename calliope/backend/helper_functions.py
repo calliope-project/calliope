@@ -67,7 +67,7 @@ def get_connected_link(model_data, **kwargs):
         remote_component_items = component.sel(techs=remote_techs, nodes=remote_nodes)
 
         return (
-            remote_component_items.drop(["nodes", "techs"])
+            remote_component_items.drop_vars(["nodes", "techs"])
             .unstack("idx")
             .reindex_like(component)
             .fillna(component)

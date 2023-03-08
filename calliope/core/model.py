@@ -461,12 +461,17 @@ class Model(object):
                 "before you can run it."
             )
 
-        if hasattr(self, "results") and self.results.data_vars and not force_rerun:
-            raise exceptions.ModelError(
-                "This model object already has results. "
-                "Use model.run(force_rerun=True) to force"
-                "the results to be overwritten with a new run."
-            )
+        if hasattr(self, "results"):
+            if self.results.data_vars and not force_rerun:
+                raise exceptions.ModelError(
+                    "This model object already has results. "
+                    "Use model.run(force_rerun=True) to force"
+                    "the results to be overwritten with a new run."
+                )
+            else:
+                to_drop = self.results.data_vars
+        else:
+            to_drop = []
 
         if (
             self.run_config["mode"] == "operate"
@@ -484,15 +489,21 @@ class Model(object):
             save_logs=self.run_config.get("save_logs", None),
             warmstart=warmstart,
         )
-        results = self.backend.load_results()
-        self._string_to_datetime(results)
 
         # Add additional post-processed result variables to results
         if termination_condition in ["optimal", "feasible"]:
+            results = self.backend.load_results()
+            self._string_to_datetime(results)
             results = postprocess_results.postprocess_model_results(
                 results, self._model_data, self._timings
             )
+        else:
+            results = xr.Dataset()
+
+        self._model_data = self._model_data.drop_vars(to_drop)
+
         self._model_data.attrs.update(results.attrs)
+        self._model_data.attrs["termination_condition"] = termination_condition
         self._model_data = xr.merge(
             [results, self._model_data], compat="override", combine_attrs="no_conflicts"
         )

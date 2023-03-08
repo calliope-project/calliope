@@ -616,7 +616,7 @@ class PyomoBackendModel(BackendModel):
         constraint_name: str,
         as_backend_objs: bool = True,
         eval_body: bool = False,
-    ) -> Optional[pd.DataFrame]:
+    ) -> Optional[Union[pd.DataFrame, xr.DataArray]]:
         constraint = self.constraints.get(constraint_name, None)
         if isinstance(constraint, xr.DataArray) and not as_backend_objs:
             constraint = (
@@ -670,7 +670,7 @@ class PyomoBackendModel(BackendModel):
             TempfileManager.tempdir = save_logs  # Sets log output dir
         if warmstart and solver in ["glpk", "cbc"]:
             model_warn(
-                "The chosen solver, {}, does not suport warmstart, which may "
+                "The chosen solver, {}, does not support warmstart, which may "
                 "impact performance.".format(solver)
             )
             warmstart = False
@@ -695,7 +695,7 @@ class PyomoBackendModel(BackendModel):
             for line in str(results.solver[0]).split("\n"):
                 logger.critical(line)
 
-            BackendWarning("Model solution was non-optimal.")
+            model_warn("Model solution was non-optimal.", _class=BackendWarning)
 
         return str(termination)
 
