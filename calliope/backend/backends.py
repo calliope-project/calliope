@@ -79,7 +79,6 @@ class BackendModel(ABC, Generic[T]):
                 consequently try to fill those entries with the parameter default value.
                 Defaults to False.
         """
-        pass
 
     @abstractmethod
     def add_constraint(
@@ -98,7 +97,6 @@ class BackendModel(ABC, Generic[T]):
             parsed_constraint (parsing.ParsedConstraint):
                 Parsed YAML constraint dictionary entry, ready for evaluation.
         """
-        pass
 
     @abstractmethod
     def add_expression(
@@ -118,7 +116,6 @@ class BackendModel(ABC, Generic[T]):
             parsed_expression (parsing.ParsedExpression):
                 Parsed YAML expression dictionary entry, ready for evaluation.
         """
-        pass
 
     @abstractmethod
     def add_variable(
@@ -137,7 +134,6 @@ class BackendModel(ABC, Generic[T]):
             parsed_variable (parsing.ParsedVariable):
                 Parsed YAML variable dictionary entry, ready for evaluation.
         """
-        pass
 
     @abstractmethod
     def add_objective(
@@ -156,7 +152,6 @@ class BackendModel(ABC, Generic[T]):
             parsed_objective (parsing.ParsedObjective):
                 Parsed YAML objective dictionary entry, ready for evaluation.
         """
-        pass
 
     @abstractmethod
     def get_parameter(
@@ -178,7 +173,6 @@ class BackendModel(ABC, Generic[T]):
         Returns:
             Optional[xr.DataArray]: If parameter is not in backend dataset, will return None.
         """
-        pass
 
     @abstractmethod
     def get_constraint(
@@ -213,7 +207,6 @@ class BackendModel(ABC, Generic[T]):
                 Otherwise, a table with index entries corresponding to constraint indices
                 and columns for constraint body, and upper and lower bounds will be given.
         """
-        pass
 
     @abstractmethod
     def get_variable(
@@ -234,7 +227,6 @@ class BackendModel(ABC, Generic[T]):
         Returns:
             Optional[xr.DataArray]: If decision variable is not in backend dataset, will return None.
         """
-        pass
 
     @abstractmethod
     def get_expression(
@@ -261,7 +253,6 @@ class BackendModel(ABC, Generic[T]):
         Returns:
             Optional[xr.DataArray]: If expression is not in backend dataset, will return None.
         """
-        pass
 
     @abstractmethod
     def solve(
@@ -295,7 +286,6 @@ class BackendModel(ABC, Generic[T]):
                 optimal solution will be used to warmstart the next solve run.
                 Defaults to False.
         """
-        pass
 
     def load_results(self) -> xr.Dataset:
         """

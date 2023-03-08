@@ -65,11 +65,12 @@ def get_connected_link(model_data, **kwargs):
         remote_nodes = model_data.link_remote_nodes.stack(idx=dims).dropna("idx")
         remote_techs = model_data.link_remote_techs.stack(idx=dims).dropna("idx")
         remote_component_items = component.sel(techs=remote_techs, nodes=remote_nodes)
-
         return (
             remote_component_items.drop_vars(["nodes", "techs"])
             .unstack("idx")
             .reindex_like(component)
+            # TODO: should we be filling NaNs? Should ONLY valid remotes remain in the
+            # returned array?
             .fillna(component)
         )
 
