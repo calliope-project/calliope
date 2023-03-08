@@ -11,11 +11,12 @@ from calliope import AttrDict
 ALL_DIMS = {"nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"}
 
 
-@pytest.fixture(scope="session", params=set(
-    chain.from_iterable(
-        combinations(ALL_DIMS, i) for i in range(1, len(ALL_DIMS))
-    )
-))
+@pytest.fixture(
+    scope="session",
+    params=set(
+        chain.from_iterable(combinations(ALL_DIMS, i) for i in range(1, len(ALL_DIMS)))
+    ),
+)
 def foreach(request):
     return request.param
 
@@ -174,22 +175,25 @@ def dummy_model_data():
             ),
             "primary_carrier_out": (
                 ["carriers", "techs"],
-                [[1.0, np.nan, 1.0, np.nan], [np.nan, 1.0, np.nan, np.nan]]
+                [[1.0, np.nan, 1.0, np.nan], [np.nan, 1.0, np.nan, np.nan]],
             ),
             "link_remote_nodes": (
                 ["nodes", "techs"],
-                [["bar", np.nan, "bar", np.nan], ["foo", np.nan, np.nan, np.nan]]
+                [["bar", np.nan, "bar", np.nan], ["foo", np.nan, np.nan, np.nan]],
             ),
             "link_remote_techs": (
                 ["nodes", "techs"],
-                [["foobar", np.nan, "foobaz", np.nan], ["bazfoo", np.nan, np.nan, np.nan]]
-            )
+                [
+                    ["foobar", np.nan, "foobaz", np.nan],
+                    ["bazfoo", np.nan, np.nan, np.nan],
+                ],
+            ),
         },
         attrs={"scenarios": ["foo"]},
     )
     # xarray forces np.nan to strings if all other values are strings.
     for k in ["link_remote_nodes", "link_remote_techs"]:
-        model_data[k] = model_data[k].where(model_data[k] != 'nan')
+        model_data[k] = model_data[k].where(model_data[k] != "nan")
 
     model_data.attrs["run_config"] = AttrDict(
         {"foo": True, "bar": {"foobar": "baz"}, "foobar": {"baz": {"foo": np.inf}}}

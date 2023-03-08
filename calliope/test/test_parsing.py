@@ -4,14 +4,10 @@ from itertools import chain, combinations
 import pytest
 import ruamel.yaml as yaml
 import pyparsing as pp
-import xarray as xr
-import numpy as np
-import pandas as pd
 
 from calliope.backend import parsing, equation_parser, subset_parser, backends
 from calliope.test.common.util import check_error_or_warning
 
-from calliope import AttrDict
 import calliope
 
 BASE_DIMS = {"carriers", "carrier_tiers", "nodes", "techs"}
@@ -765,7 +761,9 @@ class TestParsedBackendEquation:
             "bam": obj2.expression,
         }
 
-    def test_evaluate_foreach_all_permutations(self, dummy_model_data, equation_obj, foreach):
+    def test_evaluate_foreach_all_permutations(
+        self, dummy_model_data, equation_obj, foreach
+    ):
         equation_obj.sets = foreach
         imask = equation_obj._evaluate_foreach(dummy_model_data)
 
@@ -848,7 +846,9 @@ class TestParsedBackendEquation:
             ]
             initial_imask = equation_obj.evaluate_where(dummy_model_data)
             equation_obj.where = [where_parser.parse_string("True", parse_all=True)]
-            imask = equation_obj.evaluate_where(dummy_model_data, initial_imask=initial_imask)
+            imask = equation_obj.evaluate_where(
+                dummy_model_data, initial_imask=initial_imask
+            )
 
         initial_expected_imask = equation_obj._evaluate_foreach(dummy_model_data)
         added_imask = initial_expected_imask & dummy_model_data[expected_imasker]

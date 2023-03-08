@@ -8,10 +8,7 @@ from calliope.backend import helper_functions
 @pytest.mark.parametrize("over", ["techs", ["techs"]])
 def test_backend_sum_one_dim(dummy_model_data, over):
     backend_sum = helper_functions.backend_sum()
-    summed_array = backend_sum(
-        dummy_model_data.only_techs,
-        over=over
-    )
+    summed_array = backend_sum(dummy_model_data.only_techs, over=over)
     assert not summed_array.shape
     assert summed_array == 6
 
@@ -19,10 +16,7 @@ def test_backend_sum_one_dim(dummy_model_data, over):
 @pytest.mark.parametrize("over", ["techs", ["techs"]])
 def test_backend_sum_one_of_two_dims(dummy_model_data, over):
     backend_sum = helper_functions.backend_sum()
-    summed_array = backend_sum(
-        dummy_model_data.with_inf,
-        over=over
-    )
+    summed_array = backend_sum(dummy_model_data.with_inf, over=over)
     assert summed_array.shape == (2,)
     assert np.array_equal(summed_array, [5, np.inf])
 
@@ -30,8 +24,7 @@ def test_backend_sum_one_of_two_dims(dummy_model_data, over):
 def test_backend_sum_two_dims(dummy_model_data):
     backend_sum = helper_functions.backend_sum()
     summed_array = backend_sum(
-        dummy_model_data.with_inf_as_bool,
-        over=["nodes", "techs"]
+        dummy_model_data.with_inf_as_bool, over=["nodes", "techs"]
     )
     assert not summed_array.shape
     assert summed_array == 5
@@ -63,7 +56,9 @@ def test_squeeze_primary_carriers_missing_brackets(dummy_model_data):
 def test_get_connected_link(dummy_model_data):
     get_connected_link = helper_functions.get_connected_link(dummy_model_data)
     connected_link = get_connected_link(dummy_model_data.with_inf)
-    assert np.array_equal(connected_link, [[np.inf, np.nan, 2, 3], [3, 2, 1, np.nan]], equal_nan=True)
+    assert np.array_equal(
+        connected_link, [[np.inf, np.nan, 2, 3], [3, 2, 1, np.nan]], equal_nan=True
+    )
 
 
 @pytest.mark.parametrize(["ix", "expected"], [(0, "foo"), (1, "bar"), (-1, "bar")])

@@ -1,15 +1,9 @@
-from itertools import chain, combinations
-
 import pytest
-import xarray as xr
-import numpy as np
-import pandas as pd
 
 import calliope
 from calliope.backend.subsets import (
     create_valid_subset,
     _inheritance,
-    _get_valid_subset,
     _subset_imask,
     _imask_foreach,
     VALID_HELPER_FUNCTIONS,
@@ -18,7 +12,6 @@ from calliope.backend.subset_parser import generate_where_string_parser
 
 from calliope import AttrDict
 from calliope.test.common.util import (
-    check_error_or_warning,
     constraint_sets,
     subsets_config,
 )
@@ -29,7 +22,6 @@ BASE_DIMS = ["nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"
 class TestSubsets:
     def parse_yaml(self, yaml_string):
         return AttrDict.from_yaml_string(yaml_string)
-
 
     @pytest.fixture
     def imask_subset_config(self):
