@@ -410,7 +410,6 @@ class TestObservedDict:
         )
 
     def test_load_from_netcdf(self, model):
-
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = os.path.join(tempdir, "model.nc")
             model.to_netcdf(out_path)

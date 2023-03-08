@@ -27,11 +27,15 @@ class TestGetParam:
 
     def test_get_param_no_timestep_possible(self, simple_supply):
         """ """
-        param = get_param(simple_supply._backend_model, "energy_cap_max", ("b", "test_supply_elec"))
+        param = get_param(
+            simple_supply._backend_model, "energy_cap_max", ("b", "test_supply_elec")
+        )
         assert po.value(param) == 10  # see test model.yaml
 
         param = get_param(
-            simple_supply._backend_model, "cost_energy_cap", ("monetary", "a", "test_supply_elec")
+            simple_supply._backend_model,
+            "cost_energy_cap",
+            ("monetary", "a", "test_supply_elec"),
         )
         assert po.value(param) == 10
 
@@ -40,26 +44,38 @@ class TestGetParam:
         param = get_param(
             simple_supply_and_supply_plus._backend_model,
             "parasitic_eff",
-            ("b", "test_supply_plus", simple_supply_and_supply_plus._backend_model.timesteps[1]),
+            (
+                "b",
+                "test_supply_plus",
+                simple_supply_and_supply_plus._backend_model.timesteps[1],
+            ),
         )
         assert po.value(param) == 1  # see defaults.yaml
 
         param = get_param(
-            simple_supply_and_supply_plus._backend_model, "resource_cap_min", ("a", "test_supply_plus")
+            simple_supply_and_supply_plus._backend_model,
+            "resource_cap_min",
+            ("a", "test_supply_plus"),
         )
         assert po.value(param) == 0  # see defaults.yaml
 
         param = get_param(
-            simple_supply_and_supply_plus._backend_model, "cost_resource_cap", ("monetary", "b", "test_supply_plus")
+            simple_supply_and_supply_plus._backend_model,
+            "cost_resource_cap",
+            ("monetary", "b", "test_supply_plus"),
         )
         assert po.value(param) == 0  # see defaults.yaml
 
-    @pytest.mark.parametrize("dim", [("b", "test_demand_elec", "2005-01-01 00:00"), ("b", "test_supply_elec")])
+    @pytest.mark.parametrize(
+        "dim",
+        [("b", "test_demand_elec", "2005-01-01 00:00"), ("b", "test_supply_elec")],
+    )
     def test_get_param_no_default_defined(self, simple_supply, dim):
         """
         If a default is not defined, raise KeyError
         """
         assert get_param(simple_supply._backend_model, "random_param", dim) is None
+
 
 class TestGetDomain:
     @pytest.mark.parametrize(

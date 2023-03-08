@@ -105,7 +105,6 @@ def load_constraints(backend_model):
 def get_capacity_constraint(
     backend_model, parameter, loc_tech, _equals=None, _max=None, _min=None, scale=None
 ):
-
     decision_variable = getattr(backend_model, parameter)
 
     if _equals is None:

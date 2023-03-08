@@ -95,7 +95,6 @@ def process_locations(model_config, modelrun_techs):
     location_techs_to_delete = []
 
     for loc_name, loc in locations.items():
-
         if "techs" not in loc:
             # Mark this as a transmission-only node if it has not allowed
             # any technologies
@@ -415,7 +414,6 @@ def check_costs_and_compute_depreciation_rates(
 ):
     cost_classes = list(tech_config.get("costs", {}).keys())
     for cost in cost_classes:
-
         # Warning if a cost is defined without a cost class, which is probably a mistake
         if cost in POSSIBLE_COSTS:
             warnings.append(

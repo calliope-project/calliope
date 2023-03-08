@@ -23,7 +23,6 @@ from calliope.postprocess.plotting.util import (
 
 
 def _get_relevant_vars(model, dataset, array):
-
     carriers = list(dataset.carriers.values)
 
     allowed_input_vars = [

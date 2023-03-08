@@ -114,7 +114,6 @@ class TestNationalScaleExampleModelSenseChecks:
 
 class TestNationalScaleExampleModelInfeasibility:
     def example_tester(self):
-
         model = calliope.examples.national_scale(
             scenario="check_feasibility", override_dict={"run.cyclic_storage": False}
         )
@@ -159,7 +158,6 @@ class TestNationalScaleExampleModelOperate:
 )
 class TestNationalScaleExampleModelSpores:
     def example_tester(self, solver="cbc", solver_io=None, **override_dict_kwargs):
-
         model = calliope.examples.national_scale(
             override_dict={
                 "model.subset_time": ["2005-01-01", "2005-01-03"],

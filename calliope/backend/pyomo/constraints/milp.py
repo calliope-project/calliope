@@ -99,7 +99,6 @@ def load_constraints(backend_model):
             backend_model.loc_techs_update_costs_investment_units_milp_constraint
             * backend_model.costs
         ):
-
             update_costs_investment_units_milp_constraint(
                 backend_model,
                 cost,
@@ -114,7 +113,6 @@ def load_constraints(backend_model):
             backend_model.loc_techs_update_costs_investment_purchase_milp_constraint
             * backend_model.costs
         ):
-
             update_costs_investment_purchase_milp_constraint(
                 backend_model,
                 cost,

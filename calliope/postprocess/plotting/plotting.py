@@ -99,7 +99,6 @@ def _plot(
     # plotting accessor method, but are not actually used
     **kwargs,
 ):
-
     # We will bee moving plotting out of Calliope core code (and a method of the model object)
     # in 0.7.0; current implementation is now untested.
     warnings.warn(
