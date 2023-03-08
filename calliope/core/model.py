@@ -13,7 +13,6 @@ import warnings
 from typing import TypedDict, Literal, TypeVar, Union, Optional
 from contextlib import contextmanager
 import os
-import datetime
 
 import xarray as xr
 import pandas as pd
@@ -261,7 +260,6 @@ class Model(object):
 
         parsed_components: dict[str, T] = dict()
         for component_name, component_config in unparsed.items():
-            print(component_name, datetime.datetime.now().strftime("%H:%M:%S.%f"))
             parsed_ = parse_class(component_config, component_name)
             parsed_components.update({component_name: parsed_})
         return parsed_components
