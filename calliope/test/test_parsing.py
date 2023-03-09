@@ -266,9 +266,7 @@ def evaluatable_component_obj():
         """
         component_dict = string_to_dict(setup_string)
 
-        class DummyParsedBackendComponent(
-            parsing.ParsedBackendComponent, parsing.ParsedBackendEquation
-        ):
+        class DummyParsedBackendComponent(parsing.ParsedBackendComponent):
             def __init__(self, dict_, name):
                 parsing.ParsedBackendComponent.__init__(self, dict_, name)
                 self.equations = self.parse_equations(
@@ -888,7 +886,11 @@ class TestParsedConstraint:
                 ]
             },
         }
-        return parsing.ParsedConstraint(dict_, "foo")
+        parsed_ = parsing.ParsedBackendComponent(dict_, "foo")
+        parsed_.equations = parsed_.parse_equations(
+            equation_parser.generate_equation_parser()
+        )
+        return parsed_
 
     def test_parse_constraint_dict_sets(self, constraint_obj):
         assert constraint_obj.sets == ["techs"]
@@ -912,9 +914,9 @@ class TestParsedConstraint:
 class TestParsedVariable:
     @pytest.fixture
     def variable_obj(self):
-        dict_ = {"foreach": ["techs"], "where": "False", "bounds": {}}
+        dict_ = {"foreach": ["techs"], "where": "False"}
 
-        return parsing.ParsedVariable(dict_, "foo")
+        return parsing.ParsedBackendComponent(dict_, "foo")
 
     def test_parse_variable_dict_sets(self, variable_obj):
         assert variable_obj.sets == ["techs"]
@@ -933,11 +935,14 @@ class TestParsedObjective:
             "equations": [
                 {"expression": "bar + 2", "where": "False"},
                 {"expression": "sum(only_techs, over=[techs]) + 1", "where": "True"},
-            ],
-            "sense": "minimize",
+            ]
         }
 
-        return parsing.ParsedObjective(dict_, "foo")
+        parsed_ = parsing.ParsedBackendComponent(dict_, "foo")
+        parsed_.equations = parsed_.parse_equations(
+            equation_parser.generate_arithmetic_parser()
+        )
+        return parsed_
 
     def test_parse_objective_dict_sets(self, objective_obj):
         assert objective_obj.sets == []

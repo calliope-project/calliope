@@ -11,8 +11,7 @@ import pyparsing as pp
 import xarray as xr
 import numpy as np
 
-from calliope.backend import equation_parser, subset_parser
-from calliope.backend.backends import BackendModel
+from calliope.backend import equation_parser, subset_parser, backends
 from calliope import exceptions
 from calliope.backend import helper_functions
 
@@ -275,7 +274,7 @@ class ParsedBackendEquation:
     def evaluate_expression(
         self,
         model_data: xr.Dataset,
-        backend_interface: BackendModel,
+        backend_interface: backends.BackendModel,
         imask: xr.DataArray,
     ):
         return self.expression[0].eval(
@@ -291,7 +290,7 @@ class ParsedBackendEquation:
         )
 
 
-class ParsedBackendComponent(ABC, Generic[T]):
+class ParsedBackendComponent(ParsedBackendEquation):
     """
     Parse an optimisation problem configuration - defined in a dictionary of strings
     loaded from YAML - into a series of Python objects that can be passed onto a solver
@@ -514,78 +513,3 @@ class ParsedBackendComponent(ABC, Generic[T]):
             )
             for parsed_item_combination in parsed_item_product
         ]
-
-
-class ParsedConstraint(ParsedBackendComponent, ParsedBackendEquation):
-    def __init__(
-        self, constraint: UnparsedConstraintDict, constraint_name: str
-    ) -> None:
-        """Parse a constraint defined in a dictionary of strings loaded from YAML into a series of Python objects that can be passed onto a solver interface like Pyomo or Gurobipy.
-
-        Args:
-            constraint (UnparsedConstraintDict): Dictionary of the form:
-                foreach: list[str]  <- sets over which to iterate the constraint, e.g. ["timestep in timesteps"], where "timesteps" is the set and "timestep" is the reference to the set iterator in the constraint equation(s)
-                where: list[str]  <- conditions defining which items in the product of all sets to apply the constraint to
-                equation: String  <- if no other conditions, single constraint equation of the form LHS OPERATOR RHS, e.g. "energy_cap[node, tech] >= my_parameter[tech] * 2"
-                equations: list[dict]  <- if different equations for different conditions, list them here with an additional "where" statement and an associated expression: {"where": [...], "expression": "..."}
-                components: dict[list[dict]]  <- if applying the same expression to multiple equations in the constraint, store them here with optional conditions on their exact composition, e.g. "$energy_prod" in an equation would refer to a component {"energy_prod": [{"where": [...], "expression": "..."}, ...]}
-                index_slices: dict[list[dict]]  <- if indexing a parameter/variable separately to the set iterators given in "foreach", define them here.
-            constraint_name (str): Name of constraint.
-        """
-        ParsedBackendComponent.__init__(self, constraint, constraint_name)
-        self.equations = self.parse_equations(
-            equation_parser.generate_equation_parser()
-        )
-
-
-class ParsedVariable(ParsedBackendComponent, ParsedBackendEquation):
-    def __init__(self, variable: UnparsedVariableDict, variable_name: str) -> None:
-        """Parse a variable configuration dictionary.
-
-        Args:
-            variable (UnparsedVariableDict): Dictionary of the form:
-                foreach: list[str]  <- sets over which to iterate the constraint, e.g. ["techs", "timesteps"],
-                where: list[str]  <- conditions defining which items in the product of all sets build the variable for
-                domain: str <- limit on types of numeric values that can be assigned to the variable
-                bounds: UnparsedBoundsDict <- link to parameters with which to apply explicit numeric bounds on each item in the variable
-                    min: str
-                    max: str
-                    equals: str
-                    scale: str
-            variable_name (str): Name of variable.
-        """
-        ParsedBackendComponent.__init__(self, variable, variable_name)
-        self.bounds = self._unparsed["bounds"]
-
-
-class ParsedObjective(ParsedBackendComponent, ParsedBackendEquation):
-    def __init__(self, objective: UnparsedObjectiveDict, objective_name: str) -> None:
-        """Parse an objective configuration dictionary.
-
-        Args:
-            variable (UnparsedObjectiveDict): Dictionary of the form:
-                equations: list[str]
-            objective_name (str): Name of objective.
-        """
-        ParsedBackendComponent.__init__(self, objective, objective_name)
-        self.equations: list[ParsedBackendEquation] = self.parse_equations(
-            equation_parser.generate_arithmetic_parser()
-        )
-        self.sense = self._unparsed["sense"]
-
-
-class ParsedExpression(ParsedBackendComponent, ParsedBackendEquation):
-    def __init__(
-        self, expression: UnparsedConstraintDict, expression_name: str
-    ) -> None:
-        """Parse an objective configuration dictionary.
-
-        Args:
-            variable (UnparsedObjectiveDict): Dictionary of the form:
-                equations: list[str]
-            objective_name (str): Name of objective.
-        """
-        ParsedBackendComponent.__init__(self, expression, expression_name)
-        self.equations = self.parse_equations(
-            equation_parser.generate_arithmetic_parser()
-        )

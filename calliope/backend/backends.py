@@ -23,11 +23,12 @@ import pyomo.kernel as pmo
 from pyomo.opt import SolverFactory
 from pyomo.common.tempfiles import TempfileManager
 import numpy as np
+import pyparsing as pp
 
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
 from calliope.core.util.logging import LogWriter
-from calliope.backend import parsing
+from calliope.backend import parsing, equation_parser
 
 
 T = TypeVar("T")
@@ -84,7 +85,8 @@ class BackendModel(ABC, Generic[T]):
     def add_constraint(
         self,
         model_data: xr.Dataset,
-        parsed_constraint: parsing.ParsedConstraint,
+        constraint_dict: parsing.UnparsedConstraintDict,
+        constraint_name: str,
     ) -> None:
         """
         Add constraint equation to backend model in-place.
@@ -92,17 +94,19 @@ class BackendModel(ABC, Generic[T]):
 
         Args:
             model_data (xr.Dataset):
-                Calliope model data with which to create a constraint mask - only those
+                Calliope model data with which to create an array mask - only those
                 dataset entries in the mask will be generated.
-            parsed_constraint (parsing.ParsedConstraint):
-                Parsed YAML constraint dictionary entry, ready for evaluation.
+            constraint_dict (parsing.UnparsedConstraintDict):
+                Constraint configuration dictionary, ready to be parsed and then evaluated.
+            constraint_name (str): name to assign the constraint in the optimisation problem
         """
 
     @abstractmethod
     def add_expression(
         self,
         model_data: xr.Dataset,
-        parsed_expression: parsing.ParsedExpression,
+        expression_dict: parsing.UnparsedConstraintDict,
+        expression_name: str,
     ) -> None:
         """
         Add expression (arithmetic combination of parameters and/or decision variables)
@@ -111,17 +115,19 @@ class BackendModel(ABC, Generic[T]):
 
         Args:
             model_data (xr.Dataset):
-                Calliope model data with which to create a constraint mask - only those
+                Calliope model data with which to create an array mask - only those
                 dataset entries in the mask will be generated.
-            parsed_expression (parsing.ParsedExpression):
-                Parsed YAML expression dictionary entry, ready for evaluation.
+            expression_dict (parsing.UnparsedConstraintDict):
+                Expression configuration dictionary, ready to be parsed and then evaluated.
+            expression_name (str): name to assign the expression in the optimisation problem
         """
 
     @abstractmethod
     def add_variable(
         self,
         model_data: xr.Dataset,
-        parsed_variable: parsing.ParsedVariable,
+        variable_dict: parsing.UnparsedVariableDict,
+        variable_name: str,
     ) -> None:
         """
         Add decision variable to backend model in-place.
@@ -129,17 +135,19 @@ class BackendModel(ABC, Generic[T]):
 
         Args:
             model_data (xr.Dataset):
-                Calliope model data with which to create a constraint mask - only those
+                Calliope model data with which to create an array mask - only those
                 dataset entries in the mask will be generated.
-            parsed_variable (parsing.ParsedVariable):
-                Parsed YAML variable dictionary entry, ready for evaluation.
+            variable_dict (parsing.UnparsedVariableDict):
+                Variable configuration dictionary, ready to be parsed and then evaluated.
+            variable_name (str): name to assign the variable in the optimisation problem
         """
 
     @abstractmethod
     def add_objective(
         self,
         model_data: xr.Dataset,
-        parsed_objective: parsing.ParsedObjective,
+        objective_dict: parsing.UnparsedObjectiveDict,
+        objective_name: str,
     ) -> None:
         """
         Add objective arithmetic to backend model in-place.
@@ -149,8 +157,9 @@ class BackendModel(ABC, Generic[T]):
             model_data (xr.Dataset):
                 Calliope model data with which to create a constraint mask - only those
                 dataset entries in the mask will be generated.
-            parsed_objective (parsing.ParsedObjective):
-                Parsed YAML objective dictionary entry, ready for evaluation.
+            objective_dict (parsing.UnparsedObjectiveDict):
+                Objective configuration dictionary, ready to be parsed and then evaluated.
+            objective_name (str): name to assign the objective in the optimisation problem
         """
 
     @abstractmethod
@@ -495,7 +504,8 @@ class PyomoBackendModel(BackendModel):
     def add_constraint(
         self,
         model_data: xr.Dataset,
-        parsed_constraint: parsing.ParsedConstraint,
+        constraint_dict: parsing.UnparsedConstraintDict,
+        constraint_name: str,
     ) -> None:
         def _constraint_setter(
             imask: xr.DataArray, expr: tuple[xr.DataArray, str, xr.DataArray]
@@ -507,41 +517,53 @@ class PyomoBackendModel(BackendModel):
                 xr.DataArray(lhs).squeeze(drop=True),
                 xr.DataArray(rhs).squeeze(drop=True),
                 op=op,
-                name=parsed_constraint.name,
+                name=constraint_name,
             )
             self._clean_arrays(lhs, rhs)
             return to_fill
 
         self._add_constraint_or_expression(
-            model_data, parsed_constraint, _constraint_setter, "constraints"
+            model_data,
+            constraint_dict,
+            constraint_name,
+            _constraint_setter,
+            "constraints",
+            equation_parser.generate_equation_parser(),
         )
 
     def add_expression(
         self,
         model_data: xr.Dataset,
-        parsed_expression: parsing.ParsedExpression,
+        expression_dict: parsing.UnparsedConstraintDict,
+        expression_name: str,
     ) -> None:
         def _expression_setter(imask: xr.DataArray, expr: xr.DataArray) -> xr.DataArray:
             to_fill = self.apply_func(
                 self._to_pyomo_expression,
                 imask,
                 expr.squeeze(drop=True),
-                name=parsed_expression.name,
+                name=expression_name,
             )
             self._clean_arrays(expr)
             return to_fill
 
         self._add_constraint_or_expression(
-            model_data, parsed_expression, _expression_setter, "expressions"
+            model_data,
+            expression_dict,
+            expression_name,
+            _expression_setter,
+            "expressions",
+            equation_parser.generate_arithmetic_parser(),
         )
 
     def add_variable(
         self,
         model_data: xr.Dataset,
-        parsed_variable: parsing.ParsedVariable,
+        variable_dict: parsing.UnparsedVariableDict,
+        variable_name: str,
     ) -> None:
-        # self._raise_error_on_preexistence(parsed_variable.name, "variables")
-
+        self._raise_error_on_preexistence(variable_name, "variables")
+        parsed_variable = parsing.ParsedBackendComponent(variable_dict, variable_name)
         imask = parsed_variable.evaluate_where(model_data)
 
         if imask is None or not imask.any():
@@ -553,7 +575,7 @@ class PyomoBackendModel(BackendModel):
             domain_type = getattr(pmo, f"{domain.title()}Set")
 
             ub, lb = self._get_capacity_bounds(
-                parsed_variable.bounds, name=parsed_variable.name
+                variable_dict["bounds"], name=parsed_variable.name
             )
             variable_da = self.apply_func(
                 self._to_pyomo_variable,
@@ -569,28 +591,34 @@ class PyomoBackendModel(BackendModel):
     def add_objective(
         self,
         model_data: xr.Dataset,
-        parsed_objective: parsing.ParsedObjective,
+        objective_dict: parsing.UnparsedObjectiveDict,
+        objective_name: str,
     ) -> None:
-        # self._raise_error_on_preexistence(parsed_objective.name, "objectives")
+        self._raise_error_on_preexistence(objective_name, "objectives")
         sense_dict = {"minimize": 1, "maximize": -1}
+        parsed_objective = parsing.ParsedBackendComponent(
+            objective_dict, objective_name
+        )
+        equations = parsed_objective.parse_equations(
+            equation_parser.generate_arithmetic_parser()
+        )
+
         n_valid_exprs = 0
-        for equation in parsed_objective.equations:
+        for equation in equations:
             imask = equation.evaluate_where(model_data)
             if imask.any():
                 expr = equation.evaluate_expression(model_data, self, imask).item()
                 n_valid_exprs += 1
         if n_valid_exprs > 1:
             raise BackendError(
-                f"More than one {parsed_objective.name} objective is valid for this "
+                f"More than one {objective_name} objective is valid for this "
                 "optimisation problem; only one is allowed."
             )
 
-        objective = pmo.objective(expr, sense=sense_dict[parsed_objective.sense])
+        objective = pmo.objective(expr, sense=sense_dict[objective_dict["sense"]])
         self._instance.objectives.append(objective)
 
-        self._add_to_dataset(
-            parsed_objective.name, xr.DataArray(objective), "objectives"
-        )
+        self._add_to_dataset(objective_name, xr.DataArray(objective), "objectives")
 
     def get_parameter(
         self, parameter_name: str, as_backend_objs: bool = True
@@ -711,9 +739,11 @@ class PyomoBackendModel(BackendModel):
     def _add_constraint_or_expression(
         self,
         model_data: xr.Dataset,
-        parsed_component: Union[parsing.ParsedConstraint, parsing.ParsedExpression],
+        component_dict: parsing.UnparsedConstraintDict,
+        component_name: str,
         component_setter: Callable,
         component_type: Literal["constraints", "expressions"],
+        parser: pp.ParserElement,
     ) -> None:
         """Generalised function to add a constraint or expression array to the model.
 
@@ -733,17 +763,20 @@ class PyomoBackendModel(BackendModel):
                 The sub-equations of the parsed component cannot generate component
                 objects on duplicate index entries.
         """
-        self._raise_error_on_preexistence(parsed_component.name, component_type)
+        self._raise_error_on_preexistence(component_name, component_type)
+        parsed_component = parsing.ParsedBackendComponent(
+            component_dict, component_name
+        )
         top_level_imask = parsed_component.evaluate_where(model_data)
 
         if not top_level_imask.any():
             component_da = xr.DataArray(None)
         else:
             component_da = xr.DataArray().where(top_level_imask).astype(np.dtype("O"))
+            self._create_pyomo_list(component_name, component_type)
 
-            self._create_pyomo_list(parsed_component.name, component_type)
-
-            for element in parsed_component.equations:
+            equations = parsed_component.parse_equations(parser)
+            for element in equations:
                 imask = element.evaluate_where(model_data, top_level_imask)
                 if not imask.any():
                     continue
@@ -754,7 +787,7 @@ class PyomoBackendModel(BackendModel):
 
                     raise BackendError(
                         "Trying to set two equations for the same index of "
-                        f"{component_type.removesuffix('s')} `{parsed_component.name}`:\n{subset_overlap}"
+                        f"{component_type.removesuffix('s')} `{component_name}`:\n{subset_overlap}"
                     )
 
                 expr = element.evaluate_expression(model_data, self, imask)
@@ -764,10 +797,10 @@ class PyomoBackendModel(BackendModel):
             if component_da.isnull().all():
                 component_da = xr.DataArray(None)
 
-        self._add_to_dataset(parsed_component.name, component_da, component_type)
+        self._add_to_dataset(component_name, component_da, component_type)
 
     def _get_capacity_bounds(
-        self, bounds: dict, name: str
+        self, bounds: parsing.UnparsedVariableBoundDict, name: str
     ) -> tuple[xr.DataArray, xr.DataArray]:
         """
         Generate arrays corresponding to upper and lower bounds of a decision variable.

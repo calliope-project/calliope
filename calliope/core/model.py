@@ -31,28 +31,9 @@ from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
-from calliope.backend.parsing import (
-    ParsedConstraint,
-    ParsedVariable,
-    ParsedObjective,
-    ParsedExpression,
-)
 from calliope.backend import backends
 
 logger = logging.getLogger(__name__)
-
-
-T = TypeVar(
-    "T",
-    bound=Union[ParsedVariable, ParsedConstraint, ParsedObjective, ParsedExpression],
-)
-
-
-class ParsedComponents(TypedDict):
-    variables: dict[str, ParsedVariable]
-    constraints: dict[str, ParsedConstraint]
-    objectives: dict[str, ParsedObjective]
-    expressions: dict[str, ParsedExpression]
 
 
 def read_netcdf(path):
@@ -244,28 +225,6 @@ class Model(object):
         self._model_data.attrs[name] = dict_to_add
         setattr(self, name, dict_to_add)
 
-    def _generate_parsing_components(
-        self, unparsed: dict, parse_class: type[T]
-    ) -> dict[str, T]:
-        """Parse optimisation model component (constraints, variables,etc.) string definitions.
-
-        Args:
-            unparsed (dict[str, dict]):
-                Raw component definitions, direct from YAML.
-                Keys are component names, values are dictionaries with component-specific entries
-            parse_class (type[T]): Parsing class of component type to parse
-            (e.g., for a constraint: parsing.ParsedConstraint)
-
-        Returns:
-            dict[str, T]: Keys match input keys and values are of the provided `parse_class` type.
-        """
-
-        parsed_components: dict[str, T] = dict()
-        for component_name, component_config in unparsed.items():
-            parsed_ = parse_class(component_config, component_name)
-            parsed_components.update({component_name: parsed_})
-        return parsed_components
-
     def _generate_default_dict(self) -> AttrDict:
         """Process input parameter default YAML configuration file into a dictionary of
         defaults that match parameter names in the processed model dataset
@@ -302,29 +261,6 @@ class Model(object):
             backend_interface (Literal["pyomo"], optional):
                 Backend interface in which to build the problem. Defaults to "pyomo".
         """
-        parsed_variables = self._generate_parsing_components(
-            unparsed=self.component_config["variables"],
-            parse_class=ParsedVariable,
-        )
-        parsed_expression = self._generate_parsing_components(
-            unparsed=self.component_config["expressions"],
-            parse_class=ParsedExpression,
-        )
-        parsed_constraints = self._generate_parsing_components(
-            unparsed=self.component_config["constraints"],
-            parse_class=ParsedConstraint,
-        )
-        parsed_objectives = self._generate_parsing_components(
-            unparsed=self.component_config["objectives"],
-            parse_class=ParsedObjective,
-        )
-
-        parsed_components: ParsedComponents = {
-            "variables": parsed_variables,
-            "expressions": parsed_expression,
-            "constraints": parsed_constraints,
-            "objectives": parsed_objectives,
-        }
 
         with self.model_data_string_datetime():
             # FIXME: remove defaults as input arg (currently required by parsed "where" evalaution)
@@ -339,41 +275,18 @@ class Model(object):
                 "backend_parameters_generated",
                 comment="Model: Generated optimisation problem parameters",
             )
-
-            for parsed_variable in parsed_components["variables"].values():
-                backend.add_variable(self.inputs, parsed_variable)
-            log_time(
-                logger,
-                self._timings,
-                "backend_variables_generated",
-                comment="Model: Generated optimisation problem decision variables",
-            )
-
-            for parsed_expression in parsed_components["expressions"].values():
-                backend.add_expression(self.inputs, parsed_expression)
-            log_time(
-                logger,
-                self._timings,
-                "backend_expressions_generated",
-                comment="Model: Generated optimisation problem expressions",
-            )
-
-            for parsed_constraint in parsed_components["constraints"].values():
-                backend.add_constraint(self.inputs, parsed_constraint)
-            log_time(
-                logger,
-                self._timings,
-                "backend_constraints_generated",
-                comment="Model: Generated optimisation problem constraints",
-            )
-            for parsed_objective in parsed_components["objectives"].values():
-                backend.add_objective(self.inputs, parsed_objective)
-            log_time(
-                logger,
-                self._timings,
-                "backend_objectives_generated",
-                comment="Model: Generated optimisation problem objective",
-            )
+            # The order of adding components matters!
+            # 1. Variables, 2. Expressions, 3. Constraints, 4. Objectives
+            for components in ["variables", "expressions", "constraints", "objectives"]:
+                component = components.removesuffix("s")
+                for name_, dict_ in self.component_config[components].items():
+                    getattr(backend, f"add_{component}")(self.inputs, dict_, name_)
+                log_time(
+                    logger,
+                    self._timings,
+                    f"backend_{components}_generated",
+                    comment=f"Model: Generated optimisation problem {components}",
+                )
 
             self.backend = backend
 
