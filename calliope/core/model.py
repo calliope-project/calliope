@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 import warnings
-from typing import TypedDict, Literal, TypeVar, Union, Optional
+from typing import Literal, Union, Optional
 from contextlib import contextmanager
 import os
 
@@ -80,6 +80,11 @@ class Model(object):
 
         """
         self._timings: dict = {}
+        self.defaults: AttrDict
+        self.model_config: AttrDict
+        self.run_config: AttrDict
+        self.component_config: AttrDict
+
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
         log_time(logger, self._timings, "model_creation", comment="Model: initialising")

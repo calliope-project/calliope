@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import itertools
-from typing import Optional, Union, Literal, Iterable, Callable, TypeVar, Generic
+from typing import Optional, Union, Literal, Iterable, Callable, TypeVar
 from typing_extensions import NotRequired, TypedDict, Required
 import functools
 import operator
-from abc import ABC
 
 import pyparsing as pp
 import xarray as xr
