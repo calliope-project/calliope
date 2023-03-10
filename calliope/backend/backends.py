@@ -23,7 +23,6 @@ import pyomo.kernel as pmo
 from pyomo.opt import SolverFactory
 from pyomo.common.tempfiles import TempfileManager
 import numpy as np
-import pyparsing as pp
 
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn

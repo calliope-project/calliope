@@ -409,7 +409,6 @@ class ParsedBackendComponent(ParsedBackendEquation):
         try:
             parsed = parser.parse_string(parse_string, parse_all=True)
         except (pp.ParseException, KeyError) as excinfo:
-            br
             parsed = None
             self._is_valid = False
             self._errors.add(f"({expression_group}, {parse_string}): {str(excinfo)}")

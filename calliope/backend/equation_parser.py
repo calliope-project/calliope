@@ -27,7 +27,7 @@
 from __future__ import annotations
 
 from typing import Callable, Any, Union, Optional, Iterator, Iterable
-from abc import ABC, abstractmethod
+from abc import ABC
 
 import pyparsing as pp
 import xarray as xr
