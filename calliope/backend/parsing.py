@@ -14,14 +14,18 @@ from calliope.backend import equation_parser, subset_parser, backends
 from calliope import exceptions
 from calliope.backend import helper_functions
 
-VALID_HELPER_FUNCTIONS: dict[str, Callable] = {
-    "inheritance": helper_functions.inheritance,
-    "sum": helper_functions.backend_sum,
+VALID_EXPRESSION_HELPER_FUNCTIONS: dict[str, Callable] = {
+    "sum": helper_functions.expression_sum,
     "squeeze_carriers": helper_functions.squeeze_carriers,
     "squeeze_primary_carriers": helper_functions.squeeze_primary_carriers,
     "get_connected_link": helper_functions.get_connected_link,
     "get_timestep": helper_functions.get_timestep,
     "roll": helper_functions.roll,
+}
+VALID_IMASK_HELPER_FUNCTIONS: dict[str, Callable] = {
+    "inheritance": helper_functions.inheritance,
+    "sum": helper_functions.imask_sum,
+    "get_timestep": helper_functions.get_timestep,
 }
 
 
@@ -225,7 +229,7 @@ class ParsedBackendEquation:
         foreach_imask = self._evaluate_foreach(model_data)
         evaluated_wheres = [
             where[0].eval(  # type: ignore
-                model_data=model_data, helper_func_dict=VALID_HELPER_FUNCTIONS
+                model_data=model_data, helper_func_dict=VALID_IMASK_HELPER_FUNCTIONS
             )
             for where in self.where
         ]
@@ -282,7 +286,7 @@ class ParsedBackendEquation:
             component_dict=self.components,
             backend_interface=backend_interface,
             backend_dataset=backend_interface._dataset,
-            helper_func_dict=VALID_HELPER_FUNCTIONS,
+            helper_func_dict=VALID_EXPRESSION_HELPER_FUNCTIONS,
             model_data=model_data,
             imask=imask,
             as_dict=False,
@@ -318,7 +322,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
         self._is_active: bool = True
 
     def parse_equations(
-        self, equation_expression_parser
+        self,
+        equation_expression_parser: Callable,
+        valid_arithmetic_components: Iterable,
     ) -> list[ParsedBackendEquation]:
         equation_expression_list: list[UnparsedEquationDict]
         if "equation" in self._unparsed.keys():
@@ -327,7 +333,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
             equation_expression_list = self._unparsed.get("equations", [])
 
         equations = self.generate_expression_list(
-            expression_parser=equation_expression_parser,
+            expression_parser=equation_expression_parser(valid_arithmetic_components),
             expression_list=equation_expression_list,
             expression_group="equations",
             id_prefix=self.name,
@@ -335,7 +341,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
 
         component_dict = {
             c_name: self.generate_expression_list(
-                expression_parser=equation_parser.generate_arithmetic_parser(),
+                expression_parser=equation_parser.generate_arithmetic_parser(
+                    valid_arithmetic_components
+                ),
                 expression_list=c_list,
                 expression_group="components",
                 id_prefix=c_name,
@@ -344,7 +352,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
         }
         index_slice_dict = {
             idx_name: self.generate_expression_list(
-                expression_parser=equation_parser.generate_index_slice_parser(),
+                expression_parser=equation_parser.generate_index_slice_parser(
+                    valid_arithmetic_components
+                ),
                 expression_list=idx_list,
                 expression_group="index_slices",
                 id_prefix=idx_name,
@@ -399,6 +409,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         try:
             parsed = parser.parse_string(parse_string, parse_all=True)
         except (pp.ParseException, KeyError) as excinfo:
+            br
             parsed = None
             self._is_valid = False
             self._errors.add(f"({expression_group}, {parse_string}): {str(excinfo)}")
@@ -452,10 +463,10 @@ class ParsedBackendComponent(ParsedBackendEquation):
         """
         parsed_equation_list = []
         for idx, expression_data in enumerate(expression_list):
+            parsed_where = self.parse_where_string(expression_data.get("where", "True"))
             parsed_expression = self._parse_string(
                 expression_parser, expression_data["expression"], expression_group
             )
-            parsed_where = self.parse_where_string(expression_data.get("where", "True"))
             if parsed_expression is not None and parsed_where is not None:
                 parsed_equation_list.append(
                     ParsedBackendEquation(

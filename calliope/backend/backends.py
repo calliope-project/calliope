@@ -54,6 +54,7 @@ class BackendModel(ABC, Generic[T]):
 
         self._instance = instance
         self._dataset = xr.Dataset()
+        self.valid_arithmetic_components: set = set()
 
     @abstractmethod
     def add_parameter(
@@ -428,7 +429,13 @@ class BackendModel(ABC, Generic[T]):
         """
         del args
 
-    def _add_to_dataset(self, name: str, da: xr.DataArray, obj_type: _COMPONENTS_T):
+    def _add_to_dataset(
+        self,
+        name: str,
+        da: xr.DataArray,
+        obj_type: _COMPONENTS_T,
+        allow_in_arithmetic: bool = True,
+    ):
         """
         Add array of backend objects to backend dataset in-place.
 
@@ -436,8 +443,13 @@ class BackendModel(ABC, Generic[T]):
             name (str): Name of entry in dataset.
             da (xr.DataArray): Data to add.
             obj_type (str): Type of backend objects in the array.
+            allow_in_arithmetic (bool):
+                If True, allow this array to be visible to the equation and arithmetic parser.
+                Defaults to False.
         """
-        self._dataset[name] = da.assign_attrs({obj_type: 1})
+        self._dataset[name] = da.assign_attrs(
+            {obj_type: 1, "allow_in_arithmetic": allow_in_arithmetic}
+        )
 
     @property
     def constraints(self):
@@ -500,6 +512,7 @@ class PyomoBackendModel(BackendModel):
             parameter_da = parameter_da.astype(float)
 
         self._add_to_dataset(parameter_name, parameter_da, "parameters")
+        self.valid_arithmetic_components.add(parameter_name)
 
     def add_constraint(
         self,
@@ -528,7 +541,7 @@ class PyomoBackendModel(BackendModel):
             constraint_name,
             _constraint_setter,
             "constraints",
-            equation_parser.generate_equation_parser(),
+            equation_parser.generate_equation_parser,
         )
 
     def add_expression(
@@ -547,13 +560,15 @@ class PyomoBackendModel(BackendModel):
             self._clean_arrays(expr)
             return to_fill
 
+        self.valid_arithmetic_components.add(expression_name)
+
         self._add_constraint_or_expression(
             model_data,
             expression_dict,
             expression_name,
             _expression_setter,
             "expressions",
-            equation_parser.generate_arithmetic_parser(),
+            equation_parser.generate_arithmetic_parser,
         )
 
     def add_variable(
@@ -563,13 +578,14 @@ class PyomoBackendModel(BackendModel):
         variable_name: str,
     ) -> None:
         self._raise_error_on_preexistence(variable_name, "variables")
+        self.valid_arithmetic_components.add(variable_name)
+
         parsed_variable = parsing.ParsedBackendComponent(variable_dict, variable_name)
         imask = parsed_variable.evaluate_where(model_data)
-
         if imask is None or not imask.any():
             variable_da = xr.DataArray(None)
         else:
-            self._create_pyomo_list(parsed_variable.name, "variables")
+            self._create_pyomo_list(variable_name, "variables")
 
             domain = parsed_variable._unparsed.get("domain", "real")
             domain_type = getattr(pmo, f"{domain.title()}Set")
@@ -582,11 +598,11 @@ class PyomoBackendModel(BackendModel):
                 imask,
                 ub,
                 lb,
-                name=parsed_variable.name,
+                name=variable_name,
                 domain_type=domain_type,
             )
 
-        self._add_to_dataset(parsed_variable.name, variable_da, "variables")
+        self._add_to_dataset(variable_name, variable_da, "variables")
 
     def add_objective(
         self,
@@ -600,7 +616,7 @@ class PyomoBackendModel(BackendModel):
             objective_dict, objective_name
         )
         equations = parsed_objective.parse_equations(
-            equation_parser.generate_arithmetic_parser()
+            equation_parser.generate_arithmetic_parser, self.valid_arithmetic_components
         )
 
         n_valid_exprs = 0
@@ -618,7 +634,12 @@ class PyomoBackendModel(BackendModel):
         objective = pmo.objective(expr, sense=sense_dict[objective_dict["sense"]])
         self._instance.objectives.append(objective)
 
-        self._add_to_dataset(objective_name, xr.DataArray(objective), "objectives")
+        self._add_to_dataset(
+            objective_name,
+            xr.DataArray(objective),
+            "objectives",
+            allow_in_arithmetic=False,
+        )
 
     def get_parameter(
         self, parameter_name: str, as_backend_objs: bool = True
@@ -743,7 +764,7 @@ class PyomoBackendModel(BackendModel):
         component_name: str,
         component_setter: Callable,
         component_type: Literal["constraints", "expressions"],
-        parser: pp.ParserElement,
+        parser: Callable,
     ) -> None:
         """Generalised function to add a constraint or expression array to the model.
 
@@ -775,7 +796,9 @@ class PyomoBackendModel(BackendModel):
             component_da = xr.DataArray().where(top_level_imask).astype(np.dtype("O"))
             self._create_pyomo_list(component_name, component_type)
 
-            equations = parsed_component.parse_equations(parser)
+            equations = parsed_component.parse_equations(
+                parser, self.valid_arithmetic_components
+            )
             for element in equations:
                 imask = element.evaluate_where(model_data, top_level_imask)
                 if not imask.any():
@@ -796,8 +819,10 @@ class PyomoBackendModel(BackendModel):
 
             if component_da.isnull().all():
                 component_da = xr.DataArray(None)
-
-        self._add_to_dataset(component_name, component_da, component_type)
+        allow_in_arithmetic = False if component_type == "constraints" else True
+        self._add_to_dataset(
+            component_name, component_da, component_type, allow_in_arithmetic
+        )
 
     def _get_capacity_bounds(
         self, bounds: parsing.UnparsedVariableBoundDict, name: str

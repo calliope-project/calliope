@@ -26,7 +26,7 @@
 ##
 from __future__ import annotations
 
-from typing import Callable, Any, Union, Optional, Iterator
+from typing import Callable, Any, Union, Optional, Iterator, Iterable
 from abc import ABC, abstractmethod
 
 import pyparsing as pp
@@ -40,14 +40,8 @@ COMPONENT_CLASSIFIER = "$"
 
 
 class EvalString(ABC):
-    "Parent class for all string evaluation classes"
-
-    def __init__(self) -> None:
-        self.name: Optional[str]
-
-    @abstractmethod
-    def eval(self, **kwargs):
-        pass
+    "Parent class for all string evaluation classes - used in type hinting"
+    name: str
 
 
 class EvalOperatorOperand(EvalString):
@@ -190,6 +184,18 @@ class EvalFunction(EvalString):
         "Return string representation of the parsed grammar"
         return f"{str(self.func_name)}(args={self.args}, kwargs={self.kwargs})"
 
+    def arg_eval(self, arg, **eval_kwargs):
+        if isinstance(arg, pp.ParseResults):
+            evaluated_ = arg[0].eval(**eval_kwargs)
+        elif isinstance(arg, list):
+            evaluated_ = [self.arg_eval(arg_) for arg_ in arg]
+        else:
+            try:
+                evaluated_ = arg.eval(**eval_kwargs)
+            except AttributeError:
+                evaluated_ = arg
+        return evaluated_
+
     def eval(self, **eval_kwargs) -> Any:
         """
 
@@ -204,24 +210,15 @@ class EvalFunction(EvalString):
                 Either the defined helper function is called, or only a dictionary with
                 parsed components is returned (if test=True).
         """
-        args_ = []
         eval_kwargs["apply_imask"] = False
+
+        args_ = []
         for arg in self.args:
-            if isinstance(arg, pp.ParseResults):
-                args_.append(arg[0].eval(**eval_kwargs))
-            try:
-                args_.append(arg.eval(**eval_kwargs))
-            except AttributeError:
-                args_.append(arg)
+            args_.append(self.arg_eval(arg, **eval_kwargs))
 
         kwargs_ = {}
         for kwarg_name, kwarg_val in self.kwargs.items():
-            if isinstance(kwarg_val, pp.ParseResults):
-                kwargs_[kwarg_name] = kwarg_val[0].eval(**eval_kwargs)
-            try:
-                kwargs_[kwarg_name] = kwarg_val.eval(**eval_kwargs)
-            except AttributeError:
-                kwargs_[kwarg_name] = kwarg_val
+            kwargs_[kwarg_name] = self.arg_eval(kwarg_val, **eval_kwargs)
 
         helper_function = self.func_name.eval(**eval_kwargs)
         if eval_kwargs.get("as_dict"):
@@ -305,13 +302,13 @@ class EvalSlicedParameterOrVariable(EvalString):
                 param_or_var_name (str), index_slices (list of strings).
         """
         token_dict = tokens.as_dict()
-        self.name: str = token_dict["param_or_var_name"][0]
+        self.obj_name: pp.ParseResults = token_dict["param_or_var_name"]
         self.index_slices: pp.ParseResults = token_dict["index_slices"]
         self.values = tokens
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
-        return f"SLICED_PARAM_OR_VAR:{self.name}{self.index_slices}"
+        return f"SLICED_{self.obj_name}{self.index_slices}"
 
     @staticmethod
     def merge_dicts_into_one(dicts):
@@ -333,13 +330,16 @@ class EvalSlicedParameterOrVariable(EvalString):
         )
 
         if as_dict:
-            return {"param_or_var_name": self.name, "dimensions": index_slice_names}
+            return {
+                "dimensions": index_slice_names,
+                **self.obj_name.eval(as_dict=True, **eval_kwargs),
+            }
         elif eval_kwargs.get("backend_dataset", None) is not None:
             index_slices = self.merge_dicts_into_one(
                 idx_item.eval(as_dict=False, **eval_kwargs)
                 for idx_item in self.index_slices
             )
-            return eval_kwargs["backend_dataset"][self.name].sel(**index_slices)
+            return self.obj_name.eval(as_dict=False, **eval_kwargs).sel(**index_slices)
         else:
             return None
 
@@ -442,7 +442,7 @@ class EvalUnslicedParameterOrVariable(EvalString):
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
-        return "UNSLICED_PARAM_OR_VAR:" + str(self.name)
+        return "PARAM_OR_VAR:" + str(self.name)
 
     def eval(self, as_dict: bool = False, **eval_kwargs) -> Any:
         """
@@ -574,6 +574,7 @@ def helper_function_parser(
 
 def sliced_param_or_var_parser(
     generic_identifier: pp.ParserElement,
+    unsliced_object: pp.ParserElement,
 ) -> pp.ParserElement:
     """
     Parsing grammar to process strings representing sliced model parameters or variables,
@@ -590,6 +591,9 @@ def sliced_param_or_var_parser(
         generic_identifier (pp.ParserElement):
             Parser for valid python variables without leading underscore and not called "inf".
             This parser has no parse action.
+        unsliced_object (pp.ParserElement):
+            Parser for valid backend objects.
+            On evaluation, this parser will access the backend object from the backend dataset.
 
     Returns:
         pp.ParserElement:
@@ -600,14 +604,13 @@ def sliced_param_or_var_parser(
     lspar = pp.Suppress("[")
     rspar = pp.Suppress("]")
 
-    sliced_param_name = generic_identifier("param_or_var_name")
-
     index_slice = pp.Group(generic_identifier + pp.Suppress("=") + generic_identifier)
     index_slice.set_parse_action(EvalIndexSlices)
 
     index_slices = pp.Group(pp.delimited_list(index_slice))("index_slices")
+    sliced_object_name = unsliced_object("param_or_var_name")
 
-    sliced_param_or_var = pp.Combine(sliced_param_name + lspar) + index_slices + rspar
+    sliced_param_or_var = pp.Combine(sliced_object_name + lspar) + index_slices + rspar
     sliced_param_or_var.set_parse_action(EvalSlicedParameterOrVariable)
 
     return sliced_param_or_var
@@ -636,7 +639,7 @@ def component_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
     return component
 
 
-def unsliced_param_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
+def unsliced_object_parser(valid_object_names: Iterable[str]) -> pp.ParserElement:
     """
     Create a copy of the generic identifier and set a parse action to find the string in
     the list of input paramaters or optimisation decision variables.
@@ -645,6 +648,8 @@ def unsliced_param_parser(generic_identifier: pp.ParserElement) -> pp.ParserElem
         generic_identifier (pp.ParserElement):
             Parser for valid python variables without leading underscore and not called "inf".
             This parser has no parse action.
+        valid_object_names (Iterable[str]): A
+            All backend object names, to ensure they are captured by this parser function.
 
     Returns:
         pp.ParserElement:
@@ -652,7 +657,7 @@ def unsliced_param_parser(generic_identifier: pp.ParserElement) -> pp.ParserElem
             parameter/variable value
     """
 
-    unsliced_param_or_var = generic_identifier.copy()
+    unsliced_param_or_var = pp.one_of(valid_object_names, as_keyword=True)
     unsliced_param_or_var.set_parse_action(EvalUnslicedParameterOrVariable)
 
     return unsliced_param_or_var
@@ -680,11 +685,7 @@ def setup_base_parser_elements() -> tuple[pp.ParserElement, pp.ParserElement]:
 
 
 def arithmetic_parser(
-    helper_function: pp.ParserElement,
-    sliced_param_or_var: pp.ParserElement,
-    component: pp.ParserElement,
-    unsliced_param_or_var: pp.ParserElement,
-    number: pp.ParserElement,
+    *args,
     arithmetic: Optional[pp.Forward] = None,
 ) -> pp.ParserElement:
     """
@@ -709,19 +710,15 @@ def arithmetic_parser(
         pp.ParserElement:
             Parser for strings which use arithmetic operations to combine other parser elements.
     """
-    signop = pp.oneOf(["+", "-"])
-    multop = pp.oneOf(["*", "/"])
+    signop = pp.one_of(["+", "-"])
+    multop = pp.one_of(["*", "/"])
     expop = pp.Literal("**")
     if arithmetic is None:
         arithmetic = pp.Forward()
 
     arithmetic <<= pp.infixNotation(
         # the order matters if two could capture the same string, e.g. "inf".
-        helper_function
-        | sliced_param_or_var
-        | component
-        | number
-        | unsliced_param_or_var,
+        pp.MatchFirst(args),
         [
             (signop, 1, pp.opAssoc.RIGHT, EvalSignOp),
             (expop, 2, pp.opAssoc.LEFT, EvalOperatorOperand),
@@ -749,22 +746,20 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
             Parser for strings of the form "LHS OPERATOR RHS".
     """
 
-    comparison_operators = pp.oneOf(["<=", ">=", "=="])
+    comparison_operators = pp.one_of(["<=", ">=", "=="])
     equation_comparison = arithmetic + comparison_operators + arithmetic
     equation_comparison.set_parse_action(EvalComparisonOp)
 
     return equation_comparison
 
 
-def generate_index_slice_parser():
+def generate_index_slice_parser(valid_object_names):
     number, identifier = setup_base_parser_elements()
-    unsliced_param = unsliced_param_parser(identifier)
-    sliced_param = sliced_param_or_var_parser(identifier)
+    unsliced_param = unsliced_object_parser(valid_object_names)
+    sliced_param = sliced_param_or_var_parser(identifier, unsliced_param)
     evaluatable_identifier = identifier.copy().set_parse_action(GenericStringParser)
     id_list = (
-        pp.Suppress("[")
-        + pp.Group(pp.delimited_list(evaluatable_identifier))
-        + pp.Suppress("]")
+        pp.Suppress("[") + pp.Group(pp.delimited_list(identifier)) + pp.Suppress("]")
     )
 
     helper_function = helper_function_parser(
@@ -773,39 +768,44 @@ def generate_index_slice_parser():
             sliced_param,
             unsliced_param,
             number,
+            id_list,
+            identifier,
         ],
     )
 
     return helper_function | id_list | evaluatable_identifier
 
 
-def generate_arithmetic_parser():
+def generate_arithmetic_parser(valid_object_names):
     number, identifier = setup_base_parser_elements()
-    unsliced_param = unsliced_param_parser(identifier)
-    sliced_param = sliced_param_or_var_parser(identifier)
+    evaluatable_identifier = identifier.copy().set_parse_action(GenericStringParser)
+    unsliced_param = unsliced_object_parser(valid_object_names)
+    sliced_param = sliced_param_or_var_parser(identifier, unsliced_param)
     component = component_parser(identifier)
-    foreach_list = (
-        pp.Suppress("[") + pp.Group(pp.delimited_list(identifier)) + pp.Suppress("]")
+    id_list = (
+        pp.Suppress("[")
+        + pp.Group(pp.delimited_list(evaluatable_identifier))
+        + pp.Suppress("]")
     )
 
     arithmetic = pp.Forward()
     helper_function = helper_function_parser(
         identifier,
-        allowed_parser_elements_in_args=[arithmetic, foreach_list],
+        allowed_parser_elements_in_args=[arithmetic, id_list, evaluatable_identifier],
     )
     arithmetic = arithmetic_parser(
         helper_function,
-        sliced_param,
         component,
-        unsliced_param,
+        sliced_param,
         number,
+        unsliced_param,
         arithmetic=arithmetic,
     )
     return arithmetic
 
 
-def generate_equation_parser():
-    arithmetic = generate_arithmetic_parser()
+def generate_equation_parser(valid_object_names):
+    arithmetic = generate_arithmetic_parser(valid_object_names)
     equation_comparison = equation_comparison_parser(arithmetic)
 
     return equation_comparison

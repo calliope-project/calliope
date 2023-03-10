@@ -141,6 +141,7 @@ def dummy_model_data():
             "all_true": (["nodes", "techs"], np.ones((2, 4)).astype(bool)),
             "all_true_carriers": (["carriers", "techs"], np.ones((2, 4)).astype(bool)),
             "nodes_true": (["nodes"], [True, True]),
+            "nodes_false": (["nodes"], [False, False]),
             "with_inf_as_bool": (
                 ["nodes", "techs"],
                 [[True, False, True, True], [False, True, True, False]],

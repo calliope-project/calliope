@@ -29,18 +29,23 @@ def component_obj():
 
 
 @pytest.fixture
-def expression_parser():
-    return equation_parser.generate_equation_parser()
+def valid_object_names(dummy_model_data):
+    return ["foo", "bar", "baz", "foobar", *dummy_model_data.data_vars.keys()]
 
 
 @pytest.fixture
-def index_slice_parser():
-    return equation_parser.generate_index_slice_parser()
+def expression_parser(valid_object_names):
+    return equation_parser.generate_equation_parser(valid_object_names)
 
 
 @pytest.fixture
-def component_parser():
-    return equation_parser.generate_arithmetic_parser()
+def index_slice_parser(valid_object_names):
+    return equation_parser.generate_index_slice_parser(valid_object_names)
+
+
+@pytest.fixture
+def component_parser(valid_object_names):
+    return equation_parser.generate_arithmetic_parser(valid_object_names)
 
 
 @pytest.fixture
@@ -249,7 +254,7 @@ def dummy_backend_interface(dummy_model_data):
 
 
 @pytest.fixture(scope="function")
-def evaluatable_component_obj():
+def evaluatable_component_obj(valid_object_names):
     def _evaluatable_component_obj(equation_expressions):
         if isinstance(equation_expressions, list):
             equations = f"equations: {equation_expressions}"
@@ -270,7 +275,7 @@ def evaluatable_component_obj():
             def __init__(self, dict_, name):
                 parsing.ParsedBackendComponent.__init__(self, dict_, name)
                 self.equations = self.parse_equations(
-                    equation_parser.generate_equation_parser()
+                    equation_parser.generate_equation_parser, valid_object_names
                 )
 
         return DummyParsedBackendComponent(component_dict, "foo")
@@ -584,11 +589,14 @@ class TestParsedComponent:
         self,
         obj_with_components_and_index_slices,
         expression_parser,
+        valid_object_names,
         eq_string,
         expected_n_equations,
     ):
         parsed_equation = obj_with_components_and_index_slices(eq_string)
-        parsed_equations = parsed_equation.parse_equations(expression_parser)
+        parsed_equations = parsed_equation.parse_equations(
+            equation_parser.generate_equation_parser, valid_object_names
+        )
 
         assert len(parsed_equations) == expected_n_equations
         assert len(set(eq.name for eq in parsed_equations)) == expected_n_equations
@@ -888,7 +896,7 @@ class TestParsedConstraint:
         }
         parsed_ = parsing.ParsedBackendComponent(dict_, "foo")
         parsed_.equations = parsed_.parse_equations(
-            equation_parser.generate_equation_parser()
+            equation_parser.generate_equation_parser, ["only_techs"]
         )
         return parsed_
 
@@ -940,7 +948,7 @@ class TestParsedObjective:
 
         parsed_ = parsing.ParsedBackendComponent(dict_, "foo")
         parsed_.equations = parsed_.parse_equations(
-            equation_parser.generate_arithmetic_parser()
+            equation_parser.generate_arithmetic_parser, ["only_techs", "bar"]
         )
         return parsed_
 

@@ -34,13 +34,28 @@ def identifier(base_parser_elements):
 
 
 @pytest.fixture
-def unsliced_param(identifier):
-    return equation_parser.unsliced_param_parser(identifier)
+def unsliced_param():
+    def _unsliced_param(valid_object_names):
+        return equation_parser.unsliced_object_parser(valid_object_names)
+
+    return _unsliced_param
 
 
 @pytest.fixture
-def sliced_param(identifier):
-    return equation_parser.sliced_param_or_var_parser(identifier)
+def valid_object_names():
+    return ["foo", "foo_bar", "bar"]
+
+
+@pytest.fixture
+def unsliced_param_with_obj_names(unsliced_param, valid_object_names):
+    return unsliced_param(valid_object_names)
+
+
+@pytest.fixture
+def sliced_param(identifier, unsliced_param_with_obj_names):
+    return equation_parser.sliced_param_or_var_parser(
+        identifier, unsliced_param_with_obj_names
+    )
 
 
 @pytest.fixture
@@ -55,14 +70,19 @@ def foreach_list(identifier):
 
 @pytest.fixture
 def helper_function(
-    number, sliced_param, component, unsliced_param, identifier, foreach_list
+    number,
+    sliced_param,
+    component,
+    unsliced_param_with_obj_names,
+    identifier,
+    foreach_list,
 ):
     return equation_parser.helper_function_parser(
         identifier,
         allowed_parser_elements_in_args=[
             sliced_param,
             component,
-            unsliced_param,
+            unsliced_param_with_obj_names,
             number,
             foreach_list,
         ],
@@ -72,14 +92,19 @@ def helper_function(
 
 @pytest.fixture
 def helper_function_no_nesting(
-    number, sliced_param, component, unsliced_param, identifier, foreach_list
+    number,
+    sliced_param,
+    component,
+    unsliced_param_with_obj_names,
+    identifier,
+    foreach_list,
 ):
     return equation_parser.helper_function_parser(
         identifier,
         allowed_parser_elements_in_args=[
             sliced_param,
             component,
-            unsliced_param,
+            unsliced_param_with_obj_names,
             number,
             foreach_list,
         ],
@@ -92,7 +117,7 @@ def helper_function_no_nesting(
         ("number", "1.0", ["$foo", "foo", "foo[bars=bar]"]),
         ("sliced_param", "foo[bars=bar]", ["1.0", "foo", "$foo"]),
         ("component", "$foo", ["1.0", "foo", "foo[bars=bar]"]),
-        ("unsliced_param", "foo", ["1.0", "$foo", "foo[bars=bar]"]),
+        ("unsliced_param_with_obj_names", "foo", ["1.0", "$foo", "foo[bars=bar]"]),
     ]
 )
 def helper_function_one_parser_in_args(identifier, request):
@@ -122,9 +147,11 @@ def eval_kwargs():
 
 
 @pytest.fixture
-def arithmetic(helper_function, number, sliced_param, component, unsliced_param):
+def arithmetic(
+    helper_function, number, sliced_param, component, unsliced_param_with_obj_names
+):
     return equation_parser.arithmetic_parser(
-        helper_function, sliced_param, component, unsliced_param, number
+        helper_function, sliced_param, component, unsliced_param_with_obj_names, number
     )
 
 
@@ -133,7 +160,7 @@ def helper_function_allow_arithmetic(
     number,
     sliced_param,
     component,
-    unsliced_param,
+    unsliced_param_with_obj_names,
     identifier,
     arithmetic,
     foreach_list,
@@ -147,7 +174,7 @@ def helper_function_allow_arithmetic(
         helper_func,
         sliced_param,
         component,
-        unsliced_param,
+        unsliced_param_with_obj_names,
         number,
         arithmetic=arithmetic,
     )
@@ -159,8 +186,8 @@ def equation_comparison(arithmetic):
 
 
 @pytest.fixture
-def generate_equation():
-    return equation_parser.generate_equation_parser()
+def generate_equation(valid_object_names):
+    return equation_parser.generate_equation_parser(valid_object_names)
 
 
 class TestEquationParserElements:
@@ -218,14 +245,9 @@ class TestEquationParserElements:
             "FOO__",
         ],
     )
-    @pytest.mark.parametrize("parser", ["identifier", "unsliced_param"])
-    def test_identifiers(self, string_val, parser, request):
-        parser_ = request.getfixturevalue(parser)
-        parsed_ = parser_.parse_string(string_val, parse_all=True)
-        if parser == "identifier":
-            assert parsed_[0] == string_val
-        elif parser == "unsliced_param":
-            assert parsed_[0].eval(as_dict=True) == {"param_or_var_name": string_val}
+    def test_identifiers(self, string_val, identifier):
+        parsed_ = identifier.parse_string(string_val, parse_all=True)
+        assert parsed_[0] == string_val
 
     @pytest.mark.parametrize(
         "string_val",
@@ -248,11 +270,19 @@ class TestEquationParserElements:
             "__type__",  # leading underscores not allowed
         ],
     )
-    @pytest.mark.parametrize("parser", ["identifier", "unsliced_param"])
-    def test_fail_identifiers(self, string_val, parser, request):
-        parser_ = request.getfixturevalue(parser)
+    def test_fail_identifiers(self, string_val, identifier):
         with pytest.raises(pp.ParseException):
-            parser_.parse_string(string_val, parse_all=True)
+            identifier.parse_string(string_val, parse_all=True)
+
+    @pytest.mark.parametrize("string_val", ["foo", "foo_bar"])
+    def test_unsliced_param(self, unsliced_param_with_obj_names, string_val):
+        parsed_ = unsliced_param_with_obj_names.parse_string(string_val, parse_all=True)
+        assert parsed_[0].eval(as_dict=True) == {"param_or_var_name": string_val}
+
+    @pytest.mark.parametrize("string_val", ["Foo", "foobar"])
+    def test_unsliced_param_fail(self, unsliced_param_with_obj_names, string_val):
+        with pytest.raises(pp.ParseException):
+            unsliced_param_with_obj_names.parse_string(string_val, parse_all=True)
 
     @pytest.mark.parametrize(
         ["string_val", "expected"],
@@ -276,6 +306,7 @@ class TestEquationParserElements:
     @pytest.mark.parametrize(
         "string_val",
         [
+            "foobar[bars=bar]",  # name not in allowed list
             "foo [bars=bar]",  # space between param name and slicing
             "foo[techs=tech bars=bar]",  # missing delimination
             "foo[]",  # missing set and index slice
@@ -632,9 +663,9 @@ class TestEquationParserArithmetic:
 
     @pytest.mark.parametrize("number_", numbers)
     @pytest.mark.parametrize("component_", ["$foo", "$bar1"])
-    @pytest.mark.parametrize("unsliced_param_", ["foo", "bar1"])
+    @pytest.mark.parametrize("unsliced_param_", ["foo", "bar"])
     @pytest.mark.parametrize(
-        "sliced_param_", ["foo[bars=bar]", "bar1[foos=foo, bars=bar]"]
+        "sliced_param_", ["foo[bars=bar]", "bar[foos=foo, bars=bar]"]
     )
     @pytest.mark.parametrize(
         "helper_function_", ["foo(1)", "bar1(foo, $foo, bar[foos=foo], x=1)"]
@@ -699,8 +730,8 @@ class TestEquationParserArithmetic:
     def test_repr(self, arithmetic):
         parse_string = "1 + foo - foo[foos=foo] + (foo / $foo) ** -2"
         expected = (
-            "(NUM:1 + UNSLICED_PARAM_OR_VAR:foo - SLICED_PARAM_OR_VAR:foo[FOOS:foo]"
-            " + ((UNSLICED_PARAM_OR_VAR:foo / COMPONENT:foo) ** (-)NUM:2))"
+            "(NUM:1 + PARAM_OR_VAR:foo - SLICED_PARAM_OR_VAR:foo[FOOS:foo]"
+            " + ((PARAM_OR_VAR:foo / COMPONENT:foo) ** (-)NUM:2))"
         )
         parsed_ = arithmetic.parse_string(parse_string, parse_all=True)
         assert str(parsed_[0]) == expected
@@ -714,7 +745,7 @@ class TestEquationParserComparison:
         "1/2": 0.5,
         "2**2": 4,
         ".inf": np.inf,
-        "param_1": {"param_or_var_name": "param_1"},
+        "foo_bar": {"param_or_var_name": "foo_bar"},
         "foo[foos=foo, bars=bar]": {
             "param_or_var_name": "foo",
             "dimensions": {"foo": "foos", "bar": "bars"},
@@ -834,8 +865,8 @@ class TestEquationParserComparison:
     def test_repr(self, equation_comparison):
         parse_string = "1 + foo - foo[foos=foo] >= (foo / $foo) ** -2"
         expected = (
-            "(NUM:1 + UNSLICED_PARAM_OR_VAR:foo - SLICED_PARAM_OR_VAR:foo[FOOS:foo])"
-            " >= ((UNSLICED_PARAM_OR_VAR:foo / COMPONENT:foo) ** (-)NUM:2)"
+            "(NUM:1 + PARAM_OR_VAR:foo - SLICED_PARAM_OR_VAR:foo[FOOS:foo])"
+            " >= ((PARAM_OR_VAR:foo / COMPONENT:foo) ** (-)NUM:2)"
         )
         parsed_ = equation_comparison.parse_string(parse_string, parse_all=True)
         assert str(parsed_[0]) == expected
