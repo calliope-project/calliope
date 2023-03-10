@@ -444,12 +444,13 @@ class EvalUnslicedParameterOrVariable(EvalString):
         "Return string representation of the parsed grammar"
         return "PARAM_OR_VAR:" + str(self.name)
 
-    def eval(self, as_dict: bool = False, **eval_kwargs) -> Any:
+    def eval(self, references: set, as_dict: bool = False, **eval_kwargs) -> Any:
         """
         Returns:
             Any: If testing, return a dictionary with the parsed string, otherwise
             a backend model object matching the same name
         """
+        references.add(self.name)
         if as_dict:
             return {"param_or_var_name": self.name}
         elif eval_kwargs.get("backend_dataset", None) is not None:

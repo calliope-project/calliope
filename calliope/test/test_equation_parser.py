@@ -143,6 +143,7 @@ def eval_kwargs():
         "component_dict": {},
         "equation_name": "foobar",
         "apply_imask": False,
+        "references": set(),
     }
 
 
@@ -277,7 +278,15 @@ class TestEquationParserElements:
     @pytest.mark.parametrize("string_val", ["foo", "foo_bar"])
     def test_unsliced_param(self, unsliced_param_with_obj_names, string_val):
         parsed_ = unsliced_param_with_obj_names.parse_string(string_val, parse_all=True)
-        assert parsed_[0].eval(as_dict=True) == {"param_or_var_name": string_val}
+        assert parsed_[0].eval(references=set(), as_dict=True) == {
+            "param_or_var_name": string_val
+        }
+
+    def test_unsliced_param_references(self, unsliced_param_with_obj_names):
+        references = set()
+        parsed_ = unsliced_param_with_obj_names.parse_string("foo", parse_all=True)
+        parsed_[0].eval(references=references, as_dict=True)
+        assert references == {"foo"}
 
     @pytest.mark.parametrize("string_val", ["Foo", "foobar"])
     def test_unsliced_param_fail(self, unsliced_param_with_obj_names, string_val):

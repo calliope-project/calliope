@@ -913,10 +913,12 @@ class TestParsedConstraint:
         self, constraint_obj, dummy_model_data, dummy_backend_interface
     ):
         valid_imask = constraint_obj.equations[1].evaluate_where(dummy_model_data)
+        references = set()
         comparison_tuple = constraint_obj.equations[1].evaluate_expression(
-            dummy_model_data, dummy_backend_interface, valid_imask
+            dummy_model_data, dummy_backend_interface, valid_imask, references
         )
         assert apply_comparison(comparison_tuple).sum() == 1
+        assert references == {"only_techs"}
 
 
 class TestParsedVariable:

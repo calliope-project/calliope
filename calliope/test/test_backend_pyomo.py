@@ -8,6 +8,7 @@ import numpy as np
 import pyomo.core as po
 import pyomo.kernel as pmo
 import logging
+import xarray as xr
 
 import calliope.exceptions as exceptions
 from calliope.core.attrdict import AttrDict
@@ -1897,6 +1898,15 @@ class TestNewBackend:
         assert (
             var.to_series().dropna().apply(lambda x: isinstance(x, pmo.variable)).all()
         )
+        assert var.attrs == {
+            "variables": 1,
+            "references": {
+                "carrier_consumption_max",
+                "carrier_production_max",
+                "cost_investment",
+                "symmetric_transmission",
+            },
+        }
 
     def test_new_build_get_variable_as_vals(self, simple_supply_new_build):
         var = simple_supply_new_build.backend.get_variable(
@@ -1917,6 +1927,11 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.parameter))
             .all()
         )
+        assert param.attrs == {
+            "parameters": 1,
+            "is_result": 0,
+            "references": {"balance_demand", "balance_transmission"},
+        }
 
     def test_new_build_get_parameter_as_vals(self, simple_supply_new_build):
         param = simple_supply_new_build.backend.get_parameter(
@@ -1930,13 +1945,14 @@ class TestNewBackend:
         )
 
     def test_new_build_get_expression(self, simple_supply_new_build):
-        expr = simple_supply_new_build.backend.get_expression("cost")
+        expr = simple_supply_new_build.backend.get_expression("cost_investment")
         assert (
             expr.to_series()
             .dropna()
             .apply(lambda x: isinstance(x, pmo.expression))
             .all()
         )
+        assert expr.attrs == {"expressions": 1, "references": {"cost"}}
 
     def test_new_build_get_expression_as_str(self, simple_supply_new_build):
         expr = simple_supply_new_build.backend.get_expression(
@@ -1960,6 +1976,7 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.constraint))
             .all()
         )
+        assert constr.attrs == {"constraints": 1, "references": set()}
 
     def test_new_build_get_constraint_as_str(self, simple_supply_new_build):
         constr = simple_supply_new_build.backend.get_constraint(
@@ -2034,3 +2051,23 @@ class TestNewBackend:
         )
         assert not simple_supply_new_build.results
         assert "energy_cap" not in simple_supply_new_build._model_data.data_vars
+
+    def test_raise_error_on_preexistence_same_type(self, simple_supply_new_build):
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            simple_supply_new_build.backend.add_parameter("energy_eff", xr.DataArray(1))
+
+        assert check_error_or_warning(
+            excinfo,
+            "Trying to add already existing `energy_eff` to backend model parameters.",
+        )
+
+    def test_raise_error_on_preexistence_diff_type(self, simple_supply_new_build):
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            simple_supply_new_build.backend.add_parameter(
+                "carrier_prod", xr.DataArray(1)
+            )
+
+        assert check_error_or_warning(
+            excinfo,
+            "Trying to add already existing *variable* `carrier_prod` as a backend model *parameter*.",
+        )

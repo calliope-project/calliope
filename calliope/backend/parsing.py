@@ -279,6 +279,7 @@ class ParsedBackendEquation:
         model_data: xr.Dataset,
         backend_interface: backends.BackendModel,
         imask: xr.DataArray,
+        references: Optional[set] = None,
     ):
         return self.expression[0].eval(
             equation_name=self.name,
@@ -289,6 +290,7 @@ class ParsedBackendEquation:
             helper_func_dict=VALID_EXPRESSION_HELPER_FUNCTIONS,
             model_data=model_data,
             imask=imask,
+            references=references if references is not None else set(),
             as_dict=False,
         )
 

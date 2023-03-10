@@ -433,7 +433,7 @@ class BackendModel(ABC, Generic[T]):
         name: str,
         da: xr.DataArray,
         obj_type: _COMPONENTS_T,
-        allow_in_arithmetic: bool = True,
+        references: Optional[set] = None,
     ):
         """
         Add array of backend objects to backend dataset in-place.
@@ -442,13 +442,16 @@ class BackendModel(ABC, Generic[T]):
             name (str): Name of entry in dataset.
             da (xr.DataArray): Data to add.
             obj_type (str): Type of backend objects in the array.
-            allow_in_arithmetic (bool):
-                If True, allow this array to be visible to the equation and arithmetic parser.
-                Defaults to False.
+            references (set):
+                All other backend objects which are references in this backend object's linear expression(s).
+                E.g. the constraint "carrier_prod / energy_eff <= energy_cap" references the variables ["carrier_prod", "energy_cap"]
+                and the parameter ["energy_eff"].
+                All referenced objects will have their "references" attribute updated with this object's name.
         """
-        self._dataset[name] = da.assign_attrs(
-            {obj_type: 1, "allow_in_arithmetic": allow_in_arithmetic}
-        )
+        self._dataset[name] = da.assign_attrs({obj_type: 1, "references": set()})
+        if references is not None:
+            for reference in references:
+                self._dataset[reference].attrs["references"].add(name)
 
     @property
     def constraints(self):
@@ -633,12 +636,7 @@ class PyomoBackendModel(BackendModel):
         objective = pmo.objective(expr, sense=sense_dict[objective_dict["sense"]])
         self._instance.objectives.append(objective)
 
-        self._add_to_dataset(
-            objective_name,
-            xr.DataArray(objective),
-            "objectives",
-            allow_in_arithmetic=False,
-        )
+        self._add_to_dataset(objective_name, xr.DataArray(objective), "objectives")
 
     def get_parameter(
         self, parameter_name: str, as_backend_objs: bool = True
@@ -788,7 +786,7 @@ class PyomoBackendModel(BackendModel):
             component_dict, component_name
         )
         top_level_imask = parsed_component.evaluate_where(model_data)
-
+        references = set()
         if not top_level_imask.any():
             component_da = xr.DataArray(None)
         else:
@@ -812,16 +810,14 @@ class PyomoBackendModel(BackendModel):
                         f"{component_type.removesuffix('s')} `{component_name}`:\n{subset_overlap}"
                     )
 
-                expr = element.evaluate_expression(model_data, self, imask)
+                expr = element.evaluate_expression(model_data, self, imask, references)
                 to_fill = component_setter(imask, expr)
                 component_da = component_da.fillna(to_fill)
 
             if component_da.isnull().all():
                 component_da = xr.DataArray(None)
-        allow_in_arithmetic = False if component_type == "constraints" else True
-        self._add_to_dataset(
-            component_name, component_da, component_type, allow_in_arithmetic
-        )
+
+        self._add_to_dataset(component_name, component_da, component_type, references)
 
     def _get_capacity_bounds(
         self, bounds: parsing.UnparsedVariableBoundDict, name: str
