@@ -85,9 +85,9 @@ def test_get_connected_link(dummy_model_data):
 
 
 @pytest.mark.parametrize(["ix", "expected"], [(0, "foo"), (1, "bar"), (-1, "bar")])
-def test_get_timestep(dummy_model_data, ix, expected):
-    get_timestep = helper_functions.get_timestep(dummy_model_data)
-    assert get_timestep(ix) == expected
+def test_get_val_at_index(dummy_model_data, ix, expected):
+    get_val_at_index = helper_functions.get_val_at_index(dummy_model_data)
+    assert get_val_at_index(dim="timesteps", idx=ix) == expected
 
 
 @pytest.mark.parametrize(["to_roll", "expected"], [(1, 3), (1.0, 3), (-3.0, 3)])

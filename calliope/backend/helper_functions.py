@@ -99,11 +99,11 @@ def get_connected_link(model_data, **kwargs):
     return _get_connected_link
 
 
-def get_timestep(model_data, **kwargs):
-    def _get_timestep(ix):
-        return model_data.timesteps[int(ix)]
+def get_val_at_index(model_data, **kwargs):
+    def _get_val_at_index(*, dim, idx):
+        return model_data.coords[dim][int(idx)]
 
-    return _get_timestep
+    return _get_val_at_index
 
 
 def roll(**kwargs):

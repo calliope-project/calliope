@@ -366,7 +366,7 @@ class EvalIndexSlice(EvalString):
         if eval_kwargs.get("as_dict"):
             return {"index_slice_reference": self.name}
         elif index_slice_dict is not None:
-            return index_slice_dict[self.name][0].eval(**eval_kwargs)
+            return index_slice_dict[self.name][0].eval(as_values=True, **eval_kwargs)
 
 
 class EvalComponent(EvalString):
@@ -426,9 +426,18 @@ class EvalUnslicedParameterOrVariable(EvalString):
         return "PARAM_OR_VAR:" + str(self.name)
 
     def eval(
-        self, references: set, as_dict: bool = False, **eval_kwargs
+        self,
+        references: set,
+        as_dict: bool = False,
+        as_values: bool = False,
+        **eval_kwargs,
     ) -> Optional[Union[dict, xr.DataArray]]:
         """
+        Args:
+            references (set):
+            as_dict (bool, optional):
+            as_values(bool, optional):
+                If True, return values rather than backend objects
         Returns:
             Optional[Union[dict, xr.DataArray]]:
                 If `eval_kwargs["as_dict"]` is True, returns separated key:val pairs for parameter/variable name and index items;
@@ -439,7 +448,12 @@ class EvalUnslicedParameterOrVariable(EvalString):
         if as_dict:
             return {"param_or_var_name": self.name}
         elif eval_kwargs.get("backend_dataset", None) is not None:
-            return eval_kwargs["backend_dataset"][self.name]
+            if as_values:
+                return eval_kwargs["backend_interface"].get_parameter(
+                    self.name, as_backend_objs=False
+                )
+            else:
+                return eval_kwargs["backend_dataset"][self.name]
 
 
 class EvalNumber(EvalString):

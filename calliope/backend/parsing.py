@@ -19,13 +19,13 @@ VALID_EXPRESSION_HELPER_FUNCTIONS: dict[str, Callable] = {
     "squeeze_carriers": helper_functions.squeeze_carriers,
     "squeeze_primary_carriers": helper_functions.squeeze_primary_carriers,
     "get_connected_link": helper_functions.get_connected_link,
-    "get_timestep": helper_functions.get_timestep,
+    "get_val_at_index": helper_functions.get_val_at_index,
     "roll": helper_functions.roll,
 }
 VALID_IMASK_HELPER_FUNCTIONS: dict[str, Callable] = {
     "inheritance": helper_functions.inheritance,
     "sum": helper_functions.imask_sum,
-    "get_timestep": helper_functions.get_timestep,
+    "get_val_at_index": helper_functions.get_val_at_index,
 }
 
 
@@ -35,6 +35,7 @@ class UnparsedEquationDict(TypedDict):
 
 
 class UnparsedConstraintDict(TypedDict):
+    name: Required[str]
     foreach: Required[list]
     where: str
     equation: NotRequired[str]
@@ -51,6 +52,7 @@ class UnparsedVariableBoundDict(TypedDict):
 
 
 class UnparsedVariableDict(TypedDict):
+    name: Required[str]
     foreach: list[str]
     where: str
     domain: NotRequired[str]
@@ -58,6 +60,7 @@ class UnparsedVariableDict(TypedDict):
 
 
 class UnparsedObjectiveDict(TypedDict):
+    name: Required[str]
     equation: NotRequired[str]
     equations: NotRequired[list[UnparsedEquationDict]]
     components: NotRequired[dict[str, list[UnparsedEquationDict]]]
@@ -238,7 +241,7 @@ class ParsedBackendEquation:
         Returns:
             xr.DataArray: _description_
         """
-        foreach_imask = self._evaluate_foreach(model_data)
+
         evaluated_wheres = [
             where[0].eval(
                 model_data=model_data, helper_func_dict=VALID_IMASK_HELPER_FUNCTIONS
@@ -247,44 +250,14 @@ class ParsedBackendEquation:
         ]
 
         imask: xr.DataArray = functools.reduce(
-            operator.and_, [foreach_imask, initial_imask, *evaluated_wheres]
+            operator.and_, [initial_imask, *evaluated_wheres]
         )
 
-        if isinstance(imask, xr.DataArray):
-            # Squeeze out any unwanted dimensions
-            unwanted_dims = set(imask.dims).difference(self.sets)
-            imask = (imask.sum(unwanted_dims) > 0).astype(bool)
-        else:
-            imask = xr.DataArray(imask)
+        return xr.DataArray(imask)
 
-        return imask
-
-    def _evaluate_foreach(self, model_data: xr.Dataset) -> xr.DataArray:
-        """
-        Generate a multi-dimensional imasking array based on the sets
-        over which the constraint is to be built (defined by "foreach").
-        Irrespective of the sets defined by "foreach", this array will always include
-        ["nodes", "techs", "carriers", "carrier_tiers"] to ensure only valid combinations
-        of technologies consuming/producing specific carriers at specific nodes are included in later imasking.
-
-        Args:
-            model_data (xr.Dataset): Calliope model dataset.
-
-        Returns:
-            xr.DataArray: imasking boolean array.
-        """
-        # Start with (carriers, carrier_tiers, nodes, techs) and go from there
-        initial_imask = model_data.carrier.notnull() * model_data.node_tech.notnull()
-        # Add other dimensions (costs, timesteps, etc.)
-        add_dims = set(self.sets).difference(initial_imask.dims)
-        if add_dims.difference(model_data.dims):
-            raise exceptions.BackendError(
-                "Unidentified model set name(s) defined: "
-                f"`{add_dims.difference(model_data.dims)}`."
-            )
-        all_imasks = [initial_imask, *[model_data[i].notnull() for i in add_dims]]
-
-        return functools.reduce(operator.and_, all_imasks)
+    def align_imask_with_sets(self, imask: xr.DataArray):
+        unwanted_dims = set(imask.dims).difference(self.sets)
+        return (imask.sum(unwanted_dims) > 0).astype(bool)
 
     def evaluate_expression(
         self,
@@ -297,6 +270,7 @@ class ParsedBackendEquation:
             equation_name=self.name,
             index_slice_dict=self.index_slices,
             component_dict=self.components,
+            backend_interface=backend_interface,
             backend_dataset=backend_interface._dataset,
             helper_func_dict=VALID_EXPRESSION_HELPER_FUNCTIONS,
             model_data=model_data,
@@ -313,26 +287,33 @@ class ParsedBackendComponent(ParsedBackendEquation):
     interface like Pyomo or Gurobipy.
     """
 
-    def __init__(self, unparsed_data: T, component_name: str) -> None:
-        self.name: str = component_name
+    def __init__(self, unparsed_data: T) -> None:
+        self.name: str = unparsed_data["name"]
         self._unparsed: dict = dict(unparsed_data)
+
+        self.where: list[pp.ParseResults] = []
+        self.equations: list[ParsedBackendEquation] = []
 
         # capture errors to dump after processing,
         # to make it easier for a user to fix the constraint YAML.
         self._errors: set = set()
 
-        # Add objects that are used by shared functions
-        self.sets: list[str] = unparsed_data.get("foreach", [])  # type:ignore
-        top_level_where = self.parse_where_string(self._unparsed.get("where", "True"))
-        if top_level_where is not None:
-            self.where: list[pp.ParseResults] = [top_level_where]
-        else:
-            self.where = []
-        self.equations: list[ParsedBackendEquation] = []
-
         # Initialise switches
         self._is_valid: bool = True
-        self._is_active: bool = True
+        self._is_active: bool = self._unparsed.get("active", True)
+
+        # Add objects that are used by shared functions
+        self.sets: list[str] = unparsed_data.get("foreach", [])  # type:ignore
+
+    def parse_top_level_where(self):
+        top_level_where = self.parse_where_string(self._unparsed.get("where", "True"))
+
+        if not self._is_valid:
+            exceptions.print_warnings_and_raise_errors(
+                errors=self._errors, during="string parsing"
+            )
+        elif top_level_where is not None:
+            self.where = [top_level_where]
 
     def parse_equations(
         self,
@@ -415,9 +396,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         self,
         parser: pp.ParserElement,
         parse_string: str,
-        expression_group: Literal[
-            "foreach", "where", "equations", "components", "index_slices"
-        ],
+        expression_group: Literal["where", "equations", "components", "index_slices"],
     ) -> Optional[pp.ParseResults]:
         """
         Parse equation string according to predefined string parsing grammar
@@ -549,3 +528,31 @@ class ParsedBackendComponent(ParsedBackendEquation):
             )
             for parsed_item_combination in parsed_item_product
         ]
+
+    def evaluate_foreach(self, model_data: xr.Dataset) -> xr.DataArray:
+        """
+        Generate a multi-dimensional imasking array based on the sets
+        over which the constraint is to be built (defined by "foreach").
+        Irrespective of the sets defined by "foreach", this array will always include
+        ["nodes", "techs", "carriers", "carrier_tiers"] to ensure only valid combinations
+        of technologies consuming/producing specific carriers at specific nodes are included in later imasking.
+
+        Args:
+            model_data (xr.Dataset): Calliope model dataset.
+
+        Returns:
+            xr.DataArray: imasking boolean array.
+        """
+        # Start with (carriers, carrier_tiers, nodes, techs) and go from there
+        initial_imask = model_data.carrier.notnull() * model_data.node_tech.notnull()
+        # Add other dimensions (costs, timesteps, etc.)
+        add_dims = set(self.sets).difference(initial_imask.dims)
+        if add_dims.difference(model_data.dims):
+            exceptions.warn(
+                f"Not generating optimisation problem object `{self.name}` because it is "
+                f"indexed over unidentified set name(s): `{add_dims.difference(model_data.dims)}`.",
+                _class=exceptions.BackendWarning,
+            )
+            return xr.DataArray(False)
+        all_imasks = [initial_imask, *[model_data[i].notnull() for i in add_dims]]
+        return functools.reduce(operator.and_, all_imasks)

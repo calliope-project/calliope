@@ -21,11 +21,19 @@ def string_to_dict(yaml_string):
 @pytest.fixture(scope="function")
 def component_obj():
     setup_string = """
+    name: foo
     foreach: [A, A1]
+    where: "True"
     equation: 1 == 1
     """
     variable_data = string_to_dict(setup_string)
-    return parsing.ParsedBackendComponent(variable_data, "foo")
+    return parsing.ParsedBackendComponent(variable_data)
+
+
+@pytest.fixture(scope="function")
+def foreach_imask(component_obj, dummy_model_data):
+    component_obj.sets = ["nodes", "techs"]
+    return component_obj.evaluate_foreach(dummy_model_data)
 
 
 @pytest.fixture
@@ -135,6 +143,7 @@ def obj_with_components_and_index_slices():
         elif isinstance(equation_string, str):
             equation_string = f"equation: {equation_string}"
         string_ = f"""
+            name: my_constraint
             foreach: [A, techs, A1]
             {equation_string}
             components:
@@ -161,7 +170,7 @@ def obj_with_components_and_index_slices():
                       where: techs4
             """
 
-        return parsing.ParsedBackendComponent(string_to_dict(string_), "my_constraint")
+        return parsing.ParsedBackendComponent(string_to_dict(string_))
 
     return _obj_with_components_and_index_slices
 
@@ -257,6 +266,7 @@ def evaluatable_component_obj(valid_object_names):
         elif isinstance(equation_expressions, str):
             equations = f"equation: {equation_expressions}"
         setup_string = f"""
+        name: foo
         foreach: [techs, nodes]
         where: with_inf
         {equations}
@@ -268,13 +278,14 @@ def evaluatable_component_obj(valid_object_names):
         component_dict = string_to_dict(setup_string)
 
         class DummyParsedBackendComponent(parsing.ParsedBackendComponent):
-            def __init__(self, dict_, name):
-                parsing.ParsedBackendComponent.__init__(self, dict_, name)
+            def __init__(self, dict_):
+                parsing.ParsedBackendComponent.__init__(self, dict_)
+                self.parse_top_level_where()
                 self.equations = self.parse_equations(
                     equation_parser.generate_equation_parser, valid_object_names
                 )
 
-        return DummyParsedBackendComponent(component_dict, "foo")
+        return DummyParsedBackendComponent(component_dict)
 
     return _evaluatable_component_obj
 
@@ -293,12 +304,14 @@ def evaluatable_component_obj(valid_object_names):
 )
 def evaluate_component_where(evaluatable_component_obj, dummy_model_data, request):
     component_obj = evaluatable_component_obj(request.param[0])
-    top_level_imask = component_obj.evaluate_where(dummy_model_data)
+    foreach_imask = component_obj.evaluate_foreach(dummy_model_data)
+    top_level_imask = component_obj.evaluate_where(dummy_model_data, foreach_imask)
     equation_imask = component_obj.equations[0].evaluate_where(
-        dummy_model_data, initial_imask=top_level_imask
+        dummy_model_data, top_level_imask
     )
+    equation_imask_squeezed = component_obj.align_imask_with_sets(equation_imask)
 
-    return component_obj, equation_imask, request.param[1]
+    return component_obj, equation_imask_squeezed, request.param[1]
 
 
 @pytest.fixture
@@ -588,7 +601,6 @@ class TestParsedComponent:
     def test_parse_equations(
         self,
         obj_with_components_and_index_slices,
-        expression_parser,
         valid_object_names,
         eq_string,
         expected_n_equations,
@@ -600,6 +612,28 @@ class TestParsedComponent:
 
         assert len(parsed_equations) == expected_n_equations
         assert len(set(eq.name for eq in parsed_equations)) == expected_n_equations
+
+    def test_evaluate_foreach_all_permutations(
+        self, dummy_model_data, component_obj, foreach
+    ):
+        component_obj.sets = foreach
+        imask = component_obj.evaluate_foreach(dummy_model_data)
+
+        assert not BASE_DIMS.difference(imask.dims)
+        assert not set(foreach).difference(imask.dims)
+
+    def test_imask_foreach_unidentified_name(self, dummy_model_data, component_obj):
+        component_obj.sets = ["nodes", "techs", "foos"]
+        with pytest.warns(calliope.exceptions.BackendWarning) as excinfo:
+            component_obj.evaluate_foreach(dummy_model_data)
+        assert check_error_or_warning(
+            excinfo, "Not generating optimisation problem object `foo`"
+        )
+
+    def test_evaluate_where_no_imasking(self, dummy_model_data, component_obj):
+        component_obj.parse_top_level_where()
+        imask = component_obj.evaluate_where(dummy_model_data)
+        assert imask.item() == True
 
 
 class TestParsedBackendEquation:
@@ -770,43 +804,6 @@ class TestParsedBackendEquation:
             "bam": obj2.expression,
         }
 
-    def test_evaluate_foreach_all_permutations(
-        self, dummy_model_data, equation_obj, foreach
-    ):
-        equation_obj.sets = foreach
-        imask = equation_obj._evaluate_foreach(dummy_model_data)
-
-        assert not BASE_DIMS.difference(imask.dims)
-        assert not set(foreach).difference(imask.dims)
-
-    def test_imask_foreach_unidentified_name(self, dummy_model_data, equation_obj):
-        equation_obj.sets = ["nodes", "techs", "foos"]
-        with pytest.raises(calliope.exceptions.BackendError) as excinfo:
-            equation_obj._evaluate_foreach(dummy_model_data)
-        assert check_error_or_warning(
-            excinfo, "Unidentified model set name(s) defined: `{'foos'}`"
-        )
-
-    @pytest.mark.parametrize(
-        "foreach",
-        set(
-            chain.from_iterable(
-                combinations(BASE_DIMS, i) for i in range(1, len(BASE_DIMS))
-            )
-        ),
-    )
-    def test_evaluate_where_no_imasking(self, dummy_model_data, equation_obj, foreach):
-        equation_obj.sets = foreach
-        expected_imask = (
-            equation_obj._evaluate_foreach(dummy_model_data).sum(
-                BASE_DIMS.difference(foreach)
-            )
-            > 0
-        )
-        imask = equation_obj.evaluate_where(dummy_model_data)
-
-        assert expected_imask.reindex_like(imask).equals(imask)
-
     @pytest.mark.parametrize("false_location", [0, -1])
     def test_create_subset_from_where_definitely_empty(
         self, dummy_model_data, equation_obj, where_parser, false_location
@@ -817,7 +814,7 @@ class TestParsedBackendEquation:
         )
         imask = equation_obj.evaluate_where(dummy_model_data)
 
-        assert not imask.all()
+        assert not imask.any()
 
     @pytest.mark.parametrize(
         ["where_string", "expected_imasker"],
@@ -859,22 +856,33 @@ class TestParsedBackendEquation:
                 dummy_model_data, initial_imask=initial_imask
             )
 
-        initial_expected_imask = equation_obj._evaluate_foreach(dummy_model_data)
-        added_imask = initial_expected_imask & dummy_model_data[expected_imasker]
-        expected = added_imask.sum(BASE_DIMS.difference(["nodes", "techs"])) > 0
+        expected = dummy_model_data[expected_imasker]
 
-        assert expected.reindex_like(imask).equals(imask)
+        assert expected.reindex_like(imask).equals(dummy_model_data[expected_imasker])
 
     def test_create_subset_from_where_trim_dimension(
-        self, dummy_model_data, where_parser, equation_obj
+        self, dummy_model_data, where_parser, equation_obj, foreach_imask
     ):
         equation_obj.sets = ["nodes", "techs"]
+
         equation_obj.where = [
             where_parser.parse_string("[foo] in carrier_tiers", parse_all=True)
         ]
-        imask = equation_obj.evaluate_where(dummy_model_data)
+        imask = equation_obj.evaluate_where(dummy_model_data, foreach_imask)
+        assert imask.sel(carrier_tiers="foo").any()
+        assert not imask.sel(carrier_tiers="bar").any()
 
-        assert not set(imask.dims).difference(["nodes", "techs"])
+    def test_create_subset_align_dims_with_sets(
+        self, dummy_model_data, where_parser, equation_obj, foreach_imask
+    ):
+        equation_obj.sets = ["nodes", "techs"]
+
+        equation_obj.where = [where_parser.parse_string("True", parse_all=True)]
+        imask = equation_obj.evaluate_where(dummy_model_data, foreach_imask)
+        aligned_imask = equation_obj.align_imask_with_sets(imask)
+
+        assert set(imask.dims).difference(["nodes", "techs"])
+        assert not set(aligned_imask.dims).difference(["nodes", "techs"])
 
     def test_evaluate_expression(self, evaluate_component_expression):
         comparison_tuple, n_true = evaluate_component_expression
@@ -887,6 +895,7 @@ class TestParsedConstraint:
     @pytest.fixture
     def constraint_obj(self):
         dict_ = {
+            "name": "foo",
             "foreach": ["techs"],
             "where": "with_inf",
             "equation": "$foo == 1",
@@ -897,7 +906,7 @@ class TestParsedConstraint:
                 ]
             },
         }
-        parsed_ = parsing.ParsedBackendComponent(dict_, "foo")
+        parsed_ = parsing.ParsedBackendComponent(dict_)
         parsed_.equations = parsed_.parse_equations(
             equation_parser.generate_equation_parser, ["only_techs"]
         )
@@ -915,10 +924,17 @@ class TestParsedConstraint:
     def test_parse_constraint_dict_evalaute_eq2(
         self, constraint_obj, dummy_model_data, dummy_backend_interface
     ):
-        valid_imask = constraint_obj.equations[1].evaluate_where(dummy_model_data)
+        foreach_imask = constraint_obj.evaluate_foreach(dummy_model_data)
+        top_level_where_imask = constraint_obj.evaluate_where(
+            dummy_model_data, foreach_imask
+        )
+        valid_imask = constraint_obj.equations[1].evaluate_where(
+            dummy_model_data, top_level_where_imask
+        )
+        aligned_imask = constraint_obj.align_imask_with_sets(valid_imask)
         references = set()
         comparison_tuple = constraint_obj.equations[1].evaluate_expression(
-            dummy_model_data, dummy_backend_interface, valid_imask, references
+            dummy_model_data, dummy_backend_interface, aligned_imask, references
         )
         assert apply_comparison(comparison_tuple).sum() == 1
         assert references == {"only_techs"}
@@ -927,9 +943,9 @@ class TestParsedConstraint:
 class TestParsedVariable:
     @pytest.fixture
     def variable_obj(self):
-        dict_ = {"foreach": ["techs"], "where": "False"}
+        dict_ = {"name": "foo", "foreach": ["techs"], "where": "False"}
 
-        return parsing.ParsedBackendComponent(dict_, "foo")
+        return parsing.ParsedBackendComponent(dict_)
 
     def test_parse_variable_dict_sets(self, variable_obj):
         assert variable_obj.sets == ["techs"]
@@ -938,20 +954,23 @@ class TestParsedVariable:
         assert len(variable_obj.equations) == 0
 
     def test_parse_variable_dict_empty_eq1(self, variable_obj, dummy_model_data):
-        assert not variable_obj.evaluate_where(dummy_model_data).any()
+        foreach_imask = variable_obj.evaluate_foreach(dummy_model_data)
+        variable_obj.parse_top_level_where()
+        assert not variable_obj.evaluate_where(dummy_model_data, foreach_imask).any()
 
 
 class TestParsedObjective:
     @pytest.fixture
     def objective_obj(self):
         dict_ = {
+            "name": "foo",
             "equations": [
                 {"expression": "bar + 2", "where": "False"},
                 {"expression": "sum(only_techs, over=[techs]) + 1", "where": "True"},
-            ]
+            ],
         }
 
-        parsed_ = parsing.ParsedBackendComponent(dict_, "foo")
+        parsed_ = parsing.ParsedBackendComponent(dict_)
         parsed_.equations = parsed_.parse_equations(
             equation_parser.generate_arithmetic_parser, ["only_techs", "bar"]
         )

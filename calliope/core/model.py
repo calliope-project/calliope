@@ -51,9 +51,7 @@ class Model(object):
 
     """
 
-    _BACKENDS: dict[str, Callable] = {
-        "pyomo": backends.PyomoBackendModel
-    }
+    _BACKENDS: dict[str, Callable] = {"pyomo": backends.PyomoBackendModel}
 
     def __init__(
         self,
@@ -266,10 +264,9 @@ class Model(object):
             backend_interface (Literal["pyomo"], optional):
                 Backend interface in which to build the problem. Defaults to "pyomo".
         """
-
         with self.model_data_string_datetime():
             backend = self._BACKENDS[backend_interface]()
-            backend.add_all_parameters(self.inputs, self.run_config)
+            backend.add_all_parameters(self._model_data, self.run_config)
             log_time(
                 logger,
                 self._timings,
@@ -280,8 +277,8 @@ class Model(object):
             # 1. Variables, 2. Expressions, 3. Constraints, 4. Objectives
             for components in ["variables", "expressions", "constraints", "objectives"]:
                 component = components.removesuffix("s")
-                for name_, dict_ in self.component_config[components].items():
-                    getattr(backend, f"add_{component}")(self.inputs, dict_, name_)
+                for dict_ in self.component_config[components]:
+                    getattr(backend, f"add_{component}")(self._model_data, dict_)
                 log_time(
                     logger,
                     self._timings,
@@ -301,7 +298,7 @@ class Model(object):
         try:
             yield
         finally:
-            self._string_to_datetime(self.inputs)
+            self._string_to_datetime(self._model_data)
 
     def _datetime_to_string(self) -> None:
         """
@@ -311,13 +308,13 @@ class Model(object):
         """
         datetime_data = set()
         for attr in ["coords", "data_vars"]:
-            for set_name, set_data in getattr(self.inputs, attr).items():
+            for set_name, set_data in getattr(self._model_data, attr).items():
                 if set_data.dtype.kind == "M":
-                    attrs = self.inputs[set_name].attrs
-                    self.inputs[set_name] = self.inputs[set_name].dt.strftime(
+                    attrs = self._model_data[set_name].attrs
+                    self._model_data[set_name] = self._model_data[set_name].dt.strftime(
                         "%Y-%m-%d %H:%M"
                     )
-                    self.inputs[set_name].attrs = attrs
+                    self._model_data[set_name].attrs = attrs
                     datetime_data.add((attr, set_name))
 
         self._datetime_data = datetime_data
