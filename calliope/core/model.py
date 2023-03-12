@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 import warnings
-from typing import Literal, Union, Optional
+from typing import Literal, Union, Optional, Callable
 from contextlib import contextmanager
 import os
 
@@ -51,7 +51,7 @@ class Model(object):
 
     """
 
-    _BACKENDS: dict[str, type[backends.BackendModel]] = {
+    _BACKENDS: dict[str, Callable] = {
         "pyomo": backends.PyomoBackendModel
     }
 
@@ -268,7 +268,7 @@ class Model(object):
         """
 
         with self.model_data_string_datetime():
-            backend = self._BACKENDS[backend_interface]()  # type:ignore
+            backend = self._BACKENDS[backend_interface]()
             backend.add_all_parameters(self.inputs, self.run_config)
             log_time(
                 logger,

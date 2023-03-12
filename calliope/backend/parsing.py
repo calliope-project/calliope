@@ -217,7 +217,7 @@ class ParsedBackendEquation:
             **{
                 "components": self.components,
                 "index_slices": self.index_slices,
-                **expression_group_dict,
+                **expression_group_dict,  # type: ignore
             },
         )
 
@@ -240,7 +240,7 @@ class ParsedBackendEquation:
         """
         foreach_imask = self._evaluate_foreach(model_data)
         evaluated_wheres = [
-            where[0].eval(  # type: ignore
+            where[0].eval(
                 model_data=model_data, helper_func_dict=VALID_IMASK_HELPER_FUNCTIONS
             )
             for where in self.where

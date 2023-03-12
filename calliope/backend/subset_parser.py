@@ -121,8 +121,7 @@ class DataVarParser:
     def _data_var_exists(model_data_var: xr.DataArray) -> xr.DataArray:
         "mask by setting all (NaN | INF/-INF) to False, otherwise True"
         with pd.option_context("mode.use_inf_as_na", True):
-            return model_data_var.where(pd.notnull(model_data_var)).notnull()
-
+            return model_data_var.where(pd.notnull(model_data_var)).notnull()  # type: ignore
     def eval(
         self, model_data: xr.Dataset, apply_imask: bool = True, **kwargs
     ) -> Union[np.bool_, xr.DataArray]:
