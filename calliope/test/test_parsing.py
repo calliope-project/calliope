@@ -633,7 +633,7 @@ class TestParsedComponent:
     def test_evaluate_where_no_imasking(self, dummy_model_data, component_obj):
         component_obj.parse_top_level_where()
         imask = component_obj.evaluate_where(dummy_model_data)
-        assert imask.item() == True
+        assert imask.item() is True
 
 
 class TestParsedBackendEquation:

@@ -8,7 +8,6 @@ import operator
 
 import pyparsing as pp
 import xarray as xr
-import numpy as np
 
 from calliope.backend import equation_parser, subset_parser, backends
 from calliope import exceptions
