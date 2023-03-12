@@ -268,8 +268,6 @@ class Model(object):
         """
 
         with self.model_data_string_datetime():
-            # FIXME: remove defaults as input arg (currently required by parsed "where" evalaution)
-            # Maybe move it to being attached to the parsed component objects directly.
             backend = self._BACKENDS[backend_interface]()  # type:ignore
             backend.add_all_parameters(self.inputs, self.run_config)
             log_time(

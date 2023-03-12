@@ -132,9 +132,6 @@ constraints:
         equation: "sum(carrier_prod, over=techs) + sum(carrier_con, over=techs) - $carrier_export + $unmet_demand_and_unused_supply == 0"
         components:
             carrier_export:
-                # FIXME: need to sum "export_carrier" where over techs otherwise
-                # any model with export will fail on where string evaluation
-                # (both cases here will have overlapping index subsets)
                 - where: "sum(export_carrier, over=techs)"
                   expression: sum(carrier_export, over=techs)
                 - where: "NOT sum(export_carrier, over=techs)"
