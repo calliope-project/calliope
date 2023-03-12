@@ -423,7 +423,7 @@ def generate_where_string_parser() -> pp.ParserElement:
     bool_operand = bool_parser()
     evaluatable_string = evaluatable_string_parser(generic_identifier)
     helper_function = equation_parser.helper_function_parser(
-        generic_identifier, allowed_parser_elements_in_args=[evaluatable_string, number]
+        evaluatable_string, number, generic_identifier=generic_identifier
     )
     comparison = comparison_parser(
         evaluatable_string,

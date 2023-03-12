@@ -18,6 +18,11 @@ HELPER_FUNCS = {
 
 
 @pytest.fixture
+def valid_object_names():
+    return ["foo", "foo_bar", "bar"]
+
+
+@pytest.fixture
 def base_parser_elements():
     number, identifier = equation_parser.setup_base_parser_elements()
     return number, identifier
@@ -34,6 +39,21 @@ def identifier(base_parser_elements):
 
 
 @pytest.fixture
+def evaluatable_identifier_elements(identifier, valid_object_names):
+    return equation_parser.evaluatable_identifier_parser(identifier, valid_object_names)
+
+
+@pytest.fixture
+def evaluatable_identifier(evaluatable_identifier_elements):
+    return evaluatable_identifier_elements[0]
+
+
+@pytest.fixture
+def id_list(evaluatable_identifier_elements):
+    return evaluatable_identifier_elements[1]
+
+
+@pytest.fixture
 def unsliced_param():
     def _unsliced_param(valid_object_names):
         return equation_parser.unsliced_object_parser(valid_object_names)
@@ -42,19 +62,16 @@ def unsliced_param():
 
 
 @pytest.fixture
-def valid_object_names():
-    return ["foo", "foo_bar", "bar"]
-
-
-@pytest.fixture
 def unsliced_param_with_obj_names(unsliced_param, valid_object_names):
     return unsliced_param(valid_object_names)
 
 
 @pytest.fixture
-def sliced_param(identifier, unsliced_param_with_obj_names):
+def sliced_param(
+    number, identifier, evaluatable_identifier, unsliced_param_with_obj_names
+):
     return equation_parser.sliced_param_or_var_parser(
-        identifier, unsliced_param_with_obj_names
+        number, identifier, evaluatable_identifier, unsliced_param_with_obj_names
     )
 
 
@@ -64,28 +81,21 @@ def component(identifier):
 
 
 @pytest.fixture
-def foreach_list(identifier):
-    return pp.Suppress("[") + pp.Group(pp.delimited_list(identifier)) + pp.Suppress("]")
-
-
-@pytest.fixture
 def helper_function(
     number,
     sliced_param,
     component,
     unsliced_param_with_obj_names,
     identifier,
-    foreach_list,
+    id_list,
 ):
     return equation_parser.helper_function_parser(
-        identifier,
-        allowed_parser_elements_in_args=[
-            sliced_param,
-            component,
-            unsliced_param_with_obj_names,
-            number,
-            foreach_list,
-        ],
+        sliced_param,
+        component,
+        unsliced_param_with_obj_names,
+        number,
+        id_list,
+        generic_identifier=identifier,
         allow_function_in_function=True,
     )
 
@@ -97,35 +107,33 @@ def helper_function_no_nesting(
     component,
     unsliced_param_with_obj_names,
     identifier,
-    foreach_list,
+    id_list,
 ):
     return equation_parser.helper_function_parser(
-        identifier,
-        allowed_parser_elements_in_args=[
-            sliced_param,
-            component,
-            unsliced_param_with_obj_names,
-            number,
-            foreach_list,
-        ],
+        sliced_param,
+        component,
+        unsliced_param_with_obj_names,
+        number,
+        id_list,
+        generic_identifier=identifier,
         allow_function_in_function=False,
     )
 
 
 @pytest.fixture(
     params=[
-        ("number", "1.0", ["$foo", "foo", "foo[bars=bar]"]),
-        ("sliced_param", "foo[bars=bar]", ["1.0", "foo", "$foo"]),
-        ("component", "$foo", ["1.0", "foo", "foo[bars=bar]"]),
-        ("unsliced_param_with_obj_names", "foo", ["1.0", "$foo", "foo[bars=bar]"]),
+        ("number", "1.0", ["$foo", "foo", "foo[bars=bar1]"]),
+        ("sliced_param", "foo[bars=bar1]", ["1.0", "foo", "$foo"]),
+        ("component", "$foo", ["1.0", "foo", "foo[bars=bar1]"]),
+        ("unsliced_param_with_obj_names", "foo", ["1.0", "$foo", "foo[bars=bar1]"]),
     ]
 )
 def helper_function_one_parser_in_args(identifier, request):
     parser_element, valid_string, invalid_string = request.param
     return (
         equation_parser.helper_function_parser(
-            identifier,
-            allowed_parser_elements_in_args=[request.getfixturevalue(parser_element)],
+            request.getfixturevalue(parser_element),
+            generic_identifier=identifier,
             allow_function_in_function=True,
         ),
         valid_string,
@@ -152,7 +160,7 @@ def arithmetic(
     helper_function, number, sliced_param, component, unsliced_param_with_obj_names
 ):
     return equation_parser.arithmetic_parser(
-        helper_function, sliced_param, component, unsliced_param_with_obj_names, number
+        helper_function, component, sliced_param, number, unsliced_param_with_obj_names
     )
 
 
@@ -164,12 +172,13 @@ def helper_function_allow_arithmetic(
     unsliced_param_with_obj_names,
     identifier,
     arithmetic,
-    foreach_list,
+    id_list,
 ):
     arithmetic = pp.Forward()
     helper_func = equation_parser.helper_function_parser(
-        identifier,
-        allowed_parser_elements_in_args=[arithmetic, foreach_list],
+        arithmetic,
+        id_list,
+        generic_identifier=identifier,
     )
     return equation_parser.arithmetic_parser(
         helper_func,
@@ -189,6 +198,16 @@ def equation_comparison(arithmetic):
 @pytest.fixture
 def generate_equation(valid_object_names):
     return equation_parser.generate_equation_parser(valid_object_names)
+
+
+@pytest.fixture
+def generate_index_slice(valid_object_names):
+    return equation_parser.generate_index_slice_parser(valid_object_names)
+
+
+@pytest.fixture
+def generate_component(valid_object_names):
+    return equation_parser.generate_component_parser(valid_object_names)
 
 
 class TestEquationParserElements:
@@ -275,6 +294,27 @@ class TestEquationParserElements:
         with pytest.raises(pp.ParseException):
             identifier.parse_string(string_val, parse_all=True)
 
+    def test_evaluatable_identifier(self, evaluatable_identifier, eval_kwargs):
+        parsed_ = evaluatable_identifier.parse_string("hello", parse_all=True)
+        assert parsed_[0].eval(**eval_kwargs) == "hello"
+
+    def test_evaluatable_identifier_fail(self, evaluatable_identifier):
+        with pytest.raises(pp.ParseException):
+            # "foo" is a optimisation problem object, so it is ignored by the evaluatable identifier parser
+            evaluatable_identifier.parse_string("foo", parse_all=True)
+
+    def test_id_list(self, id_list, eval_kwargs):
+        parsed_ = id_list.parse_string("[hello, there]", parse_all=True)
+        evaluated_ = [i.eval(**eval_kwargs) for i in parsed_[0]]
+        assert evaluated_ == ["hello", "there"]
+
+    @pytest.mark.parametrize(
+        "string_val", ["1", "inf", "foo", "$foo", "dummy_func_1(1)"]
+    )
+    def test_id_list_fail(self, id_list, string_val):
+        with pytest.raises(pp.ParseException):
+            id_list.parse_string(f"[{string_val}, there]", parse_all=True)
+
     @pytest.mark.parametrize("string_val", ["foo", "foo_bar"])
     def test_unsliced_param(self, unsliced_param_with_obj_names, string_val):
         parsed_ = unsliced_param_with_obj_names.parse_string(string_val, parse_all=True)
@@ -296,12 +336,22 @@ class TestEquationParserElements:
     @pytest.mark.parametrize(
         ["string_val", "expected"],
         [
-            ("foo[techs=tech]", ["foo", {"tech": "techs"}]),
-            ("foo[techs=tech,bars=bar]", ["foo", {"tech": "techs", "bar": "bars"}]),
-            ("foo[ bars=bar, techs=tech ]", ["foo", {"bar": "bars", "tech": "techs"}]),
+            ("foo[techs=tech]", ["foo", {"techs": "tech"}]),
+            (
+                f"foo[techs={COMPONENT_CLASSIFIER}tech]",
+                ["foo", {"techs": {"index_slice_reference": "tech"}}],
+            ),
+            (
+                f"foo[techs=tech,bars={COMPONENT_CLASSIFIER}bar]",
+                ["foo", {"techs": "tech", "bars": {"index_slice_reference": "bar"}}],
+            ),
+            (
+                f"foo[ bars={COMPONENT_CLASSIFIER}bar, techs=tech ]",
+                ["foo", {"bars": {"index_slice_reference": "bar"}, "techs": "tech"}],
+            ),
             (
                 "foo_bar[techs=tech, nodes=node]",
-                ["foo_bar", {"tech": "techs", "node": "nodes"}],
+                ["foo_bar", {"techs": "tech", "nodes": "node"}],
             ),
         ],
     )
@@ -315,15 +365,15 @@ class TestEquationParserElements:
     @pytest.mark.parametrize(
         "string_val",
         [
-            "foobar[bars=bar]",  # name not in allowed list
-            "foo [bars=bar]",  # space between param name and slicing
-            "foo[techs=tech bars=bar]",  # missing delimination
+            "foobar[bars=bar1]",  # name not in allowed list
+            "foo [bars=bar1]",  # space between param name and slicing
+            "foo[techs=tech bars=bar1]",  # missing delimination
             "foo[]",  # missing set and index slice
             "foo[techs]",  # missing index slice/set
             "foo[techs=]",  # missing index slice
             "foo[=techs]",  # missing set
-            "[bars=bar]",  # missing component name
-            "foo(bars=bar)",  # incorrect brackets
+            "[bars=bar1]",  # missing component name
+            "foo(bars=bar1)",  # incorrect brackets
         ],
     )
     def test_fail_string_issues_sliced_param(self, sliced_param, string_val):
@@ -353,7 +403,7 @@ class TestEquationParserElements:
             "f$oo",  # classifier not at start
             "$",  # missing component name
             "$foo(1)",  # adding classifer to function
-            "$foo[bars=bar]",  # adding classifer to indexed param
+            "$foo[bars=bar1]",  # adding classifer to indexed param
             "$1",  # adding classifer to invalid python variable name
         ],
     )
@@ -409,12 +459,12 @@ class TestEquationParserElements:
                 },
             ),
             (
-                "dummy_func_1(1, foo[bars=bar])",
+                "dummy_func_1(1, foo[bars=bar1])",
                 {
                     "function": "dummy_func_1",
                     "args": [
                         1,
-                        {"param_or_var_name": "foo", "dimensions": {"bar": "bars"}},
+                        {"param_or_var_name": "foo", "dimensions": {"bars": "bar1"}},
                     ],
                     "kwargs": {},
                 },
@@ -439,22 +489,28 @@ class TestEquationParserElements:
                 },
             ),
             (
-                "dummy_func_1(foo[bars=bar])",
+                f"dummy_func_1(foo[bars={COMPONENT_CLASSIFIER}bar])",
                 {
                     "function": "dummy_func_1",
                     "args": [
-                        {"param_or_var_name": "foo", "dimensions": {"bar": "bars"}}
+                        {
+                            "param_or_var_name": "foo",
+                            "dimensions": {"bars": {"index_slice_reference": "bar"}},
+                        }
                     ],
                     "kwargs": {},
                 },
             ),
             (
-                "dummy_func_1(1, x=foo[bars=bar])",
+                "dummy_func_1(1, x=foo[bars=bar1])",
                 {
                     "function": "dummy_func_1",
                     "args": [1],
                     "kwargs": {
-                        "x": {"param_or_var_name": "foo", "dimensions": {"bar": "bars"}}
+                        "x": {
+                            "param_or_var_name": "foo",
+                            "dimensions": {"bars": "bar1"},
+                        }
                     },
                 },
             ),
@@ -475,7 +531,7 @@ class TestEquationParserElements:
                 },
             ),
             (
-                "dummy_func_1(dummy_func_2(foo[bars=bar], y=$foo))",
+                "dummy_func_1(dummy_func_2(foo[bars=bar1], y=$foo))",
                 {
                     "function": "dummy_func_1",
                     "args": [
@@ -484,7 +540,7 @@ class TestEquationParserElements:
                             "args": [
                                 {
                                     "param_or_var_name": "foo",
-                                    "dimensions": {"bar": "bars"},
+                                    "dimensions": {"bars": "bar1"},
                                 }
                             ],
                             "kwargs": {"y": {"component": "foo"}},
@@ -494,7 +550,7 @@ class TestEquationParserElements:
                 },
             ),
             (
-                "dummy_func_1(1, dummy_func_2(1, foo[bars=bar]), foo[foos=foo, bars=bar], $foo, 1, bar)",
+                "dummy_func_1(1, dummy_func_2(1, foo[bars=$bar]), foo[foos=foo1, bars=bar1], $foo, 1, bar)",
                 {
                     "function": "dummy_func_1",
                     "args": [
@@ -505,14 +561,16 @@ class TestEquationParserElements:
                                 1,
                                 {
                                     "param_or_var_name": "foo",
-                                    "dimensions": {"bar": "bars"},
+                                    "dimensions": {
+                                        "bars": {"index_slice_reference": "bar"}
+                                    },
                                 },
                             ],
                             "kwargs": {},
                         },
                         {
                             "param_or_var_name": "foo",
-                            "dimensions": {"foo": "foos", "bar": "bars"},
+                            "dimensions": {"foos": "foo1", "bars": "bar1"},
                         },
                         {"component": "foo"},
                         1,
@@ -569,7 +627,7 @@ class TestEquationParserElements:
         self, helper_function_no_nesting
     ):
         helper_function_no_nesting.parse_string(
-            "dummy_func_1(1, $foo, foo, foo[bars=bar])", parse_all=True
+            "dummy_func_1(1, $foo, foo, foo[bars=bar1])", parse_all=True
         )
 
     @pytest.mark.parametrize("args", ["dummy_func_1(1)", "x=dummy_func_1(1)"])
@@ -588,7 +646,7 @@ class TestEquationParserElements:
     def test_function_one_arg_allowed_valid_string(
         self, helper_function_one_parser_in_args, helper_func_string
     ):
-        parser_, valid_string, invalid_string = helper_function_one_parser_in_args
+        parser_, valid_string, _ = helper_function_one_parser_in_args
 
         parser_.parse_string(helper_func_string.format(valid_string), parse_all=True)
 
@@ -598,7 +656,7 @@ class TestEquationParserElements:
     def test_function_one_arg_allowed_invalid_string(
         self, helper_function_one_parser_in_args, helper_func_string
     ):
-        parser_, valid_string, invalid_string = helper_function_one_parser_in_args
+        parser_, _, invalid_string = helper_function_one_parser_in_args
 
         for string_ in invalid_string:
             with pytest.raises(pp.ParseException) as excinfo:
@@ -674,10 +732,10 @@ class TestEquationParserArithmetic:
     @pytest.mark.parametrize("component_", ["$foo", "$bar1"])
     @pytest.mark.parametrize("unsliced_param_", ["foo", "bar"])
     @pytest.mark.parametrize(
-        "sliced_param_", ["foo[bars=bar]", "bar[foos=foo, bars=bar]"]
+        "sliced_param_", ["foo[bars=bar1]", "bar[foos=foo1, bars=$bar]"]
     )
     @pytest.mark.parametrize(
-        "helper_function_", ["foo(1)", "bar1(foo, $foo, bar[foos=foo], x=1)"]
+        "helper_function_", ["foo(1)", "bar1(foo, $foo, bar[foos=foo1], x=1)"]
     )
     @pytest.mark.parametrize(
         "func_string", ["arithmetic", "helper_function_allow_arithmetic"]
@@ -737,13 +795,60 @@ class TestEquationParserArithmetic:
         assert evaluated == {"function": "dummy_func_1", **expected}
 
     def test_repr(self, arithmetic):
-        parse_string = "1 + foo - foo[foos=foo] + (foo / $foo) ** -2"
+        parse_string = "1 + foo - foo[foos=foo1, bars=$bar] + (foo / $foo) ** -2"
         expected = (
-            "(NUM:1 + PARAM_OR_VAR:foo - SLICED_PARAM_OR_VAR:foo[FOOS:foo]"
+            "(NUM:1 + PARAM_OR_VAR:foo - SLICED_PARAM_OR_VAR:foo[foos=STRING:foo1, bars=REFERENCE:bar]"
             " + ((PARAM_OR_VAR:foo / COMPONENT:foo) ** (-)NUM:2))"
         )
         parsed_ = arithmetic.parse_string(parse_string, parse_all=True)
         assert str(parsed_[0]) == expected
+
+
+class TestIndexSliceParser:
+    @pytest.mark.parametrize(
+        "instring", ["foo", "1", "[FOO, BAR]", "foo[bars=bar1]", "FOO"]
+    )
+    @pytest.mark.parametrize("func_or_not", ["dummy_func_1({})", "{}"])
+    def test_index_slice_expression_parser(
+        self, generate_index_slice, instring, func_or_not
+    ):
+        generate_index_slice.parse_string(func_or_not.format(instring), parse_all=True)
+
+    @pytest.mark.parametrize(
+        "instring", ["foo + 1", "foo == 1", "$foo", "foo[bars=$bar]", "[foo]"]
+    )
+    @pytest.mark.parametrize("func_or_not", ["dummy_func_1({})", "{}"])
+    def test_index_slice_expression_parser_fail(
+        self, generate_index_slice, instring, func_or_not
+    ):
+        with pytest.raises(pp.ParseException):
+            generate_index_slice.parse_string(
+                func_or_not.format(instring), parse_all=True
+            )
+
+
+class TestComponentParser:
+    @pytest.mark.parametrize(
+        "instring",
+        [
+            "foo",
+            "1",
+            "dummy_func_1([FOO, BAR])",
+            "dummy_func_1(FOO)",
+            "foo[foos=foo1, bars=$bar]",
+            "foo + 1",
+        ],
+    )
+    @pytest.mark.parametrize("func_or_not", ["dummy_func_1({})", "{}"])
+    def test_component_expression_parser(
+        self, generate_component, instring, func_or_not
+    ):
+        generate_component.parse_string(func_or_not.format(instring), parse_all=True)
+
+    @pytest.mark.parametrize("instring", ["[FOO, BAR]", "foo == 1", "$foo", "[foo]"])
+    def test_component_expression_parser_fail(self, generate_component, instring):
+        with pytest.raises(pp.ParseException):
+            generate_component.parse_string(instring, parse_all=True)
 
 
 class TestEquationParserComparison:
@@ -755,17 +860,20 @@ class TestEquationParserComparison:
         "2**2": 4,
         ".inf": np.inf,
         "foo_bar": {"param_or_var_name": "foo_bar"},
-        "foo[foos=foo, bars=bar]": {
+        "foo[foos=foo1, bars=bar1]": {
             "param_or_var_name": "foo",
-            "dimensions": {"foo": "foos", "bar": "bars"},
+            "dimensions": {"foos": "foo1", "bars": "bar1"},
         },
-        "foo[bars=bar]": {"param_or_var_name": "foo", "dimensions": {"bar": "bars"}},
+        "foo[bars=bar1]": {"param_or_var_name": "foo", "dimensions": {"bars": "bar1"}},
         "$foo": {"component": "foo"},
-        "dummy_func_1(1, foo[bars=bar], $foo, x=dummy_func_2(1, y=2), foo=bar)": {
+        "dummy_func_1(1, foo[bars=$bar], $foo, x=dummy_func_2(1, y=2), foo=bar)": {
             "function": "dummy_func_1",
             "args": [
                 1,
-                {"param_or_var_name": "foo", "dimensions": {"bar": "bars"}},
+                {
+                    "param_or_var_name": "foo",
+                    "dimensions": {"bars": {"index_slice_reference": "bar"}},
+                },
                 {"component": "foo"},
             ],
             "kwargs": {
@@ -872,9 +980,9 @@ class TestEquationParserComparison:
             parser_func.parse_string(equation_string, parse_all=True)
 
     def test_repr(self, equation_comparison):
-        parse_string = "1 + foo - foo[foos=foo] >= (foo / $foo) ** -2"
+        parse_string = "1 + foo - foo[foos=foo1, bars=$bar] >= (foo / $foo) ** -2"
         expected = (
-            "(NUM:1 + PARAM_OR_VAR:foo - SLICED_PARAM_OR_VAR:foo[FOOS:foo])"
+            "(NUM:1 + PARAM_OR_VAR:foo - SLICED_PARAM_OR_VAR:foo[foos=STRING:foo1, bars=REFERENCE:bar])"
             " >= ((PARAM_OR_VAR:foo / COMPONENT:foo) ** (-)NUM:2)"
         )
         parsed_ = equation_comparison.parse_string(parse_string, parse_all=True)

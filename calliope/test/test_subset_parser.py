@@ -58,7 +58,7 @@ def evaluatable_string(identifier):
 @pytest.fixture
 def helper_function(number, identifier, evaluatable_string):
     return equation_parser.helper_function_parser(
-        identifier, allowed_parser_elements_in_args=[evaluatable_string, number]
+        evaluatable_string, number, generic_identifier=identifier
     )
 
 

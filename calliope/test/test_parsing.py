@@ -45,7 +45,7 @@ def index_slice_parser(valid_object_names):
 
 @pytest.fixture
 def component_parser(valid_object_names):
-    return equation_parser.generate_arithmetic_parser(valid_object_names)
+    return equation_parser.generate_component_parser(valid_object_names)
 
 
 @pytest.fixture
@@ -141,12 +141,12 @@ def obj_with_components_and_index_slices():
                 foo:
                     - expression: 1 + foo
                       where: foo1
-                    - expression: 2 + foo[techs=tech2]
+                    - expression: 2 + foo[techs=$tech2]
                       where: foo2
                 bar:
-                    - expression: 1 + foo[techs=tech1]
+                    - expression: 1 + foo[techs=$tech1]
                       where: bar1
-                    - expression: 2 + foo[techs=tech2]
+                    - expression: 2 + foo[techs=$tech2]
                       where: bar2
             index_slices:
                 tech1:
@@ -292,7 +292,7 @@ def evaluatable_component_obj(valid_object_names):
             4,
         ),  # only non-default + non-inf values meet criterion (+ only_techs masks one valid value)
         ("$foo == 100", 0),  # no expressions are valid
-        ("only_techs + with_inf[techs=tech] == 2", 1),
+        ("only_techs + with_inf[techs=$tech] == 2", 1),
     ]
 )
 def evaluate_component_where(evaluatable_component_obj, dummy_model_data, request):
@@ -538,7 +538,7 @@ class TestParsedComponent:
         n_2,
     ):
         equation_ = generate_expression_list(
-            [expression_generator("foo[techs=tech1] == bar[techs=tech2]")]
+            [expression_generator("foo[techs=$tech1] == bar[techs=$tech2]")]
         )
         expression_list = component_obj.extend_equation_list_with_expression_group(
             equation_[0], parsed_index_slice_dict(n_1, n_2), "index_slices"
@@ -553,7 +553,11 @@ class TestParsedComponent:
         expression_generator,
     ):
         equation_ = generate_expression_list(
-            [expression_generator("foo[techs=tech1] == bar[techs=tech2, nodes=node1]")]
+            [
+                expression_generator(
+                    "foo[techs=$tech1] == bar[techs=$tech2, nodes=$node1]"
+                )
+            ]
         )
         with pytest.raises(KeyError) as excinfo:
             component_obj.extend_equation_list_with_expression_group(
@@ -570,16 +574,16 @@ class TestParsedComponent:
             ("1 == bar", 1),
             ([{"expression": "1 == bar"}], 1),
             ([{"expression": "1 == bar"}, {"expression": "foo == bar"}], 2),
-            ("1 == bar[techs=tech2]", 2),
-            ("$foo == bar[techs=tech2]", 4),
+            ("1 == bar[techs=$tech2]", 2),
+            ("$foo == bar[techs=$tech2]", 4),
             ("$bar == 1", 4),
-            ("$bar == bar[techs=tech2]", 6),
-            ("$bar + $foo == bar[techs=tech2]", 12),
-            ("$bar + $foo == bar[techs=tech2] + foo[techs=tech1]", 16),
+            ("$bar == bar[techs=$tech2]", 6),
+            ("$bar + $foo == bar[techs=$tech2]", 12),
+            ("$bar + $foo == bar[techs=$tech2] + foo[techs=$tech1]", 16),
             (
                 [
-                    {"expression": "$foo == bar[techs=tech2]"},
-                    {"expression": "$bar + $foo == bar[techs=tech2]"},
+                    {"expression": "$foo == bar[techs=$tech2]"},
+                    {"expression": "$bar + $foo == bar[techs=$tech2]"},
                 ],
                 16,
             ),
@@ -657,18 +661,21 @@ class TestParsedBackendEquation:
     @pytest.mark.parametrize(
         "parse_string",
         [
-            "foo[techs=tech1] == bar[techs=tech2]",
-            "foo[techs=tech1] + bar[techs=tech2] >= 1",
-            "(foo[techs=tech1] * 1) + bar[techs=tech2] == 1",
-            "(1**bar[techs=tech2]) <= foo[techs=tech1] + 7",
-            "(foo[techs=tech1] - bar[techs=tech2]) * 3 <= 2",
-            "dummy_func_1(bar[techs=tech2]) <= dummy_func_2(x=foo[techs=tech1])",
-            "dummy_func_1(bar[techs=tech2], x=foo[techs=tech1]) <= dummy_func_2(1)",
-            "foo[techs=tech1] + 1 <= dummy_func_2(x=bar[techs=tech2])",
-            "foo[techs=tech1] + dummy_func_2(bar[techs=tech2]) <= $foo",
+            "foo[techs=$tech1] == bar[techs=$tech2]",
+            "foo[techs=$tech1] + bar[techs=$tech2] >= 1",
+            "(foo[techs=$tech1] * 1) + bar[techs=$tech2] == 1",
+            "(1**bar[techs=$tech2]) <= foo[techs=$tech1] + 7",
+            "(foo[techs=$tech1] - bar[techs=$tech2]) * 3 <= 2",
+            "dummy_func_1(bar[techs=$tech2]) <= dummy_func_2(x=foo[techs=$tech1])",
+            "dummy_func_1(bar[techs=$tech2], x=foo[techs=$tech1]) <= dummy_func_2(1)",
+            "foo[techs=$tech1] + 1 <= dummy_func_2(x=bar[techs=$tech2])",
+            "foo[techs=$tech1] + dummy_func_2(bar[techs=$tech2]) <= $foo",
+            "foo[techs=$tech1] + dummy_func_2(bar[techs=$tech2, nodes=FOO]) <= $foo",
         ],
     )
-    def test_find_index_slices(self, expression_parser, equation_obj, parse_string):
+    def test_find_index_slice_references(
+        self, expression_parser, equation_obj, parse_string
+    ):
         parsed = expression_parser.parse_string(parse_string, parse_all=True)
         equation_obj.expression = parsed
         found_index_slices = equation_obj.find_index_slices()
@@ -693,12 +700,12 @@ class TestParsedBackendEquation:
     @pytest.mark.parametrize(
         ["equation_expr", "component_exprs"],
         [
-            ("$foo == 1", {"foo": "foo[techs=tech1] + bar[techs=tech2]"}),
-            ("$foo == $bar", {"foo": "foo[techs=tech1]", "bar": "bar[techs=tech2]"}),
-            ("foo[techs=tech1] + $bar >= 1", {"bar": "bar[techs=tech2]"}),
+            ("$foo == 1", {"foo": "foo[techs=$tech1] + bar[techs=$tech2]"}),
+            ("$foo == $bar", {"foo": "foo[techs=$tech1]", "bar": "bar[techs=$tech2]"}),
+            ("foo[techs=$tech1] + $bar >= 1", {"bar": "bar[techs=$tech2]"}),
             (
-                "foo[techs=tech1] + $bar == $foo",
-                {"foo": "10", "bar": "bar[techs=tech2]"},
+                "foo[techs=$tech1] + $bar == $foo",
+                {"foo": "10", "bar": "bar[techs=$tech2]"},
             ),
         ],
     )

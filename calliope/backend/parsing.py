@@ -140,7 +140,7 @@ class ParsedBackendEquation:
             ]
         )
         elements = [self.expression[0].values, *list(self.components.values())]
-        to_find = equation_parser.EvalIndexSlices
+        to_find = equation_parser.EvalIndexSlice
 
         return self._find_items_in_expression(elements, to_find, valid_eval_classes)
 
@@ -343,7 +343,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
 
         component_dict = {
             c_name: self.generate_expression_list(
-                expression_parser=equation_parser.generate_arithmetic_parser(
+                expression_parser=equation_parser.generate_component_parser(
                     valid_arithmetic_components
                 ),
                 expression_list=c_list,
