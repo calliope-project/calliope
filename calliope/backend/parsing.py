@@ -27,6 +27,7 @@ VALID_IMASK_HELPER_FUNCTIONS: dict[str, Callable] = {
     "get_val_at_index": helper_functions.get_val_at_index,
 }
 
+TRUE_ARRAY = xr.DataArray(True)
 
 class UnparsedEquationDict(TypedDict):
     where: NotRequired[str]
@@ -226,7 +227,7 @@ class ParsedBackendEquation:
     def evaluate_where(
         self,
         model_data: xr.Dataset,
-        initial_imask: xr.DataArray = xr.DataArray(True),
+        initial_imask: xr.DataArray = TRUE_ARRAY,
     ) -> xr.DataArray:
         """Evaluate parsed backend object dictionary `where` string.
         NOTE: imask = inverse mask (application of "np.where" to an array)
