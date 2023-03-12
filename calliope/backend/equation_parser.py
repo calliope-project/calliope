@@ -58,7 +58,7 @@ class EvalOperatorOperand(EvalString):
         self.value = tokens[0]
         self.values = tokens
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
         first_operand = self.value[0].__repr__()
         operand_operator_pairs = " ".join(
@@ -122,7 +122,7 @@ class EvalSignOp(EvalString):
         self.sign, self.value = tokens[0]
         self.values = tokens
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
         return str(f"({self.sign}){self.value.__repr__()}")
 
@@ -146,7 +146,7 @@ class EvalComparisonOp(EvalString):
         self.lhs, self.op, self.rhs = tokens
         self.values = tokens
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
         return f"{self.lhs.__repr__()} {self.op} {self.rhs.__repr__()}"
 
@@ -180,7 +180,7 @@ class EvalFunction(EvalString):
         self.kwargs: dict = token_dict["kwargs"]
         self.values = tokens
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
         return f"{str(self.func_name)}(args={self.args}, kwargs={self.kwargs})"
 
@@ -249,7 +249,7 @@ class EvalHelperFuncName(EvalString):
         self.loc = loc
         self.values = tokens
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
         return str(self.name)
 
@@ -258,7 +258,7 @@ class EvalHelperFuncName(EvalString):
         helper_func_dict: dict[str, Callable],
         as_dict: bool = False,
         **eval_kwargs,
-    ) -> Optional[Union[str, Callable, Any]]:
+    ) -> Optional[Union[str, Callable]]:
         """
 
         Args:
@@ -306,16 +306,18 @@ class EvalSlicedParameterOrVariable(EvalString):
         }
         self.values = tokens
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
         slices = ", ".join(f"{k}={v.__repr__()}" for k, v in self.index_slices.items())
         return f"SLICED_{self.obj_name}[{slices}]"
 
-    def eval(self, **eval_kwargs) -> Any:
+    def eval(self, **eval_kwargs) -> Optional[Union[dict, xr.DataArray]]:
         """
         Returns:
-            dict[str, str | list[str]]:
-                Separated key:val pairs for parameter/variable name and index items
+            Optional[Union[dict, xr.DataArray]]:
+                If `eval_kwargs["as_dict"]` is True, returns separated key:val pairs for parameter/variable name and index items;
+                else, `eval_kwargs` has a backend dataset, returns sliced xarray object;
+                else, returns None.
         """
         index_slices: dict[str, Any] = {
             k: v.eval(**eval_kwargs) for k, v in self.index_slices.items()
@@ -342,7 +344,7 @@ class EvalIndexSlice(EvalString):
         self.name: str = tokens[0]
         self.values = tokens
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
         return "REFERENCE:" + str(self.name)
 
@@ -380,7 +382,7 @@ class EvalComponent(EvalString):
         self.name: str = tokens[0]
         self.values = tokens
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
         return "COMPONENT:" + str(self.name)
 
@@ -419,15 +421,19 @@ class EvalUnslicedParameterOrVariable(EvalString):
         self.name: str = tokens[0]
         self.values = tokens
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
         return "PARAM_OR_VAR:" + str(self.name)
 
-    def eval(self, references: set, as_dict: bool = False, **eval_kwargs) -> Any:
+    def eval(
+        self, references: set, as_dict: bool = False, **eval_kwargs
+    ) -> Optional[Union[dict, xr.DataArray]]:
         """
         Returns:
-            Any: If testing, return a dictionary with the parsed string, otherwise
-            a backend model object matching the same name
+            Optional[Union[dict, xr.DataArray]]:
+                If `eval_kwargs["as_dict"]` is True, returns separated key:val pairs for parameter/variable name and index items;
+                else, `eval_kwargs` has a backend dataset, returns sliced xarray object;
+                else, returns None.
         """
         references.add(self.name)
         if as_dict:
@@ -449,7 +455,7 @@ class EvalNumber(EvalString):
         self.value = tokens[0]
         self.values = tokens
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
         return "NUM:" + str(self.value)
 
@@ -473,7 +479,7 @@ class GenericStringParser(EvalString):
         """
         self.val = tokens[0]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
         return f"STRING:{self.val}"
 
@@ -500,12 +506,14 @@ def helper_function_parser(
 
     Based partially on: # https://stackoverflow.com/questions/61807705/pyparsing-generic-python-function-args-and-kwargs
 
-    Args:
+    Args (pp.ParserElement):
+        Parser elements that can be arguments in the function (e.g., "number", "sliced_param_or_var").
+        NOTE: the order of inclusion in the args list matters. The parser will parse based on first matches.
+
+    Kwargs
         generic_identifier (pp.ParserElement):
             Parser for valid python variables without leading underscore and not called "inf".
             This parser has no parse action.
-        allowed_parser_elements_in_args (list[pp.ParserElement]):
-            List of parser elements that can be arguments in the function (e.g., "number", "sliced_param_or_var").
         allow_function_in_function (bool, optional):
             If True, allows functions to be defined inside functions.
             Nested functions are evaluated from the greatest level of nesting up to the main helper function.
@@ -559,7 +567,7 @@ def sliced_param_or_var_parser(
     unsliced_object: pp.ParserElement,
     allow_slice_references: bool = True,
 ) -> pp.ParserElement:
-    """
+    f"""
     Parsing grammar to process strings representing sliced model parameters or variables,
     e.g. "resource[node, tech]".
 
@@ -571,12 +579,21 @@ def sliced_param_or_var_parser(
     evaluation.
 
     Args:
+        number (pp.ParserElement):
+            Parser for numbers (integer, float, scientific notation, "inf"/".inf").
         generic_identifier (pp.ParserElement):
             Parser for valid python variables without leading underscore and not called "inf".
             This parser has no parse action.
+        evaluatable_identifier (pp.ParserElement):
+            Parser for valid python variables without leading underscore and not called "inf".
+            Evaluates to a string.
         unsliced_object (pp.ParserElement):
             Parser for valid backend objects.
             On evaluation, this parser will access the backend object from the backend dataset.
+        allow_slice_references (bool):
+            If True, allow reference to `index_slice` expressions
+            (e.g. `{COMPONENT_CLASSIFIER}bar` in `foo[bars={COMPONENT_CLASSIFIER}bar]`).
+            Defaults to True.
 
     Returns:
         pp.ParserElement:
@@ -589,7 +606,7 @@ def sliced_param_or_var_parser(
 
     direct_slicer = number | evaluatable_identifier
     if allow_slice_references:
-        slicer_ref = pp.Suppress("$") + generic_identifier
+        slicer_ref = pp.Suppress(COMPONENT_CLASSIFIER) + generic_identifier
         slicer_ref.set_parse_action(EvalIndexSlice)
         slicer = (slicer_ref | direct_slicer)("slicer")
     else:
@@ -635,9 +652,6 @@ def unsliced_object_parser(valid_object_names: Iterable[str]) -> pp.ParserElemen
     the list of input paramaters or optimisation decision variables.
 
     Args:
-        generic_identifier (pp.ParserElement):
-            Parser for valid python variables without leading underscore and not called "inf".
-            This parser has no parse action.
         valid_object_names (Iterable[str]): A
             All backend object names, to ensure they are captured by this parser function.
 
@@ -664,6 +678,8 @@ def evaluatable_identifier_parser(
         identifier (pp.ParserElement):
             Parser for valid python variables without leading underscore and not called "inf".
             This parser has no parse action.
+        valid_object_names (Iterable[str]): A
+            All backend object names, to ensure they are *not* captured by this parser function.
 
     Returns:
         evaluatable_identifier (pp.ParserElement):
@@ -727,7 +743,10 @@ def arithmetic_parser(
             Parser for unsliced parameters or variables, e.g. "foo"
         number (pp.ParserElement):
             Parser for numbers (integer, float, scientific notation, "inf"/".inf").
-
+    Kwargs:
+        arithmetic (Optional[pp.Forward]):
+            If given, will add arithmetic rules to this existing parsing rule.
+            Defaults to None (i.e., arithmetic rules will be a newly generated rule).
     Returns:
         pp.ParserElement:
             Parser for strings which use arithmetic operations to combine other parser elements.

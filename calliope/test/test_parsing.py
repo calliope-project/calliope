@@ -206,18 +206,14 @@ def equation_index_slice_obj(index_slice_parser, where_parser):
 def dummy_backend_interface(dummy_model_data):
     class DummyBackendModel(backends.BackendModel):
         def __init__(self):
-            backends.BackendModel.__init__(
-                self,
-                defaults=dummy_model_data.attrs["defaults"],
-                instance=None,
-            )
+            backends.BackendModel.__init__(self, instance=None)
 
             self._dataset = dummy_model_data.copy(deep=True)
             self._dataset["with_inf"] = self._dataset["with_inf"].fillna(
-                self.defaults["with_inf"]
+                dummy_model_data.attrs["defaults"]["with_inf"]
             )
             self._dataset["only_techs"] = self._dataset["only_techs"].fillna(
-                self.defaults["only_techs"]
+                dummy_model_data.attrs["defaults"]["only_techs"]
             )
 
         def add_parameter(self):

@@ -224,8 +224,20 @@ class ParsedBackendEquation:
     def evaluate_where(
         self,
         model_data: xr.Dataset,
-        initial_imask: Union[np.bool_, xr.DataArray] = np.True_,
+        initial_imask: xr.DataArray = xr.DataArray(True),
     ) -> xr.DataArray:
+        """Evaluate parsed backend object dictionary `where` string.
+        NOTE: imask = inverse mask (application of "np.where" to an array)
+
+        Args:
+            model_data (xr.Dataset): Calliope model dataset.
+            initial_imask (xr.DataArray, optional):
+                If given, the imask resulting from evaluation will be further imasked by this array.
+                Defaults to xr.DataArray(True) (i.e., no effect).
+
+        Returns:
+            xr.DataArray: _description_
+        """
         foreach_imask = self._evaluate_foreach(model_data)
         evaluated_wheres = [
             where[0].eval(  # type: ignore
@@ -285,7 +297,6 @@ class ParsedBackendEquation:
             equation_name=self.name,
             index_slice_dict=self.index_slices,
             component_dict=self.components,
-            backend_interface=backend_interface,
             backend_dataset=backend_interface._dataset,
             helper_func_dict=VALID_EXPRESSION_HELPER_FUNCTIONS,
             model_data=model_data,
@@ -326,8 +337,22 @@ class ParsedBackendComponent(ParsedBackendEquation):
     def parse_equations(
         self,
         equation_expression_parser: Callable,
-        valid_arithmetic_components: Iterable,
+        backend_object_names: Iterable[str],
     ) -> list[ParsedBackendEquation]:
+        f"""Parse `expression` and `where` strings of backend object configuration dictionary:
+
+        {self._unparsed}
+
+        Args:
+            equation_expression_parser (Callable): Parsing rule to apply to the string expressions under the `equation(s)` key.
+            backend_object_names (Iterable[str]):
+                strings referring to valid backend objects to allow the parser to differentiate between them and generic strings.
+
+        Returns:
+            list[ParsedBackendEquation]:
+                List of parsed equations ready to be evaluated.
+                The length of the list depends on the product of provided equations and component/index_slice references.
+        """
         equation_expression_list: list[UnparsedEquationDict]
         if "equation" in self._unparsed.keys():
             equation_expression_list = [{"expression": self._unparsed["equation"]}]
@@ -335,7 +360,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
             equation_expression_list = self._unparsed.get("equations", [])
 
         equations = self.generate_expression_list(
-            expression_parser=equation_expression_parser(valid_arithmetic_components),
+            expression_parser=equation_expression_parser(backend_object_names),
             expression_list=equation_expression_list,
             expression_group="equations",
             id_prefix=self.name,
@@ -344,7 +369,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         component_dict = {
             c_name: self.generate_expression_list(
                 expression_parser=equation_parser.generate_component_parser(
-                    valid_arithmetic_components
+                    backend_object_names
                 ),
                 expression_list=c_list,
                 expression_group="components",
@@ -355,7 +380,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         index_slice_dict = {
             idx_name: self.generate_expression_list(
                 expression_parser=equation_parser.generate_index_slice_parser(
-                    valid_arithmetic_components
+                    backend_object_names
                 ),
                 expression_list=idx_list,
                 expression_group="index_slices",

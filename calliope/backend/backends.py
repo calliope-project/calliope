@@ -41,15 +41,12 @@ logger = logging.getLogger(__name__)
 class BackendModel(ABC, Generic[T]):
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
 
-    def __init__(self, defaults: dict, instance: T):
+    def __init__(self, instance: T):
         """Abstract base class for interfaces to solvers.
 
         Args:
-            defaults (dict): Calliope input parameter defaults.
             instance (T): Interface model instance.
         """
-
-        self.defaults = defaults.copy()
 
         self._instance = instance
         self._dataset = xr.Dataset()
@@ -319,9 +316,7 @@ class BackendModel(ABC, Generic[T]):
 
         return results
 
-    def add_all_parameters(
-        self, model_data: xr.Dataset, defaults: dict, run_config: dict
-    ) -> None:
+    def add_all_parameters(self, model_data: xr.Dataset, run_config: dict) -> None:
         """
         Add all parameters to backend dataset in-place, including those in the run configuration.
         If model data does not include a parameter, their default values will be added here
@@ -339,9 +334,9 @@ class BackendModel(ABC, Generic[T]):
         """
 
         for param_name, param_data in model_data.data_vars.items():
-            default_val = defaults.get(param_name, np.nan)
+            default_val = model_data.attrs["defaults"].get(param_name, np.nan)
             self.add_parameter(param_name, param_data, default_val)
-        for param_name, default_val in defaults.items():
+        for param_name, default_val in model_data.attrs["defaults"].items():
             if param_name in self.parameters.keys():
                 continue
             self.add_parameter(
@@ -480,10 +475,9 @@ class BackendModel(ABC, Generic[T]):
 
 
 class PyomoBackendModel(BackendModel):
-    def __init__(self, defaults: dict):
+    def __init__(self):
         BackendModel.__init__(
             self,
-            defaults=defaults,
             instance=pmo.block(),
         )
         self._instance.parameters = pmo.parameter_dict()
@@ -767,13 +761,15 @@ class PyomoBackendModel(BackendModel):
 
         Args:
             model_data (xr.Dataset): Calliope model input data
-            parsed_component (Union[parsing.ParsedConstraint, parsing.ParsedExpression]):
-                Parsed YAML expression dictionary entry, ready for evaluation.
+            component_dict (parsing.UnparsedConstraintDict):
+                Unparsed YAML dictionary configuration.
+            component_name (str): Name to assign component in the backend model and dataset
             component_setter (Callable):
                 Function to combine evaluated xarray DataArrays into
                 constraint/expression objects.
                 Will receive outputs of `evaluate_where` and `evalaute_expression` as inputs.
             component_type (Literal[constraints, expressions])
+            parser (Callable): Parsing rule to use for the component (differs between constraints and expressions)
 
 
         Raises:
@@ -786,7 +782,7 @@ class PyomoBackendModel(BackendModel):
             component_dict, component_name
         )
         top_level_imask = parsed_component.evaluate_where(model_data)
-        references = set()
+        references: set[str] = set()
         if not top_level_imask.any():
             component_da = xr.DataArray(None)
         else:
@@ -915,8 +911,10 @@ class PyomoBackendModel(BackendModel):
             mask (Union[bool, np.bool_]): If True, add constraint, otherwise return np.nan
             lhs (Any): Equation left-hand-side expression
             rhs (Any): Equation right-hand-side expression
-            name (str): Name of constraint
+
+        Kwargs:
             op (Literal[, optional): Operator to compare `lhs` and `rhs`. Defaults to =", ">=", "<="].
+            name (str): Name of constraint
 
         Returns:
             Union[type[pmo.constraint], float]:
@@ -948,6 +946,7 @@ class PyomoBackendModel(BackendModel):
         Args:
             mask (Union[bool, np.bool_]): If True, add expression, otherwise return np.nan.
             expr (Any): Linear expression to add.
+        Kwargs:
             name (str): Expression name.
 
         Returns:
@@ -981,9 +980,11 @@ class PyomoBackendModel(BackendModel):
             mask (Union[bool, np.bool_]): If True, add variable, otherwise return np.nan.
             ub (Any): Upper bound to apply to the variable.
             lb (Any): Lower bound to apply to the variable.
-            name (str): Name of variable.
+
+        Kwargs:
             domain_type (Literal["RealSet", "IntegerSet"]):
                 Domain over which variables are valid (real = continuous, integer = integer/binary)
+            name (str): Name of variable.
 
         Returns:
             Union[type[pmo.variable], float]:
@@ -1027,6 +1028,7 @@ class PyomoBackendModel(BackendModel):
 
         Args:
             val (pmo.constraint): constraint object to be evaluated
+        Kwargs:
             eval_body (bool, optional):
                 If True, attempt to evaluate the constraint object `body`, which will evaluate the
                 linear expression contained in the constraint body and produce a numeric value.
@@ -1081,8 +1083,8 @@ class PyomoBackendModel(BackendModel):
 
 class ObjParameter(pmo.parameter):
     """
-    A pyomo parameter with added `dtype` property.
-    A pyomo parameter is `a object for storing a mutable, numeric value that can be used to build a symbolic expression`.
+    A pyomo parameter (`a object for storing a mutable, numeric value that can be used to build a symbolic expression`)
+    with added `dtype` property.
     """
 
     __slots__ = ()
