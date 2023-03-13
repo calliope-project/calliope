@@ -178,7 +178,7 @@ class BackendModel(ABC, Generic[T]):
         constraint_name: str,
         as_backend_objs: bool = True,
         eval_body: bool = False,
-    ) -> Optional[Union[pd.DataFrame, xr.DataArray]]:
+    ) -> Optional[Union[xr.DataArray, xr.Dataset]]:
         """
         Get constraint data as either a table of details or as an array of backend interface objects.
         Can be used to inspect and debug built constraints.
@@ -199,11 +199,10 @@ class BackendModel(ABC, Generic[T]):
                 Defaults to False.
 
         Returns:
-            Optional[Union[pd.DataFrame, xr.DataArray]]:
+            Optional[Union[xr.DataArray, xr.Dataset]]:
                 If constraint is not in backend dataset, will return None.
                 If as_backend_objs is True, will return an xr.DataArray.
-                Otherwise, a table with index entries corresponding to constraint indices
-                and columns for constraint body, and upper and lower bounds will be given.
+                Otherwise, a xr.Dataset will be given, indexed over the same dimensions as the xr.DataArray, with variables for the constraint body, and upper (`ub`) and lower (`lb`) bounds.
         """
 
     @abstractmethod
@@ -352,7 +351,7 @@ class BackendModel(ABC, Generic[T]):
                 self.add_parameter("objective_" + option_name, xr.DataArray(option_val))
         self.add_parameter("bigM", xr.DataArray(run_config.get("bigM", 1e10)))
 
-    def apply_func(self, func: Callable, *args, **kwargs) -> xr.DataArray:
+    def apply_func(self, func: Callable, *args, output_core_dims: tuple = ((), ), **kwargs) -> xr.DataArray:
         """
         Apply a function to every element of an arbitrary number of xarray DataArrays.
 
@@ -364,6 +363,10 @@ class BackendModel(ABC, Generic[T]):
             args (xr.DataArray):
                 xarray DataArrays which will be broadcast together and then iterated over
                 to apply the function.
+            output_core_dims (tuple):
+                Additional dimensions which are expected to be passed back from `xr.apply_ufunc` after applying `func`.
+                This is directly passed to `xr.apply_ufunc`; see their documentation for more details.
+                Defaults to ((), )
             kwargs (dict[str, Any]):
                 Additional keyword arguments to pass to `func`.
 
@@ -377,6 +380,7 @@ class BackendModel(ABC, Generic[T]):
             vectorize=True,
             keep_attrs=True,
             output_dtypes=[np.dtype("O")],
+            output_core_dims=output_core_dims
         )
 
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
@@ -645,14 +649,12 @@ class PyomoBackendModel(BackendModel):
         constraint_name: str,
         as_backend_objs: bool = True,
         eval_body: bool = False,
-    ) -> Optional[Union[pd.DataFrame, xr.DataArray]]:
+    ) -> Optional[Union[xr.DataArray, xr.Dataset]]:
         constraint = self.constraints.get(constraint_name, None)
         if isinstance(constraint, xr.DataArray) and not as_backend_objs:
-            constraint = (
-                constraint.to_series()
-                .dropna()
-                .apply(self._from_pyomo_constraint, eval_body=eval_body)
-            )
+            constraint_attrs = self.apply_func(self._from_pyomo_constraint, constraint, eval_body=eval_body, output_core_dims=(["attributes"],))
+            constraint_attrs.coords["attributes"] = ["lb", "body", "ub"]
+            constraint = constraint_attrs.to_dataset("attributes")
         return constraint
 
     def get_variable(

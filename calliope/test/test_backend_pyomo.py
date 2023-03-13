@@ -1982,7 +1982,9 @@ class TestNewBackend:
         constr = simple_supply_new_build.backend.get_constraint(
             "system_balance", as_backend_objs=False
         )
-        assert constr["body"].dropna().apply(lambda x: isinstance(x, str)).all()
+        assert isinstance(constr, xr.Dataset)
+        assert set(constr.data_vars.keys()) == {"ub", "body", "lb"}
+        assert constr["body"].to_series().dropna().apply(lambda x: isinstance(x, str)).all()
 
     def test_new_build_get_constraint_as_vals(self, simple_supply_new_build):
         constr = simple_supply_new_build.backend.get_constraint(
