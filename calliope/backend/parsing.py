@@ -29,6 +29,7 @@ VALID_IMASK_HELPER_FUNCTIONS: dict[str, Callable] = {
 
 TRUE_ARRAY = xr.DataArray(True)
 
+
 class UnparsedEquationDict(TypedDict):
     where: NotRequired[str]
     expression: str

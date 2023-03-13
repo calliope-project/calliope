@@ -490,7 +490,6 @@ variables:
       max: resource_cap_max
       equals: resource_cap_equals
 
-  # FIXME: when storage_inter_cluster is active, this variable should not exist
   - name: storage_cap
     foreach: [nodes, techs]
     where: "(inheritance(storage) OR inheritance(supply_plus)) AND NOT run.mode=operate AND include_storage=True"
@@ -512,7 +511,6 @@ variables:
     bounds:
       min: -.inf
       max: .inf
-
 
   - name: storage_inter_cluster
     foreach: [nodes, techs, datesteps]

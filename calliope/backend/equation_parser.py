@@ -481,6 +481,28 @@ class EvalNumber(EvalString):
         return float(self.value)
 
 
+class StringListParser(EvalString):
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed lists of generic strings.
+        This is required since we call "eval()" on all elements of the where string,
+        so lists of strings need to be evaluatable as a whole "package".
+
+        Args:
+            tokens (pp.ParseResults): a list of parsed string elements.
+        """
+        self.val = tokens
+
+    def __repr__(self) -> str:
+        "Return string representation of the parsed grammar"
+        return f"{self.val}"
+
+    def eval(self, **kwargs) -> list[str]:
+        "Return input as list of strings."
+
+        return [val.eval() for val in self.val]
+
+
 class GenericStringParser(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
@@ -707,10 +729,9 @@ def evaluatable_identifier_parser(
     ).set_parse_action(GenericStringParser)
 
     id_list = (
-        pp.Suppress("[")
-        + pp.Group(pp.delimited_list(evaluatable_identifier))
-        + pp.Suppress("]")
+        pp.Suppress("[") + pp.delimited_list(evaluatable_identifier) + pp.Suppress("]")
     )
+    id_list.set_parse_action(StringListParser)
 
     return evaluatable_identifier, id_list
 
