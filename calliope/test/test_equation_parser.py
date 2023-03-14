@@ -305,8 +305,7 @@ class TestEquationParserElements:
 
     def test_id_list(self, id_list, eval_kwargs):
         parsed_ = id_list.parse_string("[hello, there]", parse_all=True)
-        evaluated_ = [i.eval(**eval_kwargs) for i in parsed_[0]]
-        assert evaluated_ == ["hello", "there"]
+        assert parsed_[0].eval(**eval_kwargs) == ["hello", "there"]
 
     @pytest.mark.parametrize(
         "string_val", ["1", "inf", "foo", "$foo", "dummy_func_1(1)"]

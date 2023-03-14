@@ -351,7 +351,9 @@ class BackendModel(ABC, Generic[T]):
                 self.add_parameter("objective_" + option_name, xr.DataArray(option_val))
         self.add_parameter("bigM", xr.DataArray(run_config.get("bigM", 1e10)))
 
-    def apply_func(self, func: Callable, *args, output_core_dims: tuple = ((), ), **kwargs) -> xr.DataArray:
+    def apply_func(
+        self, func: Callable, *args, output_core_dims: tuple = ((),), **kwargs
+    ) -> xr.DataArray:
         """
         Apply a function to every element of an arbitrary number of xarray DataArrays.
 
@@ -380,7 +382,7 @@ class BackendModel(ABC, Generic[T]):
             vectorize=True,
             keep_attrs=True,
             output_dtypes=[np.dtype("O")],
-            output_core_dims=output_core_dims
+            output_core_dims=output_core_dims,
         )
 
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
@@ -652,7 +654,12 @@ class PyomoBackendModel(BackendModel):
     ) -> Optional[Union[xr.DataArray, xr.Dataset]]:
         constraint = self.constraints.get(constraint_name, None)
         if isinstance(constraint, xr.DataArray) and not as_backend_objs:
-            constraint_attrs = self.apply_func(self._from_pyomo_constraint, constraint, eval_body=eval_body, output_core_dims=(["attributes"],))
+            constraint_attrs = self.apply_func(
+                self._from_pyomo_constraint,
+                constraint,
+                eval_body=eval_body,
+                output_core_dims=(["attributes"],),
+            )
             constraint_attrs.coords["attributes"] = ["lb", "body", "ub"]
             constraint = constraint_attrs.to_dataset("attributes")
         return constraint

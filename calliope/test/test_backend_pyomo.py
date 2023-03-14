@@ -1984,14 +1984,24 @@ class TestNewBackend:
         )
         assert isinstance(constr, xr.Dataset)
         assert set(constr.data_vars.keys()) == {"ub", "body", "lb"}
-        assert constr["body"].to_series().dropna().apply(lambda x: isinstance(x, str)).all()
+        assert (
+            constr["body"]
+            .to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, str))
+            .all()
+        )
 
     def test_new_build_get_constraint_as_vals(self, simple_supply_new_build):
         constr = simple_supply_new_build.backend.get_constraint(
             "system_balance", as_backend_objs=False, eval_body=True
         )
         assert (
-            constr["body"].dropna().apply(lambda x: isinstance(x, (float, int))).all()
+            constr["body"]
+            .to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, (float, int)))
+            .all()
         )
 
     @pytest.mark.parametrize("bound", ["lb", "ub"])
@@ -1999,7 +2009,7 @@ class TestNewBackend:
         constr = simple_supply_new_build.backend.get_constraint(
             "system_balance", as_backend_objs=False
         )
-        assert (constr[bound].dropna() == 0).all()
+        assert (constr[bound].to_series().dropna() == 0).all()
 
     def test_solve_before_build(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs")
