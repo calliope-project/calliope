@@ -277,8 +277,8 @@ class Model(object):
             # 1. Variables, 2. Expressions, 3. Constraints, 4. Objectives
             for components in ["variables", "expressions", "constraints", "objectives"]:
                 component = components.removesuffix("s")
-                for dict_ in self.component_config[components]:
-                    getattr(backend, f"add_{component}")(self._model_data, dict_)
+                for name, dict_ in self.component_config[components].items():
+                    getattr(backend, f"add_{component}")(self._model_data, name, dict_)
                 log_time(
                     logger,
                     self._timings,

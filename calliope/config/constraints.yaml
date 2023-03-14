@@ -1,41 +1,41 @@
 constraints:
 
-  - name: energy_capacity_per_storage_capacity_min
+  energy_capacity_per_storage_capacity_min:
     foreach: [nodes, techs]
     where: "energy_cap_per_storage_cap_min AND NOT energy_cap_per_storage_cap_equals AND NOT run.mode=operate"
     equation: energy_cap >= storage_cap * energy_cap_per_storage_cap_min
 
-  - name: energy_capacity_per_storage_capacity_max
+  energy_capacity_per_storage_capacity_max:
     foreach: [nodes, techs]
     where: "energy_cap_per_storage_cap_max AND NOT energy_cap_per_storage_cap_equals AND NOT run.mode=operate"
     equation: energy_cap <= storage_cap * energy_cap_per_storage_cap_max
 
-  - name: energy_capacity_per_storage_capacity_equals
+  energy_capacity_per_storage_capacity_equals:
     foreach: [nodes, techs]
     where: "energy_cap_per_storage_cap_equals AND NOT run.mode=operate"
     equation: energy_cap == storage_cap * energy_cap_per_storage_cap_equals
 
-  - name: resource_capacity_equals_energy_capacity
+  resource_capacity_equals_energy_capacity:
     foreach: [nodes, techs]
     where: resource_cap_equals_energy_cap=True AND NOT run.mode=operate
     equation: resource_cap == energy_cap
 
-  - name: force_zero_resource_area
+  force_zero_resource_area:
     foreach: [nodes, techs]
     where: "(resource_area_min OR resource_area_max OR resource_area_equals OR resource_unit=energy_per_area) AND NOT run.mode=operate AND energy_cap_max=0"
     equation: resource_area == 0
 
-  - name: resource_area_per_energy_capacity
+  resource_area_per_energy_capacity:
     foreach: [nodes, techs]
     where: "resource_area_per_energy_cap AND NOT run.mode=operate"
     equation: resource_area == energy_cap * resource_area_per_energy_cap
 
-  - name: resource_area_capacity_per_loc
+  resource_area_capacity_per_loc:
     foreach: [nodes]
     where: "available_area AND (resource_area_min OR resource_area_max OR resource_area_equals OR resource_area_per_energy_cap OR resource_unit=energy_per_area) AND NOT run.mode=operate"
     equation: sum(resource_area, over=techs) <= available_area
 
-  - name: energy_capacity_systemwide
+  energy_capacity_systemwide:
     foreach: [techs]
     where: "(energy_cap_equals_systemwide OR energy_cap_max_systemwide) AND NOT run.mode=operate"
     equations:
@@ -44,23 +44,23 @@ constraints:
       - where: "NOT energy_cap_equals_systemwide"
         expression: sum(energy_cap, over=nodes) <= energy_cap_max_systemwide
 
-  - name: balance_conversion_plus_primary
+  balance_conversion_plus_primary:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion_plus) AND carrier_ratios>0"
     equation: squeeze_carriers(carrier_prod / carrier_ratios[carrier_tiers=out], carrier_tier=out) == -1 * squeeze_carriers(carrier_con * carrier_ratios[carrier_tiers=in], carrier_tier=in) * energy_eff
 
 
-  - name: carrier_production_max_conversion_plus
+  carrier_production_max_conversion_plus:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion_plus) AND NOT cap_method=integer"
     equation: squeeze_carriers(carrier_prod, carrier_tier=out) <= timestep_resolution * energy_cap
 
-  - name: carrier_production_min_conversion_plus
+  carrier_production_min_conversion_plus:
     foreach: [nodes, techs, timesteps]
     where: "energy_cap_min_use AND inheritance(conversion_plus) AND NOT cap_method=integer"
     equation: squeeze_carriers(carrier_prod, carrier_tier=out) >= timestep_resolution * energy_cap * energy_cap_min_use
 
-  - name: balance_conversion_plus_non_primary
+  balance_conversion_plus_non_primary:
     foreach: [nodes, techs, carrier_tiers, timesteps]
     where: "inheritance(conversion_plus) AND [in_2, out_2, in_3, out_3] in carrier_tiers AND carrier_ratios>0"
     equation: $c_1 == $c_2
@@ -80,7 +80,7 @@ constraints:
         - where: "[out_3] in carrier_tiers"
           expression: squeeze_carriers(carrier_prod / carrier_ratios[carrier_tiers=out_3], carrier_tier=[out_3])
 
-  - name: conversion_plus_prod_con_to_zero
+  conversion_plus_prod_con_to_zero:
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier_ratios=0 AND inheritance(conversion_plus)"
     equation: $prod_or_con == 0
@@ -91,42 +91,42 @@ constraints:
         - where: "[out, out_2, out_3] in carrier_tiers"
           expression: carrier_prod
 
-  - name: balance_conversion
+  balance_conversion:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion)"
     equation: squeeze_carriers(carrier_prod, carrier_tier=out) == -1 * squeeze_carriers(carrier_con, carrier_tier=in) * energy_eff
 
-  - name: carrier_production_max
+  carrier_production_max:
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier AND NOT inheritance(conversion_plus) AND NOT cap_method=integer AND allowed_carrier_prod=True AND [out] in carrier_tiers"
     equation: carrier_prod <= energy_cap * timestep_resolution * parasitic_eff
 
-  - name: carrier_production_min
+  carrier_production_min:
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier AND energy_cap_min_use AND NOT inheritance(conversion_plus) AND NOT cap_method=integer AND allowed_carrier_prod=True AND [out] in carrier_tiers"
     equation: carrier_prod >= energy_cap * timestep_resolution * energy_cap_min_use
 
-  - name: carrier_consumption_max
+  carrier_consumption_max:
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier AND (inheritance(transmission) OR inheritance(demand) OR inheritance(storage)) AND (NOT cap_method=integer OR inheritance(demand)) AND allowed_carrier_con=True AND [in] in carrier_tiers"
     equation: carrier_con >= -1 * energy_cap * timestep_resolution
 
-  - name: resource_max
+  resource_max:
     foreach: [nodes, techs, timesteps]
     where: inheritance(supply_plus)
     equation: resource_con <= timestep_resolution * resource_cap
 
-  - name: storage_max
+  storage_max:
     foreach: [nodes, techs, timesteps]
     where: "include_storage=True AND NOT model.time.function_options.storage_inter_cluster=True"
     equation: storage - storage_cap <= 0
 
-  - name: storage_discharge_depth_limit
+  storage_discharge_depth_limit:
     foreach: [nodes, techs, timesteps]
     where: "include_storage=True AND storage_discharge_depth"
     equation: storage - storage_discharge_depth * storage_cap >= 0
 
-  - name: system_balance
+  system_balance:
     foreach: [nodes, carriers, timesteps]
     equation: "sum(carrier_prod, over=techs) + sum(carrier_con, over=techs) - $carrier_export + $unmet_demand_and_unused_supply == 0"
     components:
@@ -141,7 +141,7 @@ constraints:
         - where: "NOT run.ensure_feasibility=True"
           expression: "0"
 
-  - name: balance_supply
+  balance_supply:
     foreach: [nodes, techs, carriers, timesteps]
     where: "resource AND inheritance(supply)"
     equations:
@@ -160,12 +160,12 @@ constraints:
         - where: "resource_unit=energy"
           expression: "resource * resource_scale"
 
-  - name: balance_supply_min_use
+  balance_supply_min_use:
     foreach: [nodes, techs, carriers, timesteps]
     where: "resource AND inheritance(supply) AND resource_min_use AND energy_eff>0 AND NOT force_resource=True"
     equation: "resource_min_use <= carrier_prod / energy_eff"
 
-  - name: balance_demand
+  balance_demand:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(demand)"
     equations:
@@ -184,7 +184,7 @@ constraints:
         - where: "resource_unit=energy"
           expression: "resource * resource_scale"
 
-  - name: balance_supply_plus_no_storage
+  balance_supply_plus_no_storage:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(supply_plus) AND NOT include_storage=True"
     equation: resource_con * resource_eff == $carrier_prod
@@ -195,7 +195,7 @@ constraints:
         - where: NOT (energy_eff=0 OR parasitic_eff=0)
           expression: carrier_prod / (energy_eff * parasitic_eff)
 
-  - name: balance_supply_plus_with_storage
+  balance_supply_plus_with_storage:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(supply_plus) AND include_storage=True"
     equation: storage == $storage_previous_step + resource_con * resource_eff - $carrier_prod
@@ -214,7 +214,7 @@ constraints:
       previous_cluster_step:
         - expression: lookup_cluster_last_timestep
 
-  - name: resource_availability_supply_plus
+  resource_availability_supply_plus:
     foreach: [nodes, techs, timesteps]
     where: "resource AND inheritance(supply_plus)"
     equations:
@@ -225,7 +225,7 @@ constraints:
     components:
       available_resource: *available_resource
 
-  - name: balance_storage
+  balance_storage:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(storage)"
     equation: storage == $storage_previous_step - $carrier_prod - carrier_con * energy_eff
@@ -238,13 +238,13 @@ constraints:
       storage_previous_step: *storage_previous_step
     index_slices: *storage_previous_step_idx_items
 
-  - name: set_storage_initial
+  set_storage_initial:
     foreach: [nodes, techs]
     where: "storage_initial AND include_storage=True AND run.cyclic_storage=True AND NOT model.time.function_options.storage_inter_cluster=True"
     equation: storage[timesteps=$final_step] * ((1 - storage_loss) ** timestep_resolution[timesteps=$final_step]) == storage_initial * storage_cap
     index_slices: *storage_previous_step_idx_items
 
-  - name: set_storage_initial_inter_cluster
+  set_storage_initial_inter_cluster:
     foreach: [nodes, techs]
     where: "storage_initial AND include_storage=True AND run.cyclic_storage=True AND model.time.function_options.storage_inter_cluster=True"
     equation: storage_inter_cluster[datesteps=$final_step] * ((1 - storage_loss) ** 24) == storage_initial * storage_cap
@@ -252,7 +252,7 @@ constraints:
       final_step:
         - expression: get_val_at_index(dim=datesteps, idx=-1)
 
-  - name: storage_intra_max
+  storage_intra_max:
     foreach: [nodes, techs, timesteps]
     where: "include_storage=True AND model.time.function_options.storage_inter_cluster=True"
     equation: storage <= storage_intra_cluster_max[clusters=$cluster]
@@ -260,13 +260,13 @@ constraints:
       cluster:
         - expression: timestep_cluster
 
-  - name: storage_intra_min
+  storage_intra_min:
     foreach: [nodes, techs, timesteps]
     where: "include_storage=True AND model.time.function_options.storage_inter_cluster=True"
     equation: storage >= storage_intra_cluster_min[clusters=$cluster]
     index_slices: *timestep_cluster_slice
 
-  - name: storage_inter_max
+  storage_inter_max:
     foreach: [nodes, techs, datesteps]
     where: "include_storage=True AND model.time.function_options.storage_inter_cluster=True"
     equation: storage_inter_cluster + storage_intra_cluster_max[clusters=$cluster] <= storage_cap
@@ -274,13 +274,13 @@ constraints:
       cluster:
         - expression: lookup_datestep_cluster
 
-  - name: storage_inter_min
+  storage_inter_min:
     foreach: [nodes, techs, datesteps]
     where: "include_storage=True AND model.time.function_options.storage_inter_cluster=True"
     equation: storage_inter_cluster * ((1 - storage_loss) ** 24) + storage_intra_cluster_min[clusters=$cluster] >= 0
     index_slices: *datestep_cluster_slice
 
-  - name: balance_storage_inter
+  balance_storage_inter:
     foreach: [nodes, techs, datesteps]
     where: "include_storage=True AND model.time.function_options.storage_inter_cluster=True"
     equation: storage_inter_cluster == $storage_previous_step + $storage_intra
@@ -299,22 +299,22 @@ constraints:
       final_step:
         - expression: roll(lookup_datestep_last_cluster_timestep, datesteps=1)
 
-  - name: balance_transmission
+  balance_transmission:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(transmission) AND allowed_carrier_prod=True"
     equation: "carrier_prod == -1 * get_connected_link(carrier_con) * energy_eff"
 
-  - name: symmetric_transmission
+  symmetric_transmission:
     foreach: [nodes, techs]
     where: "inheritance(transmission) AND NOT run.mode=operate"
     equation: energy_cap == get_connected_link(energy_cap)
 
-  - name: export_balance
+  export_balance:
     foreach: [nodes, techs, carriers, timesteps]
     where: "export_carrier AND export=True"
     equation: carrier_prod >= carrier_export
 
-  - name: carrier_export_max
+  carrier_export_max:
     foreach: [nodes, techs, carriers, timesteps]
     where: "export_max AND export_carrier AND export=True"
     equations:
@@ -323,47 +323,47 @@ constraints:
       - where: "NOT cap_method=integer"
         expression: carrier_export <= export_max
 
-  - name: unit_commitment_milp
+  unit_commitment_milp:
     foreach: [nodes, techs, timesteps]
     where: "cap_method=integer"
     equation: operating_units <= units
 
-  - name: carrier_production_max_milp
+  carrier_production_max_milp:
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier AND NOT inheritance(conversion_plus) AND cap_method=integer AND allowed_carrier_prod=True"
     equation: carrier_prod <= operating_units * timestep_resolution * energy_cap_per_unit * parasitic_eff
 
-  - name: carrier_production_max_conversion_plus_milp
+  carrier_production_max_conversion_plus_milp:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion_plus) AND cap_method=integer AND allowed_carrier_prod=True"
     equation: squeeze_carriers(carrier_prod, carrier_tier=out) <= operating_units * timestep_resolution * energy_cap_per_unit
 
-  - name: carrier_consumption_max_milp
+  carrier_consumption_max_milp:
     foreach: [nodes, techs, carriers, timesteps]
     where: "NOT inheritance(conversion_plus) AND cap_method=integer AND allowed_carrier_con=True"
     equation: carrier_con >= -1 * operating_units * timestep_resolution * energy_cap_per_unit
 
-  - name: carrier_production_min_milp
+  carrier_production_min_milp:
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier AND energy_cap_min_use AND NOT inheritance(conversion_plus) AND cap_method=integer AND allowed_carrier_prod=True"
     equation: carrier_prod >= operating_units * timestep_resolution * energy_cap_per_unit * energy_cap_min_use
 
-  - name: carrier_production_min_conversion_plus_milp
+  carrier_production_min_conversion_plus_milp:
     foreach: [nodes, techs, timesteps]
     where: "energy_cap_min_use AND inheritance(conversion_plus) AND cap_method=integer AND allowed_carrier_prod=True"
     equation: squeeze_carriers(carrier_prod, carrier_tier=out) >= operating_units * timestep_resolution * energy_cap_per_unit * energy_cap_min_use
 
-  - name: storage_capacity_units_milp
+  storage_capacity_units_milp:
     foreach: [nodes, techs]
     where: "(inheritance(storage) OR inheritance(supply_plus)) AND cap_method=integer AND include_storage=True AND NOT run.mode=operate"
     equation: storage_cap == units * storage_cap_per_unit
 
-  - name: energy_capacity_units_milp
+  energy_capacity_units_milp:
     foreach: [nodes, techs]
     where: "energy_cap_per_unit AND cap_method=integer AND NOT run.mode=operate"
     equation: energy_cap == units * energy_cap_per_unit
 
-  - name: energy_capacity_max_purchase_milp
+  energy_capacity_max_purchase_milp:
     foreach: [nodes, techs]
     where: "cost_purchase AND (energy_cap_max OR energy_cap_equals) AND cap_method=binary"
     equations:
@@ -372,12 +372,12 @@ constraints:
       - where: NOT energy_cap_equals
         expression: energy_cap <= energy_cap_max * energy_cap_scale * purchased
 
-  - name: energy_capacity_min_purchase_milp
+  energy_capacity_min_purchase_milp:
     foreach: [nodes, techs]
     where: "cost_purchase AND energy_cap_min AND NOT energy_cap_equals AND cap_method=binary"
     equation: energy_cap >= energy_cap_min * energy_cap_scale * purchased
 
-  - name: storage_capacity_max_purchase_milp
+  storage_capacity_max_purchase_milp:
     foreach: [nodes, techs]
     where: "cost_purchase AND (storage_cap_max OR storage_cap_equals) AND cap_method=binary"
     equations:
@@ -386,12 +386,12 @@ constraints:
       - where: NOT storage_cap_equals
         expression: storage_cap <= storage_cap_max * purchased
 
-  - name: storage_capacity_min_purchase_milp
+  storage_capacity_min_purchase_milp:
     foreach: [nodes, techs]
     where: "cost_purchase AND storage_cap_min AND NOT storage_cap_equals AND cap_method=binary"
     equation: storage_cap >= storage_cap_min * purchased
 
-  - name: unit_capacity_systemwide_milp
+  unit_capacity_systemwide_milp:
     foreach: [techs]
     where: "(cap_method=binary OR cap_method=integer) AND (units_max_systemwide OR units_equals_systemwide) AND NOT run.mode=operate"
     equations:
@@ -406,17 +406,17 @@ constraints:
         - where: cap_method=integer
           expression: sum(units, over=nodes)
 
-  - name: asynchronous_con_milp
+  asynchronous_con_milp:
     foreach: [nodes, techs, timesteps]
     where: "force_asynchronous_prod_con=True"
     equation: -1 * squeeze_carriers(carrier_con, carrier_tier=in) <= (1 - prod_con_switch) * bigM
 
-  - name: asynchronous_prod_milp
+  asynchronous_prod_milp:
     foreach: [nodes, techs, timesteps]
     where: "force_asynchronous_prod_con=True"
     equation: squeeze_carriers(carrier_prod, carrier_tier=out) <= prod_con_switch * bigM
 
-  - name: ramping_up
+  ramping_up:
     foreach: [nodes, techs, carriers, timesteps]
     where: "energy_ramping AND NOT timesteps=get_val_at_index(dim=timesteps, idx=0)"
     equation: $flow - roll($flow, timesteps=1) <= energy_ramping * energy_cap
@@ -429,7 +429,7 @@ constraints:
         - where: "carrier AND allowed_carrier_con=True AND allowed_carrier_prod=True"
           expression: (carrier_con + carrier_prod) / timestep_resolution
 
-  - name: ramping_down
+  ramping_down:
     foreach: [nodes, techs, carriers, timesteps]
     where: "energy_ramping AND NOT timesteps=get_val_at_index(dim=timesteps, idx=0)"
     equation:  -1 * energy_ramping * energy_cap <= $flow - roll($flow, timesteps=1)
@@ -437,7 +437,7 @@ constraints:
       flow: *ramping_flow
 
 variables:
-  - name: energy_cap
+  energy_cap:
     foreach: [nodes, techs]
     where: "NOT run.mode=operate"
     bounds:
@@ -446,28 +446,28 @@ variables:
       equals: energy_cap_equals
       scale: energy_cap_scale
 
-  - name: carrier_prod
+  carrier_prod:
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers"
     bounds:
       min: 0
       max: .inf
 
-  - name: carrier_con
+  carrier_con:
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier AND allowed_carrier_con=True AND [in, in_2, in_3] in carrier_tiers"
     bounds:
       min: -.inf
       max: 0
 
-  - name: carrier_export
+  carrier_export:
     foreach: [nodes, techs, carriers, timesteps]
     where: "export_carrier AND export=True"
     bounds:
       min: 0
       max: .inf
 
-  - name: resource_area
+  resource_area:
     foreach: [nodes, techs]
     where: "(resource_area_min OR resource_area_max OR resource_area_equals OR resource_area_per_energy_cap OR resource_unit=energy_per_area) AND NOT run.mode=operate"
     bounds:
@@ -475,14 +475,14 @@ variables:
       max: resource_area_max
       equals: resource_area_equals
 
-  - name: resource_con
+  resource_con:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(supply_plus)"
     bounds:
       min: 0
       max: .inf
 
-  - name: resource_cap
+  resource_cap:
     foreach: [nodes, techs]
     where: "inheritance(supply_plus) AND NOT run.mode=operate"
     bounds:
@@ -490,7 +490,7 @@ variables:
       max: resource_cap_max
       equals: resource_cap_equals
 
-  - name: storage_cap
+  storage_cap:
     foreach: [nodes, techs]
     where: "(inheritance(storage) OR inheritance(supply_plus)) AND NOT run.mode=operate AND include_storage=True"
     bounds:
@@ -498,42 +498,35 @@ variables:
       max: storage_cap_max
       equals: storage_cap_equals
 
-  - name: storage
+  storage:
     foreach: [nodes, techs, timesteps]
     where: "(inheritance(storage) OR inheritance(supply_plus)) AND include_storage=True AND NOT model.time.function_options.storage_inter_cluster=True"
     bounds:
       min: 0
       max: .inf
 
-  - name: storage
-    foreach: [nodes, techs, timesteps]
-    where: "(inheritance(storage) OR inheritance(supply_plus)) AND include_storage=True AND model.time.function_options.storage_inter_cluster=True AND model.time.function=apply_clustering"
-    bounds:
-      min: -.inf
-      max: .inf
-
-  - name: storage_inter_cluster
+  storage_inter_cluster:
     foreach: [nodes, techs, datesteps]
     where: "include_storage=True AND model.time.function_options.storage_inter_cluster=True"
     bounds:
       min: 0
       max: .inf
 
-  - name: storage_intra_cluster_max
+  storage_intra_cluster_max:
     foreach: [nodes, techs, clusters]
     where: "include_storage=True AND model.time.function_options.storage_inter_cluster=True"
     bounds:
       min: -.inf
       max: .inf
 
-  - name: storage_intra_cluster_min
+  storage_intra_cluster_min:
     foreach: [nodes, techs, clusters]
     where: "include_storage=True AND model.time.function_options.storage_inter_cluster=True"
     bounds:
       min: -.inf
       max: .inf
 
-  - name: purchased
+  purchased:
     foreach: [nodes, techs]
     where: "cap_method=binary AND NOT run.mode=operate"
     domain: integer
@@ -541,7 +534,7 @@ variables:
       min: 0
       max: 1
 
-  - name: units
+  units:
     foreach: [nodes, techs]
     where: "cap_method=integer AND NOT run.mode=operate"
     domain: integer
@@ -550,7 +543,7 @@ variables:
       max: units_max
       equals: units_equals
 
-  - name: operating_units
+  operating_units:
     foreach: [nodes, techs, timesteps]
     where: "cap_method=integer"
     domain: integer
@@ -558,7 +551,7 @@ variables:
       min: 0
       max: .inf
 
-  - name: prod_con_switch
+  prod_con_switch:
     foreach: [nodes, techs, timesteps]
     where: "force_asynchronous_prod_con=True"
     domain: integer
@@ -566,14 +559,14 @@ variables:
       min: 0
       max: 1
 
-  - name: unmet_demand
+  unmet_demand:
     foreach: [nodes, carriers, timesteps]
     where: "run.ensure_feasibility=True"
     bounds:
       min: 0
       max: .inf
 
-  - name: unused_supply
+  unused_supply:
     foreach: [nodes, carriers, timesteps]
     where: "run.ensure_feasibility=True"
     bounds:
@@ -581,7 +574,7 @@ variables:
       max: 0
 
 objectives:
-    - name: min_cost_optimisation
+    min_cost_optimisation:
       equation: sum(sum(cost, over=[nodes, techs]) * objective_cost_class, over=costs) + $unmet_demand
       components:
         unmet_demand:
@@ -594,7 +587,7 @@ objectives:
 
 expressions:
 
-  - name: cost_var
+  cost_var:
     foreach: [nodes, techs, costs, timesteps]
     where: "cost_export OR cost_om_con OR cost_om_prod"
     equation: timestep_weights * ($cost_export + $cost_om_prod + $cost_om_con)
@@ -623,7 +616,7 @@ expressions:
         - where: "NOT cost_om_prod"
           expression: "0"
 
-  - name: cost_investment
+  cost_investment:
     foreach: [nodes, techs, costs]
     where: "(cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap) AND NOT run.mode=operate"
     equations:
@@ -674,7 +667,7 @@ expressions:
         - where: "NOT (cost_purchase AND (cap_method=binary OR cap_method=integer))"
           expression: "0"
 
-  - name: cost
+  cost:
     foreach: [nodes, techs, costs]
     where: "cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap OR cost_export OR cost_om_con OR cost_om_prod"
     equation: $cost_investment + $cost_var_sum

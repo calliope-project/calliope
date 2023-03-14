@@ -36,7 +36,6 @@ class UnparsedEquationDict(TypedDict):
 
 
 class UnparsedConstraintDict(TypedDict):
-    name: Required[str]
     foreach: Required[list]
     where: str
     equation: NotRequired[str]
@@ -53,7 +52,6 @@ class UnparsedVariableBoundDict(TypedDict):
 
 
 class UnparsedVariableDict(TypedDict):
-    name: Required[str]
     foreach: list[str]
     where: str
     domain: NotRequired[str]
@@ -61,7 +59,6 @@ class UnparsedVariableDict(TypedDict):
 
 
 class UnparsedObjectiveDict(TypedDict):
-    name: Required[str]
     equation: NotRequired[str]
     equations: NotRequired[list[UnparsedEquationDict]]
     components: NotRequired[dict[str, list[UnparsedEquationDict]]]
@@ -288,8 +285,8 @@ class ParsedBackendComponent(ParsedBackendEquation):
     interface like Pyomo or Gurobipy.
     """
 
-    def __init__(self, unparsed_data: T) -> None:
-        self.name: str = unparsed_data["name"]
+    def __init__(self, name: str, unparsed_data: T) -> None:
+        self.name: str = name
         self._unparsed: dict = dict(unparsed_data)
 
         self.where: list[pp.ParseResults] = []

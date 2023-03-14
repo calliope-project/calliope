@@ -21,13 +21,12 @@ def string_to_dict(yaml_string):
 @pytest.fixture(scope="function")
 def component_obj():
     setup_string = """
-    name: foo
     foreach: [A, A1]
     where: "True"
     equation: 1 == 1
     """
     variable_data = string_to_dict(setup_string)
-    return parsing.ParsedBackendComponent(variable_data)
+    return parsing.ParsedBackendComponent("foo", variable_data)
 
 
 @pytest.fixture(scope="function")
@@ -143,7 +142,6 @@ def obj_with_components_and_index_slices():
         elif isinstance(equation_string, str):
             equation_string = f"equation: {equation_string}"
         string_ = f"""
-            name: my_constraint
             foreach: [A, techs, A1]
             {equation_string}
             components:
@@ -170,7 +168,7 @@ def obj_with_components_and_index_slices():
                       where: techs4
             """
 
-        return parsing.ParsedBackendComponent(string_to_dict(string_))
+        return parsing.ParsedBackendComponent("my_constraint", string_to_dict(string_))
 
     return _obj_with_components_and_index_slices
 
@@ -266,7 +264,6 @@ def evaluatable_component_obj(valid_object_names):
         elif isinstance(equation_expressions, str):
             equations = f"equation: {equation_expressions}"
         setup_string = f"""
-        name: foo
         foreach: [techs, nodes]
         where: with_inf
         {equations}
@@ -279,7 +276,7 @@ def evaluatable_component_obj(valid_object_names):
 
         class DummyParsedBackendComponent(parsing.ParsedBackendComponent):
             def __init__(self, dict_):
-                parsing.ParsedBackendComponent.__init__(self, dict_)
+                parsing.ParsedBackendComponent.__init__(self, "foo", dict_)
                 self.parse_top_level_where()
                 self.equations = self.parse_equations(
                     equation_parser.generate_equation_parser, valid_object_names
@@ -895,7 +892,6 @@ class TestParsedConstraint:
     @pytest.fixture
     def constraint_obj(self):
         dict_ = {
-            "name": "foo",
             "foreach": ["techs"],
             "where": "with_inf",
             "equation": "$foo == 1",
@@ -906,7 +902,7 @@ class TestParsedConstraint:
                 ]
             },
         }
-        parsed_ = parsing.ParsedBackendComponent(dict_)
+        parsed_ = parsing.ParsedBackendComponent("foo", dict_)
         parsed_.equations = parsed_.parse_equations(
             equation_parser.generate_equation_parser, ["only_techs"]
         )
@@ -943,9 +939,9 @@ class TestParsedConstraint:
 class TestParsedVariable:
     @pytest.fixture
     def variable_obj(self):
-        dict_ = {"name": "foo", "foreach": ["techs"], "where": "False"}
+        dict_ = {"foreach": ["techs"], "where": "False"}
 
-        return parsing.ParsedBackendComponent(dict_)
+        return parsing.ParsedBackendComponent("foo", dict_)
 
     def test_parse_variable_dict_sets(self, variable_obj):
         assert variable_obj.sets == ["techs"]
@@ -963,14 +959,13 @@ class TestParsedObjective:
     @pytest.fixture
     def objective_obj(self):
         dict_ = {
-            "name": "foo",
             "equations": [
                 {"expression": "bar + 2", "where": "False"},
                 {"expression": "sum(only_techs, over=[techs]) + 1", "where": "True"},
             ],
         }
 
-        parsed_ = parsing.ParsedBackendComponent(dict_)
+        parsed_ = parsing.ParsedBackendComponent("foo", dict_)
         parsed_.equations = parsed_.parse_equations(
             equation_parser.generate_arithmetic_parser, ["only_techs", "bar"]
         )
