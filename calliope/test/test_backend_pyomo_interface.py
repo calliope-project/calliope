@@ -24,7 +24,8 @@ class TestGetInputParams:
 
         inputs = model.backend.access_model_inputs()
         assert set(model.inputs.data_vars).symmetric_difference(inputs.data_vars) == {
-            "objective_cost_class"
+            "objective_cost_class",
+            "annualisation_weight",
         }
 
 

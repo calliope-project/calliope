@@ -6,7 +6,9 @@ import collections
 import pytest  # noqa: F401
 import numpy as np
 import pyomo.core as po
+import pyomo.kernel as pmo
 import logging
+import xarray as xr
 
 import calliope.exceptions as exceptions
 from calliope.core.attrdict import AttrDict
@@ -1860,3 +1862,224 @@ class TestLogging:
             if count > 1 and item != "" and not item.startswith("Constructing")
         ]
         assert duplicates == []
+
+
+class TestNewBackend:
+    @pytest.fixture(scope="class")
+    def simple_supply_new_build(self):
+        m = build_model({}, "simple_supply,two_hours,investment_costs")
+        m.build()
+        m.solve()
+        return m
+
+    def test_new_build_has_backend(self, simple_supply_new_build):
+        assert hasattr(simple_supply_new_build, "backend")
+
+    def test_new_build_optimal(self, simple_supply_new_build):
+        assert hasattr(simple_supply_new_build, "results")
+        assert (
+            simple_supply_new_build._model_data.attrs["termination_condition"]
+            == "optimal"
+        )
+
+    @pytest.mark.parametrize(
+        "component_type", ["variable", "expression", "parameter", "constraint"]
+    )
+    def test_new_build_get_missing_component(
+        self, simple_supply_new_build, component_type
+    ):
+        returned_ = getattr(simple_supply_new_build.backend, f"get_{component_type}")(
+            "foo"
+        )
+        assert returned_ is None
+
+    def test_new_build_get_variable(self, simple_supply_new_build):
+        var = simple_supply_new_build.backend.get_variable("energy_cap")
+        assert (
+            var.to_series().dropna().apply(lambda x: isinstance(x, pmo.variable)).all()
+        )
+        assert var.attrs == {
+            "variables": 1,
+            "references": {
+                "carrier_consumption_max",
+                "carrier_production_max",
+                "cost_investment",
+                "symmetric_transmission",
+            },
+        }
+
+    def test_new_build_get_variable_as_vals(self, simple_supply_new_build):
+        var = simple_supply_new_build.backend.get_variable(
+            "energy_cap", as_backend_objs=False
+        )
+        assert (
+            not var.to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, pmo.variable))
+            .any()
+        )
+
+    def test_new_build_get_parameter(self, simple_supply_new_build):
+        param = simple_supply_new_build.backend.get_parameter("energy_eff")
+        assert (
+            param.to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, pmo.parameter))
+            .all()
+        )
+        assert param.attrs == {
+            "parameters": 1,
+            "is_result": 0,
+            "references": {"balance_demand", "balance_transmission"},
+        }
+
+    def test_new_build_get_parameter_as_vals(self, simple_supply_new_build):
+        param = simple_supply_new_build.backend.get_parameter(
+            "energy_eff", as_backend_objs=False
+        )
+        assert (
+            not param.to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, pmo.parameter))
+            .any()
+        )
+
+    def test_new_build_get_expression(self, simple_supply_new_build):
+        expr = simple_supply_new_build.backend.get_expression("cost_investment")
+        assert (
+            expr.to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, pmo.expression))
+            .all()
+        )
+        assert expr.attrs == {"expressions": 1, "references": {"cost"}}
+
+    def test_new_build_get_expression_as_str(self, simple_supply_new_build):
+        expr = simple_supply_new_build.backend.get_expression(
+            "cost", as_backend_objs=False
+        )
+        assert expr.to_series().dropna().apply(lambda x: isinstance(x, str)).all()
+
+    def test_new_build_get_expression_as_vals(self, simple_supply_new_build):
+        expr = simple_supply_new_build.backend.get_expression(
+            "cost", as_backend_objs=False, eval_body=True
+        )
+        assert (
+            expr.to_series().dropna().apply(lambda x: isinstance(x, (float, int))).all()
+        )
+
+    def test_new_build_get_constraint(self, simple_supply_new_build):
+        constr = simple_supply_new_build.backend.get_constraint("system_balance")
+        assert (
+            constr.to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, pmo.constraint))
+            .all()
+        )
+        assert constr.attrs == {"constraints": 1, "references": set()}
+
+    def test_new_build_get_constraint_as_str(self, simple_supply_new_build):
+        constr = simple_supply_new_build.backend.get_constraint(
+            "system_balance", as_backend_objs=False
+        )
+        assert isinstance(constr, xr.Dataset)
+        assert set(constr.data_vars.keys()) == {"ub", "body", "lb"}
+        assert (
+            constr["body"]
+            .to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, str))
+            .all()
+        )
+
+    def test_new_build_get_constraint_as_vals(self, simple_supply_new_build):
+        constr = simple_supply_new_build.backend.get_constraint(
+            "system_balance", as_backend_objs=False, eval_body=True
+        )
+        assert (
+            constr["body"]
+            .to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, (float, int)))
+            .all()
+        )
+
+    @pytest.mark.parametrize("bound", ["lb", "ub"])
+    def test_new_build_get_constraint_bounds(self, simple_supply_new_build, bound):
+        constr = simple_supply_new_build.backend.get_constraint(
+            "system_balance", as_backend_objs=False
+        )
+        assert (constr[bound].to_series().dropna() == 0).all()
+
+    def test_solve_before_build(self):
+        m = build_model({}, "simple_supply,two_hours,investment_costs")
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            m.solve()
+        assert check_error_or_warning(excinfo, "You must build the optimisation")
+
+    def test_solve_after_solve(self, simple_supply_new_build):
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            simple_supply_new_build.solve()
+        assert check_error_or_warning(excinfo, "This model object already has results.")
+
+    def test_solve_operate_not_allowed(self, simple_supply_new_build):
+        simple_supply_new_build.run_config["mode"] = "operate"
+        simple_supply_new_build._model_data.attrs["allow_operate_mode"] = False
+
+        try:
+            with pytest.raises(exceptions.ModelError) as excinfo:
+                simple_supply_new_build.solve(force_rerun=True)
+            assert check_error_or_warning(excinfo, "Unable to run this model in op")
+        except AssertionError as e:
+            simple_supply_new_build.run_config["mode"] = "plan"
+            simple_supply_new_build._model_data.attrs["allow_operate_mode"] = True
+            raise e
+        else:
+            simple_supply_new_build.run_config["mode"] = "plan"
+            simple_supply_new_build._model_data.attrs["allow_operate_mode"] = True
+
+    def test_solve_warmstart_not_possible(self, simple_supply_new_build):
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            simple_supply_new_build.solve(force_rerun=True, warmstart=True)
+        assert check_error_or_warning(excinfo, "cbc, does not support warmstart")
+
+    def test_solve_non_optimal(self, simple_supply_new_build):
+        def _update_param(param):
+            param.value = param.value * 1000
+
+        simple_supply_new_build.backend.apply_func(
+            _update_param,
+            simple_supply_new_build.backend.parameters.resource.loc[
+                {"techs": "test_demand_elec"}
+            ],
+        )
+        with pytest.warns(exceptions.BackendWarning) as excinfo:
+            simple_supply_new_build.solve(force_rerun=True)
+
+        assert check_error_or_warning(excinfo, "Model solution was non-optimal")
+        assert (
+            simple_supply_new_build._model_data.attrs["termination_condition"]
+            == "infeasible"
+        )
+        assert not simple_supply_new_build.results
+        assert "energy_cap" not in simple_supply_new_build._model_data.data_vars
+
+    def test_raise_error_on_preexistence_same_type(self, simple_supply_new_build):
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            simple_supply_new_build.backend.add_parameter("energy_eff", xr.DataArray(1))
+
+        assert check_error_or_warning(
+            excinfo,
+            "Trying to add already existing `energy_eff` to backend model parameters.",
+        )
+
+    def test_raise_error_on_preexistence_diff_type(self, simple_supply_new_build):
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            simple_supply_new_build.backend.add_parameter(
+                "carrier_prod", xr.DataArray(1)
+            )
+
+        assert check_error_or_warning(
+            excinfo,
+            "Trying to add already existing *variable* `carrier_prod` as a backend model *parameter*.",
+        )

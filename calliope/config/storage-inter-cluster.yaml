@@ -1,0 +1,7 @@
+variables:
+  storage:
+    foreach: [nodes, techs, timesteps]
+    where: "(inheritance(storage) OR inheritance(supply_plus)) AND include_storage=True AND model.time.function_options.storage_inter_cluster=True AND model.time.function=apply_clustering"
+    bounds:
+      min: -.inf
+      max: .inf

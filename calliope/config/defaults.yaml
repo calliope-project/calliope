@@ -233,6 +233,7 @@ techs:
                 resource_area: 0  # name: Cost of resource area ¦ unit: m\ :sup:`-2` ¦
                 resource_cap: 0  # name: Cost of resource consumption capacity ¦ unit: kW :sup:`-1` ¦
                 storage_cap: 0  # name: Cost of storage capacity ¦ unit: kWh :sup:`-1` ¦
+                depreciation_rate: 1  # name: Depreciation rate for annualisation of investment costs ¦ unit: fraction ¦
         exists: true
 
 nodes:
@@ -240,7 +241,7 @@ nodes:
         transmission_node: false # true only if no techs are defined (including complete ommission of the `techs` key). Automatically added during processing if not defined by user.
         coordinates: {}  # The node's x-y coordinates for distance calculations and plotting: {lat: ..., lon: ...} or {x: ..., y: ...}
         available_area: .inf  # This node's available land area (required if constraining technology deployment by area).
-        techs: None  # A list of technologies, optionally with node-specific settings overriding the technology's global settings.
+        techs: null  # A list of technologies, optionally with node-specific settings overriding the technology's global settings.
         exists: true
 
 links:

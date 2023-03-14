@@ -121,10 +121,10 @@ class DataVarParser:
     def _data_var_exists(model_data_var: xr.DataArray) -> xr.DataArray:
         "mask by setting all (NaN | INF/-INF) to False, otherwise True"
         with pd.option_context("mode.use_inf_as_na", True):
-            return model_data_var.where(pd.notnull(model_data_var)).notnull()
+            return model_data_var.where(pd.notnull(model_data_var)).notnull()  # type: ignore
 
     def eval(
-        self, model_data: xr.Dataset, defaults: dict, apply_imask: bool = True, **kwargs
+        self, model_data: xr.Dataset, apply_imask: bool = True, **kwargs
     ) -> Union[np.bool_, xr.DataArray]:
         """
         Get parsed model data variable from the Calliope model dataset.
@@ -147,7 +147,8 @@ class DataVarParser:
         if apply_imask:
             return self._data_var_exists(model_data[self.data_var])
         else:
-            return model_data[self.data_var].fillna(defaults.get(self.data_var))
+            default = model_data.attrs["defaults"].get(self.data_var)
+            return model_data[self.data_var].fillna(default)
 
 
 class ComparisonParser(equation_parser.EvalComparisonOp):
@@ -206,11 +207,9 @@ class SubsetParser:
         "Return string representation of the parsed grammar"
         return f"SUBSET:{self.set_name}{self.subset}"
 
-    def eval(self, imask: xr.DataArray, **kwargs) -> xr.DataArray:
-        new_imask = imask.copy(deep=True)
+    def eval(self, model_data: xr.Dataset, **kwargs) -> xr.DataArray:
         subset = [i.eval(**kwargs) for i in self.subset]
-        new_imask.loc[{self.set_name: ~imask[self.set_name].isin(subset)}] = False
-        return new_imask
+        return model_data[self.set_name].isin(subset)
 
 
 class BoolOperandParser:
@@ -234,27 +233,6 @@ class BoolOperandParser:
         elif self.val == "false":
             bool_val = np.False_
         return bool_val
-
-
-class GenericStringParser:
-    def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed generic strings.
-        This is required since we call "eval()" on all elements of the where string,
-        so even arbitrary strings (used in comparison operations) need to be evaluatable.
-
-        Args:
-            tokens (pp.ParseResults): Has one parsed element: string name (str).
-        """
-        self.val = tokens[0]
-
-    def __repr__(self):
-        "Return string representation of the parsed grammar"
-        return f"STRING:{self.val}"
-
-    def eval(self, **kwargs) -> str:
-        "Return input as string."
-        return str(self.val)
 
 
 def data_var_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
@@ -324,7 +302,7 @@ def bool_parser() -> pp.ParserElement:
 def evaluatable_string_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
     "Parsing grammar to make generic strings used in comparison operations evaluatable"
     evaluatable_identifier = generic_identifier.copy()
-    evaluatable_identifier.set_parse_action(GenericStringParser)
+    evaluatable_identifier.set_parse_action(equation_parser.GenericStringParser)
 
     return evaluatable_identifier
 
@@ -445,7 +423,7 @@ def generate_where_string_parser() -> pp.ParserElement:
     bool_operand = bool_parser()
     evaluatable_string = evaluatable_string_parser(generic_identifier)
     helper_function = equation_parser.helper_function_parser(
-        generic_identifier, allowed_parser_elements_in_args=[evaluatable_string, number]
+        evaluatable_string, number, generic_identifier=generic_identifier
     )
     comparison = comparison_parser(
         evaluatable_string,

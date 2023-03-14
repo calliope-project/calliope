@@ -106,6 +106,9 @@ class ModelDataFactory:
             )
 
         self.model_data = time.add_max_demand_timesteps(self.model_data)
+        self.model_data["annualisation_weight"] = (
+            self.model_data.timestep_resolution * self.model_data.timestep_weights
+        ).sum() / 8760
 
     def _clean_model_data(self):
         self.model_data = dataset.reorganise_xarray_dimensions(self.model_data)
@@ -369,22 +372,6 @@ class ModelDataFactory:
         attr_dict["calliope_version"] = __version__
         attr_dict["applied_overrides"] = model_run["applied_overrides"]
         attr_dict["scenario"] = model_run["scenario"]
-
-        default_tech_dict = checks.DEFAULTS.techs.default_tech
-        default_cost_dict = {
-            "cost_{}".format(k): v
-            for k, v in default_tech_dict.costs.default_cost.items()
-        }
-        default_node_dict = checks.DEFAULTS.nodes.default_node
-
-        attr_dict["defaults"] = AttrDict(
-            {
-                **default_tech_dict.constraints.as_dict(),
-                **default_tech_dict.switches.as_dict(),
-                **default_cost_dict,
-                **default_node_dict.as_dict(),
-            }
-        )
 
         self.model_data.attrs = attr_dict
 

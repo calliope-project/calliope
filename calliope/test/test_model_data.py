@@ -379,13 +379,8 @@ class TestModelData:
         assert "timesteps" in model_data.model_data.resource.dims
         assert "max_demand_timesteps" in model_data.model_data.data_vars.keys()
         for var in model_data.model_data.data_vars.values():
-            assert (
-                var.to_series()
-                .astype(str)
-                .where(lambda x: (x.str.find("file=") > -1) | (x.str.find("df=") > -1))
-                .dropna()
-                .empty
-            )
+            var_ = var.astype(str)
+            assert not var_.str.match(r"df=|file=").any()
 
     def test_clean_model_data(self, model_data):
         model_data._extract_node_tech_data()
@@ -413,11 +408,8 @@ class TestModelData:
         model_data._add_attributes(model_run)
         attr_dict = model_data.model_data.attrs
         assert set(attr_dict.keys()) == set(
-            ["calliope_version", "applied_overrides", "scenario", "defaults"]
+            ["calliope_version", "applied_overrides", "scenario"]
         )
         attr_dict["calliope_version"] == __version__
         assert attr_dict["applied_overrides"] == "foo"
         assert attr_dict["scenario"] == "bar"
-        assert "cost_energy_cap" in attr_dict["defaults"]
-        assert "energy_cap_max" in attr_dict["defaults"]
-        assert "available_area" in attr_dict["defaults"]

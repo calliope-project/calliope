@@ -8,12 +8,18 @@ model.py
 Implements the core Model class.
 
 """
+from __future__ import annotations
+
 import logging
 import warnings
-from typing import Optional
+from typing import Literal, Union, Optional, Callable
+from contextlib import contextmanager
+import os
 
 import xarray as xr
+import pandas as pd
 
+import calliope
 from calliope.postprocess import results as postprocess_results
 from calliope.core import io
 from calliope.preprocess import (
@@ -25,6 +31,7 @@ from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
+from calliope.backend import backends
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +51,16 @@ class Model(object):
 
     """
 
-    def __init__(self, config, model_data=None, debug=False, *args, **kwargs):
+    _BACKENDS: dict[str, Callable] = {"pyomo": backends.PyomoBackendModel}
+
+    def __init__(
+        self,
+        config: Optional[Union[str, dict]],
+        model_data: Optional[xr.Dataset] = None,
+        debug: bool = False,
+        *args,
+        **kwargs,
+    ):
         """
         Returns a new Model from either the path to a YAML model
         configuration file or a dict fully specifying the model.
@@ -61,7 +77,12 @@ class Model(object):
             a model previously saved to a NetCDF file.
 
         """
-        self._timings = {}
+        self._timings: dict = {}
+        self.defaults: AttrDict
+        self.model_config: AttrDict
+        self.run_config: AttrDict
+        self.component_config: AttrDict
+
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
         log_time(logger, self._timings, "model_creation", comment="Model: initialising")
@@ -105,7 +126,6 @@ class Model(object):
             self._debug_data = debug_data
             self._model_data_pre_time = data_pre_time
             self._model_data_stripped_keys = stripped_keys
-        self.inputs = self._model_data.filter_by_attrs(is_result=0)
         log_time(
             logger,
             self._timings,
@@ -121,7 +141,16 @@ class Model(object):
         self._add_observed_dict("model_config", model_config)
         self._add_observed_dict("run_config", model_run["run"])
         self._add_observed_dict("subsets", model_run["subsets"])
+        self._add_observed_dict("defaults", self._generate_default_dict())
 
+        component_config = AttrDict.from_yaml(
+            os.path.join(
+                os.path.dirname(calliope.__file__), "config", "constraints.yaml"
+            )
+        )
+        self._add_observed_dict("component_config", component_config)
+
+        self.inputs = self._model_data.filter_by_attrs(is_result=0)
         log_time(
             logger,
             self._timings,
@@ -156,7 +185,9 @@ class Model(object):
         self._add_observed_dict("model_config")
         self._add_observed_dict("run_config")
         self._add_observed_dict("subsets")
+        self._add_observed_dict("component_config")
 
+        self.inputs = self._model_data.filter_by_attrs(is_result=0)
         results = self._model_data.filter_by_attrs(is_result=1)
         if len(results.data_vars) > 0:
             self.results = results
@@ -196,6 +227,198 @@ class Model(object):
             dict_to_add = AttrDict(dict_to_add)
         self._model_data.attrs[name] = dict_to_add
         setattr(self, name, dict_to_add)
+
+    def _generate_default_dict(self) -> AttrDict:
+        """Process input parameter default YAML configuration file into a dictionary of
+        defaults that match parameter names in the processed model dataset
+        (e.g., costs are prepended with `cost_`).
+
+        Returns:
+            AttrDict: Flat dictionary of `parameter_name`:`parameter_default` pairs.
+        """
+        raw_defaults = AttrDict.from_yaml(
+            os.path.join(os.path.dirname(calliope.__file__), "config", "defaults.yaml")
+        )
+        default_tech_dict = raw_defaults.techs.default_tech
+        default_cost_dict = {
+            "cost_{}".format(k): v
+            for k, v in default_tech_dict.costs.default_cost.items()
+        }
+        default_node_dict = {
+            "available_area": raw_defaults.nodes.default_node.available_area
+        }
+
+        return AttrDict(
+            {
+                **default_tech_dict.constraints.as_dict(),
+                **default_tech_dict.switches.as_dict(),
+                **default_cost_dict,
+                **default_node_dict,
+            }
+        )
+
+    def build(self, backend_interface: Literal["pyomo"] = "pyomo") -> None:
+        """Build description of the optimisation problem in the chosen backend interface.
+
+        Args:
+            backend_interface (Literal["pyomo"], optional):
+                Backend interface in which to build the problem. Defaults to "pyomo".
+        """
+        with self.model_data_string_datetime():
+            backend = self._BACKENDS[backend_interface]()
+            backend.add_all_parameters(self._model_data, self.run_config)
+            log_time(
+                logger,
+                self._timings,
+                "backend_parameters_generated",
+                comment="Model: Generated optimisation problem parameters",
+            )
+            # The order of adding components matters!
+            # 1. Variables, 2. Expressions, 3. Constraints, 4. Objectives
+            for components in ["variables", "expressions", "constraints", "objectives"]:
+                component = components.removesuffix("s")
+                for name, dict_ in self.component_config[components].items():
+                    getattr(backend, f"add_{component}")(self._model_data, name, dict_)
+                log_time(
+                    logger,
+                    self._timings,
+                    f"backend_{components}_generated",
+                    comment=f"Model: Generated optimisation problem {components}",
+                )
+
+            self.backend = backend
+
+    @contextmanager
+    def model_data_string_datetime(self):
+        """
+        Temporarily turn model data input timeseries objects into strings with maximum
+        resolution of minutes.
+        """
+        self._datetime_to_string()
+        try:
+            yield
+        finally:
+            self._string_to_datetime(self._model_data)
+
+    def _datetime_to_string(self) -> None:
+        """
+        Convert model data inputs from datetime to string xarray dataarrays, to reduce the memory
+        footprint of converting datetimes from numpy.datetime64 -> pandas.Timestamp
+        when creating the pyomo model object.
+        """
+        datetime_data = set()
+        for attr in ["coords", "data_vars"]:
+            for set_name, set_data in getattr(self._model_data, attr).items():
+                if set_data.dtype.kind == "M":
+                    attrs = self._model_data[set_name].attrs
+                    self._model_data[set_name] = self._model_data[set_name].dt.strftime(
+                        "%Y-%m-%d %H:%M"
+                    )
+                    self._model_data[set_name].attrs = attrs
+                    datetime_data.add((attr, set_name))
+
+        self._datetime_data = datetime_data
+
+        return None
+
+    def _string_to_datetime(self, da: xr.Dataset) -> None:
+        """
+        Convert from string to datetime xarray dataarrays, reverting the process
+        undertaken in `_datetime_to_string`. Operation is undertaken in-place.
+
+        Without running `_datetime_to_string` earlier, this function will not function
+        as expected since it will not be able to identify which coordinates should be
+        converted to datetime format.
+
+        Args:
+            da (xr.Dataset): Dataset in which to convert timeseries data arrays.
+
+        """
+        for attr, set_name in self._datetime_data:
+            if attr == "coords" and set_name in da:
+                da.coords[set_name] = da[set_name].astype("datetime64[ns]")
+            elif set_name in da:
+                da[set_name] = xr.apply_ufunc(
+                    pd.to_datetime, da[set_name], keep_attrs=True
+                )
+        return None
+
+    def solve(self, force_rerun: bool = False, warmstart: bool = False) -> None:
+        """
+        Run the built optimisation problem.
+
+        Args:
+            force_rerun (bool, optional):
+                If ``force_rerun`` is True, any existing results will be overwritten.
+                Defaults to False.
+            warmstart (bool, optional):
+                If True and the optimisation problem has already been run in this session
+                (i.e., `force_rerun` is not True), the next optimisation will be run with
+                decision variables initially set to their previously optimal values.
+                If the optimisation problem is similar to the previous run, this can
+                decrease the solution time.
+                Warmstart will not work with some solvers (e.g., CBC, GLPK).
+                Defaults to False.
+
+        Raises:
+            exceptions.ModelError: Optimisation problem must already be built.
+            exceptions.ModelError: Cannot run the model if there are already results loaded, unless `force_rerun` is True.
+            exceptions.ModelError: Some preprocessing steps will stop a run mode of "operate" from being possible.
+        """
+        # Check that results exist and are non-empty
+        if not hasattr(self, "backend"):
+            raise exceptions.ModelError(
+                "You must build the optimisation problem (`.build()`) "
+                "before you can run it."
+            )
+
+        if hasattr(self, "results"):
+            if self.results.data_vars and not force_rerun:
+                raise exceptions.ModelError(
+                    "This model object already has results. "
+                    "Use model.run(force_rerun=True) to force"
+                    "the results to be overwritten with a new run."
+                )
+            else:
+                to_drop = self.results.data_vars
+        else:
+            to_drop = []
+
+        if (
+            self.run_config["mode"] == "operate"
+            and not self._model_data.attrs["allow_operate_mode"]
+        ):
+            raise exceptions.ModelError(
+                "Unable to run this model in operational mode, probably because "
+                "there exist non-uniform timesteps (e.g. from time masking)"
+            )
+
+        termination_condition = self.backend.solve(
+            solver=self.run_config["solver"],
+            solver_io=self.run_config.get("solver_io", None),
+            solver_options=self.run_config.get("solver_options", None),
+            save_logs=self.run_config.get("save_logs", None),
+            warmstart=warmstart,
+        )
+
+        # Add additional post-processed result variables to results
+        if termination_condition in ["optimal", "feasible"]:
+            results = self.backend.load_results()
+            self._string_to_datetime(results)
+            results = postprocess_results.postprocess_model_results(
+                results, self._model_data, self._timings
+            )
+        else:
+            results = xr.Dataset()
+
+        self._model_data = self._model_data.drop_vars(to_drop)
+
+        self._model_data.attrs.update(results.attrs)
+        self._model_data.attrs["termination_condition"] = termination_condition
+        self._model_data = xr.merge(
+            [results, self._model_data], compat="override", combine_attrs="no_conflicts"
+        )
+        self._add_model_data_methods()
 
     def run(self, force_rerun=False, **kwargs):
         """
@@ -252,7 +475,7 @@ class Model(object):
         """
         warnings.warn(
             "get_formatted_array() is deprecated and will be removed in a "
-            "future version. Use `model.results.variable` instead.",
+            "future version. Use `model.results[var]` instead.",
             DeprecationWarning,
         )
         if var not in self._model_data.data_vars:

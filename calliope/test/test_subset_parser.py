@@ -20,73 +20,6 @@ def parse_yaml(yaml_string):
 
 
 @pytest.fixture
-def dummy_model_data():
-    model_data = xr.Dataset(
-        coords={
-            dim: ["foo", "bar"]
-            if dim != "techs"
-            else ["foo", "bar", "foobar", "foobaz"]
-            for dim in BASE_DIMS
-        },
-        data_vars={
-            "with_inf": (
-                ["nodes", "techs"],
-                [[1.0, np.nan, 1.0, 3], [np.inf, 2.0, True, np.nan]],
-            ),
-            "only_techs": (["techs"], [np.nan, 1, 2, 3]),
-            "all_inf": (["nodes", "techs"], np.ones((2, 4)) * np.inf, {"is_result": 1}),
-            "all_nan": (["nodes", "techs"], np.ones((2, 4)) * np.nan),
-            "all_false": (["nodes", "techs"], np.zeros((2, 4)).astype(bool)),
-            "all_true": (["nodes", "techs"], np.ones((2, 4)).astype(bool)),
-            "with_inf_as_bool": (
-                ["nodes", "techs"],
-                [[True, False, True, True], [False, True, True, False]],
-            ),
-            "with_inf_as_bool_and_subset_on_bar_in_nodes": (
-                ["nodes", "techs"],
-                [[False, False, False, False], [False, True, True, False]],
-            ),
-            "with_inf_as_bool_or_subset_on_bar_in_nodes": (
-                ["nodes", "techs"],
-                [[True, False, True, True], [True, True, True, True]],
-            ),
-            "only_techs_as_bool": (["techs"], [False, True, True, True]),
-            "with_inf_and_only_techs_as_bool": (
-                ["nodes", "techs"],
-                [[False, False, True, True], [False, True, True, False]],
-            ),
-            "with_inf_or_only_techs_as_bool": (
-                ["nodes", "techs"],
-                [[True, True, True, True], [False, True, True, True]],
-            ),
-            "inheritance": (
-                ["nodes", "techs"],
-                [
-                    ["foo.bar", "boo", "baz", "boo"],
-                    ["bar", "ar", "baz.boo", "foo.boo"],
-                ],
-            ),
-            "boo_inheritance_bool": (
-                ["nodes", "techs"],
-                [[False, True, False, True], [False, False, True, True]],
-            ),
-        },
-        attrs={"scenarios": ["foo"]},
-    )
-
-    model_data.attrs["run_config"] = AttrDict(
-        {"foo": True, "bar": {"foobar": "baz"}, "foobar": {"baz": {"foo": np.inf}}}
-    )
-    model_data.attrs["model_config"] = AttrDict({"a_b": 0, "b_a": [1, 2]})
-
-    model_data.attrs["defaults"] = AttrDict(
-        {"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100}
-    )
-
-    return model_data
-
-
-@pytest.fixture
 def base_parser_elements():
     number, identifier = equation_parser.setup_base_parser_elements()
     return number, identifier
@@ -125,7 +58,7 @@ def evaluatable_string(identifier):
 @pytest.fixture
 def helper_function(number, identifier, evaluatable_string):
     return equation_parser.helper_function_parser(
-        identifier, allowed_parser_elements_in_args=[evaluatable_string, number]
+        evaluatable_string, number, generic_identifier=identifier
     )
 
 
@@ -163,8 +96,6 @@ def eval_kwargs(dummy_model_data):
         "test": True,
         "errors": set(),
         "warnings": set(),
-        "imask": dummy_model_data["all_true"],
-        "defaults": dummy_model_data.attrs["defaults"],
     }
 
 
@@ -545,7 +476,7 @@ class TestParserMasking:
     @pytest.mark.parametrize(
         ["instring", "expected"],
         [
-            ("[foo, bar] in nodes", "all_true"),
+            ("[foo, bar] in nodes", "nodes_true"),
             (
                 "with_inf and [bar] in nodes",
                 "with_inf_as_bool_and_subset_on_bar_in_nodes",
