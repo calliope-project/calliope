@@ -1,7 +1,9 @@
 constraints:
+  storage_max:
+    active: False
+
   balance_supply_plus_with_storage:
     components:
-      carrier_prod: *carrier_prod_with_parasitic
       storage_previous_step: &storage_previous_step
         - where: timesteps=get_val_at_index(dim=timesteps, idx=0) AND NOT run.cyclic_storage=True
           expression: storage_initial * storage_cap
@@ -10,9 +12,7 @@ constraints:
         - where: lookup_cluster_last_timestep
           expression: "0"
 
-  set_storage_initial_inter_cluster:
-    foreach: [ nodes, techs ]
-    where: "storage_initial AND include_storage=True AND run.cyclic_storage=True"
+  set_storage_initial:
     equation: storage_inter_cluster[datesteps=$final_step] * ((1 - storage_loss) ** 24) == storage_initial * storage_cap
     index_slices:
       final_step:
@@ -67,11 +67,8 @@ constraints:
 
 variables:
   storage:
-    foreach: [nodes, techs, timesteps]
-    where: "(inheritance(storage) OR inheritance(supply_plus)) AND include_storage=True AND model.time.function=apply_clustering"
     bounds:
       min: -.inf
-      max: .inf
 
   storage_inter_cluster:
     foreach: [ nodes, techs, datesteps ]
