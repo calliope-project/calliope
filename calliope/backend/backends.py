@@ -560,7 +560,6 @@ class PyomoBackendModel(BackendModel):
         name: str,
         expression_dict: parsing.UnparsedConstraintDict,
     ) -> None:
-
         def _expression_setter(imask: xr.DataArray, expr: xr.DataArray) -> xr.DataArray:
             to_fill = self.apply_func(
                 self._to_pyomo_expression,
@@ -608,9 +607,7 @@ class PyomoBackendModel(BackendModel):
         domain = parsed_variable._unparsed.get("domain", "real")
         domain_type = getattr(pmo, f"{domain.title()}Set")
 
-        ub, lb = self._get_capacity_bounds(
-            variable_dict["bounds"], name=name
-        )
+        ub, lb = self._get_capacity_bounds(variable_dict["bounds"], name=name)
         variable_da = self.apply_func(
             self._to_pyomo_variable,
             imask,
