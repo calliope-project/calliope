@@ -1,7 +1,95 @@
+constraints:
+  balance_supply_plus_with_storage:
+    components:
+      carrier_prod: *carrier_prod_with_parasitic
+      storage_previous_step: &storage_previous_step
+        - where: timesteps=get_val_at_index(dim=timesteps, idx=0) AND NOT run.cyclic_storage=True
+          expression: storage_initial * storage_cap
+        - where: ((timesteps=get_val_at_index(dim=timesteps, idx=0) AND run.cyclic_storage=True) OR NOT timesteps=get_val_at_index(dim=timesteps, idx=0)) AND NOT lookup_cluster_last_timestep
+          expression: (1 - storage_loss) ** roll(timestep_resolution, timesteps=1) * roll(storage, timesteps=1)
+        - where: lookup_cluster_last_timestep
+          expression: "0"
+
+  set_storage_initial_inter_cluster:
+    foreach: [ nodes, techs ]
+    where: "storage_initial AND include_storage=True AND run.cyclic_storage=True"
+    equation: storage_inter_cluster[datesteps=$final_step] * ((1 - storage_loss) ** 24) == storage_initial * storage_cap
+    index_slices:
+      final_step:
+        - expression: get_val_at_index(dim=datesteps, idx=-1)
+
+  storage_intra_max:
+    foreach: [nodes, techs, timesteps]
+    where: "include_storage=True"
+    equation: storage <= storage_intra_cluster_max[clusters=$cluster]
+    index_slices: &timestep_cluster_slice
+      cluster:
+        - expression: timestep_cluster
+
+  storage_intra_min:
+    foreach: [nodes, techs, timesteps]
+    where: "include_storage=True"
+    equation: storage >= storage_intra_cluster_min[clusters=$cluster]
+    index_slices: *timestep_cluster_slice
+
+  storage_inter_max:
+    foreach: [nodes, techs, datesteps]
+    where: "include_storage=True"
+    equation: storage_inter_cluster + storage_intra_cluster_max[clusters=$cluster] <= storage_cap
+    index_slices: &datestep_cluster_slice
+      cluster:
+        - expression: lookup_datestep_cluster
+
+  storage_inter_min:
+    foreach: [nodes, techs, datesteps]
+    where: "include_storage=True"
+    equation: storage_inter_cluster * ((1 - storage_loss) ** 24) + storage_intra_cluster_min[clusters=$cluster] >= 0
+    index_slices: *datestep_cluster_slice
+
+  balance_storage_inter:
+    foreach: [nodes, techs, datesteps]
+    where: "include_storage=True"
+    equation: storage_inter_cluster == $storage_previous_step + $storage_intra
+    components:
+      storage_previous_step:
+        - where: datesteps=get_val_at_index(dim=datesteps, idx=0) AND NOT run.cyclic_storage=True
+          expression: storage_initial
+        - where: (datesteps=get_val_at_index(dim=datesteps, idx=0) AND run.cyclic_storage=True) OR NOT datesteps=get_val_at_index(dim=datesteps, idx=0)
+          expression: ((1 - storage_loss) ** 24) * roll(storage_inter_cluster, datesteps=1)
+      storage_intra:
+        - where: datesteps=get_val_at_index(dim=datesteps, idx=0) AND NOT run.cyclic_storage=True
+          expression: "0"
+        - where: NOT (datesteps=get_val_at_index(dim=datesteps, idx=0) AND NOT run.cyclic_storage=True)
+          expression: storage[timesteps=$final_step]
+    index_slices:
+      final_step:
+        - expression: roll(lookup_datestep_last_cluster_timestep, datesteps=1)
+
 variables:
   storage:
     foreach: [nodes, techs, timesteps]
-    where: "(inheritance(storage) OR inheritance(supply_plus)) AND include_storage=True AND model.time.function_options.storage_inter_cluster=True AND model.time.function=apply_clustering"
+    where: "(inheritance(storage) OR inheritance(supply_plus)) AND include_storage=True AND model.time.function=apply_clustering"
+    bounds:
+      min: -.inf
+      max: .inf
+
+  storage_inter_cluster:
+    foreach: [ nodes, techs, datesteps ]
+    where: "include_storage=True"
+    bounds:
+      min: 0
+      max: .inf
+
+  storage_intra_cluster_max:
+    foreach: [ nodes, techs, clusters ]
+    where: "include_storage=True"
+    bounds:
+      min: -.inf
+      max: .inf
+
+  storage_intra_cluster_min:
+    foreach: [ nodes, techs, clusters ]
+    where: "include_storage=True"
     bounds:
       min: -.inf
       max: .inf
