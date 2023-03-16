@@ -25,8 +25,6 @@ Internal changes
 
 |new| Generation of subsets over the model dimensions is now automated and determined by hardcoded YAML configuration files (`model_data_lookup.yaml` and `subsets.yaml`). This reduces the need to update code when incorporating additional functionality in the future.
 
-|changed| Timestamps are converted to strings when generating sets in Pyomo. This reduces the time and memory footprint of variable/constraint generation.
-
 |changed| Costs are now Pyomo expressions rather than decision variables.
 
 |changed| When a model is loaded into an active session, configuration dictionaries are stored as dictionaries instead of seralised YAML strings in the model data attributes dictionary. Serialisation and de-serialisation only occur on saving and loading from NetCDF, respectively.
