@@ -287,49 +287,6 @@ class Model(object):
 
         self.backend = backend
 
-    def _datetime_to_string(self) -> None:
-        """
-        Convert model data inputs from datetime to string xarray dataarrays, to reduce the memory
-        footprint of converting datetimes from numpy.datetime64 -> pandas.Timestamp
-        when creating the pyomo model object.
-        """
-        datetime_data = set()
-        for attr in ["coords", "data_vars"]:
-            for set_name, set_data in getattr(self._model_data, attr).items():
-                if set_data.dtype.kind == "M":
-                    attrs = self._model_data[set_name].attrs
-                    self._model_data[set_name] = self._model_data[set_name].dt.strftime(
-                        "%Y-%m-%d %H:%M"
-                    )
-                    self._model_data[set_name].attrs = attrs
-                    datetime_data.add((attr, set_name))
-
-        self._datetime_data = datetime_data
-
-        return None
-
-    def _string_to_datetime(self, da: xr.Dataset) -> None:
-        """
-        Convert from string to datetime xarray dataarrays, reverting the process
-        undertaken in `_datetime_to_string`. Operation is undertaken in-place.
-
-        Without running `_datetime_to_string` earlier, this function will not function
-        as expected since it will not be able to identify which coordinates should be
-        converted to datetime format.
-
-        Args:
-            da (xr.Dataset): Dataset in which to convert timeseries data arrays.
-
-        """
-        for attr, set_name in self._datetime_data:
-            if attr == "coords" and set_name in da:
-                da.coords[set_name] = da[set_name].astype("datetime64[ns]")
-            elif set_name in da:
-                da[set_name] = xr.apply_ufunc(
-                    pd.to_datetime, da[set_name], keep_attrs=True
-                )
-        return None
-
     def solve(self, force_rerun: bool = False, warmstart: bool = False) -> None:
         """
         Run the built optimisation problem.
