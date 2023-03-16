@@ -264,41 +264,28 @@ class Model(object):
             backend_interface (Literal["pyomo"], optional):
                 Backend interface in which to build the problem. Defaults to "pyomo".
         """
-        with self.model_data_string_datetime():
-            backend = self._BACKENDS[backend_interface]()
-            backend.add_all_parameters(self._model_data, self.run_config)
+        backend = self._BACKENDS[backend_interface]()
+        backend.add_all_parameters(self._model_data, self.run_config)
+        log_time(
+            logger,
+            self._timings,
+            "backend_parameters_generated",
+            comment="Model: Generated optimisation problem parameters",
+        )
+        # The order of adding components matters!
+        # 1. Variables, 2. Expressions, 3. Constraints, 4. Objectives
+        for components in ["variables", "expressions", "constraints", "objectives"]:
+            component = components.removesuffix("s")
+            for name, dict_ in self.component_config[components].items():
+                getattr(backend, f"add_{component}")(self._model_data, name, dict_)
             log_time(
                 logger,
                 self._timings,
-                "backend_parameters_generated",
-                comment="Model: Generated optimisation problem parameters",
+                f"backend_{components}_generated",
+                comment=f"Model: Generated optimisation problem {components}",
             )
-            # The order of adding components matters!
-            # 1. Variables, 2. Expressions, 3. Constraints, 4. Objectives
-            for components in ["variables", "expressions", "constraints", "objectives"]:
-                component = components.removesuffix("s")
-                for name, dict_ in self.component_config[components].items():
-                    getattr(backend, f"add_{component}")(self._model_data, name, dict_)
-                log_time(
-                    logger,
-                    self._timings,
-                    f"backend_{components}_generated",
-                    comment=f"Model: Generated optimisation problem {components}",
-                )
 
-            self.backend = backend
-
-    @contextmanager
-    def model_data_string_datetime(self):
-        """
-        Temporarily turn model data input timeseries objects into strings with maximum
-        resolution of minutes.
-        """
-        self._datetime_to_string()
-        try:
-            yield
-        finally:
-            self._string_to_datetime(self._model_data)
+        self.backend = backend
 
     def _datetime_to_string(self) -> None:
         """
@@ -404,7 +391,6 @@ class Model(object):
         # Add additional post-processed result variables to results
         if termination_condition in ["optimal", "feasible"]:
             results = self.backend.load_results()
-            self._string_to_datetime(results)
             results = postprocess_results.postprocess_model_results(
                 results, self._model_data, self._timings
             )
