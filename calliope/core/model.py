@@ -15,6 +15,7 @@ import warnings
 from typing import Literal, Union, Optional, Callable
 from contextlib import contextmanager
 import os
+from pathlib import Path
 
 import xarray as xr
 import pandas as pd
@@ -87,9 +88,11 @@ class Model(object):
         # use CLI logging format if model called from CLI
         log_time(logger, self._timings, "model_creation", comment="Model: initialising")
         if isinstance(config, str):
+            self._config_path = config
             model_run, debug_data = model_run_from_yaml(config, *args, **kwargs)
             self._init_from_model_run(model_run, debug_data, debug)
         elif isinstance(config, dict):
+            self._config_path = None
             model_run, debug_data = model_run_from_dict(config, *args, **kwargs)
             self._init_from_model_run(model_run, debug_data, debug)
         elif model_data is not None and config is None:
@@ -148,7 +151,10 @@ class Model(object):
                 os.path.dirname(calliope.__file__), "config", "constraints.yaml"
             )
         )
-        self._add_observed_dict("component_config", component_config)
+        component_config_override = self._add_optimisation_config_override(
+            component_config, model_config["optimisation_config_overrides"]
+        )
+        self._add_observed_dict("component_config", component_config_override)
 
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         log_time(
@@ -227,6 +233,36 @@ class Model(object):
             dict_to_add = AttrDict(dict_to_add)
         self._model_data.attrs[name] = dict_to_add
         setattr(self, name, dict_to_add)
+
+    def _add_optimisation_config_override(
+        self, component_config: AttrDict, optimisation_config_overrides: list
+    ) -> AttrDict:
+        """
+        Add/override the custom constraints to the component configuration.
+        """
+        component_config_copy = component_config.copy()
+        override_errors = []
+
+        for override in optimisation_config_overrides:
+            if not f"{override}".endswith((".yaml", ".yml")):
+                path_override = (
+                    Path(calliope.__file__).parent / "config" / f"{override}.yaml"
+                )
+            else:
+                path_override = Path(self._config_path) / override
+
+            if not path_override.is_file():
+                override_errors.append(override)
+                continue
+            else:
+                override_dict = AttrDict.from_yaml(path_override)
+
+            component_config_copy.union(override_dict, allow_override=True)
+        if override_errors:
+            raise exceptions.ModelError(
+                f"Attempted to load a configuration override that does not exist: {override_errors}"
+            )
+        return component_config_copy
 
     def _generate_default_dict(self) -> AttrDict:
         """Process input parameter default YAML configuration file into a dictionary of

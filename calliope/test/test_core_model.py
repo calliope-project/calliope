@@ -86,7 +86,7 @@ class TestOptimisationConfigOverrides:
 
     def test_internal_override(self, storage_inter_cluster):
         assert (
-            "set_storage_initial_inter_cluster"
+            "storage_intra_max"
             in storage_inter_cluster.component_config["constraints"].keys()
         )
 
@@ -95,7 +95,7 @@ class TestOptimisationConfigOverrides:
             storage_inter_cluster.component_config["variables"]["storage"]["bounds"][
                 "min"
             ]
-            == np.inf
+            == -np.inf
         )
 
     @pytest.mark.parametrize(
@@ -104,6 +104,7 @@ class TestOptimisationConfigOverrides:
             (["foo"], ["foo"]),
             (["bar", "foo"], ["bar", "foo"]),
             (["foo", "storage_inter_cluster"], ["foo"]),
+            (["foo.yaml"], ["foo.yaml"]),
         ],
     )
     def test_allowed_internal_constraint(self, override, expected):
