@@ -239,6 +239,16 @@ class Model(object):
     ) -> AttrDict:
         """
         Add/override the custom constraints to the component configuration.
+
+        Args:
+            component_config (AttrDict): Configuration dictionary including default constraints.
+            optimisation_config_overrides (list): list of custom-constraints that will be added or overridden to the internal constraints.
+
+        Raises:
+            exceptions.ModelError: Referenced internal custom-constraints or custom-constraint files must exist.
+
+        Returns:
+            AttrDict: dictionary of custom-constraints added/overridden to the base constraints.
         """
         component_config_copy = component_config.copy()
         override_errors = []
