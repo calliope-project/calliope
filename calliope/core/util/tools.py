@@ -4,7 +4,6 @@ Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
 
-from copy import deepcopy
 import functools
 import importlib
 import operator

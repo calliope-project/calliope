@@ -139,8 +139,8 @@ def save_csv(model_data, path, dropna=True):
 def save_lp(model, path):
     if not model.run_config["backend"] == "pyomo":
         raise IOError("Only the pyomo backend can save to LP.")
-    if not hasattr(model, "_backend_model"):
-        model.run(build_only=True)
-    model._backend_model.write(
+    if not hasattr(model, "backend"):
+        model.build()
+    model.backend._instance.write(
         path, format="lp", io_options={"symbolic_solver_labels": True}
     )

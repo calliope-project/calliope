@@ -30,7 +30,6 @@ from calliope.preprocess.model_data import ModelDataFactory
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
 from calliope import exceptions
-from calliope.backend.run import run as run_backend
 from calliope.backend import backends
 
 logger = logging.getLogger(__name__)
@@ -140,7 +139,6 @@ class Model(object):
 
         self._add_observed_dict("model_config", model_config)
         self._add_observed_dict("run_config", model_run["run"])
-        self._add_observed_dict("subsets", model_run["subsets"])
         self._add_observed_dict("defaults", self._generate_default_dict())
 
         component_config = AttrDict.from_yaml(
@@ -184,7 +182,6 @@ class Model(object):
         self.results = self._model_data.filter_by_attrs(is_result=1)
         self._add_observed_dict("model_config")
         self._add_observed_dict("run_config")
-        self._add_observed_dict("subsets")
         self._add_observed_dict("component_config")
 
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
@@ -257,13 +254,25 @@ class Model(object):
             }
         )
 
-    def build(self, backend_interface: Literal["pyomo"] = "pyomo") -> None:
+    def build(
+        self, force: bool = False, backend_interface: Literal["pyomo"] = "pyomo"
+    ) -> None:
         """Build description of the optimisation problem in the chosen backend interface.
 
         Args:
+            force (bool, optional):
+                If ``force`` is True, any existing results will be overwritten.
+                Defaults to False.
             backend_interface (Literal["pyomo"], optional):
                 Backend interface in which to build the problem. Defaults to "pyomo".
         """
+        if hasattr(self, "backend"):
+            raise exceptions.ModelError(
+                "This model object already has a built optimisation problem. Use model.build(force=True) "
+                "to force the existing optimisation problem to be overwritten with a new one."
+            )
+        else:
+            to_drop = []
         with self.model_data_string_datetime():
             backend = self._BACKENDS[backend_interface]()
             backend.add_all_parameters(self._model_data, self.run_config)
@@ -343,17 +352,17 @@ class Model(object):
                 )
         return None
 
-    def solve(self, force_rerun: bool = False, warmstart: bool = False) -> None:
+    def solve(self, force: bool = False, warmstart: bool = False) -> None:
         """
         Run the built optimisation problem.
 
         Args:
-            force_rerun (bool, optional):
-                If ``force_rerun`` is True, any existing results will be overwritten.
+            force (bool, optional):
+                If ``force`` is True, any existing results will be overwritten.
                 Defaults to False.
             warmstart (bool, optional):
                 If True and the optimisation problem has already been run in this session
-                (i.e., `force_rerun` is not True), the next optimisation will be run with
+                (i.e., `force` is not True), the next optimisation will be run with
                 decision variables initially set to their previously optimal values.
                 If the optimisation problem is similar to the previous run, this can
                 decrease the solution time.
@@ -362,7 +371,7 @@ class Model(object):
 
         Raises:
             exceptions.ModelError: Optimisation problem must already be built.
-            exceptions.ModelError: Cannot run the model if there are already results loaded, unless `force_rerun` is True.
+            exceptions.ModelError: Cannot run the model if there are already results loaded, unless `force` is True.
             exceptions.ModelError: Some preprocessing steps will stop a run mode of "operate" from being possible.
         """
         # Check that results exist and are non-empty
@@ -373,10 +382,10 @@ class Model(object):
             )
 
         if hasattr(self, "results"):
-            if self.results.data_vars and not force_rerun:
+            if self.results.data_vars and not force:
                 raise exceptions.ModelError(
                     "This model object already has results. "
-                    "Use model.run(force_rerun=True) to force"
+                    "Use model.solve(force=True) to force"
                     "the results to be overwritten with a new run."
                 )
             else:
@@ -419,48 +428,6 @@ class Model(object):
             [results, self._model_data], compat="override", combine_attrs="no_conflicts"
         )
         self._add_model_data_methods()
-
-    def run(self, force_rerun=False, **kwargs):
-        """
-        Run the model. If ``force_rerun`` is True, any existing results
-        will be overwritten.
-
-        Additional kwargs are passed to the backend.
-
-        """
-        # Check that results exist and are non-empty
-        if hasattr(self, "results") and self.results.data_vars and not force_rerun:
-            raise exceptions.ModelError(
-                "This model object already has results. "
-                "Use model.run(force_rerun=True) to force"
-                "the results to be overwritten with a new run."
-            )
-
-        if (
-            self.run_config["mode"] == "operate"
-            and not self._model_data.attrs["allow_operate_mode"]
-        ):
-            raise exceptions.ModelError(
-                "Unable to run this model in operational mode, probably because "
-                "there exist non-uniform timesteps (e.g. from time masking)"
-            )
-
-        results, self._backend_model, self._backend_model_opt, interface = run_backend(
-            self._model_data, self._timings, **kwargs
-        )
-
-        # Add additional post-processed result variables to results
-        if results.attrs.get("termination_condition", None) in ["optimal", "feasible"]:
-            results = postprocess_results.postprocess_model_results(
-                results, self._model_data, self._timings
-            )
-        self._model_data.attrs.update(results.attrs)
-        self._model_data = xr.merge(
-            [results, self._model_data], compat="override", combine_attrs="no_conflicts"
-        )
-        self._add_model_data_methods()
-
-        self.backend = interface(self)
 
     def get_formatted_array(self, var):
         """

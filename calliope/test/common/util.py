@@ -1,11 +1,12 @@
+from typing import Optional
 import os
 import sys
 import ast
 
 import pytest
-from pyomo.core.expr.current import identify_variables
-import pyomo.core as po
+import xarray as xr
 
+from calliope.backend import backends
 import calliope
 from calliope import AttrDict
 
@@ -21,10 +22,6 @@ constraint_sets = {
 
 defaults = AttrDict.from_yaml(
     os.path.join(os.path.dirname(calliope.__file__), "config", "defaults.yaml")
-)
-
-subsets_config = AttrDict.from_yaml(
-    os.path.join(os.path.dirname(calliope.__file__), "config", "subsets.yaml")
 )
 
 python36_or_higher = pytest.mark.skipif(
@@ -64,33 +61,27 @@ def check_error_or_warning(error_warning, test_string_or_strings):
     return result
 
 
-def check_variable_exists(backend_model, constraint, variable, idx=None):
+def check_variable_exists(
+    expr_or_constr: Optional[xr.DataArray], variable: str, idx: Optional[dict] = None
+):
     """
     Search for existence of a decision variable in a Pyomo constraint.
 
     Parameters
     ----------
-    backend_model : Pyomo ConcreteModel
+    backend_interface : solver interface library
     constraint : str, name of constraint which could exist in the backend
     variable : str, string to search in the list of variables to check if existing
     """
+    if expr_or_constr is None:
+        return False
 
-    def _get_body(pyomo_parent_obj, pyomo_child_obj):
-        if pyomo_parent_obj in backend_model.component_objects(ctype=po.Constraint):
-            return pyomo_child_obj.body
-        else:
-            return pyomo_child_obj
+    try:
+        var_exists = expr_or_constr.body.astype(str).str.find(variable) > -1
+    except (AttributeError, KeyError):
+        var_exists = expr_or_constr.astype(str).str.find(variable) > -1
 
-    pyomo_obj = getattr(backend_model, constraint)
     if idx is not None:
-        if idx in pyomo_obj.index_set():
-            variables = identify_variables(_get_body(pyomo_obj, pyomo_obj[idx]))
-            return any(variable in j.getname() for j in list(variables))
-        else:
-            return False
-    else:
-        exists = []
-        for v in pyomo_obj.values():
-            variables = identify_variables(_get_body(pyomo_obj, v))
-            exists.append(any(variable in j.getname() for j in list(variables)))
-        return any(exists)
+        var_exists = var_exists.loc[idx]
+
+    return var_exists.any()

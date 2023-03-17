@@ -8,10 +8,9 @@ from calliope.test.common.util import check_error_or_warning
 class TestDeprecationWarnings:
     def test_get_formatted_array_deprecationwarning(self):
         model = build_model(scenario="simple_supply,one_day,investment_costs")
-        model.run()
 
         with pytest.warns(DeprecationWarning) as warning:
-            model.get_formatted_array("carrier_prod")
+            model.get_formatted_array("resource")
 
         assert check_error_or_warning(warning, "get_formatted_array() is deprecated")
 
@@ -22,6 +21,4 @@ class TestDeprecationWarnings:
             )
 
         assert check_error_or_warning(warning, "`locations` has been renamed")
-
-        model.run()
-        assert model.results.carrier_prod.sum() == 420
+        assert set(model._model_data.dims.nodes) == {"a", "b"}

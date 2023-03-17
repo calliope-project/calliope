@@ -220,7 +220,7 @@ def _run_setup_model(model_file, scenario, model_format, override_dict):
     return model
 
 
-@cli.command(name="run", short_help="Build and run a model.")
+@cli.command(name="run", short_help="Build and solve a model.")
 @click.argument("model_file")
 @click.option("--scenario")
 @click.option("--model_format")
@@ -309,7 +309,8 @@ def run(
                     "save_per_spore_path"
                 ] = save_netcdf.replace(".nc", "/spore_{}.nc")
 
-            model.run()
+            model.build()
+            model.solve()
             termination = model._model_data.attrs.get(
                 "termination_condition", "unknown"
             )

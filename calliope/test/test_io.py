@@ -19,7 +19,8 @@ class TestIO:
             foo_dict={"foo": {"a": 1}},
             foo_attrdict=calliope.AttrDict({"foo": {"a": 1}}),
         )
-        model.run()
+        model.build()
+        model.solve()
         return model
 
     @pytest.fixture(scope="module")
@@ -87,7 +88,6 @@ class TestIO:
                     "foo_dict",
                     "foo_attrdict",
                     "defaults",
-                    "subsets",
                     "model_config",
                     "run_config",
                     "component_config",
@@ -141,14 +141,15 @@ class TestIO:
             scenario="check_feasibility", override_dict={"run.cyclic_storage": False}
         )
 
-        model.run()
+        model.build()
+        model.solve()
 
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = os.path.join(tempdir, "out_dir")
             with pytest.warns(exceptions.ModelWarning):
                 model.to_csv(out_path, dropna=False)
 
-    @pytest.mark.parametrize("attr", ["run_config", "model_config", "subsets"])
+    @pytest.mark.parametrize("attr", ["run_config", "model_config", "component_config"])
     def test_dicts_as_model_attrs_and_property(self, model_from_file, attr):
         assert attr in model_from_file._model_data.attrs.keys()
         assert hasattr(model_from_file, attr)
@@ -170,7 +171,8 @@ class TestIO:
         # Ensure _model_run doesn't exist to simulate a re-run
         # via the backend
         delattr(model_from_disk, "_model_run")
-        model_from_disk.run(force_rerun=True)
+        model_from_disk.build()
+        model_from_disk.solve(force=True)
         assert not hasattr(model_from_disk, "_model_run")
 
         with tempfile.TemporaryDirectory() as tempdir:
@@ -201,7 +203,8 @@ class TestIO:
                     ),
                 },
             )
-            model.run()
+            model.build()
+            model.solve()
 
             for i in ["0", "1", "2", "3"]:
                 assert os.path.isfile(os.path.join(tempdir, "output", f"spore_{i}.nc"))

@@ -52,7 +52,8 @@ def model_plots(
 
 def generate_all_plots():
     model_urban = calliope.examples.urban_scale(scenario="mapbox_ready")
-    model_urban.run()
+    model_urban.build()
+    model_urban.solve()
     model_plots(model_urban)
     model_plots(
         model_urban,
@@ -61,7 +62,8 @@ def generate_all_plots():
     )
 
     model_clustered = calliope.examples.time_clustering()
-    model_clustered.run()
+    model_clustered.build()
+    model_clustered.solve()
     model_plots(model_clustered, plots=["timeseries"], filename_prefix="clustered_")
 
 

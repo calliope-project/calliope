@@ -62,7 +62,7 @@ def set_log_verbosity(
         interactively.
 
     """
-    backend_logger = logging.getLogger("calliope.backend.pyomo.model")
+    backend_logger = logging.getLogger("calliope.backend.backends")
     if include_solver_output is True:
         backend_logger.setLevel("DEBUG")
     else:
