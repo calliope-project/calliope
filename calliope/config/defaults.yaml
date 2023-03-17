@@ -9,246 +9,511 @@
 ##
 
 run:
-    backend: pyomo  # Backend to use to build and solve the model. As of v0.6.0, only `pyomo` is available
-    bigM: 1e9 # Used for unmet demand, but should be of a similar order of magnitude as the largest cost that the model could achieve. Too high and the model will not converge
-    cyclic_storage: true # If true, storage in the last timestep of the timeseries is considered to be the 'previous timestep' in the first timestep of the timeseries
-    ensure_feasibility: false # If true, unmet_demand will be a decision variable, to account for an ability to meet demand with the available supply. If False and a mismatch occurs, the optimisation will fail due to infeasibility
-    mode: plan  # Which mode to run the model in: 'plan', 'operation' or 'spores'
-    objective_options: {'cost_class': {'monetary': 1}, 'sense': 'minimize'}  # Arguments to pass to objective function. If cost-based objective function in use, should include 'cost_class' and 'sense' (maximize/minimize)
-    objective:  minmax_cost_optimization # Name of internal objective function to use, currently only min/max cost-based optimisation is available
-    operation:  # Settings for operational mode
-        window: null
-        horizon: null
-        use_cap_results: false
-    spores_options:  # settings for SPORES (spatially-explicit, practically optimal results) mode
-        spores_number: 3  # The number of SPORES to generate
-        slack: 0.1  # The fraction above the cost-optimal cost to set the maximum cost during SPORES
-        score_cost_class: spores_score  # The cost class to optimise against when generating SPORES
-        objective_cost_class: {spores_score: 1, monetary: 0}  # The updated cost class weightings inthe objective when running SPORES
-        slack_cost_group: null  # The group constraint name in which the `cost_max` constraint is assigned, for use alongside the slack and cost-optimal cost
-        save_per_spore: false  # whether or not to save each SPORE run results separately or as one concatenated NetCDF. If True, "save_per_spore_path" or CLI argument "--to_netcdf" must be defined (to_netcdf will take precendence and be used a the directory name).
-        save_per_spore_path: null  # file path for each spore run, which will be used if save_per_spore is used, and CLI command "--to_netcdf" is not defined. Will apply spore number using the python "format" method, so the path should include a "{}" at the position where the spore number should be included (e.g. "/path/to/spores/spore_{}.nc" will save results for SPORE 1 to "/path/to/spores/spore_1.nc"). The cost-optimal solution will be saved by using spore number 0.
-        skip_cost_op: false  # whether or not to run the initial cost optimisation model to ascertain the cost-optimal cost and initial spores scores. If True, will take the group constraint and cost_energy_cap values directly.
-    save_logs: null  # Directory into which to save logs and temporary files. Also turns on symbolic solver labels in the Pyomo backend
-    solver_io: null  # What method the Pyomo backend should use to communicate with the solver
-    solver_options: null  # A list of options, which are passed on to the chosen solver, and are therefore solver-dependent
-    solver: cbc  # Which solver to use
-    zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this threshold (due to floating point errors, probably) will be set to zero
+  backend: pyomo # Backend to use to build and solve the model. As of v0.6.0, only `pyomo` is available
+  bigM: 1e9 # Used for unmet demand, but should be of a similar order of magnitude as the largest cost that the model could achieve. Too high and the model will not converge
+  cyclic_storage: true # If true, storage in the last timestep of the timeseries is considered to be the 'previous timestep' in the first timestep of the timeseries
+  ensure_feasibility: false # If true, unmet_demand will be a decision variable, to account for an ability to meet demand with the available supply. If False and a mismatch occurs, the optimisation will fail due to infeasibility
+  mode: plan # Which mode to run the model in: 'plan', 'operation' or 'spores'
+  objective_options: { "cost_class": { "monetary": 1 }, "sense": "minimize" } # Arguments to pass to objective function. If cost-based objective function in use, should include 'cost_class' and 'sense' (maximize/minimize)
+  objective: minmax_cost_optimization # Name of internal objective function to use, currently only min/max cost-based optimisation is available
+  operation: # Settings for operational mode
+    window: null
+    horizon: null
+    use_cap_results: false
+  spores_options: # settings for SPORES (spatially-explicit, practically optimal results) mode
+    spores_number: 3 # The number of SPORES to generate
+    slack: 0.1 # The fraction above the cost-optimal cost to set the maximum cost during SPORES
+    score_cost_class: spores_score # The cost class to optimise against when generating SPORES
+    objective_cost_class: { spores_score: 1, monetary: 0 } # The updated cost class weightings inthe objective when running SPORES
+    slack_cost_group: null # The group constraint name in which the `cost_max` constraint is assigned, for use alongside the slack and cost-optimal cost
+    save_per_spore: false # whether or not to save each SPORE run results separately or as one concatenated NetCDF. If True, "save_per_spore_path" or CLI argument "--to_netcdf" must be defined (to_netcdf will take precendence and be used a the directory name).
+    save_per_spore_path: null # file path for each spore run, which will be used if save_per_spore is used, and CLI command "--to_netcdf" is not defined. Will apply spore number using the python "format" method, so the path should include a "{}" at the position where the spore number should be included (e.g. "/path/to/spores/spore_{}.nc" will save results for SPORE 1 to "/path/to/spores/spore_1.nc"). The cost-optimal solution will be saved by using spore number 0.
+    skip_cost_op: false # whether or not to run the initial cost optimisation model to ascertain the cost-optimal cost and initial spores scores. If True, will take the group constraint and cost_energy_cap values directly.
+  save_logs: null # Directory into which to save logs and temporary files. Also turns on symbolic solver labels in the Pyomo backend
+  solver_io: null # What method the Pyomo backend should use to communicate with the solver
+  solver_options: null # A list of options, which are passed on to the chosen solver, and are therefore solver-dependent
+  solver: cbc # Which solver to use
+  zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this threshold (due to floating point errors, probably) will be set to zero
 
 model:
-    calliope_version: null  # Calliope framework version this model is intended for
-    name: null  # Model name
-    random_seed: null  # Seed for random number generator used during clustering
-    reserve_margin:  {} # Per-carrier system-wide reserve margins
-    subset_time: null  # Subset of timesteps as a two-element list giving the range, e.g. ['2005-01-01', '2005-01-05'], or a single string, e.g. '2005-01'
-    time: {}  # Optional settings to adjust time resolution, see :ref:`time_clustering` for the available options
-    timeseries_data_path: null  # Path to time series data
-    timeseries_data: null  # Dict of dataframes with time series data (when passing in dicts rather than YAML files to Model constructor)
-    timeseries_dateformat: '%Y-%m-%d %H:%M:%S'  # Timestamp format of all time series data when read from file
-    file_allowed: ['clustering_func', 'energy_eff', 'energy_ramping', 'export', 'om_con', 'om_prod', 'parasitic_eff', 'resource', 'resource_eff', 'storage_loss', 'carrier_ratios']  # List of configuration options allowed to specify "file=" to load timeseries data. This can be updated if you're adding a new custom constraint that requires a newly defined parameter to be a timeseries. If updating existing parameters, you can expect existing constraints to not change behaviour or to break on being constructed.
-    optimisation_config_overrides: []  # List of custom-constraints
-    
+  calliope_version: null # Calliope framework version this model is intended for
+  name: null # Model name
+  random_seed: null # Seed for random number generator used during clustering
+  reserve_margin: {} # Per-carrier system-wide reserve margins
+  subset_time: null # Subset of timesteps as a two-element list giving the range, e.g. ['2005-01-01', '2005-01-05'], or a single string, e.g. '2005-01'
+  time: {} # Optional settings to adjust time resolution, see :ref:`time_clustering` for the available options
+  timeseries_data_path: null # Path to time series data
+  timeseries_data: null # Dict of dataframes with time series data (when passing in dicts rather than YAML files to Model constructor)
+  timeseries_dateformat: "%Y-%m-%d %H:%M:%S" # Timestamp format of all time series data when read from file
+  file_allowed: [
+      "clustering_func",
+      "energy_eff",
+      "energy_ramping",
+      "export",
+      "om_con",
+      "om_prod",
+      "parasitic_eff",
+      "resource",
+      "resource_eff",
+      "storage_loss",
+      "carrier_ratios",
+    ] # List of configuration options allowed to specify "file=" to load timeseries data. This can be updated if you're adding a new custom constraint that requires a newly defined parameter to be a timeseries. If updating existing parameters, you can expect existing constraints to not change behaviour or to break on being constructed.
+  custom_math: [] # List of references to files which contain custom mathematical formulations. If referring to an in-built Calliope custom math file (see documentation for available files), do not append the reference with ".yaml". If referring to your own custom math file, ensure the file type is given as a suffix (".yaml" or ".yml"). Relative paths will be assumed to be relative to the `config` file given when creating a calliope Model (`calliope.Model(config)`)
+
 ##
 # Base technology groups
 ##
 
 tech_groups:
-    conversion:
-        required_constraints: []
-        allowed_constraints: ['energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'lifetime', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
-        allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase']
-        allowed_switches: [cap_method, export, allowed_carrier_con, allowed_carrier_prod]
-        essentials:
-            parent: null
-        switches:
-            cap_method: linear
-            export: false
-            allowed_carrier_con: true
-            allowed_carrier_prod: true
+  conversion:
+    required_constraints: []
+    allowed_constraints:
+      [
+        "energy_cap_equals",
+        "energy_cap_equals_systemwide",
+        "energy_cap_max",
+        "energy_cap_max_systemwide",
+        "energy_cap_min",
+        "energy_cap_min_use",
+        "energy_cap_per_unit",
+        "energy_cap_scale",
+        "energy_eff",
+        "energy_ramping",
+        "export_max",
+        "export_carrier",
+        "lifetime",
+        "units_equals",
+        "units_equals_systemwide",
+        "units_max",
+        "units_max_systemwide",
+        "units_min",
+      ]
+    allowed_costs:
+      [
+        "depreciation_rate",
+        "energy_cap",
+        "export",
+        "interest_rate",
+        "om_annual",
+        "om_annual_investment_fraction",
+        "om_con",
+        "om_prod",
+        "purchase",
+      ]
+    allowed_switches:
+      [cap_method, export, allowed_carrier_con, allowed_carrier_prod]
+    essentials:
+      parent: null
+    switches:
+      cap_method: linear
+      export: false
+      allowed_carrier_con: true
+      allowed_carrier_prod: true
 
-    conversion_plus:
-        required_constraints: []
-        allowed_constraints: ['carrier_ratios', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'lifetime', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
-        allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase']
-        allowed_switches: [cap_method, export, allowed_carrier_con, allowed_carrier_prod]
-        essentials:
-            parent: null
-        switches:
-            cap_method: linear
-            export: false
-            allowed_carrier_con: true
-            allowed_carrier_prod: true
-    demand:
-        required_constraints: ['resource']
-        allowed_constraints: ['resource', 'resource_area_equals', 'resource_scale', 'resource_unit']
-        allowed_costs: [om_con]
-        allowed_switches: [resource_unit, force_resource, allowed_carrier_con, allowed_carrier_prod]
-        essentials:
-            parent: null
-        switches:
-            force_resource: true
-            resource_unit: energy
-            allowed_carrier_con: true
-            allowed_carrier_prod: false
-    storage:
-        required_constraints: []
-        allowed_constraints: ['energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_equals', 'energy_cap_per_storage_cap_max', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'force_asynchronous_prod_con', 'lifetime', 'storage_cap_equals', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'storage_time_max', 'storage_discharge_depth', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
-        allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_prod', 'purchase', 'storage_cap']
-        allowed_switches: [cap_method, include_storage, export, allowed_carrier_con, allowed_carrier_prod]
-        essentials:
-            parent: null
-        switches:
-            include_storage: True
-            cap_method: linear
-            export: false
-            allowed_carrier_con: true
-            allowed_carrier_prod: true
-    supply:
-        required_constraints: []
-        allowed_constraints: ['energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'lifetime', 'resource', 'resource_area_equals', 'resource_area_max', 'resource_area_min', 'resource_area_per_energy_cap', 'resource_min_use', 'resource_scale', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
-        allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase', 'resource_area']
-        allowed_switches: [cap_method, resource_unit, force_resource, export, allowed_carrier_con, allowed_carrier_prod]
-        essentials:
-            parent: null
-        switches:
-            resource_unit: energy
-            cap_method: linear
-            force_resource: false
-            export: false
-            allowed_carrier_prod: true
-            allowed_carrier_con: false
+  conversion_plus:
+    required_constraints: []
+    allowed_constraints:
+      [
+        "carrier_ratios",
+        "energy_cap_equals",
+        "energy_cap_equals_systemwide",
+        "energy_cap_max",
+        "energy_cap_max_systemwide",
+        "energy_cap_min",
+        "energy_cap_min_use",
+        "energy_cap_per_unit",
+        "energy_cap_scale",
+        "energy_eff",
+        "energy_ramping",
+        "export_max",
+        "export_carrier",
+        "lifetime",
+        "units_equals",
+        "units_equals_systemwide",
+        "units_max",
+        "units_max_systemwide",
+        "units_min",
+      ]
+    allowed_costs:
+      [
+        "depreciation_rate",
+        "energy_cap",
+        "export",
+        "interest_rate",
+        "om_annual",
+        "om_annual_investment_fraction",
+        "om_con",
+        "om_prod",
+        "purchase",
+      ]
+    allowed_switches:
+      [cap_method, export, allowed_carrier_con, allowed_carrier_prod]
+    essentials:
+      parent: null
+    switches:
+      cap_method: linear
+      export: false
+      allowed_carrier_con: true
+      allowed_carrier_prod: true
+  demand:
+    required_constraints: ["resource"]
+    allowed_constraints:
+      ["resource", "resource_area_equals", "resource_scale", "resource_unit"]
+    allowed_costs: [om_con]
+    allowed_switches:
+      [resource_unit, force_resource, allowed_carrier_con, allowed_carrier_prod]
+    essentials:
+      parent: null
+    switches:
+      force_resource: true
+      resource_unit: energy
+      allowed_carrier_con: true
+      allowed_carrier_prod: false
+  storage:
+    required_constraints: []
+    allowed_constraints:
+      [
+        "energy_cap_per_storage_cap_min",
+        "energy_cap_per_storage_cap_equals",
+        "energy_cap_per_storage_cap_max",
+        "energy_cap_equals",
+        "energy_cap_equals_systemwide",
+        "energy_cap_max",
+        "energy_cap_max_systemwide",
+        "energy_cap_min",
+        "energy_cap_min_use",
+        "energy_cap_per_unit",
+        "energy_cap_scale",
+        "energy_eff",
+        "energy_ramping",
+        "export_max",
+        "export_carrier",
+        "force_asynchronous_prod_con",
+        "lifetime",
+        "storage_cap_equals",
+        "storage_cap_max",
+        "storage_cap_min",
+        "storage_cap_per_unit",
+        "storage_initial",
+        "storage_loss",
+        "storage_time_max",
+        "storage_discharge_depth",
+        "units_equals",
+        "units_equals_systemwide",
+        "units_max",
+        "units_max_systemwide",
+        "units_min",
+      ]
+    allowed_costs:
+      [
+        "depreciation_rate",
+        "energy_cap",
+        "export",
+        "interest_rate",
+        "om_annual",
+        "om_annual_investment_fraction",
+        "om_prod",
+        "purchase",
+        "storage_cap",
+      ]
+    allowed_switches:
+      [
+        cap_method,
+        include_storage,
+        export,
+        allowed_carrier_con,
+        allowed_carrier_prod,
+      ]
+    essentials:
+      parent: null
+    switches:
+      include_storage: True
+      cap_method: linear
+      export: false
+      allowed_carrier_con: true
+      allowed_carrier_prod: true
+  supply:
+    required_constraints: []
+    allowed_constraints:
+      [
+        "energy_cap_equals",
+        "energy_cap_equals_systemwide",
+        "energy_cap_max",
+        "energy_cap_max_systemwide",
+        "energy_cap_min",
+        "energy_cap_min_use",
+        "energy_cap_per_unit",
+        "energy_cap_scale",
+        "energy_eff",
+        "energy_ramping",
+        "export_max",
+        "export_carrier",
+        "lifetime",
+        "resource",
+        "resource_area_equals",
+        "resource_area_max",
+        "resource_area_min",
+        "resource_area_per_energy_cap",
+        "resource_min_use",
+        "resource_scale",
+        "units_equals",
+        "units_equals_systemwide",
+        "units_max",
+        "units_max_systemwide",
+        "units_min",
+      ]
+    allowed_costs:
+      [
+        "depreciation_rate",
+        "energy_cap",
+        "export",
+        "interest_rate",
+        "om_annual",
+        "om_annual_investment_fraction",
+        "om_con",
+        "om_prod",
+        "purchase",
+        "resource_area",
+      ]
+    allowed_switches:
+      [
+        cap_method,
+        resource_unit,
+        force_resource,
+        export,
+        allowed_carrier_con,
+        allowed_carrier_prod,
+      ]
+    essentials:
+      parent: null
+    switches:
+      resource_unit: energy
+      cap_method: linear
+      force_resource: false
+      export: false
+      allowed_carrier_prod: true
+      allowed_carrier_con: false
 
-    supply_plus:
-        required_constraints: []
-        allowed_constraints: ['energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_equals', 'energy_cap_per_storage_cap_max', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'lifetime', 'parasitic_eff', 'resource', 'resource_area_equals', 'resource_area_max', 'resource_area_min', 'resource_area_per_energy_cap', 'resource_cap_equals', 'resource_cap_max', 'resource_cap_min', 'resource_eff', 'resource_min_use', 'resource_scale', 'storage_cap_equals', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
-        allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase', 'resource_area', 'resource_cap', 'storage_cap']
-        allowed_switches: [cap_method, include_storage, resource_unit, resource_cap_equals_energy_cap, force_resource, export, allowed_carrier_con, allowed_carrier_prod]
-        essentials:
-            parent: null
-        switches:
-            resource_unit: energy
-            cap_method: linear
-            include_storage: False
-            force_asynchronous_prod_con: false
-            resource_cap_equals_energy_cap: false
-            force_resource: false
-            export: false
-            allowed_carrier_prod: true
-            allowed_carrier_con: False
+  supply_plus:
+    required_constraints: []
+    allowed_constraints:
+      [
+        "energy_cap_per_storage_cap_min",
+        "energy_cap_per_storage_cap_equals",
+        "energy_cap_per_storage_cap_max",
+        "energy_cap_equals",
+        "energy_cap_equals_systemwide",
+        "energy_cap_max",
+        "energy_cap_max_systemwide",
+        "energy_cap_min",
+        "energy_cap_min_use",
+        "energy_cap_per_unit",
+        "energy_cap_scale",
+        "energy_eff",
+        "energy_ramping",
+        "export_max",
+        "export_carrier",
+        "lifetime",
+        "parasitic_eff",
+        "resource",
+        "resource_area_equals",
+        "resource_area_max",
+        "resource_area_min",
+        "resource_area_per_energy_cap",
+        "resource_cap_equals",
+        "resource_cap_max",
+        "resource_cap_min",
+        "resource_eff",
+        "resource_min_use",
+        "resource_scale",
+        "storage_cap_equals",
+        "storage_cap_max",
+        "storage_cap_min",
+        "storage_cap_per_unit",
+        "storage_initial",
+        "storage_loss",
+        "units_equals",
+        "units_equals_systemwide",
+        "units_max",
+        "units_max_systemwide",
+        "units_min",
+      ]
+    allowed_costs:
+      [
+        "depreciation_rate",
+        "energy_cap",
+        "export",
+        "interest_rate",
+        "om_annual",
+        "om_annual_investment_fraction",
+        "om_con",
+        "om_prod",
+        "purchase",
+        "resource_area",
+        "resource_cap",
+        "storage_cap",
+      ]
+    allowed_switches:
+      [
+        cap_method,
+        include_storage,
+        resource_unit,
+        resource_cap_equals_energy_cap,
+        force_resource,
+        export,
+        allowed_carrier_con,
+        allowed_carrier_prod,
+      ]
+    essentials:
+      parent: null
+    switches:
+      resource_unit: energy
+      cap_method: linear
+      include_storage: False
+      force_asynchronous_prod_con: false
+      resource_cap_equals_energy_cap: false
+      force_resource: false
+      export: false
+      allowed_carrier_prod: true
+      allowed_carrier_con: False
 
-    transmission:
-        required_constraints: []
-        allowed_constraints: ['energy_cap_equals', 'energy_cap_min', 'energy_cap_max', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_eff_per_distance', 'force_asynchronous_prod_con', 'lifetime', 'one_way']
-        allowed_costs: ['depreciation_rate', 'energy_cap', 'energy_cap_per_distance', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_prod', 'purchase', 'purchase_per_distance']
-        allowed_switches: [cap_method, one_way, allowed_carrier_con, allowed_carrier_prod]
-        essentials:
-            parent: null
-        switches:
-            cap_method: linear
-            one_way: false
-            allowed_carrier_con: true
-            allowed_carrier_prod: true
+  transmission:
+    required_constraints: []
+    allowed_constraints:
+      [
+        "energy_cap_equals",
+        "energy_cap_min",
+        "energy_cap_max",
+        "energy_cap_per_unit",
+        "energy_cap_scale",
+        "energy_eff",
+        "energy_eff_per_distance",
+        "force_asynchronous_prod_con",
+        "lifetime",
+        "one_way",
+      ]
+    allowed_costs:
+      [
+        "depreciation_rate",
+        "energy_cap",
+        "energy_cap_per_distance",
+        "interest_rate",
+        "om_annual",
+        "om_annual_investment_fraction",
+        "om_prod",
+        "purchase",
+        "purchase_per_distance",
+      ]
+    allowed_switches:
+      [cap_method, one_way, allowed_carrier_con, allowed_carrier_prod]
+    essentials:
+      parent: null
+    switches:
+      cap_method: linear
+      one_way: false
+      allowed_carrier_con: true
+      allowed_carrier_prod: true
 
 ##
 # Default technology
 ##
 techs:
-    default_tech:
-        essentials:
-            carrier_in: false  # Defaults to false, allows technologies to define primary carrier(s) to consume
-            carrier_in_2: false  # Defaults to false, allows technologies to define secondary carrier(s) to consume
-            carrier_in_3: false  # Defaults to false, allows technologies to define tertiary carrier(s) to consume
-            carrier_out: false  # Defaults to false, allows conversion technologies to define primary carrier(s) to produce
-            carrier_out_2: false  # Defaults to false, allows conversion technologies to define secondary carrier(s) to produce
-            carrier_out_3: false  # Defaults to false, allows conversion technologies to define tertiary carrier(s) to produce
-            color: false  # Color to use when plotting results. If not defined, a random one will be chosen
-            name: 'Default technology'  # Name of tech, used for plotting and analysis
-            parent: null  # Parent tech_group. Must always be defined
-            primary_carrier_in: false  # Selects the primary input carrier to associate with costs & constraints (if multiple primary input carriers are assigned)
-            primary_carrier_out: false  # Selects the primary output carrier to associate with costs & constraints (if multiple primary output carriers are assigned)
-        switches:
-            cap_method: linear  # name: capacity method switch, one of 'linear' (LP model), 'binary' (uses purchase decision variable), or 'integer' (uses units and operating _units decision variables)
-            include_storage: False  # name: boolean storage method swtich. Used for supply plus technologies to define a storage between resource consumption and carrier production
-            force_asynchronous_prod_con: false  # name: Force asynchronous production consumption ¦ unit: boolean ¦ If True, carrier_prod and carrier_con cannot both occur in the same timestep
-            resource_unit: energy  # name: Resource unit ¦ unit: N/A ¦ Sets the unit of ``resource`` to either ``energy`` (i.e. kWh), ``energy_per_area`` (i.e. kWh/m2), or ``energy_per_cap`` (i.e. kWh/kW). ``energy_per_area`` uses the ``resource_area`` decision variable to scale the available resource while ``energy_per_cap`` uses the ``energy_cap`` decision variable.
-            resource_cap_equals_energy_cap: false  # name: Resource capacity equals energy cpacity ¦ unit: boolean ¦ If true, ``resource_cap`` is forced to equal ``energy_cap``
-            force_resource: false  # name: Force resource ¦ unit: boolean ¦ Forces this technology to use all available ``resource``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption). Static boolean, or from file as timeseries
-            one_way: false  # name: One way ¦ unit: boolean ¦ Forces a transmission technology to only move energy in one direction on the link, in this case from `default_node_from` to `default_node_to`
-            allowed_carrier_con: false  # name: Energy consumption ¦ unit: boolean ¦ Allow this technology to consume energy from the carrier (static boolean, or from file as timeseries).
-            allowed_carrier_prod: false  # name: Energy production ¦ unit: boolean ¦ Allow this technology to supply energy to the carrier (static boolean, or from file as timeseries).
-            export: false
-        constraints:
-            carrier_ratios: 1  # name: Carrier ratios ¦ unit: fraction ¦ Ratio of summed output of carriers in ['out_2', 'out_3'] / ['in_2', 'in_3'] to the summed output of carriers in 'out' / 'in'. given in a nested dictionary.
-            energy_cap_per_storage_cap_min: 0 # name: Minimum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of minimum charge/discharge (kW) for a given storage capacity (kWh).
-            energy_cap_per_storage_cap_max: .inf # name: Maximum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of maximum charge/discharge (kW) for a given storage capacity (kWh).
-            energy_cap_per_storage_cap_equals: null # name: Tie energy capacity to storage capacity ¦ unit: hour :sup:`-1` ¦
-            energy_cap_equals: null  # name: Specific installed energy capacity ¦ unit: kW ¦ fixes maximum/minimum if decision variables ``carrier_prod``/``carrier_con`` and overrides ``_max`` and ``_min`` constraints.
-            energy_cap_equals_systemwide: null   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
-            energy_cap_max: .inf  # name: Maximum installed energy capacity ¦ unit: kW ¦ Limits decision variables ``carrier_prod``/``carrier_con`` to a maximum/minimum.
-            energy_cap_max_systemwide: .inf  # name: System-wide maximum installed energy capacity ¦ unit: kW ¦ Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
-            energy_cap_min: 0  # name: Minimum installed energy capacity ¦ unit: kW ¦ Limits decision variables ``carrier_prod``/``carrier_con`` to a minimum/maximum.
-            energy_cap_min_use: 0  # name: Minimum carrier production ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum carrier production as a fraction of the technology maximum energy capacity. If non-zero and technology is not defined by ``units``, this will force the technology to operate above its minimum value at every timestep.
-            energy_cap_per_unit: null  # name: Energy capacity per purchased unit ¦ unit: kW/unit ¦ Set the capacity of each integer unit of a technology purchased
-            energy_cap_scale: 1.0  # name: Energy capacity scale ¦ unit: float ¦ Scale all ``energy_cap`` min/max/equals/total_max/total_equals constraints by this value
-            energy_eff: 1.0  # name: Energy efficiency ¦ unit: fraction ¦ conversion efficiency (static, or from file as timeseries), from ``resource``/``storage``/``carrier_in`` (tech dependent) to ``carrier_out``.
-            energy_eff_per_distance: 1.0 # name: Energy efficiency per distance ¦ unit: fraction/distance ¦ Set as value between 1 (no loss) and 0 (all energy lost).
-            energy_ramping: 1  # name: Ramping rate ¦ unit: fraction / hour ¦ Set to ``false`` to disable ramping constraints, otherwise limit maximum carrier production to a fraction of maximum capacity, which increases by that fraction at each timestep.
-            export_max: .inf  # name: Maximum allowed export ¦ unit: kW ¦ Maximum allowed export of produced energy carrier for a technology.
-            export_carrier: null  # name: Export carrier ¦ unit: N/A ¦ Name of carrier to be exported. Must be an output carrier of the technology
-            lifetime: null  # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
-            parasitic_eff: 1.0  # name: Plant parasitic efficiency ¦ unit: fraction ¦ Additional losses as energy gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption
-            resource: .inf  # name: Available resource ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Maximum available resource (static, or from file as timeseries). Unit dictated by ``resource_unit``
-            resource_area_equals: null  # name: Specific installed resource area ¦ unit: m\ :sup:`2` ¦
-            resource_area_max: .inf  # name: Maximum usable resource area ¦ unit: m\ :sup:`2` ¦ If set to a finite value, restricts the usable area of the technology to this value.
-            resource_area_min: 0  # name: Minimum usable resource area ¦ unit: m\ :sup:`2` ¦
-            resource_area_per_energy_cap: null  # name: Resource area per energy capacity ¦ unit: m\ :sup: `2`/kW ¦ If set, forces ``resource_area`` to follow ``energy_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``resource_area == 1.5 * energy_cap``)
-            resource_cap_equals: null  # name: Specific installed resource consumption capacity ¦ unit: kW ¦ overrides ``_max`` and ``_min`` constraints.
-            resource_cap_max: .inf  # name: Maximum installed resource consumption capacity ¦ unit: kW ¦
-            resource_cap_min: 0  # name: Minimum installed resource consumption capacity ¦ unit: kW ¦
-            resource_eff: 1.0  # name: Resource efficiency ¦ unit: fraction ¦ Efficiency (static, or from file as timeseries) in capturing resource before it reaches storage (if storage is present) or conversion to carrier.
-            resource_min_use: 0 # name: Minimum resource consumption ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum resource consumption for production technologies
-            resource_scale: 1.0  # name: Resource scale ¦ unit: fraction ¦ Scale resource (either static value or all values in timeseries) by this value
-            storage_cap_equals: null  # name: Specific storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_equals`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity and overrides ``_max`` and ``_min`` constraints.
-            storage_cap_max: .inf  # name: Maximum storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_max`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity.
-            storage_cap_min: 0  # name: Minimum storage capacity ¦ unit: kWh ¦
-            storage_cap_per_unit: null # name: Storage capacity per purchased unit ¦ unit: kWh/unit ¦ Set the storage capacity of each integer unit of a technology purchased.
-            storage_discharge_depth: 0 # name: Storage depth of discharge ¦ unit: fraction ¦ Defines the minimum level of storage state of charge, as a fraction of total storage capacity
-            storage_initial: 0  # name: Initial storage level ¦ unit: fraction ¦ Set stored energy in device at the first timestep, as a fraction of total storage capacity
-            storage_loss: 0  # name: Storage loss rate ¦ unit: fraction/hour ¦ rate of storage loss per hour (static, or from file as timeseries), used to calculate lost stored energy as ``(1 - storage_loss)^hours_per_timestep``
-            units_equals: null  # name: Specific number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
-            units_equals_systemwide: null   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a specific value, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
-            units_max: .inf  # name: Maximum number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
-            units_max_systemwide: .inf  # name: System-wide maximum installed energy capacity ¦ unit: kW ¦ Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
-            units_min: 0  # name: Minimum number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
-        costs:
-            default_cost:  # These costs are used for any value not defined for a given cost class
-                energy_cap: 0  # name: Cost of energy capacity ¦ unit: kW :sub:`gross` :sup:`-1` ¦
-                energy_cap_per_distance: 0  # name: Cost of energy capacity, per unit distance ¦ unit: kW :sub:`gross` :sup:`-1` / distance ¦ Applied to transmission links only
-                export: 0  # name: Carrier export cost ¦ unit: kWh :sup:`-1` ¦ Usually used in the negative sense, as a subsidy.
-                interest_rate: 0  # name: Interest rate ¦ unit: fraction ¦ Used when computing levelized costs
-                om_annual: 0  # name: Yearly O&M costs ¦ unit: kW :sub:`energy_cap` :sup:`-1` ¦
-                om_annual_investment_fraction: 0  # name: Fractional yearly O&M costs ¦ unit: fraction / total investment ¦
-                om_con: 0  # name: Carrier consumption cost ¦ unit: kWh :sup:`-1` ¦ Applied to carrier consumption of a technology
-                om_prod: 0  # name: Carrier production cost ¦ unit: kWh :sup:`-1` ¦ Applied to carrier production of a technology
-                purchase: 0  # name: Purchase cost ¦ unit: unit :sup:`-1` ¦ Triggers a binary variable for that technology to say that it has been purchased or is applied to integer variable ``units``
-                resource_area: 0  # name: Cost of resource area ¦ unit: m\ :sup:`-2` ¦
-                resource_cap: 0  # name: Cost of resource consumption capacity ¦ unit: kW :sup:`-1` ¦
-                storage_cap: 0  # name: Cost of storage capacity ¦ unit: kWh :sup:`-1` ¦
-                depreciation_rate: 1  # name: Depreciation rate for annualisation of investment costs ¦ unit: fraction ¦
-        exists: true
+  default_tech:
+    essentials:
+      carrier_in: false # Defaults to false, allows technologies to define primary carrier(s) to consume
+      carrier_in_2: false # Defaults to false, allows technologies to define secondary carrier(s) to consume
+      carrier_in_3: false # Defaults to false, allows technologies to define tertiary carrier(s) to consume
+      carrier_out: false # Defaults to false, allows conversion technologies to define primary carrier(s) to produce
+      carrier_out_2: false # Defaults to false, allows conversion technologies to define secondary carrier(s) to produce
+      carrier_out_3: false # Defaults to false, allows conversion technologies to define tertiary carrier(s) to produce
+      color: false # Color to use when plotting results. If not defined, a random one will be chosen
+      name: "Default technology" # Name of tech, used for plotting and analysis
+      parent: null # Parent tech_group. Must always be defined
+      primary_carrier_in: false # Selects the primary input carrier to associate with costs & constraints (if multiple primary input carriers are assigned)
+      primary_carrier_out: false # Selects the primary output carrier to associate with costs & constraints (if multiple primary output carriers are assigned)
+    switches:
+      cap_method: linear # name: capacity method switch, one of 'linear' (LP model), 'binary' (uses purchase decision variable), or 'integer' (uses units and operating _units decision variables)
+      include_storage: False # name: boolean storage method swtich. Used for supply plus technologies to define a storage between resource consumption and carrier production
+      force_asynchronous_prod_con: false # name: Force asynchronous production consumption ¦ unit: boolean ¦ If True, carrier_prod and carrier_con cannot both occur in the same timestep
+      resource_unit: energy # name: Resource unit ¦ unit: N/A ¦ Sets the unit of ``resource`` to either ``energy`` (i.e. kWh), ``energy_per_area`` (i.e. kWh/m2), or ``energy_per_cap`` (i.e. kWh/kW). ``energy_per_area`` uses the ``resource_area`` decision variable to scale the available resource while ``energy_per_cap`` uses the ``energy_cap`` decision variable.
+      resource_cap_equals_energy_cap: false # name: Resource capacity equals energy cpacity ¦ unit: boolean ¦ If true, ``resource_cap`` is forced to equal ``energy_cap``
+      force_resource: false # name: Force resource ¦ unit: boolean ¦ Forces this technology to use all available ``resource``, rather than making it a maximum upper boundary (for production) or minimum lower boundary (for consumption). Static boolean, or from file as timeseries
+      one_way: false # name: One way ¦ unit: boolean ¦ Forces a transmission technology to only move energy in one direction on the link, in this case from `default_node_from` to `default_node_to`
+      allowed_carrier_con: false # name: Energy consumption ¦ unit: boolean ¦ Allow this technology to consume energy from the carrier (static boolean, or from file as timeseries).
+      allowed_carrier_prod: false # name: Energy production ¦ unit: boolean ¦ Allow this technology to supply energy to the carrier (static boolean, or from file as timeseries).
+      export: false
+    constraints:
+      carrier_ratios: 1 # name: Carrier ratios ¦ unit: fraction ¦ Ratio of summed output of carriers in ['out_2', 'out_3'] / ['in_2', 'in_3'] to the summed output of carriers in 'out' / 'in'. given in a nested dictionary.
+      energy_cap_per_storage_cap_min: 0 # name: Minimum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of minimum charge/discharge (kW) for a given storage capacity (kWh).
+      energy_cap_per_storage_cap_max: .inf # name: Maximum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of maximum charge/discharge (kW) for a given storage capacity (kWh).
+      energy_cap_per_storage_cap_equals: null # name: Tie energy capacity to storage capacity ¦ unit: hour :sup:`-1` ¦
+      energy_cap_equals: null # name: Specific installed energy capacity ¦ unit: kW ¦ fixes maximum/minimum if decision variables ``carrier_prod``/``carrier_con`` and overrides ``_max`` and ``_min`` constraints.
+      energy_cap_equals_systemwide: null # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
+      energy_cap_max: .inf # name: Maximum installed energy capacity ¦ unit: kW ¦ Limits decision variables ``carrier_prod``/``carrier_con`` to a maximum/minimum.
+      energy_cap_max_systemwide: .inf # name: System-wide maximum installed energy capacity ¦ unit: kW ¦ Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
+      energy_cap_min: 0 # name: Minimum installed energy capacity ¦ unit: kW ¦ Limits decision variables ``carrier_prod``/``carrier_con`` to a minimum/maximum.
+      energy_cap_min_use: 0 # name: Minimum carrier production ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum carrier production as a fraction of the technology maximum energy capacity. If non-zero and technology is not defined by ``units``, this will force the technology to operate above its minimum value at every timestep.
+      energy_cap_per_unit: null # name: Energy capacity per purchased unit ¦ unit: kW/unit ¦ Set the capacity of each integer unit of a technology purchased
+      energy_cap_scale: 1.0 # name: Energy capacity scale ¦ unit: float ¦ Scale all ``energy_cap`` min/max/equals/total_max/total_equals constraints by this value
+      energy_eff: 1.0 # name: Energy efficiency ¦ unit: fraction ¦ conversion efficiency (static, or from file as timeseries), from ``resource``/``storage``/``carrier_in`` (tech dependent) to ``carrier_out``.
+      energy_eff_per_distance: 1.0 # name: Energy efficiency per distance ¦ unit: fraction/distance ¦ Set as value between 1 (no loss) and 0 (all energy lost).
+      energy_ramping: 1 # name: Ramping rate ¦ unit: fraction / hour ¦ Set to ``false`` to disable ramping constraints, otherwise limit maximum carrier production to a fraction of maximum capacity, which increases by that fraction at each timestep.
+      export_max: .inf # name: Maximum allowed export ¦ unit: kW ¦ Maximum allowed export of produced energy carrier for a technology.
+      export_carrier: null # name: Export carrier ¦ unit: N/A ¦ Name of carrier to be exported. Must be an output carrier of the technology
+      lifetime: null # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
+      parasitic_eff: 1.0 # name: Plant parasitic efficiency ¦ unit: fraction ¦ Additional losses as energy gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption
+      resource: .inf # name: Available resource ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Maximum available resource (static, or from file as timeseries). Unit dictated by ``resource_unit``
+      resource_area_equals: null # name: Specific installed resource area ¦ unit: m\ :sup:`2` ¦
+      resource_area_max: .inf # name: Maximum usable resource area ¦ unit: m\ :sup:`2` ¦ If set to a finite value, restricts the usable area of the technology to this value.
+      resource_area_min: 0 # name: Minimum usable resource area ¦ unit: m\ :sup:`2` ¦
+      resource_area_per_energy_cap: null # name: Resource area per energy capacity ¦ unit: m\ :sup: `2`/kW ¦ If set, forces ``resource_area`` to follow ``energy_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``resource_area == 1.5 * energy_cap``)
+      resource_cap_equals: null # name: Specific installed resource consumption capacity ¦ unit: kW ¦ overrides ``_max`` and ``_min`` constraints.
+      resource_cap_max: .inf # name: Maximum installed resource consumption capacity ¦ unit: kW ¦
+      resource_cap_min: 0 # name: Minimum installed resource consumption capacity ¦ unit: kW ¦
+      resource_eff: 1.0 # name: Resource efficiency ¦ unit: fraction ¦ Efficiency (static, or from file as timeseries) in capturing resource before it reaches storage (if storage is present) or conversion to carrier.
+      resource_min_use: 0 # name: Minimum resource consumption ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum resource consumption for production technologies
+      resource_scale: 1.0 # name: Resource scale ¦ unit: fraction ¦ Scale resource (either static value or all values in timeseries) by this value
+      storage_cap_equals: null # name: Specific storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_equals`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity and overrides ``_max`` and ``_min`` constraints.
+      storage_cap_max: .inf # name: Maximum storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_max`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity.
+      storage_cap_min: 0 # name: Minimum storage capacity ¦ unit: kWh ¦
+      storage_cap_per_unit: null # name: Storage capacity per purchased unit ¦ unit: kWh/unit ¦ Set the storage capacity of each integer unit of a technology purchased.
+      storage_discharge_depth: 0 # name: Storage depth of discharge ¦ unit: fraction ¦ Defines the minimum level of storage state of charge, as a fraction of total storage capacity
+      storage_initial: 0 # name: Initial storage level ¦ unit: fraction ¦ Set stored energy in device at the first timestep, as a fraction of total storage capacity
+      storage_loss: 0 # name: Storage loss rate ¦ unit: fraction/hour ¦ rate of storage loss per hour (static, or from file as timeseries), used to calculate lost stored energy as ``(1 - storage_loss)^hours_per_timestep``
+      units_equals: null # name: Specific number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
+      units_equals_systemwide: null # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a specific value, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
+      units_max: .inf # name: Maximum number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
+      units_max_systemwide: .inf # name: System-wide maximum installed energy capacity ¦ unit: kW ¦ Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
+      units_min: 0 # name: Minimum number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
+    costs:
+      default_cost: # These costs are used for any value not defined for a given cost class
+        energy_cap: 0 # name: Cost of energy capacity ¦ unit: kW :sub:`gross` :sup:`-1` ¦
+        energy_cap_per_distance: 0 # name: Cost of energy capacity, per unit distance ¦ unit: kW :sub:`gross` :sup:`-1` / distance ¦ Applied to transmission links only
+        export: 0 # name: Carrier export cost ¦ unit: kWh :sup:`-1` ¦ Usually used in the negative sense, as a subsidy.
+        interest_rate: 0 # name: Interest rate ¦ unit: fraction ¦ Used when computing levelized costs
+        om_annual: 0 # name: Yearly O&M costs ¦ unit: kW :sub:`energy_cap` :sup:`-1` ¦
+        om_annual_investment_fraction: 0 # name: Fractional yearly O&M costs ¦ unit: fraction / total investment ¦
+        om_con: 0 # name: Carrier consumption cost ¦ unit: kWh :sup:`-1` ¦ Applied to carrier consumption of a technology
+        om_prod: 0 # name: Carrier production cost ¦ unit: kWh :sup:`-1` ¦ Applied to carrier production of a technology
+        purchase: 0 # name: Purchase cost ¦ unit: unit :sup:`-1` ¦ Triggers a binary variable for that technology to say that it has been purchased or is applied to integer variable ``units``
+        resource_area: 0 # name: Cost of resource area ¦ unit: m\ :sup:`-2` ¦
+        resource_cap: 0 # name: Cost of resource consumption capacity ¦ unit: kW :sup:`-1` ¦
+        storage_cap: 0 # name: Cost of storage capacity ¦ unit: kWh :sup:`-1` ¦
+        depreciation_rate: 1 # name: Depreciation rate for annualisation of investment costs ¦ unit: fraction ¦
+    exists: true
 
 nodes:
-    default_node:
-        transmission_node: false # true only if no techs are defined (including complete ommission of the `techs` key). Automatically added during processing if not defined by user.
-        coordinates: {}  # The node's x-y coordinates for distance calculations and plotting: {lat: ..., lon: ...} or {x: ..., y: ...}
-        available_area: .inf  # This node's available land area (required if constraining technology deployment by area).
-        techs: null  # A list of technologies, optionally with node-specific settings overriding the technology's global settings.
-        exists: true
+  default_node:
+    transmission_node: false # true only if no techs are defined (including complete ommission of the `techs` key). Automatically added during processing if not defined by user.
+    coordinates: {} # The node's x-y coordinates for distance calculations and plotting: {lat: ..., lon: ...} or {x: ..., y: ...}
+    available_area: .inf # This node's available land area (required if constraining technology deployment by area).
+    techs: null # A list of technologies, optionally with node-specific settings overriding the technology's global settings.
+    exists: true
 
 links:
-    default_node_from,default_node_to:
-        techs:
-            default_tech:
-                distance: null # Used for per_distance constraints, but automatically inferred from coordinates of nodes in a link if not given directly
+  default_node_from,default_node_to:
+    techs:
+      default_tech:
+        distance: null # Used for per_distance constraints, but automatically inferred from coordinates of nodes in a link if not given directly
 
-        exists: true
+    exists: true

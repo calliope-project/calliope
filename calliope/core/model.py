@@ -16,6 +16,7 @@ from typing import Literal, Union, Optional, Callable
 from contextlib import contextmanager
 import os
 from pathlib import Path
+from calliope.core.util.tools import relative_path
 
 import xarray as xr
 import pandas as pd
@@ -82,7 +83,8 @@ class Model(object):
         self.defaults: AttrDict
         self.model_config: AttrDict
         self.run_config: AttrDict
-        self.component_config: AttrDict
+        self.math: AttrDict
+        self._config_path: Optional[str]
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
@@ -146,15 +148,8 @@ class Model(object):
         self._add_observed_dict("subsets", model_run["subsets"])
         self._add_observed_dict("defaults", self._generate_default_dict())
 
-        component_config = AttrDict.from_yaml(
-            os.path.join(
-                os.path.dirname(calliope.__file__), "config", "constraints.yaml"
-            )
-        )
-        component_config_override = self._add_optimisation_config_override(
-            component_config, model_config["optimisation_config_overrides"]
-        )
-        self._add_observed_dict("component_config", component_config_override)
+        math = self._add_math(model_config["custom_math"])
+        self._add_observed_dict("math", math)
 
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         log_time(
@@ -191,7 +186,7 @@ class Model(object):
         self._add_observed_dict("model_config")
         self._add_observed_dict("run_config")
         self._add_observed_dict("subsets")
-        self._add_observed_dict("component_config")
+        self._add_observed_dict("math")
 
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         results = self._model_data.filter_by_attrs(is_result=1)
@@ -234,45 +229,48 @@ class Model(object):
         self._model_data.attrs[name] = dict_to_add
         setattr(self, name, dict_to_add)
 
-    def _add_optimisation_config_override(
-        self, component_config: AttrDict, optimisation_config_overrides: list
-    ) -> AttrDict:
+    def _add_math(self, custom_math: list) -> AttrDict:
         """
-        Add/override the custom constraints to the component configuration.
+        Load the base math and optionally override with custom math from a list of references to custom math files.
 
         Args:
-            component_config (AttrDict): Configuration dictionary including default constraints.
-            optimisation_config_overrides (list): list of custom-constraints that will be added or overridden to the internal constraints.
+            custom_math (list):
+                List of references to files containting custom mathematical formulations that will be merged with the base formulation.
 
         Raises:
-            exceptions.ModelError: Referenced internal custom-constraints or custom-constraint files must exist.
+            exceptions.ModelError:
+                Referenced internal custom math files or user-defined custom math files must exist.
 
         Returns:
-            AttrDict: dictionary of custom-constraints added/overridden to the base constraints.
+            AttrDict: Dictionary of math (constraints, variables, objectives, and global expressions).
         """
-        component_config_copy = component_config.copy()
-        override_errors = []
 
-        for override in optimisation_config_overrides:
-            if not f"{override}".endswith((".yaml", ".yml")):
-                path_override = (
-                    Path(calliope.__file__).parent / "config" / f"{override}.yaml"
+        base_math = AttrDict.from_yaml(
+            os.path.join(os.path.dirname(calliope.__file__), "config", "base_math.yaml")
+        )
+
+        file_errors = []
+
+        for filename in custom_math:
+            if not f"{filename}".endswith((".yaml", ".yml")):
+                yaml_filepath = (
+                    Path(calliope.__file__).parent / "config" / f"{filename}.yaml"
                 )
             else:
-                path_override = Path(self._config_path) / override
+                yaml_filepath = Path(relative_path(self._config_path, filename))
 
-            if not path_override.is_file():
-                override_errors.append(override)
+            if not yaml_filepath.is_file():
+                file_errors.append(filename)
                 continue
             else:
-                override_dict = AttrDict.from_yaml(path_override)
+                override_dict = AttrDict.from_yaml(yaml_filepath)
 
-            component_config_copy.union(override_dict, allow_override=True)
-        if override_errors:
+            base_math.union(override_dict, allow_override=True)
+        if file_errors:
             raise exceptions.ModelError(
-                f"Attempted to load a configuration override that does not exist: {override_errors}"
+                f"Attempted to load custom math that does not exist: {file_errors}"
             )
-        return component_config_copy
+        return base_math
 
     def _generate_default_dict(self) -> AttrDict:
         """Process input parameter default YAML configuration file into a dictionary of
@@ -323,7 +321,7 @@ class Model(object):
             # 1. Variables, 2. Expressions, 3. Constraints, 4. Objectives
             for components in ["variables", "expressions", "constraints", "objectives"]:
                 component = components.removesuffix("s")
-                for name, dict_ in self.component_config[components].items():
+                for name, dict_ in self.math[components].items():
                     getattr(backend, f"add_{component}")(self._model_data, name, dict_)
                 log_time(
                     logger,
