@@ -535,7 +535,7 @@ class PyomoBackendModel(BackendModel):
         ) -> xr.DataArray:
             lhs, op, rhs = expr
 
-            incomplete_constraints = ((rhs.isnull()) | (lhs.isnull())).where(imask)
+            incomplete_constraints = (rhs.isnull() | lhs.isnull()).where(imask)
             if incomplete_constraints.any():
                 raise BackendError(
                     "Missing rhs or lhs for some coordinates selected by 'where'. Adapting 'where' might help."
