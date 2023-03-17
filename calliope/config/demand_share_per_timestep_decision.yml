@@ -1,0 +1,81 @@
+# Allows the model to decide on how a fraction of demand for a carrier is met
+# by the given group (of given technologies at given nodes),
+# which will all have the same share in each timestep.
+# The share is relative to the actual demand from ``demand`` technologies only.
+# Specifying `relaxation` inside the constraint to a non-zero value allows the
+# constraint some flexibiliy around a given value, making a model easier to solve.
+
+# An alternative to using index_slices would be to use a custom parameter that
+# is set to e.g. 1 at some set of nodes and techs in the model config, and is
+# checked for in the `where` string.
+
+variables:
+  demand_share_per_timestep_decision:
+    foreach: [nodes, techs]
+    where: &where_string NOT run.mode=operate
+    bounds:
+      min: 0
+      max: .inf
+
+# The two main constraints enforce that the shares are the same in each timestep,
+# with an optional relaxation.
+
+constraints:
+  demand_share_per_timestep_decision_main_min:
+    foreach: [nodes, techs, timesteps]
+    where: *where_string
+    equation: >
+      carrier_prod[nodes=$my_nodes, carriers=$my_carrier, techs=$my_techs] >= -1 * (1 - $relaxation)
+      * sum($required_resource, over=[nodes, techs])
+      * demand_share_per_timestep_decision[nodes=$my_nodes, techs=$my_techs]
+    index_slices:
+      my_nodes: &my_nodes_index_slice
+        - expression: "[l0, l1]"
+      my_carrier: &my_carriers_index_slice
+        - expression: electricity
+      my_techs: &my_techs_index_slice
+        - expression: "[normal_elec_supply, expensive_elec_supply]"
+      demand_techs: &demand_techs_index_slice
+        - expression: "inheritance(demand)"
+    components:
+      # 0 == no relaxation, 0.01 == 1% relaxation (lhs == rhs -> lhs >= 0.99 * rhs & lhs <= 1.01 * rhs)
+      relaxation: &relaxation_component
+        - expression: "0"
+      required_resource: &required_resource_component
+        - where: "resource_unit=energy_per_area"
+          expression: "resource[nodes=$my_nodes, techs=$demand_techs] * resource_scale[nodes=$my_nodes, techs=$demand_techs] * resource_area[nodes=$my_nodes, techs=$demand_techs]"
+        - where: "resource_unit=energy_per_cap"
+          expression: "resource[nodes=$my_nodes, techs=$demand_techs] * resource_scale[nodes=$my_nodes, techs=$demand_techs] * energy_cap[nodes=$my_nodes, techs=$demand_techs]"
+        - where: "resource_unit=energy"
+          expression: "resource[nodes=$my_nodes, techs=$demand_techs] * resource_scale[nodes=$my_nodes, techs=$demand_techs]"
+
+  demand_share_per_timestep_decision_main_max:
+    foreach: [nodes, techs, timesteps]
+    where: *where_string
+    equation: >
+      carrier_prod[nodes=$my_nodes, carriers=$my_carrier, techs=$my_techs] <= -1 * (1 + $relaxation)
+      * sum($required_resource, over=[nodes, techs])
+      * demand_share_per_timestep_decision[nodes=$my_nodes, techs=$my_techs]
+    index_slices:
+      my_nodes: *my_nodes_index_slice
+      my_carrier: *my_carriers_index_slice
+      my_techs: *my_techs_index_slice
+      demand_techs: *demand_techs_index_slice
+    components:
+      relaxation: *relaxation_component
+      required_resource: *required_resource_component
+
+# The optional additional sum constraint ensures that all decision shares add up
+# to a specified share of carrier demand (here, 50% = 0.5 of electricity demand).
+
+  demand_share_per_timestep_decision_sum:
+    where: *where_string
+    equation: >
+      sum(
+      demand_share_per_timestep_decision[nodes=$my_nodes, techs=$my_techs],
+      over=[nodes, techs]
+      ) == 0.5
+    index_slices:
+      my_nodes: *my_nodes_index_slice
+      my_carrier: *my_carriers_index_slice
+      my_techs: *my_techs_index_slice

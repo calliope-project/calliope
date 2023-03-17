@@ -326,7 +326,11 @@ class EvalSlicedParameterOrVariable(EvalString):
         if eval_kwargs.get("as_dict", False):
             return {"dimensions": index_slices, **self.obj_name.eval(**eval_kwargs)}
         elif eval_kwargs.get("backend_dataset", None) is not None:
-            return self.obj_name.eval(**eval_kwargs).sel(**index_slices)
+            array = self.obj_name.eval(**eval_kwargs)
+            if not array.shape:
+                return array
+            else:
+                return array.sel(**index_slices)
         else:
             return None
 

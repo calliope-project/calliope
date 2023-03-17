@@ -20,6 +20,7 @@ VALID_EXPRESSION_HELPER_FUNCTIONS: dict[str, Callable] = {
     "get_connected_link": helper_functions.get_connected_link,
     "get_val_at_index": helper_functions.get_val_at_index,
     "roll": helper_functions.roll,
+    "inheritance": helper_functions.inheritance,
 }
 VALID_IMASK_HELPER_FUNCTIONS: dict[str, Callable] = {
     "inheritance": helper_functions.inheritance,
