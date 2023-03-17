@@ -534,6 +534,13 @@ class PyomoBackendModel(BackendModel):
             imask: xr.DataArray, expr: tuple[xr.DataArray, str, xr.DataArray]
         ) -> xr.DataArray:
             lhs, op, rhs = expr
+
+            incomplete_constraints = ((rhs.isnull()) | (lhs.isnull())).where(imask)
+            if incomplete_constraints.any():
+                raise BackendError(
+                    "Missing rhs or lhs for some coordinates selected by 'where'. Adapting 'where' might help."
+                )
+
             to_fill = self.apply_func(
                 self._to_pyomo_constraint,
                 imask,
@@ -561,6 +568,12 @@ class PyomoBackendModel(BackendModel):
         expression_dict: parsing.UnparsedConstraintDict,
     ) -> None:
         def _expression_setter(imask: xr.DataArray, expr: xr.DataArray) -> xr.DataArray:
+            incomplete_expressions = expr.isnull().where(imask)
+            if incomplete_expressions.any():
+                raise BackendError(
+                    "Missing expressions for some coordinates selected by 'where'. Adapting 'where' might help."
+                )
+
             to_fill = self.apply_func(
                 self._to_pyomo_expression,
                 imask,
