@@ -12,6 +12,8 @@ v0.7 includes a major change to how Calliope internally operates. Most of this a
 User-facing changes
 ~~~~~~~~~~~~~~~~~~~
 
+|new| Files containing user-defined mathematical formulations can be referenced in the model configuration. User-defined mathematical formulations must follow the new Calliope YAML math syntax (see "Internal changes" below).
+
 |changed| |backwards incompatible| `Locations` (abbreviated to `locs`) are now referred to as `nodes` (no abbreviation). For users, this requires updating the top-level YAML key "locations" to "nodes" and accessing data in `model.inputs` and `model.results` on the set "nodes" rather than "locs".
 
 |changed| |backwards incompatible| The `loc::tech` and `loc::tech::carrier` sets have been removed. Model components are now indexed separately over `node`, `tech`, and `carrier` (where applicable). Although primarily an internal change, this affects the xarray dataset structure and hence how users access data in `model.inputs` and `model.results`. For example, `model.inputs.energy_cap_max.loc[{"loc_techs": "X:pv"}]` in v0.6 needs to be changed to `model.inputs.energy_cap_max.loc[{"nodes": "X", "techs": "pv"}]` in v0.7. This is functionally equivalent to first calling `model.get_formatted_array("energy_cap_max")` in v0.6, which is no longer necessary in v0.7.
@@ -23,7 +25,9 @@ User-facing changes
 Internal changes
 ~~~~~~~~~~~~~~~~
 
-|new| Generation of subsets over the model dimensions is now automated and determined by hardcoded YAML configuration files (`model_data_lookup.yaml` and `subsets.yaml`). This reduces the need to update code when incorporating additional functionality in the future.
+|new| Logic to convert the model definition (YAML or direct dictionary) to an xarray dataset is stored in a YAML configuration file: `model_data_lookup.yaml`. This reduces the need to update scripts when incorporating additional parameters in the future.
+
+|new| The model mathematical formulation (constraints, decision variables, objectives) is stored in a YAML configuration file: `base_math.yaml`. Equation expressions and the logic to decide on when to apply a constraint/create a variable etc. are given in string format. These strings are parsed according to a set of documented rules.
 
 |changed| Costs are now Pyomo expressions rather than decision variables.
 
