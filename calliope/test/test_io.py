@@ -90,7 +90,7 @@ class TestIO:
                     "defaults",
                     "model_config",
                     "run_config",
-                    "component_config",
+                    "math",
                 ],
             ),
         ],
