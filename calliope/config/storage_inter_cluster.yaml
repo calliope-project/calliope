@@ -9,8 +9,12 @@ constraints:
           expression: storage_initial * storage_cap
         - where: ((timesteps=get_val_at_index(dim=timesteps, idx=0) AND run.cyclic_storage=True) OR NOT timesteps=get_val_at_index(dim=timesteps, idx=0)) AND NOT lookup_cluster_last_timestep
           expression: (1 - storage_loss) ** roll(timestep_resolution, timesteps=1) * roll(storage, timesteps=1)
-        - where: lookup_cluster_last_timestep
+        - where: lookup_cluster_last_timestep AND NOT (timesteps=get_val_at_index(dim=timesteps, idx=0) AND NOT run.cyclic_storage=True)
           expression: "0"
+
+  balance_storage:
+    components:
+      storage_previous_step: *storage_previous_step
 
   set_storage_initial:
     equation: storage_inter_cluster[datesteps=$final_step] * ((1 - storage_loss) ** 24) == storage_initial * storage_cap
@@ -71,21 +75,21 @@ variables:
       min: -.inf
 
   storage_inter_cluster:
-    foreach: [ nodes, techs, datesteps ]
+    foreach: [nodes, techs, datesteps]
     where: "include_storage=True"
     bounds:
       min: 0
       max: .inf
 
   storage_intra_cluster_max:
-    foreach: [ nodes, techs, clusters ]
+    foreach: [nodes, techs, clusters]
     where: "include_storage=True"
     bounds:
       min: -.inf
       max: .inf
 
   storage_intra_cluster_min:
-    foreach: [ nodes, techs, clusters ]
+    foreach: [nodes, techs, clusters]
     where: "include_storage=True"
     bounds:
       min: -.inf

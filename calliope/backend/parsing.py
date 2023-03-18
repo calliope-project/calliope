@@ -17,7 +17,7 @@ VALID_EXPRESSION_HELPER_FUNCTIONS: dict[str, Callable] = {
     "sum": helper_functions.expression_sum,
     "squeeze_carriers": helper_functions.squeeze_carriers,
     "squeeze_primary_carriers": helper_functions.squeeze_primary_carriers,
-    "get_connected_link": helper_functions.get_connected_link,
+    "select_from_lookup_table": helper_functions.select_from_lookup_table,
     "get_val_at_index": helper_functions.get_val_at_index,
     "roll": helper_functions.roll,
 }

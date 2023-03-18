@@ -1,4 +1,7 @@
+from typing import Callable
+
 import xarray as xr
+from calliope.exceptions import BackendError
 
 
 def inheritance(model_data, **kwargs):
@@ -81,22 +84,38 @@ def squeeze_primary_carriers(model_data, **kwargs):
     return _squeeze_primary_carriers
 
 
-def get_connected_link(model_data, **kwargs):
-    def _get_connected_link(component):
-        dims = [i for i in component.dims if i in ["techs", "nodes"]]
-        remote_nodes = model_data.link_remote_nodes.stack(idx=dims).dropna("idx")
-        remote_techs = model_data.link_remote_techs.stack(idx=dims).dropna("idx")
-        remote_component_items = component.sel(techs=remote_techs, nodes=remote_nodes)
-        return (
-            remote_component_items.drop_vars(["nodes", "techs"])
-            .unstack("idx")
-            .reindex_like(component)
-            # TODO: should we be filling NaNs? Should ONLY valid remotes remain in the
-            # returned array?
-            .fillna(component)
+def select_from_lookup_table(model_data: xr.Dataset, **kwargs) -> Callable:
+    def _select_from_lookup_table(
+        component: xr.DataArray, **slice_dims
+    ) -> xr.DataArray:
+        dims = set(slice_dims.keys())
+        if dims.difference(component.dims):
+            raise BackendError(
+                f"Cannot select items from `{component.name}` on the dimensions {dims} since the array is not indexed over the dimensions {dims.difference(component.dims)}"
+            )
+        if any(
+            dim not in dim_slicer.dims
+            for dim in dims
+            for dim_slicer in slice_dims.values()
+        ):
+            raise BackendError(
+                f"All lookup tables used to select items from `{component.name}` must be indexed over the dimensions {dims}"
+            )
+
+        sliced_component = component.sel(
+            **{
+                dim_name: model_data[dim_slicer.name].stack(idx=dims).dropna("idx")
+                for dim_name, dim_slicer in slice_dims.items()
+            }
         )
 
-    return _get_connected_link
+        return (
+            sliced_component.drop_vars(dims)
+            .unstack("idx")
+            .reindex_like(component, copy=False)
+        )
+
+    return _select_from_lookup_table
 
 
 def get_val_at_index(model_data, **kwargs):

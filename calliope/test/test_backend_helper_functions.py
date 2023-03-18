@@ -4,6 +4,8 @@ import numpy as np
 import xarray as xr
 
 from calliope.backend import helper_functions
+from calliope import exceptions
+from calliope.test.common.util import check_error_or_warning
 
 
 def test_inheritance(dummy_model_data):
@@ -76,11 +78,61 @@ def test_squeeze_primary_carriers_not_in_model(dummy_model_data):
         squeeze_carriers(dummy_model_data.all_true_carriers, "foo")
 
 
-def test_get_connected_link(dummy_model_data):
-    get_connected_link = helper_functions.get_connected_link(dummy_model_data)
-    connected_link = get_connected_link(dummy_model_data.with_inf)
+@pytest.mark.parametrize(
+    ["lookup", "expected"],
+    [
+        (
+            {"techs": "lookup_techs"},
+            [[1.0, np.nan, np.nan, np.nan], [np.inf, np.nan, 2.0, np.nan]],
+        ),
+        (
+            {"nodes": "link_remote_nodes", "techs": "link_remote_techs"},
+            [[np.inf, np.nan, 2, np.nan], [3, np.nan, np.nan, np.nan]],
+        ),
+    ],
+)
+def test_select_from_lookup_table(dummy_model_data, lookup, expected):
+    select_from_lookup_table = helper_functions.select_from_lookup_table(
+        dummy_model_data
+    )
+
+    new_array = select_from_lookup_table(
+        dummy_model_data.with_inf, **{k: dummy_model_data[v] for k, v in lookup.items()}
+    )
     assert np.array_equal(
-        connected_link, [[np.inf, np.nan, 2, 3], [3, 2, 1, np.nan]], equal_nan=True
+        new_array.transpose(*dummy_model_data.with_inf.dims), expected, equal_nan=True
+    )
+
+
+def test_select_from_lookup_table_fail_dim_not_in_component(dummy_model_data):
+    select_from_lookup_table = helper_functions.select_from_lookup_table(
+        dummy_model_data
+    )
+    with pytest.raises(exceptions.BackendError) as excinfo:
+        select_from_lookup_table(
+            dummy_model_data.nodes_true,
+            techs=dummy_model_data.lookup_techs,
+        )
+    assert check_error_or_warning(
+        excinfo,
+        "Cannot select items from `nodes_true` on the dimensions {'techs'} since the array is not indexed over the dimensions {'techs'}",
+    )
+
+
+def test_select_from_lookup_table_fail_dim_slicer_mismatch(dummy_model_data):
+    select_from_lookup_table = helper_functions.select_from_lookup_table(
+        dummy_model_data
+    )
+    with pytest.raises(exceptions.BackendError) as excinfo:
+        select_from_lookup_table(
+            dummy_model_data.with_inf,
+            techs=dummy_model_data.lookup_techs,
+            nodes=dummy_model_data.link_remote_nodes,
+        )
+
+    assert check_error_or_warning(
+        excinfo,
+        ["lookup tables used to select items from `with_inf", "'techs'", "'nodes'"],
     )
 
 

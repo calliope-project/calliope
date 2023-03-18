@@ -1,5 +1,4 @@
 constraints:
-
   energy_capacity_per_storage_capacity_min:
     foreach: [nodes, techs]
     where: "energy_cap_per_storage_cap_min AND NOT energy_cap_per_storage_cap_equals AND NOT run.mode=operate"
@@ -48,7 +47,6 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion_plus) AND carrier_ratios>0"
     equation: squeeze_carriers(carrier_prod / carrier_ratios[carrier_tiers=out], carrier_tier=out) == -1 * squeeze_carriers(carrier_con * carrier_ratios[carrier_tiers=in], carrier_tier=in) * energy_eff
-
 
   carrier_production_max_conversion_plus:
     foreach: [nodes, techs, timesteps]
@@ -204,13 +202,10 @@ constraints:
       storage_previous_step: &storage_previous_step
         - where: timesteps=get_val_at_index(dim=timesteps, idx=0) AND NOT run.cyclic_storage=True
           expression: storage_initial * storage_cap
-        - where: ((timesteps=get_val_at_index(dim=timesteps, idx=0) AND run.cyclic_storage=True) OR NOT timesteps=get_val_at_index(dim=timesteps, idx=0)) AND NOT lookup_cluster_last_timestep
+        - where: ((timesteps=get_val_at_index(dim=timesteps, idx=0) AND run.cyclic_storage=True) OR NOT timesteps=get_val_at_index(dim=timesteps, idx=0)) AND NOT lookup_cluster_first_timestep=True
           expression: (1 - storage_loss) ** roll(timestep_resolution, timesteps=1) * roll(storage, timesteps=1)
-        - where: lookup_cluster_last_timestep
-          expression: (1 - storage_loss) ** timestep_resolution[timesteps=$previous_cluster_step] * storage[timesteps=$previous_cluster_step]
-    index_slices: &storage_previous_step_idx_items
-      previous_cluster_step:
-        - expression: lookup_cluster_last_timestep
+        - where: lookup_cluster_first_timestep=True AND NOT (timesteps=get_val_at_index(dim=timesteps, idx=0) AND NOT run.cyclic_storage=True)
+          expression: (1 - storage_loss) ** select_from_lookup_table(timestep_resolution, timesteps=lookup_cluster_last_timestep) * select_from_lookup_table(storage, timesteps=lookup_cluster_last_timestep)
 
   resource_availability_supply_plus:
     foreach: [nodes, techs, timesteps]
@@ -234,23 +229,24 @@ constraints:
         - where: energy_eff = 0
           expression: "0"
       storage_previous_step: *storage_previous_step
-    index_slices: *storage_previous_step_idx_items
 
   set_storage_initial:
     foreach: [nodes, techs]
     where: "storage_initial AND include_storage=True AND run.cyclic_storage=True"
     equation: storage[timesteps=$final_step] * ((1 - storage_loss) ** timestep_resolution[timesteps=$final_step]) == storage_initial * storage_cap
-    index_slices: *storage_previous_step_idx_items
+    index_slices:
+      final_step:
+        - expression: get_val_at_index(dim=timesteps, idx=-1)
 
   balance_transmission:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(transmission) AND allowed_carrier_prod=True"
-    equation: "carrier_prod == -1 * get_connected_link(carrier_con) * energy_eff"
+    equation: "carrier_prod == -1 * select_from_lookup_table(carrier_con, techs=link_remote_techs, nodes=link_remote_nodes) * energy_eff"
 
   symmetric_transmission:
     foreach: [nodes, techs]
     where: "inheritance(transmission) AND NOT run.mode=operate"
-    equation: energy_cap == get_connected_link(energy_cap)
+    equation: energy_cap == select_from_lookup_table(energy_cap, techs=link_remote_techs, nodes=link_remote_nodes)
 
   export_balance:
     foreach: [nodes, techs, carriers, timesteps]
@@ -375,7 +371,7 @@ constraints:
   ramping_down:
     foreach: [nodes, techs, carriers, timesteps]
     where: "energy_ramping AND NOT timesteps=get_val_at_index(dim=timesteps, idx=0)"
-    equation:  -1 * energy_ramping * energy_cap <= $flow - roll($flow, timesteps=1)
+    equation: -1 * energy_ramping * energy_cap <= $flow - roll($flow, timesteps=1)
     components:
       flow: *ramping_flow
 
@@ -496,19 +492,18 @@ variables:
       max: 0
 
 objectives:
-    min_cost_optimisation:
-      equation: sum(sum(cost, over=[nodes, techs]) * objective_cost_class, over=costs) + $unmet_demand
-      components:
-        unmet_demand:
-          - where: "run.ensure_feasibility=True"
-            expression: sum(sum(unmet_demand - unused_supply, over=[carriers, nodes])  * timestep_weights, over=timesteps) * bigM
-          - where: "NOT run.ensure_feasibility=True"
-            expression: "0"
-      domain: Reals
-      sense: minimize
+  min_cost_optimisation:
+    equation: sum(sum(cost, over=[nodes, techs]) * objective_cost_class, over=costs) + $unmet_demand
+    components:
+      unmet_demand:
+        - where: "run.ensure_feasibility=True"
+          expression: sum(sum(unmet_demand - unused_supply, over=[carriers, nodes])  * timestep_weights, over=timesteps) * bigM
+        - where: "NOT run.ensure_feasibility=True"
+          expression: "0"
+    domain: Reals
+    sense: minimize
 
 expressions:
-
   cost_var:
     foreach: [nodes, techs, costs, timesteps]
     where: "cost_export OR cost_om_con OR cost_om_prod"
@@ -542,24 +537,24 @@ expressions:
     foreach: [nodes, techs, costs]
     where: "(cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap) AND NOT run.mode=operate"
     equations:
-        - where: "NOT inheritance(transmission)"
-          expression: >
-            annualisation_weight * (
-              cost_depreciation_rate * (
+      - where: "NOT inheritance(transmission)"
+        expression: >
+          annualisation_weight * (
+            cost_depreciation_rate * (
+                $cost_energy_cap + $cost_storage_cap + $cost_resource_cap
+                + $cost_resource_area + $cost_of_purchase
+              ) * (1 + cost_om_annual_investment_fraction)
+              + cost_om_annual * energy_cap
+          )
+      - where: "inheritance(transmission)"
+        expression: >
+          annualisation_weight * (
+            cost_depreciation_rate * (
                   $cost_energy_cap + $cost_storage_cap + $cost_resource_cap
                   + $cost_resource_area + $cost_of_purchase
-                ) * (1 + cost_om_annual_investment_fraction)
+                ) * (0.5 + cost_om_annual_investment_fraction)
                 + cost_om_annual * energy_cap
-            )
-        - where: "inheritance(transmission)"
-          expression: >
-            annualisation_weight * (
-              cost_depreciation_rate * (
-                    $cost_energy_cap + $cost_storage_cap + $cost_resource_cap
-                    + $cost_resource_area + $cost_of_purchase
-                  ) * (0.5 + cost_om_annual_investment_fraction)
-                  + cost_om_annual * energy_cap
-            )
+          )
     components:
       cost_energy_cap:
         - where: "cost_energy_cap"
@@ -604,4 +599,3 @@ expressions:
           expression: sum(cost_var, over=timesteps)
         - where: "NOT (cost_export OR cost_om_con OR cost_om_prod)"
           expression: "0"
-

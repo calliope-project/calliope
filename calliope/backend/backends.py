@@ -520,7 +520,7 @@ class PyomoBackendModel(BackendModel):
         )
         if not parameter_values.shape and parameter_da.isnull().all():
             parameter_da = parameter_da.astype(float)
-
+        parameter_da.attrs["original_dtype"] = parameter_values.dtype
         self._add_to_dataset(parameter_name, parameter_da, "parameters")
         self.valid_arithmetic_components.add(parameter_name)
 
@@ -654,7 +654,11 @@ class PyomoBackendModel(BackendModel):
     ) -> Optional[xr.DataArray]:
         parameter = self.parameters.get(parameter_name, None)
         if isinstance(parameter, xr.DataArray) and not as_backend_objs:
-            return self.apply_func(self._from_pyomo_param, parameter)
+            param_as_vals = self.apply_func(self._from_pyomo_param, parameter)
+            if parameter.original_dtype.kind == "M":
+                return xr.apply_ufunc(pd.to_datetime, param_as_vals)
+            else:
+                return param_as_vals.astype(parameter.original_dtype)
         else:
             return parameter
 
