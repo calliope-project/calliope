@@ -308,84 +308,28 @@ class Model(object):
             backend_interface (Literal["pyomo"], optional):
                 Backend interface in which to build the problem. Defaults to "pyomo".
         """
-        with self.model_data_string_datetime():
-            backend = self._BACKENDS[backend_interface]()
-            backend.add_all_parameters(self._model_data, self.run_config)
+        backend = self._BACKENDS[backend_interface]()
+        backend.add_all_parameters(self._model_data, self.run_config)
+        log_time(
+            logger,
+            self._timings,
+            "backend_parameters_generated",
+            comment="Model: Generated optimisation problem parameters",
+        )
+        # The order of adding components matters!
+        # 1. Variables, 2. Expressions, 3. Constraints, 4. Objectives
+        for components in ["variables", "expressions", "constraints", "objectives"]:
+            component = components.removesuffix("s")
+            for name, dict_ in self.math[components].items():
+                getattr(backend, f"add_{component}")(self._model_data, name, dict_)
             log_time(
                 logger,
                 self._timings,
-                "backend_parameters_generated",
-                comment="Model: Generated optimisation problem parameters",
+                f"backend_{components}_generated",
+                comment=f"Model: Generated optimisation problem {components}",
             )
-            # The order of adding components matters!
-            # 1. Variables, 2. Expressions, 3. Constraints, 4. Objectives
-            for components in ["variables", "expressions", "constraints", "objectives"]:
-                component = components.removesuffix("s")
-                for name, dict_ in self.math[components].items():
-                    getattr(backend, f"add_{component}")(self._model_data, name, dict_)
-                log_time(
-                    logger,
-                    self._timings,
-                    f"backend_{components}_generated",
-                    comment=f"Model: Generated optimisation problem {components}",
-                )
 
-            self.backend = backend
-
-    @contextmanager
-    def model_data_string_datetime(self):
-        """
-        Temporarily turn model data input timeseries objects into strings with maximum
-        resolution of minutes.
-        """
-        self._datetime_to_string()
-        try:
-            yield
-        finally:
-            self._string_to_datetime(self._model_data)
-
-    def _datetime_to_string(self) -> None:
-        """
-        Convert model data inputs from datetime to string xarray dataarrays, to reduce the memory
-        footprint of converting datetimes from numpy.datetime64 -> pandas.Timestamp
-        when creating the pyomo model object.
-        """
-        datetime_data = set()
-        for attr in ["coords", "data_vars"]:
-            for set_name, set_data in getattr(self._model_data, attr).items():
-                if set_data.dtype.kind == "M":
-                    attrs = self._model_data[set_name].attrs
-                    self._model_data[set_name] = self._model_data[set_name].dt.strftime(
-                        "%Y-%m-%d %H:%M"
-                    )
-                    self._model_data[set_name].attrs = attrs
-                    datetime_data.add((attr, set_name))
-
-        self._datetime_data = datetime_data
-
-        return None
-
-    def _string_to_datetime(self, da: xr.Dataset) -> None:
-        """
-        Convert from string to datetime xarray dataarrays, reverting the process
-        undertaken in `_datetime_to_string`. Operation is undertaken in-place.
-
-        Without running `_datetime_to_string` earlier, this function will not function
-        as expected since it will not be able to identify which coordinates should be
-        converted to datetime format.
-
-        Args:
-            da (xr.Dataset): Dataset in which to convert timeseries data arrays.
-
-        """
-        for attr, set_name in self._datetime_data:
-            if attr == "coords" and set_name in da:
-                da.coords[set_name] = da[set_name].astype("datetime64[ns]")
-            elif set_name in da:
-                da[set_name] = xr.apply_ufunc(
-                    pd.to_datetime, da[set_name], keep_attrs=True
-                )
-        return None
+        self.backend = backend
 
     def solve(self, force_rerun: bool = False, warmstart: bool = False) -> None:
         """
@@ -448,7 +392,6 @@ class Model(object):
         # Add additional post-processed result variables to results
         if termination_condition in ["optimal", "feasible"]:
             results = self.backend.load_results()
-            self._string_to_datetime(results)
             results = postprocess_results.postprocess_model_results(
                 results, self._model_data, self._timings
             )
