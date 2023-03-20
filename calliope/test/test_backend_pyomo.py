@@ -1872,6 +1872,13 @@ class TestNewBackend:
         m.solve()
         return m
 
+    @pytest.fixture(scope="class")
+    def simple_supply_longnames(self):
+        m = build_model({}, "simple_supply,two_hours,investment_costs")
+        m.build()
+        m.backend.expand_object_string_representation()
+        return m
+
     def test_new_build_has_backend(self, simple_supply_new_build):
         assert hasattr(simple_supply_new_build, "backend")
 
@@ -1906,6 +1913,7 @@ class TestNewBackend:
                 "cost_investment",
                 "symmetric_transmission",
             },
+            "coords_in_name": False,
         }
 
     def test_new_build_get_variable_as_vals(self, simple_supply_new_build):
@@ -1931,6 +1939,7 @@ class TestNewBackend:
             "parameters": 1,
             "is_result": 0,
             "references": {"balance_demand", "balance_transmission"},
+            "coords_in_name": False,
         }
 
     def test_new_build_get_parameter_as_vals(self, simple_supply_new_build):
@@ -1952,7 +1961,11 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.expression))
             .all()
         )
-        assert expr.attrs == {"expressions": 1, "references": {"cost"}}
+        assert expr.attrs == {
+            "expressions": 1,
+            "references": {"cost"},
+            "coords_in_name": False,
+        }
 
     def test_new_build_get_expression_as_str(self, simple_supply_new_build):
         expr = simple_supply_new_build.backend.get_expression(
@@ -1976,7 +1989,11 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.constraint))
             .all()
         )
-        assert constr.attrs == {"constraints": 1, "references": set()}
+        assert constr.attrs == {
+            "constraints": 1,
+            "references": set(),
+            "coords_in_name": False,
+        }
 
     def test_new_build_get_constraint_as_str(self, simple_supply_new_build):
         constr = simple_supply_new_build.backend.get_constraint(
@@ -2083,3 +2100,71 @@ class TestNewBackend:
             excinfo,
             "Trying to add already existing *variable* `carrier_prod` as a backend model *parameter*.",
         )
+
+    def test_object_string_representation(self, simple_supply_new_build):
+        assert (
+            simple_supply_new_build.backend.variables.carrier_prod.sel(
+                nodes="a",
+                techs="test_supply_elec",
+                carriers="electricity",
+                timesteps="2005-01-01 00:00",
+            )
+            .item()
+            .name
+            == "variables[carrier_prod][0]"
+        )
+        assert not simple_supply_new_build.backend.variables.carrier_prod.coords_in_name
+
+    @pytest.mark.parametrize(
+        ["objname", "dims", "objtype"],
+        [
+            (
+                "carrier_prod",
+                {
+                    "nodes": "a",
+                    "techs": "test_supply_elec",
+                    "carriers": "electricity",
+                    "timesteps": "2005-01-01 00:00",
+                },
+                "variables",
+            ),
+            ("energy_eff", {"nodes": "a", "techs": "test_supply_elec"}, "parameters"),
+        ],
+    )
+    def test_expand_object_string_representation(
+        self, simple_supply_longnames, objname, dims, objtype
+    ):
+        obj = simple_supply_longnames.backend._dataset[objname]
+        assert (
+            obj.sel(dims).item().name
+            == f"{objtype}[{objname}][{', '.join(dims[i] for i in obj.dims)}]"
+        )
+        assert obj.coords_in_name
+
+    def test_expand_object_string_representation_constraint(
+        self, simple_supply_longnames
+    ):
+        dims = {
+            "nodes": "a",
+            "techs": "test_demand_elec",
+            "carriers": "electricity",
+            "timesteps": "2005-01-01 00:00",
+        }
+
+        obj = simple_supply_longnames.backend.get_constraint(
+            "balance_demand", as_backend_objs=False
+        )
+        energy_eff_dims = ", ".join(
+            dims[i] for i in simple_supply_longnames.backend.parameters.energy_eff.dims
+        )
+        assert (
+            obj.sel(dims).body.item()
+            == f"parameters[energy_eff][{energy_eff_dims}]*variables[carrier_con][{', '.join(dims[i] for i in obj.dims)}]"
+        )
+        assert not obj.coords_in_name
+
+    def test_expand_object_string_representation_no_len(self, simple_supply_longnames):
+        obj = simple_supply_longnames.backend.parameters.annualisation_weight
+
+        assert obj.item().name == "parameters[annualisation_weight][]"
+        assert obj.coords_in_name

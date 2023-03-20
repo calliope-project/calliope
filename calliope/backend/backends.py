@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 import typing
 from typing import (
@@ -10,10 +11,12 @@ from typing import (
     TypeVar,
     Generic,
     Union,
+    Iterator,
+    Iterable,
 )
 
 import os
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stdout, redirect_stderr, contextmanager
 import logging
 
 import xarray as xr
@@ -397,6 +400,18 @@ class BackendModel(ABC, Generic[T]):
             output_core_dims=output_core_dims,
         )
 
+    @abstractmethod
+    def expand_object_string_representation(self):
+        """
+        Update optimisation model object string representations to include the index coordinates of the object.
+
+        E.g., `variables(carrier_prod)[0]` will become `variables(carrier_prod)[power, region1, ccgt, 2005-01-01 00:00]`
+
+        This takes approximately 10% of the peak memory required to initially build the optimisation problem, so should only be invoked if inspecting the model in detail (e.g., debugging)
+
+        Only model parameters and variables string representations will be updated.
+        """
+
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
         f"""
         We do not allow any overlap of backend object names since they all have to
@@ -457,7 +472,9 @@ class BackendModel(ABC, Generic[T]):
                 and the parameter ["energy_eff"].
                 All referenced objects will have their "references" attribute updated with this object's name.
         """
-        self._dataset[name] = da.assign_attrs({obj_type: 1, "references": set()})
+        self._dataset[name] = da.assign_attrs(
+            {obj_type: 1, "references": set(), "coords_in_name": False}
+        )
         if references is not None:
             for reference in references:
                 self._dataset[reference].attrs["references"].add(name)
@@ -749,6 +766,9 @@ class PyomoBackendModel(BackendModel):
 
         return str(termination)
 
+    def expand_object_string_representation(self):
+        self._add_coords_to_object_names()
+
     def _create_pyomo_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         """Attach an empty pyomo kernel list object to the pyomo model object.
 
@@ -998,7 +1018,7 @@ class PyomoBackendModel(BackendModel):
         *,
         name: str,
         domain_type: Literal["RealSet", "IntegerSet"],
-    ) -> Union[type[pmo.variable], float]:
+    ) -> Union[type[ObjVariable], float]:
         """
         Utility function to generate a pyomo decision variable for every element of an
         xarray DataArray.
@@ -1016,19 +1036,19 @@ class PyomoBackendModel(BackendModel):
             name (str): Name of variable.
 
         Returns:
-            Union[type[pmo.variable], float]:
+            Union[type[ObjVariable], float]:
                 If mask is True, return np.nan.
                 Otherwise return pmo_variable(ub=ub, lb=lb, domain_type=domain_type).
         """
         if mask:
-            var = pmo.variable(ub=ub, lb=lb, domain_type=domain_type)
+            var = ObjVariable(ub=ub, lb=lb, domain_type=domain_type)
             self._instance.variables[name].append(var)
             return var
         else:
             return np.nan
 
     @staticmethod
-    def _from_pyomo_param(val: Union[ObjParameter, pmo.variable, float]) -> Any:
+    def _from_pyomo_param(val: Union[ObjParameter, ObjVariable, float]) -> Any:
         """
         Evaluate value of Pyomo object.
         If the input object is a parameter, a numeric/string value will be given.
@@ -1036,7 +1056,7 @@ class PyomoBackendModel(BackendModel):
         only if the backend model has been successfully optimised, otherwise evaluation will return None.
 
         Args:
-            val (Union[ObjParameter, pmo.expression, pmo.variable, np.nan]):
+            val (Union[ObjParameter, pmo.expression, ObjVariable, np.nan]):
                 Item to be evaluated.
 
         Returns:
@@ -1107,21 +1127,105 @@ class PyomoBackendModel(BackendModel):
             else:
                 return val.to_string()
 
+    def _add_coords_to_object_names(self):
+        """
+        Add coordinate references to parameter and variable names.
+        """
 
-class ObjParameter(pmo.parameter):
+        def __renamer(val, *idx):
+            if pd.notnull(val):
+                val.calliope_coords = idx
+
+        with self._datetime_as_string(self._dataset):
+            for da in self.parameters.filter_by_attrs(coords_in_name=False).values():
+                self.apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
+                da.attrs["coords_in_name"] = True
+            for da in self.variables.filter_by_attrs(coords_in_name=False).values():
+                self.apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
+                da.attrs["coords_in_name"] = True
+
+    @contextmanager
+    def _datetime_as_string(self, data: Union[xr.DataArray, xr.Dataset]) -> Iterator:
+        """Context manager to temporarily convert np.dtype("datetime64[ns]") coordinates (e.g. timesteps) to strings with a resolution of minutes.
+
+        Args:
+            data (Union[xr.DataArray, xr.Dataset]): xarray object on whose coordinates the conversion will take place.
+        """
+        datetime_coords = set()
+        for name_, vals_ in data.coords.items():
+            if vals_.dtype.kind == "M":
+                data.coords[name_] = data.coords[name_].dt.strftime("%Y-%m-%d %H:%M")
+                datetime_coords.add(name_)
+        try:
+            yield
+        finally:
+            for name_ in datetime_coords:
+                data.coords[name_] = xr.apply_ufunc(
+                    pd.to_datetime, data.coords[name_], keep_attrs=True
+                )
+
+
+class CoordObj(ABC):
+    """Class with methods to update the `name` property of inheriting classes"""
+
+    def __init__(self) -> None:
+        self._calliope_coords: Optional[Iterable] = None
+
+    def _update_name(self, old_name: str) -> str:
+        """
+        Update string of a list containing a single number with a string of a list containing any arbitrary number of elements
+
+        Args:
+            old_name (str): String representation of a list containing a single number
+
+        Returns:
+            str:
+                If `self.calliope_coords` is None, returns `old_name`.
+                Otherwise returns string representation of a list containing the contents of `self.calliope_coords`
+        """
+        if self._calliope_coords is None:
+            return old_name
+        else:
+            coord_list = f"[{', '.join(str(i) for i in self._calliope_coords)}]"
+            return re.sub(r"\[\d+\]", coord_list, old_name)
+
+    @property
+    def calliope_coords(self):
+        return self._calliope_coords
+
+    @calliope_coords.setter
+    def calliope_coords(self, val):
+        self._calliope_coords = val
+
+
+class ObjParameter(pmo.parameter, CoordObj):
     """
     A pyomo parameter (`a object for storing a mutable, numeric value that can be used to build a symbolic expression`)
-    with added `dtype` property.
+    with added `dtype` property and a `name` property setter (via the `pmo.parameter.getname` method) which replaces a list position as a name with a list of strings.
     """
-
-    __slots__ = ()
 
     def __init__(self, value, **kwds):
         assert not pd.isnull(value)
-        super(ObjParameter, self).__init__(value, **kwds)
-        if "dtype" not in kwds:
-            kwds["dtype"] = "O"
+        pmo.parameter.__init__(self, value, **kwds)
+        CoordObj.__init__(self)
 
     @property
     def dtype(self):
         return "O"
+
+    def getname(self, *args, **kwargs):
+        return self._update_name(pmo.parameter.getname(self, *args, **kwargs))
+
+
+class ObjVariable(pmo.variable, CoordObj):
+    """
+    A pyomo variable with a `name` property setter (via the `pmo.variable.getname` method) which replaces a list position as a name with a list of strings.
+
+    """
+
+    def __init__(self, **kwds):
+        pmo.variable.__init__(self, **kwds)
+        CoordObj.__init__(self)
+
+    def getname(self, *args, **kwargs):
+        return self._update_name(pmo.variable.getname(self, *args, **kwargs))
