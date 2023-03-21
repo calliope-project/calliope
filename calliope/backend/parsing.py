@@ -279,22 +279,43 @@ class ParsedBackendEquation:
 
 
 class ParsedBackendComponent(ParsedBackendEquation):
-    """
-    Parse an optimisation problem configuration - defined in a dictionary of strings
-    loaded from YAML - into a series of Python objects that can be passed onto a solver
-    interface like Pyomo or Gurobipy.
-    """
+    _ERR_BULLET: str = " * "
+    _ERR_STRING_ORDER: list[str] = ["expression_group", "id", "expr_or_where"]
+    PARSERS: dict[str, Callable] = {
+        "constraints": equation_parser.generate_equation_parser,
+        "expressions": equation_parser.generate_arithmetic_parser,
+        "objectives": equation_parser.generate_arithmetic_parser,
+        "variables": lambda x: None,
+    }
 
-    def __init__(self, name: str, unparsed_data: T) -> None:
-        self.name: str = name
+    def __init__(
+        self,
+        group: Literal["variables", "expressions", "constraints", "objectives"],
+        name: str,
+        unparsed_data: T,
+    ) -> None:
+        """
+        Parse an optimisation problem configuration - defined in a dictionary of strings
+        loaded from YAML - into a series of Python objects that can be passed onto a solver
+        interface like Pyomo or Gurobipy.
+
+        Args:
+            group (Literal["variables", "expressions", "constraints", "objectives"]): Optimisation problem component group to which the unparsed data belongs.
+            name (str): Name of the optimisation problem component
+            unparsed_data (T): Unparsed math formulation. Expected structure depends on the group to which the optimisation problem component belongs.
+        """
+        self.name = name
+        self.group_name = group
         self._unparsed: dict = dict(unparsed_data)
 
         self.where: list[pp.ParseResults] = []
         self.equations: list[ParsedBackendEquation] = []
+        self.equation_expression_parser: Callable = self.PARSERS[group]
 
         # capture errors to dump after processing,
         # to make it easier for a user to fix the constraint YAML.
-        self._errors: set = set()
+        self._errors: list = []
+        self._tracker = self._init_tracker()
 
         # Initialise switches
         self._is_valid: bool = True
@@ -303,29 +324,53 @@ class ParsedBackendComponent(ParsedBackendEquation):
         # Add objects that are used by shared functions
         self.sets: list[str] = unparsed_data.get("foreach", [])  # type:ignore
 
-    def parse_top_level_where(self):
+    def get_parsing_position(self):
+        """Create "." separated list from tracked strings"""
+        return ".".join(
+            filter(None, [self._tracker[i] for i in self._ERR_STRING_ORDER])
+        )
+
+    def reset_tracker(self):
+        """Re-initialise error string tracking"""
+        self._tracker = self._init_tracker()
+
+    def _init_tracker(self):
+        f"""Initialise error string tracking as dictionary of `key: None` for key in {self._ERR_STRING_ORDER}"""
+        return {i: None for i in self._ERR_STRING_ORDER}
+
+    def parse_top_level_where(
+        self, errors: Literal["raise", "ignore"] = "raise"
+    ) -> None:
+        """Parse the "where" string that is (optionally) given as a top-level key of the math component dictionary.
+
+        Args:
+            errors (Literal["raise", "ignore"], optional):
+                Collected parsing errors can be raised directly or ignored.
+                If errors exist and are ignored, the parsed component cannot be successfully evaluated. Defaults to "raise".
+        """
         top_level_where = self.parse_where_string(self._unparsed.get("where", "True"))
 
-        if not self._is_valid:
-            exceptions.print_warnings_and_raise_errors(
-                errors=self._errors, during="string parsing"
-            )
-        elif top_level_where is not None:
+        if errors == "raise":
+            self.raise_caught_errors()
+
+        if self._is_valid:
             self.where = [top_level_where]
 
     def parse_equations(
         self,
-        equation_expression_parser: Callable,
-        backend_object_names: Iterable[str],
+        valid_math_element_names: Iterable[str],
+        errors: Literal["raise", "ignore"] = "raise",
     ) -> list[ParsedBackendEquation]:
         f"""Parse `expression` and `where` strings of backend object configuration dictionary:
 
         {self._unparsed}
 
         Args:
-            equation_expression_parser (Callable): Parsing rule to apply to the string expressions under the `equation(s)` key.
-            backend_object_names (Iterable[str]):
+            valid_math_element_names (Iterable[str]):
                 strings referring to valid backend objects to allow the parser to differentiate between them and generic strings.
+            errors (Literal["raise", "ignore"], optional):
+                Collected parsing errors can be raised directly or ignored.
+                If errors exist and are ignored, the parsed component cannot be successfully evaluated. Defaults to "raise".
 
         Returns:
             list[ParsedBackendEquation]:
@@ -339,7 +384,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
             equation_expression_list = self._unparsed.get("equations", [])
 
         equations = self.generate_expression_list(
-            expression_parser=equation_expression_parser(backend_object_names),
+            expression_parser=self.equation_expression_parser(valid_math_element_names),
             expression_list=equation_expression_list,
             expression_group="equations",
             id_prefix=self.name,
@@ -348,7 +393,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         component_dict = {
             c_name: self.generate_expression_list(
                 expression_parser=equation_parser.generate_component_parser(
-                    backend_object_names
+                    valid_math_element_names
                 ),
                 expression_list=c_list,
                 expression_group="components",
@@ -359,7 +404,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         index_slice_dict = {
             idx_name: self.generate_expression_list(
                 expression_parser=equation_parser.generate_index_slice_parser(
-                    backend_object_names
+                    valid_math_element_names
                 ),
                 expression_list=idx_list,
                 expression_group="index_slices",
@@ -368,10 +413,8 @@ class ParsedBackendComponent(ParsedBackendEquation):
             for idx_name, idx_list in self._unparsed.get("index_slices", {}).items()
         }
 
-        if not self._is_valid:
-            exceptions.print_warnings_and_raise_errors(
-                errors=self._errors, during="string parsing"
-            )
+        if errors == "raise":
+            self.raise_caught_errors()
 
         equations_with_components = []
         for equation in equations:
@@ -394,8 +437,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         self,
         parser: pp.ParserElement,
         parse_string: str,
-        expression_group: Literal["where", "equations", "components", "index_slices"],
-    ) -> Optional[pp.ParseResults]:
+    ) -> pp.ParseResults:
         """
         Parse equation string according to predefined string parsing grammar
         given by `self.parser`
@@ -403,7 +445,6 @@ class ParsedBackendComponent(ParsedBackendEquation):
         Args:
             parser (pp.ParserElement): Parsing grammar.
             parse_string (str): String to parse according to parser grammar.
-            expression_group (str): For error reporting, the constraint dict key corresponding to the parse_string.
 
         Returns:
             Optional[pp.ParseResults]:
@@ -412,16 +453,18 @@ class ParsedBackendComponent(ParsedBackendEquation):
         """
         try:
             parsed = parser.parse_string(parse_string, parse_all=True)
-        except (pp.ParseException, KeyError) as excinfo:
-            parsed = None
+        except pp.ParseException as excinfo:
+            parsed = pp.ParseResults([])
             self._is_valid = False
-            self._errors.add(f"({expression_group}, {parse_string}): {str(excinfo)}")
+            pointer = f"{self.get_parsing_position()} (line {excinfo.lineno}, char {excinfo.col}): "
+            marker_pos = " " * (
+                len(pointer) + 2 * len(self._ERR_BULLET) + excinfo.col - 1
+            )
+            self._errors.append(f"{pointer}{excinfo.line}\n{marker_pos}^")
 
         return parsed
 
-    def parse_where_string(
-        self, where_string: str = "True"
-    ) -> Optional[pp.ParseResults]:
+    def parse_where_string(self, where_string: str = "True") -> pp.ParseResults:
         """Parse a "where" string of the form "CONDITION OPERATOR CONDITION", where the
         operator can be "and"/"or"/"not and"/"not or".
 
@@ -436,7 +479,8 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 they will be logged to `self._errors` to raise later.
         """
         parser = subset_parser.generate_where_string_parser()
-        return self._parse_string(parser, where_string, "where")
+        self._tracker["expr_or_where"] = "where"
+        return self._parse_string(parser, where_string)
 
     def generate_expression_list(
         self,
@@ -465,12 +509,25 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 Aligned expression dictionaries with parsed expression strings.
         """
         parsed_equation_list = []
+
+        if expression_group == "equations":
+            to_track = {"expression_group": f"{expression_group}[{{id}}]"}
+        else:
+            to_track = {
+                "expression_group": expression_group,
+                "id": f"{id_prefix}[{{id}}]",
+            }
+
         for idx, expression_data in enumerate(expression_list):
+            self._tracker.update({k: v.format(id=idx) for k, v in to_track.items()})
+
             parsed_where = self.parse_where_string(expression_data.get("where", "True"))
+
+            self._tracker["expr_or_where"] = "expression"
             parsed_expression = self._parse_string(
-                expression_parser, expression_data["expression"], expression_group
+                expression_parser, expression_data["expression"]
             )
-            if parsed_expression is not None and parsed_where is not None:
+            if len(parsed_expression) > 0:
                 parsed_equation_list.append(
                     ParsedBackendEquation(
                         equation_name=":".join(filter(None, [id_prefix, str(idx)])),
@@ -479,6 +536,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
                         expression=parsed_expression,
                     )
                 )
+        self.reset_tracker()
 
         return parsed_equation_list
 
@@ -513,7 +571,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         invalid_items = equation_items.difference(parsed_items.keys())
         if invalid_items:
             raise KeyError(
-                f"({parsed_equation.expression.__repr__()}, equation): Undefined {expression_group} found in equation: {invalid_items}"
+                f"({self.group_name}, {self.name}): Undefined {expression_group} found in equation: {invalid_items}"
             )
 
         parsed_item_product = itertools.product(
@@ -554,3 +612,12 @@ class ParsedBackendComponent(ParsedBackendEquation):
             return xr.DataArray(False)
         all_imasks = [initial_imask, *[model_data[i].notnull() for i in add_dims]]
         return functools.reduce(operator.and_, all_imasks)
+
+    def raise_caught_errors(self):
+        """If there are any parsing errors, pipe them to the ModelError bullet point list generator"""
+        if not self._is_valid:
+            exceptions.print_warnings_and_raise_errors(
+                errors={f"({self.group_name}, {self.name})": self._errors},
+                during="math string parsing (marker indicates where parsing stopped, not strictly the equation term that caused the failure)",
+                bullet=self._ERR_BULLET,
+            )
