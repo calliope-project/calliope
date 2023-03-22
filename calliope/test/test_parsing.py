@@ -1,5 +1,4 @@
 from io import StringIO
-import textwrap
 
 import pytest
 import ruamel.yaml as yaml
