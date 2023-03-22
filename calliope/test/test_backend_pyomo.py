@@ -2083,3 +2083,26 @@ class TestNewBackend:
             excinfo,
             "Trying to add already existing *variable* `carrier_prod` as a backend model *parameter*.",
         )
+
+    def test_add_two_same_obj(self, simple_supply_new_build):
+        eq = {"expression": "bigM", "where": "True"}
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            simple_supply_new_build.backend.add_objective(
+                simple_supply_new_build._model_data,
+                "foo",
+                {"equations": [eq, eq], "sense": "minimise"},
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "More than one foo objective is valid for this optimisation problem; only one is allowed.",
+        )
+
+    def test_add_valid_obj(self, simple_supply_new_build):
+        eq = {"expression": "bigM", "where": "True"}
+        simple_supply_new_build.backend.add_objective(
+            simple_supply_new_build._model_data,
+            "foo",
+            {"equations": [eq], "sense": "minimise"},
+        )
+        assert "foo" in simple_supply_new_build.backend.objectives
+        assert not simple_supply_new_build.backend.objectives.foo.item().active

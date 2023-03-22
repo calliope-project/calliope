@@ -626,7 +626,7 @@ class PyomoBackendModel(BackendModel):
         objective_dict: parsing.UnparsedObjectiveDict,
     ) -> None:
         self._raise_error_on_preexistence(name, "objectives")
-        sense_dict = {"minimize": 1, "maximize": -1}
+        sense_dict = {"minimize": 1, "minimise": 1, "maximize": -1, "maximise": -1}
         parsed_objective = parsing.ParsedBackendComponent(name, objective_dict)
         equations = parsed_objective.parse_equations(
             equation_parser.generate_arithmetic_parser, self.valid_arithmetic_components
@@ -645,6 +645,12 @@ class PyomoBackendModel(BackendModel):
             )
 
         objective = pmo.objective(expr, sense=sense_dict[objective_dict["sense"]])
+
+        if name == model_data.run_config["objective"]:
+            objective.activate()
+        else:
+            objective.deactivate()
+
         self._instance.objectives.append(objective)
 
         self._add_to_dataset(name, xr.DataArray(objective), "objectives")

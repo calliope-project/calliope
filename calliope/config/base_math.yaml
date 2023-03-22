@@ -1,5 +1,4 @@
 constraints:
-
   energy_capacity_per_storage_capacity_min:
     foreach: [nodes, techs]
     where: "energy_cap_per_storage_cap_min AND NOT energy_cap_per_storage_cap_equals AND NOT run.mode=operate"
@@ -48,7 +47,6 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion_plus) AND carrier_ratios>0"
     equation: squeeze_carriers(carrier_prod / carrier_ratios[carrier_tiers=out], carrier_tier=out) == -1 * squeeze_carriers(carrier_con * carrier_ratios[carrier_tiers=in], carrier_tier=in) * energy_eff
-
 
   carrier_production_max_conversion_plus:
     foreach: [nodes, techs, timesteps]
@@ -375,7 +373,7 @@ constraints:
   ramping_down:
     foreach: [nodes, techs, carriers, timesteps]
     where: "energy_ramping AND NOT timesteps=get_val_at_index(dim=timesteps, idx=0)"
-    equation:  -1 * energy_ramping * energy_cap <= $flow - roll($flow, timesteps=1)
+    equation: -1 * energy_ramping * energy_cap <= $flow - roll($flow, timesteps=1)
     components:
       flow: *ramping_flow
 
@@ -496,19 +494,18 @@ variables:
       max: 0
 
 objectives:
-    min_cost_optimisation:
-      equation: sum(sum(cost, over=[nodes, techs]) * objective_cost_class, over=costs) + $unmet_demand
-      components:
-        unmet_demand:
-          - where: "run.ensure_feasibility=True"
-            expression: sum(sum(unmet_demand - unused_supply, over=[carriers, nodes])  * timestep_weights, over=timesteps) * bigM
-          - where: "NOT run.ensure_feasibility=True"
-            expression: "0"
-      domain: Reals
-      sense: minimize
+  minmax_cost_optimisation:
+    equation: sum(sum(cost, over=[nodes, techs]) * objective_cost_class, over=costs) + $unmet_demand
+    components:
+      unmet_demand:
+        - where: "run.ensure_feasibility=True"
+          expression: sum(sum(unmet_demand - unused_supply, over=[carriers, nodes])  * timestep_weights, over=timesteps) * bigM
+        - where: "NOT run.ensure_feasibility=True"
+          expression: "0"
+    domain: Reals
+    sense: minimise
 
 expressions:
-
   cost_var:
     foreach: [nodes, techs, costs, timesteps]
     where: "cost_export OR cost_om_con OR cost_om_prod"
@@ -542,24 +539,24 @@ expressions:
     foreach: [nodes, techs, costs]
     where: "(cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap) AND NOT run.mode=operate"
     equations:
-        - where: "NOT inheritance(transmission)"
-          expression: >
-            annualisation_weight * (
-              cost_depreciation_rate * (
+      - where: "NOT inheritance(transmission)"
+        expression: >
+          annualisation_weight * (
+            cost_depreciation_rate * (
+                $cost_energy_cap + $cost_storage_cap + $cost_resource_cap
+                + $cost_resource_area + $cost_of_purchase
+              ) * (1 + cost_om_annual_investment_fraction)
+              + cost_om_annual * energy_cap
+          )
+      - where: "inheritance(transmission)"
+        expression: >
+          annualisation_weight * (
+            cost_depreciation_rate * (
                   $cost_energy_cap + $cost_storage_cap + $cost_resource_cap
                   + $cost_resource_area + $cost_of_purchase
-                ) * (1 + cost_om_annual_investment_fraction)
+                ) * (0.5 + cost_om_annual_investment_fraction)
                 + cost_om_annual * energy_cap
-            )
-        - where: "inheritance(transmission)"
-          expression: >
-            annualisation_weight * (
-              cost_depreciation_rate * (
-                    $cost_energy_cap + $cost_storage_cap + $cost_resource_cap
-                    + $cost_resource_area + $cost_of_purchase
-                  ) * (0.5 + cost_om_annual_investment_fraction)
-                  + cost_om_annual * energy_cap
-            )
+          )
     components:
       cost_energy_cap:
         - where: "cost_energy_cap"
@@ -604,4 +601,3 @@ expressions:
           expression: sum(cost_var, over=timesteps)
         - where: "NOT (cost_export OR cost_om_con OR cost_om_prod)"
           expression: "0"
-
