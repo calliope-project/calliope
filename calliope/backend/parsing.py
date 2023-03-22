@@ -36,12 +36,17 @@ class UnparsedEquationDict(TypedDict):
 
 
 class UnparsedConstraintDict(TypedDict):
+    description: NotRequired[str]
     foreach: Required[list]
     where: str
     equation: NotRequired[str]
     equations: NotRequired[list[UnparsedEquationDict]]
     components: NotRequired[dict[str, list[UnparsedEquationDict]]]
     index_slices: NotRequired[dict[str, list[UnparsedEquationDict]]]
+
+
+class UnparsedExpressionDict(UnparsedConstraintDict):
+    unit: NotRequired[str]
 
 
 class UnparsedVariableBoundDict(TypedDict):
@@ -52,6 +57,8 @@ class UnparsedVariableBoundDict(TypedDict):
 
 
 class UnparsedVariableDict(TypedDict):
+    description: NotRequired[str]
+    unit: NotRequired[str]
     foreach: list[str]
     where: str
     domain: NotRequired[str]
@@ -59,6 +66,7 @@ class UnparsedVariableDict(TypedDict):
 
 
 class UnparsedObjectiveDict(TypedDict):
+    description: NotRequired[str]
     equation: NotRequired[str]
     equations: NotRequired[list[UnparsedEquationDict]]
     components: NotRequired[dict[str, list[UnparsedEquationDict]]]
@@ -66,10 +74,13 @@ class UnparsedObjectiveDict(TypedDict):
     sense: str
 
 
-T = TypeVar(
-    "T",
-    bound=Union[UnparsedConstraintDict, UnparsedVariableDict, UnparsedObjectiveDict],
-)
+UNPARSED_DICTS = Union[
+    UnparsedConstraintDict,
+    UnparsedVariableDict,
+    UnparsedExpressionDict,
+    UnparsedObjectiveDict,
+]
+T = TypeVar("T", bound=UNPARSED_DICTS)
 
 
 class ParsedBackendEquation:
@@ -426,10 +437,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
         operator can be "and"/"or"/"not and"/"not or".
 
         Args:
-            equation_dict (Union[UnparsedEquationDict, UnparsedConstraintDict]):
-                Dictionary with optional "where" key.
-                If not found, the where string will default to "True", to have no effect
-                on the subsequent subsetting.
+            where_string (str):
+                string value from a math dictionary "where" key.
+                Defaults to "True", to have no effect on the subsequent subsetting.
 
         Returns:
             pp.ParseResults: Parsed string. If any parsing errors are caught,
@@ -461,7 +471,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 expression_list position `idx` to a tuple of the form (id_prefix, idx).
 
         Returns:
-            list[UnparsedConstraintDict]:
+            list[ParsedBackendEquation]:
                 Aligned expression dictionaries with parsed expression strings.
         """
         parsed_equation_list = []
@@ -493,15 +503,15 @@ class ParsedBackendComponent(ParsedBackendEquation):
         product of the component data.
 
         Args:
-            equation_data (UnparsedConstraintDict): Equation data dictionary.
-            parsed_items (dict[list[UnparsedConstraintDict]]):
+            equation_data (ParsedBackendEquation): Equation data dictionary.
+            parsed_items (dict[str, list[ParsedBackendEquation]]):
                 Dictionary of expressions to replace within the equation data dictionary.
             expression_group (Literal["components", "index_slices"]):
                 Name of expression group that the parsed_items dict is referencing.
 
         Returns:
-            list[list[UnparsedConstraintDict]]:
-                Each nested list contains a unique product of parsed_item dictionaries.
+            list[ParsedBackendEquation]:
+                Expanded list of parsed equations with the product of all references to items from the `expression_group` producing a new equation object. E.g., if the input equation object has a reference to an index_slice which itself has two expression options, two equation objects will be added to the return list.
         """
         if expression_group == "components":
             equation_items = parsed_equation.find_components()

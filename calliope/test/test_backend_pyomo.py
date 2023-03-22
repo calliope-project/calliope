@@ -1906,6 +1906,8 @@ class TestNewBackend:
                 "cost_investment",
                 "symmetric_transmission",
             },
+            "description": "A technology's energy capacity, also known as its nominal or nameplate capacity.",
+            "unit": "power",
         }
 
     def test_new_build_get_variable_as_vals(self, simple_supply_new_build):
@@ -1952,7 +1954,12 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.expression))
             .all()
         )
-        assert expr.attrs == {"expressions": 1, "references": {"cost"}}
+        assert expr.attrs == {
+            "expressions": 1,
+            "references": {"cost"},
+            "description": "The installation costs of a technology, including annualised investment costs and annual maintenance costs.",
+            "unit": "cost",
+        }
 
     def test_new_build_get_expression_as_str(self, simple_supply_new_build):
         expr = simple_supply_new_build.backend.get_expression(
@@ -1976,7 +1983,11 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.constraint))
             .all()
         )
-        assert constr.attrs == {"constraints": 1, "references": set()}
+        assert constr.attrs == {
+            "constraints": 1,
+            "references": set(),
+            "description": "Set the global energy balance of the optimisation problem by fixing the total production of a given energy carrier to equal the total consumption of that carrier at every node in every timestep.",
+        }
 
     def test_new_build_get_constraint_as_str(self, simple_supply_new_build):
         constr = simple_supply_new_build.backend.get_constraint(

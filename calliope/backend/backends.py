@@ -104,7 +104,7 @@ class BackendModel(ABC, Generic[T]):
         self,
         model_data: xr.Dataset,
         name: str,
-        expression_dict: parsing.UnparsedConstraintDict,
+        expression_dict: parsing.UnparsedExpressionDict,
     ) -> None:
         """
         Add expression (arithmetic combination of parameters and/or decision variables)
@@ -117,7 +117,7 @@ class BackendModel(ABC, Generic[T]):
                 dataset entries in the mask will be generated.
             name (str):
                 Name of the expression
-            expression_dict (parsing.UnparsedConstraintDict):
+            expression_dict (parsing.UnparsedExpressionDict):
                 Expression configuration dictionary, ready to be parsed and then evaluated.
         """
 
@@ -442,6 +442,7 @@ class BackendModel(ABC, Generic[T]):
         name: str,
         da: xr.DataArray,
         obj_type: _COMPONENTS_T,
+        unparsed_dict: Union[parsing.UNPARSED_DICTS, dict],
         references: Optional[set] = None,
     ):
         """
@@ -451,13 +452,25 @@ class BackendModel(ABC, Generic[T]):
             name (str): Name of entry in dataset.
             da (xr.DataArray): Data to add.
             obj_type (str): Type of backend objects in the array.
+            unparsed_dict (DT):
+                Dictionary describing the object being added, from which descriptor attributes will be extracted and added to the array attributes.
             references (set):
                 All other backend objects which are references in this backend object's linear expression(s).
                 E.g. the constraint "carrier_prod / energy_eff <= energy_cap" references the variables ["carrier_prod", "energy_cap"]
                 and the parameter ["energy_eff"].
                 All referenced objects will have their "references" attribute updated with this object's name.
+                Defaults to None.
         """
-        self._dataset[name] = da.assign_attrs({obj_type: 1, "references": set()})
+        from_unparsed_dict = ["description", "unit"]
+        add_attrs = {
+            attr: unparsed_dict.get(attr)
+            for attr in from_unparsed_dict
+            if attr in unparsed_dict.keys()
+        }
+
+        self._dataset[name] = da.assign_attrs(
+            {obj_type: 1, "references": set(), **add_attrs}
+        )
         if references is not None:
             for reference in references:
                 self._dataset[reference].attrs["references"].add(name)
@@ -521,7 +534,7 @@ class PyomoBackendModel(BackendModel):
         if not parameter_values.shape and parameter_da.isnull().all():
             parameter_da = parameter_da.astype(float)
 
-        self._add_to_dataset(parameter_name, parameter_da, "parameters")
+        self._add_to_dataset(parameter_name, parameter_da, "parameters", {})
         self.valid_arithmetic_components.add(parameter_name)
 
     def add_constraint(
@@ -558,7 +571,7 @@ class PyomoBackendModel(BackendModel):
         self,
         model_data: xr.Dataset,
         name: str,
-        expression_dict: parsing.UnparsedConstraintDict,
+        expression_dict: parsing.UnparsedExpressionDict,
     ) -> None:
         def _expression_setter(imask: xr.DataArray, expr: xr.DataArray) -> xr.DataArray:
             to_fill = self.apply_func(
@@ -617,7 +630,7 @@ class PyomoBackendModel(BackendModel):
             domain_type=domain_type,
         )
 
-        self._add_to_dataset(name, variable_da, "variables")
+        self._add_to_dataset(name, variable_da, "variables", variable_dict)
 
     def add_objective(
         self,
@@ -647,7 +660,9 @@ class PyomoBackendModel(BackendModel):
         objective = pmo.objective(expr, sense=sense_dict[objective_dict["sense"]])
         self._instance.objectives.append(objective)
 
-        self._add_to_dataset(name, xr.DataArray(objective), "objectives")
+        self._add_to_dataset(
+            name, xr.DataArray(objective), "objectives", objective_dict
+        )
 
     def get_parameter(
         self, parameter_name: str, as_backend_objs: bool = True
@@ -772,7 +787,9 @@ class PyomoBackendModel(BackendModel):
         self,
         model_data: xr.Dataset,
         name: str,
-        component_dict: parsing.UnparsedConstraintDict,
+        component_dict: Union[
+            parsing.UnparsedConstraintDict, parsing.UnparsedExpressionDict
+        ],
         component_setter: Callable,
         component_type: Literal["constraints", "expressions"],
         parser: Callable,
@@ -782,7 +799,7 @@ class PyomoBackendModel(BackendModel):
         Args:
             model_data (xr.Dataset): Calliope model input data
             name: Name of the constraint or expression
-            component_dict (parsing.UnparsedConstraintDict):
+            component_dict (Union[parsing.UnparsedConstraintDict, parsing.UnparsedExpressionDict]):
                 Unparsed YAML dictionary configuration.
             component_setter (Callable):
                 Function to combine evaluated xarray DataArrays into
@@ -842,7 +859,9 @@ class PyomoBackendModel(BackendModel):
         if component_da.isnull().all():
             return None
 
-        self._add_to_dataset(name, component_da, component_type, references)
+        self._add_to_dataset(
+            name, component_da, component_type, component_dict, references
+        )
 
     def _get_capacity_bounds(
         self, bounds: parsing.UnparsedVariableBoundDict, name: str
