@@ -246,7 +246,7 @@ class Model(object):
         """
 
         base_math = AttrDict.from_yaml(
-            os.path.join(os.path.dirname(calliope.__file__), "config", "base_math.yaml")
+            os.path.join(os.path.dirname(calliope.__file__), "math", "base_math.yaml")
         )
 
         file_errors = []
@@ -254,7 +254,7 @@ class Model(object):
         for filename in custom_math:
             if not f"{filename}".endswith((".yaml", ".yml")):
                 yaml_filepath = (
-                    Path(calliope.__file__).parent / "config" / f"{filename}.yaml"
+                    Path(calliope.__file__).parent / "math" / f"{filename}.yaml"
                 )
             else:
                 yaml_filepath = Path(relative_path(self._config_path, filename))
@@ -301,6 +301,23 @@ class Model(object):
             }
         )
 
+    def _add_run_mode_custom_math(self) -> None:
+        """If not given in the custom_math list, override model math with run mode math"""
+        run_mode = self.run_config["mode"]
+        # FIXME: available modes should not be hardcoded here.
+        # They should come from a YAML schema.
+        not_run_mode = {"plan", "operate", "spores"}.difference([run_mode])
+        run_mode_mismatch = not_run_mode.intersection(self.model_config["custom_math"])
+        if run_mode_mismatch:
+            exceptions.warn(
+                f"Running in {run_mode} mode, but run mode(s) {run_mode_mismatch} custom "
+                "math being loaded from file via the model configuration"
+            )
+
+        if run_mode != "plan" and run_mode not in self.model_config["custom_math"]:
+            filepath = Path(calliope.__file__).parent / "math" / f"{run_mode}.yaml"
+            self.math.union(AttrDict.from_yaml(filepath), allow_override=True)
+
     def build(self, backend_interface: Literal["pyomo"] = "pyomo") -> None:
         """Build description of the optimisation problem in the chosen backend interface.
 
@@ -316,6 +333,7 @@ class Model(object):
             "backend_parameters_generated",
             comment="Model: Generated optimisation problem parameters",
         )
+        self._add_run_mode_custom_math()
         # The order of adding components matters!
         # 1. Variables, 2. Expressions, 3. Constraints, 4. Objectives
         for components in ["variables", "expressions", "constraints", "objectives"]:
