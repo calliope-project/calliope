@@ -518,8 +518,10 @@ class PyomoBackendModel(BackendModel):
             default=default,
             use_inf_as_na=use_inf_as_na,
         )
-        if not parameter_values.shape and parameter_da.isnull().all():
-            parameter_da = parameter_da.astype(float)
+        if parameter_da.isnull().all():
+            self._delete_pyomo_list(parameter_name, "parameters")
+            if not parameter_values.shape:
+                parameter_da = parameter_da.astype(float)
 
         self._add_to_dataset(parameter_name, parameter_da, "parameters")
         self.valid_arithmetic_components.add(parameter_name)
@@ -638,6 +640,10 @@ class PyomoBackendModel(BackendModel):
             if imask.any():
                 expr = equation.evaluate_expression(model_data, self, imask).item()
                 n_valid_exprs += 1
+
+        if n_valid_exprs == 0:
+            return None
+
         if n_valid_exprs > 1:
             raise BackendError(
                 f"More than one {name} objective is valid for this "
@@ -768,6 +774,19 @@ class PyomoBackendModel(BackendModel):
             singular_component = component_type.removesuffix("s")
             component_dict[key] = getattr(pmo, f"{singular_component}_list")()
 
+    def _delete_pyomo_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+        """Delete a pyomo kernel list object from the pyomo model object.
+
+        Args:
+            key (str): Name of object
+            component_type (str): Object type
+        """
+        component_dict = getattr(self._instance, component_type)
+        if key not in component_dict:
+            return None
+        else:
+            del component_dict[key]
+
     def _add_constraint_or_expression(
         self,
         model_data: xr.Dataset,
@@ -840,6 +859,7 @@ class PyomoBackendModel(BackendModel):
             component_da = component_da.fillna(to_fill)
 
         if component_da.isnull().all():
+            self._delete_pyomo_list(name, component_type)
             return None
 
         self._add_to_dataset(name, component_da, component_type, references)

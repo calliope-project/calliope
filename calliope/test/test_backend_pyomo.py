@@ -2083,3 +2083,82 @@ class TestNewBackend:
             excinfo,
             "Trying to add already existing *variable* `carrier_prod` as a backend model *parameter*.",
         )
+
+    @pytest.mark.parametrize(
+        "component", ["parameters", "variables", "expressions", "constraints"]
+    )
+    def test_create_and_delete_pyomo_list(self, simple_supply_new_build, component):
+        backend_instance = simple_supply_new_build.backend._instance
+        simple_supply_new_build.backend._create_pyomo_list("foo", component)
+        assert "foo" in getattr(backend_instance, component).keys()
+
+        simple_supply_new_build.backend._delete_pyomo_list("foo", component)
+        assert "foo" not in getattr(backend_instance, component).keys()
+
+    @pytest.mark.parametrize(
+        "component", ["parameters", "variables", "expressions", "constraints"]
+    )
+    def test_delete_inexistent_pyomo_list(self, simple_supply_new_build, component):
+        backend_instance = simple_supply_new_build.backend._instance
+        assert "bar" not in getattr(backend_instance, component).keys()
+        simple_supply_new_build.backend._delete_pyomo_list("bar", component)
+        assert "bar" not in getattr(backend_instance, component).keys()
+
+    @pytest.mark.parametrize(
+        ["component", "eq"],
+        [("expressions", "energy_cap + 1"), ("constraints", "energy_cap >= 1")],
+    )
+    def test_add_allnull_expr_or_constr(self, simple_supply_new_build, component, eq):
+        adder = getattr(
+            simple_supply_new_build.backend, "add_" + component.removesuffix("s")
+        )
+        constr_dict = {
+            "foreach": ["nodes", "techs"],
+            "where": "True",
+            "equations": [{"expression": eq, "where": "False"}],
+        }
+        adder(simple_supply_new_build._model_data, "foo", constr_dict)
+
+        assert (
+            "foo"
+            not in getattr(simple_supply_new_build.backend._instance, component).keys()
+        )
+        assert "foo" not in simple_supply_new_build.backend._dataset.data_vars.keys()
+
+    def test_add_allnull_param_no_shape(self, simple_supply_new_build):
+        simple_supply_new_build.backend.add_parameter("foo", xr.DataArray(np.nan))
+
+        assert "foo" not in simple_supply_new_build.backend._instance.parameters.keys()
+        # We keep it in the dataset since it might be fillna'd by another param later.
+        assert "foo" in simple_supply_new_build.backend._dataset.data_vars.keys()
+        del simple_supply_new_build.backend._dataset["foo"]
+
+    def test_add_allnull_param_with_shape(self, simple_supply_new_build):
+        nan_array = simple_supply_new_build._model_data.energy_cap_max.where(
+            lambda x: x < 0
+        )
+        simple_supply_new_build.backend.add_parameter("foo", nan_array)
+
+        assert "foo" not in simple_supply_new_build.backend._instance.parameters.keys()
+        # We keep it in the dataset since it might be fillna'd by another param later.
+        assert "foo" in simple_supply_new_build.backend._dataset.data_vars.keys()
+        del simple_supply_new_build.backend._dataset["foo"]
+
+    def test_add_allnull_var(self, simple_supply_new_build):
+        simple_supply_new_build.backend.add_variable(
+            simple_supply_new_build._model_data,
+            "foo",
+            {"foreach": ["nodes"], "where": "False"},
+        )
+        assert "foo" not in simple_supply_new_build.backend._instance.variables.keys()
+        assert "foo" not in simple_supply_new_build.backend._dataset.data_vars.keys()
+
+    def test_add_allnull_obj(self, simple_supply_new_build):
+        eq = {"expression": "bigM", "where": "False"}
+        simple_supply_new_build.backend.add_objective(
+            simple_supply_new_build._model_data,
+            "foo",
+            {"equations": [eq, eq], "sense": "minimise"},
+        )
+        assert len(simple_supply_new_build.backend._instance.objectives) == 1
+        assert "foo" not in simple_supply_new_build.backend._dataset.data_vars.keys()
