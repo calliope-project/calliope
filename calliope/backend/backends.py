@@ -538,7 +538,7 @@ class PyomoBackendModel(BackendModel):
             incomplete_constraints = (rhs.isnull() | lhs.isnull()) & imask
             if incomplete_constraints.any():
                 raise BackendError(
-                    "Missing rhs or lhs for some coordinates selected by 'where'. Adapting 'where' might help."
+                    f"(constraints, {name}): Missing rhs or lhs for some coordinates selected by 'where'. Adapting 'where' might help."
                 )
 
             to_fill = self.apply_func(
@@ -571,7 +571,7 @@ class PyomoBackendModel(BackendModel):
             incomplete_expressions = expr.isnull() & imask
             if incomplete_expressions.any():
                 raise BackendError(
-                    "Missing expressions for some coordinates selected by 'where'. Adapting 'where' might help."
+                    f"(expressions, {name}): Missing expressions for some coordinates selected by 'where'. Adapting 'where' might help."
                 )
 
             to_fill = self.apply_func(
