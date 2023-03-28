@@ -205,7 +205,7 @@ constraints:
         - where: ((timesteps=get_val_at_index(dim=timesteps, idx=0) AND run.cyclic_storage=True) OR NOT timesteps=get_val_at_index(dim=timesteps, idx=0)) AND NOT lookup_cluster_first_timestep=True
           expression: (1 - storage_loss) ** roll(timestep_resolution, timesteps=1) * roll(storage, timesteps=1)
         - where: lookup_cluster_first_timestep=True AND NOT (timesteps=get_val_at_index(dim=timesteps, idx=0) AND NOT run.cyclic_storage=True)
-          expression: (1 - storage_loss) ** select_from_lookup_table(timestep_resolution, timesteps=lookup_cluster_last_timestep) * select_from_lookup_table(storage, timesteps=lookup_cluster_last_timestep)
+          expression: (1 - storage_loss) ** select_from_lookup_arrays(timestep_resolution, timesteps=lookup_cluster_last_timestep) * select_from_lookup_arrays(storage, timesteps=lookup_cluster_last_timestep)
 
   resource_availability_supply_plus:
     foreach: [nodes, techs, timesteps]
@@ -241,12 +241,12 @@ constraints:
   balance_transmission:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(transmission) AND allowed_carrier_prod=True"
-    equation: "carrier_prod == -1 * select_from_lookup_table(carrier_con, techs=link_remote_techs, nodes=link_remote_nodes) * energy_eff"
+    equation: "carrier_prod == -1 * select_from_lookup_arrays(carrier_con, techs=link_remote_techs, nodes=link_remote_nodes) * energy_eff"
 
   symmetric_transmission:
     foreach: [nodes, techs]
     where: "inheritance(transmission) AND NOT run.mode=operate"
-    equation: energy_cap == select_from_lookup_table(energy_cap, techs=link_remote_techs, nodes=link_remote_nodes)
+    equation: energy_cap == select_from_lookup_arrays(energy_cap, techs=link_remote_techs, nodes=link_remote_nodes)
 
   export_balance:
     foreach: [nodes, techs, carriers, timesteps]

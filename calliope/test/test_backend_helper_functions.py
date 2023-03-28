@@ -91,25 +91,27 @@ def test_squeeze_primary_carriers_not_in_model(dummy_model_data):
         ),
     ],
 )
-def test_select_from_lookup_table(dummy_model_data, lookup, expected):
-    select_from_lookup_table = helper_functions.select_from_lookup_table(
+def test_select_from_lookup_arrays(dummy_model_data, lookup, expected):
+    select_from_lookup_arrays = helper_functions.select_from_lookup_arrays(
         dummy_model_data
     )
 
-    new_array = select_from_lookup_table(
+    new_array = select_from_lookup_arrays(
         dummy_model_data.with_inf, **{k: dummy_model_data[v] for k, v in lookup.items()}
     )
     assert np.array_equal(
         new_array.transpose(*dummy_model_data.with_inf.dims), expected, equal_nan=True
     )
+    for dim in dummy_model_data.with_inf.dims:
+        assert new_array[dim].equals(dummy_model_data[dim])
 
 
-def test_select_from_lookup_table_fail_dim_not_in_component(dummy_model_data):
-    select_from_lookup_table = helper_functions.select_from_lookup_table(
+def test_select_from_lookup_arrays_fail_dim_not_in_component(dummy_model_data):
+    select_from_lookup_arrays = helper_functions.select_from_lookup_arrays(
         dummy_model_data
     )
     with pytest.raises(exceptions.BackendError) as excinfo:
-        select_from_lookup_table(
+        select_from_lookup_arrays(
             dummy_model_data.nodes_true,
             techs=dummy_model_data.lookup_techs,
         )
@@ -119,12 +121,12 @@ def test_select_from_lookup_table_fail_dim_not_in_component(dummy_model_data):
     )
 
 
-def test_select_from_lookup_table_fail_dim_slicer_mismatch(dummy_model_data):
-    select_from_lookup_table = helper_functions.select_from_lookup_table(
+def test_select_from_lookup_arrays_fail_dim_slicer_mismatch(dummy_model_data):
+    select_from_lookup_arrays = helper_functions.select_from_lookup_arrays(
         dummy_model_data
     )
     with pytest.raises(exceptions.BackendError) as excinfo:
-        select_from_lookup_table(
+        select_from_lookup_arrays(
             dummy_model_data.with_inf,
             techs=dummy_model_data.lookup_techs,
             nodes=dummy_model_data.link_remote_nodes,
@@ -132,7 +134,7 @@ def test_select_from_lookup_table_fail_dim_slicer_mismatch(dummy_model_data):
 
     assert check_error_or_warning(
         excinfo,
-        ["lookup tables used to select items from `with_inf", "'techs'", "'nodes'"],
+        ["lookup arrays used to select items from `with_inf", "'techs'", "'nodes'"],
     )
 
 

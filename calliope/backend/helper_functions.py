@@ -84,30 +84,72 @@ def squeeze_primary_carriers(model_data, **kwargs):
     return _squeeze_primary_carriers
 
 
-def select_from_lookup_table(model_data: xr.Dataset, **kwargs) -> Callable:
-    def _select_from_lookup_table(
-        component: xr.DataArray, **slice_dims
+def select_from_lookup_arrays(model_data: xr.Dataset, **kwargs) -> Callable:
+    def _select_from_lookup_arrays(
+        component: xr.DataArray, **lookup_arrays: xr.DataArray
     ) -> xr.DataArray:
-        dims = set(slice_dims.keys())
-        if dims.difference(component.dims):
-            raise BackendError(
-                f"Cannot select items from `{component.name}` on the dimensions {dims} since the array is not indexed over the dimensions {dims.difference(component.dims)}"
+        """
+        Apply vectorised indexing on an arbitrary number of an input array's dimensions.
+
+        Args:
+            component (xr.DataArray): Array on which to apply vectorised indexing.
+
+        Kwargs:
+            lookup_arrays (dict[str, xr.DataArray]):
+                key: dimension on which to apply vectorised indexing
+                value: array whose values are either NaN or values from the dimension given in the key.
+        Raises:
+            BackendError: `component` must be indexed over the dimensions given in the `lookup_arrays` dict keys.
+            BackendError: All `lookup_arrays` must be indexed over all the dimensions given in the `lookup_arrays` dict keys.
+
+        Returns:
+            xr.DataArray:
+                `component` with rearranged values (coordinates remain unchanged).
+                Any NaN index coordinates in the lookup arrays will be NaN in the returned array.
+
+        Examples:
+        >>> coords = {"foo": ["A", "B", "C"]}
+        >>> component = xr.DataArray([1, 2, 3], coords=coords)
+        >>> lookup_array = xr.DataArray(
+                np.array(["B", "A", np.nan], dtype="O"), coords=coords, name="bar"
             )
-        if any(
-            dim not in dim_slicer.dims
-            for dim in dims
-            for dim_slicer in slice_dims.values()
-        ):
+        >>> model_data = xr.Dataset({"bar": lookup_array})
+        >>> select_from_lookup_arrays(model_data)(component, foo=lookup_array)
+        <xarray.DataArray 'bar' (foo: 3)>
+        array([ 2.,  1., nan])
+        Coordinates:
+        * foo      (foo) object 'A' 'B' 'C'
+
+        The lookup array assigns the value at "B" to "A" and vice versa.
+        "C" is masked since the lookup array value is NaN.
+        """
+
+        dims = set(lookup_arrays.keys())
+        missing_dims_in_component = dims.difference(component.dims)
+        missing_dims_in_lookup_tables = any(
+            dim not in lookup.dims for dim in dims for lookup in lookup_arrays.values()
+        )
+        if missing_dims_in_component:
             raise BackendError(
-                f"All lookup tables used to select items from `{component.name}` must be indexed over the dimensions {dims}"
+                f"Cannot select items from `{component.name}` on the dimensions {dims} since the array is not indexed over the dimensions {missing_dims_in_component}"
+            )
+        if missing_dims_in_lookup_tables:
+            raise BackendError(
+                f"All lookup arrays used to select items from `{component.name}` must be indexed over the dimensions {dims}"
             )
 
-        sliced_component = component.sel(
-            **{
-                dim_name: model_data[dim_slicer.name].stack(idx=dims).dropna("idx")
-                for dim_name, dim_slicer in slice_dims.items()
-            }
-        )
+        stacked_and_dense_lookup_arrays = {
+            # Although we have the lookup array, its values are backend objects,
+            # so we grab the same array from the unadulterated model data.
+            # FIXME: do not add lookup tables as backend objects.
+            dim_name: model_data[lookup.name]
+            # Stacking ensures that the dimensions on `component` are not reordered on calling `.sel()`.
+            .stack(idx=list(dims))
+            # Cannot select on NaNs, so we drop them all.
+            .dropna("idx")
+            for dim_name, lookup in lookup_arrays.items()
+        }
+        sliced_component = component.sel(stacked_and_dense_lookup_arrays)
 
         return (
             sliced_component.drop_vars(dims)
@@ -115,7 +157,7 @@ def select_from_lookup_table(model_data: xr.Dataset, **kwargs) -> Callable:
             .reindex_like(component, copy=False)
         )
 
-    return _select_from_lookup_table
+    return _select_from_lookup_arrays
 
 
 def get_val_at_index(model_data, **kwargs):
