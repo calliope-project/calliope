@@ -68,6 +68,8 @@ MOCK_MODULES = [
     "pyomo.common",
     "pyomo.common.tempfiles",
     "pyomo.common.tempfiles.TempfileManager",
+    "pyomo.kernel",
+    "pyparsing",
     "yaml",
     "pandas",
     "pandas.api",
@@ -337,7 +339,7 @@ latex_documents = [
         "manual",
     ),
 ]
-
+imgmath_latex_preamble = r"\usepackage{breqn}"
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
 # latex_logo = None

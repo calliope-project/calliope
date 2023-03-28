@@ -1,4 +1,5 @@
 from __future__ import annotations
+import re
 
 from abc import ABC, abstractmethod
 import typing
@@ -10,6 +11,8 @@ from typing import (
     TypeVar,
     Generic,
     Union,
+    Iterable,
+    overload,
 )
 
 import os
@@ -18,10 +21,10 @@ import logging
 
 import xarray as xr
 import pandas as pd
-import pyomo.environ as pe
-import pyomo.kernel as pmo
-from pyomo.opt import SolverFactory
-from pyomo.common.tempfiles import TempfileManager
+import pyomo.environ as pe  # type: ignore
+import pyomo.kernel as pmo  # type: ignore
+from pyomo.opt import SolverFactory  # type: ignore
+from pyomo.common.tempfiles import TempfileManager  # type: ignore
 import numpy as np
 
 from calliope.exceptions import BackendError, BackendWarning
@@ -296,6 +299,19 @@ class BackendModel(ABC, Generic[T]):
                 Defaults to False.
         """
 
+    @abstractmethod
+    def create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+        """Attach an empty list object to the backend model object.
+        This may be a backend-specific subclass of a standard list object.
+
+        Args:
+            key (str): Name of object
+            component_type (str): Object type
+
+        Raises:
+            BackendError: Cannot overwrite object of same name and type.
+        """
+
     def load_results(self) -> xr.Dataset:
         """
         Evaluate backend decision variables, expressions, and parameters (if not in inputs)
@@ -457,43 +473,122 @@ class BackendModel(ABC, Generic[T]):
                 and the parameter ["energy_eff"].
                 All referenced objects will have their "references" attribute updated with this object's name.
         """
-        self._dataset[name] = da.assign_attrs({obj_type: 1, "references": set()})
+        self._dataset[name] = da.assign_attrs(
+            {"obj_type": obj_type, "references": set()}
+        )
         if references is not None:
             for reference in references:
                 self._dataset[reference].attrs["references"].add(name)
 
+    def _add_constraint_or_expression(
+        self,
+        model_data: xr.Dataset,
+        name: str,
+        component_dict: parsing.UnparsedConstraintDict,
+        component_setter: Callable,
+        component_type: Literal["constraints", "expressions"],
+        parser: Callable,
+    ) -> None:
+        """Generalised function to add a constraint or expression array to the model.
+
+        Args:
+            model_data (xr.Dataset): Calliope model input data
+            name: Name of the constraint or expression
+            component_dict (parsing.UnparsedConstraintDict):
+                Unparsed YAML dictionary configuration.
+            component_setter (Callable):
+                Function to combine evaluated xarray DataArrays into
+                constraint/expression objects.
+                Will receive outputs of `evaluate_where` and `evaluate_expression` as inputs.
+            component_type (Literal[constraints, expressions])
+            parser (Callable): Parsing rule to use for the component (differs between constraints and expressions)
+
+
+        Raises:
+            BackendError:
+                The sub-equations of the parsed component cannot generate component
+                objects on duplicate index entries.
+        """
+        references: set[str] = set()
+
+        parsed_component = parsing.ParsedBackendComponent(name, component_dict)
+        foreach_imask = parsed_component.evaluate_foreach(model_data)
+        if not foreach_imask.any():
+            return None
+
+        parsed_component.parse_top_level_where()
+        top_level_imask = parsed_component.evaluate_where(
+            model_data, initial_imask=foreach_imask
+        )
+        if not top_level_imask.any():
+            return None
+
+        self._raise_error_on_preexistence(name, component_type)
+        component_da = (
+            xr.DataArray()
+            .where(parsed_component.align_imask_with_sets(top_level_imask))
+            .astype(np.dtype("O"))
+        )
+        self.create_obj_list(name, component_type)
+
+        equations = parsed_component.parse_equations(
+            parser, self.valid_arithmetic_components
+        )
+        for element in equations:
+            imask = element.evaluate_where(model_data, initial_imask=top_level_imask)
+            if not imask.any():
+                continue
+
+            imask = parsed_component.align_imask_with_sets(imask)
+
+            if component_da.where(imask).notnull().any():
+                subset_overlap = component_da.where(imask).to_series().dropna().index
+
+                raise BackendError(
+                    "Trying to set two equations for the same index of "
+                    f"{component_type.removesuffix('s')} `{name}`:\n{subset_overlap}"
+                )
+
+            expr = element.evaluate_expression(
+                model_data, self, references=references, imask=imask
+            )
+            to_fill = component_setter(imask, expr)
+            component_da = component_da.fillna(to_fill)
+
+        if component_da.isnull().all():
+            return None
+        self._add_to_dataset(name, component_da, component_type, references)
+
     @property
     def constraints(self):
         "Slice of backend dataset to show only built constraints"
-        return self._dataset.filter_by_attrs(constraints=1)
+        return self._dataset.filter_by_attrs(obj_type="constraints")
 
     @property
     def variables(self):
         "Slice of backend dataset to show only built variables"
-        return self._dataset.filter_by_attrs(variables=1)
+        return self._dataset.filter_by_attrs(obj_type="variables")
 
     @property
     def parameters(self):
         "Slice of backend dataset to show only built parameters"
-        return self._dataset.filter_by_attrs(parameters=1)
+        return self._dataset.filter_by_attrs(obj_type="parameters")
 
     @property
     def expressions(self):
         "Slice of backend dataset to show only built expressions"
-        return self._dataset.filter_by_attrs(expressions=1)
+        return self._dataset.filter_by_attrs(obj_type="expressions")
 
     @property
     def objectives(self):
         "Slice of backend dataset to show only built objectives"
-        return self._dataset.filter_by_attrs(objectives=1)
+        return self._dataset.filter_by_attrs(obj_type="objectives")
 
 
 class PyomoBackendModel(BackendModel):
     def __init__(self):
-        BackendModel.__init__(
-            self,
-            instance=pmo.block(),
-        )
+        BackendModel.__init__(self, instance=pmo.block())
+
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()
         self._instance.expressions = pmo.expression_dict()
@@ -509,7 +604,7 @@ class PyomoBackendModel(BackendModel):
     ) -> None:
         self._raise_error_on_preexistence(parameter_name, "parameters")
 
-        self._create_pyomo_list(parameter_name, "parameters")
+        self.create_obj_list(parameter_name, "parameters")
 
         parameter_da = self.apply_func(
             self._to_pyomo_param,
@@ -595,14 +690,14 @@ class PyomoBackendModel(BackendModel):
             return None
 
         parsed_variable.parse_top_level_where()
-        imask = parsed_variable.evaluate_where(model_data, foreach_imask)
+        imask = parsed_variable.evaluate_where(model_data, initial_imask=foreach_imask)
         if not imask.any():
             return None
 
         imask = parsed_variable.align_imask_with_sets(imask)
 
         self._raise_error_on_preexistence(name, "variables")
-        self._create_pyomo_list(name, "variables")
+        self.create_obj_list(name, "variables")
 
         domain = parsed_variable._unparsed.get("domain", "real")
         domain_type = getattr(pmo, f"{domain.title()}Set")
@@ -636,7 +731,9 @@ class PyomoBackendModel(BackendModel):
         for equation in equations:
             imask = equation.evaluate_where(model_data)
             if imask.any():
-                expr = equation.evaluate_expression(model_data, self, imask).item()
+                expr = equation.evaluate_expression(
+                    model_data, self, imask=imask
+                ).item()
                 n_valid_exprs += 1
         if n_valid_exprs > 1:
             raise BackendError(
@@ -749,16 +846,7 @@ class PyomoBackendModel(BackendModel):
 
         return str(termination)
 
-    def _create_pyomo_list(self, key: str, component_type: _COMPONENTS_T) -> None:
-        """Attach an empty pyomo kernel list object to the pyomo model object.
-
-        Args:
-            key (str): Name of object
-            component_type (str): Object type
-
-        Raises:
-            BackendError: Cannot overwrite object of same name and type.
-        """
+    def create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         component_dict = getattr(self._instance, component_type)
         if key in component_dict:
             raise BackendError(
@@ -768,81 +856,17 @@ class PyomoBackendModel(BackendModel):
             singular_component = component_type.removesuffix("s")
             component_dict[key] = getattr(pmo, f"{singular_component}_list")()
 
-    def _add_constraint_or_expression(
-        self,
-        model_data: xr.Dataset,
-        name: str,
-        component_dict: parsing.UnparsedConstraintDict,
-        component_setter: Callable,
-        component_type: Literal["constraints", "expressions"],
-        parser: Callable,
-    ) -> None:
-        """Generalised function to add a constraint or expression array to the model.
-
-        Args:
-            model_data (xr.Dataset): Calliope model input data
-            name: Name of the constraint or expression
-            component_dict (parsing.UnparsedConstraintDict):
-                Unparsed YAML dictionary configuration.
-            component_setter (Callable):
-                Function to combine evaluated xarray DataArrays into
-                constraint/expression objects.
-                Will receive outputs of `evaluate_where` and `evaluate_expression` as inputs.
-            component_type (Literal[constraints, expressions])
-            parser (Callable): Parsing rule to use for the component (differs between constraints and expressions)
-
-
-        Raises:
-            BackendError:
-                The sub-equations of the parsed component cannot generate component
-                objects on duplicate index entries.
-        """
-        references: set[str] = set()
-
-        parsed_component = parsing.ParsedBackendComponent(name, component_dict)
-        foreach_imask = parsed_component.evaluate_foreach(model_data)
-        if not foreach_imask.any():
-            return None
-
-        parsed_component.parse_top_level_where()
-        top_level_imask = parsed_component.evaluate_where(model_data, foreach_imask)
-        if not top_level_imask.any():
-            return None
-
-        self._raise_error_on_preexistence(name, component_type)
-        component_da = (
-            xr.DataArray()
-            .where(parsed_component.align_imask_with_sets(top_level_imask))
-            .astype(np.dtype("O"))
+    def _add_dims_to_latex_str(self, expr_latex: str, dims: Iterable) -> str:
+        _textify_and_escape = lambda x: "\\text{" + re.sub("_", r"\_", x) + "}"
+        return (
+            expr_latex
+            + "\\forall{"
+            + ",".join(
+                f"{_textify_and_escape(i.removesuffix('s'))} \\in{{ {_textify_and_escape(i)} }}"
+                for i in dims
+            )
+            + "}"
         )
-        self._create_pyomo_list(name, component_type)
-
-        equations = parsed_component.parse_equations(
-            parser, self.valid_arithmetic_components
-        )
-        for element in equations:
-            imask = element.evaluate_where(model_data, top_level_imask)
-            if not imask.any():
-                continue
-
-            imask = parsed_component.align_imask_with_sets(imask)
-
-            if component_da.where(imask).notnull().any():
-                subset_overlap = component_da.where(imask).to_series().dropna().index
-
-                raise BackendError(
-                    "Trying to set two equations for the same index of "
-                    f"{component_type.removesuffix('s')} `{name}`:\n{subset_overlap}"
-                )
-
-            expr = element.evaluate_expression(model_data, self, imask, references)
-            to_fill = component_setter(imask, expr)
-            component_da = component_da.fillna(to_fill)
-
-        if component_da.isnull().all():
-            return None
-
-        self._add_to_dataset(name, component_da, component_type, references)
 
     def _get_capacity_bounds(
         self, bounds: parsing.UnparsedVariableBoundDict, name: str
@@ -870,7 +894,7 @@ class PyomoBackendModel(BackendModel):
             else:
                 # TODO: decide if this parameter should be added to the backend dataset too
                 name_ = f"TEMP_{name}_{bound}"
-                self._create_pyomo_list(name_, "parameters")
+                self.create_obj_list(name_, "parameters")
                 return xr.DataArray(self._to_pyomo_param(this_bound, name=name_))
 
         scale = __get_bound("scale")

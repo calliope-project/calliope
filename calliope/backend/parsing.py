@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import Optional, Union, Literal, Iterable, Callable, TypeVar
+from typing import Optional, Union, Literal, Iterable, Callable, TypeVar, overload, Any
 from typing_extensions import NotRequired, TypedDict, Required
 import functools
 import operator
@@ -222,11 +222,29 @@ class ParsedBackendEquation:
             },
         )
 
+    @overload
     def evaluate_where(
         self,
         model_data: xr.Dataset,
+        as_latex: Literal[False] = False,
         initial_imask: xr.DataArray = TRUE_ARRAY,
     ) -> xr.DataArray:
+        ...
+
+    @overload
+    def evaluate_where(
+        self,
+        model_data: xr.Dataset,
+        as_latex: Literal[True],
+    ) -> str:
+        ...
+
+    def evaluate_where(
+        self,
+        model_data: xr.Dataset,
+        as_latex: bool = False,
+        initial_imask: xr.DataArray = TRUE_ARRAY,
+    ) -> Union[xr.DataArray, str]:
         """Evaluate parsed backend object dictionary `where` string.
         NOTE: imask = inverse mask (application of "np.where" to an array)
 
@@ -242,28 +260,56 @@ class ParsedBackendEquation:
 
         evaluated_wheres = [
             where[0].eval(
-                model_data=model_data, helper_func_dict=VALID_IMASK_HELPER_FUNCTIONS
+                model_data=model_data,
+                helper_func_dict=VALID_IMASK_HELPER_FUNCTIONS,
+                as_latex=as_latex,
             )
             for where in self.where
         ]
-
-        imask: xr.DataArray = functools.reduce(
-            operator.and_, [initial_imask, *evaluated_wheres]
-        )
-
-        return xr.DataArray(imask)
+        if as_latex:
+            return r"\land{}".join(f"({i})" for i in evaluated_wheres if i != "true")
+        else:
+            return xr.DataArray(
+                functools.reduce(operator.and_, [initial_imask, *evaluated_wheres])
+            )
 
     def align_imask_with_sets(self, imask: xr.DataArray):
         unwanted_dims = set(imask.dims).difference(self.sets)
         return (imask.sum(unwanted_dims) > 0).astype(bool)
 
+    @overload
     def evaluate_expression(
         self,
         model_data: xr.Dataset,
         backend_interface: backends.BackendModel,
-        imask: xr.DataArray,
+        as_latex: Literal[False] = False,
         references: Optional[set] = None,
-    ):
+        imask: Optional[xr.DataArray] = None,
+    ) -> Any:
+        ...
+
+    @overload
+    def evaluate_expression(
+        self,
+        model_data: xr.Dataset,
+        backend_interface: backends.BackendModel,
+        as_latex: Literal[True],
+        references: Optional[set] = None,
+    ) -> str:
+        ...
+
+    def evaluate_expression(
+        self,
+        model_data: xr.Dataset,
+        backend_interface: backends.BackendModel,
+        as_latex: bool = False,
+        references: Optional[set] = None,
+        imask: Optional[xr.DataArray] = None,
+    ) -> Any:
+        if imask is None:
+            apply_imask = False
+        else:
+            apply_imask = True
         return self.expression[0].eval(
             equation_name=self.name,
             index_slice_dict=self.index_slices,
@@ -275,6 +321,8 @@ class ParsedBackendEquation:
             imask=imask,
             references=references if references is not None else set(),
             as_dict=False,
+            as_latex=as_latex,
+            apply_imask=apply_imask,
         )
 
 

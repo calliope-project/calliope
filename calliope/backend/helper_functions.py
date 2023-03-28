@@ -1,15 +1,33 @@
+import re
+
 import xarray as xr
 
 
-def inheritance(model_data, **kwargs):
+def inheritance(model_data, as_latex: bool = False, **kwargs):
+    def _as_latex(tech_group):
+        return rf"\text{{tech_group={tech_group}}}"
+
     def _inheritance(tech_group):
         # Only for base tech inheritance
         return model_data.inheritance.str.endswith(tech_group)
 
-    return _inheritance
+    if as_latex:
+        return _as_latex
+    else:
+        return _inheritance
 
 
-def imask_sum(model_data, **kwargs):
+def imask_sum(model_data, as_latex: bool = False, **kwargs):
+    def _instr(dim):
+        return rf"\text{{{dim.removesuffix('s')}}} \in \text{{{dim}}}"
+
+    def _as_latex(component, *, over):
+        if isinstance(over, str):
+            overstring = _instr(over)
+        else:
+            overstring = r"\substack{" + " \\ ".join(_instr(i) for i in over) + "}"
+        return rf"\sum\limit_{{{overstring}}} ({component})"
+
     def _imask_sum(component, *, over):
         """
         Args:
@@ -25,10 +43,23 @@ def imask_sum(model_data, **kwargs):
 
         return to_return
 
-    return _imask_sum
+    if as_latex:
+        return _as_latex
+    else:
+        return _imask_sum
 
 
-def expression_sum(**kwargs):
+def expression_sum(as_latex: bool = False, **kwargs):
+    def _instr(dim):
+        return rf"\text{{{dim.removesuffix('s')}}} \in \text{{{dim}}}"
+
+    def _as_latex(component, *, over):
+        if isinstance(over, str):
+            overstring = _instr(over)
+        else:
+            overstring = r"\substack{" + " \\ ".join(_instr(i) for i in over) + "}"
+        return rf"\sum\limit_{{{overstring}}} ({component})"
+
     def _expression_sum(component, *, over):
         """
 
@@ -54,10 +85,16 @@ def expression_sum(**kwargs):
 
         return to_return
 
-    return _expression_sum
+    if as_latex:
+        return _as_latex
+    else:
+        return _expression_sum
 
 
-def squeeze_carriers(model_data, **kwargs):
+def squeeze_carriers(model_data, as_latex: bool = False, **kwargs):
+    def _as_latex(component, carrier_tier):
+        return rf"\sum_{{\text{{carrier}} \in \text{{carrier_tier({carrier_tier})}}}} ({component})"
+
     def _squeeze_carriers(component, carrier_tier):
         return expression_sum(**kwargs)(
             component.where(
@@ -66,10 +103,18 @@ def squeeze_carriers(model_data, **kwargs):
             over="carriers",
         )
 
-    return _squeeze_carriers
+    if as_latex:
+        return _as_latex
+    else:
+        return _squeeze_carriers
 
 
-def squeeze_primary_carriers(model_data, **kwargs):
+def squeeze_primary_carriers(model_data, as_latex: bool = False, **kwargs):
+    def _as_latex(component, carrier_tier):
+        return (
+            rf"\sum_{{\text{{carrier=primary_carrier_{carrier_tier}}}}} ({component})"
+        )
+
     def _squeeze_primary_carriers(component, carrier_tier):
         return expression_sum(**kwargs)(
             component.where(
@@ -78,10 +123,24 @@ def squeeze_primary_carriers(model_data, **kwargs):
             over="carriers",
         )
 
-    return _squeeze_primary_carriers
+    if as_latex:
+        return _as_latex
+    else:
+        return _squeeze_primary_carriers
 
 
-def get_connected_link(model_data, **kwargs):
+def get_connected_link(model_data, as_latex: bool = False, **kwargs):
+    def _as_latex(component):
+        try:
+            component_sections = component.split(r"_\text{")
+            sub_section = component_sections[1]
+        except IndexError:
+            return component
+        else:
+            sub_node = re.sub(r"\bnode\b", r"node=remote\_node", sub_section)
+            sub_node_tech = re.sub(r"\btech\b", r"tech=remote\_tech", sub_node)
+            return component_sections[0] + r"_\text{" + sub_node_tech
+
     def _get_connected_link(component):
         dims = [i for i in component.dims if i in ["techs", "nodes"]]
         remote_nodes = model_data.link_remote_nodes.stack(idx=dims).dropna("idx")
@@ -96,19 +155,45 @@ def get_connected_link(model_data, **kwargs):
             .fillna(component)
         )
 
-    return _get_connected_link
+    if as_latex:
+        return _as_latex
+    else:
+        return _get_connected_link
 
 
-def get_val_at_index(model_data, **kwargs):
+def get_val_at_index(model_data, as_latex: bool = False, **kwargs):
+    def _as_latex(*, dim, idx):
+        return f"{dim}[{idx}]"
+
     def _get_val_at_index(*, dim, idx):
         return model_data.coords[dim][int(idx)]
 
-    return _get_val_at_index
+    if as_latex:
+        return _as_latex
+    else:
+        return _get_val_at_index
 
 
-def roll(**kwargs):
+def roll(as_latex: bool = False, **kwargs):
+    def _as_latex(component, **roll_kwargs):
+        try:
+            component_sections = component.split(r"_\text{")
+            sub_section = component_sections[1]
+        except IndexError:
+            return component
+        else:
+            for k, v in roll_kwargs.items():
+                k_singular = k.removesuffix("s")
+                sub_section = re.sub(
+                    rf"\b{k_singular}\b", rf"{k_singular}-{v}", sub_section
+                )
+            return component_sections[0] + r"_\text{" + sub_section
+
     def _roll(component, **roll_kwargs):
         roll_kwargs_int = {k: int(v) for k, v in roll_kwargs.items()}
         return component.roll(roll_kwargs_int)
 
-    return _roll
+    if as_latex:
+        return _as_latex
+    else:
+        return _roll

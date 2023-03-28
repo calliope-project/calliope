@@ -17,9 +17,9 @@ from contextlib import contextmanager
 import os
 from pathlib import Path
 from calliope.core.util.tools import relative_path
+import textwrap
 
 import xarray as xr
-import pandas as pd
 
 import calliope
 from calliope.postprocess import results as postprocess_results
@@ -33,7 +33,7 @@ from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
-from calliope.backend import backends
+from calliope.backend import backends, latex_backend
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,10 @@ class Model(object):
 
     """
 
-    _BACKENDS: dict[str, Callable] = {"pyomo": backends.PyomoBackendModel}
+    _BACKENDS: dict[str, Callable] = {
+        "pyomo": backends.PyomoBackendModel,
+        "latex": latex_backend.LatexBackendModel,
+    }
 
     def __init__(
         self,
@@ -301,7 +304,7 @@ class Model(object):
             }
         )
 
-    def build(self, backend_interface: Literal["pyomo"] = "pyomo") -> None:
+    def build(self, backend_interface: Literal["pyomo", "latex"] = "pyomo") -> None:
         """Build description of the optimisation problem in the chosen backend interface.
 
         Args:
@@ -448,6 +451,100 @@ class Model(object):
         self._add_model_data_methods()
 
         self.backend = interface(self)
+
+    def write_latex_math(
+        self,
+        path: Optional[str] = None,
+        how: Literal["all", "valid"] = "all",
+        style: Literal["tex", "rst"] = "tex",
+    ) -> Optional[str]:
+        tab = " " * 4
+        linebreak = "\n" + tab * 2
+        latex_math = textwrap.dedent(
+            r"""
+            \begin{{array}}{{r}}
+                {top_level_info}
+            \end{{array}}
+            \begin{{cases}}
+                {equations}
+            \end{{cases}}
+        """
+        )
+        rst_math = ".. math::" + textwrap.indent(latex_math, tab)
+        eq_string = "{expression}{linebreak}&\quad{linebreak}{where}\\\\"
+        self.build(backend_interface="latex")
+        for name, objective in self.backend.objectives:
+            strings = objective.latex_strings.copy()
+            valid_eqs = objective.to_series().dropna().unique()
+            if how == "valid" and not objective["attrs"].active or valid_eqs.empty:
+                continue
+
+            top_level_info = r"\\" + objective.sense
+
+            if how == "valid":
+                equations = linebreak.join(
+                    eq_string.format(
+                        expression=strings[eq]["expression"],
+                        linebreak=linebreak,
+                        where=strings[eq]["where"],
+                    )
+                    for eq in valid_eqs
+                )
+            else:
+                equations = linebreak.join(
+                    eq_string.format(
+                        expression=eq["expression"],
+                        linebreak=linebreak,
+                        where=eq["where"],
+                    )
+                    for eq in strings.values()
+                )
+            ready_for_file = latex_math.format(
+                top_level_info=top_level_info, equations=equations
+            )
+            with open(Path(path) / f"{name}.tex", "w") as f:
+                f.write(ready_for_file)
+        for name, constraint in self.backend.constraints:
+            strings = constraint.latex_strings.copy()
+            valid_eqs = constraint.to_series().dropna().unique()
+            if how == "valid" and not constraint["attrs"].active or valid_eqs.empty:
+                continue
+
+            top_level_info = (
+                r"\forall "
+                + ", ".join(
+                    rf"\text{{{i.removesuffix('s')}}} \in \text{{{i}}}"
+                    for i in constraint.dims
+                )
+                + r"\\"
+            )
+            top_level_where = strings.pop("where", None)
+            if top_level_where is not None:
+                top_level_info += rf"{linebreak}\text{{if }}" + top_level_where
+
+            if how == "valid":
+                equations = linebreak.join(
+                    eq_string.format(
+                        expression=strings[eq]["expression"],
+                        linebreak=linebreak,
+                        where=strings[eq]["where"],
+                    )
+                    for eq in valid_eqs
+                )
+            else:
+                equations = linebreak.join(
+                    eq_string.format(
+                        expression=eq["expression"],
+                        linebreak=linebreak,
+                        where=eq["where"],
+                    )
+                    for eq in strings.values()
+                )
+            ready_for_file = latex_math.format(
+                top_level_info=top_level_info, equations=equations
+            )
+            with open(Path(path) / f"{name}.tex", "w") as f:
+                f.write(ready_for_file)
 
     def get_formatted_array(self, var):
         """

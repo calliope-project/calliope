@@ -26,13 +26,15 @@
 ##
 from __future__ import annotations
 
-from typing import Callable, Any, Union, Optional, Iterator, Iterable
+from typing import Callable, Any, Union, Optional, Iterator, Iterable, Literal, overload
 from abc import ABC
+import re
 
 import pyparsing as pp
 import xarray as xr
 
 from calliope.exceptions import BackendError
+from calliope.backend.backends import BackendModel
 
 pp.ParserElement.enablePackrat()
 
@@ -43,8 +45,20 @@ class EvalString(ABC):
     "Parent class for all string evaluation classes - used in type hinting"
     name: str
 
+    @staticmethod
+    def escape(string_to_esc: str, esc_char: str = "_") -> str:
+        return re.sub(esc_char, rf"\{esc_char}", string_to_esc)
+
 
 class EvalOperatorOperand(EvalString):
+    LATEX_OPERATOR_LOOKUP: dict[str, str] = {
+        "**": "{val}^{{{operand}}}",
+        "*": r"{val} \times {operand}",
+        "/": r"\frac{{ {val} }} {{ {operand} }}",
+        "+": "{val} + {operand}",
+        "-": "{val} - {operand}",
+    }
+
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed expressions with operands separated
@@ -55,7 +69,7 @@ class EvalOperatorOperand(EvalString):
                 Contains a list of the form [operand (pp.ParseResults), operator (str),
                 operand (pp.ParseResults), operator (str), ...].
         """
-        self.value = tokens[0]
+        self.value: pp.ParseResults = tokens[0]
         self.values = tokens
 
     def __repr__(self) -> str:
@@ -80,32 +94,70 @@ class EvalOperatorOperand(EvalString):
             except StopIteration:
                 break
 
-    def eval(self, **eval_kwargs) -> Any:
+    def as_latex(
+        self, val: str, operand: str, operator_: str, operand_type: Any
+    ) -> str:
+        """Add sign to stringified data for use in a LaTex math formula"""
+        # We ignore zeros that do nothing
+        if operand == "0" and operator_ in ["-", "+"]:
+            return val
+
+        if operand_type == type(self):
+            operand = "(" + operand + ")"
+        return self.LATEX_OPERATOR_LOOKUP[operator_].format(val=val, operand=operand)
+
+    def _eval(
+        self,
+        to_eval: pp.ParseResults,
+        as_latex: bool = False,
+        **eval_kwargs,
+    ) -> Any:
+        evaluated = to_eval.eval(as_latex=as_latex, **eval_kwargs)
+        if not as_latex:
+            evaluated = xr.DataArray(evaluated)
+            if eval_kwargs.get("apply_imask", True):
+                evaluated = evaluated.where(eval_kwargs["imask"])
+
+        return evaluated
+
+    def operate(
+        self, val: xr.DataArray, evaluated_operand: xr.DataArray, operator_: str
+    ) -> xr.DataArray:
+        if operator_ == "**":
+            val = val**evaluated_operand
+        elif operator_ == "*":
+            val = val * evaluated_operand
+        elif operator_ == "/":
+            val = val / evaluated_operand
+        elif operator_ == "+":
+            val = val + evaluated_operand
+        elif operator_ == "-":
+            val = val - evaluated_operand
+        return val
+
+    @overload
+    def eval(self, as_latex: Literal[False] = False, **eval_kwargs) -> xr.DataArray:
+        ...
+
+    @overload
+    def eval(self, as_latex: Literal[True], **eval_kwargs) -> str:
+        ...
+
+    def eval(self, as_latex: bool = False, **eval_kwargs) -> Union[str, xr.DataArray]:
         """
         Returns:
             Any:
                 If all operands are numeric, returns float, otherwise returns an
                 expression to use in an optimisation model constraint.
         """
-        apply_imask = eval_kwargs.get("apply_imask", True)
-        val = xr.DataArray(self.value[0].eval(**eval_kwargs))
+        val = self._eval(self.value[0], as_latex, **eval_kwargs)
 
-        if apply_imask:
-            val = val.where(eval_kwargs["imask"])
         for operator_, operand in self.operatorOperands(self.value[1:]):
-            evaluated_operand = xr.DataArray(operand.eval(**eval_kwargs))
-            if apply_imask:
-                evaluated_operand = evaluated_operand.where(eval_kwargs["imask"])
-            if operator_ == "**":
-                val = val**evaluated_operand
-            elif operator_ == "*":
-                val = val * evaluated_operand
-            elif operator_ == "/":
-                val = val / evaluated_operand
-            elif operator_ == "+":
-                val = val + evaluated_operand
-            elif operator_ == "-":
-                val = val - evaluated_operand
+            evaluated_operand = self._eval(operand, as_latex, **eval_kwargs)
+            if as_latex == True:
+                val = self.as_latex(val, evaluated_operand, operator_, type(operand))
+            else:
+                val = self.operate(val, evaluated_operand, operator_)
 
         return val
 
@@ -126,15 +178,23 @@ class EvalSignOp(EvalString):
         "Return string representation of the parsed grammar"
         return str(f"({self.sign}){self.value.__repr__()}")
 
+    def as_latex(self, val: str) -> str:
+        """Add sign to stringified data for use in a LaTex math formula"""
+        return self.sign + val
+
     def eval(self, **eval_kwargs) -> Any:
         val = self.value.eval(**eval_kwargs)
-        if self.sign == "+":
+        if eval_kwargs.get("as_latex", False):
+            return self.as_latex(val)
+        elif self.sign == "+":
             return val
         elif self.sign == "-":
             return -1 * val
 
 
 class EvalComparisonOp(EvalString):
+    OP_TRANSLATOR = {"<=": r"\leq{}", ">=": r"\geq{}", "==": " = "}
+
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed equations of the form LHS OPERATOR RHS.
@@ -150,6 +210,10 @@ class EvalComparisonOp(EvalString):
         "Return string representation of the parsed grammar"
         return f"{self.lhs.__repr__()} {self.op} {self.rhs.__repr__()}"
 
+    def as_latex(self, lhs: str, rhs: str) -> str:
+        """Add operator between two sets of stringified data for use in a LaTex math formula"""
+        return lhs + self.OP_TRANSLATOR[self.op] + rhs
+
     def eval(self, **eval_kwargs) -> Any:
         """
         Returns:
@@ -160,7 +224,10 @@ class EvalComparisonOp(EvalString):
         lhs = self.lhs.eval(**eval_kwargs)
         rhs = self.rhs.eval(**eval_kwargs)
 
-        return lhs, self.op, rhs
+        if eval_kwargs.get("as_latex", False):
+            return self.as_latex(lhs, rhs)
+        else:
+            return lhs, self.op, rhs
 
 
 class EvalFunction(EvalString):
@@ -311,7 +378,40 @@ class EvalSlicedParameterOrVariable(EvalString):
         slices = ", ".join(f"{k}={v.__repr__()}" for k, v in self.index_slices.items())
         return f"SLICED_{self.obj_name}[{slices}]"
 
-    def eval(self, **eval_kwargs) -> Optional[Union[dict, xr.DataArray]]:
+    @staticmethod
+    def replace_rule(index_slices):
+        def _replace(term):
+            if len(term) == 1:
+                return term
+            else:
+                replacers = {k: f"{k}={v}" for k, v in index_slices.items()}
+                return (
+                    term[0]
+                    + term[1]
+                    + ",".join(replacers.get(k, k) for k in term[2])
+                    + term[3]
+                )
+
+        return _replace
+
+    def as_latex(self, evaluated_obj: str, index_slices: dict[str, str]) -> str:
+        """Stingify evaluated dataarray for use in a LaTex math formula"""
+        singular_slice_refs = {
+            self.escape(k.removesuffix("s")): v for k, v in index_slices.items()
+        }
+        id_ = pp.Combine(
+            pp.Word(pp.alphas, pp.alphanums)
+            + pp.ZeroOrMore("_" + pp.Word(pp.alphanums))
+            + pp.Opt("_")
+        )
+        id_formatted = pp.Combine("\\" + pp.Word(pp.alphas) + "{" + id_ + "}")
+        obj_parser = id_formatted + pp.Opt(
+            r"_\text{" + pp.Group(pp.delimited_list(id_)) + "}"
+        )
+        obj_parser.set_parse_action(self.replace_rule(singular_slice_refs))
+        return obj_parser.parse_string(evaluated_obj, parse_all=True)[0]
+
+    def eval(self, **eval_kwargs) -> Optional[Union[str, dict, xr.DataArray]]:
         """
         Returns:
             Optional[Union[dict, xr.DataArray]]:
@@ -326,7 +426,11 @@ class EvalSlicedParameterOrVariable(EvalString):
         if eval_kwargs.get("as_dict", False):
             return {"dimensions": index_slices, **self.obj_name.eval(**eval_kwargs)}
         elif eval_kwargs.get("backend_dataset", None) is not None:
-            return self.obj_name.eval(**eval_kwargs).sel(**index_slices)
+            evaluated_obj = self.obj_name.eval(**eval_kwargs)
+            if eval_kwargs.get("as_latex", False):
+                return self.as_latex(evaluated_obj, index_slices)
+            else:
+                return evaluated_obj.sel(**index_slices)
         else:
             return None
 
@@ -425,13 +529,30 @@ class EvalUnslicedParameterOrVariable(EvalString):
         "Return string representation of the parsed grammar"
         return "PARAM_OR_VAR:" + str(self.name)
 
+    def as_latex(self, evaluated: Optional[xr.DataArray] = None) -> str:
+        """Stingify evaluated dataarray for use in a LaTex math formula"""
+        if evaluated is None:
+            return rf"\text{{{self.name}}}"
+
+        if evaluated.shape:
+            dims = rf"_\text{{{','.join(str(i).removesuffix('s') for i in evaluated.dims)}}}"
+        else:
+            dims = ""
+        if evaluated.attrs["obj_type"] in ["expressions", "variables"]:
+            formatted_name = rf"\textbf{{{self.name}}}"
+        elif evaluated.attrs["obj_type"] == "parameters":
+            formatted_name = rf"\textit{{{self.name}}}"
+        return formatted_name + dims
+
     def eval(
         self,
         references: set,
         as_dict: bool = False,
         as_values: bool = False,
+        backend_dataset: Optional[xr.Dataset] = None,
+        backend_interface: Optional[BackendModel] = None,
         **eval_kwargs,
-    ) -> Optional[Union[dict, xr.DataArray]]:
+    ) -> Optional[Union[dict, xr.DataArray, str]]:
         """
         Args:
             references (set):
@@ -445,15 +566,23 @@ class EvalUnslicedParameterOrVariable(EvalString):
                 else, returns None.
         """
         references.add(self.name)
+        evaluated: Optional[Union[dict, xr.DataArray, str]]
         if as_dict:
-            return {"param_or_var_name": self.name}
-        elif eval_kwargs.get("backend_dataset", None) is not None:
+            evaluated = {"param_or_var_name": self.name}
+        elif backend_interface is not None and backend_dataset is not None:
             if as_values:
-                return eval_kwargs["backend_interface"].get_parameter(
+                evaluated = backend_interface.get_parameter(
                     self.name, as_backend_objs=False
                 )
             else:
-                return eval_kwargs["backend_dataset"][self.name]
+                evaluated = backend_dataset[self.name]
+
+            if eval_kwargs.get("as_latex", False):
+                evaluated = self.as_latex(evaluated)
+        else:
+            evaluated = None
+
+        return evaluated
 
 
 class EvalNumber(EvalString):
@@ -473,12 +602,21 @@ class EvalNumber(EvalString):
         "Return string representation of the parsed grammar"
         return "NUM:" + str(self.value)
 
+    def as_latex(self, evaluated):
+        """Stingify evaluated float to 6 significant figures for use in a LaTex math formula"""
+        return f"{evaluated:.6g}"
+
     def eval(self, **eval_kwargs) -> float:
         """
         Returns:
             float: Input string as a float, even if given as an integer.
         """
-        return float(self.value)
+
+        evaluated = float(self.value)
+        if eval_kwargs.get("as_latex", False):
+            return self.as_latex(evaluated)
+        else:
+            return evaluated
 
 
 class StringListParser(EvalString):
@@ -497,10 +635,18 @@ class StringListParser(EvalString):
         "Return string representation of the parsed grammar"
         return f"{self.val}"
 
-    def eval(self, **kwargs) -> list[str]:
-        "Return input as list of strings."
+    def as_latex(self, evaluated):
+        """Stingify evaluated object for use in a LaTex math formula"""
+        escaped_strings = [self.escape(i) for i in evaluated]
+        return evaluated  # f"[{', '.join(escaped_strings)}]"
 
-        return [val.eval() for val in self.val]
+    def eval(self, **eval_kwargs) -> list[str]:
+        "Return input as list of strings."
+        evaluated = [val.eval() for val in self.val]
+        if eval_kwargs.get("as_latex", False):
+            return self.as_latex(evaluated)
+        else:
+            return evaluated
 
 
 class GenericStringParser(EvalString):
@@ -519,9 +665,17 @@ class GenericStringParser(EvalString):
         "Return string representation of the parsed grammar"
         return f"STRING:{self.val}"
 
-    def eval(self, **kwargs) -> str:
+    def as_latex(self, evaluated):
+        """Stingify evaluated string for use in a LaTex math formula"""
+        return evaluated  # rf"\text{{{evaluated}}}"
+
+    def eval(self, **eval_kwargs) -> str:
         "Return input as string."
-        return str(self.val)
+        evaluated = str(self.val)
+        if eval_kwargs.get("as_latex", False):
+            return self.as_latex(evaluated)
+        else:
+            return evaluated
 
 
 def helper_function_parser(
