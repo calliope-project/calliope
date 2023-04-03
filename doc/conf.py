@@ -33,28 +33,6 @@ generate_tables.process()
 # Mock modules for Read The Docs autodoc generation
 ##
 
-
-class Mock(object):
-    __all__ = []
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def __call__(self, *args, **kwargs):
-        return Mock()
-
-    @classmethod
-    def __getattr__(cls, name):
-        if name in ("__file__", "__path__"):
-            return "/dev/null"
-        elif name[0] == name[0].upper():
-            mockType = type(name, (), {})
-            mockType.__module__ = __name__
-            return mockType
-        else:
-            return Mock()
-
-
 MOCK_MODULES = [
     "numpy",
     "matplotlib",
@@ -75,9 +53,10 @@ MOCK_MODULES = [
     "pandas.api",
     "pandas.api.types",
     "click",
-    "xarray",
     "dask",
+    "xarray",
     "xarray.ufuncs",
+    "xarray.DataArray",
     "numpy.random",
     "numpy.fft",
     "numpy.lib",
@@ -100,8 +79,7 @@ MOCK_MODULES = [
     "IPython",
 ]
 
-for m in MOCK_MODULES:
-    sys.modules[m] = Mock()
+autodoc_mock_imports = MOCK_MODULES
 
 
 # Redefine supported_image_types for the HTML builder to prefer PNG over SVG
@@ -138,10 +116,11 @@ extensions = [
     "sphinx_search.extension",
 ]
 
-# Ensure that cdnjs is used rather than the discontinued mathjax cdn
-mathjax_path = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+# Ensure that mathjax will render large equations
+mathjax3_config = {"tex": {"MAXBUFFER": 25 * 1024}}
 
-numpydoc_show_class_members = False  # numpydoc: don't do autosummary
+# numpydoc: don't do autosummary
+numpydoc_show_class_members = False
 
 nbviewer_url = "https://nbviewer.org/url/calliope.readthedocs.io/"
 

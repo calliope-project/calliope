@@ -2,94 +2,19 @@
 Mathematical formulation
 ------------------------
 
-This section details the mathematical formulation of the different components. For each component, a link to the actual implementing function in the Calliope code is given.
+This section details the base mathematical formulation that is loaded when creating a Calliope model.
+If a math component's initial conditions are met (those to the left of the curly brace), it will be applied to a model.
+For each objective, constraint and global expression, a number of subconditions then apply (those to the right of the curly brace) to decide on the specific expression to apply at a given iteration of the component dimensions.
 
-.. note::
-    Make sure to also refer to the detailed :doc:`listing of constraints and costs along with their units and default values <config_defaults>`.
+In the following expressions, terms in **bold** font are decision variables and terms in *italic* font are parameters. A list of the decision variables is given at the end of this page. A detailed listing of parameters along with their units and default values is given  :doc:`here <config_defaults>`.
+Those parameters which are defined over time (`timesteps`) in the expressions can be defined by a user as a single, time invariant value, or as a timeseries that is :ref:`loaded from file or dataframe <_configuration_timeseries>`.
 
-Decision variables
-------------------
+To view only the mathematical formulation valid for your own model, you can write a LaTeX or reStructuredText file as follows:
 
-.. automodule:: calliope.backend.pyomo.variables
-    :members:
+.. code-block:: python
 
-Objective functions
--------------------
+    model = calliope.Model("path/to/model.yaml")
+    model.write_math_documentation(filename="path/to/output/file.[tex|rst]", include="valid")
 
-.. automodule:: calliope.backend.pyomo.objective
-    :members:
+.. include:: ../_static/math.rst
 
-.. _api_constraints:
-
-Constraints
-===========
-
-Energy Balance
---------------
-
-.. automodule:: calliope.backend.pyomo.constraints.energy_balance
-    :members:
-
-.. _constraint_capacity:
-
-Capacity
---------
-
-.. automodule:: calliope.backend.pyomo.constraints.capacity
-    :members:
-
-Dispatch
---------
-
-.. automodule:: calliope.backend.pyomo.constraints.dispatch
-    :members:
-
-Costs
------
-
-.. automodule:: calliope.backend.pyomo.constraints.costs
-    :members:
-
-Export
-------
-
-.. automodule:: calliope.backend.pyomo.constraints.export
-    :members:
-
-MILP
-----
-
-.. automodule:: calliope.backend.pyomo.constraints.milp
-    :members:
-
-Conversion
-----------
-
-.. automodule:: calliope.backend.pyomo.constraints.conversion
-    :members:
-
-Conversion_plus
----------------
-
-.. automodule:: calliope.backend.pyomo.constraints.conversion_plus
-    :members:
-
-Network
--------
-
-.. automodule:: calliope.backend.pyomo.constraints.network
-    :members:
-
-Policy
-------
-
-.. automodule:: calliope.backend.pyomo.constraints.policy
-    :members:
-
-.. _constraint_group:
-
-Group constraints
-----------------------
-
-.. automodule:: calliope.backend.pyomo.constraints.group
-    :members:

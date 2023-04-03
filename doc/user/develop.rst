@@ -245,6 +245,7 @@ Pre-release
 
 * Make sure all unit tests pass
 * Build up-to-date Plotly plots for the documentation with (``make doc-plots``)
+* Build up-to-date mathematical formulation for the documentation with (``make doc-math``)
 * Re-run tutorial Jupyter notebooks, found in `doc/_static/notebooks`
 * Make sure documentation builds without errors
 * Make sure the release notes are up-to-date, especially that new features and backward incompatible changes are clearly marked
@@ -265,6 +266,7 @@ Create release
         * Reset ``build: number: 0`` if it is not already at zero (should be automatically updated)
         * Range of python versions supported
         * Requirement version pinning, to match any changes in ``requirements.txt`` and ``requirements.yml``
+
     ^ Any necessary updates can be made direclty on the PR by pushing directly to the bot's branch or by using the GIthub interactive editing interface.
 
 Post-release
