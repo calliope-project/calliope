@@ -1,21 +1,159 @@
+from __future__ import annotations
+
 from typing import Any, Callable, Optional, Literal, TypeVar, Generic, Union, Iterable
+import textwrap
 
 import xarray as xr
 import numpy as np
+import jinja2
 
 from calliope.backend import backends
 from calliope.backend import parsing, equation_parser
 from calliope.exceptions import BackendError
-
+from calliope.core.model import _ALLOWED_MATH_FILE_FORMATS
 
 class LatexBackendModel(backends.BackendModel):
-    def __init__(self):
+    LATEX_EQUATION_ELEMENT = textwrap.dedent(
+        r"""
+        \begin{array}{r}
+        {% if sets is defined %}
+            \forall{}
+        {% for set in sets %}
+            {{set|removesuffix("s")}} \in {{set + ", " if not loop.last else set }}
+        {% endfor %}
+            \\
+        {% endif %}
+        {% if sense is defined %}
+            {{sense}}
+        {% endif %}
+        {% if where is defined and where != "" %}
+            if {{where}}
+        {% endif %}
+        \end{array}
+        \begin{cases}
+        {% for equation in equations %}
+            {{equation["expression"]}}&\quad
+        {% if "where" in equation and equation["where"] != "" %}
+            if {{equation["where"]}}
+        {% endif %}
+            \\
+        {% endfor %}
+        \end{cases}
+        """
+    )
+    RST_DOC = textwrap.dedent(
+        r"""
+    {% for component_type, equations in components.items() %}
+    {% if component_type == "objectives" %}
+    Objective
+    #########
+    {% elif component_type == "constraints" %}
+
+    Subject to
+    ##########
+    {% elif component_type == "expressions" %}
+
+    Where
+    #####
+    {% elif component_type == "variables" %}
+
+    Decision Variables
+    ##################
+    {% endif %}
+    {% for equation in equations %}
+
+    {{ equation.name }}
+    {{ "=" * equation.name|length }}
+
+    .. container:: scrolling-wrapper
+
+        .. math::
+            {{ equation.expression | indent(8) }}
+    {% endfor %}
+    {% endfor %}
+    """
+    )
+
+    TEX_DOC = textwrap.dedent(
+        r"""
+    \documentclass{article}
+
+    \usepackage{amsmath}
+    \usepackage[T1]{fontenc}
+    \usepackage{graphicx}
+    \usepackage[landscape, margin=2mm]{geometry}
+
+    \AtBeginDocument{ % escape underscores that are not in math
+        \catcode`_=12
+        \begingroup\lccode`~=`_
+        \lowercase{\endgroup\let~}\sb
+        \mathcode`_="8000
+    }
+
+    \begin{document}
+    {% for component_type, equations in components.items() %}
+    {% if component_type == "objectives" %}
+    \section{Objective:}
+    {% elif component_type == "constraints" %}
+    \section{Subject to:}
+    {% elif component_type in ["expressions", "variables"] %}
+    \section{Where:}
+    {% elif component_type == "variables" %}
+    \subsection{Decision Variables}
+    {% endif %}
+    {% for equation in equations %}
+
+    \paragraph{ {{ equation.name }} }
+    \begin{equation}
+    \resizebox{\ifdim\width>\linewidth0.95\linewidth\else\width\fi}{!}{${{ equation.expression }}
+    $}
+    \end{equation}
+    {% endfor %}
+    {% endfor %}
+    \end{document}
+    """
+    )
+    MD_DOC = textwrap.dedent(
+        r"""
+    {% for component_type, equations in components.items() %}
+    {% if component_type == "objectives" %}
+    # Objective
+    {% elif component_type == "constraints" %}
+
+    # Subject to
+    {% elif component_type == "expressions" %}
+
+    # Where
+    {% elif component_type == "variables" %}
+
+    # Decision Variables
+    {% endif %}
+    {% for equation in equations %}
+
+    ## {{ equation.name }}
+
+        $$ {{ equation.expression | indent(4) }} $$
+    {% endfor %}
+    {% endfor %}
+    """
+    )
+    FORMAT_STRINGS = {"rst": RST_DOC, "tex": TEX_DOC, "md": MD_DOC}
+
+    def __init__(
+        self,
+        include: Literal["all", "valid"] = "all",
+        format: _ALLOWED_MATH_FILE_FORMATS = "tex",
+    ):
         """Abstract base class for interfaces to solvers.
 
         Args:
             instance (T): Interface model instance.
         """
-        backends.BackendModel.__init__(self, instance=None)
+        backends.BackendModel.__init__(self, instance=dict())
+        self.include = include
+        for component in ["objectives", "constraints", "expressions", "variables"]:
+            self._instance[component] = []
+        self._doctemplate = self.FORMAT_STRINGS[format]
 
     def add_parameter(
         self,
@@ -70,13 +208,40 @@ class LatexBackendModel(backends.BackendModel):
 
         parsed_variable = parsing.ParsedBackendComponent(name, variable_dict)
         foreach_imask = parsed_variable.evaluate_foreach(model_data)
-
         parsed_variable.parse_top_level_where()
         imask = parsed_variable.evaluate_where(model_data, initial_imask=foreach_imask)
         imask = parsed_variable.align_imask_with_sets(imask)
+
         imask_latex = parsed_variable.evaluate_where(model_data, as_latex=True)
-        imask.attrs["latex_strings"] = {1: {"where": imask_latex}}
+
         self._add_to_dataset(name, imask.where(imask), "variables")
+
+        bound_dict: parsing.UnparsedConstraintDict = {
+            "foreach": parsed_variable.sets,
+            "where": "True",
+            "equations": [
+                {"expression": f"{variable_dict['bounds']['min']} <= {name}"},
+                {"expression": f"{name} <= {variable_dict['bounds']['max']}"},
+            ],
+        }
+        parsed_bounds = parsing.ParsedBackendComponent(name, bound_dict)
+        equations = parsed_bounds.parse_equations(
+            equation_parser.generate_equation_parser,
+            self.valid_arithmetic_components,
+        )
+        bound_strings: list[dict[str, str]] = [
+            {"expression": eq.evaluate_expression(model_data, self, as_latex=True)}
+            for eq in equations
+        ]
+        if self.include == "all" or (self.include == "valid" and imask.any()):
+            self._generate_math_string(
+                name,
+                imask,
+                "variables",
+                sets=parsed_variable.sets,
+                where=imask_latex if imask_latex != "" else None,
+                equations=bound_strings,
+            )
 
     def add_objective(
         self,
@@ -90,24 +255,25 @@ class LatexBackendModel(backends.BackendModel):
         equations = parsed_objective.parse_equations(
             equation_parser.generate_arithmetic_parser, self.valid_arithmetic_components
         )
-        latex_strings = {}
-        valid_expressions = []
+        equation_strings = []
         for element in equations:
-            imask = element.evaluate_where(model_data)
-            if imask.any():
-                valid_expressions.append(element.name)
+            if self.include == "valid":
+                imask = element.evaluate_where(model_data)
             imask_latex = element.evaluate_where(model_data, as_latex=True)
             expr = element.evaluate_expression(model_data, self, as_latex=True)
-            latex_strings[element.name] = {
-                "expression": sense_dict[objective_dict["sense"]] + expr,
-                "where": imask_latex,
-            }
 
-        self._add_to_dataset(
-            name,
-            xr.DataArray(valid_expressions).assign_attrs(latex_strings=latex_strings),
-            "objectives",
-        )
+            if self.include == "all" or (self.include == "valid" and imask.any()):
+                equation_strings.append({"expression": expr, "where": imask_latex})
+        objective_da = xr.DataArray()
+        if equation_strings:
+            self._generate_math_string(
+                name,
+                objective_da,
+                "objectives",
+                sense=sense_dict[objective_dict["sense"]],
+                equations=equation_strings,
+            )
+        self._add_to_dataset(name, objective_da, "objectives")
 
     def get_parameter(
         self, parameter_name: str, as_backend_objs: bool = True
@@ -148,6 +314,9 @@ class LatexBackendModel(backends.BackendModel):
             "Cannot solve a LaTex backend model - this only exists to produce a string representation of the model math"
         )
 
+    def generate_math_doc(self):
+        return self._render(self._doctemplate, components=self._instance)
+
     def _add_constraint_or_expression(
         self,
         model_data: xr.Dataset,
@@ -157,48 +326,64 @@ class LatexBackendModel(backends.BackendModel):
         component_type: Literal["constraints", "expressions"],
         parser: Callable,
     ) -> None:
-        references: set[str] = set()
-
         parsed_component = parsing.ParsedBackendComponent(name, component_dict)
+
         foreach_imask = parsed_component.evaluate_foreach(model_data)
         parsed_component.parse_top_level_where()
         top_level_imask = parsed_component.evaluate_where(
             model_data, initial_imask=foreach_imask
         )
+        component_da = xr.DataArray().where(
+            parsed_component.align_imask_with_sets(top_level_imask)
+        )
+
         top_level_imask_latex = parsed_component.evaluate_where(
             model_data, as_latex=True
         )
-        self._raise_error_on_preexistence(name, component_type)
 
-        component_da = (
-            xr.DataArray()
-            .where(parsed_component.align_imask_with_sets(top_level_imask))
-            .assign_attrs(latex_strings={"where": top_level_imask_latex})
-        )
+        self._raise_error_on_preexistence(name, component_type)
 
         equations = parsed_component.parse_equations(
             parser, self.valid_arithmetic_components
         )
+        equation_strings = []
         for element in equations:
             imask = element.evaluate_where(model_data, initial_imask=top_level_imask)
             imask = parsed_component.align_imask_with_sets(imask)
 
-            if component_da.where(imask).notnull().any():
-                subset_overlap = component_da.where(imask).to_series().dropna().index
-
-                raise BackendError(
-                    "Trying to set two equations for the same index of "
-                    f"{component_type.removesuffix('s')} `{name}`:\n{subset_overlap}"
-                )
-
-            expr = element.evaluate_expression(
-                model_data, self, as_latex=True, references=references
-            )
+            expr = element.evaluate_expression(model_data, self, as_latex=True)
             imask_latex = element.evaluate_where(model_data, as_latex=True)
-            component_da = component_da.fillna(xr.DataArray(element.name).where(imask))
-            component_da.latex_strings[element.name] = {
-                "expression": expr,
-                "where": imask_latex,
-            }
 
-        self._add_to_dataset(name, component_da, component_type, references)
+            if self.include == "all" or (self.include == "valid" and imask.any()):
+                equation_strings.append({"expression": expr, "where": imask_latex})
+            component_da = component_da.fillna(imask.where(imask))
+        if equation_strings:
+            self._generate_math_string(
+                name,
+                component_da,
+                component_type,
+                sets=parsed_component.sets,
+                where=top_level_imask_latex,
+                equations=equation_strings,
+            )
+        self._add_to_dataset(name, component_da, component_type)
+
+    def _generate_math_string(
+        self,
+        name: str,
+        da: xr.DataArray,
+        component_type: backends._COMPONENTS_T,
+        **kwargs,
+    ) -> None:
+        equation_element_string = self._render(self.LATEX_EQUATION_ELEMENT, **kwargs)
+        da.attrs["math_string"] = equation_element_string
+        self._instance[component_type].append(
+            {"expression": equation_element_string, "name": name}
+        )
+        return None
+
+    @staticmethod
+    def _render(template: str, **kwargs) -> str:
+        jinja_env = jinja2.Environment(trim_blocks=True, autoescape=False)
+        jinja_env.filters["removesuffix"] = lambda val, remove: val.removesuffix(remove)
+        return jinja_env.from_string(template).render(**kwargs)

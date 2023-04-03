@@ -54,7 +54,7 @@ class EvalOperatorOperand(EvalString):
     LATEX_OPERATOR_LOOKUP: dict[str, str] = {
         "**": "{val}^{{{operand}}}",
         "*": r"{val} \times {operand}",
-        "/": r"\frac{{ {val} }} {{ {operand} }}",
+        "/": r"\frac{{ {val} }}{{ {operand} }}",
         "+": "{val} + {operand}",
         "-": "{val} - {operand}",
     }
@@ -101,9 +101,11 @@ class EvalOperatorOperand(EvalString):
         # We ignore zeros that do nothing
         if operand == "0" and operator_ in ["-", "+"]:
             return val
-
         if operand_type == type(self):
             operand = "(" + operand + ")"
+        if val == "0" and operator_ in ["-", "+"]:
+            return operand
+
         return self.LATEX_OPERATOR_LOOKUP[operator_].format(val=val, operand=operand)
 
     def _eval(
@@ -637,8 +639,7 @@ class StringListParser(EvalString):
 
     def as_latex(self, evaluated):
         """Stingify evaluated object for use in a LaTex math formula"""
-        escaped_strings = [self.escape(i) for i in evaluated]
-        return evaluated  # f"[{', '.join(escaped_strings)}]"
+        return evaluated
 
     def eval(self, **eval_kwargs) -> list[str]:
         "Return input as list of strings."
@@ -667,7 +668,7 @@ class GenericStringParser(EvalString):
 
     def as_latex(self, evaluated):
         """Stingify evaluated string for use in a LaTex math formula"""
-        return evaluated  # rf"\text{{{evaluated}}}"
+        return evaluated
 
     def eval(self, **eval_kwargs) -> str:
         "Return input as string."

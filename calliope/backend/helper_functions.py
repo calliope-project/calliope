@@ -25,8 +25,8 @@ def imask_sum(model_data, as_latex: bool = False, **kwargs):
         if isinstance(over, str):
             overstring = _instr(over)
         else:
-            overstring = r"\substack{" + " \\ ".join(_instr(i) for i in over) + "}"
-        return rf"\sum\limit_{{{overstring}}} ({component})"
+            overstring = r"\substack{" + r" \\ ".join(_instr(i) for i in over) + "}"
+        return rf"\sum\limits_{{{overstring}}} ({component})"
 
     def _imask_sum(component, *, over):
         """
@@ -57,8 +57,8 @@ def expression_sum(as_latex: bool = False, **kwargs):
         if isinstance(over, str):
             overstring = _instr(over)
         else:
-            overstring = r"\substack{" + " \\ ".join(_instr(i) for i in over) + "}"
-        return rf"\sum\limit_{{{overstring}}} ({component})"
+            overstring = r"\substack{" + r" \\ ".join(_instr(i) for i in over) + "}"
+        return rf"\sum\limits_{{{overstring}}} ({component})"
 
     def _expression_sum(component, *, over):
         """
@@ -93,7 +93,7 @@ def expression_sum(as_latex: bool = False, **kwargs):
 
 def squeeze_carriers(model_data, as_latex: bool = False, **kwargs):
     def _as_latex(component, carrier_tier):
-        return rf"\sum_{{\text{{carrier}} \in \text{{carrier_tier({carrier_tier})}}}} ({component})"
+        return rf"\sum\limits_{{\text{{carrier}} \in \text{{carrier_tier({carrier_tier})}}}} ({component})"
 
     def _squeeze_carriers(component, carrier_tier):
         return expression_sum(**kwargs)(
@@ -112,7 +112,7 @@ def squeeze_carriers(model_data, as_latex: bool = False, **kwargs):
 def squeeze_primary_carriers(model_data, as_latex: bool = False, **kwargs):
     def _as_latex(component, carrier_tier):
         return (
-            rf"\sum_{{\text{{carrier=primary_carrier_{carrier_tier}}}}} ({component})"
+            rf"\sum\limits_{{\text{{carrier=primary_carrier_{carrier_tier}}}}} ({component})"
         )
 
     def _squeeze_primary_carriers(component, carrier_tier):
@@ -176,18 +176,14 @@ def get_val_at_index(model_data, as_latex: bool = False, **kwargs):
 
 def roll(as_latex: bool = False, **kwargs):
     def _as_latex(component, **roll_kwargs):
-        try:
-            component_sections = component.split(r"_\text{")
-            sub_section = component_sections[1]
-        except IndexError:
-            return component
-        else:
-            for k, v in roll_kwargs.items():
-                k_singular = k.removesuffix("s")
-                sub_section = re.sub(
-                    rf"\b{k_singular}\b", rf"{k_singular}-{v}", sub_section
-                )
-            return component_sections[0] + r"_\text{" + sub_section
+        for k, v in roll_kwargs.items():
+            k_singular = k.removesuffix("s")
+            component = re.sub(
+                rf"(_\\text{{)([\w,_]*?)(\b{k_singular}\b)([\w,_]*?)(}})",
+                rf"\1\2\3{-1 * int(v)}\4\5",
+                component,
+            )
+        return component
 
     def _roll(component, **roll_kwargs):
         roll_kwargs_int = {k: int(v) for k, v in roll_kwargs.items()}

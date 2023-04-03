@@ -205,8 +205,8 @@ class ComparisonParser(equation_parser.EvalComparisonOp):
         "<=": r"\mathord{\leq}",
         ">=": r"\mathord{\geq}",
         "=": "\mathord{=}",
-        "<": r"\mathord{\lt}",
-        ">": r"\mathord{\gt}",
+        "<": r"\mathord{<}",
+        ">": r"\mathord{>}",
     }
 
     def __repr__(self):
@@ -219,12 +219,15 @@ class ComparisonParser(equation_parser.EvalComparisonOp):
 
         Returns:
             BOOLEANTYPE: Same shape as LHS.
+            str: latex representation of the comparison.
         """
         kwargs["apply_imask"] = False
         lhs = self.lhs.eval(**kwargs)
         rhs = self.rhs.eval(**kwargs)
 
         if kwargs.get("as_latex", False):
+            if not r"\text" in rhs:
+                rhs = rf"\text{{{rhs}}}"
             comparison = self.as_latex(lhs, rhs)
         else:
             if self.op == "<=":
@@ -269,7 +272,7 @@ class SubsetParser(equation_parser.EvalString):
         """stringify subset for use in a LaTex math formula"""
         set_singular = self.set_name.removesuffix("s")
         subset_string = "[" + ",".join(str(i) for i in subset) + "]"
-        return rf"\\text{{{set_singular}}}\in{{ \\text{{{subset_string}}} }}"
+        return rf"\text{{{set_singular}}}\in \text{{{subset_string}}}"
 
     def eval(self, model_data: xr.Dataset, **kwargs) -> Union[str, xr.DataArray]:
         subset = [i.eval(**kwargs) for i in self.subset]

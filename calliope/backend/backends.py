@@ -586,7 +586,7 @@ class BackendModel(ABC, Generic[T]):
 
 
 class PyomoBackendModel(BackendModel):
-    def __init__(self):
+    def __init__(self, **kwargs):
         BackendModel.__init__(self, instance=pmo.block())
 
         self._instance.parameters = pmo.parameter_dict()

@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import logging
 import warnings
-from typing import Literal, Union, Optional, Callable
+import typing
+from typing import Literal, Union, Optional, Callable, overload
 from contextlib import contextmanager
 import os
 from pathlib import Path
@@ -36,6 +37,7 @@ from calliope.backend.run import run as run_backend
 from calliope.backend import backends, latex_backend
 
 logger = logging.getLogger(__name__)
+_ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
 
 
 def read_netcdf(path):
@@ -304,14 +306,18 @@ class Model(object):
             }
         )
 
-    def build(self, backend_interface: Literal["pyomo", "latex"] = "pyomo") -> None:
+    def build(
+        self, backend_interface: Literal["pyomo", "latex"] = "pyomo", **kwargs
+    ) -> None:
         """Build description of the optimisation problem in the chosen backend interface.
 
         Args:
             backend_interface (Literal["pyomo"], optional):
                 Backend interface in which to build the problem. Defaults to "pyomo".
+        Kwargs:
+            Any given keyword arguments will be passed directly to backend interface on initialisation.
         """
-        backend = self._BACKENDS[backend_interface]()
+        backend = self._BACKENDS[backend_interface](**kwargs)
         backend.add_all_parameters(self._model_data, self.run_config)
         log_time(
             logger,
@@ -452,99 +458,45 @@ class Model(object):
 
         self.backend = interface(self)
 
-    def write_latex_math(
+    @overload
+    def write_math_documentation(
         self,
-        path: Optional[str] = None,
-        how: Literal["all", "valid"] = "all",
-        style: Literal["tex", "rst"] = "tex",
+        filename: Literal[None] = None,
+        include: Literal["all", "valid"] = "all",
+        format: _ALLOWED_MATH_FILE_FORMATS = "tex",
+    ) -> str:
+        ...
+
+    @overload
+    def write_math_documentation(
+        self,
+        filename: str,
+        include: Literal["all", "valid"] = "all",
+    ) -> None:
+        ...
+
+    def write_math_documentation(
+        self,
+        filename: Optional[str] = None,
+        include: Literal["all", "valid"] = "all",
+        format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
     ) -> Optional[str]:
-        tab = " " * 4
-        linebreak = "\n" + tab * 2
-        latex_math = textwrap.dedent(
-            r"""
-            \begin{{array}}{{r}}
-                {top_level_info}
-            \end{{array}}
-            \begin{{cases}}
-                {equations}
-            \end{{cases}}
-        """
-        )
-        rst_math = ".. math::" + textwrap.indent(latex_math, tab)
-        eq_string = "{expression}{linebreak}&\quad{linebreak}{where}\\\\"
-        self.build(backend_interface="latex")
-        for name, objective in self.backend.objectives:
-            strings = objective.latex_strings.copy()
-            valid_eqs = objective.to_series().dropna().unique()
-            if how == "valid" and not objective["attrs"].active or valid_eqs.empty:
-                continue
+        if format is None and filename is not None:
+            format = Path(filename).suffix.removeprefix(".")  # type: ignore
 
-            top_level_info = r"\\" + objective.sense
-
-            if how == "valid":
-                equations = linebreak.join(
-                    eq_string.format(
-                        expression=strings[eq]["expression"],
-                        linebreak=linebreak,
-                        where=strings[eq]["where"],
-                    )
-                    for eq in valid_eqs
-                )
-            else:
-                equations = linebreak.join(
-                    eq_string.format(
-                        expression=eq["expression"],
-                        linebreak=linebreak,
-                        where=eq["where"],
-                    )
-                    for eq in strings.values()
-                )
-            ready_for_file = latex_math.format(
-                top_level_info=top_level_info, equations=equations
+        if format not in typing.get_args(_ALLOWED_MATH_FILE_FORMATS):
+            raise ValueError(
+                f"Math documentation style must be one of {_ALLOWED_MATH_FILE_FORMATS}, received `{format}`"
             )
-            with open(Path(path) / f"{name}.tex", "w") as f:
-                f.write(ready_for_file)
-        for name, constraint in self.backend.constraints:
-            strings = constraint.latex_strings.copy()
-            valid_eqs = constraint.to_series().dropna().unique()
-            if how == "valid" and not constraint["attrs"].active or valid_eqs.empty:
-                continue
 
-            top_level_info = (
-                r"\forall "
-                + ", ".join(
-                    rf"\text{{{i.removesuffix('s')}}} \in \text{{{i}}}"
-                    for i in constraint.dims
-                )
-                + r"\\"
-            )
-            top_level_where = strings.pop("where", None)
-            if top_level_where is not None:
-                top_level_info += rf"{linebreak}\text{{if }}" + top_level_where
+        self.build(backend_interface="latex", include=include, format=format)
+        populated_doc = self.backend.generate_math_doc()
 
-            if how == "valid":
-                equations = linebreak.join(
-                    eq_string.format(
-                        expression=strings[eq]["expression"],
-                        linebreak=linebreak,
-                        where=strings[eq]["where"],
-                    )
-                    for eq in valid_eqs
-                )
-            else:
-                equations = linebreak.join(
-                    eq_string.format(
-                        expression=eq["expression"],
-                        linebreak=linebreak,
-                        where=eq["where"],
-                    )
-                    for eq in strings.values()
-                )
-            ready_for_file = latex_math.format(
-                top_level_info=top_level_info, equations=equations
-            )
-            with open(Path(path) / f"{name}.tex", "w") as f:
-                f.write(ready_for_file)
+        if filename is not None:
+            Path(filename).open("w").write(populated_doc)
+            return None
+        else:
+            return populated_doc
 
     def get_formatted_array(self, var):
         """
