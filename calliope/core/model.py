@@ -457,7 +457,7 @@ class Model(object):
         self.backend = interface(self)
 
     @overload  # noqa: F811
-    def write_math_documentation(
+    def write_math_documentation(  # noqa: F811
         self,
         filename: Literal[None] = None,
         include: Literal["all", "valid"] = "all",
@@ -466,14 +466,14 @@ class Model(object):
         ...
 
     @overload  # noqa: F811
-    def write_math_documentation(
+    def write_math_documentation(  # noqa: F811
         self,
         filename: str,
         include: Literal["all", "valid"] = "all",
     ) -> None:
         ...
 
-    def write_math_documentation(
+    def write_math_documentation(  # noqa: F811
         self,
         filename: Optional[str] = None,
         include: Literal["all", "valid"] = "all",

@@ -136,14 +136,18 @@ class EvalOperatorOperand(EvalString):
         return val
 
     @overload  # noqa: F811
-    def eval(self, as_latex: Literal[False] = False, **eval_kwargs) -> xr.DataArray:
+    def eval(  # noqa: F811
+        self, as_latex: Literal[False] = False, **eval_kwargs
+    ) -> xr.DataArray:
         ...
 
     @overload  # noqa: F811
-    def eval(self, as_latex: Literal[True], **eval_kwargs) -> str:
+    def eval(self, as_latex: Literal[True], **eval_kwargs) -> str:  # noqa: F811
         ...
 
-    def eval(self, as_latex: bool = False, **eval_kwargs) -> Union[str, xr.DataArray]:
+    def eval(  # noqa: F811
+        self, as_latex: bool = False, **eval_kwargs
+    ) -> Union[str, xr.DataArray]:
         """
         Returns:
             Any:

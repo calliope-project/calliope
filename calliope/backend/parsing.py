@@ -223,7 +223,7 @@ class ParsedBackendEquation:
         )
 
     @overload  # noqa: F811
-    def evaluate_where(
+    def evaluate_where(  # noqa: F811
         self,
         model_data: xr.Dataset,
         as_latex: Literal[False] = False,
@@ -232,14 +232,14 @@ class ParsedBackendEquation:
         ...
 
     @overload  # noqa: F811
-    def evaluate_where(
+    def evaluate_where(  # noqa: F811
         self,
         model_data: xr.Dataset,
         as_latex: Literal[True],
     ) -> str:
         ...
 
-    def evaluate_where(
+    def evaluate_where(  # noqa: F811
         self,
         model_data: xr.Dataset,
         as_latex: bool = False,
@@ -290,7 +290,7 @@ class ParsedBackendEquation:
         return (imask.sum(unwanted_dims) > 0).astype(bool).transpose(*self.sets)
 
     @overload  # noqa: F811
-    def evaluate_expression(
+    def evaluate_expression(  # noqa: F811
         self,
         model_data: xr.Dataset,
         backend_interface: backends.BackendModel,
@@ -301,7 +301,7 @@ class ParsedBackendEquation:
         ...
 
     @overload  # noqa: F811
-    def evaluate_expression(
+    def evaluate_expression(  # noqa: F811
         self,
         model_data: xr.Dataset,
         backend_interface: backends.BackendModel,
@@ -310,7 +310,7 @@ class ParsedBackendEquation:
     ) -> str:
         ...
 
-    def evaluate_expression(
+    def evaluate_expression(  # noqa: F811
         self,
         model_data: xr.Dataset,
         backend_interface: backends.BackendModel,

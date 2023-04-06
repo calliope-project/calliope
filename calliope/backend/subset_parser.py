@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union, Any, Literal, overload
+from typing import Union, Any
 import operator
 
 import pyparsing as pp
