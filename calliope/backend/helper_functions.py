@@ -1,4 +1,5 @@
 import re
+from typing import Union, Any
 
 import xarray as xr
 
@@ -18,25 +19,7 @@ def inheritance(model_data, as_latex: bool = False, **kwargs):
 
 
 def imask_sum(model_data, as_latex: bool = False, **kwargs):
-    def _instr(dim):
-        return rf"\text{{{dim.removesuffix('s')}}} \in \text{{{dim}}}"
-
-    def _as_latex(component, *, over):
-        if isinstance(over, str):
-            overstring = _instr(over)
-        else:
-            overstring = r"\substack{" + r" \\ ".join(_instr(i) for i in over) + "}"
-        return rf"\sum\limits_{{{overstring}}} ({component})"
-
     def _imask_sum(component, *, over):
-        """
-        Args:
-            to_sum (_type_): _description_
-            over (_type_): _description_
-
-        Returns:
-            _type_: _description_
-        """
         to_return = model_data.get(component, xr.DataArray(False))
         if to_return.any():
             to_return = expression_sum()(to_return, over=over) > 0
@@ -44,22 +27,12 @@ def imask_sum(model_data, as_latex: bool = False, **kwargs):
         return to_return
 
     if as_latex:
-        return _as_latex
+        return sum_as_latex
     else:
         return _imask_sum
 
 
 def expression_sum(as_latex: bool = False, **kwargs):
-    def _instr(dim):
-        return rf"\text{{{dim.removesuffix('s')}}} \in \text{{{dim}}}"
-
-    def _as_latex(component, *, over):
-        if isinstance(over, str):
-            overstring = _instr(over)
-        else:
-            overstring = r"\substack{" + r" \\ ".join(_instr(i) for i in over) + "}"
-        return rf"\sum\limits_{{{overstring}}} ({component})"
-
     def _expression_sum(component, *, over):
         """
 
@@ -86,9 +59,32 @@ def expression_sum(as_latex: bool = False, **kwargs):
         return to_return
 
     if as_latex:
-        return _as_latex
+        return sum_as_latex
     else:
         return _expression_sum
+
+
+def sum_as_latex(component: str, *, over: Union[str, list]) -> str:
+    """Shared utility function to generate the imask and expression latex summation string
+
+    Args:
+        component (str): Component name to sum.
+        over (Union[str, list]): either one dimension or list of dimension names over which to sum. Each is expected to end in "s".
+
+    Returns:
+        str: Valid LaTeX math summation string.
+    """
+
+    def _instr(dim):
+        dim_singular = dim.removesuffix("s")
+        return rf"\text{{{dim_singular}}} \in \text{{{dim}}}"
+
+    if isinstance(over, str):
+        overstring = _instr(over)
+    else:
+        foreach_string = r" \\ ".join(_instr(i) for i in over)
+        overstring = rf"\substack{{{foreach_string}}}"
+    return rf"\sum\limits_{{{overstring}}} ({component})"
 
 
 def squeeze_carriers(model_data, as_latex: bool = False, **kwargs):
@@ -111,9 +107,7 @@ def squeeze_carriers(model_data, as_latex: bool = False, **kwargs):
 
 def squeeze_primary_carriers(model_data, as_latex: bool = False, **kwargs):
     def _as_latex(component, carrier_tier):
-        return (
-            rf"\sum\limits_{{\text{{carrier=primary_carrier_{carrier_tier}}}}} ({component})"
-        )
+        return rf"\sum\limits_{{\text{{carrier=primary_carrier_{carrier_tier}}}}} ({component})"
 
     def _squeeze_primary_carriers(component, carrier_tier):
         return expression_sum(**kwargs)(
@@ -131,15 +125,9 @@ def squeeze_primary_carriers(model_data, as_latex: bool = False, **kwargs):
 
 def get_connected_link(model_data, as_latex: bool = False, **kwargs):
     def _as_latex(component):
-        try:
-            component_sections = component.split(r"_\text{")
-            sub_section = component_sections[1]
-        except IndexError:
-            return component
-        else:
-            sub_node = re.sub(r"\bnode\b", r"node=remote\_node", sub_section)
-            sub_node_tech = re.sub(r"\btech\b", r"tech=remote\_tech", sub_node)
-            return component_sections[0] + r"_\text{" + sub_node_tech
+        for iterator in ["node", "tech"]:
+            component = add_to_iterator(component, iterator, f"=remote_{iterator}")
+        return component
 
     def _get_connected_link(component):
         dims = [i for i in component.dims if i in ["techs", "nodes"]]
@@ -178,11 +166,7 @@ def roll(as_latex: bool = False, **kwargs):
     def _as_latex(component, **roll_kwargs):
         for k, v in roll_kwargs.items():
             k_singular = k.removesuffix("s")
-            component = re.sub(
-                rf"(_\\text{{)([\w,_]*?)(\b{k_singular}\b)([\w,_]*?)(}})",
-                rf"\1\2\3{-1 * int(v)}\4\5",
-                component,
-            )
+            component = add_to_iterator(component, k_singular, f"{-1 * int(v):+d}")
         return component
 
     def _roll(component, **roll_kwargs):
@@ -193,3 +177,31 @@ def roll(as_latex: bool = False, **kwargs):
         return _as_latex
     else:
         return _roll
+
+
+def add_to_iterator(instring: str, iterator: Any, new_string: Any) -> str:
+    """Find an iterator in the iterator substring of the component string
+    (anything wrapped in `_text{}`). Other parts of the iterator substring can be anything
+    except curly braces, e.g. the standalone `foo` will be found here and acted upon:
+    `\\textit{my_param}_\text{bar,foo,foo=bar,foo+1}`
+
+    Args:
+        instring (str): String in which the iterator substring can be found.
+        iterator (Any): The iterator to search for.
+        new_string (Any): The new string to **append** to the iterator name.
+
+    Returns:
+        str: `instring`, but with `iterator` replaced with `iterator + new_string`
+    """
+
+    def _replace_in_iterator(matched):
+        iterator_list = matched.group(2).split(",")
+        new_iterator_list = []
+        for it in iterator_list:
+            if it == iterator:
+                it += new_string
+            new_iterator_list.append(it)
+
+        return matched.group(1) + ",".join(new_iterator_list) + matched.group(3)
+
+    return re.sub(r"(_\\text{)([^{}]*?)(})", _replace_in_iterator, instring)
