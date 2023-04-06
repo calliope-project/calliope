@@ -604,6 +604,54 @@ class TestParsedComponent:
         imask = component_obj.evaluate_where(dummy_model_data)
         assert imask.item() is True
 
+    def test_parse_top_level_where_fail(self, component_obj):
+        component_obj._unparsed["where"] = "1"
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            component_obj.parse_top_level_where()
+
+        assert check_error_or_warning(excinfo, "Errors during string parsing")
+
+    def test_generate_top_level_where_array_break_at_foreach(
+        self, dummy_model_data, component_obj
+    ):
+        component_obj.sets = ["nodes", "techs", "foos"]
+        with pytest.warns(calliope.exceptions.BackendWarning):
+            imask = component_obj.generate_top_level_where_array(dummy_model_data)
+        assert not imask.any()
+        assert not imask.shape
+
+    def test_generate_top_level_where_array_break_at_top_level_where(
+        self, dummy_model_data, component_obj
+    ):
+        component_obj.sets = ["nodes", "techs", "timesteps"]
+        component_obj._unparsed["where"] = "all_nan"
+        imask = component_obj.generate_top_level_where_array(dummy_model_data)
+        assert not imask.any()
+        assert not set(component_obj.sets).difference(imask.dims)
+
+    def test_generate_top_level_where_array_no_break_no_align(
+        self, dummy_model_data, component_obj
+    ):
+        component_obj.sets = ["nodes", "techs", "foos"]
+        component_obj._unparsed["where"] = "all_nan"
+        with pytest.warns(calliope.exceptions.BackendWarning):
+            imask = component_obj.generate_top_level_where_array(
+                dummy_model_data, break_early=False, align_to_foreach_sets=False
+            )
+        assert not imask.any()
+        assert set(component_obj.sets).difference(imask.dims) == {"foos"}
+
+    def test_generate_top_level_where_array_no_break_align(
+        self, dummy_model_data, component_obj
+    ):
+        component_obj.sets = ["nodes", "techs"]
+        component_obj._unparsed["where"] = "all_nan AND all_true_carriers"
+        imask = component_obj.generate_top_level_where_array(
+            dummy_model_data, break_early=False, align_to_foreach_sets=True
+        )
+        assert not imask.any()
+        assert not set(component_obj.sets).difference(imask.dims)
+
 
 class TestParsedBackendEquation:
     @pytest.mark.parametrize(
@@ -894,7 +942,7 @@ class TestParsedConstraint:
     def test_parse_constraint_dict_empty_eq1(self, constraint_obj, dummy_model_data):
         assert not constraint_obj.equations[0].evaluate_where(dummy_model_data).any()
 
-    def test_parse_constraint_dict_evalaute_eq2(
+    def test_parse_constraint_dict_evaluate_eq2(
         self, constraint_obj, dummy_model_data, dummy_backend_interface
     ):
         # We ignore foreach here so we can do "== 1" below. With foreach, there is
@@ -960,7 +1008,7 @@ class TestParsedObjective:
     def test_parse_objective_dict_empty_eq1(self, objective_obj, dummy_model_data):
         assert not objective_obj.equations[0].evaluate_where(dummy_model_data).any()
 
-    def test_parse_objective_dict_evalaute_eq2(
+    def test_parse_objective_dict_evaluate_eq2(
         self, objective_obj, dummy_model_data, dummy_backend_interface
     ):
         valid_imask = objective_obj.equations[1].evaluate_where(dummy_model_data)

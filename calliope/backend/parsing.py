@@ -229,7 +229,7 @@ class ParsedBackendEquation:
         as_latex: Literal[False] = False,
         initial_imask: xr.DataArray = TRUE_ARRAY,
     ) -> xr.DataArray:
-        ...
+        "Expecting array if not requesting latex string"
 
     @overload  # noqa: F811
     def evaluate_where(  # noqa: F811
@@ -237,7 +237,7 @@ class ParsedBackendEquation:
         model_data: xr.Dataset,
         as_latex: Literal[True],
     ) -> str:
-        ...
+        "Expecting string if requesting latex string"
 
     def evaluate_where(  # noqa: F811
         self,
@@ -298,7 +298,7 @@ class ParsedBackendEquation:
         references: Optional[set] = None,
         imask: Optional[xr.DataArray] = None,
     ) -> Any:
-        ...
+        "Expecting anything (most likely an array) if not requesting latex string"
 
     @overload  # noqa: F811
     def evaluate_expression(  # noqa: F811
@@ -308,7 +308,7 @@ class ParsedBackendEquation:
         as_latex: Literal[True],
         references: Optional[set] = None,
     ) -> str:
-        ...
+        "Expecting string if requesting latex string"
 
     def evaluate_expression(  # noqa: F811
         self,

@@ -463,7 +463,7 @@ class Model(object):
         include: Literal["all", "valid"] = "all",
         format: _ALLOWED_MATH_FILE_FORMATS = "tex",
     ) -> str:
-        ...
+        "Expecting string if not giving filename"
 
     @overload  # noqa: F811
     def write_math_documentation(  # noqa: F811
@@ -471,7 +471,7 @@ class Model(object):
         filename: str,
         include: Literal["all", "valid"] = "all",
     ) -> None:
-        ...
+        "Expecting None (and format arg is not needed) if giving filename"
 
     def write_math_documentation(  # noqa: F811
         self,
