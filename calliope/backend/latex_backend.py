@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Optional, Literal, TypeVar, Generic, Union, Iterable
+from typing import Any, Callable, Optional, Literal, Union
 import textwrap
 
 import xarray as xr

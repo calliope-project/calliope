@@ -841,18 +841,6 @@ class PyomoBackendModel(BackendModel):
             singular_component = component_type.removesuffix("s")
             component_dict[key] = getattr(pmo, f"{singular_component}_list")()
 
-    def _add_dims_to_latex_str(self, expr_latex: str, dims: Iterable) -> str:
-        _textify_and_escape = lambda x: "\\text{" + re.sub("_", r"\_", x) + "}"
-        return (
-            expr_latex
-            + "\\forall{"
-            + ",".join(
-                f"{_textify_and_escape(i.removesuffix('s'))} \\in{{ {_textify_and_escape(i)} }}"
-                for i in dims
-            )
-            + "}"
-        )
-
     def _get_capacity_bounds(
         self, bounds: parsing.UnparsedVariableBoundDict, name: str
     ) -> tuple[xr.DataArray, xr.DataArray]:

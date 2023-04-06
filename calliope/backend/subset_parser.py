@@ -216,7 +216,7 @@ class ComparisonParser(equation_parser.EvalComparisonOp):
     OP_TRANSLATOR = {
         "<=": r"\mathord{\leq}",
         ">=": r"\mathord{\geq}",
-        "=": "\mathord{=}",
+        "=": r"\mathord{=}",
         "<": r"\mathord{<}",
         ">": r"\mathord{>}",
     }
@@ -238,7 +238,7 @@ class ComparisonParser(equation_parser.EvalComparisonOp):
         rhs = self.rhs.eval(**kwargs)
 
         if kwargs.get("as_latex", False):
-            if not r"\text" in rhs:
+            if r"\text" not in rhs:
                 rhs = rf"\text{{{rhs}}}"
             comparison = self.as_latex(lhs, rhs)
         else:

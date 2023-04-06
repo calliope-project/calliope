@@ -135,11 +135,11 @@ class EvalOperatorOperand(EvalString):
             val = val - evaluated_operand
         return val
 
-    @overload
+    @overload  # noqa: F811
     def eval(self, as_latex: Literal[False] = False, **eval_kwargs) -> xr.DataArray:
         ...
 
-    @overload
+    @overload  # noqa: F811
     def eval(self, as_latex: Literal[True], **eval_kwargs) -> str:
         ...
 
@@ -154,7 +154,7 @@ class EvalOperatorOperand(EvalString):
 
         for operator_, operand in self.operatorOperands(self.value[1:]):
             evaluated_operand = self._eval(operand, as_latex, **eval_kwargs)
-            if as_latex == True:
+            if as_latex:
                 val = self.as_latex(
                     val,
                     evaluated_operand,

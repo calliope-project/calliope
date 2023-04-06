@@ -222,7 +222,7 @@ class ParsedBackendEquation:
             },
         )
 
-    @overload
+    @overload  # noqa: F811
     def evaluate_where(
         self,
         model_data: xr.Dataset,
@@ -231,7 +231,7 @@ class ParsedBackendEquation:
     ) -> xr.DataArray:
         ...
 
-    @overload
+    @overload  # noqa: F811
     def evaluate_where(
         self,
         model_data: xr.Dataset,
@@ -289,7 +289,7 @@ class ParsedBackendEquation:
         unwanted_dims = set(imask.dims).difference(self.sets)
         return (imask.sum(unwanted_dims) > 0).astype(bool).transpose(*self.sets)
 
-    @overload
+    @overload  # noqa: F811
     def evaluate_expression(
         self,
         model_data: xr.Dataset,
@@ -300,7 +300,7 @@ class ParsedBackendEquation:
     ) -> Any:
         ...
 
-    @overload
+    @overload  # noqa: F811
     def evaluate_expression(
         self,
         model_data: xr.Dataset,

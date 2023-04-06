@@ -14,11 +14,9 @@ import logging
 import warnings
 import typing
 from typing import Literal, Union, Optional, Callable, overload
-from contextlib import contextmanager
 import os
 from pathlib import Path
 from calliope.core.util.tools import relative_path
-import textwrap
 
 import xarray as xr
 
@@ -458,7 +456,7 @@ class Model(object):
 
         self.backend = interface(self)
 
-    @overload
+    @overload  # noqa: F811
     def write_math_documentation(
         self,
         filename: Literal[None] = None,
@@ -467,7 +465,7 @@ class Model(object):
     ) -> str:
         ...
 
-    @overload
+    @overload  # noqa: F811
     def write_math_documentation(
         self,
         filename: str,
