@@ -97,9 +97,7 @@ def generate_math():
     m = calliope.Model(
         config=model_config, timeseries_dataframes={"ts": ts, "ts_neg": -1 * ts}
     )
-    m.write_math_documentation(
-        filename=BASEPATH / ".." / "user" / "includes" / "math.rst"
-    )
+    m.write_math_documentation(filename=BASEPATH / ".." / "_static" / "math.rst")
 
 
 def _add_data(name, default_val, defaults):

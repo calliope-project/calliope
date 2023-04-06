@@ -13,13 +13,15 @@ from calliope.exceptions import BackendError
 
 
 class LatexBackendModel(backends.BackendModel):
+    # \negthickspace used to counter the introduction of spaces to separate the curly braces
+    # in \text. Curly braces need separating otherwise jinja2 gets confused.
     LATEX_EQUATION_ELEMENT = textwrap.dedent(
         r"""
         \begin{array}{r}
         {% if sets is defined and sets%}
             \forall{}
         {% for set in sets %}
-            \text{\,{{set|removesuffix("s")}}\,} \in \text{\,{{set + ", " if not loop.last else set }}\,}
+            \text{ {{set|removesuffix("s")}} }\negthickspace \in \negthickspace\text{ {{set + "," if not loop.last else set }} }
         {% endfor %}
             \\
         {% endif %}
@@ -27,14 +29,14 @@ class LatexBackendModel(backends.BackendModel):
             {{sense}}
         {% endif %}
         {% if where is defined and where != "" %}
-            if {{where}}
+            \text{if } {{where}}
         {% endif %}
         \end{array}
         \begin{cases}
         {% for equation in equations %}
             {{equation["expression"]}}&\quad
         {% if "where" in equation and equation["where"] != "" %}
-            if {{equation["where"]}}
+            \text{if } {{equation["where"]}}
         {% endif %}
             \\
         {% endfor %}

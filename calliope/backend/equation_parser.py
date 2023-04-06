@@ -139,11 +139,11 @@ class EvalOperatorOperand(EvalString):
     def eval(  # noqa: F811
         self, as_latex: Literal[False] = False, **eval_kwargs
     ) -> xr.DataArray:
-        ...
+        "Expecting array if not requesting latex string"
 
     @overload  # noqa: F811
     def eval(self, as_latex: Literal[True], **eval_kwargs) -> str:  # noqa: F811
-        ...
+        "Expecting string if requesting latex string"
 
     def eval(  # noqa: F811
         self, as_latex: bool = False, **eval_kwargs

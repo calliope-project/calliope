@@ -289,8 +289,8 @@ class TestLatexBackendModel:
                     r"""
                 \begin{array}{r}
                     \forall{}
-                    \text{\,node\,} \in \text{\,nodes, \,}
-                    \text{\,tech\,} \in \text{\,techs\,}
+                    \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
+                    \text{ tech }\negthickspace \in \negthickspace\text{ techs }
                     \\
                 \end{array}
                 \begin{cases}
@@ -313,7 +313,7 @@ class TestLatexBackendModel:
                 textwrap.dedent(
                     r"""
                 \begin{array}{r}
-                    if foo \land bar
+                    \text{if } foo \land bar
                 \end{array}
                 \begin{cases}
                 \end{cases}"""
@@ -342,7 +342,7 @@ class TestLatexBackendModel:
                 \end{array}
                 \begin{cases}
                     foo&\quad
-                    if bar
+                    \text{if } bar
                     \\
                     foo + 1&\quad
                     \\
