@@ -10,16 +10,16 @@ import jinja2
 from calliope.backend import backends
 from calliope.backend import parsing, equation_parser
 from calliope.exceptions import BackendError
-from calliope.core.model import _ALLOWED_MATH_FILE_FORMATS
+
 
 class LatexBackendModel(backends.BackendModel):
     LATEX_EQUATION_ELEMENT = textwrap.dedent(
         r"""
         \begin{array}{r}
-        {% if sets is defined %}
+        {% if sets is defined and sets%}
             \forall{}
         {% for set in sets %}
-            {{set|removesuffix("s")}} \in {{set + ", " if not loop.last else set }}
+            \text{\,{{set|removesuffix("s")}}\,} \in \text{\,{{set + ", " if not loop.last else set }}\,}
         {% endfor %}
             \\
         {% endif %}
@@ -67,8 +67,7 @@ class LatexBackendModel(backends.BackendModel):
 
     .. container:: scrolling-wrapper
 
-        .. math::
-            {{ equation.expression | indent(8) }}
+        .. math::{{ equation.expression | indent(8) }}
     {% endfor %}
     {% endfor %}
     """
@@ -93,13 +92,13 @@ class LatexBackendModel(backends.BackendModel):
     \begin{document}
     {% for component_type, equations in components.items() %}
     {% if component_type == "objectives" %}
-    \section{Objective:}
+    \section{Objective}
     {% elif component_type == "constraints" %}
-    \section{Subject to:}
-    {% elif component_type in ["expressions", "variables"] %}
-    \section{Where:}
+    \section{Subject to}
+    {% elif component_type == "expressions" %}
+    \section{Where}
     {% elif component_type == "variables" %}
-    \subsection{Decision Variables}
+    \section{Decision Variables}
     {% endif %}
     {% for equation in equations %}
 
@@ -131,8 +130,8 @@ class LatexBackendModel(backends.BackendModel):
     {% for equation in equations %}
 
     ## {{ equation.name }}
-
-        $$ {{ equation.expression | indent(4) }} $$
+        ```math{{ equation.expression | indent(4) }}
+        ```
     {% endfor %}
     {% endfor %}
     """
@@ -142,12 +141,15 @@ class LatexBackendModel(backends.BackendModel):
     def __init__(
         self,
         include: Literal["all", "valid"] = "all",
-        format: _ALLOWED_MATH_FILE_FORMATS = "tex",
+        format: Literal["tex", "rst", "md"] = "tex",
     ):
-        """Abstract base class for interfaces to solvers.
+        """Interface to build a string representation of the mathematical formulation using LaTeX math notation.
 
         Args:
-            instance (T): Interface model instance.
+            include (Literal["all", "valid"], optional):
+                Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
+            format (Optional["tex", "rst", "md"], optional):
+                Not required if filename is given (as the format will be automatically inferred). Required if expecting a string return from calling this function. The LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown). Defaults to None.
         """
         backends.BackendModel.__init__(self, instance=dict())
         self.include = include
@@ -207,32 +209,16 @@ class LatexBackendModel(backends.BackendModel):
         self._raise_error_on_preexistence(name, "variables")
 
         parsed_variable = parsing.ParsedBackendComponent(name, variable_dict)
-        foreach_imask = parsed_variable.evaluate_foreach(model_data)
-        parsed_variable.parse_top_level_where()
-        imask = parsed_variable.evaluate_where(model_data, initial_imask=foreach_imask)
-        imask = parsed_variable.align_imask_with_sets(imask)
+        imask = parsed_variable.generate_top_level_where_array(
+            model_data, break_early=False
+        )
+
+        # add early to be accessed when creating bound strings.
+        self._add_to_dataset(name, imask, "variables")
 
         imask_latex = parsed_variable.evaluate_where(model_data, as_latex=True)
+        lb, ub = self._get_capacity_bounds(variable_dict["bounds"], name, model_data)
 
-        self._add_to_dataset(name, imask.where(imask), "variables")
-
-        bound_dict: parsing.UnparsedConstraintDict = {
-            "foreach": parsed_variable.sets,
-            "where": "True",
-            "equations": [
-                {"expression": f"{variable_dict['bounds']['min']} <= {name}"},
-                {"expression": f"{name} <= {variable_dict['bounds']['max']}"},
-            ],
-        }
-        parsed_bounds = parsing.ParsedBackendComponent(name, bound_dict)
-        equations = parsed_bounds.parse_equations(
-            equation_parser.generate_equation_parser,
-            self.valid_arithmetic_components,
-        )
-        bound_strings: list[dict[str, str]] = [
-            {"expression": eq.evaluate_expression(model_data, self, as_latex=True)}
-            for eq in equations
-        ]
         if self.include == "all" or (self.include == "valid" and imask.any()):
             self._generate_math_string(
                 name,
@@ -240,8 +226,10 @@ class LatexBackendModel(backends.BackendModel):
                 "variables",
                 sets=parsed_variable.sets,
                 where=imask_latex if imask_latex != "" else None,
-                equations=bound_strings,
+                equations=[lb, ub],
             )
+        # add again to ensure "math_string" attribute is there.
+        self._add_to_dataset(name, imask, "variables")
 
     def add_objective(
         self,
@@ -328,15 +316,12 @@ class LatexBackendModel(backends.BackendModel):
     ) -> None:
         parsed_component = parsing.ParsedBackendComponent(name, component_dict)
 
-        foreach_imask = parsed_component.evaluate_foreach(model_data)
-        parsed_component.parse_top_level_where()
-        top_level_imask = parsed_component.evaluate_where(
-            model_data, initial_imask=foreach_imask
+        top_level_imask = parsed_component.generate_top_level_where_array(
+            model_data, break_early=False
         )
         component_da = xr.DataArray().where(
-            parsed_component.align_imask_with_sets(top_level_imask)
+            parsed_component.align_imask_with_foreach_sets(top_level_imask)
         )
-
         top_level_imask_latex = parsed_component.evaluate_where(
             model_data, as_latex=True
         )
@@ -349,7 +334,7 @@ class LatexBackendModel(backends.BackendModel):
         equation_strings = []
         for element in equations:
             imask = element.evaluate_where(model_data, initial_imask=top_level_imask)
-            imask = parsed_component.align_imask_with_sets(imask)
+            imask = parsed_component.align_imask_with_foreach_sets(imask)
 
             expr = element.evaluate_expression(model_data, self, as_latex=True)
             imask_latex = element.evaluate_where(model_data, as_latex=True)
@@ -366,7 +351,7 @@ class LatexBackendModel(backends.BackendModel):
                 where=top_level_imask_latex,
                 equations=equation_strings,
             )
-        self._add_to_dataset(name, component_da, component_type)
+        self._add_to_dataset(name, component_da.fillna(0), component_type)
 
     def _generate_math_string(
         self,
@@ -376,7 +361,7 @@ class LatexBackendModel(backends.BackendModel):
         **kwargs,
     ) -> None:
         equation_element_string = self._render(self.LATEX_EQUATION_ELEMENT, **kwargs)
-        da.attrs["math_string"] = equation_element_string
+        da.attrs.update({"math_string": equation_element_string})
         self._instance[component_type].append(
             {"expression": equation_element_string, "name": name}
         )
@@ -387,3 +372,27 @@ class LatexBackendModel(backends.BackendModel):
         jinja_env = jinja2.Environment(trim_blocks=True, autoescape=False)
         jinja_env.filters["removesuffix"] = lambda val, remove: val.removesuffix(remove)
         return jinja_env.from_string(template).render(**kwargs)
+
+    def _get_capacity_bounds(
+        self,
+        bounds: parsing.UnparsedVariableBoundDict,
+        name: str,
+        model_data: xr.Dataset,
+    ) -> tuple[dict[str, str], ...]:
+        bound_dict: parsing.UnparsedConstraintDict = {
+            "foreach": [],
+            "where": "True",
+            "equations": [
+                {"expression": f"{bounds['min']} <= {name}"},
+                {"expression": f"{name} <= {bounds['max']}"},
+            ],
+        }
+        parsed_bounds = parsing.ParsedBackendComponent(name, bound_dict)
+        equations = parsed_bounds.parse_equations(
+            equation_parser.generate_equation_parser,
+            self.valid_arithmetic_components,
+        )
+        return tuple(
+            {"expression": eq.evaluate_expression(model_data, self, as_latex=True)}
+            for eq in equations
+        )

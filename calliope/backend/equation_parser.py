@@ -45,10 +45,6 @@ class EvalString(ABC):
     "Parent class for all string evaluation classes - used in type hinting"
     name: str
 
-    @staticmethod
-    def escape(string_to_esc: str, esc_char: str = "_") -> str:
-        return re.sub(esc_char, rf"\{esc_char}", string_to_esc)
-
 
 class EvalOperatorOperand(EvalString):
     LATEX_OPERATOR_LOOKUP: dict[str, str] = {
@@ -95,12 +91,14 @@ class EvalOperatorOperand(EvalString):
                 break
 
     def as_latex(
-        self, val: str, operand: str, operator_: str, operand_type: Any
+        self, val: str, operand: str, operator_: str, val_type: Any, operand_type: Any
     ) -> str:
         """Add sign to stringified data for use in a LaTex math formula"""
         # We ignore zeros that do nothing
         if operand == "0" and operator_ in ["-", "+"]:
             return val
+        if val_type == type(self):
+            val = "(" + val + ")"
         if operand_type == type(self):
             operand = "(" + operand + ")"
         if val == "0" and operator_ in ["-", "+"]:
@@ -157,7 +155,13 @@ class EvalOperatorOperand(EvalString):
         for operator_, operand in self.operatorOperands(self.value[1:]):
             evaluated_operand = self._eval(operand, as_latex, **eval_kwargs)
             if as_latex == True:
-                val = self.as_latex(val, evaluated_operand, operator_, type(operand))
+                val = self.as_latex(
+                    val,
+                    evaluated_operand,
+                    operator_,
+                    type(self.value[0]),
+                    type(operand),
+                )
             else:
                 val = self.operate(val, evaluated_operand, operator_)
 
@@ -195,7 +199,7 @@ class EvalSignOp(EvalString):
 
 
 class EvalComparisonOp(EvalString):
-    OP_TRANSLATOR = {"<=": r"\leq{}", ">=": r"\geq{}", "==": " = "}
+    OP_TRANSLATOR = {"<=": r" \leq ", ">=": r" \geq ", "==": " = "}
 
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
@@ -398,9 +402,7 @@ class EvalSlicedParameterOrVariable(EvalString):
 
     def as_latex(self, evaluated_obj: str, index_slices: dict[str, str]) -> str:
         """Stingify evaluated dataarray for use in a LaTex math formula"""
-        singular_slice_refs = {
-            self.escape(k.removesuffix("s")): v for k, v in index_slices.items()
-        }
+        singular_slice_refs = {k.removesuffix("s"): v for k, v in index_slices.items()}
         id_ = pp.Combine(
             pp.Word(pp.alphas, pp.alphanums)
             + pp.ZeroOrMore("_" + pp.Word(pp.alphanums))
@@ -606,7 +608,11 @@ class EvalNumber(EvalString):
 
     def as_latex(self, evaluated):
         """Stingify evaluated float to 6 significant figures for use in a LaTex math formula"""
-        return f"{evaluated:.6g}"
+        return re.sub(
+            r"([\d]+?)e([+-])([\d]+)",
+            r"\1\\mathord{\\times}10^{\2\3}",
+            f"{evaluated:.6g}",
+        )
 
     def eval(self, **eval_kwargs) -> float:
         """
@@ -758,7 +764,7 @@ def sliced_param_or_var_parser(
     unsliced_object: pp.ParserElement,
     allow_slice_references: bool = True,
 ) -> pp.ParserElement:
-    f"""
+    """
     Parsing grammar to process strings representing sliced model parameters or variables,
     e.g. "resource[node, tech]".
 
@@ -782,8 +788,7 @@ def sliced_param_or_var_parser(
             Parser for valid backend objects.
             On evaluation, this parser will access the backend object from the backend dataset.
         allow_slice_references (bool):
-            If True, allow reference to `index_slice` expressions
-            (e.g. `{COMPONENT_CLASSIFIER}bar` in `foo[bars={COMPONENT_CLASSIFIER}bar]`).
+            If True, allow reference to `index_slice` expressions (e.g. `$bar` in `foo[bars=$bar]`).
             Defaults to True.
 
     Returns:
@@ -815,10 +820,8 @@ def sliced_param_or_var_parser(
 
 
 def component_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
-    f"""
-    Parse strings preppended with the YAML constraint component classifier.
-    {COMPONENT_CLASSIFIER}.
-    E.g. "{COMPONENT_CLASSIFIER}my_component"
+    """
+    Parse strings preppended with the YAML constraint component classifier `$`. E.g. "$my_component"
 
     Args:
         generic_identifier (pp.ParserElement):
@@ -827,7 +830,7 @@ def component_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
 
     Returns:
         pp.ParserElement:
-            Parser which produces a dictionary of the form {{"component": "my_component"}}
+            Parser which produces a dictionary of the form {"component": "my_component"}
             on evaluation.
     """
 

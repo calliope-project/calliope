@@ -364,7 +364,7 @@ class BackendModel(ABC, Generic[T]):
                 param_name, xr.DataArray(default_val), use_inf_as_na=False
             )
 
-        for option_name, option_val in run_config["objective_options"].items():
+        for option_name, option_val in run_config.get("objective_options", {}).items():
             if option_name == "cost_class":
                 objective_cost_class = {
                     k: v for k, v in option_val.items() if k in model_data.costs
@@ -414,7 +414,7 @@ class BackendModel(ABC, Generic[T]):
         )
 
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
-        f"""
+        """
         We do not allow any overlap of backend object names since they all have to
         co-exist in the backend dataset.
         I.e., users cannot overwrite any backend component with another
@@ -422,7 +422,7 @@ class BackendModel(ABC, Generic[T]):
 
         Args:
             key (str): Backend object name
-            obj_type (str): Object type (one of {self._VALID_COMPONENTS})
+            obj_type (Literal["variables", "constraints", "objectives", "parameters", "expressions"]): Object type.
 
         Raises:
             BackendError:
@@ -435,11 +435,7 @@ class BackendModel(ABC, Generic[T]):
                     f"Trying to add already existing `{key}` to backend model {obj_type}."
                 )
             else:
-                other_obj_type = [
-                    k.removesuffix("s")
-                    for k, v in self._dataset[key].attrs.items()
-                    if k in self._VALID_COMPONENTS and v == 1
-                ][0]
+                other_obj_type = self._dataset[key].attrs["obj_type"].removesuffix("s")
                 raise BackendError(
                     f"Trying to add already existing *{other_obj_type}* `{key}` "
                     f"as a backend model *{obj_type.removesuffix('s')}*."
@@ -473,9 +469,8 @@ class BackendModel(ABC, Generic[T]):
                 and the parameter ["energy_eff"].
                 All referenced objects will have their "references" attribute updated with this object's name.
         """
-        self._dataset[name] = da.assign_attrs(
-            {"obj_type": obj_type, "references": set()}
-        )
+        da.attrs.update({"obj_type": obj_type, "references": set()})
+        self._dataset[name] = da
         if references is not None:
             for reference in references:
                 self._dataset[reference].attrs["references"].add(name)
@@ -512,13 +507,9 @@ class BackendModel(ABC, Generic[T]):
         references: set[str] = set()
 
         parsed_component = parsing.ParsedBackendComponent(name, component_dict)
-        foreach_imask = parsed_component.evaluate_foreach(model_data)
-        if not foreach_imask.any():
-            return None
 
-        parsed_component.parse_top_level_where()
-        top_level_imask = parsed_component.evaluate_where(
-            model_data, initial_imask=foreach_imask
+        top_level_imask = parsed_component.generate_top_level_where_array(
+            model_data, align_to_foreach_sets=False
         )
         if not top_level_imask.any():
             return None
@@ -526,7 +517,7 @@ class BackendModel(ABC, Generic[T]):
         self._raise_error_on_preexistence(name, component_type)
         component_da = (
             xr.DataArray()
-            .where(parsed_component.align_imask_with_sets(top_level_imask))
+            .where(parsed_component.align_imask_with_foreach_sets(top_level_imask))
             .astype(np.dtype("O"))
         )
         self.create_obj_list(name, component_type)
@@ -539,7 +530,7 @@ class BackendModel(ABC, Generic[T]):
             if not imask.any():
                 continue
 
-            imask = parsed_component.align_imask_with_sets(imask)
+            imask = parsed_component.align_imask_with_foreach_sets(imask)
 
             if component_da.where(imask).notnull().any():
                 subset_overlap = component_da.where(imask).to_series().dropna().index
@@ -685,16 +676,10 @@ class PyomoBackendModel(BackendModel):
         self.valid_arithmetic_components.add(name)
 
         parsed_variable = parsing.ParsedBackendComponent(name, variable_dict)
-        foreach_imask = parsed_variable.evaluate_foreach(model_data)
-        if not foreach_imask.any():
-            return None
 
-        parsed_variable.parse_top_level_where()
-        imask = parsed_variable.evaluate_where(model_data, initial_imask=foreach_imask)
+        imask = parsed_variable.generate_top_level_where_array(model_data)
         if not imask.any():
             return None
-
-        imask = parsed_variable.align_imask_with_sets(imask)
 
         self._raise_error_on_preexistence(name, "variables")
         self.create_obj_list(name, "variables")
@@ -702,7 +687,7 @@ class PyomoBackendModel(BackendModel):
         domain = parsed_variable._unparsed.get("domain", "real")
         domain_type = getattr(pmo, f"{domain.title()}Set")
 
-        ub, lb = self._get_capacity_bounds(variable_dict["bounds"], name=name)
+        lb, ub = self._get_capacity_bounds(variable_dict["bounds"], name=name)
         variable_da = self.apply_func(
             self._to_pyomo_variable,
             imask,
@@ -908,7 +893,7 @@ class PyomoBackendModel(BackendModel):
             lb = lb * scale
             ub = ub * scale
 
-        return ub.fillna(None), lb.fillna(None)
+        return lb.fillna(None), ub.fillna(None)
 
     def _to_pyomo_param(
         self, val: Any, *, name: str, default: Any = np.nan, use_inf_as_na: bool = True

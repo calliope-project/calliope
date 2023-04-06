@@ -390,7 +390,7 @@ class TestModelData:
 
         model_data._clean_model_data()
         for var in model_data.model_data.data_vars.values():
-            assert var.attrs == {"parameters": 1, "is_result": 0}
+            assert var.attrs == {"is_result": 0}
 
     @pytest.mark.parametrize("subdict", ["tech", "node"])
     def test_check_data(self, model_data, subdict):

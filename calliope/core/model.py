@@ -481,12 +481,30 @@ class Model(object):
         include: Literal["all", "valid"] = "all",
         format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
     ) -> Optional[str]:
+        """Generate a string representation of the mathematical formulation using LaTeX math notation to write to file or to return as a string.
+
+        Args:
+            filename (Optional[str], optional):
+                If given, will write the built mathematical formulation to a file with the given extension as the file format. Defaults to None.
+            include (Literal["all", "valid"], optional):
+                Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
+            format (Optional["tex", "rst", "md"], optional):
+                Not required if filename is given (as the format will be automatically inferred). Required if expecting a string return from calling this function. The LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown). Defaults to None.
+
+        Raises:
+            ValueError: The file format (inferred automatically from `filename` or given by `format`) must be one of ["tex", "rst", "md"].
+
+        Returns:
+            Optional[str]:
+                If `filename` is None, the built mathematical formulation documentation will be returned as a string.
+        """
         if format is None and filename is not None:
             format = Path(filename).suffix.removeprefix(".")  # type: ignore
 
-        if format not in typing.get_args(_ALLOWED_MATH_FILE_FORMATS):
+        allowed_formats = typing.get_args(_ALLOWED_MATH_FILE_FORMATS)
+        if format not in allowed_formats:
             raise ValueError(
-                f"Math documentation style must be one of {_ALLOWED_MATH_FILE_FORMATS}, received `{format}`"
+                f"Math documentation style must be one of {allowed_formats}, received `{format}`"
             )
 
         self.build(backend_interface="latex", include=include, format=format)

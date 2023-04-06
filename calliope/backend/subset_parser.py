@@ -53,12 +53,12 @@ class EvalAndOr(equation_parser.EvalOperatorOperand):
         return val
 
     def _as_latex(
-        self, val: str, operand: str, operator_: str, operand_type: Any
+        self, val: str, operand: str, operator_: str, val_type: Any, operand_type: Any
     ) -> str:
         if val == "true":
             val = operand
         elif operand != "true":
-            val = self.as_latex(val, operand, operator_, operand_type)
+            val = self.as_latex(val, operand, operator_, val_type, operand_type)
         return val
 
     def eval(self, as_latex: bool = False, **kwargs) -> Any:
@@ -67,7 +67,13 @@ class EvalAndOr(equation_parser.EvalOperatorOperand):
         for operator_, operand in self.operatorOperands(self.value[1:]):
             evaluated_operand = operand.eval(as_latex=as_latex, **kwargs)
             if as_latex:
-                val = self._as_latex(val, evaluated_operand, operator_, type(operand))
+                val = self._as_latex(
+                    val,
+                    evaluated_operand,
+                    operator_,
+                    type(self.value[0]),
+                    type(operand),
+                )
             else:
                 val = self.bool_operate(val, evaluated_operand, operator_)
         return val
@@ -154,10 +160,16 @@ class DataVarParser(equation_parser.EvalString):
         "Return string representation of the parsed grammar"
         return f"DATA_VAR:{self.data_var}"
 
-    def as_latex(self, apply_imask) -> str:
+    def as_latex(self, model_data: xr.Dataset, apply_imask: bool = True) -> str:
         """stringify conditional for use in a LaTex math formula"""
         # TODO: add dims from a YAML schema of params that includes default dims
         data_var_string = rf"\textit{{{self.data_var}}}"
+
+        var = model_data.get(self.data_var, None)
+        if var is not None and var.shape:
+            data_var_string += (
+                rf"_\text{{{','.join(str(i).removesuffix('s') for i in var.dims)}}}"
+            )
         if apply_imask:
             data_var_string = rf"\exists ({data_var_string})"
         return data_var_string
@@ -187,7 +199,7 @@ class DataVarParser(equation_parser.EvalString):
                 False if data variable not in model data, array otherwise.
         """
         if kwargs.get("as_latex", False):
-            return self.as_latex(apply_imask)
+            return self.as_latex(model_data, apply_imask)
 
         if self.data_var not in model_data:
             return np.False_
@@ -272,7 +284,7 @@ class SubsetParser(equation_parser.EvalString):
         """stringify subset for use in a LaTex math formula"""
         set_singular = self.set_name.removesuffix("s")
         subset_string = "[" + ",".join(str(i) for i in subset) + "]"
-        return rf"\text{{{set_singular}}}\in \text{{{subset_string}}}"
+        return rf"\text{{{set_singular}}} \in \text{{{subset_string}}}"
 
     def eval(self, model_data: xr.Dataset, **kwargs) -> Union[str, xr.DataArray]:
         subset = [i.eval(**kwargs) for i in self.subset]

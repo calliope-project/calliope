@@ -255,7 +255,9 @@ class ParsedBackendEquation:
                 Defaults to xr.DataArray(True) (i.e., no effect).
 
         Returns:
-            xr.DataArray: _description_
+            Union[xr.DataArray, str]:
+                If `as_latex` is False: Boolean array defining on which index items a parsed component should be built.
+                If `as_latex` is True: Valid LaTeX math string defining the "where" conditions using logic notation.
         """
 
         evaluated_wheres = [
@@ -273,9 +275,19 @@ class ParsedBackendEquation:
                 functools.reduce(operator.and_, [initial_imask, *evaluated_wheres])
             )
 
-    def align_imask_with_sets(self, imask: xr.DataArray):
+    def align_imask_with_foreach_sets(self, imask: xr.DataArray) -> xr.DataArray:
+        """the dimensions not included in "foreach" are removed from the input array
+
+        Args:
+            imask (xr.DataArray): Array with potentially unwanted dimensions
+
+        Returns:
+            xr.DataArray:
+                Array with same dimensions as the user-defined foreach sets.
+                Dimensions are ordered to match the order given by the sets.
+        """
         unwanted_dims = set(imask.dims).difference(self.sets)
-        return (imask.sum(unwanted_dims) > 0).astype(bool)
+        return (imask.sum(unwanted_dims) > 0).astype(bool).transpose(*self.sets)
 
     @overload
     def evaluate_expression(
@@ -366,9 +378,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         equation_expression_parser: Callable,
         backend_object_names: Iterable[str],
     ) -> list[ParsedBackendEquation]:
-        f"""Parse `expression` and `where` strings of backend object configuration dictionary:
-
-        {self._unparsed}
+        """Parse `expression` and `where` strings of math component dictionary.
 
         Args:
             equation_expression_parser (Callable): Parsing rule to apply to the string expressions under the `equation(s)` key.
@@ -602,3 +612,38 @@ class ParsedBackendComponent(ParsedBackendEquation):
             return xr.DataArray(False)
         all_imasks = [initial_imask, *[model_data[i].notnull() for i in add_dims]]
         return functools.reduce(operator.and_, all_imasks)
+
+    def generate_top_level_where_array(
+        self,
+        model_data: xr.Dataset,
+        align_to_foreach_sets: bool = True,
+        break_early: bool = True,
+    ) -> xr.DataArray:
+        """
+        Create multi-dimensional array from model inputs and component sets (defined in foreach)
+        and apply the component top-level where to the array.
+
+        Args:
+            model_data (xr.Dataset): Calliope model input data.
+            align_to_foreach_sets (bool, optional):
+                By default, all foreach arrays have the dimensions ("nodes", "techs", "carriers", "carrier_tiers") as well as any additional dimensions provided by the component's "foreach" key. If this argument is True, the dimensions not included in "foreach" are removed from the array.
+                Defaults to True.
+            break_early (bool, optional):
+                If any intermediate array has no valid elements (i.e. all are False), the function will return that array rather than continuing - this saves time and memory on large models.
+                Defaults to True.
+
+        Returns:
+            xr.DataArray: Boolean array defining on which index items a parsed component should be built.
+        """
+        foreach_imask = self.evaluate_foreach(model_data)
+        if break_early and not foreach_imask.any():
+            return foreach_imask
+
+        self.parse_top_level_where()
+        imask = self.evaluate_where(model_data, initial_imask=foreach_imask)
+        if break_early and not imask.any():
+            return imask
+
+        if align_to_foreach_sets:
+            imask = self.align_imask_with_foreach_sets(imask)
+        return imask

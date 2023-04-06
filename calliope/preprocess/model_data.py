@@ -342,7 +342,6 @@ class ModelDataFactory:
 
     def _add_var_attrs(self):
         for var_data in self.model_data.data_vars.values():
-            var_data.attrs["parameters"] = 1
             var_data.attrs["is_result"] = 0
 
     @staticmethod

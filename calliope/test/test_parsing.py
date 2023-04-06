@@ -1,5 +1,5 @@
 from io import StringIO
-from itertools import chain, combinations
+from unittest.mock import patch
 
 import pytest
 import ruamel.yaml as yaml
@@ -211,47 +211,20 @@ def equation_index_slice_obj(index_slice_parser, where_parser):
 
 @pytest.fixture
 def dummy_backend_interface(dummy_model_data):
-    class DummyBackendModel(backends.BackendModel):
-        def __init__(self):
-            backends.BackendModel.__init__(self, instance=None)
+    # ignore the need to define the abstract methods from backends.BackendModel
+    with patch.multiple(backends.BackendModel, __abstractmethods__=set()):
 
-            self._dataset = dummy_model_data.copy(deep=True)
-            self._dataset["with_inf"] = self._dataset["with_inf"].fillna(
-                dummy_model_data.attrs["defaults"]["with_inf"]
-            )
-            self._dataset["only_techs"] = self._dataset["only_techs"].fillna(
-                dummy_model_data.attrs["defaults"]["only_techs"]
-            )
+        class DummyBackendModel(backends.BackendModel):
+            def __init__(self):
+                backends.BackendModel.__init__(self, instance=None)
 
-        def add_parameter(self):
-            pass
-
-        def add_constraint(self):
-            pass
-
-        def add_expression(self):
-            pass
-
-        def add_variable(self):
-            pass
-
-        def add_objective(self):
-            pass
-
-        def get_parameter(self):
-            pass
-
-        def get_constraint(self):
-            pass
-
-        def get_variable(self):
-            pass
-
-        def get_expression(self):
-            pass
-
-        def solve(self):
-            pass
+                self._dataset = dummy_model_data.copy(deep=True)
+                self._dataset["with_inf"] = self._dataset["with_inf"].fillna(
+                    dummy_model_data.attrs["defaults"]["with_inf"]
+                )
+                self._dataset["only_techs"] = self._dataset["only_techs"].fillna(
+                    dummy_model_data.attrs["defaults"]["only_techs"]
+                )
 
     return DummyBackendModel()
 
@@ -291,24 +264,22 @@ def evaluatable_component_obj(valid_object_names):
     params=[
         ("with_inf <= 100", 7),  # all vals except .inf meet criterion
         ("with_inf == 100", 2),  # only default vals meet criterion
-        (
-            "$foo <= 100",
-            4,
-        ),  # only non-default + non-inf values meet criterion (+ only_techs masks one valid value)
+        # only non-default + non-inf values meet criterion (+ only_techs masks one valid value)
+        ("$foo <= 100", 4),
         ("$foo == 100", 0),  # no expressions are valid
         ("only_techs + with_inf[techs=$tech] == 2", 1),
     ]
 )
 def evaluate_component_where(evaluatable_component_obj, dummy_model_data, request):
     component_obj = evaluatable_component_obj(request.param[0])
-    foreach_imask = component_obj.evaluate_foreach(dummy_model_data)
-    top_level_imask = component_obj.evaluate_where(dummy_model_data, foreach_imask)
-    equation_imask = component_obj.equations[0].evaluate_where(
-        dummy_model_data, top_level_imask
+    top_level_imask = component_obj.generate_top_level_where_array(
+        dummy_model_data, break_early=False, align_to_foreach_sets=False
     )
-    equation_imask_squeezed = component_obj.align_imask_with_sets(equation_imask)
-
-    return component_obj, equation_imask_squeezed, request.param[1]
+    equation_imask = component_obj.equations[0].evaluate_where(
+        dummy_model_data, initial_imask=top_level_imask
+    )
+    equation_imask_aligned = component_obj.align_imask_with_foreach_sets(equation_imask)
+    return component_obj, equation_imask_aligned, request.param[1]
 
 
 @pytest.fixture
@@ -316,9 +287,10 @@ def evaluate_component_expression(
     evaluate_component_where, dummy_model_data, dummy_backend_interface
 ):
     component_obj, equation_imask, n_true = evaluate_component_where
+
     return (
         component_obj.equations[0].evaluate_expression(
-            dummy_model_data, dummy_backend_interface, equation_imask
+            dummy_model_data, dummy_backend_interface, imask=equation_imask
         ),
         n_true,
     )
@@ -865,7 +837,9 @@ class TestParsedBackendEquation:
         equation_obj.where = [
             where_parser.parse_string("[foo] in carrier_tiers", parse_all=True)
         ]
-        imask = equation_obj.evaluate_where(dummy_model_data, foreach_imask)
+        imask = equation_obj.evaluate_where(
+            dummy_model_data, initial_imask=foreach_imask
+        )
         assert imask.sel(carrier_tiers="foo").any()
         assert not imask.sel(carrier_tiers="bar").any()
 
@@ -875,8 +849,10 @@ class TestParsedBackendEquation:
         equation_obj.sets = ["nodes", "techs"]
 
         equation_obj.where = [where_parser.parse_string("True", parse_all=True)]
-        imask = equation_obj.evaluate_where(dummy_model_data, foreach_imask)
-        aligned_imask = equation_obj.align_imask_with_sets(imask)
+        imask = equation_obj.evaluate_where(
+            dummy_model_data, initial_imask=foreach_imask
+        )
+        aligned_imask = equation_obj.align_imask_with_foreach_sets(imask)
 
         assert set(imask.dims).difference(["nodes", "techs"])
         assert not set(aligned_imask.dims).difference(["nodes", "techs"])
@@ -906,6 +882,7 @@ class TestParsedConstraint:
         parsed_.equations = parsed_.parse_equations(
             equation_parser.generate_equation_parser, ["only_techs"]
         )
+        parsed_.parse_top_level_where()
         return parsed_
 
     def test_parse_constraint_dict_sets(self, constraint_obj):
@@ -920,17 +897,19 @@ class TestParsedConstraint:
     def test_parse_constraint_dict_evalaute_eq2(
         self, constraint_obj, dummy_model_data, dummy_backend_interface
     ):
-        foreach_imask = constraint_obj.evaluate_foreach(dummy_model_data)
-        top_level_where_imask = constraint_obj.evaluate_where(
-            dummy_model_data, foreach_imask
-        )
+        # We ignore foreach here so we can do "== 1" below. With foreach, there is
+        # a random element that might create a where array that masks the only valid index item
+        top_level_where_imask = constraint_obj.evaluate_where(dummy_model_data)
         valid_imask = constraint_obj.equations[1].evaluate_where(
-            dummy_model_data, top_level_where_imask
+            dummy_model_data, initial_imask=top_level_where_imask
         )
-        aligned_imask = constraint_obj.align_imask_with_sets(valid_imask)
+        aligned_imask = constraint_obj.align_imask_with_foreach_sets(valid_imask)
         references = set()
         comparison_tuple = constraint_obj.equations[1].evaluate_expression(
-            dummy_model_data, dummy_backend_interface, aligned_imask, references
+            dummy_model_data,
+            dummy_backend_interface,
+            imask=aligned_imask,
+            references=references,
         )
         assert apply_comparison(comparison_tuple).sum() == 1
         assert references == {"only_techs"}
@@ -950,9 +929,10 @@ class TestParsedVariable:
         assert len(variable_obj.equations) == 0
 
     def test_parse_variable_dict_empty_eq1(self, variable_obj, dummy_model_data):
-        foreach_imask = variable_obj.evaluate_foreach(dummy_model_data)
-        variable_obj.parse_top_level_where()
-        assert not variable_obj.evaluate_where(dummy_model_data, foreach_imask).any()
+        top_level_where_imask = variable_obj.generate_top_level_where_array(
+            dummy_model_data, break_early=False, align_to_foreach_sets=False
+        )
+        assert not top_level_where_imask.any()
 
 
 class TestParsedObjective:
@@ -985,6 +965,6 @@ class TestParsedObjective:
     ):
         valid_imask = objective_obj.equations[1].evaluate_where(dummy_model_data)
         objective_expression = objective_obj.equations[1].evaluate_expression(
-            dummy_model_data, dummy_backend_interface, valid_imask
+            dummy_model_data, dummy_backend_interface, imask=valid_imask
         )
         assert objective_expression.sum() == 12

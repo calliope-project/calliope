@@ -8,7 +8,7 @@ min_cost_optimisation
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \min{}
         \end{array}
@@ -30,10 +30,10 @@ energy_capacity_per_storage_capacity_min
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\exists (\textit{energy_cap_per_storage_cap_min}) \land \neg (\exists (\textit{energy_cap_per_storage_cap_equals})) \land \neg (\text{run_config.mode}\mathord{=}\text{operate}))
@@ -49,10 +49,10 @@ energy_capacity_per_storage_capacity_max
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\exists (\textit{energy_cap_per_storage_cap_max}) \land \neg (\exists (\textit{energy_cap_per_storage_cap_equals})) \land \neg (\text{run_config.mode}\mathord{=}\text{operate}))
@@ -68,10 +68,10 @@ energy_capacity_per_storage_capacity_equals
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\exists (\textit{energy_cap_per_storage_cap_equals}) \land \neg (\text{run_config.mode}\mathord{=}\text{operate}))
@@ -87,10 +87,10 @@ resource_capacity_equals_energy_capacity
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\textit{resource_cap_equals_energy_cap}\mathord{=}\text{true} \land \neg (\text{run_config.mode}\mathord{=}\text{operate}))
@@ -106,10 +106,10 @@ force_zero_resource_area
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\exists (\textit{resource_area_min}) \lor \exists (\textit{resource_area_max}) \lor \exists (\textit{resource_area_equals}) \lor \textit{resource_unit}\mathord{=}\text{energy_per_area} \land \neg (\text{run_config.mode}\mathord{=}\text{operate}) \land \textit{energy_cap_max}\mathord{=}\text{0})
@@ -125,10 +125,10 @@ resource_area_per_energy_capacity
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\exists (\textit{resource_area_per_energy_cap}) \land \neg (\text{run_config.mode}\mathord{=}\text{operate}))
@@ -144,7 +144,7 @@ resource_area_capacity_per_loc
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
             node \in nodes
@@ -162,7 +162,7 @@ energy_capacity_systemwide
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
             tech \in techs
@@ -184,11 +184,11 @@ balance_conversion_plus_primary
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\text{tech_group=conversion_plus} \land \textit{carrier_ratios}\mathord{>}\text{0})
@@ -204,11 +204,11 @@ carrier_production_max_conversion_plus
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\text{tech_group=conversion_plus} \land \neg (\textit{cap_method}\mathord{=}\text{integer}))
@@ -224,11 +224,11 @@ carrier_production_min_conversion_plus
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\exists (\textit{energy_cap_min_use}) \land \text{tech_group=conversion_plus} \land \neg (\textit{cap_method}\mathord{=}\text{integer}))
@@ -244,12 +244,12 @@ balance_conversion_plus_non_primary
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier_tier \in carrier_tiers, 
+            node \in nodes,
+            tech \in techs,
+            carrier_tier \in carrier_tiers,
             timestep \in timesteps
             \\
             if (\text{tech_group=conversion_plus} \land \text{carrier_tier}\in \text{[in_2,out_2,in_3,out_3]} \land \textit{carrier_ratios}\mathord{>}\text{0})
@@ -287,12 +287,12 @@ conversion_plus_prod_con_to_zero
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\textit{carrier_ratios}\mathord{=}\text{0} \land \text{tech_group=conversion_plus})
@@ -312,11 +312,11 @@ balance_conversion
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\text{tech_group=conversion})
@@ -332,12 +332,12 @@ carrier_production_max
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\exists (\textit{carrier}) \land \neg (\text{tech_group=conversion_plus}) \land \neg (\textit{cap_method}\mathord{=}\text{integer}) \land \textit{allowed_carrier_prod}\mathord{=}\text{true} \land \text{carrier_tier}\in \text{[out]})
@@ -353,12 +353,12 @@ carrier_production_min
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\exists (\textit{carrier}) \land \exists (\textit{energy_cap_min_use}) \land \neg (\text{tech_group=conversion_plus}) \land \neg (\textit{cap_method}\mathord{=}\text{integer}) \land \textit{allowed_carrier_prod}\mathord{=}\text{true} \land \text{carrier_tier}\in \text{[out]})
@@ -374,12 +374,12 @@ carrier_consumption_max
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\exists (\textit{carrier}) \land (\text{tech_group=transmission} \lor \text{tech_group=demand} \lor \text{tech_group=storage}) \land (\neg (\textit{cap_method}\mathord{=}\text{integer}) \lor \text{tech_group=demand}) \land \textit{allowed_carrier_con}\mathord{=}\text{true} \land \text{carrier_tier}\in \text{[in]})
@@ -395,11 +395,11 @@ resource_max
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\text{tech_group=supply_plus})
@@ -415,11 +415,11 @@ storage_max
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\textit{include_storage}\mathord{=}\text{true})
@@ -435,11 +435,11 @@ storage_discharge_depth_limit
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\textit{include_storage}\mathord{=}\text{true} \land \exists (\textit{storage_discharge_depth}))
@@ -455,11 +455,11 @@ system_balance
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            carrier \in carriers, 
+            node \in nodes,
+            carrier \in carriers,
             timestep \in timesteps
             \\
         \end{array}
@@ -484,12 +484,12 @@ balance_supply
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\exists (\textit{resource}) \land \text{tech_group=supply})
@@ -524,12 +524,12 @@ balance_supply_min_use
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\exists (\textit{resource}) \land \text{tech_group=supply} \land \exists (\textit{resource_min_use}) \land \textit{energy_eff}\mathord{>}\text{0} \land \neg (\textit{force_resource}\mathord{=}\text{true}))
@@ -545,12 +545,12 @@ balance_demand
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\text{tech_group=demand})
@@ -582,12 +582,12 @@ balance_supply_plus_no_storage
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\text{tech_group=supply_plus} \land \neg (\textit{include_storage}\mathord{=}\text{true}))
@@ -607,12 +607,12 @@ balance_supply_plus_with_storage
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\text{tech_group=supply_plus} \land \textit{include_storage}\mathord{=}\text{true})
@@ -644,11 +644,11 @@ resource_availability_supply_plus
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\exists (\textit{resource}) \land \text{tech_group=supply_plus})
@@ -680,12 +680,12 @@ balance_storage
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\text{tech_group=storage})
@@ -717,10 +717,10 @@ set_storage_initial
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\exists (\textit{storage_initial}) \land \textit{include_storage}\mathord{=}\text{true} \land \text{run_config.cyclic_storage}\mathord{=}\text{true})
@@ -736,12 +736,12 @@ balance_transmission
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\text{tech_group=transmission} \land \textit{allowed_carrier_prod}\mathord{=}\text{true})
@@ -757,10 +757,10 @@ symmetric_transmission
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\text{tech_group=transmission} \land \neg (\text{run_config.mode}\mathord{=}\text{operate}))
@@ -776,12 +776,12 @@ export_balance
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\exists (\textit{export_carrier}) \land \textit{export}\mathord{=}\text{true})
@@ -797,12 +797,12 @@ carrier_export_max
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\exists (\textit{export_max}) \land \exists (\textit{export_carrier}) \land \textit{export}\mathord{=}\text{true})
@@ -822,11 +822,11 @@ unit_commitment_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\textit{cap_method}\mathord{=}\text{integer})
@@ -842,12 +842,12 @@ carrier_production_max_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\exists (\textit{carrier}) \land \neg (\text{tech_group=conversion_plus}) \land \textit{cap_method}\mathord{=}\text{integer} \land \textit{allowed_carrier_prod}\mathord{=}\text{true})
@@ -863,11 +863,11 @@ carrier_production_max_conversion_plus_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\text{tech_group=conversion_plus} \land \textit{cap_method}\mathord{=}\text{integer} \land \textit{allowed_carrier_prod}\mathord{=}\text{true})
@@ -883,12 +883,12 @@ carrier_consumption_max_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\neg (\text{tech_group=conversion_plus}) \land \textit{cap_method}\mathord{=}\text{integer} \land \textit{allowed_carrier_con}\mathord{=}\text{true})
@@ -904,12 +904,12 @@ carrier_production_min_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\exists (\textit{carrier}) \land \exists (\textit{energy_cap_min_use}) \land \neg (\text{tech_group=conversion_plus}) \land \textit{cap_method}\mathord{=}\text{integer} \land \textit{allowed_carrier_prod}\mathord{=}\text{true})
@@ -925,11 +925,11 @@ carrier_production_min_conversion_plus_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\exists (\textit{energy_cap_min_use}) \land \text{tech_group=conversion_plus} \land \textit{cap_method}\mathord{=}\text{integer} \land \textit{allowed_carrier_prod}\mathord{=}\text{true})
@@ -945,10 +945,10 @@ storage_capacity_units_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\text{tech_group=storage} \lor \text{tech_group=supply_plus} \land \textit{cap_method}\mathord{=}\text{integer} \land \textit{include_storage}\mathord{=}\text{true} \land \neg (\text{run_config.mode}\mathord{=}\text{operate}))
@@ -964,10 +964,10 @@ energy_capacity_units_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\exists (\textit{energy_cap_per_unit}) \land \textit{cap_method}\mathord{=}\text{integer} \land \neg (\text{run_config.mode}\mathord{=}\text{operate}))
@@ -983,10 +983,10 @@ energy_capacity_max_purchase_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\exists (\textit{cost_purchase}) \land (\exists (\textit{energy_cap_max}) \lor \exists (\textit{energy_cap_equals})) \land \textit{cap_method}\mathord{=}\text{binary})
@@ -1006,10 +1006,10 @@ energy_capacity_min_purchase_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\exists (\textit{cost_purchase}) \land \exists (\textit{energy_cap_min}) \land \neg (\exists (\textit{energy_cap_equals})) \land \textit{cap_method}\mathord{=}\text{binary})
@@ -1025,10 +1025,10 @@ storage_capacity_max_purchase_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\exists (\textit{cost_purchase}) \land (\exists (\textit{storage_cap_max}) \lor \exists (\textit{storage_cap_equals})) \land \textit{cap_method}\mathord{=}\text{binary})
@@ -1048,10 +1048,10 @@ storage_capacity_min_purchase_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\exists (\textit{cost_purchase}) \land \exists (\textit{storage_cap_min}) \land \neg (\exists (\textit{storage_cap_equals})) \land \textit{cap_method}\mathord{=}\text{binary})
@@ -1067,7 +1067,7 @@ unit_capacity_systemwide_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
             tech \in techs
@@ -1095,11 +1095,11 @@ asynchronous_con_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\textit{force_asynchronous_prod_con}\mathord{=}\text{true})
@@ -1115,11 +1115,11 @@ asynchronous_prod_milp
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\textit{force_asynchronous_prod_con}\mathord{=}\text{true})
@@ -1135,12 +1135,12 @@ ramping_up
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\exists (\textit{energy_ramping}) \land \neg (\textit{timesteps}\mathord{=}\text{timesteps[0]}))
@@ -1163,12 +1163,12 @@ ramping_down
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\exists (\textit{energy_ramping}) \land \neg (\textit{timesteps}\mathord{=}\text{timesteps[0]}))
@@ -1194,12 +1194,12 @@ cost_var
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            cost \in costs, 
+            node \in nodes,
+            tech \in techs,
+            cost \in costs,
             timestep \in timesteps
             \\
             if (\exists (\textit{cost_export}) \lor \exists (\textit{cost_om_con}) \lor \exists (\textit{cost_om_prod}))
@@ -1303,11 +1303,11 @@ cost_investment
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             cost \in costs
             \\
             if (\exists (\textit{cost_energy_cap}) \lor \exists (\textit{cost_om_annual}) \lor \exists (\textit{cost_om_annual_investment_fraction}) \lor \exists (\textit{cost_purchase}) \lor \exists (\textit{cost_resource_area}) \lor \exists (\textit{cost_resource_cap}) \lor \exists (\textit{cost_storage_cap}) \land \neg (\text{run_config.mode}\mathord{=}\text{operate}))
@@ -1609,11 +1609,11 @@ cost
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             cost \in costs
             \\
             if (\exists (\textit{cost_energy_cap}) \lor \exists (\textit{cost_om_annual}) \lor \exists (\textit{cost_om_annual_investment_fraction}) \lor \exists (\textit{cost_purchase}) \lor \exists (\textit{cost_resource_area}) \lor \exists (\textit{cost_resource_cap}) \lor \exists (\textit{cost_storage_cap}) \lor \exists (\textit{cost_export}) \lor \exists (\textit{cost_om_con}) \lor \exists (\textit{cost_om_prod}))
@@ -1642,10 +1642,10 @@ energy_cap
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\neg (\text{run_config.mode}\mathord{=}\text{operate}))
@@ -1663,12 +1663,12 @@ carrier_prod
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\exists (\textit{carrier}) \land \textit{allowed_carrier_prod}\mathord{=}\text{true} \land \text{carrier_tier}\in \text{[out,out_2,out_3]})
@@ -1686,12 +1686,12 @@ carrier_con
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\exists (\textit{carrier}) \land \textit{allowed_carrier_con}\mathord{=}\text{true} \land \text{carrier_tier}\in \text{[in,in_2,in_3]})
@@ -1709,12 +1709,12 @@ carrier_export
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
-            carrier \in carriers, 
+            node \in nodes,
+            tech \in techs,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\exists (\textit{export_carrier}) \land \textit{export}\mathord{=}\text{true})
@@ -1732,10 +1732,10 @@ resource_area
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\exists (\textit{resource_area_min}) \lor \exists (\textit{resource_area_max}) \lor \exists (\textit{resource_area_equals}) \lor \exists (\textit{resource_area_per_energy_cap}) \lor \textit{resource_unit}\mathord{=}\text{energy_per_area} \land \neg (\text{run_config.mode}\mathord{=}\text{operate}))
@@ -1753,11 +1753,11 @@ resource_con
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\text{tech_group=supply_plus})
@@ -1775,10 +1775,10 @@ resource_cap
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\text{tech_group=supply_plus} \land \neg (\text{run_config.mode}\mathord{=}\text{operate}))
@@ -1796,10 +1796,10 @@ storage_cap
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\text{tech_group=storage} \lor \text{tech_group=supply_plus} \land \neg (\text{run_config.mode}\mathord{=}\text{operate}) \land \textit{include_storage}\mathord{=}\text{true})
@@ -1817,11 +1817,11 @@ storage
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\text{tech_group=storage} \lor \text{tech_group=supply_plus} \land \textit{include_storage}\mathord{=}\text{true})
@@ -1839,10 +1839,10 @@ purchased
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\textit{cap_method}\mathord{=}\text{binary} \land \neg (\text{run_config.mode}\mathord{=}\text{operate}))
@@ -1860,10 +1860,10 @@ units
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
+            node \in nodes,
             tech \in techs
             \\
             if (\textit{cap_method}\mathord{=}\text{integer} \land \neg (\text{run_config.mode}\mathord{=}\text{operate}))
@@ -1881,11 +1881,11 @@ operating_units
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\textit{cap_method}\mathord{=}\text{integer})
@@ -1903,11 +1903,11 @@ prod_con_switch
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            tech \in techs, 
+            node \in nodes,
+            tech \in techs,
             timestep \in timesteps
             \\
             if (\textit{force_asynchronous_prod_con}\mathord{=}\text{true})
@@ -1925,11 +1925,11 @@ unmet_demand
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            carrier \in carriers, 
+            node \in nodes,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\text{run_config.ensure_feasibility}\mathord{=}\text{true})
@@ -1947,11 +1947,11 @@ unused_supply
 .. container:: scrolling-wrapper
 
     .. math::
-        
+
         \begin{array}{r}
             \forall{}
-            node \in nodes, 
-            carrier \in carriers, 
+            node \in nodes,
+            carrier \in carriers,
             timestep \in timesteps
             \\
             if (\text{run_config.ensure_feasibility}\mathord{=}\text{true})

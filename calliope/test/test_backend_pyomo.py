@@ -1899,7 +1899,7 @@ class TestNewBackend:
             var.to_series().dropna().apply(lambda x: isinstance(x, pmo.variable)).all()
         )
         assert var.attrs == {
-            "variables": 1,
+            "obj_type": "variables",
             "references": {
                 "carrier_consumption_max",
                 "carrier_production_max",
@@ -1928,7 +1928,7 @@ class TestNewBackend:
             .all()
         )
         assert param.attrs == {
-            "parameters": 1,
+            "obj_type": "parameters",
             "is_result": 0,
             "references": {"balance_demand", "balance_transmission"},
         }
@@ -1952,7 +1952,7 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.expression))
             .all()
         )
-        assert expr.attrs == {"expressions": 1, "references": {"cost"}}
+        assert expr.attrs == {"obj_type": "expressions", "references": {"cost"}}
 
     def test_new_build_get_expression_as_str(self, simple_supply_new_build):
         expr = simple_supply_new_build.backend.get_expression(
@@ -1976,7 +1976,7 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.constraint))
             .all()
         )
-        assert constr.attrs == {"constraints": 1, "references": set()}
+        assert constr.attrs == {"obj_type": "constraints", "references": set()}
 
     def test_new_build_get_constraint_as_str(self, simple_supply_new_build):
         constr = simple_supply_new_build.backend.get_constraint(
