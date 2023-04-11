@@ -1,7 +1,10 @@
-version: 2
+version: 2 # required
 formats: [pdf]
 conda:
   environment: requirements_docs.yml
 build:
+  os: ubuntu-22.04 # required
   tools:
     python: mambaforge-4.10
+sphinx:
+  configuration: doc/conf.py
