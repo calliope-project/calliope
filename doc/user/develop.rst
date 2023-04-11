@@ -4,11 +4,11 @@ Development guide
 
 Contributions are very welcome! See our `contributors guide on GitHub <https://github.com/calliope-project/calliope/blob/main/CONTRIBUTING.md>`_ for information on how to contribute.
 
-The code lives on GitHub at `calliope-project/calliope <https://github.com/calliope-project/calliope>`_. Development takes place in the ``main`` branch. Stable versions are tagged off of ``main`` with `semantic versioning <http://semver.org/>`_.
+The code lives on GitHub at `calliope-project/calliope <https://github.com/calliope-project/calliope>`_. Development takes place in the ``main`` branch. Stable versions are tagged off of ``main`` with `semantic versioning <https://semver.org/>`_.
 
 Tests are included and can be run with ``py.test`` from the project's root directory.
 
-Also see the list of `open issues <https://github.com/calliope-project/calliope/issues>`_,  planned `milestones <https://github.com/calliope-project/calliope/milestones>`_ and `projects <https://github.com/calliope-project/calliope/projects>`_ for an overview of where development is heading, and `join us on Gitter <https://gitter.im/calliope-project/calliope>`_ to ask questions or discuss code.
+Also see the list of `open issues <https://github.com/calliope-project/calliope/issues>`_,  planned `milestones <https://github.com/calliope-project/calliope/milestones>`_ and `projects <https://github.com/calliope-project/calliope/projects>`_ for an overview of where development is heading, and `join us on Gitter <https://app.gitter.im/#/room/#calliope-project_calliope:gitter.im>`_ to ask questions or discuss code.
 
 .. _installing_dev:
 
@@ -116,7 +116,7 @@ Have a bug fix or feature addition you'd like to see in the next stable release 
 Implementing a change
 ---------------------
 
-When you want to change some part of Calliope, whether it is the software or the documentation, it's best to do it in a fork of the main Calliope project repository. You can find out more about how to fork a repository `on GitHub's help pages <https://help.github.com/articles/fork-a-repo/>`_. Your fork will be a duplicate of the Calliope main branch and can be 'cloned' to provide you with the repository on your own device
+When you want to change some part of Calliope, whether it is the software or the documentation, it's best to do it in a fork of the main Calliope project repository. You can find out more about how to fork a repository `on GitHub's help pages <https://docs.github.com/en/get-started/quickstart/fork-a-repo>`_. Your fork will be a duplicate of the Calliope main branch and can be 'cloned' to provide you with the repository on your own device
 
   .. code-block:: fishshell
 
@@ -167,9 +167,9 @@ If you only want a subset of edited files to go into this commit, you can specif
 
 If you're happy with your commit(s) then it is time to 'push' everything online using the command `git push`. If you're working with someone else on a branch and they have made changes, you can bring them into your local repository using the command `git pull`.
 
-Now it is time to request that these changes are added into the main Calliope project repository! You can do this by starting a `pull request <https://help.github.com/articles/about-pull-requests/>`_. One of the core Calliope team will review the pull request and either accept it or request some changes before it's merged into the main Calliope repository. If any changes are requested, you can make those changes on your local branch, commit them, and push them online -- your pull request will update automatically with those changes.
+Now it is time to request that these changes are added into the main Calliope project repository! You can do this by starting a `pull request <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests>`_. One of the core Calliope team will review the pull request and either accept it or request some changes before it's merged into the main Calliope repository. If any changes are requested, you can make those changes on your local branch, commit them, and push them online -- your pull request will update automatically with those changes.
 
-Once a pull request has been accepted, you can return your fork back to its main branch and `sync it <https://help.github.com/articles/syncing-a-fork/>`_ with the updated Calliope project main
+Once a pull request has been accepted, you can return your fork back to its main branch and `sync it <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork>`_ with the updated Calliope project main
 
   .. code-block:: fishshell
 
@@ -265,7 +265,8 @@ Create release
         * Reset ``build: number: 0`` if it is not already at zero (should be automatically updated)
         * Range of python versions supported
         * Requirement version pinning, to match any changes in ``requirements.txt`` and ``requirements.yml``
-    ^ Any necessary updates can be made direclty on the PR by pushing directly to the bot's branch or by using the GIthub interactive editing interface.
+
+    ^ Any necessary updates can be made direclty on the PR by pushing directly to the bot's branch or by using the GitHub interactive editing interface.
 
 Post-release
 ------------

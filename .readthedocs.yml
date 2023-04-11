@@ -1,2 +1,4 @@
-conda:
-    file: requirements_docs.yml
+version: 2
+formats: [pdf]
+conda.environment: requirements_docs.yml
+build.tools.python: mambaforge-4.10

@@ -383,9 +383,9 @@ def get_clusters(
     kwargs : dict
         Additional keyword arguments available depend on the `func`.
         For available KMeans kwargs see:
-        http://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html
+        https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html
         For available hierarchical kwargs see:
-        http://scikit-learn.org/stable/modules/generated/sklearn.cluster.AgglomerativeClustering.html
+        https://scikit-learn.org/stable/modules/generated/sklearn.cluster.AgglomerativeClustering.html
     Returns
     -------
     clusters : dataframe
