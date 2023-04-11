@@ -244,18 +244,14 @@ class Model(object):
         Returns:
             AttrDict: Dictionary of math (constraints, variables, objectives, and global expressions).
         """
-
-        base_math = AttrDict.from_yaml(
-            os.path.join(os.path.dirname(calliope.__file__), "math", "base_math.yaml")
-        )
+        math_dir = Path(calliope.__file__).parent / "math"
+        base_math = AttrDict.from_yaml(math_dir / "base.yaml")
 
         file_errors = []
 
         for filename in custom_math:
             if not f"{filename}".endswith((".yaml", ".yml")):
-                yaml_filepath = (
-                    Path(calliope.__file__).parent / "math" / f"{filename}.yaml"
-                )
+                yaml_filepath = math_dir / f"{filename}.yaml"
             else:
                 yaml_filepath = Path(relative_path(self._config_path, filename))
 
@@ -281,7 +277,7 @@ class Model(object):
             AttrDict: Flat dictionary of `parameter_name`:`parameter_default` pairs.
         """
         raw_defaults = AttrDict.from_yaml(
-            os.path.join(os.path.dirname(calliope.__file__), "config", "defaults.yaml")
+            Path(calliope.__file__).parent / "config" / "defaults.yaml"
         )
         default_tech_dict = raw_defaults.techs.default_tech
         default_cost_dict = {
