@@ -1,3 +1,6 @@
+# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
+# Licensed under the Apache 2.0 License (see LICENSE file).
+
 ##
 # Part of the code in this file is adapted from
 # https://github.com/pyparsing/pyparsing/blob/master/examples/eval_arith.py
@@ -24,6 +27,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ##
+
 from __future__ import annotations
 
 from typing import Callable, Any, Union, Optional, Iterator, Iterable
