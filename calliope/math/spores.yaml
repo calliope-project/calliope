@@ -1,0 +1,11 @@
+constraints:
+  # TODO: add following config options which are then added to m._model_data (on "build"?):
+  # run.spores.slack_cost_group: str (e.g., monetary)
+  # run.spores.slack: float (e.g., 0.1)
+  # run.spores.cost_max: float (default=inf)
+
+  cost_sum_max:
+    equations:
+      - expression: sum(cost[costs=$slack_cost_group], over=[nodes, techs]) * (1 + spores_slack) <= spores_cost_max
+    index_slices:
+      slack_cost_group: spores_slack_cost_group
