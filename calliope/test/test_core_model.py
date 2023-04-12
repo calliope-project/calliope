@@ -209,6 +209,10 @@ class TestCustomMath:
             if i == "bounds":
                 assert new[i]["min"] == -1
                 assert new[i]["max"] == new[i]["max"]
+            elif i == "description":
+                assert new[i].startswith(
+                    "The virtual energy stored by a `supply_plus` or `storage` technology"
+                )
             else:
                 assert base[i] == new[i]
 

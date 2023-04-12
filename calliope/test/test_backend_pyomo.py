@@ -1906,6 +1906,8 @@ class TestNewBackend:
                 "cost_investment",
                 "symmetric_transmission",
             },
+            "description": "A technology's energy capacity, also known as its nominal or nameplate capacity.",
+            "unit": "power",
             "coords_in_name": False,
         }
 
@@ -1957,6 +1959,8 @@ class TestNewBackend:
         assert expr.attrs == {
             "expressions": 1,
             "references": {"cost"},
+            "description": "The installation costs of a technology, including annualised investment costs and annual maintenance costs.",
+            "unit": "cost",
             "coords_in_name": False,
         }
 
@@ -1985,6 +1989,7 @@ class TestNewBackend:
         assert constr.attrs == {
             "constraints": 1,
             "references": set(),
+            "description": "Set the global energy balance of the optimisation problem by fixing the total production of a given energy carrier to equal the total consumption of that carrier at every node in every timestep.",
             "coords_in_name": False,
         }
 
