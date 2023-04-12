@@ -24,7 +24,7 @@ Calliope's time resolution adjustment functionality allows running a function th
 
 The available options include:
 
-1. Uniform time resolution reduction through the ``resample`` function, which takes a `pandas-compatible rule describing the target resolution <http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.resample.html>`_ (see above example).
+1. Uniform time resolution reduction through the ``resample`` function, which takes a `pandas-compatible rule describing the target resolution <https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.resample.html>`_ (see above example).
 
 2. Deriving representative days from the input time series, by applying the clustering method implemented in :mod:`calliope.time.clustering`, for example:
 
@@ -142,7 +142,6 @@ This works for:
 * Links: :yaml:`links.location1,location2.exists: false`
 * Techs at a specific location:  :yaml:`locations.location_name.techs.tech_name.exists: false`
 * Transmission techs at a specific location: :yaml:`links.location1,location2.techs.transmission_tech.exists: false`
-* Group constraints: :yaml:`group_constraints.my_constraint.exists: false`
 
 .. _operational_mode:
 
@@ -306,7 +305,7 @@ You can use this interface to:
 3. Activate / Deactivate a constraint or objective.
     Constraints can be activated and deactivate such that they will or will not have an impact on the optimisation. All constraints are active by default, but you might like to remove, for example, a capacity constraint if you don't want there to be a capacity limit for any technologies. Similarly, if you had multiple objectives, you could deactivate one and activate another. The result would be to have a different objective when rerunning the backend.
 
-.. note:: Currently Calliope does not allow you to build multiple objectives, you will need to `understand Pyomo <http://www.pyomo.org/documentation/>`_ and add an additional objective yourself to make use of this functionality. The Pyomo ConcreteModel() object can be accessed at :python:`model._backend_model`.
+.. note:: Currently Calliope does not allow you to build multiple objectives, you will need to `understand Pyomo <https://www.pyomo.org/documentation/>`_ and add an additional objective yourself to make use of this functionality. The Pyomo ConcreteModel() object can be accessed at :python:`model._backend_model`.
 
 4. Rerunning the backend.
     If you have edited parameters or constraint activation, you will need to rerun the optimisation to propagate the effects. By calling :python:`model.backend.rerun()`, the optimisation will run again, with the updated backend. This will not affect your model, but instead will return a new calliope Model object associated with that *specific* rerun. You can analyse the results and inputs in this new model, but there is no backend interface available. You'll need to return to the original model to access the backend again, or run the returned model using :python:`new_model.run(force_rerun=True)`. In the original model, :python:`model.results` will not change, and can only be overwritten by :python:`model.run(force_rerun=True)`.
@@ -336,7 +335,7 @@ Refer to the `Gurobi manual <https://www.gurobi.com/documentation/>`_, which con
 CPLEX
 ^^^^^
 
-Refer to the `CPLEX parameter list <https://www.ibm.com/support/knowledgecenter/en/SS9UKU_12.5.0/com.ibm.cplex.zos.help/Parameters/topics/introListAlpha.html>`_. Use the "Interactive" parameter names, replacing any spaces with underscores (for example, the memory reduction switch is called "emphasis memory", and thus becomes "emphasis_memory"). For example:
+Refer to the `CPLEX parameter list <https://www.ibm.com/docs/en/icos/22.1.1?topic=cplex-list-parameters>`_. Use the "Interactive" parameter names, replacing any spaces with underscores (for example, the memory reduction switch is called "emphasis memory", and thus becomes "emphasis_memory"). For example:
 
 .. code-block:: yaml
 

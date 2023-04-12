@@ -55,11 +55,6 @@ These are all the available costs, which are set to :math:`0` by default for eve
 
 Technology depreciation settings apply when calculating levelized costs. The interest rate and life times must be set for each technology with investment costs.
 
-Group constraints
------------------
-
-See :ref:`group_constraints` for a full listing of available group constraints.
-
 .. _abstract_base_tech_definitions:
 
 Abstract base technology groups

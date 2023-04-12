@@ -1,14 +1,15 @@
 name: calliope-docs
 
 channels:
-    - conda-forge
+  - conda-forge
+  - nodefaults
 
 dependencies:
-    - python=3.7  # https://docs.readthedocs.io/en/stable/config-file/v2.html#python-version
-    - sphinx=4.2
-    - numpydoc
-    - ruamel.yaml
-    - nbconvert  # To generate HTML files from example notebooks
-    - pip
-    - pip:
-        - "git+https://github.com/readthedocs/readthedocs-sphinx-search@main"
+  - python=3.10
+  - sphinx~=6.1.0
+  - sphinx-autodoc-typehints < 2
+  - ruamel.yaml < 18
+  - nbconvert < 8 # To generate HTML files from example notebooks
+  - pip < 24
+  - pip:
+      - readthedocs-sphinx-search < 0.4
