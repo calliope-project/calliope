@@ -2,49 +2,49 @@ constraints:
   energy_capacity_per_storage_capacity_min:
     description: "Set the lower bound of a `storage`/`supply_plus` technology's energy capacity relative to its storage capacity."
     foreach: [nodes, techs]
-    where: "energy_cap_per_storage_cap_min AND NOT energy_cap_per_storage_cap_equals AND NOT run.mode=operate"
+    where: "energy_cap_per_storage_cap_min AND NOT energy_cap_per_storage_cap_equals"
     equation: energy_cap >= storage_cap * energy_cap_per_storage_cap_min
 
   energy_capacity_per_storage_capacity_max:
     description: "Set the upper bound of a `storage`/`supply_plus` technology's energy capacity relative to its storage capacity."
     foreach: [nodes, techs]
-    where: "energy_cap_per_storage_cap_max AND NOT energy_cap_per_storage_cap_equals AND NOT run.mode=operate"
+    where: "energy_cap_per_storage_cap_max AND NOT energy_cap_per_storage_cap_equals"
     equation: energy_cap <= storage_cap * energy_cap_per_storage_cap_max
 
   energy_capacity_per_storage_capacity_equals:
     description: "Set a fixed relationship between a `storage`/`supply_plus` technology's energy capacity and its storage capacity."
     foreach: [nodes, techs]
-    where: "energy_cap_per_storage_cap_equals AND NOT run.mode=operate"
+    where: "energy_cap_per_storage_cap_equals"
     equation: energy_cap == storage_cap * energy_cap_per_storage_cap_equals
 
   resource_capacity_equals_energy_capacity:
     description: "Set a `supply_plus` technology's energy capacity to equal its resource capacity."
     foreach: [nodes, techs]
-    where: resource_cap_equals_energy_cap=True AND NOT run.mode=operate
+    where: resource_cap_equals_energy_cap=True
     equation: resource_cap == energy_cap
 
   force_zero_resource_area:
     description: "Set a technology's resource area to zero if its energy capacity upper bound is zero."
     foreach: [nodes, techs]
-    where: "(resource_area_min OR resource_area_max OR resource_area_equals OR resource_unit=energy_per_area) AND NOT run.mode=operate AND energy_cap_max=0"
+    where: "(resource_area_min OR resource_area_max OR resource_area_equals OR resource_unit=energy_per_area) AND energy_cap_max=0"
     equation: resource_area == 0
 
   resource_area_per_energy_capacity:
     description: "Set a fixed relationship between a technology's energy capacity and its resource area."
     foreach: [nodes, techs]
-    where: "resource_area_per_energy_cap AND NOT run.mode=operate"
+    where: "resource_area_per_energy_cap"
     equation: resource_area == energy_cap * resource_area_per_energy_cap
 
   resource_area_capacity_per_loc:
     description: "Set an upper bound on the total area that all technologies with a resource_area can occupy at a given node."
     foreach: [nodes]
-    where: "available_area AND (resource_area_min OR resource_area_max OR resource_area_equals OR resource_area_per_energy_cap OR resource_unit=energy_per_area) AND NOT run.mode=operate"
+    where: "available_area AND (resource_area_min OR resource_area_max OR resource_area_equals OR resource_area_per_energy_cap OR resource_unit=energy_per_area)"
     equation: sum(resource_area, over=techs) <= available_area
 
   energy_capacity_systemwide:
     description: "Set an upper bound on, or a fixed total of, energy capacity of a technology across all nodes in which the technology exists."
     foreach: [techs]
-    where: "(energy_cap_equals_systemwide OR energy_cap_max_systemwide) AND NOT run.mode=operate"
+    where: "(energy_cap_equals_systemwide OR energy_cap_max_systemwide)"
     equations:
       - where: "energy_cap_equals_systemwide"
         expression: sum(energy_cap, over=nodes) == energy_cap_equals_systemwide
@@ -266,7 +266,9 @@ constraints:
     foreach: [nodes, techs]
     where: "storage_initial AND include_storage=True AND run.cyclic_storage=True"
     equation: storage[timesteps=$final_step] * ((1 - storage_loss) ** timestep_resolution[timesteps=$final_step]) == storage_initial * storage_cap
-    index_slices: *storage_previous_step_idx_items
+    index_slices:
+      final_step:
+        - expression: get_val_at_index(dim=timesteps, idx=-1)
 
   balance_transmission:
     description: "Fix the relationship between between energy flowing into and out of a `transmission` link in each timestep."
@@ -277,7 +279,7 @@ constraints:
   symmetric_transmission:
     description: "Fix the energy capacity of two `transmission` technologies representing the same link in the system."
     foreach: [nodes, techs]
-    where: "inheritance(transmission) AND NOT run.mode=operate"
+    where: "inheritance(transmission)"
     equation: energy_cap == get_connected_link(energy_cap)
 
   export_balance:
@@ -335,13 +337,13 @@ constraints:
   storage_capacity_units_milp:
     description: "Fix the storage capacity of any technology using integer units to define its capacity."
     foreach: [nodes, techs]
-    where: "(inheritance(storage) OR inheritance(supply_plus)) AND cap_method=integer AND include_storage=True AND NOT run.mode=operate"
+    where: "(inheritance(storage) OR inheritance(supply_plus)) AND cap_method=integer AND include_storage=True"
     equation: storage_cap == units * storage_cap_per_unit
 
   energy_capacity_units_milp:
     description: "Fix the energy capacity of any technology using integer units to define its capacity."
     foreach: [nodes, techs]
-    where: "energy_cap_per_unit AND cap_method=integer AND NOT run.mode=operate"
+    where: "energy_cap_per_unit AND cap_method=integer"
     equation: energy_cap == units * energy_cap_per_unit
 
   energy_capacity_max_purchase_milp:
@@ -379,7 +381,7 @@ constraints:
   unit_capacity_systemwide_milp:
     description: "Set the upper bound on, or a fixed total of, the total number of units of a technology that can be purchased across all nodes where the technology can exist, for any technology using integer units to define its capacity."
     foreach: [techs]
-    where: "(cap_method=binary OR cap_method=integer) AND (units_max_systemwide OR units_equals_systemwide) AND NOT run.mode=operate"
+    where: "(cap_method=binary OR cap_method=integer) AND (units_max_systemwide OR units_equals_systemwide)"
     equations:
       - where: units_equals_systemwide
         expression: $summed_components == units_equals_systemwide
@@ -431,7 +433,6 @@ variables:
     description: "A technology's energy capacity, also known as its nominal or nameplate capacity."
     unit: power
     foreach: [nodes, techs]
-    where: "NOT run.mode=operate"
     bounds:
       min: energy_cap_min
       max: energy_cap_max
@@ -469,7 +470,7 @@ variables:
     description: "The area in space utilised directly (e.g., solar PV panels) or indirectly (e.g., biofuel crops) by a technology."
     unit: area
     foreach: [nodes, techs]
-    where: "(resource_area_min OR resource_area_max OR resource_area_equals OR resource_area_per_energy_cap OR resource_unit=energy_per_area) AND NOT run.mode=operate"
+    where: "(resource_area_min OR resource_area_max OR resource_area_equals OR resource_area_per_energy_cap OR resource_unit=energy_per_area)"
     bounds:
       min: resource_area_min
       max: resource_area_max
@@ -488,7 +489,7 @@ variables:
     description: "The upper limit on energy that can be consumed from outside the system boundaries by a `supply_plus` technology in each timestep."
     unit: power
     foreach: [nodes, techs]
-    where: "inheritance(supply_plus) AND NOT run.mode=operate"
+    where: "inheritance(supply_plus)"
     bounds:
       min: resource_cap_min
       max: resource_cap_max
@@ -498,7 +499,7 @@ variables:
     description: "The upper limit on energy that can be stored by a `supply_plus` or `storage` technology in any timestep."
     unit: energy
     foreach: [nodes, techs]
-    where: "(inheritance(storage) OR inheritance(supply_plus)) AND NOT run.mode=operate AND include_storage=True"
+    where: "(inheritance(storage) OR inheritance(supply_plus)) AND include_storage=True"
     bounds:
       min: storage_cap_min
       max: storage_cap_max
@@ -517,7 +518,7 @@ variables:
     description: "Binary switch defining whether a technology has been purchased or not, for any technology set to require binary capacity purchasing. This is used to set a fixed cost for a technology, irrespective of its installed capacity, on top of which a cost for the quantity of installed capacity can also be applied."
     unit: integer
     foreach: [nodes, techs]
-    where: "cap_method=binary AND NOT run.mode=operate"
+    where: "cap_method=binary"
     domain: integer
     bounds:
       min: 0
@@ -527,7 +528,7 @@ variables:
     description: "Integer number of a technology that has been purchased, for any technology set to require inteter capacity purchasing. This is used to allow installation of fixed capacity units of technologies. Since technology capacity is no longer a continuous decision variable, it is possible for these technologies to have a lower bound set on carrier production/consumption which will only be enforced in those timesteps that the technology is operating (otherwise, the same lower bound forces the technology to produce/consume that minimum amount of energy in *every* timestep)."
     unit: integer
     foreach: [nodes, techs]
-    where: "cap_method=integer AND NOT run.mode=operate"
+    where: "cap_method=integer"
     domain: integer
     bounds:
       min: units_min
@@ -573,17 +574,17 @@ variables:
       max: 0
 
 objectives:
-  min_cost_optimisation:
+  minmax_cost_optimisation:
     description: "Minimise the total cost of installing and operation all technologies in the system. If multiple cost classes are present (e.g., monetary and co2 emissions), the weighted sum of total costs is minimised. Cost class weights can be defined in `run.objective_options.cost_class`."
     equation: sum(sum(cost, over=[nodes, techs]) * objective_cost_class, over=costs) + $unmet_demand
     components:
       unmet_demand:
         - where: "run.ensure_feasibility=True"
-          expression: sum(sum(unmet_demand - unused_supply, over=[carriers, nodes]) * timestep_weights, over=timesteps) * bigM
+          expression: sum(sum(unmet_demand - unused_supply, over=[carriers, nodes])  * timestep_weights, over=timesteps) * bigM
         - where: "NOT run.ensure_feasibility=True"
           expression: "0"
     domain: Reals
-    sense: minimize
+    sense: minimise
 
 expressions:
   cost_var:
@@ -621,7 +622,7 @@ expressions:
     description: "The installation costs of a technology, including annualised investment costs and annual maintenance costs."
     unit: cost
     foreach: [nodes, techs, costs]
-    where: "(cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap) AND NOT run.mode=operate"
+    where: "(cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap)"
     equations:
       - expression: >
           annualisation_weight * (
@@ -673,9 +674,9 @@ expressions:
     equation: $cost_investment + $cost_var_sum
     components:
       cost_investment:
-        - where: "(cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap) AND NOT run.mode=operate"
+        - where: "(cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap)"
           expression: cost_investment
-        - where: "NOT ((cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap) AND NOT run.mode=operate)"
+        - where: "NOT ((cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap))"
           expression: "0"
       cost_var_sum:
         - where: "cost_export OR cost_om_con OR cost_om_prod"
