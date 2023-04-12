@@ -655,7 +655,7 @@ class PyomoBackendModel(BackendModel):
         parameter = self.parameters.get(parameter_name, None)
         if isinstance(parameter, xr.DataArray) and not as_backend_objs:
             param_as_vals = self.apply_func(self._from_pyomo_param, parameter)
-            if parameter.original_dtype.kind == "M":
+            if parameter.original_dtype.kind == "M":  # i.e., np.datetime64
                 return xr.apply_ufunc(pd.to_datetime, param_as_vals)
             else:
                 return param_as_vals.astype(parameter.original_dtype)
