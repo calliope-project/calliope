@@ -18,8 +18,7 @@ import os
 from pathlib import Path
 from calliope.core.util.tools import relative_path
 
-import xarray as xr
-import pandas as pd
+import xarray
 
 import calliope
 from calliope.postprocess import results as postprocess_results
@@ -58,7 +57,7 @@ class Model(object):
     def __init__(
         self,
         config: Optional[Union[str, dict]],
-        model_data: Optional[xr.Dataset] = None,
+        model_data: Optional[xarray.Dataset] = None,
         debug: bool = False,
         *args,
         **kwargs,
@@ -396,13 +395,13 @@ class Model(object):
                 results, self._model_data, self._timings
             )
         else:
-            results = xr.Dataset()
+            results = xarray.Dataset()
 
         self._model_data = self._model_data.drop_vars(to_drop)
 
         self._model_data.attrs.update(results.attrs)
         self._model_data.attrs["termination_condition"] = termination_condition
-        self._model_data = xr.merge(
+        self._model_data = xarray.merge(
             [results, self._model_data], compat="override", combine_attrs="no_conflicts"
         )
         self._add_model_data_methods()
@@ -442,7 +441,7 @@ class Model(object):
                 results, self._model_data, self._timings
             )
         self._model_data.attrs.update(results.attrs)
-        self._model_data = xr.merge(
+        self._model_data = xarray.merge(
             [results, self._model_data], compat="override", combine_attrs="no_conflicts"
         )
         self._add_model_data_methods()
@@ -451,7 +450,7 @@ class Model(object):
 
     def get_formatted_array(self, var):
         """
-        Return an xr.DataArray with nodes, techs, and carriers as
+        Return an xarray.DataArray with nodes, techs, and carriers as
         separate dimensions.
 
         Parameters

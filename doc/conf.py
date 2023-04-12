@@ -52,6 +52,8 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.extlinks",
     "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
+    "sphinx_autodoc_typehints",
     "sphinx_search.extension",
 ]
 
@@ -100,6 +102,13 @@ extlinks = {"nbviewer_docs": (nbviewer_url + docs_base_url + "%s", None)}
 MOCK_MODULES = ["xarray", "pandas", "numpy", "pyomo", "sklearn", "pyparsing"]
 autodoc_mock_imports = MOCK_MODULES
 autodoc_typehints = "both"
+
+intersphinx_mapping = {
+    "python": ("http://docs.python.org/3", None),
+    "xarray": ("https://docs.xarray.dev/en/v2022.03.0", None),
+    "pandas": ("https://pandas.pydata.org/docs/", None),
+    "sklearn": ("https://scikit-learn.org/stable/", None),
+}
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
