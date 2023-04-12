@@ -401,7 +401,7 @@ class BackendModel(ABC, Generic[T]):
         )
 
     @abstractmethod
-    def expand_object_string_representation(self):
+    def verbose_strings(self) -> None:
         """
         Update optimisation model object string representations to include the index coordinates of the object.
 
@@ -409,7 +409,7 @@ class BackendModel(ABC, Generic[T]):
 
         This takes approximately 10% of the peak memory required to initially build the optimisation problem, so should only be invoked if inspecting the model in detail (e.g., debugging)
 
-        Only model parameters and variables string representations will be updated.
+        Only string representations of model parameters and variables will be updated since global expressions are automatically show the string representation of their contents.
         """
 
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
@@ -766,8 +766,18 @@ class PyomoBackendModel(BackendModel):
 
         return str(termination)
 
-    def expand_object_string_representation(self):
-        self._add_coords_to_object_names()
+    def verbose_strings(self) -> None:
+        def __renamer(val, *idx):
+            if pd.notnull(val):
+                val.calliope_coords = idx
+
+        with self._datetime_as_string(self._dataset):
+            for component_group in ["parameters", "variables"]:
+                for da in self._dataset.filter_by_attrs(
+                    coords_in_name=False, **{component_group: 1}
+                ).values():
+                    self.apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
+                    da.attrs["coords_in_name"] = True
 
     def _create_pyomo_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         """Attach an empty pyomo kernel list object to the pyomo model object.
@@ -1127,23 +1137,6 @@ class PyomoBackendModel(BackendModel):
             else:
                 return val.to_string()
 
-    def _add_coords_to_object_names(self):
-        """
-        Add coordinate references to parameter and variable names.
-        """
-
-        def __renamer(val, *idx):
-            if pd.notnull(val):
-                val.calliope_coords = idx
-
-        with self._datetime_as_string(self._dataset):
-            for da in self.parameters.filter_by_attrs(coords_in_name=False).values():
-                self.apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
-                da.attrs["coords_in_name"] = True
-            for da in self.variables.filter_by_attrs(coords_in_name=False).values():
-                self.apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
-                da.attrs["coords_in_name"] = True
-
     @contextmanager
     def _datetime_as_string(self, data: Union[xr.DataArray, xr.Dataset]) -> Iterator:
         """Context manager to temporarily convert np.dtype("datetime64[ns]") coordinates (e.g. timesteps) to strings with a resolution of minutes.
@@ -1185,9 +1178,12 @@ class CoordObj(ABC):
         """
         if self._calliope_coords is None:
             return old_name
+
+        if not self._calliope_coords:  # empty list = dimensionless component
+            coord_list = ""
         else:
             coord_list = f"[{', '.join(str(i) for i in self._calliope_coords)}]"
-            return re.sub(r"\[\d+\]", coord_list, old_name)
+        return re.sub(r"\[\d+\]", coord_list, old_name)
 
     @property
     def calliope_coords(self):

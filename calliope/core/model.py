@@ -13,13 +13,11 @@ from __future__ import annotations
 import logging
 import warnings
 from typing import Literal, Union, Optional, Callable
-from contextlib import contextmanager
 import os
 from pathlib import Path
 from calliope.core.util.tools import relative_path
 
 import xarray as xr
-import pandas as pd
 
 import calliope
 from calliope.postprocess import results as postprocess_results
@@ -31,6 +29,7 @@ from calliope.preprocess import (
 from calliope.preprocess.model_data import ModelDataFactory
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
+from calliope.core.util.tools import copy_docstring
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
 from calliope.backend import backends
@@ -330,6 +329,14 @@ class Model(object):
             )
 
         self.backend = backend
+
+    @copy_docstring(backends.BackendModel.verbose_strings)
+    def verbose_strings(self) -> None:
+        if not hasattr(self, "backend"):
+            raise NotImplementedError(
+                "Call `build()` to generate an optimisation problem before calling this function."
+            )
+        self.backend.verbose_strings()
 
     def solve(self, force_rerun: bool = False, warmstart: bool = False) -> None:
         """

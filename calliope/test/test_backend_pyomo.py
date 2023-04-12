@@ -1866,17 +1866,10 @@ class TestLogging:
 
 class TestNewBackend:
     @pytest.fixture(scope="class")
-    def simple_supply_new_build(self):
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.build()
-        m.solve()
-        return m
-
-    @pytest.fixture(scope="class")
     def simple_supply_longnames(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.build()
-        m.backend.expand_object_string_representation()
+        m.backend.verbose_strings()
         return m
 
     def test_new_build_has_backend(self, simple_supply_new_build):
@@ -2131,9 +2124,7 @@ class TestNewBackend:
             ("energy_eff", {"nodes": "a", "techs": "test_supply_elec"}, "parameters"),
         ],
     )
-    def test_expand_object_string_representation(
-        self, simple_supply_longnames, objname, dims, objtype
-    ):
+    def test_verbose_strings(self, simple_supply_longnames, objname, dims, objtype):
         obj = simple_supply_longnames.backend._dataset[objname]
         assert (
             obj.sel(dims).item().name
@@ -2141,9 +2132,7 @@ class TestNewBackend:
         )
         assert obj.coords_in_name
 
-    def test_expand_object_string_representation_constraint(
-        self, simple_supply_longnames
-    ):
+    def test_verbose_strings_constraint(self, simple_supply_longnames):
         dims = {
             "nodes": "a",
             "techs": "test_demand_elec",
@@ -2163,7 +2152,23 @@ class TestNewBackend:
         )
         assert not obj.coords_in_name
 
-    def test_expand_object_string_representation_no_len(self, simple_supply_longnames):
+    def test_verbose_strings_expression(self, simple_supply_longnames):
+        dims = {
+            "nodes": "a",
+            "techs": "test_supply_elec",
+            "costs": "monetary",
+        }
+
+        obj = simple_supply_longnames.backend.get_expression(
+            "cost_investment", as_backend_objs=False
+        )
+
+        assert "variables[energy_cap][test_supply_elec, a]" in obj.sel(dims).item()
+        assert "parameters[annualisation_weight]" in obj.sel(dims).item()
+
+        assert not obj.coords_in_name
+
+    def test_verbose_strings_no_len(self, simple_supply_longnames):
         obj = simple_supply_longnames.backend.parameters.annualisation_weight
 
         assert obj.item().name == "parameters[annualisation_weight][]"
