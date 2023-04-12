@@ -1,5 +1,5 @@
 from io import StringIO
-from itertools import chain, combinations
+from unittest.mock import patch
 
 import pytest
 import ruamel.yaml as yaml
@@ -211,50 +211,20 @@ def equation_index_slice_obj(index_slice_parser, where_parser):
 
 @pytest.fixture
 def dummy_backend_interface(dummy_model_data):
-    class DummyBackendModel(backends.BackendModel):
-        def __init__(self):
-            backends.BackendModel.__init__(self, instance=None)
+    # ignore the need to define the abstract methods from backends.BackendModel
+    with patch.multiple(backends.BackendModel, __abstractmethods__=set()):
 
-            self._dataset = dummy_model_data.copy(deep=True)
-            self._dataset["with_inf"] = self._dataset["with_inf"].fillna(
-                dummy_model_data.attrs["defaults"]["with_inf"]
-            )
-            self._dataset["only_techs"] = self._dataset["only_techs"].fillna(
-                dummy_model_data.attrs["defaults"]["only_techs"]
-            )
+        class DummyBackendModel(backends.BackendModel):
+            def __init__(self):
+                backends.BackendModel.__init__(self, instance=None)
 
-        def add_parameter(self):
-            pass
-
-        def add_constraint(self):
-            pass
-
-        def add_expression(self):
-            pass
-
-        def add_variable(self):
-            pass
-
-        def add_objective(self):
-            pass
-
-        def get_parameter(self):
-            pass
-
-        def get_constraint(self):
-            pass
-
-        def get_variable(self):
-            pass
-
-        def get_expression(self):
-            pass
-
-        def solve(self):
-            pass
-
-        def expand_object_string_representation(self):
-            pass
+                self._dataset = dummy_model_data.copy(deep=True)
+                self._dataset["with_inf"] = self._dataset["with_inf"].fillna(
+                    dummy_model_data.attrs["defaults"]["with_inf"]
+                )
+                self._dataset["only_techs"] = self._dataset["only_techs"].fillna(
+                    dummy_model_data.attrs["defaults"]["only_techs"]
+                )
 
     return DummyBackendModel()
 
