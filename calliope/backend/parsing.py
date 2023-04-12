@@ -335,7 +335,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         self._tracker = self._init_tracker()
 
     def _init_tracker(self):
-        f"""Initialise error string tracking as dictionary of `key: None` for key in {self._ERR_STRING_ORDER}"""
+        "Initialise error string tracking as dictionary of `key: None`"
         return {i: None for i in self._ERR_STRING_ORDER}
 
     def parse_top_level_where(
