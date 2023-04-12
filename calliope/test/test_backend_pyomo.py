@@ -2194,5 +2194,5 @@ class TestNewBackend:
     def test_verbose_strings_no_len(self, simple_supply_longnames):
         obj = simple_supply_longnames.backend.parameters.annualisation_weight
 
-        assert obj.item().name == "parameters[annualisation_weight][]"
+        assert obj.item().name == "parameters[annualisation_weight]"
         assert obj.coords_in_name
