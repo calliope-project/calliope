@@ -13,7 +13,7 @@ import pyomo.core as po
 from calliope.core.util.tools import load_function
 
 
-def minmax_cost_optimization(backend_model):
+def minmax_cost_optimisation(backend_model):
     """
     Minimize or maximise total system cost for specified cost class or a set of cost classes.
     cost_class is a string or dictionary. If a string, it is automatically converted to a

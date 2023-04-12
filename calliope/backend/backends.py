@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 import typing
 from typing import (
@@ -13,10 +14,12 @@ from typing import (
     TypeVar,
     Generic,
     Union,
+    Iterator,
+    Iterable,
 )
 
 import os
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stdout, redirect_stderr, contextmanager
 import logging
 
 import xarray as xr
@@ -53,7 +56,7 @@ class BackendModel(ABC, Generic[T]):
 
         self._instance = instance
         self._dataset = xr.Dataset()
-        self.valid_arithmetic_components: set = set()
+        self.valid_math_element_names: set = set()
 
     @abstractmethod
     def add_parameter(
@@ -107,7 +110,7 @@ class BackendModel(ABC, Generic[T]):
         self,
         model_data: xr.Dataset,
         name: str,
-        expression_dict: parsing.UnparsedConstraintDict,
+        expression_dict: parsing.UnparsedExpressionDict,
     ) -> None:
         """
         Add expression (arithmetic combination of parameters and/or decision variables)
@@ -120,7 +123,7 @@ class BackendModel(ABC, Generic[T]):
                 dataset entries in the mask will be generated.
             name (str):
                 Name of the expression
-            expression_dict (parsing.UnparsedConstraintDict):
+            expression_dict (parsing.UnparsedExpressionDict):
                 Expression configuration dictionary, ready to be parsed and then evaluated.
         """
 
@@ -400,6 +403,18 @@ class BackendModel(ABC, Generic[T]):
             output_core_dims=output_core_dims,
         )
 
+    @abstractmethod
+    def verbose_strings(self) -> None:
+        """
+        Update optimisation model object string representations to include the index coordinates of the object.
+
+        E.g., `variables(carrier_prod)[0]` will become `variables(carrier_prod)[power, region1, ccgt, 2005-01-01 00:00]`
+
+        This takes approximately 10% of the peak memory required to initially build the optimisation problem, so should only be invoked if inspecting the model in detail (e.g., debugging)
+
+        Only string representations of model parameters and variables will be updated since global expressions automatically show the string representation of their contents.
+        """
+
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
         f"""
         We do not allow any overlap of backend object names since they all have to
@@ -445,6 +460,7 @@ class BackendModel(ABC, Generic[T]):
         name: str,
         da: xr.DataArray,
         obj_type: _COMPONENTS_T,
+        unparsed_dict: Union[parsing.UNPARSED_DICTS, dict],
         references: Optional[set] = None,
     ):
         """
@@ -454,13 +470,25 @@ class BackendModel(ABC, Generic[T]):
             name (str): Name of entry in dataset.
             da (xr.DataArray): Data to add.
             obj_type (str): Type of backend objects in the array.
+            unparsed_dict (DT):
+                Dictionary describing the object being added, from which descriptor attributes will be extracted and added to the array attributes.
             references (set):
                 All other backend objects which are references in this backend object's linear expression(s).
                 E.g. the constraint "carrier_prod / energy_eff <= energy_cap" references the variables ["carrier_prod", "energy_cap"]
                 and the parameter ["energy_eff"].
                 All referenced objects will have their "references" attribute updated with this object's name.
+                Defaults to None.
         """
-        self._dataset[name] = da.assign_attrs({obj_type: 1, "references": set()})
+        from_unparsed_dict = ["description", "unit"]
+        add_attrs = {
+            attr: unparsed_dict.get(attr)
+            for attr in from_unparsed_dict
+            if attr in unparsed_dict.keys()
+        }
+
+        self._dataset[name] = da.assign_attrs(
+            {obj_type: 1, "references": set(), "coords_in_name": False, **add_attrs}
+        )
         if references is not None:
             for reference in references:
                 self._dataset[reference].attrs["references"].add(name)
@@ -521,11 +549,12 @@ class PyomoBackendModel(BackendModel):
             default=default,
             use_inf_as_na=use_inf_as_na,
         )
-        if not parameter_values.shape and parameter_da.isnull().all():
+        if parameter_da.isnull().all():
+            self._delete_pyomo_list(parameter_name, "parameters")
             parameter_da = parameter_da.astype(float)
 
-        self._add_to_dataset(parameter_name, parameter_da, "parameters")
-        self.valid_arithmetic_components.add(parameter_name)
+        self._add_to_dataset(parameter_name, parameter_da, "parameters", {})
+        self.valid_math_element_names.add(parameter_name)
 
     def add_constraint(
         self,
@@ -554,14 +583,13 @@ class PyomoBackendModel(BackendModel):
             constraint_dict,
             _constraint_setter,
             "constraints",
-            equation_parser.generate_equation_parser,
         )
 
     def add_expression(
         self,
         model_data: xr.Dataset,
         name: str,
-        expression_dict: parsing.UnparsedConstraintDict,
+        expression_dict: parsing.UnparsedExpressionDict,
     ) -> None:
         def _expression_setter(imask: xr.DataArray, expr: xr.DataArray) -> xr.DataArray:
             to_fill = self.apply_func(
@@ -573,7 +601,7 @@ class PyomoBackendModel(BackendModel):
             self._clean_arrays(expr)
             return to_fill
 
-        self.valid_arithmetic_components.add(name)
+        self.valid_math_element_names.add(name)
 
         self._add_constraint_or_expression(
             model_data,
@@ -581,7 +609,6 @@ class PyomoBackendModel(BackendModel):
             expression_dict,
             _expression_setter,
             "expressions",
-            equation_parser.generate_arithmetic_parser,
         )
 
     def add_variable(
@@ -590,9 +617,11 @@ class PyomoBackendModel(BackendModel):
         name: str,
         variable_dict: parsing.UnparsedVariableDict,
     ) -> None:
-        self.valid_arithmetic_components.add(name)
+        self.valid_math_element_names.add(name)
 
-        parsed_variable = parsing.ParsedBackendComponent(name, variable_dict)
+        parsed_variable = parsing.ParsedBackendComponent(
+            "variables", name, variable_dict
+        )
         foreach_imask = parsed_variable.evaluate_foreach(model_data)
         if not foreach_imask.any():
             return None
@@ -620,7 +649,7 @@ class PyomoBackendModel(BackendModel):
             domain_type=domain_type,
         )
 
-        self._add_to_dataset(name, variable_da, "variables")
+        self._add_to_dataset(name, variable_da, "variables", variable_dict)
 
     def add_objective(
         self,
@@ -629,11 +658,11 @@ class PyomoBackendModel(BackendModel):
         objective_dict: parsing.UnparsedObjectiveDict,
     ) -> None:
         self._raise_error_on_preexistence(name, "objectives")
-        sense_dict = {"minimize": 1, "maximize": -1}
-        parsed_objective = parsing.ParsedBackendComponent(name, objective_dict)
-        equations = parsed_objective.parse_equations(
-            equation_parser.generate_arithmetic_parser, self.valid_arithmetic_components
+        sense_dict = {"minimize": 1, "minimise": 1, "maximize": -1, "maximise": -1}
+        parsed_objective = parsing.ParsedBackendComponent(
+            "objectives", name, objective_dict
         )
+        equations = parsed_objective.parse_equations(self.valid_math_element_names)
 
         n_valid_exprs = 0
         for equation in equations:
@@ -641,6 +670,10 @@ class PyomoBackendModel(BackendModel):
             if imask.any():
                 expr = equation.evaluate_expression(model_data, self, imask).item()
                 n_valid_exprs += 1
+
+        if n_valid_exprs == 0:
+            return None
+
         if n_valid_exprs > 1:
             raise BackendError(
                 f"More than one {name} objective is valid for this "
@@ -648,9 +681,17 @@ class PyomoBackendModel(BackendModel):
             )
 
         objective = pmo.objective(expr, sense=sense_dict[objective_dict["sense"]])
+
+        if name == model_data.run_config["objective"]:
+            objective.activate()
+        else:
+            objective.deactivate()
+
         self._instance.objectives.append(objective)
 
-        self._add_to_dataset(name, xr.DataArray(objective), "objectives")
+        self._add_to_dataset(
+            name, xr.DataArray(objective), "objectives", objective_dict
+        )
 
     def get_parameter(
         self, parameter_name: str, as_backend_objs: bool = True
@@ -752,6 +793,19 @@ class PyomoBackendModel(BackendModel):
 
         return str(termination)
 
+    def verbose_strings(self) -> None:
+        def __renamer(val, *idx):
+            if pd.notnull(val):
+                val.calliope_coords = idx
+
+        with self._datetime_as_string(self._dataset):
+            for component_group in ["parameters", "variables"]:
+                for da in self._dataset.filter_by_attrs(
+                    coords_in_name=False, **{component_group: 1}
+                ).values():
+                    self.apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
+                    da.attrs["coords_in_name"] = True
+
     def _create_pyomo_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         """Attach an empty pyomo kernel list object to the pyomo model object.
 
@@ -771,21 +825,35 @@ class PyomoBackendModel(BackendModel):
             singular_component = component_type.removesuffix("s")
             component_dict[key] = getattr(pmo, f"{singular_component}_list")()
 
+    def _delete_pyomo_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+        """Delete a pyomo kernel list object from the pyomo model object.
+
+        Args:
+            key (str): Name of object
+            component_type (str): Object type
+        """
+        component_dict = getattr(self._instance, component_type)
+        if key not in component_dict:
+            return None
+        else:
+            del component_dict[key]
+
     def _add_constraint_or_expression(
         self,
         model_data: xr.Dataset,
         name: str,
-        component_dict: parsing.UnparsedConstraintDict,
+        component_dict: Union[
+            parsing.UnparsedConstraintDict, parsing.UnparsedExpressionDict
+        ],
         component_setter: Callable,
         component_type: Literal["constraints", "expressions"],
-        parser: Callable,
     ) -> None:
         """Generalised function to add a constraint or expression array to the model.
 
         Args:
             model_data (xr.Dataset): Calliope model input data
             name: Name of the constraint or expression
-            component_dict (parsing.UnparsedConstraintDict):
+            component_dict (Union[parsing.UnparsedConstraintDict, parsing.UnparsedExpressionDict]):
                 Unparsed YAML dictionary configuration.
             component_setter (Callable):
                 Function to combine evaluated xarray DataArrays into
@@ -802,7 +870,9 @@ class PyomoBackendModel(BackendModel):
         """
         references: set[str] = set()
 
-        parsed_component = parsing.ParsedBackendComponent(name, component_dict)
+        parsed_component = parsing.ParsedBackendComponent(
+            component_type, name, component_dict
+        )
         foreach_imask = parsed_component.evaluate_foreach(model_data)
         if not foreach_imask.any():
             return None
@@ -820,9 +890,7 @@ class PyomoBackendModel(BackendModel):
         )
         self._create_pyomo_list(name, component_type)
 
-        equations = parsed_component.parse_equations(
-            parser, self.valid_arithmetic_components
-        )
+        equations = parsed_component.parse_equations(self.valid_math_element_names)
         for element in equations:
             imask = element.evaluate_where(model_data, top_level_imask)
             if not imask.any():
@@ -843,9 +911,12 @@ class PyomoBackendModel(BackendModel):
             component_da = component_da.fillna(to_fill)
 
         if component_da.isnull().all():
+            self._delete_pyomo_list(name, component_type)
             return None
 
-        self._add_to_dataset(name, component_da, component_type, references)
+        self._add_to_dataset(
+            name, component_da, component_type, component_dict, references
+        )
 
     def _get_capacity_bounds(
         self, bounds: parsing.UnparsedVariableBoundDict, name: str
@@ -1001,7 +1072,7 @@ class PyomoBackendModel(BackendModel):
         *,
         name: str,
         domain_type: Literal["RealSet", "IntegerSet"],
-    ) -> Union[type[pmo.variable], float]:
+    ) -> Union[type[ObjVariable], float]:
         """
         Utility function to generate a pyomo decision variable for every element of an
         xarray DataArray.
@@ -1019,19 +1090,19 @@ class PyomoBackendModel(BackendModel):
             name (str): Name of variable.
 
         Returns:
-            Union[type[pmo.variable], float]:
+            Union[type[ObjVariable], float]:
                 If mask is True, return np.nan.
                 Otherwise return pmo_variable(ub=ub, lb=lb, domain_type=domain_type).
         """
         if mask:
-            var = pmo.variable(ub=ub, lb=lb, domain_type=domain_type)
+            var = ObjVariable(ub=ub, lb=lb, domain_type=domain_type)
             self._instance.variables[name].append(var)
             return var
         else:
             return np.nan
 
     @staticmethod
-    def _from_pyomo_param(val: Union[ObjParameter, pmo.variable, float]) -> Any:
+    def _from_pyomo_param(val: Union[ObjParameter, ObjVariable, float]) -> Any:
         """
         Evaluate value of Pyomo object.
         If the input object is a parameter, a numeric/string value will be given.
@@ -1039,7 +1110,7 @@ class PyomoBackendModel(BackendModel):
         only if the backend model has been successfully optimised, otherwise evaluation will return None.
 
         Args:
-            val (Union[ObjParameter, pmo.expression, pmo.variable, np.nan]):
+            val (Union[ObjParameter, pmo.expression, ObjVariable, np.nan]):
                 Item to be evaluated.
 
         Returns:
@@ -1110,21 +1181,91 @@ class PyomoBackendModel(BackendModel):
             else:
                 return val.to_string()
 
+    @contextmanager
+    def _datetime_as_string(self, data: Union[xr.DataArray, xr.Dataset]) -> Iterator:
+        """Context manager to temporarily convert np.dtype("datetime64[ns]") coordinates (e.g. timesteps) to strings with a resolution of minutes.
 
-class ObjParameter(pmo.parameter):
+        Args:
+            data (Union[xr.DataArray, xr.Dataset]): xarray object on whose coordinates the conversion will take place.
+        """
+        datetime_coords = set()
+        for name_, vals_ in data.coords.items():
+            if vals_.dtype.kind == "M":
+                data.coords[name_] = data.coords[name_].dt.strftime("%Y-%m-%d %H:%M")
+                datetime_coords.add(name_)
+        try:
+            yield
+        finally:
+            for name_ in datetime_coords:
+                data.coords[name_] = xr.apply_ufunc(
+                    pd.to_datetime, data.coords[name_], keep_attrs=True
+                )
+
+
+class CoordObj(ABC):
+    """Class with methods to update the `name` property of inheriting classes"""
+
+    def __init__(self) -> None:
+        self._calliope_coords: Optional[Iterable] = None
+
+    def _update_name(self, old_name: str) -> str:
+        """
+        Update string of a list containing a single number with a string of a list containing any arbitrary number of elements
+
+        Args:
+            old_name (str): String representation of a list containing a single number
+
+        Returns:
+            str:
+                If `self.calliope_coords` is None, returns `old_name`.
+                Otherwise returns string representation of a list containing the contents of `self.calliope_coords`
+        """
+        if self._calliope_coords is None:
+            return old_name
+
+        if not self._calliope_coords:  # empty list = dimensionless component
+            coord_list = ""
+        else:
+            coord_list = f"[{', '.join(str(i) for i in self._calliope_coords)}]"
+        return re.sub(r"\[\d+\]", coord_list, old_name)
+
+    @property
+    def calliope_coords(self):
+        return self._calliope_coords
+
+    @calliope_coords.setter
+    def calliope_coords(self, val):
+        self._calliope_coords = val
+
+
+class ObjParameter(pmo.parameter, CoordObj):
     """
     A pyomo parameter (`a object for storing a mutable, numeric value that can be used to build a symbolic expression`)
-    with added `dtype` property.
+    with added `dtype` property and a `name` property setter (via the `pmo.parameter.getname` method) which replaces a list position as a name with a list of strings.
     """
-
-    __slots__ = ()
 
     def __init__(self, value, **kwds):
         assert not pd.isnull(value)
-        super(ObjParameter, self).__init__(value, **kwds)
-        if "dtype" not in kwds:
-            kwds["dtype"] = "O"
+        pmo.parameter.__init__(self, value, **kwds)
+        CoordObj.__init__(self)
 
     @property
     def dtype(self):
         return "O"
+
+    def getname(self, *args, **kwargs):
+        return self._update_name(pmo.parameter.getname(self, *args, **kwargs))
+
+
+class ObjVariable(pmo.variable, CoordObj):
+    """
+    A pyomo variable with a `name` property setter (via the `pmo.variable.getname` method) which replaces a list position as a name with a list of strings.
+
+    """
+
+    def __init__(self, **kwds):
+        pmo.variable.__init__(self, **kwds)
+        CoordObj.__init__(self)
+
+    def getname(self, *args, **kwargs):
+        return self._update_name(pmo.variable.getname(self, *args, **kwargs))

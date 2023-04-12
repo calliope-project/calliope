@@ -2,12 +2,17 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
 
+from typing import TypeVar, Callable
+from typing_extensions import ParamSpec
 from copy import deepcopy
 import functools
 import importlib
 import operator
 import os
 import sys
+
+P = ParamSpec("P")
+T = TypeVar("T")
 
 
 def get_from_dict(data_dict, map_list):
@@ -101,3 +106,13 @@ def plugin_load(name, builtin_module):
         func_string = builtin_module + "." + name
         func = load_function(func_string)
     return func
+
+
+def copy_docstring(wrapper: Callable[P, T]):
+    """Decorator to copy across a function docstring to the wrapped function."""
+
+    def decorator(func: Callable) -> Callable[P, T]:
+        func.__doc__ = wrapper.__doc__
+        return func
+
+    return decorator
