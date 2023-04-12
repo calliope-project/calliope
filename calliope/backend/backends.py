@@ -409,7 +409,7 @@ class BackendModel(ABC, Generic[T]):
 
         This takes approximately 10% of the peak memory required to initially build the optimisation problem, so should only be invoked if inspecting the model in detail (e.g., debugging)
 
-        Only string representations of model parameters and variables will be updated since global expressions are automatically show the string representation of their contents.
+        Only string representations of model parameters and variables will be updated since global expressions automatically show the string representation of their contents.
         """
 
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
