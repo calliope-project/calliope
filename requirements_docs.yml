@@ -6,7 +6,7 @@ channels:
 
 dependencies:
   - python=3.11
-  - sphinx~=5.3
+  - sphinx~=6.0.0
   - sphinx-autodoc-typehints < 2
   - ruamel.yaml < 18
   - nbconvert < 8 # To generate HTML files from example notebooks
