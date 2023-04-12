@@ -1,7 +1,7 @@
-"""
-Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
-Licensed under the Apache 2.0 License (see LICENSE file).
+# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
+# Licensed under the Apache 2.0 License (see LICENSE file).
 
+"""
 generate_tables.py
 ~~~~~~~~~~~~~~~~~~
 
@@ -15,7 +15,7 @@ import ruamel.yaml as yaml
 
 
 def get_section(commented_map):
-    """ Returns list of (setting, default, comment) tuples processed
+    """Returns list of (setting, default, comment) tuples processed
     from a YAML section."""
     result = []
     for k, v in commented_map.items():

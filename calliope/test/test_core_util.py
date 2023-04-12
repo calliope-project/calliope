@@ -4,7 +4,7 @@ import logging
 import datetime
 import os
 
-from calliope.core.util.tools import memoize, memoize_instancemethod
+from calliope.core.util.tools import memoize, memoize_instancemethod, copy_docstring
 
 from calliope.core.util.logging import log_time
 from calliope.core.util.generate_runs import generate_runs
@@ -132,3 +132,17 @@ class TestPandasExport:
             model.inputs[variable_name].to_dataframe()
         else:
             pass
+
+
+class TestCopyDocstring:
+    def test_copy_docstring(self):
+        def _func_w_docstring():
+            "foobar"
+            pass
+
+        def _func(foo, bar):
+            return foo + bar
+
+        docified_func = copy_docstring(_func_w_docstring)(_func)
+        assert docified_func.__doc__ == "foobar"
+        assert docified_func(1, 2) == 3

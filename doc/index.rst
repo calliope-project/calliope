@@ -11,7 +11,7 @@ v\ |version| (:doc:`Release history <history>`)
 
 ------------
 
-This is the documentation for version |version|. See the `main project website <http://www.callio.pe/>`_ for contact details and other useful information.
+This is the documentation for version |version|. See the `main project website <https://www.callio.pe/>`_ for contact details and other useful information.
 
 ------------
 
@@ -20,7 +20,7 @@ Calliope focuses on flexibility, high spatial and temporal resolution, the abili
 .. raw:: html
    :file: user/images/plot_timeseries.html
 
-A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials. Calliope takes these files, constructs an optimisation problem, solves it, and reports results in the form of `xarray Datasets <http://xarray.pydata.org/en/stable/>`_ which in turn can easily be converted into `Pandas <http://pandas.pydata.org/>`_ data structures, for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
+A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials. Calliope takes these files, constructs an optimisation problem, solves it, and reports results in the form of `xarray Datasets <https://docs.xarray.dev/en/v2022.03.0/user-guide/data-structures.html#dataset>`_ which in turn can easily be converted into `Pandas data structures <https://pandas.pydata.org/pandas-docs/version/1.5/user_guide/dsintro.html#dsintro>`_ for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
 
 Calliope is developed in the open `on GitHub <https://github.com/calliope-project/calliope>`_ and contributions are very welcome (see the :doc:`user/develop`).
 
@@ -31,7 +31,7 @@ Key features of Calliope include:
 * Resolved in space: define locations with individual resource potentials
 * Resolved in time: read time series with arbitrary resolution
 * Able to run on high-performance computing (HPC) clusters
-* Uses a state-of-the-art Python toolchain based on `Pyomo <https://software.sandia.gov/trac/coopr/wiki/Pyomo>`_, `xarray <http://xarray.pydata.org/>`_, and `Pandas <http://pandas.pydata.org/>`_
+* Uses a state-of-the-art Python toolchain based on `Pyomo <https://pyomo.readthedocs.io/en/stable/>`_, `xarray <https://docs.xarray.dev/en/stable/>`_, and `Pandas <https://pandas.pydata.org/>`_
 * Freely available under the Apache 2.0 license
 
 ----------
@@ -73,12 +73,9 @@ Release history
 ---------------
 
 .. toctree::
-   :hidden:
    :maxdepth: 1
 
    history
-
-:doc:`Release history <history>`
 
 -------
 License
@@ -90,7 +87,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-   http://www.apache.org/licenses/LICENSE-2.0
+   https://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,

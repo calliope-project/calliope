@@ -1801,10 +1801,10 @@ class TestLogging:
 
 class TestNewBackend:
     @pytest.fixture(scope="class")
-    def simple_supply_new_build(self):
+    def simple_supply_longnames(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.build()
-        m.solve()
+        m.backend.verbose_strings()
         return m
 
     def test_new_build_has_backend(self, simple_supply_new_build):
@@ -1841,6 +1841,9 @@ class TestNewBackend:
                 "cost_investment",
                 "symmetric_transmission",
             },
+            "description": "A technology's energy capacity, also known as its nominal or nameplate capacity.",
+            "unit": "power",
+            "coords_in_name": False,
         }
 
     def test_new_build_get_variable_as_vals(self, simple_supply_new_build):
@@ -1866,6 +1869,7 @@ class TestNewBackend:
             "parameters": 1,
             "is_result": 0,
             "references": {"balance_demand", "balance_transmission"},
+            "coords_in_name": False,
         }
 
     def test_new_build_get_parameter_as_vals(self, simple_supply_new_build):
@@ -1887,7 +1891,13 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.expression))
             .all()
         )
-        assert expr.attrs == {"expressions": 1, "references": {"cost"}}
+        assert expr.attrs == {
+            "expressions": 1,
+            "references": {"cost"},
+            "description": "The installation costs of a technology, including annualised investment costs and annual maintenance costs.",
+            "unit": "cost",
+            "coords_in_name": False,
+        }
 
     def test_new_build_get_expression_as_str(self, simple_supply_new_build):
         expr = simple_supply_new_build.backend.get_expression(
@@ -1911,7 +1921,12 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.constraint))
             .all()
         )
-        assert constr.attrs == {"constraints": 1, "references": set()}
+        assert constr.attrs == {
+            "constraints": 1,
+            "references": set(),
+            "description": "Set the global energy balance of the optimisation problem by fixing the total production of a given energy carrier to equal the total consumption of that carrier at every node in every timestep.",
+            "coords_in_name": False,
+        }
 
     def test_new_build_get_constraint_as_str(self, simple_supply_new_build):
         constr = simple_supply_new_build.backend.get_constraint(
@@ -2018,3 +2033,185 @@ class TestNewBackend:
             excinfo,
             "Trying to add already existing *variable* `carrier_prod` as a backend model *parameter*.",
         )
+
+    @pytest.mark.parametrize(
+        "component", ["parameters", "variables", "expressions", "constraints"]
+    )
+    def test_create_and_delete_pyomo_list(self, simple_supply_new_build, component):
+        backend_instance = simple_supply_new_build.backend._instance
+        simple_supply_new_build.backend._create_pyomo_list("foo", component)
+        assert "foo" in getattr(backend_instance, component).keys()
+
+        simple_supply_new_build.backend._delete_pyomo_list("foo", component)
+        assert "foo" not in getattr(backend_instance, component).keys()
+
+    @pytest.mark.parametrize(
+        "component", ["parameters", "variables", "expressions", "constraints"]
+    )
+    def test_delete_inexistent_pyomo_list(self, simple_supply_new_build, component):
+        backend_instance = simple_supply_new_build.backend._instance
+        assert "bar" not in getattr(backend_instance, component).keys()
+        simple_supply_new_build.backend._delete_pyomo_list("bar", component)
+        assert "bar" not in getattr(backend_instance, component).keys()
+
+    @pytest.mark.parametrize(
+        ["component", "eq"],
+        [("expressions", "energy_cap + 1"), ("constraints", "energy_cap >= 1")],
+    )
+    def test_add_allnull_expr_or_constr(self, simple_supply_new_build, component, eq):
+        adder = getattr(
+            simple_supply_new_build.backend, "add_" + component.removesuffix("s")
+        )
+        constr_dict = {
+            "foreach": ["nodes", "techs"],
+            "where": "True",
+            "equations": [{"expression": eq, "where": "False"}],
+        }
+        adder(simple_supply_new_build._model_data, "foo", constr_dict)
+
+        assert (
+            "foo"
+            not in getattr(simple_supply_new_build.backend._instance, component).keys()
+        )
+        assert "foo" not in simple_supply_new_build.backend._dataset.data_vars.keys()
+
+    def test_add_allnull_param_no_shape(self, simple_supply_new_build):
+        simple_supply_new_build.backend.add_parameter("foo", xr.DataArray(np.nan))
+
+        assert "foo" not in simple_supply_new_build.backend._instance.parameters.keys()
+        # We keep it in the dataset since it might be fillna'd by another param later.
+        assert "foo" in simple_supply_new_build.backend._dataset.data_vars.keys()
+        del simple_supply_new_build.backend._dataset["foo"]
+
+    def test_add_allnull_param_with_shape(self, simple_supply_new_build):
+        nan_array = simple_supply_new_build._model_data.energy_cap_max.where(
+            lambda x: x < 0
+        )
+        simple_supply_new_build.backend.add_parameter("foo", nan_array)
+
+        assert "foo" not in simple_supply_new_build.backend._instance.parameters.keys()
+        # We keep it in the dataset since it might be fillna'd by another param later.
+        assert "foo" in simple_supply_new_build.backend._dataset.data_vars.keys()
+        del simple_supply_new_build.backend._dataset["foo"]
+
+    def test_add_allnull_var(self, simple_supply_new_build):
+        simple_supply_new_build.backend.add_variable(
+            simple_supply_new_build._model_data,
+            "foo",
+            {"foreach": ["nodes"], "where": "False"},
+        )
+        assert "foo" not in simple_supply_new_build.backend._instance.variables.keys()
+        assert "foo" not in simple_supply_new_build.backend._dataset.data_vars.keys()
+
+    def test_add_allnull_obj(self, simple_supply_new_build):
+        eq = {"expression": "bigM", "where": "False"}
+        simple_supply_new_build.backend.add_objective(
+            simple_supply_new_build._model_data,
+            "foo",
+            {"equations": [eq, eq], "sense": "minimise"},
+        )
+        assert len(simple_supply_new_build.backend._instance.objectives) == 1
+        assert "foo" not in simple_supply_new_build.backend._dataset.data_vars.keys()
+
+    def test_add_two_same_obj(self, simple_supply_new_build):
+        eq = {"expression": "bigM", "where": "True"}
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            simple_supply_new_build.backend.add_objective(
+                simple_supply_new_build._model_data,
+                "foo",
+                {"equations": [eq, eq], "sense": "minimise"},
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "More than one foo objective is valid for this optimisation problem; only one is allowed.",
+        )
+
+    def test_add_valid_obj(self, simple_supply_new_build):
+        eq = {"expression": "bigM", "where": "True"}
+        simple_supply_new_build.backend.add_objective(
+            simple_supply_new_build._model_data,
+            "foo",
+            {"equations": [eq], "sense": "minimise"},
+        )
+        assert "foo" in simple_supply_new_build.backend.objectives
+        assert not simple_supply_new_build.backend.objectives.foo.item().active
+
+    def test_object_string_representation(self, simple_supply_new_build):
+        assert (
+            simple_supply_new_build.backend.variables.carrier_prod.sel(
+                nodes="a",
+                techs="test_supply_elec",
+                carriers="electricity",
+                timesteps="2005-01-01 00:00",
+            )
+            .item()
+            .name
+            == "variables[carrier_prod][0]"
+        )
+        assert not simple_supply_new_build.backend.variables.carrier_prod.coords_in_name
+
+    @pytest.mark.parametrize(
+        ["objname", "dims", "objtype"],
+        [
+            (
+                "carrier_prod",
+                {
+                    "nodes": "a",
+                    "techs": "test_supply_elec",
+                    "carriers": "electricity",
+                    "timesteps": "2005-01-01 00:00",
+                },
+                "variables",
+            ),
+            ("energy_eff", {"nodes": "a", "techs": "test_supply_elec"}, "parameters"),
+        ],
+    )
+    def test_verbose_strings(self, simple_supply_longnames, objname, dims, objtype):
+        obj = simple_supply_longnames.backend._dataset[objname]
+        assert (
+            obj.sel(dims).item().name
+            == f"{objtype}[{objname}][{', '.join(dims[i] for i in obj.dims)}]"
+        )
+        assert obj.coords_in_name
+
+    def test_verbose_strings_constraint(self, simple_supply_longnames):
+        dims = {
+            "nodes": "a",
+            "techs": "test_demand_elec",
+            "carriers": "electricity",
+            "timesteps": "2005-01-01 00:00",
+        }
+
+        obj = simple_supply_longnames.backend.get_constraint(
+            "balance_demand", as_backend_objs=False
+        )
+        energy_eff_dims = ", ".join(
+            dims[i] for i in simple_supply_longnames.backend.parameters.energy_eff.dims
+        )
+        assert (
+            obj.sel(dims).body.item()
+            == f"parameters[energy_eff][{energy_eff_dims}]*variables[carrier_con][{', '.join(dims[i] for i in obj.dims)}]"
+        )
+        assert not obj.coords_in_name
+
+    def test_verbose_strings_expression(self, simple_supply_longnames):
+        dims = {
+            "nodes": "a",
+            "techs": "test_supply_elec",
+            "costs": "monetary",
+        }
+
+        obj = simple_supply_longnames.backend.get_expression(
+            "cost_investment", as_backend_objs=False
+        )
+
+        assert "variables[energy_cap][test_supply_elec, a]" in obj.sel(dims).item()
+        assert "parameters[annualisation_weight]" in obj.sel(dims).item()
+
+        assert not obj.coords_in_name
+
+    def test_verbose_strings_no_len(self, simple_supply_longnames):
+        obj = simple_supply_longnames.backend.parameters.annualisation_weight
+
+        assert obj.item().name == "parameters[annualisation_weight]"
+        assert obj.coords_in_name

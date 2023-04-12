@@ -26,7 +26,6 @@ The :sh:`calliope run` command takes the following options:
 
 * :sh:`--save_netcdf={filename.nc}`: Save complete model, including results, to the given NetCDF file. This is the recommended way to save model input and output data into a single file, as it preserves all data fully, and allows later reconstruction of the Calliope model for further analysis.
 * :sh:`--save_csv={directory name}`: Save results as a set of CSV files to the given directory. This can be handy if the modeler needs results in a simple text-based format for further processing with a tool like Microsoft Excel.
-* :sh:`--save_plots={filename.html}`: Save interactive plots to the given HTML file (see :doc:`analysing` for further details on the plotting functionality).
 * :sh:`--debug`: Run in debug mode, which prints more internal information, and is useful when troubleshooting failing models.
 * :sh:`--scenario={scenario}` and :sh:`--override_dict={yaml_string}`: Specify a scenario, or one or several overrides, to apply to the model, or apply specific overrides from a YAML string (see below for more information)
 * :sh:`--help`: Show all available options.
@@ -35,7 +34,7 @@ Multiple options can be specified, for example, saving NetCDF, CSV, and HTML plo
 
   .. code-block:: fishshell
 
-   $ calliope run testmodel/model.yaml --save_netcdf=results.nc --save_csv=outputs --save_plots=plots.html
+   $ calliope run testmodel/model.yaml --save_netcdf=results.nc --save_csv=outputs
 
 .. Warning:: Unlike in versions prior to 0.6.0, the command-line tool in Calliope 0.6.0 and upward does not save results by default -- the modeller must specify one of the :sh:`-save` options.
 

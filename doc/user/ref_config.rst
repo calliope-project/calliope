@@ -58,6 +58,6 @@ Sometimes, a setting can be either enabled or disabled, in this case, the boolea
 
 Comments can be inserted anywhere in YAML files with the ``#`` symbol. The remainder of a line after ``#`` is interpreted as a comment.
 
-See the `YAML website <http://www.yaml.org/>`_ for more general information about YAML.
+See the `YAML website <https://yaml.org/>`_ for more general information about YAML.
 
 Calliope internally represents the configuration as :class:`~calliope.core.attrdict.AttrDict`\ s, which are a subclass of the built-in Python dictionary data type (``dict``) with added functionality such as YAML reading/writing and attribute access to keys.

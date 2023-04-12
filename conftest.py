@@ -29,6 +29,14 @@ def simple_supply():
     return m
 
 
+@pytest.fixture(scope="class")
+def simple_supply_new_build():
+    m = build_model({}, "simple_supply,two_hours,investment_costs")
+    m.build()
+    m.solve()
+    return m
+
+
 @pytest.fixture(scope="session")
 def supply_milp():
     m = build_model({}, "supply_milp,two_hours,investment_costs")

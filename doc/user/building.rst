@@ -188,7 +188,7 @@ For example, a simple photovoltaic (PV) tech using a time series of hour-by-hour
             resource: file=pv_resource.csv
             energy_cap_max: 10000  # kW
 
-By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting :yaml:`model.timeseries_dateformat` based on ``strftime` directives <http://strftime.org/>`_, which defaults to ``'%Y-%m-%d %H:%M:%S'``.
+By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting :yaml:`model.timeseries_dateformat` based on ``strftime` directives <https://strftime.org/>`_, which defaults to ``'%Y-%m-%d %H:%M:%S'``.
 
 For example, the first few lines of a CSV file, called ``pv_resource.csv`` giving a resource potential for two locations might look like this, with the first column in the file always being read as the date-time index:
 
@@ -311,7 +311,7 @@ The only required setting in the run configuration is the solver to use:
 
 the most important parts of the ``run`` section are ``solver`` and  ``mode``. A model can run in planning mode (``plan``), operational mode (``operate``), or SPORES mode (``spores``). In planning mode, capacities are determined by the model, whereas in operational mode, capacities are fixed and the system is operated with a receding horizon control algorithm. In SPORES mode, the model is first run in planning mode, then run `N` number of times to find alternative system configurations with similar monetary cost, but maximally different choice of technology capacity and location.
 
-Possible options for solver include ``glpk``, ``gurobi``, ``cplex``, and ``cbc``. The interface to these solvers is done through the Pyomo library. Any `solver compatible with Pyomo <https://software.sandia.gov/downloads/pub/pyomo/PyomoInstallGuide.html#Solvers>`_ should work with Calliope.
+Possible options for solver include ``glpk``, ``gurobi``, ``cplex``, and ``cbc``. The interface to these solvers is done through the Pyomo library. Any `solver compatible with Pyomo <https://pyomo.readthedocs.io/en/6.5.0/solving_pyomo_models.html#supported-solvers>`_ should work with Calliope.
 
 For solvers with which Pyomo provides more than one way to interface, the additional ``solver_io`` option can be used. In the case of Gurobi, for example, it is usually fastest to use the direct Python interface:
 
