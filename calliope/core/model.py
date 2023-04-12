@@ -32,7 +32,7 @@ from calliope.core.util.logging import log_time
 from calliope.core.util.tools import copy_docstring
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
-from calliope.backend import backends
+from calliope.backend import backends, parsing
 
 logger = logging.getLogger(__name__)
 
@@ -541,3 +541,55 @@ class Model(object):
         warning should specify Calliope version in which it was added, and the
         version in which it should be updated/removed.
         """
+
+    def validate_math_strings(self, math_dict: dict) -> None:
+        """Validate that `expression` and `where` strings of a dictionary containing string mathematical formulations can be successfully parsed. This function can be used to test custom math before attempting to build the optimisation problem.
+
+        NOTE: strings are not checked for evaluation validity. Evaluation issues will be raised only on calling `Model.build()`.
+
+        Args:
+            math_dict (dict): Math formulation dictionary to validate. Top level keys must be one or more of ["variables", "expressions", "constraints", "objectives"], e.g.:
+            {
+                "constraints": {
+                    "my_constraint_name":
+                        {
+                            "foreach": ["nodes"],
+                            "where": "inheritance(supply)",
+                            "equation": "sum(energy_cap, over=techs) >= 10"
+                        }
+                }
+
+            }
+        Returns:
+            If all components of the dictionary are parsed successfully, this function will log a success message to the INFO logging level and return None.
+            Otherwise, a calliope.ModelError will be raised with parsing issues listed.
+        """
+        valid_math_element_names = [
+            *self.math["variables"].keys(),
+            *self.math["expressions"].keys(),
+            *math_dict.get("variables", {}).keys(),
+            *math_dict.get("expressions", {}).keys(),
+            *self.inputs.data_vars.keys(),
+            *self.defaults.keys(),
+            # FIXME: these should not be hardcoded, but rather end up in model data keys
+            "bigM",
+            *["objective_" + k for k in self.run_config["objective_options"].keys()],
+        ]
+        collected_errors: dict = dict()
+        for component_group, component_dicts in math_dict.items():
+            for name, component_dict in component_dicts.items():
+                parsed = parsing.ParsedBackendComponent(
+                    component_group, name, component_dict
+                )
+                parsed.parse_top_level_where(errors="ignore")
+                parsed.parse_equations(set(valid_math_element_names), errors="ignore")
+                if not parsed._is_valid:
+                    collected_errors[f"({component_group}, {name})"] = parsed._errors
+
+        if collected_errors:
+            exceptions.print_warnings_and_raise_errors(
+                during="math string parsing (marker indicates where parsing stopped, not strictly the equation term that caused the failure)",
+                errors=collected_errors,
+            )
+
+        logger.info("Model: validated math strings")
