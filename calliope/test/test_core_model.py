@@ -1,8 +1,7 @@
 import os
+from pathlib import Path
 
 import pytest
-import tempfile
-import pandas as pd
 import numpy as np
 
 import calliope
@@ -209,3 +208,86 @@ class TestOptimisationConfigOverrides:
                 assert new[i]["max"] == new[i]["max"]
             else:
                 assert base[i] == new[i]
+
+    @pytest.mark.parametrize("mode", ["operate", "spores"])
+    def test_add_run_mode_custom_math(self, simple_supply, mode):
+        mode_custom_math = calliope.AttrDict.from_yaml(
+            Path(calliope.__file__).parent / "math" / f"{mode}.yaml"
+        )
+        m = build_model(scenario="simple_supply,two_hours,investment_costs")
+        m.run_config.mode = mode
+        m._add_run_mode_custom_math()
+
+        base_math = simple_supply.math.copy()
+        base_math.union(mode_custom_math, allow_override=True)
+        assert m.math == base_math
+
+    def test_add_run_mode_custom_math_before_build(self, temp_path):
+        """A user can override the run mode custom math by including it directly in the custom math string"""
+        custom_math = calliope.AttrDict({"variables": {"energy_cap": {"active": True}}})
+        file_path = temp_path.join("custom-math.yaml")
+        custom_math.to_yaml(file_path)
+
+        m = build_model(
+            {"model.custom_math": ["operate", file_path]},
+            "simple_supply,two_hours,investment_costs",
+        )
+        m.run_config.mode = "operate"
+        m._add_run_mode_custom_math()
+
+        assert m.math.variables.energy_cap.active
+
+    def test_run_mode_mismatch(self):
+        m = build_model(
+            {"model.custom_math": ["operate"]},
+            "simple_supply,two_hours,investment_costs",
+        )
+        m.run_config.mode = "plan"
+        with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
+            m._add_run_mode_custom_math()
+
+        assert check_error_or_warning(
+            excinfo, "Running in plan mode, but run mode(s) {'operate'}"
+        )
+
+
+class TestVerboseStrings:
+    def test_verbose_strings_not_implemented(self):
+        m = build_model(
+            {},
+            "simple_supply,two_hours,investment_costs",
+        )
+        with pytest.raises(NotImplementedError) as excinfo:
+            m.verbose_strings()
+
+        assert check_error_or_warning(
+            excinfo,
+            "Call `build()` to generate an optimisation problem before calling this function.",
+        )
+
+    def test_verbose_strings(self, simple_supply_new_build):
+        def _compare_to_string(group, component, dims, verbose):
+            component_obj = simple_supply_new_build.backend._dataset.filter_by_attrs(
+                **{group: 1}
+            )[component]
+            if verbose:
+                dim_list = ", ".join(dims[k] for k in component_obj.dims)
+                expected = f"{group}[{component}][{dim_list}]"
+            else:
+                expected = f"{group}[{component}][0]"
+            return component_obj.sel(**dims).item().to_string() == expected
+
+        dims_param = {
+            "nodes": "a",
+            "techs": "test_demand_elec",
+            "timesteps": "2005-01-01 00:00",
+        }
+        dims_var = {"carriers": "electricity", **dims_param}
+
+        assert _compare_to_string("parameters", "resource", dims_param, False)
+        assert _compare_to_string("variables", "carrier_con", dims_var, False)
+
+        simple_supply_new_build.verbose_strings()
+
+        assert _compare_to_string("parameters", "resource", dims_param, True)
+        assert _compare_to_string("variables", "carrier_con", dims_var, True)

@@ -1,42 +1,42 @@
 constraints:
   energy_capacity_per_storage_capacity_min:
     foreach: [nodes, techs]
-    where: "energy_cap_per_storage_cap_min AND NOT energy_cap_per_storage_cap_equals AND NOT run.mode=operate"
+    where: "energy_cap_per_storage_cap_min AND NOT energy_cap_per_storage_cap_equals"
     equation: energy_cap >= storage_cap * energy_cap_per_storage_cap_min
 
   energy_capacity_per_storage_capacity_max:
     foreach: [nodes, techs]
-    where: "energy_cap_per_storage_cap_max AND NOT energy_cap_per_storage_cap_equals AND NOT run.mode=operate"
+    where: "energy_cap_per_storage_cap_max AND NOT energy_cap_per_storage_cap_equals"
     equation: energy_cap <= storage_cap * energy_cap_per_storage_cap_max
 
   energy_capacity_per_storage_capacity_equals:
     foreach: [nodes, techs]
-    where: "energy_cap_per_storage_cap_equals AND NOT run.mode=operate"
+    where: "energy_cap_per_storage_cap_equals"
     equation: energy_cap == storage_cap * energy_cap_per_storage_cap_equals
 
   resource_capacity_equals_energy_capacity:
     foreach: [nodes, techs]
-    where: resource_cap_equals_energy_cap=True AND NOT run.mode=operate
+    where: resource_cap_equals_energy_cap=True
     equation: resource_cap == energy_cap
 
   force_zero_resource_area:
     foreach: [nodes, techs]
-    where: "(resource_area_min OR resource_area_max OR resource_area_equals OR resource_unit=energy_per_area) AND NOT run.mode=operate AND energy_cap_max=0"
+    where: "(resource_area_min OR resource_area_max OR resource_area_equals OR resource_unit=energy_per_area) AND energy_cap_max=0"
     equation: resource_area == 0
 
   resource_area_per_energy_capacity:
     foreach: [nodes, techs]
-    where: "resource_area_per_energy_cap AND NOT run.mode=operate"
+    where: "resource_area_per_energy_cap"
     equation: resource_area == energy_cap * resource_area_per_energy_cap
 
   resource_area_capacity_per_loc:
     foreach: [nodes]
-    where: "available_area AND (resource_area_min OR resource_area_max OR resource_area_equals OR resource_area_per_energy_cap OR resource_unit=energy_per_area) AND NOT run.mode=operate"
+    where: "available_area AND (resource_area_min OR resource_area_max OR resource_area_equals OR resource_area_per_energy_cap OR resource_unit=energy_per_area)"
     equation: sum(resource_area, over=techs) <= available_area
 
   energy_capacity_systemwide:
     foreach: [techs]
-    where: "(energy_cap_equals_systemwide OR energy_cap_max_systemwide) AND NOT run.mode=operate"
+    where: "(energy_cap_equals_systemwide OR energy_cap_max_systemwide)"
     equations:
       - where: "energy_cap_equals_systemwide"
         expression: sum(energy_cap, over=nodes) == energy_cap_equals_systemwide
@@ -247,7 +247,7 @@ constraints:
 
   symmetric_transmission:
     foreach: [nodes, techs]
-    where: "inheritance(transmission) AND NOT run.mode=operate"
+    where: "inheritance(transmission)"
     equation: energy_cap == get_connected_link(energy_cap)
 
   export_balance:
@@ -296,12 +296,12 @@ constraints:
 
   storage_capacity_units_milp:
     foreach: [nodes, techs]
-    where: "(inheritance(storage) OR inheritance(supply_plus)) AND cap_method=integer AND include_storage=True AND NOT run.mode=operate"
+    where: "(inheritance(storage) OR inheritance(supply_plus)) AND cap_method=integer AND include_storage=True"
     equation: storage_cap == units * storage_cap_per_unit
 
   energy_capacity_units_milp:
     foreach: [nodes, techs]
-    where: "energy_cap_per_unit AND cap_method=integer AND NOT run.mode=operate"
+    where: "energy_cap_per_unit AND cap_method=integer"
     equation: energy_cap == units * energy_cap_per_unit
 
   energy_capacity_max_purchase_milp:
@@ -334,7 +334,7 @@ constraints:
 
   unit_capacity_systemwide_milp:
     foreach: [techs]
-    where: "(cap_method=binary OR cap_method=integer) AND (units_max_systemwide OR units_equals_systemwide) AND NOT run.mode=operate"
+    where: "(cap_method=binary OR cap_method=integer) AND (units_max_systemwide OR units_equals_systemwide)"
     equations:
       - where: units_equals_systemwide
         expression: $summed_components == units_equals_systemwide
@@ -380,7 +380,6 @@ constraints:
 variables:
   energy_cap:
     foreach: [nodes, techs]
-    where: "NOT run.mode=operate"
     bounds:
       min: energy_cap_min
       max: energy_cap_max
@@ -410,7 +409,7 @@ variables:
 
   resource_area:
     foreach: [nodes, techs]
-    where: "(resource_area_min OR resource_area_max OR resource_area_equals OR resource_area_per_energy_cap OR resource_unit=energy_per_area) AND NOT run.mode=operate"
+    where: "(resource_area_min OR resource_area_max OR resource_area_equals OR resource_area_per_energy_cap OR resource_unit=energy_per_area)"
     bounds:
       min: resource_area_min
       max: resource_area_max
@@ -425,7 +424,7 @@ variables:
 
   resource_cap:
     foreach: [nodes, techs]
-    where: "inheritance(supply_plus) AND NOT run.mode=operate"
+    where: "inheritance(supply_plus)"
     bounds:
       min: resource_cap_min
       max: resource_cap_max
@@ -433,7 +432,7 @@ variables:
 
   storage_cap:
     foreach: [nodes, techs]
-    where: "(inheritance(storage) OR inheritance(supply_plus)) AND NOT run.mode=operate AND include_storage=True"
+    where: "(inheritance(storage) OR inheritance(supply_plus)) AND include_storage=True"
     bounds:
       min: storage_cap_min
       max: storage_cap_max
@@ -448,7 +447,7 @@ variables:
 
   purchased:
     foreach: [nodes, techs]
-    where: "cap_method=binary AND NOT run.mode=operate"
+    where: "cap_method=binary"
     domain: integer
     bounds:
       min: 0
@@ -456,7 +455,7 @@ variables:
 
   units:
     foreach: [nodes, techs]
-    where: "cap_method=integer AND NOT run.mode=operate"
+    where: "cap_method=integer"
     domain: integer
     bounds:
       min: units_min
@@ -537,7 +536,7 @@ expressions:
 
   cost_investment:
     foreach: [nodes, techs, costs]
-    where: "(cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap) AND NOT run.mode=operate"
+    where: "(cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap)"
     equations:
       - where: "NOT inheritance(transmission)"
         expression: >
@@ -592,9 +591,9 @@ expressions:
     equation: $cost_investment + $cost_var_sum
     components:
       cost_investment:
-        - where: "(cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap) AND NOT run.mode=operate"
+        - where: "(cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap)"
           expression: cost_investment
-        - where: "NOT ((cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap) AND NOT run.mode=operate)"
+        - where: "NOT ((cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap))"
           expression: "0"
       cost_var_sum:
         - where: "cost_export OR cost_om_con OR cost_om_prod"
