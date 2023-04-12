@@ -3,10 +3,13 @@ from pathlib import Path
 
 import pytest
 import numpy as np
+import logging
 
 import calliope
 from calliope.test.common.util import check_error_or_warning
 from calliope.test.common.util import build_test_model as build_model
+
+LOGGER = "calliope.core.model"
 
 
 class TestModel:
@@ -69,7 +72,7 @@ class TestModel:
         )
 
 
-class TestOptimisationConfigOverrides:
+class TestCustomMath:
     @pytest.fixture
     def storage_inter_cluster(
         self,
@@ -291,3 +294,64 @@ class TestVerboseStrings:
 
         assert _compare_to_string("parameters", "resource", dims_param, True)
         assert _compare_to_string("variables", "carrier_con", dims_var, True)
+
+
+class TestValidateMathDict:
+    def test_base_math(self, caplog, simple_supply):
+        with caplog.at_level(logging.INFO, logger=LOGGER):
+            simple_supply.validate_math_strings(simple_supply.math)
+        assert "Model: validated math strings" in [
+            rec.message for rec in caplog.records
+        ]
+
+    @pytest.mark.parametrize(
+        ["equation", "where"],
+        [
+            ("1 == 1", "True"),
+            (
+                "carrier_prod * energy_eff + sum(cost, over=costs) <= .inf",
+                "inheritance(supply) and energy_eff>0",
+            ),
+        ],
+    )
+    def test_custom_math(self, caplog, simple_supply, equation, where):
+        with caplog.at_level(logging.INFO, logger=LOGGER):
+            simple_supply.validate_math_strings(
+                {"constraints": {"foo": {"equation": equation, "where": where}}}
+            )
+        assert "Model: validated math strings" in [
+            rec.message for rec in caplog.records
+        ]
+
+    @pytest.mark.parametrize(
+        "component_dict",
+        [{"equation": "1 = 1"}, {"equation": "1 = 1", "where": "foo[bar]"}],
+    )
+    @pytest.mark.parametrize("both_fail", [True, False])
+    def test_custom_math_fails(self, simple_supply, component_dict, both_fail):
+        math_dict = {"constraints": {"foo": component_dict}}
+        errors_to_check = [
+            "math string parsing (marker indicates where parsing stopped, not strictly the equation term that caused the failure)",
+            " * (constraints, foo):",
+            "equations[0].expression",
+            "where",
+        ]
+        if both_fail:
+            math_dict["constraints"]["bar"] = component_dict
+            errors_to_check.append("* (constraints, bar):")
+        else:
+            math_dict["constraints"]["bar"] = {"equation": "1 == 1"}
+
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            simple_supply.validate_math_strings(math_dict)
+        assert check_error_or_warning(excinfo, errors_to_check)
+
+    @pytest.mark.parametrize("eq_string", ["1 = 1", "1 ==\n1[a]"])
+    def test_custom_math_fails_marker_correct_position(self, simple_supply, eq_string):
+        math_dict = {"constraints": {"foo": {"equation": eq_string}}}
+
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            simple_supply.validate_math_strings(math_dict)
+        errorstrings = str(excinfo.value).split("\n")
+        # marker should be at the "=" sign, i.e., 2 characters from the end
+        assert len(errorstrings[-2]) - 2 == len(errorstrings[-1])

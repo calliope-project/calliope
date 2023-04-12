@@ -2173,6 +2173,29 @@ class TestNewBackend:
         assert len(simple_supply_new_build.backend._instance.objectives) == 1
         assert "foo" not in simple_supply_new_build.backend._dataset.data_vars.keys()
 
+    def test_add_two_same_obj(self, simple_supply_new_build):
+        eq = {"expression": "bigM", "where": "True"}
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            simple_supply_new_build.backend.add_objective(
+                simple_supply_new_build._model_data,
+                "foo",
+                {"equations": [eq, eq], "sense": "minimise"},
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "More than one foo objective is valid for this optimisation problem; only one is allowed.",
+        )
+
+    def test_add_valid_obj(self, simple_supply_new_build):
+        eq = {"expression": "bigM", "where": "True"}
+        simple_supply_new_build.backend.add_objective(
+            simple_supply_new_build._model_data,
+            "foo",
+            {"equations": [eq], "sense": "minimise"},
+        )
+        assert "foo" in simple_supply_new_build.backend.objectives
+        assert not simple_supply_new_build.backend.objectives.foo.item().active
+
     def test_object_string_representation(self, simple_supply_new_build):
         assert (
             simple_supply_new_build.backend.variables.carrier_prod.sel(
@@ -2250,5 +2273,5 @@ class TestNewBackend:
     def test_verbose_strings_no_len(self, simple_supply_longnames):
         obj = simple_supply_longnames.backend.parameters.annualisation_weight
 
-        assert obj.item().name == "parameters[annualisation_weight][]"
+        assert obj.item().name == "parameters[annualisation_weight]"
         assert obj.coords_in_name

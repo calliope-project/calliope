@@ -1,5 +1,5 @@
 from io import StringIO
-from itertools import chain, combinations
+from unittest.mock import patch
 
 import pytest
 import ruamel.yaml as yaml
@@ -26,7 +26,7 @@ def component_obj():
     equation: 1 == 1
     """
     variable_data = string_to_dict(setup_string)
-    return parsing.ParsedBackendComponent("foo", variable_data)
+    return parsing.ParsedBackendComponent("constraints", "foo", variable_data)
 
 
 @pytest.fixture(scope="function")
@@ -75,7 +75,7 @@ def expression_generator():
 def generate_expression_list(component_obj, expression_parser):
     def _generate_expression_list(expression_list, **kwargs):
         return component_obj.generate_expression_list(
-            expression_parser, expression_list, "my_expr", **kwargs
+            expression_parser, expression_list, "equations", **kwargs
         )
 
     return _generate_expression_list
@@ -168,7 +168,9 @@ def obj_with_components_and_index_slices():
                       where: techs4
             """
 
-        return parsing.ParsedBackendComponent("my_constraint", string_to_dict(string_))
+        return parsing.ParsedBackendComponent(
+            "constraints", "my_constraint", string_to_dict(string_)
+        )
 
     return _obj_with_components_and_index_slices
 
@@ -211,50 +213,20 @@ def equation_index_slice_obj(index_slice_parser, where_parser):
 
 @pytest.fixture
 def dummy_backend_interface(dummy_model_data):
-    class DummyBackendModel(backends.BackendModel):
-        def __init__(self):
-            backends.BackendModel.__init__(self, instance=None)
+    # ignore the need to define the abstract methods from backends.BackendModel
+    with patch.multiple(backends.BackendModel, __abstractmethods__=set()):
 
-            self._dataset = dummy_model_data.copy(deep=True)
-            self._dataset["with_inf"] = self._dataset["with_inf"].fillna(
-                dummy_model_data.attrs["defaults"]["with_inf"]
-            )
-            self._dataset["only_techs"] = self._dataset["only_techs"].fillna(
-                dummy_model_data.attrs["defaults"]["only_techs"]
-            )
+        class DummyBackendModel(backends.BackendModel):
+            def __init__(self):
+                backends.BackendModel.__init__(self, instance=None)
 
-        def add_parameter(self):
-            pass
-
-        def add_constraint(self):
-            pass
-
-        def add_expression(self):
-            pass
-
-        def add_variable(self):
-            pass
-
-        def add_objective(self):
-            pass
-
-        def get_parameter(self):
-            pass
-
-        def get_constraint(self):
-            pass
-
-        def get_variable(self):
-            pass
-
-        def get_expression(self):
-            pass
-
-        def solve(self):
-            pass
-
-        def expand_object_string_representation(self):
-            pass
+                self._dataset = dummy_model_data.copy(deep=True)
+                self._dataset["with_inf"] = self._dataset["with_inf"].fillna(
+                    dummy_model_data.attrs["defaults"]["with_inf"]
+                )
+                self._dataset["only_techs"] = self._dataset["only_techs"].fillna(
+                    dummy_model_data.attrs["defaults"]["only_techs"]
+                )
 
     return DummyBackendModel()
 
@@ -279,11 +251,11 @@ def evaluatable_component_obj(valid_object_names):
 
         class DummyParsedBackendComponent(parsing.ParsedBackendComponent):
             def __init__(self, dict_):
-                parsing.ParsedBackendComponent.__init__(self, "foo", dict_)
-                self.parse_top_level_where()
-                self.equations = self.parse_equations(
-                    equation_parser.generate_equation_parser, valid_object_names
+                parsing.ParsedBackendComponent.__init__(
+                    self, "constraints", "foo", dict_
                 )
+                self.parse_top_level_where()
+                self.equations = self.parse_equations(valid_object_names)
 
         return DummyParsedBackendComponent(component_dict)
 
@@ -347,7 +319,7 @@ class TestParsedComponent:
         ],
     )
     def test_parse_string(self, component_obj, expression_parser, parse_string):
-        parsed_ = component_obj._parse_string(expression_parser, parse_string, "foo")
+        parsed_ = component_obj._parse_string(expression_parser, parse_string)
         assert isinstance(parsed_, pp.ParseResults)
         assert not component_obj._errors
 
@@ -358,9 +330,9 @@ class TestParsedComponent:
     def test_parse_string_malformed(
         self, component_obj, expression_parser, parse_string
     ):
-        parsed_ = component_obj._parse_string(expression_parser, parse_string, "foo")
-        assert parsed_ is None
-        assert check_error_or_warning(component_obj._errors, "Expected")
+        parsed_ = component_obj._parse_string(expression_parser, parse_string)
+        assert isinstance(parsed_, pp.ParseResults) and len(parsed_) == 0
+        assert check_error_or_warning(component_obj._errors, parse_string)
 
     @pytest.mark.parametrize(
         "parse_string",
@@ -385,7 +357,7 @@ class TestParsedComponent:
     ):
         expression_dict = expression_generator(parse_string, where_string)
         parsed_list = component_obj.generate_expression_list(
-            expression_parser, [expression_dict], "foo"
+            expression_parser, [expression_dict], "equations", id_prefix="foo"
         )
 
         assert parsed_list[0].where[0][0].eval() == expected_where_eval
@@ -426,7 +398,7 @@ class TestParsedComponent:
 
         assert not parsed_list
         assert check_error_or_warning(
-            component_obj._errors, "(my_expr, foo = 1): Expected"
+            component_obj._errors, ["equations[0].expression", "foo = 1"]
         )
 
     @pytest.mark.parametrize("error_position", [0, 1])
@@ -447,7 +419,8 @@ class TestParsedComponent:
 
         assert len(component_obj._errors) == 1
         assert check_error_or_warning(
-            component_obj._errors, "(my_expr, foo = 1): Expected"
+            component_obj._errors,
+            f"equations[{error_position}].expression",
         )
 
     def test_generate_expression_list_two_error(
@@ -464,7 +437,10 @@ class TestParsedComponent:
         assert len(component_obj._errors) == 2
         assert check_error_or_warning(
             component_obj._errors,
-            ["(my_expr, foo = 1): Expected", "(my_expr, foo = 2): Expected"],
+            [
+                "equations[0].expression (line 1, char 5): foo = 1",
+                "equations[1].expression (line 1, char 5): foo = 2",
+            ],
         )
 
     @pytest.mark.parametrize("n_foos", [0, 1, 2])
@@ -499,7 +475,8 @@ class TestParsedComponent:
                 equation_[0], parsed_component_dict(1, 2), "components"
             )
         assert check_error_or_warning(
-            excinfo, "Undefined components found in equation: {'ba'}"
+            excinfo,
+            "(constraints, foo): Undefined components found in equation: {'ba'}",
         )
 
     @pytest.mark.parametrize(
@@ -574,7 +551,7 @@ class TestParsedComponent:
             )
         assert check_error_or_warning(
             excinfo,
-            "Undefined index_slices found in equation: {'node1'}",
+            "(constraints, foo): Undefined index_slices found in equation: {'node1'}",
         )
 
     @pytest.mark.parametrize(
@@ -605,13 +582,45 @@ class TestParsedComponent:
         eq_string,
         expected_n_equations,
     ):
-        parsed_equation = obj_with_components_and_index_slices(eq_string)
-        parsed_equations = parsed_equation.parse_equations(
-            equation_parser.generate_equation_parser, valid_object_names
-        )
+        component_obj = obj_with_components_and_index_slices(eq_string)
+        parsed_equations = component_obj.parse_equations(valid_object_names)
 
         assert len(parsed_equations) == expected_n_equations
         assert len(set(eq.name for eq in parsed_equations)) == expected_n_equations
+
+    @pytest.mark.parametrize("is_valid", [True, False])
+    def test_raise_caught_errors(self, component_obj, is_valid):
+        component_obj._is_valid = is_valid
+        if is_valid:
+            component_obj.raise_caught_errors()
+        else:
+            with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+                component_obj.raise_caught_errors()
+            assert check_error_or_warning(excinfo, ["\n * (constraints, foo):"])
+
+    def test_parse_equations_fail(
+        self, obj_with_components_and_index_slices, valid_object_names
+    ):
+        component_obj = obj_with_components_and_index_slices("bar = 1")
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            component_obj.parse_equations(valid_object_names, errors="raise")
+        expected_err_string = """
+ * (constraints, my_constraint):
+    * equations[0].expression (line 1, char 5): bar = 1
+                                                    ^"""
+        assert check_error_or_warning(excinfo, expected_err_string)
+
+    def test_parse_equations_fail_no_raise(
+        self, obj_with_components_and_index_slices, valid_object_names
+    ):
+        component_obj = obj_with_components_and_index_slices("bar = 1")
+        component_obj.parse_equations(valid_object_names, errors="ignore")
+
+        expected_err_string = """\
+equations[0].expression (line 1, char 5): bar = 1
+                                                    ^"""
+
+        assert check_error_or_warning(component_obj._errors, expected_err_string)
 
     def test_evaluate_foreach_all_permutations(
         self, dummy_model_data, component_obj, foreach
@@ -634,6 +643,24 @@ class TestParsedComponent:
         component_obj.parse_top_level_where()
         imask = component_obj.evaluate_where(dummy_model_data)
         assert imask.item() is True
+
+    def test_evaluate_where_fail(self, component_obj):
+        component_obj._unparsed["where"] = "1[]"
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            component_obj.parse_top_level_where()
+        expected_err_string = """
+ * (constraints, foo):
+    * where (line 1, char 1): 1[]
+                              ^"""
+        assert check_error_or_warning(excinfo, expected_err_string)
+
+    def test_evaluate_where_fail_no_raise(self, component_obj):
+        component_obj._unparsed["where"] = "1[]"
+        component_obj.parse_top_level_where(errors="ignore")
+        expected_err_string = """\
+where (line 1, char 1): 1[]
+                              ^"""
+        assert check_error_or_warning(component_obj._errors, expected_err_string)
 
 
 class TestParsedBackendEquation:
@@ -905,10 +932,8 @@ class TestParsedConstraint:
                 ]
             },
         }
-        parsed_ = parsing.ParsedBackendComponent("foo", dict_)
-        parsed_.equations = parsed_.parse_equations(
-            equation_parser.generate_equation_parser, ["only_techs"]
-        )
+        parsed_ = parsing.ParsedBackendComponent("constraints", "foo", dict_)
+        parsed_.equations = parsed_.parse_equations(["only_techs"])
         return parsed_
 
     def test_parse_constraint_dict_sets(self, constraint_obj):
@@ -944,7 +969,7 @@ class TestParsedVariable:
     def variable_obj(self):
         dict_ = {"foreach": ["techs"], "where": "False"}
 
-        return parsing.ParsedBackendComponent("foo", dict_)
+        return parsing.ParsedBackendComponent("variables", "foo", dict_)
 
     def test_parse_variable_dict_sets(self, variable_obj):
         assert variable_obj.sets == ["techs"]
@@ -968,10 +993,8 @@ class TestParsedObjective:
             ],
         }
 
-        parsed_ = parsing.ParsedBackendComponent("foo", dict_)
-        parsed_.equations = parsed_.parse_equations(
-            equation_parser.generate_arithmetic_parser, ["only_techs", "bar"]
-        )
+        parsed_ = parsing.ParsedBackendComponent("objectives", "foo", dict_)
+        parsed_.equations = parsed_.parse_equations(["only_techs", "bar"])
         return parsed_
 
     def test_parse_objective_dict_sets(self, objective_obj):
