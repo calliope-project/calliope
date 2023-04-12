@@ -520,8 +520,7 @@ class PyomoBackendModel(BackendModel):
         )
         if parameter_da.isnull().all():
             self._delete_pyomo_list(parameter_name, "parameters")
-            if not parameter_values.shape:
-                parameter_da = parameter_da.astype(float)
+            parameter_da = parameter_da.astype(float)
 
         self._add_to_dataset(parameter_name, parameter_da, "parameters")
         self.valid_arithmetic_components.add(parameter_name)
