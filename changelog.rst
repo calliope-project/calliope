@@ -27,7 +27,7 @@ Internal changes
 
 |new| Logic to convert the model definition (YAML or direct dictionary) to an xarray dataset is stored in a YAML configuration file: `model_data_lookup.yaml`. This reduces the need to update scripts when incorporating additional parameters in the future.
 
-|new| The model mathematical formulation (constraints, decision variables, objectives) is stored in a YAML configuration file: `base_math.yaml`. Equation expressions and the logic to decide on when to apply a constraint/create a variable etc. are given in string format. These strings are parsed according to a set of documented rules.
+|new| The model mathematical formulation (constraints, decision variables, objectives) is stored in a YAML configuration file: `math/base.yaml`. Equation expressions and the logic to decide on when to apply a constraint/create a variable etc. are given in string format. These strings are parsed according to a set of documented rules.
 
 |changed| Costs are now Pyomo expressions rather than decision variables.
 

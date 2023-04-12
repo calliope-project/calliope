@@ -254,6 +254,9 @@ def dummy_backend_interface(dummy_model_data):
         def solve(self):
             pass
 
+        def expand_object_string_representation(self):
+            pass
+
     return DummyBackendModel()
 
 
