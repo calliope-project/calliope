@@ -495,7 +495,7 @@ variables:
       max: 0
 
 objectives:
-  min_cost_optimisation:
+  minmax_cost_optimisation:
     equation: sum(sum(cost, over=[nodes, techs]) * objective_cost_class, over=costs) + $unmet_demand
     components:
       unmet_demand:
@@ -504,7 +504,7 @@ objectives:
         - where: "NOT run.ensure_feasibility=True"
           expression: "0"
     domain: Reals
-    sense: minimize
+    sense: minimise
 
 expressions:
   cost_var:
