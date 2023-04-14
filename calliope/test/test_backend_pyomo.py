@@ -16,6 +16,7 @@ from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import (
     check_error_or_warning,
     check_variable_exists,
+    load_constraint_dict,
 )
 
 
@@ -2082,4 +2083,23 @@ class TestNewBackend:
         assert check_error_or_warning(
             excinfo,
             "Trying to add already existing *variable* `carrier_prod` as a backend model *parameter*.",
+        )
+
+    def test_add_constraint_with_nan(self, simple_supply_new_build):
+        constraint_name = "constraint-with-nan"
+
+        constraint_dict = load_constraint_dict("constraint-with-nan.yaml")[
+            "constraints"
+        ][constraint_name]
+
+        with pytest.raises(exceptions.BackendError) as error:
+            simple_supply_new_build.backend.add_constraint(
+                simple_supply_new_build.inputs,
+                constraint_name,
+                constraint_dict,
+            )
+
+        assert check_error_or_warning(
+            error,
+            "(constraints, constraint-with-nan): Missing rhs or lhs for some coordinates selected by 'where'. Adapting 'where' might help.",
         )

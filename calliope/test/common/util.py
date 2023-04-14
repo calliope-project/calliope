@@ -46,6 +46,12 @@ def build_test_model(
     )
 
 
+def load_constraint_dict(constraint_file):
+    return AttrDict.from_yaml(
+        os.path.join(os.path.dirname(__file__), "test_model", constraint_file),
+    )
+
+
 def check_error_or_warning(error_warning, test_string_or_strings):
     if hasattr(error_warning, "list"):
         output = ",".join(
