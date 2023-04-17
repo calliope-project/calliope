@@ -1,0 +1,52 @@
+constraints:
+  combined_max_total_capacity:
+    equation:
+      - expression: "$sum_capacity_group <= $max_total_capacity"
+    components:
+      sum_capacity_group:
+        - expression: "sum(energy_cap[techs=$tech_group], over=[timesteps, regions])"
+      max_total_capacity:
+        - expression: 100
+    index_slices:
+      tech_group:
+        - expression: xxx
+
+  combined_max_share_capacity:
+    equation:
+      - expression: "$sum_capacity_group <= $sum_capacity * $max_share_capacity"
+    components:
+      sum_capacity_group:
+        - expression: "sum(energy_cap[techs=$tech_group], over=[timesteps, regions])"
+      sum_capacity:
+        - expression: "sum(energy_cap, over=[timesteps, regions, techs])"
+      max_share_capacity:
+        - expression: 0.3
+    index_slices:
+      tech_group:
+        - expression: xxx
+
+  combined_max_total_carrier_prod:
+    equation:
+      - expression: "$sum_carrier_prod_group <= $max_total_carrier_prod"
+    components:
+      sum_carrier_prod_group:
+        - expression: "sum(carrier_prod[techs=$tech_group], over=[timesteps, regions])"
+      max_total_carrier_prod:
+        - expression: 100
+    index_slices:
+      tech_group:
+        - expression: xxx
+
+  combined_max_share_carrier_prod:
+    equation:
+      - expression: "$sum_carrier_prod_group <= $sum_carrier_prod * $max_share_carrier_prod"
+    components:
+      summ_carrier_prod_group:
+        - expression: "sum(carrier_prod_energy[techs=$tech_group], over=[timesteps, regions])"
+      sum_carrier_prod:
+        - expression: "sum(carrier_prod_energy, over=[timesteps, regions, techs])"
+      max_share_carrier_prod:
+        - expression: 0.3
+    index_slices:
+      tech_group:
+        - expression: xxx
