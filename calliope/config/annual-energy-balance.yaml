@@ -8,10 +8,10 @@ constraints:
         - expression: sum(carrier_prod[techs=$tech_group_1], over=timesteps)
       annual_carrier_prod_group2:
         - expression: sum(carrier_prod[techs=$tech_group_2], over=timesteps)
+      factor2:
+        -expression: 3
     index_slices:
       tech_group_1:
         - expression: supply_gas
       tech_group_2:
         - expression: supply_gas
-      factor2:
-        - 3
