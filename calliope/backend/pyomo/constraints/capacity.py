@@ -25,7 +25,7 @@ def get_capacity_bounds(bounds):
         scale = _get_bound("scale")
         _min = _get_bound("min")
         _max = _get_bound("max")
-        
+
         if invalid(_min):
             _min = None
         if invalid(_max):
