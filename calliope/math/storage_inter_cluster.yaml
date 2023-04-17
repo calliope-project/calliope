@@ -5,7 +5,7 @@ constraints:
     active: False
 
   balance_supply_plus_with_storage:
-    components:
+    sub_expressions:
       storage_previous_step: &storage_previous_step
         - where: timesteps=get_val_at_index(dim=timesteps, idx=0) AND NOT run.cyclic_storage=True
           expression: storage_initial * storage_cap
@@ -57,7 +57,7 @@ constraints:
     foreach: [nodes, techs, datesteps]
     where: "include_storage=True"
     equation: storage_inter_cluster == $storage_previous_step + $storage_intra
-    components:
+    sub_expressions:
       storage_previous_step:
         - where: datesteps=get_val_at_index(dim=datesteps, idx=0) AND NOT run.cyclic_storage=True
           expression: storage_initial
