@@ -18,7 +18,7 @@ constraints:
 
     force_zero_resource_area:
         foreach: [nodes, techs]
-        where: "(resource_area_min OR resource_area_max OR resource_area_equals OR resource_unit=energy_per_area) AND NOT run.mode=operate AND energy_cap_max=0"
+        where: "(resource_area_min OR resource_area_max OR resource_unit=energy_per_area) AND NOT run.mode=operate AND energy_cap_max=0"
 
     resource_area_per_energy_capacity:
         foreach: [nodes, techs]
@@ -26,7 +26,7 @@ constraints:
 
     resource_area_capacity_per_loc:
         foreach: [nodes]
-        where: "available_area AND (resource_area_min OR resource_area_max OR resource_area_equals OR resource_area_per_energy_cap OR resource_unit=energy_per_area) AND NOT run.mode=operate"
+        where: "available_area AND (resource_area_min OR resource_area_max OR resource_area_per_energy_cap OR resource_unit=energy_per_area) AND NOT run.mode=operate"
 
     energy_capacity_systemwide:
         foreach: [techs]
@@ -169,19 +169,19 @@ constraints:
 
     energy_capacity_max_purchase_milp:
         foreach: [nodes, techs]
-        where: "cost_purchase AND (energy_cap_max OR energy_cap_equals) AND cap_method=binary"
+        where: "cost_purchase AND (energy_cap_max) AND cap_method=binary"
 
     energy_capacity_min_purchase_milp:
         foreach: [nodes, techs]
-        where: "cost_purchase AND energy_cap_min AND NOT energy_cap_equals AND cap_method=binary"
+        where: "cost_purchase AND energy_cap_min AND NOT (energy_cap_min=energy_cap_max) AND cap_method=binary"
 
     storage_capacity_max_purchase_milp:
         foreach: [nodes, techs]
-        where: "cost_purchase AND (storage_cap_max OR storage_cap_equals) AND cap_method=binary"
+        where: "cost_purchase AND (storage_cap_max) AND cap_method=binary"
 
     storage_capacity_min_purchase_milp:
         foreach: [nodes, techs]
-        where: "cost_purchase AND storage_cap_min AND NOT storage_cap_equals AND cap_method=binary"
+        where: "cost_purchase AND storage_cap_min AND NOT (storage_cap_min=storage_cap_max) AND cap_method=binary"
 
     unit_capacity_systemwide_milp:
         foreach: [techs]
@@ -228,7 +228,6 @@ variables:
         bounds:
             min: energy_cap_min
             max: energy_cap_max
-            equals: energy_cap_equals
             scale: energy_cap_scale
 
     carrier_prod:
@@ -247,12 +246,11 @@ variables:
 
     resource_area:
         foreach: [nodes, techs]
-        where: "(resource_area_min OR resource_area_max OR resource_area_equals OR resource_area_per_energy_cap OR resource_unit=energy_per_area) AND NOT run.mode=operate"
+        where: "(resource_area_min OR resource_area_max OR resource_area_per_energy_cap OR resource_unit=energy_per_area) AND NOT run.mode=operate"
         domain: NonNegativeReals
         bounds:
             min: resource_area_min
             max: resource_area_max
-            equals: resource_area_equals
 
     storage_cap:
         foreach: [nodes, techs]
@@ -261,7 +259,6 @@ variables:
         bounds:
             min: storage_cap_min
             max: storage_cap_max
-            equals: storage_cap_equals
 
     storage_inter_cluster:
         foreach: [nodes, techs, datesteps]
@@ -295,7 +292,6 @@ variables:
         bounds:
             min: resource_cap_min
             max: resource_cap_max
-            equals: resource_cap_equals
 
     carrier_export:
         foreach: [nodes, techs, carriers, timesteps]
@@ -318,7 +314,6 @@ variables:
         bounds:
             min: units_min
             max: units_max
-            equals: units_equals
 
     operating_units:
         foreach: [nodes, techs, timesteps]

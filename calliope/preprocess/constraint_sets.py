@@ -150,7 +150,6 @@ def generate_constraint_sets(model_run):
         for i in sets.loc_techs_finite_resource_supply_plus
         if any(
             [
-                constraint_exists(model_run, i, "constraints.resource_cap_equals"),
                 constraint_exists(model_run, i, "constraints.resource_cap_max"),
                 constraint_exists(model_run, i, "constraints.resource_cap_min"),
             ]
@@ -281,7 +280,12 @@ def generate_constraint_sets(model_run):
         i
         for i in sets.loc_techs_purchase
         if (
-            constraint_exists(model_run, i, "constraints.energy_cap_equals") is not None
+            (
+                constraint_exists(model_run, i, "constraints.energy_cap_max")
+                is not None
+                and constraint_exists(model_run, i, "constraints.energy_cap_min")
+                is not None
+            )
             or (
                 constraint_exists(model_run, i, "constraints.energy_cap_max")
                 is not None
@@ -294,7 +298,10 @@ def generate_constraint_sets(model_run):
         i
         for i in sets.loc_techs_purchase
         if (
-            not constraint_exists(model_run, i, "constraints.energy_cap_equals")
+            not (
+                constraint_exists(model_run, i, "constraints.energy_cap_max")
+                and constraint_exists(model_run, i, "constraints.energy_cap_min")
+            )
             and constraint_exists(model_run, i, "constraints.energy_cap_min")
         )
     ]
@@ -302,8 +309,11 @@ def generate_constraint_sets(model_run):
         i
         for i in set(sets.loc_techs_purchase).intersection(sets.loc_techs_store)
         if (
-            constraint_exists(model_run, i, "constraints.storage_cap_equals")
-            is not None
+            (constraint_exists(model_run, i, "constraints.storage_cap_max") is not None)
+            and (
+                constraint_exists(model_run, i, "constraints.storage_cap_min")
+                is not None
+            )
             or (
                 constraint_exists(model_run, i, "constraints.storage_cap_max")
                 is not None
@@ -315,10 +325,7 @@ def generate_constraint_sets(model_run):
     constraint_sets["loc_techs_storage_capacity_min_purchase_milp_constraint"] = [
         i
         for i in set(sets.loc_techs_purchase).intersection(sets.loc_techs_store)
-        if (
-            not constraint_exists(model_run, i, "constraints.storage_cap_equals")
-            and constraint_exists(model_run, i, "constraints.storage_cap_min")
-        )
+        if (constraint_exists(model_run, i, "constraints.storage_cap_min"))
     ]
     constraint_sets["loc_techs_update_costs_investment_units_milp_constraint"] = [
         i

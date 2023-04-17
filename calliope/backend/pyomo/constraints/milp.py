@@ -248,8 +248,8 @@ def energy_capacity_max_purchase_milp_constraint_rule(backend_model, node, tech)
 
             \\frac{\\boldsymbol{energy_{cap}}(loc::tech)}{energy_{cap, scale}(loc::tech)}
             \\begin{cases}
-                = energy_{cap, equals}(loc::tech) \\times \\boldsymbol{purchased}(loc::tech),&
-                    \\text{if } energy_{cap, equals}(loc::tech)\\\\
+                \\geq energy_{cap, min}(loc::tech) \\times \\boldsymbol{purchased}(loc::tech),&
+                    \\text{if } energy_{cap, min}(loc::tech)\\\\
                 \\leq energy_{cap, max}(loc::tech) \\times \\boldsymbol{purchased}(loc::tech),&
                     \\text{if } energy_{cap, max}(loc::tech)\\\\
                 \\text{unconstrained},& \\text{otherwise}
@@ -258,12 +258,12 @@ def energy_capacity_max_purchase_milp_constraint_rule(backend_model, node, tech)
 
     """
     energy_cap_max = get_param(backend_model, "energy_cap_max", (node, tech))
-    energy_cap_equals = get_param(backend_model, "energy_cap_equals", (node, tech))
+    energy_cap_min = get_param(backend_model, "energy_cap_min", (node, tech))
     energy_cap_scale = get_param(backend_model, "energy_cap_scale", (node, tech))
 
-    if po.value(energy_cap_equals):
+    if po.value(energy_cap_max) == po.value(energy_cap_min):
         return backend_model.energy_cap[node, tech] == (
-            energy_cap_equals * energy_cap_scale * backend_model.purchased[node, tech]
+            energy_cap_max * energy_cap_scale * backend_model.purchased[node, tech]
         )
 
     else:
@@ -307,8 +307,8 @@ def storage_capacity_max_purchase_milp_constraint_rule(backend_model, node, tech
 
             \\boldsymbol{storage_{cap}}(loc::tech)
             \\begin{cases}
-                = storage_{cap, equals}(loc::tech) \\times \\boldsymbol{purchased},&
-                    \\text{if } storage_{cap, equals} \\\\
+                \\geq storage_{cap, min}(loc::tech) \\times \\boldsymbol{purchased},&
+                    \\text{if } storage_{cap, min}(loc::tech)\\\\
                 \\leq storage_{cap, max}(loc::tech) \\times \\boldsymbol{purchased},&
                     \\text{if } storage_{cap, max}(loc::tech)\\\\
                 \\text{unconstrained},& \\text{otherwise}
@@ -317,11 +317,11 @@ def storage_capacity_max_purchase_milp_constraint_rule(backend_model, node, tech
 
     """
     storage_cap_max = get_param(backend_model, "storage_cap_max", (node, tech))
-    storage_cap_equals = get_param(backend_model, "storage_cap_equals", (node, tech))
+    storage_cap_min = get_param(backend_model, "storage_cap_min", (node, tech))
 
-    if po.value(storage_cap_equals):
+    if po.value(storage_cap_max) == po.value(storage_cap_min):
         return backend_model.storage_cap[node, tech] == (
-            storage_cap_equals * backend_model.purchased[node, tech]
+            storage_cap_max * backend_model.purchased[node, tech]
         )
 
     elif po.value(storage_cap_max):

@@ -23,20 +23,14 @@ def get_capacity_bounds(bounds):
                 return None
 
         scale = _get_bound("scale")
-        _equals = _get_bound("equals")
         _min = _get_bound("min")
         _max = _get_bound("max")
-
-        if not invalid(_equals):
-            if not invalid(scale):
-                _equals *= scale
-            bound_tuple = (_equals, _equals)
-        else:
-            if invalid(_min):
-                _min = None
-            if invalid(_max):
-                _max = None
-            bound_tuple = (_min, _max)
+        
+        if invalid(_min):
+            _min = None
+        if invalid(_max):
+            _max = None
+        bound_tuple = (_min, _max)
 
         if not invalid(scale):
             bound_tuple = tuple(i * scale for i in bound_tuple)

@@ -54,7 +54,7 @@ model:
 tech_groups:
     conversion:
         required_constraints: []
-        allowed_constraints: ['energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'lifetime', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
+        allowed_constraints: ['energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'lifetime', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase']
         allowed_switches: [cap_method, export, allowed_carrier_con, allowed_carrier_prod]
         essentials:
@@ -67,7 +67,7 @@ tech_groups:
 
     conversion_plus:
         required_constraints: []
-        allowed_constraints: ['carrier_ratios', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'lifetime', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
+        allowed_constraints: ['carrier_ratios', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'lifetime', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase']
         allowed_switches: [cap_method, export, allowed_carrier_con, allowed_carrier_prod]
         essentials:
@@ -79,7 +79,7 @@ tech_groups:
             allowed_carrier_prod: true
     demand:
         required_constraints: ['resource']
-        allowed_constraints: ['resource', 'resource_area_equals', 'resource_scale', 'resource_unit']
+        allowed_constraints: ['resource', 'resource_scale', 'resource_unit']
         allowed_costs: [om_con]
         allowed_switches: [resource_unit, force_resource, allowed_carrier_con, allowed_carrier_prod]
         essentials:
@@ -91,7 +91,7 @@ tech_groups:
             allowed_carrier_prod: false
     storage:
         required_constraints: []
-        allowed_constraints: ['energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_equals', 'energy_cap_per_storage_cap_max', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'force_asynchronous_prod_con', 'lifetime', 'storage_cap_equals', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'storage_time_max', 'storage_discharge_depth', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
+        allowed_constraints: ['energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_equals', 'energy_cap_per_storage_cap_max', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'force_asynchronous_prod_con', 'lifetime', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'storage_time_max', 'storage_discharge_depth', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_prod', 'purchase', 'storage_cap']
         allowed_switches: [cap_method, include_storage, export, allowed_carrier_con, allowed_carrier_prod]
         essentials:
@@ -104,7 +104,7 @@ tech_groups:
             allowed_carrier_prod: true
     supply:
         required_constraints: []
-        allowed_constraints: ['energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'lifetime', 'resource', 'resource_area_equals', 'resource_area_max', 'resource_area_min', 'resource_area_per_energy_cap', 'resource_min_use', 'resource_scale', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
+        allowed_constraints: ['energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'lifetime', 'resource', 'resource_area_max', 'resource_area_min', 'resource_area_per_energy_cap', 'resource_min_use', 'resource_scale', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase', 'resource_area']
         allowed_switches: [cap_method, resource_unit, force_resource, export, allowed_carrier_con, allowed_carrier_prod]
         essentials:
@@ -119,7 +119,7 @@ tech_groups:
 
     supply_plus:
         required_constraints: []
-        allowed_constraints: ['energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_equals', 'energy_cap_per_storage_cap_max', 'energy_cap_equals', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'lifetime', 'parasitic_eff', 'resource', 'resource_area_equals', 'resource_area_max', 'resource_area_min', 'resource_area_per_energy_cap', 'resource_cap_equals', 'resource_cap_max', 'resource_cap_min', 'resource_eff', 'resource_min_use', 'resource_scale', 'storage_cap_equals', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'units_equals', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
+        allowed_constraints: ['energy_cap_per_storage_cap_min', 'energy_cap_per_storage_cap_equals', 'energy_cap_per_storage_cap_max', 'energy_cap_equals_systemwide', 'energy_cap_max', 'energy_cap_max_systemwide', 'energy_cap_min', 'energy_cap_min_use', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_ramping', 'export_max', 'export_carrier', 'lifetime', 'parasitic_eff', 'resource', 'resource_area_max', 'resource_area_min', 'resource_area_per_energy_cap', 'resource_cap_max', 'resource_cap_min', 'resource_eff', 'resource_min_use', 'resource_scale', 'storage_cap_max', 'storage_cap_min', 'storage_cap_per_unit', 'storage_initial', 'storage_loss', 'units_equals_systemwide', 'units_max', 'units_max_systemwide', 'units_min']
         allowed_costs: ['depreciation_rate', 'energy_cap', 'export', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_con', 'om_prod', 'purchase', 'resource_area', 'resource_cap', 'storage_cap']
         allowed_switches: [cap_method, include_storage, resource_unit, resource_cap_equals_energy_cap, force_resource, export, allowed_carrier_con, allowed_carrier_prod]
         essentials:
@@ -137,7 +137,7 @@ tech_groups:
 
     transmission:
         required_constraints: []
-        allowed_constraints: ['energy_cap_equals', 'energy_cap_min', 'energy_cap_max', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_eff_per_distance', 'force_asynchronous_prod_con', 'lifetime', 'one_way']
+        allowed_constraints: ['energy_cap_min', 'energy_cap_max', 'energy_cap_per_unit', 'energy_cap_scale', 'energy_eff', 'energy_eff_per_distance', 'force_asynchronous_prod_con', 'lifetime', 'one_way']
         allowed_costs: ['depreciation_rate', 'energy_cap', 'energy_cap_per_distance', 'interest_rate', 'om_annual', 'om_annual_investment_fraction', 'om_prod', 'purchase', 'purchase_per_distance']
         allowed_switches: [cap_method, one_way, allowed_carrier_con, allowed_carrier_prod]
         essentials:
@@ -181,7 +181,6 @@ techs:
             energy_cap_per_storage_cap_min: 0 # name: Minimum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of minimum charge/discharge (kW) for a given storage capacity (kWh).
             energy_cap_per_storage_cap_max: .inf # name: Maximum energy capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of maximum charge/discharge (kW) for a given storage capacity (kWh).
             energy_cap_per_storage_cap_equals: null # name: Tie energy capacity to storage capacity ¦ unit: hour :sup:`-1` ¦
-            energy_cap_equals: null  # name: Specific installed energy capacity ¦ unit: kW ¦ fixes maximum/minimum if decision variables ``carrier_prod``/``carrier_con`` and overrides ``_max`` and ``_min`` constraints.
             energy_cap_equals_systemwide: null   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
             energy_cap_max: .inf  # name: Maximum installed energy capacity ¦ unit: kW ¦ Limits decision variables ``carrier_prod``/``carrier_con`` to a maximum/minimum.
             energy_cap_max_systemwide: .inf  # name: System-wide maximum installed energy capacity ¦ unit: kW ¦ Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
@@ -197,24 +196,20 @@ techs:
             lifetime: null  # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
             parasitic_eff: 1.0  # name: Plant parasitic efficiency ¦ unit: fraction ¦ Additional losses as energy gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption
             resource: .inf  # name: Available resource ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Maximum available resource (static, or from file as timeseries). Unit dictated by ``resource_unit``
-            resource_area_equals: null  # name: Specific installed resource area ¦ unit: m\ :sup:`2` ¦
             resource_area_max: .inf  # name: Maximum usable resource area ¦ unit: m\ :sup:`2` ¦ If set to a finite value, restricts the usable area of the technology to this value.
             resource_area_min: 0  # name: Minimum usable resource area ¦ unit: m\ :sup:`2` ¦
             resource_area_per_energy_cap: null  # name: Resource area per energy capacity ¦ unit: m\ :sup: `2`/kW ¦ If set, forces ``resource_area`` to follow ``energy_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``resource_area == 1.5 * energy_cap``)
-            resource_cap_equals: null  # name: Specific installed resource consumption capacity ¦ unit: kW ¦ overrides ``_max`` and ``_min`` constraints.
             resource_cap_max: .inf  # name: Maximum installed resource consumption capacity ¦ unit: kW ¦
             resource_cap_min: 0  # name: Minimum installed resource consumption capacity ¦ unit: kW ¦
             resource_eff: 1.0  # name: Resource efficiency ¦ unit: fraction ¦ Efficiency (static, or from file as timeseries) in capturing resource before it reaches storage (if storage is present) or conversion to carrier.
             resource_min_use: 0 # name: Minimum resource consumption ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum resource consumption for production technologies
             resource_scale: 1.0  # name: Resource scale ¦ unit: fraction ¦ Scale resource (either static value or all values in timeseries) by this value
-            storage_cap_equals: null  # name: Specific storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_equals`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity and overrides ``_max`` and ``_min`` constraints.
             storage_cap_max: .inf  # name: Maximum storage capacity ¦ unit: kWh ¦ If not defined, ``energy_cap_max`` * ``energy_cap_per_storage_cap_max`` will be used as the capacity.
             storage_cap_min: 0  # name: Minimum storage capacity ¦ unit: kWh ¦
             storage_cap_per_unit: null # name: Storage capacity per purchased unit ¦ unit: kWh/unit ¦ Set the storage capacity of each integer unit of a technology purchased.
             storage_discharge_depth: 0 # name: Storage depth of discharge ¦ unit: fraction ¦ Defines the minimum level of storage state of charge, as a fraction of total storage capacity
             storage_initial: 0  # name: Initial storage level ¦ unit: fraction ¦ Set stored energy in device at the first timestep, as a fraction of total storage capacity
             storage_loss: 0  # name: Storage loss rate ¦ unit: fraction/hour ¦ rate of storage loss per hour (static, or from file as timeseries), used to calculate lost stored energy as ``(1 - storage_loss)^hours_per_timestep``
-            units_equals: null  # name: Specific number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
             units_equals_systemwide: null   # name: System-wide specific installed energy capacity ¦ unit: kW ¦ fixes the sum to a specific value, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.
             units_max: .inf  # name: Maximum number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
             units_max_systemwide: .inf  # name: System-wide maximum installed energy capacity ¦ unit: kW ¦ Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``carrier_prod``/``carrier_con`` over all nodes.

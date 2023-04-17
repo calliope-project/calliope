@@ -46,7 +46,6 @@ class ParsedEquationDict(TypedDict):
 class UnparsedVariableBoundDict(TypedDict):
     min: str
     max: str
-    equals: str
     scale: NotRequired[str]
 
 
@@ -665,7 +664,6 @@ class ParsedVariable(ParsedBackendComponent):
                 bounds: UnparsedBoundsDict <- link to parameters with which to apply explicit numeric bounds on each item in the variable
                     min: str
                     max: str
-                    equals: str
                     scale: str
             variable_name (str): Name of variable.
         """
