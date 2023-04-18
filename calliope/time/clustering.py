@@ -1,7 +1,7 @@
-"""
-Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
-Licensed under the Apache 2.0 License (see LICENSE file).
+# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
+# Licensed under the Apache 2.0 License (see LICENSE file).
 
+"""
 clustering.py
 ~~~~~~~~~~~~~
 
@@ -383,17 +383,17 @@ def get_clusters(
     kwargs : dict
         Additional keyword arguments available depend on the `func`.
         For available KMeans kwargs see:
-        http://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html
+        :class:`sklearn.cluster.KMeans`
         For available hierarchical kwargs see:
-        http://scikit-learn.org/stable/modules/generated/sklearn.cluster.AgglomerativeClustering.html
+        :class:`sklearn.cluster.AgglomerativeClustering`
     Returns
     -------
-    clusters : dataframe
+    clusters : pandas.DataFrame
         Indexed by timesteps and with nodes as columns, giving cluster
         membership for first timestep of each day.
     clustered_data : sklearn.cluster object
-        Result of clustering using sklearn.KMeans(k).fit(X) or
-        sklearn.KMeans(k).AgglomerativeClustering(X). Allows user to access
+        Result of clustering using :python:`sklearn.KMeans(k).fit(X)` or
+        :python:`sklearn.KMeans(k).AgglomerativeClustering(X)`. Allows user to access
         specific attributes, for detailed statistical analysis.
 
     """
