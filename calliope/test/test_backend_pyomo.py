@@ -2107,7 +2107,7 @@ class TestNewBackend:
         """
 
         constraint_dict = {
-            "foreach": ["techs"],
+            "foreach": ["techs", "carriers"],
             "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100"
             # "where": "carrier_prod"  # <- no error would be raised with this uncommented
         }
@@ -2122,7 +2122,7 @@ class TestNewBackend:
 
         assert check_error_or_warning(
             error,
-            f"(constraints, {constraint_name}): Missing rhs or lhs for some coordinates selected by 'where'. Adapting 'where' might help.",
+            f"(constraints, {constraint_name}): Missing expression for some coordinates selected by 'where'. Adapting 'where' might help.",
         )
 
     def test_raise_error_on_expression_with_nan(self, simple_supply_new_build):
@@ -2133,7 +2133,7 @@ class TestNewBackend:
         """
 
         expression_dict = {
-            "foreach": ["techs"],
+            "foreach": ["techs", "carriers"],
             "equation": "sum(carrier_prod, over=[nodes, timesteps])"
             # "where": "carrier_prod"  # <- no error would be raised with this uncommented
         }
@@ -2148,7 +2148,32 @@ class TestNewBackend:
 
         assert check_error_or_warning(
             error,
-            f"(expressions, {expression_name}): Missing expressions for some coordinates selected by 'where'. Adapting 'where' might help.",
+            f"(expressions, {expression_name}): Missing expression for some coordinates selected by 'where'. Adapting 'where' might help.",
+        )
+
+    def test_raise_error_on_excess_dimensions(self, simple_supply_new_build):
+        """
+        A very simple constraint: For each tech, let the `energy_cap` be larger than 100.
+        However, we forgot to include `nodes` in `foreach`.
+        With `nodes` included, this constraint should build.
+        """
+
+        constraint_dict = {
+            "foreach": ["techs"],
+            "equation": "energy_cap >= 100",
+        }
+        constraint_name = "constraint-with-excess-dimensions"
+
+        with pytest.raises(exceptions.BackendError) as error:
+            simple_supply_new_build.backend.add_constraint(
+                simple_supply_new_build.inputs,
+                constraint_name,
+                constraint_dict,
+            )
+
+        assert check_error_or_warning(
+            error,
+            f"(constraints, {constraint_name}): imask will be broadcasted to these dims {{'nodes'}}",
         )
 
     @pytest.mark.parametrize(
