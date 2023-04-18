@@ -186,8 +186,8 @@ def equation_obj(expression_parser, where_parser):
 
 
 @pytest.fixture(scope="function")
-def equation_component_obj(sub_expression_parser, where_parser):
-    def _equation_component_obj(name):
+def equation_sub_expression_obj(sub_expression_parser, where_parser):
+    def _equation_sub_expression_obj(name):
         return parsing.ParsedBackendEquation(
             equation_name=name,
             sets=["A", "A1"],
@@ -195,7 +195,7 @@ def equation_component_obj(sub_expression_parser, where_parser):
             where_list=[where_parser.parse_string("False", parse_all=True)],
         )
 
-    return _equation_component_obj
+    return _equation_sub_expression_obj
 
 
 @pytest.fixture(scope="function")
@@ -247,7 +247,7 @@ def evaluatable_component_obj(valid_object_names):
         index_slices:
             tech: [{{expression: barfoo, where: "[bar] in nodes"}}]
         """
-        component_dict = string_to_dict(setup_string)
+        sub_expression_dict = string_to_dict(setup_string)
 
         class DummyParsedBackendComponent(parsing.ParsedBackendComponent):
             def __init__(self, dict_):
@@ -257,7 +257,7 @@ def evaluatable_component_obj(valid_object_names):
                 self.parse_top_level_where()
                 self.equations = self.parse_equations(valid_object_names)
 
-        return DummyParsedBackendComponent(component_dict)
+        return DummyParsedBackendComponent(sub_expression_dict)
 
     return _evaluatable_component_obj
 
@@ -462,7 +462,7 @@ class TestParsedComponent:
         )
         assert len(expression_list) == n_foos * n_bars
 
-    def test_extend_equation_list_with_expression_group_missing_component(
+    def test_extend_equation_list_with_expression_group_missing_sub_expression(
         self,
         component_obj,
         generate_expression_list,
@@ -478,7 +478,7 @@ class TestParsedComponent:
             )
         assert check_error_or_warning(
             excinfo,
-            "(constraints, foo): Undefined sub-expressions found in equation: {'ba'}",
+            "(constraints, foo): Undefined sub_expressions found in equation: {'ba'}",
         )
 
     @pytest.mark.parametrize(
@@ -494,11 +494,11 @@ class TestParsedComponent:
         equation_,
         expected,
     ):
-        component_dict = parsed_sub_expression_dict(2, 2)
+        sub_expression_dict = parsed_sub_expression_dict(2, 2)
 
         equation_dict = generate_expression_list([expression_generator(equation_)])[0]
         expression_list = component_obj.extend_equation_list_with_expression_group(
-            equation_dict, component_dict, "sub_expressions"
+            equation_dict, sub_expression_dict, "sub_expressions"
         )
         # All IDs should be unique
         assert len(set(expr.name for expr in expression_list)) == 4
@@ -509,7 +509,7 @@ class TestParsedComponent:
                 ["foo", "bar"]
             )
             comparison_tuple = constraint_eq.expression[0].eval(
-                component_dict=component_sub_dict, apply_imask=False
+                sub_expression_dict=component_sub_dict, apply_imask=False
             )
 
             assert apply_comparison(comparison_tuple) == expected
@@ -818,7 +818,7 @@ class TestParsedBackendEquation:
         }
 
     def test_add_index_slices_after_sub_expressions(
-        self, equation_obj, equation_component_obj, equation_index_slice_obj
+        self, equation_obj, equation_sub_expression_obj, equation_index_slice_obj
     ):
         equation_obj.sub_expressions = {"bar": equation_sub_expression_obj("bar:0")}
         obj1 = equation_index_slice_obj("baz:0")
