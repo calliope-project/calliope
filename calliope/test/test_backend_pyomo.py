@@ -2085,7 +2085,7 @@ class TestNewBackend:
             "Trying to add already existing *variable* `carrier_prod` as a backend model *parameter*.",
         )
 
-    def test_add_constraint_with_nan(self, simple_supply_new_build):
+    def test_raise_error_on_constraint_with_nan(self, simple_supply_new_build):
         """
         A very simple constraint: For each tech, let the annual and regional sum of `carrier_prod` be larger than 100.
         However, not every tech has the variable `carrier_prod`.
