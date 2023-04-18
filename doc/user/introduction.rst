@@ -19,11 +19,11 @@ Calliope is an attempt to design an energy system model from the ground of up wi
 
 Calliope was designed to address questions around the transition to renewable energy, so there are tools that are likely to be more suitable for other types of questions. In particular, the following related energy modelling systems are available under open source or free software licenses:
 
-* `SWITCH <http://switch-model.org/>`_: A power system model focused on renewables integration, using multi-stage stochastic linear optimisation, as well as hourly resource potential and demand data. Written in the commercial AMPL language and GPL-licensed [Fripp2012]_.
-* `Temoa <http://temoaproject.org/>`_: An energy system model with multi-stage stochastic optimisation functionality which can be deployed to computing clusters, to address parametric uncertainty. Written in Python/Pyomo and AGPL-licensed [Hunter2013]_.
-* `OSeMOSYS <http://www.osemosys.org/>`_: A simplified energy system model similar to the MARKAL/TIMES model families, which can be used as a stand-alone tool or integrated in the `LEAP energy model <http://www.energycommunity.org/LEAP/>`_. Written in GLPK, a free subset of the commercial AMPL language, and Apache 2.0-licensed [Howells2011]_.
+* `SWITCH <https://switch-model.org/>`_: A power system model focused on renewables integration, using multi-stage stochastic linear optimisation, as well as hourly resource potential and demand data. Written in the commercial AMPL language and GPL-licensed [Fripp2012]_.
+* `Temoa <https://temoacloud.com/>`_: An energy system model with multi-stage stochastic optimisation functionality which can be deployed to computing clusters, to address parametric uncertainty. Written in Python/Pyomo and AGPL-licensed [Hunter2013]_.
+* `OSeMOSYS <http://www.osemosys.org/>`_: A simplified energy system model similar to the MARKAL/TIMES model families, which can be used as a stand-alone tool or integrated in the `LEAP energy model <https://leap.sei.org/>`_. Written in GLPK, a free subset of the commercial AMPL language, and Apache 2.0-licensed [Howells2011]_.
 
-Additional energy models that are partially or fully open can be found on the `Open Energy Modelling Initiative's wiki <http://wiki.openmod-initiative.org/wiki/Model_fact_sheets>`_.
+Additional energy models that are partially or fully open can be found on the `Open Energy Modelling Initiative's wiki <https://wiki.openmod-initiative.org/wiki/Model_fact_sheets>`_.
 
 .. _rationale:
 
@@ -48,12 +48,12 @@ Acknowledgments
 
 Development has been partially funded by several grants throughout throughout the years. We would particularly like to acknowledge the following:
 
-* The `Grantham Institute <http://www.imperial.ac.uk/grantham>`_ at Imperial College London.
-* the European Institute of Innovation & Technology's `Climate-KIC program <http://www.climate-kic.org>`_.
+* The `Grantham Institute <https://www.imperial.ac.uk/grantham>`_ at Imperial College London.
+* the European Institute of Innovation & Technology's `Climate-KIC program <https://www.climate-kic.org>`_.
 * `Engineering and Physical Sciences Research Council <https://gow.epsrc.ukri.org/NGBOViewGrant.aspx?GrantRef=EP/L016095/1>`_, reference number: EP/L016095/1.
-* `The Swiss Competence Center for Energy Research − Supply of Electricity (SCCER SoE) <http://sccer-soe.ch/>`_, contract number 1155002546.
+* `The Swiss Competence Center for Energy Research − Supply of Electricity (SCCER SoE) <http://sccer-soe.ch/en/home/>`_, contract number 1155002546.
 * `Swiss Federal Office for Energy (SFOE) <https://www.bfe.admin.ch/bfe/en/home.html>`_, grant number SI/501768-01.
-* `European Research Council <http://erc.europa.eu>`_ TRIPOD grant, grant agreement number 715132.
+* `European Research Council <https://erc.europa.eu>`_ TRIPOD grant, grant agreement number 715132.
 * `The SENTINEL project <https://sentinel.energy/>`_ of the European Union's Horizon 2020 research and innovation programme under grant agreement No 837089.
 
 .. _license:
@@ -72,7 +72,7 @@ Calliope is released under the Apache 2.0 license, which is a permissive open-so
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-      http://www.apache.org/licenses/LICENSE-2.0
+      https://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,

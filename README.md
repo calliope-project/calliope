@@ -1,4 +1,4 @@
-[![Chat on Gitter](https://img.shields.io/gitter/room/calliope-project/calliope.svg?style=flat-square)](https://gitter.im/calliope-project/calliope)
+[![Chat on Gitter](https://img.shields.io/gitter/room/calliope-project/calliope.svg?style=flat-square)](https://app.gitter.im/#/room/#calliope-project_calliope:gitter.im)
 [![Main branch build status](https://img.shields.io/azure-devops/build/calliope-project/371cbbaa-fa6b-4efb-9b23-c4283a8e33eb/1?style=flat-square)](https://dev.azure.com/calliope-project/calliope/_build?definitionId=1)
 [![Documentation build status](https://img.shields.io/readthedocs/calliope.svg?style=flat-square)](https://readthedocs.org/projects/calliope/builds/)
 [![Test coverage](https://img.shields.io/codecov/c/github/calliope-project/calliope?style=flat-square&token=b4fd170f0e7b43679a8bf649719e1cea)](https://codecov.io/gh/calliope-project/calliope)
@@ -31,7 +31,7 @@
 
 Calliope is a framework to develop energy system models, with a focus on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data). Its primary focus is on planning energy systems at scales ranging from urban districts to entire continents. In an optional operational it can also test a pre-defined system under different operational conditions.
 
-A Calliope model consists of a collection of text files (in YAML and CSV formats) that fully define a model, with details on technologies, locations, resource potentials, etc. Calliope takes these files, constructs an optimization problem, solves it, and reports back results. Results can be saved to CSV or NetCDF files for further processing, or analysed directly in Python through Python's extensive scientific data processing capabilities provided by libraries like [Pandas](http://pandas.pydata.org/) and [xarray](http://xarray.pydata.org/).
+A Calliope model consists of a collection of text files (in YAML and CSV formats) that fully define a model, with details on technologies, locations, resource potentials, etc. Calliope takes these files, constructs an optimization problem, solves it, and reports back results. Results can be saved to CSV or NetCDF files for further processing, or analysed directly in Python through Python's extensive scientific data processing capabilities provided by libraries like [Pandas](http://pandas.pydata.org/) and [xarray](https://docs.xarray.dev/en/stable/).
 
 Calliope comes with several built-in analysis and visualisation tools. Having some knowledge of the Python programming language helps when running Calliope and using these tools, but is not a prerequisite.
 
@@ -65,7 +65,7 @@ To contribute changes:
 5. Push the branch to GitHub (`git push origin my-new-feature`)
 6. On GitHub, create a new pull request from the feature branch
 
-See our [contribution guidelines](https://github.com/calliope-project/calliope/blob/main/CONTRIBUTING.md) for more information -- and [join us on Gitter](https://gitter.im/calliope-project/calliope) to ask questions or discuss code.
+See our [contribution guidelines](https://github.com/calliope-project/calliope/blob/main/CONTRIBUTING.md) for more information -- and [join us on Gitter](https://app.gitter.im/#/room/#calliope-project_calliope:gitter.im) to ask questions or discuss code.
 
 ## What's new
 

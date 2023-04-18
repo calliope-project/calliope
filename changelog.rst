@@ -1,9 +1,11 @@
 .. include:: definitions.rst
 
+===============
 Release History
 ===============
 
 
+-----------
 0.7.0 (dev)
 -----------
 
@@ -12,27 +14,32 @@ v0.7 includes a major change to how Calliope internally operates. Most of this a
 User-facing changes
 ~~~~~~~~~~~~~~~~~~~
 
-|changed| |backwards incompatible| `Locations` (abbreviated to `locs`) are now referred to as `nodes` (no abbreviation). For users, this requires updating the top-level YAML key "locations" to "nodes" and accessing data in `model.inputs` and `model.results` on the set "nodes" rather than "locs".
+|new| Files containing user-defined mathematical formulations can be referenced in the model configuration. User-defined mathematical formulations must follow the new Calliope YAML math syntax (see "Internal changes" below).
 
-|changed| |backwards incompatible| The `loc::tech` and `loc::tech::carrier` sets have been removed. Model components are now indexed separately over `node`, `tech`, and `carrier` (where applicable). Although primarily an internal change, this affects the xarray dataset structure and hence how users access data in `model.inputs` and `model.results`. For example, `model.inputs.energy_cap_max.loc[{"loc_techs": "X:pv"}]` in v0.6 needs to be changed to `model.inputs.energy_cap_max.loc[{"nodes": "X", "techs": "pv"}]` in v0.7. This is functionally equivalent to first calling `model.get_formatted_array("energy_cap_max")` in v0.6, which is no longer necessary in v0.7.
+|changed| |backwards-incompatible| `Locations` (abbreviated to `locs`) are now referred to as `nodes` (no abbreviation). For users, this requires updating the top-level YAML key "locations" to "nodes" and accessing data in `model.inputs` and `model.results` on the set "nodes" rather than "locs".
 
-|changed| |backwards incompatible| The dimensions of the model data no longer include all possible subsets. E.g. a user can no longer access `loc_techs_supply` to view the location/technology pairs which have defined `supply` as their top-level parent. Instead, the same subset can be supplied by calling `model.inputs.inheritance.str.endswith('supply')` to create a boolean array of technologies with `supply` as their top-level parent.
+|changed| |backwards-incompatible| The `loc::tech` and `loc::tech::carrier` sets have been removed. Model components are now indexed separately over `node`, `tech`, and `carrier` (where applicable). Although primarily an internal change, this affects the xarray dataset structure and hence how users access data in `model.inputs` and `model.results`. For example, `model.inputs.energy_cap_max.loc[{"loc_techs": "X:pv"}]` in v0.6 needs to be changed to `model.inputs.energy_cap_max.loc[{"nodes": "X", "techs": "pv"}]` in v0.7. This is functionally equivalent to first calling `model.get_formatted_array("energy_cap_max")` in v0.6, which is no longer necessary in v0.7.
 
-|changed| |backwards incompatible| Group constraints have been removed. They will be replaced by `custom constraint` functionality.
+|changed| |backwards-incompatible| The dimensions of the model data no longer include all possible subsets. E.g. a user can no longer access `loc_techs_supply` to view the location/technology pairs which have defined `supply` as their top-level parent. Instead, the same subset can be supplied by calling `model.inputs.inheritance.str.endswith('supply')` to create a boolean array of technologies with `supply` as their top-level parent.
+
+|changed| |backwards-incompatible| Group constraints have been removed. They will be replaced by `custom constraint` functionality.
 
 Internal changes
 ~~~~~~~~~~~~~~~~
 
-|new| Generation of subsets over the model dimensions is now automated and determined by hardcoded YAML configuration files (`model_data_lookup.yaml` and `subsets.yaml`). This reduces the need to update code when incorporating additional functionality in the future.
+|new| Logic to convert the model definition (YAML or direct dictionary) to an xarray dataset is stored in a YAML configuration file: `model_data_lookup.yaml`. This reduces the need to update scripts when incorporating additional parameters in the future.
+
+|new| The model mathematical formulation (constraints, decision variables, objectives) is stored in a YAML configuration file: `math/base.yaml`. Equation expressions and the logic to decide on when to apply a constraint/create a variable etc. are given in string format. These strings are parsed according to a set of documented rules.
 
 |changed| Costs are now Pyomo expressions rather than decision variables.
 
 |changed| When a model is loaded into an active session, configuration dictionaries are stored as dictionaries instead of seralised YAML strings in the model data attributes dictionary. Serialisation and de-serialisation only occur on saving and loading from NetCDF, respectively.
 
+-------------------
 0.6.10 (2023-01-18)
 -------------------
 
-|changed| |backwards-incompatible| Updated to Numpy v1.23, Pandas v1.5, Pyomo v6.4, Ruamel.yaml v0.17, Scikit-learn v1.2, Xarray v2022.3, GLPK v5. This enables Calliope to be installed on Apple Silicon devices, but changes the result of algorithmic timeseries clustering. `In scikit-learn version 0.24.0, the method of random sampling for K-Means clustering was changed <https://scikit-learn.org/stable/whats_new/v0.24.html#changed-models>`_. This change will lead to different optimisation results if using `K-Means clustering <https://calliope.readthedocs.io/en/v0.6.10/user/advanced_features.html#time-resolution-adjustment>`_ in your model.
+|changed| |backwards-incompatible| Updated to Numpy v1.23, Pandas v1.5, Pyomo v6.4, Ruamel.yaml v0.17, Scikit-learn v1.2, Xarray v2022.3, GLPK v5. This enables Calliope to be installed on Apple Silicon devices, but changes the result of algorithmic timeseries clustering. `In scikit-learn version 0.24.0, the method of random sampling for K-Means clustering was changed <https://scikit-learn.org/0.24/whats_new/v0.24.html#changed-models>`_. This change will lead to different optimisation results if using `K-Means clustering <https://calliope.readthedocs.io/en/v0.6.10/user/advanced_features.html#time-resolution-adjustment>`_ in your model.
 
 |changed| |backwards-incompatible| Removed support for Python version 3.7 since some updated dependencies are not available in this version.
 
@@ -41,6 +48,7 @@ Internal changes
 |fixed| Set ordering in the model dataset is consistent before and after optimising a model with clustered timeseries. Previously, the link between clusters and timesteps would become mixed following optimisation, so running `model.run(force_rerun=True)` would yield a different result.
 
 
+------------------
 0.6.9 (2023-01-10)
 ------------------
 
@@ -61,6 +69,7 @@ Internal changes
 |fixed| `om_annual` investment costs will be calculated for technologies with only an `om_annual` cost defined in their configuration (#373). Previously, no investment costs would be calculated in this edge case.
 
 
+------------------
 0.6.8 (2022-02-07)
 ------------------
 
@@ -79,6 +88,7 @@ Internal changes
 |fixed| Mixed dtype xarray dataset variables, where one dtype is boolean, are converted to float if possible. This overcomes an error whereby the NetCDF file cannot be created due to a mixed dtype variable.
 
 
+------------------
 0.6.7 (2021-06-29)
 ------------------
 
@@ -110,6 +120,7 @@ Internal changes
 
 |fixed| Handle number of timesteps lower than the horizon length in `operate` mode (#337).
 
+------------------
 0.6.6 (2020-10-08)
 ------------------
 
@@ -131,6 +142,7 @@ Internal changes
 
 |fixed| Silent override of nested dicts when parsing YAML strings
 
+------------------
 0.6.5 (2020-01-14)
 ------------------
 
@@ -178,6 +190,7 @@ Internal changes
 
 |fixed| |backwards-incompatible| Updated to require pandas 0.25, xarray 0.14, and scikit-learn 0.22, and verified Python 3.8 compatibility. Because of a bugfix in scikit-learn 0.22, models using k-means clustering with a specified random seed may return different clusters from Calliope 0.6.5 on.
 
+------------------
 0.6.4 (2019-05-27)
 ------------------
 
@@ -244,6 +257,7 @@ Internal changes
 
 |fixed| Loc::techs with empty cost classes (i.e. value == None) are handled by a warning and cost class deletion, instead of messy failure.
 
+------------------
 0.6.3 (2018-10-03)
 ------------------
 
@@ -281,6 +295,7 @@ Internal changes
 
 |fixed| If time clustering with 'storage_inter_cluster' = True, but no storage technologies, the model doesn't break. Fixes issue #142.
 
+------------------
 0.6.2 (2018-06-04)
 ------------------
 
@@ -302,6 +317,7 @@ Internal changes
 
 |fixed| Fixed negative ``om_con`` costs in conversion and conversion_plus technologies
 
+------------------
 0.6.1 (2018-05-04)
 ------------------
 
@@ -321,17 +337,18 @@ Internal changes
 
 |fixed| ``AttrDict.union`` failed on all-empty nested dicts
 
+------------------
 0.6.0 (2018-04-20)
 ------------------
 
-Version 0.6.0 is an almost complete rewrite of most of Calliope's internals. See :doc:`user/whatsnew_060` for a more detailed description of the many changes.
+Version 0.6.0 is an almost complete rewrite of most of Calliope's internals. See :doc:`user/ref_05_to_06` for a more detailed description of the many changes.
 
 Major changes
 ~~~~~~~~~~~~~
 
 |changed| |backwards-incompatible| Substantial changes to model configuration format, including more verbose names for most settings, and removal of run configuration files.
 
-|new| |backwards-incompatible| Complete rewrite of Pyomo backend, including new various new and improved functionality to interact with a built model (see :doc:`user/whatsnew_060`).
+|new| |backwards-incompatible| Complete rewrite of Pyomo backend, including new various new and improved functionality to interact with a built model (see :doc:`user/ref_05_to_06`).
 
 |new| Addition of a ``calliope convert`` CLI tool to convert 0.5.x models to 0.6.0.
 
@@ -345,6 +362,7 @@ Major changes
 
 |changed| |backwards-incompatible| Removed the ability to load additional custom constraints or objectives.
 
+------------------
 0.5.5 (2018-02-28)
 ------------------
 
@@ -352,6 +370,7 @@ Major changes
 * |fixed| Ensure static parameters in resampled timeseries are caught in constraint generation
 * |fixed| Fix time masking when set_t.csv contains sub-hourly resolutions
 
+------------------
 0.5.4 (2017-11-10)
 ------------------
 
@@ -373,6 +392,7 @@ Other changes
 * |fixed| e_cap constraints for unmet_demand technologies are ignored in operational mode. Capacities are fixed for all other technologies, which previously raised an exception, as a fixed infinite capacity is not physically allowable.
 * |fixed| stack_weights were strings rather than numeric datatypes on reading NetCDF solution files.
 
+------------------
 0.5.3 (2017-08-22)
 ------------------
 
@@ -395,6 +415,7 @@ Other changes
 * |changed| Solution now includes time-varying costs (costs_variable)
 * |fixed| Saving to NetCDF does not affect in-memory solution (#62)
 
+------------------
 0.5.2 (2017-06-16)
 ------------------
 
@@ -403,12 +424,13 @@ Other changes
 * |fixed| Fixed a bug in storage constraints when both ``s_cap`` and ``e_cap`` were constrained but no ``c_rate`` was given.
 * |fixed| Fixed a bug in the system margin constraint.
 
+------------------
 0.5.1 (2017-06-14)
 ------------------
 
 |new| |backwards-incompatible| Better coordinate definitions in metadata. Location coordinates are now specified by a dictionary with either lat/lon (for geographic coordinates) or x/y (for generic Cartesian coordinates), e.g. ``{lat: 40, lon: -2}`` or ``{x: 0, y: 1}``. For geographic coordinates, the ``map_boundary`` definition for plotting was also updated in accordance. See the built-in example models for details.
 
-|new| Unidirectional transmission links are now possible. See the `documentation on transmission links <https://calliope.readthedocs.io/en/stable/user/configuration.html#transmission-links>`_.
+|new| Unidirectional transmission links are now possible. See the `documentation on transmission links <https://calliope.readthedocs.io/en/v0.5.1/user/configuration.html#transmission-links>`_.
 
 Other changes
 ~~~~~~~~~~~~~
@@ -417,6 +439,7 @@ Other changes
 * |fixed| Edge cases in ``conversion_plus`` constraints addressed
 * |changed| Documentation improvements
 
+------------------
 0.5.0 (2017-05-04)
 ------------------
 
@@ -441,6 +464,7 @@ Other changes
 * |changed| Removed SolutionModel class
 * |fixed| Other minor fixes
 
+------------------
 0.4.1 (2017-01-12)
 ------------------
 
@@ -449,6 +473,7 @@ Other changes
 * |changed| Updated installation documentation using conda-forge package
 * |fixed| Other minor fixes
 
+------------------
 0.4.0 (2016-12-09)
 ------------------
 
@@ -457,7 +482,7 @@ Major changes
 
 |new| Added new methods to deal with time resolution: clustering, resampling, and heuristic timestep selection
 
-|changed| |backwards-incompatible| Major change to solution data structure. Model solution is now returned as a single `xarray DataSet <http://xarray.pydata.org/en/stable/data-structures.html#dataset>`_ instead of multiple pandas DataFrames and Panels. Instead of as a generic HDF5 file, complete solutions can be saved as a NetCDF4 file via xarray's NetCDF functionality.
+|changed| |backwards-incompatible| Major change to solution data structure. Model solution is now returned as a single `xarray DataSet <https://docs.xarray.dev/en/v0.8.2/data-structures.html#dataset>`_ instead of multiple pandas DataFrames and Panels. Instead of as a generic HDF5 file, complete solutions can be saved as a NetCDF4 file via xarray's NetCDF functionality.
 
 While the recommended way to save and process model results is by NetCDF4, CSV saving functionality has now been upgraded for more flexibility. Each variable is saved as a separate CSV file with a single value column and as many index columns as required.
 
@@ -472,6 +497,7 @@ Other changes
 * |changed| Improved logging, status messages, and error reporting
 * |fixed| Other minor fixes
 
+------------------
 0.3.7 (2016-03-10)
 ------------------
 
@@ -498,11 +524,13 @@ Other changes
 * |fixed| Pyomo 4.2 API compatibility
 * |fixed| Other minor fixes
 
+------------------
 0.3.6 (2015-09-23)
 ------------------
 
 * |fixed| Version 0.3.5 changes were not reflected in tutorial
 
+------------------
 0.3.5 (2015-09-18)
 ------------------
 
@@ -535,11 +563,13 @@ Other changes
 * |fixed| Bug causing some total levelized transmission costs to be infinite instead of zero
 * |fixed| Bug causing some CSV solution files to be empty
 
+------------------
 0.3.4 (2015-04-27)
 ------------------
 
 * |fixed| Bug in construction and fixed O&M cost calculations in operational mode
 
+------------------
 0.3.3 (2015-04-03)
 ------------------
 
@@ -558,6 +588,7 @@ Other changes
 * |changed| Analysis tools restructured
 * |changed| Renamed ``debug.keepfiles`` setting to ``debug.keep_temp_files`` and better documented debug configuration
 
+------------------
 0.3.2 (2015-02-13)
 ------------------
 
@@ -571,12 +602,14 @@ Other changes
 * |fixed| Bug on saving YAML files with numpy dtypes fixed
 * Other minor improvements and fixes
 
+------------------
 0.3.1 (2015-01-06)
 ------------------
 
 * Fixes to time_functions
 * Other minor improvements and fixes
 
+------------------
 0.3.0 (2014-12-12)
 ------------------
 
@@ -594,6 +627,7 @@ Other changes
 * Basic distance-dependent constraints (only implemented for e_loss and cost of e_cap for now)
 * Other improvements and fixes
 
+------------------
 0.2.0 (2014-03-18)
 ------------------
 
@@ -614,6 +648,7 @@ Other changes
 * Apache 2.0 licensed
 * Other improvements and fixes
 
+------------------
 0.1.0 (2013-12-10)
 ------------------
 

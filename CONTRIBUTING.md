@@ -4,7 +4,7 @@ We're really glad you're reading this, because we need volunteer developers to h
 
 Some of the resources to look at if you're interested in contributing:
 
-* [Join us on Gitter to chat!](https://gitter.im/calliope-project/calliope)
+* [Join us on Gitter to chat!](https://app.gitter.im/#/room/#calliope-project_calliope:gitter.im)
 * Look at our [milestones](https://github.com/calliope-project/calliope/milestones) and [projects](https://github.com/calliope-project/calliope/projects) on GitHub for an idea on where development is headed
 * Look at [open issues tagged with "help wanted"](https://github.com/calliope-project/calliope/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) and ["good first issue"](https://github.com/calliope-project/calliope/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 * Look at the [development guide in our documentation](http://calliope.readthedocs.io/en/latest/user/develop.html)

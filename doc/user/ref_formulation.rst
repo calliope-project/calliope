@@ -7,12 +7,6 @@ This section details the mathematical formulation of the different components. F
 .. note::
     Make sure to also refer to the detailed :doc:`listing of constraints and costs along with their units and default values <config_defaults>`.
 
-Decision variables
-------------------
-
-.. automodule:: calliope.backend.pyomo.variables
-    :members:
-
 Objective functions
 -------------------
 
@@ -84,12 +78,4 @@ Policy
 ------
 
 .. automodule:: calliope.backend.pyomo.constraints.policy
-    :members:
-
-.. _constraint_group:
-
-Group constraints
-----------------------
-
-.. automodule:: calliope.backend.pyomo.constraints.group
     :members:

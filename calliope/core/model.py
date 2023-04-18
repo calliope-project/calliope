@@ -1,7 +1,7 @@
-"""
-Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
-Licensed under the Apache 2.0 License (see LICENSE file).
+# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
+# Licensed under the Apache 2.0 License (see LICENSE file).
 
+"""
 model.py
 ~~~~~~~~
 
@@ -13,11 +13,10 @@ from __future__ import annotations
 import logging
 import warnings
 from typing import Literal, Union, Optional, Callable
-from contextlib import contextmanager
-import os
+from pathlib import Path
+from calliope.core.util.tools import relative_path
 
-import xarray as xr
-import pandas as pd
+import xarray
 
 import calliope
 from calliope.postprocess import results as postprocess_results
@@ -29,9 +28,10 @@ from calliope.preprocess import (
 from calliope.preprocess.model_data import ModelDataFactory
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
+from calliope.core.util.tools import copy_docstring
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
-from calliope.backend import backends
+from calliope.backend import backends, parsing
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class Model(object):
     def __init__(
         self,
         config: Optional[Union[str, dict]],
-        model_data: Optional[xr.Dataset] = None,
+        model_data: Optional[xarray.Dataset] = None,
         debug: bool = False,
         *args,
         **kwargs,
@@ -81,15 +81,18 @@ class Model(object):
         self.defaults: AttrDict
         self.model_config: AttrDict
         self.run_config: AttrDict
-        self.component_config: AttrDict
+        self.math: AttrDict
+        self._config_path: Optional[str]
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
         log_time(logger, self._timings, "model_creation", comment="Model: initialising")
         if isinstance(config, str):
+            self._config_path = config
             model_run, debug_data = model_run_from_yaml(config, *args, **kwargs)
             self._init_from_model_run(model_run, debug_data, debug)
         elif isinstance(config, dict):
+            self._config_path = None
             model_run, debug_data = model_run_from_dict(config, *args, **kwargs)
             self._init_from_model_run(model_run, debug_data, debug)
         elif model_data is not None and config is None:
@@ -143,12 +146,8 @@ class Model(object):
         self._add_observed_dict("subsets", model_run["subsets"])
         self._add_observed_dict("defaults", self._generate_default_dict())
 
-        component_config = AttrDict.from_yaml(
-            os.path.join(
-                os.path.dirname(calliope.__file__), "config", "constraints.yaml"
-            )
-        )
-        self._add_observed_dict("component_config", component_config)
+        math = self._add_math(model_config["custom_math"])
+        self._add_observed_dict("math", math)
 
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         log_time(
@@ -185,7 +184,7 @@ class Model(object):
         self._add_observed_dict("model_config")
         self._add_observed_dict("run_config")
         self._add_observed_dict("subsets")
-        self._add_observed_dict("component_config")
+        self._add_observed_dict("math")
 
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         results = self._model_data.filter_by_attrs(is_result=1)
@@ -228,6 +227,45 @@ class Model(object):
         self._model_data.attrs[name] = dict_to_add
         setattr(self, name, dict_to_add)
 
+    def _add_math(self, custom_math: list) -> AttrDict:
+        """
+        Load the base math and optionally override with custom math from a list of references to custom math files.
+
+        Args:
+            custom_math (list):
+                List of references to files containting custom mathematical formulations that will be merged with the base formulation.
+
+        Raises:
+            exceptions.ModelError:
+                Referenced internal custom math files or user-defined custom math files must exist.
+
+        Returns:
+            AttrDict: Dictionary of math (constraints, variables, objectives, and global expressions).
+        """
+        math_dir = Path(calliope.__file__).parent / "math"
+        base_math = AttrDict.from_yaml(math_dir / "base.yaml")
+
+        file_errors = []
+
+        for filename in custom_math:
+            if not f"{filename}".endswith((".yaml", ".yml")):
+                yaml_filepath = math_dir / f"{filename}.yaml"
+            else:
+                yaml_filepath = Path(relative_path(self._config_path, filename))
+
+            if not yaml_filepath.is_file():
+                file_errors.append(filename)
+                continue
+            else:
+                override_dict = AttrDict.from_yaml(yaml_filepath)
+
+            base_math.union(override_dict, allow_override=True)
+        if file_errors:
+            raise exceptions.ModelError(
+                f"Attempted to load custom math that does not exist: {file_errors}"
+            )
+        return base_math
+
     def _generate_default_dict(self) -> AttrDict:
         """Process input parameter default YAML configuration file into a dictionary of
         defaults that match parameter names in the processed model dataset
@@ -237,7 +275,7 @@ class Model(object):
             AttrDict: Flat dictionary of `parameter_name`:`parameter_default` pairs.
         """
         raw_defaults = AttrDict.from_yaml(
-            os.path.join(os.path.dirname(calliope.__file__), "config", "defaults.yaml")
+            Path(calliope.__file__).parent / "config" / "defaults.yaml"
         )
         default_tech_dict = raw_defaults.techs.default_tech
         default_cost_dict = {
@@ -257,6 +295,23 @@ class Model(object):
             }
         )
 
+    def _add_run_mode_custom_math(self) -> None:
+        """If not given in the custom_math list, override model math with run mode math"""
+        run_mode = self.run_config["mode"]
+        # FIXME: available modes should not be hardcoded here.
+        # They should come from a YAML schema.
+        not_run_mode = {"plan", "operate", "spores"}.difference([run_mode])
+        run_mode_mismatch = not_run_mode.intersection(self.model_config["custom_math"])
+        if run_mode_mismatch:
+            exceptions.warn(
+                f"Running in {run_mode} mode, but run mode(s) {run_mode_mismatch} custom "
+                "math being loaded from file via the model configuration"
+            )
+
+        if run_mode != "plan" and run_mode not in self.model_config["custom_math"]:
+            filepath = Path(calliope.__file__).parent / "math" / f"{run_mode}.yaml"
+            self.math.union(AttrDict.from_yaml(filepath), allow_override=True)
+
     def build(self, backend_interface: Literal["pyomo"] = "pyomo") -> None:
         """Build description of the optimisation problem in the chosen backend interface.
 
@@ -272,11 +327,12 @@ class Model(object):
             "backend_parameters_generated",
             comment="Model: Generated optimisation problem parameters",
         )
+        self._add_run_mode_custom_math()
         # The order of adding components matters!
         # 1. Variables, 2. Expressions, 3. Constraints, 4. Objectives
         for components in ["variables", "expressions", "constraints", "objectives"]:
             component = components.removesuffix("s")
-            for name, dict_ in self.component_config[components].items():
+            for name, dict_ in self.math[components].items():
                 getattr(backend, f"add_{component}")(self._model_data, name, dict_)
             log_time(
                 logger,
@@ -286,6 +342,14 @@ class Model(object):
             )
 
         self.backend = backend
+
+    @copy_docstring(backends.BackendModel.verbose_strings)
+    def verbose_strings(self) -> None:
+        if not hasattr(self, "backend"):
+            raise NotImplementedError(
+                "Call `build()` to generate an optimisation problem before calling this function."
+            )
+        self.backend.verbose_strings()
 
     def solve(self, force_rerun: bool = False, warmstart: bool = False) -> None:
         """
@@ -352,13 +416,13 @@ class Model(object):
                 results, self._model_data, self._timings
             )
         else:
-            results = xr.Dataset()
+            results = xarray.Dataset()
 
         self._model_data = self._model_data.drop_vars(to_drop)
 
         self._model_data.attrs.update(results.attrs)
         self._model_data.attrs["termination_condition"] = termination_condition
-        self._model_data = xr.merge(
+        self._model_data = xarray.merge(
             [results, self._model_data], compat="override", combine_attrs="no_conflicts"
         )
         self._add_model_data_methods()
@@ -398,7 +462,7 @@ class Model(object):
                 results, self._model_data, self._timings
             )
         self._model_data.attrs.update(results.attrs)
-        self._model_data = xr.merge(
+        self._model_data = xarray.merge(
             [results, self._model_data], compat="override", combine_attrs="no_conflicts"
         )
         self._add_model_data_methods()
@@ -407,7 +471,7 @@ class Model(object):
 
     def get_formatted_array(self, var):
         """
-        Return an xr.DataArray with nodes, techs, and carriers as
+        Return an xarray.DataArray with nodes, techs, and carriers as
         separate dimensions.
 
         Parameters
@@ -476,3 +540,55 @@ class Model(object):
         warning should specify Calliope version in which it was added, and the
         version in which it should be updated/removed.
         """
+
+    def validate_math_strings(self, math_dict: dict) -> None:
+        """Validate that `expression` and `where` strings of a dictionary containing string mathematical formulations can be successfully parsed. This function can be used to test custom math before attempting to build the optimisation problem.
+
+        NOTE: strings are not checked for evaluation validity. Evaluation issues will be raised only on calling `Model.build()`.
+
+        Args:
+            math_dict (dict): Math formulation dictionary to validate. Top level keys must be one or more of ["variables", "expressions", "constraints", "objectives"], e.g.:
+            {
+                "constraints": {
+                    "my_constraint_name":
+                        {
+                            "foreach": ["nodes"],
+                            "where": "inheritance(supply)",
+                            "equation": "sum(energy_cap, over=techs) >= 10"
+                        }
+                }
+
+            }
+        Returns:
+            If all components of the dictionary are parsed successfully, this function will log a success message to the INFO logging level and return None.
+            Otherwise, a calliope.ModelError will be raised with parsing issues listed.
+        """
+        valid_math_element_names = [
+            *self.math["variables"].keys(),
+            *self.math["expressions"].keys(),
+            *math_dict.get("variables", {}).keys(),
+            *math_dict.get("expressions", {}).keys(),
+            *self.inputs.data_vars.keys(),
+            *self.defaults.keys(),
+            # FIXME: these should not be hardcoded, but rather end up in model data keys
+            "bigM",
+            *["objective_" + k for k in self.run_config["objective_options"].keys()],
+        ]
+        collected_errors: dict = dict()
+        for component_group, component_dicts in math_dict.items():
+            for name, component_dict in component_dicts.items():
+                parsed = parsing.ParsedBackendComponent(
+                    component_group, name, component_dict
+                )
+                parsed.parse_top_level_where(errors="ignore")
+                parsed.parse_equations(set(valid_math_element_names), errors="ignore")
+                if not parsed._is_valid:
+                    collected_errors[f"({component_group}, {name})"] = parsed._errors
+
+        if collected_errors:
+            exceptions.print_warnings_and_raise_errors(
+                during="math string parsing (marker indicates where parsing stopped, not strictly the equation term that caused the failure)",
+                errors=collected_errors,
+            )
+
+        logger.info("Model: validated math strings")
