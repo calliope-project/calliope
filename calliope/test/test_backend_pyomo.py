@@ -2307,4 +2307,3 @@ class TestNewBackend:
 
         assert obj.item().name == "parameters[annualisation_weight]"
         assert obj.coords_in_name
-        
