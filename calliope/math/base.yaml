@@ -231,7 +231,7 @@ constraints:
           expression: (1 - storage_loss) ** roll(timestep_resolution, timesteps=1) * roll(storage, timesteps=1)
         - where: lookup_cluster_last_timestep
           expression: (1 - storage_loss) ** timestep_resolution[timesteps=$previous_cluster_step] * storage[timesteps=$previous_cluster_step]
-    index_slices: &storage_previous_step_idx_items
+    slices: &storage_previous_step_idx_items
       previous_cluster_step:
         - expression: lookup_cluster_last_timestep
 
@@ -259,14 +259,14 @@ constraints:
         - where: energy_eff = 0
           expression: "0"
       storage_previous_step: *storage_previous_step
-    index_slices: *storage_previous_step_idx_items
+    slices: *storage_previous_step_idx_items
 
   set_storage_initial:
     description: "Fix the relationship between energy stored in a `storage` technology at the start and end of the whole model period."
     foreach: [nodes, techs]
     where: "storage_initial AND include_storage=True AND run.cyclic_storage=True"
     equation: storage[timesteps=$final_step] * ((1 - storage_loss) ** timestep_resolution[timesteps=$final_step]) == storage_initial * storage_cap
-    index_slices:
+    slices:
       final_step:
         - expression: get_val_at_index(dim=timesteps, idx=-1)
 

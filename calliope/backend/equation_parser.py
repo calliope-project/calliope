@@ -295,24 +295,24 @@ class EvalSlicedParameterOrVariable(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed sliced parameters or decision variables
-        of the form param_or_var[*index_slices].
+        of the form param_or_var[*slices].
 
         Args:
             tokens (pp.ParseResults):
                 Has a dictionary component with the parsed elements:
-                param_or_var_name (str), index_slices (list of strings).
+                param_or_var_name (str), slices (list of strings).
         """
         token_dict = tokens.as_dict()
         self.obj_name: pp.ParseResults = token_dict["param_or_var_name"]
 
-        self.index_slices: dict[str, pp.ParseResults] = {
-            idx["set_name"][0]: idx["slicer"][0] for idx in token_dict["index_slices"]
+        self.slices: dict[str, pp.ParseResults] = {
+            idx["set_name"][0]: idx["slicer"][0] for idx in token_dict["slices"]
         }
         self.values = tokens
 
     def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
-        slices = ", ".join(f"{k}={v.__repr__()}" for k, v in self.index_slices.items())
+        slices = ", ".join(f"{k}={v.__repr__()}" for k, v in self.slices.items())
         return f"SLICED_{self.obj_name}[{slices}]"
 
     def eval(self, **eval_kwargs) -> Optional[Union[dict, xr.DataArray]]:
@@ -323,14 +323,14 @@ class EvalSlicedParameterOrVariable(EvalString):
                 else, `eval_kwargs` has a backend dataset, returns sliced xarray object;
                 else, returns None.
         """
-        index_slices: dict[str, Any] = {
-            k: v.eval(**eval_kwargs) for k, v in self.index_slices.items()
+        slices: dict[str, Any] = {
+            k: v.eval(**eval_kwargs) for k, v in self.slices.items()
         }
 
         if eval_kwargs.get("as_dict", False):
-            return {"dimensions": index_slices, **self.obj_name.eval(**eval_kwargs)}
+            return {"dimensions": slices, **self.obj_name.eval(**eval_kwargs)}
         elif eval_kwargs.get("backend_dataset", None) is not None:
-            return self.obj_name.eval(**eval_kwargs).sel(**index_slices)
+            return self.obj_name.eval(**eval_kwargs).sel(**slices)
         else:
             return None
 
@@ -339,7 +339,7 @@ class EvalIndexSlice(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed expression index slice references
-        of the form `$index_slice`.
+        of the form `$slice`.
 
         Args:
             tokens (pp.ParseResults):
@@ -354,12 +354,12 @@ class EvalIndexSlice(EvalString):
 
     def eval(
         self,
-        index_slice_dict: Optional[dict[str, pp.ParseResults]] = None,
+        slice_dict: Optional[dict[str, pp.ParseResults]] = None,
         **eval_kwargs,
     ) -> Any:
         """
         Args:
-            index_slice_dict (Optional[dict[str, pp.ParseResults]]):
+            slice_dict (Optional[dict[str, pp.ParseResults]]):
                 Dictionary mapping the index slice name to a parsed equation expression.
                 Default is None.
 
@@ -368,9 +368,9 @@ class EvalIndexSlice(EvalString):
             otherwise attempts to evaluate the referenced index slice.
         """
         if eval_kwargs.get("as_dict"):
-            return {"index_slice_reference": self.name}
-        elif index_slice_dict is not None:
-            return index_slice_dict[self.name][0].eval(as_values=True, **eval_kwargs)
+            return {"slice_reference": self.name}
+        elif slice_dict is not None:
+            return slice_dict[self.name][0].eval(as_values=True, **eval_kwargs)
 
 
 class EvalSubExpressions(EvalString):
@@ -631,7 +631,7 @@ def sliced_param_or_var_parser(
             Parser for valid backend objects.
             On evaluation, this parser will access the backend object from the backend dataset.
         allow_slice_references (bool):
-            If True, allow reference to `index_slice` expressions
+            If True, allow reference to `slice` expressions
             (e.g. `{SUB_EXPRESSION_CLASSIFIER}bar` in `foo[bars={SUB_EXPRESSION_CLASSIFIER}bar]`).
             Defaults to True.
 
@@ -652,12 +652,12 @@ def sliced_param_or_var_parser(
     else:
         slicer = direct_slicer("slicer")
 
-    index_slice = pp.Group(generic_identifier("set_name") + pp.Suppress("=") + slicer)
+    slice = pp.Group(generic_identifier("set_name") + pp.Suppress("=") + slicer)
 
-    index_slices = pp.Group(pp.delimited_list(index_slice))("index_slices")
+    slices = pp.Group(pp.delimited_list(slice))("slices")
     sliced_object_name = unsliced_object("param_or_var_name")
 
-    sliced_param_or_var = pp.Combine(sliced_object_name + lspar) + index_slices + rspar
+    sliced_param_or_var = pp.Combine(sliced_object_name + lspar) + slices + rspar
     sliced_param_or_var.set_parse_action(EvalSlicedParameterOrVariable)
 
     return sliced_param_or_var
@@ -835,7 +835,7 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
     return equation_comparison
 
 
-def generate_index_slice_parser(valid_object_names: Iterable) -> pp.ParserElement:
+def generate_slice_parser(valid_object_names: Iterable) -> pp.ParserElement:
     """
     Create parser for index slice reference expressions. These expressions are linked
     to the equation expression by e.g. `$bar` in `foo[bars=$bar]`.
@@ -848,7 +848,7 @@ def generate_index_slice_parser(valid_object_names: Iterable) -> pp.ParserElemen
             to allow the parser to separate these from generic strings.
 
     Returns:
-        pp.ParserElement: Parser for expression strings under the constraint key "index_slices".
+        pp.ParserElement: Parser for expression strings under the constraint key "slices".
     """
     number, identifier = setup_base_parser_elements()
     evaluatable_identifier, id_list = evaluatable_identifier_parser(
