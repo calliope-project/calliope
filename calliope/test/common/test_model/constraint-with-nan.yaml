@@ -1,8 +1,0 @@
-constraints:
-  constraint-with-nan:
-    # A very simple constraint: For each tech, let the annual and regional sum of `carrier_prod` be larger than 100.
-    # However, not every tech has the variable `carrier_prod`.
-    # How to solve it? Let the constraint be active only where carrier_prod exists by setting 'where' accordingly.
-    foreach: [techs]
-    equation: "sum(carrier_prod, over=[nodes, timesteps]) >= 100"
-    # where: "carrier_prod"

@@ -16,7 +16,6 @@ from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import (
     check_error_or_warning,
     check_variable_exists,
-    load_constraint_dict,
 )
 
 
