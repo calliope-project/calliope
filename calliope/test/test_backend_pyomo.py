@@ -2086,12 +2086,19 @@ class TestNewBackend:
         )
 
     def test_add_constraint_with_nan(self, simple_supply_new_build):
+        """ 
+        A very simple constraint: For each tech, let the annual and regional sum of `carrier_prod` be larger than 100.
+        However, not every tech has the variable `carrier_prod`.
+        How to solve it? Let the constraint be active only where carrier_prod exists by setting 'where' accordingly.
+        """
+
+        constraint_dict = {
+            "foreach": ["techs"]
+            "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100"
+            # "where": "carrier_prod"  # <- no error would be raised with this uncommented
+        }
         constraint_name = "constraint-with-nan"
-
-        constraint_dict = load_constraint_dict("constraint-with-nan.yaml")[
-            "constraints"
-        ][constraint_name]
-
+        
         with pytest.raises(exceptions.BackendError) as error:
             simple_supply_new_build.backend.add_constraint(
                 simple_supply_new_build.inputs,
@@ -2101,5 +2108,5 @@ class TestNewBackend:
 
         assert check_error_or_warning(
             error,
-            "(constraints, constraint-with-nan): Missing rhs or lhs for some coordinates selected by 'where'. Adapting 'where' might help.",
+            f"(constraints, {constraint_name}): Missing rhs or lhs for some coordinates selected by 'where'. Adapting 'where' might help.",
         )
