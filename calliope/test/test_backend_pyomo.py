@@ -2126,6 +2126,32 @@ class TestNewBackend:
             f"(constraints, {constraint_name}): Missing rhs or lhs for some coordinates selected by 'where'. Adapting 'where' might help.",
         )
 
+    def test_raise_error_on_expression_with_nan(self, simple_supply_new_build):
+        """
+        A very simple expression: The annual and regional sum of `carrier_prod` for each tech.
+        However, not every tech has the variable `carrier_prod`.
+        How to solve it? Let the constraint be active only where carrier_prod exists by setting 'where' accordingly.
+        """
+
+        expression_dict = {
+            "foreach": ["techs"],
+            "equation": "sum(carrier_prod, over=[nodes, timesteps])"
+            # "where": "carrier_prod"  # <- no error would be raised with this uncommented
+        }
+        expression_name = "expression-with-nan"
+
+        with pytest.raises(exceptions.BackendError) as error:
+            simple_supply_new_build.backend.add_expression(
+                simple_supply_new_build.inputs,
+                expression_name,
+                expression_dict,
+            )
+
+        assert check_error_or_warning(
+            error,
+            f"(expressions, {expression_name}): Missing expressions for some coordinates selected by 'where'. Adapting 'where' might help.",
+        )
+
     @pytest.mark.parametrize(
         "component", ["parameters", "variables", "expressions", "constraints"]
     )
