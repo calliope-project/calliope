@@ -835,7 +835,7 @@ class TestComponentParser:
         ],
     )
     @pytest.mark.parametrize("func_or_not", ["dummy_func_1({})", "{}"])
-    def test_sub_expression_expression_parser(
+    def test_sub_expression_parser(
         self, generate_sub_expression, instring, func_or_not
     ):
         generate_sub_expression.parse_string(
@@ -843,9 +843,7 @@ class TestComponentParser:
         )
 
     @pytest.mark.parametrize("instring", ["[FOO, BAR]", "foo == 1", "$foo", "[foo]"])
-    def test_sub_expression_expression_parser_fail(
-        self, generate_sub_expression, instring
-    ):
+    def test_sub_expression_parser_fail(self, generate_sub_expression, instring):
         with pytest.raises(pp.ParseException):
             generate_sub_expression.parse_string(instring, parse_all=True)
 
