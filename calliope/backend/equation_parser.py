@@ -932,7 +932,7 @@ def generate_arithmetic_parser(valid_object_names: Iterable) -> pp.ParserElement
 
     Args:
         valid_object_names (Iterable):
-            Allowed names for optimisation problem components (parameters, decision variables, expressions),
+            Allowed names for optimisation problem components (parameters, decision variables, global_expressions),
             to allow the parser to separate these from generic strings.
 
     Returns:
@@ -972,7 +972,7 @@ def generate_equation_parser(valid_object_names: Iterable) -> pp.ParserElement:
 
     Args:
         valid_object_names (Iterable):
-            Allowed names for optimisation problem components (parameters, decision variables, expressions),
+            Allowed names for optimisation problem components (parameters, decision variables, global_expressions),
             to allow the parser to separate these from generic strings.
 
     Returns:

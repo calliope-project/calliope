@@ -564,9 +564,7 @@ class TestEquationParserElements:
                                 1,
                                 {
                                     "param_or_var_name": "foo",
-                                    "dimensions": {
-                                        "bars": {"slice_reference": "bar"}
-                                    },
+                                    "dimensions": {"bars": {"slice_reference": "bar"}},
                                 },
                             ],
                             "kwargs": {},
@@ -812,22 +810,16 @@ class TestIndexSliceParser:
         "instring", ["foo", "1", "[FOO, BAR]", "foo[bars=bar1]", "FOO"]
     )
     @pytest.mark.parametrize("func_or_not", ["dummy_func_1({})", "{}"])
-    def test_slice_expression_parser(
-        self, generate_slice, instring, func_or_not
-    ):
+    def test_slice_expression_parser(self, generate_slice, instring, func_or_not):
         generate_slice.parse_string(func_or_not.format(instring), parse_all=True)
 
     @pytest.mark.parametrize(
         "instring", ["foo + 1", "foo == 1", "$foo", "foo[bars=$bar]", "[foo]"]
     )
     @pytest.mark.parametrize("func_or_not", ["dummy_func_1({})", "{}"])
-    def test_slice_expression_parser_fail(
-        self, generate_slice, instring, func_or_not
-    ):
+    def test_slice_expression_parser_fail(self, generate_slice, instring, func_or_not):
         with pytest.raises(pp.ParseException):
-            generate_slice.parse_string(
-                func_or_not.format(instring), parse_all=True
-            )
+            generate_slice.parse_string(func_or_not.format(instring), parse_all=True)
 
 
 class TestComponentParser:

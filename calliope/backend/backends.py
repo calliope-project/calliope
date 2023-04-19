@@ -38,7 +38,7 @@ from calliope.backend import parsing, equation_parser
 
 T = TypeVar("T")
 _COMPONENTS_T = Literal[
-    "variables", "constraints", "objectives", "parameters", "expressions"
+    "variables", "constraints", "objectives", "parameters", "global_expressions"
 ]
 
 logger = logging.getLogger(__name__)
@@ -106,7 +106,7 @@ class BackendModel(ABC, Generic[T]):
         """
 
     @abstractmethod
-    def add_expression(
+    def add_global_expression(
         self,
         model_data: xr.Dataset,
         name: str,
@@ -122,9 +122,9 @@ class BackendModel(ABC, Generic[T]):
                 Calliope model data with which to create an array mask - only those
                 dataset entries in the mask will be generated.
             name (str):
-                Name of the expression
+                Name of the global expression
             expression_dict (parsing.UnparsedExpressionDict):
-                Expression configuration dictionary, ready to be parsed and then evaluated.
+                Global expression configuration dictionary, ready to be parsed and then evaluated.
         """
 
     @abstractmethod
@@ -244,18 +244,18 @@ class BackendModel(ABC, Generic[T]):
         """
 
     @abstractmethod
-    def get_expression(
+    def get_global_expression(
         self, expression_name: str, as_backend_objs: bool = True, eval_body: bool = True
     ) -> Optional[xr.DataArray]:
-        """Exrtact expression array from backend dataset
+        """Exrtact global expression array from backend dataset
 
         Args:
-            expression_name (str): Name of expression
+            global_expression_name (str): Name of global expression
             TODO: hide this and create a method to edit expressions that handles differences in interface APIs.
             as_backend_objs (bool, optional):
                 If True, will keep the array entries as backend interface objects,
                 which can be updated to update the underlying model.
-                Otherwise, expression values are given directly.
+                Otherwise, global expression values are given directly.
                 If the model has not been successfully optimised, expression values will all be provided as strings.
                 Defaults to True.
             eval_body (bool, optional):
@@ -266,7 +266,7 @@ class BackendModel(ABC, Generic[T]):
                 Defaults to True.
 
         Returns:
-            Optional[xr.DataArray]: If expression is not in backend dataset, will return None.
+            Optional[xr.DataArray]: If global_expression is not in backend dataset, will return None.
         """
 
     @abstractmethod
@@ -281,7 +281,7 @@ class BackendModel(ABC, Generic[T]):
     ):
         """
         Optimise built model. If solution is optimal, interface objects
-        (decision variables, expressions, constraints, objective) can be successfully
+        (decision variables, global expressions, constraints, objective) can be successfully
         evaluated for their values at optimality.
 
         Args:
@@ -304,7 +304,7 @@ class BackendModel(ABC, Generic[T]):
 
     def load_results(self) -> xr.Dataset:
         """
-        Evaluate backend decision variables, expressions, and parameters (if not in inputs)
+        Evaluate backend decision variables, global expressions, and parameters (if not in inputs)
         after a successful model run.
 
         Returns:
@@ -315,13 +315,15 @@ class BackendModel(ABC, Generic[T]):
             for name_, var in self.variables.items()
             if var.notnull().any()
         }
-        all_expressions = {
-            name_: self.get_expression(name_, as_backend_objs=False, eval_body=True)
-            for name_, expr in self.expressions.items()
+        all_global_expressions = {
+            name_: self.get_global_expression(
+                name_, as_backend_objs=False, eval_body=True
+            )
+            for name_, expr in self.global_expressions.items()
             if expr.notnull().any()
         }
 
-        results = xr.Dataset({**all_variables, **all_expressions})
+        results = xr.Dataset({**all_variables, **all_global_expressions})
 
         return results
 
@@ -509,9 +511,9 @@ class BackendModel(ABC, Generic[T]):
         return self._dataset.filter_by_attrs(parameters=1)
 
     @property
-    def expressions(self):
-        "Slice of backend dataset to show only built expressions"
-        return self._dataset.filter_by_attrs(expressions=1)
+    def global_expressions(self):
+        "Slice of backend dataset to show only built global expressions"
+        return self._dataset.filter_by_attrs(global_expressions=1)
 
     @property
     def objectives(self):
@@ -520,6 +522,14 @@ class BackendModel(ABC, Generic[T]):
 
 
 class PyomoBackendModel(BackendModel):
+    component_translator = {
+        "parameter": "parameter",
+        "variable": "variable",
+        "global_expression": "expression",
+        "constraint": "constraint",
+        "objective": "objective",
+    }
+
     def __init__(self):
         BackendModel.__init__(
             self,
@@ -527,7 +537,7 @@ class PyomoBackendModel(BackendModel):
         )
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()
-        self._instance.expressions = pmo.expression_dict()
+        self._instance.global_expressions = pmo.expression_dict()
         self._instance.constraints = pmo.constraint_dict()
         self._instance.objectives = pmo.objective_list()
 
@@ -577,7 +587,7 @@ class PyomoBackendModel(BackendModel):
             self._clean_arrays(lhs, rhs)
             return to_fill
 
-        self._add_constraint_or_expression(
+        self._add_constraint_or_global_expression(
             model_data,
             name,
             constraint_dict,
@@ -585,7 +595,7 @@ class PyomoBackendModel(BackendModel):
             "constraints",
         )
 
-    def add_expression(
+    def add_global_expression(
         self,
         model_data: xr.Dataset,
         name: str,
@@ -603,12 +613,12 @@ class PyomoBackendModel(BackendModel):
 
         self.valid_math_element_names.add(name)
 
-        self._add_constraint_or_expression(
+        self._add_constraint_or_global_expression(
             model_data,
             name,
             expression_dict,
             _expression_setter,
-            "expressions",
+            "global_expressions",
         )
 
     def add_variable(
@@ -729,19 +739,19 @@ class PyomoBackendModel(BackendModel):
         else:
             return variable
 
-    def get_expression(
+    def get_global_expression(
         self,
-        expression_name: str,
+        global_expression_name: str,
         as_backend_objs: bool = True,
         eval_body: bool = False,
     ) -> Optional[xr.DataArray]:
-        expression = self.expressions.get(expression_name, None)
-        if isinstance(expression, xr.DataArray) and not as_backend_objs:
+        global_expression = self.global_expressions.get(global_expression_name, None)
+        if isinstance(global_expression, xr.DataArray) and not as_backend_objs:
             return self.apply_func(
-                self._from_pyomo_expr, expression, eval_body=eval_body
+                self._from_pyomo_expr, global_expression, eval_body=eval_body
             )
         else:
-            return expression
+            return global_expression
 
     def solve(
         self,
@@ -823,7 +833,9 @@ class PyomoBackendModel(BackendModel):
             )
         else:
             singular_component = component_type.removesuffix("s")
-            component_dict[key] = getattr(pmo, f"{singular_component}_list")()
+            component_dict[key] = getattr(
+                pmo, f"{self.component_translator[singular_component]}_list"
+            )()
 
     def _delete_pyomo_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         """Delete a pyomo kernel list object from the pyomo model object.
@@ -838,7 +850,7 @@ class PyomoBackendModel(BackendModel):
         else:
             del component_dict[key]
 
-    def _add_constraint_or_expression(
+    def _add_constraint_or_global_expression(
         self,
         model_data: xr.Dataset,
         name: str,
@@ -846,21 +858,21 @@ class PyomoBackendModel(BackendModel):
             parsing.UnparsedConstraintDict, parsing.UnparsedExpressionDict
         ],
         component_setter: Callable,
-        component_type: Literal["constraints", "expressions"],
+        component_type: Literal["constraints", "global_expressions"],
     ) -> None:
-        """Generalised function to add a constraint or expression array to the model.
+        """Generalised function to add a constraint or global expression array to the model.
 
         Args:
             model_data (xr.Dataset): Calliope model input data
-            name: Name of the constraint or expression
+            name: Name of the constraint or global expression
             component_dict (Union[parsing.UnparsedConstraintDict, parsing.UnparsedExpressionDict]):
                 Unparsed YAML dictionary configuration.
             component_setter (Callable):
                 Function to combine evaluated xarray DataArrays into
-                constraint/expression objects.
+                constraint/global expression objects.
                 Will receive outputs of `evaluate_where` and `evaluate_expression` as inputs.
-            component_type (Literal[constraints, expressions])
-            parser (Callable): Parsing rule to use for the component (differs between constraints and expressions)
+            component_type (Literal[constraints, global_expressions])
+            parser (Callable): Parsing rule to use for the component (differs between constraints and global expressions)
 
 
         Raises:
@@ -1059,7 +1071,7 @@ class PyomoBackendModel(BackendModel):
         """
         if mask:
             expr_obj = pmo.expression(expr)
-            self._instance.expressions[name].append(expr_obj)
+            self._instance.global_expressions[name].append(expr_obj)
             return expr_obj
         else:
             return np.nan
@@ -1106,7 +1118,7 @@ class PyomoBackendModel(BackendModel):
         """
         Evaluate value of Pyomo object.
         If the input object is a parameter, a numeric/string value will be given.
-        If the input object is an expression or variable, a numeric value will be given
+        If the input object is a global expression or variable, a numeric value will be given
         only if the backend model has been successfully optimised, otherwise evaluation will return None.
 
         Args:

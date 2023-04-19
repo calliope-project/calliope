@@ -340,7 +340,7 @@ variables:
         where: "run.ensure_feasibility=True"
         domain: NegativeReals
 
-expressions:
+global_expressions:
     required_resource:
         foreach: [nodes, techs, timesteps]
         where: "inheritance(demand)"

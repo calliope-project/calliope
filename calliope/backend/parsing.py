@@ -299,14 +299,14 @@ class ParsedBackendComponent(ParsedBackendEquation):
     _ERR_STRING_ORDER: list[str] = ["expression_group", "id", "expr_or_where"]
     PARSERS: dict[str, Callable] = {
         "constraints": equation_parser.generate_equation_parser,
-        "expressions": equation_parser.generate_arithmetic_parser,
+        "global_expressions": equation_parser.generate_arithmetic_parser,
         "objectives": equation_parser.generate_arithmetic_parser,
         "variables": lambda x: None,
     }
 
     def __init__(
         self,
-        group: Literal["variables", "expressions", "constraints", "objectives"],
+        group: Literal["variables", "global_expressions", "constraints", "objectives"],
         name: str,
         unparsed_data: T,
     ) -> None:
@@ -316,7 +316,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         interface like Pyomo or Gurobipy.
 
         Args:
-            group (Literal["variables", "expressions", "constraints", "objectives"]): Optimisation problem component group to which the unparsed data belongs.
+            group (Literal["variables", "global_expressions", "constraints", "objectives"]): Optimisation problem component group to which the unparsed data belongs.
             name (str): Name of the optimisation problem component
             unparsed_data (T): Unparsed math formulation. Expected structure depends on the group to which the optimisation problem component belongs.
         """

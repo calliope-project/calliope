@@ -1883,7 +1883,7 @@ class TestNewBackend:
         )
 
     @pytest.mark.parametrize(
-        "component_type", ["variable", "expression", "parameter", "constraint"]
+        "component_type", ["variable", "global_expression", "parameter", "constraint"]
     )
     def test_new_build_get_missing_component(
         self, simple_supply_new_build, component_type
@@ -1948,8 +1948,8 @@ class TestNewBackend:
             .any()
         )
 
-    def test_new_build_get_expression(self, simple_supply_new_build):
-        expr = simple_supply_new_build.backend.get_expression("cost_investment")
+    def test_new_build_get_global_expression(self, simple_supply_new_build):
+        expr = simple_supply_new_build.backend.get_global_expression("cost_investment")
         assert (
             expr.to_series()
             .dropna()
@@ -1957,21 +1957,21 @@ class TestNewBackend:
             .all()
         )
         assert expr.attrs == {
-            "expressions": 1,
+            "global_expressions": 1,
             "references": {"cost"},
             "description": "The installation costs of a technology, including annualised investment costs and annual maintenance costs.",
             "unit": "cost",
             "coords_in_name": False,
         }
 
-    def test_new_build_get_expression_as_str(self, simple_supply_new_build):
-        expr = simple_supply_new_build.backend.get_expression(
+    def test_new_build_get_global_expression_as_str(self, simple_supply_new_build):
+        expr = simple_supply_new_build.backend.get_global_expression(
             "cost", as_backend_objs=False
         )
         assert expr.to_series().dropna().apply(lambda x: isinstance(x, str)).all()
 
-    def test_new_build_get_expression_as_vals(self, simple_supply_new_build):
-        expr = simple_supply_new_build.backend.get_expression(
+    def test_new_build_get_global_expression_as_vals(self, simple_supply_new_build):
+        expr = simple_supply_new_build.backend.get_global_expression(
             "cost", as_backend_objs=False, eval_body=True
         )
         assert (
@@ -2100,7 +2100,7 @@ class TestNewBackend:
         )
 
     @pytest.mark.parametrize(
-        "component", ["parameters", "variables", "expressions", "constraints"]
+        "component", ["parameters", "variables", "global_expressions", "constraints"]
     )
     def test_create_and_delete_pyomo_list(self, simple_supply_new_build, component):
         backend_instance = simple_supply_new_build.backend._instance
@@ -2111,7 +2111,7 @@ class TestNewBackend:
         assert "foo" not in getattr(backend_instance, component).keys()
 
     @pytest.mark.parametrize(
-        "component", ["parameters", "variables", "expressions", "constraints"]
+        "component", ["parameters", "variables", "global_expressions", "constraints"]
     )
     def test_delete_inexistent_pyomo_list(self, simple_supply_new_build, component):
         backend_instance = simple_supply_new_build.backend._instance
@@ -2121,7 +2121,7 @@ class TestNewBackend:
 
     @pytest.mark.parametrize(
         ["component", "eq"],
-        [("expressions", "energy_cap + 1"), ("constraints", "energy_cap >= 1")],
+        [("global_expressions", "energy_cap + 1"), ("constraints", "energy_cap >= 1")],
     )
     def test_add_allnull_expr_or_constr(self, simple_supply_new_build, component, eq):
         adder = getattr(
@@ -2266,7 +2266,7 @@ class TestNewBackend:
             "costs": "monetary",
         }
 
-        obj = simple_supply_longnames.backend.get_expression(
+        obj = simple_supply_longnames.backend.get_global_expression(
             "cost_investment", as_backend_objs=False
         )
 

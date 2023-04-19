@@ -319,7 +319,7 @@ def get_all_pyomo_model_attrs(subsets, backend_model):
     mapping_dict = {
         "Var": "variables",
         "Param": "parameters",
-        "Expression": "expressions",
+        "Expression": "global_expressions",
     }
 
     # Indexed objected

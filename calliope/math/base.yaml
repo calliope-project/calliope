@@ -586,7 +586,7 @@ objectives:
     domain: Reals
     sense: minimise
 
-expressions:
+global_expressions:
   cost_var:
     description: "The operating costs per timestep of a technology"
     unit: cost_per_time

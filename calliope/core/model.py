@@ -329,8 +329,13 @@ class Model(object):
         )
         self._add_run_mode_custom_math()
         # The order of adding components matters!
-        # 1. Variables, 2. Expressions, 3. Constraints, 4. Objectives
-        for components in ["variables", "expressions", "constraints", "objectives"]:
+        # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
+        for components in [
+            "variables",
+            "global_expressions",
+            "constraints",
+            "objectives",
+        ]:
             component = components.removesuffix("s")
             for name, dict_ in self.math[components].items():
                 getattr(backend, f"add_{component}")(self._model_data, name, dict_)
@@ -547,7 +552,7 @@ class Model(object):
         NOTE: strings are not checked for evaluation validity. Evaluation issues will be raised only on calling `Model.build()`.
 
         Args:
-            math_dict (dict): Math formulation dictionary to validate. Top level keys must be one or more of ["variables", "expressions", "constraints", "objectives"], e.g.:
+            math_dict (dict): Math formulation dictionary to validate. Top level keys must be one or more of ["variables", "global_expressions", "constraints", "objectives"], e.g.:
             {
                 "constraints": {
                     "my_constraint_name":
@@ -565,9 +570,9 @@ class Model(object):
         """
         valid_math_element_names = [
             *self.math["variables"].keys(),
-            *self.math["expressions"].keys(),
+            *self.math["global_expressions"].keys(),
             *math_dict.get("variables", {}).keys(),
-            *math_dict.get("expressions", {}).keys(),
+            *math_dict.get("global_expressions", {}).keys(),
             *self.inputs.data_vars.keys(),
             *self.defaults.keys(),
             # FIXME: these should not be hardcoded, but rather end up in model data keys
