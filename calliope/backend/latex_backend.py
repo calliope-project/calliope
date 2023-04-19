@@ -166,8 +166,8 @@ class LatexBackendModel(backends.BackendModel):
         default: Any = np.nan,
         use_inf_as_na: bool = False,
     ) -> None:
-        self._add_to_dataset(parameter_name, parameter_values, "parameters")
-        self.valid_arithmetic_components.add(parameter_name)
+        self._add_to_dataset(parameter_name, parameter_values, "parameters", {})
+        self.valid_math_element_names.add(parameter_name)
 
     def add_constraint(
         self,
@@ -181,7 +181,6 @@ class LatexBackendModel(backends.BackendModel):
             constraint_dict,
             lambda x: None,
             "constraints",
-            equation_parser.generate_equation_parser,
         )
 
     def add_expression(
@@ -190,7 +189,7 @@ class LatexBackendModel(backends.BackendModel):
         name: str,
         expression_dict: parsing.UnparsedConstraintDict,
     ) -> None:
-        self.valid_arithmetic_components.add(name)
+        self.valid_math_element_names.add(name)
 
         self._add_constraint_or_expression(
             model_data,
@@ -198,7 +197,6 @@ class LatexBackendModel(backends.BackendModel):
             expression_dict,
             lambda x: None,
             "expressions",
-            equation_parser.generate_arithmetic_parser,
         )
 
     def add_variable(
@@ -207,16 +205,18 @@ class LatexBackendModel(backends.BackendModel):
         name: str,
         variable_dict: parsing.UnparsedVariableDict,
     ) -> None:
-        self.valid_arithmetic_components.add(name)
+        self.valid_math_element_names.add(name)
         self._raise_error_on_preexistence(name, "variables")
 
-        parsed_variable = parsing.ParsedBackendComponent(name, variable_dict)
+        parsed_variable = parsing.ParsedBackendComponent(
+            "variables", name, variable_dict
+        )
         imask = parsed_variable.generate_top_level_where_array(
             model_data, break_early=False
         )
 
         # add early to be accessed when creating bound strings.
-        self._add_to_dataset(name, imask, "variables")
+        self._add_to_dataset(name, imask, "variables", variable_dict)
 
         imask_latex = parsed_variable.evaluate_where(model_data, as_latex=True)
         lb, ub = self._get_capacity_bounds(variable_dict["bounds"], name, model_data)
@@ -231,7 +231,7 @@ class LatexBackendModel(backends.BackendModel):
                 equations=[lb, ub],
             )
         # add again to ensure "math_string" attribute is there.
-        self._add_to_dataset(name, imask, "variables")
+        self._add_to_dataset(name, imask, "variables", variable_dict)
 
     def add_objective(
         self,
@@ -240,11 +240,16 @@ class LatexBackendModel(backends.BackendModel):
         objective_dict: parsing.UnparsedObjectiveDict,
     ) -> None:
         self._raise_error_on_preexistence(name, "objectives")
-        sense_dict = {"minimize": r"\min{}", "maximize": r"\max{}"}
-        parsed_objective = parsing.ParsedBackendComponent(name, objective_dict)
-        equations = parsed_objective.parse_equations(
-            equation_parser.generate_arithmetic_parser, self.valid_arithmetic_components
+        sense_dict = {
+            "minimize": r"\min{}",
+            "maximize": r"\max{}",
+            "minimise": r"\min{}",
+            "maximise": r"\max{}",
+        }
+        parsed_objective = parsing.ParsedBackendComponent(
+            "objectives", name, objective_dict
         )
+        equations = parsed_objective.parse_equations(self.valid_math_element_names)
         equation_strings = []
         for element in equations:
             if self.include == "valid":
@@ -263,7 +268,7 @@ class LatexBackendModel(backends.BackendModel):
                 sense=sense_dict[objective_dict["sense"]],
                 equations=equation_strings,
             )
-        self._add_to_dataset(name, objective_da, "objectives")
+        self._add_to_dataset(name, objective_da, "objectives", objective_dict)
 
     def get_parameter(
         self, parameter_name: str, as_backend_objs: bool = True
@@ -271,6 +276,9 @@ class LatexBackendModel(backends.BackendModel):
         return self.parameters.get(parameter_name, None)
 
     def create_obj_list(self, key: str, component_type: backends._COMPONENTS_T) -> None:
+        return None
+
+    def delete_obj_list(self, key: str, component_type: backends._COMPONENTS_T) -> None:
         return None
 
     def get_constraint(
@@ -304,6 +312,9 @@ class LatexBackendModel(backends.BackendModel):
             "Cannot solve a LaTex backend model - this only exists to produce a string representation of the model math"
         )
 
+    def verbose_strings(self):
+        return None
+
     def generate_math_doc(self):
         return self._render(self._doctemplate, components=self._instance)
 
@@ -311,12 +322,15 @@ class LatexBackendModel(backends.BackendModel):
         self,
         model_data: xr.Dataset,
         name: str,
-        component_dict: parsing.UnparsedConstraintDict,
+        component_dict: Union[
+            parsing.UnparsedConstraintDict, parsing.UnparsedExpressionDict
+        ],
         component_setter: Callable,
         component_type: Literal["constraints", "expressions"],
-        parser: Callable,
     ) -> None:
-        parsed_component = parsing.ParsedBackendComponent(name, component_dict)
+        parsed_component = parsing.ParsedBackendComponent(
+            component_type, name, component_dict
+        )
 
         top_level_imask = parsed_component.generate_top_level_where_array(
             model_data, break_early=False
@@ -330,9 +344,7 @@ class LatexBackendModel(backends.BackendModel):
 
         self._raise_error_on_preexistence(name, component_type)
 
-        equations = parsed_component.parse_equations(
-            parser, self.valid_arithmetic_components
-        )
+        equations = parsed_component.parse_equations(self.valid_math_element_names)
         equation_strings = []
         for element in equations:
             imask = element.evaluate_where(model_data, initial_imask=top_level_imask)
@@ -353,7 +365,9 @@ class LatexBackendModel(backends.BackendModel):
                 where=top_level_imask_latex,
                 equations=equation_strings,
             )
-        self._add_to_dataset(name, component_da.fillna(0), component_type)
+        self._add_to_dataset(
+            name, component_da.fillna(0), component_type, component_dict
+        )
 
     def _generate_math_string(
         self,
@@ -389,10 +403,9 @@ class LatexBackendModel(backends.BackendModel):
                 {"expression": f"{name} <= {bounds['max']}"},
             ],
         }
-        parsed_bounds = parsing.ParsedBackendComponent(name, bound_dict)
+        parsed_bounds = parsing.ParsedBackendComponent("constraints", name, bound_dict)
         equations = parsed_bounds.parse_equations(
-            equation_parser.generate_equation_parser,
-            self.valid_arithmetic_components,
+            self.valid_math_element_names,
         )
         return tuple(
             {"expression": eq.evaluate_expression(model_data, self, as_latex=True)}

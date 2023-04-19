@@ -30,7 +30,18 @@
 
 from __future__ import annotations
 
-from typing import Callable, Any, Union, Optional, Iterator, Iterable, Literal, overload
+from typing import (
+    Callable,
+    Any,
+    Union,
+    Optional,
+    Iterator,
+    Iterable,
+    Literal,
+    overload,
+    TYPE_CHECKING,
+)
+
 from abc import ABC
 import re
 
@@ -38,7 +49,9 @@ import pyparsing as pp
 import xarray as xr
 
 from calliope.exceptions import BackendError
-from calliope.backend.backends import BackendModel
+
+if TYPE_CHECKING:
+    from calliope.backend.backends import BackendModel
 
 pp.ParserElement.enablePackrat()
 

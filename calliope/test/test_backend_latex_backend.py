@@ -19,7 +19,7 @@ class TestLatexBackendModel:
         latex_backend_model = request.getfixturevalue(backend_obj)
         latex_backend_model.add_parameter("param", xr.DataArray(1))
         assert latex_backend_model.parameters["param"] == xr.DataArray(1)
-        assert "param" in latex_backend_model.valid_arithmetic_components
+        assert "param" in latex_backend_model.valid_math_element_names
 
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
@@ -40,7 +40,7 @@ class TestLatexBackendModel:
             latex_backend_model.variables["var"].sum()
             <= dummy_model_data.with_inf_as_bool.sum()
         )
-        assert "var" in latex_backend_model.valid_arithmetic_components
+        assert "var" in latex_backend_model.valid_math_element_names
         assert latex_backend_model._instance["variables"][-1]["name"] == "var"
 
     def test_add_variable_not_valid(self, dummy_model_data, valid_latex_backend):
@@ -55,7 +55,7 @@ class TestLatexBackendModel:
         )
         # some null values might be introduced by the foreach array, so we just check the upper bound
         assert not valid_latex_backend.variables["invalid_var"].sum()
-        assert "invalid_var" in valid_latex_backend.valid_arithmetic_components
+        assert "invalid_var" in valid_latex_backend.valid_math_element_names
         assert valid_latex_backend._instance["variables"][-1]["name"] != "invalid_var"
 
     @pytest.mark.parametrize(
@@ -77,7 +77,7 @@ class TestLatexBackendModel:
             latex_backend_model.expressions["expr"].sum()
             <= dummy_model_data.with_inf_as_bool.sum()
         )
-        assert "expr" in latex_backend_model.valid_arithmetic_components
+        assert "expr" in latex_backend_model.valid_math_element_names
         assert latex_backend_model._instance["expressions"][-1]["name"] == "expr"
 
     @pytest.mark.parametrize(
@@ -99,7 +99,7 @@ class TestLatexBackendModel:
             latex_backend_model.constraints["constr"].sum()
             <= dummy_model_data.with_inf_as_bool.sum()
         )
-        assert "constr" not in latex_backend_model.valid_arithmetic_components
+        assert "constr" not in latex_backend_model.valid_math_element_names
         assert latex_backend_model._instance["constraints"][-1]["name"] == "constr"
 
     def test_add_constraint_not_valid(self, dummy_model_data, valid_latex_backend):
@@ -147,7 +147,7 @@ class TestLatexBackendModel:
             {"equation": "sum(var, over=[nodes, techs])", "sense": "minimize"},
         )
         assert dummy_latex_backend_model.objectives["obj"].isnull().all()
-        assert "obj" not in dummy_latex_backend_model.valid_arithmetic_components
+        assert "obj" not in dummy_latex_backend_model.valid_math_element_names
         assert len(dummy_latex_backend_model._instance["objectives"]) == 1
 
     def test_get_parameter(self, dummy_latex_backend_model):

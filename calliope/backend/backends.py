@@ -33,7 +33,7 @@ import numpy as np
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
 from calliope.core.util.logging import LogWriter
-from calliope.backend import parsing, equation_parser
+from calliope.backend import parsing
 
 
 T = TypeVar("T")
@@ -308,11 +308,20 @@ class BackendModel(ABC, Generic[T]):
         This may be a backend-specific subclass of a standard list object.
 
         Args:
-            key (str): Name of object
-            component_type (str): Object type
+            key (str): Name of object.
+            component_type (str): Object type.
 
         Raises:
             BackendError: Cannot overwrite object of same name and type.
+        """
+
+    @abstractmethod
+    def delete_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+        """Delete a list object from the backend model object.
+
+        Args:
+            key (str): Name of object.
+            component_type (str): Object type.
         """
 
     def load_results(self) -> xr.Dataset:
@@ -501,7 +510,7 @@ class BackendModel(ABC, Generic[T]):
                 "obj_type": obj_type,
                 "references": set(),
                 "coords_in_name": False,
-                **add_attrs,
+                **add_attrs,  # type: ignore
             }
         )
         self._dataset[name] = da
@@ -517,7 +526,6 @@ class BackendModel(ABC, Generic[T]):
         component_dict: parsing.UnparsedConstraintDict,
         component_setter: Callable,
         component_type: Literal["constraints", "expressions"],
-        parser: Callable,
     ) -> None:
         """Generalised function to add a constraint or expression array to the model.
 
@@ -540,8 +548,9 @@ class BackendModel(ABC, Generic[T]):
                 objects on duplicate index entries.
         """
         references: set[str] = set()
-
-        parsed_component = parsing.ParsedBackendComponent(name, component_dict)
+        parsed_component = parsing.ParsedBackendComponent(
+            component_type, name, component_dict
+        )
 
         top_level_imask = parsed_component.generate_top_level_where_array(
             model_data, align_to_foreach_sets=False
@@ -557,9 +566,7 @@ class BackendModel(ABC, Generic[T]):
         )
         self.create_obj_list(name, component_type)
 
-        equations = parsed_component.parse_equations(
-            parser, self.valid_arithmetic_components
-        )
+        equations = parsed_component.parse_equations(self.valid_math_element_names)
         for element in equations:
             imask = element.evaluate_where(model_data, initial_imask=top_level_imask)
             if not imask.any():
@@ -576,14 +583,18 @@ class BackendModel(ABC, Generic[T]):
                 )
 
             expr = element.evaluate_expression(
-                model_data, self, references=references, imask=imask
+                model_data, self, imask=imask, references=references
             )
             to_fill = component_setter(imask, expr)
             component_da = component_da.fillna(to_fill)
 
         if component_da.isnull().all():
+            self.delete_obj_list(name, component_type)
             return None
-        self._add_to_dataset(name, component_da, component_type, references)
+
+        self._add_to_dataset(
+            name, component_da, component_type, component_dict, references
+        )
 
     @property
     def constraints(self):
@@ -640,7 +651,7 @@ class PyomoBackendModel(BackendModel):
             use_inf_as_na=use_inf_as_na,
         )
         if parameter_da.isnull().all():
-            self._delete_pyomo_list(parameter_name, "parameters")
+            self.delete_obj_list(parameter_name, "parameters")
             parameter_da = parameter_da.astype(float)
 
         self._add_to_dataset(parameter_name, parameter_da, "parameters", {})
@@ -713,7 +724,7 @@ class PyomoBackendModel(BackendModel):
             "variables", name, variable_dict
         )
         foreach_imask = parsed_variable.evaluate_foreach(model_data)
-        if not foresach_imask.any():
+        if not foreach_imask.any():
             return None
 
         imask = parsed_variable.generate_top_level_where_array(model_data)
@@ -890,7 +901,7 @@ class PyomoBackendModel(BackendModel):
         with self._datetime_as_string(self._dataset):
             for component_group in ["parameters", "variables"]:
                 for da in self._dataset.filter_by_attrs(
-                    coords_in_name=False, **{component_group: 1}
+                    coords_in_name=False, **{"obj_type": component_group}
                 ).values():
                     self.apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
                     da.attrs["coords_in_name"] = True
@@ -914,8 +925,8 @@ class PyomoBackendModel(BackendModel):
             singular_component = component_type.removesuffix("s")
             component_dict[key] = getattr(pmo, f"{singular_component}_list")()
 
-    def _delete_pyomo_list(self, key: str, component_type: _COMPONENTS_T) -> None:
-        """Delete a pyomo kernel list object from the pyomo model object.
+    def delete_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+        """Delete a list object from the backend model object.
 
         Args:
             key (str): Name of object

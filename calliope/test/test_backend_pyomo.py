@@ -2104,10 +2104,10 @@ class TestNewBackend:
     )
     def test_create_and_delete_pyomo_list(self, simple_supply_new_build, component):
         backend_instance = simple_supply_new_build.backend._instance
-        simple_supply_new_build.backend._create_pyomo_list("foo", component)
+        simple_supply_new_build.backend.create_obj_list("foo", component)
         assert "foo" in getattr(backend_instance, component).keys()
 
-        simple_supply_new_build.backend._delete_pyomo_list("foo", component)
+        simple_supply_new_build.backend.delete_obj_list("foo", component)
         assert "foo" not in getattr(backend_instance, component).keys()
 
     @pytest.mark.parametrize(
@@ -2116,7 +2116,7 @@ class TestNewBackend:
     def test_delete_inexistent_pyomo_list(self, simple_supply_new_build, component):
         backend_instance = simple_supply_new_build.backend._instance
         assert "bar" not in getattr(backend_instance, component).keys()
-        simple_supply_new_build.backend._delete_pyomo_list("bar", component)
+        simple_supply_new_build.backend.delete_obj_list("bar", component)
         assert "bar" not in getattr(backend_instance, component).keys()
 
     @pytest.mark.parametrize(
@@ -2270,7 +2270,7 @@ class TestNewBackend:
             "cost_investment", as_backend_objs=False
         )
 
-        assert "variables[energy_cap][test_supply_elec, a]" in obj.sel(dims).item()
+        assert "variables[energy_cap][a, test_supply_elec]" in obj.sel(dims).item()
         assert "parameters[annualisation_weight]" in obj.sel(dims).item()
 
         assert not obj.coords_in_name

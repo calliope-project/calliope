@@ -648,7 +648,7 @@ equations[0].expression (line 1, char 5): bar = 1
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             component_obj.parse_top_level_where()
 
-        assert check_error_or_warning(excinfo, "Errors during string parsing")
+        assert check_error_or_warning(excinfo, "Errors during math string parsing")
 
     def test_generate_top_level_where_array_break_at_foreach(
         self, dummy_model_data, component_obj
