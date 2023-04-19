@@ -22,6 +22,7 @@ import os
 from contextlib import redirect_stdout, redirect_stderr, contextmanager
 import logging
 
+import xarray
 import xarray as xr
 import pandas as pd
 import pyomo.environ as pe
@@ -928,7 +929,9 @@ class PyomoBackendModel(BackendModel):
         )
 
     @staticmethod
-    def _check_expr_imask_consistency(expression, imask, description):
+    def _check_expr_imask_consistency(
+        expression: xr.DataArray, imask: xarray.DataArray, description: str
+    ) -> None:
         """
         Checks if a given constraint or expression is consistent with the imask.
 
