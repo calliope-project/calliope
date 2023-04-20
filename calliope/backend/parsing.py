@@ -11,6 +11,7 @@ import operator
 
 import pyparsing as pp
 import xarray as xr
+import logging
 
 from calliope.backend import equation_parser, subset_parser, backends
 from calliope import exceptions
@@ -31,6 +32,8 @@ VALID_IMASK_HELPER_FUNCTIONS: dict[str, Callable] = {
 }
 
 TRUE_ARRAY = xr.DataArray(True)
+
+logger = logging.getLogger(__name__)
 
 
 class UnparsedEquationDict(TypedDict):
