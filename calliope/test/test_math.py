@@ -11,7 +11,7 @@ from calliope.test.common.util import build_lp, build_test_model
 
 @pytest.fixture(scope="class")
 def compare_lps(tmpdir_factory):
-    def _compare_lps(model, filename, custom_math):
+    def _compare_lps(model, custom_math, filename):
         lp_file = filename + ".lp"
         generated_file = Path(tmpdir_factory.mktemp("lp_files")) / lp_file
         build_lp(model, generated_file, custom_math)
@@ -51,7 +51,7 @@ class TestBaseMath:
                 }
             }
         }
-        compare_lps(model, "energy_cap", custom_math)
+        compare_lps(model, custom_math, "energy_cap")
 
     @pytest.mark.xfail(reason="not all base math is in the test config dict yet")
     def test_all_math_registered(self, base_math):

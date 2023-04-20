@@ -114,29 +114,29 @@ def build_lp(
         math (Optional[dict], optional): All constraint/expression/objective math to apply. Defaults to None.
         backend (Literal["pyomo"], optional): Backend to use to create the LP file. Defaults to "pyomo".
     """
-    backend_model = model._BACKENDS[backend]()
-    backend_model.add_all_parameters(model.inputs, model.run_config)
+    backend_instance = model._BACKENDS[backend]()
+    backend_instance.add_all_parameters(model.inputs, model.run_config)
     for name, dict_ in model.math["variables"].items():
-        backend_model.add_variable(model.inputs, name, dict_)
+        backend_instance.add_variable(model.inputs, name, dict_)
 
     if math is not None:
         for component_group, component_math in math.items():
             for name, dict_ in component_math.items():
-                getattr(backend_model, f"add_{component_group.removesuffix('s')}")(
+                getattr(backend_instance, f"add_{component_group.removesuffix('s')}")(
                     model.inputs, name, dict_
                 )
 
     # MUST have an objective for a valid LP file
     if math is None or "objectives" not in math.keys():
-        backend_model.add_objective(
+        backend_instance.add_objective(
             model.inputs, "dummy_obj", {"equation": "1 + 1", "sense": "minimize"}
         )
-    backend_model._instance.objectives[0].activate()
+    backend_instance._instance.objectives[0].activate()
 
-    backend_model.verbose_strings()
+    backend_instance.verbose_strings()
 
     # TODO: change to generalised `to_lp()` function
-    backend_model._instance.write(str(outfile), symbolic_solver_labels=True)
+    backend_instance._instance.write(str(outfile), symbolic_solver_labels=True)
 
     # strip trailing whitespace from `outfile` after the fact,
     # so it can be reliably compared other files in future
