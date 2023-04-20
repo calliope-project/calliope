@@ -875,11 +875,19 @@ class PyomoBackendModel(BackendModel):
         )
         foreach_imask = parsed_component.evaluate_foreach(model_data)
         if not foreach_imask.any():
+            logger.debug(
+                f"Trying to add constraint/expression with name '{name}', but 'foreach' does not apply anywhere. "
+                f"Constraint/expresssion will not be added."
+            )
             return None
 
         parsed_component.parse_top_level_where()
         top_level_imask = parsed_component.evaluate_where(model_data, foreach_imask)
         if not top_level_imask.any():
+            logger.debug(
+                f"Trying to add constraint/expression with name '{name}', but top level where does not apply anywhere. "
+                f"Constraint/expresssion will not be added."
+            )
             return None
 
         self._raise_error_on_preexistence(name, component_type)

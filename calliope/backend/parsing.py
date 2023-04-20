@@ -617,7 +617,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         # Add other dimensions (costs, timesteps, etc.)
         add_dims = set(self.sets).difference(initial_imask.dims)
         if add_dims.difference(model_data.dims):
-            exceptions.warn(
+            logger.debug(
                 f"Not generating optimisation problem object `{self.name}` because it is "
                 f"indexed over unidentified set name(s): `{add_dims.difference(model_data.dims)}`.",
                 _class=exceptions.BackendWarning,
