@@ -2105,7 +2105,21 @@ class TestNewBackend:
         However, not every tech has the variable `carrier_prod`.
         How to solve it? Let the constraint be active only where carrier_prod exists by setting 'where' accordingly.
         """
+        # add constraint without nan
+        constraint_dict = {
+            "foreach": ["techs", "carriers"],
+            "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100",
+            "where": "carrier_prod",  # <- no error is raised because of this
+        }
+        constraint_name = "constraint-without-nan"
 
+        simple_supply_new_build.backend.add_constraint(
+            simple_supply_new_build.inputs,
+            constraint_name,
+            constraint_dict,
+        )
+
+        # add constraint with nan
         constraint_dict = {
             "foreach": ["techs", "carriers"],
             "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100"
@@ -2131,6 +2145,20 @@ class TestNewBackend:
         However, not every tech has the variable `carrier_prod`.
         How to solve it? Let the constraint be active only where carrier_prod exists by setting 'where' accordingly.
         """
+        # add expression without nan
+        expression_dict = {
+            "foreach": ["techs", "carriers"],
+            "equation": "sum(carrier_prod, over=[nodes, timesteps])",
+            "where": "carrier_prod",  # <- no error is raised because of this
+        }
+        expression_name = "expression-without-nan"
+
+        # add expression with nan
+        simple_supply_new_build.backend.add_expression(
+            simple_supply_new_build.inputs,
+            expression_name,
+            expression_dict,
+        )
 
         expression_dict = {
             "foreach": ["techs", "carriers"],
@@ -2157,9 +2185,27 @@ class TestNewBackend:
         However, we forgot to include `nodes` in `foreach`.
         With `nodes` included, this constraint should build.
         """
-
+        # add constraint without excess dimensions
         constraint_dict = {
-            "foreach": ["techs"],
+            "foreach": [
+                "techs",
+                "nodes",
+            ],  # as 'nodes' is listed here, the constraint will have no excess dimensions
+            "equation": "energy_cap >= 100",
+        }
+        constraint_name = "constraint-without-excess-dimensions"
+
+        simple_supply_new_build.backend.add_constraint(
+            simple_supply_new_build.inputs,
+            constraint_name,
+            constraint_dict,
+        )
+
+        # add constraint with excess dimensions
+        constraint_dict = {
+            "foreach": [
+                "techs"
+            ],  # as 'nodes' is not listed here, the constraint will have excess dimensions
             "equation": "energy_cap >= 100",
         }
         constraint_name = "constraint-with-excess-dimensions"
