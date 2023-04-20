@@ -28,7 +28,7 @@ from calliope.preprocess import (
 from calliope.preprocess.model_data import ModelDataFactory
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
-from calliope.core.util.tools import copy_docstring
+from calliope.core.util.tools import copy_docstring, validate_dict
 from calliope import exceptions
 from calliope.backend.run import run as run_backend
 from calliope.backend import backends, parsing
@@ -52,6 +52,9 @@ class Model(object):
     """
 
     _BACKENDS: dict[str, Callable] = {"pyomo": backends.PyomoBackendModel}
+    _MATH_SCHEMA = AttrDict.from_yaml(
+        Path(calliope.__file__).parent / "config" / "math_schema.yaml"
+    )
 
     def __init__(
         self,
@@ -328,6 +331,7 @@ class Model(object):
             comment="Model: Generated optimisation problem parameters",
         )
         self._add_run_mode_custom_math()
+        validate_dict(self.math, self._MATH_SCHEMA, "math")
         # The order of adding components matters!
         # 1. Variables, 2. Expressions, 3. Constraints, 4. Objectives
         for components in ["variables", "expressions", "constraints", "objectives"]:
@@ -563,6 +567,7 @@ class Model(object):
             If all components of the dictionary are parsed successfully, this function will log a success message to the INFO logging level and return None.
             Otherwise, a calliope.ModelError will be raised with parsing issues listed.
         """
+        validate_dict(math_dict, self._MATH_SCHEMA, "math")
         valid_math_element_names = [
             *self.math["variables"].keys(),
             *self.math["expressions"].keys(),

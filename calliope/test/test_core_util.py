@@ -3,13 +3,20 @@ import calliope
 import logging
 import datetime
 import os
-import tempfile
+import glob
+from pathlib import Path
 
+import jsonschema
 import xarray as xr
 
 from calliope.core.util import dataset
 
-from calliope.core.util.tools import memoize, memoize_instancemethod, copy_docstring
+from calliope.core.util.tools import (
+    memoize,
+    memoize_instancemethod,
+    copy_docstring,
+    validate_dict,
+)
 
 from calliope.core.util.logging import log_time
 from calliope.core.util.generate_runs import generate_runs
@@ -17,6 +24,7 @@ from calliope.test.common.util import (
     python36_or_higher,
     check_error_or_warning,
 )
+from calliope.exceptions import ModelError
 
 _MODEL_NATIONAL = os.path.join(
     os.path.dirname(__file__), "..", "example_models", "national_scale", "model.yaml"
@@ -208,3 +216,66 @@ class TestCopyDocstring:
         docified_func = copy_docstring(_func_w_docstring)(_func)
         assert docified_func.__doc__ == "foobar"
         assert docified_func(1, 2) == 3
+
+
+class TestValidateDict:
+    @pytest.mark.parametrize(
+        ["schema", "expected_path"],
+        [
+            ({"foo": 2}, ""),
+            ({"properties": {"bar": {"foo": "string"}}}, " at `properties.bar`"),
+            (
+                {
+                    "definitions": {"baz": {"foo": "string"}},
+                    "properties": {"bar": {"$ref": "#definitions/baz"}},
+                },
+                " at `definitions.baz`",
+            ),
+        ],
+    )
+    def test_malformed_schema(self, schema, expected_path):
+        to_validate = {"bar": [1, 2, 3]}
+        with pytest.raises(jsonschema.SchemaError) as err:
+            validate_dict(to_validate, schema, "foobar")
+        assert check_error_or_warning(
+            err,
+            f"The foobar schema is malformed{expected_path}: Additional properties are not allowed ('foo' was unexpected)",
+        )
+
+    @pytest.mark.parametrize(
+        ["to_validate", "expected_path"],
+        [
+            ({"invalid": {"foo": 2}}, ""),
+            ({"valid": {"foo": 2, "invalid": 3}}, "valid: "),
+        ],
+    )
+    def test_invalid_dict(self, to_validate, expected_path):
+        schema = {
+            "properties": {
+                "valid": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {"foo": {"type": "number"}},
+                }
+            },
+            "additionalProperties": False,
+        }
+        with pytest.raises(ModelError) as err:
+            validate_dict(to_validate, schema, "foobar")
+        assert check_error_or_warning(
+            err,
+            [
+                "Errors during validation of the foobar dictionary",
+                f"* {expected_path}Additional properties are not allowed ('invalid' was unexpected)",
+            ],
+        )
+
+    @pytest.mark.parametrize(
+        "dict_path", glob.glob(str(Path(calliope.__file__).parent / "math" / "*.yaml"))
+    )
+    def test_validate_math(self, dict_path):
+        math_schema = calliope.AttrDict.from_yaml(
+            Path(calliope.__file__).parent / "config" / "math_schema.yaml"
+        )
+        to_validate = calliope.AttrDict.from_yaml(dict_path)
+        validate_dict(to_validate, math_schema, "")
