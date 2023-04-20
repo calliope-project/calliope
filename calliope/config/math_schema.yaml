@@ -58,7 +58,6 @@ definitions:
       '[^\d^_\W][\w\d]+':
         type: array
         description: Named Index slice.
-        additionalProperties: false
         items:
           type: object
           additionalProperties: false
@@ -145,6 +144,7 @@ properties:
           bounds:
             type: object
             description: Upper and lower bounds of the decision variable, either derived per-index item from a multi-dimensional input parameter, or given as a single value that is applied across all decision variable index items.
+            additionalProperties: false
             properties:
               min:
                 type: [string, number]
@@ -167,6 +167,7 @@ properties:
       '[^\d^_\W][\w\d]+':
         type: object
         description: A named variable.
+        additionalProperties: false
         properties:
           description: { $ref: "#definitions/description" }
           active: { $ref: "#definitions/active" }
@@ -178,7 +179,7 @@ properties:
             description: Math equation expressions with conditions to determinee which expression will be applied for this objectives. Conditions must be set up such that only one equation expression can be applied for this objective.
             items: { $ref: "#definitions/equation_items" }
           components: { $ref: "#definitions/components" }
-          index_items: { $ref: "#definitions/index_items" }
+          index_slices: { $ref: "#definitions/index_slices" }
           sense:
             type: string
             description: Whether the objective function should be minimised or maximised in the optimisation.

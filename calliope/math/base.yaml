@@ -583,7 +583,6 @@ objectives:
           expression: sum(sum(unmet_demand - unused_supply, over=[carriers, nodes])  * timestep_weights, over=timesteps) * bigM
         - where: "NOT run.ensure_feasibility=True"
           expression: "0"
-    domain: Reals
     sense: minimise
 
 expressions:
