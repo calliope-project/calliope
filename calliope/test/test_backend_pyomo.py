@@ -2127,8 +2127,8 @@ class TestNewBackend:
         # add constraint with nan
         constraint_dict = {
             "foreach": ["techs", "carriers"],
-            "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100"
-            # "where": "carrier_prod"  # <- no error would be raised with this uncommented
+            "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100",
+            # "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
         }
         constraint_name = "constraint-with-nan"
 
@@ -2172,8 +2172,8 @@ class TestNewBackend:
 
         expression_dict = {
             "foreach": ["techs", "carriers"],
-            "equation": "sum(carrier_prod, over=[nodes, timesteps])"
-            # "where": "carrier_prod"  # <- no error would be raised with this uncommented
+            "equation": "sum(carrier_prod, over=[nodes, timesteps])",
+            # "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
         }
         expression_name = "expression-with-nan"
 
