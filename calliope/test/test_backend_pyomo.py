@@ -2109,7 +2109,7 @@ class TestNewBackend:
         constraint_dict = {
             "foreach": ["techs", "carriers"],
             "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100",
-            "where": "carrier_prod",  # <- no error is raised because of this
+            "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
         }
         constraint_name = "constraint-without-nan"
 
@@ -2117,6 +2117,11 @@ class TestNewBackend:
             simple_supply_new_build.inputs,
             constraint_name,
             constraint_dict,
+        )
+
+        assert (
+            simple_supply_new_build.backend.get_constraint(constraint_name).name
+            == constraint_name
         )
 
         # add constraint with nan
@@ -2149,7 +2154,7 @@ class TestNewBackend:
         expression_dict = {
             "foreach": ["techs", "carriers"],
             "equation": "sum(carrier_prod, over=[nodes, timesteps])",
-            "where": "carrier_prod",  # <- no error is raised because of this
+            "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
         }
         expression_name = "expression-without-nan"
 
@@ -2158,6 +2163,11 @@ class TestNewBackend:
             simple_supply_new_build.inputs,
             expression_name,
             expression_dict,
+        )
+
+        assert (
+            simple_supply_new_build.backend.get_expression(expression_name).name
+            == expression_name
         )
 
         expression_dict = {
@@ -2199,6 +2209,11 @@ class TestNewBackend:
             simple_supply_new_build.inputs,
             constraint_name,
             constraint_dict,
+        )
+
+        assert (
+            simple_supply_new_build.backend.get_constraint(constraint_name).name
+            == constraint_name
         )
 
         # add constraint with excess dimensions
