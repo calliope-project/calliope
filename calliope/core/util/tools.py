@@ -146,9 +146,9 @@ def validate_dict(to_validate: dict, schema: dict, dict_descriptor: str) -> None
             path = f" at `{path}`"
 
         if err.context:
-            message = err.context[0].message
+            message = err.context[0].args[0]
         else:
-            message = err.message
+            message = err.args[0]
         raise jsonschema.SchemaError(
             message=f"The {dict_descriptor} schema is malformed{path}: {message}"
         )
@@ -158,7 +158,7 @@ def validate_dict(to_validate: dict, schema: dict, dict_descriptor: str) -> None
     except jsonschema.ValidationError:
         for error in sorted(validator.iter_errors(to_validate), key=str):
             path_ = error.json_path.lstrip("$.")
-            message = error.message
+            message = error.args[0]
             if path_ == "":
                 errors.append(message)
             else:
