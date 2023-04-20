@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import itertools
+import logging
 from typing import Optional, Union, Literal, Iterable, Callable, TypeVar
 from typing_extensions import NotRequired, TypedDict, Required
 import functools
@@ -31,6 +32,8 @@ VALID_IMASK_HELPER_FUNCTIONS: dict[str, Callable] = {
 }
 
 TRUE_ARRAY = xr.DataArray(True)
+
+logger = logging.getLogger(__name__)
 
 
 class UnparsedEquationDict(TypedDict):
