@@ -3,10 +3,10 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-import sys
 import os
+import sys
 
-from sphinx.builders.singlehtml import StandaloneHTMLBuilder, SingleFileHTMLBuilder
+from sphinx.builders.singlehtml import SingleFileHTMLBuilder, StandaloneHTMLBuilder
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -47,13 +47,13 @@ version = release = __version__
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-    "sphinx.ext.autodoc",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.extlinks",
     "sphinx.ext.napoleon",
-    "sphinx.ext.intersphinx",
+    "sphinx.ext.autodoc",
     "sphinx_autodoc_typehints",
+    "sphinx.ext.intersphinx",
     "sphinx_search.extension",
 ]
 

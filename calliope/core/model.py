@@ -12,26 +12,22 @@ from __future__ import annotations
 
 import logging
 import warnings
-from typing import Literal, Union, Optional, Callable
 from pathlib import Path
-from calliope.core.util.tools import relative_path
+from typing import Callable, Literal, Optional, Union
 
 import xarray
 
 import calliope
-from calliope.postprocess import results as postprocess_results
+from calliope import exceptions
+from calliope.backend import backends, parsing
+from calliope.backend.run import run as run_backend
 from calliope.core import io
-from calliope.preprocess import (
-    model_run_from_yaml,
-    model_run_from_dict,
-)
-from calliope.preprocess.model_data import ModelDataFactory
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
-from calliope.core.util.tools import copy_docstring
-from calliope import exceptions
-from calliope.backend.run import run as run_backend
-from calliope.backend import backends, parsing
+from calliope.core.util.tools import copy_docstring, relative_path
+from calliope.postprocess import results as postprocess_results
+from calliope.preprocess import model_run_from_dict, model_run_from_yaml
+from calliope.preprocess.model_data import ModelDataFactory
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +42,7 @@ def read_netcdf(path):
 
 
 class Model(object):
-    """
-    A Calliope Model.
-
-    """
+    "A Calliope Model."
 
     _BACKENDS: dict[str, Callable] = {"pyomo": backends.PyomoBackendModel}
 
@@ -65,16 +58,16 @@ class Model(object):
         Returns a new Model from either the path to a YAML model
         configuration file or a dict fully specifying the model.
 
-        Parameters
-        ----------
-        config : str or dict or AttrDict
-            If str, must be the path to a model configuration file.
-            If dict or AttrDict, must fully specify the model.
-        model_data : Dataset, optional
-            Create a Model instance from a fully built model_data Dataset.
-            This is only used if `config` is explicitly set to None
-            and is primarily used to re-create a Model instance from
-            a model previously saved to a NetCDF file.
+        Args:
+            config (Optional[Union[str, dict]]):
+                If str, must be the path to a model configuration file.
+                If dict or AttrDict, must fully specify the model.
+            model_data (Dataset, optional):
+                Create a Model instance from a fully built model_data Dataset.
+                This is only used if `config` is explicitly set to None
+                and is primarily used to re-create a Model instance from
+                a model previously saved to a NetCDF file.
+                Defaults to None.
 
         """
         self._timings: dict = {}
@@ -547,7 +540,8 @@ class Model(object):
         NOTE: strings are not checked for evaluation validity. Evaluation issues will be raised only on calling `Model.build()`.
 
         Args:
-            math_dict (dict): Math formulation dictionary to validate. Top level keys must be one or more of ["variables", "expressions", "constraints", "objectives"], e.g.:
+            math_dict (dict): Math formulation dictionary to validate. Top level keys must be one or more of ["variables", "expressions", "constraints", "objectives"], e.g.::
+
             {
                 "constraints": {
                     "my_constraint_name":
