@@ -1,8 +1,6 @@
-"""
-Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
-Licensed under the Apache 2.0 License (see LICENSE file).
+# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
+# Licensed under the Apache 2.0 License (see LICENSE file).
 
-"""
 
 from calliope.backend.pyomo.constraints.capacity import get_capacity_bounds
 import logging

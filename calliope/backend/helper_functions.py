@@ -1,6 +1,10 @@
+# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
+# Licensed under the Apache 2.0 License (see LICENSE file).
+
 from typing import Callable
 
 import xarray as xr
+
 from calliope.exceptions import BackendError
 
 

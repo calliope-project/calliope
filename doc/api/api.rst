@@ -25,14 +25,6 @@ Time series
 .. automodule:: calliope.time.funcs
     :members: resample
 
-.. _api_analysis:
-
-Analyzing models
-================
-
-.. autoclass:: calliope.postprocess.plotting.plotting.ModelPlotMethods
-    :members: timeseries, capacity, transmission, summary
-
 .. _api_backend_interface:
 
 Pyomo backend interface
