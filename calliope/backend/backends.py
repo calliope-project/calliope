@@ -566,15 +566,20 @@ class PyomoBackendModel(BackendModel):
             imask: xr.DataArray, expr: tuple[xr.DataArray, str, xr.DataArray]
         ) -> xr.DataArray:
             lhs, op, rhs = expr
+            lhs = lhs.squeeze(drop=True)
+            rhs = rhs.squeeze(drop=True)
+
+            self._check_expr_imask_consistency(lhs, imask, f"(constraints, {name})")
+            self._check_expr_imask_consistency(rhs, imask, f"(constraints, {name})")
+
             to_fill = self.apply_func(
                 self._to_pyomo_constraint,
                 imask,
-                xr.DataArray(lhs).squeeze(drop=True),
-                xr.DataArray(rhs).squeeze(drop=True),
+                lhs,
+                rhs,
                 op=op,
                 name=name,
             )
-            self._clean_arrays(lhs, rhs)
             return to_fill
 
         self._add_constraint_or_expression(
@@ -592,10 +597,14 @@ class PyomoBackendModel(BackendModel):
         expression_dict: parsing.UnparsedExpressionDict,
     ) -> None:
         def _expression_setter(imask: xr.DataArray, expr: xr.DataArray) -> xr.DataArray:
+            expr = expr.squeeze(drop=True)
+
+            self._check_expr_imask_consistency(expr, imask, f"(expressions, {name})")
+
             to_fill = self.apply_func(
                 self._to_pyomo_expression,
                 imask,
-                expr.squeeze(drop=True),
+                expr,
                 name=name,
             )
             self._clean_arrays(expr)
@@ -917,6 +926,37 @@ class PyomoBackendModel(BackendModel):
         self._add_to_dataset(
             name, component_da, component_type, component_dict, references
         )
+
+    @staticmethod
+    def _check_expr_imask_consistency(
+        expression: xr.DataArray, imask: xr.DataArray, description: str
+    ) -> None:
+        """
+        Checks if a given constraint or expression is consistent with the imask.
+
+        Parameters:
+            expression (xr.DataArray): constraint or expression
+            imask (xr.DataArray): imask
+            description (str): Description to prefix the error message.
+
+        Raises:
+            BackendError:
+                Raised if there is a dimension in the expression that is not in the imask.
+            BackendError:
+                Raised if the expression has any NaN where the imask applies.
+        """
+        # Check whether expression has a dim that does not exist in imask.
+        broadcast_dims_imask = set(expression.dims).difference(set(imask.dims))
+        if broadcast_dims_imask:
+            raise BackendError(
+                f"{description}: imask will be broadcasted to these dims {broadcast_dims_imask}"
+            )
+
+        incomplete_constraints = expression.isnull() & imask
+        if incomplete_constraints.any():
+            raise BackendError(
+                f"{description}: Missing expression for some coordinates selected by 'where'. Adapting 'where' might help."
+            )
 
     def _get_capacity_bounds(
         self, bounds: parsing.UnparsedVariableBoundDict, name: str
