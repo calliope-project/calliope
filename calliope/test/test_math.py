@@ -70,6 +70,31 @@ class TestBaseMath:
         }
         compare_lps(model, custom_math, "carrier_production_max")
 
+    def test_balance_conversion(self, compare_lps):
+        self.TEST_REGISTER.add("constraints.balance_conversion")
+
+        model = build_test_model(
+            scenario="simple_conversion,two_hours,investment_costs",
+        )
+        custom_math = {
+            "constraints": {
+                "balance_conversion": model.math.constraints.balance_conversion
+            }
+        }
+
+        compare_lps(model, custom_math, "balance_conversion")
+
+    def test_resource_max(self, compare_lps):
+        self.TEST_REGISTER.add("constraints.resource_max")
+        model = build_test_model(
+            {},
+            "simple_supply_plus,resample_two_days,investment_costs",
+        )
+        custom_math = {
+            "constraints": {"my_constraint": model.math.constraints.resource_max}
+        }
+        compare_lps(model, custom_math, "resource_max")
+
     @pytest.mark.xfail(reason="not all base math is in the test config dict yet")
     def test_all_math_registered(self, base_math):
         "After running all the previous tests in the class, the base_math dict should be empty, i.e. all math has been tested"
