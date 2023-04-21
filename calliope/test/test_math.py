@@ -63,7 +63,11 @@ class TestBaseMath:
             "simple_supply,two_hours,investment_costs",
         )
 
-        custom_math = {'constraints': {'carrier_production_max': model.math.constraints.carrier_production_max}}
+        custom_math = {
+            "constraints": {
+                "carrier_production_max": model.math.constraints.carrier_production_max
+            }
+        }
         compare_lps(model, custom_math, "carrier_production_max")
 
     @pytest.mark.xfail(reason="not all base math is in the test config dict yet")
