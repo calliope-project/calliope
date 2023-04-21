@@ -9,7 +9,17 @@ import re
 import typing
 from abc import ABC, abstractmethod
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
-from typing import Any, Callable, Generic, Literal, Optional, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Iterable,
+    Iterator,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -19,7 +29,7 @@ import xarray as xr
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import SolverFactory
 
-from calliope.backend import equation_parser, parsing
+from calliope.backend import parsing
 from calliope.core.util.logging import LogWriter
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
