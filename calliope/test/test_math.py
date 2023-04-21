@@ -53,6 +53,20 @@ class TestBaseMath:
         }
         compare_lps(model, custom_math, "energy_cap")
 
+    def test_balance_conversion(self, compare_lps):
+        self.TEST_REGISTER.add("constraints.balance_conversion")
+
+        model = build_test_model(
+            scenario="simple_conversion,two_hours,investment_costs",
+        )
+        custom_math = {
+            "constraints": {
+                "balance_conversion": model.math.constraints.balance_conversion
+            }
+        }
+
+        compare_lps(model, custom_math, "balance_conversion")
+
     def test_resource_max(self, compare_lps):
         self.TEST_REGISTER.add("constraints.resource_max")
         model = build_test_model(
