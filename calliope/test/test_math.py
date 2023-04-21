@@ -58,13 +58,54 @@ class TestBaseMath:
     def test_storage_max(self, compare_lps):
         self.TEST_REGISTER.add("constraints.storage_max")
         model = build_test_model(
-            {},
-            "simple_storage,two_hours,investment_costs",
+            scenario="simple_storage,two_hours,investment_costs",
         )
         custom_math = {
             "constraints": {"storage_max": model.math.constraints.storage_max}
         }
         compare_lps(model, custom_math, "storage_max")
+
+    def test_carrier_production_max(self, compare_lps):
+        self.TEST_REGISTER.add("constraints.carrier_production_max")
+        model = build_test_model(
+            {
+                "nodes.a.techs.test_supply_elec.constraints.energy_cap_min": 100,
+                "nodes.a.techs.test_supply_elec.constraints.energy_cap_max": 100,
+            },
+            "simple_supply,two_hours,investment_costs",
+        )
+
+        custom_math = {
+            "constraints": {
+                "carrier_production_max": model.math.constraints.carrier_production_max
+            }
+        }
+        compare_lps(model, custom_math, "carrier_production_max")
+
+    def test_balance_conversion(self, compare_lps):
+        self.TEST_REGISTER.add("constraints.balance_conversion")
+
+        model = build_test_model(
+            scenario="simple_conversion,two_hours,investment_costs",
+        )
+        custom_math = {
+            "constraints": {
+                "balance_conversion": model.math.constraints.balance_conversion
+            }
+        }
+
+        compare_lps(model, custom_math, "balance_conversion")
+
+    def test_resource_max(self, compare_lps):
+        self.TEST_REGISTER.add("constraints.resource_max")
+        model = build_test_model(
+            {},
+            "simple_supply_plus,resample_two_days,investment_costs",
+        )
+        custom_math = {
+            "constraints": {"my_constraint": model.math.constraints.resource_max}
+        }
+        compare_lps(model, custom_math, "resource_max")
 
     @pytest.mark.xfail(reason="not all base math is in the test config dict yet")
     def test_all_math_registered(self, base_math):
