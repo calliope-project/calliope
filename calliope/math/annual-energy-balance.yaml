@@ -2,16 +2,16 @@ constraints:
   annual_carrier_prod_group_balance:
     foreach: [nodes]
     equation: "$annual_carrier_prod_group1 == $annual_carrier_prod_group2 * $factor2"
-    where: "supply_gas"
+    where: "[supply_gas, boiler] in techs"
     components:
       annual_carrier_prod_group1:
-        - expression: sum(carrier_prod[techs=$tech_group_1], over=timesteps)
+        - expression: sum(carrier_prod[techs=$tech_group_1], over=[timesteps, carriers])
       annual_carrier_prod_group2:
-        - expression: sum(carrier_prod[techs=$tech_group_2], over=timesteps)
+        - expression: sum(carrier_prod[techs=$tech_group_2], over=[timesteps, carriers])
       factor2:
-        -expression: "3"
+        - expression: "1"
     index_slices:
       tech_group_1:
         - expression: supply_gas
       tech_group_2:
-        - expression: supply_gas
+        - expression: boiler
