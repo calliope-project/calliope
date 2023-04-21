@@ -53,6 +53,18 @@ class TestBaseMath:
         }
         compare_lps(model, custom_math, "energy_cap")
 
+        # "energy_cap" is the name of the lp file
+
+    def test_storage_max(self, compare_lps):
+        self.TEST_REGISTER.add("constraints.storage_max")
+        model = build_test_model(
+            scenario="simple_storage,two_hours,investment_costs",
+        )
+        custom_math = {
+            "constraints": {"storage_max": model.math.constraints.storage_max}
+        }
+        compare_lps(model, custom_math, "storage_max")
+
     def test_carrier_production_max(self, compare_lps):
         self.TEST_REGISTER.add("constraints.carrier_production_max")
         model = build_test_model(
