@@ -1,34 +1,24 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-import typing
-from typing import (
-    Any,
-    Callable,
-    Optional,
-    Literal,
-    TypeVar,
-    Generic,
-    Union,
-)
-
-import os
-from contextlib import redirect_stdout, redirect_stderr
 import logging
+import os
+import typing
+from abc import ABC, abstractmethod
+from contextlib import redirect_stderr, redirect_stdout
+from typing import Any, Callable, Generic, Literal, Optional, TypeVar, Union
 
-import xarray as xr
+import numpy as np
 import pandas as pd
 import pyomo.environ as pe
 import pyomo.kernel as pmo
-from pyomo.opt import SolverFactory
+import xarray as xr
 from pyomo.common.tempfiles import TempfileManager
-import numpy as np
+from pyomo.opt import SolverFactory
 
+from calliope.backend import equation_parser, parsing
+from calliope.core.util.logging import LogWriter
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
-from calliope.core.util.logging import LogWriter
-from calliope.backend import parsing, equation_parser
-
 
 T = TypeVar("T")
 _COMPONENTS_T = Literal[
@@ -653,14 +643,14 @@ class PyomoBackendModel(BackendModel):
         self, parameter_name: str, as_backend_objs: bool = True
     ) -> Optional[xr.DataArray]:
         parameter = self.parameters.get(parameter_name, None)
-        if isinstance(parameter, xr.DataArray) and not as_backend_objs:
-            param_as_vals = self.apply_func(self._from_pyomo_param, parameter)
-            if parameter.original_dtype.kind == "M":  # i.e., np.datetime64
-                return xr.apply_ufunc(pd.to_datetime, param_as_vals)
-            else:
-                return param_as_vals.astype(parameter.original_dtype)
-        else:
+        if as_backend_objs or not isinstance(parameter, xr.DataArray):
             return parameter
+
+        param_as_vals = self.apply_func(self._from_pyomo_param, parameter)
+        if parameter.original_dtype.kind == "M":  # i.e., np.datetime64
+            return xr.apply_ufunc(pd.to_datetime, param_as_vals)
+        else:
+            return param_as_vals.astype(parameter.original_dtype)
 
     def get_constraint(
         self,
