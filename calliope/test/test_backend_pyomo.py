@@ -1933,6 +1933,7 @@ class TestNewBackend:
         assert param.attrs == {
             "parameters": 1,
             "is_result": 0,
+            "original_dtype": np.dtype("float64"),
             "references": {"balance_demand", "balance_transmission"},
             "coords_in_name": False,
         }
@@ -1941,12 +1942,7 @@ class TestNewBackend:
         param = simple_supply_new_build.backend.get_parameter(
             "energy_eff", as_backend_objs=False
         )
-        assert (
-            not param.to_series()
-            .dropna()
-            .apply(lambda x: isinstance(x, pmo.parameter))
-            .any()
-        )
+        assert param.dtype == np.dtype("float64")
 
     def test_new_build_get_expression(self, simple_supply_new_build):
         expr = simple_supply_new_build.backend.get_expression("cost_investment")
