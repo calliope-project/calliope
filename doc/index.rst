@@ -51,6 +51,7 @@ User guide
    user/tutorials
    user/advanced_constraints
    user/advanced_features
+   user/custom_math
    user/config_defaults
    user/troubleshooting
    user/reference

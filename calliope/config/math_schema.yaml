@@ -1,74 +1,5 @@
 $schema: http://json-schema.org/draft-07/schema#
 description: Below you can find all options available to formulate math to use in solving an optimisation problem with Calliope.
-definitions:
-  description:
-    type: string
-    description: A verbose description of the component.
-  active:
-    type: boolean
-    description: If False, this component will be ignored entirely at the optimisation problem build phase.
-  unit:
-    type: string
-    description: Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)
-  foreach:
-    type: array
-    description: sets (a.k.a. dimensions) of the model over which the math formulation component will be built.
-    uniqueItems: true
-    items:
-      type: string
-      description: Calliope set name (e.g., "techs", "nodes")
-  where:
-    type: string
-    description: Top-level condition to determine whether the component exists in this optimisation problem (at all, if `foreach` is not given, or for specific index items within the product of the sets given by `foreach`)
-  equation_items:
-    type: object
-    additionalProperties: false
-    properties:
-      where:
-        type: string
-        description: Condition to determine whether the accompanying expression is built (at all, if `foreach` is not given, or for specific index items within the product of the sets given by `foreach`).
-      expression:
-        type: string
-        description: Equation expression valid for this component type (see component `equations` description) .
-    required: ["expression"]
-  components:
-    type: object
-    description: Math sub-expressions which are used to replace any instances in which they are referenced in the component equation(s). Sub-expressions are referenced by their name preceded with the "$" symbol, e.g., `foo` in `$foo == 1` or `$foo + 1`.
-    additionalProperties: false
-    patternProperties:
-      '[^\d^_\W][\w\d]+':
-        type: array
-        description: Named sub-expression.
-        items:
-          type: object
-          additionalProperties: false
-          properties:
-            where:
-              type: string
-              description: Condition to determine whether the accompanying sub-expression is built.
-            expression:
-              type: string
-              description: math equation sub-expression which can be one term or a combination of terms using the operators [+, -, *, /, **].
-          required: ["expression"]
-  index_slices:
-    type: object
-    description: Array index slices which are used to replace any instances in which they are referenced in decision variables/parameters/global expressions in the component equation(s) or sub-expressions. Index slices are referenced by their name preceded with the "$" symbol, e.g., `foo` in `energy_eff[techs=$foo]`.
-    additionalProperties: false
-    patternProperties:
-      '[^\d^_\W][\w\d]+':
-        type: array
-        description: Named Index slice.
-        items:
-          type: object
-          additionalProperties: false
-          properties:
-            where:
-              type: string
-              description: Condition to determine whether the accompanying index slice is built.
-            expression:
-              type: string
-              description: Index slice expression, such as a list of set items or a call to a helper function.
-          required: ["expression"]
 additionalProperties: false
 properties:
   constraints:
@@ -81,19 +12,77 @@ properties:
         description: A named constraint
         additionalProperties: false
         properties:
-          description: { $ref: "#definitions/description" }
-          active: { $ref: "#definitions/active" }
-          foreach: { $ref: "#definitions/foreach" }
-          where: { $ref: "#definitions/where" }
+          description: &description
+            type: string
+            description: A verbose description of the component.
+          active: &active
+            type: boolean
+            description: If False, this component will be ignored entirely at the optimisation problem build phase.
+          foreach: &foreach
+            type: array
+            description: sets (a.k.a. dimensions) of the model over which the math formulation component will be built.
+            uniqueItems: true
+            items:
+              type: string
+              description: Calliope set name (e.g., "techs", "nodes")
+          where: &top_level_where
+            type: string
+            description: Top-level condition to determine whether the component exists in this optimisation problem (at all, if `foreach` is not given, or for specific index items within the product of the sets given by `foreach`)
           equation:
             type: string
             description: Constraint math equation of the form LHS OPERATOR RHS, where LHS and RHS are math expressions and OPERATOR is one of [==, <=, >=].
           equations:
             type: array
             description: Constraint math equations with conditions defining on which index items in the product of `foreach` sets they will be applied. Conditions must be set up such that a maximum of one equation can be applied per index item. Equations are of the form LHS OPERATOR RHS, where LHS and RHS are math expressions and OPERATOR is one of [==, <=, >=].
-            items: { $ref: "#definitions/equation_items" }
-          components: { $ref: "#definitions/components" }
-          index_slices: { $ref: "#definitions/index_slices" }
+            items: &equation_items
+              type: object
+              additionalProperties: false
+              properties:
+                where:
+                  type: string
+                  description: Condition to determine whether the accompanying expression is built (at all, if `foreach` is not given, or for specific index items within the product of the sets given by `foreach`).
+                expression:
+                  type: string
+                  description: Equation expression valid for this component type (see component `equations` description).
+              required: ["expression"]
+          components: &sub_expressions
+            type: object
+            description: Math sub-expressions which are used to replace any instances in which they are referenced in the component equation(s). Sub-expressions are referenced by their name preceded with the "$" symbol, e.g., `foo` in `$foo == 1` or `$foo + 1`.
+            additionalProperties: false
+            patternProperties:
+              '[^\d^_\W][\w\d]+':
+                type: array
+                description: Named sub-expression.
+                items:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    where:
+                      type: string
+                      description: Condition to determine whether the accompanying sub-expression is built.
+                    expression:
+                      type: string
+                      description: math equation sub-expression which can be one term or a combination of terms using the operators [+, -, *, /, **].
+                  required: ["expression"]
+          index_slices: &index_slices
+            type: object
+            description: Array index slices which are used to replace any instances in which they are referenced in decision variables/parameters/global expressions in the component equation(s) or sub-expressions. Index slices are referenced by their name preceded with the "$" symbol, e.g., `foo` in `energy_eff[techs=$foo]`.
+            additionalProperties: false
+            patternProperties:
+              '[^\d^_\W][\w\d]+':
+                type: array
+                description: Named Index slice.
+                items:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    where:
+                      type: string
+                      description: Condition to determine whether the accompanying index slice is built.
+                    expression:
+                      type: string
+                      description: Index slice expression, such as a list of set items or a call to a helper function.
+                  required: ["expression"]
 
   expressions:
     type: object
@@ -107,20 +96,22 @@ properties:
         description: A named global expression.
         additionalProperties: false
         properties:
-          description: { $ref: "#definitions/description" }
-          active: { $ref: "#definitions/active" }
-          unit: { $ref: "#definitions/unit" }
-          foreach: { $ref: "#definitions/foreach" }
-          where: { $ref: "#definitions/where" }
+          description: *description
+          active: *active
+          unit: &unit
+            type: string
+            description: Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)
+          foreach: *foreach
+          where: *top_level_where
           equation:
             type: string
             description: Math equation expression combining terms with the operators [+, -, *, /, **].
           equations:
             type: array
             description: Math equation expressions with conditions defining on which index items in the product of `foreach` sets they will be applied. Conditions must be set up such that a maximum of one equation expression can be applied per index item. Equation expression combining terms with the operators [+, -, *, /, **].
-            items: { $ref: "#definitions/equation_items" }
-          components: { $ref: "#definitions/components" }
-          index_slices: { $ref: "#definitions/index_slices" }
+            items: *equation_items
+          components: *sub_expressions
+          index_slices: *index_slices
 
   variables:
     type: object
@@ -132,11 +123,11 @@ properties:
         description: A named variable.
         additionalProperties: false
         properties:
-          description: { $ref: "#definitions/description" }
-          active: { $ref: "#definitions/active" }
-          unit: { $ref: "#definitions/unit" }
-          foreach: { $ref: "#definitions/foreach" }
-          where: { $ref: "#definitions/where" }
+          description: *description
+          active: *active
+          unit: *unit
+          foreach: *foreach
+          where: *top_level_where
           domain:
             type: string
             description: Allowed values that the decision variable can take (either integer or continuous, a.k.a. real, values)
@@ -169,17 +160,17 @@ properties:
         description: A named variable.
         additionalProperties: false
         properties:
-          description: { $ref: "#definitions/description" }
-          active: { $ref: "#definitions/active" }
+          description: *description
+          active: *active
           equation:
             type: string
             description: Math equation expression combining terms with the operators [+, -, *, /, **].
           equations:
             type: array
             description: Math equation expressions with conditions to determinee which expression will be applied for this objectives. Conditions must be set up such that only one equation expression can be applied for this objective.
-            items: { $ref: "#definitions/equation_items" }
-          components: { $ref: "#definitions/components" }
-          index_slices: { $ref: "#definitions/index_slices" }
+            items: *equation_items
+          components: *sub_expressions
+          index_slices: *index_slices
           sense:
             type: string
             description: Whether the objective function should be minimised or maximised in the optimisation.
