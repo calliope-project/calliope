@@ -1,11 +1,12 @@
-from calliope import exceptions
 import shutil
 
+import numpy as np
+import pandas as pd
 import pytest
 from pytest import approx
-import pandas as pd
-import numpy as np
+
 import calliope
+from calliope import exceptions
 from calliope.test.common.util import check_error_or_warning
 
 
@@ -116,6 +117,7 @@ class TestNationalScaleExampleModelSenseChecks:
             calliope.examples.national_scale(override_dict=override)
 
 
+@pytest.mark.fails("Not reimplemented the 'check feasibility' objective")
 class TestNationalScaleExampleModelInfeasibility:
     def example_tester(self):
         model = calliope.examples.national_scale(

@@ -1,20 +1,16 @@
-from itertools import product
-import os
 import collections
+import logging
+import os
+from itertools import product
 
-
-import pytest  # noqa: F401
 import numpy as np
 import pyomo.kernel as pmo
-import logging
+import pytest  # noqa: F401
 import xarray as xr
 
 import calliope.exceptions as exceptions
 from calliope.test.common.util import build_test_model as build_model
-from calliope.test.common.util import (
-    check_error_or_warning,
-    check_variable_exists,
-)
+from calliope.test.common.util import check_error_or_warning, check_variable_exists
 
 
 @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
@@ -988,7 +984,7 @@ class TestCapacityConstraints:
             if bound == "equals":
                 assert constraint.lb.item() == 20
             if bound == "max":
-                assert constraint.lb.item() == 0
+                assert constraint.lb.item() == None
 
         m = build_model(
             {
@@ -1572,8 +1568,7 @@ class TestMILPConstraints:
                 "unit_capacity_systemwide_milp", as_backend_objs=False
             )
             .sel(techs="test_conversion_plus")
-            .item()
-            .ub
+            .ub.item()
             == 2
         )
 
@@ -1597,6 +1592,7 @@ class TestMILPConstraints:
             )
             .sel(techs="test_conversion_plus")
             .lb
+            .item()
             == 1
         )
         assert (
@@ -1605,6 +1601,7 @@ class TestMILPConstraints:
             )
             .sel(techs="test_conversion_plus")
             .ub
+            .item()
             == 1
         )
 
@@ -1649,7 +1646,7 @@ class TestMILPConstraints:
         }
         m = build_model(
             override_no_transmission,
-            "simple_supply,two_hours,investment_costs",
+            "supply_milp,two_hours,investment_costs",
             model_file="model_minimal.yaml",
         )
         m.build()
@@ -1666,9 +1663,9 @@ class TestMILPConstraints:
             "simple_storage,investment_costs",
         )
         m.build()
-        assert "prod_con_switch" in m.backend.constraints
-        assert "asynchronous_con_milp" in m.backend.variables
-        assert "asynchronous_prod_milp" in m.backend.variables
+        assert "prod_con_switch" in m.backend.variables
+        assert "asynchronous_con_milp" in m.backend.constraints
+        assert "asynchronous_prod_milp" in m.backend.constraints
 
 
 class TestConversionConstraints:

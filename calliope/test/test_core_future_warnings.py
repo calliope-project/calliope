@@ -21,4 +21,4 @@ class TestDeprecationWarnings:
             )
 
         assert check_error_or_warning(warning, "`locations` has been renamed")
-        assert set(model._model_data.dims.nodes) == {"a", "b"}
+        assert set(model._model_data.nodes.values) == {"a", "b"}

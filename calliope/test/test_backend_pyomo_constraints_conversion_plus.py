@@ -104,9 +104,9 @@ class TestBuildConversionPlusConstraints:
         )
         m.build()
         assert m.backend.expressions.cost_var.notnull().any()
-        assert check_variable_exists(m.backend, "cost_var", f"carrier_{flow}")
+        assert check_variable_exists(m.backend.get_expression("cost_var", as_backend_objs=False), f"carrier_{flow}")
         assert not check_variable_exists(
-            m.backend, "cost_var", "carrier_prodcon".replace(flow, "")
+            m.backend.get_expression("cost_var", as_backend_objs=False), "carrier_prodcon".replace(flow, "")
         )
         assert (
             m.backend.expressions.cost_var.sel(techs="test_conversion_plus")
@@ -183,8 +183,7 @@ class TestBuildConversionPlusConstraints:
         m.build()
         assert "conversion_plus_prod_con_to_zero" in m.backend.constraints
         assert check_variable_exists(
-            m.backend,
-            "conversion_plus_prod_con_to_zero",
+            m.backend.get_constraint("conversion_plus_prod_con_to_zero", as_backend_objs=False),
             "carrier_prod",
         )
 
@@ -204,13 +203,11 @@ class TestBuildConversionPlusConstraints:
         m.build()
         assert "conversion_plus_prod_con_to_zero" in m.backend.constraints
         assert check_variable_exists(
-            m.backend,
-            "conversion_plus_prod_con_to_zero",
+            m.backend.get_constraint("conversion_plus_prod_con_to_zero", as_backend_objs=False),
             "carrier_prod",
         )
         assert check_variable_exists(
-            m.backend,
-            "conversion_plus_prod_con_to_zero",
+            m.backend.get_constraint("conversion_plus_prod_con_to_zero", as_backend_objs=False),
             "carrier_con",
         )
 
@@ -285,11 +282,11 @@ class TestConversionPlusConstraintResults:
             m._model_run.timeseries_data["carrier_ratio.csv"]
             .loc[:, "a"]
             .reindex(prod_ratios.index)
-            == prod_ratios.round(1)
+            == prod_ratios.astype(float).round(1)
         ).all()
         assert (
             m._model_run.timeseries_data["carrier_ratio.csv"]
             .loc[:, "a"]
             .reindex(con_ratios.index)
-            == con_ratios.round(1)
+            == con_ratios.astype(float).round(1)
         ).all()
