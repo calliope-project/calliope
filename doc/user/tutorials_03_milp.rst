@@ -16,7 +16,7 @@ The capacity of a technology is usually a continuous decision variable, which ca
    :start-after: # chp-start
    :end-before: # chp-end
 
-A unit maximum allows a discrete, integer number of CHP to be purchased, each having a capacity of ``flow_cap_per_unit``. Any of ``flow_cap_max``, ``flow_cap_min``, or ``flow_cap_equals`` are now ignored, in favour of ``units_max``, ``units_min``, or ``units_equals``. A useful feature unlocked by introducing this is the ability to set a minimum operating capacity which is *only* enforced when the technology is operating. In the LP model, ``flow_out_min_relative`` would force the technology to operate at least at that proportion of its maximum capacity at each time step. In this model, the newly introduced ``flow_out_min_relative`` of 0.2 will ensure that the output of the CHP is 20% of its maximum capacity in any time step in which it has a non-zero output.
+A unit maximum allows a discrete, integer number of CHP to be purchased, each having a capacity of ``flow_cap_per_unit``. ``flow_cap_max`` and ``flow_cap_min`` are now ignored, in favour of ``units_max`` or ``units_min``. A useful feature unlocked by introducing this is the ability to set a minimum operating capacity which is *only* enforced when the technology is operating. In the LP model, ``flow_out_min_relative`` would force the technology to operate at least at that proportion of its maximum capacity at each time step. In this model, the newly introduced ``flow_out_min_relative`` of 0.2 will ensure that the output of the CHP is 20% of its maximum capacity in any time step in which it has a non-zero output.
 
 Purchase cost
 =============

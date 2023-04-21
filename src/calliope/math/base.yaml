@@ -2,23 +2,16 @@ constraints:
   flow_capacity_per_storage_capacity_min:
     description: "Set the lower bound of a `storage`/`supply_plus` technology's flow capacity relative to its storage capacity."
     foreach: [nodes, techs]
-    where: "storage_cap AND flow_cap_per_storage_cap_min AND NOT flow_cap_per_storage_cap_equals"
+    where: "storage_cap AND flow_cap_per_storage_cap_min"
     equations:
       - expression: flow_cap >= storage_cap * flow_cap_per_storage_cap_min
 
   flow_capacity_per_storage_capacity_max:
     description: "Set the upper bound of a `storage`/`supply_plus` technology's flow capacity relative to its storage capacity."
     foreach: [nodes, techs]
-    where: "storage_cap AND flow_cap_per_storage_cap_max AND NOT flow_cap_per_storage_cap_equals"
+    where: "storage_cap AND flow_cap_per_storage_cap_max"
     equations:
       - expression: flow_cap <= storage_cap * flow_cap_per_storage_cap_max
-
-  flow_capacity_per_storage_capacity_equals:
-    description: "Set a fixed relationship between a `storage`/`supply_plus` technology's flow capacity and its storage capacity."
-    foreach: [nodes, techs]
-    where: "storage_cap AND flow_cap_per_storage_cap_equals"
-    equations:
-      - expression: flow_cap == storage_cap * flow_cap_per_storage_cap_equals
 
   source_capacity_equals_flow_capacity:
     description: "Set a `supply_plus` technology's flow capacity to equal its source capacity."
@@ -48,15 +41,19 @@ constraints:
     equations:
       - expression: sum(area_use, over=techs) <= available_area
 
-  flow_capacity_systemwide:
-    description: "Set an upper bound on, or a fixed total of, flow capacity of a technology across all nodes in which the technology exists."
+  flow_capacity_systemwide_max:
+    description: "Set an upper bound on flow capacity of a technology across all nodes in which the technology exists."
     foreach: [techs]
-    where: "(flow_cap_equals_systemwide OR flow_cap_max_systemwide)"
+    where: "flow_cap_max_systemwide"
     equations:
-      - where: "flow_cap_equals_systemwide"
-        expression: sum(flow_cap, over=nodes) == flow_cap_equals_systemwide
-      - where: "NOT flow_cap_equals_systemwide"
-        expression: sum(flow_cap, over=nodes) <= flow_cap_max_systemwide
+      - expression: sum(flow_cap, over=nodes) <= flow_cap_max_systemwide
+
+  flow_capacity_systemwide_min:
+    description: "Set a lower bound on flow capacity of a technology across all nodes in which the technology exists."
+    foreach: [techs]
+    where: "flow_cap_min_systemwide"
+    equations:
+      - expression: sum(flow_cap, over=nodes) >= flow_cap_min_systemwide
 
   balance_conversion_plus_primary:
     description: "Fix the relationship between total outflow and total inflow of `conversion_plus` technologies for `in` (consumption) and `out` (production) carrier flows."
@@ -194,11 +191,11 @@ constraints:
     sub_expressions:
       source_scaler: &source_scaler
         - where: "source_unit=per_area"
-          expression: "source_scale * area_use"
+          expression: "area_use"
         - where: "source_unit=per_cap"
-          expression: "source_scale * flow_cap"
+          expression: "flow_cap"
         - where: "source_unit=absolute"
-          expression: "source_scale"
+          expression: "1"
 
   balance_supply_min_use:
     description: "Set the lower bound on the quantity of its source a `supply` technology must use in each timestep."
@@ -222,11 +219,11 @@ constraints:
         - expression: flow_in * flow_eff
       sink_scaler: &sink_scaler
         - where: "sink_unit=per_area"
-          expression: "sink_scale * area_use"
+          expression: "area_use"
         - where: "sink_unit=per_cap"
-          expression: "sink_scale * flow_cap"
+          expression: "flow_cap"
         - where: "sink_unit=absolute"
-          expression: "sink_scale"
+          expression: "1"
 
   balance_demand_min_use:
     description: "Set the lower bound on the quantity of flow a `demand` technology must dump to its sink in each timestep."
@@ -392,29 +389,23 @@ constraints:
   flow_capacity_max_purchase_milp:
     description: "Set the upper bound on, or a fixed total of, a technology's flow capacity, for any technology with binary capacity purchasing."
     foreach: [nodes, techs]
-    where: "purchased AND (flow_cap_max OR flow_cap_equals)"
+    where: "purchased AND flow_cap_max"
     equations:
-      - where: flow_cap_equals
-        expression: flow_cap == flow_cap_equals * flow_cap_scale * purchased
-      - where: NOT flow_cap_equals
-        expression: flow_cap <= flow_cap_max * flow_cap_scale * purchased
+      - expression: flow_cap <= flow_cap_max * purchased
 
   flow_capacity_min_purchase_milp:
     description: "Set the lower bound on a technology's flow capacity, for any technology with binary capacity purchasing."
     foreach: [nodes, techs]
     where: "purchased AND flow_cap_min AND NOT flow_cap_equals"
     equations:
-      - expression: flow_cap >= flow_cap_min * flow_cap_scale * purchased
+      - expression: flow_cap >= flow_cap_min * purchased
 
   storage_capacity_max_purchase_milp:
     description: "Set the upper bound on, or a fixed total of, a technology's storage capacity, for any technology with binary capacity purchasing."
     foreach: [nodes, techs]
-    where: "purchased AND (storage_cap_max OR storage_cap_equals)"
+    where: "purchased AND storage_cap_max"
     equations:
-      - where: storage_cap_equals
-        expression: storage_cap == storage_cap_equals * purchased
-      - where: NOT storage_cap_equals
-        expression: storage_cap <= storage_cap_max * purchased
+      - expression: storage_cap <= storage_cap_max * purchased
 
   storage_capacity_min_purchase_milp:
     description: "Set the lower bound on a technology's storage capacity, for any technology with binary capacity purchasing."
@@ -423,21 +414,26 @@ constraints:
     equations:
       - expression: storage_cap >= storage_cap_min * purchased
 
-  unit_capacity_systemwide_milp:
-    description: "Set the upper bound on, or a fixed total of, the total number of units of a technology that can be purchased across all nodes where the technology can exist, for any technology using integer units to define its capacity."
+  unit_capacity_max_systemwide_milp:
+    description: "Set the upper bound on the total number of units of a technology that can be purchased across all nodes where the technology can exist, for any technology using integer units to define its capacity."
     foreach: [techs]
-    where: "(purchased OR units) AND (units_max_systemwide OR units_equals_systemwide)"
+    where: "(purchased OR units) AND units_max_systemwide"
     equations:
-      - where: units_equals_systemwide
-        expression: $summed_components == units_equals_systemwide
-      - where: NOT units_equals_systemwide
-        expression: $summed_components <= units_max_systemwide
-    sub_expressions:
+      - expression: $summed_components <= units_max_systemwide
+    sub_expressions: &unit_capacity_systemwide_milp_sub_exprs
       summed_components:
         - where: purchased
           expression: sum(purchased, over=nodes)
         - where: units
           expression: sum(units, over=nodes)
+
+  unit_capacity_min_systemwide_milp:
+    description: "Set the lower bound on the total number of units of a technology that can be purchased across all nodes where the technology can exist, for any technology using integer units to define its capacity."
+    foreach: [techs]
+    where: "(purchased OR units) AND units_min_systemwide"
+    equations:
+      - expression: $summed_components >= units_min_systemwide
+    sub_expressions: *unit_capacity_systemwide_milp_sub_exprs
 
   async_flow_in_milp:
     description: "Set a technology's ability to have inflow in the same timestep that it has outflow, for any technology using the asynchronous flow binary switch."
@@ -485,8 +481,6 @@ variables:
     bounds:
       min: flow_cap_min
       max: flow_cap_max
-      equals: flow_cap_equals
-      scale: flow_cap_scale
 
   flow_out:
     description: "The outflow of a technology per timestep, also known as the flow discharged (from `storage` technologies) or the flow received (by `transmission` technologies) on a link."
@@ -519,11 +513,10 @@ variables:
     description: "The area in space utilised directly (e.g., solar PV panels) or indirectly (e.g., biofuel crops) by a technology."
     unit: area
     foreach: [nodes, techs]
-    where: "(area_use_min OR area_use_max OR area_use_equals OR area_use_per_flow_cap OR sink_unit=per_area OR source_unit=per_area)"
+    where: "(area_use_min OR area_use_max OR area_use_per_flow_cap OR sink_unit=per_area OR source_unit=per_area)"
     bounds:
       min: area_use_min
       max: area_use_max
-      equals: area_use_equals
 
   source_use:
     description: "The carrier flow consumed from outside the system boundaries by a `supply_plus` technology."
@@ -542,7 +535,6 @@ variables:
     bounds:
       min: source_cap_min
       max: source_cap_max
-      equals: source_cap_equals
 
   storage_cap:
     description: "The upper limit on a carrier that can be stored by a `supply_plus` or `storage` technology in any timestep."
@@ -552,7 +544,6 @@ variables:
     bounds:
       min: storage_cap_min
       max: storage_cap_max
-      equals: storage_cap_equals
 
   storage:
     description: "The carrier stored by a `supply_plus` or `storage` technology in each timestep."
@@ -582,7 +573,6 @@ variables:
     bounds:
       min: units_min
       max: units_max
-      equals: units_equals
 
   operating_units:
     description: "Integer number of a technology that is operating in each timestep, for any technology set to require inteter capacity purchasing."

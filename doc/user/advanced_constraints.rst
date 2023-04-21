@@ -198,7 +198,7 @@ To make use of these constraints, one should set ``source_unit: per_area`` for t
 
 The following related settings are available:
 
-* ``area_use_equals``, ``area_use_max``, ``area_use_min``: Set uppper or lower bounds on area_use or force it to a specific value
+* ``area_use_max``, ``area_use_min``: Set upper or lower bounds on area_use
 * ``area_use_per_flow_cap``: False by default, but if set to true, it forces ``area_use`` to follow ``flow_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``area_use == 1.5 * flow_cap``)
 
 By default, ``area_use_max`` is infinite and ``area_use_min`` is 0 (zero).

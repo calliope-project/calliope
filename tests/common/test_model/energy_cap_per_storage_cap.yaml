@@ -37,8 +37,6 @@ nodes:
     electricity_demand:
 
 overrides:
-  equals:
-    techs.my_storage.constraints.flow_cap_per_storage_cap_equals: 10
   max:
     techs.my_storage.constraints.flow_cap_per_storage_cap_max: 0.01
   min:
