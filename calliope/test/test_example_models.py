@@ -424,6 +424,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
         storage_inter_cluster=False,
         cyclic=False,
         storage=True,
+        backend_runner="run",
     ):
         override = {
             "model.time.function_options": {
@@ -435,9 +436,10 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
         }
         if storage is False:
             override.update({"techs.battery.exists": False, "techs.csp.exists": False})
-
         if solver_io:
             override["run.solver_io"] = solver_io
+        if storage_inter_cluster and backend_runner == "solve":
+            override["model.custom_math"] = ["storage_inter_cluster"]
 
         model = calliope.examples.time_clustering(override_dict=override)
         timesteps = model._model_data.timesteps.copy(deep=True)
@@ -470,7 +472,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 
         return None
 
-    def example_tester_closest(self, solver="cbc", solver_io=None):
+    def example_tester_closest(self, backend_runner, solver="cbc", solver_io=None):
         self.model_runner(
             solver=solver,
             expected_total_cost=51711873.177,  # was 49670627.15297682 when clustering with sklearn < v0.24
@@ -478,9 +480,10 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             expected_capacity_factor=0.074809,  # was 0.064501 when clustering with sklearn < v0.24
             solver_io=solver_io,
             how="closest",
+            backend_runner=backend_runner,
         )
 
-    def example_tester_mean(self, solver="cbc", solver_io=None):
+    def example_tester_mean(self, backend_runner, solver="cbc", solver_io=None):
         self.model_runner(
             solver=solver,
             expected_total_cost=45110416.434,  # was 22172253.328 when clustering with sklearn < v0.24
@@ -488,31 +491,26 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             expected_capacity_factor=0.047596,  # was 0.044458 when clustering with sklearn < v0.24
             solver_io=solver_io,
             how="mean",
+            backend_runner=backend_runner,
         )
 
-    def example_tester_storage_inter_cluster(self):
+    @pytest.mark.parametrize("backend_runner", ["run", "solve"])
+    def test_nationalscale_clustered_example_closest_results_cbc(self, backend_runner):
+        self.example_tester_closest(backend_runner)
+
+    @pytest.mark.parametrize("backend_runner", ["run", "solve"])
+    def test_nationalscale_clustered_example_mean_results_cbc(self, backend_runner):
+        self.example_tester_mean(backend_runner)
+
+    def test_nationalscale_clustered_example_storage_inter_cluster(self):
         self.model_runner(
             expected_total_cost=33353390.626,  # was 21825515.304 when clustering with sklearn < v0.24
             expected_levelised_cost=0.115866,  # was 0.100760 when clustering with sklearn < v0.24
             expected_capacity_factor=0.074167,  # was 0.091036 when clustering with sklearn < v0.24
             storage_inter_cluster=True,
+            backend_runner="solve",
         )
 
-    def test_nationalscale_clustered_example_closest_results_cbc(self):
-        self.example_tester_closest()
-
-    def test_nationalscale_clustered_example_mean_results_cbc(self):
-        self.example_tester_mean()
-
-    @pytest.mark.xfail(
-        reason="New implementation of constraint subsets does't allow for negative values of storage_cap, which is needed for inter cluster storage"
-    )
-    def test_nationalscale_clustered_example_storage_inter_cluster(self):
-        self.example_tester_storage_inter_cluster()
-
-    @pytest.mark.xfail(
-        reason="New implementation of constraint subsets does't allow for negative values of storage_cap, which is needed for inter cluster storage"
-    )
     def test_storage_inter_cluster_cyclic(self):
         self.model_runner(
             expected_total_cost=18838244.197,  # was 18904055.722 when clustering with sklearn < v0.24
@@ -520,20 +518,8 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             expected_capacity_factor=0.071411,  # was 0.075145 when clustering with sklearn < v0.24
             storage_inter_cluster=True,
             cyclic=True,
+            backend_runner="solve",
         )
-
-    @pytest.mark.xfail(
-        reason="New implementation of constraint subsets does't allow for negative values of storage_cap, which is needed for inter cluster storage"
-    )
-    def test_storage_inter_cluster_no_storage(self):
-        with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
-            self.model_runner(storage_inter_cluster=True, storage=False)
-
-        expected_warnings = [
-            "Tech battery was removed by setting ``exists: False``",
-            "Tech csp was removed by setting ``exists: False``",
-        ]
-        assert check_error_or_warning(excinfo, expected_warnings)
 
 
 class TestUrbanScaleExampleModelSenseChecks:

@@ -199,6 +199,10 @@ def dummy_model_data():
                 ["carriers", "techs"],
                 [[1.0, np.nan, 1.0, np.nan], [np.nan, 1.0, np.nan, np.nan]],
             ),
+            "lookup_techs": (
+                ["techs"],
+                ["foobar", np.nan, "foobaz", np.nan],
+            ),
             "link_remote_nodes": (
                 ["nodes", "techs"],
                 [["bar", np.nan, "bar", np.nan], ["foo", np.nan, np.nan, np.nan]],
@@ -214,7 +218,7 @@ def dummy_model_data():
         attrs={"scenarios": ["foo"]},
     )
     # xarray forces np.nan to strings if all other values are strings.
-    for k in ["link_remote_nodes", "link_remote_techs"]:
+    for k in ["link_remote_nodes", "link_remote_techs", "lookup_techs"]:
         model_data[k] = model_data[k].where(model_data[k] != "nan")
 
     model_data.attrs["run_config"] = AttrDict(

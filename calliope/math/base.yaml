@@ -227,13 +227,10 @@ constraints:
       storage_previous_step: &storage_previous_step
         - where: timesteps=get_val_at_index(dim=timesteps, idx=0) AND NOT run.cyclic_storage=True
           expression: storage_initial * storage_cap
-        - where: ((timesteps=get_val_at_index(dim=timesteps, idx=0) AND run.cyclic_storage=True) OR NOT timesteps=get_val_at_index(dim=timesteps, idx=0)) AND NOT lookup_cluster_last_timestep
+        - where: ((timesteps=get_val_at_index(dim=timesteps, idx=0) AND run.cyclic_storage=True) OR NOT timesteps=get_val_at_index(dim=timesteps, idx=0)) AND NOT lookup_cluster_first_timestep=True
           expression: (1 - storage_loss) ** roll(timestep_resolution, timesteps=1) * roll(storage, timesteps=1)
-        - where: lookup_cluster_last_timestep
-          expression: (1 - storage_loss) ** timestep_resolution[timesteps=$previous_cluster_step] * storage[timesteps=$previous_cluster_step]
-    index_slices: &storage_previous_step_idx_items
-      previous_cluster_step:
-        - expression: lookup_cluster_last_timestep
+        - where: lookup_cluster_first_timestep=True AND NOT (timesteps=get_val_at_index(dim=timesteps, idx=0) AND NOT run.cyclic_storage=True)
+          expression: (1 - storage_loss) ** select_from_lookup_arrays(timestep_resolution, timesteps=lookup_cluster_last_timestep) * select_from_lookup_arrays(storage, timesteps=lookup_cluster_last_timestep)
 
   resource_availability_supply_plus:
     description: "Set the upper bound on, or a fixed total of, a `supply_plus` technology's ability to consume its available energy resource."
@@ -259,7 +256,6 @@ constraints:
         - where: energy_eff = 0
           expression: "0"
       storage_previous_step: *storage_previous_step
-    index_slices: *storage_previous_step_idx_items
 
   set_storage_initial:
     description: "Fix the relationship between energy stored in a `storage` technology at the start and end of the whole model period."
@@ -274,13 +270,13 @@ constraints:
     description: "Fix the relationship between between energy flowing into and out of a `transmission` link in each timestep."
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(transmission) AND allowed_carrier_prod=True"
-    equation: "carrier_prod == -1 * get_connected_link(carrier_con) * energy_eff"
+    equation: "carrier_prod == -1 * select_from_lookup_arrays(carrier_con, techs=link_remote_techs, nodes=link_remote_nodes) * energy_eff"
 
   symmetric_transmission:
     description: "Fix the energy capacity of two `transmission` technologies representing the same link in the system."
     foreach: [nodes, techs]
     where: "inheritance(transmission)"
-    equation: energy_cap == get_connected_link(energy_cap)
+    equation: energy_cap == select_from_lookup_arrays(energy_cap, techs=link_remote_techs, nodes=link_remote_nodes)
 
   export_balance:
     description: "Set the lower bound of a technology's carrier production to a technology's carrier export, for any technologies that can export energy out of the system."
