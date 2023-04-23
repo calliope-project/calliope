@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Optional, Literal, Union
 import textwrap
+from typing import Any, Callable, Literal, Optional, Union
 
-import xarray as xr
-import numpy as np
 import jinja2
+import numpy as np
+import xarray as xr
 
-from calliope.backend import backends
-from calliope.backend import parsing, equation_parser
+from calliope.backend import backends, parsing
 from calliope.exceptions import BackendError
 
 

@@ -11,31 +11,30 @@ Implements the core Model class.
 from __future__ import annotations
 
 import logging
-import warnings
 import typing
-from typing import Literal, Union, Optional, Callable, overload
+import warnings
 from pathlib import Path
-from calliope.core.util.tools import relative_path
+from typing import Callable, Literal, Optional, TypeVar, Union, overload
 
 import xarray
 
 import calliope
-from calliope.postprocess import results as postprocess_results
+from calliope import exceptions
+from calliope.backend import backends, latex_backend, parsing
+from calliope.backend.run import run as run_backend
 from calliope.core import io
-from calliope.preprocess import (
-    model_run_from_yaml,
-    model_run_from_dict,
-)
-from calliope.preprocess.model_data import ModelDataFactory
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
-from calliope.core.util.tools import copy_docstring
-from calliope import exceptions
-from calliope.backend.run import run as run_backend
-from calliope.backend import backends, latex_backend, parsing
+from calliope.core.util.tools import copy_docstring, relative_path
+from calliope.postprocess import results as postprocess_results
+from calliope.preprocess import model_run_from_dict, model_run_from_yaml
+from calliope.preprocess.model_data import ModelDataFactory
 
 logger = logging.getLogger(__name__)
 _ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
+T = TypeVar(
+    "T", bound=Union[backends.PyomoBackendModel, latex_backend.LatexBackendModel]
+)
 
 
 def read_netcdf(path):
@@ -55,7 +54,6 @@ class Model(object):
 
     _BACKENDS: dict[str, Callable] = {
         "pyomo": backends.PyomoBackendModel,
-        "latex": latex_backend.LatexBackendModel,
     }
 
     def __init__(
@@ -88,6 +86,7 @@ class Model(object):
         self.run_config: AttrDict
         self.math: AttrDict
         self._config_path: Optional[str]
+        self.math_documentation: latex_backend.LatexBackendModel
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
@@ -317,9 +316,7 @@ class Model(object):
             filepath = Path(calliope.__file__).parent / "math" / f"{run_mode}.yaml"
             self.math.union(AttrDict.from_yaml(filepath), allow_override=True)
 
-    def build(
-        self, backend_interface: Literal["pyomo", "latex"] = "pyomo", **kwargs
-    ) -> None:
+    def build(self, backend_interface: Literal["pyomo"] = "pyomo", **kwargs) -> None:
         """Build description of the optimisation problem in the chosen backend interface.
 
         Args:
@@ -329,6 +326,9 @@ class Model(object):
             Any given keyword arguments will be passed directly to backend interface on initialisation.
         """
         backend = self._BACKENDS[backend_interface](**kwargs)
+        self.backend = self._build(backend)
+
+    def _build(self, backend: T) -> T:
         backend.add_all_parameters(self._model_data, self.run_config)
         log_time(
             logger,
@@ -349,8 +349,7 @@ class Model(object):
                 f"backend_{components}_generated",
                 comment=f"Model: Generated optimisation problem {components}",
             )
-
-        self.backend = backend
+        return backend
 
     @copy_docstring(backends.BackendModel.verbose_strings)
     def verbose_strings(self) -> None:
@@ -522,13 +521,14 @@ class Model(object):
             format = Path(filename).suffix.removeprefix(".")  # type: ignore
 
         allowed_formats = typing.get_args(_ALLOWED_MATH_FILE_FORMATS)
-        if format not in allowed_formats:
+        if format is None or format not in allowed_formats:
             raise ValueError(
                 f"Math documentation style must be one of {allowed_formats}, received `{format}`"
             )
+        backend = latex_backend.LatexBackendModel(include=include, format=format)
 
-        self.build(backend_interface="latex", include=include, format=format)
-        populated_doc = self.backend.generate_math_doc()
+        self.math_documentation = self._build(backend)
+        populated_doc = self.math_documentation.generate_math_doc()
 
         if filename is not None:
             Path(filename).open("w").write(populated_doc)
