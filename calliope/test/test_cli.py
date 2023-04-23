@@ -224,6 +224,9 @@ class TestCLI:
                 "cold_fusion_cap_share",
             ]
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Model solution was non-optimal:calliope.exceptions.BackendWarning"
+    )
     def test_no_success_exit_code_when_infeasible(self):
         runner = CliRunner()
         result = runner.invoke(
@@ -236,6 +239,9 @@ class TestCLI:
         )
         assert result.exit_code != 0
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Model solution was non-optimal:calliope.exceptions.BackendWarning"
+    )
     def test_success_exit_code_when_infeasible_and_demanded(self):
         runner = CliRunner()
         result = runner.invoke(
