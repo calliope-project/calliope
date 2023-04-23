@@ -117,7 +117,7 @@ class TestNationalScaleExampleModelSenseChecks:
             calliope.examples.national_scale(override_dict=override)
 
 
-@pytest.mark.fails("Not reimplemented the 'check feasibility' objective")
+@pytest.mark.xfail(reason="Not reimplemented the 'check feasibility' objective")
 class TestNationalScaleExampleModelInfeasibility:
     def example_tester(self):
         model = calliope.examples.national_scale(
@@ -329,7 +329,7 @@ class TestNationalScaleExampleModelSpores:
         # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
         # This enables us to test our functionality that only *additional* capacity is scored.
         override_dict = {
-            f"locations.region1.techs.ccgt.constraints.energy_cap_min": 15000
+            "locations.region1.techs.ccgt.constraints.energy_cap_min": 15000
         }
         result_with_override, _ = spores_with_override(override_dict)
         assert (
@@ -346,8 +346,8 @@ class TestNationalScaleExampleModelSpores:
         # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
         # This enables us to test our functionality that only *additional* capacity is scored.
         override_dict = {
-            f"locations.region1.techs.ccgt.constraints.energy_cap_min": 15000,
-            f"locations.region1.techs.ccgt.constraints.energy_cap_equals": 30000,
+            "locations.region1.techs.ccgt.constraints.energy_cap_min": 15000,
+            "locations.region1.techs.ccgt.constraints.energy_cap_equals": 30000,
         }
         result_with_override, _ = spores_with_override(override_dict)
         assert (
@@ -572,14 +572,14 @@ class TestUrbanScaleExampleModelSenseChecks:
         self.example_tester("per_area")
 
     def test_urban_example_results_area_gurobi(self):
-        gurobi = pytest.importorskip("gurobipy")
+        pytest.importorskip("gurobipy")
         self.example_tester("per_area", solver="gurobi", solver_io="python")
 
     def test_urban_example_results_cap(self):
         self.example_tester("per_cap")
 
     def test_urban_example_results_cap_gurobi(self):
-        gurobi = pytest.importorskip("gurobipy")
+        pytest.importorskip("gurobipy")
         self.example_tester("per_cap", solver="gurobi", solver_io="python")
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")

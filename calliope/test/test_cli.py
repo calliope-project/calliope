@@ -1,11 +1,12 @@
 import os
 import tempfile
+from pathlib import Path
 
 import pytest  # noqa: F401
 from click.testing import CliRunner
 
 import calliope
-from calliope import cli, AttrDict
+from calliope import AttrDict, cli
 
 _THIS_DIR = os.path.dirname(__file__)
 _MODEL_NATIONAL = os.path.join(
@@ -101,13 +102,15 @@ class TestCLI:
     def test_run_from_netcdf(self):
         runner = CliRunner()
         model = calliope.examples.national_scale()
+
+        model_file = "model.nc"
+        out_file = "output.nc"
+
         with runner.isolated_filesystem() as tempdir:
-            model_file = os.path.join(tempdir, "model.nc")
-            out_file = os.path.join(tempdir, "output.nc")
             model.to_netcdf(model_file)
-            result = runner.invoke(cli.run, [model_file, "--save_netcdf=output.nc"])
+            result = runner.invoke(cli.run, [model_file, f"--save_netcdf={out_file}"])
             assert result.exit_code == 0
-            assert os.path.isfile(out_file)
+            assert (Path(tempdir) / out_file).is_file()
 
     def test_run_save_lp(self):
         runner = CliRunner()

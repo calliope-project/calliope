@@ -10,13 +10,16 @@ Functions to read and save model results.
 """
 
 import os
+from pathlib import Path
+from typing import Union
 
-import xarray as xr
 import numpy as np
 import pandas as pd
+import xarray as xr
 
-from calliope._version import __version__
 from calliope import exceptions
+from calliope._version import __version__
+from calliope.backend.backends import PyomoBackendModel
 from calliope.core.attrdict import AttrDict
 
 
@@ -40,6 +43,12 @@ def read_netcdf(path):
         model_data.attrs[attr] = bool(model_data.attrs[attr])
     for attr in _pop_serialised_list(model_data.attrs, "serialised_nones"):
         model_data.attrs[attr] = None
+
+    # Convert empty strings back to np.NaN
+    # TODO: revert when this issue is solved: https://github.com/pydata/xarray/issues/1647
+    for var_name, var_array in model_data.data_vars.items():
+        if var_array.dtype.kind in ["U", "O"]:
+            model_data[var_name] = var_array.where(lambda x: x != "")
 
     # FIXME some checks for consistency
     # use check_dataset from the checks module
@@ -88,7 +97,7 @@ def save_netcdf(model_data, path, model=None):
         model_data_attrs[k] = "None"
 
     encoding = {
-        k: {"zlib": False}
+        k: {"zlib": False, "_FillValue": None}
         if v.dtype.kind in ["U", "O"]
         else {"zlib": True, "complevel": 4}
         for k, v in model_data.data_vars.items()
@@ -136,11 +145,6 @@ def save_csv(model_data, path, dropna=True):
         series.to_csv(out_path, header=True, index=keep_index)
 
 
-def save_lp(model, path):
-    if not model.run_config["backend"] == "pyomo":
-        raise IOError("Only the pyomo backend can save to LP.")
-    if not hasattr(model, "backend"):
-        model.build()
-    model.backend._instance.write(
-        path, format="lp", io_options={"symbolic_solver_labels": True}
-    )
+def save_lp(backend: PyomoBackendModel, path: Union[str, Path]):
+    # TODO: create `to_lp` abstract method on BackendModel ABC.
+    backend._instance.write(path, format="lp", symbolic_solver_labels=True)

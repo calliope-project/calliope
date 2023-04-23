@@ -283,6 +283,7 @@ def run(
                     fg="red",
                     bold=True,
                 )
+            model.build()
             model.to_lp(save_lp)
             print_end_time(start_time)
 

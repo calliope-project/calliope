@@ -12,25 +12,21 @@ from __future__ import annotations
 
 import logging
 import warnings
-from typing import Literal, Union, Optional, Callable
 from pathlib import Path
-from calliope.core.util.tools import relative_path
+from typing import Callable, Literal, Optional, Union
 
 import xarray
 
 import calliope
-from calliope.postprocess import results as postprocess_results
-from calliope.core import io
-from calliope.preprocess import (
-    model_run_from_yaml,
-    model_run_from_dict,
-)
-from calliope.preprocess.model_data import ModelDataFactory
-from calliope.core.attrdict import AttrDict
-from calliope.core.util.logging import log_time
-from calliope.core.util.tools import copy_docstring
 from calliope import exceptions
 from calliope.backend import backends, parsing
+from calliope.core import io
+from calliope.core.attrdict import AttrDict
+from calliope.core.util.logging import log_time
+from calliope.core.util.tools import copy_docstring, relative_path
+from calliope.postprocess import results as postprocess_results
+from calliope.preprocess import model_run_from_dict, model_run_from_yaml
+from calliope.preprocess.model_data import ModelDataFactory
 
 logger = logging.getLogger(__name__)
 
@@ -321,7 +317,7 @@ class Model(object):
             backend_interface (Literal["pyomo"], optional):
                 Backend interface in which to build the problem. Defaults to "pyomo".
         """
-        if hasattr(self, "backend"):
+        if hasattr(self, "backend") and not force:
             raise exceptions.ModelError(
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
                 "to force the existing optimisation problem to be overwritten with a new one."
@@ -482,12 +478,22 @@ class Model(object):
         """
         io.save_csv(self._model_data, path, dropna)
 
-    def to_lp(self, path):
+    def to_lp(self, path: Union[str, Path]) -> None:
         """
-        Save built model to LP format at the given ``path``. If the backend
-        model has not been built yet, it is built prior to saving.
+        Write the optimisation problem to file in LP format.
+
+        Args:
+            path (Union[str, Path]): LP file path.
+
+        Raises:
+            exceptions.ModelError: This method cannot be called prior to calling `build()`.
         """
-        io.save_lp(self, path)
+
+        if not hasattr(self, "backend"):
+            raise exceptions.ModelError(
+                "Build the optimisation problem by calling `build()` before trying to generate an LP file."
+            )
+        io.save_lp(self.backend, path)
 
     def info(self):
         info_strings = []

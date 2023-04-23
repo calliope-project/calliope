@@ -1,11 +1,8 @@
-import os
-
 import pytest  # noqa: F401
 
-import calliope
 from calliope import exceptions
-from calliope.test.common.util import check_error_or_warning
 from calliope.test.common.util import build_test_model as build_model
+from calliope.test.common.util import check_error_or_warning
 
 
 class TestExistsFalse:
@@ -50,8 +47,8 @@ class TestExistsFalse:
         # Ensure what should be gone is gone
         assert (
             model._model_data.node_tech.sel(techs="test_storage", nodes="b")
-            .item()
             .isnull()
+            .item()
         )
 
     def test_link_exists_false(self):
@@ -70,6 +67,6 @@ class TestExistsFalse:
         assert "test_transmission_elec:a" not in model._model_data.techs
         assert (
             model._model_data.node_tech.sel(nodes="a", techs="test_transmission_heat:b")
-            .item()
             .notnull()
+            .item()
         )

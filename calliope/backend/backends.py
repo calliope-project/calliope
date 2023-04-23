@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 class BackendModel(ABC, Generic[T]):
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
+    _COMPONENT_ATTR_METADATA = ["description", "unit"]
 
     def __init__(self, instance: T):
         """Abstract base class for interfaces to solvers.
@@ -308,13 +309,22 @@ class BackendModel(ABC, Generic[T]):
         Returns:
             xr.Dataset: Dataset of optimal solution results (all numeric data).
         """
+
+        def _drop_attrs(da):
+            da.attrs = {
+                k: v for k, v in da.attrs.items() if k in self._COMPONENT_ATTR_METADATA
+            }
+            return da
+
         all_variables = {
-            name_: self.get_variable(name_, as_backend_objs=False)
+            name_: _drop_attrs(self.get_variable(name_, as_backend_objs=False))
             for name_, var in self.variables.items()
             if var.notnull().any()
         }
         all_expressions = {
-            name_: self.get_expression(name_, as_backend_objs=False, eval_body=True)
+            name_: _drop_attrs(
+                self.get_expression(name_, as_backend_objs=False, eval_body=True)
+            )
             for name_, expr in self.expressions.items()
             if expr.notnull().any()
         }
@@ -477,10 +487,10 @@ class BackendModel(ABC, Generic[T]):
                 All referenced objects will have their "references" attribute updated with this object's name.
                 Defaults to None.
         """
-        from_unparsed_dict = ["description", "unit"]
+
         add_attrs = {
             attr: unparsed_dict.get(attr)
-            for attr in from_unparsed_dict
+            for attr in self._COMPONENT_ATTR_METADATA
             if attr in unparsed_dict.keys()
         }
 
