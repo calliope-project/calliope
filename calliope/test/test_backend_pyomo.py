@@ -1,6 +1,4 @@
-import collections
 import logging
-import os
 from itertools import product
 
 import numpy as np
@@ -436,7 +434,7 @@ class TestBalanceConstraints:
         sets.loc_techs_storage,
         """
         assert "balance_storage" in simple_storage.backend.constraints
-        assert not "set_storage_initial" in simple_storage.backend.constraints
+        assert "set_storage_initial" not in simple_storage.backend.constraints
 
     def test_loc_techs_balance_storage_discharge_depth_constraint(self):
         """
@@ -806,8 +804,8 @@ class TestCapacityConstraints:
         if constraint_exists(model_run, i, 'constraints.resource_cap_equals_energy_cap')
         """
         assert (
-            not "resource_capacity_equals_energy_capacity"
-            in simple_supply_and_supply_plus.backend.constraints
+            "resource_capacity_equals_energy_capacity"
+            not in simple_supply_and_supply_plus.backend.constraints
         )
 
         m = build_model(
@@ -988,7 +986,7 @@ class TestCapacityConstraints:
             if bound == "equals":
                 assert constraint.lb.item() == 20
             if bound == "max":
-                assert constraint.lb.item() == None
+                assert constraint.lb.item() is None
 
         m = build_model(
             {
@@ -1681,9 +1679,9 @@ class TestConversionConstraints:
         """
         sets.loc_techs_conversion,
         """
-        assert not "balance_conversion" in simple_supply.backend.constraints
+        assert "balance_conversion" not in simple_supply.backend.constraints
         assert "balance_conversion" in simple_conversion.backend.constraints
-        assert not "balance_conversion" in simple_conversion_plus.backend.constraints
+        assert "balance_conversion" not in simple_conversion_plus.backend.constraints
 
 
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
