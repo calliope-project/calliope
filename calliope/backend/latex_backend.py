@@ -47,24 +47,28 @@ class LatexBackendModel(backends.BackendModel):
     {% for component_type, equations in components.items() %}
     {% if component_type == "objectives" %}
     Objective
-    #########
+    ---------
     {% elif component_type == "constraints" %}
 
     Subject to
-    ##########
+    ----------
     {% elif component_type == "expressions" %}
 
     Where
-    #####
+    -----
     {% elif component_type == "variables" %}
 
     Decision Variables
-    ##################
+    ------------------
     {% endif %}
     {% for equation in equations %}
 
     {{ equation.name }}
-    {{ "=" * equation.name|length }}
+    {{ "^" * equation.name|length }}
+
+    {% if equation.description is not none %}
+    {{ equation.description }}
+    {% endif %}
 
     .. container:: scrolling-wrapper
 
@@ -104,6 +108,9 @@ class LatexBackendModel(backends.BackendModel):
     {% for equation in equations %}
 
     \paragraph{ {{ equation.name }} }
+    {% if equation.description is not none %}
+    {{ equation.description }}
+    {% endif %}
     \begin{equation}
     \resizebox{\ifdim\width>\linewidth0.95\linewidth\else\width\fi}{!}{${{ equation.expression }}
     $}
@@ -131,6 +138,9 @@ class LatexBackendModel(backends.BackendModel):
     {% for equation in equations %}
 
     ## {{ equation.name }}
+        {% if equation.description is not none %}
+        {{ equation.description }}
+        {% endif %}
         ```math{{ equation.expression | indent(4) }}
         ```
     {% endfor %}
@@ -139,24 +149,15 @@ class LatexBackendModel(backends.BackendModel):
     )
     FORMAT_STRINGS = {"rst": RST_DOC, "tex": TEX_DOC, "md": MD_DOC}
 
-    def __init__(
-        self,
-        include: Literal["all", "valid"] = "all",
-        format: Literal["tex", "rst", "md"] = "tex",
-    ):
+    def __init__(self, include: Literal["all", "valid"] = "all") -> None:
         """Interface to build a string representation of the mathematical formulation using LaTeX math notation.
 
         Args:
             include (Literal["all", "valid"], optional):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
-            format (Optional["tex", "rst", "md"], optional):
-                Not required if filename is given (as the format will be automatically inferred). Required if expecting a string return from calling this function. The LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown). Defaults to None.
         """
         backends.BackendModel.__init__(self, instance=dict())
         self.include = include
-        for component in ["objectives", "constraints", "expressions", "variables"]:
-            self._instance[component] = []
-        self._doctemplate = self.FORMAT_STRINGS[format]
 
     def add_parameter(
         self,
@@ -314,8 +315,30 @@ class LatexBackendModel(backends.BackendModel):
     def verbose_strings(self):
         return None
 
-    def generate_math_doc(self):
-        return self._render(self._doctemplate, components=self._instance)
+    def generate_math_doc(self, format: Literal["tex", "rst", "md"] = "tex") -> str:
+        """Generate the math documentation by embedding LaTeX math in a template.
+
+        Args:
+            format (Literal["tex", "rst", "md"]):
+                The built LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown). Defaults to "tex".
+
+        Returns:
+            str: Generated math documentation.
+        """
+        doc_template = self.FORMAT_STRINGS[format]
+        components = {
+            objtype: [
+                {
+                    "expression": da.attrs["math_string"],
+                    "name": name,
+                    "description": da.attrs.get("description", None),
+                }
+                for name, da in getattr(self, objtype).data_vars.items()
+            ]
+            for objtype in ["objectives", "constraints", "expressions", "variables"]
+            if getattr(self, objtype).data_vars
+        }
+        return self._render(doc_template, components=components)
 
     def _add_constraint_or_expression(
         self,
@@ -377,9 +400,6 @@ class LatexBackendModel(backends.BackendModel):
     ) -> None:
         equation_element_string = self._render(self.LATEX_EQUATION_ELEMENT, **kwargs)
         da.attrs.update({"math_string": equation_element_string})
-        self._instance[component_type].append(
-            {"expression": equation_element_string, "name": name}
-        )
         return None
 
     @staticmethod

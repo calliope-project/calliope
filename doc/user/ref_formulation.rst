@@ -1,6 +1,9 @@
-------------------------
+.. role:: green
+.. role:: red
+.. role:: yellow
+
 Mathematical formulation
-------------------------
+========================
 
 This section details the base mathematical formulation that is loaded when creating a Calliope model.
 If a math component's initial conditions are met (those to the left of the curly brace), it will be applied to a model.
@@ -14,7 +17,18 @@ To view only the mathematical formulation valid for your own model, you can writ
 .. code-block:: python
 
     model = calliope.Model("path/to/model.yaml")
-    model.write_math_documentation(filename="path/to/output/file.[tex|rst]", include="valid")
+    model.build_math_documentation(include="valid")
+    model.write_math_documentation(filename="path/to/output/file.[tex|rst]")
+
+Base math
+---------
 
 .. include:: ../_static/math.rst
+
+Storage inter cluster custom math
+---------------------------------
+Below are the changes from the base math introduced by the inbuilt custom math file `storage_inter_cluster`.
+
+.. include:: ../_static/math_storage_inter_cluster.rst
+
 

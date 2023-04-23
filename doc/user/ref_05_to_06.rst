@@ -422,8 +422,6 @@ In the process of making these updates, the ``demand_power_peak`` and (undocumen
 
 When first introduced, charge rate was used to hard-link `energy_cap` and `storage_cap` for a storage/supply_plus technology. This meant that on defining ``energy_cap_max`` and ``charge_rate``, a user was implicitly defining ``storage_cap_max``. This hard-link has now been removed, replaced with only one constraint concerning charge rate: :math:`storage_{cap}(loc::tech) \geq energy_{cap}(loc:tech) \times charge\_rate(loc:tech)`.
 
-.. seealso:: :ref:`constraint_capacity`
-
 Pre-processed data
 ==================
 

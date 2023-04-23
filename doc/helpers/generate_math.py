@@ -11,6 +11,7 @@ Generate LaTeX math to include in the documentation.
 from pathlib import Path
 
 import pandas as pd
+
 import calliope
 
 BASEPATH = Path(__file__).resolve().parent
@@ -24,7 +25,66 @@ NONDEMAND_TECHGROUPS = [
 ]
 
 
-def generate_math():
+def generate_base_math_model(write: bool = True) -> calliope.Model:
+    node_techs = generate_node_techs()
+    model_config = {
+        "model": {},
+        "run": {"objective_options": {"cost_class": {"monetary": 1}}},
+        **node_techs,
+    }
+    model = calliope.Model(config=model_config, timeseries_dataframes=_ts_dfs())
+    model.build_math_documentation()
+    if write:
+        write_math(model, "math.rst")
+    return model
+
+
+def generate_storage_inter_cluster_math_model(write: bool = True):
+    node_techs = generate_node_techs()
+    model_config = {
+        "model": {
+            "custom_math": ["storage_inter_cluster"],
+            "time": {
+                "function": "apply_clustering",
+                "function_options": {
+                    "clustering_func": "kmeans",
+                    "how": "mean",
+                    "k": 1,
+                },
+            },
+        },
+        "run": {"objective_options": {"cost_class": {"monetary": 1}}},
+        **node_techs,
+    }
+    base_model = generate_base_math_model(write=False)
+    model = calliope.Model(config=model_config, timeseries_dataframes=_ts_dfs())
+    full_del = []
+    expr_del = []
+    for component_group, component_group_dict in model.math.items():
+        for name, component_dict in component_group_dict.items():
+            if name in base_model.math[component_group]:
+                if not component_dict.get("active", True):
+                    expr_del.append(name)
+                    component_dict["description"] = ":red:`REMOVED`"
+                    component_dict["active"] = True
+                elif base_model.math[component_group].get(name, {}) != component_dict:
+                    _add_to_description(component_dict, ":yellow:`UPDATED`")
+                else:
+                    full_del.append(name)
+            else:
+                _add_to_description(component_dict, ":green:`NEW`")
+    model.build_math_documentation()
+    for key in expr_del:
+        model.math_documentation._dataset[key].attrs["math_string"] = ""
+    for key in full_del:
+        del model.math_documentation._dataset[key]
+
+    if write:
+        write_math(model, "math_storage_inter_cluster.rst")
+    return model
+
+
+def generate_node_techs() -> dict[str, dict]:
     """
     To generate the written mathematical formulation of all possible base constraints, we first create a dummy model that has all the relevant technology groups defining all their allowed parameters defined.
 
@@ -40,7 +100,7 @@ def generate_math():
         columns=["A"],
     )
 
-    allowed_ = {i: {"all": set()} for i in ["costs", "constraints"]}
+    allowed_: dict[str, dict] = {i: {"all": set()} for i in ["costs", "constraints"]}
 
     dummy_techs = {
         "demand_tech": {
@@ -85,19 +145,16 @@ def generate_math():
             },
         }
 
-    model_config = {
-        "model": {},
-        "run": {"objective_options": {"cost_class": {"monetary": 1}}},
-        # Hardcoding just one expected per-node parameter: available area
+    return {
         "nodes": {
             "A": {"techs": {k: None for k in dummy_techs.keys()}, "available_area": 1}
         },
         "techs": dummy_techs,
     }
-    m = calliope.Model(
-        config=model_config, timeseries_dataframes={"ts": ts, "ts_neg": -1 * ts}
-    )
-    m.write_math_documentation(filename=BASEPATH / ".." / "_static" / "math.rst")
+
+
+def write_math(model: calliope.Model, filename: str) -> None:
+    model.write_math_documentation(filename=str(BASEPATH / ".." / "_static" / filename))
 
 
 def _add_data(name, default_val, defaults):
@@ -115,5 +172,19 @@ def _add_data(name, default_val, defaults):
         return default_val
 
 
+def _add_to_description(component_dict: dict, update_string: str) -> None:
+    component_dict["description"] = f"{update_string}\n{component_dict['description']}"
+
+
+def _ts_dfs() -> dict[str, pd.DataFrame]:
+    ts = pd.DataFrame(
+        [1, 1, 1],
+        index=pd.date_range("2005-01-01 00:00", "2005-01-01 02:00", freq="H"),
+        columns=["A"],
+    )
+    return {"ts": ts, "ts_neg": -1 * ts}
+
+
 if __name__ == "__main__":
-    generate_math()
+    generate_base_math_model(write=True)
+    generate_storage_inter_cluster_math_model(write=True)

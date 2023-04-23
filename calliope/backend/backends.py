@@ -3,38 +3,36 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import re
-from abc import ABC, abstractmethod
 import typing
+from abc import ABC, abstractmethod
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from typing import (
     Any,
     Callable,
-    Optional,
-    Literal,
-    TypeVar,
     Generic,
-    Union,
-    Iterator,
     Iterable,
+    Iterator,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
 )
 
-import os
-from contextlib import redirect_stdout, redirect_stderr, contextmanager
-import logging
-
-import xarray as xr
+import numpy as np
 import pandas as pd
 import pyomo.environ as pe  # type: ignore
 import pyomo.kernel as pmo  # type: ignore
-from pyomo.opt import SolverFactory  # type: ignore
+import xarray as xr
 from pyomo.common.tempfiles import TempfileManager  # type: ignore
-import numpy as np
+from pyomo.opt import SolverFactory  # type: ignore
 
+from calliope.backend import parsing
+from calliope.core.util.logging import LogWriter
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
-from calliope.core.util.logging import LogWriter
-from calliope.backend import parsing
-
 
 T = TypeVar("T")
 _COMPONENTS_T = Literal[
