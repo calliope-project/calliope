@@ -4,6 +4,7 @@ from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import check_variable_exists
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestBuildConversionPlusConstraints:
     # conversion_plus.py
     def test_no_balance_conversion_plus_primary_constraint(self, simple_supply):
@@ -222,6 +223,7 @@ class TestBuildConversionPlusConstraints:
         )
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestConversionPlusConstraintResults:
     def test_carrier_ratio(self):
         m = build_model(

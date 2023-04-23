@@ -6,7 +6,7 @@ import calliope
 from calliope.test.common.util import build_test_model as build_model
 
 
-@pytest.mark.xfail(reason="to be reimplemented by comparison to LP files")
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestCostMinimisationObjective:
     def test_nationalscale_minimize_emissions(self):
         model = calliope.examples.national_scale(

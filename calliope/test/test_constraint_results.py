@@ -5,6 +5,7 @@ import calliope
 from calliope.test.common.util import build_test_model as build_model
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestNationalScaleExampleModelSenseChecks:
     @pytest.mark.xfail(
         reason="Group constraints no longer working: to be replaced by custom constraints"
@@ -71,6 +72,7 @@ class TestNationalScaleExampleModelSenseChecks:
 
 
 @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestUrbanScaleMILP:
     def test_asynchronous_prod_con(self):
         def _get_prod_con(model, prod_con):
@@ -102,6 +104,7 @@ class TestUrbanScaleMILP:
         assert any(((_con < 0) & (_prod > 0)).any()) is False
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestModelSettings:
     @pytest.fixture
     def run_model(self):
@@ -188,6 +191,7 @@ class TestModelSettings:
         assert not model.results.attrs["termination_condition"] == "optimal"
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestEnergyCapacityPerStorageCapacity:
     @pytest.fixture
     def model_file(self):

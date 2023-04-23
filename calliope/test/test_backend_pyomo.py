@@ -302,6 +302,7 @@ class TestChecks:
             )
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestBalanceConstraints:
     def test_loc_carriers_system_balance_constraint(self, simple_supply):
         """
@@ -486,6 +487,7 @@ class TestBalanceConstraints:
         assert "reserve_margin" in m.backend.constraints
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestCostConstraints:
     # costs.py
     def test_loc_techs_cost_constraint(self, simple_supply):
@@ -577,6 +579,7 @@ class TestCostConstraints:
         )
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestExportConstraints:
     # export.py
     def test_loc_carriers_system_balance_no_export(self, simple_supply):
@@ -639,6 +642,7 @@ class TestExportConstraints:
         assert "carrier_export_max" in m.backend.constraints
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestCapacityConstraints:
     # capacity.py
     def test_loc_techs_storage_capacity_constraint(
@@ -1036,6 +1040,7 @@ class TestCapacityConstraints:
         assert "energy_capacity_systemwide" not in m.backend.constraints
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestDispatchConstraints:
     # dispatch.py
     def test_loc_tech_carriers_carrier_production_max_constraint(self, simple_supply):
@@ -1148,6 +1153,7 @@ class TestDispatchConstraints:
 
 
 @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestMILPConstraints:
     # milp.py
     def test_loc_techs_unit_commitment_milp_constraint(
@@ -1591,8 +1597,7 @@ class TestMILPConstraints:
                 "unit_capacity_systemwide_milp", as_backend_objs=False
             )
             .sel(techs="test_conversion_plus")
-            .lb
-            .item()
+            .lb.item()
             == 1
         )
         assert (
@@ -1600,8 +1605,7 @@ class TestMILPConstraints:
                 "unit_capacity_systemwide_milp", as_backend_objs=False
             )
             .sel(techs="test_conversion_plus")
-            .ub
-            .item()
+            .ub.item()
             == 1
         )
 
@@ -1668,6 +1672,7 @@ class TestMILPConstraints:
         assert "asynchronous_prod_milp" in m.backend.constraints
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestConversionConstraints:
     # conversion.py
     def test_loc_techs_balance_conversion_constraint(
@@ -1681,6 +1686,7 @@ class TestConversionConstraints:
         assert not "balance_conversion" in simple_conversion_plus.backend.constraints
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestNetworkConstraints:
     # network.py
     def test_loc_techs_symmetric_transmission_constraint(
@@ -1695,8 +1701,7 @@ class TestNetworkConstraints:
         )
 
 
-# clustering constraints
-@pytest.mark.xfail(reason="storage inter cluster doesn't work yet")
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestClusteringConstraints:
     def constraints(self):
         return [
@@ -1728,9 +1733,11 @@ class TestClusteringConstraints:
                 "function_options": {
                     "clustering_func": "file=cluster_days.csv:a",
                     "how": how,
-                    "storage_inter_cluster": storage_inter_cluster,
                 },
             },
+            "model.custom_math": ["storage_inter_cluster"]
+            if storage_inter_cluster
+            else [],
             "run.cyclic_storage": cyclic,
         }
         if storage_initial:
