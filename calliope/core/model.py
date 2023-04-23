@@ -435,6 +435,22 @@ class Model(object):
         )
         self._add_model_data_methods()
 
+    def run(self, force_rerun=False, **kwargs):
+        """
+        Run the model. If ``force_rerun`` is True, any existing results
+        will be overwritten.
+
+        Additional kwargs are passed to the backend.
+
+        """
+        warnings.warn(
+            "`run()` is deprecated and will be removed in a "
+            "future version. Use `model.build()` followed by `model.solve()`.",
+            DeprecationWarning,
+        )
+        self.build(force=force_rerun)
+        self.solve(force=force_rerun)
+
     def get_formatted_array(self, var):
         """
         Return an xarray.DataArray with nodes, techs, and carriers as
