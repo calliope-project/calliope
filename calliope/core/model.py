@@ -11,10 +11,9 @@ Implements the core Model class.
 from __future__ import annotations
 
 import logging
-import typing
 import warnings
 from pathlib import Path
-from typing import Callable, Literal, Optional, TypeVar, Union, overload
+from typing import Callable, Literal, Optional, TypeVar, Union
 
 import xarray
 

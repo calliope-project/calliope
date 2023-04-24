@@ -215,27 +215,25 @@ if __name__ == "__main__":
     # FIXME: Operate mode replaces variables with parameters, so we cannot show that the
     # variable has been deleted in the doc because we cannot build a variable with the same
     # name as another model component.
-
-    #generate_custom_math_model(
-    #    base_model,
-    #    base_model_config,
-    #    {
-    #        "model.custom_math": ["operate"],
-    #        # FIXME: operate mode should have access to parameter defaults for capacity values
-    #        "techs": {
-    #            "supply_tech.constraints.energy_cap": 1,
-    #            "supply_tech.constraints.purchased": 1,
-    #            "supply_tech.constraints.units": 1,
-    #            "storage_tech.constraints.storage_cap": 1,
-    #            "supply_plus_tech.constraints.resource_cap": 1,
-    #            "supply_plus_tech.constraints.resource_area": 1,
-    #        },
-    #    },
-    #    "operate",
-    #)
+    # generate_custom_math_model(
+    #     base_model,
+    #     base_model_config,
+    #     {
+    #         "model.custom_math": ["operate"],
+    #         # FIXME: operate mode should have access to parameter defaults for capacity values
+    #         "techs": {
+    #             "supply_tech.constraints.energy_cap": 1,
+    #             "supply_tech.constraints.purchased": 1,
+    #             "supply_tech.constraints.units": 1,
+    #             "storage_tech.constraints.storage_cap": 1,
+    #             "supply_plus_tech.constraints.resource_cap": 1,
+    #             "supply_plus_tech.constraints.resource_area": 1,
+    #         },
+    #     },
+    #     "operate",
+    # )
 
     # FIXME: need to generate the spores params for the spores mode math to build.
-
     # generate_custom_math_model(
     #    base_model, base_model_config.copy(), {"model.custom_math": ["spores"]}, "spores"
     # )
