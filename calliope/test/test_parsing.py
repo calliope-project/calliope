@@ -1,14 +1,13 @@
 from io import StringIO
 from unittest.mock import patch
 
+import pyparsing as pp
 import pytest
 import ruamel.yaml as yaml
-import pyparsing as pp
-
-from calliope.backend import parsing, equation_parser, subset_parser, backends
-from calliope.test.common.util import check_error_or_warning
 
 import calliope
+from calliope.backend import backends, equation_parser, parsing, subset_parser
+from calliope.test.common.util import check_error_or_warning
 
 BASE_DIMS = {"carriers", "carrier_tiers", "nodes", "techs"}
 
@@ -36,23 +35,23 @@ def foreach_imask(component_obj, dummy_model_data):
 
 
 @pytest.fixture
-def valid_object_names(dummy_model_data):
+def valid_math_element_names(dummy_model_data):
     return ["foo", "bar", "baz", "foobar", *dummy_model_data.data_vars.keys()]
 
 
 @pytest.fixture
-def expression_parser(valid_object_names):
-    return equation_parser.generate_equation_parser(valid_object_names)
+def expression_parser(valid_math_element_names):
+    return equation_parser.generate_equation_parser(valid_math_element_names)
 
 
 @pytest.fixture
-def slice_parser(valid_object_names):
-    return equation_parser.generate_slice_parser(valid_object_names)
+def slice_parser(valid_math_element_names):
+    return equation_parser.generate_slice_parser(valid_math_element_names)
 
 
 @pytest.fixture
-def sub_expression_parser(valid_object_names):
-    return equation_parser.generate_sub_expression_parser(valid_object_names)
+def sub_expression_parser(valid_math_element_names):
+    return equation_parser.generate_sub_expression_parser(valid_math_element_names)
 
 
 @pytest.fixture
@@ -232,7 +231,7 @@ def dummy_backend_interface(dummy_model_data):
 
 
 @pytest.fixture(scope="function")
-def evaluatable_component_obj(valid_object_names):
+def evaluatable_component_obj(valid_math_element_names):
     def _evaluatable_component_obj(equation_expressions):
         if isinstance(equation_expressions, list):
             equations = f"equations: {equation_expressions}"
@@ -255,7 +254,7 @@ def evaluatable_component_obj(valid_object_names):
                     self, "constraints", "foo", dict_
                 )
                 self.parse_top_level_where()
-                self.equations = self.parse_equations(valid_object_names)
+                self.equations = self.parse_equations(valid_math_element_names)
 
         return DummyParsedBackendComponent(sub_expression_dict)
 
@@ -580,12 +579,12 @@ class TestParsedComponent:
     def test_parse_equations(
         self,
         obj_with_sub_expressions_and_slices,
-        valid_object_names,
+        valid_math_element_names,
         eq_string,
         expected_n_equations,
     ):
         component_obj = obj_with_sub_expressions_and_slices(eq_string)
-        parsed_equations = component_obj.parse_equations(valid_object_names)
+        parsed_equations = component_obj.parse_equations(valid_math_element_names)
 
         assert len(parsed_equations) == expected_n_equations
         assert len(set(eq.name for eq in parsed_equations)) == expected_n_equations
@@ -601,11 +600,11 @@ class TestParsedComponent:
             assert check_error_or_warning(excinfo, ["\n * (constraints, foo):"])
 
     def test_parse_equations_fail(
-        self, obj_with_sub_expressions_and_slices, valid_object_names
+        self, obj_with_sub_expressions_and_slices, valid_math_element_names
     ):
         component_obj = obj_with_sub_expressions_and_slices("bar = 1")
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            component_obj.parse_equations(valid_object_names, errors="raise")
+            component_obj.parse_equations(valid_math_element_names, errors="raise")
         expected_err_string = """
  * (constraints, my_constraint):
     * equations[0].expression (line 1, char 5): bar = 1
@@ -613,10 +612,10 @@ class TestParsedComponent:
         assert check_error_or_warning(excinfo, expected_err_string)
 
     def test_parse_equations_fail_no_raise(
-        self, obj_with_sub_expressions_and_slices, valid_object_names
+        self, obj_with_sub_expressions_and_slices, valid_math_element_names
     ):
         component_obj = obj_with_sub_expressions_and_slices("bar = 1")
-        component_obj.parse_equations(valid_object_names, errors="ignore")
+        component_obj.parse_equations(valid_math_element_names, errors="ignore")
 
         expected_err_string = """\
 equations[0].expression (line 1, char 5): bar = 1

@@ -30,8 +30,8 @@
 
 from __future__ import annotations
 
-from typing import Callable, Any, Union, Optional, Iterator, Iterable
 from abc import ABC
+from typing import Any, Callable, Iterable, Iterator, Optional, Union
 
 import pyparsing as pp
 import xarray as xr
@@ -688,13 +688,13 @@ def sub_expression_parser(generic_identifier: pp.ParserElement) -> pp.ParserElem
     return sub_expression
 
 
-def unsliced_object_parser(valid_object_names: Iterable[str]) -> pp.ParserElement:
+def unsliced_object_parser(valid_math_element_names: Iterable[str]) -> pp.ParserElement:
     """
     Create a copy of the generic identifier and set a parse action to find the string in
     the list of input paramaters or optimisation decision variables.
 
     Args:
-        valid_object_names (Iterable[str]): A
+        valid_math_element_names (Iterable[str]): A
             All backend object names, to ensure they are captured by this parser function.
 
     Returns:
@@ -703,14 +703,14 @@ def unsliced_object_parser(valid_object_names: Iterable[str]) -> pp.ParserElemen
             parameter/variable value
     """
 
-    unsliced_param_or_var = pp.one_of(valid_object_names, as_keyword=True)
+    unsliced_param_or_var = pp.one_of(valid_math_element_names, as_keyword=True)
     unsliced_param_or_var.set_parse_action(EvalUnslicedParameterOrVariable)
 
     return unsliced_param_or_var
 
 
 def evaluatable_identifier_parser(
-    identifier: pp.ParserElement, valid_object_names: Iterable
+    identifier: pp.ParserElement, valid_math_element_names: Iterable
 ) -> tuple[pp.ParserElement, pp.ParserElement]:
     """
     Create an evaluatable copy of the generic identifier that will return a string or a
@@ -720,7 +720,7 @@ def evaluatable_identifier_parser(
         identifier (pp.ParserElement):
             Parser for valid python variables without leading underscore and not called "inf".
             This parser has no parse action.
-        valid_object_names (Iterable[str]): A
+        valid_math_element_names (Iterable[str]): A
             All backend object names, to ensure they are *not* captured by this parser function.
 
     Returns:
@@ -731,7 +731,7 @@ def evaluatable_identifier_parser(
             Parser for lists of "evaluatable_identifier", bound by "[]" parentheses
     """
     evaluatable_identifier = (
-        ~pp.one_of(valid_object_names, as_keyword=True) + identifier
+        ~pp.one_of(valid_math_element_names, as_keyword=True) + identifier
     ).set_parse_action(GenericStringParser)
 
     id_list = (
@@ -835,7 +835,7 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
     return equation_comparison
 
 
-def generate_slice_parser(valid_object_names: Iterable) -> pp.ParserElement:
+def generate_slice_parser(valid_math_element_names: Iterable) -> pp.ParserElement:
     """
     Create parser for index slice reference expressions. These expressions are linked
     to the equation expression by e.g. `$bar` in `foo[bars=$bar]`.
@@ -843,7 +843,7 @@ def generate_slice_parser(valid_object_names: Iterable) -> pp.ParserElement:
     nor references to sub expressions.
 
     Args:
-        valid_object_names (Iterable):
+        valid_math_element_names (Iterable):
             Allowed names for optimisation problem components (parameters, decision variables, expressions),
             to allow the parser to separate these from generic strings.
 
@@ -852,9 +852,9 @@ def generate_slice_parser(valid_object_names: Iterable) -> pp.ParserElement:
     """
     number, identifier = setup_base_parser_elements()
     evaluatable_identifier, id_list = evaluatable_identifier_parser(
-        identifier, valid_object_names
+        identifier, valid_math_element_names
     )
-    unsliced_param = unsliced_object_parser(valid_object_names)
+    unsliced_param = unsliced_object_parser(valid_math_element_names)
     sliced_param = sliced_param_or_var_parser(
         number,
         identifier,
@@ -883,7 +883,7 @@ def generate_slice_parser(valid_object_names: Iterable) -> pp.ParserElement:
     )
 
 
-def generate_sub_expression_parser(valid_object_names: Iterable) -> pp.Forward:
+def generate_sub_expression_parser(valid_math_element_names: Iterable) -> pp.Forward:
     """
     Create parser for sub expressions. These expressions are linked
     to the equation expression by e.g. `$bar`.
@@ -891,7 +891,7 @@ def generate_sub_expression_parser(valid_object_names: Iterable) -> pp.Forward:
     and reference to index slice expressions.
 
     Args:
-        valid_object_names (Iterable):
+        valid_math_element_names (Iterable):
             Allowed names for optimisation problem components (parameters, decision variables, expressions),
             to allow the parser to separate these from generic strings.
 
@@ -900,9 +900,9 @@ def generate_sub_expression_parser(valid_object_names: Iterable) -> pp.Forward:
     """
     number, identifier = setup_base_parser_elements()
     evaluatable_identifier, id_list = evaluatable_identifier_parser(
-        identifier, valid_object_names
+        identifier, valid_math_element_names
     )
-    unsliced_param = unsliced_object_parser(valid_object_names)
+    unsliced_param = unsliced_object_parser(valid_math_element_names)
     sliced_param = sliced_param_or_var_parser(
         number, identifier, evaluatable_identifier, unsliced_param
     )
@@ -924,14 +924,14 @@ def generate_sub_expression_parser(valid_object_names: Iterable) -> pp.Forward:
     return arithmetic
 
 
-def generate_arithmetic_parser(valid_object_names: Iterable) -> pp.ParserElement:
+def generate_arithmetic_parser(valid_math_element_names: Iterable) -> pp.ParserElement:
     """
     Create parser for left-/right-hand side (LHS/RHS) of equation expressions of the form LHS OPERATOR RHS (e.g. `foo == 1 + bar`).
     This parser allows arbitrarily nested arithmetic and function calls (and arithmetic inside function calls)
     and reference to sub-expressions and index slice expressions.
 
     Args:
-        valid_object_names (Iterable):
+        valid_math_element_names (Iterable):
             Allowed names for optimisation problem components (parameters, decision variables, global_expressions),
             to allow the parser to separate these from generic strings.
 
@@ -940,9 +940,9 @@ def generate_arithmetic_parser(valid_object_names: Iterable) -> pp.ParserElement
     """
     number, identifier = setup_base_parser_elements()
     evaluatable_identifier, id_list = evaluatable_identifier_parser(
-        identifier, valid_object_names
+        identifier, valid_math_element_names
     )
-    unsliced_param = unsliced_object_parser(valid_object_names)
+    unsliced_param = unsliced_object_parser(valid_math_element_names)
     sliced_param = sliced_param_or_var_parser(
         number, identifier, evaluatable_identifier, unsliced_param
     )
@@ -964,14 +964,14 @@ def generate_arithmetic_parser(valid_object_names: Iterable) -> pp.ParserElement
     return arithmetic
 
 
-def generate_equation_parser(valid_object_names: Iterable) -> pp.ParserElement:
+def generate_equation_parser(valid_math_element_names: Iterable) -> pp.ParserElement:
     """
     Create parser for equation expressions of the form LHS OPERATOR RHS (e.g. `foo == 1 + bar`).
     This parser allows arbitrarily nested arithmetic and function calls (and arithmetic inside function calls)
     and reference to sub-expressions and index slice expressions.
 
     Args:
-        valid_object_names (Iterable):
+        valid_math_element_names (Iterable):
             Allowed names for optimisation problem components (parameters, decision variables, global_expressions),
             to allow the parser to separate these from generic strings.
 
@@ -979,7 +979,7 @@ def generate_equation_parser(valid_object_names: Iterable) -> pp.ParserElement:
         pp.ParserElement: Parser for expression strings under the constraint key "equation/equations".
     """
 
-    arithmetic = generate_arithmetic_parser(valid_object_names)
+    arithmetic = generate_arithmetic_parser(valid_math_element_names)
     equation_comparison = equation_comparison_parser(arithmetic)
 
     return equation_comparison

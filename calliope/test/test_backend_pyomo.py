@@ -1,22 +1,18 @@
-from itertools import product
-import os
 import collections
+import logging
+import os
+from itertools import product
 
-
-import pytest  # noqa: F401
 import numpy as np
 import pyomo.core as po
 import pyomo.kernel as pmo
-import logging
+import pytest  # noqa: F401
 import xarray as xr
 
 import calliope.exceptions as exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.test.common.util import build_test_model as build_model
-from calliope.test.common.util import (
-    check_error_or_warning,
-    check_variable_exists,
-)
+from calliope.test.common.util import check_error_or_warning, check_variable_exists
 
 
 class TestModel:
@@ -2137,7 +2133,7 @@ class TestNewBackend:
 
         assert check_error_or_warning(
             error,
-            f"(constraints, {constraint_name}): Missing expression for some coordinates selected by 'where'. Adapting 'where' might help.",
+            f"(constraints, {constraint_name}): Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
         )
 
     def test_raise_error_on_expression_with_nan(self, simple_supply_new_build):
@@ -2155,14 +2151,14 @@ class TestNewBackend:
         expression_name = "expression-without-nan"
 
         # add expression with nan
-        simple_supply_new_build.backend.add_expression(
+        simple_supply_new_build.backend.add_global_expression(
             simple_supply_new_build.inputs,
             expression_name,
             expression_dict,
         )
 
         assert (
-            simple_supply_new_build.backend.get_expression(expression_name).name
+            simple_supply_new_build.backend.get_global_expression(expression_name).name
             == expression_name
         )
 
@@ -2174,7 +2170,7 @@ class TestNewBackend:
         expression_name = "expression-with-nan"
 
         with pytest.raises(exceptions.BackendError) as error:
-            simple_supply_new_build.backend.add_expression(
+            simple_supply_new_build.backend.add_global_expression(
                 simple_supply_new_build.inputs,
                 expression_name,
                 expression_dict,
@@ -2182,7 +2178,7 @@ class TestNewBackend:
 
         assert check_error_or_warning(
             error,
-            f"(expressions, {expression_name}): Missing expression for some coordinates selected by 'where'. Adapting 'where' might help.",
+            f"(expressions, {expression_name}): Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
         )
 
     def test_raise_error_on_excess_dimensions(self, simple_supply_new_build):
@@ -2230,7 +2226,7 @@ class TestNewBackend:
 
         assert check_error_or_warning(
             error,
-            f"(constraints, {constraint_name}): imask will be broadcasted to these dims {{'nodes'}}",
+            f"(constraints, {constraint_name}): The linear expression array is indexed over dimensions not present in `foreach`: {{'nodes'}}",
         )
 
     @pytest.mark.parametrize(

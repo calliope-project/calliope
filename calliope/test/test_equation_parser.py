@@ -1,14 +1,13 @@
 import operator
 import random
 
-import pytest
 import numpy as np
 import pyparsing as pp
+import pytest
 
+from calliope import exceptions
 from calliope.backend import equation_parser
 from calliope.test.common.util import check_error_or_warning
-from calliope import exceptions
-
 
 SUB_EXPRESSION_CLASSIFIER = equation_parser.SUB_EXPRESSION_CLASSIFIER
 HELPER_FUNCS = {
@@ -18,7 +17,7 @@ HELPER_FUNCS = {
 
 
 @pytest.fixture
-def valid_object_names():
+def valid_math_element_names():
     return ["foo", "foo_bar", "bar"]
 
 
@@ -39,8 +38,10 @@ def identifier(base_parser_elements):
 
 
 @pytest.fixture
-def evaluatable_identifier_elements(identifier, valid_object_names):
-    return equation_parser.evaluatable_identifier_parser(identifier, valid_object_names)
+def evaluatable_identifier_elements(identifier, valid_math_element_names):
+    return equation_parser.evaluatable_identifier_parser(
+        identifier, valid_math_element_names
+    )
 
 
 @pytest.fixture
@@ -55,15 +56,15 @@ def id_list(evaluatable_identifier_elements):
 
 @pytest.fixture
 def unsliced_param():
-    def _unsliced_param(valid_object_names):
-        return equation_parser.unsliced_object_parser(valid_object_names)
+    def _unsliced_param(valid_math_element_names):
+        return equation_parser.unsliced_object_parser(valid_math_element_names)
 
     return _unsliced_param
 
 
 @pytest.fixture
-def unsliced_param_with_obj_names(unsliced_param, valid_object_names):
-    return unsliced_param(valid_object_names)
+def unsliced_param_with_obj_names(unsliced_param, valid_math_element_names):
+    return unsliced_param(valid_math_element_names)
 
 
 @pytest.fixture
@@ -146,9 +147,8 @@ def eval_kwargs():
     return {
         "helper_func_dict": HELPER_FUNCS,
         "as_dict": True,
-        "iterator_dict": {},
         "slice_dict": {},
-        "component_dict": {},
+        "sub_expression_dict": {},
         "equation_name": "foobar",
         "apply_imask": False,
         "references": set(),
@@ -200,18 +200,18 @@ def equation_comparison(arithmetic):
 
 
 @pytest.fixture
-def generate_equation(valid_object_names):
-    return equation_parser.generate_equation_parser(valid_object_names)
+def generate_equation(valid_math_element_names):
+    return equation_parser.generate_equation_parser(valid_math_element_names)
 
 
 @pytest.fixture
-def generate_slice(valid_object_names):
-    return equation_parser.generate_slice_parser(valid_object_names)
+def generate_slice(valid_math_element_names):
+    return equation_parser.generate_slice_parser(valid_math_element_names)
 
 
 @pytest.fixture
-def generate_sub_expression(valid_object_names):
-    return equation_parser.generate_sub_expression_parser(valid_object_names)
+def generate_sub_expression(valid_math_element_names):
+    return equation_parser.generate_sub_expression_parser(valid_math_element_names)
 
 
 class TestEquationParserElements:
@@ -400,11 +400,11 @@ class TestEquationParserElements:
     @pytest.mark.parametrize(
         "string_val",
         [
-            f"{SUB_EXPRESSION_CLASSIFIER} foo",  # space between classifier and component name
+            f"{SUB_EXPRESSION_CLASSIFIER} foo",  # space between classifier and sub-expression name
             "foo",  # no classifier
             "foo$",  # classifier not at start
             "f$oo",  # classifier not at start
-            "$",  # missing component name
+            "$",  # missing sub-expression name
             "$foo(1)",  # adding classifer to function
             "$foo[bars=bar1]",  # adding classifer to indexed param
             "$1",  # adding classifer to invalid python variable name
@@ -730,7 +730,7 @@ class TestEquationParserArithmetic:
         assert parsed_[0].eval(**eval_kwargs) == expected
 
     @pytest.mark.parametrize("number_", numbers)
-    @pytest.mark.parametrize("component_", ["$foo", "$bar1"])
+    @pytest.mark.parametrize("sub_expr_", ["$foo", "$bar1"])
     @pytest.mark.parametrize("unsliced_param_", ["foo", "bar"])
     @pytest.mark.parametrize(
         "sliced_param_", ["foo[bars=bar1]", "bar[foos=foo1, bars=$bar]"]
@@ -744,7 +744,7 @@ class TestEquationParserArithmetic:
     def test_non_numbers(
         self,
         number_,
-        component_,
+        sub_expr_,
         unsliced_param_,
         sliced_param_,
         helper_function_,
@@ -753,7 +753,7 @@ class TestEquationParserArithmetic:
     ):
         items = [
             number_,
-            component_,
+            sub_expr_,
             unsliced_param_,
             sliced_param_,
             helper_function_,

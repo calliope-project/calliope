@@ -111,7 +111,7 @@ class BackendModel(ABC, Generic[T]):
         expression_dict: parsing.UnparsedExpressionDict,
     ) -> None:
         """
-        Add expression (arithmetic combination of parameters and/or decision variables)
+        Add global expression (arithmetic combination of parameters and/or decision variables)
         to backend model in-place.
         Resulting backend dataset entries will be linear expression objects.
 
@@ -245,7 +245,7 @@ class BackendModel(ABC, Generic[T]):
     def get_global_expression(
         self, expression_name: str, as_backend_objs: bool = True, eval_body: bool = True
     ) -> Optional[xr.DataArray]:
-        """Exrtact global expression array from backend dataset
+        """Extract global expression array from backend dataset
 
         Args:
             global_expression_name (str): Name of global expression
@@ -520,7 +520,7 @@ class BackendModel(ABC, Generic[T]):
 
 
 class PyomoBackendModel(BackendModel):
-    component_translator = {
+    _COMPONENT_TRANSLATOR = {
         "parameter": "parameter",
         "variable": "variable",
         "global_expression": "expression",
@@ -821,9 +821,9 @@ class PyomoBackendModel(BackendModel):
                 val.calliope_coords = idx
 
         with self._datetime_as_string(self._dataset):
-            for component_group in ["parameters", "variables"]:
+            for component_type in ["parameters", "variables"]:
                 for da in self._dataset.filter_by_attrs(
-                    coords_in_name=False, **{component_group: 1}
+                    coords_in_name=False, **{component_type: 1}
                 ).values():
                     self.apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
                     da.attrs["coords_in_name"] = True
@@ -846,7 +846,7 @@ class PyomoBackendModel(BackendModel):
         else:
             singular_component = component_type.removesuffix("s")
             component_dict[key] = getattr(
-                pmo, f"{self.component_translator[singular_component]}_list"
+                pmo, f"{self._COMPONENT_TRANSLATOR[singular_component]}_list"
             )()
 
     def _delete_pyomo_list(self, key: str, component_type: _COMPONENTS_T) -> None:
@@ -947,11 +947,11 @@ class PyomoBackendModel(BackendModel):
         expression: xr.DataArray, imask: xr.DataArray, description: str
     ) -> None:
         """
-        Checks if a given constraint or expression is consistent with the imask.
+        Checks if a given constraint or global expression is consistent with the imask.
 
         Parameters:
-            expression (xr.DataArray): constraint or expression
-            imask (xr.DataArray): imask
+            expression (xr.DataArray): array of linear expressions from a global expression or one side of a constraint equation.
+            imask (xr.DataArray): where array.
             description (str): Description to prefix the error message.
 
         Raises:
@@ -964,13 +964,13 @@ class PyomoBackendModel(BackendModel):
         broadcast_dims_imask = set(expression.dims).difference(set(imask.dims))
         if broadcast_dims_imask:
             raise BackendError(
-                f"{description}: imask will be broadcasted to these dims {broadcast_dims_imask}"
+                f"{description}: The linear expression array is indexed over dimensions not present in `foreach`: {broadcast_dims_imask}"
             )
 
         incomplete_constraints = expression.isnull() & imask
         if incomplete_constraints.any():
             raise BackendError(
-                f"{description}: Missing expression for some coordinates selected by 'where'. Adapting 'where' might help."
+                f"{description}: Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help."
             )
 
     def _get_capacity_bounds(
@@ -1067,8 +1067,8 @@ class PyomoBackendModel(BackendModel):
 
         Args:
             mask (Union[bool, np.bool_]): If True, add constraint, otherwise return np.nan
-            lhs (Any): Equation left-hand-side expression
-            rhs (Any): Equation right-hand-side expression
+            lhs (Any): Equation left-hand-side linear expression
+            rhs (Any): Equation right-hand-side linear expression
 
         Kwargs:
             op (Literal[, optional): Operator to compare `lhs` and `rhs`. Defaults to =", ">=", "<="].
