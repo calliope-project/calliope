@@ -3,18 +3,17 @@
 
 from __future__ import annotations
 
-import itertools
-from typing import Optional, Union, Literal, Iterable, Callable, TypeVar
-from typing_extensions import NotRequired, TypedDict, Required
 import functools
+import itertools
 import operator
+from typing import Callable, Iterable, Literal, Optional, TypeVar, Union
 
 import pyparsing as pp
 import xarray as xr
+from typing_extensions import NotRequired, Required, TypedDict
 
-from calliope.backend import equation_parser, subset_parser, backends
 from calliope import exceptions
-from calliope.backend import helper_functions
+from calliope.backend import backends, equation_parser, helper_functions, subset_parser
 
 VALID_EXPRESSION_HELPER_FUNCTIONS: dict[str, Callable] = {
     "sum": helper_functions.expression_sum,
@@ -110,11 +109,11 @@ class ParsedBackendEquation:
             where_list (list[pp.ParseResults]):
                 List of parsed where strings.
             sub_expressions (Optional[dict[str, pp.ParseResults]], optional):
-                Dictionary of parsed sub expressions with which to replace references to components
+                Dictionary of parsed sub-expressions with which to replace sub-expression references
                 on evaluation of the parsed expression. Defaults to None.
             slices (Optional[dict[str, pp.ParseResults]], optional):
-                Dictionary of parsed index slices with which to replace references to index slices
-                on evaluation of the parsed expression / components. Defaults to None.
+                Dictionary of parsed array slices with which to replace slice references
+                on evaluation of the parsed expression / sub-expression. Defaults to None.
         """
         self.name = equation_name
         self.where = where_list
@@ -142,11 +141,11 @@ class ParsedBackendEquation:
 
     def find_slices(self) -> set[str]:
         """
-        Identify all the references to index slices in the parsed expression or in the
+        Identify all the references to array slices in the parsed expression or in the
         parsed sub-expressions.
 
         Returns:
-            set[str]: Unique index slice references.
+            set[str]: Unique slice references.
         """
 
         valid_eval_classes = tuple(
