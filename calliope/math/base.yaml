@@ -74,7 +74,7 @@ constraints:
     foreach: [nodes, techs, carrier_tiers, timesteps]
     where: "inheritance(conversion_plus) AND [in_2, out_2, in_3, out_3] in carrier_tiers AND carrier_ratios>0"
     equation: $c_1 == $c_2
-    components:
+    sub_expressions:
       c_1:
         - where: "[in_2, in_3] in carrier_tiers"
           expression: squeeze_carriers(carrier_con / carrier_ratios[carrier_tiers=in], carrier_tier=in)
@@ -95,7 +95,7 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier_ratios=0 AND inheritance(conversion_plus)"
     equation: $prod_or_con == 0
-    components:
+    sub_expressions:
       prod_or_con:
         - where: "[in, in_2, in_3] in carrier_tiers"
           expression: carrier_con
@@ -148,7 +148,7 @@ constraints:
     description: "Set the global energy balance of the optimisation problem by fixing the total production of a given energy carrier to equal the total consumption of that carrier at every node in every timestep."
     foreach: [nodes, carriers, timesteps]
     equation: "sum(carrier_prod, over=techs) + sum(carrier_con, over=techs) - $carrier_export + $unmet_demand_and_unused_supply == 0"
-    components:
+    sub_expressions:
       carrier_export:
         - where: "sum(export_carrier, over=techs)"
           expression: sum(carrier_export, over=techs)
@@ -171,7 +171,7 @@ constraints:
         expression: "carrier_prod / energy_eff <= $available_resource"
       - where: "energy_eff = 0"
         expression: "carrier_prod == 0"
-    components:
+    sub_expressions:
       available_resource: &available_resource
         - where: "resource_unit=energy_per_area"
           expression: "resource * resource_scale * resource_area"
@@ -194,7 +194,7 @@ constraints:
         expression: "$carrier_con == $required_resource"
       - where: "NOT force_resource=True"
         expression: "$carrier_con >= $required_resource"
-    components:
+    sub_expressions:
       carrier_con:
         - expression: carrier_con * energy_eff
       required_resource:
@@ -210,7 +210,7 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(supply_plus) AND NOT include_storage=True"
     equation: resource_con * resource_eff == $carrier_prod
-    components:
+    sub_expressions:
       carrier_prod: &carrier_prod_with_parasitic
         - where: energy_eff=0 OR parasitic_eff=0
           expression: "0"
@@ -222,7 +222,7 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(supply_plus) AND include_storage=True"
     equation: storage == $storage_previous_step + resource_con * resource_eff - $carrier_prod
-    components:
+    sub_expressions:
       carrier_prod: *carrier_prod_with_parasitic
       storage_previous_step: &storage_previous_step
         - where: timesteps=get_val_at_index(dim=timesteps, idx=0) AND NOT run.cyclic_storage=True
@@ -241,7 +241,7 @@ constraints:
         expression: "resource_con == $available_resource"
       - where: "NOT force_resource=True"
         expression: "resource_con <= $available_resource"
-    components:
+    sub_expressions:
       available_resource: *available_resource
 
   balance_storage:
@@ -249,7 +249,7 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(storage)"
     equation: storage == $storage_previous_step - $carrier_prod - carrier_con * energy_eff
-    components:
+    sub_expressions:
       carrier_prod:
         - where: energy_eff > 0
           expression: carrier_prod / energy_eff
@@ -262,7 +262,7 @@ constraints:
     foreach: [nodes, techs]
     where: "storage_initial AND include_storage=True AND run.cyclic_storage=True"
     equation: storage[timesteps=$final_step] * ((1 - storage_loss) ** timestep_resolution[timesteps=$final_step]) == storage_initial * storage_cap
-    index_slices:
+    slices:
       final_step:
         - expression: get_val_at_index(dim=timesteps, idx=-1)
 
@@ -383,7 +383,7 @@ constraints:
         expression: $summed_components == units_equals_systemwide
       - where: NOT units_equals_systemwide
         expression: $summed_components <= units_max_systemwide
-    components:
+    sub_expressions:
       summed_components:
         - where: cap_method=binary
           expression: sum(purchased, over=nodes)
@@ -407,7 +407,7 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "energy_ramping AND NOT timesteps=get_val_at_index(dim=timesteps, idx=0)"
     equation: $flow - roll($flow, timesteps=1) <= energy_ramping * energy_cap
-    components:
+    sub_expressions:
       flow: &ramping_flow
         - where: "carrier AND allowed_carrier_prod=True AND NOT allowed_carrier_con=True"
           expression: carrier_prod / timestep_resolution
@@ -421,7 +421,7 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "energy_ramping AND NOT timesteps=get_val_at_index(dim=timesteps, idx=0)"
     equation: -1 * energy_ramping * energy_cap <= $flow - roll($flow, timesteps=1)
-    components:
+    sub_expressions:
       flow: *ramping_flow
 
 variables:
@@ -573,7 +573,7 @@ objectives:
   minmax_cost_optimisation:
     description: "Minimise the total cost of installing and operation all technologies in the system. If multiple cost classes are present (e.g., monetary and co2 emissions), the weighted sum of total costs is minimised. Cost class weights can be defined in `run.objective_options.cost_class`."
     equation: sum(sum(cost, over=[nodes, techs]) * objective_cost_class, over=costs) + $unmet_demand
-    components:
+    sub_expressions:
       unmet_demand:
         - where: "run.ensure_feasibility=True"
           expression: sum(sum(unmet_demand - unused_supply, over=[carriers, nodes])  * timestep_weights, over=timesteps) * bigM
@@ -582,14 +582,14 @@ objectives:
     domain: Reals
     sense: minimise
 
-expressions:
+global_expressions:
   cost_var:
     description: "The operating costs per timestep of a technology"
     unit: cost_per_time
     foreach: [nodes, techs, costs, timesteps]
     where: "cost_export OR cost_om_con OR cost_om_prod"
     equation: timestep_weights * ($cost_export + $cost_om_prod + $cost_om_con)
-    components:
+    sub_expressions:
       cost_export:
         - where: "export_carrier AND cost_export"
           expression: cost_export * sum(carrier_export, over=carriers)
@@ -628,7 +628,7 @@ expressions:
               ) * ($multiplier + cost_om_annual_investment_fraction)
               + cost_om_annual * energy_cap
           )
-    components:
+    sub_expressions:
       multiplier:
         - where: "inheritance(transmission)"
           expression: "0.5"
@@ -668,7 +668,7 @@ expressions:
     foreach: [nodes, techs, costs]
     where: "cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap OR cost_export OR cost_om_con OR cost_om_prod"
     equation: $cost_investment + $cost_var_sum
-    components:
+    sub_expressions:
       cost_investment:
         - where: "(cost_energy_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_resource_area OR cost_resource_cap OR cost_storage_cap)"
           expression: cost_investment

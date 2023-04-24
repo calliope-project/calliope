@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
 pp.ParserElement.enablePackrat()
 
-COMPONENT_CLASSIFIER = "$"
+SUB_EXPRESSION_CLASSIFIER = "$"
 
 
 class EvalString(ABC):
@@ -384,24 +384,24 @@ class EvalSlicedParameterOrVariable(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed sliced parameters or decision variables
-        of the form param_or_var[*index_slices].
+        of the form param_or_var[*slices].
 
         Args:
             tokens (pp.ParseResults):
                 Has a dictionary component with the parsed elements:
-                param_or_var_name (str), index_slices (list of strings).
+                param_or_var_name (str), slices (list of strings).
         """
         token_dict = tokens.as_dict()
         self.obj_name: pp.ParseResults = token_dict["param_or_var_name"]
 
-        self.index_slices: dict[str, pp.ParseResults] = {
-            idx["set_name"][0]: idx["slicer"][0] for idx in token_dict["index_slices"]
+        self.slices: dict[str, pp.ParseResults] = {
+            idx["set_name"][0]: idx["slicer"][0] for idx in token_dict["slices"]
         }
         self.values = tokens
 
     def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
-        slices = ", ".join(f"{k}={v.__repr__()}" for k, v in self.index_slices.items())
+        slices = ", ".join(f"{k}={v.__repr__()}" for k, v in self.slices.items())
         return f"SLICED_{self.obj_name}[{slices}]"
 
     @staticmethod
@@ -443,18 +443,18 @@ class EvalSlicedParameterOrVariable(EvalString):
                 else, `eval_kwargs` has a backend dataset, returns sliced xarray object;
                 else, returns None.
         """
-        index_slices: dict[str, Any] = {
-            k: v.eval(**eval_kwargs) for k, v in self.index_slices.items()
+        slices: dict[str, Any] = {
+            k: v.eval(**eval_kwargs) for k, v in self.slices.items()
         }
 
         if eval_kwargs.get("as_dict", False):
-            return {"dimensions": index_slices, **self.obj_name.eval(**eval_kwargs)}
+            return {"dimensions": slices, **self.obj_name.eval(**eval_kwargs)}
         elif eval_kwargs.get("backend_dataset", None) is not None:
             evaluated_obj = self.obj_name.eval(**eval_kwargs)
             if eval_kwargs.get("as_latex", False):
-                return self.as_latex(evaluated_obj, index_slices)
+                return self.as_latex(evaluated_obj, slices)
             else:
-                return evaluated_obj.sel(**index_slices)
+                return evaluated_obj.sel(**slices)
         else:
             return None
 
@@ -463,7 +463,7 @@ class EvalIndexSlice(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed expression index slice references
-        of the form `$index_slice`.
+        of the form `$slice`.
 
         Args:
             tokens (pp.ParseResults):
@@ -478,12 +478,12 @@ class EvalIndexSlice(EvalString):
 
     def eval(
         self,
-        index_slice_dict: Optional[dict[str, pp.ParseResults]] = None,
+        slice_dict: Optional[dict[str, pp.ParseResults]] = None,
         **eval_kwargs,
     ) -> Any:
         """
         Args:
-            index_slice_dict (Optional[dict[str, pp.ParseResults]]):
+            slice_dict (Optional[dict[str, pp.ParseResults]]):
                 Dictionary mapping the index slice name to a parsed equation expression.
                 Default is None.
 
@@ -492,48 +492,48 @@ class EvalIndexSlice(EvalString):
             otherwise attempts to evaluate the referenced index slice.
         """
         if eval_kwargs.get("as_dict"):
-            return {"index_slice_reference": self.name}
-        elif index_slice_dict is not None:
-            return index_slice_dict[self.name][0].eval(as_values=True, **eval_kwargs)
+            return {"slice_reference": self.name}
+        elif slice_dict is not None:
+            return slice_dict[self.name][0].eval(as_values=True, **eval_kwargs)
 
 
-class EvalComponent(EvalString):
+class EvalSubExpressions(EvalString):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
-        Parse action to process successfully parsed expression components of the form
-        `$component`.
+        Parse action to process successfully parsed sub-expressions of the form
+        `$sub_expressions`.
 
         Args:
             tokens (pp.ParseResults):
-                Has one parsed element containing the component name (str).
+                Has one parsed element containing the sub_expression name (str).
         """
         self.name: str = tokens[0]
         self.values = tokens
 
     def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
-        return "COMPONENT:" + str(self.name)
+        return "SUB_EXPRESSION:" + str(self.name)
 
     def eval(
         self,
-        component_dict: Optional[dict[str, pp.ParseResults]] = None,
+        sub_expression_dict: Optional[dict[str, pp.ParseResults]] = None,
         **eval_kwargs,
     ) -> Any:
         """
         Args:
-            component_dict (Optional[dict[str, pp.ParseResults]]):
-                Dictionary mapping the component name to a parsed equation expression.
+            sub_expression_dict (Optional[dict[str, pp.ParseResults]]):
+                Dictionary mapping the sub-expression name to a parsed equation expression.
                 Default is None.
 
         Returns:
-            Any: If component_expressions dictionary is given, find the expression matching
-            the component name and evaluate it.
-            If not given, return a dictionary giving the component name.
+            Any: If sub-expression dictionary is given, find the expression matching
+            the sub-expression name and evaluate it.
+            If not given, return a dictionary giving the sub-expression name.
         """
         if eval_kwargs.get("as_dict"):
-            return {"component": self.name}
-        elif component_dict is not None:
-            return component_dict[self.name][0].eval(**eval_kwargs)
+            return {"sub_expression": self.name}
+        elif sub_expression_dict is not None:
+            return sub_expression_dict[self.name][0].eval(**eval_kwargs)
 
 
 class EvalUnslicedParameterOrVariable(EvalString):
@@ -808,7 +808,7 @@ def sliced_param_or_var_parser(
             Parser for valid backend objects.
             On evaluation, this parser will access the backend object from the backend dataset.
         allow_slice_references (bool):
-            If True, allow reference to `index_slice` expressions (e.g. `$bar` in `foo[bars=$bar]`).
+            If True, allow reference to `slice` expressions (e.g. `$bar` in `foo[bars=$bar]`).
             Defaults to True.
 
     Returns:
@@ -822,26 +822,26 @@ def sliced_param_or_var_parser(
 
     direct_slicer = number | evaluatable_identifier
     if allow_slice_references:
-        slicer_ref = pp.Suppress(COMPONENT_CLASSIFIER) + generic_identifier
+        slicer_ref = pp.Suppress(SUB_EXPRESSION_CLASSIFIER) + generic_identifier
         slicer_ref.set_parse_action(EvalIndexSlice)
         slicer = (slicer_ref | direct_slicer)("slicer")
     else:
         slicer = direct_slicer("slicer")
 
-    index_slice = pp.Group(generic_identifier("set_name") + pp.Suppress("=") + slicer)
+    slice = pp.Group(generic_identifier("set_name") + pp.Suppress("=") + slicer)
 
-    index_slices = pp.Group(pp.delimited_list(index_slice))("index_slices")
+    slices = pp.Group(pp.delimited_list(slice))("slices")
     sliced_object_name = unsliced_object("param_or_var_name")
 
-    sliced_param_or_var = pp.Combine(sliced_object_name + lspar) + index_slices + rspar
+    sliced_param_or_var = pp.Combine(sliced_object_name + lspar) + slices + rspar
     sliced_param_or_var.set_parse_action(EvalSlicedParameterOrVariable)
 
     return sliced_param_or_var
 
 
-def component_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
+def sub_expression_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
     """
-    Parse strings preppended with the YAML constraint component classifier `$`. E.g. "$my_component"
+    Parse strings preppended with the YAML constraint sub-expression classifier `$`. E.g. "$my_sub_expr"
 
     Args:
         generic_identifier (pp.ParserElement):
@@ -850,23 +850,24 @@ def component_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
 
     Returns:
         pp.ParserElement:
-            Parser which produces a dictionary of the form {"component": "my_component"}
-            on evaluation.
+            Parser which produces a dictionary of the form {"sub_expression": "my_sub_expression"} on evaluation.
     """
 
-    component = pp.Combine(pp.Suppress(COMPONENT_CLASSIFIER) + generic_identifier)
-    component.set_parse_action(EvalComponent)
+    sub_expression = pp.Combine(
+        pp.Suppress(SUB_EXPRESSION_CLASSIFIER) + generic_identifier
+    )
+    sub_expression.set_parse_action(EvalSubExpressions)
 
-    return component
+    return sub_expression
 
 
-def unsliced_object_parser(valid_object_names: Iterable[str]) -> pp.ParserElement:
+def unsliced_object_parser(valid_math_element_names: Iterable[str]) -> pp.ParserElement:
     """
     Create a copy of the generic identifier and set a parse action to find the string in
     the list of input paramaters or optimisation decision variables.
 
     Args:
-        valid_object_names (Iterable[str]): A
+        valid_math_element_names (Iterable[str]): A
             All backend object names, to ensure they are captured by this parser function.
 
     Returns:
@@ -875,14 +876,14 @@ def unsliced_object_parser(valid_object_names: Iterable[str]) -> pp.ParserElemen
             parameter/variable value
     """
 
-    unsliced_param_or_var = pp.one_of(valid_object_names, as_keyword=True)
+    unsliced_param_or_var = pp.one_of(valid_math_element_names, as_keyword=True)
     unsliced_param_or_var.set_parse_action(EvalUnslicedParameterOrVariable)
 
     return unsliced_param_or_var
 
 
 def evaluatable_identifier_parser(
-    identifier: pp.ParserElement, valid_object_names: Iterable
+    identifier: pp.ParserElement, valid_math_element_names: Iterable
 ) -> tuple[pp.ParserElement, pp.ParserElement]:
     """
     Create an evaluatable copy of the generic identifier that will return a string or a
@@ -892,7 +893,7 @@ def evaluatable_identifier_parser(
         identifier (pp.ParserElement):
             Parser for valid python variables without leading underscore and not called "inf".
             This parser has no parse action.
-        valid_object_names (Iterable[str]): A
+        valid_math_element_names (Iterable[str]): A
             All backend object names, to ensure they are *not* captured by this parser function.
 
     Returns:
@@ -903,7 +904,7 @@ def evaluatable_identifier_parser(
             Parser for lists of "evaluatable_identifier", bound by "[]" parentheses
     """
     evaluatable_identifier = (
-        ~pp.one_of(valid_object_names, as_keyword=True) + identifier
+        ~pp.one_of(valid_math_element_names, as_keyword=True) + identifier
     ).set_parse_action(GenericStringParser)
 
     id_list = (
@@ -950,8 +951,8 @@ def arithmetic_parser(
             Parsing grammar to process helper functions of the form `helper_function(*args, **eval_kwargs)`.
         sliced_param_or_var (pp.ParserElement):
             Parser for sliced parameters or variables, e.g. "foo[bar]"
-        component (pp.ParserElement):
-            Parser for constraint components, e.g. "$foo"
+        sub_expression (pp.ParserElement):
+            Parser for constraint sub expressions, e.g. "$foo"
         unsliced_param_or_var (pp.ParserElement):
             Parser for unsliced parameters or variables, e.g. "foo"
         number (pp.ParserElement):
@@ -1007,26 +1008,26 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
     return equation_comparison
 
 
-def generate_index_slice_parser(valid_object_names: Iterable) -> pp.ParserElement:
+def generate_slice_parser(valid_math_element_names: Iterable) -> pp.ParserElement:
     """
     Create parser for index slice reference expressions. These expressions are linked
     to the equation expression by e.g. `$bar` in `foo[bars=$bar]`.
-    Unlike component and equation expressions, these strings cannot contain arithemtic
-    nor references to equation components.
+    Unlike sub-expressions and equation expressions, these strings cannot contain arithemtic
+    nor references to sub expressions.
 
     Args:
-        valid_object_names (Iterable):
+        valid_math_element_names (Iterable):
             Allowed names for optimisation problem components (parameters, decision variables, expressions),
             to allow the parser to separate these from generic strings.
 
     Returns:
-        pp.ParserElement: Parser for expression strings under the constraint key "index_slices".
+        pp.ParserElement: Parser for expression strings under the constraint key "slices".
     """
     number, identifier = setup_base_parser_elements()
     evaluatable_identifier, id_list = evaluatable_identifier_parser(
-        identifier, valid_object_names
+        identifier, valid_math_element_names
     )
-    unsliced_param = unsliced_object_parser(valid_object_names)
+    unsliced_param = unsliced_object_parser(valid_math_element_names)
     sliced_param = sliced_param_or_var_parser(
         number,
         identifier,
@@ -1055,26 +1056,26 @@ def generate_index_slice_parser(valid_object_names: Iterable) -> pp.ParserElemen
     )
 
 
-def generate_component_parser(valid_object_names: Iterable) -> pp.Forward:
+def generate_sub_expression_parser(valid_math_element_names: Iterable) -> pp.Forward:
     """
-    Create parser for equation component reference expressions. These expressions are linked
+    Create parser for sub expressions. These expressions are linked
     to the equation expression by e.g. `$bar`.
     This parser allows arbitrarily nested arithmetic and function calls (and arithmetic inside function calls)
     and reference to index slice expressions.
 
     Args:
-        valid_object_names (Iterable):
+        valid_math_element_names (Iterable):
             Allowed names for optimisation problem components (parameters, decision variables, expressions),
             to allow the parser to separate these from generic strings.
 
     Returns:
-        pp.ParserElement: Parser for expression strings under the constraint key "components".
+        pp.ParserElement: Parser for expression strings under the constraint key "sub_expressions".
     """
     number, identifier = setup_base_parser_elements()
     evaluatable_identifier, id_list = evaluatable_identifier_parser(
-        identifier, valid_object_names
+        identifier, valid_math_element_names
     )
-    unsliced_param = unsliced_object_parser(valid_object_names)
+    unsliced_param = unsliced_object_parser(valid_math_element_names)
     sliced_param = sliced_param_or_var_parser(
         number, identifier, evaluatable_identifier, unsliced_param
     )
@@ -1096,15 +1097,15 @@ def generate_component_parser(valid_object_names: Iterable) -> pp.Forward:
     return arithmetic
 
 
-def generate_arithmetic_parser(valid_object_names: Iterable) -> pp.ParserElement:
+def generate_arithmetic_parser(valid_math_element_names: Iterable) -> pp.ParserElement:
     """
     Create parser for left-/right-hand side (LHS/RHS) of equation expressions of the form LHS OPERATOR RHS (e.g. `foo == 1 + bar`).
     This parser allows arbitrarily nested arithmetic and function calls (and arithmetic inside function calls)
-    and reference to component and index slice expressions.
+    and reference to sub-expressions and index slice expressions.
 
     Args:
-        valid_object_names (Iterable):
-            Allowed names for optimisation problem components (parameters, decision variables, expressions),
+        valid_math_element_names (Iterable):
+            Allowed names for optimisation problem components (parameters, decision variables, global_expressions),
             to allow the parser to separate these from generic strings.
 
     Returns:
@@ -1112,13 +1113,13 @@ def generate_arithmetic_parser(valid_object_names: Iterable) -> pp.ParserElement
     """
     number, identifier = setup_base_parser_elements()
     evaluatable_identifier, id_list = evaluatable_identifier_parser(
-        identifier, valid_object_names
+        identifier, valid_math_element_names
     )
-    unsliced_param = unsliced_object_parser(valid_object_names)
+    unsliced_param = unsliced_object_parser(valid_math_element_names)
     sliced_param = sliced_param_or_var_parser(
         number, identifier, evaluatable_identifier, unsliced_param
     )
-    component = component_parser(identifier)
+    sub_expression = sub_expression_parser(identifier)
 
     arithmetic = pp.Forward()
     helper_function = helper_function_parser(
@@ -1126,7 +1127,7 @@ def generate_arithmetic_parser(valid_object_names: Iterable) -> pp.ParserElement
     )
     arithmetic = arithmetic_parser(
         helper_function,
-        component,
+        sub_expression,
         sliced_param,
         number,
         unsliced_param,
@@ -1136,22 +1137,22 @@ def generate_arithmetic_parser(valid_object_names: Iterable) -> pp.ParserElement
     return arithmetic
 
 
-def generate_equation_parser(valid_object_names: Iterable) -> pp.ParserElement:
+def generate_equation_parser(valid_math_element_names: Iterable) -> pp.ParserElement:
     """
     Create parser for equation expressions of the form LHS OPERATOR RHS (e.g. `foo == 1 + bar`).
     This parser allows arbitrarily nested arithmetic and function calls (and arithmetic inside function calls)
-    and reference to component and index slice expressions.
+    and reference to sub-expressions and index slice expressions.
 
     Args:
-        valid_object_names (Iterable):
-            Allowed names for optimisation problem components (parameters, decision variables, expressions),
+        valid_math_element_names (Iterable):
+            Allowed names for optimisation problem components (parameters, decision variables, global_expressions),
             to allow the parser to separate these from generic strings.
 
     Returns:
         pp.ParserElement: Parser for expression strings under the constraint key "equation/equations".
     """
 
-    arithmetic = generate_arithmetic_parser(valid_object_names)
+    arithmetic = generate_arithmetic_parser(valid_math_element_names)
     equation_comparison = equation_comparison_parser(arithmetic)
 
     return equation_comparison

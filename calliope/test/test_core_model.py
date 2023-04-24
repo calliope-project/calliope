@@ -257,6 +257,7 @@ class TestCustomMath:
             excinfo, "Running in plan mode, but run mode(s) {'operate'}"
         )
 
+
 class TestVerboseStrings:
     def test_verbose_strings_not_implemented(self):
         m = build_model(

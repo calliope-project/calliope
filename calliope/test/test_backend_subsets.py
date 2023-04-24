@@ -90,7 +90,7 @@ class TestSubsets:
     def test_create_valid_subset(self, model_name):
         model = getattr(calliope.examples, model_name)()
 
-        for object_type in ["constraints", "expressions"]:
+        for object_type in ["constraints", "global_expressions"]:
             valid_subsets = {
                 name: create_valid_subset(model._model_data, name, config)
                 for name, config in subsets_config[object_type].items()

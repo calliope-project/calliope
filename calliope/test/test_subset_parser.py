@@ -9,7 +9,7 @@ from calliope.core.attrdict import AttrDict
 from calliope.exceptions import BackendError
 
 
-COMPONENT_CLASSIFIER = equation_parser.COMPONENT_CLASSIFIER
+SUB_EXPRESSION_CLASSIFIER = equation_parser.SUB_EXPRESSION_CLASSIFIER
 HELPER_FUNCS = {"dummy_func_1": lambda x: x * 10, "dummy_func_2": lambda x, y: x + y}
 
 BASE_DIMS = ["nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"]

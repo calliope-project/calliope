@@ -140,7 +140,7 @@ def build_constraints(backend_model, model_data, constraint_definitions):
         )
 
 
-def build_expressions(backend_model, model_data, expression_definitions):
+def build_global_expressions(backend_model, model_data, expression_definitions):
     build_order_dict = {
         expr: config.get("build_order", 0)
         for expr, config in expression_definitions.items()
@@ -182,7 +182,9 @@ def generate_model(model_data):
     build_sets(model_data, backend_model)
     build_params(model_data, backend_model)
     build_variables(backend_model, model_data, subsets_config["variables"])
-    build_expressions(backend_model, model_data, subsets_config["expressions"])
+    build_global_expressions(
+        backend_model, model_data, subsets_config["global_expressions"]
+    )
     build_constraints(backend_model, model_data, subsets_config["constraints"])
     build_objective(backend_model)
     # FIXME: Optional constraints
@@ -296,7 +298,7 @@ def get_result_array(backend_model, model_data):
             i.name: get_var(
                 backend_model,
                 i.name,
-                dims=_get_dim_order(subsets_config.expressions[i.name].foreach),
+                dims=_get_dim_order(subsets_config.global_expressions[i.name].foreach),
                 expr=True,
             )
             for i in backend_model.component_objects(ctype=po.Expression)
