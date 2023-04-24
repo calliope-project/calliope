@@ -161,8 +161,8 @@ class EvalComparisonOp(EvalString):
                 If LHS and RHS are numeric, returns bool, otherwise returns an equation
                 to use as an optimisation model constraint.
         """
-        lhs = self.lhs.eval(**eval_kwargs)
-        rhs = self.rhs.eval(**eval_kwargs)
+        lhs = xr.DataArray(self.lhs.eval(**eval_kwargs))
+        rhs = xr.DataArray(self.rhs.eval(**eval_kwargs))
 
         return lhs, self.op, rhs
 

@@ -3,38 +3,36 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import re
-from abc import ABC, abstractmethod
 import typing
+from abc import ABC, abstractmethod
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from typing import (
     Any,
     Callable,
-    Optional,
-    Literal,
-    TypeVar,
     Generic,
-    Union,
-    Iterator,
     Iterable,
+    Iterator,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
 )
 
-import os
-from contextlib import redirect_stdout, redirect_stderr, contextmanager
-import logging
-
-import xarray as xr
+import numpy as np
 import pandas as pd
 import pyomo.environ as pe
 import pyomo.kernel as pmo
-from pyomo.opt import SolverFactory
+import xarray as xr
 from pyomo.common.tempfiles import TempfileManager
-import numpy as np
+from pyomo.opt import SolverFactory
 
+from calliope.backend import parsing
+from calliope.core.util.logging import LogWriter
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
-from calliope.core.util.logging import LogWriter
-from calliope.backend import parsing, equation_parser
-
 
 T = TypeVar("T")
 _COMPONENTS_T = Literal[
@@ -563,6 +561,7 @@ class PyomoBackendModel(BackendModel):
             self._delete_pyomo_list(parameter_name, "parameters")
             parameter_da = parameter_da.astype(float)
 
+        parameter_da.attrs["original_dtype"] = parameter_values.dtype
         self._add_to_dataset(parameter_name, parameter_da, "parameters", {})
         self.valid_math_element_names.add(parameter_name)
 
@@ -576,15 +575,20 @@ class PyomoBackendModel(BackendModel):
             imask: xr.DataArray, expr: tuple[xr.DataArray, str, xr.DataArray]
         ) -> xr.DataArray:
             lhs, op, rhs = expr
+            lhs = lhs.squeeze(drop=True)
+            rhs = rhs.squeeze(drop=True)
+
+            self._check_expr_imask_consistency(lhs, imask, f"(constraints, {name})")
+            self._check_expr_imask_consistency(rhs, imask, f"(constraints, {name})")
+
             to_fill = self.apply_func(
                 self._to_pyomo_constraint,
                 imask,
-                xr.DataArray(lhs).squeeze(drop=True),
-                xr.DataArray(rhs).squeeze(drop=True),
+                lhs,
+                rhs,
                 op=op,
                 name=name,
             )
-            self._clean_arrays(lhs, rhs)
             return to_fill
 
         self._add_constraint_or_global_expression(
@@ -602,10 +606,14 @@ class PyomoBackendModel(BackendModel):
         expression_dict: parsing.UnparsedExpressionDict,
     ) -> None:
         def _expression_setter(imask: xr.DataArray, expr: xr.DataArray) -> xr.DataArray:
+            expr = expr.squeeze(drop=True)
+
+            self._check_expr_imask_consistency(expr, imask, f"(expressions, {name})")
+
             to_fill = self.apply_func(
                 self._to_pyomo_expression,
                 imask,
-                expr.squeeze(drop=True),
+                expr,
                 name=name,
             )
             self._clean_arrays(expr)
@@ -707,10 +715,14 @@ class PyomoBackendModel(BackendModel):
         self, parameter_name: str, as_backend_objs: bool = True
     ) -> Optional[xr.DataArray]:
         parameter = self.parameters.get(parameter_name, None)
-        if isinstance(parameter, xr.DataArray) and not as_backend_objs:
-            return self.apply_func(self._from_pyomo_param, parameter)
-        else:
+        if as_backend_objs or not isinstance(parameter, xr.DataArray):
             return parameter
+
+        param_as_vals = self.apply_func(self._from_pyomo_param, parameter)
+        if parameter.original_dtype.kind == "M":  # i.e., np.datetime64
+            return xr.apply_ufunc(pd.to_datetime, param_as_vals)
+        else:
+            return param_as_vals.astype(parameter.original_dtype)
 
     def get_constraint(
         self,
@@ -929,6 +941,37 @@ class PyomoBackendModel(BackendModel):
         self._add_to_dataset(
             name, component_da, component_type, component_dict, references
         )
+
+    @staticmethod
+    def _check_expr_imask_consistency(
+        expression: xr.DataArray, imask: xr.DataArray, description: str
+    ) -> None:
+        """
+        Checks if a given constraint or expression is consistent with the imask.
+
+        Parameters:
+            expression (xr.DataArray): constraint or expression
+            imask (xr.DataArray): imask
+            description (str): Description to prefix the error message.
+
+        Raises:
+            BackendError:
+                Raised if there is a dimension in the expression that is not in the imask.
+            BackendError:
+                Raised if the expression has any NaN where the imask applies.
+        """
+        # Check whether expression has a dim that does not exist in imask.
+        broadcast_dims_imask = set(expression.dims).difference(set(imask.dims))
+        if broadcast_dims_imask:
+            raise BackendError(
+                f"{description}: imask will be broadcasted to these dims {broadcast_dims_imask}"
+            )
+
+        incomplete_constraints = expression.isnull() & imask
+        if incomplete_constraints.any():
+            raise BackendError(
+                f"{description}: Missing expression for some coordinates selected by 'where'. Adapting 'where' might help."
+            )
 
     def _get_capacity_bounds(
         self, bounds: parsing.UnparsedVariableBoundDict, name: str

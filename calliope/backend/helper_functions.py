@@ -1,7 +1,11 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
+from typing import Callable
+
 import xarray as xr
+
+from calliope.exceptions import BackendError
 
 
 def inheritance(model_data, **kwargs):
@@ -84,22 +88,80 @@ def squeeze_primary_carriers(model_data, **kwargs):
     return _squeeze_primary_carriers
 
 
-def get_connected_link(model_data, **kwargs):
-    def _get_connected_link(component):
-        dims = [i for i in component.dims if i in ["techs", "nodes"]]
-        remote_nodes = model_data.link_remote_nodes.stack(idx=dims).dropna("idx")
-        remote_techs = model_data.link_remote_techs.stack(idx=dims).dropna("idx")
-        remote_component_items = component.sel(techs=remote_techs, nodes=remote_nodes)
+def select_from_lookup_arrays(model_data: xr.Dataset, **kwargs) -> Callable:
+    def _select_from_lookup_arrays(
+        component: xr.DataArray, **lookup_arrays: xr.DataArray
+    ) -> xr.DataArray:
+        """
+        Apply vectorised indexing on an arbitrary number of an input array's dimensions.
+
+        Args:
+            component (xr.DataArray): Array on which to apply vectorised indexing.
+
+        Kwargs:
+            lookup_arrays (dict[str, xr.DataArray]):
+                key: dimension on which to apply vectorised indexing
+                value: array whose values are either NaN or values from the dimension given in the key.
+        Raises:
+            BackendError: `component` must be indexed over the dimensions given in the `lookup_arrays` dict keys.
+            BackendError: All `lookup_arrays` must be indexed over all the dimensions given in the `lookup_arrays` dict keys.
+
+        Returns:
+            xr.DataArray:
+                `component` with rearranged values (coordinates remain unchanged).
+                Any NaN index coordinates in the lookup arrays will be NaN in the returned array.
+
+        Examples:
+        >>> coords = {"foo": ["A", "B", "C"]}
+        >>> component = xr.DataArray([1, 2, 3], coords=coords)
+        >>> lookup_array = xr.DataArray(
+                np.array(["B", "A", np.nan], dtype="O"), coords=coords, name="bar"
+            )
+        >>> model_data = xr.Dataset({"bar": lookup_array})
+        >>> select_from_lookup_arrays(model_data)(component, foo=lookup_array)
+        <xarray.DataArray 'bar' (foo: 3)>
+        array([ 2.,  1., nan])
+        Coordinates:
+        * foo      (foo) object 'A' 'B' 'C'
+
+        The lookup array assigns the value at "B" to "A" and vice versa.
+        "C" is masked since the lookup array value is NaN.
+        """
+
+        dims = set(lookup_arrays.keys())
+        missing_dims_in_component = dims.difference(component.dims)
+        missing_dims_in_lookup_tables = any(
+            dim not in lookup.dims for dim in dims for lookup in lookup_arrays.values()
+        )
+        if missing_dims_in_component:
+            raise BackendError(
+                f"Cannot select items from `{component.name}` on the dimensions {dims} since the array is not indexed over the dimensions {missing_dims_in_component}"
+            )
+        if missing_dims_in_lookup_tables:
+            raise BackendError(
+                f"All lookup arrays used to select items from `{component.name}` must be indexed over the dimensions {dims}"
+            )
+
+        stacked_and_dense_lookup_arrays = {
+            # Although we have the lookup array, its values are backend objects,
+            # so we grab the same array from the unadulterated model data.
+            # FIXME: do not add lookup tables as backend objects.
+            dim_name: model_data[lookup.name]
+            # Stacking ensures that the dimensions on `component` are not reordered on calling `.sel()`.
+            .stack(idx=list(dims))
+            # Cannot select on NaNs, so we drop them all.
+            .dropna("idx")
+            for dim_name, lookup in lookup_arrays.items()
+        }
+        sliced_component = component.sel(stacked_and_dense_lookup_arrays)
+
         return (
-            remote_component_items.drop_vars(["nodes", "techs"])
+            sliced_component.drop_vars(dims)
             .unstack("idx")
-            .reindex_like(component)
-            # TODO: should we be filling NaNs? Should ONLY valid remotes remain in the
-            # returned array?
-            .fillna(component)
+            .reindex_like(component, copy=False)
         )
 
-    return _get_connected_link
+    return _select_from_lookup_arrays
 
 
 def get_val_at_index(model_data, **kwargs):
