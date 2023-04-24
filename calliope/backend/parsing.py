@@ -3,18 +3,17 @@
 
 from __future__ import annotations
 
-import itertools
-from typing import Optional, Union, Literal, Iterable, Callable, TypeVar, overload, Any
-from typing_extensions import NotRequired, TypedDict, Required
 import functools
+import itertools
 import operator
+from typing import Any, Callable, Iterable, Literal, Optional, TypeVar, Union, overload
 
 import pyparsing as pp
 import xarray as xr
+from typing_extensions import NotRequired, Required, TypedDict
 
-from calliope.backend import equation_parser, subset_parser, backends
 from calliope import exceptions
-from calliope.backend import helper_functions
+from calliope.backend import backends, equation_parser, helper_functions, subset_parser
 
 VALID_EXPRESSION_HELPER_FUNCTIONS: dict[str, Callable] = {
     "sum": helper_functions.expression_sum,
@@ -133,8 +132,12 @@ class ParsedBackendEquation:
             equation_parser.EvalOperatorOperand,
             equation_parser.EvalFunction,
         )
-        elements: list = [self.expression[0].values]
         to_find = equation_parser.EvalComponent
+        elements: list
+        if isinstance(self.expression[0], to_find):
+            elements = [self.expression[0]]
+        else:
+            elements = [self.expression[0].values]
 
         return self._find_items_in_expression(elements, to_find, valid_eval_classes)
 
@@ -154,8 +157,8 @@ class ParsedBackendEquation:
                 equation_parser.EvalSlicedParameterOrVariable,
             ]
         )
-        elements = [self.expression[0].values, *list(self.components.values())]
         to_find = equation_parser.EvalIndexSlice
+        elements: list = [self.expression[0].values, *list(self.components.values())]
 
         return self._find_items_in_expression(elements, to_find, valid_eval_classes)
 

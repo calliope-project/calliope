@@ -1,14 +1,13 @@
 from io import StringIO
 from unittest.mock import patch
 
+import pyparsing as pp
 import pytest
 import ruamel.yaml as yaml
-import pyparsing as pp
-
-from calliope.backend import parsing, equation_parser, subset_parser, backends
-from calliope.test.common.util import check_error_or_warning
 
 import calliope
+from calliope.backend import backends, equation_parser, parsing, subset_parser
+from calliope.test.common.util import check_error_or_warning
 
 BASE_DIMS = {"carriers", "carrier_tiers", "nodes", "techs"}
 
@@ -502,9 +501,7 @@ class TestParsedComponent:
 
         for constraint_eq in expression_list:
             component_sub_dict = constraint_eq.components
-            assert not set(component_sub_dict.keys()).symmetric_difference(
-                ["foo", "bar"]
-            )
+            assert set(component_sub_dict.keys()) == {"foo", "bar"}
             comparison_tuple = constraint_eq.expression[0].eval(
                 component_dict=component_sub_dict, apply_imask=False
             )
@@ -732,7 +729,7 @@ class TestParsedBackendEquation:
             equation_parser.EvalComponent,
             (equation_parser.EvalOperatorOperand),
         )
-        assert not found_components.symmetric_difference(["foo", "bar"])
+        assert found_components == {"foo", "bar"}
 
     @pytest.mark.parametrize(
         ["parse_string", "expected"],
@@ -760,7 +757,7 @@ class TestParsedBackendEquation:
             equation_parser.EvalComponent,
             (),  # The above happens because we provide no eval classes to search inside
         )
-        assert not found_components.symmetric_difference(expected)
+        assert found_components == set(expected)
 
     @pytest.mark.parametrize(
         "parse_string",
@@ -783,7 +780,7 @@ class TestParsedBackendEquation:
         parsed = expression_parser.parse_string(parse_string, parse_all=True)
         equation_obj.expression = parsed
         found_index_slices = equation_obj.find_index_slices()
-        assert not found_index_slices.symmetric_difference(["tech1", "tech2"])
+        assert found_index_slices == {"tech1", "tech2"}
 
     @pytest.mark.parametrize(
         "parse_string",
@@ -799,7 +796,13 @@ class TestParsedBackendEquation:
         parsed = expression_parser.parse_string(parse_string, parse_all=True)
         equation_obj.expression = parsed
         found_index_slices = equation_obj.find_components()
-        assert not found_index_slices.symmetric_difference(["foo", "bar"])
+        assert found_index_slices == {"foo", "bar"}
+
+    def test_find_single_component(self, expression_parser, equation_obj):
+        parsed = expression_parser.parse_string("$foo == 1", parse_all=True)
+        equation_obj.expression = parsed
+        found_index_slices = equation_obj.find_components()
+        assert found_index_slices == {"foo"}
 
     @pytest.mark.parametrize(
         ["equation_expr", "component_exprs"],
@@ -829,7 +832,7 @@ class TestParsedBackendEquation:
             for component, expr_ in component_exprs.items()
         }
         found_index_slices = equation_obj.find_index_slices()
-        assert not found_index_slices.symmetric_difference(["tech1", "tech2"])
+        assert found_index_slices == {"tech1", "tech2"}
 
     @pytest.mark.parametrize("expression_group", ["components", "index_slices"])
     def test_add_expression_group_combination(

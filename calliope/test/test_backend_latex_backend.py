@@ -1,10 +1,68 @@
-import pytest
 import textwrap
+from pathlib import Path
 
+import pytest
 import xarray as xr
-from calliope.backend import latex_backend
+
 from calliope import exceptions
-from calliope.test.common.util import check_error_or_warning
+from calliope.backend import latex_backend
+from calliope.test.common.util import build_test_model, check_error_or_warning
+
+
+class TestMathDocumentation:
+    @pytest.fixture(scope="class")
+    def no_build(self):
+        return build_test_model({}, "simple_supply,two_hours,investment_costs")
+
+    @pytest.fixture(scope="class")
+    def build_all(self):
+        model = build_test_model({}, "simple_supply,two_hours,investment_costs")
+        model.math_documentation.build(include="all")
+        return model
+
+    @pytest.fixture(scope="class")
+    def build_valid(self):
+        model = build_test_model({}, "simple_supply,two_hours,investment_costs")
+        model.math_documentation.build(include="valid")
+        return model
+
+    def test_write_before_build(self, no_build, tmpdir_factory):
+        filepath = tmpdir_factory.mktemp("custom_math").join("foo.tex")
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            no_build.math_documentation.write(filepath)
+        check_error_or_warning(
+            excinfo, "Build the documentation (`build`) before trying to write it"
+        )
+
+    @pytest.mark.parametrize(
+        ["format", "startswith"],
+        [
+            ("tex", "\n\\documentclass{article}"),
+            ("rst", "\nObjective"),
+            ("md", "\n# Objective"),
+        ],
+    )
+    @pytest.mark.parametrize("include", ["build_all", "build_valid"])
+    def test_string_return(self, request, format, startswith, include):
+        model = request.getfixturevalue(include)
+        string_math = model.math_documentation.write(format=format)
+        assert string_math.startswith(startswith)
+
+    def test_to_file(self, build_all, tmpdir_factory):
+        filepath = tmpdir_factory.mktemp("custom_math").join("custom-math.tex")
+        build_all.math_documentation.write(filename=filepath)
+        assert Path(filepath).exists()
+
+    @pytest.mark.parametrize(
+        ["filepath", "format"],
+        [(None, "foo"), ("myfile.foo", None), ("myfile.tex", "foo")],
+    )
+    def test_invalid_format(self, build_all, tmpdir_factory, filepath, format):
+        if filepath is not None:
+            filepath = tmpdir_factory.mktemp("custom_math").join(filepath)
+        with pytest.raises(ValueError) as excinfo:
+            build_all.math_documentation.write(filename="foo", format=format)
+        check_error_or_warning(excinfo, "Math documentation style must be one of")
 
 
 class TestLatexBackendModel:
@@ -41,7 +99,7 @@ class TestLatexBackendModel:
             <= dummy_model_data.with_inf_as_bool.sum()
         )
         assert "var" in latex_backend_model.valid_math_element_names
-        assert latex_backend_model._instance["variables"][-1]["name"] == "var"
+        assert "math_string" in latex_backend_model.variables["var"].attrs
 
     def test_add_variable_not_valid(self, dummy_model_data, valid_latex_backend):
         valid_latex_backend.add_variable(
@@ -56,7 +114,7 @@ class TestLatexBackendModel:
         # some null values might be introduced by the foreach array, so we just check the upper bound
         assert not valid_latex_backend.variables["invalid_var"].sum()
         assert "invalid_var" in valid_latex_backend.valid_math_element_names
-        assert valid_latex_backend._instance["variables"][-1]["name"] != "invalid_var"
+        assert "math_string" not in valid_latex_backend.variables["invalid_var"].attrs
 
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
@@ -78,7 +136,7 @@ class TestLatexBackendModel:
             <= dummy_model_data.with_inf_as_bool.sum()
         )
         assert "expr" in latex_backend_model.valid_math_element_names
-        assert latex_backend_model._instance["expressions"][-1]["name"] == "expr"
+        assert "math_string" in latex_backend_model.expressions["expr"].attrs
 
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
@@ -100,7 +158,7 @@ class TestLatexBackendModel:
             <= dummy_model_data.with_inf_as_bool.sum()
         )
         assert "constr" not in latex_backend_model.valid_math_element_names
-        assert latex_backend_model._instance["constraints"][-1]["name"] == "constr"
+        assert "math_string" in latex_backend_model.constraints["constr"].attrs
 
     def test_add_constraint_not_valid(self, dummy_model_data, valid_latex_backend):
         valid_latex_backend.add_constraint(
@@ -117,7 +175,7 @@ class TestLatexBackendModel:
         )
         assert not valid_latex_backend.constraints["invalid_constr"].any()
         assert (
-            valid_latex_backend._instance["constraints"][-1]["name"] != "invalid_constr"
+            "math_string" not in valid_latex_backend.constraints["invalid_constr"].attrs
         )
 
     def test_add_constraint_one_not_valid(self, dummy_model_data, valid_latex_backend):
@@ -134,10 +192,8 @@ class TestLatexBackendModel:
             },
         )
         assert (
-            valid_latex_backend._instance["constraints"][-1]["name"] == "valid_constr"
-        )
-        assert (
-            "expr" not in valid_latex_backend._instance["constraints"][-1]["expression"]
+            "expr"
+            not in valid_latex_backend.constraints["valid_constr"].attrs["math_string"]
         )
 
     def test_add_objective(self, dummy_model_data, dummy_latex_backend_model):
@@ -148,7 +204,7 @@ class TestLatexBackendModel:
         )
         assert dummy_latex_backend_model.objectives["obj"].isnull().all()
         assert "obj" not in dummy_latex_backend_model.valid_math_element_names
-        assert len(dummy_latex_backend_model._instance["objectives"]) == 1
+        assert len(dummy_latex_backend_model.objectives.data_vars) == 1
 
     def test_get_parameter(self, dummy_latex_backend_model):
         param = dummy_latex_backend_model.get_parameter("param")
@@ -196,11 +252,10 @@ class TestLatexBackendModel:
                     }
 
                     \begin{document}
-                    \section{Objective}
-                    \section{Subject to}
                     \section{Where}
 
                     \paragraph{ expr }
+                    foobar
                     \begin{equation}
                     \resizebox{\ifdim\width>\linewidth0.95\linewidth\else\width\fi}{!}{$
                     \begin{array}{r}
@@ -211,7 +266,6 @@ class TestLatexBackendModel:
                     \end{cases}
                     $}
                     \end{equation}
-                    \section{Decision Variables}
                     \end{document}"""
                 ),
             ),
@@ -219,17 +273,14 @@ class TestLatexBackendModel:
                 "rst",
                 textwrap.dedent(
                     r"""
-                    Objective
-                    #########
-
-                    Subject to
-                    ##########
 
                     Where
-                    #####
+                    -----
 
                     expr
-                    ====
+                    ^^^^
+
+                    foobar
 
                     .. container:: scrolling-wrapper
 
@@ -240,9 +291,6 @@ class TestLatexBackendModel:
                                 1 + 2&\quad
                                 \\
                             \end{cases}
-
-                    Decision Variables
-                    ##################
                     """
                 ),
             ),
@@ -250,13 +298,12 @@ class TestLatexBackendModel:
                 "md",
                 textwrap.dedent(
                     r"""
-                    # Objective
-
-                    # Subject to
 
                     # Where
 
                     ## expr
+                    foobar
+
                         ```math
                         \begin{array}{r}
                         \end{array}
@@ -265,19 +312,17 @@ class TestLatexBackendModel:
                             \\
                         \end{cases}
                         ```
-
-                    # Decision Variables
                     """
                 ),
             ),
         ],
     )
     def test_generate_math_doc(self, dummy_model_data, format, expected):
-        latex_backend_model = latex_backend.LatexBackendModel(format=format)
+        latex_backend_model = latex_backend.LatexBackendModel()
         latex_backend_model.add_expression(
-            dummy_model_data, "expr", {"equation": "1 + 2"}
+            dummy_model_data, "expr", {"equation": "1 + 2", "description": "foobar"}
         )
-        doc = latex_backend_model.generate_math_doc()
+        doc = latex_backend_model.generate_math_doc(format=format)
         assert doc == expected
 
     @pytest.mark.parametrize(
@@ -357,10 +402,6 @@ class TestLatexBackendModel:
             "foo", da, "constraints", **kwargs
         )
         assert da.math_string == expected
-        assert dummy_latex_backend_model._instance["constraints"][-1] == {
-            "expression": expected,
-            "name": "foo",
-        }
 
     @pytest.mark.parametrize(
         ["instring", "kwargs", "expected"],

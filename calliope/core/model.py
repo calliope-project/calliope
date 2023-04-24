@@ -31,7 +31,7 @@ from calliope.preprocess import model_run_from_dict, model_run_from_yaml
 from calliope.preprocess.model_data import ModelDataFactory
 
 logger = logging.getLogger(__name__)
-_ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
+
 T = TypeVar(
     "T", bound=Union[backends.PyomoBackendModel, latex_backend.LatexBackendModel]
 )
@@ -86,7 +86,7 @@ class Model(object):
         self.run_config: AttrDict
         self.math: AttrDict
         self._config_path: Optional[str]
-        self.math_documentation: latex_backend.LatexBackendModel
+        self.math_documentation = latex_backend.MathDocumentation(self._build)
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
@@ -340,6 +340,8 @@ class Model(object):
         # The order of adding components matters!
         # 1. Variables, 2. Expressions, 3. Constraints, 4. Objectives
         for components in ["variables", "expressions", "constraints", "objectives"]:
+            if components in ["variables", "expressions"]:
+                backend.valid_math_element_names.update(self.math[components].keys())
             component = components.removesuffix("s")
             for name, dict_ in self.math[components].items():
                 if dict_.get("active", True):
@@ -478,83 +480,6 @@ class Model(object):
         self._add_model_data_methods()
 
         self.backend = interface(self)
-
-    def build_math_documentation(
-        self,
-        include: Literal["all", "valid"] = "all",
-    ) -> None:
-        """Build string representations of the mathematical formulation using LaTeX math notation.
-
-        Args:
-            include (Literal["all", "valid"], optional):
-                Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
-
-
-        Returns:
-            None: The model property `math_documentation` populated with math strings.
-        """
-
-        backend = latex_backend.LatexBackendModel(include=include)
-
-        self.math_documentation = self._build(backend)
-
-    @overload  # noqa: F811
-    def write_math_documentation(  # noqa: F811
-        self,
-        filename: Literal[None] = None,
-        format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
-    ) -> str:
-        "Expecting string if not giving filename"
-
-    @overload  # noqa: F811
-    def write_math_documentation(  # noqa: F811
-        self,
-        filename: Union[str, Path],
-    ) -> None:
-        "Expecting None (and format arg is not needed) if giving filename"
-
-    def write_math_documentation(  # noqa: F811
-        self,
-        filename: Optional[Union[str, Path]] = None,
-        format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
-    ) -> Optional[str]:
-        """_summary_
-
-        Args:
-            filename (Optional[str], optional):
-                If given, will write the built mathematical formulation to a file with the given extension as the file format. Defaults to None.
-
-            format (Optional["tex", "rst", "md"], optional):
-                Not required if filename is given (as the format will be automatically inferred). Required if expecting a string return from calling this function. The LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown). Defaults to None.
-
-        Raises:
-            exceptions.ModelError: Math strings need to be built first (`build_math_documentation`)
-            ValueError: The file format (inferred automatically from `filename` or given by `format`) must be one of ["tex", "rst", "md"].
-
-        Returns:
-            Optional[str]:
-                If `filename` is None, the built mathematical formulation documentation will be returned as a string.
-        """
-        if not hasattr(self, "math_documentation"):
-            raise exceptions.ModelError(
-                "Build the documentation (`build_math_documentation`) before trying to write it"
-            )
-
-        if format is None and filename is not None:
-            format = Path(filename).suffix.removeprefix(".")  # type: ignore
-
-        allowed_formats = typing.get_args(_ALLOWED_MATH_FILE_FORMATS)
-        if format is None or format not in allowed_formats:
-            raise ValueError(
-                f"Math documentation style must be one of {allowed_formats}, received `{format}`"
-            )
-        populated_doc = self.math_documentation.generate_math_doc(format)
-
-        if filename is None:
-            return populated_doc
-        else:
-            Path(filename).write_text(populated_doc)
-            return None
 
     def get_formatted_array(self, var):
         """

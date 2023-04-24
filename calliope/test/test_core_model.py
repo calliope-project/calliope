@@ -1,13 +1,13 @@
+import logging
 import os
 from pathlib import Path
 
-import pytest
 import numpy as np
-import logging
+import pytest
 
 import calliope
-from calliope.test.common.util import check_error_or_warning
 from calliope.test.common.util import build_test_model as build_model
+from calliope.test.common.util import check_error_or_warning
 
 LOGGER = "calliope.core.model"
 
@@ -256,46 +256,6 @@ class TestCustomMath:
         assert check_error_or_warning(
             excinfo, "Running in plan mode, but run mode(s) {'operate'}"
         )
-
-
-class TestWriteMathDocumentation:
-    @pytest.fixture
-    def simple_supply_no_build(self):
-        return build_model({}, "simple_supply,two_hours,investment_costs")
-
-    @pytest.mark.parametrize(
-        ["format", "startswith"],
-        [
-            ("tex", "\n\\documentclass{article}"),
-            ("rst", "\nObjective"),
-            ("md", "\n# Objective"),
-        ],
-    )
-    @pytest.mark.parametrize("include", ["all", "valid"])
-    def test_string_return(self, simple_supply_no_build, format, startswith, include):
-        string_math = simple_supply_no_build.write_math_documentation(
-            None, include, format
-        )
-        assert string_math.startswith(startswith)
-
-    def test_to_file(self, simple_supply_no_build, tmpdir_factory):
-        filepath = tmpdir_factory.mktemp("custom_math").join("custom-math.tex")
-        simple_supply_no_build.write_math_documentation(filepath, "all")
-        assert Path(filepath).exists()
-
-    @pytest.mark.parametrize(
-        ["filepath", "format"],
-        [(None, "foo"), ("myfile.foo", None), ("myfile.tex", "foo")],
-    )
-    def test_invalid_format(
-        self, simple_supply_no_build, tmpdir_factory, filepath, format
-    ):
-        if filepath is not None:
-            filepath = tmpdir_factory.mktemp("custom_math").join(filepath)
-        with pytest.raises(ValueError) as excinfo:
-            simple_supply_no_build.write_math_documentation(None, "all", "foo")
-        check_error_or_warning(excinfo, "Math documentation style must be one of")
-
 
 class TestVerboseStrings:
     def test_verbose_strings_not_implemented(self):

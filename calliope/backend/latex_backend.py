@@ -1,14 +1,102 @@
 from __future__ import annotations
 
 import textwrap
-from typing import Any, Callable, Literal, Optional, Union
+import typing
+from pathlib import Path
+from typing import Any, Callable, Literal, Optional, Union, overload
 
 import jinja2
 import numpy as np
 import xarray as xr
 
 from calliope.backend import backends, parsing
-from calliope.exceptions import BackendError
+from calliope.exceptions import BackendError, ModelError
+
+_ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
+
+
+class MathDocumentation:
+    def __init__(self, backend_builder: Callable) -> None:
+        """Math documentation builder/writer
+
+        Args:
+            backend_builder (Callable):
+                Method to generate all optimisation problem components on a calliope.backends.BackendModel object.
+        """
+        self._builder = backend_builder
+
+    def build(
+        self,
+        include: Literal["all", "valid"] = "all",
+    ) -> None:
+        """Build string representations of the mathematical formulation using LaTeX math notation, ready to be written with `write`.
+
+        Args:
+            include (Literal["all", "valid"], optional):
+                Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
+        """
+
+        backend = LatexBackendModel(include=include)
+
+        self._instance = self._builder(backend)
+
+    @overload  # noqa: F811
+    def write(  # noqa: F811
+        self,
+        filename: Literal[None] = None,
+        format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
+    ) -> str:
+        "Expecting string if not giving filename"
+
+    @overload  # noqa: F811
+    def write(  # noqa: F811
+        self,
+        filename: Union[str, Path],
+    ) -> None:
+        "Expecting None (and format arg is not needed) if giving filename"
+
+    def write(  # noqa: F811
+        self,
+        filename: Optional[Union[str, Path]] = None,
+        format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
+    ) -> Optional[str]:
+        """_summary_
+
+        Args:
+            filename (Optional[str], optional):
+                If given, will write the built mathematical formulation to a file with the given extension as the file format. Defaults to None.
+
+            format (Optional["tex", "rst", "md"], optional):
+                Not required if filename is given (as the format will be automatically inferred). Required if expecting a string return from calling this function. The LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown). Defaults to None.
+
+        Raises:
+            exceptions.ModelError: Math strings need to be built first (`build`)
+            ValueError: The file format (inferred automatically from `filename` or given by `format`) must be one of ["tex", "rst", "md"].
+
+        Returns:
+            Optional[str]:
+                If `filename` is None, the built mathematical formulation documentation will be returned as a string.
+        """
+        if not hasattr(self, "_instance"):
+            raise ModelError(
+                "Build the documentation (`build`) before trying to write it"
+            )
+
+        if format is None and filename is not None:
+            format = Path(filename).suffix.removeprefix(".")  # type: ignore
+
+        allowed_formats = typing.get_args(_ALLOWED_MATH_FILE_FORMATS)
+        if format is None or format not in allowed_formats:
+            raise ValueError(
+                f"Math documentation style must be one of {allowed_formats}, received `{format}`"
+            )
+        populated_doc = self._instance.generate_math_doc(format)
+
+        if filename is None:
+            return populated_doc
+        else:
+            Path(filename).write_text(populated_doc)
+            return None
 
 
 class LatexBackendModel(backends.BackendModel):
@@ -70,9 +158,11 @@ class LatexBackendModel(backends.BackendModel):
     {{ equation.description }}
     {% endif %}
 
+    {% if equation.expression != "" %}
     .. container:: scrolling-wrapper
 
         .. math::{{ equation.expression | indent(8) }}
+    {% endif %}
     {% endfor %}
     {% endfor %}
     """
@@ -111,10 +201,12 @@ class LatexBackendModel(backends.BackendModel):
     {% if equation.description is not none %}
     {{ equation.description }}
     {% endif %}
+    {% if equation.expression != "" %}
     \begin{equation}
     \resizebox{\ifdim\width>\linewidth0.95\linewidth\else\width\fi}{!}{${{ equation.expression }}
     $}
     \end{equation}
+    {% endif %}
     {% endfor %}
     {% endfor %}
     \end{document}
@@ -138,11 +230,14 @@ class LatexBackendModel(backends.BackendModel):
     {% for equation in equations %}
 
     ## {{ equation.name }}
-        {% if equation.description is not none %}
-        {{ equation.description }}
-        {% endif %}
+    {% if equation.description is not none %}
+    {{ equation.description }}
+    {% endif %}
+    {% if equation.expression != "" %}
+
         ```math{{ equation.expression | indent(4) }}
         ```
+    {% endif %}
     {% endfor %}
     {% endfor %}
     """
@@ -315,7 +410,7 @@ class LatexBackendModel(backends.BackendModel):
     def verbose_strings(self):
         return None
 
-    def generate_math_doc(self, format: Literal["tex", "rst", "md"] = "tex") -> str:
+    def generate_math_doc(self, format: _ALLOWED_MATH_FILE_FORMATS = "tex") -> str:
         """Generate the math documentation by embedding LaTeX math in a template.
 
         Args:
@@ -334,6 +429,7 @@ class LatexBackendModel(backends.BackendModel):
                     "description": da.attrs.get("description", None),
                 }
                 for name, da in getattr(self, objtype).data_vars.items()
+                if "math_string" in da.attrs
             ]
             for objtype in ["objectives", "constraints", "expressions", "variables"]
             if getattr(self, objtype).data_vars

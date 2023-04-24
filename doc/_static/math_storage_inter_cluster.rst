@@ -8,9 +8,6 @@ storage_max
 
 :red:`REMOVED`
 
-.. container:: scrolling-wrapper
-
-    .. math::
 
 balance_supply_plus_with_storage
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -93,14 +90,14 @@ Fix the relationship between one day and the next of a `storage` technology's av
             \textbf{storage_inter_cluster}_\text{node,tech,datestep} = \textit{storage_initial}_\text{node,tech}&\quad
             \text{if } (\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true}))\land{}(\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true}))
             \\
-            \textbf{storage_inter_cluster}_\text{node,tech,datestep} = \textit{storage_initial}_\text{node,tech} + \textbf{storage}_\text{node,tech,timestep=\textit{lookup_datestep_last_cluster_timestep}_\text{datestep-1}}&\quad
-            \text{if } (\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true}))\land{}(\neg (\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true})))
-            \\
             \textbf{storage_inter_cluster}_\text{node,tech,datestep} = ((1 - \textit{storage_loss}_\text{node,tech,timestep})^{24}) \times \textbf{storage_inter_cluster}_\text{node,tech,datestep-1}&\quad
-            \text{if } ((\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]} \land \text{run_config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]}))\land{}(\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true}))
+            \text{if } (\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true}))\land{}((\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]} \land \text{run_config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]}))
+            \\
+            \textbf{storage_inter_cluster}_\text{node,tech,datestep} = \textit{storage_initial}_\text{node,tech} + \textbf{storage}_\text{node,tech,timestep=\textit{lookup_datestep_last_cluster_timestep}_\text{datestep-1}}&\quad
+            \text{if } (\neg (\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true})))\land{}(\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true}))
             \\
             \textbf{storage_inter_cluster}_\text{node,tech,datestep} = ((1 - \textit{storage_loss}_\text{node,tech,timestep})^{24}) \times \textbf{storage_inter_cluster}_\text{node,tech,datestep-1} + \textbf{storage}_\text{node,tech,timestep=\textit{lookup_datestep_last_cluster_timestep}_\text{datestep-1}}&\quad
-            \text{if } ((\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]} \land \text{run_config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]}))\land{}(\neg (\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true})))
+            \text{if } (\neg (\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true})))\land{}((\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]} \land \text{run_config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{datesteps}_\text{datestep}\mathord{=}\text{datesteps[0]}))
             \\
         \end{cases}
 
