@@ -125,8 +125,7 @@ def build_lp(
 
     backend_instance.verbose_strings()
 
-    # TODO: change to generalised `to_lp()` function
-    backend_instance._instance.write(str(outfile), symbolic_solver_labels=True)
+    backend_instance.to_lp(str(outfile))
 
     # strip trailing whitespace from `outfile` after the fact,
     # so it can be reliably compared other files in future

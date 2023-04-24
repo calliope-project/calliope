@@ -9,6 +9,7 @@ import re
 import typing
 from abc import ABC, abstractmethod
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -423,6 +424,15 @@ class BackendModel(ABC, Generic[T]):
         Only string representations of model parameters and variables will be updated since global expressions automatically show the string representation of their contents.
         """
 
+    @abstractmethod
+    def to_lp(self, path: Union[str, Path]) -> None:
+        """Write the optimisation problem to file in the linear programming LP format.
+        The LP file can be used for debugging and to submit to solvers directly.
+
+        Args:
+            path (Union[str, Path]): Path to which the LP file will be written.
+        """
+
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
         f"""
         We do not allow any overlap of backend object names since they all have to
@@ -827,6 +837,9 @@ class PyomoBackendModel(BackendModel):
                 ).values():
                     self.apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
                     da.attrs["coords_in_name"] = True
+
+    def to_lp(self, path: Union[str, Path]) -> None:
+        self._instance.write(str(path), format="lp", symbolic_solver_labels=True)
 
     def _create_pyomo_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         """Attach an empty pyomo kernel list object to the pyomo model object.

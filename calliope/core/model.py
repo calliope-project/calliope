@@ -494,13 +494,9 @@ class Model(object):
         """
         io.save_csv(self._model_data, path, dropna)
 
+    @copy_docstring(backends.BackendModel.to_lp)
     def to_lp(self, path: Union[str, Path]) -> None:
         """
-        Write the optimisation problem to file in LP format.
-
-        Args:
-            path (Union[str, Path]): LP file path.
-
         Raises:
             exceptions.ModelError: This method cannot be called prior to calling `build()`.
         """
@@ -509,7 +505,7 @@ class Model(object):
             raise exceptions.ModelError(
                 "Build the optimisation problem by calling `build()` before trying to generate an LP file."
             )
-        io.save_lp(self.backend, path)
+        self.backend.to_lp(path)
 
     def info(self):
         info_strings = []
