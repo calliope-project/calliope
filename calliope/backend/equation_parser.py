@@ -30,20 +30,19 @@
 
 from __future__ import annotations
 
-from typing import (
-    Callable,
-    Any,
-    Union,
-    Optional,
-    Iterator,
-    Iterable,
-    Literal,
-    overload,
-    TYPE_CHECKING,
-)
-
-from abc import ABC
 import re
+from abc import ABC
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Iterable,
+    Iterator,
+    Literal,
+    Optional,
+    Union,
+    overload,
+)
 
 import pyparsing as pp
 import xarray as xr
@@ -254,7 +253,7 @@ class EvalComparisonOp(EvalString):
         if eval_kwargs.get("as_latex", False):
             return self.as_latex(lhs, rhs)
         else:
-            return lhs, self.op, rhs
+            return xr.DataArray(lhs), self.op, xr.DataArray(rhs)
 
 
 class EvalFunction(EvalString):

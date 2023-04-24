@@ -1933,6 +1933,7 @@ class TestNewBackend:
         assert param.attrs == {
             "obj_type": "parameters",
             "is_result": 0,
+            "original_dtype": np.dtype("float64"),
             "references": {"balance_demand", "balance_transmission"},
             "coords_in_name": False,
         }
@@ -1941,12 +1942,7 @@ class TestNewBackend:
         param = simple_supply_new_build.backend.get_parameter(
             "energy_eff", as_backend_objs=False
         )
-        assert (
-            not param.to_series()
-            .dropna()
-            .apply(lambda x: isinstance(x, pmo.parameter))
-            .any()
-        )
+        assert param.dtype == np.dtype("float64")
 
     def test_new_build_get_expression(self, simple_supply_new_build):
         expr = simple_supply_new_build.backend.get_expression("cost_investment")
@@ -2097,6 +2093,144 @@ class TestNewBackend:
         assert check_error_or_warning(
             excinfo,
             "Trying to add already existing *variable* `carrier_prod` as a backend model *parameter*.",
+        )
+
+    def test_raise_error_on_constraint_with_nan(self, simple_supply_new_build):
+        """
+        A very simple constraint: For each tech, let the annual and regional sum of `carrier_prod` be larger than 100.
+        However, not every tech has the variable `carrier_prod`.
+        How to solve it? Let the constraint be active only where carrier_prod exists by setting 'where' accordingly.
+        """
+        # add constraint without nan
+        constraint_dict = {
+            "foreach": ["techs", "carriers"],
+            "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100",
+            "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
+        }
+        constraint_name = "constraint-without-nan"
+
+        simple_supply_new_build.backend.add_constraint(
+            simple_supply_new_build.inputs,
+            constraint_name,
+            constraint_dict,
+        )
+
+        assert (
+            simple_supply_new_build.backend.get_constraint(constraint_name).name
+            == constraint_name
+        )
+
+        # add constraint with nan
+        constraint_dict = {
+            "foreach": ["techs", "carriers"],
+            "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100",
+            # "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
+        }
+        constraint_name = "constraint-with-nan"
+
+        with pytest.raises(exceptions.BackendError) as error:
+            simple_supply_new_build.backend.add_constraint(
+                simple_supply_new_build.inputs,
+                constraint_name,
+                constraint_dict,
+            )
+
+        assert check_error_or_warning(
+            error,
+            f"(constraints, {constraint_name}): Missing expression for some coordinates selected by 'where'. Adapting 'where' might help.",
+        )
+
+    def test_raise_error_on_expression_with_nan(self, simple_supply_new_build):
+        """
+        A very simple expression: The annual and regional sum of `carrier_prod` for each tech.
+        However, not every tech has the variable `carrier_prod`.
+        How to solve it? Let the constraint be active only where carrier_prod exists by setting 'where' accordingly.
+        """
+        # add expression without nan
+        expression_dict = {
+            "foreach": ["techs", "carriers"],
+            "equation": "sum(carrier_prod, over=[nodes, timesteps])",
+            "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
+        }
+        expression_name = "expression-without-nan"
+
+        # add expression with nan
+        simple_supply_new_build.backend.add_expression(
+            simple_supply_new_build.inputs,
+            expression_name,
+            expression_dict,
+        )
+
+        assert (
+            simple_supply_new_build.backend.get_expression(expression_name).name
+            == expression_name
+        )
+
+        expression_dict = {
+            "foreach": ["techs", "carriers"],
+            "equation": "sum(carrier_prod, over=[nodes, timesteps])",
+            # "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
+        }
+        expression_name = "expression-with-nan"
+
+        with pytest.raises(exceptions.BackendError) as error:
+            simple_supply_new_build.backend.add_expression(
+                simple_supply_new_build.inputs,
+                expression_name,
+                expression_dict,
+            )
+
+        assert check_error_or_warning(
+            error,
+            f"(expressions, {expression_name}): Missing expression for some coordinates selected by 'where'. Adapting 'where' might help.",
+        )
+
+    def test_raise_error_on_excess_dimensions(self, simple_supply_new_build):
+        """
+        A very simple constraint: For each tech, let the `energy_cap` be larger than 100.
+        However, we forgot to include `nodes` in `foreach`.
+        With `nodes` included, this constraint should build.
+        """
+        # add constraint without excess dimensions
+        constraint_dict = {
+            "foreach": [
+                "techs",
+                "nodes",
+            ],  # as 'nodes' is listed here, the constraint will have no excess dimensions
+            "equation": "energy_cap >= 100",
+        }
+        constraint_name = "constraint-without-excess-dimensions"
+
+        simple_supply_new_build.backend.add_constraint(
+            simple_supply_new_build.inputs,
+            constraint_name,
+            constraint_dict,
+        )
+
+        assert (
+            simple_supply_new_build.backend.get_constraint(constraint_name).name
+            == constraint_name
+        )
+
+        # add constraint with excess dimensions
+        constraint_dict = {
+            "foreach": [
+                "techs"
+            ],  # as 'nodes' is not listed here, the constraint will have excess dimensions
+            "equation": "energy_cap >= 100",
+        }
+        constraint_name = "constraint-with-excess-dimensions"
+
+        with pytest.raises(exceptions.BackendError) as error:
+            simple_supply_new_build.backend.add_constraint(
+                simple_supply_new_build.inputs,
+                constraint_name,
+                constraint_dict,
+            )
+
+        assert check_error_or_warning(
+            error,
+            f"(constraints, {constraint_name}): imask will be broadcasted to these dims {{'nodes'}}",
         )
 
     @pytest.mark.parametrize(

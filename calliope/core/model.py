@@ -345,7 +345,10 @@ class Model(object):
             for name, dict_ in self.math[components].items():
                 if dict_.get("active", True):
                     getattr(backend, f"add_{component}")(self._model_data, name, dict_)
-
+                else:
+                    logger.debug(
+                        f"({component}, {name}): Component deactivated and therefore not built."
+                    )
             log_time(
                 logger,
                 self._timings,

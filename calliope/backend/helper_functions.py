@@ -2,9 +2,11 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
 import re
-from typing import Union, Any
+from typing import Any, Callable, Union
 
 import xarray as xr
+
+from calliope.exceptions import BackendError
 
 
 def inheritance(model_data, as_latex: bool = False, **kwargs):
@@ -126,30 +128,93 @@ def squeeze_primary_carriers(model_data, as_latex: bool = False, **kwargs):
         return _squeeze_primary_carriers
 
 
-def get_connected_link(model_data, as_latex: bool = False, **kwargs):
-    def _as_latex(component):
-        for iterator in ["node", "tech"]:
-            component = add_to_iterator(component, iterator, f"=remote_{iterator}")
+def select_from_lookup_arrays(
+    model_data: xr.Dataset, as_latex: bool = False, **kwargs
+) -> Callable:
+    def _as_latex(component: str, **lookup_arrays: str):
+        new_strings = {
+            (iterator := dim.removesuffix("s")): rf"={array}[{iterator}]"
+            for dim, array in lookup_arrays.items()
+        }
+        component = add_to_iterator(component, new_strings)
         return component
 
-    def _get_connected_link(component):
-        dims = [i for i in component.dims if i in ["techs", "nodes"]]
-        remote_nodes = model_data.link_remote_nodes.stack(idx=dims).dropna("idx")
-        remote_techs = model_data.link_remote_techs.stack(idx=dims).dropna("idx")
-        remote_component_items = component.sel(techs=remote_techs, nodes=remote_nodes)
+    def _select_from_lookup_arrays(
+        component: xr.DataArray, **lookup_arrays: xr.DataArray
+    ) -> xr.DataArray:
+        """
+        Apply vectorised indexing on an arbitrary number of an input array's dimensions.
+
+        Args:
+            component (xr.DataArray): Array on which to apply vectorised indexing.
+
+        Kwargs:
+            lookup_arrays (dict[str, xr.DataArray]):
+                key: dimension on which to apply vectorised indexing
+                value: array whose values are either NaN or values from the dimension given in the key.
+        Raises:
+            BackendError: `component` must be indexed over the dimensions given in the `lookup_arrays` dict keys.
+            BackendError: All `lookup_arrays` must be indexed over all the dimensions given in the `lookup_arrays` dict keys.
+
+        Returns:
+            xr.DataArray:
+                `component` with rearranged values (coordinates remain unchanged).
+                Any NaN index coordinates in the lookup arrays will be NaN in the returned array.
+
+        Examples:
+        >>> coords = {"foo": ["A", "B", "C"]}
+        >>> component = xr.DataArray([1, 2, 3], coords=coords)
+        >>> lookup_array = xr.DataArray(
+                np.array(["B", "A", np.nan], dtype="O"), coords=coords, name="bar"
+            )
+        >>> model_data = xr.Dataset({"bar": lookup_array})
+        >>> select_from_lookup_arrays(model_data)(component, foo=lookup_array)
+        <xarray.DataArray 'bar' (foo: 3)>
+        array([ 2.,  1., nan])
+        Coordinates:
+        * foo      (foo) object 'A' 'B' 'C'
+
+        The lookup array assigns the value at "B" to "A" and vice versa.
+        "C" is masked since the lookup array value is NaN.
+        """
+
+        dims = set(lookup_arrays.keys())
+        missing_dims_in_component = dims.difference(component.dims)
+        missing_dims_in_lookup_tables = any(
+            dim not in lookup.dims for dim in dims for lookup in lookup_arrays.values()
+        )
+        if missing_dims_in_component:
+            raise BackendError(
+                f"Cannot select items from `{component.name}` on the dimensions {dims} since the array is not indexed over the dimensions {missing_dims_in_component}"
+            )
+        if missing_dims_in_lookup_tables:
+            raise BackendError(
+                f"All lookup arrays used to select items from `{component.name}` must be indexed over the dimensions {dims}"
+            )
+
+        stacked_and_dense_lookup_arrays = {
+            # Although we have the lookup array, its values are backend objects,
+            # so we grab the same array from the unadulterated model data.
+            # FIXME: do not add lookup tables as backend objects.
+            dim_name: model_data[lookup.name]
+            # Stacking ensures that the dimensions on `component` are not reordered on calling `.sel()`.
+            .stack(idx=list(dims))
+            # Cannot select on NaNs, so we drop them all.
+            .dropna("idx")
+            for dim_name, lookup in lookup_arrays.items()
+        }
+        sliced_component = component.sel(stacked_and_dense_lookup_arrays)
+
         return (
-            remote_component_items.drop_vars(["nodes", "techs"])
+            sliced_component.drop_vars(dims)
             .unstack("idx")
-            .reindex_like(component)
-            # TODO: should we be filling NaNs? Should ONLY valid remotes remain in the
-            # returned array?
-            .fillna(component)
+            .reindex_like(component, copy=False)
         )
 
     if as_latex:
         return _as_latex
     else:
-        return _get_connected_link
+        return _select_from_lookup_arrays
 
 
 def get_val_at_index(model_data, as_latex: bool = False, **kwargs):
@@ -167,9 +232,10 @@ def get_val_at_index(model_data, as_latex: bool = False, **kwargs):
 
 def roll(as_latex: bool = False, **kwargs):
     def _as_latex(component, **roll_kwargs):
-        for k, v in roll_kwargs.items():
-            k_singular = k.removesuffix("s")
-            component = add_to_iterator(component, k_singular, f"{-1 * int(v):+d}")
+        new_strings = {
+            k.removesuffix("s"): f"{-1 * int(v):+d}" for k, v in roll_kwargs.items()
+        }
+        component = add_to_iterator(component, new_strings)
         return component
 
     def _roll(component, **roll_kwargs):
@@ -182,7 +248,7 @@ def roll(as_latex: bool = False, **kwargs):
         return _roll
 
 
-def add_to_iterator(instring: str, iterator: Any, new_string: Any) -> str:
+def add_to_iterator(instring: str, iterator_converter: dict[str, str]) -> str:
     """Find an iterator in the iterator substring of the component string
     (anything wrapped in `_text{}`). Other parts of the iterator substring can be anything
     except curly braces, e.g. the standalone `foo` will be found here and acted upon:
@@ -190,8 +256,9 @@ def add_to_iterator(instring: str, iterator: Any, new_string: Any) -> str:
 
     Args:
         instring (str): String in which the iterator substring can be found.
-        iterator (Any): The iterator to search for.
-        new_string (Any): The new string to **append** to the iterator name.
+        iterator_converter (dict[str, str]):
+            key: the iterator to search for.
+            val: The new string to **append** to the iterator name.
 
     Returns:
         str: `instring`, but with `iterator` replaced with `iterator + new_string`
@@ -201,8 +268,8 @@ def add_to_iterator(instring: str, iterator: Any, new_string: Any) -> str:
         iterator_list = matched.group(2).split(",")
         new_iterator_list = []
         for it in iterator_list:
-            if it == iterator:
-                it += new_string
+            if it in iterator_converter:
+                it += iterator_converter[it]
             new_iterator_list.append(it)
 
         return matched.group(1) + ",".join(new_iterator_list) + matched.group(3)

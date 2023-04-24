@@ -41,10 +41,49 @@ Set the upper bound on, or a fixed total of, a `supply_plus` (with storage) tech
             \text{if } (((\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \text{run_config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]})) \land \neg (\exists (\textit{lookup_cluster_last_timestep}_\text{timestep})))\land{}(\neg (\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech,timestep}\mathord{=}\text{0}))
             \\
             \textbf{storage}_\text{node,tech,timestep} = (\textbf{resource_con}_\text{node,tech,timestep} \times \textit{resource_eff}_\text{node,tech,timestep})&\quad
-            \text{if } (\exists (\textit{lookup_cluster_last_timestep}_\text{timestep}))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech,timestep}\mathord{=}\text{0})
+            \text{if } (\exists (\textit{lookup_cluster_last_timestep}_\text{timestep}) \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true})))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech,timestep}\mathord{=}\text{0})
             \\
             \textbf{storage}_\text{node,tech,timestep} = (\textbf{resource_con}_\text{node,tech,timestep} \times \textit{resource_eff}_\text{node,tech,timestep}) - \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ (\textit{energy_eff}_\text{node,tech,timestep} \times \textit{parasitic_eff}_\text{node,tech,timestep}) }&\quad
-            \text{if } (\exists (\textit{lookup_cluster_last_timestep}_\text{timestep}))\land{}(\neg (\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech,timestep}\mathord{=}\text{0}))
+            \text{if } (\exists (\textit{lookup_cluster_last_timestep}_\text{timestep}) \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true})))\land{}(\neg (\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech,timestep}\mathord{=}\text{0}))
+            \\
+        \end{cases}
+
+balance_storage
+^^^^^^^^^^^^^^^
+
+:yellow:`UPDATED`
+Fix the quantity of energy stored in a `storage` technology at the end of each timestep based on the net flow of energy charged and discharged and the quantity of energy stored at the start of the timestep.
+
+.. container:: scrolling-wrapper
+
+    .. math::
+        \begin{array}{r}
+            \forall{}
+            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
+            \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
+            \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
+            \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
+            \\
+            \text{if } (\text{tech_group=storage})
+        \end{array}
+        \begin{cases}
+            \textbf{storage}_\text{node,tech,timestep} = \textit{storage_initial}_\text{node,tech} \times \textbf{storage_cap}_\text{node,tech} - \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{energy_eff}_\text{node,tech,timestep} } - (\textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep})&\quad
+            \text{if } (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true}))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0})
+            \\
+            \textbf{storage}_\text{node,tech,timestep} = \textit{storage_initial}_\text{node,tech} \times \textbf{storage_cap}_\text{node,tech} - (\textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep})&\quad
+            \text{if } (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true}))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0})
+            \\
+            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech,timestep})^{\textit{timestep_resolution}_\text{timestep-1}}) \times \textbf{storage}_\text{node,tech,timestep-1} - \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{energy_eff}_\text{node,tech,timestep} } - (\textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep})&\quad
+            \text{if } (((\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \text{run_config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]})) \land \neg (\exists (\textit{lookup_cluster_last_timestep}_\text{timestep})))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0})
+            \\
+            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech,timestep})^{\textit{timestep_resolution}_\text{timestep-1}}) \times \textbf{storage}_\text{node,tech,timestep-1} - (\textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep})&\quad
+            \text{if } (((\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \text{run_config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]})) \land \neg (\exists (\textit{lookup_cluster_last_timestep}_\text{timestep})))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0})
+            \\
+            \textbf{storage}_\text{node,tech,timestep} = \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{energy_eff}_\text{node,tech,timestep} } - (\textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep})&\quad
+            \text{if } (\exists (\textit{lookup_cluster_last_timestep}_\text{timestep}) \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true})))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0})
+            \\
+            \textbf{storage}_\text{node,tech,timestep} = (\textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep})&\quad
+            \text{if } (\exists (\textit{lookup_cluster_last_timestep}_\text{timestep}) \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true})))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0})
             \\
         \end{cases}
 
