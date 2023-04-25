@@ -4,7 +4,7 @@
 # Editors
 *~
 \#*\#
-.vscode
+**/.vscode
 
 # Byte-compiled files
 __pycache__
