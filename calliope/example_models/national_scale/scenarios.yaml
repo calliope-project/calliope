@@ -171,8 +171,7 @@ overrides:
     maximize_utility_costs:
         run:
             objective_options:
-                cost_class: {'utility': 1 , 'monetary': 0}
-                sense: maximize
+                cost_class: {'utility': -1 , 'monetary': 0}
         techs:
             ccgt:
                 costs:

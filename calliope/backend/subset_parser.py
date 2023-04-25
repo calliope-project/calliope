@@ -3,13 +3,13 @@
 
 from __future__ import annotations
 
-from typing import Union, Any
 import operator
+from typing import Any, Union
 
-import pyparsing as pp
 import numpy as np
-import xarray as xr
 import pandas as pd
+import pyparsing as pp
+import xarray as xr
 
 from calliope.backend import equation_parser
 from calliope.exceptions import BackendError
@@ -177,11 +177,22 @@ class DataVarParser(equation_parser.EvalString):
             data_var_string = rf"\exists ({data_var_string})"
         return data_var_string
 
-    @staticmethod
-    def _data_var_exists(model_data_var: xr.DataArray) -> xr.DataArray:
+    def _data_var_exists(self, model_data: xr.DataArray) -> xr.DataArray:
         "mask by setting all (NaN | INF/-INF) to False, otherwise True"
+        if self.data_var not in model_data:
+            return xr.DataArray(np.False_)
+        else:
+            model_data_var = model_data[self.data_var]
         with pd.option_context("mode.use_inf_as_na", True):
             return model_data_var.where(pd.notnull(model_data_var)).notnull()  # type: ignore
+
+    def _data_var_with_default(self, model_data: xr.Dataset) -> xr.DataArray:
+        "Access data var and fill with default values. Return default value as an array if var does not exist"
+        default = model_data.attrs["defaults"].get(self.data_var)
+        if self.data_var not in model_data:
+            return xr.DataArray(default)
+        else:
+            return model_data[self.data_var].fillna(default)
 
     def eval(
         self, model_data: xr.Dataset, apply_imask: bool = True, **kwargs
@@ -208,10 +219,9 @@ class DataVarParser(equation_parser.EvalString):
             return np.False_
 
         if apply_imask:
-            return self._data_var_exists(model_data[self.data_var])
+            return self._data_var_exists(model_data)
         else:
-            default = model_data.attrs["defaults"].get(self.data_var)
-            return model_data[self.data_var].fillna(default)
+            return self._data_var_with_default(model_data)
 
 
 class ComparisonParser(equation_parser.EvalComparisonOp):

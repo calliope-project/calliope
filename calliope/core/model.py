@@ -20,7 +20,6 @@ import xarray
 import calliope
 from calliope import exceptions
 from calliope.backend import backends, latex_backend, parsing
-from calliope.backend.run import run as run_backend
 from calliope.core import io
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
@@ -146,7 +145,6 @@ class Model(object):
 
         self._add_observed_dict("model_config", model_config)
         self._add_observed_dict("run_config", model_run["run"])
-        self._add_observed_dict("subsets", model_run["subsets"])
         self._add_observed_dict("defaults", self._generate_default_dict())
 
         math = self._add_math(model_config["custom_math"])
@@ -186,7 +184,6 @@ class Model(object):
         self.results = self._model_data.filter_by_attrs(is_result=1)
         self._add_observed_dict("model_config")
         self._add_observed_dict("run_config")
-        self._add_observed_dict("subsets")
         self._add_observed_dict("math")
 
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
@@ -315,16 +312,25 @@ class Model(object):
             filepath = Path(calliope.__file__).parent / "math" / f"{run_mode}.yaml"
             self.math.union(AttrDict.from_yaml(filepath), allow_override=True)
 
-    def build(self, backend_interface: Literal["pyomo"] = "pyomo", **kwargs) -> None:
+    def build(
+        self, force: bool = False, backend_interface: Literal["pyomo"] = "pyomo"
+    ) -> None:
         """Build description of the optimisation problem in the chosen backend interface.
 
         Args:
+            force (bool, optional):
+                If ``force`` is True, any existing results will be overwritten.
+                Defaults to False.
             backend_interface (Literal["pyomo"], optional):
                 Backend interface in which to build the problem. Defaults to "pyomo".
-        Kwargs:
-            Any given keyword arguments will be passed directly to backend interface on initialisation.
         """
-        backend = self._BACKENDS[backend_interface](**kwargs)
+
+        if hasattr(self, "backend") and not force:
+            raise exceptions.ModelError(
+                "This model object already has a built optimisation problem. Use model.build(force=True) "
+                "to force the existing optimisation problem to be overwritten with a new one."
+            )
+        backend = self._BACKENDS[backend_interface]()
         self.backend = self._build(backend)
 
     def _build(self, backend: T) -> T:
@@ -370,17 +376,17 @@ class Model(object):
             )
         self.backend.verbose_strings()
 
-    def solve(self, force_rerun: bool = False, warmstart: bool = False) -> None:
+    def solve(self, force: bool = False, warmstart: bool = False) -> None:
         """
         Run the built optimisation problem.
 
         Args:
-            force_rerun (bool, optional):
-                If ``force_rerun`` is True, any existing results will be overwritten.
+            force (bool, optional):
+                If ``force`` is True, any existing results will be overwritten.
                 Defaults to False.
             warmstart (bool, optional):
                 If True and the optimisation problem has already been run in this session
-                (i.e., `force_rerun` is not True), the next optimisation will be run with
+                (i.e., `force` is not True), the next optimisation will be run with
                 decision variables initially set to their previously optimal values.
                 If the optimisation problem is similar to the previous run, this can
                 decrease the solution time.
@@ -389,9 +395,11 @@ class Model(object):
 
         Raises:
             exceptions.ModelError: Optimisation problem must already be built.
-            exceptions.ModelError: Cannot run the model if there are already results loaded, unless `force_rerun` is True.
+            exceptions.ModelError: Cannot run the model if there are already results loaded, unless `force` is True.
             exceptions.ModelError: Some preprocessing steps will stop a run mode of "operate" from being possible.
         """
+        run_mode = self.run_config["mode"]
+
         # Check that results exist and are non-empty
         if not hasattr(self, "backend"):
             raise exceptions.ModelError(
@@ -400,10 +408,10 @@ class Model(object):
             )
 
         if hasattr(self, "results"):
-            if self.results.data_vars and not force_rerun:
+            if self.results.data_vars and not force:
                 raise exceptions.ModelError(
                     "This model object already has results. "
-                    "Use model.run(force_rerun=True) to force"
+                    "Use model.solve(force=True) to force"
                     "the results to be overwritten with a new run."
                 )
             else:
@@ -411,14 +419,18 @@ class Model(object):
         else:
             to_drop = []
 
-        if (
-            self.run_config["mode"] == "operate"
-            and not self._model_data.attrs["allow_operate_mode"]
-        ):
+        if run_mode == "operate" and not self._model_data.attrs["allow_operate_mode"]:
             raise exceptions.ModelError(
                 "Unable to run this model in operational mode, probably because "
                 "there exist non-uniform timesteps (e.g. from time masking)"
             )
+
+        log_time(
+            logger,
+            self._timings,
+            "solve_start",
+            comment=f"Backend: starting model solve in {run_mode} mode",
+        )
 
         termination_condition = self.backend.solve(
             solver=self.run_config["solver"],
@@ -426,6 +438,14 @@ class Model(object):
             solver_options=self.run_config.get("solver_options", None),
             save_logs=self.run_config.get("save_logs", None),
             warmstart=warmstart,
+        )
+
+        log_time(
+            logger,
+            self._timings,
+            "solver_exit",
+            time_since_solve_start=True,
+            comment="Backend: solver finished running",
         )
 
         # Add additional post-processed result variables to results
@@ -454,39 +474,13 @@ class Model(object):
         Additional kwargs are passed to the backend.
 
         """
-        # Check that results exist and are non-empty
-        if hasattr(self, "results") and self.results.data_vars and not force_rerun:
-            raise exceptions.ModelError(
-                "This model object already has results. "
-                "Use model.run(force_rerun=True) to force"
-                "the results to be overwritten with a new run."
-            )
-
-        if (
-            self.run_config["mode"] == "operate"
-            and not self._model_data.attrs["allow_operate_mode"]
-        ):
-            raise exceptions.ModelError(
-                "Unable to run this model in operational mode, probably because "
-                "there exist non-uniform timesteps (e.g. from time masking)"
-            )
-
-        results, self._backend_model, self._backend_model_opt, interface = run_backend(
-            self._model_data, self._timings, **kwargs
+        warnings.warn(
+            "`run()` is deprecated and will be removed in a "
+            "future version. Use `model.build()` followed by `model.solve()`.",
+            DeprecationWarning,
         )
-
-        # Add additional post-processed result variables to results
-        if results.attrs.get("termination_condition", None) in ["optimal", "feasible"]:
-            results = postprocess_results.postprocess_model_results(
-                results, self._model_data, self._timings
-            )
-        self._model_data.attrs.update(results.attrs)
-        self._model_data = xarray.merge(
-            [results, self._model_data], compat="override", combine_attrs="no_conflicts"
-        )
-        self._add_model_data_methods()
-
-        self.backend = interface(self)
+        self.build(force=force_rerun)
+        self.solve(force=force_rerun)
 
     def get_formatted_array(self, var):
         """
@@ -531,12 +525,18 @@ class Model(object):
         """
         io.save_csv(self._model_data, path, dropna)
 
-    def to_lp(self, path):
+    @copy_docstring(backends.BackendModel.to_lp)
+    def to_lp(self, path: Union[str, Path]) -> None:
         """
-        Save built model to LP format at the given ``path``. If the backend
-        model has not been built yet, it is built prior to saving.
+        Raises:
+            exceptions.ModelError: This method cannot be called prior to calling `build()`.
         """
-        io.save_lp(self, path)
+
+        if not hasattr(self, "backend"):
+            raise exceptions.ModelError(
+                "Build the optimisation problem by calling `build()` before trying to generate an LP file."
+            )
+        self.backend.to_lp(path)
 
     def info(self):
         info_strings = []

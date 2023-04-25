@@ -1220,27 +1220,23 @@ class TestChecks:
             "model.subset_time": ["2005-01-01", "2005-01-01"],
         }
         m = calliope.examples.urban_scale(override_dict=override)
-        m.run(build_only=True)
+        m.build()
         removed_prod_links = [
-            ("X1", "heat_pipes:N1"),
-            ("N1", "heat_pipes:X2"),
-            ("N1", "heat_pipes:X3"),
+            {"nodes": "X1", "techs": "heat_pipes:N1"},
+            {"nodes": "N1", "techs": "heat_pipes:X2"},
+            {"nodes": "N1", "techs": "heat_pipes:X3"},
         ]
         removed_con_links = [
-            ("N1", "heat_pipes:X1"),
-            ("X2", "heat_pipes:N1"),
-            ("X3", "heat_pipes:N1"),
+            {"nodes": "N1", "techs": "heat_pipes:X1"},
+            {"nodes": "X2", "techs": "heat_pipes:N1"},
+            {"nodes": "X3", "techs": "heat_pipes:N1"},
         ]
 
         for link in removed_prod_links:
-            assert link not in set(
-                i[1:3] for i in m._backend_model.carrier_prod.index_set()
-            )
+            assert m.backend.variables.carrier_prod.loc[link].isnull().all()
 
         for link in removed_con_links:
-            assert link not in set(
-                i[1:3] for i in m._backend_model.carrier_con.index_set()
-            )
+            assert m.backend.variables.carrier_con.loc[link].isnull().all()
 
     def test_carrier_ratio_for_inexistent_carrier(self):
         """
