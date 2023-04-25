@@ -18,7 +18,6 @@ class TestModel:
         model = calliope.examples.national_scale(
             override_dict={"model.subset_time": ["2005-01-01", "2005-01-01"]}
         )
-        model.run()
         return model
 
     @pytest.fixture(params=[dict, calliope.AttrDict])

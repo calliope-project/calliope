@@ -16,6 +16,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 import calliope
 from calliope._version import __version__
@@ -656,8 +657,8 @@ def check_model_data(model_data):
     for cap in relevant_caps:
         if (
             (model_data[cap.group(0)] < 0)
-            & pd.isnull(model_data.get(f"{cap.group(1)}_max", np.nan))
-            & pd.isnull(model_data.get(f"{cap.group(1)}_equals", np.nan))
+            & model_data.get(f"{cap.group(1)}_max", xr.DataArray(np.nan)).isnull()
+            & model_data.get(f"{cap.group(1)}_equals", xr.DataArray(np.nan)).isnull()
         ).any():
             errors.append(
                 f"Cannot have a negative {cap.group(0)} as there is an unset "

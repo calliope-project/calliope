@@ -37,16 +37,6 @@ def flatten_list(unflattened_list):
     return flattened_list
 
 
-def split_loc_techs_transmission(transmission_string):
-    """
-    from loc::tech:link get out a dictionary of {loc_from:loc, loc_to:link, tech:tech}
-    """
-    loc, tech_link = transmission_string.split("::")
-    tech, link = tech_link.split(":")
-
-    return {"loc_from": loc, "loc_to": link, "tech": tech}
-
-
 def get_systemwide_constraints(tech_config):
     if "constraints" in tech_config:
         constraints = AttrDict(

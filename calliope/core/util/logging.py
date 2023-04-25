@@ -62,7 +62,7 @@ def set_log_verbosity(
         interactively.
 
     """
-    backend_logger = logging.getLogger("calliope.backend.pyomo.model")
+    backend_logger = logging.getLogger("calliope.backend.backends")
     if include_solver_output is True:
         backend_logger.setLevel("DEBUG")
     else:
@@ -72,16 +72,23 @@ def set_log_verbosity(
 
 
 def log_time(
-    logger, timings, identifier, comment=None, level="info", time_since_run_start=False
+    logger,
+    timings,
+    identifier,
+    comment=None,
+    level="info",
+    time_since_solve_start=False,
 ):
     if comment is None:
         comment = identifier
 
     timings[identifier] = now = datetime.datetime.now()
 
-    if time_since_run_start and "run_start" in timings:
-        time_diff = now - timings["run_start"]
-        comment += ". Time since start of model run: {}".format(time_diff)
+    if time_since_solve_start and "solve_start" in timings:
+        time_diff = now - timings["solve_start"]
+        comment += ". Time since start of solving optimisation problem: {}".format(
+            time_diff
+        )
 
     getattr(logger, level)(comment)
 

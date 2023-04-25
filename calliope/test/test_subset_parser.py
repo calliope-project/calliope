@@ -3,7 +3,7 @@ import numpy as np
 import pyparsing
 import xarray as xr
 
-from calliope.backend import equation_parser, subset_parser, subsets
+from calliope.backend import equation_parser, subset_parser, parsing
 from calliope.test.common.util import check_error_or_warning
 from calliope.core.attrdict import AttrDict
 from calliope.exceptions import BackendError
@@ -92,7 +92,7 @@ def imasking(bool_operand, helper_function, data_var, comparison, subset):
 def eval_kwargs(dummy_model_data):
     return {
         "model_data": dummy_model_data,
-        "helper_func_dict": subsets.VALID_HELPER_FUNCTIONS,
+        "helper_func_dict": parsing.VALID_IMASK_HELPER_FUNCTIONS,
         "test": True,
         "errors": set(),
         "warnings": set(),

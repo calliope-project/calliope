@@ -19,7 +19,8 @@ class TestIO:
             foo_dict={"foo": {"a": 1}},
             foo_attrdict=calliope.AttrDict({"foo": {"a": 1}}),
         )
-        model.run()
+        model.build()
+        model.solve()
         return model
 
     @pytest.fixture(scope="module")
@@ -87,7 +88,6 @@ class TestIO:
                     "foo_dict",
                     "foo_attrdict",
                     "defaults",
-                    "subsets",
                     "model_config",
                     "run_config",
                     "math",
@@ -136,19 +136,21 @@ class TestIO:
             ) as f:
                 assert "demand_power" in f.read()
 
+    @pytest.mark.xfail(reason="Not reimplemented the 'check feasibility' objective")
     def test_save_csv_not_optimal(self):
         model = calliope.examples.national_scale(
             scenario="check_feasibility", override_dict={"run.cyclic_storage": False}
         )
 
-        model.run()
+        model.build()
+        model.solve()
 
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = os.path.join(tempdir, "out_dir")
             with pytest.warns(exceptions.ModelWarning):
                 model.to_csv(out_path, dropna=False)
 
-    @pytest.mark.parametrize("attr", ["run_config", "model_config", "subsets"])
+    @pytest.mark.parametrize("attr", ["run_config", "model_config", "math"])
     def test_dicts_as_model_attrs_and_property(self, model_from_file, attr):
         assert attr in model_from_file._model_data.attrs.keys()
         assert hasattr(model_from_file, attr)
@@ -161,16 +163,16 @@ class TestIO:
     def test_filtered_dataset_as_property(self, model_from_file, attr):
         assert hasattr(model_from_file, attr)
 
-    def test_save_read_solve_save_netcdf(self, model):
-        with tempfile.TemporaryDirectory() as tempdir:
-            out_path = os.path.join(tempdir, "model.nc")
-            model.to_netcdf(out_path)
-            model_from_disk = calliope.read_netcdf(out_path)
+    def test_save_read_solve_save_netcdf(self, model, tmpdir_factory):
+        out_path = tmpdir_factory.mktemp("model_dir").join("model.nc")
+        model.to_netcdf(out_path)
+        model_from_disk = calliope.read_netcdf(out_path)
 
         # Ensure _model_run doesn't exist to simulate a re-run
         # via the backend
         delattr(model_from_disk, "_model_run")
-        model_from_disk.run(force_rerun=True)
+        model_from_disk.build()
+        model_from_disk.solve(force=True)
         assert not hasattr(model_from_disk, "_model_run")
 
         with tempfile.TemporaryDirectory() as tempdir:
@@ -184,7 +186,7 @@ class TestIO:
             model.to_lp(out_path)
 
             with open(out_path, "r") as f:
-                assert "energy_cap(region1_ccgt)" in f.read()
+                assert "variables(energy_cap)" in f.read()
 
     @pytest.mark.skip(
         reason="SPORES mode will fail until the cost max group constraint can be reproduced"
@@ -201,7 +203,8 @@ class TestIO:
                     ),
                 },
             )
-            model.run()
+            model.build()
+            model.solve()
 
             for i in ["0", "1", "2", "3"]:
                 assert os.path.isfile(os.path.join(tempdir, "output", f"spore_{i}.nc"))

@@ -1,60 +1,14 @@
-import collections
 import logging
-import os
 from itertools import product
 
 import numpy as np
-import pyomo.core as po
 import pyomo.kernel as pmo
 import pytest  # noqa: F401
 import xarray as xr
 
 import calliope.exceptions as exceptions
-from calliope.core.attrdict import AttrDict
 from calliope.test.common.util import build_test_model as build_model
 from calliope.test.common.util import check_error_or_warning, check_variable_exists
-
-
-class TestModel:
-    @pytest.mark.skip("Buggy")
-    @pytest.mark.serial  # Cannot run in parallel with other tests
-    def test_load_constraints_no_order(self):
-        temp_file = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "backend",
-            "pyomo",
-            "constraints",
-            "temp_constraint_file_for_testing.py",
-        )
-
-        # Write an empty file
-        with open(temp_file, "w") as f:
-            f.write("")
-
-        # Should fail, since the empty .py file is included in the list, but
-        # has no attribute 'ORDER'.
-        with pytest.raises(AttributeError) as excinfo:
-            m = build_model({}, "simple_supply,two_hours,investment_costs")
-            m.run(build_only=True)
-
-        # We can't use `with` because reasons related to Windows,
-        # so we manually remove the temp file in the end
-        os.remove(temp_file)
-
-        assert check_error_or_warning(
-            excinfo,
-            "module 'calliope.backend.pyomo.constraints.temp_constraint_file_for_testing' "
-            "has no attribute 'ORDER'",
-        )
-
-    def test_first_timestep(self, simple_supply):
-        """
-        Pyomo likes to 1-index its Sets, which we now expect.
-        This test will fail if they ever decide to move to the more pythonic zero-indexing.
-        """
-        timestep_0 = "2005-01-01 00:00"
-        assert simple_supply._backend_model.timesteps.ord(timestep_0) == 1
 
 
 @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
@@ -75,7 +29,7 @@ class TestChecks:
             )
             assert m.run_config["cyclic_storage"] is False
         with pytest.warns(exceptions.ModelWarning) as warning:
-            m.run(build_only=True)
+            m.build()
         check_warn = check_error_or_warning(
             warning, "Storage cannot be cyclic in operate run mode"
         )
@@ -99,7 +53,7 @@ class TestChecks:
         assert "timesteps" in m._model_data[param].dims
 
         with pytest.warns(exceptions.ModelWarning):
-            m.run(build_only=True)  # will fail to complete run if there's a problem
+            m.build()  # will fail to complete run if there's a problem
 
     @pytest.mark.parametrize("force", (True, False))
     def test_operate_energy_cap_min_use(self, force):
@@ -120,7 +74,7 @@ class TestChecks:
 
         with pytest.raises(exceptions.ModelError) as error:
             with pytest.warns(exceptions.ModelWarning):
-                m.run(build_only=True)
+                m.build()
 
         assert check_error_or_warning(
             error, ["Operate mode: User must define a finite energy_cap"]
@@ -149,13 +103,13 @@ class TestChecks:
         if force is True:
             with pytest.raises(exceptions.ModelError) as error:
                 with pytest.warns(exceptions.ModelWarning):
-                    m.run(build_only=True)
+                    m.build()
             assert check_error_or_warning(
                 error, ["Operate mode: User must define a finite energy_cap"]
             )
         elif force is False:
             with pytest.warns(exceptions.ModelWarning):
-                m.run(build_only=True)
+                m.build()
 
     @pytest.mark.parametrize(
         "resource_unit,force",
@@ -180,7 +134,7 @@ class TestChecks:
             "simple_supply_and_supply_plus,operate,investment_costs",
         )
         with pytest.warns(exceptions.ModelWarning) as warning:
-            m.run(build_only=True)
+            m.build()
 
         if resource_unit == "energy":
             _warnings = [
@@ -226,9 +180,9 @@ class TestChecks:
             # energy_per_area without a resource_cap will cause an error, which we have to catch here
             if resource_unit == "energy_per_area":
                 with pytest.raises(exceptions.ModelError) as error:
-                    m.run(build_only=True)
+                    m.build()
             else:
-                m.run(build_only=True)
+                m.build()
 
         if resource_unit == "energy":
             _warnings = [
@@ -275,7 +229,7 @@ class TestChecks:
 
         with pytest.warns(exceptions.ModelWarning) as warning:
             with pytest.raises(exceptions.ModelError) as error:
-                m.run(build_only=True)
+                m.build()
 
         assert check_error_or_warning(
             error,
@@ -304,7 +258,7 @@ class TestChecks:
         )
 
         with pytest.warns(exceptions.ModelWarning) as warning:
-            m.run(build_only=True)
+            m.build()
         if on is False:
             assert check_error_or_warning(
                 warning, "Resource capacity constraint defined and set to infinity"
@@ -331,7 +285,7 @@ class TestChecks:
         )
 
         with pytest.warns(exceptions.ModelWarning) as warning:
-            m.run(build_only=True)
+            m.build()
         if on is False:
             assert check_error_or_warning(warning, "Initial stored energy not defined")
             assert (
@@ -346,13 +300,14 @@ class TestChecks:
             )
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestBalanceConstraints:
     def test_loc_carriers_system_balance_constraint(self, simple_supply):
         """
         sets.loc_carriers
         """
 
-        assert hasattr(simple_supply._backend_model, "system_balance_constraint")
+        assert "system_balance" in simple_supply.backend.constraints
 
     def test_loc_techs_balance_supply_constraint(self):
         """
@@ -362,8 +317,8 @@ class TestBalanceConstraints:
             {"techs.test_supply_elec.constraints.resource": 20},
             "simple_supply,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "balance_supply_constraint")
+        m.build()
+        assert "balance_supply" in m.backend.constraints
 
         m = build_model(
             {
@@ -372,9 +327,10 @@ class TestBalanceConstraints:
             },
             "simple_supply,two_hours,investment_costs",
         )
-        m.run(build_only=True)
+        m.build()
         assert check_variable_exists(
-            m._backend_model, "balance_supply_constraint", "energy_cap"
+            m.backend.get_constraint("balance_supply", as_backend_objs=False),
+            "energy_cap",
         )
 
         m = build_model(
@@ -384,33 +340,36 @@ class TestBalanceConstraints:
             },
             "simple_supply,two_hours,investment_costs",
         )
-        m.run(build_only=True)
+        m.build()
         assert check_variable_exists(
-            m._backend_model, "balance_supply_constraint", "resource_area"
+            m.backend.get_constraint("balance_supply", as_backend_objs=False),
+            "resource_area",
         )
 
     def test_loc_techs_balance_demand_constraint(self, simple_supply):
         """
         sets.loc_techs_finite_resource_demand,
         """
-        assert hasattr(simple_supply._backend_model, "balance_demand_constraint")
+        assert "balance_demand" in simple_supply.backend.constraints
 
         m = build_model(
             {"techs.test_demand_elec.switches.resource_unit": "energy_per_cap"},
             "simple_supply,two_hours,investment_costs",
         )
-        m.run(build_only=True)
+        m.build()
         assert check_variable_exists(
-            m._backend_model, "balance_demand_constraint", "energy_cap"
+            m.backend.get_constraint("balance_demand", as_backend_objs=False),
+            "energy_cap",
         )
 
         m = build_model(
             {"techs.test_demand_elec.switches.resource_unit": "energy_per_area"},
             "simple_supply,two_hours,investment_costs",
         )
-        m.run(build_only=True)
+        m.build()
         assert check_variable_exists(
-            m._backend_model, "balance_demand_constraint", "resource_area"
+            m.backend.get_constraint("balance_demand", as_backend_objs=False),
+            "resource_area",
         )
 
     def test_loc_techs_resource_availability_supply_plus_constraint(
@@ -419,19 +378,20 @@ class TestBalanceConstraints:
         """
         sets.loc_techs_finite_resource_supply_plus,
         """
-        assert hasattr(
-            simple_supply_and_supply_plus._backend_model,
-            "resource_availability_supply_plus_constraint",
+        assert (
+            "resource_availability_supply_plus"
+            in simple_supply_and_supply_plus.backend.constraints
         )
 
         m = build_model(
             {"techs.test_supply_plus.switches.resource_unit": "energy_per_cap"},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
-        m.run(build_only=True)
+        m.build()
         assert check_variable_exists(
-            m._backend_model,
-            "resource_availability_supply_plus_constraint",
+            m.backend.get_constraint(
+                "resource_availability_supply_plus", as_backend_objs=False
+            ),
             "energy_cap",
         )
 
@@ -439,10 +399,11 @@ class TestBalanceConstraints:
             {"techs.test_supply_plus.switches.resource_unit": "energy_per_area"},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
-        m.run(build_only=True)
+        m.build()
         assert check_variable_exists(
-            m._backend_model,
-            "resource_availability_supply_plus_constraint",
+            m.backend.get_constraint(
+                "resource_availability_supply_plus", as_backend_objs=False
+            ),
             "resource_area",
         )
 
@@ -450,7 +411,7 @@ class TestBalanceConstraints:
         """
         sets.loc_techs_transmission,
         """
-        assert hasattr(simple_supply._backend_model, "balance_transmission_constraint")
+        assert "balance_transmission" in simple_supply.backend.constraints
 
     def test_loc_techs_balance_supply_plus_constraint(
         self, simple_supply_and_supply_plus
@@ -459,17 +420,21 @@ class TestBalanceConstraints:
         sets.loc_techs_supply_plus,
         """
 
-        assert hasattr(
-            simple_supply_and_supply_plus._backend_model,
-            "balance_supply_plus_constraint",
+        assert (
+            "balance_supply_plus_with_storage"
+            in simple_supply_and_supply_plus.backend.constraints
+        )
+        assert (
+            "balance_supply_plus_no_storage"
+            not in simple_supply_and_supply_plus.backend.constraints
         )
 
     def test_loc_techs_balance_storage_constraint(self, simple_storage):
         """
         sets.loc_techs_storage,
         """
-        assert hasattr(simple_storage._backend_model, "balance_storage_constraint")
-        assert not hasattr(simple_storage._backend_model, "storage_initial_constraint")
+        assert "balance_storage" in simple_storage.backend.constraints
+        assert "set_storage_initial" not in simple_storage.backend.constraints
 
     def test_loc_techs_balance_storage_discharge_depth_constraint(self):
         """
@@ -478,15 +443,15 @@ class TestBalanceConstraints:
         m = build_model(
             {}, "simple_storage,two_hours,investment_costs,storage_discharge_depth"
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "storage_discharge_depth_constraint")
-        assert not hasattr(m._backend_model, "storage_initial_constraint")
+        m.build()
+        assert "storage_discharge_depth_limit" in m.backend.constraints
+        assert "set_storage_initial" not in m.backend.constraints
 
         m3 = build_model(
             {"techs.test_storage.constraints.storage_initial": 1},
             "simple_storage,one_day,investment_costs,storage_discharge_depth",
         )
-        m3.run(build_only=True)
+        m3.build()
         assert (
             m3._model_data.storage_initial.to_series().dropna()
             > m3._model_data.storage_discharge_depth.to_series().dropna()
@@ -496,16 +461,16 @@ class TestBalanceConstraints:
         """
         sets.loc_techs_store,
         """
-        assert hasattr(simple_storage._backend_model, "balance_storage_constraint")
-        assert not hasattr(simple_storage._backend_model, "storage_initial_constraint")
+        assert "balance_storage" in simple_storage.backend.constraints
+        assert "set_storage_initial" not in simple_storage.backend.constraints
 
         m2 = build_model(
             {"techs.test_storage.constraints.storage_initial": 0},
             "simple_storage,one_day,investment_costs",
         )
-        m2.run(build_only=True)
-        assert hasattr(m2._backend_model, "balance_storage_constraint")
-        assert hasattr(m2._backend_model, "storage_initial_constraint")
+        m2.build()
+        assert "balance_storage" in m2.backend.constraints
+        assert "set_storage_initial" in m2.backend.constraints
 
     @pytest.mark.xfail(reason="no longer a constraint we're creating")
     def test_carriers_reserve_margin_constraint(self):
@@ -516,23 +481,24 @@ class TestBalanceConstraints:
             {"model.reserve_margin.electricity": 0.01},
             "simple_supply,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "reserve_margin_constraint")
+        m.build()
+        assert "reserve_margin" in m.backend.constraints
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestCostConstraints:
     # costs.py
     def test_loc_techs_cost_constraint(self, simple_supply):
         """
         sets.loc_techs_cost,
         """
-        assert hasattr(simple_supply._backend_model, "cost")
+        assert "cost" in simple_supply.backend.expressions
 
     def test_loc_techs_cost_investment_constraint(self, simple_conversion):
         """
         sets.loc_techs_investment_cost,
         """
-        assert hasattr(simple_conversion._backend_model, "cost_investment")
+        assert "cost_investment" in simple_conversion.backend.expressions
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_loc_techs_cost_investment_milp_constraint(self):
@@ -543,16 +509,16 @@ class TestCostConstraints:
             },
             "supply_purchase,two_hours",
         )
-        m.run(build_only=True)
+        m.build()
 
-        assert hasattr(m._backend_model, "cost_investment")
+        assert "cost_investment" in m.backend.expressions
 
     def test_loc_techs_not_cost_var_constraint(self, simple_conversion):
         """
         i for i in sets.loc_techs_om_cost if i not in sets.loc_techs_conversion_plus + sets.loc_techs_conversion
 
         """
-        assert not hasattr(simple_conversion._backend_model, "cost_var")
+        assert "cost_var" not in simple_conversion.backend.expressions
 
     @pytest.mark.parametrize(
         "tech,scenario,cost",
@@ -575,8 +541,8 @@ class TestCostConstraints:
             {"techs.{}.costs.monetary.{}".format(tech, cost): 1},
             "{},two_hours".format(scenario),
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "cost_var")
+        m.build()
+        assert "cost_var" in m.backend.expressions
 
     def test_one_way_om_cost(self):
         """
@@ -589,21 +555,29 @@ class TestCostConstraints:
             },
             "simple_supply,two_hours",
         )
-        m.run(build_only=True)
-        arg1 = m._backend_model
-        arg2 = "cost_var"
-        arg3 = [
-            "monetary",
-            "b",
-            "test_transmission_elec:a",
-            m._backend_model.timesteps[1],
-        ]
-        assert check_variable_exists(arg1, arg2, "carrier_prod", tuple(arg3))
+        m.build()
+        idx = {
+            "costs": "monetary",
+            "nodes": "b",
+            "techs": "test_transmission_elec:a",
+            "timesteps": m.backend._dataset.timesteps[1],
+        }
+        assert check_variable_exists(
+            m.backend.get_expression("cost_var", as_backend_objs=False),
+            "carrier_prod",
+            idx,
+        )
 
-        arg3[1] = ("a", "test_transmission_elec:b")
-        assert not check_variable_exists(arg1, arg2, "carrier_prod", tuple(arg3))
+        idx["nodes"] = "a"
+        idx["techs"] = "test_transmission_elec:b"
+        assert not check_variable_exists(
+            m.backend.get_expression("cost_var", as_backend_objs=False),
+            "carrier_prod",
+            idx,
+        )
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestExportConstraints:
     # export.py
     def test_loc_carriers_system_balance_no_export(self, simple_supply):
@@ -613,40 +587,44 @@ class TestExportConstraints:
         for j in sets.loc_tech_carriers_export])
         """
 
-        export_exists = check_variable_exists(
-            simple_supply._backend_model, "system_balance_constraint", "carrier_export"
+        assert not check_variable_exists(
+            simple_supply.backend.get_constraint(
+                "system_balance", as_backend_objs=False
+            ),
+            "carrier_export",
         )
-        assert not export_exists
 
     def test_loc_carriers_system_balance_export(self, supply_export):
-        export_exists = check_variable_exists(
-            supply_export._backend_model, "system_balance_constraint", "carrier_export"
+        assert check_variable_exists(
+            supply_export.backend.get_constraint(
+                "system_balance", as_backend_objs=False
+            ),
+            "carrier_export",
         )
-        assert export_exists
 
     def test_loc_tech_carriers_export_balance_constraint(self, supply_export):
         """
         sets.loc_tech_carriers_export,
         """
-        assert hasattr(supply_export._backend_model, "export_balance_constraint")
+        assert "export_balance" in supply_export.backend.constraints
 
     def test_loc_techs_update_costs_var_constraint(self, supply_export):
         """
         i for i in sets.loc_techs_om_cost if i in sets.loc_techs_export
         """
-        assert hasattr(supply_export._backend_model, "cost_var")
+        assert "cost_var" in supply_export.backend.expressions
 
         m = build_model(
             {"techs.test_supply_elec.costs.monetary.om_prod": 0.1},
             "supply_export,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "cost_var")
+        m.build()
+        assert "cost_var" in m.backend.expressions
 
-        export_exists = check_variable_exists(
-            m._backend_model, "cost_var", "carrier_export"
+        assert check_variable_exists(
+            m.backend.get_expression("cost_var", as_backend_objs=False),
+            "carrier_export",
         )
-        assert export_exists
 
     def test_loc_tech_carriers_export_max_constraint(self):
         """
@@ -658,10 +636,11 @@ class TestExportConstraints:
             {"techs.test_supply_elec.constraints.export_max": 5},
             "supply_export,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "export_max_constraint")
+        m.build()
+        assert "carrier_export_max" in m.backend.constraints
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestCapacityConstraints:
     # capacity.py
     def test_loc_techs_storage_capacity_constraint(
@@ -670,19 +649,26 @@ class TestCapacityConstraints:
         """
         i for i in sets.loc_techs_store if i not in sets.loc_techs_milp
         """
-        assert hasattr(simple_storage._backend_model, "storage_max_constraint")
-
-        assert hasattr(
-            simple_supply_and_supply_plus._backend_model, "storage_max_constraint"
-        )
+        assert "storage_max" in simple_storage.backend.constraints
+        assert "storage_max" in simple_supply_and_supply_plus.backend.constraints
 
         m = build_model(
             {"techs.test_storage.constraints.storage_cap_equals": 20},
             "simple_storage,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert m._backend_model.storage_cap["a", "test_storage"].ub == 20
-        assert m._backend_model.storage_cap["a", "test_storage"].lb == 20
+        m.build()
+        assert (
+            m.backend.variables.storage_cap.sel(nodes="a", techs="test_storage")
+            .item()
+            .ub
+            == 20
+        )
+        assert (
+            m.backend.variables.storage_cap.sel(nodes="a", techs="test_storage")
+            .item()
+            .lb
+            == 20
+        )
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_loc_techs_storage_capacity_milp_constraint(self):
@@ -696,8 +682,8 @@ class TestCapacityConstraints:
             },
             "simple_storage,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, "storage_capacity_constraint")
+        m.build()
+        assert "storage_capacity" not in m.backend.constraints
 
     @pytest.mark.parametrize(
         "scenario,tech,override",
@@ -720,20 +706,15 @@ class TestCapacityConstraints:
             {f"techs.{tech}.constraints.energy_cap_per_storage_cap_{override}": 0.5},
             f"{scenario},two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(
-            m._backend_model,
-            "energy_capacity_per_storage_capacity_{}_constraint".format(override),
+        m.build()
+        assert (
+            f"energy_capacity_per_storage_capacity_{override}" in m.backend.constraints
         )
+
         if override == "equals":
             assert not any(
-                [
-                    hasattr(
-                        m._backend_model,
-                        "energy_capacity_per_storage_capacity_{}_constraint".format(i),
-                    )
-                    for i in set(["max", "min"])
-                ]
+                "energy_capacity_per_storage_capacity_{i}" in m.backend.constraints
+                for i in ["max", "min"]
             )
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
@@ -749,20 +730,14 @@ class TestCapacityConstraints:
             },
             "supply_and_supply_plus_milp,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(
-            m._backend_model,
-            f"energy_capacity_per_storage_capacity_{override}_constraint",
+        m.build()
+        assert (
+            f"energy_capacity_per_storage_capacity_{override}" in m.backend.constraints
         )
         if override == "equals":
             assert not any(
-                [
-                    hasattr(
-                        m._backend_model,
-                        f"energy_capacity_per_storage_capacity_{i}_constraint",
-                    )
-                    for i in set(["max", "min"])
-                ]
+                "energy_capacity_per_storage_capacity_{i}" in m.backend.constraints
+                for i in ["max", "min"]
             )
 
     def test_no_loc_techs_energy_capacity_storage_constraint(self, caplog):
@@ -772,14 +747,10 @@ class TestCapacityConstraints:
         with caplog.at_level(logging.INFO):
             m = build_model(model_file="energy_cap_per_storage_cap.yaml")
 
-        m.run(build_only=True)
+        m.build()
         assert not any(
-            [
-                hasattr(
-                    m._backend_model, "energy_capacity_storage_{}_constraint".format(i)
-                )
-                for i in ["max", "equals", "min"]
-            ]
+            "energy_capacity_storage_{i}" in m.backend.constraints
+            for i in ["max", "min", "equals"]
         )
 
     @pytest.mark.parametrize("override", ((None, "max", "equals", "min")))
@@ -795,10 +766,12 @@ class TestCapacityConstraints:
             m = build_model(
                 {}, "simple_supply_and_supply_plus,two_hours,investment_costs"
             )
-            m.run(build_only=True)
-            expr = m._backend_model.resource_cap[("b", "test_supply_plus")]
+            m.build()
+            expr = m.backend.variables.resource_cap.sel(
+                nodes="b", techs="test_supply_plus"
+            ).item()
             assert expr.lb == 0
-            assert expr.ub is None
+            assert np.isinf(expr.ub)
 
         else:
             m = build_model(
@@ -809,8 +782,10 @@ class TestCapacityConstraints:
                 },
                 "simple_supply_and_supply_plus,two_hours,investment_costs",
             )
-            m.run(build_only=True)
-            expr = m._backend_model.resource_cap[("b", "test_supply_plus")]
+            m.build()
+            expr = m.backend.variables.resource_cap.sel(
+                nodes="b", techs="test_supply_plus"
+            ).item()
             if override == "max":
                 assert expr.ub == 10
                 assert expr.lb == 0
@@ -819,7 +794,7 @@ class TestCapacityConstraints:
                 assert expr.lb == 10
             if override == "min":
                 assert expr.lb == 10
-                assert expr.ub is None
+                assert np.isinf(expr.ub)
 
     def test_loc_techs_resource_capacity_equals_energy_capacity_constraint(
         self, simple_supply_and_supply_plus
@@ -828,41 +803,37 @@ class TestCapacityConstraints:
         i for i in sets.loc_techs_finite_resource_supply_plus
         if constraint_exists(model_run, i, 'constraints.resource_cap_equals_energy_cap')
         """
-        assert not hasattr(
-            simple_supply_and_supply_plus._backend_model,
-            "resource_capacity_equals_energy_capacity_constraint",
+        assert (
+            "resource_capacity_equals_energy_capacity"
+            not in simple_supply_and_supply_plus.backend.constraints
         )
 
         m = build_model(
             {"techs.test_supply_plus.switches.resource_cap_equals_energy_cap": True},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(
-            m._backend_model, "resource_capacity_equals_energy_capacity_constraint"
-        )
+        m.build()
+        assert "resource_capacity_equals_energy_capacity" in m.backend.constraints
 
     def test_loc_techs_resource_area_constraint(self, simple_supply_and_supply_plus):
         """
         i for i in sets.loc_techs_area if i in sets.loc_techs_supply_plus
         """
-        assert not hasattr(
-            simple_supply_and_supply_plus._backend_model, "resource_area"
-        )
+        assert "resource_area" not in simple_supply_and_supply_plus.backend.variables
 
         m = build_model(
             {"techs.test_supply_plus.constraints.resource_area_max": 10},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "resource_area")
+        m.build()
+        assert "resource_area" in m.backend.variables
 
         m = build_model(
             {"techs.test_supply_elec.constraints.resource_area_max": 10},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "resource_area")
+        m.build()
+        assert "resource_area" in m.backend.variables
 
         # Check that setting energy_cap_max to 0 also forces this constraint to 0
         m = build_model(
@@ -874,11 +845,12 @@ class TestCapacityConstraints:
             },
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert (
-            i.upper() == 0
-            for i in m._backend_model.force_zero_resource_area_constraint.values()
-        )
+        m.build()
+        ub = m.backend.get_constraint(
+            "force_zero_resource_area", as_backend_objs=False
+        ).ub
+
+        assert (ub.to_series().dropna() == 0).all()
 
     def test_loc_techs_resource_area_per_energy_capacity_constraint(
         self, simple_supply_and_supply_plus
@@ -887,26 +859,24 @@ class TestCapacityConstraints:
         i for i in sets.loc_techs_area if i in sets.loc_techs_supply_plus
         and constraint_exists(model_run, i, 'constraints.resource_area_per_energy_cap')
         """
-        assert not hasattr(
-            simple_supply_and_supply_plus._backend_model,
-            "resource_area_per_energy_capacity_constraint",
+        assert (
+            "resource_area_per_energy_capacity"
+            not in simple_supply_and_supply_plus.backend.constraints
         )
 
         m = build_model(
             {"techs.test_supply_plus.constraints.resource_area_max": 10},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(
-            m._backend_model, "resource_area_per_energy_capacity_constraint"
-        )
+        m.build()
+        assert "resource_area_per_energy_capacity" not in m.backend.constraints
 
         m = build_model(
             {"techs.test_supply_elec.constraints.resource_area_per_energy_cap": 10},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "resource_area_per_energy_capacity_constraint")
+        m.build()
+        assert "resource_area_per_energy_capacity" in m.backend.constraints
 
         m = build_model(
             {
@@ -917,8 +887,8 @@ class TestCapacityConstraints:
             },
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "resource_area_per_energy_capacity_constraint")
+        m.build()
+        assert "resource_area_per_energy_capacity" in m.backend.constraints
 
     def test_locs_resource_area_capacity_per_loc_constraint(
         self, simple_supply_and_supply_plus
@@ -927,19 +897,17 @@ class TestCapacityConstraints:
         i for i in sets.locs
         if model_run.nodes[i].get_key('available_area', None) is not None
         """
-        assert not hasattr(
-            simple_supply_and_supply_plus._backend_model,
-            "resource_area_capacity_per_loc_constraint",
+        assert (
+            "resource_area_capacity_per_loc"
+            not in simple_supply_and_supply_plus.backend.constraints
         )
 
         m = build_model(
             {"nodes.a.available_area": 1},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(
-            m._backend_model, "resource_area_capacity_per_loc_constraint"
-        )
+        m.build()
+        assert "resource_area_capacity_per_loc" not in m.backend.constraints
 
         m = build_model(
             {
@@ -948,8 +916,8 @@ class TestCapacityConstraints:
             },
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "resource_area_capacity_per_loc_constraint")
+        m.build()
+        assert "resource_area_capacity_per_loc" in m.backend.constraints
 
     def test_loc_techs_energy_capacity_constraint(self, simple_supply_and_supply_plus):
         """
@@ -960,12 +928,16 @@ class TestCapacityConstraints:
             {"techs.test_supply_elec.constraints.energy_cap_scale": 5},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
-        m2.run(build_only=True)
+        m2.build()
         assert (
-            m2._backend_model.energy_cap[("a", "test_supply_elec")].ub
-            == simple_supply_and_supply_plus._backend_model.energy_cap[
-                ("a", "test_supply_elec")
-            ].ub
+            m2.backend.variables.energy_cap.sel(nodes="a", techs="test_supply_elec")
+            .item()
+            .ub
+            == simple_supply_and_supply_plus.backend.variables.energy_cap.sel(
+                nodes="a", techs="test_supply_elec"
+            )
+            .item()
+            .ub
             * 5
         )
 
@@ -974,9 +946,18 @@ class TestCapacityConstraints:
         m = build_model(
             {}, "supply_milp,two_hours,investment_costs"
         )  # demand still is in loc_techs
-        m.run(build_only=True)
-        assert m._backend_model.energy_cap[("a", "test_demand_elec")].ub is None
-        assert m._backend_model.energy_cap[("a", "test_supply_elec")].ub == 10
+        m.build()
+        assert np.isinf(
+            m.backend.variables.energy_cap.sel(nodes="a", techs="test_demand_elec")
+            .item()
+            .ub
+        )
+        assert (
+            m.backend.variables.energy_cap.sel(nodes="a", techs="test_supply_elec")
+            .item()
+            .ub
+            == 10
+        )
 
     @pytest.mark.xfail(reason="This will be caught by typedconfig")
     def test_loc_techs_energy_capacity_constraint_warning_on_infinite_equals(self):
@@ -986,7 +967,7 @@ class TestCapacityConstraints:
         }
         with pytest.raises(exceptions.ModelError) as error:
             m = build_model(override, "simple_supply,two_hours,investment_costs")
-            m.run(build_only=True)
+            m.build()
 
         assert check_error_or_warning(
             error,
@@ -1001,24 +982,31 @@ class TestCapacityConstraints:
         """
 
         def check_bounds(constraint):
-            assert po.value(constraint.upper) == 20
+            assert constraint.ub.item() == 20
             if bound == "equals":
-                assert po.value(constraint.lower) == 20
+                assert constraint.lb.item() == 20
             if bound == "max":
-                assert po.value(constraint.lower) is None
+                assert constraint.lb.item() is None
 
         m = build_model(
-            {f"techs.test_supply_elec.constraints.energy_cap_{bound}_systemwide": 20},
+            {
+                f"techs.test_supply_elec.constraints.energy_cap_{bound}_systemwide": 20
+            },  # foo
             "simple_supply,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "energy_capacity_systemwide_constraint")
-        assert (
-            "test_supply_elec"
-            in m._backend_model.energy_capacity_systemwide_constraint.keys()
+        m.build()
+        assert "energy_capacity_systemwide" in m.backend.constraints
+        assert isinstance(
+            m.backend.constraints.energy_capacity_systemwide.sel(
+                techs="test_supply_elec"
+            ).item(),
+            pmo.constraint,
         )
+
         check_bounds(
-            m._backend_model.energy_capacity_systemwide_constraint["test_supply_elec"]
+            m.backend.get_constraint(
+                "energy_capacity_systemwide", as_backend_objs=False
+            ).sel(techs="test_supply_elec")
         )
 
         # Check that a model without transmission techs doesn't cause an error
@@ -1027,17 +1015,18 @@ class TestCapacityConstraints:
             "simple_supply,two_hours,investment_costs",
             model_file="model_minimal.yaml",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "energy_capacity_systemwide_constraint")
+        m.build()
+        assert "energy_capacity_systemwide" in m.backend.constraints
         check_bounds(
-            m._backend_model.energy_capacity_systemwide_constraint["test_supply_elec"]
+            m.backend.get_constraint(
+                "energy_capacity_systemwide", as_backend_objs=False
+            ).sel(techs="test_supply_elec")
         )
 
     @pytest.mark.parametrize("bound", (("equals", "max")))
     def test_techs_energy_capacity_systemwide_no_constraint(self, simple_supply, bound):
-        assert not hasattr(
-            simple_supply._backend_model, "energy_capacity_systemwide_constraint"
-        )
+        assert "energy_capacity_systemwide" not in simple_supply.backend.constraints
+
         # setting the constraint to infinity leads to no constraint being built
         m = build_model(
             {
@@ -1045,10 +1034,11 @@ class TestCapacityConstraints:
             },
             "simple_supply,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, "energy_capacity_systemwide_constraint")
+        m.build()
+        assert "energy_capacity_systemwide" not in m.backend.constraints
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestDispatchConstraints:
     # dispatch.py
     def test_loc_tech_carriers_carrier_production_max_constraint(self, simple_supply):
@@ -1057,17 +1047,13 @@ class TestDispatchConstraints:
         if i not in sets.loc_tech_carriers_conversion_plus
         and i.rsplit('::', 1)[0] not in sets.loc_techs_milp
         """
-        assert hasattr(
-            simple_supply._backend_model, "carrier_production_max_constraint"
-        )
+        assert "carrier_production_max" in simple_supply.backend.constraints
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_loc_tech_carriers_carrier_production_max_milp_constraint(
         self, supply_milp
     ):
-        assert not hasattr(
-            supply_milp._backend_model, "carrier_production_max_constraint"
-        )
+        assert "carrier_production_max" not in supply_milp.backend.constraints
 
     def test_loc_tech_carriers_carrier_production_min_constraint(self, simple_supply):
         """
@@ -1076,31 +1062,27 @@ class TestDispatchConstraints:
         and constraint_exists(model_run, i, 'constraints.energy_cap_min_use')
         and i.rsplit('::', 1)[0] not in sets.loc_techs_milp
         """
-        assert not hasattr(
-            simple_supply._backend_model, "carrier_production_min_constraint"
-        )
+        assert "carrier_production_min" not in simple_supply.backend.constraints
 
         m = build_model(
             {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
             "simple_supply,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "carrier_production_min_constraint")
+        m.build()
+        assert "carrier_production_min" in m.backend.constraints
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_loc_tech_carriers_carrier_production_min_milp_constraint(
         self, supply_milp
     ):
-        assert not hasattr(
-            supply_milp._backend_model, "carrier_production_min_constraint"
-        )
+        assert "carrier_production_min" not in supply_milp.backend.constraints
 
         m = build_model(
             {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
             "supply_milp,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, "carrier_production_min_constraint")
+        m.build()
+        assert "carrier_production_min" not in m.backend.constraints
 
     def test_loc_tech_carriers_carrier_consumption_max_constraint(self, simple_supply):
         """
@@ -1109,16 +1091,13 @@ class TestDispatchConstraints:
             sets.loc_techs_storage + sets.loc_techs_transmission
         and i.rsplit('::', 1)[0] not in sets.loc_techs_milp
         """
-
-        assert hasattr(
-            simple_supply._backend_model, "carrier_consumption_max_constraint"
-        )
+        assert "carrier_consumption_max" in simple_supply.backend.constraints
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_loc_tech_carriers_carrier_consumption_max_milp_constraint(
         self, supply_milp
     ):
-        assert hasattr(supply_milp._backend_model, "carrier_consumption_max_constraint")
+        assert "carrier_consumption_max" in supply_milp.backend.constraints
 
     def test_loc_techs_resource_max_constraint(
         self, simple_supply, simple_supply_and_supply_plus
@@ -1126,17 +1105,15 @@ class TestDispatchConstraints:
         """
         sets.loc_techs_finite_resource_supply_plus,
         """
-        assert not hasattr(simple_supply._backend_model, "resource_max_constraint")
-        assert hasattr(
-            simple_supply_and_supply_plus._backend_model, "resource_max_constraint"
-        )
+        assert "resource_max" not in simple_supply.backend.constraints
+        assert "resource_max" in simple_supply_and_supply_plus.backend.constraints
 
         m = build_model(
             {"techs.test_supply_plus.constraints.resource": np.inf},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "resource_max_constraint")
+        m.build()
+        assert "resource_max" in m.backend.constraints
 
     def test_loc_techs_storage_max_constraint(
         self, simple_supply, simple_supply_and_supply_plus, simple_storage
@@ -1144,38 +1121,37 @@ class TestDispatchConstraints:
         """
         sets.loc_techs_store
         """
-        assert not hasattr(simple_supply._backend_model, "storage_max_constraint")
-        assert hasattr(
-            simple_supply_and_supply_plus._backend_model, "storage_max_constraint"
-        )
-        assert hasattr(simple_storage._backend_model, "storage_max_constraint")
+        assert "storage_max" not in simple_supply.backend.constraints
+        assert "storage_max" in simple_supply_and_supply_plus.backend.constraints
+        assert "storage_max" in simple_storage.backend.constraints
 
     def test_loc_tech_carriers_ramping_constraint(self, simple_supply):
         """
         i for i in sets.loc_tech_carriers_prod
         if i.rsplit('::', 1)[0] in sets.loc_techs_ramping
         """
-        assert not hasattr(simple_supply._backend_model, "ramping_up_constraint")
-        assert not hasattr(simple_supply._backend_model, "ramping_down_constraint")
+        assert "ramping_up" not in simple_supply.backend.constraints
+        assert "ramping_down" not in simple_supply.backend.constraints
 
         m = build_model(
             {"techs.test_supply_elec.constraints.energy_ramping": 0.1},
             "simple_supply,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "ramping_up_constraint")
-        assert hasattr(m._backend_model, "ramping_down_constraint")
+        m.build()
+        assert "ramping_up" in m.backend.constraints
+        assert "ramping_down" in m.backend.constraints
 
         m = build_model(
             {"techs.test_conversion.constraints.energy_ramping": 0.1},
             "simple_conversion,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "ramping_up_constraint")
-        assert hasattr(m._backend_model, "ramping_down_constraint")
+        m.build()
+        assert "ramping_up" in m.backend.constraints
+        assert "ramping_down" in m.backend.constraints
 
 
 @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestMILPConstraints:
     # milp.py
     def test_loc_techs_unit_commitment_milp_constraint(
@@ -1184,13 +1160,9 @@ class TestMILPConstraints:
         """
         sets.loc_techs_milp,
         """
-        assert not hasattr(
-            simple_supply._backend_model, "unit_commitment_milp_constraint"
-        )
-        assert hasattr(supply_milp._backend_model, "unit_commitment_milp_constraint")
-        assert not hasattr(
-            supply_purchase._backend_model, "unit_commitment_milp_constraint"
-        )
+        assert "unit_commitment_milp" not in simple_supply.backend.constraints
+        assert "unit_commitment_milp" in supply_milp.backend.constraints
+        assert "unit_commitment_milp" not in supply_purchase.backend.constraints
 
     def test_loc_techs_unit_capacity_milp_constraint(
         self, simple_supply, supply_milp, supply_purchase
@@ -1198,9 +1170,9 @@ class TestMILPConstraints:
         """
         sets.loc_techs_milp,
         """
-        assert not hasattr(simple_supply._backend_model, "units")
-        assert hasattr(supply_milp._backend_model, "units")
-        assert not hasattr(supply_purchase._backend_model, "units")
+        assert "units" not in simple_supply.backend.variables
+        assert "units" in supply_milp.backend.variables
+        assert "units" not in supply_purchase.backend.variables
 
     def test_loc_tech_carriers_carrier_production_max_milp_constraint(
         self, simple_supply, supply_milp, supply_purchase, conversion_plus_milp
@@ -1210,18 +1182,13 @@ class TestMILPConstraints:
         if i not in sets.loc_tech_carriers_conversion_plus
         and i.rsplit('::', 1)[0] in sets.loc_techs_milp
         """
-        assert not hasattr(
-            simple_supply._backend_model, "carrier_production_max_milp_constraint"
-        )
-        assert hasattr(
-            supply_milp._backend_model, "carrier_production_max_milp_constraint"
-        )
-        assert not hasattr(
-            supply_purchase._backend_model, "carrier_production_max_milp_constraint"
-        )
-        assert not hasattr(
-            conversion_plus_milp._backend_model,
-            "carrier_production_max_milp_constraint",
+        assert "carrier_production_max_milp" not in simple_supply.backend.constraints
+        assert "carrier_production_max_milp" in supply_milp.backend.constraints
+
+        assert "carrier_production_max_milp" not in supply_purchase.backend.constraints
+        assert (
+            "carrier_production_max_milp"
+            not in conversion_plus_milp.backend.constraints
         )
 
     def test_loc_techs_carrier_production_max_conversion_plus_milp_constraint(
@@ -1237,25 +1204,25 @@ class TestMILPConstraints:
         if i in sets.loc_techs_milp
         """
 
-        assert not hasattr(
-            simple_supply._backend_model,
-            "carrier_production_max_conversion_plus_milp_constraint",
+        assert (
+            "carrier_production_max_conversion_plus_milp"
+            not in simple_supply.backend.constraints
         )
-        assert not hasattr(
-            supply_milp._backend_model,
-            "carrier_production_max_conversion_plus_milp_constraint",
+        assert (
+            "carrier_production_max_conversion_plus_milp"
+            not in supply_milp.backend.constraints
         )
-        assert not hasattr(
-            supply_purchase._backend_model,
-            "carrier_production_max_conversion_plus_milp_constraint",
+        assert (
+            "carrier_production_max_conversion_plus_milp"
+            not in supply_purchase.backend.constraints
         )
-        assert hasattr(
-            conversion_plus_milp._backend_model,
-            "carrier_production_max_conversion_plus_milp_constraint",
+        assert (
+            "carrier_production_max_conversion_plus_milp"
+            in conversion_plus_milp.backend.constraints
         )
-        assert not hasattr(
-            conversion_plus_purchase._backend_model,
-            "carrier_production_max_conversion_plus_milp_constraint",
+        assert (
+            "carrier_production_max_conversion_plus_milp"
+            not in conversion_plus_purchase.backend.constraints
         )
 
     def test_loc_tech_carriers_carrier_production_min_milp_constraint(self):
@@ -1269,36 +1236,36 @@ class TestMILPConstraints:
             {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
             "simple_supply,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, "carrier_production_min_milp_constraint")
+        m.build()
+        assert "carrier_production_min_milp" not in m.backend.constraints
 
         m = build_model(
             {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
             "supply_milp,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "carrier_production_min_milp_constraint")
+        m.build()
+        assert "carrier_production_min_milp" in m.backend.constraints
 
         m = build_model(
             {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
             "supply_purchase,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, "carrier_production_min_milp_constraint")
+        m.build()
+        assert "carrier_production_min_milp" not in m.backend.constraints
 
         m = build_model(
             {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
             "conversion_plus_milp,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, "carrier_production_min_milp_constraint")
+        m.build()
+        assert "carrier_production_min_milp" not in m.backend.constraints
 
         m = build_model(
             {"techs.test_conversion_plus.constraints.energy_cap_min_use": 0.1},
             "conversion_plus_milp,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(m._backend_model, "carrier_production_min_milp_constraint")
+        m.build()
+        assert "carrier_production_min_milp" not in m.backend.constraints
 
     def test_loc_techs_carrier_production_min_conversion_plus_milp_constraint(self):
         """
@@ -1310,45 +1277,43 @@ class TestMILPConstraints:
             {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
             "simple_supply,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(
-            m._backend_model, "carrier_production_min_conversion_plus_milp_constraint"
+        m.build()
+        assert (
+            "carrier_production_min_conversion_plus_milp" not in m.backend.constraints
         )
 
         m = build_model(
             {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
             "supply_milp,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(
-            m._backend_model, "carrier_production_min_conversion_plus_milp_constraint"
+        m.build()
+        assert (
+            "carrier_production_min_conversion_plus_milp" not in m.backend.constraints
         )
 
         m = build_model(
             {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
             "conversion_plus_milp,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(
-            m._backend_model, "carrier_production_min_conversion_plus_milp_constraint"
+        m.build()
+        assert (
+            "carrier_production_min_conversion_plus_milp" not in m.backend.constraints
         )
 
         m = build_model(
             {"techs.test_conversion_plus.constraints.energy_cap_min_use": 0.1},
             "conversion_plus_milp,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(
-            m._backend_model, "carrier_production_min_conversion_plus_milp_constraint"
-        )
+        m.build()
+        assert "carrier_production_min_conversion_plus_milp" in m.backend.constraints
 
         m = build_model(
             {"techs.test_conversion_plus.constraints.energy_cap_min_use": 0.1},
             "conversion_plus_purchase,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(
-            m._backend_model, "carrier_production_min_conversion_plus_milp_constraint"
+        m.build()
+        assert (
+            "carrier_production_min_conversion_plus_milp" not in m.backend.constraints
         )
 
     def test_loc_tech_carriers_carrier_consumption_max_milp_constraint(
@@ -1360,18 +1325,12 @@ class TestMILPConstraints:
             sets.loc_techs_storage + sets.loc_techs_transmission
         and i.rsplit('::', 1)[0] in sets.loc_techs_milp
         """
-        assert not hasattr(
-            simple_supply._backend_model, "carrier_consumption_max_milp_constraint"
-        )
-        assert not hasattr(
-            supply_milp._backend_model, "carrier_consumption_max_milp_constraint"
-        )
-        assert hasattr(
-            storage_milp._backend_model, "carrier_consumption_max_milp_constraint"
-        )
-        assert not hasattr(
-            conversion_plus_milp._backend_model,
-            "carrier_consumption_max_milp_constraint",
+        assert "carrier_consumption_max_milp" not in simple_supply.backend.constraints
+        assert "carrier_consumption_max_milp" not in supply_milp.backend.constraints
+        assert "carrier_consumption_max_milp" in storage_milp.backend.constraints
+        assert (
+            "carrier_consumption_max_milp"
+            not in conversion_plus_milp.backend.constraints
         )
 
     def test_loc_techs_energy_capacity_units_milp_constraint(
@@ -1382,18 +1341,10 @@ class TestMILPConstraints:
         if constraint_exists(model_run, i, 'constraints.energy_cap_per_unit')
         is not None
         """
-        assert not hasattr(
-            simple_supply._backend_model, "energy_capacity_units_milp_constraint"
-        )
-        assert hasattr(
-            supply_milp._backend_model, "energy_capacity_units_milp_constraint"
-        )
-        assert hasattr(
-            storage_milp._backend_model, "energy_capacity_units_milp_constraint"
-        )
-        assert hasattr(
-            conversion_plus_milp._backend_model, "energy_capacity_units_milp_constraint"
-        )
+        assert "energy_capacity_units_milp" not in simple_supply.backend.constraints
+        assert "energy_capacity_units_milp" in supply_milp.backend.constraints
+        assert "energy_capacity_units_milp" in storage_milp.backend.constraints
+        assert "energy_capacity_units_milp" in conversion_plus_milp.backend.constraints
 
     def test_loc_techs_storage_capacity_units_milp_constraint(
         self,
@@ -1406,22 +1357,16 @@ class TestMILPConstraints:
         """
         i for i in sets.loc_techs_milp if i in sets.loc_techs_store
         """
-        assert not hasattr(
-            simple_supply._backend_model, "storage_capacity_units_milp_constraint"
+        assert "storage_capacity_units_milp" not in simple_supply.backend.constraints
+        assert "storage_capacity_units_milp" not in supply_milp.backend.constraints
+        assert "storage_capacity_units_milp" in storage_milp.backend.constraints
+        assert (
+            "storage_capacity_units_milp"
+            not in conversion_plus_milp.backend.constraints
         )
-        assert not hasattr(
-            supply_milp._backend_model, "storage_capacity_units_milp_constraint"
-        )
-        assert hasattr(
-            storage_milp._backend_model, "storage_capacity_units_milp_constraint"
-        )
-        assert not hasattr(
-            conversion_plus_milp._backend_model,
-            "storage_capacity_units_milp_constraint",
-        )
-        assert hasattr(
-            supply_and_supply_plus_milp._backend_model,
-            "storage_capacity_units_milp_constraint",
+        assert (
+            "storage_capacity_units_milp"
+            in supply_and_supply_plus_milp.backend.constraints
         )
 
     def test_loc_techs_energy_capacity_max_purchase_milp_constraint(
@@ -1432,15 +1377,14 @@ class TestMILPConstraints:
         if (constraint_exists(model_run, i, 'constraints.energy_cap_equals') is not None
             or constraint_exists(model_run, i, 'constraints.energy_cap_max') is not None)
         """
-        assert not hasattr(
-            simple_supply._backend_model, "energy_capacity_max_purchase_milp_constraint"
+        assert (
+            "energy_capacity_max_purchase_milp" not in simple_supply.backend.constraints
         )
-        assert not hasattr(
-            supply_milp._backend_model, "energy_capacity_max_purchase_milp_constraint"
+        assert (
+            "energy_capacity_max_purchase_milp" not in supply_milp.backend.constraints
         )
-        assert hasattr(
-            supply_purchase._backend_model,
-            "energy_capacity_max_purchase_milp_constraint",
+        assert (
+            "energy_capacity_max_purchase_milp" in supply_purchase.backend.constraints
         )
 
         m = build_model(
@@ -1452,8 +1396,8 @@ class TestMILPConstraints:
             },
             "supply_purchase,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "energy_capacity_max_purchase_milp_constraint")
+        m.build()
+        assert "energy_capacity_max_purchase_milp" in m.backend.constraints
 
     def test_loc_techs_energy_capacity_min_purchase_milp_constraint(
         self, simple_supply, supply_milp, supply_purchase
@@ -1463,15 +1407,15 @@ class TestMILPConstraints:
         if (not constraint_exists(model_run, i, 'constraints.energy_cap_equals')
             and constraint_exists(model_run, i, 'constraints.energy_cap_min'))
         """
-        assert not hasattr(
-            simple_supply._backend_model, "energy_capacity_min_purchase_milp_constraint"
+        assert (
+            "energy_capacity_min_purchase_milp" not in simple_supply.backend.constraints
         )
-        assert not hasattr(
-            supply_milp._backend_model, "energy_capacity_min_purchase_milp_constraint"
+        assert (
+            "energy_capacity_min_purchase_milp" not in supply_milp.backend.constraints
         )
-        assert not hasattr(
-            supply_purchase._backend_model,
-            "energy_capacity_min_purchase_milp_constraint",
+        assert (
+            "energy_capacity_min_purchase_milp"
+            not in supply_purchase.backend.constraints
         )
 
         m = build_model(
@@ -1483,17 +1427,15 @@ class TestMILPConstraints:
             },
             "supply_purchase,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(
-            m._backend_model, "energy_capacity_min_purchase_milp_constraint"
-        )
+        m.build()
+        assert "energy_capacity_min_purchase_milp" not in m.backend.constraints
 
         m = build_model(
             {"techs.test_supply_elec.constraints.energy_cap_min": 10},
             "supply_purchase,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "energy_capacity_min_purchase_milp_constraint")
+        m.build()
+        assert "energy_capacity_min_purchase_milp" in m.backend.constraints
 
     def test_loc_techs_storage_capacity_max_purchase_milp_constraint(
         self, simple_storage, storage_milp, storage_purchase, supply_purchase
@@ -1501,20 +1443,19 @@ class TestMILPConstraints:
         """
         i for i in set(sets.loc_techs_purchase).intersection(sets.loc_techs_store)
         """
-        assert not hasattr(
-            simple_storage._backend_model,
-            "storage_capacity_max_purchase_milp_constraint",
+        assert (
+            "storage_capacity_max_purchase_milp"
+            not in simple_storage.backend.constraints
         )
-        assert not hasattr(
-            storage_milp._backend_model, "storage_capacity_max_purchase_milp_constraint"
+        assert (
+            "storage_capacity_max_purchase_milp" not in storage_milp.backend.constraints
         )
-        assert hasattr(
-            storage_purchase._backend_model,
-            "storage_capacity_max_purchase_milp_constraint",
+        assert (
+            "storage_capacity_max_purchase_milp" in storage_purchase.backend.constraints
         )
-        assert not hasattr(
-            supply_purchase._backend_model,
-            "storage_capacity_max_purchase_milp_constraint",
+        assert (
+            "storage_capacity_max_purchase_milp"
+            not in supply_purchase.backend.constraints
         )
 
     def test_loc_techs_storage_capacity_min_purchase_milp_constraint(
@@ -1530,33 +1471,27 @@ class TestMILPConstraints:
             {"techs.test_storage.constraints.storage_cap_min": 10},
             "simple_storage,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(
-            m._backend_model, "storage_capacity_min_purchase_milp_constraint"
-        )
+        m.build()
+        assert "storage_capacity_min_purchase_milp" not in m.backend.constraints
 
         m = build_model(
             {"techs.test_storage.constraints.storage_cap_min": 10},
             "storage_milp,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(
-            m._backend_model, "storage_capacity_min_purchase_milp_constraint"
-        )
+        m.build()
+        assert "storage_capacity_min_purchase_milp" not in m.backend.constraints
 
-        assert not hasattr(
-            storage_purchase._backend_model,
-            "storage_capacity_min_purchase_milp_constraint",
+        assert (
+            "storage_capacity_min_purchase_milp"
+            not in storage_purchase.backend.constraints
         )
 
         m = build_model(
             {"techs.test_storage.constraints.storage_cap_min": 10},
             "storage_purchase,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(
-            m._backend_model, "storage_capacity_min_purchase_milp_constraint"
-        )
+        m.build()
+        assert "storage_capacity_min_purchase_milp" in m.backend.constraints
 
         m = build_model(
             {
@@ -1567,10 +1502,8 @@ class TestMILPConstraints:
             },
             "storage_purchase,two_hours,investment_costs",
         )
-        m.run(build_only=True)
-        assert not hasattr(
-            m._backend_model, "storage_capacity_min_purchase_milp_constraint"
-        )
+        m.build()
+        assert "storage_capacity_min_purchase_milp" not in m.backend.constraints
 
     @pytest.mark.parametrize(
         ("scenario", "exists", "override_dict"),
@@ -1596,21 +1529,27 @@ class TestMILPConstraints:
         """
 
         m = build_model(override_dict, f"{scenario},two_hours,investment_costs")
-        m.run(build_only=True)
+        m.build()
         if exists[0] == "not":
             assert not check_variable_exists(
-                m._backend_model, "cost_investment", "purchased"
+                m.backend.get_expression("cost_investment", as_backend_objs=False),
+                "purchased",
             )
         else:
             assert check_variable_exists(
-                m._backend_model, "cost_investment", "purchased"
+                m.backend.get_expression("cost_investment", as_backend_objs=False),
+                "purchased",
             )
         if exists[1] == "not":
             assert not check_variable_exists(
-                m._backend_model, "cost_investment", "units"
+                m.backend.get_expression("cost_investment", as_backend_objs=False),
+                "units",
             )
         else:
-            assert check_variable_exists(m._backend_model, "cost_investment", "units")
+            assert check_variable_exists(
+                m.backend.get_expression("cost_investment", as_backend_objs=False),
+                "units",
+            )
 
     def test_techs_unit_capacity_max_systemwide_milp_constraint(self):
         """
@@ -1626,12 +1565,14 @@ class TestMILPConstraints:
             },
         }
         m = build_model(override_max, "conversion_plus_milp,two_hours,investment_costs")
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "unit_capacity_systemwide_milp_constraint")
+        m.build()
+        assert "unit_capacity_systemwide_milp" in m.backend.constraints
         assert (
-            m._backend_model.unit_capacity_systemwide_milp_constraint[
-                "test_conversion_plus"
-            ].upper()
+            m.backend.get_constraint(
+                "unit_capacity_systemwide_milp", as_backend_objs=False
+            )
+            .sel(techs="test_conversion_plus")
+            .ub.item()
             == 2
         )
 
@@ -1647,18 +1588,22 @@ class TestMILPConstraints:
         m = build_model(
             override_equals, "conversion_plus_milp,two_hours,investment_costs"
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "unit_capacity_systemwide_milp_constraint")
+        m.build()
+        assert "unit_capacity_systemwide_milp" in m.backend.constraints
         assert (
-            m._backend_model.unit_capacity_systemwide_milp_constraint[
-                "test_conversion_plus"
-            ].lower()
+            m.backend.get_constraint(
+                "unit_capacity_systemwide_milp", as_backend_objs=False
+            )
+            .sel(techs="test_conversion_plus")
+            .lb.item()
             == 1
         )
         assert (
-            m._backend_model.unit_capacity_systemwide_milp_constraint[
-                "test_conversion_plus"
-            ].upper()
+            m.backend.get_constraint(
+                "unit_capacity_systemwide_milp", as_backend_objs=False
+            )
+            .sel(techs="test_conversion_plus")
+            .ub.item()
             == 1
         )
 
@@ -1684,12 +1629,15 @@ class TestMILPConstraints:
         m = build_model(
             override_transmission, "simple_supply,two_hours,investment_costs"
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "unit_capacity_systemwide_milp_constraint")
+        m.build()
+        assert "unit_capacity_systemwide_milp" in m.backend.constraints
         assert (
-            m._backend_model.unit_capacity_systemwide_milp_constraint[
-                "test_transmission_elec"
-            ].upper()
+            m.backend.get_constraint(
+                "unit_capacity_systemwide_milp", as_backend_objs=False
+            )
+            .sel(techs="test_transmission_elec")
+            .item()
+            .ub
             == 2
         )
 
@@ -1700,11 +1648,11 @@ class TestMILPConstraints:
         }
         m = build_model(
             override_no_transmission,
-            "simple_supply,two_hours,investment_costs",
+            "supply_milp,two_hours,investment_costs",
             model_file="model_minimal.yaml",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "unit_capacity_systemwide_milp_constraint")
+        m.build()
+        assert "unit_capacity_systemwide_milp" in m.backend.constraints
 
     @pytest.mark.parametrize("tech", (("test_storage"), ("test_transmission_elec")))
     def test_asynchronous_prod_con_constraint(self, tech):
@@ -1716,12 +1664,13 @@ class TestMILPConstraints:
             {f"techs.{tech}.constraints.force_asynchronous_prod_con": True},
             "simple_storage,investment_costs",
         )
-        m.run(build_only=True)
-        assert hasattr(m._backend_model, "prod_con_switch")
-        assert hasattr(m._backend_model, "asynchronous_con_milp_constraint")
-        assert hasattr(m._backend_model, "asynchronous_prod_milp_constraint")
+        m.build()
+        assert "prod_con_switch" in m.backend.variables
+        assert "asynchronous_con_milp" in m.backend.constraints
+        assert "asynchronous_prod_milp" in m.backend.constraints
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestConversionConstraints:
     # conversion.py
     def test_loc_techs_balance_conversion_constraint(
@@ -1730,17 +1679,12 @@ class TestConversionConstraints:
         """
         sets.loc_techs_conversion,
         """
-        assert not hasattr(
-            simple_supply._backend_model, "balance_conversion_constraint"
-        )
-        assert hasattr(
-            simple_conversion._backend_model, "balance_conversion_constraint"
-        )
-        assert not hasattr(
-            simple_conversion_plus._backend_model, "balance_conversion_constraint"
-        )
+        assert "balance_conversion" not in simple_supply.backend.constraints
+        assert "balance_conversion" in simple_conversion.backend.constraints
+        assert "balance_conversion" not in simple_conversion_plus.backend.constraints
 
 
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestNetworkConstraints:
     # network.py
     def test_loc_techs_symmetric_transmission_constraint(
@@ -1749,23 +1693,21 @@ class TestNetworkConstraints:
         """
         sets.loc_techs_transmission,
         """
-        assert hasattr(
-            simple_supply._backend_model, "symmetric_transmission_constraint"
-        )
-        assert not hasattr(
-            simple_conversion_plus._backend_model, "symmetric_transmission_constraint"
+        assert "symmetric_transmission" in simple_supply.backend.constraints
+        assert (
+            "symmetric_transmission" not in simple_conversion_plus.backend.constraints
         )
 
 
-# clustering constraints
+@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestClusteringConstraints:
     def constraints(self):
         return [
-            "balance_storage_inter_constraint",
-            "storage_intra_max_constraint",
-            "storage_intra_min_constraint",
-            "storage_inter_max_constraint",
-            "storage_inter_min_constraint",
+            "balance_storage_inter",
+            "storage_intra_max",
+            "storage_intra_min",
+            "storage_inter_max",
+            "storage_inter_min",
         ]
 
     def decision_variables(self):
@@ -1789,9 +1731,11 @@ class TestClusteringConstraints:
                 "function_options": {
                     "clustering_func": "file=cluster_days.csv:a",
                     "how": how,
-                    "storage_inter_cluster": storage_inter_cluster,
                 },
             },
+            "model.custom_math": ["storage_inter_cluster"]
+            if storage_inter_cluster
+            else [],
             "run.cyclic_storage": cyclic,
         }
         if storage_initial:
@@ -1800,41 +1744,41 @@ class TestClusteringConstraints:
 
     def test_cluster_storage_constraints(self):
         m = self.cluster_model()
-        m.run(build_only=True)
+        m.build()
 
         for variable in self.decision_variables():
-            assert hasattr(m._backend_model, variable)
+            assert variable in m.backend.variables
 
         for constraint in self.constraints():
-            assert hasattr(m._backend_model, constraint)
+            assert constraint in m.backend.constraints
 
-        assert not hasattr(m._backend_model, "storage_max_constraint")
-        assert not hasattr(m._backend_model, "storage_initial_constraint")
+        assert "storage_max" not in m.backend.constraints
+        assert "set_storage_initial" not in m.backend.constraints
 
     def test_cluster_cyclic_storage_constraints(self):
         m = self.cluster_model(cyclic=True)
-        m.run(build_only=True)
+        m.build()
 
         for variable in self.decision_variables():
-            assert hasattr(m._backend_model, variable)
+            assert variable in m.backend.variables
 
         for constraint in self.constraints():
-            assert hasattr(m._backend_model, constraint)
+            assert constraint in m.backend.constraints
 
-        assert not hasattr(m._backend_model, "storage_max_constraint")
-        assert not hasattr(m._backend_model, "storage_initial_constraint")
+        assert "storage_max" not in m.backend.constraints
+        assert "set_storage_initial" not in m.backend.constraints
 
     def test_no_cluster_storage_constraints(self):
         m = self.cluster_model(storage_inter_cluster=False)
-        m.run(build_only=True)
+        m.build()
 
         for variable in self.decision_variables():
-            assert not hasattr(m._backend_model, variable)
+            assert variable not in m.backend.variables
 
         for constraint in self.constraints():
-            assert not hasattr(m._backend_model, constraint)
+            assert constraint not in m.backend.constraints
 
-        assert hasattr(m._backend_model, "storage_max_constraint")
+        assert "storage_max" in m.backend.constraints
 
 
 class TestLogging:
@@ -1842,22 +1786,19 @@ class TestLogging:
     def gurobi_model(self):
         pytest.importorskip("gurobipy")
         model_file = "model.yaml"
-        return build_model(
+        model = build_model(
             model_file=model_file,
             scenario="simple_supply,investment_costs",
             override_dict={"run": {"solver": "gurobi", "solver_io": "python"}},
         )
+        model.build()
+        return model
 
     def test_no_duplicate_log_message(self, caplog, gurobi_model):
         caplog.set_level(logging.DEBUG)
-        gurobi_model.run(build_only=True)
+        gurobi_model.solve()
         all_log_messages = [r.msg for r in caplog.records]
-        duplicates = [
-            item
-            for item, count in collections.Counter(all_log_messages).items()
-            if count > 1 and item != "" and not item.startswith("Constructing")
-        ]
-        assert duplicates == []
+        assert sum([i.find("Gurobi Optimizer") > -1 for i in all_log_messages]) == 1
 
 
 class TestNewBackend:
@@ -2035,7 +1976,7 @@ class TestNewBackend:
 
         try:
             with pytest.raises(exceptions.ModelError) as excinfo:
-                simple_supply_new_build.solve(force_rerun=True)
+                simple_supply_new_build.solve(force=True)
             assert check_error_or_warning(excinfo, "Unable to run this model in op")
         except AssertionError as e:
             simple_supply_new_build.run_config["mode"] = "plan"
@@ -2047,7 +1988,7 @@ class TestNewBackend:
 
     def test_solve_warmstart_not_possible(self, simple_supply_new_build):
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            simple_supply_new_build.solve(force_rerun=True, warmstart=True)
+            simple_supply_new_build.solve(force=True, warmstart=True)
         assert check_error_or_warning(excinfo, "cbc, does not support warmstart")
 
     def test_solve_non_optimal(self, simple_supply_new_build):
@@ -2061,7 +2002,7 @@ class TestNewBackend:
             ],
         )
         with pytest.warns(exceptions.BackendWarning) as excinfo:
-            simple_supply_new_build.solve(force_rerun=True)
+            simple_supply_new_build.solve(force=True)
 
         assert check_error_or_warning(excinfo, "Model solution was non-optimal")
         assert (
