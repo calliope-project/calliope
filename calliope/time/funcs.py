@@ -344,7 +344,7 @@ def drop(data, timesteps):
     # checks whether they are actually valid
     try:
         timesteps_pd = pd.to_datetime(timesteps)
-    except Exception as e:
+    except Exception:
         raise exceptions.ModelError("Invalid timesteps: {}".format(timesteps))
 
     # 'Distribute weight' of the dropped timesteps onto the remaining ones

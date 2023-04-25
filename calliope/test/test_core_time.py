@@ -4,11 +4,7 @@ import pytest  # noqa: F401
 
 import calliope
 from calliope import exceptions
-from calliope.test.common.util import (
-    build_test_model,
-    check_error_or_warning,
-    python36_or_higher,
-)
+from calliope.test.common.util import build_test_model, check_error_or_warning
 from calliope.time import funcs, masks
 
 
@@ -39,7 +35,7 @@ class TestClustering:
     def test_kmeans_closest(self, model_national):
         data = model_national._model_data
 
-        data_clustered = funcs.apply_clustering(
+        funcs.apply_clustering(
             data,
             timesteps=None,
             clustering_func="kmeans",
@@ -65,7 +61,7 @@ class TestClustering:
     def test_hierarchical_closest(self, model_national):
         data = model_national._model_data
 
-        data_clustered = funcs.apply_clustering(
+        funcs.apply_clustering(
             data,
             timesteps=None,
             clustering_func="hierarchical",
@@ -599,7 +595,7 @@ class TestMasks:
     def test_extreme_week_2d(self, model_national):
         data = model_national._model_data_pre_clustering.copy()
         with pytest.raises(ValueError):
-            mask = masks.extreme(
+            masks.extreme(
                 data,
                 "csp",
                 var="resource",

@@ -12,8 +12,7 @@ Functions to deal with nodes and their configuration.
 import math
 
 from calliope.core.attrdict import AttrDict
-from calliope.exceptions import ModelError, warn
-from calliope.preprocess.checks import DEFAULTS, POSSIBLE_COSTS
+from calliope.preprocess.checks import POSSIBLE_COSTS
 from calliope.preprocess.util import vincenty
 
 
@@ -46,8 +45,6 @@ def process_nodes(model_config, modelrun_techs):
         nodes_in = model_config.locations  # TODO: Remove in v0.7.1
 
     links_in = model_config.get("links", AttrDict())
-
-    allowed_from_file = DEFAULTS.model.file_allowed
 
     warnings = []
     errors = []
