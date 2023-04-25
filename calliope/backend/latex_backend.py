@@ -140,7 +140,7 @@ class LatexBackendModel(backends.BackendModel):
 
     Subject to
     ----------
-    {% elif component_type == "expressions" %}
+    {% elif component_type == "global_expressions" %}
 
     Where
     -----
@@ -190,7 +190,7 @@ class LatexBackendModel(backends.BackendModel):
     \section{Objective}
     {% elif component_type == "constraints" %}
     \section{Subject to}
-    {% elif component_type == "expressions" %}
+    {% elif component_type == "global_expressions" %}
     \section{Where}
     {% elif component_type == "variables" %}
     \section{Decision Variables}
@@ -220,7 +220,7 @@ class LatexBackendModel(backends.BackendModel):
     {% elif component_type == "constraints" %}
 
     # Subject to
-    {% elif component_type == "expressions" %}
+    {% elif component_type == "global_expressions" %}
 
     # Where
     {% elif component_type == "variables" %}
@@ -278,7 +278,7 @@ class LatexBackendModel(backends.BackendModel):
             "constraints",
         )
 
-    def add_expression(
+    def add_global_expression(
         self,
         model_data: xr.Dataset,
         name: str,
@@ -291,7 +291,7 @@ class LatexBackendModel(backends.BackendModel):
             name,
             expression_dict,
             lambda x: None,
-            "expressions",
+            "global_expressions",
         )
 
     def add_variable(
@@ -318,9 +318,7 @@ class LatexBackendModel(backends.BackendModel):
 
         if self.include == "all" or (self.include == "valid" and imask.any()):
             self._generate_math_string(
-                name,
                 imask,
-                "variables",
                 sets=parsed_variable.sets,
                 where=imask_latex if imask_latex != "" else None,
                 equations=[lb, ub],
@@ -357,9 +355,7 @@ class LatexBackendModel(backends.BackendModel):
         objective_da = xr.DataArray()
         if equation_strings:
             self._generate_math_string(
-                name,
                 objective_da,
-                "objectives",
                 sense=sense_dict[objective_dict["sense"]],
                 equations=equation_strings,
             )
@@ -389,10 +385,10 @@ class LatexBackendModel(backends.BackendModel):
     ) -> Optional[xr.DataArray]:
         return self.variables.get(variable_name, None)
 
-    def get_expression(
+    def get_global_expression(
         self, expression_name: str, as_backend_objs: bool = True, eval_body: bool = True
     ) -> Optional[xr.DataArray]:
-        return self.expressions.get(expression_name, None)
+        return self.global_expressions.get(expression_name, None)
 
     def solve(
         self,
@@ -431,7 +427,12 @@ class LatexBackendModel(backends.BackendModel):
                 for name, da in getattr(self, objtype).data_vars.items()
                 if "math_string" in da.attrs
             ]
-            for objtype in ["objectives", "constraints", "expressions", "variables"]
+            for objtype in [
+                "objectives",
+                "constraints",
+                "global_expressions",
+                "variables",
+            ]
             if getattr(self, objtype).data_vars
         }
         return self._render(doc_template, components=components)
@@ -444,7 +445,7 @@ class LatexBackendModel(backends.BackendModel):
             parsing.UnparsedConstraintDict, parsing.UnparsedExpressionDict
         ],
         component_setter: Callable,
-        component_type: Literal["constraints", "expressions"],
+        component_type: Literal["constraints", "global_expressions"],
     ) -> None:
         parsed_component = parsing.ParsedBackendComponent(
             component_type, name, component_dict
@@ -476,9 +477,7 @@ class LatexBackendModel(backends.BackendModel):
             component_da = component_da.fillna(imask.where(imask))
         if equation_strings:
             self._generate_math_string(
-                name,
                 component_da,
-                component_type,
                 sets=parsed_component.sets,
                 where=top_level_imask_latex,
                 equations=equation_strings,
@@ -489,9 +488,7 @@ class LatexBackendModel(backends.BackendModel):
 
     def _generate_math_string(
         self,
-        name: str,
         da: xr.DataArray,
-        component_type: backends._COMPONENTS_T,
         **kwargs,
     ) -> None:
         equation_element_string = self._render(self.LATEX_EQUATION_ELEMENT, **kwargs)

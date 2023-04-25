@@ -562,7 +562,7 @@ class EvalUnslicedParameterOrVariable(EvalString):
             dims = rf"_\text{{{','.join(str(i).removesuffix('s') for i in evaluated.dims)}}}"
         else:
             dims = ""
-        if evaluated.attrs["obj_type"] in ["expressions", "variables"]:
+        if evaluated.attrs["obj_type"] in ["global_expressions", "variables"]:
             formatted_name = rf"\textbf{{{self.name}}}"
         elif evaluated.attrs["obj_type"] == "parameters":
             formatted_name = rf"\textit{{{self.name}}}"

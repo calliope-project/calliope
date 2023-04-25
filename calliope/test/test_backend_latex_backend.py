@@ -121,7 +121,7 @@ class TestLatexBackendModel:
     )
     def test_add_expression(self, request, dummy_model_data, backend_obj):
         latex_backend_model = request.getfixturevalue(backend_obj)
-        latex_backend_model.add_expression(
+        latex_backend_model.add_global_expression(
             dummy_model_data,
             "expr",
             {
@@ -132,11 +132,11 @@ class TestLatexBackendModel:
         )
         # some null values might be introduced by the foreach array, so we just check the upper bound
         assert (
-            latex_backend_model.expressions["expr"].sum()
+            latex_backend_model.global_expressions["expr"].sum()
             <= dummy_model_data.with_inf_as_bool.sum()
         )
         assert "expr" in latex_backend_model.valid_math_element_names
-        assert "math_string" in latex_backend_model.expressions["expr"].attrs
+        assert "math_string" in latex_backend_model.global_expressions["expr"].attrs
 
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
@@ -222,8 +222,8 @@ class TestLatexBackendModel:
         assert var.equals(dummy_latex_backend_model.variables["var"])
 
     def test_get_expression(self, dummy_latex_backend_model):
-        expr = dummy_latex_backend_model.get_expression("expr")
-        assert expr.equals(dummy_latex_backend_model.expressions["expr"])
+        expr = dummy_latex_backend_model.get_global_expression("expr")
+        assert expr.equals(dummy_latex_backend_model.global_expressions["expr"])
 
     def test_solve(self, dummy_latex_backend_model):
         with pytest.raises(exceptions.BackendError) as excinfo:
@@ -319,7 +319,7 @@ class TestLatexBackendModel:
     )
     def test_generate_math_doc(self, dummy_model_data, format, expected):
         latex_backend_model = latex_backend.LatexBackendModel()
-        latex_backend_model.add_expression(
+        latex_backend_model.add_global_expression(
             dummy_model_data, "expr", {"equation": "1 + 2", "description": "foobar"}
         )
         doc = latex_backend_model.generate_math_doc(format=format)
@@ -398,9 +398,7 @@ class TestLatexBackendModel:
     )
     def test_generate_math_string(self, dummy_latex_backend_model, kwargs, expected):
         da = xr.DataArray()
-        dummy_latex_backend_model._generate_math_string(
-            "foo", da, "constraints", **kwargs
-        )
+        dummy_latex_backend_model._generate_math_string(da, **kwargs)
         assert da.math_string == expected
 
     @pytest.mark.parametrize(
