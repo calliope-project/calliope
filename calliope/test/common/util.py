@@ -9,7 +9,6 @@ import xarray as xr
 
 import calliope
 from calliope import AttrDict
-from calliope.backend import backends
 
 constraint_sets = {
     k: [ast.literal_eval(i) for i in v]
@@ -101,7 +100,7 @@ def build_lp(
     Args:
         model (calliope.Model): Calliope model.
         outfile (Union[str, Path]): Path to LP file.
-        math (Optional[dict], optional): All constraint/expression/objective math to apply. Defaults to None.
+        math (Optional[dict], optional): All constraint/global expression/objective math to apply. Defaults to None.
         backend (Literal["pyomo"], optional): Backend to use to create the LP file. Defaults to "pyomo".
     """
     backend_instance = model._BACKENDS[backend]()

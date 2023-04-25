@@ -10,8 +10,6 @@ Functions to read and save model results.
 """
 
 import os
-from pathlib import Path
-from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -19,7 +17,6 @@ import xarray as xr
 
 from calliope import exceptions
 from calliope._version import __version__
-from calliope.backend.backends import PyomoBackendModel
 from calliope.core.attrdict import AttrDict
 
 
