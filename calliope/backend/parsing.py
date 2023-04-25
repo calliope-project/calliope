@@ -17,15 +17,15 @@ from calliope.backend import backends, equation_parser, helper_functions, subset
 
 VALID_EXPRESSION_HELPER_FUNCTIONS: dict[str, Callable] = {
     "sum": helper_functions.expression_sum,
-    "squeeze_carriers": helper_functions.squeeze_carriers,
-    "squeeze_primary_carriers": helper_functions.squeeze_primary_carriers,
+    "reduce_carrier_dim": helper_functions.reduce_carrier_dim,
+    "reduce_primary_carrier_dim": helper_functions.reduce_primary_carrier_dim,
     "select_from_lookup_arrays": helper_functions.select_from_lookup_arrays,
     "get_val_at_index": helper_functions.get_val_at_index,
     "roll": helper_functions.roll,
 }
 VALID_IMASK_HELPER_FUNCTIONS: dict[str, Callable] = {
     "inheritance": helper_functions.inheritance,
-    "sum": helper_functions.imask_sum,
+    "any": helper_functions.where_any,
     "get_val_at_index": helper_functions.get_val_at_index,
 }
 

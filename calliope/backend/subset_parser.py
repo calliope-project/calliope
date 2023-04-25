@@ -122,20 +122,14 @@ class DataVarParser:
 
     def _data_var_exists(self, model_data: xr.Dataset) -> xr.DataArray:
         "mask by setting all (NaN | INF/-INF) to False, otherwise True"
-        if self.data_var not in model_data:
-            return xr.DataArray(np.False_)
-        else:
-            model_data_var = model_data[self.data_var]
+        model_data_var = model_data.get(self.data_var, xr.DataArray(None))
         with pd.option_context("mode.use_inf_as_na", True):
             return model_data_var.where(pd.notnull(model_data_var)).notnull()  # type: ignore
 
     def _data_var_with_default(self, model_data: xr.Dataset) -> xr.DataArray:
         "Access data var and fill with default values. Return default value as an array if var does not exist"
         default = model_data.attrs["defaults"].get(self.data_var)
-        if self.data_var not in model_data:
-            return xr.DataArray(default)
-        else:
-            return model_data[self.data_var].fillna(default)
+        return model_data.get(self.data_var, xr.DataArray(default)).fillna(default)
 
     def eval(
         self, model_data: xr.Dataset, apply_imask: bool = True, **kwargs

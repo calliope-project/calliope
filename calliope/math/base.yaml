@@ -55,19 +55,19 @@ constraints:
     description: "Fix the relationship between total carrier production and total carrier consumption of `conversion_plus` technologies for `in` (consumption) and `out` (production) carrier flows."
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion_plus) AND carrier_ratios>0"
-    equation: squeeze_carriers(carrier_prod / carrier_ratios[carrier_tiers=out], carrier_tier=out) == -1 * squeeze_carriers(carrier_con * carrier_ratios[carrier_tiers=in], carrier_tier=in) * energy_eff
+    equation: reduce_carrier_dim(carrier_prod / carrier_ratios[carrier_tiers=out], carrier_tier=out) == -1 * reduce_carrier_dim(carrier_con * carrier_ratios[carrier_tiers=in], carrier_tier=in) * energy_eff
 
   carrier_production_max_conversion_plus:
     description: "Set the upper bound in each timestep of a `conversion_plus` technology's total carrier production on its `out` carrier flows."
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion_plus) AND NOT cap_method=integer"
-    equation: squeeze_carriers(carrier_prod, carrier_tier=out) <= timestep_resolution * energy_cap
+    equation: reduce_carrier_dim(carrier_prod, carrier_tier=out) <= timestep_resolution * energy_cap
 
   carrier_production_min_conversion_plus:
     description: "Set the lower bound in each timestep of a `conversion_plus` technology's total carrier production on its `out` carrier flows."
     foreach: [nodes, techs, timesteps]
     where: "energy_cap_min_use AND inheritance(conversion_plus) AND NOT cap_method=integer"
-    equation: squeeze_carriers(carrier_prod, carrier_tier=out) >= timestep_resolution * energy_cap * energy_cap_min_use
+    equation: reduce_carrier_dim(carrier_prod, carrier_tier=out) >= timestep_resolution * energy_cap * energy_cap_min_use
 
   balance_conversion_plus_non_primary:
     description: "Fix the relationship between a `conversion_plus` technology's total `in_2`/`in_3` (consumption) and `out_2`/`out_3` (production) carrier flows and its `in` (consumption) and `out` (production) carrier flows."
@@ -77,18 +77,18 @@ constraints:
     sub_expressions:
       c_1:
         - where: "[in_2, in_3] in carrier_tiers"
-          expression: squeeze_carriers(carrier_con / carrier_ratios[carrier_tiers=in], carrier_tier=in)
+          expression: reduce_carrier_dim(carrier_con / carrier_ratios[carrier_tiers=in], carrier_tier=in)
         - where: "[out_2, out_3] in carrier_tiers"
-          expression: squeeze_carriers(carrier_prod / carrier_ratios[carrier_tiers=out], carrier_tier=out)
+          expression: reduce_carrier_dim(carrier_prod / carrier_ratios[carrier_tiers=out], carrier_tier=out)
       c_2:
         - where: "[in_2] in carrier_tiers"
-          expression: squeeze_carriers(carrier_con / carrier_ratios[carrier_tiers=in_2], carrier_tier=[in_2])
+          expression: reduce_carrier_dim(carrier_con / carrier_ratios[carrier_tiers=in_2], carrier_tier=[in_2])
         - where: "[in_3] in carrier_tiers"
-          expression: squeeze_carriers(carrier_con / carrier_ratios[carrier_tiers=in_3], carrier_tier=[in_3])
+          expression: reduce_carrier_dim(carrier_con / carrier_ratios[carrier_tiers=in_3], carrier_tier=[in_3])
         - where: "[out_2] in carrier_tiers"
-          expression: squeeze_carriers(carrier_prod / carrier_ratios[carrier_tiers=out_2], carrier_tier=[out_2])
+          expression: reduce_carrier_dim(carrier_prod / carrier_ratios[carrier_tiers=out_2], carrier_tier=[out_2])
         - where: "[out_3] in carrier_tiers"
-          expression: squeeze_carriers(carrier_prod / carrier_ratios[carrier_tiers=out_3], carrier_tier=[out_3])
+          expression: reduce_carrier_dim(carrier_prod / carrier_ratios[carrier_tiers=out_3], carrier_tier=[out_3])
 
   conversion_plus_prod_con_to_zero:
     description: "Set a `conversion_plus` technology's carrier flow to zero if its `carrier_ratio` is zero."
@@ -106,7 +106,7 @@ constraints:
     description: "Fix the relationship between a `conversion` technology's carrier production and consumption."
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion)"
-    equation: squeeze_carriers(carrier_prod, carrier_tier=out) == -1 * squeeze_carriers(carrier_con, carrier_tier=in) * energy_eff
+    equation: reduce_carrier_dim(carrier_prod, carrier_tier=out) == -1 * reduce_carrier_dim(carrier_con, carrier_tier=in) * energy_eff
 
   carrier_production_max:
     description: "Set the upper bound of a non-`conversion_plus` technology's carrier production."
@@ -150,9 +150,9 @@ constraints:
     equation: "sum(carrier_prod, over=techs) + sum(carrier_con, over=techs) - $carrier_export + $unmet_demand_and_unused_supply == 0"
     sub_expressions:
       carrier_export:
-        - where: "sum(export_carrier, over=techs)"
+        - where: "any(export_carrier, over=techs)"
           expression: sum(carrier_export, over=techs)
-        - where: "NOT sum(export_carrier, over=techs)"
+        - where: "NOT any(export_carrier, over=techs)"
           expression: "0"
       unmet_demand_and_unused_supply:
         - where: "run.ensure_feasibility=True"
@@ -225,11 +225,11 @@ constraints:
     sub_expressions:
       carrier_prod: *carrier_prod_with_parasitic
       storage_previous_step: &storage_previous_step
-        - where: timesteps=get_val_at_index(dim=timesteps, idx=0) AND NOT run.cyclic_storage=True
+        - where: timesteps=get_val_at_index(timesteps=0) AND NOT run.cyclic_storage=True
           expression: storage_initial * storage_cap
-        - where: ((timesteps=get_val_at_index(dim=timesteps, idx=0) AND run.cyclic_storage=True) OR NOT timesteps=get_val_at_index(dim=timesteps, idx=0)) AND NOT lookup_cluster_first_timestep=True
+        - where: ((timesteps=get_val_at_index(timesteps=0) AND run.cyclic_storage=True) OR NOT timesteps=get_val_at_index(timesteps=0)) AND NOT lookup_cluster_first_timestep=True
           expression: (1 - storage_loss) ** roll(timestep_resolution, timesteps=1) * roll(storage, timesteps=1)
-        - where: lookup_cluster_first_timestep=True AND NOT (timesteps=get_val_at_index(dim=timesteps, idx=0) AND NOT run.cyclic_storage=True)
+        - where: lookup_cluster_first_timestep=True AND NOT (timesteps=get_val_at_index(timesteps=0) AND NOT run.cyclic_storage=True)
           expression: (1 - storage_loss) ** select_from_lookup_arrays(timestep_resolution, timesteps=lookup_cluster_last_timestep) * select_from_lookup_arrays(storage, timesteps=lookup_cluster_last_timestep)
 
   resource_availability_supply_plus:
@@ -264,7 +264,7 @@ constraints:
     equation: storage[timesteps=$final_step] * ((1 - storage_loss) ** timestep_resolution[timesteps=$final_step]) == storage_initial * storage_cap
     slices:
       final_step:
-        - expression: get_val_at_index(dim=timesteps, idx=-1)
+        - expression: get_val_at_index(timesteps=-1)
 
   balance_transmission:
     description: "Fix the relationship between between energy flowing into and out of a `transmission` link in each timestep."
@@ -310,7 +310,7 @@ constraints:
     description: "Set the upper bound of a `conversion_plus` technology's ability to produce energy across all of its `out` energy carriers, if it uses integer units to define its capacity."
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion_plus) AND cap_method=integer AND allowed_carrier_prod=True"
-    equation: squeeze_carriers(carrier_prod, carrier_tier=out) <= operating_units * timestep_resolution * energy_cap_per_unit
+    equation: reduce_carrier_dim(carrier_prod, carrier_tier=out) <= operating_units * timestep_resolution * energy_cap_per_unit
 
   carrier_consumption_max_milp:
     description: "Set the upper bound of a non-`conversion_plus` technology's ability to consume energy, for any technology using integer units to define its capacity."
@@ -328,7 +328,7 @@ constraints:
     description: "Set the lower bound of a `conversion_plus` technology's ability to produce energy across all of its `out` energy carriers, if it uses integer units to define its capacity."
     foreach: [nodes, techs, timesteps]
     where: "energy_cap_min_use AND inheritance(conversion_plus) AND cap_method=integer AND allowed_carrier_prod=True"
-    equation: squeeze_carriers(carrier_prod, carrier_tier=out) >= operating_units * timestep_resolution * energy_cap_per_unit * energy_cap_min_use
+    equation: reduce_carrier_dim(carrier_prod, carrier_tier=out) >= operating_units * timestep_resolution * energy_cap_per_unit * energy_cap_min_use
 
   storage_capacity_units_milp:
     description: "Fix the storage capacity of any technology using integer units to define its capacity."
@@ -394,18 +394,18 @@ constraints:
     description: "Set a technology's ability to consume energy in the same timestep that it is producing energy, for any technology using the asynchronous production/consumption binary switch."
     foreach: [nodes, techs, timesteps]
     where: "force_asynchronous_prod_con=True"
-    equation: -1 * squeeze_carriers(carrier_con, carrier_tier=in) <= (1 - prod_con_switch) * bigM
+    equation: -1 * reduce_carrier_dim(carrier_con, carrier_tier=in) <= (1 - prod_con_switch) * bigM
 
   asynchronous_prod_milp:
     description: "Set a technology's ability to produce energy in the same timestep that it is consuming energy, for any technology using the asynchronous production/consumption binary switch."
     foreach: [nodes, techs, timesteps]
     where: "force_asynchronous_prod_con=True"
-    equation: squeeze_carriers(carrier_prod, carrier_tier=out) <= prod_con_switch * bigM
+    equation: reduce_carrier_dim(carrier_prod, carrier_tier=out) <= prod_con_switch * bigM
 
   ramping_up:
     description: "Set the upper bound on a technology's ability to ramp energy production up beyond a certain percentage compared to the previous timestep."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "energy_ramping AND NOT timesteps=get_val_at_index(dim=timesteps, idx=0)"
+    where: "energy_ramping AND NOT timesteps=get_val_at_index(timesteps=0)"
     equation: $flow - roll($flow, timesteps=1) <= energy_ramping * energy_cap
     sub_expressions:
       flow: &ramping_flow
@@ -419,7 +419,7 @@ constraints:
   ramping_down:
     description: "Set the upper bound on a technology's ability to ramp energy production down beyond a certain percentage compared to the previous timestep."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "energy_ramping AND NOT timesteps=get_val_at_index(dim=timesteps, idx=0)"
+    where: "energy_ramping AND NOT timesteps=get_val_at_index(timesteps=0)"
     equation: -1 * energy_ramping * energy_cap <= $flow - roll($flow, timesteps=1)
     sub_expressions:
       flow: *ramping_flow
@@ -599,18 +599,18 @@ global_expressions:
         - where: "cost_om_con AND inheritance(supply_plus)"
           expression: cost_om_con * resource_con
         - where: "cost_om_con AND inheritance(supply) AND energy_eff>0 AND [out] in carrier_tiers"
-          expression: cost_om_con * squeeze_carriers(carrier_prod, carrier_tier=out) / energy_eff
+          expression: cost_om_con * reduce_carrier_dim(carrier_prod, carrier_tier=out) / energy_eff
         - where: "cost_om_con AND inheritance(conversion_plus)"
-          expression: cost_om_con * -1 * squeeze_primary_carriers(carrier_con, carrier_tier=in)
+          expression: cost_om_con * -1 * reduce_primary_carrier_dim(carrier_con, carrier_tier=in)
         - where: "cost_om_con AND NOT (inheritance(conversion_plus) OR inheritance(supply_plus) OR inheritance(supply)) AND [in] in carrier_tiers"
-          expression: cost_om_con * -1 * squeeze_carriers(carrier_con, carrier_tier=in)
+          expression: cost_om_con * -1 * reduce_carrier_dim(carrier_con, carrier_tier=in)
         - where: "NOT cost_om_con"
           expression: "0"
       cost_om_prod:
         - where: "cost_om_prod AND inheritance(conversion_plus)"
-          expression: cost_om_prod * squeeze_primary_carriers(carrier_prod, carrier_tier=out)
+          expression: cost_om_prod * reduce_primary_carrier_dim(carrier_prod, carrier_tier=out)
         - where: "cost_om_prod AND NOT inheritance(conversion_plus)"
-          expression: cost_om_prod * squeeze_carriers(carrier_prod, carrier_tier=out)
+          expression: cost_om_prod * reduce_carrier_dim(carrier_prod, carrier_tier=out)
         - where: "NOT cost_om_prod"
           expression: "0"
 

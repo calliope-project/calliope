@@ -1,124 +1,172 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
-from typing import Callable
+from typing import Callable, Literal, Union
 
+import pandas as pd
 import xarray as xr
 
 from calliope.exceptions import BackendError
 
 
-def inheritance(model_data, **kwargs):
-    def _inheritance(tech_group):
-        # Only for base tech inheritance
-        return model_data.inheritance.str.endswith(tech_group)
+def inheritance(model_data: xr.Dataset, **kwargs) -> Callable:
+    "Wrapper for `inheritance` function"
+    inheritance_lists = model_data.inheritance.to_series().str.split(".")
+
+    def _inheritance(tech_group: str) -> xr.DataArray:
+        """
+        Find all technologies which inherit from a particular technology group.
+        The technology group can be an abstract base group (e.g., `supply`, `storage`) or a user-defined technology group which itself inherits from one of the abstract base groups.
+
+        Args:
+            model_data (xr.Dataset): Calliope model data
+        """
+        return inheritance_lists.apply(lambda x: tech_group in x).to_xarray()
 
     return _inheritance
 
 
-def imask_sum(model_data, **kwargs):
-    def _imask_sum(component, *, over):
+def where_any(model_data: xr.Dataset, **kwargs) -> Callable:
+    "Wrapper for `where_any` function"
+
+    def _where_any(parameter: str, *, over: Union[str, list[str]]) -> xr.DataArray:
         """
+        Reduce the boolean where array of a model parameter by applying `any` over some dimension(s).
+
         Args:
-            to_sum (_type_): _description_
-            over (_type_): _description_
+            parameter (str): Reference to a model input parameter
+            over (Union[str, list[str]]): dimension(s) over which to apply `any`.
 
         Returns:
-            _type_: _description_
-        """
-        to_return = model_data.get(component, xr.DataArray(False))
-        if to_return.any():
-            to_return = expression_sum()(to_return, over=over) > 0
-
-        return to_return
-
-    return _imask_sum
-
-
-def expression_sum(**kwargs):
-    def _expression_sum(component, *, over):
+            xr.DataArray:
+                If the parameter exists in the model, returns a boolean array with dimensions reduced by applying a boolean OR operation along the dimensions given in `over`.
+                If the parameter does not exist, returns a dimensionless False array.
         """
 
-        Slower method that uses the backend "quicksum" method:
-
-        to_sum_series = to_sum.to_series()
-        over = over if isinstance(over, list) else [over]
-        summed = backend_interface.sum(to_sum_series, over=over)
-
-        if isinstance(summed, pd.Series):
-            to_return = xr.DataArray.from_series(summed)
+        if parameter in model_data.data_vars:
+            parameter_da = model_data[parameter]
+            with pd.option_context("mode.use_inf_as_na", True):
+                bool_parameter_da = (
+                    parameter_da.where(pd.notnull(parameter_da))  # type: ignore
+                    .notnull()
+                    .any(dim=over, keep_attrs=True)
+                )
         else:
-            to_return = xr.DataArray(summed)
+            bool_parameter_da = xr.DataArray(False)
+        return bool_parameter_da
+
+    return _where_any
+
+
+def expression_sum(**kwargs) -> Callable:
+    "Wrapper for `expression_sum` function"
+
+    def _expression_sum(
+        array: xr.DataArray, *, over: Union[str, list[str]]
+    ) -> xr.DataArray:
+        """
+        Sum an expression array over the given dimension(s).
 
         Args:
-            to_sum (_type_): _description_
-            over (_type_): _description_
+            array (xr.DataArray): expression array
+            over (Union[str, list[str]]): dimension(s) over which to apply `sum`.
 
         Returns:
-            _type_: _description_
+            xr.DataArray:
+                Array with dimensions reduced by applying a summation over the dimensions given in `over`.
+                NaNs are ignored (xarray.DataArray.sum arg: `skipna: True`) and if all values along the dimension(s) are NaN, the summation will lead to a NaN (xarray.DataArray.sum arg: `min_count=1`).
         """
-        to_return = component.sum(over, min_count=1, skipna=True)
+        to_return = array.sum(over, min_count=1, skipna=True)
 
         return to_return
 
     return _expression_sum
 
 
-def squeeze_carriers(model_data, **kwargs):
-    def _squeeze_carriers(component, carrier_tier):
-        return expression_sum(**kwargs)(
-            component.where(
-                model_data.carrier.sel(carrier_tiers=carrier_tier).notnull()
-            ),
+def reduce_carrier_dim(model_data: xr.Dataset, **kwargs) -> Callable:
+    "Wrapper for `reduce_carrier_dim` function"
+
+    def _reduce_carrier_dim(
+        array: xr.DataArray,
+        carrier_tier: Literal["in", "out", "in_2", "out_2", "in_3", "out_3"],
+    ) -> xr.DataArray:
+        """Reduce expression array data by selecting the carrier that corresponds to the given carrier tier and then dropping the `carriers` dimension.
+
+        Args:
+            array (xr.DataArray): Expression array.
+            carrier_tier (Literal["in", "out", "in_2", "out_2", "in_3", "out_3"]): Carrier tier on which to slice the model `exists` array to find the carrier that exists for the elements of `array`.
+
+        Returns:
+            xr.DataArray: `array` reduced by the `carriers` dimension.
+        """
+        return expression_sum(model_data=model_data, **kwargs)(
+            array.where(model_data.carrier.sel(carrier_tiers=carrier_tier).notnull()),
             over="carriers",
         )
 
-    return _squeeze_carriers
+    return _reduce_carrier_dim
 
 
-def squeeze_primary_carriers(model_data, **kwargs):
-    def _squeeze_primary_carriers(component, carrier_tier):
+def reduce_primary_carrier_dim(model_data: xr.Dataset, **kwargs) -> Callable:
+    "Wrapper for `reduce_primary_carrier_dim` function"
+
+    def _reduce_primary_carrier_dim(
+        array: xr.DataArray, carrier_tier: Literal["in", "out"]
+    ) -> xr.DataArray:
+        """Reduce expression array data by selecting the carrier that corresponds to the primary carrier and then dropping the `carriers` dimension.
+        This function is only valid for `conversion_plus` technologies, so should only be included in a math component if the `where` string includes `inheritance(conversion_plus)` or an equivalent expression.
+
+        Args:
+            array (xr.DataArray): Expression array.
+            carrier_tier (Literal["in", "out"]): Carrier tier to select one of the `primary_carrier_in`/`primary_carrier_out` arrays, in which the primary carrier for the technology is defined.
+
+
+        Returns:
+            xr.DataArray: `array` reduced by the `carriers` dimension.
+        """
         return expression_sum(**kwargs)(
-            component.where(
+            array.where(
                 getattr(model_data, f"primary_carrier_{carrier_tier}").notnull()
             ),
             over="carriers",
         )
 
-    return _squeeze_primary_carriers
+    return _reduce_primary_carrier_dim
 
 
 def select_from_lookup_arrays(model_data: xr.Dataset, **kwargs) -> Callable:
+    "Wrapper for `select_from_lookup_arrays` function"
+
     def _select_from_lookup_arrays(
-        component: xr.DataArray, **lookup_arrays: xr.DataArray
+        array: xr.DataArray, **lookup_arrays: xr.DataArray
     ) -> xr.DataArray:
         """
         Apply vectorised indexing on an arbitrary number of an input array's dimensions.
 
         Args:
-            component (xr.DataArray): Array on which to apply vectorised indexing.
+            array (xr.DataArray): Array on which to apply vectorised indexing.
 
         Kwargs:
             lookup_arrays (dict[str, xr.DataArray]):
                 key: dimension on which to apply vectorised indexing
                 value: array whose values are either NaN or values from the dimension given in the key.
         Raises:
-            BackendError: `component` must be indexed over the dimensions given in the `lookup_arrays` dict keys.
+            BackendError: `array` must be indexed over the dimensions given in the `lookup_arrays` dict keys.
             BackendError: All `lookup_arrays` must be indexed over all the dimensions given in the `lookup_arrays` dict keys.
 
         Returns:
             xr.DataArray:
-                `component` with rearranged values (coordinates remain unchanged).
+                `array` with rearranged values (coordinates remain unchanged).
                 Any NaN index coordinates in the lookup arrays will be NaN in the returned array.
 
         Examples:
         >>> coords = {"foo": ["A", "B", "C"]}
-        >>> component = xr.DataArray([1, 2, 3], coords=coords)
+        >>> array = xr.DataArray([1, 2, 3], coords=coords)
         >>> lookup_array = xr.DataArray(
                 np.array(["B", "A", np.nan], dtype="O"), coords=coords, name="bar"
             )
         >>> model_data = xr.Dataset({"bar": lookup_array})
-        >>> select_from_lookup_arrays(model_data)(component, foo=lookup_array)
+        >>> select_from_lookup_arrays(model_data)(array, foo=lookup_array)
         <xarray.DataArray 'bar' (foo: 3)>
         array([ 2.,  1., nan])
         Coordinates:
@@ -129,17 +177,17 @@ def select_from_lookup_arrays(model_data: xr.Dataset, **kwargs) -> Callable:
         """
 
         dims = set(lookup_arrays.keys())
-        missing_dims_in_component = dims.difference(component.dims)
+        missing_dims_in_component = dims.difference(array.dims)
         missing_dims_in_lookup_tables = any(
             dim not in lookup.dims for dim in dims for lookup in lookup_arrays.values()
         )
         if missing_dims_in_component:
             raise BackendError(
-                f"Cannot select items from `{component.name}` on the dimensions {dims} since the array is not indexed over the dimensions {missing_dims_in_component}"
+                f"Cannot select items from `{array.name}` on the dimensions {dims} since the array is not indexed over the dimensions {missing_dims_in_component}"
             )
         if missing_dims_in_lookup_tables:
             raise BackendError(
-                f"All lookup arrays used to select items from `{component.name}` must be indexed over the dimensions {dims}"
+                f"All lookup arrays used to select items from `{array.name}` must be indexed over the dimensions {dims}"
             )
 
         stacked_and_dense_lookup_arrays = {
@@ -153,27 +201,83 @@ def select_from_lookup_arrays(model_data: xr.Dataset, **kwargs) -> Callable:
             .dropna("idx")
             for dim_name, lookup in lookup_arrays.items()
         }
-        sliced_component = component.sel(stacked_and_dense_lookup_arrays)
+        sliced_component = array.sel(stacked_and_dense_lookup_arrays)
 
         return (
             sliced_component.drop_vars(dims)
             .unstack("idx")
-            .reindex_like(component, copy=False)
+            .reindex_like(array, copy=False)
         )
 
     return _select_from_lookup_arrays
 
 
-def get_val_at_index(model_data, **kwargs):
-    def _get_val_at_index(*, dim, idx):
+def get_val_at_index(model_data: xr.Dataset, **kwargs) -> Callable:
+    "Wrapper for `get_val_at_index` function"
+
+    def _get_val_at_index(**dim_idx_mapping: int) -> xr.DataArray:
+        """Get value of a model dimension at a given integer index.
+        This function is primarily useful for timeseries data
+
+        Keyword Args:
+            key (str): Model dimension in which to extract value.
+            value (int): Integer index of the value to extract (assuming zero-indexing).
+
+        Raises:
+            ValueError: Exactly one dimension:index mapping is expected.
+
+        Returns:
+            xr.DataArray: Dimensionless array containing one value.
+
+        Examples:
+        >>> coords = {"timesteps": ["2000-01-01 00:00", "2000-01-01 01:00", "2000-01-01 02:00"]}
+        >>> model_data = xr.Dataset(coords=coords)
+        >>> get_val_at_index(model_data)(timesteps=0)
+        <xarray.DataArray 'timesteps' ()>
+        array('2000-01-01 00:00', dtype='<U16')
+        Coordinates:
+            timesteps  <U16 '2000-01-01 00:00'
+        >>> get_val_at_index(model_data)(timesteps=-1)
+        <xarray.DataArray 'timesteps' ()>
+        array('2000-01-01 00:00', dtype='<U16')
+        Coordinates:
+            timesteps  <U16 '2000-01-01 02:00'
+        """
+        if len(dim_idx_mapping) != 1:
+            raise ValueError("Supply one (and only one) dimension:index mapping")
+        dim, idx = next(iter(dim_idx_mapping.items()))
         return model_data.coords[dim][int(idx)]
 
     return _get_val_at_index
 
 
-def roll(**kwargs):
-    def _roll(component, **roll_kwargs):
+def roll(**kwargs) -> Callable:
+    "Wrapper for `roll` function"
+
+    def _roll(array: xr.DataArray, **roll_kwargs: int) -> xr.DataArray:
+        """
+        Roll (a.k.a., shift) the array along the given dimension(s) by the given number of places.
+        Rolling keeps the array index labels in the same position, but moves the data by the given number of places.
+
+        Args:
+            array (xr.DataArray): Array on which to roll data.
+        Keyword Args:
+            key (str): name of dimension on which to roll.
+            value (int): number of places to roll data.
+
+        Returns:
+            xr.DataArray: `array` with rolled data.
+
+        Examples:
+        >>> array = xr.DataArray([1, 2, 3], coords={"foo": ["A", "B", "C"]})
+        >>> model_data = xr.Dataset({"bar": array})
+        >>> roll()("bar", foo=1)
+        <xarray.DataArray 'bar' (foo: 3)>
+        array([3, 1, 2])
+        Coordinates:
+        * foo      (foo) <U1 'A' 'B' 'C'
+        """
         roll_kwargs_int = {k: int(v) for k, v in roll_kwargs.items()}
-        return component.roll(roll_kwargs_int)
+        return array.roll(roll_kwargs_int)
 
     return _roll

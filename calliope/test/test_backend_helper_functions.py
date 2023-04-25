@@ -1,10 +1,9 @@
-import pytest
-
 import numpy as np
+import pytest
 import xarray as xr
 
-from calliope.backend import helper_functions
 from calliope import exceptions
+from calliope.backend import helper_functions
 from calliope.test.common.util import check_error_or_warning
 
 
@@ -14,9 +13,9 @@ def test_inheritance(dummy_model_data):
     assert boo_bool.equals(dummy_model_data.boo_inheritance_bool)
 
 
-def test_imask_sum_not_exists(dummy_model_data):
-    imask_sum = helper_functions.imask_sum(dummy_model_data)
-    summed = imask_sum("foo", over="techs")
+def test_where_any_not_exists(dummy_model_data):
+    where_any = helper_functions.where_any(dummy_model_data)
+    summed = where_any("foo", over="techs")
     assert summed.equals(xr.DataArray(False))
 
 
@@ -24,9 +23,9 @@ def test_imask_sum_not_exists(dummy_model_data):
     ["var", "over", "expected"],
     [("with_inf", "techs", "nodes_true"), ("all_nan", "techs", "nodes_false")],
 )
-def test_imask_sum_exists(dummy_model_data, var, over, expected):
-    imask_sum = helper_functions.imask_sum(dummy_model_data)
-    summed = imask_sum(var, over=over)
+def test_where_any_exists(dummy_model_data, var, over, expected):
+    where_any = helper_functions.where_any(dummy_model_data)
+    summed = where_any(var, over=over)
     assert summed.equals(dummy_model_data[expected])
 
 
@@ -55,27 +54,27 @@ def test_expression_sum_two_dims(dummy_model_data):
     assert summed_array == 5
 
 
-def test_squeeze_carriers(dummy_model_data):
-    squeeze_carriers = helper_functions.squeeze_carriers(dummy_model_data)
-    squeezed = squeeze_carriers(dummy_model_data.all_true_carriers, "foo")
+def test_reduce_carrier_dim(dummy_model_data):
+    reduce_carrier_dim = helper_functions.reduce_carrier_dim(dummy_model_data)
+    reduced = reduce_carrier_dim(dummy_model_data.all_true_carriers, "foo")
 
-    assert dummy_model_data.carrier.sel(carrier_tiers="foo").sum() == squeezed.sum()
-    assert not set(squeezed.dims).symmetric_difference(["techs"])
-
-
-def test_squeeze_primary_carriers(dummy_model_data):
-    squeeze_carriers = helper_functions.squeeze_primary_carriers(dummy_model_data)
-    squeezed = squeeze_carriers(dummy_model_data.all_true_carriers, "out")
-
-    assert squeezed.sum() == 3
-    assert squeezed.max() == 1
-    assert not set(squeezed.dims).symmetric_difference(["techs"])
+    assert dummy_model_data.carrier.sel(carrier_tiers="foo").sum() == reduced.sum()
+    assert not set(reduced.dims).symmetric_difference(["techs"])
 
 
-def test_squeeze_primary_carriers_not_in_model(dummy_model_data):
-    squeeze_carriers = helper_functions.squeeze_primary_carriers(dummy_model_data)
+def test_reduce_primary_carrier_dim(dummy_model_data):
+    reduce_carrier = helper_functions.reduce_primary_carrier_dim(dummy_model_data)
+    reduced = reduce_carrier(dummy_model_data.all_true_carriers, "out")
+
+    assert reduced.sum() == 3
+    assert reduced.max() == 1
+    assert not set(reduced.dims).symmetric_difference(["techs"])
+
+
+def test_reduce_primary_carrier_dim_not_in_model(dummy_model_data):
+    reduce_carrier = helper_functions.reduce_primary_carrier_dim(dummy_model_data)
     with pytest.raises(AttributeError):
-        squeeze_carriers(dummy_model_data.all_true_carriers, "foo")
+        reduce_carrier(dummy_model_data.all_true_carriers, "foo")
 
 
 @pytest.mark.parametrize(
@@ -138,10 +137,20 @@ def test_select_from_lookup_arrays_fail_dim_slicer_mismatch(dummy_model_data):
     )
 
 
-@pytest.mark.parametrize(["ix", "expected"], [(0, "foo"), (1, "bar"), (-1, "bar")])
-def test_get_val_at_index(dummy_model_data, ix, expected):
+@pytest.mark.parametrize(["idx", "expected"], [(0, "foo"), (1, "bar"), (-1, "bar")])
+def test_get_val_at_index(dummy_model_data, idx, expected):
     get_val_at_index = helper_functions.get_val_at_index(dummy_model_data)
-    assert get_val_at_index(dim="timesteps", idx=ix) == expected
+    assert get_val_at_index(timesteps=idx) == expected
+
+
+@pytest.mark.parametrize("mapping", [{}, {"foo": 1, "bar": 1}])
+def test_get_val_at_index_not_one_mapping(dummy_model_data, mapping):
+    get_val_at_index = helper_functions.get_val_at_index(dummy_model_data)
+    with pytest.raises(ValueError) as excinfo:
+        get_val_at_index(**mapping)
+    assert check_error_or_warning(
+        excinfo, "Supply one (and only one) dimension:index mapping"
+    )
 
 
 @pytest.mark.parametrize(["to_roll", "expected"], [(1, 3), (1.0, 3), (-3.0, 3)])
