@@ -13,7 +13,7 @@ import xarray as xr
 from typing_extensions import NotRequired, Required, TypedDict
 
 from calliope import exceptions
-from calliope.backend import backends, equation_parser, helper_functions, subset_parser
+from calliope.backend import backends, expression_parser, helper_functions, where_parser
 
 VALID_EXPRESSION_HELPER_FUNCTIONS: dict[str, Callable] = {
     "sum": helper_functions.expression_sum,
@@ -131,11 +131,11 @@ class ParsedBackendEquation:
             set[str]: Unique sub-expressions references.
         """
         valid_eval_classes: tuple = (
-            equation_parser.EvalOperatorOperand,
-            equation_parser.EvalFunction,
+            expression_parser.EvalOperatorOperand,
+            expression_parser.EvalFunction,
         )
         elements: list = [self.expression[0].values]
-        to_find = equation_parser.EvalSubExpressions
+        to_find = expression_parser.EvalSubExpressions
 
         return self._find_items_in_expression(elements, to_find, valid_eval_classes)
 
@@ -150,21 +150,21 @@ class ParsedBackendEquation:
 
         valid_eval_classes = tuple(
             [
-                equation_parser.EvalOperatorOperand,
-                equation_parser.EvalFunction,
-                equation_parser.EvalSlicedParameterOrVariable,
+                expression_parser.EvalOperatorOperand,
+                expression_parser.EvalFunction,
+                expression_parser.EvalSlicedParameterOrVariable,
             ]
         )
         elements = [self.expression[0].values, *list(self.sub_expressions.values())]
-        to_find = equation_parser.EvalIndexSlice
+        to_find = expression_parser.EvalIndexSlice
 
         return self._find_items_in_expression(elements, to_find, valid_eval_classes)
 
     @staticmethod
     def _find_items_in_expression(
         parser_elements: Union[list, pp.ParseResults],
-        to_find: type[equation_parser.EvalString],
-        valid_eval_classes: tuple[type[equation_parser.EvalString], ...],
+        to_find: type[expression_parser.EvalString],
+        valid_eval_classes: tuple[type[expression_parser.EvalString], ...],
     ) -> set[str]:
         """
         Recursively find sub-expressions / index items defined in an equation expression.
@@ -296,9 +296,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
     _ERR_BULLET: str = " * "
     _ERR_STRING_ORDER: list[str] = ["expression_group", "id", "expr_or_where"]
     PARSERS: dict[str, Callable] = {
-        "constraints": equation_parser.generate_equation_parser,
-        "global_expressions": equation_parser.generate_arithmetic_parser,
-        "objectives": equation_parser.generate_arithmetic_parser,
+        "constraints": expression_parser.generate_equation_parser,
+        "global_expressions": expression_parser.generate_arithmetic_parser,
+        "objectives": expression_parser.generate_arithmetic_parser,
         "variables": lambda x: None,
     }
 
@@ -406,7 +406,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
 
         sub_expression_dict = {
             c_name: self.generate_expression_list(
-                expression_parser=equation_parser.generate_sub_expression_parser(
+                expression_parser=expression_parser.generate_sub_expression_parser(
                     valid_math_element_names
                 ),
                 expression_list=c_list,
@@ -417,7 +417,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         }
         slice_dict = {
             idx_name: self.generate_expression_list(
-                expression_parser=equation_parser.generate_slice_parser(
+                expression_parser=expression_parser.generate_slice_parser(
                     valid_math_element_names
                 ),
                 expression_list=idx_list,
@@ -491,7 +491,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
             pp.ParseResults: Parsed string. If any parsing errors are caught,
                 they will be logged to `self._errors` to raise later.
         """
-        parser = subset_parser.generate_where_string_parser()
+        parser = where_parser.generate_where_string_parser()
         self._tracker["expr_or_where"] = "where"
         return self._parse_string(parser, where_string)
 

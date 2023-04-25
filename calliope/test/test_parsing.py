@@ -6,7 +6,7 @@ import pytest
 import ruamel.yaml as yaml
 
 import calliope
-from calliope.backend import backends, equation_parser, parsing, subset_parser
+from calliope.backend import backends, expression_parser, parsing, where_parser
 from calliope.test.common.util import check_error_or_warning
 
 BASE_DIMS = {"carriers", "carrier_tiers", "nodes", "techs"}
@@ -40,23 +40,23 @@ def valid_math_element_names(dummy_model_data):
 
 
 @pytest.fixture
-def expression_parser(valid_math_element_names):
-    return equation_parser.generate_equation_parser(valid_math_element_names)
+def expression_string_parser(valid_math_element_names):
+    return expression_parser.generate_equation_parser(valid_math_element_names)
 
 
 @pytest.fixture
 def slice_parser(valid_math_element_names):
-    return equation_parser.generate_slice_parser(valid_math_element_names)
+    return expression_parser.generate_slice_parser(valid_math_element_names)
 
 
 @pytest.fixture
 def sub_expression_parser(valid_math_element_names):
-    return equation_parser.generate_sub_expression_parser(valid_math_element_names)
+    return expression_parser.generate_sub_expression_parser(valid_math_element_names)
 
 
 @pytest.fixture
-def where_parser():
-    return subset_parser.generate_where_string_parser()
+def where_string_parser():
+    return where_parser.generate_where_string_parser()
 
 
 @pytest.fixture
@@ -71,10 +71,10 @@ def expression_generator():
 
 
 @pytest.fixture
-def generate_expression_list(component_obj, expression_parser):
+def generate_expression_list(component_obj, expression_string_parser):
     def _generate_expression_list(expression_list, **kwargs):
         return component_obj.generate_expression_list(
-            expression_parser, expression_list, "equations", **kwargs
+            expression_string_parser, expression_list, "equations", **kwargs
         )
 
     return _generate_expression_list
@@ -175,36 +175,36 @@ def obj_with_sub_expressions_and_slices():
 
 
 @pytest.fixture(scope="function")
-def equation_obj(expression_parser, where_parser):
+def equation_obj(expression_string_parser, where_string_parser):
     return parsing.ParsedBackendEquation(
         equation_name="foo",
         sets=["A", "A1"],
-        expression=expression_parser.parse_string("foo == 1", parse_all=True),
-        where_list=[where_parser.parse_string("True", parse_all=True)],
+        expression=expression_string_parser.parse_string("foo == 1", parse_all=True),
+        where_list=[where_string_parser.parse_string("True", parse_all=True)],
     )
 
 
 @pytest.fixture(scope="function")
-def equation_sub_expression_obj(sub_expression_parser, where_parser):
+def equation_sub_expression_obj(sub_expression_parser, where_string_parser):
     def _equation_sub_expression_obj(name):
         return parsing.ParsedBackendEquation(
             equation_name=name,
             sets=["A", "A1"],
             expression=sub_expression_parser.parse_string("foo + 1", parse_all=True),
-            where_list=[where_parser.parse_string("False", parse_all=True)],
+            where_list=[where_string_parser.parse_string("False", parse_all=True)],
         )
 
     return _equation_sub_expression_obj
 
 
 @pytest.fixture(scope="function")
-def equation_slice_obj(slice_parser, where_parser):
+def equation_slice_obj(slice_parser, where_string_parser):
     def _equation_slice_obj(name):
         return parsing.ParsedBackendEquation(
             equation_name=name,
             sets=["A", "A1"],
             expression=slice_parser.parse_string("bar", parse_all=True),
-            where_list=[where_parser.parse_string("False", parse_all=True)],
+            where_list=[where_string_parser.parse_string("False", parse_all=True)],
         )
 
     return _equation_slice_obj
@@ -317,8 +317,8 @@ class TestParsedComponent:
             "-1**foo + dummy_func_1(2) + baz[A1=a1] >= foobar",
         ],
     )
-    def test_parse_string(self, component_obj, expression_parser, parse_string):
-        parsed_ = component_obj._parse_string(expression_parser, parse_string)
+    def test_parse_string(self, component_obj, expression_string_parser, parse_string):
+        parsed_ = component_obj._parse_string(expression_string_parser, parse_string)
         assert isinstance(parsed_, pp.ParseResults)
         assert not component_obj._errors
 
@@ -327,9 +327,9 @@ class TestParsedComponent:
         ["foo bar == 1", "foo - $bar + baz[A1=a1] = 1", "1foo == 1", "_foo >= foobar"],
     )
     def test_parse_string_malformed(
-        self, component_obj, expression_parser, parse_string
+        self, component_obj, expression_string_parser, parse_string
     ):
-        parsed_ = component_obj._parse_string(expression_parser, parse_string)
+        parsed_ = component_obj._parse_string(expression_string_parser, parse_string)
         assert isinstance(parsed_, pp.ParseResults) and len(parsed_) == 0
         assert check_error_or_warning(component_obj._errors, parse_string)
 
@@ -348,7 +348,7 @@ class TestParsedComponent:
     def test_generate_expression_list(
         self,
         component_obj,
-        expression_parser,
+        expression_string_parser,
         expression_generator,
         parse_string,
         where_string,
@@ -356,7 +356,7 @@ class TestParsedComponent:
     ):
         expression_dict = expression_generator(parse_string, where_string)
         parsed_list = component_obj.generate_expression_list(
-            expression_parser, [expression_dict], "equations", id_prefix="foo"
+            expression_string_parser, [expression_dict], "equations", id_prefix="foo"
         )
 
         assert parsed_list[0].where[0][0].eval() == expected_where_eval
@@ -678,13 +678,13 @@ class TestParsedBackendEquation:
         ],
     )
     def test_find_items_in_expression(
-        self, expression_parser, equation_obj, parse_string
+        self, expression_string_parser, equation_obj, parse_string
     ):
-        parsed = expression_parser.parse_string(parse_string, parse_all=True)
+        parsed = expression_string_parser.parse_string(parse_string, parse_all=True)
         found_sub_expressions = equation_obj._find_items_in_expression(
             [parsed[0].lhs, parsed[0].rhs],
-            equation_parser.EvalSubExpressions,
-            (equation_parser.EvalOperatorOperand),
+            expression_parser.EvalSubExpressions,
+            (expression_parser.EvalOperatorOperand),
         )
         assert not found_sub_expressions.symmetric_difference(["foo", "bar"])
 
@@ -706,12 +706,12 @@ class TestParsedBackendEquation:
         ],
     )
     def test_find_items_in_expression_missing_eval_class(
-        self, expression_parser, equation_obj, parse_string, expected
+        self, expression_string_parser, equation_obj, parse_string, expected
     ):
-        parsed = expression_parser.parse_string(parse_string, parse_all=True)
+        parsed = expression_string_parser.parse_string(parse_string, parse_all=True)
         found_sub_expressions = equation_obj._find_items_in_expression(
             [parsed[0].lhs, parsed[0].rhs],
-            equation_parser.EvalSubExpressions,
+            expression_parser.EvalSubExpressions,
             (),  # The above happens because we provide no eval classes to search inside
         )
         assert not found_sub_expressions.symmetric_difference(expected)
@@ -731,8 +731,10 @@ class TestParsedBackendEquation:
             "foo[techs=$tech1] + dummy_func_2(bar[techs=$tech2, nodes=FOO]) <= $foo",
         ],
     )
-    def test_find_slice_references(self, expression_parser, equation_obj, parse_string):
-        parsed = expression_parser.parse_string(parse_string, parse_all=True)
+    def test_find_slice_references(
+        self, expression_string_parser, equation_obj, parse_string
+    ):
+        parsed = expression_string_parser.parse_string(parse_string, parse_all=True)
         equation_obj.expression = parsed
         found_slices = equation_obj.find_slices()
         assert not found_slices.symmetric_difference(["tech1", "tech2"])
@@ -747,8 +749,10 @@ class TestParsedBackendEquation:
             "dummy_func_1($bar, x=$foo) <= 2",
         ],
     )
-    def test_find_sub_expressions(self, expression_parser, equation_obj, parse_string):
-        parsed = expression_parser.parse_string(parse_string, parse_all=True)
+    def test_find_sub_expressions(
+        self, expression_string_parser, equation_obj, parse_string
+    ):
+        parsed = expression_string_parser.parse_string(parse_string, parse_all=True)
         equation_obj.expression = parsed
         found_slices = equation_obj.find_sub_expressions()
         assert not found_slices.symmetric_difference(["foo", "bar"])
@@ -767,13 +771,13 @@ class TestParsedBackendEquation:
     )
     def test_find_slices_in_expr_and_sub_expressions(
         self,
-        expression_parser,
+        expression_string_parser,
         sub_expression_parser,
         equation_obj,
         equation_expr,
         sub_expression_exprs,
     ):
-        equation_obj.expression = expression_parser.parse_string(
+        equation_obj.expression = expression_string_parser.parse_string(
             equation_expr, parse_all=True
         )
         equation_obj.sub_expressions = {
@@ -832,11 +836,11 @@ class TestParsedBackendEquation:
 
     @pytest.mark.parametrize("false_location", [0, -1])
     def test_create_subset_from_where_definitely_empty(
-        self, dummy_model_data, equation_obj, where_parser, false_location
+        self, dummy_model_data, equation_obj, where_string_parser, false_location
     ):
         equation_obj.sets = ["nodes", "techs"]
         equation_obj.where.insert(
-            false_location, where_parser.parse_string("False", parse_all=True)
+            false_location, where_string_parser.parse_string("False", parse_all=True)
         )
         where = equation_obj.evaluate_where(dummy_model_data)
 
@@ -861,7 +865,7 @@ class TestParsedBackendEquation:
         self,
         dummy_model_data,
         equation_obj,
-        where_parser,
+        where_string_parser,
         where_string,
         expected_where_array,
         level_,
@@ -869,15 +873,17 @@ class TestParsedBackendEquation:
         equation_obj.sets = ["nodes", "techs"]
         if level_ == "where":
             equation_obj.where = [
-                where_parser.parse_string(where_string, parse_all=True)
+                where_string_parser.parse_string(where_string, parse_all=True)
             ]
             where = equation_obj.evaluate_where(dummy_model_data)
         if level_ == "initial_where":
             equation_obj.where = [
-                where_parser.parse_string(where_string, parse_all=True)
+                where_string_parser.parse_string(where_string, parse_all=True)
             ]
             initial_where = equation_obj.evaluate_where(dummy_model_data)
-            equation_obj.where = [where_parser.parse_string("True", parse_all=True)]
+            equation_obj.where = [
+                where_string_parser.parse_string("True", parse_all=True)
+            ]
             where = equation_obj.evaluate_where(
                 dummy_model_data, initial_where=initial_where
             )
@@ -889,23 +895,23 @@ class TestParsedBackendEquation:
         )
 
     def test_create_subset_from_where_trim_dimension(
-        self, dummy_model_data, where_parser, equation_obj, exists_array
+        self, dummy_model_data, where_string_parser, equation_obj, exists_array
     ):
         equation_obj.sets = ["nodes", "techs"]
 
         equation_obj.where = [
-            where_parser.parse_string("[foo] in carrier_tiers", parse_all=True)
+            where_string_parser.parse_string("[foo] in carrier_tiers", parse_all=True)
         ]
         where = equation_obj.evaluate_where(dummy_model_data, exists_array)
         assert where.sel(carrier_tiers="foo").any()
         assert not where.sel(carrier_tiers="bar").any()
 
     def test_create_subset_align_dims_with_sets(
-        self, dummy_model_data, where_parser, equation_obj, exists_array
+        self, dummy_model_data, where_string_parser, equation_obj, exists_array
     ):
         equation_obj.sets = ["nodes", "techs"]
 
-        equation_obj.where = [where_parser.parse_string("True", parse_all=True)]
+        equation_obj.where = [where_string_parser.parse_string("True", parse_all=True)]
         where = equation_obj.evaluate_where(dummy_model_data, exists_array)
         aligned_where = equation_obj.drop_dims_not_in_foreach(where)
 

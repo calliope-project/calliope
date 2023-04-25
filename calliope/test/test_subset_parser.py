@@ -3,12 +3,12 @@ import pyparsing
 import pytest
 import xarray as xr
 
-from calliope.backend import equation_parser, parsing, subset_parser
+from calliope.backend import expression_parser, parsing, where_parser
 from calliope.core.attrdict import AttrDict
 from calliope.exceptions import BackendError
 from calliope.test.common.util import check_error_or_warning
 
-SUB_EXPRESSION_CLASSIFIER = equation_parser.SUB_EXPRESSION_CLASSIFIER
+SUB_EXPRESSION_CLASSIFIER = expression_parser.SUB_EXPRESSION_CLASSIFIER
 HELPER_FUNCS = {"dummy_func_1": lambda x: x * 10, "dummy_func_2": lambda x, y: x + y}
 
 BASE_DIMS = ["nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"]
@@ -20,7 +20,7 @@ def parse_yaml(yaml_string):
 
 @pytest.fixture
 def base_parser_elements():
-    number, identifier = equation_parser.setup_base_parser_elements()
+    number, identifier = expression_parser.setup_base_parser_elements()
     return number, identifier
 
 
@@ -36,27 +36,27 @@ def identifier(base_parser_elements):
 
 @pytest.fixture
 def data_var(identifier):
-    return subset_parser.data_var_parser(identifier)
+    return where_parser.data_var_parser(identifier)
 
 
 @pytest.fixture
 def config_option(identifier):
-    return subset_parser.config_option_parser(identifier)
+    return where_parser.config_option_parser(identifier)
 
 
 @pytest.fixture
 def bool_operand():
-    return subset_parser.bool_parser()
+    return where_parser.bool_parser()
 
 
 @pytest.fixture
 def evaluatable_string(identifier):
-    return subset_parser.evaluatable_string_parser(identifier)
+    return where_parser.evaluatable_string_parser(identifier)
 
 
 @pytest.fixture
 def helper_function(number, identifier, evaluatable_string):
-    return equation_parser.helper_function_parser(
+    return expression_parser.helper_function_parser(
         evaluatable_string, number, generic_identifier=identifier
     )
 
@@ -65,7 +65,7 @@ def helper_function(number, identifier, evaluatable_string):
 def comparison(
     evaluatable_string, number, helper_function, bool_operand, config_option, data_var
 ):
-    return subset_parser.comparison_parser(
+    return where_parser.comparison_parser(
         evaluatable_string,
         number,
         helper_function,
@@ -77,12 +77,12 @@ def comparison(
 
 @pytest.fixture
 def subset(identifier, evaluatable_string, number):
-    return subset_parser.subset_parser(identifier, evaluatable_string, number)
+    return where_parser.subset_parser(identifier, evaluatable_string, number)
 
 
 @pytest.fixture
 def where(bool_operand, helper_function, data_var, comparison, subset):
-    return subset_parser.where_parser(
+    return where_parser.where_parser(
         bool_operand, helper_function, data_var, comparison, subset
     )
 

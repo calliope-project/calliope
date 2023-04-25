@@ -11,7 +11,7 @@ import pandas as pd
 import pyparsing as pp
 import xarray as xr
 
-from calliope.backend import equation_parser
+from calliope.backend import expression_parser
 from calliope.exceptions import BackendError
 
 pp.ParserElement.enablePackrat()
@@ -19,7 +19,7 @@ pp.ParserElement.enablePackrat()
 BOOLEANTYPE = Union[np.bool_, np.typing.NDArray[np.bool_]]
 
 
-class EvalNot(equation_parser.EvalSignOp):
+class EvalNot(expression_parser.EvalSignOp):
     "Parse action to process successfully parsed expressions with a leading `not`"
 
     def eval(self, **kwargs) -> BOOLEANTYPE:
@@ -27,7 +27,7 @@ class EvalNot(equation_parser.EvalSignOp):
         return ~self.value.eval(**kwargs)
 
 
-class EvalAndOr(equation_parser.EvalOperatorOperand):
+class EvalAndOr(expression_parser.EvalOperatorOperand):
     """
     Parse action to process successfully parsed expressions with operands separated
     by an and/or operator (OPERAND OPERATOR OPERAND OPERATOR OPERAND ...)
@@ -162,7 +162,7 @@ class DataVarParser:
             return self._data_var_with_default(model_data)
 
 
-class ComparisonParser(equation_parser.EvalComparisonOp):
+class ComparisonParser(expression_parser.EvalComparisonOp):
     "Parse action to process successfully parsed strings of the form x=y"
 
     def __repr__(self):
@@ -313,7 +313,7 @@ def bool_parser() -> pp.ParserElement:
 def evaluatable_string_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
     "Parsing grammar to make generic strings used in comparison operations evaluatable"
     evaluatable_identifier = generic_identifier.copy()
-    evaluatable_identifier.set_parse_action(equation_parser.GenericStringParser)
+    evaluatable_identifier.set_parse_action(expression_parser.GenericStringParser)
 
     return evaluatable_identifier
 
@@ -428,12 +428,12 @@ def generate_where_string_parser() -> pp.ParserElement:
     Returns:
         pp.ParseResults: evaluatable to a bool/boolean array.
     """
-    number, generic_identifier = equation_parser.setup_base_parser_elements()
+    number, generic_identifier = expression_parser.setup_base_parser_elements()
     data_var = data_var_parser(generic_identifier)
     config_option = config_option_parser(generic_identifier)
     bool_operand = bool_parser()
     evaluatable_string = evaluatable_string_parser(generic_identifier)
-    helper_function = equation_parser.helper_function_parser(
+    helper_function = expression_parser.helper_function_parser(
         evaluatable_string, number, generic_identifier=generic_identifier
     )
     comparison = comparison_parser(
