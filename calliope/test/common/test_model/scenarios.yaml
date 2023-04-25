@@ -267,6 +267,13 @@ overrides:
     two_hours:
         model.subset_time: ['2005-01-01 00:00:00', '2005-01-01 01:00:00']
 
+    resample_two_days:
+        model:
+            subset_time: ['2005-01-01', '2005-01-02']
+            time:
+                function: resample
+                function_options.resolution: 24h
+
     operate:
         run.mode: operate
         model.subset_time: ['2005-01-01', '2005-01-04']

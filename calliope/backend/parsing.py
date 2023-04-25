@@ -3,24 +3,23 @@
 
 from __future__ import annotations
 
-import itertools
-from typing import Optional, Union, Literal, Iterable, Callable, TypeVar
-from typing_extensions import NotRequired, TypedDict, Required
 import functools
+import itertools
 import operator
+from typing import Callable, Iterable, Literal, Optional, TypeVar, Union
 
 import pyparsing as pp
 import xarray as xr
+from typing_extensions import NotRequired, Required, TypedDict
 
-from calliope.backend import equation_parser, subset_parser, backends
 from calliope import exceptions
-from calliope.backend import helper_functions
+from calliope.backend import backends, equation_parser, helper_functions, subset_parser
 
 VALID_EXPRESSION_HELPER_FUNCTIONS: dict[str, Callable] = {
     "sum": helper_functions.expression_sum,
     "squeeze_carriers": helper_functions.squeeze_carriers,
     "squeeze_primary_carriers": helper_functions.squeeze_primary_carriers,
-    "get_connected_link": helper_functions.get_connected_link,
+    "select_from_lookup_arrays": helper_functions.select_from_lookup_arrays,
     "get_val_at_index": helper_functions.get_val_at_index,
     "roll": helper_functions.roll,
 }
@@ -44,8 +43,8 @@ class UnparsedConstraintDict(TypedDict):
     where: str
     equation: NotRequired[str]
     equations: NotRequired[list[UnparsedEquationDict]]
-    components: NotRequired[dict[str, list[UnparsedEquationDict]]]
-    index_slices: NotRequired[dict[str, list[UnparsedEquationDict]]]
+    sub_expressions: NotRequired[dict[str, list[UnparsedEquationDict]]]
+    slices: NotRequired[dict[str, list[UnparsedEquationDict]]]
 
 
 class UnparsedExpressionDict(UnparsedConstraintDict):
@@ -72,7 +71,7 @@ class UnparsedObjectiveDict(TypedDict):
     description: NotRequired[str]
     equation: NotRequired[str]
     equations: NotRequired[list[UnparsedEquationDict]]
-    components: NotRequired[dict[str, list[UnparsedEquationDict]]]
+    sub_expressions: NotRequired[dict[str, list[UnparsedEquationDict]]]
     sense: str
 
 
@@ -92,8 +91,8 @@ class ParsedBackendEquation:
         sets: list[str],
         expression: pp.ParseResults,
         where_list: list[pp.ParseResults],
-        components: Optional[dict[str, pp.ParseResults]] = None,
-        index_slices: Optional[dict[str, pp.ParseResults]] = None,
+        sub_expressions: Optional[dict[str, pp.ParseResults]] = None,
+        slices: Optional[dict[str, pp.ParseResults]] = None,
     ) -> None:
         """
         Object for storing a parsed equation expression and corresponding "where" string,
@@ -108,42 +107,44 @@ class ParsedBackendEquation:
                 Parsed arithmetic/equation expression.
             where_list (list[pp.ParseResults]):
                 List of parsed where strings.
-            components (Optional[dict[str, pp.ParseResults]], optional):
-                Dictionary of parsed components with which to replace references to components
+            sub_expressions (Optional[dict[str, pp.ParseResults]], optional):
+                Dictionary of parsed sub-expressions with which to replace sub-expression references
                 on evaluation of the parsed expression. Defaults to None.
-            index_slices (Optional[dict[str, pp.ParseResults]], optional):
-                Dictionary of parsed index slices with which to replace references to index slices
-                on evaluation of the parsed expression / components. Defaults to None.
+            slices (Optional[dict[str, pp.ParseResults]], optional):
+                Dictionary of parsed array slices with which to replace slice references
+                on evaluation of the parsed expression / sub-expression. Defaults to None.
         """
         self.name = equation_name
         self.where = where_list
         self.expression = expression
-        self.components = components if components is not None else dict()
-        self.index_slices = index_slices if index_slices is not None else dict()
+        self.sub_expressions = (
+            sub_expressions if sub_expressions is not None else dict()
+        )
+        self.slices = slices if slices is not None else dict()
         self.sets = sets
 
-    def find_components(self) -> set[str]:
-        """Identify all the references to components in the parsed expression.
+    def find_sub_expressions(self) -> set[str]:
+        """Identify all the references to sub_expressions in the parsed expression.
 
         Returns:
-            set[str]: Unique component references.
+            set[str]: Unique sub-expressions references.
         """
         valid_eval_classes: tuple = (
             equation_parser.EvalOperatorOperand,
             equation_parser.EvalFunction,
         )
         elements: list = [self.expression[0].values]
-        to_find = equation_parser.EvalComponent
+        to_find = equation_parser.EvalSubExpressions
 
         return self._find_items_in_expression(elements, to_find, valid_eval_classes)
 
-    def find_index_slices(self) -> set[str]:
+    def find_slices(self) -> set[str]:
         """
-        Identify all the references to index slices in the parsed expression or in the
-        parsed components.
+        Identify all the references to array slices in the parsed expression or in the
+        parsed sub-expressions.
 
         Returns:
-            set[str]: Unique index slice references.
+            set[str]: Unique slice references.
         """
 
         valid_eval_classes = tuple(
@@ -153,7 +154,7 @@ class ParsedBackendEquation:
                 equation_parser.EvalSlicedParameterOrVariable,
             ]
         )
-        elements = [self.expression[0].values, *list(self.components.values())]
+        elements = [self.expression[0].values, *list(self.sub_expressions.values())]
         to_find = equation_parser.EvalIndexSlice
 
         return self._find_items_in_expression(elements, to_find, valid_eval_classes)
@@ -165,7 +166,7 @@ class ParsedBackendEquation:
         valid_eval_classes: tuple[type[equation_parser.EvalString], ...],
     ) -> set[str]:
         """
-        Recursively find components / index items defined in an equation expression.
+        Recursively find sub-expressions / index items defined in an equation expression.
 
         Args:
             parser_elements (pp.ParseResults): list of parser elements to check.
@@ -195,22 +196,22 @@ class ParsedBackendEquation:
 
     def add_expression_group_combination(
         self,
-        expression_group_name: Literal["components", "index_slices"],
+        expression_group_name: Literal["sub_expressions", "slices"],
         expression_group_combination: Iterable[ParsedBackendEquation],
     ) -> ParsedBackendEquation:
         """
-        Add dictionary of parsed components/index slices to a copy of self, updating
+        Add dictionary of parsed sub-expressions/index slices to a copy of self, updating
         the name and where list of self in the process.
 
         Args:
-            expression_group_name (Literal[components, index_slices]):
-                Which of `components`/`index slices` is being added.
+            expression_group_name (Literal[sub_expressions, slices]):
+                Which of `sub-expressions`/`index slices` is being added.
             expression_group_combination (Iterable[ParsedBackendEquation]):
                 All items of expression_group_name to be added.
 
         Returns:
             ParsedBackendEquation:
-                Copy of self with added component/index slice dictionary and updated name
+                Copy of self with added sub-expressions/index slice dictionary and updated name
                 and where list to include those corresponding to the dictionary entries.
         """
         new_where_list = [*self.where]
@@ -229,8 +230,8 @@ class ParsedBackendEquation:
             expression=self.expression,
             where_list=new_where_list,
             **{
-                "components": self.components,
-                "index_slices": self.index_slices,
+                "sub_expressions": self.sub_expressions,
+                "slices": self.slices,
                 **expression_group_dict,  # type: ignore
             },
         )
@@ -279,8 +280,8 @@ class ParsedBackendEquation:
     ):
         return self.expression[0].eval(
             equation_name=self.name,
-            index_slice_dict=self.index_slices,
-            component_dict=self.components,
+            slice_dict=self.slices,
+            sub_expression_dict=self.sub_expressions,
             backend_interface=backend_interface,
             backend_dataset=backend_interface._dataset,
             helper_func_dict=VALID_EXPRESSION_HELPER_FUNCTIONS,
@@ -296,14 +297,14 @@ class ParsedBackendComponent(ParsedBackendEquation):
     _ERR_STRING_ORDER: list[str] = ["expression_group", "id", "expr_or_where"]
     PARSERS: dict[str, Callable] = {
         "constraints": equation_parser.generate_equation_parser,
-        "expressions": equation_parser.generate_arithmetic_parser,
+        "global_expressions": equation_parser.generate_arithmetic_parser,
         "objectives": equation_parser.generate_arithmetic_parser,
         "variables": lambda x: None,
     }
 
     def __init__(
         self,
-        group: Literal["variables", "expressions", "constraints", "objectives"],
+        group: Literal["variables", "global_expressions", "constraints", "objectives"],
         name: str,
         unparsed_data: T,
     ) -> None:
@@ -313,7 +314,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         interface like Pyomo or Gurobipy.
 
         Args:
-            group (Literal["variables", "expressions", "constraints", "objectives"]): Optimisation problem component group to which the unparsed data belongs.
+            group (Literal["variables", "global_expressions", "constraints", "objectives"]): Optimisation problem component group to which the unparsed data belongs.
             name (str): Name of the optimisation problem component
             unparsed_data (T): Unparsed math formulation. Expected structure depends on the group to which the optimisation problem component belongs.
         """
@@ -388,7 +389,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         Returns:
             list[ParsedBackendEquation]:
                 List of parsed equations ready to be evaluated.
-                The length of the list depends on the product of provided equations and component/index_slice references.
+                The length of the list depends on the product of provided equations and sub-expression/slice references.
         """
         equation_expression_list: list[UnparsedEquationDict]
         if "equation" in self._unparsed.keys():
@@ -403,48 +404,48 @@ class ParsedBackendComponent(ParsedBackendEquation):
             id_prefix=self.name,
         )
 
-        component_dict = {
+        sub_expression_dict = {
             c_name: self.generate_expression_list(
-                expression_parser=equation_parser.generate_component_parser(
+                expression_parser=equation_parser.generate_sub_expression_parser(
                     valid_math_element_names
                 ),
                 expression_list=c_list,
-                expression_group="components",
+                expression_group="sub_expressions",
                 id_prefix=c_name,
             )
-            for c_name, c_list in self._unparsed.get("components", {}).items()
+            for c_name, c_list in self._unparsed.get("sub_expressions", {}).items()
         }
-        index_slice_dict = {
+        slice_dict = {
             idx_name: self.generate_expression_list(
-                expression_parser=equation_parser.generate_index_slice_parser(
+                expression_parser=equation_parser.generate_slice_parser(
                     valid_math_element_names
                 ),
                 expression_list=idx_list,
-                expression_group="index_slices",
+                expression_group="slices",
                 id_prefix=idx_name,
             )
-            for idx_name, idx_list in self._unparsed.get("index_slices", {}).items()
+            for idx_name, idx_list in self._unparsed.get("slices", {}).items()
         }
 
         if errors == "raise":
             self.raise_caught_errors()
 
-        equations_with_components = []
+        equations_with_sub_expressions = []
         for equation in equations:
-            equations_with_components.extend(
+            equations_with_sub_expressions.extend(
                 self.extend_equation_list_with_expression_group(
-                    equation, component_dict, "components"
+                    equation, sub_expression_dict, "sub_expressions"
                 )
             )
-        equations_with_components_and_index_slices: list[ParsedBackendEquation] = []
-        for equation in equations_with_components:
-            equations_with_components_and_index_slices.extend(
+        equations_with_sub_expressions_and_slices: list[ParsedBackendEquation] = []
+        for equation in equations_with_sub_expressions:
+            equations_with_sub_expressions_and_slices.extend(
                 self.extend_equation_list_with_expression_group(
-                    equation, index_slice_dict, "index_slices"
+                    equation, slice_dict, "slices"
                 )
             )
 
-        return equations_with_components_and_index_slices
+        return equations_with_sub_expressions_and_slices
 
     def _parse_string(
         self,
@@ -498,17 +499,17 @@ class ParsedBackendComponent(ParsedBackendEquation):
         self,
         expression_parser: pp.ParserElement,
         expression_list: list[UnparsedEquationDict],
-        expression_group: Literal["equations", "components", "index_slices"],
+        expression_group: Literal["equations", "sub_expressions", "slices"],
         id_prefix: str = "",
     ) -> list[ParsedBackendEquation]:
         """
-        Align user-defined constraint equations/components by parsing expressions,
+        Align user-defined constraint equations/sub-expressions by parsing expressions,
         specifying a default "where" string if not defined,
         and providing an ID to enable returning to the initial dictionary.
 
         Args:
             expression_list (list[dict]):
-                list of constraint equations or components with arithmetic expression
+                list of constraint equations or sub-expressions with arithmetic expression
                 string and optional where string.
             expression_group (str):
                 For error reporting, the constraint dict key corresponding to the parse_string.
@@ -556,27 +557,27 @@ class ParsedBackendComponent(ParsedBackendEquation):
         self,
         parsed_equation: ParsedBackendEquation,
         parsed_items: dict[str, list[ParsedBackendEquation]],
-        expression_group: Literal["components", "index_slices"],
+        expression_group: Literal["sub_expressions", "slices"],
     ) -> list[ParsedBackendEquation]:
         """
-        Find all components referenced in an equation expression and return a
-        product of the component data.
+        Find all sub-expressions referenced in an equation expression and return a
+        product of the sub-expression data.
 
         Args:
             equation_data (ParsedBackendEquation): Equation data dictionary.
             parsed_items (dict[str, list[ParsedBackendEquation]]):
                 Dictionary of expressions to replace within the equation data dictionary.
-            expression_group (Literal["components", "index_slices"]):
+            expression_group (Literal["sub_expressions", "slices"]):
                 Name of expression group that the parsed_items dict is referencing.
 
         Returns:
             list[ParsedBackendEquation]:
-                Expanded list of parsed equations with the product of all references to items from the `expression_group` producing a new equation object. E.g., if the input equation object has a reference to an index_slice which itself has two expression options, two equation objects will be added to the return list.
+                Expanded list of parsed equations with the product of all references to items from the `expression_group` producing a new equation object. E.g., if the input equation object has a reference to an slice which itself has two expression options, two equation objects will be added to the return list.
         """
-        if expression_group == "components":
-            equation_items = parsed_equation.find_components()
-        elif expression_group == "index_slices":
-            equation_items = parsed_equation.find_index_slices()
+        if expression_group == "sub_expressions":
+            equation_items = parsed_equation.find_sub_expressions()
+        elif expression_group == "slices":
+            equation_items = parsed_equation.find_slices()
         if not equation_items:
             return [parsed_equation]
 

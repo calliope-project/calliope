@@ -1,22 +1,18 @@
-from itertools import product
-import os
 import collections
+import logging
+import os
+from itertools import product
 
-
-import pytest  # noqa: F401
 import numpy as np
 import pyomo.core as po
 import pyomo.kernel as pmo
-import logging
+import pytest  # noqa: F401
 import xarray as xr
 
 import calliope.exceptions as exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.test.common.util import build_test_model as build_model
-from calliope.test.common.util import (
-    check_error_or_warning,
-    check_variable_exists,
-)
+from calliope.test.common.util import check_error_or_warning, check_variable_exists
 
 
 class TestModel:
@@ -1883,7 +1879,7 @@ class TestNewBackend:
         )
 
     @pytest.mark.parametrize(
-        "component_type", ["variable", "expression", "parameter", "constraint"]
+        "component_type", ["variable", "global_expression", "parameter", "constraint"]
     )
     def test_new_build_get_missing_component(
         self, simple_supply_new_build, component_type
@@ -1933,6 +1929,7 @@ class TestNewBackend:
         assert param.attrs == {
             "parameters": 1,
             "is_result": 0,
+            "original_dtype": np.dtype("float64"),
             "references": {"balance_demand", "balance_transmission"},
             "coords_in_name": False,
         }
@@ -1941,15 +1938,10 @@ class TestNewBackend:
         param = simple_supply_new_build.backend.get_parameter(
             "energy_eff", as_backend_objs=False
         )
-        assert (
-            not param.to_series()
-            .dropna()
-            .apply(lambda x: isinstance(x, pmo.parameter))
-            .any()
-        )
+        assert param.dtype == np.dtype("float64")
 
-    def test_new_build_get_expression(self, simple_supply_new_build):
-        expr = simple_supply_new_build.backend.get_expression("cost_investment")
+    def test_new_build_get_global_expression(self, simple_supply_new_build):
+        expr = simple_supply_new_build.backend.get_global_expression("cost_investment")
         assert (
             expr.to_series()
             .dropna()
@@ -1957,21 +1949,21 @@ class TestNewBackend:
             .all()
         )
         assert expr.attrs == {
-            "expressions": 1,
+            "global_expressions": 1,
             "references": {"cost"},
             "description": "The installation costs of a technology, including annualised investment costs and annual maintenance costs.",
             "unit": "cost",
             "coords_in_name": False,
         }
 
-    def test_new_build_get_expression_as_str(self, simple_supply_new_build):
-        expr = simple_supply_new_build.backend.get_expression(
+    def test_new_build_get_global_expression_as_str(self, simple_supply_new_build):
+        expr = simple_supply_new_build.backend.get_global_expression(
             "cost", as_backend_objs=False
         )
         assert expr.to_series().dropna().apply(lambda x: isinstance(x, str)).all()
 
-    def test_new_build_get_expression_as_vals(self, simple_supply_new_build):
-        expr = simple_supply_new_build.backend.get_expression(
+    def test_new_build_get_global_expression_as_vals(self, simple_supply_new_build):
+        expr = simple_supply_new_build.backend.get_global_expression(
             "cost", as_backend_objs=False, eval_body=True
         )
         assert (
@@ -2099,8 +2091,146 @@ class TestNewBackend:
             "Trying to add already existing *variable* `carrier_prod` as a backend model *parameter*.",
         )
 
+    def test_raise_error_on_constraint_with_nan(self, simple_supply_new_build):
+        """
+        A very simple constraint: For each tech, let the annual and regional sum of `carrier_prod` be larger than 100.
+        However, not every tech has the variable `carrier_prod`.
+        How to solve it? Let the constraint be active only where carrier_prod exists by setting 'where' accordingly.
+        """
+        # add constraint without nan
+        constraint_dict = {
+            "foreach": ["techs", "carriers"],
+            "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100",
+            "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
+        }
+        constraint_name = "constraint-without-nan"
+
+        simple_supply_new_build.backend.add_constraint(
+            simple_supply_new_build.inputs,
+            constraint_name,
+            constraint_dict,
+        )
+
+        assert (
+            simple_supply_new_build.backend.get_constraint(constraint_name).name
+            == constraint_name
+        )
+
+        # add constraint with nan
+        constraint_dict = {
+            "foreach": ["techs", "carriers"],
+            "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100",
+            # "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
+        }
+        constraint_name = "constraint-with-nan"
+
+        with pytest.raises(exceptions.BackendError) as error:
+            simple_supply_new_build.backend.add_constraint(
+                simple_supply_new_build.inputs,
+                constraint_name,
+                constraint_dict,
+            )
+
+        assert check_error_or_warning(
+            error,
+            f"(constraints, {constraint_name}): Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
+        )
+
+    def test_raise_error_on_expression_with_nan(self, simple_supply_new_build):
+        """
+        A very simple expression: The annual and regional sum of `carrier_prod` for each tech.
+        However, not every tech has the variable `carrier_prod`.
+        How to solve it? Let the constraint be active only where carrier_prod exists by setting 'where' accordingly.
+        """
+        # add expression without nan
+        expression_dict = {
+            "foreach": ["techs", "carriers"],
+            "equation": "sum(carrier_prod, over=[nodes, timesteps])",
+            "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
+        }
+        expression_name = "expression-without-nan"
+
+        # add expression with nan
+        simple_supply_new_build.backend.add_global_expression(
+            simple_supply_new_build.inputs,
+            expression_name,
+            expression_dict,
+        )
+
+        assert (
+            simple_supply_new_build.backend.get_global_expression(expression_name).name
+            == expression_name
+        )
+
+        expression_dict = {
+            "foreach": ["techs", "carriers"],
+            "equation": "sum(carrier_prod, over=[nodes, timesteps])",
+            # "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
+        }
+        expression_name = "expression-with-nan"
+
+        with pytest.raises(exceptions.BackendError) as error:
+            simple_supply_new_build.backend.add_global_expression(
+                simple_supply_new_build.inputs,
+                expression_name,
+                expression_dict,
+            )
+
+        assert check_error_or_warning(
+            error,
+            f"(expressions, {expression_name}): Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
+        )
+
+    def test_raise_error_on_excess_dimensions(self, simple_supply_new_build):
+        """
+        A very simple constraint: For each tech, let the `energy_cap` be larger than 100.
+        However, we forgot to include `nodes` in `foreach`.
+        With `nodes` included, this constraint should build.
+        """
+        # add constraint without excess dimensions
+        constraint_dict = {
+            "foreach": [
+                "techs",
+                "nodes",
+            ],  # as 'nodes' is listed here, the constraint will have no excess dimensions
+            "equation": "energy_cap >= 100",
+        }
+        constraint_name = "constraint-without-excess-dimensions"
+
+        simple_supply_new_build.backend.add_constraint(
+            simple_supply_new_build.inputs,
+            constraint_name,
+            constraint_dict,
+        )
+
+        assert (
+            simple_supply_new_build.backend.get_constraint(constraint_name).name
+            == constraint_name
+        )
+
+        # add constraint with excess dimensions
+        constraint_dict = {
+            "foreach": [
+                "techs"
+            ],  # as 'nodes' is not listed here, the constraint will have excess dimensions
+            "equation": "energy_cap >= 100",
+        }
+        constraint_name = "constraint-with-excess-dimensions"
+
+        with pytest.raises(exceptions.BackendError) as error:
+            simple_supply_new_build.backend.add_constraint(
+                simple_supply_new_build.inputs,
+                constraint_name,
+                constraint_dict,
+            )
+
+        assert check_error_or_warning(
+            error,
+            f"(constraints, {constraint_name}): The linear expression array is indexed over dimensions not present in `foreach`: {{'nodes'}}",
+        )
+
     @pytest.mark.parametrize(
-        "component", ["parameters", "variables", "expressions", "constraints"]
+        "component", ["parameters", "variables", "global_expressions", "constraints"]
     )
     def test_create_and_delete_pyomo_list(self, simple_supply_new_build, component):
         backend_instance = simple_supply_new_build.backend._instance
@@ -2111,7 +2241,7 @@ class TestNewBackend:
         assert "foo" not in getattr(backend_instance, component).keys()
 
     @pytest.mark.parametrize(
-        "component", ["parameters", "variables", "expressions", "constraints"]
+        "component", ["parameters", "variables", "global_expressions", "constraints"]
     )
     def test_delete_inexistent_pyomo_list(self, simple_supply_new_build, component):
         backend_instance = simple_supply_new_build.backend._instance
@@ -2121,7 +2251,7 @@ class TestNewBackend:
 
     @pytest.mark.parametrize(
         ["component", "eq"],
-        [("expressions", "energy_cap + 1"), ("constraints", "energy_cap >= 1")],
+        [("global_expressions", "energy_cap + 1"), ("constraints", "energy_cap >= 1")],
     )
     def test_add_allnull_expr_or_constr(self, simple_supply_new_build, component, eq):
         adder = getattr(
@@ -2266,7 +2396,7 @@ class TestNewBackend:
             "costs": "monetary",
         }
 
-        obj = simple_supply_longnames.backend.get_expression(
+        obj = simple_supply_longnames.backend.get_global_expression(
             "cost_investment", as_backend_objs=False
         )
 
