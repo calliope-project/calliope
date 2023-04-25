@@ -91,15 +91,15 @@ class EvalOperatorOperand(EvalString):
                 If all operands are numeric, returns float, otherwise returns an
                 expression to use in an optimisation model constraint.
         """
-        apply_imask = eval_kwargs.get("apply_imask", True)
+        apply_where = eval_kwargs.get("apply_where", True)
         val = xr.DataArray(self.value[0].eval(**eval_kwargs))
 
-        if apply_imask:
-            val = val.where(eval_kwargs["imask"])
+        if apply_where:
+            val = val.where(eval_kwargs["where"])
         for operator_, operand in self.operatorOperands(self.value[1:]):
             evaluated_operand = xr.DataArray(operand.eval(**eval_kwargs))
-            if apply_imask:
-                evaluated_operand = evaluated_operand.where(eval_kwargs["imask"])
+            if apply_where:
+                evaluated_operand = evaluated_operand.where(eval_kwargs["where"])
             if operator_ == "**":
                 val = val**evaluated_operand
             elif operator_ == "*":
@@ -211,7 +211,7 @@ class EvalFunction(EvalString):
                 Either the defined helper function is called, or only a dictionary with
                 parsed components is returned (if test=True).
         """
-        eval_kwargs["apply_imask"] = False
+        eval_kwargs["apply_where"] = False
 
         args_ = []
         for arg in self.args:

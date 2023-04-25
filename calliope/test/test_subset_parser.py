@@ -1,13 +1,12 @@
-import pytest
 import numpy as np
 import pyparsing
+import pytest
 import xarray as xr
 
-from calliope.backend import equation_parser, subset_parser, parsing
-from calliope.test.common.util import check_error_or_warning
+from calliope.backend import equation_parser, parsing, subset_parser
 from calliope.core.attrdict import AttrDict
 from calliope.exceptions import BackendError
-
+from calliope.test.common.util import check_error_or_warning
 
 SUB_EXPRESSION_CLASSIFIER = equation_parser.SUB_EXPRESSION_CLASSIFIER
 HELPER_FUNCS = {"dummy_func_1": lambda x: x * 10, "dummy_func_2": lambda x, y: x + y}
@@ -82,8 +81,8 @@ def subset(identifier, evaluatable_string, number):
 
 
 @pytest.fixture
-def imasking(bool_operand, helper_function, data_var, comparison, subset):
-    return subset_parser.imasking_parser(
+def where(bool_operand, helper_function, data_var, comparison, subset):
+    return subset_parser.where_parser(
         bool_operand, helper_function, data_var, comparison, subset
     )
 
@@ -92,7 +91,7 @@ def imasking(bool_operand, helper_function, data_var, comparison, subset):
 def eval_kwargs(dummy_model_data):
     return {
         "model_data": dummy_model_data,
-        "helper_func_dict": parsing.VALID_IMASK_HELPER_FUNCTIONS,
+        "helper_func_dict": parsing.VALID_WHERE_HELPER_FUNCTIONS,
         "test": True,
         "errors": set(),
         "warnings": set(),
@@ -100,9 +99,9 @@ def eval_kwargs(dummy_model_data):
 
 
 @pytest.fixture
-def parse_where_string(eval_kwargs, imasking):
-    def _parse_where_string(imasking_string):
-        parsed_ = imasking.parse_string(imasking_string, parse_all=True)
+def parse_where_string(eval_kwargs, where):
+    def _parse_where_string(where_string):
+        parsed_ = where.parse_string(where_string, parse_all=True)
         return parsed_[0].eval(**eval_kwargs)
 
     return _parse_where_string
@@ -120,7 +119,7 @@ class TestParserElements:
         default = dummy_model_data.attrs["defaults"][expected]
         assert (
             parsed_[0]
-            .eval(apply_imask=False, **eval_kwargs)
+            .eval(apply_where=False, **eval_kwargs)
             .equals(dummy_model_data[expected].fillna(default))
         )
 
@@ -132,27 +131,18 @@ class TestParserElements:
             ("all_nan", "all_false"),
         ],
     )
-    def test_data_var_with_imask(
+    def test_data_var_with_where(
         self, data_var, dummy_model_data, data_var_string, expected, eval_kwargs
     ):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
 
-        # apply_imask=True is the default, but we also test being explicit.
+        # apply_where=True is the default, but we also test being explicit.
         assert (
             parsed_[0]
-            .eval(apply_imask=True, **eval_kwargs)
+            .eval(apply_where=True, **eval_kwargs)
             .equals(dummy_model_data[expected])
         )
         assert parsed_[0].eval(**eval_kwargs).equals(dummy_model_data[expected])
-
-    @pytest.mark.xfail(
-        reason="No longer protected; there doesn't seem a reason to keep this."
-    )
-    @pytest.mark.parametrize("data_var_string", ["carrier", "node_tech", "inheritance"])
-    def test_data_var_fail_protected(self, data_var, data_var_string):
-        with pytest.raises(pyparsing.ParseException) as excinfo:
-            data_var.parse_string(data_var_string, parse_all=True)
-        assert check_error_or_warning(excinfo, "Found unwanted token")
 
     @pytest.mark.parametrize(
         "data_var_string", ["_foo", "__type__", "1foo", "with _ inf"]
@@ -420,7 +410,7 @@ class TestParserMasking:
             ("run.foo=1  and  model.a_b=0", True),
         ],
     )
-    def test_imasking_and(self, parse_where_string, instring, expected_true):
+    def test_where_string_and(self, parse_where_string, instring, expected_true):
         evaluated_ = parse_where_string(instring)
         assert evaluated_ if expected_true else not evaluated_
 
@@ -434,7 +424,7 @@ class TestParserMasking:
             ("run.foo=1 or model.a_b=0", True),
         ],
     )
-    def test_imasking_or(self, parse_where_string, instring, expected_true):
+    def test_where_string_or(self, parse_where_string, instring, expected_true):
         evaluated_ = parse_where_string(instring)
         assert evaluated_ if expected_true else not evaluated_
 
@@ -448,7 +438,7 @@ class TestParserMasking:
             ("run.foo=False or not model.a_b=0", False),
         ],
     )
-    def test_imasking_not(self, parse_where_string, instring, expected_true):
+    def test_where_string_not(self, parse_where_string, instring, expected_true):
         evaluated_ = parse_where_string(instring)
         assert evaluated_ if expected_true else not evaluated_
 
@@ -465,7 +455,7 @@ class TestParserMasking:
             ("only_techs or with_inf", "with_inf_or_only_techs_as_bool"),
         ],
     )
-    def test_imasking_arrays(
+    def test_where_arrays(
         self, parse_where_string, dummy_model_data, instring, expected
     ):
         evaluated_ = parse_where_string(instring)
@@ -495,7 +485,7 @@ class TestParserMasking:
             ),
         ],
     )
-    def test_imasking_arrays_subsetting(
+    def test_where_arrays_subsetting(
         self, parse_where_string, dummy_model_data, instring, expected
     ):
         evaluated_ = parse_where_string(instring)
@@ -513,7 +503,7 @@ class TestParserMasking:
             ),
         ],
     )
-    def test_mixed_imasking(
+    def test_mixed_where(
         self, parse_where_string, dummy_model_data, instring, expected
     ):
         evaluated_ = parse_where_string(instring)
@@ -536,7 +526,7 @@ class TestParserMasking:
             "run.foo=True andnot all_inf",
         ],
     )
-    def test_imasking_malformed(self, imasking, instring):
+    def test_where_malformed(self, where, instring):
         with pytest.raises(pyparsing.ParseException) as excinfo:
-            imasking.parse_string(instring, parse_all=True)
+            where.parse_string(instring, parse_all=True)
         assert check_error_or_warning(excinfo, "Expected")

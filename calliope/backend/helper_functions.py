@@ -16,8 +16,8 @@ def inheritance(model_data, **kwargs):
     return _inheritance
 
 
-def imask_sum(model_data, **kwargs):
-    def _imask_sum(component, *, over):
+def where_sum(model_data, **kwargs):
+    def _where_sum(component, *, over):
         """
         Args:
             to_sum (_type_): _description_
@@ -32,7 +32,7 @@ def imask_sum(model_data, **kwargs):
 
         return to_return
 
-    return _imask_sum
+    return _where_sum
 
 
 def expression_sum(**kwargs):

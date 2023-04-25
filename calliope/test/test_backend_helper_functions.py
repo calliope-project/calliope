@@ -1,10 +1,9 @@
-import pytest
-
 import numpy as np
+import pytest
 import xarray as xr
 
-from calliope.backend import helper_functions
 from calliope import exceptions
+from calliope.backend import helper_functions
 from calliope.test.common.util import check_error_or_warning
 
 
@@ -14,9 +13,9 @@ def test_inheritance(dummy_model_data):
     assert boo_bool.equals(dummy_model_data.boo_inheritance_bool)
 
 
-def test_imask_sum_not_exists(dummy_model_data):
-    imask_sum = helper_functions.imask_sum(dummy_model_data)
-    summed = imask_sum("foo", over="techs")
+def test_where_sum_not_exists(dummy_model_data):
+    where_sum = helper_functions.where_sum(dummy_model_data)
+    summed = where_sum("foo", over="techs")
     assert summed.equals(xr.DataArray(False))
 
 
@@ -24,9 +23,9 @@ def test_imask_sum_not_exists(dummy_model_data):
     ["var", "over", "expected"],
     [("with_inf", "techs", "nodes_true"), ("all_nan", "techs", "nodes_false")],
 )
-def test_imask_sum_exists(dummy_model_data, var, over, expected):
-    imask_sum = helper_functions.imask_sum(dummy_model_data)
-    summed = imask_sum(var, over=over)
+def test_where_sum_exists(dummy_model_data, var, over, expected):
+    where_sum = helper_functions.where_sum(dummy_model_data)
+    summed = where_sum(var, over=over)
     assert summed.equals(dummy_model_data[expected])
 
 

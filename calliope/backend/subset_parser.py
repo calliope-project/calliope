@@ -138,7 +138,7 @@ class DataVarParser:
             return model_data[self.data_var].fillna(default)
 
     def eval(
-        self, model_data: xr.Dataset, apply_imask: bool = True, **kwargs
+        self, model_data: xr.Dataset, apply_where: bool = True, **kwargs
     ) -> Union[np.bool_, xr.DataArray]:
         """
         Get parsed model data variable from the Calliope model dataset.
@@ -146,7 +146,7 @@ class DataVarParser:
 
         Args:
             model_data (xr.Dataset): Calliope model dataset.
-            apply_imask (bool, optional):
+            apply_where (bool, optional):
                 If True, return boolean array corresponding to whether there is data or
                 not in each element of the array. If False, return original array.
                 Defaults to True.
@@ -156,7 +156,7 @@ class DataVarParser:
                 False if data variable not in model data, array otherwise.
         """
 
-        if apply_imask:
+        if apply_where:
             return self._data_var_exists(model_data)
         else:
             return self._data_var_with_default(model_data)
@@ -176,7 +176,7 @@ class ComparisonParser(equation_parser.EvalComparisonOp):
         Returns:
             BOOLEANTYPE: Same shape as LHS.
         """
-        kwargs["apply_imask"] = False
+        kwargs["apply_where"] = False
         lhs = self.lhs.eval(**kwargs)
         rhs = self.rhs.eval(**kwargs)
 
@@ -385,7 +385,7 @@ def subset_parser(
     return subset_expression
 
 
-def imasking_parser(
+def where_parser(
     bool_operand: pp.ParserElement,
     helper_function: pp.ParserElement,
     data_var: pp.ParserElement,
@@ -409,7 +409,7 @@ def imasking_parser(
     notop = pp.Keyword("not", caseless=True)
     andorop = pp.Keyword("and", caseless=True) | pp.Keyword("or", caseless=True)
 
-    imask_rules = pp.infixNotation(
+    where_rules = pp.infixNotation(
         helper_function | comparison_parser | subset | data_var | bool_operand,
         [
             (notop, 1, pp.opAssoc.RIGHT, EvalNot),
@@ -417,7 +417,7 @@ def imasking_parser(
         ],
     )
 
-    return imask_rules
+    return where_rules
 
 
 def generate_where_string_parser() -> pp.ParserElement:
@@ -445,4 +445,4 @@ def generate_where_string_parser() -> pp.ParserElement:
         data_var,
     )
     subset = subset_parser(generic_identifier, evaluatable_string, number)
-    return imasking_parser(bool_operand, helper_function, data_var, comparison, subset)
+    return where_parser(bool_operand, helper_function, data_var, comparison, subset)

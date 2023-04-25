@@ -150,7 +150,7 @@ def eval_kwargs():
         "slice_dict": {},
         "sub_expression_dict": {},
         "equation_name": "foobar",
-        "apply_imask": False,
+        "apply_where": False,
         "references": set(),
     }
 

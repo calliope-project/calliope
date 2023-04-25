@@ -10,17 +10,8 @@ import typing
 from abc import ABC, abstractmethod
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    Iterable,
-    Iterator,
-    Literal,
-    Optional,
-    TypeVar,
-    Union,
-)
+from typing import (Any, Callable, Generic, Iterable, Iterator, Literal,
+                    Optional, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
@@ -590,18 +581,18 @@ class PyomoBackendModel(BackendModel):
         constraint_dict: parsing.UnparsedConstraintDict,
     ) -> None:
         def _constraint_setter(
-            imask: xr.DataArray, expr: tuple[xr.DataArray, str, xr.DataArray]
+            where: xr.DataArray, expr: tuple[xr.DataArray, str, xr.DataArray]
         ) -> xr.DataArray:
             lhs, op, rhs = expr
             lhs = lhs.squeeze(drop=True)
             rhs = rhs.squeeze(drop=True)
 
-            self._check_expr_imask_consistency(lhs, imask, f"(constraints, {name})")
-            self._check_expr_imask_consistency(rhs, imask, f"(constraints, {name})")
+            self._check_expr_where_consistency(lhs, where, f"(constraints, {name})")
+            self._check_expr_where_consistency(rhs, where, f"(constraints, {name})")
 
             to_fill = self.apply_func(
                 self._to_pyomo_constraint,
-                imask,
+                where,
                 lhs,
                 rhs,
                 op=op,
@@ -623,14 +614,14 @@ class PyomoBackendModel(BackendModel):
         name: str,
         expression_dict: parsing.UnparsedExpressionDict,
     ) -> None:
-        def _expression_setter(imask: xr.DataArray, expr: xr.DataArray) -> xr.DataArray:
+        def _expression_setter(where: xr.DataArray, expr: xr.DataArray) -> xr.DataArray:
             expr = expr.squeeze(drop=True)
 
-            self._check_expr_imask_consistency(expr, imask, f"(expressions, {name})")
+            self._check_expr_where_consistency(expr, where, f"(expressions, {name})")
 
             to_fill = self.apply_func(
                 self._to_pyomo_expression,
-                imask,
+                where,
                 expr,
                 name=name,
             )
@@ -658,16 +649,16 @@ class PyomoBackendModel(BackendModel):
         parsed_variable = parsing.ParsedBackendComponent(
             "variables", name, variable_dict
         )
-        foreach_imask = parsed_variable.evaluate_foreach(model_data)
-        if not foreach_imask.any():
+        exists_array = parsed_variable.combine_exists_and_foreach(model_data)
+        if not exists_array.any():
             return None
 
         parsed_variable.parse_top_level_where()
-        imask = parsed_variable.evaluate_where(model_data, foreach_imask)
-        if not imask.any():
+        where = parsed_variable.evaluate_where(model_data, exists_array)
+        if not where.any():
             return None
 
-        imask = parsed_variable.align_imask_with_sets(imask)
+        where = parsed_variable.align_where_with_foreach_sets(where)
 
         self._raise_error_on_preexistence(name, "variables")
         self._create_pyomo_list(name, "variables")
@@ -678,7 +669,7 @@ class PyomoBackendModel(BackendModel):
         ub, lb = self._get_capacity_bounds(variable_dict["bounds"], name=name)
         variable_da = self.apply_func(
             self._to_pyomo_variable,
-            imask,
+            where,
             ub,
             lb,
             name=name,
@@ -702,9 +693,9 @@ class PyomoBackendModel(BackendModel):
 
         n_valid_exprs = 0
         for equation in equations:
-            imask = equation.evaluate_where(model_data)
-            if imask.any():
-                expr = equation.evaluate_expression(model_data, self, imask).item()
+            where = equation.evaluate_where(model_data)
+            if where.any():
+                expr = equation.evaluate_expression(model_data, self, where).item()
                 n_valid_exprs += 1
 
         if n_valid_exprs == 0:
@@ -918,41 +909,41 @@ class PyomoBackendModel(BackendModel):
         parsed_component = parsing.ParsedBackendComponent(
             component_type, name, component_dict
         )
-        foreach_imask = parsed_component.evaluate_foreach(model_data)
-        if not foreach_imask.any():
+        exists_array = parsed_component.combine_exists_and_foreach(model_data)
+        if not exists_array.any():
             return None
 
         parsed_component.parse_top_level_where()
-        top_level_imask = parsed_component.evaluate_where(model_data, foreach_imask)
-        if not top_level_imask.any():
+        top_level_where = parsed_component.evaluate_where(model_data, exists_array)
+        if not top_level_where.any():
             return None
 
         self._raise_error_on_preexistence(name, component_type)
         component_da = (
             xr.DataArray()
-            .where(parsed_component.align_imask_with_sets(top_level_imask))
+            .where(parsed_component.align_where_with_foreach_sets(top_level_where))
             .astype(np.dtype("O"))
         )
         self._create_pyomo_list(name, component_type)
 
         equations = parsed_component.parse_equations(self.valid_math_element_names)
         for element in equations:
-            imask = element.evaluate_where(model_data, top_level_imask)
-            if not imask.any():
+            where = element.evaluate_where(model_data, top_level_where)
+            if not where.any():
                 continue
 
-            imask = parsed_component.align_imask_with_sets(imask)
+            where = parsed_component.align_where_with_foreach_sets(where)
 
-            if component_da.where(imask).notnull().any():
-                subset_overlap = component_da.where(imask).to_series().dropna().index
+            if component_da.where(where).notnull().any():
+                subset_overlap = component_da.where(where).to_series().dropna().index
 
                 raise BackendError(
                     "Trying to set two equations for the same index of "
                     f"{component_type.removesuffix('s')} `{name}`:\n{subset_overlap}"
                 )
 
-            expr = element.evaluate_expression(model_data, self, imask, references)
-            to_fill = component_setter(imask, expr)
+            expr = element.evaluate_expression(model_data, self, where, references)
+            to_fill = component_setter(where, expr)
             component_da = component_da.fillna(to_fill)
 
         if component_da.isnull().all():
@@ -964,31 +955,31 @@ class PyomoBackendModel(BackendModel):
         )
 
     @staticmethod
-    def _check_expr_imask_consistency(
-        expression: xr.DataArray, imask: xr.DataArray, description: str
+    def _check_expr_where_consistency(
+        expression: xr.DataArray, where: xr.DataArray, description: str
     ) -> None:
         """
-        Checks if a given constraint or global expression is consistent with the imask.
+        Checks if a given constraint or global expression is consistent with the binary where array.
 
         Parameters:
             expression (xr.DataArray): array of linear expressions from a global expression or one side of a constraint equation.
-            imask (xr.DataArray): where array.
+            where (xr.DataArray): where array.
             description (str): Description to prefix the error message.
 
         Raises:
             BackendError:
-                Raised if there is a dimension in the expression that is not in the imask.
+                Raised if there is a dimension in the expression that is not in the where array.
             BackendError:
-                Raised if the expression has any NaN where the imask applies.
+                Raised if the expression has any NaN where the where array applies.
         """
-        # Check whether expression has a dim that does not exist in imask.
-        broadcast_dims_imask = set(expression.dims).difference(set(imask.dims))
-        if broadcast_dims_imask:
+        # Check whether expression has a dim that does not exist in where.
+        broadcast_dims_where = set(expression.dims).difference(set(where.dims))
+        if broadcast_dims_where:
             raise BackendError(
-                f"{description}: The linear expression array is indexed over dimensions not present in `foreach`: {broadcast_dims_imask}"
+                f"{description}: The linear expression array is indexed over dimensions not present in `foreach`: {broadcast_dims_where}"
             )
 
-        incomplete_constraints = expression.isnull() & imask
+        incomplete_constraints = expression.isnull() & where
         if incomplete_constraints.any():
             raise BackendError(
                 f"{description}: Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help."

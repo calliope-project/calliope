@@ -29,9 +29,9 @@ def component_obj():
 
 
 @pytest.fixture(scope="function")
-def foreach_imask(component_obj, dummy_model_data):
+def exists_array(component_obj, dummy_model_data):
     component_obj.sets = ["nodes", "techs"]
-    return component_obj.evaluate_foreach(dummy_model_data)
+    return component_obj.combine_exists_and_foreach(dummy_model_data)
 
 
 @pytest.fixture
@@ -275,24 +275,26 @@ def evaluatable_component_obj(valid_math_element_names):
 )
 def evaluate_component_where(evaluatable_component_obj, dummy_model_data, request):
     component_obj = evaluatable_component_obj(request.param[0])
-    foreach_imask = component_obj.evaluate_foreach(dummy_model_data)
-    top_level_imask = component_obj.evaluate_where(dummy_model_data, foreach_imask)
-    equation_imask = component_obj.equations[0].evaluate_where(
-        dummy_model_data, top_level_imask
+    exists_array = component_obj.combine_exists_and_foreach(dummy_model_data)
+    top_level_where = component_obj.evaluate_where(dummy_model_data, exists_array)
+    equation_where = component_obj.equations[0].evaluate_where(
+        dummy_model_data, top_level_where
     )
-    equation_imask_squeezed = component_obj.align_imask_with_sets(equation_imask)
+    equation_where_squeezed = component_obj.align_where_with_foreach_sets(
+        equation_where
+    )
 
-    return component_obj, equation_imask_squeezed, request.param[1]
+    return component_obj, equation_where_squeezed, request.param[1]
 
 
 @pytest.fixture
 def evaluate_component_expression(
     evaluate_component_where, dummy_model_data, dummy_backend_interface
 ):
-    component_obj, equation_imask, n_true = evaluate_component_where
+    component_obj, equation_where, n_true = evaluate_component_where
     return (
         component_obj.equations[0].evaluate_expression(
-            dummy_model_data, dummy_backend_interface, equation_imask
+            dummy_model_data, dummy_backend_interface, equation_where
         ),
         n_true,
     )
@@ -508,7 +510,7 @@ class TestParsedComponent:
                 ["foo", "bar"]
             )
             comparison_tuple = constraint_eq.expression[0].eval(
-                sub_expression_dict=component_sub_dict, apply_imask=False
+                sub_expression_dict=component_sub_dict, apply_where=False
             )
 
             assert apply_comparison(comparison_tuple) == expected
@@ -623,27 +625,27 @@ equations[0].expression (line 1, char 5): bar = 1
 
         assert check_error_or_warning(component_obj._errors, expected_err_string)
 
-    def test_evaluate_foreach_all_permutations(
+    def test_combine_exists_and_foreach_all_permutations(
         self, dummy_model_data, component_obj, foreach
     ):
         component_obj.sets = foreach
-        imask = component_obj.evaluate_foreach(dummy_model_data)
+        where = component_obj.combine_exists_and_foreach(dummy_model_data)
 
-        assert not BASE_DIMS.difference(imask.dims)
-        assert not set(foreach).difference(imask.dims)
+        assert not BASE_DIMS.difference(where.dims)
+        assert not set(foreach).difference(where.dims)
 
-    def test_imask_foreach_unidentified_name(self, dummy_model_data, component_obj):
+    def test_foreach_unidentified_name(self, dummy_model_data, component_obj):
         component_obj.sets = ["nodes", "techs", "foos"]
         with pytest.warns(calliope.exceptions.BackendWarning) as excinfo:
-            component_obj.evaluate_foreach(dummy_model_data)
+            component_obj.combine_exists_and_foreach(dummy_model_data)
         assert check_error_or_warning(
             excinfo, "Not generating optimisation problem object `foo`"
         )
 
-    def test_evaluate_where_no_imasking(self, dummy_model_data, component_obj):
+    def test_evaluate_where_to_false(self, dummy_model_data, component_obj):
         component_obj.parse_top_level_where()
-        imask = component_obj.evaluate_where(dummy_model_data)
-        assert imask.item() is True
+        where = component_obj.evaluate_where(dummy_model_data)
+        assert where.item() is True
 
     def test_evaluate_where_fail(self, component_obj):
         component_obj._unparsed["where"] = "1[]"
@@ -838,12 +840,12 @@ class TestParsedBackendEquation:
         equation_obj.where.insert(
             false_location, where_parser.parse_string("False", parse_all=True)
         )
-        imask = equation_obj.evaluate_where(dummy_model_data)
+        where = equation_obj.evaluate_where(dummy_model_data)
 
-        assert not imask.any()
+        assert not where.any()
 
     @pytest.mark.parametrize(
-        ["where_string", "expected_imasker"],
+        ["where_string", "expected_where_array"],
         [
             ("with_inf", "with_inf_as_bool"),
             ("only_techs", "only_techs_as_bool"),
@@ -856,14 +858,14 @@ class TestParsedBackendEquation:
             ),
         ],
     )
-    @pytest.mark.parametrize("level_", ["initial_imask", "where"])
+    @pytest.mark.parametrize("level_", ["initial_where", "where"])
     def test_create_subset_from_where_one_level_where(
         self,
         dummy_model_data,
         equation_obj,
         where_parser,
         where_string,
-        expected_imasker,
+        expected_where_array,
         level_,
     ):
         equation_obj.sets = ["nodes", "techs"]
@@ -871,44 +873,46 @@ class TestParsedBackendEquation:
             equation_obj.where = [
                 where_parser.parse_string(where_string, parse_all=True)
             ]
-            imask = equation_obj.evaluate_where(dummy_model_data)
-        if level_ == "initial_imask":
+            where = equation_obj.evaluate_where(dummy_model_data)
+        if level_ == "initial_where":
             equation_obj.where = [
                 where_parser.parse_string(where_string, parse_all=True)
             ]
-            initial_imask = equation_obj.evaluate_where(dummy_model_data)
+            initial_where = equation_obj.evaluate_where(dummy_model_data)
             equation_obj.where = [where_parser.parse_string("True", parse_all=True)]
-            imask = equation_obj.evaluate_where(
-                dummy_model_data, initial_imask=initial_imask
+            where = equation_obj.evaluate_where(
+                dummy_model_data, initial_where=initial_where
             )
 
-        expected = dummy_model_data[expected_imasker]
+        expected = dummy_model_data[expected_where_array]
 
-        assert expected.reindex_like(imask).equals(dummy_model_data[expected_imasker])
+        assert expected.reindex_like(where).equals(
+            dummy_model_data[expected_where_array]
+        )
 
     def test_create_subset_from_where_trim_dimension(
-        self, dummy_model_data, where_parser, equation_obj, foreach_imask
+        self, dummy_model_data, where_parser, equation_obj, exists_array
     ):
         equation_obj.sets = ["nodes", "techs"]
 
         equation_obj.where = [
             where_parser.parse_string("[foo] in carrier_tiers", parse_all=True)
         ]
-        imask = equation_obj.evaluate_where(dummy_model_data, foreach_imask)
-        assert imask.sel(carrier_tiers="foo").any()
-        assert not imask.sel(carrier_tiers="bar").any()
+        where = equation_obj.evaluate_where(dummy_model_data, exists_array)
+        assert where.sel(carrier_tiers="foo").any()
+        assert not where.sel(carrier_tiers="bar").any()
 
     def test_create_subset_align_dims_with_sets(
-        self, dummy_model_data, where_parser, equation_obj, foreach_imask
+        self, dummy_model_data, where_parser, equation_obj, exists_array
     ):
         equation_obj.sets = ["nodes", "techs"]
 
         equation_obj.where = [where_parser.parse_string("True", parse_all=True)]
-        imask = equation_obj.evaluate_where(dummy_model_data, foreach_imask)
-        aligned_imask = equation_obj.align_imask_with_sets(imask)
+        where = equation_obj.evaluate_where(dummy_model_data, exists_array)
+        aligned_where = equation_obj.align_where_with_foreach_sets(where)
 
-        assert set(imask.dims).difference(["nodes", "techs"])
-        assert not set(aligned_imask.dims).difference(["nodes", "techs"])
+        assert set(where.dims).difference(["nodes", "techs"])
+        assert not set(aligned_where.dims).difference(["nodes", "techs"])
 
     def test_evaluate_expression(self, evaluate_component_expression):
         comparison_tuple, n_true = evaluate_component_expression
@@ -947,17 +951,17 @@ class TestParsedConstraint:
     def test_parse_constraint_dict_evalaute_eq2(
         self, constraint_obj, dummy_model_data, dummy_backend_interface
     ):
-        foreach_imask = constraint_obj.evaluate_foreach(dummy_model_data)
-        top_level_where_imask = constraint_obj.evaluate_where(
-            dummy_model_data, foreach_imask
+        exists_array = constraint_obj.combine_exists_and_foreach(dummy_model_data)
+        top_level_where_array = constraint_obj.evaluate_where(
+            dummy_model_data, exists_array
         )
-        valid_imask = constraint_obj.equations[1].evaluate_where(
-            dummy_model_data, top_level_where_imask
+        valid_where = constraint_obj.equations[1].evaluate_where(
+            dummy_model_data, top_level_where_array
         )
-        aligned_imask = constraint_obj.align_imask_with_sets(valid_imask)
+        aligned_where = constraint_obj.align_where_with_foreach_sets(valid_where)
         references = set()
         comparison_tuple = constraint_obj.equations[1].evaluate_expression(
-            dummy_model_data, dummy_backend_interface, aligned_imask, references
+            dummy_model_data, dummy_backend_interface, aligned_where, references
         )
         assert apply_comparison(comparison_tuple).sum() == 1
         assert references == {"only_techs"}
@@ -977,9 +981,9 @@ class TestParsedVariable:
         assert len(variable_obj.equations) == 0
 
     def test_parse_variable_dict_empty_eq1(self, variable_obj, dummy_model_data):
-        foreach_imask = variable_obj.evaluate_foreach(dummy_model_data)
+        exists_array = variable_obj.combine_exists_and_foreach(dummy_model_data)
         variable_obj.parse_top_level_where()
-        assert not variable_obj.evaluate_where(dummy_model_data, foreach_imask).any()
+        assert not variable_obj.evaluate_where(dummy_model_data, exists_array).any()
 
 
 class TestParsedObjective:
@@ -1008,8 +1012,8 @@ class TestParsedObjective:
     def test_parse_objective_dict_evalaute_eq2(
         self, objective_obj, dummy_model_data, dummy_backend_interface
     ):
-        valid_imask = objective_obj.equations[1].evaluate_where(dummy_model_data)
+        valid_where = objective_obj.equations[1].evaluate_where(dummy_model_data)
         objective_expression = objective_obj.equations[1].evaluate_expression(
-            dummy_model_data, dummy_backend_interface, valid_imask
+            dummy_model_data, dummy_backend_interface, valid_where
         )
         assert objective_expression.sum() == 12

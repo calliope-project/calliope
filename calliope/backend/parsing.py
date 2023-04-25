@@ -23,9 +23,9 @@ VALID_EXPRESSION_HELPER_FUNCTIONS: dict[str, Callable] = {
     "get_val_at_index": helper_functions.get_val_at_index,
     "roll": helper_functions.roll,
 }
-VALID_IMASK_HELPER_FUNCTIONS: dict[str, Callable] = {
+VALID_WHERE_HELPER_FUNCTIONS: dict[str, Callable] = {
     "inheritance": helper_functions.inheritance,
-    "sum": helper_functions.imask_sum,
+    "sum": helper_functions.where_sum,
     "get_val_at_index": helper_functions.get_val_at_index,
 }
 
@@ -240,15 +240,14 @@ class ParsedBackendEquation:
     def evaluate_where(
         self,
         model_data: xr.Dataset,
-        initial_imask: xr.DataArray = TRUE_ARRAY,
+        initial_where: xr.DataArray = TRUE_ARRAY,
     ) -> xr.DataArray:
         """Evaluate parsed backend object dictionary `where` string.
-        NOTE: imask = inverse mask (application of "np.where" to an array)
 
         Args:
             model_data (xr.Dataset): Calliope model dataset.
-            initial_imask (xr.DataArray, optional):
-                If given, the imask resulting from evaluation will be further imasked by this array.
+            initial_where (xr.DataArray, optional):
+                If given, the where array resulting from evaluation will be further where'd by this array.
                 Defaults to xr.DataArray(True) (i.e., no effect).
 
         Returns:
@@ -257,26 +256,26 @@ class ParsedBackendEquation:
 
         evaluated_wheres = [
             where[0].eval(
-                model_data=model_data, helper_func_dict=VALID_IMASK_HELPER_FUNCTIONS
+                model_data=model_data, helper_func_dict=VALID_WHERE_HELPER_FUNCTIONS
             )
             for where in self.where
         ]
 
-        imask: xr.DataArray = functools.reduce(
-            operator.and_, [initial_imask, *evaluated_wheres]
+        where: xr.DataArray = functools.reduce(
+            operator.and_, [initial_where, *evaluated_wheres]
         )
 
-        return xr.DataArray(imask)
+        return xr.DataArray(where)
 
-    def align_imask_with_sets(self, imask: xr.DataArray):
-        unwanted_dims = set(imask.dims).difference(self.sets)
-        return (imask.sum(unwanted_dims) > 0).astype(bool)
+    def align_where_with_foreach_sets(self, where: xr.DataArray):
+        unwanted_dims = set(where.dims).difference(self.sets)
+        return (where.sum(unwanted_dims) > 0).astype(bool)
 
     def evaluate_expression(
         self,
         model_data: xr.Dataset,
         backend_interface: backends.BackendModel,
-        imask: xr.DataArray,
+        where: xr.DataArray,
         references: Optional[set] = None,
     ):
         return self.expression[0].eval(
@@ -287,7 +286,7 @@ class ParsedBackendEquation:
             backend_dataset=backend_interface._dataset,
             helper_func_dict=VALID_EXPRESSION_HELPER_FUNCTIONS,
             model_data=model_data,
-            imask=imask,
+            where=where,
             references=references if references is not None else set(),
             as_dict=False,
         )
@@ -599,24 +598,23 @@ class ParsedBackendComponent(ParsedBackendEquation):
             for parsed_item_combination in parsed_item_product
         ]
 
-    def evaluate_foreach(self, model_data: xr.Dataset) -> xr.DataArray:
+    def combine_exists_and_foreach(self, model_data: xr.Dataset) -> xr.DataArray:
         """
-        Generate a multi-dimensional imasking array based on the sets
-        over which the constraint is to be built (defined by "foreach").
-        Irrespective of the sets defined by "foreach", this array will always include
-        ["nodes", "techs", "carriers", "carrier_tiers"] to ensure only valid combinations
-        of technologies consuming/producing specific carriers at specific nodes are included in later imasking.
+        Generate a multi-dimensional boolean array based on the sets
+        over which the constraint is to be built (defined by "foreach") and the
+        model `exists` array.
+        The `exists` array is a boolean array defining the structure of the model and is True for valid combinations of technologies consuming/producing specific carriers at specific nodes. It is indexed over ["nodes", "techs", "carriers", "carrier_tiers"].
 
         Args:
             model_data (xr.Dataset): Calliope model dataset.
 
         Returns:
-            xr.DataArray: imasking boolean array.
+            xr.DataArray: boolean array indexed over ["nodes", "techs", "carriers", "carrier_tiers"] + any additional dimensions provided by `foreach`.
         """
         # Start with (carriers, carrier_tiers, nodes, techs) and go from there
-        initial_imask = model_data.carrier.notnull() * model_data.node_tech.notnull()
+        exists = model_data.carrier.notnull() * model_data.node_tech.notnull()
         # Add other dimensions (costs, timesteps, etc.)
-        add_dims = set(self.sets).difference(initial_imask.dims)
+        add_dims = set(self.sets).difference(exists.dims)
         if add_dims.difference(model_data.dims):
             exceptions.warn(
                 f"Not generating optimisation problem object `{self.name}` because it is "
@@ -624,8 +622,8 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 _class=exceptions.BackendWarning,
             )
             return xr.DataArray(False)
-        all_imasks = [initial_imask, *[model_data[i].notnull() for i in add_dims]]
-        return functools.reduce(operator.and_, all_imasks)
+        exists_and_foreach = [exists, *[model_data[i].notnull() for i in add_dims]]
+        return functools.reduce(operator.and_, exists_and_foreach)
 
     def raise_caught_errors(self):
         """If there are any parsing errors, pipe them to the ModelError bullet point list generator"""
