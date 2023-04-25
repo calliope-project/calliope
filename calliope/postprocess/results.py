@@ -11,11 +11,11 @@ Functionality to post-process model results.
 
 import logging
 
-import xarray as xr
 import numpy as np
+import xarray as xr
 
-from calliope.core.util.logging import log_time
 from calliope.core.attrdict import AttrDict
+from calliope.core.util.logging import log_time
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ def postprocess_model_results(results, model_data, timings):
         logger,
         timings,
         "post_process_end",
-        time_since_run_start=True,
+        time_since_solve_start=True,
         comment="Postprocessing: ended",
     )
 

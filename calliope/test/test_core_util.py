@@ -1,13 +1,13 @@
-import pytest  # noqa: F401
-import calliope
-import logging
 import datetime
+import logging
 import os
 
-from calliope.core.util.tools import memoize, memoize_instancemethod, copy_docstring
+import pytest  # noqa: F401
 
-from calliope.core.util.logging import log_time
+import calliope
 from calliope.core.util.generate_runs import generate_runs
+from calliope.core.util.logging import log_time
+from calliope.core.util.tools import copy_docstring, memoize, memoize_instancemethod
 from calliope.test.common.util import python36_or_higher
 
 _MODEL_NATIONAL = os.path.join(
@@ -76,14 +76,14 @@ class TestLogging:
         log_time(logger, timings, "test2", comment=None, level="info")
         assert isinstance(timings["test2"], datetime.datetime)
 
-        # TODO: capture logging output and check that time_since_run_start is in the string
+        # TODO: capture logging output and check that time_since_solve_start is in the string
         log_time(
             logger,
             timings,
             "test",
             comment=None,
             level="info",
-            time_since_run_start=True,
+            time_since_solve_start=True,
         )
 
 

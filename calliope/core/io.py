@@ -143,8 +143,3 @@ def save_csv(model_data, path, dropna=True):
         if dropna:
             series = series.dropna()
         series.to_csv(out_path, header=True, index=keep_index)
-
-
-def save_lp(backend: PyomoBackendModel, path: Union[str, Path]):
-    # TODO: create `to_lp` abstract method on BackendModel ABC.
-    backend._instance.write(path, format="lp", symbolic_solver_labels=True)

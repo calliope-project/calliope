@@ -381,6 +381,8 @@ class Model(object):
             exceptions.ModelError: Cannot run the model if there are already results loaded, unless `force` is True.
             exceptions.ModelError: Some preprocessing steps will stop a run mode of "operate" from being possible.
         """
+        run_mode = self.run_config["mode"]
+
         # Check that results exist and are non-empty
         if not hasattr(self, "backend"):
             raise exceptions.ModelError(
@@ -400,14 +402,18 @@ class Model(object):
         else:
             to_drop = []
 
-        if (
-            self.run_config["mode"] == "operate"
-            and not self._model_data.attrs["allow_operate_mode"]
-        ):
+        if run_mode == "operate" and not self._model_data.attrs["allow_operate_mode"]:
             raise exceptions.ModelError(
                 "Unable to run this model in operational mode, probably because "
                 "there exist non-uniform timesteps (e.g. from time masking)"
             )
+
+        log_time(
+            logger,
+            self._timings,
+            "solve_start",
+            comment=f"Backend: starting model solve in {run_mode} mode",
+        )
 
         termination_condition = self.backend.solve(
             solver=self.run_config["solver"],
@@ -415,6 +421,14 @@ class Model(object):
             solver_options=self.run_config.get("solver_options", None),
             save_logs=self.run_config.get("save_logs", None),
             warmstart=warmstart,
+        )
+
+        log_time(
+            logger,
+            self._timings,
+            "solver_exit",
+            time_since_solve_start=True,
+            comment="Backend: solver finished running",
         )
 
         # Add additional post-processed result variables to results
