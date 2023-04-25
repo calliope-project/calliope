@@ -280,9 +280,7 @@ def evaluate_component_where(evaluatable_component_obj, dummy_model_data, reques
     equation_where = component_obj.equations[0].evaluate_where(
         dummy_model_data, top_level_where
     )
-    equation_where_squeezed = component_obj.align_where_with_foreach_sets(
-        equation_where
-    )
+    equation_where_squeezed = component_obj.drop_dims_not_in_foreach(equation_where)
 
     return component_obj, equation_where_squeezed, request.param[1]
 
@@ -909,7 +907,7 @@ class TestParsedBackendEquation:
 
         equation_obj.where = [where_parser.parse_string("True", parse_all=True)]
         where = equation_obj.evaluate_where(dummy_model_data, exists_array)
-        aligned_where = equation_obj.align_where_with_foreach_sets(where)
+        aligned_where = equation_obj.drop_dims_not_in_foreach(where)
 
         assert set(where.dims).difference(["nodes", "techs"])
         assert not set(aligned_where.dims).difference(["nodes", "techs"])
@@ -958,7 +956,7 @@ class TestParsedConstraint:
         valid_where = constraint_obj.equations[1].evaluate_where(
             dummy_model_data, top_level_where_array
         )
-        aligned_where = constraint_obj.align_where_with_foreach_sets(valid_where)
+        aligned_where = constraint_obj.drop_dims_not_in_foreach(valid_where)
         references = set()
         comparison_tuple = constraint_obj.equations[1].evaluate_expression(
             dummy_model_data, dummy_backend_interface, aligned_where, references

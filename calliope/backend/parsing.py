@@ -267,7 +267,7 @@ class ParsedBackendEquation:
 
         return xr.DataArray(where)
 
-    def align_where_with_foreach_sets(self, where: xr.DataArray):
+    def drop_dims_not_in_foreach(self, where: xr.DataArray):
         unwanted_dims = set(where.dims).difference(self.sets)
         return (where.sum(unwanted_dims) > 0).astype(bool)
 

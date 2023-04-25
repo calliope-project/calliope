@@ -10,8 +10,17 @@ import typing
 from abc import ABC, abstractmethod
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
-from typing import (Any, Callable, Generic, Iterable, Iterator, Literal,
-                    Optional, TypeVar, Union)
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Iterable,
+    Iterator,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -658,7 +667,7 @@ class PyomoBackendModel(BackendModel):
         if not where.any():
             return None
 
-        where = parsed_variable.align_where_with_foreach_sets(where)
+        where = parsed_variable.drop_dims_not_in_foreach(where)
 
         self._raise_error_on_preexistence(name, "variables")
         self._create_pyomo_list(name, "variables")
@@ -921,7 +930,7 @@ class PyomoBackendModel(BackendModel):
         self._raise_error_on_preexistence(name, component_type)
         component_da = (
             xr.DataArray()
-            .where(parsed_component.align_where_with_foreach_sets(top_level_where))
+            .where(parsed_component.drop_dims_not_in_foreach(top_level_where))
             .astype(np.dtype("O"))
         )
         self._create_pyomo_list(name, component_type)
@@ -932,7 +941,7 @@ class PyomoBackendModel(BackendModel):
             if not where.any():
                 continue
 
-            where = parsed_component.align_where_with_foreach_sets(where)
+            where = parsed_component.drop_dims_not_in_foreach(where)
 
             if component_da.where(where).notnull().any():
                 subset_overlap = component_da.where(where).to_series().dropna().index
