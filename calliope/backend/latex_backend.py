@@ -406,6 +406,9 @@ class LatexBackendModel(backends.BackendModel):
     def verbose_strings(self):
         return None
 
+    def to_lp(self, path: Union[str, Path]):
+        return None
+
     def generate_math_doc(self, format: _ALLOWED_MATH_FILE_FORMATS = "tex") -> str:
         """Generate the math documentation by embedding LaTeX math in a template.
 
