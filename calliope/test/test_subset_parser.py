@@ -1,13 +1,12 @@
-import pytest
 import numpy as np
 import pyparsing
+import pytest
 import xarray as xr
 
-from calliope.backend import equation_parser, subset_parser, parsing
-from calliope.test.common.util import check_error_or_warning
+from calliope.backend import equation_parser, parsing, subset_parser
 from calliope.core.attrdict import AttrDict
 from calliope.exceptions import BackendError
-
+from calliope.test.common.util import check_error_or_warning
 
 SUB_EXPRESSION_CLASSIFIER = equation_parser.SUB_EXPRESSION_CLASSIFIER
 HELPER_FUNCS = {"dummy_func_1": lambda x: x * 10, "dummy_func_2": lambda x, y: x + y}

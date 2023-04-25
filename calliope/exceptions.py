@@ -9,10 +9,9 @@ Exceptions and Warnings.
 
 """
 
-from typing import Union, Optional
 import textwrap
 import warnings
-
+from typing import Optional, Union
 
 # Enable simple format when printing ModelWarnings
 formatwarning_orig = warnings.formatwarning

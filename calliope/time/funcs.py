@@ -9,8 +9,8 @@ Functions to process time series data.
 
 """
 
-import logging
 import datetime
+import logging
 
 import numpy as np
 import pandas as pd

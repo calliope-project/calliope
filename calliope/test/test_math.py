@@ -1,8 +1,8 @@
-from pathlib import Path
 import filecmp
+from pathlib import Path
 
-import pytest
 import numpy as np
+import pytest
 
 import calliope
 from calliope import AttrDict

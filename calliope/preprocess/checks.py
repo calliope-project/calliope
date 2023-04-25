@@ -9,8 +9,8 @@ Checks for model consistency and possible errors during preprocessing.
 
 """
 
-import os
 import logging
+import os
 import re
 import warnings
 

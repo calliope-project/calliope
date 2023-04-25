@@ -13,7 +13,6 @@ import os
 
 import calliope
 
-
 _TOKEN = "pk.eyJ1IjoiY2FsbGlvcGUtcHJvamVjdCIsImEiOiJjamVwd280ODkwYzh6Mnhxbm1qYnU4bWI4In0.mv2O1aDqQEkOUwAIcVoUMA"
 
 

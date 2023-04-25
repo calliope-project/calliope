@@ -1,10 +1,9 @@
-import pytest
-
 import numpy as np
+import pytest
 import xarray as xr
 
-from calliope.backend import helper_functions
 from calliope import exceptions
+from calliope.backend import helper_functions
 from calliope.test.common.util import check_error_or_warning
 
 

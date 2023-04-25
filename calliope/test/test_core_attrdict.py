@@ -1,12 +1,12 @@
-from io import StringIO
 import os
-
-import pytest
-import numpy as np
 import tempfile
+from io import StringIO
+
+import numpy as np
+import pytest
 import ruamel.yaml as ruamel_yaml
 
-from calliope.core.attrdict import AttrDict, _MISSING
+from calliope.core.attrdict import _MISSING, AttrDict
 from calliope.test.common.util import check_error_or_warning
 
 

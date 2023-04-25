@@ -1,12 +1,11 @@
-import pytest
 from itertools import chain, combinations
 
-import xarray as xr
 import numpy as np
+import pytest
+import xarray as xr
 
-from calliope.test.common.util import build_test_model as build_model
 from calliope import AttrDict
-
+from calliope.test.common.util import build_test_model as build_model
 
 ALL_DIMS = {"nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"}
 

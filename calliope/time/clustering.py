@@ -11,9 +11,8 @@ Functions to cluster data along the time dimension.
 import numpy as np
 import pandas as pd
 import xarray as xr
-
-from sklearn.metrics import mean_squared_error
 from sklearn import cluster as sk_cluster
+from sklearn.metrics import mean_squared_error
 
 from calliope import exceptions
 

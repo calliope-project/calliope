@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 from pathlib import Path
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 exec(Path("calliope/_version.py").read_text())  # Sets the __version__ variable
 

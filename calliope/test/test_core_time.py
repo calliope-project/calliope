@@ -1,15 +1,15 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytest  # noqa: F401
 
 import calliope
 from calliope import exceptions
-from calliope.time import funcs, masks
 from calliope.test.common.util import (
     build_test_model,
     check_error_or_warning,
     python36_or_higher,
 )
+from calliope.time import funcs, masks
 
 
 class TestClustering:

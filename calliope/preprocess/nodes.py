@@ -11,10 +11,10 @@ Functions to deal with nodes and their configuration.
 
 import math
 
-from calliope.exceptions import ModelError, warn
 from calliope.core.attrdict import AttrDict
-from calliope.preprocess.util import vincenty
+from calliope.exceptions import ModelError, warn
 from calliope.preprocess.checks import DEFAULTS, POSSIBLE_COSTS
+from calliope.preprocess.util import vincenty
 
 
 def process_nodes(model_config, modelrun_techs):

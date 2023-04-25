@@ -1,13 +1,13 @@
+import logging
 import os
 from pathlib import Path
 
-import pytest
 import numpy as np
-import logging
+import pytest
 
 import calliope
-from calliope.test.common.util import check_error_or_warning
 from calliope.test.common.util import build_test_model as build_model
+from calliope.test.common.util import check_error_or_warning
 
 LOGGER = "calliope.core.model"
 
