@@ -241,12 +241,12 @@ class ParsedBackendEquation:
             xr.DataArray: _description_
         """
         kwargs = {"model_data": "model_data"}
+        helpers = {
+            k: v("where", **kwargs)
+            for k, v in helper_functions._registry["where"].items()
+        }
         evaluated_wheres = [
-            where[0].eval(
-                helper_functions=helper_functions.ParsingHelperFuncs("where", **kwargs),
-                **kwargs,
-            )
-            for where in self.where
+            where[0].eval(helper_functions=helpers, **kwargs) for where in self.where
         ]
 
         imask: xr.DataArray = functools.reduce(
@@ -277,12 +277,11 @@ class ParsedBackendEquation:
             "references": references if references is not None else set(),
             "as_dict": False,
         }
-        return self.expression[0].eval(
-            helper_functions=helper_functions.ParsingHelperFuncs(
-                "expression", **kwargs
-            ),
-            **kwargs,
-        )
+        helpers = {
+            k: v("expression", **kwargs)
+            for k, v in helper_functions._registry["expression"].items()
+        }
+        return self.expression[0].eval(helper_functions=helpers, **kwargs)
 
 
 class ParsedBackendComponent(ParsedBackendEquation):

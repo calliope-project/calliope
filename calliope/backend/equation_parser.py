@@ -259,14 +259,14 @@ class EvalHelperFuncName(EvalString):
 
     def eval(
         self,
-        helper_func_dict: dict[str, Callable],
+        helper_functions: dict[str, Callable],
         as_dict: bool = False,
         **eval_kwargs,
     ) -> Optional[Union[str, Callable]]:
         """
 
         Args:
-            helper_func_dict (dict[str, Callable]): Allowed helper functions.
+            helper_functions (dict[str, Callable]): Allowed helper functions.
             test (bool, optional):
                 If True, return a string with the helper function name rather than
                 collecting the helper function from the dictionary of functions.

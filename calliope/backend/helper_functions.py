@@ -8,6 +8,7 @@ helper_functions.py
 Functions that can be used to process data in math `where` and `expression` strings.
 """
 import functools
+from abc import ABC, abstractmethod
 from typing import Literal, Mapping, Union
 
 import pandas as pd
@@ -16,44 +17,75 @@ import xarray as xr
 from calliope.exceptions import BackendError
 
 
-def _available_func(func):
+def _allowed_func(func):
     @functools.wraps(func)
-    def is_available(self, *args, **kwargs):
-        func_name = func.__name__
-        if func_name in self._available_funcs:
+    def is_allowed(self, *args, **kwargs):
+        if self._parse_string_type in self.ALLOWED_IN:
             return func(self, *args, **kwargs)
         else:
             raise BackendError(
-                f"Helper function `{func_name}` cannot be used in math `{self._parse_string_type}` strings"
+                f"Helper function `{str(self)}` cannot be used in math `{self._parse_string_type}` strings"
             )
 
-    return is_available
+    return is_allowed
 
 
-class ParsingHelperFuncs:
-    _AVAILABLE_FUNCS = {
-        "expression": [
-            "sum",
-            "reduce_carrier_dim",
-            "reduce_primary_carrier_dim",
-            "select_from_lookup_arrays",
-            "get_val_at_index",
-            "roll",
-        ],
-        "where": ["inheritance", "any", "get_val_at_index"],
-    }
+_registry: dict[
+    Literal["where", "expression"], dict[str, type["ParsingHelperFunction"]]
+] = {
+    "where": {},
+    "expression": {},
+}
 
+
+class ParsingHelperFunction(ABC):
     def __init__(
         self,
         parse_string_type: Literal["expression", "where"],
         **kwargs,
     ) -> None:
         self._kwargs = kwargs
-        self._available_funcs = self._AVAILABLE_FUNCS[parse_string_type]
         self._parse_string_type = parse_string_type
 
-    @_available_func
-    def inheritance(self, tech_group: str) -> xr.DataArray:
+    def __str__(self) -> str:
+        return self.NAME
+
+    @property
+    @abstractmethod
+    def ALLOWED_IN(self) -> list[Literal["where", "expression"]]:
+        """List of parseable math strings that this function can be accessed from"""
+
+    @property
+    @abstractmethod
+    def NAME(self) -> str:
+        """Helper function name that is used in the math expression/where string"""
+
+    @abstractmethod
+    def __call__(self, *args, **kwargs) -> xr.DataArray:
+        """Primary function of the helper class, which will be called by the parsing class"""
+
+    def __init_subclass__(cls):
+        """
+        Override subclass definition in two ways:
+        1. Do not allow new helper functions to have a name that is already defined (be it a built-in function or a custom function).
+        2. Wrap helper function __call__ in a check for the function being allowed in specific parsing string types.
+        """
+        super().__init_subclass__()
+        for allowed in cls.ALLOWED_IN:
+            if cls.NAME in _registry[allowed].keys():
+                raise ValueError(
+                    f"`{allowed}` string helper function `{cls.NAME}` already exists"
+                )
+        cls.__call__ = _allowed_func(cls.__call__)
+        for allowed in cls.ALLOWED_IN:
+            _registry[allowed][cls.NAME] = cls
+
+
+class Inheritance(ParsingHelperFunction):
+    ALLOWED_IN = ["where"]
+    NAME = "inheritance"
+
+    def __call__(self, tech_group: str) -> xr.DataArray:
         """
         Find all technologies which inherit from a particular technology group.
         The technology group can be an abstract base group (e.g., `supply`, `storage`) or a user-defined technology group which itself inherits from one of the abstract base groups.
@@ -66,8 +98,12 @@ class ParsingHelperFuncs:
         )
         return inheritance_lists.apply(lambda x: tech_group in x).to_xarray()
 
-    @_available_func
-    def any(self, parameter: str, *, over: Union[str, list[str]]) -> xr.DataArray:
+
+class Any(ParsingHelperFunction):
+    NAME = "any"
+    ALLOWED_IN = ["where"]
+
+    def __call__(self, parameter: str, *, over: Union[str, list[str]]) -> xr.DataArray:
         """
         Reduce the boolean where array of a model parameter by applying `any` over some dimension(s).
 
@@ -80,7 +116,6 @@ class ParsingHelperFuncs:
                 If the parameter exists in the model, returns a boolean array with dimensions reduced by applying a boolean OR operation along the dimensions given in `over`.
                 If the parameter does not exist, returns a dimensionless False array.
         """
-
         if parameter in self._kwargs["model_data"].data_vars:
             parameter_da = self._kwargs["model_data"][parameter]
             with pd.option_context("mode.use_inf_as_na", True):
@@ -93,8 +128,14 @@ class ParsingHelperFuncs:
             bool_parameter_da = xr.DataArray(False)
         return bool_parameter_da
 
-    @_available_func
-    def sum(self, array: xr.DataArray, *, over: Union[str, list[str]]) -> xr.DataArray:
+
+class Sum(ParsingHelperFunction):
+    NAME = "sum"
+    ALLOWED_IN = ["expression"]
+
+    def __call__(
+        self, array: xr.DataArray, *, over: Union[str, list[str]]
+    ) -> xr.DataArray:
         """
         Sum an expression array over the given dimension(s).
 
@@ -111,8 +152,12 @@ class ParsingHelperFuncs:
 
         return to_return
 
-    @_available_func
-    def reduce_carrier_dim(
+
+class ReduceCarrierDim(ParsingHelperFunction):
+    NAME = "reduce_carrier_dim"
+    ALLOWED_IN = ["expression"]
+
+    def __call__(
         self,
         array: xr.DataArray,
         carrier_tier: Literal["in", "out", "in_2", "out_2", "in_3", "out_3"],
@@ -126,7 +171,7 @@ class ParsingHelperFuncs:
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        return self.sum(
+        return Sum(self._parse_string_type, **self._kwargs)(
             array.where(
                 self._kwargs["model_data"]
                 .carrier.sel(carrier_tiers=carrier_tier)
@@ -135,8 +180,12 @@ class ParsingHelperFuncs:
             over="carriers",
         )
 
-    @_available_func
-    def reduce_primary_carrier_dim(
+
+class ReducePrimaryCarrierDim(ParsingHelperFunction):
+    NAME = "reduce_primary_carrier_dim"
+    ALLOWED_IN = ["expression"]
+
+    def __call__(
         self, array: xr.DataArray, carrier_tier: Literal["in", "out"]
     ) -> xr.DataArray:
         """Reduce expression array data by selecting the carrier that corresponds to the primary carrier and then dropping the `carriers` dimension.
@@ -150,7 +199,7 @@ class ParsingHelperFuncs:
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        return self.sum(
+        return Sum(self._parse_string_type, **self._kwargs)(
             array.where(
                 getattr(
                     self._kwargs["model_data"], f"primary_carrier_{carrier_tier}"
@@ -159,8 +208,12 @@ class ParsingHelperFuncs:
             over="carriers",
         )
 
-    @_available_func
-    def select_from_lookup_arrays(
+
+class SelectFromLookupArrays(ParsingHelperFunction):
+    NAME = "select_from_lookup_arrays"
+    ALLOWED_IN = ["expression"]
+
+    def __call__(
         self, array: xr.DataArray, **lookup_arrays: xr.DataArray
     ) -> xr.DataArray:
         """
@@ -232,8 +285,12 @@ class ParsingHelperFuncs:
             .reindex_like(array, copy=False)
         )
 
-    @_available_func
-    def get_val_at_index(self, **dim_idx_mapping: int) -> xr.DataArray:
+
+class GetValAtIndex(ParsingHelperFunction):
+    NAME = "get_val_at_index"
+    ALLOWED_IN = ["expression", "where"]
+
+    def __call__(self, **dim_idx_mapping: int) -> xr.DataArray:
         """Get value of a model dimension at a given integer index.
         This function is primarily useful for timeseries data
 
@@ -266,8 +323,12 @@ class ParsingHelperFuncs:
         dim, idx = next(iter(dim_idx_mapping.items()))
         return self._kwargs["model_data"].coords[dim][int(idx)]
 
-    @_available_func
-    def roll(self, array: xr.DataArray, **roll_kwargs: int) -> xr.DataArray:
+
+class Roll(ParsingHelperFunction):
+    NAME = "roll"
+    ALLOWED_IN = ["expression"]
+
+    def __call__(self, array: xr.DataArray, **roll_kwargs: int) -> xr.DataArray:
         """
         Roll (a.k.a., shift) the array along the given dimension(s) by the given number of places.
         Rolling keeps the array index labels in the same position, but moves the data by the given number of places.
@@ -292,3 +353,7 @@ class ParsingHelperFuncs:
         """
         roll_kwargs_int: Mapping = {k: int(v) for k, v in roll_kwargs.items()}
         return array.roll(roll_kwargs_int)
+
+
+def protected_names():
+    return [i.NAME for i in ParsingHelperFunction.__subclasses__()]
