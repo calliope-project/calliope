@@ -7,7 +7,7 @@ helper_functions.py
 
 Functions that can be used to process data in math `where` and `expression` strings.
 """
-import functools
+
 from abc import ABC, abstractmethod
 from typing import Literal, Mapping, Union
 
@@ -22,6 +22,11 @@ _registry: dict[
 
 
 class ParsingHelperFunction(ABC):
+    """
+    Abstract helper function class, which all helper functions must subclass.
+    The abstract properties and methods defined here must be defined by all helper functions.
+    """
+
     def __init__(
         self,
         **kwargs,
@@ -31,16 +36,16 @@ class ParsingHelperFunction(ABC):
     @property
     @abstractmethod
     def ALLOWED_IN(self) -> list[Literal["where", "expression"]]:
-        """List of parseable math strings that this function can be accessed from"""
+        """List of parseable math strings that this function can be accessed from."""
 
     @property
     @abstractmethod
     def NAME(self) -> str:
-        """Helper function name that is used in the math expression/where string"""
+        """Helper function name that is used in the math expression/where string."""
 
     @abstractmethod
     def __call__(self, *args, **kwargs) -> xr.DataArray:
-        """Primary function of the helper class, which will be called by the parsing class"""
+        """Primary function of the helper class, which will be called by the helper when called by evaluating a parsing string."""
 
     def __init_subclass__(cls):
         """
@@ -59,7 +64,9 @@ class ParsingHelperFunction(ABC):
 
 
 class Inheritance(ParsingHelperFunction):
+    #:
     ALLOWED_IN = ["where"]
+    #:
     NAME = "inheritance"
 
     def __call__(self, tech_group: str) -> xr.DataArray:
@@ -77,7 +84,9 @@ class Inheritance(ParsingHelperFunction):
 
 
 class Any(ParsingHelperFunction):
+    #:
     NAME = "any"
+    #:
     ALLOWED_IN = ["where"]
 
     def __call__(self, parameter: str, *, over: Union[str, list[str]]) -> xr.DataArray:
@@ -107,7 +116,9 @@ class Any(ParsingHelperFunction):
 
 
 class Sum(ParsingHelperFunction):
+    #:
     NAME = "sum"
+    #:
     ALLOWED_IN = ["expression"]
 
     def __call__(
@@ -131,7 +142,9 @@ class Sum(ParsingHelperFunction):
 
 
 class ReduceCarrierDim(ParsingHelperFunction):
+    #:
     NAME = "reduce_carrier_dim"
+    #:
     ALLOWED_IN = ["expression"]
 
     def __call__(
@@ -159,7 +172,9 @@ class ReduceCarrierDim(ParsingHelperFunction):
 
 
 class ReducePrimaryCarrierDim(ParsingHelperFunction):
+    #:
     NAME = "reduce_primary_carrier_dim"
+    #:
     ALLOWED_IN = ["expression"]
 
     def __call__(
@@ -187,7 +202,9 @@ class ReducePrimaryCarrierDim(ParsingHelperFunction):
 
 
 class SelectFromLookupArrays(ParsingHelperFunction):
+    #:
     NAME = "select_from_lookup_arrays"
+    #:
     ALLOWED_IN = ["expression"]
 
     def __call__(
@@ -213,17 +230,16 @@ class SelectFromLookupArrays(ParsingHelperFunction):
                 Any NaN index coordinates in the lookup arrays will be NaN in the returned array.
 
         Examples:
-        >>> coords = {"foo": ["A", "B", "C"]}
-        >>> array = xr.DataArray([1, 2, 3], coords=coords)
-        >>> lookup_array = xr.DataArray(
-                np.array(["B", "A", np.nan], dtype="O"), coords=coords, name="bar"
-            )
-        >>> model_data = xr.Dataset({"bar": lookup_array})
-        >>> select_from_lookup_arrays(model_data)(array, foo=lookup_array)
-        <xarray.DataArray 'bar' (foo: 3)>
-        array([ 2.,  1., nan])
-        Coordinates:
-        * foo      (foo) object 'A' 'B' 'C'
+            >>> coords = {"foo": ["A", "B", "C"]}
+            >>> array = xr.DataArray([1, 2, 3], coords=coords)
+            >>> lookup_array = xr.DataArray(np.array(["B", "A", np.nan], dtype="O"), coords=coords, name="bar")
+            >>> model_data = xr.Dataset({"bar": lookup_array})
+            >>> select_from_lookup_arrays = SelectFromLookupArrays(model_data=model_data)
+            >>> select_from_lookup_arrays(array, foo=lookup_array)
+            <xarray.DataArray 'bar' (foo: 3)>
+            array([ 2.,  1., nan])
+            Coordinates:
+            * foo      (foo) object 'A' 'B' 'C'
 
         The lookup array assigns the value at "B" to "A" and vice versa.
         "C" is masked since the lookup array value is NaN.
@@ -264,7 +280,9 @@ class SelectFromLookupArrays(ParsingHelperFunction):
 
 
 class GetValAtIndex(ParsingHelperFunction):
+    #:
     NAME = "get_val_at_index"
+    #:
     ALLOWED_IN = ["expression", "where"]
 
     def __call__(self, **dim_idx_mapping: int) -> xr.DataArray:
@@ -282,18 +300,19 @@ class GetValAtIndex(ParsingHelperFunction):
             xr.DataArray: Dimensionless array containing one value.
 
         Examples:
-        >>> coords = {"timesteps": ["2000-01-01 00:00", "2000-01-01 01:00", "2000-01-01 02:00"]}
-        >>> model_data = xr.Dataset(coords=coords)
-        >>> get_val_at_index(model_data)(timesteps=0)
-        <xarray.DataArray 'timesteps' ()>
-        array('2000-01-01 00:00', dtype='<U16')
-        Coordinates:
-            timesteps  <U16 '2000-01-01 00:00'
-        >>> get_val_at_index(model_data)(timesteps=-1)
-        <xarray.DataArray 'timesteps' ()>
-        array('2000-01-01 00:00', dtype='<U16')
-        Coordinates:
-            timesteps  <U16 '2000-01-01 02:00'
+            >>> coords = {"timesteps": ["2000-01-01 00:00", "2000-01-01 01:00", "2000-01-01 02:00"]}
+            >>> model_data = xr.Dataset(coords=coords)
+            >>> get_val_at_index = GetValAtIndex(model_data=model_data)
+            >>> get_val_at_index(model_data)(timesteps=0)
+            <xarray.DataArray 'timesteps' ()>
+            array('2000-01-01 00:00', dtype='<U16')
+            Coordinates:
+                timesteps  <U16 '2000-01-01 00:00'
+            >>> get_val_at_index(model_data)(timesteps=-1)
+            <xarray.DataArray 'timesteps' ()>
+            array('2000-01-01 00:00', dtype='<U16')
+            Coordinates:
+                timesteps  <U16 '2000-01-01 02:00'
         """
         if len(dim_idx_mapping) != 1:
             raise ValueError("Supply one (and only one) dimension:index mapping")
@@ -302,7 +321,9 @@ class GetValAtIndex(ParsingHelperFunction):
 
 
 class Roll(ParsingHelperFunction):
+    #:
     NAME = "roll"
+    #:
     ALLOWED_IN = ["expression"]
 
     def __call__(self, array: xr.DataArray, **roll_kwargs: int) -> xr.DataArray:
@@ -320,17 +341,14 @@ class Roll(ParsingHelperFunction):
             xr.DataArray: `array` with rolled data.
 
         Examples:
-        >>> array = xr.DataArray([1, 2, 3], coords={"foo": ["A", "B", "C"]})
-        >>> model_data = xr.Dataset({"bar": array})
-        >>> roll()("bar", foo=1)
-        <xarray.DataArray 'bar' (foo: 3)>
-        array([3, 1, 2])
-        Coordinates:
-        * foo      (foo) <U1 'A' 'B' 'C'
+            >>> array = xr.DataArray([1, 2, 3], coords={"foo": ["A", "B", "C"]})
+            >>> model_data = xr.Dataset({"bar": array})
+            >>> roll = Roll()
+            >>> roll("bar", foo=1)
+            <xarray.DataArray 'bar' (foo: 3)>
+            array([3, 1, 2])
+            Coordinates:
+            * foo      (foo) <U1 'A' 'B' 'C'
         """
         roll_kwargs_int: Mapping = {k: int(v) for k, v in roll_kwargs.items()}
         return array.roll(roll_kwargs_int)
-
-
-def protected_names():
-    return [i.NAME for i in ParsingHelperFunction.__subclasses__()]

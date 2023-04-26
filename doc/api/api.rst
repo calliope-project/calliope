@@ -52,4 +52,5 @@ Math formulation helper functions
 
 .. automodule:: calliope.backend.helper_functions
     :members:
-    :private-members:
+    :special-members: __call__
+    :inherited-members:
