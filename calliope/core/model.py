@@ -77,7 +77,15 @@ class Model(object):
             debug (bool, optional):
                 If True, additional debug data will be included in the built model.
                 Defaults to False.
-
+        Keyword Args:
+            timeseries_dataframes (dict[str, pd.DataFrame]):
+                If supplying `config` as a dictionary, in-memory timeseries data can be referred to using `df=...`.
+                The referenced data must be supplied here as a dicitionary of dataframes.
+            scenario (str):
+                Comma delimited string of pre-defined `scenarios` to apply to the model,
+            override_dict (dict):
+                Additional overrides to apply to `config`.
+                These will be applied *after* applying any defined `scenario` overrides.
         Raises:
             ValueError: `config` must be provided (as one of `str`, `int`, `None`).
         """
