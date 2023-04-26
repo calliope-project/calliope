@@ -28,9 +28,6 @@ class ParsingHelperFunction(ABC):
     ) -> None:
         self._kwargs = kwargs
 
-    def __str__(self) -> str:
-        return self.NAME
-
     @property
     @abstractmethod
     def ALLOWED_IN(self) -> list[Literal["where", "expression"]]:
@@ -151,7 +148,7 @@ class ReduceCarrierDim(ParsingHelperFunction):
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        return Sum(self._parse_string_type, **self._kwargs)(
+        return Sum(**self._kwargs)(
             array.where(
                 self._kwargs["model_data"]
                 .carrier.sel(carrier_tiers=carrier_tier)
@@ -179,7 +176,7 @@ class ReducePrimaryCarrierDim(ParsingHelperFunction):
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        return Sum(self._parse_string_type, **self._kwargs)(
+        return Sum(**self._kwargs)(
             array.where(
                 getattr(
                     self._kwargs["model_data"], f"primary_carrier_{carrier_tier}"

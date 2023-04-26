@@ -89,10 +89,9 @@ def imasking(bool_operand, helper_function, data_var, comparison, subset):
 
 @pytest.fixture(scope="function")
 def eval_kwargs(dummy_model_data):
-    helpers = helper_functions.ParsingHelperFuncs("where", model_data=dummy_model_data)
     return {
         "model_data": dummy_model_data,
-        "helper_functions": helpers,
+        "helper_functions": helper_functions._registry["where"],
         "test": True,
         "errors": set(),
         "warnings": set(),

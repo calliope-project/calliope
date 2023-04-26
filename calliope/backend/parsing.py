@@ -13,8 +13,7 @@ import xarray as xr
 from typing_extensions import NotRequired, Required, TypedDict
 
 from calliope import exceptions
-from calliope.backend import (backends, equation_parser, helper_functions,
-                              subset_parser)
+from calliope.backend import backends, equation_parser, helper_functions, subset_parser
 
 TRUE_ARRAY = xr.DataArray(True)
 
@@ -241,13 +240,12 @@ class ParsedBackendEquation:
         Returns:
             xr.DataArray: _description_
         """
-        kwargs = {"model_data": "model_data"}
-        helpers = {
-            k: v(**kwargs)
-            for k, v in helper_functions._registry["where"].items()
-        }
         evaluated_wheres = [
-            where[0].eval(helper_functions=helpers, **kwargs) for where in self.where
+            where[0].eval(
+                helper_functions=helper_functions._registry["where"],
+                model_data=model_data,
+            )
+            for where in self.where
         ]
 
         imask: xr.DataArray = functools.reduce(
@@ -267,22 +265,18 @@ class ParsedBackendEquation:
         imask: xr.DataArray,
         references: Optional[set] = None,
     ):
-        kwargs = {
-            "equation_name": self.name,
-            "slice_dict": self.slices,
-            "sub_expression_dict": self.sub_expressions,
-            "backend_interface": backend_interface,
-            "backend_dataset": backend_interface._dataset,
-            "model_data": model_data,
-            "imask": imask,
-            "references": references if references is not None else set(),
-            "as_dict": False,
-        }
-        helpers = {
-            k: v(**kwargs)
-            for k, v in helper_functions._registry["expression"].items()
-        }
-        return self.expression[0].eval(helper_functions=helpers, **kwargs)
+        return self.expression[0].eval(
+            equation_name=self.name,
+            slice_dict=self.slices,
+            sub_expression_dict=self.sub_expressions,
+            backend_interface=backend_interface,
+            backend_dataset=backend_interface._dataset,
+            model_data=model_data,
+            imask=imask,
+            references=references if references is not None else set(),
+            as_dict=False,
+            helper_functions=helper_functions._registry["expression"],
+        )
 
 
 class ParsedBackendComponent(ParsedBackendEquation):

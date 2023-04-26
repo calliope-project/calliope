@@ -36,6 +36,7 @@ from typing import Any, Callable, Iterable, Iterator, Optional, Union
 import pyparsing as pp
 import xarray as xr
 
+from calliope.backend.helper_functions import ParsingHelperFunction
 from calliope.exceptions import BackendError
 
 pp.ParserElement.enablePackrat()
@@ -259,14 +260,14 @@ class EvalHelperFuncName(EvalString):
 
     def eval(
         self,
-        helper_functions: dict[str, Callable],
+        helper_functions: dict[str, type[ParsingHelperFunction]],
         as_dict: bool = False,
         **eval_kwargs,
     ) -> Optional[Union[str, Callable]]:
         """
 
         Args:
-            helper_functions (dict[str, Callable]): Allowed helper functions.
+            helper_functions (dict[str, type[ParsingHelperFunction]]): Allowed helper functions.
             test (bool, optional):
                 If True, return a string with the helper function name rather than
                 collecting the helper function from the dictionary of functions.
@@ -280,15 +281,20 @@ class EvalHelperFuncName(EvalString):
                 If test=True, only the helper function name is returned.
         """
 
-        if self.name not in helper_func_dict.keys():
+        if self.name not in helper_functions.keys():
             raise BackendError(
-                f"({eval_kwargs['equation_name']}, {self.instring}): Invalid helper function defined"
+                f"({eval_kwargs['equation_name']}, {self.instring}): Invalid helper function defined: {self.name}"
+            )
+        elif not isinstance(helper_functions[self.name], type(ParsingHelperFunction)):
+            raise TypeError(
+                f"({eval_kwargs['equation_name']}, {self.instring}): Helper function must be "
+                f"subclassed from calliope.backend.helper_functions.ParsingHelperFunction: {self.name}"
             )
         else:
             if as_dict:
                 return str(self.name)
             else:
-                return helper_func_dict[self.name](**eval_kwargs)
+                return helper_functions[self.name](**eval_kwargs)
 
 
 class EvalSlicedParameterOrVariable(EvalString):
