@@ -1,13 +1,13 @@
+import logging
 import os
 from pathlib import Path
 
-import pytest
 import numpy as np
-import logging
+import pytest
 
 import calliope
-from calliope.test.common.util import check_error_or_warning
 from calliope.test.common.util import build_test_model as build_model
+from calliope.test.common.util import check_error_or_warning
 
 LOGGER = "calliope.core.model"
 
@@ -273,9 +273,7 @@ class TestVerboseStrings:
 
     def test_verbose_strings(self, simple_supply_new_build):
         def _compare_to_string(group, component, dims, verbose):
-            component_obj = simple_supply_new_build.backend._dataset.filter_by_attrs(
-                **{group: 1}
-            )[component]
+            component_obj = simple_supply_new_build.backend._dataset[component]
             if verbose:
                 dim_list = ", ".join(dims[k] for k in component_obj.dims)
                 expected = f"{group}[{component}][{dim_list}]"

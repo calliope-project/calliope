@@ -13,13 +13,13 @@ from __future__ import annotations
 import logging
 import warnings
 from pathlib import Path
-from typing import Callable, Literal, Optional, Union
+from typing import Callable, Literal, Optional, TypeVar, Union
 
 import xarray
 
 import calliope
 from calliope import exceptions
-from calliope.backend import backends, parsing
+from calliope.backend import backends, latex_backend, parsing
 from calliope.core import io
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
@@ -29,6 +29,10 @@ from calliope.preprocess import model_run_from_dict, model_run_from_yaml
 from calliope.preprocess.model_data import ModelDataFactory
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar(
+    "T", bound=Union[backends.PyomoBackendModel, latex_backend.LatexBackendModel]
+)
 
 
 def read_netcdf(path):
@@ -46,7 +50,9 @@ class Model(object):
 
     """
 
-    _BACKENDS: dict[str, Callable] = {"pyomo": backends.PyomoBackendModel}
+    _BACKENDS: dict[str, Callable] = {
+        "pyomo": backends.PyomoBackendModel,
+    }
 
     def __init__(
         self,
@@ -78,6 +84,7 @@ class Model(object):
         self.run_config: AttrDict
         self.math: AttrDict
         self._config_path: Optional[str]
+        self.math_documentation = latex_backend.MathDocumentation(self._build)
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
@@ -317,12 +324,16 @@ class Model(object):
             backend_interface (Literal["pyomo"], optional):
                 Backend interface in which to build the problem. Defaults to "pyomo".
         """
+
         if hasattr(self, "backend") and not force:
             raise exceptions.ModelError(
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
         backend = self._BACKENDS[backend_interface]()
+        self.backend = self._build(backend)
+
+    def _build(self, backend: T) -> T:
         backend.add_all_parameters(self._model_data, self.run_config)
         log_time(
             logger,
@@ -340,6 +351,8 @@ class Model(object):
             "objectives",
         ]:
             component = components.removesuffix("s")
+            if components in ["variables", "expressions"]:
+                backend.valid_math_element_names.update(self.math[components].keys())
             for name, dict_ in self.math[components].items():
                 if dict_.get("active", True):
                     getattr(backend, f"add_{component}")(self._model_data, name, dict_)
@@ -353,8 +366,7 @@ class Model(object):
                 f"backend_{components}_generated",
                 comment=f"Model: Generated optimisation problem {components}",
             )
-
-        self.backend = backend
+        return backend
 
     @copy_docstring(backends.BackendModel.verbose_strings)
     def verbose_strings(self) -> None:

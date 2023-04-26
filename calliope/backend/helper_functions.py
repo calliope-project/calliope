@@ -7,9 +7,9 @@ helper_functions.py
 
 Functions that can be used to process data in math `where` and `expression` strings.
 """
-
+import re
 from abc import ABC, abstractmethod
-from typing import Literal, Mapping, Union
+from typing import Any, Literal, Mapping, Union, overload
 
 import pandas as pd
 import xarray as xr
@@ -29,9 +29,11 @@ class ParsingHelperFunction(ABC):
 
     def __init__(
         self,
+        as_latex: bool = False,
         **kwargs,
     ) -> None:
         self._kwargs = kwargs
+        self._as_latex = as_latex
 
     @property
     @abstractmethod
@@ -44,8 +46,28 @@ class ParsingHelperFunction(ABC):
         """Helper function name that is used in the math expression/where string."""
 
     @abstractmethod
-    def __call__(self, *args, **kwargs) -> xr.DataArray:
-        """Primary function of the helper class, which will be called by the helper when called by evaluating a parsing string."""
+    def as_latex(self, *args, **kwargs) -> str:
+        """
+        Method to update LaTeX math strings to include the action applied by the helper function.
+        This method is called when the class is initialised with ``as_latex=True``.
+        """
+
+    @abstractmethod
+    def as_array(self, *args, **kwargs) -> xr.DataArray:
+        """
+        Method to apply the helper function to provide an n-dimensional array output.
+        This method is called when the class is initialised with ``as_latex=False``.
+        """
+
+    def __call__(self, *args, **kwargs) -> Any:
+        """
+        When a helper function is accessed by evaluating a parsing string, this method is called.
+        The value of `as_latex` on initialisation of the class defines whether this method returns a string (``as_latex=True``) or :meth:xr.DataArray (``as_latex=False``)
+        """
+        if self._as_latex:
+            return self.as_latex(*args, **kwargs)
+        else:
+            return self.as_array(*args, **kwargs)
 
     def __init_subclass__(cls):
         """
@@ -62,6 +84,52 @@ class ParsingHelperFunction(ABC):
         for allowed in cls.ALLOWED_IN:
             _registry[allowed][cls.NAME] = cls
 
+    @staticmethod
+    def _add_to_iterator(instring: str, iterator_converter: dict[str, str]) -> str:
+        """
+        Utility function for generating latex strings in multiple helper functions.
+
+        Find an iterator in the iterator substring of the component string
+        (anything wrapped in `_text{}`). Other parts of the iterator substring can be anything
+        except curly braces, e.g. the standalone `foo` will be found here and acted upon:
+        `\\textit{my_param}_\text{bar,foo,foo=bar,foo+1}`
+
+        Args:
+            instring (str): String in which the iterator substring can be found.
+            iterator_converter (dict[str, str]):
+                key: the iterator to search for.
+                val: The new string to **append** to the iterator name.
+
+        Returns:
+            str: `instring`, but with `iterator` replaced with `iterator + new_string`
+        """
+
+        def _replace_in_iterator(matched):
+            iterator_list = matched.group(2).split(",")
+            new_iterator_list = []
+            for it in iterator_list:
+                if it in iterator_converter:
+                    it += iterator_converter[it]
+                new_iterator_list.append(it)
+
+            return matched.group(1) + ",".join(new_iterator_list) + matched.group(3)
+
+        return re.sub(r"(_\\text{)([^{}]*?)(})", _replace_in_iterator, instring)
+
+    @staticmethod
+    def _instr(dim: str) -> str:
+        """
+        Utility function for generating latex strings in multiple helper functions.
+
+        Args:
+            dim (str): Dimension suffixed with a "s" (e.g., "techs")
+
+        Returns:
+            str: LaTeX string for iterator in a set (e.g., "tech in techs")
+        """
+        dim_singular = dim.removesuffix("s")
+        return rf"\text{{{dim_singular}}} \in \text{{{dim}}}"
+
 
 class Inheritance(ParsingHelperFunction):
     #:
@@ -69,7 +137,10 @@ class Inheritance(ParsingHelperFunction):
     #:
     NAME = "inheritance"
 
-    def __call__(self, tech_group: str) -> xr.DataArray:
+    def as_latex(self, tech_group: str) -> str:
+        return rf"\text{{tech_group={tech_group}}}"
+
+    def as_array(self, tech_group: str) -> xr.DataArray:
         """
         Find all technologies which inherit from a particular technology group.
         The technology group can be an abstract base group (e.g., `supply`, `storage`) or a user-defined technology group which itself inherits from one of the abstract base groups.
@@ -83,13 +154,22 @@ class Inheritance(ParsingHelperFunction):
         return inheritance_lists.apply(lambda x: tech_group in x).to_xarray()
 
 
-class Any(ParsingHelperFunction):
+class WhereAny(ParsingHelperFunction):
     #:
     NAME = "any"
     #:
     ALLOWED_IN = ["where"]
 
-    def __call__(self, parameter: str, *, over: Union[str, list[str]]) -> xr.DataArray:
+    def as_latex(self, array: str, *, over: Union[str, list[str]]) -> str:
+        if isinstance(over, str):
+            overstring = self._instr(over)
+        else:
+            foreach_string = r" \\ ".join(self._instr(i) for i in over)
+            overstring = rf"\substack{{{foreach_string}}}"
+        # Using bigvee for "collective-or"
+        return rf"\bigvee\limits_{{{overstring}}} ({array})"
+
+    def as_array(self, parameter: str, *, over: Union[str, list[str]]) -> xr.DataArray:
         """
         Reduce the boolean where array of a model parameter by applying `any` over some dimension(s).
 
@@ -115,13 +195,21 @@ class Any(ParsingHelperFunction):
         return bool_parameter_da
 
 
-class Sum(ParsingHelperFunction):
+class ExprSum(ParsingHelperFunction):
     #:
     NAME = "sum"
     #:
     ALLOWED_IN = ["expression"]
 
-    def __call__(
+    def as_latex(self, array: str, *, over: Union[str, list[str]]) -> str:
+        if isinstance(over, str):
+            overstring = self._instr(over)
+        else:
+            foreach_string = r" \\ ".join(self._instr(i) for i in over)
+            overstring = rf"\substack{{{foreach_string}}}"
+        return rf"\sum\limits_{{{overstring}}} ({array})"
+
+    def as_array(
         self, array: xr.DataArray, *, over: Union[str, list[str]]
     ) -> xr.DataArray:
         """
@@ -136,9 +224,7 @@ class Sum(ParsingHelperFunction):
                 Array with dimensions reduced by applying a summation over the dimensions given in `over`.
                 NaNs are ignored (xarray.DataArray.sum arg: `skipna: True`) and if all values along the dimension(s) are NaN, the summation will lead to a NaN (xarray.DataArray.sum arg: `min_count=1`).
         """
-        to_return = array.sum(over, min_count=1, skipna=True)
-
-        return to_return
+        return array.sum(over, min_count=1, skipna=True)
 
 
 class ReduceCarrierDim(ParsingHelperFunction):
@@ -147,7 +233,14 @@ class ReduceCarrierDim(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def __call__(
+    def as_latex(
+        self,
+        array: str,
+        carrier_tier: Literal["in", "out", "in_2", "out_2", "in_3", "out_3"],
+    ) -> str:
+        return rf"\sum\limits_{{\text{{carrier}} \in \text{{carrier_tier({carrier_tier})}}}} ({array})"
+
+    def as_array(
         self,
         array: xr.DataArray,
         carrier_tier: Literal["in", "out", "in_2", "out_2", "in_3", "out_3"],
@@ -161,7 +254,7 @@ class ReduceCarrierDim(ParsingHelperFunction):
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        return Sum(**self._kwargs)(
+        return ExprSum(as_latex=self._as_latex, **self._kwargs)(
             array.where(
                 self._kwargs["model_data"]
                 .carrier.sel(carrier_tiers=carrier_tier)
@@ -177,7 +270,10 @@ class ReducePrimaryCarrierDim(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def __call__(
+    def as_latex(self, array: str, carrier_tier: Literal["in", "out"]) -> str:
+        return rf"\sum\limits_{{\text{{carrier=primary_carrier_{carrier_tier}}}}} ({array})"
+
+    def as_array(
         self, array: xr.DataArray, carrier_tier: Literal["in", "out"]
     ) -> xr.DataArray:
         """Reduce expression array data by selecting the carrier that corresponds to the primary carrier and then dropping the `carriers` dimension.
@@ -191,7 +287,7 @@ class ReducePrimaryCarrierDim(ParsingHelperFunction):
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        return Sum(**self._kwargs)(
+        return ExprSum(as_latex=self._as_latex, **self._kwargs)(
             array.where(
                 getattr(
                     self._kwargs["model_data"], f"primary_carrier_{carrier_tier}"
@@ -207,7 +303,15 @@ class SelectFromLookupArrays(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def __call__(
+    def as_latex(self, array: str, **lookup_arrays: str) -> str:
+        new_strings = {
+            (iterator := dim.removesuffix("s")): rf"={array}[{iterator}]"
+            for dim, array in lookup_arrays.items()
+        }
+        array = self._add_to_iterator(array, new_strings)
+        return array
+
+    def as_array(
         self, array: xr.DataArray, **lookup_arrays: xr.DataArray
     ) -> xr.DataArray:
         """
@@ -285,7 +389,11 @@ class GetValAtIndex(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression", "where"]
 
-    def __call__(self, **dim_idx_mapping: int) -> xr.DataArray:
+    def as_latex(self, **dim_idx_mapping: str) -> str:
+        dim, idx = self._mapping_to_dim_idx(**dim_idx_mapping)
+        return f"{dim}[{idx}]"
+
+    def as_array(self, **dim_idx_mapping: int) -> xr.DataArray:
         """Get value of a model dimension at a given integer index.
         This function is primarily useful for timeseries data
 
@@ -314,10 +422,24 @@ class GetValAtIndex(ParsingHelperFunction):
             Coordinates:
                 timesteps  <U16 '2000-01-01 02:00'
         """
+        dim, idx = self._mapping_to_dim_idx(**dim_idx_mapping)
+        return self._kwargs["model_data"].coords[dim][int(idx)]
+
+    @overload
+    @staticmethod
+    def _mapping_to_dim_idx(**dim_idx_mapping: int) -> tuple[str, int]:
+        "used in as_array"
+
+    @overload
+    @staticmethod
+    def _mapping_to_dim_idx(**dim_idx_mapping: str) -> tuple[str, str]:
+        "used in as_latex"
+
+    @staticmethod
+    def _mapping_to_dim_idx(**dim_idx_mapping) -> tuple[str, Union[str, int]]:
         if len(dim_idx_mapping) != 1:
             raise ValueError("Supply one (and only one) dimension:index mapping")
-        dim, idx = next(iter(dim_idx_mapping.items()))
-        return self._kwargs["model_data"].coords[dim][int(idx)]
+        return next(iter(dim_idx_mapping.items()))
 
 
 class Roll(ParsingHelperFunction):
@@ -326,7 +448,14 @@ class Roll(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def __call__(self, array: xr.DataArray, **roll_kwargs: int) -> xr.DataArray:
+    def as_latex(self, array: str, **roll_kwargs: str) -> str:
+        new_strings = {
+            k.removesuffix("s"): f"{-1 * int(v):+d}" for k, v in roll_kwargs.items()
+        }
+        component = self._add_to_iterator(array, new_strings)
+        return component
+
+    def as_array(self, array: xr.DataArray, **roll_kwargs: int) -> xr.DataArray:
         """
         Roll (a.k.a., shift) the array along the given dimension(s) by the given number of places.
         Rolling keeps the array index labels in the same position, but moves the data by the given number of places.

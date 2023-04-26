@@ -2,8 +2,8 @@
 
 min
 objectives(0):
-+1 variables(energy_cap)(test_supply_elec__a)
-+1 variables(energy_cap)(test_supply_elec__b)
++1 variables(energy_cap)(a__test_supply_elec)
++1 variables(energy_cap)(b__test_supply_elec)
 
 s.t.
 
@@ -11,6 +11,6 @@ c_e_ONE_VAR_CONSTANT:
 ONE_VAR_CONSTANT = 1.0
 
 bounds
-   1 <= variables(energy_cap)(test_supply_elec__a) <= +inf
-   0 <= variables(energy_cap)(test_supply_elec__b) <= 100
+   1 <= variables(energy_cap)(a__test_supply_elec) <= +inf
+   0 <= variables(energy_cap)(b__test_supply_elec) <= 100
 end
