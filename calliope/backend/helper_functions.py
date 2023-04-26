@@ -16,36 +16,17 @@ import xarray as xr
 
 from calliope.exceptions import BackendError
 
-
-def _allowed_func(func):
-    @functools.wraps(func)
-    def is_allowed(self, *args, **kwargs):
-        if self._parse_string_type in self.ALLOWED_IN:
-            return func(self, *args, **kwargs)
-        else:
-            raise BackendError(
-                f"Helper function `{str(self)}` cannot be used in math `{self._parse_string_type}` strings"
-            )
-
-    return is_allowed
-
-
 _registry: dict[
     Literal["where", "expression"], dict[str, type["ParsingHelperFunction"]]
-] = {
-    "where": {},
-    "expression": {},
-}
+] = {"where": {}, "expression": {}}
 
 
 class ParsingHelperFunction(ABC):
     def __init__(
         self,
-        parse_string_type: Literal["expression", "where"],
         **kwargs,
     ) -> None:
         self._kwargs = kwargs
-        self._parse_string_type = parse_string_type
 
     def __str__(self) -> str:
         return self.NAME
@@ -76,7 +57,6 @@ class ParsingHelperFunction(ABC):
                 raise ValueError(
                     f"`{allowed}` string helper function `{cls.NAME}` already exists"
                 )
-        cls.__call__ = _allowed_func(cls.__call__)
         for allowed in cls.ALLOWED_IN:
             _registry[allowed][cls.NAME] = cls
 

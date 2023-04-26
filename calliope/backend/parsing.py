@@ -13,7 +13,8 @@ import xarray as xr
 from typing_extensions import NotRequired, Required, TypedDict
 
 from calliope import exceptions
-from calliope.backend import backends, equation_parser, helper_functions, subset_parser
+from calliope.backend import (backends, equation_parser, helper_functions,
+                              subset_parser)
 
 TRUE_ARRAY = xr.DataArray(True)
 
@@ -242,7 +243,7 @@ class ParsedBackendEquation:
         """
         kwargs = {"model_data": "model_data"}
         helpers = {
-            k: v("where", **kwargs)
+            k: v(**kwargs)
             for k, v in helper_functions._registry["where"].items()
         }
         evaluated_wheres = [
@@ -278,7 +279,7 @@ class ParsedBackendEquation:
             "as_dict": False,
         }
         helpers = {
-            k: v("expression", **kwargs)
+            k: v(**kwargs)
             for k, v in helper_functions._registry["expression"].items()
         }
         return self.expression[0].eval(helper_functions=helpers, **kwargs)
