@@ -66,25 +66,13 @@ class Model(object):
         Returns a new Model from either the path to a YAML model
         configuration file or a dict fully specifying the model.
 
-        Parameters
-        ----------
-        config : str or dict or AttrDict
-
-        model_data : Dataset, optional
-            Create a Model instance from a fully built model_data Dataset.
-            This is only used if `config` is explicitly set to None
-            and is primarily used to re-create a Model instance from
-            a model previously saved to a NetCDF file.
-
         Args:
             config (Optional[Union[str, dict]]):
                 If str, must be the path to a model configuration file.
                 If dict or AttrDict, must fully specify the model.
             model_data (Optional[xarray.Dataset], optional):
                 Create a Model instance from a fully built model_data Dataset.
-                This is only used if `config` is explicitly set to None
-                and is primarily used to re-create a Model instance from
-                a model previously saved to a NetCDF file.
+                This is only used if `config` is explicitly set to None and is primarily used to re-create a Model instance from a model previously saved to a NetCDF file.
                 Defaults to None.
             debug (bool, optional):
                 If True, additional debug data will be included in the built model.
