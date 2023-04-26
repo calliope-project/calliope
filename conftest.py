@@ -5,6 +5,7 @@ import xarray as xr
 import numpy as np
 
 from calliope.test.common.util import build_test_model as build_model
+from calliope.backend import latex_backend, backends
 from calliope import AttrDict
 
 
@@ -156,6 +157,7 @@ def dummy_model_data():
                 [[1.0, np.nan, 1.0, 3], [np.inf, 2.0, True, np.nan]],
             ),
             "only_techs": (["techs"], [np.nan, 1, 2, 3]),
+            "no_dims": (2),
             "all_inf": (["nodes", "techs"], np.ones((2, 4)) * np.inf, {"is_result": 1}),
             "all_nan": (["nodes", "techs"], np.ones((2, 4)) * np.nan),
             "all_false": (["nodes", "techs"], np.zeros((2, 4)).astype(bool)),
@@ -221,6 +223,9 @@ def dummy_model_data():
     for k in ["link_remote_nodes", "link_remote_techs", "lookup_techs"]:
         model_data[k] = model_data[k].where(model_data[k] != "nan")
 
+    for param in model_data.data_vars.values():
+        param.attrs["is_result"] = 0
+
     model_data.attrs["run_config"] = AttrDict(
         {"foo": True, "bar": {"foobar": "baz"}, "foobar": {"baz": {"foo": np.inf}}}
     )
@@ -230,3 +235,32 @@ def dummy_model_data():
         {"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100, "only_techs": 5}
     )
     return model_data
+
+
+def populate_backend_model(backend, model_data):
+    backend.add_all_parameters(model_data, model_data.run_config)
+    backend.add_variable(
+        model_data,
+        "multi_dim_var",
+        {
+            "foreach": ["nodes", "techs"],
+            "where": "with_inf",
+            "bounds": {"min": "0", "max": ".inf"},
+        },
+    )
+    backend.add_variable(
+        model_data, "no_dim_var", {"bounds": {"min": "-1", "max": "1"}}
+    )
+    return backend
+
+
+@pytest.fixture(scope="module")
+def dummy_pyomo_backend_model(dummy_model_data):
+    backend = backends.PyomoBackendModel()
+    return populate_backend_model(backend, dummy_model_data)
+
+
+@pytest.fixture(scope="module")
+def dummy_latex_backend_model(dummy_model_data):
+    backend = latex_backend.LatexBackendModel()
+    return populate_backend_model(backend, dummy_model_data)

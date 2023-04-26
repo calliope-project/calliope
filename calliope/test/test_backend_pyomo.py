@@ -1836,7 +1836,7 @@ class TestNewBackend:
             var.to_series().dropna().apply(lambda x: isinstance(x, pmo.variable)).all()
         )
         assert var.attrs == {
-            "variables": 1,
+            "obj_type": "variables",
             "references": {
                 "carrier_consumption_max",
                 "carrier_production_max",
@@ -1868,7 +1868,7 @@ class TestNewBackend:
             .all()
         )
         assert param.attrs == {
-            "parameters": 1,
+            "obj_type": "parameters",
             "is_result": 0,
             "original_dtype": np.dtype("float64"),
             "references": {"balance_demand", "balance_transmission"},
@@ -1890,7 +1890,7 @@ class TestNewBackend:
             .all()
         )
         assert expr.attrs == {
-            "global_expressions": 1,
+            "obj_type": "global_expressions",
             "references": {"cost"},
             "description": "The installation costs of a technology, including annualised investment costs and annual maintenance costs.",
             "unit": "cost",
@@ -1920,7 +1920,7 @@ class TestNewBackend:
             .all()
         )
         assert constr.attrs == {
-            "constraints": 1,
+            "obj_type": "constraints",
             "references": set(),
             "description": "Set the global energy balance of the optimisation problem by fixing the total production of a given energy carrier to equal the total consumption of that carrier at every node in every timestep.",
             "coords_in_name": False,
@@ -2175,10 +2175,10 @@ class TestNewBackend:
     )
     def test_create_and_delete_pyomo_list(self, simple_supply_new_build, component):
         backend_instance = simple_supply_new_build.backend._instance
-        simple_supply_new_build.backend._create_pyomo_list("foo", component)
+        simple_supply_new_build.backend.create_obj_list("foo", component)
         assert "foo" in getattr(backend_instance, component).keys()
 
-        simple_supply_new_build.backend._delete_pyomo_list("foo", component)
+        simple_supply_new_build.backend.delete_obj_list("foo", component)
         assert "foo" not in getattr(backend_instance, component).keys()
 
     @pytest.mark.parametrize(
@@ -2187,7 +2187,7 @@ class TestNewBackend:
     def test_delete_inexistent_pyomo_list(self, simple_supply_new_build, component):
         backend_instance = simple_supply_new_build.backend._instance
         assert "bar" not in getattr(backend_instance, component).keys()
-        simple_supply_new_build.backend._delete_pyomo_list("bar", component)
+        simple_supply_new_build.backend.delete_obj_list("bar", component)
         assert "bar" not in getattr(backend_instance, component).keys()
 
     @pytest.mark.parametrize(
@@ -2341,7 +2341,7 @@ class TestNewBackend:
             "cost_investment", as_backend_objs=False
         )
 
-        assert "variables[energy_cap][test_supply_elec, a]" in obj.sel(dims).item()
+        assert "variables[energy_cap][a, test_supply_elec]" in obj.sel(dims).item()
         assert "parameters[annualisation_weight]" in obj.sel(dims).item()
 
         assert not obj.coords_in_name

@@ -8,6 +8,7 @@ dependencies:
   - python=3.10
   - sphinx~=6.1.0
   - sphinx-autodoc-typehints < 2
+  - sphinx-tabs < 4
   - ruamel.yaml < 18
   - nbconvert < 8 # To generate HTML files from example notebooks
   - pip < 24
