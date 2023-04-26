@@ -270,6 +270,17 @@ class BackendModel(ABC, Generic[T]):
         """
 
     @abstractmethod
+    def update_parameter(self, parameter_name: str, new_values: xr.DataArray) -> None:
+        """Update parameter elements using an array of new values.
+        If the parameter has not been previously defined, it will be added to the optimisation problem based on the new values given (with NaNs reverting to default values).
+        If the new values have fewer dimensions than are on the parameter array, the new values will be broadcast across the missing dimensions before applying the update.
+
+        Args:
+            parameter_name (str): Parameter to update
+            new_values (xr.DataArray): New values to apply. Any empty (NaN) elements in the array will be skipped.
+        """
+
+    @abstractmethod
     def solve(
         self,
         solver: str,
@@ -535,6 +546,18 @@ class BackendModel(ABC, Generic[T]):
         if references is not None:
             for reference in references:
                 self._dataset[reference].attrs["references"].add(name)
+
+    def _find_all_references(self, initial_references: set) -> set:
+        references = initial_references.copy()
+        for reference in initial_references:
+            new_refs = self._dataset[reference].attrs.get("references", {})
+            references.update(self._find_all_references(new_refs))
+        return references
+
+    def _rebuild_references(self, references: set) -> None:
+        for reference in references:
+            obj_type = self._dataset[reference].attrs["obj_type"]
+            getattr(self, "add_" + obj_type.removesuffix("s"))(name="reference")
 
     @property
     def constraints(self):
@@ -901,6 +924,36 @@ class PyomoBackendModel(BackendModel):
         else:
             del component_dict[key]
 
+    def update_parameter(self, parameter_name: str, new_values: xr.DataArray) -> None:
+        parameter_da = self.get_parameter(parameter_name)
+        if parameter_da is None:
+            raise KeyError(
+                f"Attempting to update an unknown parameter: {parameter_name}"
+            )
+        missing_dims_in_new_vals = set(parameter_da.dims).difference(new_values.dims)
+        missing_dims_in_orig_vals = set(new_values.dims).difference(parameter_da.dims)
+        refs_to_update: set = set()
+
+        if (
+            (not parameter_da.shape and new_values.shape)
+            or missing_dims_in_orig_vals
+            or (parameter_da.isnull() and new_values.notnull())
+        ):
+            refs_to_update = self._find_all_references(parameter_da.attrs["references"])
+            logger.warning(
+                f"Defining values for a previously fully/partially undefined parameter. The optimisation problem components {refs_to_update} will be re-built."
+            )
+            self.add_parameter(parameter_name, new_values, default=parameter_da.item())
+            self._rebuild_references(refs_to_update)
+            return None
+
+        if missing_dims_in_new_vals:
+            logger.warning(
+                f"New values will be broadcast along the {missing_dims_in_new_vals} dimension(s)"
+            )
+
+        self.apply_func(self._update_pyomo_param, parameter_da, new_values)
+
     def _add_constraint_or_global_expression(
         self,
         model_data: xr.Dataset,
@@ -1087,6 +1140,11 @@ class PyomoBackendModel(BackendModel):
                 param = ObjParameter(val)
                 self._instance.parameters[name].append(param)
             return param
+
+    def _update_pyomo_param(self, orig: ObjParameter, new: Any) -> ObjParameter:
+        if pd.notnull(new):
+            orig.value = new
+        return orig
 
     def _to_pyomo_constraint(
         self,
