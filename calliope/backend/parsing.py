@@ -15,20 +15,6 @@ from typing_extensions import NotRequired, Required, TypedDict
 from calliope import exceptions
 from calliope.backend import backends, equation_parser, helper_functions, subset_parser
 
-VALID_EXPRESSION_HELPER_FUNCTIONS: dict[str, Callable] = {
-    "sum": helper_functions.expression_sum,
-    "reduce_carrier_dim": helper_functions.reduce_carrier_dim,
-    "reduce_primary_carrier_dim": helper_functions.reduce_primary_carrier_dim,
-    "select_from_lookup_arrays": helper_functions.select_from_lookup_arrays,
-    "get_val_at_index": helper_functions.get_val_at_index,
-    "roll": helper_functions.roll,
-}
-VALID_IMASK_HELPER_FUNCTIONS: dict[str, Callable] = {
-    "inheritance": helper_functions.inheritance,
-    "any": helper_functions.where_any,
-    "get_val_at_index": helper_functions.get_val_at_index,
-}
-
 TRUE_ARRAY = xr.DataArray(True)
 
 
@@ -254,10 +240,11 @@ class ParsedBackendEquation:
         Returns:
             xr.DataArray: _description_
         """
-
+        kwargs = {"model_data": "model_data"}
         evaluated_wheres = [
             where[0].eval(
-                model_data=model_data, helper_func_dict=VALID_IMASK_HELPER_FUNCTIONS
+                helper_functions=helper_functions.ParsingHelperFuncs("where", **kwargs),
+                **kwargs,
             )
             for where in self.where
         ]
@@ -279,17 +266,22 @@ class ParsedBackendEquation:
         imask: xr.DataArray,
         references: Optional[set] = None,
     ):
+        kwargs = {
+            "equation_name": self.name,
+            "slice_dict": self.slices,
+            "sub_expression_dict": self.sub_expressions,
+            "backend_interface": backend_interface,
+            "backend_dataset": backend_interface._dataset,
+            "model_data": model_data,
+            "imask": imask,
+            "references": references if references is not None else set(),
+            "as_dict": False,
+        }
         return self.expression[0].eval(
-            equation_name=self.name,
-            slice_dict=self.slices,
-            sub_expression_dict=self.sub_expressions,
-            backend_interface=backend_interface,
-            backend_dataset=backend_interface._dataset,
-            helper_func_dict=VALID_EXPRESSION_HELPER_FUNCTIONS,
-            model_data=model_data,
-            imask=imask,
-            references=references if references is not None else set(),
-            as_dict=False,
+            helper_functions=helper_functions.ParsingHelperFuncs(
+                "expression", **kwargs
+            ),
+            **kwargs,
         )
 
 

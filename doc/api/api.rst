@@ -46,3 +46,10 @@ Utility classes: AttrDict, Exceptions, Logging
 
 .. automodule:: calliope.core.util.logging
     :members: set_log_verbosity
+
+Math formulation helper functions
+=================================
+
+.. automodule:: calliope.backend.helper_functions
+    :members:
+    :private-members:

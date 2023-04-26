@@ -1,13 +1,12 @@
-import pytest
 import numpy as np
 import pyparsing
+import pytest
 import xarray as xr
 
-from calliope.backend import equation_parser, subset_parser, parsing
-from calliope.test.common.util import check_error_or_warning
+from calliope.backend import equation_parser, helper_functions, subset_parser
 from calliope.core.attrdict import AttrDict
 from calliope.exceptions import BackendError
-
+from calliope.test.common.util import check_error_or_warning
 
 SUB_EXPRESSION_CLASSIFIER = equation_parser.SUB_EXPRESSION_CLASSIFIER
 HELPER_FUNCS = {"dummy_func_1": lambda x: x * 10, "dummy_func_2": lambda x, y: x + y}
@@ -90,9 +89,10 @@ def imasking(bool_operand, helper_function, data_var, comparison, subset):
 
 @pytest.fixture(scope="function")
 def eval_kwargs(dummy_model_data):
+    helpers = helper_functions.ParsingHelperFuncs("where", model_data=dummy_model_data)
     return {
         "model_data": dummy_model_data,
-        "helper_func_dict": parsing.VALID_IMASK_HELPER_FUNCTIONS,
+        "helper_functions": helpers,
         "test": True,
         "errors": set(),
         "warnings": set(),

@@ -1,7 +1,14 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
-from typing import Callable, Literal, Union
+"""
+helper_functions.py
+~~~~~~~~~~~~~
+
+Functions that can be used to process data in math `where` and `expression` strings.
+"""
+import functools
+from typing import Literal, Mapping, Union
 
 import pandas as pd
 import xarray as xr
@@ -9,11 +16,44 @@ import xarray as xr
 from calliope.exceptions import BackendError
 
 
-def inheritance(model_data: xr.Dataset, **kwargs) -> Callable:
-    "Wrapper for `inheritance` function"
-    inheritance_lists = model_data.inheritance.to_series().str.split(".")
+def _available_func(func):
+    @functools.wraps(func)
+    def is_available(self, *args, **kwargs):
+        func_name = func.__name__
+        if func_name in self._available_funcs:
+            return func(self, *args, **kwargs)
+        else:
+            raise BackendError(
+                f"Helper function `{func_name}` cannot be used in math `{self._parse_string_type}` strings"
+            )
 
-    def _inheritance(tech_group: str) -> xr.DataArray:
+    return is_available
+
+
+class ParsingHelperFuncs:
+    _AVAILABLE_FUNCS = {
+        "expression": [
+            "sum",
+            "reduce_carrier_dim",
+            "reduce_primary_carrier_dim",
+            "select_from_lookup_arrays",
+            "get_val_at_index",
+            "roll",
+        ],
+        "where": ["inheritance", "any", "get_val_at_index"],
+    }
+
+    def __init__(
+        self,
+        parse_string_type: Literal["expression", "where"],
+        **kwargs,
+    ) -> None:
+        self._kwargs = kwargs
+        self._available_funcs = self._AVAILABLE_FUNCS[parse_string_type]
+        self._parse_string_type = parse_string_type
+
+    @_available_func
+    def inheritance(self, tech_group: str) -> xr.DataArray:
         """
         Find all technologies which inherit from a particular technology group.
         The technology group can be an abstract base group (e.g., `supply`, `storage`) or a user-defined technology group which itself inherits from one of the abstract base groups.
@@ -21,15 +61,13 @@ def inheritance(model_data: xr.Dataset, **kwargs) -> Callable:
         Args:
             model_data (xr.Dataset): Calliope model data
         """
+        inheritance_lists = (
+            self._kwargs["model_data"].inheritance.to_series().str.split(".")
+        )
         return inheritance_lists.apply(lambda x: tech_group in x).to_xarray()
 
-    return _inheritance
-
-
-def where_any(model_data: xr.Dataset, **kwargs) -> Callable:
-    "Wrapper for `where_any` function"
-
-    def _where_any(parameter: str, *, over: Union[str, list[str]]) -> xr.DataArray:
+    @_available_func
+    def any(self, parameter: str, *, over: Union[str, list[str]]) -> xr.DataArray:
         """
         Reduce the boolean where array of a model parameter by applying `any` over some dimension(s).
 
@@ -43,8 +81,8 @@ def where_any(model_data: xr.Dataset, **kwargs) -> Callable:
                 If the parameter does not exist, returns a dimensionless False array.
         """
 
-        if parameter in model_data.data_vars:
-            parameter_da = model_data[parameter]
+        if parameter in self._kwargs["model_data"].data_vars:
+            parameter_da = self._kwargs["model_data"][parameter]
             with pd.option_context("mode.use_inf_as_na", True):
                 bool_parameter_da = (
                     parameter_da.where(pd.notnull(parameter_da))  # type: ignore
@@ -55,15 +93,8 @@ def where_any(model_data: xr.Dataset, **kwargs) -> Callable:
             bool_parameter_da = xr.DataArray(False)
         return bool_parameter_da
 
-    return _where_any
-
-
-def expression_sum(**kwargs) -> Callable:
-    "Wrapper for `expression_sum` function"
-
-    def _expression_sum(
-        array: xr.DataArray, *, over: Union[str, list[str]]
-    ) -> xr.DataArray:
+    @_available_func
+    def sum(self, array: xr.DataArray, *, over: Union[str, list[str]]) -> xr.DataArray:
         """
         Sum an expression array over the given dimension(s).
 
@@ -80,13 +111,9 @@ def expression_sum(**kwargs) -> Callable:
 
         return to_return
 
-    return _expression_sum
-
-
-def reduce_carrier_dim(model_data: xr.Dataset, **kwargs) -> Callable:
-    "Wrapper for `reduce_carrier_dim` function"
-
-    def _reduce_carrier_dim(
+    @_available_func
+    def reduce_carrier_dim(
+        self,
         array: xr.DataArray,
         carrier_tier: Literal["in", "out", "in_2", "out_2", "in_3", "out_3"],
     ) -> xr.DataArray:
@@ -99,19 +126,18 @@ def reduce_carrier_dim(model_data: xr.Dataset, **kwargs) -> Callable:
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        return expression_sum(model_data=model_data, **kwargs)(
-            array.where(model_data.carrier.sel(carrier_tiers=carrier_tier).notnull()),
+        return self.sum(
+            array.where(
+                self._kwargs["model_data"]
+                .carrier.sel(carrier_tiers=carrier_tier)
+                .notnull()
+            ),
             over="carriers",
         )
 
-    return _reduce_carrier_dim
-
-
-def reduce_primary_carrier_dim(model_data: xr.Dataset, **kwargs) -> Callable:
-    "Wrapper for `reduce_primary_carrier_dim` function"
-
-    def _reduce_primary_carrier_dim(
-        array: xr.DataArray, carrier_tier: Literal["in", "out"]
+    @_available_func
+    def reduce_primary_carrier_dim(
+        self, array: xr.DataArray, carrier_tier: Literal["in", "out"]
     ) -> xr.DataArray:
         """Reduce expression array data by selecting the carrier that corresponds to the primary carrier and then dropping the `carriers` dimension.
         This function is only valid for `conversion_plus` technologies, so should only be included in a math component if the `where` string includes `inheritance(conversion_plus)` or an equivalent expression.
@@ -124,21 +150,18 @@ def reduce_primary_carrier_dim(model_data: xr.Dataset, **kwargs) -> Callable:
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        return expression_sum(**kwargs)(
+        return self.sum(
             array.where(
-                getattr(model_data, f"primary_carrier_{carrier_tier}").notnull()
+                getattr(
+                    self._kwargs["model_data"], f"primary_carrier_{carrier_tier}"
+                ).notnull()
             ),
             over="carriers",
         )
 
-    return _reduce_primary_carrier_dim
-
-
-def select_from_lookup_arrays(model_data: xr.Dataset, **kwargs) -> Callable:
-    "Wrapper for `select_from_lookup_arrays` function"
-
-    def _select_from_lookup_arrays(
-        array: xr.DataArray, **lookup_arrays: xr.DataArray
+    @_available_func
+    def select_from_lookup_arrays(
+        self, array: xr.DataArray, **lookup_arrays: xr.DataArray
     ) -> xr.DataArray:
         """
         Apply vectorised indexing on an arbitrary number of an input array's dimensions.
@@ -194,7 +217,7 @@ def select_from_lookup_arrays(model_data: xr.Dataset, **kwargs) -> Callable:
             # Although we have the lookup array, its values are backend objects,
             # so we grab the same array from the unadulterated model data.
             # FIXME: do not add lookup tables as backend objects.
-            dim_name: model_data[lookup.name]
+            dim_name: self._kwargs["model_data"][lookup.name]
             # Stacking ensures that the dimensions on `component` are not reordered on calling `.sel()`.
             .stack(idx=list(dims))
             # Cannot select on NaNs, so we drop them all.
@@ -209,13 +232,8 @@ def select_from_lookup_arrays(model_data: xr.Dataset, **kwargs) -> Callable:
             .reindex_like(array, copy=False)
         )
 
-    return _select_from_lookup_arrays
-
-
-def get_val_at_index(model_data: xr.Dataset, **kwargs) -> Callable:
-    "Wrapper for `get_val_at_index` function"
-
-    def _get_val_at_index(**dim_idx_mapping: int) -> xr.DataArray:
+    @_available_func
+    def get_val_at_index(self, **dim_idx_mapping: int) -> xr.DataArray:
         """Get value of a model dimension at a given integer index.
         This function is primarily useful for timeseries data
 
@@ -246,15 +264,10 @@ def get_val_at_index(model_data: xr.Dataset, **kwargs) -> Callable:
         if len(dim_idx_mapping) != 1:
             raise ValueError("Supply one (and only one) dimension:index mapping")
         dim, idx = next(iter(dim_idx_mapping.items()))
-        return model_data.coords[dim][int(idx)]
+        return self._kwargs["model_data"].coords[dim][int(idx)]
 
-    return _get_val_at_index
-
-
-def roll(**kwargs) -> Callable:
-    "Wrapper for `roll` function"
-
-    def _roll(array: xr.DataArray, **roll_kwargs: int) -> xr.DataArray:
+    @_available_func
+    def roll(self, array: xr.DataArray, **roll_kwargs: int) -> xr.DataArray:
         """
         Roll (a.k.a., shift) the array along the given dimension(s) by the given number of places.
         Rolling keeps the array index labels in the same position, but moves the data by the given number of places.
@@ -277,7 +290,5 @@ def roll(**kwargs) -> Callable:
         Coordinates:
         * foo      (foo) <U1 'A' 'B' 'C'
         """
-        roll_kwargs_int = {k: int(v) for k, v in roll_kwargs.items()}
+        roll_kwargs_int: Mapping = {k: int(v) for k, v in roll_kwargs.items()}
         return array.roll(roll_kwargs_int)
-
-    return _roll
