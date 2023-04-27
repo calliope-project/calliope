@@ -1,7 +1,7 @@
 \* Source Pyomo model name=None *\
 
 min
-objectives(0):
+objectives(dummy_obj)(0):
 +2 ONE_VAR_CONSTANT
 
 s.t.

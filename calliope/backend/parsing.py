@@ -6,14 +6,27 @@ from __future__ import annotations
 import functools
 import itertools
 import operator
-from typing import Any, Callable, Iterable, Literal, Optional, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Iterable,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import pyparsing as pp
 import xarray as xr
-from typing_extensions import NotRequired, Required, TypedDict
+from typing_extensions import NotRequired, TypedDict
 
 from calliope import exceptions
-from calliope.backend import backends, equation_parser, helper_functions, subset_parser
+from calliope.backend import equation_parser, helper_functions, subset_parser
+
+if TYPE_CHECKING:
+    from calliope.backend import backend_model
 
 VALID_EXPRESSION_HELPER_FUNCTIONS: dict[str, Callable] = {
     "sum": helper_functions.expression_sum,
@@ -39,8 +52,8 @@ class UnparsedEquationDict(TypedDict):
 
 class UnparsedConstraintDict(TypedDict):
     description: NotRequired[str]
-    foreach: Required[list]
-    where: str
+    foreach: NotRequired[list]
+    where: NotRequired[str]
     equation: NotRequired[str]
     equations: NotRequired[list[UnparsedEquationDict]]
     sub_expressions: NotRequired[dict[str, list[UnparsedEquationDict]]]
@@ -315,7 +328,7 @@ class ParsedBackendEquation:
     def evaluate_expression(  # noqa: F811
         self,
         model_data: xr.Dataset,
-        backend_interface: backends.BackendModel,
+        backend_interface: backend_model.BackendModel,
         as_latex: Literal[False] = False,
         references: Optional[set] = None,
         imask: Optional[xr.DataArray] = None,
@@ -326,7 +339,7 @@ class ParsedBackendEquation:
     def evaluate_expression(  # noqa: F811
         self,
         model_data: xr.Dataset,
-        backend_interface: backends.BackendModel,
+        backend_interface: backend_model.BackendModel,
         as_latex: Literal[True],
         references: Optional[set] = None,
     ) -> str:
@@ -335,7 +348,7 @@ class ParsedBackendEquation:
     def evaluate_expression(  # noqa: F811
         self,
         model_data: xr.Dataset,
-        backend_interface: backends.BackendModel,
+        backend_interface: backend_model.BackendModel,
         as_latex: bool = False,
         references: Optional[set] = None,
         imask: Optional[xr.DataArray] = None,

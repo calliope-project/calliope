@@ -7,7 +7,8 @@ import pytest  # noqa: F401
 import calliope
 from calliope.core.util.generate_runs import generate_runs
 from calliope.core.util.logging import log_time
-from calliope.core.util.tools import copy_docstring, memoize, memoize_instancemethod
+from calliope.core.util.tools import (copy_docstring, memoize,
+                                      memoize_instancemethod)
 from calliope.test.common.util import python36_or_higher
 
 _MODEL_NATIONAL = os.path.join(
@@ -51,19 +52,19 @@ class TestLogging:
 
         assert logging.getLogger("calliope").getEffectiveLevel() == 50
         assert logging.getLogger("py.warnings").getEffectiveLevel() == 50
-        assert logging.getLogger("calliope.backend.backends").getEffectiveLevel() == 10
+        assert logging.getLogger("calliope.backend.backend_model").getEffectiveLevel() == 10
 
         calliope.set_log_verbosity("CRITICAL", include_solver_output=False)
 
         assert logging.getLogger("calliope").getEffectiveLevel() == 50
         assert logging.getLogger("py.warnings").getEffectiveLevel() == 50
-        assert logging.getLogger("calliope.backend.backends").getEffectiveLevel() == 50
+        assert logging.getLogger("calliope.backend.backend_model").getEffectiveLevel() == 50
 
         calliope.set_log_verbosity()
 
         assert logging.getLogger("calliope").getEffectiveLevel() == 20
         assert logging.getLogger("py.warnings").getEffectiveLevel() == 20
-        assert logging.getLogger("calliope.backend.backends").getEffectiveLevel() == 10
+        assert logging.getLogger("calliope.backend.backend_model").getEffectiveLevel() == 10
 
     def test_timing_log(self):
         timings = {"model_creation": datetime.datetime.now()}

@@ -1825,10 +1825,8 @@ class TestNewBackend:
     def test_new_build_get_missing_component(
         self, simple_supply_new_build, component_type
     ):
-        returned_ = getattr(simple_supply_new_build.backend, f"get_{component_type}")(
-            "foo"
-        )
-        assert returned_ is None
+        with pytest.raises(KeyError):
+            getattr(simple_supply_new_build.backend, f"get_{component_type}")("foo")
 
     def test_new_build_get_variable(self, simple_supply_new_build):
         var = simple_supply_new_build.backend.get_variable("energy_cap")
@@ -2047,7 +2045,6 @@ class TestNewBackend:
         constraint_name = "constraint-without-nan"
 
         simple_supply_new_build.backend.add_constraint(
-            simple_supply_new_build.inputs,
             constraint_name,
             constraint_dict,
         )
@@ -2067,7 +2064,6 @@ class TestNewBackend:
 
         with pytest.raises(exceptions.BackendError) as error:
             simple_supply_new_build.backend.add_constraint(
-                simple_supply_new_build.inputs,
                 constraint_name,
                 constraint_dict,
             )
@@ -2093,7 +2089,6 @@ class TestNewBackend:
 
         # add expression with nan
         simple_supply_new_build.backend.add_global_expression(
-            simple_supply_new_build.inputs,
             expression_name,
             expression_dict,
         )
@@ -2112,7 +2107,6 @@ class TestNewBackend:
 
         with pytest.raises(exceptions.BackendError) as error:
             simple_supply_new_build.backend.add_global_expression(
-                simple_supply_new_build.inputs,
                 expression_name,
                 expression_dict,
             )
@@ -2139,7 +2133,6 @@ class TestNewBackend:
         constraint_name = "constraint-without-excess-dimensions"
 
         simple_supply_new_build.backend.add_constraint(
-            simple_supply_new_build.inputs,
             constraint_name,
             constraint_dict,
         )
@@ -2160,7 +2153,6 @@ class TestNewBackend:
 
         with pytest.raises(exceptions.BackendError) as error:
             simple_supply_new_build.backend.add_constraint(
-                simple_supply_new_build.inputs,
                 constraint_name,
                 constraint_dict,
             )
@@ -2178,8 +2170,9 @@ class TestNewBackend:
         simple_supply_new_build.backend.create_obj_list("foo", component)
         assert "foo" in getattr(backend_instance, component).keys()
 
-        simple_supply_new_build.backend.delete_obj_list("foo", component)
+        simple_supply_new_build.backend.delete_component("foo", component)
         assert "foo" not in getattr(backend_instance, component).keys()
+        assert "foo" not in getattr(simple_supply_new_build.backend, component).keys()
 
     @pytest.mark.parametrize(
         "component", ["parameters", "variables", "global_expressions", "constraints"]
@@ -2187,7 +2180,7 @@ class TestNewBackend:
     def test_delete_inexistent_pyomo_list(self, simple_supply_new_build, component):
         backend_instance = simple_supply_new_build.backend._instance
         assert "bar" not in getattr(backend_instance, component).keys()
-        simple_supply_new_build.backend.delete_obj_list("bar", component)
+        simple_supply_new_build.backend.delete_component("bar", component)
         assert "bar" not in getattr(backend_instance, component).keys()
 
     @pytest.mark.parametrize(
@@ -2203,7 +2196,7 @@ class TestNewBackend:
             "where": "True",
             "equations": [{"expression": eq, "where": "False"}],
         }
-        adder(simple_supply_new_build._model_data, "foo", constr_dict)
+        adder("foo", constr_dict)
 
         assert (
             "foo"
@@ -2232,7 +2225,6 @@ class TestNewBackend:
 
     def test_add_allnull_var(self, simple_supply_new_build):
         simple_supply_new_build.backend.add_variable(
-            simple_supply_new_build._model_data,
             "foo",
             {"foreach": ["nodes"], "where": "False"},
         )
@@ -2242,9 +2234,7 @@ class TestNewBackend:
     def test_add_allnull_obj(self, simple_supply_new_build):
         eq = {"expression": "bigM", "where": "False"}
         simple_supply_new_build.backend.add_objective(
-            simple_supply_new_build._model_data,
-            "foo",
-            {"equations": [eq, eq], "sense": "minimise"},
+            "foo", {"equations": [eq, eq], "sense": "minimise"}
         )
         assert len(simple_supply_new_build.backend._instance.objectives) == 1
         assert "foo" not in simple_supply_new_build.backend._dataset.data_vars.keys()
@@ -2253,21 +2243,17 @@ class TestNewBackend:
         eq = {"expression": "bigM", "where": "True"}
         with pytest.raises(exceptions.BackendError) as excinfo:
             simple_supply_new_build.backend.add_objective(
-                simple_supply_new_build._model_data,
-                "foo",
-                {"equations": [eq, eq], "sense": "minimise"},
+                "foo", {"equations": [eq, eq], "sense": "minimise"}
             )
         assert check_error_or_warning(
             excinfo,
-            "More than one foo objective is valid for this optimisation problem; only one is allowed.",
+            "(objective, foo:1): trying to set two equations for the same component.",
         )
 
     def test_add_valid_obj(self, simple_supply_new_build):
         eq = {"expression": "bigM", "where": "True"}
         simple_supply_new_build.backend.add_objective(
-            simple_supply_new_build._model_data,
-            "foo",
-            {"equations": [eq], "sense": "minimise"},
+            "foo", {"equations": [eq], "sense": "minimise"}
         )
         assert "foo" in simple_supply_new_build.backend.objectives
         assert not simple_supply_new_build.backend.objectives.foo.item().active

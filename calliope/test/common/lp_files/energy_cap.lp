@@ -1,7 +1,7 @@
 \* Source Pyomo model name=None *\
 
 min
-objectives(0):
+objectives(foo)(0):
 +1 variables(energy_cap)(a__test_supply_elec)
 +1 variables(energy_cap)(b__test_supply_elec)
 

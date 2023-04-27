@@ -50,7 +50,7 @@ import xarray as xr
 from calliope.exceptions import BackendError
 
 if TYPE_CHECKING:
-    from calliope.backend.backends import BackendModel
+    from calliope.backend.backend_model import BackendModel
 
 pp.ParserElement.enablePackrat()
 

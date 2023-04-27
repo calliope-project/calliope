@@ -6,7 +6,7 @@ import pytest
 import ruamel.yaml as yaml
 
 import calliope
-from calliope.backend import backends, equation_parser, parsing, subset_parser
+from calliope.backend import backend_model, equation_parser, parsing, subset_parser
 from calliope.test.common.util import check_error_or_warning
 
 BASE_DIMS = {"carriers", "carrier_tiers", "nodes", "techs"}
@@ -212,12 +212,14 @@ def equation_slice_obj(slice_parser, where_parser):
 
 @pytest.fixture
 def dummy_backend_interface(dummy_model_data):
-    # ignore the need to define the abstract methods from backends.BackendModel
-    with patch.multiple(backends.BackendModel, __abstractmethods__=set()):
+    # ignore the need to define the abstract methods from backend_model.BackendModel
+    with patch.multiple(backend_model.BackendModel, __abstractmethods__=set()):
 
-        class DummyBackendModel(backends.BackendModel):
+        class DummyBackendModel(backend_model.BackendModel):
             def __init__(self):
-                backends.BackendModel.__init__(self, instance=None)
+                backend_model.BackendModel.__init__(
+                    self, dummy_model_data, instance=None
+                )
 
                 self._dataset = dummy_model_data.copy(deep=True)
                 self._dataset["with_inf"] = self._dataset["with_inf"].fillna(

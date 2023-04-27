@@ -62,7 +62,7 @@ def set_log_verbosity(
         interactively.
 
     """
-    backend_logger = logging.getLogger("calliope.backend.backends")
+    backend_logger = logging.getLogger("calliope.backend.backend_model")
     if include_solver_output is True:
         backend_logger.setLevel("DEBUG")
     else:

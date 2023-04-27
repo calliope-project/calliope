@@ -13,17 +13,20 @@ from __future__ import annotations
 import logging
 import warnings
 from pathlib import Path
-from typing import Callable, Literal, Optional, TypeVar, Union
+from typing import Callable, Literal, Optional, SupportsFloat, TypeVar, Union
 
 import xarray
 
 import calliope
 from calliope import exceptions
-from calliope.backend import backends, latex_backend, parsing
+from calliope.backend import parsing
+from calliope.backend.backend_model import BackendModel
+from calliope.backend.latex_backend_model import LatexBackendModel, MathDocumentation
+from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.core import io
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
-from calliope.core.util.tools import copy_docstring, relative_path
+from calliope.core.util.tools import check_attr_exists, copy_docstring, relative_path
 from calliope.postprocess import results as postprocess_results
 from calliope.preprocess import model_run_from_dict, model_run_from_yaml
 from calliope.preprocess.model_data import ModelDataFactory
@@ -31,7 +34,8 @@ from calliope.preprocess.model_data import ModelDataFactory
 logger = logging.getLogger(__name__)
 
 T = TypeVar(
-    "T", bound=Union[backends.PyomoBackendModel, latex_backend.LatexBackendModel]
+    "T",
+    bound=Union[PyomoBackendModel, LatexBackendModel],
 )
 
 
@@ -51,7 +55,7 @@ class Model(object):
     """
 
     _BACKENDS: dict[str, Callable] = {
-        "pyomo": backends.PyomoBackendModel,
+        "pyomo": PyomoBackendModel,
     }
 
     def __init__(
@@ -84,7 +88,7 @@ class Model(object):
         self.run_config: AttrDict
         self.math: AttrDict
         self._config_path: Optional[str]
-        self.math_documentation = latex_backend.MathDocumentation(self._build)
+        self.math_documentation = MathDocumentation(self._build)
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
@@ -151,6 +155,8 @@ class Model(object):
         self._add_observed_dict("math", math)
 
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
+        self.math_documentation.inputs = self._model_data
+
         log_time(
             logger,
             self._timings,
@@ -188,6 +194,8 @@ class Model(object):
 
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         results = self._model_data.filter_by_attrs(is_result=1)
+        self.math_documentation.inputs = self._model_data
+
         if len(results.data_vars) > 0:
             self.results = results
         log_time(
@@ -330,7 +338,7 @@ class Model(object):
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
-        backend = self._BACKENDS[backend_interface]()
+        backend = self._BACKENDS[backend_interface](self._model_data)
         self.backend = self._build(backend)
 
     def _build(self, backend: T) -> T:
@@ -350,15 +358,9 @@ class Model(object):
             "objectives",
         ]:
             component = components.removesuffix("s")
-            if components in ["variables", "expressions"]:
-                backend.valid_math_element_names.update(self.math[components].keys())
-            for name, dict_ in self.math[components].items():
-                if dict_.get("active", True):
-                    getattr(backend, f"add_{component}")(name)
-                else:
-                    logger.debug(
-                        f"({component}, {name}): Component deactivated and therefore not built."
-                    )
+            for name in self.math[components]:
+                getattr(backend, f"add_{component}")(name)
+
             log_time(
                 logger,
                 self._timings,
@@ -367,13 +369,40 @@ class Model(object):
             )
         return backend
 
-    @copy_docstring(backends.BackendModel.verbose_strings)
+    @check_attr_exists("backend")
+    @copy_docstring(BackendModel.verbose_strings)
     def verbose_strings(self) -> None:
-        if not hasattr(self, "backend"):
-            raise NotImplementedError(
-                "Call `build()` to generate an optimisation problem before calling this function."
-            )
         self.backend.verbose_strings()
+
+    @check_attr_exists("backend")
+    @copy_docstring(BackendModel.update_parameter)
+    def update_parameter(
+        self, name: str, new_values: Union[xarray.DataArray, SupportsFloat]
+    ) -> None:
+        self.backend.update_parameter(name, new_values)
+
+    @check_attr_exists("backend")
+    @copy_docstring(BackendModel.update_variable_bounds)
+    def update_variable_bounds(
+        self,
+        name: str,
+        *,
+        min: Optional[Union[xarray.DataArray, SupportsFloat]] = None,
+        max: Optional[Union[xarray.DataArray, SupportsFloat]] = None,
+    ) -> None:
+        self.backend.update_variable_bounds(self, name, min, max)
+
+    @check_attr_exists("backend")
+    @copy_docstring(BackendModel.fix_variable)
+    def fix_variable(self, name: str, where: Optional[xarray.DataArray] = None) -> None:
+        self.backend.fix_variable(name, where)
+
+    @check_attr_exists("backend")
+    @copy_docstring(BackendModel.unfix_variable)
+    def unfix_variable(
+        self, name: str, where: Optional[xarray.DataArray] = None
+    ) -> None:
+        self.backend.unfix_variable(name, where)
 
     def solve(self, force: bool = False, warmstart: bool = False) -> None:
         """
@@ -524,17 +553,14 @@ class Model(object):
         """
         io.save_csv(self._model_data, path, dropna)
 
-    @copy_docstring(backends.BackendModel.to_lp)
+    @check_attr_exists("backend")
+    @copy_docstring(BackendModel.to_lp)
     def to_lp(self, path: Union[str, Path]) -> None:
         """
         Raises:
             exceptions.ModelError: This method cannot be called prior to calling `build()`.
         """
 
-        if not hasattr(self, "backend"):
-            raise exceptions.ModelError(
-                "Build the optimisation problem by calling `build()` before trying to generate an LP file."
-            )
         self.backend.to_lp(path)
 
     def info(self):

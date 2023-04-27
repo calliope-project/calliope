@@ -1,13 +1,12 @@
-import pytest
 from itertools import chain, combinations
 
-import xarray as xr
 import numpy as np
+import pytest
+import xarray as xr
 
-from calliope.test.common.util import build_test_model as build_model
-from calliope.backend import latex_backend, backends
 from calliope import AttrDict
-
+from calliope.backend import latex_backend_model, pyomo_backend_model
+from calliope.test.common.util import build_test_model as build_model
 
 ALL_DIMS = {"nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"}
 
@@ -237,10 +236,8 @@ def dummy_model_data():
     return model_data
 
 
-def populate_backend_model(backend, model_data):
-    backend.add_all_parameters(model_data, model_data.run_config)
+def populate_backend_model(backend):
     backend.add_variable(
-        model_data,
         "multi_dim_var",
         {
             "foreach": ["nodes", "techs"],
@@ -248,19 +245,17 @@ def populate_backend_model(backend, model_data):
             "bounds": {"min": "0", "max": ".inf"},
         },
     )
-    backend.add_variable(
-        model_data, "no_dim_var", {"bounds": {"min": "-1", "max": "1"}}
-    )
+    backend.add_variable("no_dim_var", {"bounds": {"min": "-1", "max": "1"}})
     return backend
 
 
 @pytest.fixture(scope="module")
 def dummy_pyomo_backend_model(dummy_model_data):
-    backend = backends.PyomoBackendModel()
-    return populate_backend_model(backend, dummy_model_data)
+    backend = pyomo_backend_model.PyomoBackendModel(dummy_model_data)
+    return populate_backend_model(backend)
 
 
 @pytest.fixture(scope="module")
 def dummy_latex_backend_model(dummy_model_data):
-    backend = latex_backend.LatexBackendModel()
-    return populate_backend_model(backend, dummy_model_data)
+    backend = latex_backend_model.LatexBackendModel(dummy_model_data)
+    return populate_backend_model(backend)

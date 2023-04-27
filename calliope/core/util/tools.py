@@ -126,3 +126,17 @@ def copy_docstring(wrapper: Callable[P, T]):
         return func
 
     return decorator
+
+
+def check_attr_exists(attribute):
+    def _check_attr_exists(func):
+        def wrapper(self, *args, **kwargs):
+            if not hasattr(self, attribute):
+                raise NotImplementedError(
+                    "Call `build()` to generate an optimisation problem before calling this function."
+                )
+            return func(self, *args, **kwargs)
+
+        return wrapper
+
+    return _check_attr_exists
