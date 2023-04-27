@@ -10,17 +10,8 @@ import typing
 from abc import ABC, abstractmethod
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    Iterable,
-    Iterator,
-    Literal,
-    Optional,
-    TypeVar,
-    Union,
-)
+from typing import (Any, Callable, Generic, Iterable, Iterator, Literal,
+                    Optional, TypeVar, Union)
 
 import numpy as np
 import pandas as pd
@@ -47,7 +38,7 @@ class BackendModel(ABC, Generic[T]):
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
     _COMPONENT_ATTR_METADATA = ["description", "unit"]
 
-    def __init__(self, instance: T):
+    def __init__(self, inputs: xr.Dataset, instance: T):
         """Abstract base class for interfaces to solvers.
 
         Args:
@@ -56,7 +47,10 @@ class BackendModel(ABC, Generic[T]):
 
         self._instance = instance
         self._dataset = xr.Dataset()
+        self.inputs = inputs
         self.valid_math_element_names: set = set()
+
+        self.add_all_inputs_as_parameters()
 
     @abstractmethod
     def add_parameter(
@@ -87,7 +81,6 @@ class BackendModel(ABC, Generic[T]):
     @abstractmethod
     def add_constraint(
         self,
-        model_data: xr.Dataset,
         name: str,
         constraint_dict: parsing.UnparsedConstraintDict,
     ) -> None:
@@ -108,7 +101,6 @@ class BackendModel(ABC, Generic[T]):
     @abstractmethod
     def add_global_expression(
         self,
-        model_data: xr.Dataset,
         name: str,
         expression_dict: parsing.UnparsedExpressionDict,
     ) -> None:
@@ -130,7 +122,6 @@ class BackendModel(ABC, Generic[T]):
     @abstractmethod
     def add_variable(
         self,
-        model_data: xr.Dataset,
         name: str,
         variable_dict: parsing.UnparsedVariableDict,
     ) -> None:
@@ -151,7 +142,6 @@ class BackendModel(ABC, Generic[T]):
     @abstractmethod
     def add_objective(
         self,
-        model_data: xr.Dataset,
         name: str,
         objective_dict: parsing.UnparsedObjectiveDict,
     ) -> None:
@@ -367,7 +357,7 @@ class BackendModel(ABC, Generic[T]):
 
         return results
 
-    def add_all_parameters(self, model_data: xr.Dataset, run_config: dict) -> None:
+    def add_all_inputs_as_parameters(self) -> None:
         """
         Add all parameters to backend dataset in-place, including those in the run configuration.
         If model data does not include a parameter, their default values will be added here
@@ -384,22 +374,22 @@ class BackendModel(ABC, Generic[T]):
             run_config (UpdateObserverDict): Run configuration dictionary.
         """
 
-        for param_name, param_data in model_data.filter_by_attrs(
+        for param_name, param_data in self.inputs.filter_by_attrs(
             is_result=0
         ).data_vars.items():
-            default_val = model_data.attrs["defaults"].get(param_name, np.nan)
+            default_val = self.inputs.attrs["defaults"].get(param_name, np.nan)
             self.add_parameter(param_name, param_data, default_val)
-        for param_name, default_val in model_data.attrs["defaults"].items():
+        for param_name, default_val in self.inputs.attrs["defaults"].items():
             if param_name in self.parameters.keys():
                 continue
             self.add_parameter(
                 param_name, xr.DataArray(default_val), use_inf_as_na=False
             )
 
-        for option_name, option_val in run_config.get("objective_options", {}).items():
+        for option_name, option_val in self.inputs.run_config.get("objective_options", {}).items():
             if option_name == "cost_class":
                 objective_cost_class = {
-                    k: v for k, v in option_val.items() if k in model_data.costs
+                    k: v for k, v in option_val.items() if k in self.inputs.costs
                 }
                 self.add_parameter(
                     "objective_cost_class",
@@ -409,7 +399,7 @@ class BackendModel(ABC, Generic[T]):
                 )
             else:
                 self.add_parameter("objective_" + option_name, xr.DataArray(option_val))
-        self.add_parameter("bigM", xr.DataArray(run_config.get("bigM", 1e10)))
+        self.add_parameter("bigM", xr.DataArray(self.inputs.run_config.get("bigM", 1e10)))
 
     def apply_func(
         self, func: Callable, *args, output_core_dims: tuple = ((),), **kwargs
@@ -557,7 +547,8 @@ class BackendModel(ABC, Generic[T]):
     def _rebuild_references(self, references: set) -> None:
         for reference in references:
             obj_type = self._dataset[reference].attrs["obj_type"]
-            getattr(self, "add_" + obj_type.removesuffix("s"))(name="reference")
+            self.delete_obj_list(reference, obj_type)
+            getattr(self, "add_" + obj_type.removesuffix("s"))(name=reference)
 
     @property
     def constraints(self):
@@ -594,8 +585,8 @@ class PyomoBackendModel(BackendModel):
         "objective": "objective",
     }
 
-    def __init__(self, **kwargs):
-        BackendModel.__init__(self, instance=pmo.block())
+    def __init__(self, inputs: xr.Dataset):
+        BackendModel.__init__(self, inputs, instance=pmo.block())
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()
         self._instance.global_expressions = pmo.expression_dict()
@@ -630,9 +621,8 @@ class PyomoBackendModel(BackendModel):
 
     def add_constraint(
         self,
-        model_data: xr.Dataset,
         name: str,
-        constraint_dict: parsing.UnparsedConstraintDict,
+        constraint_dict: Optional[parsing.UnparsedConstraintDict] = None,
     ) -> None:
         def _constraint_setter(
             imask: xr.DataArray, expr: tuple[xr.DataArray, str, xr.DataArray]
@@ -655,7 +645,6 @@ class PyomoBackendModel(BackendModel):
             return to_fill
 
         self._add_constraint_or_global_expression(
-            model_data,
             name,
             constraint_dict,
             _constraint_setter,
@@ -664,9 +653,8 @@ class PyomoBackendModel(BackendModel):
 
     def add_global_expression(
         self,
-        model_data: xr.Dataset,
         name: str,
-        expression_dict: parsing.UnparsedExpressionDict,
+        expression_dict: Optional[parsing.UnparsedExpressionDict] = None,
     ) -> None:
         def _expression_setter(imask: xr.DataArray, expr: xr.DataArray) -> xr.DataArray:
             expr = expr.squeeze(drop=True)
@@ -685,7 +673,6 @@ class PyomoBackendModel(BackendModel):
         self.valid_math_element_names.add(name)
 
         self._add_constraint_or_global_expression(
-            model_data,
             name,
             expression_dict,
             _expression_setter,
@@ -694,17 +681,19 @@ class PyomoBackendModel(BackendModel):
 
     def add_variable(
         self,
-        model_data: xr.Dataset,
         name: str,
-        variable_dict: parsing.UnparsedVariableDict,
+        variable_dict: Optional[parsing.UnparsedVariableDict] = None,
     ) -> None:
         self.valid_math_element_names.add(name)
+
+        if variable_dict is None:
+            variable_dict = self.inputs.math["variables"][name]
 
         parsed_variable = parsing.ParsedBackendComponent(
             "variables", name, variable_dict
         )
 
-        imask = parsed_variable.generate_top_level_where_array(model_data)
+        imask = parsed_variable.generate_top_level_where_array(self.inputs)
         if not imask.any():
             return None
 
@@ -728,12 +717,14 @@ class PyomoBackendModel(BackendModel):
 
     def add_objective(
         self,
-        model_data: xr.Dataset,
         name: str,
-        objective_dict: parsing.UnparsedObjectiveDict,
+        objective_dict: Optional[parsing.UnparsedObjectiveDict] = None,
     ) -> None:
         self._raise_error_on_preexistence(name, "objectives")
         sense_dict = {"minimize": 1, "minimise": 1, "maximize": -1, "maximise": -1}
+        if objective_dict is None:
+            objective_dict = self.inputs.math["objectives"][name]
+
         parsed_objective = parsing.ParsedBackendComponent(
             "objectives", name, objective_dict
         )
@@ -741,10 +732,10 @@ class PyomoBackendModel(BackendModel):
 
         n_valid_exprs = 0
         for equation in equations:
-            imask = equation.evaluate_where(model_data)
+            imask = equation.evaluate_where(self.inputs)
             if imask.any():
                 expr = equation.evaluate_expression(
-                    model_data, self, imask=imask
+                    self.inputs, self, imask=imask
                 ).item()
                 n_valid_exprs += 1
 
@@ -759,7 +750,7 @@ class PyomoBackendModel(BackendModel):
 
         objective = pmo.objective(expr, sense=sense_dict[objective_dict["sense"]])
 
-        if name == model_data.run_config["objective"]:
+        if name == self.inputs.run_config["objective"]:
             objective.activate()
         else:
             objective.deactivate()
@@ -956,10 +947,9 @@ class PyomoBackendModel(BackendModel):
 
     def _add_constraint_or_global_expression(
         self,
-        model_data: xr.Dataset,
         name: str,
-        component_dict: Union[
-            parsing.UnparsedConstraintDict, parsing.UnparsedExpressionDict
+        component_dict: Optional[
+            Union[parsing.UnparsedConstraintDict, parsing.UnparsedExpressionDict]
         ],
         component_setter: Callable,
         component_type: Literal["constraints", "global_expressions"],
@@ -967,7 +957,6 @@ class PyomoBackendModel(BackendModel):
         """Generalised function to add a constraint or global expression array to the model.
 
         Args:
-            model_data (xr.Dataset): Calliope model input data
             name: Name of the constraint or global expression
             component_dict (Union[parsing.UnparsedConstraintDict, parsing.UnparsedExpressionDict]):
                 Unparsed YAML dictionary configuration.
@@ -985,12 +974,16 @@ class PyomoBackendModel(BackendModel):
                 objects on duplicate index entries.
         """
         references: set[str] = set()
+
+        if component_dict is None:
+            component_dict = self.inputs.math[component_type][name]
+
         parsed_component = parsing.ParsedBackendComponent(
             component_type, name, component_dict
         )
 
         top_level_imask = parsed_component.generate_top_level_where_array(
-            model_data, align_to_foreach_sets=False
+            self.inputs, align_to_foreach_sets=False
         )
         if not top_level_imask.any():
             return None
@@ -1005,7 +998,7 @@ class PyomoBackendModel(BackendModel):
 
         equations = parsed_component.parse_equations(self.valid_math_element_names)
         for element in equations:
-            imask = element.evaluate_where(model_data, initial_imask=top_level_imask)
+            imask = element.evaluate_where(self.inputs, initial_imask=top_level_imask)
             if not imask.any():
                 continue
 
@@ -1020,7 +1013,7 @@ class PyomoBackendModel(BackendModel):
                 )
 
             expr = element.evaluate_expression(
-                model_data, self, imask=imask, references=references
+                self.inputs, self, imask=imask, references=references
             )
             to_fill = component_setter(imask, expr)
             component_da = component_da.fillna(to_fill)

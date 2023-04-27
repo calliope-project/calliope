@@ -334,7 +334,6 @@ class Model(object):
         self.backend = self._build(backend)
 
     def _build(self, backend: T) -> T:
-        backend.add_all_parameters(self._model_data, self.run_config)
         log_time(
             logger,
             self._timings,
@@ -355,7 +354,7 @@ class Model(object):
                 backend.valid_math_element_names.update(self.math[components].keys())
             for name, dict_ in self.math[components].items():
                 if dict_.get("active", True):
-                    getattr(backend, f"add_{component}")(self._model_data, name, dict_)
+                    getattr(backend, f"add_{component}")(name)
                 else:
                     logger.debug(
                         f"({component}, {name}): Component deactivated and therefore not built."
