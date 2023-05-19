@@ -4,23 +4,14 @@
 
 import functools
 import importlib
-import operator
 import os
 import sys
-from typing import Callable, TypeVar
+from typing import TypeVar
 
 from typing_extensions import ParamSpec
 
 P = ParamSpec("P")
 T = TypeVar("T")
-
-
-def get_from_dict(data_dict, map_list):
-    return functools.reduce(operator.getitem, map_list, data_dict)
-
-
-def apply_to_dict(data_dict, map_list, func, args):
-    getattr(get_from_dict(data_dict, map_list[:-1])[map_list[-1]], func)(*args)
 
 
 memoize = functools.lru_cache(maxsize=2048)
@@ -106,37 +97,3 @@ def plugin_load(name, builtin_module):
         func_string = builtin_module + "." + name
         func = load_function(func_string)
     return func
-
-
-def copy_docstring(wrapper: Callable[P, T]):
-    """
-    Decorator to copy across a function docstring to the wrapped function.
-    Any additional documentation in the wrapped function will be appended to the copied
-    docstring.
-    """
-
-    def decorator(func: Callable) -> Callable[P, T]:
-        func_doc = ""
-        if wrapper.__doc__ is not None:
-            func_doc += wrapper.__doc__
-        if func.__doc__ is not None:
-            func_doc += func.__doc__
-        func.__doc__ = func_doc
-
-        return func
-
-    return decorator
-
-
-def check_attr_exists(attribute):
-    def _check_attr_exists(func):
-        def wrapper(self, *args, **kwargs):
-            if not hasattr(self, attribute):
-                raise NotImplementedError(
-                    "Call `build()` to generate an optimisation problem before calling this function."
-                )
-            return func(self, *args, **kwargs)
-
-        return wrapper
-
-    return _check_attr_exists
