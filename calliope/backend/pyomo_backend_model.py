@@ -600,7 +600,9 @@ class PyomoBackendModel(backend_model.BackendModel):
         Raises:
             BackendError: Can only fix variables if they have values assigned to them from an optimal solution.
         """
-        if orig is None:
+        if pd.isnull(orig):
+            return None
+        elif orig.value is None:
             raise BackendError(
                 "Cannot fix variable values without already having solved the model successfully."
             )
@@ -614,7 +616,8 @@ class PyomoBackendModel(backend_model.BackendModel):
             orig (ObjVariable): Pyomo variable to unfix.
 
         """
-        orig.unfix()
+        if pd.notnull(orig):
+            orig.unfix()
 
     def _to_pyomo_constraint(
         self,

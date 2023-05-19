@@ -2441,3 +2441,54 @@ class TestNewBackend:
             excinfo,
             "Cannot update variable bounds that have been set by parameters. use `update_parameter('energy_cap_min')` to update the min bound of energy_cap",
         )
+
+    @staticmethod
+    def _is_fixed(val):
+        if pd.notnull(val):
+            return val.fixed
+
+    def test_fix_variable(self, simple_supply):
+        simple_supply.backend.fix_variable("energy_cap")
+        fixed = simple_supply.backend._apply_func(
+            self._is_fixed, simple_supply.backend.variables.energy_cap
+        )
+        simple_supply.backend.unfix_variable("energy_cap")  # reset
+        assert fixed.where(fixed.notnull()).all()
+
+    def test_fix_variable_where(self, simple_supply):
+        where = simple_supply.inputs.energy_cap_max.notnull()
+        simple_supply.backend.fix_variable("energy_cap", where=where)
+        fixed = simple_supply.backend._apply_func(
+            self._is_fixed, simple_supply.backend.variables.energy_cap
+        )
+        simple_supply.backend.unfix_variable("energy_cap")  # reset
+        assert not fixed.sel(techs="test_demand_elec").any()
+        assert fixed.where(where).all()
+
+    def test_fix_variable_before_solve(self, simple_supply_longnames):
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            simple_supply_longnames.backend.fix_variable("energy_cap")
+
+        assert check_error_or_warning(
+            excinfo,
+            "Cannot fix variable values without already having solved the model successfully.",
+        )
+
+    def test_unfix_variable(self, simple_supply):
+        simple_supply.backend.fix_variable("energy_cap")
+        simple_supply.backend.unfix_variable("energy_cap")
+        fixed = simple_supply.backend._apply_func(
+            self._is_fixed, simple_supply.backend.variables.energy_cap
+        )
+        assert not fixed.where(fixed.notnull()).all()
+
+    def test_unfix_variable_where(self, simple_supply):
+        where = simple_supply.inputs.energy_cap_max.notnull()
+        simple_supply.backend.fix_variable("energy_cap")
+        simple_supply.backend.unfix_variable("energy_cap", where=where)
+        fixed = simple_supply.backend._apply_func(
+            self._is_fixed, simple_supply.backend.variables.energy_cap
+        )
+        simple_supply.backend.unfix_variable("energy_cap")  # reset
+        assert fixed.sel(techs="test_demand_elec").all()
+        assert not fixed.where(where).all()
