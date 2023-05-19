@@ -199,29 +199,8 @@ class TestLatexBackendModel:
         assert "obj" not in dummy_latex_backend_model.valid_math_element_names
         assert len(dummy_latex_backend_model.objectives.data_vars) == 1
 
-    def test_get_parameter(self, dummy_latex_backend_model):
-        param = dummy_latex_backend_model.get_parameter("param")
-        assert param.equals(xr.DataArray(1))
-
     def test_create_obj_list(self, dummy_latex_backend_model):
         assert dummy_latex_backend_model._create_obj_list("var", "variables") is None
-
-    def test_get_constraint(self, dummy_latex_backend_model):
-        constr = dummy_latex_backend_model.get_constraint("constr")
-        assert constr.equals(dummy_latex_backend_model.constraints["constr"])
-
-    def test_get_variable(self, dummy_latex_backend_model):
-        var = dummy_latex_backend_model.get_variable("var")
-        assert var.equals(dummy_latex_backend_model.variables["var"])
-
-    def test_get_expression(self, dummy_latex_backend_model):
-        expr = dummy_latex_backend_model.get_global_expression("expr")
-        assert expr.equals(dummy_latex_backend_model.global_expressions["expr"])
-
-    def test_solve(self, dummy_latex_backend_model):
-        with pytest.raises(exceptions.BackendError) as excinfo:
-            dummy_latex_backend_model.solve("cbc")
-        assert check_error_or_warning(excinfo, "Cannot solve a LaTex backend model")
 
     @pytest.mark.parametrize(
         ["format", "expected"],

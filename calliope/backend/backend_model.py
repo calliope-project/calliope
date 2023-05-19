@@ -38,18 +38,17 @@ _COMPONENTS_T = Literal[
 logger = logging.getLogger(__name__)
 
 
-class BackendModel(ABC, Generic[T]):
+class BackendModelGenerator(ABC):
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
     _COMPONENT_ATTR_METADATA = ["description", "unit"]
 
-    def __init__(self, inputs: xr.Dataset, instance: T):
-        """Abstract base class for interfaces to solvers.
+    def __init__(self, inputs: xr.Dataset):
+        """Abstract base class to build a representation of the optimisation problem.
 
         Args:
-            instance (T): Interface model instance.
+            inputs (xr.Dataset): Calliope model data.
         """
 
-        self._instance = instance
         self._dataset = xr.Dataset()
         self.inputs = inputs
         self.valid_math_element_names: set = set()
@@ -260,6 +259,228 @@ class BackendModel(ABC, Generic[T]):
         return parsed_component
 
     @abstractmethod
+    def delete_component(self, key: str, component_type: _COMPONENTS_T) -> None:
+        """Delete a list object from the backend model object.
+
+        Args:
+            key (str): Name of object.
+            component_type (str): Object type.
+        """
+
+    @abstractmethod
+    def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+        """Attach an empty list object to the backend model object.
+        This may be a backend-specific subclass of a standard list object.
+
+        Args:
+            key (str): Name of object.
+            component_type (str): Object type.
+
+        Raises:
+            BackendError: Cannot overwrite object of same name and type.
+        """
+
+    def _add_all_inputs_as_parameters(self) -> None:
+        """
+        Add all parameters to backend dataset in-place, including those in the run configuration.
+        If model data does not include a parameter, their default values will be added here
+        as unindexed backend dataset parameters.
+
+        TODO: Move the decision on which run config params to generate as backend params
+              earlier in the process.
+        Parameters in "objective_options" and the bigM parameter will be added from
+        run configuration.
+
+        Args:
+            model_data (xr.Dataset): Input model data.
+            defaults (dict): Parameter defaults.
+            run_config (UpdateObserverDict): Run configuration dictionary.
+        """
+
+        for param_name, param_data in self.inputs.filter_by_attrs(
+            is_result=0
+        ).data_vars.items():
+            default_val = self.inputs.attrs["defaults"].get(param_name, np.nan)
+            self.add_parameter(param_name, param_data, default_val)
+        for param_name, default_val in self.inputs.attrs["defaults"].items():
+            if param_name in self.parameters.keys():
+                continue
+            self.add_parameter(
+                param_name, xr.DataArray(default_val), use_inf_as_na=False
+            )
+
+        for option_name, option_val in self.inputs.run_config.get(
+            "objective_options", {}
+        ).items():
+            if option_name == "cost_class":
+                objective_cost_class = {
+                    k: v for k, v in option_val.items() if k in self.inputs.costs
+                }
+                self.add_parameter(
+                    "objective_cost_class",
+                    xr.DataArray.from_series(
+                        pd.Series(objective_cost_class).rename_axis(index="costs")
+                    ),
+                )
+            else:
+                self.add_parameter("objective_" + option_name, xr.DataArray(option_val))
+        self.add_parameter(
+            "bigM", xr.DataArray(self.inputs.run_config.get("bigM", 1e10))
+        )
+
+    @staticmethod
+    def _clean_arrays(*args) -> None:
+        """
+        Preemptively delete objects with large memory footprints that might otherwise
+        stick around longer than necessary.
+        """
+        del args
+
+    def _add_to_dataset(
+        self,
+        name: str,
+        da: xr.DataArray,
+        obj_type: _COMPONENTS_T,
+        unparsed_dict: Union[parsing.UNPARSED_DICTS, dict],
+        references: Optional[set] = None,
+    ):
+        """
+        Add array of backend objects to backend dataset in-place.
+
+        Args:
+            name (str): Name of entry in dataset.
+            da (xr.DataArray): Data to add.
+            obj_type (str): Type of backend objects in the array.
+            unparsed_dict (DT):
+                Dictionary describing the object being added, from which descriptor attributes will be extracted and added to the array attributes.
+            references (set):
+                All other backend objects which are references in this backend object's linear expression(s).
+                E.g. the constraint "carrier_prod / energy_eff <= energy_cap" references the variables ["carrier_prod", "energy_cap"]
+                and the parameter ["energy_eff"].
+                All referenced objects will have their "references" attribute updated with this object's name.
+                Defaults to None.
+        """
+
+        add_attrs = {
+            attr: unparsed_dict.get(attr)
+            for attr in self._COMPONENT_ATTR_METADATA
+            if attr in unparsed_dict.keys()
+        }
+
+        da.attrs.update(
+            {
+                "obj_type": obj_type,
+                "references": set(),
+                "coords_in_name": False,
+                **add_attrs,  # type: ignore
+            }
+        )
+        self._dataset[name] = da
+
+        if references is not None:
+            for reference in references:
+                self._dataset[reference].attrs["references"].add(name)
+
+    def _apply_func(
+        self, func: Callable, *args, output_core_dims: tuple = ((),), **kwargs
+    ) -> xr.DataArray:
+        """
+        Apply a function to every element of an arbitrary number of xarray DataArrays.
+
+        Args:
+            func (Callable):
+                Un-vectorized function to call.
+                Number of accepted args should equal len(args).
+                Number of accepted kwargs should equal len(kwargs).
+            args (xr.DataArray):
+                xarray DataArrays which will be broadcast together and then iterated over
+                to apply the function.
+            output_core_dims (tuple):
+                Additional dimensions which are expected to be passed back from `xr.apply_ufunc` after applying `func`.
+                This is directly passed to `xr.apply_ufunc`; see their documentation for more details.
+                Defaults to ((), )
+            kwargs (dict[str, Any]):
+                Additional keyword arguments to pass to `func`.
+
+        Returns:
+            xr.DataArray: Array with func applied to all elements.
+        """
+        return xr.apply_ufunc(
+            func,
+            *args,
+            kwargs=kwargs,
+            vectorize=True,
+            keep_attrs=True,
+            output_dtypes=[np.dtype("O")],
+            output_core_dims=output_core_dims,
+        )
+
+    def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
+        """
+        We do not allow any overlap of backend object names since they all have to
+        co-exist in the backend dataset.
+        I.e., users cannot overwrite any backend component with another
+        (of the same type or otherwise).
+
+        Args:
+            key (str): Backend object name
+            obj_type (Literal["variables", "constraints", "objectives", "parameters", "expressions"]): Object type.
+
+        Raises:
+            BackendError:
+                Raised if `key` already exists in the backend model
+                (either with the same or different type as `obj_type`).
+        """
+        if key in self._dataset.keys():
+            if key in getattr(self, obj_type):
+                raise BackendError(
+                    f"Trying to add already existing `{key}` to backend model {obj_type}."
+                )
+            else:
+                other_obj_type = self._dataset[key].attrs["obj_type"].removesuffix("s")
+                raise BackendError(
+                    f"Trying to add already existing *{other_obj_type}* `{key}` "
+                    f"as a backend model *{obj_type.removesuffix('s')}*."
+                )
+
+    @property
+    def constraints(self):
+        "Slice of backend dataset to show only built constraints"
+        return self._dataset.filter_by_attrs(obj_type="constraints")
+
+    @property
+    def variables(self):
+        "Slice of backend dataset to show only built variables"
+        return self._dataset.filter_by_attrs(obj_type="variables")
+
+    @property
+    def parameters(self):
+        "Slice of backend dataset to show only built parameters"
+        return self._dataset.filter_by_attrs(obj_type="parameters")
+
+    @property
+    def global_expressions(self):
+        "Slice of backend dataset to show only built global expressions"
+        return self._dataset.filter_by_attrs(obj_type="global_expressions")
+
+    @property
+    def objectives(self):
+        "Slice of backend dataset to show only built objectives"
+        return self._dataset.filter_by_attrs(obj_type="objectives")
+
+
+class BackendModel(BackendModelGenerator, Generic[T]):
+    def __init__(self, inputs: xr.Dataset, instance: T) -> None:
+        """Abstract base class to build bakcend models that interface with solvers.
+
+        Args:
+            inputs (xr.Dataset): Calliope model data.
+            instance (T): Interface model instance.
+        """
+        super().__init__(inputs)
+        self._instance = instance
+
+    @abstractmethod
     def get_parameter(
         self, parameter_name: str, as_backend_objs: bool = True
     ) -> xr.DataArray:
@@ -465,28 +686,6 @@ class BackendModel(ABC, Generic[T]):
                 Defaults to False.
         """
 
-    @abstractmethod
-    def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
-        """Attach an empty list object to the backend model object.
-        This may be a backend-specific subclass of a standard list object.
-
-        Args:
-            key (str): Name of object.
-            component_type (str): Object type.
-
-        Raises:
-            BackendError: Cannot overwrite object of same name and type.
-        """
-
-    @abstractmethod
-    def delete_component(self, key: str, component_type: _COMPONENTS_T) -> None:
-        """Delete a list object from the backend model object.
-
-        Args:
-            key (str): Name of object.
-            component_type (str): Object type.
-        """
-
     def load_results(self) -> xr.Dataset:
         """
         Evaluate backend decision variables, global expressions, and parameters (if not in inputs)
@@ -519,88 +718,6 @@ class BackendModel(ABC, Generic[T]):
 
         return results
 
-    def _add_all_inputs_as_parameters(self) -> None:
-        """
-        Add all parameters to backend dataset in-place, including those in the run configuration.
-        If model data does not include a parameter, their default values will be added here
-        as unindexed backend dataset parameters.
-
-        TODO: Move the decision on which run config params to generate as backend params
-              earlier in the process.
-        Parameters in "objective_options" and the bigM parameter will be added from
-        run configuration.
-
-        Args:
-            model_data (xr.Dataset): Input model data.
-            defaults (dict): Parameter defaults.
-            run_config (UpdateObserverDict): Run configuration dictionary.
-        """
-
-        for param_name, param_data in self.inputs.filter_by_attrs(
-            is_result=0
-        ).data_vars.items():
-            default_val = self.inputs.attrs["defaults"].get(param_name, np.nan)
-            self.add_parameter(param_name, param_data, default_val)
-        for param_name, default_val in self.inputs.attrs["defaults"].items():
-            if param_name in self.parameters.keys():
-                continue
-            self.add_parameter(
-                param_name, xr.DataArray(default_val), use_inf_as_na=False
-            )
-
-        for option_name, option_val in self.inputs.run_config.get(
-            "objective_options", {}
-        ).items():
-            if option_name == "cost_class":
-                objective_cost_class = {
-                    k: v for k, v in option_val.items() if k in self.inputs.costs
-                }
-                self.add_parameter(
-                    "objective_cost_class",
-                    xr.DataArray.from_series(
-                        pd.Series(objective_cost_class).rename_axis(index="costs")
-                    ),
-                )
-            else:
-                self.add_parameter("objective_" + option_name, xr.DataArray(option_val))
-        self.add_parameter(
-            "bigM", xr.DataArray(self.inputs.run_config.get("bigM", 1e10))
-        )
-
-    def _apply_func(
-        self, func: Callable, *args, output_core_dims: tuple = ((),), **kwargs
-    ) -> xr.DataArray:
-        """
-        Apply a function to every element of an arbitrary number of xarray DataArrays.
-
-        Args:
-            func (Callable):
-                Un-vectorized function to call.
-                Number of accepted args should equal len(args).
-                Number of accepted kwargs should equal len(kwargs).
-            args (xr.DataArray):
-                xarray DataArrays which will be broadcast together and then iterated over
-                to apply the function.
-            output_core_dims (tuple):
-                Additional dimensions which are expected to be passed back from `xr.apply_ufunc` after applying `func`.
-                This is directly passed to `xr.apply_ufunc`; see their documentation for more details.
-                Defaults to ((), )
-            kwargs (dict[str, Any]):
-                Additional keyword arguments to pass to `func`.
-
-        Returns:
-            xr.DataArray: Array with func applied to all elements.
-        """
-        return xr.apply_ufunc(
-            func,
-            *args,
-            kwargs=kwargs,
-            vectorize=True,
-            keep_attrs=True,
-            output_dtypes=[np.dtype("O")],
-            output_core_dims=output_core_dims,
-        )
-
     @abstractmethod
     def verbose_strings(self) -> None:
         """
@@ -621,87 +738,6 @@ class BackendModel(ABC, Generic[T]):
         Args:
             path (Union[str, Path]): Path to which the LP file will be written.
         """
-
-    def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
-        """
-        We do not allow any overlap of backend object names since they all have to
-        co-exist in the backend dataset.
-        I.e., users cannot overwrite any backend component with another
-        (of the same type or otherwise).
-
-        Args:
-            key (str): Backend object name
-            obj_type (Literal["variables", "constraints", "objectives", "parameters", "expressions"]): Object type.
-
-        Raises:
-            BackendError:
-                Raised if `key` already exists in the backend model
-                (either with the same or different type as `obj_type`).
-        """
-        if key in self._dataset.keys():
-            if key in getattr(self, obj_type):
-                raise BackendError(
-                    f"Trying to add already existing `{key}` to backend model {obj_type}."
-                )
-            else:
-                other_obj_type = self._dataset[key].attrs["obj_type"].removesuffix("s")
-                raise BackendError(
-                    f"Trying to add already existing *{other_obj_type}* `{key}` "
-                    f"as a backend model *{obj_type.removesuffix('s')}*."
-                )
-
-    @staticmethod
-    def _clean_arrays(*args) -> None:
-        """
-        Preemptively delete objects with large memory footprints that might otherwise
-        stick around longer than necessary.
-        """
-        del args
-
-    def _add_to_dataset(
-        self,
-        name: str,
-        da: xr.DataArray,
-        obj_type: _COMPONENTS_T,
-        unparsed_dict: Union[parsing.UNPARSED_DICTS, dict],
-        references: Optional[set] = None,
-    ):
-        """
-        Add array of backend objects to backend dataset in-place.
-
-        Args:
-            name (str): Name of entry in dataset.
-            da (xr.DataArray): Data to add.
-            obj_type (str): Type of backend objects in the array.
-            unparsed_dict (DT):
-                Dictionary describing the object being added, from which descriptor attributes will be extracted and added to the array attributes.
-            references (set):
-                All other backend objects which are references in this backend object's linear expression(s).
-                E.g. the constraint "carrier_prod / energy_eff <= energy_cap" references the variables ["carrier_prod", "energy_cap"]
-                and the parameter ["energy_eff"].
-                All referenced objects will have their "references" attribute updated with this object's name.
-                Defaults to None.
-        """
-
-        add_attrs = {
-            attr: unparsed_dict.get(attr)
-            for attr in self._COMPONENT_ATTR_METADATA
-            if attr in unparsed_dict.keys()
-        }
-
-        da.attrs.update(
-            {
-                "obj_type": obj_type,
-                "references": set(),
-                "coords_in_name": False,
-                **add_attrs,  # type: ignore
-            }
-        )
-        self._dataset[name] = da
-
-        if references is not None:
-            for reference in references:
-                self._dataset[reference].attrs["references"].add(name)
 
     def _find_all_references(self, initial_references: set) -> set:
         """
@@ -729,28 +765,3 @@ class BackendModel(ABC, Generic[T]):
         obj_type = self._dataset[reference].attrs["obj_type"]
         self.delete_component(reference, obj_type)
         getattr(self, "add_" + obj_type.removesuffix("s"))(name=reference)
-
-    @property
-    def constraints(self):
-        "Slice of backend dataset to show only built constraints"
-        return self._dataset.filter_by_attrs(obj_type="constraints")
-
-    @property
-    def variables(self):
-        "Slice of backend dataset to show only built variables"
-        return self._dataset.filter_by_attrs(obj_type="variables")
-
-    @property
-    def parameters(self):
-        "Slice of backend dataset to show only built parameters"
-        return self._dataset.filter_by_attrs(obj_type="parameters")
-
-    @property
-    def global_expressions(self):
-        "Slice of backend dataset to show only built global expressions"
-        return self._dataset.filter_by_attrs(obj_type="global_expressions")
-
-    @property
-    def objectives(self):
-        "Slice of backend dataset to show only built objectives"
-        return self._dataset.filter_by_attrs(obj_type="objectives")

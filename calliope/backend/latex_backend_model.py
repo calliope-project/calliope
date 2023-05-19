@@ -10,7 +10,7 @@ import numpy as np
 import xarray as xr
 
 from calliope.backend import backend_model, parsing
-from calliope.exceptions import BackendError, ModelError
+from calliope.exceptions import ModelError
 
 _ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
 
@@ -108,7 +108,7 @@ class MathDocumentation:
             return None
 
 
-class LatexBackendModel(backend_model.BackendModel):
+class LatexBackendModel(backend_model.BackendModelGenerator):
     # \negthickspace used to counter the introduction of spaces to separate the curly braces
     # in \text. Curly braces need separating otherwise jinja2 gets confused.
     LATEX_EQUATION_ELEMENT = textwrap.dedent(
@@ -262,7 +262,7 @@ class LatexBackendModel(backend_model.BackendModel):
             include (Literal["all", "valid"], optional):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
         """
-        backend_model.BackendModel.__init__(self, inputs, instance=dict())
+        super().__init__(inputs)
         self.include = include
 
         self._add_all_inputs_as_parameters()
@@ -392,25 +392,6 @@ class LatexBackendModel(backend_model.BackendModel):
             sense=sense_dict[objective_dict["sense"]],
         )
 
-    def get_parameter(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
-        return self.parameters[name]
-
-    def get_constraint(
-        self,
-        name: str,
-        as_backend_objs: bool = True,
-        eval_body: bool = False,
-    ) -> Union[xr.DataArray, xr.Dataset]:
-        return self.constraints[name]
-
-    def get_variable(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
-        return self.variables[name]
-
-    def get_global_expression(
-        self, name: str, as_backend_objs: bool = True, eval_body: bool = True
-    ) -> xr.DataArray:
-        return self.global_expressions[name]
-
     def _create_obj_list(
         self, key: str, component_type: backend_model._COMPONENTS_T
     ) -> None:
@@ -511,38 +492,3 @@ class LatexBackendModel(backend_model.BackendModel):
             {"expression": eq.evaluate_expression(self.inputs, self, as_latex=True)}
             for eq in equations
         )
-
-    def solve(
-        self,
-        solver: str,
-        solver_io: Optional[str] = None,
-        solver_options: Optional[dict] = None,
-        save_logs: Optional[str] = None,
-        warmstart: bool = False,
-        **solve_kwargs,
-    ):
-        raise BackendError(
-            "Cannot solve a LaTex backend model - this only exists to produce a string representation of the model math"
-        )
-
-    # Below are unimplemented abstract methods
-    def verbose_strings(self, *args, **kwargs):
-        super().verbose_strings(*args, **kwargs)
-
-    def to_lp(self, *args, **kwargs):
-        super().to_lp(*args, **kwargs)
-
-    def get_variable_bounds(self, *args, **kwargs):
-        super().get_variable_bounds(*args, **kwargs)
-
-    def update_parameter(self, *args, **kwargs) -> None:
-        super().to_lp(*args, **kwargs)
-
-    def update_variable_bounds(self, *args, **kwargs) -> None:
-        super().update_variable_bounds(*args, **kwargs)
-
-    def fix_variable(self, *args, **kwargs) -> None:
-        super().fix_variable(*args, **kwargs)
-
-    def unfix_variable(self, *args, **kwargs) -> None:
-        super().unfix_variable(*args, **kwargs)
