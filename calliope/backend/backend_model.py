@@ -704,17 +704,31 @@ class BackendModel(ABC, Generic[T]):
                 self._dataset[reference].attrs["references"].add(name)
 
     def _find_all_references(self, initial_references: set) -> set:
+        """
+        Find all nested references to optimisation problem components from an initial set of references.
+
+        Args:
+            initial_references (set): names of optimisation problem components.
+
+        Returns:
+            set: `initial_references` + any names of optimisation problem components referenced from those initial references.
+        """
+
         references = initial_references.copy()
         for reference in initial_references:
             new_refs = self._dataset[reference].attrs.get("references", {})
             references.update(self._find_all_references(new_refs))
         return references
 
-    def _rebuild_references(self, references: set) -> None:
-        for reference in references:
-            obj_type = self._dataset[reference].attrs["obj_type"]
-            self.delete_component(reference, obj_type)
-            getattr(self, "add_" + obj_type.removesuffix("s"))(name=reference)
+    def _rebuild_reference(self, reference: str) -> None:
+        """Delete and rebuild an optimisation problem component.
+
+        Args:
+            references (str): name of optimisation problem component.
+        """
+        obj_type = self._dataset[reference].attrs["obj_type"]
+        self.delete_component(reference, obj_type)
+        getattr(self, "add_" + obj_type.removesuffix("s"))(name=reference)
 
     @property
     def constraints(self):

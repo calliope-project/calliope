@@ -401,7 +401,8 @@ class PyomoBackendModel(backend_model.BackendModel):
             self.add_parameter(
                 name, new_values, default=self.inputs.defaults.get(name, np.nan)
             )
-            self._rebuild_references(refs_to_update)
+            for ref in refs_to_update:
+                self._rebuild_reference(ref)
             return None
 
         if missing_dims_in_new_vals:
