@@ -13,20 +13,19 @@ from __future__ import annotations
 import logging
 import warnings
 from pathlib import Path
-from typing import Callable, Literal, Optional, SupportsFloat, TypeVar, Union
+from typing import Callable, Literal, Optional, TypeVar, Union
 
 import xarray
 
 import calliope
 from calliope import exceptions
 from calliope.backend import parsing
-from calliope.backend.backend_model import BackendModel
 from calliope.backend.latex_backend_model import LatexBackendModel, MathDocumentation
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.core import io
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
-from calliope.core.util.tools import check_attr_exists, copy_docstring, relative_path
+from calliope.core.util.tools import relative_path
 from calliope.postprocess import results as postprocess_results
 from calliope.preprocess import model_run_from_dict, model_run_from_yaml
 from calliope.preprocess.model_data import ModelDataFactory
@@ -54,9 +53,7 @@ class Model(object):
 
     """
 
-    _BACKENDS: dict[str, Callable] = {
-        "pyomo": PyomoBackendModel,
-    }
+    _BACKENDS: dict[str, Callable] = {"pyomo": PyomoBackendModel}
 
     def __init__(
         self,
@@ -369,41 +366,6 @@ class Model(object):
             )
         return backend
 
-    @check_attr_exists("backend")
-    @copy_docstring(BackendModel.verbose_strings)
-    def verbose_strings(self) -> None:
-        self.backend.verbose_strings()
-
-    @check_attr_exists("backend")
-    @copy_docstring(BackendModel.update_parameter)
-    def update_parameter(
-        self, name: str, new_values: Union[xarray.DataArray, SupportsFloat]
-    ) -> None:
-        self.backend.update_parameter(name, new_values)
-
-    @check_attr_exists("backend")
-    @copy_docstring(BackendModel.update_variable_bounds)
-    def update_variable_bounds(
-        self,
-        name: str,
-        *,
-        min: Optional[Union[xarray.DataArray, SupportsFloat]] = None,
-        max: Optional[Union[xarray.DataArray, SupportsFloat]] = None,
-    ) -> None:
-        self.backend.update_variable_bounds(self, name, min, max)
-
-    @check_attr_exists("backend")
-    @copy_docstring(BackendModel.fix_variable)
-    def fix_variable(self, name: str, where: Optional[xarray.DataArray] = None) -> None:
-        self.backend.fix_variable(name, where)
-
-    @check_attr_exists("backend")
-    @copy_docstring(BackendModel.unfix_variable)
-    def unfix_variable(
-        self, name: str, where: Optional[xarray.DataArray] = None
-    ) -> None:
-        self.backend.unfix_variable(name, where)
-
     def solve(self, force: bool = False, warmstart: bool = False) -> None:
         """
         Run the built optimisation problem.
@@ -552,16 +514,6 @@ class Model(object):
 
         """
         io.save_csv(self._model_data, path, dropna)
-
-    @check_attr_exists("backend")
-    @copy_docstring(BackendModel.to_lp)
-    def to_lp(self, path: Union[str, Path]) -> None:
-        """
-        Raises:
-            exceptions.ModelError: This method cannot be called prior to calling `build()`.
-        """
-
-        self.backend.to_lp(path)
 
     def info(self):
         info_strings = []

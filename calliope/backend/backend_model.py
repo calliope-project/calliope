@@ -152,7 +152,7 @@ class BackendModel(ABC, Generic[T]):
                 Objective configuration dictionary, ready to be parsed and then evaluated.
         """
 
-    def add_component(
+    def _add_component(
         self,
         name: str,
         component_dict: Optional[Tp],
@@ -203,7 +203,7 @@ class BackendModel(ABC, Generic[T]):
         if break_early and not top_level_imask.any():
             return parsed_component
 
-        self.create_obj_list(name, component_type)
+        self._create_obj_list(name, component_type)
 
         equations = parsed_component.parse_equations(self.valid_math_element_names)
         if not equations:
@@ -447,7 +447,7 @@ class BackendModel(ABC, Generic[T]):
         """
 
     @abstractmethod
-    def create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+    def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         """Attach an empty list object to the backend model object.
         This may be a backend-specific subclass of a standard list object.
 
@@ -500,7 +500,7 @@ class BackendModel(ABC, Generic[T]):
 
         return results
 
-    def add_all_inputs_as_parameters(self) -> None:
+    def _add_all_inputs_as_parameters(self) -> None:
         """
         Add all parameters to backend dataset in-place, including those in the run configuration.
         If model data does not include a parameter, their default values will be added here
@@ -548,7 +548,7 @@ class BackendModel(ABC, Generic[T]):
             "bigM", xr.DataArray(self.inputs.run_config.get("bigM", 1e10))
         )
 
-    def apply_func(
+    def _apply_func(
         self, func: Callable, *args, output_core_dims: tuple = ((),), **kwargs
     ) -> xr.DataArray:
         """

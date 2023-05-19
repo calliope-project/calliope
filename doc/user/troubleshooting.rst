@@ -20,7 +20,8 @@ General strategies
 
   .. code-block:: python
 
-    model.to_lp('my_saved_model.lp')
+    model.build()
+    model.backend.to_lp('my_saved_model.lp')
 
 Improving solution times
 ------------------------

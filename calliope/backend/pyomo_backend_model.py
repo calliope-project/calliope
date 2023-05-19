@@ -9,16 +9,8 @@ import re
 from abc import ABC
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
-from typing import (
-    Any,
-    Iterable,
-    Iterator,
-    Literal,
-    Optional,
-    SupportsFloat,
-    TypeVar,
-    Union,
-)
+from typing import (Any, Iterable, Iterator, Literal, Optional, SupportsFloat,
+                    TypeVar, Union)
 
 import numpy as np
 import pandas as pd
@@ -59,7 +51,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._instance.constraints = pmo.constraint_dict()
         self._instance.objectives = pmo.objective_dict()
 
-        self.add_all_inputs_as_parameters()
+        self._add_all_inputs_as_parameters()
 
     def add_parameter(
         self,
@@ -70,9 +62,9 @@ class PyomoBackendModel(backend_model.BackendModel):
     ) -> None:
         self._raise_error_on_preexistence(parameter_name, "parameters")
 
-        self.create_obj_list(parameter_name, "parameters")
+        self._create_obj_list(parameter_name, "parameters")
 
-        parameter_da = self.apply_func(
+        parameter_da = self._apply_func(
             self._to_pyomo_param,
             parameter_values,
             name=parameter_name,
@@ -104,7 +96,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             self._check_expr_imask_consistency(lhs, imask, f"(constraints, {name})")
             self._check_expr_imask_consistency(rhs, imask, f"(constraints, {name})")
 
-            to_fill = self.apply_func(
+            to_fill = self._apply_func(
                 self._to_pyomo_constraint,
                 imask,
                 lhs,
@@ -114,7 +106,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             )
             return to_fill
 
-        self.add_component(name, constraint_dict, _constraint_setter, "constraints")
+        self._add_component(name, constraint_dict, _constraint_setter, "constraints")
 
     def add_global_expression(
         self,
@@ -131,7 +123,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
             self._check_expr_imask_consistency(expr, imask, f"(expressions, {name})")
 
-            to_fill = self.apply_func(
+            to_fill = self._apply_func(
                 self._to_pyomo_expression,
                 imask,
                 expr,
@@ -142,7 +134,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         self.valid_math_element_names.add(name)
 
-        self.add_component(
+        self._add_component(
             name, expression_dict, _expression_setter, "global_expressions"
         )
 
@@ -161,7 +153,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
 
             lb, ub = self._get_capacity_bounds(name, variable_dict["bounds"])
-            return self.apply_func(
+            return self._apply_func(
                 self._to_pyomo_variable,
                 imask,
                 ub,
@@ -172,7 +164,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         self.valid_math_element_names.add(name)
 
-        self.add_component(name, variable_dict, _variable_setter, "variables")
+        self._add_component(name, variable_dict, _variable_setter, "variables")
 
     def add_objective(
         self,
@@ -198,7 +190,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             self._instance.objectives[name].append(objective)
             return xr.DataArray(objective)
 
-        self.add_component(name, objective_dict, _objective_setter, "objectives")
+        self._add_component(name, objective_dict, _objective_setter, "objectives")
 
     def get_parameter(
         self,
@@ -212,7 +204,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         if as_backend_objs or not isinstance(parameter, xr.DataArray):
             return parameter
 
-        param_as_vals = self.apply_func(self._from_pyomo_param, parameter)
+        param_as_vals = self._apply_func(self._from_pyomo_param, parameter)
         if parameter.original_dtype.kind == "M":  # i.e., np.datetime64
             return xr.apply_ufunc(pd.to_datetime, param_as_vals)
         else:
@@ -228,7 +220,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         if constraint is None:
             raise KeyError(f"Unknown constraint: {name}")
         if isinstance(constraint, xr.DataArray) and not as_backend_objs:
-            constraint_attrs = self.apply_func(
+            constraint_attrs = self._apply_func(
                 self._from_pyomo_constraint,
                 constraint,
                 eval_body=eval_body,
@@ -247,7 +239,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         if variable is None:
             raise KeyError(f"Unknown variable: {name}")
         if isinstance(variable, xr.DataArray) and not as_backend_objs:
-            return self.apply_func(self._from_pyomo_param, variable)
+            return self._apply_func(self._from_pyomo_param, variable)
         else:
             return variable
 
@@ -261,7 +253,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         if global_expression is None:
             raise KeyError(f"Unknown global_expression: {name}")
         if isinstance(global_expression, xr.DataArray) and not as_backend_objs:
-            return self.apply_func(
+            return self._apply_func(
                 self._from_pyomo_expr, global_expression, eval_body=eval_body
             )
         else:
@@ -327,13 +319,13 @@ class PyomoBackendModel(backend_model.BackendModel):
                 for da in self._dataset.filter_by_attrs(
                     coords_in_name=False, **{"obj_type": component_type}
                 ).values():
-                    self.apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
+                    self._apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
                     da.attrs["coords_in_name"] = True
 
     def to_lp(self, path: Union[str, Path]) -> None:
         self._instance.write(str(path), format="lp", symbolic_solver_labels=True)
 
-    def create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+    def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         """Attach an empty pyomo kernel list object to the pyomo model object.
 
         Args:
@@ -398,7 +390,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 f"New values will be broadcast along the {missing_dims_in_new_vals} dimension(s)"
             )
 
-        self.apply_func(self._update_pyomo_param, parameter_da, new_values)
+        self._apply_func(self._update_pyomo_param, parameter_da, new_values)
 
     def update_variable_bounds(
         self,
@@ -422,19 +414,19 @@ class PyomoBackendModel(backend_model.BackendModel):
                     f"Cannot update variable bounds that have been set by parameters. use `update_parameter({existing_bound_param})` to update the {bound_name} bound of {name}"
                 )
             kwargs[translator[bound_name]] = new_bounds
-        self.apply_func(self._update_pyomo_variable, variable_da, **kwargs)
+        self._apply_func(self._update_pyomo_variable, variable_da, **kwargs)
 
     def fix_variable(self, name: str, where: Optional[xr.DataArray] = None) -> None:
         variable_da = self.get_variable(name)
         if where is not None:
             variable_da = variable_da.where(where.fillna(0))
-        self.apply_func(self._fix_pyomo_variable, variable_da)
+        self._apply_func(self._fix_pyomo_variable, variable_da)
 
     def unfix_variable(self, name: str, where: Optional[xr.DataArray] = None) -> None:
         variable_da = self.get_variable(name)
         if where is not None:
             variable_da = variable_da.where(where.fillna(0))
-        self.apply_func(self._unfix_pyomo_variable, variable_da)
+        self._apply_func(self._unfix_pyomo_variable, variable_da)
 
     @staticmethod
     def _check_expr_imask_consistency(
@@ -493,7 +485,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             else:
                 # TODO: decide if this parameter should be added to the backend dataset too
                 name_ = f"__{name}_{bound}"
-                self.create_obj_list(name_, "parameters")
+                self._create_obj_list(name_, "parameters")
                 return xr.DataArray(self._to_pyomo_param(this_bound, name=name_))
 
         scale = __get_bound("scale")

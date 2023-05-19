@@ -204,7 +204,7 @@ class TestLatexBackendModel:
         assert param.equals(xr.DataArray(1))
 
     def test_create_obj_list(self, dummy_latex_backend_model):
-        assert dummy_latex_backend_model.create_obj_list("var", "variables") is None
+        assert dummy_latex_backend_model._create_obj_list("var", "variables") is None
 
     def test_get_constraint(self, dummy_latex_backend_model):
         constr = dummy_latex_backend_model.get_constraint("constr")

@@ -1993,7 +1993,7 @@ class TestNewBackend:
         def _update_param(param):
             param.value = param.value * 1000
 
-        simple_supply_new_build.backend.apply_func(
+        simple_supply_new_build.backend._apply_func(
             _update_param,
             simple_supply_new_build.backend.parameters.resource.loc[
                 {"techs": "test_demand_elec"}
@@ -2167,7 +2167,7 @@ class TestNewBackend:
     )
     def test_create_and_delete_pyomo_list(self, simple_supply_new_build, component):
         backend_instance = simple_supply_new_build.backend._instance
-        simple_supply_new_build.backend.create_obj_list("foo", component)
+        simple_supply_new_build.backend._create_obj_list("foo", component)
         assert "foo" in getattr(backend_instance, component).keys()
 
         simple_supply_new_build.backend.delete_component("foo", component)

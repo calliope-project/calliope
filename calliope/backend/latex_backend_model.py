@@ -265,7 +265,7 @@ class LatexBackendModel(backend_model.BackendModel):
         backend_model.BackendModel.__init__(self, inputs, instance=dict())
         self.include = include
 
-        self.add_all_inputs_as_parameters()
+        self._add_all_inputs_as_parameters()
 
     def add_parameter(
         self,
@@ -290,7 +290,7 @@ class LatexBackendModel(backend_model.BackendModel):
             self._add_latex_strings(imask, element, equation_strings)
             return imask.where(imask)
 
-        parsed_component = self.add_component(
+        parsed_component = self._add_component(
             name,
             constraint_dict,
             _constraint_setter,
@@ -319,7 +319,7 @@ class LatexBackendModel(backend_model.BackendModel):
             self._add_latex_strings(imask, element, equation_strings)
             return imask.where(imask)
 
-        parsed_component = self.add_component(
+        parsed_component = self._add_component(
             name,
             expression_dict,
             _expression_setter,
@@ -345,7 +345,7 @@ class LatexBackendModel(backend_model.BackendModel):
         if variable_dict is None:
             variable_dict = self.inputs.math["variables"][name]
 
-        parsed_component = self.add_component(
+        parsed_component = self._add_component(
             name, variable_dict, lambda imask: imask, "variables", break_early=False
         )
         imask = self.variables[name]
@@ -381,7 +381,7 @@ class LatexBackendModel(backend_model.BackendModel):
             self._add_latex_strings(imask, element, equation_strings)
             return None
 
-        parsed_component = self.add_component(
+        parsed_component = self._add_component(
             name, objective_dict, _objective_setter, "objectives", break_early=False
         )
 
@@ -411,7 +411,7 @@ class LatexBackendModel(backend_model.BackendModel):
     ) -> xr.DataArray:
         return self.global_expressions[name]
 
-    def create_obj_list(
+    def _create_obj_list(
         self, key: str, component_type: backend_model._COMPONENTS_T
     ) -> None:
         return None
