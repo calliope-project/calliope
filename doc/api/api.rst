@@ -27,11 +27,11 @@ Time series
 
 .. _api_backend_interface:
 
-Pyomo backend interface
-=======================
+Methods to interface with the optimisation problem (a.k.a., `backend`)
+======================================================================
 
-.. autoclass:: calliope.backend.pyomo.interface.BackendInterfaceMethods
-    :members: access_model_inputs, update_param, activate_constraint, rerun
+.. autoclass:: calliope.backend.backend_model
+    :members:
 
 .. _api_utility_classes:
 

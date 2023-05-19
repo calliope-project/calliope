@@ -532,6 +532,9 @@ class LatexBackendModel(backend_model.BackendModel):
     def to_lp(self, *args, **kwargs):
         super().to_lp(*args, **kwargs)
 
+    def get_variable_bounds(self, *args, **kwargs):
+        super().get_variable_bounds(*args, **kwargs)
+
     def update_parameter(self, *args, **kwargs) -> None:
         super().to_lp(*args, **kwargs)
 

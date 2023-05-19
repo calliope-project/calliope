@@ -9,8 +9,16 @@ import re
 from abc import ABC
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
-from typing import (Any, Iterable, Iterator, Literal, Optional, SupportsFloat,
-                    TypeVar, Union)
+from typing import (
+    Any,
+    Iterable,
+    Iterator,
+    Literal,
+    Optional,
+    SupportsFloat,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -238,10 +246,20 @@ class PyomoBackendModel(backend_model.BackendModel):
         variable = self.variables.get(name, None)
         if variable is None:
             raise KeyError(f"Unknown variable: {name}")
-        if isinstance(variable, xr.DataArray) and not as_backend_objs:
-            return self._apply_func(self._from_pyomo_param, variable)
-        else:
+        if as_backend_objs:
             return variable
+        else:
+            return self._apply_func(self._from_pyomo_param, variable)
+
+    def get_variable_bounds(self, name: str) -> xr.Dataset:
+        variable = self.get_variable(name, as_backend_objs=True)
+        variable_attrs = self._apply_func(
+            self._from_pyomo_variable_bounds,
+            variable,
+            output_core_dims=(["attributes"],),
+        )
+        variable_attrs.coords["attributes"] = ["lb", "ub"]
+        return variable_attrs.to_dataset("attributes")
 
     def get_global_expression(
         self,
@@ -375,9 +393,10 @@ class PyomoBackendModel(backend_model.BackendModel):
             or (parameter_da.isnull() & new_values.notnull()).any()
         ):
             refs_to_update = self._find_all_references(parameter_da.attrs["references"])
-            logger.warning(
-                f"Defining values for a previously fully/partially undefined parameter. The optimisation problem components {refs_to_update} will be re-built."
-            )
+            if refs_to_update:
+                logger.warning(
+                    f"Defining values for a previously fully/partially undefined parameter. The optimisation problem components {refs_to_update} will be re-built."
+                )
             self.delete_component(name, "parameters")
             self.add_parameter(
                 name, new_values, default=self.inputs.defaults.get(name, np.nan)
@@ -387,7 +406,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         if missing_dims_in_new_vals:
             logger.warning(
-                f"New values will be broadcast along the {missing_dims_in_new_vals} dimension(s)"
+                f"New values will be broadcast along the {missing_dims_in_new_vals} dimension(s)."
             )
 
         self._apply_func(self._update_pyomo_param, parameter_da, new_values)
@@ -400,21 +419,32 @@ class PyomoBackendModel(backend_model.BackendModel):
         max: Optional[Union[xr.DataArray, SupportsFloat]] = None,
     ) -> None:
         translator = {"min": "lb", "max": "ub"}
-        kwargs: dict = {}
         variable_da = self.get_variable(name)
 
         for bound_name, new_bounds in {"min": min, "max": max}.items():
             if new_bounds is None:
                 continue
+
             existing_bound_param = self.inputs.math.get_key(
                 f"variables.{name}.bounds.{bound_name}", None
             )
             if existing_bound_param in self.parameters:
                 raise BackendError(
-                    f"Cannot update variable bounds that have been set by parameters. use `update_parameter({existing_bound_param})` to update the {bound_name} bound of {name}"
+                    f"Cannot update variable bounds that have been set by parameters. use `update_parameter('{existing_bound_param}')` to update the {bound_name} bound of {name}."
                 )
-            kwargs[translator[bound_name]] = new_bounds
-        self._apply_func(self._update_pyomo_variable, variable_da, **kwargs)
+
+            bound_da = xr.DataArray(new_bounds)
+            missing_dims_in_new_vals = set(variable_da.dims).difference(bound_da.dims)
+            if missing_dims_in_new_vals:
+                logger.warning(
+                    f"New `{bound_name}` bounds for variable `{name}` will be broadcast along the {missing_dims_in_new_vals} dimension(s)."
+                )
+            self._apply_func(
+                self._update_pyomo_variable,
+                variable_da,
+                xr.DataArray(new_bounds),
+                bound=translator[bound_name],
+            )
 
     def fix_variable(self, name: str, where: Optional[xr.DataArray] = None) -> None:
         variable_da = self.get_variable(name)
@@ -546,7 +576,9 @@ class PyomoBackendModel(backend_model.BackendModel):
         if pd.notnull(new):
             orig.value = new
 
-    def _update_pyomo_variable(self, orig: ObjVariable, **kwargs) -> None:
+    def _update_pyomo_variable(
+        self, orig: ObjVariable, new: Any, *, bound: Literal["lb", "ub"]
+    ) -> None:
         """Utility function to update pyomo variable bounds in-place.
 
         Args:
@@ -555,9 +587,8 @@ class PyomoBackendModel(backend_model.BackendModel):
             lb (Any): Value with which to update the lower bound of the variable.
             ub (Any): Value with which to update the upper bound of the variable.
         """
-        for bound, bound_val in kwargs.items():
-            if pd.notnull(bound_val):
-                setattr(orig, bound, bound_val)
+        if pd.notnull(orig) and pd.notnull(new):
+            setattr(orig, bound, new)
 
     def _fix_pyomo_variable(self, orig: ObjVariable) -> None:
         """Utility function to fix a pyomo variable to its value in the optimisation model solution.
@@ -742,6 +773,22 @@ class PyomoBackendModel(backend_model.BackendModel):
                 body = val.body.to_string()
             vals = [val.lb, body, val.ub]
         return pd.Series(data=vals, index=["lb", "body", "ub"])
+
+    @staticmethod
+    def _from_pyomo_variable_bounds(val: ObjVariable) -> pd.Series:
+        """Evaluate Pyomo decision variable object bounds.
+
+        Args:
+            val (ObjVariable): Variable object to be evaluated.
+
+        Returns:
+            pd.Series: Array of variable upper and lower bound.
+        """
+        if pd.isnull(val):
+            vals = [np.nan, np.nan]
+        else:
+            vals = [val.lb, val.ub]
+        return pd.Series(data=vals, index=["lb", "ub"])
 
     @staticmethod
     def _from_pyomo_expr(val: pmo.expression, *, eval_body: bool = False) -> Any:

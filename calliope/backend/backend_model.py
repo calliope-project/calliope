@@ -7,8 +7,17 @@ import logging
 import typing
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import (TYPE_CHECKING, Any, Callable, Generic, Literal, Optional,
-                    SupportsFloat, TypeVar, Union)
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Literal,
+    Optional,
+    SupportsFloat,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -268,7 +277,7 @@ class BackendModel(ABC, Generic[T]):
                 Defaults to True.
 
         Returns:
-            Optional[xr.DataArray]: If parameter is not in backend dataset, will return None.
+            xr.DataArray: parameter array.
         """
 
     @abstractmethod
@@ -298,8 +307,7 @@ class BackendModel(ABC, Generic[T]):
                 Defaults to False.
 
         Returns:
-            Optional[Union[xr.DataArray, xr.Dataset]]:
-                If constraint is not in backend dataset, will return None.
+            Union[xr.DataArray, xr.Dataset]:
                 If as_backend_objs is True, will return an xr.DataArray.
                 Otherwise, a xr.Dataset will be given, indexed over the same dimensions as the xr.DataArray, with variables for the constraint body, and upper (`ub`) and lower (`lb`) bounds.
         """
@@ -321,7 +329,18 @@ class BackendModel(ABC, Generic[T]):
                 Defaults to True.
 
         Returns:
-            Optional[xr.DataArray]: If decision variable is not in backend dataset, will return None.
+            xr.DataArray: Decision variable array.
+        """
+
+    @abstractmethod
+    def get_variable_bounds(self, name: str) -> xr.Dataset:
+        """Extract decision variable upper and lower bound array from backend dataset
+
+        Args:
+            variable_name (str): Name of variable.
+
+        Returns:
+            xr.Dataset: Contains the arrays for upper ("ub", a.k.a. "max") and lower ("lb", a.k.a. "min") variable bounds.
         """
 
     @abstractmethod
@@ -347,7 +366,7 @@ class BackendModel(ABC, Generic[T]):
                 Defaults to True.
 
         Returns:
-            Optional[xr.DataArray]: If global_expression is not in backend dataset, will return None.
+            xr.DataArray: global expression array.
         """
 
     @abstractmethod
