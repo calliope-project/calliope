@@ -30,7 +30,7 @@ Time series
 Methods to interface with the optimisation problem (a.k.a., `backend`)
 ======================================================================
 
-.. autoclass:: calliope.backend.backend_model
+.. autoclass:: calliope.backend.backend_model.BackendModel
     :members:
 
 .. _api_utility_classes:
