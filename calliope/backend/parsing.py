@@ -70,7 +70,6 @@ class UnparsedObjectiveDict(TypedDict):
     description: NotRequired[str]
     equations: Required[list[UnparsedEquationDict]]
     sub_expressions: NotRequired[dict[str, list[UnparsedEquationDict]]]
-    domain: str
     sense: str
 
 

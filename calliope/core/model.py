@@ -23,7 +23,7 @@ from calliope.backend import backends, latex_backend, parsing
 from calliope.core import io
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
-from calliope.core.util.tools import copy_docstring, relative_path
+from calliope.core.util.tools import copy_docstring, relative_path, validate_dict
 from calliope.postprocess import results as postprocess_results
 from calliope.preprocess import model_run_from_dict, model_run_from_yaml
 from calliope.preprocess.model_data import ModelDataFactory
@@ -50,9 +50,10 @@ class Model(object):
 
     """
 
-    _BACKENDS: dict[str, Callable] = {
-        "pyomo": backends.PyomoBackendModel,
-    }
+    _BACKENDS: dict[str, Callable] = {"pyomo": backends.PyomoBackendModel}
+    _MATH_SCHEMA = AttrDict.from_yaml(
+        Path(calliope.__file__).parent / "config" / "math_schema.yaml"
+    )
 
     def __init__(
         self,
@@ -374,6 +375,7 @@ class Model(object):
             comment="Model: Generated optimisation problem parameters",
         )
         self._add_run_mode_custom_math()
+        validate_dict(self.math, self._MATH_SCHEMA, "math")
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
         for components in [
@@ -383,7 +385,7 @@ class Model(object):
             "objectives",
         ]:
             component = components.removesuffix("s")
-            if components in ["variables", "expressions"]:
+            if components in ["variables", "global_expressions"]:
                 backend.valid_math_element_names.update(self.math[components].keys())
             for name, dict_ in self.math[components].items():
                 if dict_.get("active", True):
@@ -608,6 +610,7 @@ class Model(object):
             If all components of the dictionary are parsed successfully, this function will log a success message to the INFO logging level and return None.
             Otherwise, a calliope.ModelError will be raised with parsing issues listed.
         """
+        validate_dict(math_dict, self._MATH_SCHEMA, "math")
         valid_math_element_names = [
             *self.math["variables"].keys(),
             *self.math["global_expressions"].keys(),

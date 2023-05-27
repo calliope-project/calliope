@@ -70,21 +70,19 @@ def print_warnings_and_raise_errors(
     Concatenate collections of warnings/errors and print (warnings) / raise ModelError (errors) with a bullet point list of the concatenated collections.
 
     Lists will return simple bullet lists:
-    E.g. warnings=["foo", "bar"] becomes:
-    ```
-    Possible issues found during model processing:
-     * foo
-     * bar
-    ```
+    E.g. warnings=["foo", "bar"] becomes::
+
+        Possible issues found during model processing:
+        * foo
+        * bar
 
     Dicts of lists will return nested bullet lists:
-    E.g. errors={"foo": ["foobar", "foobaz"]} becomes:
-    ```
-    Errors during model processing:
-     * foo
-        * foobar
-        * foobaz
-    ```
+    E.g. errors={"foo": ["foobar", "foobaz"]} becomes::
+
+        Errors during model processing:
+        * foo
+            * foobar
+            * foobaz
 
     Args:
         warnings (Optional[Union[list[str], dict[str, list[str]]]], optional):
