@@ -10,10 +10,10 @@ used for managing model configuration.
 
 """
 
-import io
-from pathlib import Path
-import logging
 import copy
+import io
+import logging
+from pathlib import Path
 
 import numpy as np
 import ruamel.yaml as ruamel_yaml

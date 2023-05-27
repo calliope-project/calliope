@@ -1,13 +1,12 @@
-import pytest
 from itertools import chain, combinations
 
-import xarray as xr
 import numpy as np
+import pytest
+import xarray as xr
 
-from calliope.test.common.util import build_test_model as build_model
-from calliope.backend import latex_backend, backends
 from calliope import AttrDict
-
+from calliope.backend import backends, latex_backend
+from calliope.test.common.util import build_test_model as build_model
 
 ALL_DIMS = {"nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"}
 
@@ -24,14 +23,6 @@ def foreach(request):
 
 @pytest.fixture(scope="session")
 def simple_supply():
-    m = build_model({}, "simple_supply,two_hours,investment_costs")
-    m.build()
-    m.solve()
-    return m
-
-
-@pytest.fixture(scope="class")
-def simple_supply_new_build():
     m = build_model({}, "simple_supply,two_hours,investment_costs")
     m.build()
     m.solve()

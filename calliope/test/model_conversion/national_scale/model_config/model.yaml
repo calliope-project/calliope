@@ -5,8 +5,8 @@
 # Can either be paths relative to this file, or absolute paths
 
 import:
-    - 'techs.yaml'
-    - 'locations.yaml'
+  - "techs.yaml"
+  - "locations.yaml"
 
 ##
 # MODEL NAME
@@ -14,14 +14,13 @@ import:
 
 name: "Test model"
 
-
 ##
 # DATASET PATH
 ##
 
 # Can either be a path relative to this file, or an absolute path
 
-data_path: 'data'
+data_path: "data"
 
 ##
 # OBJECTIVE FUNCTION
@@ -35,12 +34,12 @@ data_path: 'data'
 ##
 
 constraints:
-    - constraints.optional.ramping_rate
+  - constraints.optional.ramping_rate
 
 ##
 # OTHER MODEL-WIDE OPTIONS
 ##
 
 system_margin:
-    power: 0
-    heat: 0
+  power: 0
+  heat: 0

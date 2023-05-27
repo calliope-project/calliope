@@ -275,9 +275,9 @@ class TestVerboseStrings:
             "Call `build()` to generate an optimisation problem before calling this function.",
         )
 
-    def test_verbose_strings(self, simple_supply_new_build):
+    def test_verbose_strings(self, simple_supply):
         def _compare_to_string(group, component, dims, verbose):
-            component_obj = simple_supply_new_build.backend._dataset[component]
+            component_obj = simple_supply.backend._dataset[component]
             if verbose:
                 dim_list = ", ".join(dims[k] for k in component_obj.dims)
                 expected = f"{group}[{component}][{dim_list}]"
@@ -295,7 +295,7 @@ class TestVerboseStrings:
         assert _compare_to_string("parameters", "resource", dims_param, False)
         assert _compare_to_string("variables", "carrier_con", dims_var, False)
 
-        simple_supply_new_build.verbose_strings()
+        simple_supply.verbose_strings()
 
         assert _compare_to_string("parameters", "resource", dims_param, True)
         assert _compare_to_string("variables", "carrier_con", dims_var, True)

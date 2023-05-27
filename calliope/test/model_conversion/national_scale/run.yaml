@@ -2,15 +2,15 @@
 # RUN SETTINGS
 ##
 
-name: "Test run"  # Run name -- distinct from model name!
+name: "Test run" # Run name -- distinct from model name!
 
-model: 'model_config/model.yaml'
+model: "model_config/model.yaml"
 
-output:  # Only used if run via the 'calliope run' command-line tool
-    format: csv  # Choices: netcdf, csv
-    path: 'Output'  # Will be created if it doesn't exist
+output: # Only used if run via the 'calliope run' command-line tool
+  format: csv # Choices: netcdf, csv
+  path: "Output" # Will be created if it doesn't exist
 
-mode: plan  # Choices: plan, operate
+mode: plan # Choices: plan, operate
 
 solver: cbc
 
@@ -21,19 +21,19 @@ solver: cbc
 # Ignored unless run via the 'calliope generate' tool
 
 parallel:
-    name: example-model-national
-    environment: bsub  # Choices: bsub, qsub
-    pre_run:  # Commands to run before executing model
-    post_run:  # Commands to run after executing model
-    iterations:
-        - subset_t: ['2005-01-01', '2005-01-31']
-          override.nodes.r1.techs: ['demand', 'unmet_demand', 'ccgt']
-        - subset_t: ['2005-02-01', '2005-02-31']
-          override.nodes.r1.techs: ['demand', 'unmet_demand']
-    resources:  # Request resources on a computing cluster
-        threads:  # Non-default number of threads
-        wall_time:  # Run time (minutes)
-        memory:  # Working memory (MB)
+  name: example-model-national
+  environment: bsub # Choices: bsub, qsub
+  pre_run: # Commands to run before executing model
+  post_run: # Commands to run after executing model
+  iterations:
+    - subset_t: ["2005-01-01", "2005-01-31"]
+      override.nodes.r1.techs: ["demand", "unmet_demand", "ccgt"]
+    - subset_t: ["2005-02-01", "2005-02-31"]
+      override.nodes.r1.techs: ["demand", "unmet_demand"]
+  resources: # Request resources on a computing cluster
+    threads: # Non-default number of threads
+    wall_time: # Run time (minutes)
+    memory: # Working memory (MB)
 
 ##
 # TIME RESOLUTION ADJUSTMENT
@@ -52,9 +52,9 @@ parallel:
 
 # Leave any of these empty to disable subsetting
 
-subset_y: []  # Subset of technologies
-subset_x: []  # Subset of nodes
-subset_t: ['2005-01-01', '2005-01-02']  # Subset of timesteps
+subset_y: [] # Subset of technologies
+subset_x: [] # Subset of nodes
+subset_t: ["2005-01-01", "2005-01-02"] # Subset of timesteps
 
 ##
 # MODEL SETTINGS OVERRIDE
@@ -69,5 +69,5 @@ override:
 ##
 
 debug:
-    keep_temp_files: false  # Keep temporary files
-    symbolic_solver_labels: false # Use human-readable component labels? (slower)
+  keep_temp_files: false # Keep temporary files
+  symbolic_solver_labels: false # Use human-readable component labels? (slower)

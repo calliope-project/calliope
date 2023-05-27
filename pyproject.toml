@@ -21,3 +21,6 @@ exclude = '''
   | requirements
 )/
 '''
+
+[tool.isort]
+profile = "black"

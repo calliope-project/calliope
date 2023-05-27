@@ -1,17 +1,16 @@
-import pytest
-import os
 import logging
+import os
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import calliope
-from calliope.preprocess.model_data import ModelDataFactory
-from calliope.core.attrdict import AttrDict
-from calliope._version import __version__
 import calliope.exceptions as exceptions
-
+from calliope._version import __version__
+from calliope.core.attrdict import AttrDict
 from calliope.preprocess import model_run_from_yaml
+from calliope.preprocess.model_data import ModelDataFactory
 from calliope.test.common.util import check_error_or_warning
 
 

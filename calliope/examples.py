@@ -13,7 +13,6 @@ import os
 
 from calliope.core.model import Model
 
-
 _PATHS = {
     "national_scale": os.path.join(
         os.path.dirname(__file__), "example_models", "national_scale"
