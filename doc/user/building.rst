@@ -297,6 +297,8 @@ The modeller can also specify a distance for each link, and use per-distance con
 
     :ref:`config_reference_constraints`, :ref:`config_reference_costs`.
 
+.. _run_config:
+
 ---------------------------
 Run configuration (``run``)
 ---------------------------

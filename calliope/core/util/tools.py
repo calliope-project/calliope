@@ -2,14 +2,14 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
 
-from typing import TypeVar, Callable
-from typing_extensions import ParamSpec
-from copy import deepcopy
 import functools
 import importlib
 import operator
 import os
 import sys
+from typing import Callable, TypeVar
+
+from typing_extensions import ParamSpec
 
 import jsonschema
 
@@ -113,10 +113,20 @@ def plugin_load(name, builtin_module):
 
 
 def copy_docstring(wrapper: Callable[P, T]):
-    """Decorator to copy across a function docstring to the wrapped function."""
+    """
+    Decorator to copy across a function docstring to the wrapped function.
+    Any additional documentation in the wrapped function will be appended to the copied
+    docstring.
+    """
 
     def decorator(func: Callable) -> Callable[P, T]:
-        func.__doc__ = wrapper.__doc__
+        func_doc = ""
+        if wrapper.__doc__ is not None:
+            func_doc += wrapper.__doc__
+        if func.__doc__ is not None:
+            func_doc += func.__doc__
+        func.__doc__ = func_doc
+
         return func
 
     return decorator

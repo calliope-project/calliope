@@ -69,9 +69,6 @@ def model_run_from_yaml(
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
     )
-    subsets = AttrDict.from_yaml(
-        os.path.join(os.path.dirname(calliope.__file__), "config", "subsets.yaml")
-    )
 
     return generate_model_run(
         config_with_overrides,
@@ -79,7 +76,6 @@ def model_run_from_yaml(
         debug_comments,
         overrides,
         scenario,
-        subsets,
     )
 
 
@@ -113,9 +109,6 @@ def model_run_from_dict(
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
     )
-    subsets = AttrDict.from_yaml(
-        os.path.join(os.path.dirname(calliope.__file__), "config", "subsets.yaml")
-    )
 
     return generate_model_run(
         config_with_overrides,
@@ -123,7 +116,6 @@ def model_run_from_dict(
         debug_comments,
         overrides,
         scenario,
-        subsets,
     )
 
 
@@ -674,12 +666,7 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
 
 def generate_model_run(
-    config,
-    timeseries_dataframes,
-    debug_comments,
-    applied_overrides,
-    scenario,
-    subsets,
+    config, timeseries_dataframes, debug_comments, applied_overrides, scenario
 ):
     """
     Returns a processed model_run configuration AttrDict and a debug
@@ -729,10 +716,6 @@ def generate_model_run(
     # 6) Grab additional relevant bits from run and model config
     model_run["run"] = config["run"]
     model_run["model"] = config["model"]
-
-    # model_run["sets"] = all_sets
-    model_run["subsets"] = subsets
-    # model_run["constraint_sets"] = constraint_sets.generate_constraint_sets(model_run)
 
     # 8) Final sense-checking
     final_check_comments, warning_messages, errors = checks.check_final(model_run)

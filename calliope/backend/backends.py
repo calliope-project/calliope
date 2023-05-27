@@ -9,6 +9,7 @@ import re
 import typing
 from abc import ABC, abstractmethod
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -23,11 +24,11 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-import pyomo.environ as pe
-import pyomo.kernel as pmo
+import pyomo.environ as pe  # type: ignore
+import pyomo.kernel as pmo  # type: ignore
 import xarray as xr
-from pyomo.common.tempfiles import TempfileManager
-from pyomo.opt import SolverFactory
+from pyomo.common.tempfiles import TempfileManager  # type: ignore
+from pyomo.opt import SolverFactory  # type: ignore
 
 from calliope.backend import parsing
 from calliope.core.util.logging import LogWriter
@@ -44,6 +45,7 @@ logger = logging.getLogger(__name__)
 
 class BackendModel(ABC, Generic[T]):
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
+    _COMPONENT_ATTR_METADATA = ["description", "unit"]
 
     def __init__(self, instance: T):
         """Abstract base class for interfaces to solvers.
@@ -300,6 +302,28 @@ class BackendModel(ABC, Generic[T]):
                 Defaults to False.
         """
 
+    @abstractmethod
+    def create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+        """Attach an empty list object to the backend model object.
+        This may be a backend-specific subclass of a standard list object.
+
+        Args:
+            key (str): Name of object.
+            component_type (str): Object type.
+
+        Raises:
+            BackendError: Cannot overwrite object of same name and type.
+        """
+
+    @abstractmethod
+    def delete_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+        """Delete a list object from the backend model object.
+
+        Args:
+            key (str): Name of object.
+            component_type (str): Object type.
+        """
+
     def load_results(self) -> xr.Dataset:
         """
         Evaluate backend decision variables, global expressions, and parameters (if not in inputs)
@@ -308,14 +332,21 @@ class BackendModel(ABC, Generic[T]):
         Returns:
             xr.Dataset: Dataset of optimal solution results (all numeric data).
         """
+
+        def _drop_attrs(da):
+            da.attrs = {
+                k: v for k, v in da.attrs.items() if k in self._COMPONENT_ATTR_METADATA
+            }
+            return da
+
         all_variables = {
-            name_: self.get_variable(name_, as_backend_objs=False)
+            name_: _drop_attrs(self.get_variable(name_, as_backend_objs=False))
             for name_, var in self.variables.items()
             if var.notnull().any()
         }
         all_global_expressions = {
-            name_: self.get_global_expression(
-                name_, as_backend_objs=False, eval_body=True
+            name_: _drop_attrs(
+                self.get_global_expression(name_, as_backend_objs=False, eval_body=True)
             )
             for name_, expr in self.global_expressions.items()
             if expr.notnull().any()
@@ -354,7 +385,7 @@ class BackendModel(ABC, Generic[T]):
                 param_name, xr.DataArray(default_val), use_inf_as_na=False
             )
 
-        for option_name, option_val in run_config["objective_options"].items():
+        for option_name, option_val in run_config.get("objective_options", {}).items():
             if option_name == "cost_class":
                 objective_cost_class = {
                     k: v for k, v in option_val.items() if k in model_data.costs
@@ -415,8 +446,17 @@ class BackendModel(ABC, Generic[T]):
         Only string representations of model parameters and variables will be updated since global expressions automatically show the string representation of their contents.
         """
 
+    @abstractmethod
+    def to_lp(self, path: Union[str, Path]) -> None:
+        """Write the optimisation problem to file in the linear programming LP format.
+        The LP file can be used for debugging and to submit to solvers directly.
+
+        Args:
+            path (Union[str, Path]): Path to which the LP file will be written.
+        """
+
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
-        f"""
+        """
         We do not allow any overlap of backend object names since they all have to
         co-exist in the backend dataset.
         I.e., users cannot overwrite any backend component with another
@@ -424,7 +464,7 @@ class BackendModel(ABC, Generic[T]):
 
         Args:
             key (str): Backend object name
-            obj_type (str): Object type (one of {self._VALID_COMPONENTS})
+            obj_type (Literal["variables", "constraints", "objectives", "parameters", "expressions"]): Object type.
 
         Raises:
             BackendError:
@@ -437,11 +477,7 @@ class BackendModel(ABC, Generic[T]):
                     f"Trying to add already existing `{key}` to backend model {obj_type}."
                 )
             else:
-                other_obj_type = [
-                    k.removesuffix("s")
-                    for k, v in self._dataset[key].attrs.items()
-                    if k in self._VALID_COMPONENTS and v == 1
-                ][0]
+                other_obj_type = self._dataset[key].attrs["obj_type"].removesuffix("s")
                 raise BackendError(
                     f"Trying to add already existing *{other_obj_type}* `{key}` "
                     f"as a backend model *{obj_type.removesuffix('s')}*."
@@ -479,16 +515,23 @@ class BackendModel(ABC, Generic[T]):
                 All referenced objects will have their "references" attribute updated with this object's name.
                 Defaults to None.
         """
-        from_unparsed_dict = ["description", "unit"]
+
         add_attrs = {
             attr: unparsed_dict.get(attr)
-            for attr in from_unparsed_dict
+            for attr in self._COMPONENT_ATTR_METADATA
             if attr in unparsed_dict.keys()
         }
 
-        self._dataset[name] = da.assign_attrs(
-            {obj_type: 1, "references": set(), "coords_in_name": False, **add_attrs}
+        da.attrs.update(
+            {
+                "obj_type": obj_type,
+                "references": set(),
+                "coords_in_name": False,
+                **add_attrs,  # type: ignore
+            }
         )
+        self._dataset[name] = da
+
         if references is not None:
             for reference in references:
                 self._dataset[reference].attrs["references"].add(name)
@@ -496,27 +539,27 @@ class BackendModel(ABC, Generic[T]):
     @property
     def constraints(self):
         "Slice of backend dataset to show only built constraints"
-        return self._dataset.filter_by_attrs(constraints=1)
+        return self._dataset.filter_by_attrs(obj_type="constraints")
 
     @property
     def variables(self):
         "Slice of backend dataset to show only built variables"
-        return self._dataset.filter_by_attrs(variables=1)
+        return self._dataset.filter_by_attrs(obj_type="variables")
 
     @property
     def parameters(self):
         "Slice of backend dataset to show only built parameters"
-        return self._dataset.filter_by_attrs(parameters=1)
+        return self._dataset.filter_by_attrs(obj_type="parameters")
 
     @property
     def global_expressions(self):
         "Slice of backend dataset to show only built global expressions"
-        return self._dataset.filter_by_attrs(global_expressions=1)
+        return self._dataset.filter_by_attrs(obj_type="global_expressions")
 
     @property
     def objectives(self):
         "Slice of backend dataset to show only built objectives"
-        return self._dataset.filter_by_attrs(objectives=1)
+        return self._dataset.filter_by_attrs(obj_type="objectives")
 
 
 class PyomoBackendModel(BackendModel):
@@ -528,11 +571,8 @@ class PyomoBackendModel(BackendModel):
         "objective": "objective",
     }
 
-    def __init__(self):
-        BackendModel.__init__(
-            self,
-            instance=pmo.block(),
-        )
+    def __init__(self, **kwargs):
+        BackendModel.__init__(self, instance=pmo.block())
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()
         self._instance.global_expressions = pmo.expression_dict()
@@ -548,7 +588,7 @@ class PyomoBackendModel(BackendModel):
     ) -> None:
         self._raise_error_on_preexistence(parameter_name, "parameters")
 
-        self._create_pyomo_list(parameter_name, "parameters")
+        self.create_obj_list(parameter_name, "parameters")
 
         parameter_da = self.apply_func(
             self._to_pyomo_param,
@@ -558,7 +598,7 @@ class PyomoBackendModel(BackendModel):
             use_inf_as_na=use_inf_as_na,
         )
         if parameter_da.isnull().all():
-            self._delete_pyomo_list(parameter_name, "parameters")
+            self.delete_obj_list(parameter_name, "parameters")
             parameter_da = parameter_da.astype(float)
 
         parameter_da.attrs["original_dtype"] = parameter_values.dtype
@@ -640,24 +680,18 @@ class PyomoBackendModel(BackendModel):
         parsed_variable = parsing.ParsedBackendComponent(
             "variables", name, variable_dict
         )
-        foreach_imask = parsed_variable.evaluate_foreach(model_data)
-        if not foreach_imask.any():
-            return None
 
-        parsed_variable.parse_top_level_where()
-        imask = parsed_variable.evaluate_where(model_data, foreach_imask)
+        imask = parsed_variable.generate_top_level_where_array(model_data)
         if not imask.any():
             return None
 
-        imask = parsed_variable.align_imask_with_sets(imask)
-
         self._raise_error_on_preexistence(name, "variables")
-        self._create_pyomo_list(name, "variables")
+        self.create_obj_list(name, "variables")
 
         domain = parsed_variable._unparsed.get("domain", "real")
         domain_type = getattr(pmo, f"{domain.title()}Set")
 
-        ub, lb = self._get_capacity_bounds(variable_dict["bounds"], name=name)
+        lb, ub = self._get_capacity_bounds(variable_dict["bounds"], name=name)
         variable_da = self.apply_func(
             self._to_pyomo_variable,
             imask,
@@ -686,7 +720,9 @@ class PyomoBackendModel(BackendModel):
         for equation in equations:
             imask = equation.evaluate_where(model_data)
             if imask.any():
-                expr = equation.evaluate_expression(model_data, self, imask).item()
+                expr = equation.evaluate_expression(
+                    model_data, self, imask=imask
+                ).item()
                 n_valid_exprs += 1
 
         if n_valid_exprs == 0:
@@ -823,12 +859,15 @@ class PyomoBackendModel(BackendModel):
         with self._datetime_as_string(self._dataset):
             for component_type in ["parameters", "variables"]:
                 for da in self._dataset.filter_by_attrs(
-                    coords_in_name=False, **{component_type: 1}
+                    coords_in_name=False, **{"obj_type": component_type}
                 ).values():
                     self.apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
                     da.attrs["coords_in_name"] = True
 
-    def _create_pyomo_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+    def to_lp(self, path: Union[str, Path]) -> None:
+        self._instance.write(str(path), format="lp", symbolic_solver_labels=True)
+
+    def create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         """Attach an empty pyomo kernel list object to the pyomo model object.
 
         Args:
@@ -849,8 +888,8 @@ class PyomoBackendModel(BackendModel):
                 pmo, f"{self._COMPONENT_TRANSLATOR[singular_component]}_list"
             )()
 
-    def _delete_pyomo_list(self, key: str, component_type: _COMPONENTS_T) -> None:
-        """Delete a pyomo kernel list object from the pyomo model object.
+    def delete_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+        """Delete a list object from the backend model object.
 
         Args:
             key (str): Name of object
@@ -893,34 +932,31 @@ class PyomoBackendModel(BackendModel):
                 objects on duplicate index entries.
         """
         references: set[str] = set()
-
         parsed_component = parsing.ParsedBackendComponent(
             component_type, name, component_dict
         )
-        foreach_imask = parsed_component.evaluate_foreach(model_data)
-        if not foreach_imask.any():
-            return None
 
-        parsed_component.parse_top_level_where()
-        top_level_imask = parsed_component.evaluate_where(model_data, foreach_imask)
+        top_level_imask = parsed_component.generate_top_level_where_array(
+            model_data, align_to_foreach_sets=False
+        )
         if not top_level_imask.any():
             return None
 
         self._raise_error_on_preexistence(name, component_type)
         component_da = (
             xr.DataArray()
-            .where(parsed_component.align_imask_with_sets(top_level_imask))
+            .where(parsed_component.align_imask_with_foreach_sets(top_level_imask))
             .astype(np.dtype("O"))
         )
-        self._create_pyomo_list(name, component_type)
+        self.create_obj_list(name, component_type)
 
         equations = parsed_component.parse_equations(self.valid_math_element_names)
         for element in equations:
-            imask = element.evaluate_where(model_data, top_level_imask)
+            imask = element.evaluate_where(model_data, initial_imask=top_level_imask)
             if not imask.any():
                 continue
 
-            imask = parsed_component.align_imask_with_sets(imask)
+            imask = parsed_component.align_imask_with_foreach_sets(imask)
 
             if component_da.where(imask).notnull().any():
                 subset_overlap = component_da.where(imask).to_series().dropna().index
@@ -930,12 +966,14 @@ class PyomoBackendModel(BackendModel):
                     f"{component_type.removesuffix('s')} `{name}`:\n{subset_overlap}"
                 )
 
-            expr = element.evaluate_expression(model_data, self, imask, references)
+            expr = element.evaluate_expression(
+                model_data, self, imask=imask, references=references
+            )
             to_fill = component_setter(imask, expr)
             component_da = component_da.fillna(to_fill)
 
         if component_da.isnull().all():
-            self._delete_pyomo_list(name, component_type)
+            self.delete_obj_list(name, component_type)
             return None
 
         self._add_to_dataset(
@@ -999,7 +1037,7 @@ class PyomoBackendModel(BackendModel):
             else:
                 # TODO: decide if this parameter should be added to the backend dataset too
                 name_ = f"TEMP_{name}_{bound}"
-                self._create_pyomo_list(name_, "parameters")
+                self.create_obj_list(name_, "parameters")
                 return xr.DataArray(self._to_pyomo_param(this_bound, name=name_))
 
         scale = __get_bound("scale")
@@ -1013,7 +1051,7 @@ class PyomoBackendModel(BackendModel):
             lb = lb * scale
             ub = ub * scale
 
-        return ub.fillna(None), lb.fillna(None)
+        return lb.fillna(None), ub.fillna(None)
 
     def _to_pyomo_param(
         self, val: Any, *, name: str, default: Any = np.nan, use_inf_as_na: bool = True

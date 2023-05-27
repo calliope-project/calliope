@@ -3,7 +3,7 @@ import numpy as np
 import pyparsing
 import xarray as xr
 
-from calliope.backend import equation_parser, subset_parser, subsets
+from calliope.backend import equation_parser, subset_parser, parsing
 from calliope.test.common.util import check_error_or_warning
 from calliope.core.attrdict import AttrDict
 from calliope.exceptions import BackendError
@@ -92,7 +92,7 @@ def imasking(bool_operand, helper_function, data_var, comparison, subset):
 def eval_kwargs(dummy_model_data):
     return {
         "model_data": dummy_model_data,
-        "helper_func_dict": subsets.VALID_HELPER_FUNCTIONS,
+        "helper_func_dict": parsing.VALID_IMASK_HELPER_FUNCTIONS,
         "test": True,
         "errors": set(),
         "warnings": set(),
@@ -540,3 +540,49 @@ class TestParserMasking:
         with pytest.raises(pyparsing.ParseException) as excinfo:
             imasking.parse_string(instring, parse_all=True)
         assert check_error_or_warning(excinfo, "Expected")
+
+
+class TestAsLatex:
+    @pytest.fixture
+    def latex_eval_kwargs(self, eval_kwargs):
+        eval_kwargs["as_latex"] = True
+        return eval_kwargs
+
+    @pytest.mark.parametrize(
+        ["parser", "instring", "expected"],
+        [
+            ("data_var", "with_inf", r"\exists (\textit{with_inf}_\text{node,tech})"),
+            ("data_var", "foo", r"\exists (\textit{foo})"),
+            ("data_var", "no_dims", r"\exists (\textit{no_dims})"),
+            ("config_option", "run.foo", r"\text{run_config.foo}"),
+            ("bool_operand", "True", "true"),
+            ("comparison", "run.foo>1", r"\text{run_config.foo}\mathord{>}\text{1}"),
+            (
+                "comparison",
+                "with_inf=True",
+                r"\textit{with_inf}_\text{node,tech}\mathord{=}\text{true}",
+            ),
+            ("subset", "[foo, bar] in foos", r"\text{foo} \in \text{[foo,bar]}"),
+            ("imasking", "NOT no_dims", r"\neg (\exists (\textit{no_dims}))"),
+            (
+                "imasking",
+                "true AND with_inf",
+                r"\exists (\textit{with_inf}_\text{node,tech})",
+            ),
+            (
+                "imasking",
+                "with_inf AND true",
+                r"\exists (\textit{with_inf}_\text{node,tech})",
+            ),
+            (
+                "imasking",
+                "no_dims AND (with_inf OR run.foo>1)",
+                r"\exists (\textit{no_dims}) \land (\exists (\textit{with_inf}_\text{node,tech}) \lor \text{run_config.foo}\mathord{>}\text{1})",
+            ),
+        ],
+    )
+    def test_latex_eval(self, request, latex_eval_kwargs, parser, instring, expected):
+        parser_func = request.getfixturevalue(parser)
+        parsed_ = parser_func.parse_string(instring, parse_all=True)
+        evaluated_ = parsed_[0].eval(**latex_eval_kwargs)
+        assert evaluated_ == expected

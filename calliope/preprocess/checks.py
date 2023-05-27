@@ -9,13 +9,14 @@ Checks for model consistency and possible errors during preprocessing.
 
 """
 
-import os
 import logging
+import os
 import re
 import warnings
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 import calliope
 from calliope._version import __version__
@@ -232,16 +233,16 @@ def check_initial(config_model):
                 model_warnings.append(
                     "Unknown key `{}` defined for tech {}.".format(key, t_name)
                 )
-        if not t_config.get_key("essentials.parent"):
+        if not t_config.get_key("essentials.parent", False):
             errors.append(
                 "tech {} does not define " "`essentials.parent`".format(t_name)
             )
-        elif t_config.get_key("essentials.parent") in config_model.techs.keys():
+        elif t_config.get_key("essentials.parent", None) in config_model.techs.keys():
             errors.append(
                 "tech `{}` has another tech as a parent, only a tech_group "
                 "is allowed".format(tg_name)
             )
-        if "resource" in get_all_carriers(t_config.essentials):
+        if "resource" in get_all_carriers(t_config.get("essentials", AttrDict())):
             errors.append(
                 "No carrier called `resource` may "
                 "be defined (tech: {})".format(t_name)
@@ -656,8 +657,8 @@ def check_model_data(model_data):
     for cap in relevant_caps:
         if (
             (model_data[cap.group(0)] < 0)
-            & pd.isnull(model_data.get(f"{cap.group(1)}_max", np.nan))
-            & pd.isnull(model_data.get(f"{cap.group(1)}_equals", np.nan))
+            & model_data.get(f"{cap.group(1)}_max", xr.DataArray(np.nan)).isnull()
+            & model_data.get(f"{cap.group(1)}_equals", xr.DataArray(np.nan)).isnull()
         ).any():
             errors.append(
                 f"Cannot have a negative {cap.group(0)} as there is an unset "

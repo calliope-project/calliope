@@ -1,13 +1,13 @@
+import logging
 import os
 from pathlib import Path
 
-import pytest
 import numpy as np
-import logging
+import pytest
 
 import calliope
-from calliope.test.common.util import check_error_or_warning
 from calliope.test.common.util import build_test_model as build_model
+from calliope.test.common.util import check_error_or_warning
 
 LOGGER = "calliope.core.model"
 
@@ -18,7 +18,6 @@ class TestModel:
         model = calliope.examples.national_scale(
             override_dict={"model.subset_time": ["2005-01-01", "2005-01-01"]}
         )
-        model.run()
         return model
 
     @pytest.fixture(params=[dict, calliope.AttrDict])
@@ -119,7 +118,7 @@ class TestCustomMath:
         new_constraint = calliope.AttrDict(
             {
                 "constraints": {
-                    "constraint_name": {"foreach": [], "where": "", "equation": ""}
+                    "constraint_name": {"foreach": [], "where": "", "equations": [{"expression": ""}]}
                 }
             }
         )
@@ -274,9 +273,7 @@ class TestVerboseStrings:
 
     def test_verbose_strings(self, simple_supply_new_build):
         def _compare_to_string(group, component, dims, verbose):
-            component_obj = simple_supply_new_build.backend._dataset.filter_by_attrs(
-                **{group: 1}
-            )[component]
+            component_obj = simple_supply_new_build.backend._dataset[component]
             if verbose:
                 dim_list = ", ".join(dims[k] for k in component_obj.dims)
                 expected = f"{group}[{component}][{dim_list}]"
@@ -321,7 +318,7 @@ class TestValidateMathDict:
     def test_custom_math(self, caplog, simple_supply, equation, where):
         with caplog.at_level(logging.INFO, logger=LOGGER):
             simple_supply.validate_math_strings(
-                {"constraints": {"foo": {"equation": equation, "where": where}}}
+                {"constraints": {"foo": {"equations": [{"expression": equation}], "where": where}}}
             )
         assert "Model: validated math strings" in [
             rec.message for rec in caplog.records
@@ -329,7 +326,7 @@ class TestValidateMathDict:
 
     @pytest.mark.parametrize(
         "component_dict",
-        [{"equation": "1 = 1"}, {"equation": "1 = 1", "where": "foo[bar]"}],
+        [{"equations": [{"expression": "1 = 1"}]}, {"equations": [{"expression": "1 = 1"}], "where": "foo[bar]"}],
     )
     @pytest.mark.parametrize("both_fail", [True, False])
     def test_custom_math_fails(self, simple_supply, component_dict, both_fail):
@@ -344,7 +341,7 @@ class TestValidateMathDict:
             math_dict["constraints"]["bar"] = component_dict
             errors_to_check.append("* (constraints, bar):")
         else:
-            math_dict["constraints"]["bar"] = {"equation": "1 == 1"}
+            math_dict["constraints"]["bar"] = {"equations": [{"expression": "1 == 1"}]}
 
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             simple_supply.validate_math_strings(math_dict)
@@ -352,7 +349,7 @@ class TestValidateMathDict:
 
     @pytest.mark.parametrize("eq_string", ["1 = 1", "1 ==\n1[a]"])
     def test_custom_math_fails_marker_correct_position(self, simple_supply, eq_string):
-        math_dict = {"constraints": {"foo": {"equation": eq_string}}}
+        math_dict = {"constraints": {"foo": {"equations": [{"expression": eq_string}]}}}
 
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             simple_supply.validate_math_strings(math_dict)

@@ -6,7 +6,7 @@ constraints:
 
   cost_sum_max:
     equations:
-      - expression: sum(cost[costs=$slack_cost_group], over=[nodes, techs]) * (1 + spores_slack) <= spores_cost_max
+      - expression: sum(cost[costs=$slack_cost_group], over=[nodes, techs]) <= spores_cost_max * (1 + spores_slack)
     slices:
       slack_cost_group:
         - expression: spores_slack_cost_group

@@ -23,7 +23,6 @@ from calliope.core.attrdict import AttrDict
 from calliope._version import __version__
 from calliope.preprocess import checks
 from calliope.preprocess import time
-from calliope.core.util import dataset
 
 
 class ModelDataFactory:
@@ -111,7 +110,6 @@ class ModelDataFactory:
         ).sum() / 8760
 
     def _clean_model_data(self):
-        self.model_data = dataset.reorganise_xarray_dimensions(self.model_data)
         self._add_var_attrs()
         self._update_dtypes()
         self._check_data()
@@ -342,7 +340,6 @@ class ModelDataFactory:
 
     def _add_var_attrs(self):
         for var_data in self.model_data.data_vars.values():
-            var_data.attrs["parameters"] = 1
             var_data.attrs["is_result"] = 0
 
     @staticmethod

@@ -1,30 +1,23 @@
-import pytest  # noqa: F401
-import calliope
-import logging
 import datetime
-import os
 import glob
+import logging
+import os
 from pathlib import Path
 
 import jsonschema
-import xarray as xr
+import pytest
 
-from calliope.core.util import dataset
-
+import calliope
+from calliope.core.util.generate_runs import generate_runs
+from calliope.core.util.logging import log_time
 from calliope.core.util.tools import (
+    copy_docstring,
     memoize,
     memoize_instancemethod,
-    copy_docstring,
     validate_dict,
 )
-
-from calliope.core.util.logging import log_time
-from calliope.core.util.generate_runs import generate_runs
-from calliope.test.common.util import (
-    python36_or_higher,
-    check_error_or_warning,
-)
 from calliope.exceptions import ModelError
+from calliope.test.common.util import check_error_or_warning, python36_or_higher
 
 _MODEL_NATIONAL = os.path.join(
     os.path.dirname(__file__), "..", "example_models", "national_scale", "model.yaml"
@@ -33,54 +26,6 @@ _MODEL_NATIONAL = os.path.join(
 _MODEL_URBAN = os.path.join(
     os.path.dirname(__file__), "..", "example_models", "urban_scale", "model.yaml"
 )
-
-
-class TestDataset:
-    @pytest.fixture()
-    def example_dataarray(self):
-        return xr.DataArray(
-            [
-                [[[0], [1], [2]], [[3], [4], [5]], [[6], [7], [8]]],
-                [[[0], [1], [2]], [[3], [4], [5]], [[6], [7], [8]]],
-            ],
-            dims=("timesteps", "nodes", "techs", "costs"),
-            coords={
-                "timesteps": ["foo", "bar"],
-                "nodes": ["a", "b", "c"],
-                "techs": ["foo", "bar", "baz"],
-                "costs": ["foo"],
-            },
-        )
-
-    @pytest.fixture()
-    def example_one_dim_dataarray(self):
-        return xr.DataArray(
-            [0, 1, 2], dims=("timesteps"), coords={"timesteps": ["foo", "bar", "baz"]}
-        )
-
-    @pytest.fixture()
-    def example_dataset(self, example_dataarray):
-        return xr.Dataset(
-            {"foo": example_dataarray, "bar": example_dataarray.squeeze()}
-        )
-
-    def test_reorganise_dataset_dimensions(self, example_dataset):
-        reorganised_dataset = dataset.reorganise_xarray_dimensions(example_dataset)
-        dataset_dims = [i for i in reorganised_dataset.dims.keys()]
-        assert dataset_dims == ["costs", "nodes", "techs", "timesteps"]
-
-    def test_reorganise_dataarray_dimensions(self, example_dataarray):
-        reorganised_dataset = dataset.reorganise_xarray_dimensions(example_dataarray)
-        assert reorganised_dataset.dims == ("costs", "nodes", "techs", "timesteps")
-
-    def test_fail_reorganise_dimensions(self):
-        with pytest.raises(TypeError) as excinfo:
-            dataset.reorganise_xarray_dimensions(
-                ["timesteps", "nodes", "techs", "costs"]
-            )
-        assert check_error_or_warning(
-            excinfo, "Must provide either xarray Dataset or DataArray to be reorganised"
-        )
 
 
 class TestMemoization:
@@ -115,25 +60,19 @@ class TestLogging:
 
         assert logging.getLogger("calliope").getEffectiveLevel() == 50
         assert logging.getLogger("py.warnings").getEffectiveLevel() == 50
-        assert (
-            logging.getLogger("calliope.backend.pyomo.model").getEffectiveLevel() == 10
-        )
+        assert logging.getLogger("calliope.backend.backends").getEffectiveLevel() == 10
 
         calliope.set_log_verbosity("CRITICAL", include_solver_output=False)
 
         assert logging.getLogger("calliope").getEffectiveLevel() == 50
         assert logging.getLogger("py.warnings").getEffectiveLevel() == 50
-        assert (
-            logging.getLogger("calliope.backend.pyomo.model").getEffectiveLevel() == 50
-        )
+        assert logging.getLogger("calliope.backend.backends").getEffectiveLevel() == 50
 
         calliope.set_log_verbosity()
 
         assert logging.getLogger("calliope").getEffectiveLevel() == 20
         assert logging.getLogger("py.warnings").getEffectiveLevel() == 20
-        assert (
-            logging.getLogger("calliope.backend.pyomo.model").getEffectiveLevel() == 10
-        )
+        assert logging.getLogger("calliope.backend.backends").getEffectiveLevel() == 10
 
     def test_timing_log(self):
         timings = {"model_creation": datetime.datetime.now()}
@@ -146,14 +85,14 @@ class TestLogging:
         log_time(logger, timings, "test2", comment=None, level="info")
         assert isinstance(timings["test2"], datetime.datetime)
 
-        # TODO: capture logging output and check that time_since_run_start is in the string
+        # TODO: capture logging output and check that time_since_solve_start is in the string
         log_time(
             logger,
             timings,
             "test",
             comment=None,
             level="info",
-            time_since_run_start=True,
+            time_since_solve_start=True,
         )
 
 
