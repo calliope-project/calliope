@@ -1,41 +1,43 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
-from typing import Callable
+import re
+from typing import Any, Callable, Union
 
 import xarray as xr
 
 from calliope.exceptions import BackendError
 
 
-def inheritance(model_data, **kwargs):
+def inheritance(model_data, as_latex: bool = False, **kwargs):
+    def _as_latex(tech_group):
+        return rf"\text{{tech_group={tech_group}}}"
+
     def _inheritance(tech_group):
         # Only for base tech inheritance
         return model_data.inheritance.str.endswith(tech_group)
 
-    return _inheritance
+    if as_latex:
+        return _as_latex
+    else:
+        return _inheritance
 
 
-def imask_sum(model_data, **kwargs):
+def imask_sum(model_data, as_latex: bool = False, **kwargs):
     def _imask_sum(component, *, over):
-        """
-        Args:
-            to_sum (_type_): _description_
-            over (_type_): _description_
-
-        Returns:
-            _type_: _description_
-        """
         to_return = model_data.get(component, xr.DataArray(False))
         if to_return.any():
             to_return = expression_sum()(to_return, over=over) > 0
 
         return to_return
 
-    return _imask_sum
+    if as_latex:
+        return sum_as_latex
+    else:
+        return _imask_sum
 
 
-def expression_sum(**kwargs):
+def expression_sum(as_latex: bool = False, **kwargs):
     def _expression_sum(component, *, over):
         """
 
@@ -61,10 +63,39 @@ def expression_sum(**kwargs):
 
         return to_return
 
-    return _expression_sum
+    if as_latex:
+        return sum_as_latex
+    else:
+        return _expression_sum
 
 
-def squeeze_carriers(model_data, **kwargs):
+def sum_as_latex(component: str, *, over: Union[str, list]) -> str:
+    """Shared utility function to generate the imask and expression latex summation string
+
+    Args:
+        component (str): Component name to sum.
+        over (Union[str, list]): either one dimension or list of dimension names over which to sum. Each is expected to end in "s".
+
+    Returns:
+        str: Valid LaTeX math summation string.
+    """
+
+    def _instr(dim):
+        dim_singular = dim.removesuffix("s")
+        return rf"\text{{{dim_singular}}} \in \text{{{dim}}}"
+
+    if isinstance(over, str):
+        overstring = _instr(over)
+    else:
+        foreach_string = r" \\ ".join(_instr(i) for i in over)
+        overstring = rf"\substack{{{foreach_string}}}"
+    return rf"\sum\limits_{{{overstring}}} ({component})"
+
+
+def squeeze_carriers(model_data, as_latex: bool = False, **kwargs):
+    def _as_latex(component, carrier_tier):
+        return rf"\sum\limits_{{\text{{carrier}} \in \text{{carrier_tier({carrier_tier})}}}} ({component})"
+
     def _squeeze_carriers(component, carrier_tier):
         return expression_sum(**kwargs)(
             component.where(
@@ -73,10 +104,16 @@ def squeeze_carriers(model_data, **kwargs):
             over="carriers",
         )
 
-    return _squeeze_carriers
+    if as_latex:
+        return _as_latex
+    else:
+        return _squeeze_carriers
 
 
-def squeeze_primary_carriers(model_data, **kwargs):
+def squeeze_primary_carriers(model_data, as_latex: bool = False, **kwargs):
+    def _as_latex(component, carrier_tier):
+        return rf"\sum\limits_{{\text{{carrier=primary_carrier_{carrier_tier}}}}} ({component})"
+
     def _squeeze_primary_carriers(component, carrier_tier):
         return expression_sum(**kwargs)(
             component.where(
@@ -85,10 +122,23 @@ def squeeze_primary_carriers(model_data, **kwargs):
             over="carriers",
         )
 
-    return _squeeze_primary_carriers
+    if as_latex:
+        return _as_latex
+    else:
+        return _squeeze_primary_carriers
 
 
-def select_from_lookup_arrays(model_data: xr.Dataset, **kwargs) -> Callable:
+def select_from_lookup_arrays(
+    model_data: xr.Dataset, as_latex: bool = False, **kwargs
+) -> Callable:
+    def _as_latex(component: str, **lookup_arrays: str):
+        new_strings = {
+            (iterator := dim.removesuffix("s")): rf"={array}[{iterator}]"
+            for dim, array in lookup_arrays.items()
+        }
+        component = add_to_iterator(component, new_strings)
+        return component
+
     def _select_from_lookup_arrays(
         component: xr.DataArray, **lookup_arrays: xr.DataArray
     ) -> xr.DataArray:
@@ -161,19 +211,67 @@ def select_from_lookup_arrays(model_data: xr.Dataset, **kwargs) -> Callable:
             .reindex_like(component, copy=False)
         )
 
-    return _select_from_lookup_arrays
+    if as_latex:
+        return _as_latex
+    else:
+        return _select_from_lookup_arrays
 
 
-def get_val_at_index(model_data, **kwargs):
+def get_val_at_index(model_data, as_latex: bool = False, **kwargs):
+    def _as_latex(*, dim, idx):
+        return f"{dim}[{idx}]"
+
     def _get_val_at_index(*, dim, idx):
         return model_data.coords[dim][int(idx)]
 
-    return _get_val_at_index
+    if as_latex:
+        return _as_latex
+    else:
+        return _get_val_at_index
 
 
-def roll(**kwargs):
+def roll(as_latex: bool = False, **kwargs):
+    def _as_latex(component, **roll_kwargs):
+        new_strings = {
+            k.removesuffix("s"): f"{-1 * int(v):+d}" for k, v in roll_kwargs.items()
+        }
+        component = add_to_iterator(component, new_strings)
+        return component
+
     def _roll(component, **roll_kwargs):
         roll_kwargs_int = {k: int(v) for k, v in roll_kwargs.items()}
         return component.roll(roll_kwargs_int)
 
-    return _roll
+    if as_latex:
+        return _as_latex
+    else:
+        return _roll
+
+
+def add_to_iterator(instring: str, iterator_converter: dict[str, str]) -> str:
+    """Find an iterator in the iterator substring of the component string
+    (anything wrapped in `_text{}`). Other parts of the iterator substring can be anything
+    except curly braces, e.g. the standalone `foo` will be found here and acted upon:
+    `\\textit{my_param}_\text{bar,foo,foo=bar,foo+1}`
+
+    Args:
+        instring (str): String in which the iterator substring can be found.
+        iterator_converter (dict[str, str]):
+            key: the iterator to search for.
+            val: The new string to **append** to the iterator name.
+
+    Returns:
+        str: `instring`, but with `iterator` replaced with `iterator + new_string`
+    """
+
+    def _replace_in_iterator(matched):
+        iterator_list = matched.group(2).split(",")
+        new_iterator_list = []
+        for it in iterator_list:
+            if it in iterator_converter:
+                it += iterator_converter[it]
+            new_iterator_list.append(it)
+
+        return matched.group(1) + ",".join(new_iterator_list) + matched.group(3)
+
+    return re.sub(r"(_\\text{)([^{}]*?)(})", _replace_in_iterator, instring)

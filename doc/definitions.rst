@@ -3,6 +3,7 @@
 .. role:: red
 .. role:: yellow
 .. role:: grey
+.. role:: orange
 
 .. |new| replace:: :green:`new`
 .. |changed| replace:: :yellow:`changed`

@@ -233,16 +233,16 @@ def check_initial(config_model):
                 model_warnings.append(
                     "Unknown key `{}` defined for tech {}.".format(key, t_name)
                 )
-        if not t_config.get_key("essentials.parent"):
+        if not t_config.get_key("essentials.parent", False):
             errors.append(
                 "tech {} does not define " "`essentials.parent`".format(t_name)
             )
-        elif t_config.get_key("essentials.parent") in config_model.techs.keys():
+        elif t_config.get_key("essentials.parent", None) in config_model.techs.keys():
             errors.append(
                 "tech `{}` has another tech as a parent, only a tech_group "
                 "is allowed".format(tg_name)
             )
-        if "resource" in get_all_carriers(t_config.essentials):
+        if "resource" in get_all_carriers(t_config.get("essentials", AttrDict())):
             errors.append(
                 "No carrier called `resource` may "
                 "be defined (tech: {})".format(t_name)

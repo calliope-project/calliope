@@ -814,7 +814,7 @@ class TestChecks:
             """
         )
 
-        with pytest.raises(KeyError):
+        with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, scenario="simple_supply,one_day")
 
     def test_tech_as_parent(self):
