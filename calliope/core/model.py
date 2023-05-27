@@ -353,7 +353,7 @@ class Model(object):
             "objectives",
         ]:
             component = components.removesuffix("s")
-            if components in ["variables", "expressions"]:
+            if components in ["variables", "global_expressions"]:
                 backend.valid_math_element_names.update(self.math[components].keys())
             for name, dict_ in self.math[components].items():
                 if dict_.get("active", True):

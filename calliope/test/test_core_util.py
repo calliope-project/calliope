@@ -209,12 +209,20 @@ class TestValidateDict:
             ],
         )
 
+    @pytest.fixture
+    def base_math(self):
+        return calliope.AttrDict.from_yaml(
+            Path(calliope.__file__).parent / "math" / "base.yaml"
+        )
+
     @pytest.mark.parametrize(
         "dict_path", glob.glob(str(Path(calliope.__file__).parent / "math" / "*.yaml"))
     )
-    def test_validate_math(self, dict_path):
+    def test_validate_math(self, base_math, dict_path):
         math_schema = calliope.AttrDict.from_yaml(
             Path(calliope.__file__).parent / "config" / "math_schema.yaml"
         )
-        to_validate = calliope.AttrDict.from_yaml(dict_path)
+        to_validate = base_math.union(
+            calliope.AttrDict.from_yaml(dict_path), allow_override=True
+        )
         validate_dict(to_validate, math_schema, "")

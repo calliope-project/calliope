@@ -15,7 +15,7 @@ constraints:
           expression: "0"
 
   balance_storage:
-    components:
+    sub_expressions:
       storage_previous_step: *storage_previous_step
 
   set_storage_initial:

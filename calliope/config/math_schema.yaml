@@ -11,6 +11,7 @@ properties:
         type: object
         description: A named constraint
         additionalProperties: false
+        required: ["equations"]
         properties:
           description: &description
             type: string
@@ -28,15 +29,13 @@ properties:
           where: &top_level_where
             type: string
             description: Top-level condition to determine whether the component exists in this optimisation problem (at all, if `foreach` is not given, or for specific index items within the product of the sets given by `foreach`)
-          equation:
-            type: string
-            description: Constraint math equation of the form LHS OPERATOR RHS, where LHS and RHS are math expressions and OPERATOR is one of [==, <=, >=].
           equations:
             type: array
             description: Constraint math equations with conditions defining on which index items in the product of `foreach` sets they will be applied. Conditions must be set up such that a maximum of one equation can be applied per index item. Equations are of the form LHS OPERATOR RHS, where LHS and RHS are math expressions and OPERATOR is one of [==, <=, >=].
             items: &equation_items
               type: object
               additionalProperties: false
+              required: ["expression"]
               properties:
                 where:
                   type: string
@@ -44,8 +43,7 @@ properties:
                 expression:
                   type: string
                   description: Equation expression valid for this component type (see component `equations` description).
-              required: ["expression"]
-          components: &sub_expressions
+          sub_expressions: &sub_expressions
             type: object
             description: Math sub-expressions which are used to replace any instances in which they are referenced in the component equation(s). Sub-expressions are referenced by their name preceded with the "$" symbol, e.g., `foo` in `$foo == 1` or `$foo + 1`.
             additionalProperties: false
@@ -56,6 +54,7 @@ properties:
                 items:
                   type: object
                   additionalProperties: false
+                  required: ["expression"]
                   properties:
                     where:
                       type: string
@@ -63,8 +62,7 @@ properties:
                     expression:
                       type: string
                       description: math equation sub-expression which can be one term or a combination of terms using the operators [+, -, *, /, **].
-                  required: ["expression"]
-          index_slices: &index_slices
+          slices: &slices
             type: object
             description: Array index slices which are used to replace any instances in which they are referenced in decision variables/parameters/global expressions in the component equation(s) or sub-expressions. Index slices are referenced by their name preceded with the "$" symbol, e.g., `foo` in `energy_eff[techs=$foo]`.
             additionalProperties: false
@@ -75,6 +73,7 @@ properties:
                 items:
                   type: object
                   additionalProperties: false
+                  required: ["expression"]
                   properties:
                     where:
                       type: string
@@ -82,9 +81,8 @@ properties:
                     expression:
                       type: string
                       description: Index slice expression, such as a list of set items or a call to a helper function.
-                  required: ["expression"]
 
-  expressions:
+  global_expressions:
     type: object
     description: >-
       Definition of global expressions that can be used to combine parameters and variables and then used in one or more expressions elsewhere in the math formulation (i.e., in constraints, objectives, and other global expressions).
@@ -95,6 +93,7 @@ properties:
         type: object
         description: A named global expression.
         additionalProperties: false
+        required: ["equations"]
         properties:
           description: *description
           active: *active
@@ -103,15 +102,12 @@ properties:
             description: Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)
           foreach: *foreach
           where: *top_level_where
-          equation:
-            type: string
-            description: Math equation expression combining terms with the operators [+, -, *, /, **].
           equations:
             type: array
             description: Math equation expressions with conditions defining on which index items in the product of `foreach` sets they will be applied. Conditions must be set up such that a maximum of one equation expression can be applied per index item. Equation expression combining terms with the operators [+, -, *, /, **].
             items: *equation_items
-          components: *sub_expressions
-          index_slices: *index_slices
+          sub_expressions: *sub_expressions
+          slices: *slices
 
   variables:
     type: object
@@ -159,18 +155,16 @@ properties:
         type: object
         description: A named variable.
         additionalProperties: false
+        required: ["equations"]
         properties:
           description: *description
           active: *active
-          equation:
-            type: string
-            description: Math equation expression combining terms with the operators [+, -, *, /, **].
           equations:
             type: array
             description: Math equation expressions with conditions to determinee which expression will be applied for this objectives. Conditions must be set up such that only one equation expression can be applied for this objective.
             items: *equation_items
-          components: *sub_expressions
-          index_slices: *index_slices
+          sub_expressions: *sub_expressions
+          slices: *slices
           sense:
             type: string
             description: Whether the objective function should be minimised or maximised in the optimisation.
