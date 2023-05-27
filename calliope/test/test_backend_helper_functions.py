@@ -13,18 +13,18 @@ class TestFuncs:
         boo_bool = inheritance("boo")
         assert boo_bool.equals(dummy_model_data.boo_inheritance_bool)
 
-    def test_imask_sum_not_exists(self, dummy_model_data):
-        imask_sum = helper_functions.imask_sum(dummy_model_data)
-        summed = imask_sum("foo", over="techs")
+    def test_where_sum_not_exists(self, dummy_model_data):
+        where_sum = helper_functions.where_sum(dummy_model_data)
+        summed = where_sum("foo", over="techs")
         assert summed.equals(xr.DataArray(False))
 
     @pytest.mark.parametrize(
         ["var", "over", "expected"],
         [("with_inf", "techs", "nodes_true"), ("all_nan", "techs", "nodes_false")],
     )
-    def test_imask_sum_exists(self, dummy_model_data, var, over, expected):
-        imask_sum = helper_functions.imask_sum(dummy_model_data)
-        summed = imask_sum(var, over=over)
+    def test_where_sum_exists(self, dummy_model_data, var, over, expected):
+        where_sum = helper_functions.where_sum(dummy_model_data)
+        summed = where_sum(var, over=over)
         assert summed.equals(dummy_model_data[expected])
 
     @pytest.mark.parametrize("over", ["techs", ["techs"]])
@@ -148,9 +148,9 @@ class TestAsLatex:
         inheritance = helper_functions.inheritance(dummy_model_data, as_latex=True)
         assert inheritance("boo") == r"\text{tech_group=boo}"
 
-    def test_imask_sum_not_exists(self, dummy_model_data):
-        imask_sum = helper_functions.imask_sum(dummy_model_data, as_latex=True)
-        summed_string = imask_sum("foo", over="techs")
+    def test_where_sum_not_exists(self, dummy_model_data):
+        where_sum = helper_functions.where_sum(dummy_model_data, as_latex=True)
+        summed_string = where_sum("foo", over="techs")
         assert summed_string == r"\sum\limits_{\text{tech} \in \text{techs}} (foo)"
 
     @pytest.mark.parametrize(
@@ -165,11 +165,11 @@ class TestAsLatex:
         ],
     )
     @pytest.mark.parametrize(
-        "func", [helper_functions.imask_sum, helper_functions.expression_sum]
+        "func", [helper_functions.where_sum, helper_functions.expression_sum]
     )
     def test_sum(self, dummy_model_data, over, expected_substring, func):
-        imask_sum = func(model_data=dummy_model_data, as_latex=True)
-        summed_string = imask_sum(r"\textit{with_inf}_\text{node,tech}", over=over)
+        where_sum = func(model_data=dummy_model_data, as_latex=True)
+        summed_string = where_sum(r"\textit{with_inf}_\text{node,tech}", over=over)
         assert (
             summed_string
             == rf"\sum\limits_{{{expected_substring}}} (\textit{{with_inf}}_\text{{node,tech}})"

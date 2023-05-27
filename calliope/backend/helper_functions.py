@@ -23,8 +23,8 @@ def inheritance(model_data, as_latex: bool = False, **kwargs):
         return _inheritance
 
 
-def imask_sum(model_data, as_latex: bool = False, **kwargs):
-    def _imask_sum(component, *, over):
+def where_sum(model_data, as_latex: bool = False, **kwargs):
+    def _where_sum(component, *, over):
         to_return = model_data.get(component, xr.DataArray(False))
         if to_return.any():
             to_return = expression_sum()(to_return, over=over) > 0
@@ -34,7 +34,7 @@ def imask_sum(model_data, as_latex: bool = False, **kwargs):
     if as_latex:
         return sum_as_latex
     else:
-        return _imask_sum
+        return _where_sum
 
 
 def expression_sum(as_latex: bool = False, **kwargs):
@@ -70,7 +70,7 @@ def expression_sum(as_latex: bool = False, **kwargs):
 
 
 def sum_as_latex(component: str, *, over: Union[str, list]) -> str:
-    """Shared utility function to generate the imask and expression latex summation string
+    """Shared utility function to generate the where and expression latex summation string
 
     Args:
         component (str): Component name to sum.

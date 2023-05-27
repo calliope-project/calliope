@@ -306,25 +306,25 @@ class LatexBackendModel(backends.BackendModel):
         parsed_variable = parsing.ParsedBackendComponent(
             "variables", name, variable_dict
         )
-        imask = parsed_variable.generate_top_level_where_array(
+        where_array = parsed_variable.generate_top_level_where_array(
             model_data, break_early=False
         )
 
         # add early to be accessed when creating bound strings.
-        self._add_to_dataset(name, imask, "variables", variable_dict)
+        self._add_to_dataset(name, where_array, "variables", variable_dict)
 
-        imask_latex = parsed_variable.evaluate_where(model_data, as_latex=True)
+        where_latex = parsed_variable.evaluate_where(model_data, as_latex=True)
         lb, ub = self._get_capacity_bounds(variable_dict["bounds"], name, model_data)
 
-        if self.include == "all" or (self.include == "valid" and imask.any()):
+        if self.include == "all" or (self.include == "valid" and where_array.any()):
             self._generate_math_string(
-                imask,
+                where_array,
                 sets=parsed_variable.sets,
-                where=imask_latex if imask_latex != "" else None,
+                where=where_latex if where_latex != "" else None,
                 equations=[lb, ub],
             )
         # add again to ensure "math_string" attribute is there.
-        self._add_to_dataset(name, imask, "variables", variable_dict)
+        self._add_to_dataset(name, where_array, "variables", variable_dict)
 
     def add_objective(
         self,
@@ -346,12 +346,12 @@ class LatexBackendModel(backends.BackendModel):
         equation_strings = []
         for element in equations:
             if self.include == "valid":
-                imask = element.evaluate_where(model_data)
-            imask_latex = element.evaluate_where(model_data, as_latex=True)
+                where_array = element.evaluate_where(model_data)
+            where_latex = element.evaluate_where(model_data, as_latex=True)
             expr = element.evaluate_expression(model_data, self, as_latex=True)
 
-            if self.include == "all" or (self.include == "valid" and imask.any()):
-                equation_strings.append({"expression": expr, "where": imask_latex})
+            if self.include == "all" or (self.include == "valid" and where_array.any()):
+                equation_strings.append({"expression": expr, "where": where_latex})
         objective_da = xr.DataArray()
         if equation_strings:
             self._generate_math_string(
@@ -454,13 +454,13 @@ class LatexBackendModel(backends.BackendModel):
             component_type, name, component_dict
         )
 
-        top_level_imask = parsed_component.generate_top_level_where_array(
+        top_level_where = parsed_component.generate_top_level_where_array(
             model_data, break_early=False
         )
         component_da = xr.DataArray().where(
-            parsed_component.align_imask_with_foreach_sets(top_level_imask)
+            parsed_component.drop_dims_not_in_foreach(top_level_where)
         )
-        top_level_imask_latex = parsed_component.evaluate_where(
+        top_level_where_latex = parsed_component.evaluate_where(
             model_data, as_latex=True
         )
 
@@ -469,20 +469,22 @@ class LatexBackendModel(backends.BackendModel):
         equations = parsed_component.parse_equations(self.valid_math_element_names)
         equation_strings = []
         for element in equations:
-            imask = element.evaluate_where(model_data, initial_imask=top_level_imask)
-            imask = parsed_component.align_imask_with_foreach_sets(imask)
+            where_array = element.evaluate_where(
+                model_data, initial_where=top_level_where
+            )
+            where_array = parsed_component.drop_dims_not_in_foreach(where_array)
 
             expr = element.evaluate_expression(model_data, self, as_latex=True)
-            imask_latex = element.evaluate_where(model_data, as_latex=True)
+            where_latex = element.evaluate_where(model_data, as_latex=True)
 
-            if self.include == "all" or (self.include == "valid" and imask.any()):
-                equation_strings.append({"expression": expr, "where": imask_latex})
-            component_da = component_da.fillna(imask.where(imask))
+            if self.include == "all" or (self.include == "valid" and where_array.any()):
+                equation_strings.append({"expression": expr, "where": where_latex})
+            component_da = component_da.fillna(where_array.where(where_array))
         if equation_strings:
             self._generate_math_string(
                 component_da,
                 sets=parsed_component.sets,
-                where=top_level_imask_latex,
+                where=top_level_where_latex,
                 equations=equation_strings,
             )
         self._add_to_dataset(

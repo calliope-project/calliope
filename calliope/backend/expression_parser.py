@@ -131,8 +131,8 @@ class EvalOperatorOperand(EvalString):
         evaluated = to_eval.eval(as_latex=as_latex, **eval_kwargs)
         if not as_latex:
             evaluated = xr.DataArray(evaluated)
-            if eval_kwargs.get("apply_imask", True):
-                evaluated = evaluated.where(eval_kwargs["imask"])
+            if eval_kwargs.get("apply_where", True):
+                evaluated = evaluated.where(eval_kwargs["where"])
 
         return evaluated
 
@@ -300,7 +300,7 @@ class EvalFunction(EvalString):
                 Either the defined helper function is called, or only a dictionary with
                 parsed components is returned (if test=True).
         """
-        eval_kwargs["apply_imask"] = False
+        eval_kwargs["apply_where"] = False
 
         args_ = []
         for arg in self.args:
