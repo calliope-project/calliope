@@ -10,15 +10,48 @@ from calliope.backend import expression_parser
 from calliope.test.common.util import check_error_or_warning
 
 SUB_EXPRESSION_CLASSIFIER = expression_parser.SUB_EXPRESSION_CLASSIFIER
-HELPER_FUNCS = {
-    "dummy_func_1": lambda **kwargs: lambda x: x * 10,
-    "dummy_func_2": lambda **kwargs: lambda x, y: x + y,
-}
+
+
+def dummy_func_1(as_latex=False, **kwargs):
+    def _dummy_func_1(x):
+        return x * 10
+
+    def _as_latex(x):
+        return f"{x} * 10"
+
+    if as_latex:
+        return _as_latex
+    else:
+        return _dummy_func_1
+
+
+def dummy_func_2(as_latex=False, **kwargs):
+    def _dummy_func_2(x, y):
+        return x + y
+
+    def _as_latex(x, y):
+        return f"{x} + {y}"
+
+    if as_latex:
+        return _as_latex
+    else:
+        return _dummy_func_2
+
+
+HELPER_FUNCS = {"dummy_func_1": dummy_func_1, "dummy_func_2": dummy_func_2}
 
 
 @pytest.fixture
 def valid_math_element_names():
-    return ["foo", "foo_bar", "bar"]
+    return [
+        "foo",
+        "foo_bar",
+        "with_inf",
+        "only_techs",
+        "no_dims",
+        "multi_dim_var",
+        "no_dim_var",
+    ]
 
 
 @pytest.fixture
@@ -123,10 +156,10 @@ def helper_function_no_nesting(
 
 @pytest.fixture(
     params=[
-        ("number", "1.0", ["$foo", "foo", "foo[bars=bar1]"]),
-        ("sliced_param", "foo[bars=bar1]", ["1.0", "foo", "$foo"]),
-        ("sub_expression", "$foo", ["1.0", "foo", "foo[bars=bar1]"]),
-        ("unsliced_param_with_obj_names", "foo", ["1.0", "$foo", "foo[bars=bar1]"]),
+        ("number", "1.0", ["$foo", "foo", "foo[bars=bar]"]),
+        ("sliced_param", "foo[bars=bar]", ["1.0", "foo", "$foo"]),
+        ("sub_expression", "$foo", ["1.0", "foo", "foo[bars=bar]"]),
+        ("unsliced_param_with_obj_names", "foo", ["1.0", "$foo", "foo[bars=bar]"]),
     ]
 )
 def helper_function_one_parser_in_args(identifier, request):
@@ -368,15 +401,15 @@ class TestEquationParserElements:
     @pytest.mark.parametrize(
         "string_val",
         [
-            "foobar[bars=bar1]",  # name not in allowed list
-            "foo [bars=bar1]",  # space between param name and slicing
-            "foo[techs=tech bars=bar1]",  # missing delimination
+            "foobar[bars=bar]",  # name not in allowed list
+            "foo [bars=bar]",  # space between param name and slicing
+            "foo[techs=tech bars=bar]",  # missing delimination
             "foo[]",  # missing set and index slice
             "foo[techs]",  # missing index slice/set
             "foo[techs=]",  # missing index slice
             "foo[=techs]",  # missing set
-            "[bars=bar1]",  # missing component name
-            "foo(bars=bar1)",  # incorrect brackets
+            "[bars=bar]",  # missing component name
+            "foo(bars=bar)",  # incorrect brackets
         ],
     )
     def test_fail_string_issues_sliced_param(self, sliced_param, string_val):
@@ -462,12 +495,12 @@ class TestEquationParserElements:
                 },
             ),
             (
-                "dummy_func_1(1, foo[bars=bar1])",
+                "dummy_func_1(1, foo[bars=bar])",
                 {
                     "function": "dummy_func_1",
                     "args": [
                         1,
-                        {"param_or_var_name": "foo", "dimensions": {"bars": "bar1"}},
+                        {"param_or_var_name": "foo", "dimensions": {"bars": "bar"}},
                     ],
                     "kwargs": {},
                 },
@@ -553,7 +586,7 @@ class TestEquationParserElements:
                 },
             ),
             (
-                "dummy_func_1(1, dummy_func_2(1, foo[bars=$bar]), foo[foos=foo1, bars=bar1], $foo, 1, bar)",
+                "dummy_func_1(1, dummy_func_2(1, foo[bars=$bar]), foo[foos=foo1, bars=bar1], $foo, 1, foo)",
                 {
                     "function": "dummy_func_1",
                     "args": [
@@ -575,7 +608,7 @@ class TestEquationParserElements:
                         },
                         {"sub_expression": "foo"},
                         1,
-                        {"param_or_var_name": "bar"},
+                        {"param_or_var_name": "foo"},
                     ],
                     "kwargs": {},
                 },
@@ -731,12 +764,12 @@ class TestEquationParserArithmetic:
 
     @pytest.mark.parametrize("number_", numbers)
     @pytest.mark.parametrize("sub_expr_", ["$foo", "$bar1"])
-    @pytest.mark.parametrize("unsliced_param_", ["foo", "bar"])
+    @pytest.mark.parametrize("unsliced_param_", ["foo", "foo_bar"])
     @pytest.mark.parametrize(
-        "sliced_param_", ["foo[bars=bar1]", "bar[foos=foo1, bars=$bar]"]
+        "sliced_param_", ["foo[bars=bar1]", "foo_bar[foos=foo1, bars=$bar]"]
     )
     @pytest.mark.parametrize(
-        "helper_function_", ["foo(1)", "bar1(foo, $foo, bar[foos=foo1], x=1)"]
+        "helper_function_", ["foo(1)", "bar1(foo, $foo, foo_bar[foos=foo1], x=1)"]
     )
     @pytest.mark.parametrize(
         "func_string", ["arithmetic", "helper_function_allow_arithmetic"]
@@ -863,7 +896,7 @@ class TestEquationParserComparison:
         },
         "foo[bars=bar1]": {"param_or_var_name": "foo", "dimensions": {"bars": "bar1"}},
         "$foo": {"sub_expression": "foo"},
-        "dummy_func_1(1, foo[bars=$bar], $foo, x=dummy_func_2(1, y=2), foo=bar)": {
+        "dummy_func_1(1, foo[bars=$bar], $foo, x=dummy_func_2(1, y=2), foo=foo_bar)": {
             "function": "dummy_func_1",
             "args": [
                 1,
@@ -875,7 +908,7 @@ class TestEquationParserComparison:
             ],
             "kwargs": {
                 "x": {"function": "dummy_func_2", "args": [1], "kwargs": {"y": 2}},
-                "foo": {"param_or_var_name": "bar"},
+                "foo": {"param_or_var_name": "foo_bar"},
             },
         },
     }
@@ -984,3 +1017,125 @@ class TestEquationParserComparison:
         )
         parsed_ = equation_comparison.parse_string(parse_string, parse_all=True)
         assert str(parsed_[0]) == expected
+
+
+class TestAsLatex:
+    @pytest.fixture
+    def latex_eval_kwargs(self, dummy_latex_backend_model, dummy_model_data):
+        return {
+            "helper_func_dict": HELPER_FUNCS,
+            "as_dict": False,
+            "as_latex": True,
+            "index_slice_dict": {},
+            "component_dict": {},
+            "equation_name": "foobar",
+            "apply_where": False,
+            "references": set(),
+            "backend_interface": dummy_latex_backend_model,
+            "backend_dataset": dummy_latex_backend_model._dataset,
+            "model_data": dummy_model_data,
+        }
+
+    @pytest.mark.parametrize(
+        ["parser", "instring", "expected"],
+        [
+            ("number", "1", "1"),
+            ("number", "1.0", "1"),
+            ("number", "0.01", "0.01"),
+            ("number", "inf", "inf"),
+            ("number", "-1", "-1"),
+            ("number", "2000000", "2\\mathord{\\times}10^{+06}"),
+            ("evaluatable_identifier", "hello_there", "hello_there"),
+            ("id_list", "[hello, hello_there]", ["hello", "hello_there"]),
+            ("unsliced_param_with_obj_names", "no_dims", r"\textit{no_dims}"),
+            (
+                "unsliced_param_with_obj_names",
+                "with_inf",
+                r"\textit{with_inf}_\text{node,tech}",
+            ),
+            ("unsliced_param_with_obj_names", "no_dim_var", r"\textbf{no_dim_var}"),
+            (
+                "unsliced_param_with_obj_names",
+                "multi_dim_var",
+                r"\textbf{multi_dim_var}_\text{node,tech}",
+            ),
+            (
+                "sliced_param",
+                "with_inf[node=bar]",
+                r"\textit{with_inf}_\text{node=bar,tech}",
+            ),
+            (
+                "sliced_param",
+                "only_techs[tech=foobar]",
+                r"\textit{only_techs}_\text{tech=foobar}",
+            ),
+            (
+                "sliced_param",
+                "multi_dim_var[node=bar]",
+                r"\textbf{multi_dim_var}_\text{node=bar,tech}",
+            ),
+            (
+                "sliced_param",
+                "with_inf[node=bar, tech=foobar]",
+                r"\textit{with_inf}_\text{node=bar,tech=foobar}",
+            ),
+            (
+                "sliced_param",
+                "multi_dim_var[node=bar, tech=foobar]",
+                r"\textbf{multi_dim_var}_\text{node=bar,tech=foobar}",
+            ),
+            ("helper_function", "dummy_func_1(1)", r"1 * 10"),
+            (
+                "helper_function",
+                "dummy_func_2(1, with_inf)",
+                r"1 + \textit{with_inf}_\text{node,tech}",
+            ),
+            (
+                "helper_function",
+                "dummy_func_2(dummy_func_1(1), with_inf)",
+                r"1 * 10 + \textit{with_inf}_\text{node,tech}",
+            ),
+            ("arithmetic", "1 + with_inf", r"1 + \textit{with_inf}_\text{node,tech}"),
+            (
+                "arithmetic",
+                "multi_dim_var[node=bar] + with_inf",
+                r"\textbf{multi_dim_var}_\text{node=bar,tech} + \textit{with_inf}_\text{node,tech}",
+            ),
+            # We ignore zeros that make no difference
+            ("arithmetic", "0 + with_inf", r"\textit{with_inf}_\text{node,tech}"),
+            ("arithmetic", "0 - with_inf", r"\textit{with_inf}_\text{node,tech}"),
+            ("arithmetic", "with_inf - 0", r"\textit{with_inf}_\text{node,tech}"),
+            # We DO NOT ignore zeros that make a difference
+            ("arithmetic", "with_inf**0", r"\textit{with_inf}_\text{node,tech}^{0}"),
+            (
+                "arithmetic",
+                "0 * with_inf",
+                r"0 \times \textit{with_inf}_\text{node,tech}",
+            ),
+            (
+                "arithmetic",
+                "0 / with_inf",
+                r"\frac{ 0 }{ \textit{with_inf}_\text{node,tech} }",
+            ),
+            (
+                "arithmetic",
+                "(no_dims * no_dim_var) + (with_inf + 2)",
+                r"(\textit{no_dims} \times \textbf{no_dim_var}) + (\textit{with_inf}_\text{node,tech} + 2)",
+            ),
+            (
+                "equation_comparison",
+                "no_dim_var >= with_inf",
+                r"\textbf{no_dim_var} \geq \textit{with_inf}_\text{node,tech}",
+            ),
+            (
+                "equation_comparison",
+                "no_dim_var == with_inf",
+                r"\textbf{no_dim_var} = \textit{with_inf}_\text{node,tech}",
+            ),
+        ],
+    )
+    def test_latex_eval(self, request, latex_eval_kwargs, parser, instring, expected):
+        parser_func = request.getfixturevalue(parser)
+        parsed_ = parser_func.parse_string(instring, parse_all=True)
+        evaluated_ = parsed_[0].eval(**latex_eval_kwargs)
+        assert evaluated_ == expected

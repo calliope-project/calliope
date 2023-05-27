@@ -11,8 +11,8 @@ Functions to pick timesteps from data given certain criteria.
 
 import pandas as pd
 
-from calliope.time import funcs
 from calliope import exceptions
+from calliope.time import funcs
 
 
 def _get_array(data, var, tech, **kwargs):

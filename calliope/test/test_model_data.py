@@ -1,17 +1,16 @@
-import pytest
-import os
 import logging
+import os
 
 import numpy as np
 import pandas as pd
+import pytest
 
 import calliope
-from calliope.preprocess.model_data import ModelDataFactory
-from calliope.core.attrdict import AttrDict
-from calliope._version import __version__
 import calliope.exceptions as exceptions
-
+from calliope._version import __version__
+from calliope.core.attrdict import AttrDict
 from calliope.preprocess import model_run_from_yaml
+from calliope.preprocess.model_data import ModelDataFactory
 from calliope.test.common.util import check_error_or_warning
 
 
@@ -390,7 +389,7 @@ class TestModelData:
 
         model_data._clean_model_data()
         for var in model_data.model_data.data_vars.values():
-            assert var.attrs == {"parameters": 1, "is_result": 0}
+            assert var.attrs == {"is_result": 0}
 
     @pytest.mark.parametrize("subdict", ["tech", "node"])
     def test_check_data(self, model_data, subdict):

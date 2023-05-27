@@ -22,7 +22,8 @@ def component_obj():
     setup_string = """
     foreach: [A, A1]
     where: "True"
-    equation: 1 == 1
+    equations:
+        - expression: 1 == 1
     """
     variable_data = string_to_dict(setup_string)
     return parsing.ParsedBackendComponent("constraints", "foo", variable_data)
@@ -136,13 +137,12 @@ def parsed_slice_dict(component_obj, slice_parser):
 @pytest.fixture
 def obj_with_sub_expressions_and_slices():
     def _obj_with_sub_expressions_and_slices(equation_string):
-        if isinstance(equation_string, list):
-            equation_string = f"equations: {equation_string}"
-        elif isinstance(equation_string, str):
-            equation_string = f"equation: {equation_string}"
+        if isinstance(equation_string, str):
+            equation_string = f"[{{'expression': '{equation_string}'}}]"
+
         string_ = f"""
             foreach: [A, techs, A1]
-            {equation_string}
+            equations: {equation_string}
             sub_expressions:
                 foo:
                     - expression: 1 + foo
@@ -233,14 +233,11 @@ def dummy_backend_interface(dummy_model_data):
 @pytest.fixture(scope="function")
 def evaluatable_component_obj(valid_math_element_names):
     def _evaluatable_component_obj(equation_expressions):
-        if isinstance(equation_expressions, list):
-            equations = f"equations: {equation_expressions}"
-        elif isinstance(equation_expressions, str):
-            equations = f"equation: {equation_expressions}"
         setup_string = f"""
         foreach: [techs, nodes]
         where: with_inf
-        {equations}
+        equations:
+            - expression: {equation_expressions}
         sub_expressions:
             foo: [{{expression: with_inf * 2, where: only_techs}}]
         slices:
@@ -265,24 +262,22 @@ def evaluatable_component_obj(valid_math_element_names):
     params=[
         ("with_inf <= 100", 7),  # all vals except .inf meet criterion
         ("with_inf == 100", 2),  # only default vals meet criterion
-        (
-            "$foo <= 100",
-            4,
-        ),  # only non-default + non-inf values meet criterion (+ only_techs masks one valid value)
+        # only non-default + non-inf values meet criterion (+ only_techs masks one valid value)
+        ("$foo <= 100", 4),
         ("$foo == 100", 0),  # no expressions are valid
         ("only_techs + with_inf[techs=$tech] == 2", 1),
     ]
 )
 def evaluate_component_where(evaluatable_component_obj, dummy_model_data, request):
     component_obj = evaluatable_component_obj(request.param[0])
-    exists_array = component_obj.combine_exists_and_foreach(dummy_model_data)
-    top_level_where = component_obj.evaluate_where(dummy_model_data, exists_array)
-    equation_where = component_obj.equations[0].evaluate_where(
-        dummy_model_data, top_level_where
+    top_level_where = component_obj.generate_top_level_where_array(
+        dummy_model_data, break_early=False, align_to_foreach_sets=False
     )
-    equation_where_squeezed = component_obj.drop_dims_not_in_foreach(equation_where)
-
-    return component_obj, equation_where_squeezed, request.param[1]
+    equation_where = component_obj.equations[0].evaluate_where(
+        dummy_model_data, initial_where=top_level_where
+    )
+    equation_where_aligned = component_obj.drop_dims_not_in_foreach(equation_where)
+    return component_obj, equation_where_aligned, request.param[1]
 
 
 @pytest.fixture
@@ -290,9 +285,10 @@ def evaluate_component_expression(
     evaluate_component_where, dummy_model_data, dummy_backend_interface
 ):
     component_obj, equation_where, n_true = evaluate_component_where
+
     return (
         component_obj.equations[0].evaluate_expression(
-            dummy_model_data, dummy_backend_interface, equation_where
+            dummy_model_data, dummy_backend_interface, where=equation_where
         ),
         n_true,
     )
@@ -504,9 +500,7 @@ class TestParsedComponent:
 
         for constraint_eq in expression_list:
             component_sub_dict = constraint_eq.sub_expressions
-            assert not set(component_sub_dict.keys()).symmetric_difference(
-                ["foo", "bar"]
-            )
+            assert set(component_sub_dict.keys()) == {"foo", "bar"}
             comparison_tuple = constraint_eq.expression[0].eval(
                 sub_expression_dict=component_sub_dict, apply_where=False
             )
@@ -645,6 +639,54 @@ equations[0].expression (line 1, char 5): bar = 1
         where = component_obj.evaluate_where(dummy_model_data)
         assert where.item() is True
 
+    def test_parse_top_level_where_fail(self, component_obj):
+        component_obj._unparsed["where"] = "1"
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            component_obj.parse_top_level_where()
+
+        assert check_error_or_warning(excinfo, "Errors during math string parsing")
+
+    def test_generate_top_level_where_array_break_at_foreach(
+        self, dummy_model_data, component_obj
+    ):
+        component_obj.sets = ["nodes", "techs", "foos"]
+        with pytest.warns(calliope.exceptions.BackendWarning):
+            where_array = component_obj.generate_top_level_where_array(dummy_model_data)
+        assert not where_array.any()
+        assert not where_array.shape
+
+    def test_generate_top_level_where_array_break_at_top_level_where(
+        self, dummy_model_data, component_obj
+    ):
+        component_obj.sets = ["nodes", "techs", "timesteps"]
+        component_obj._unparsed["where"] = "all_nan"
+        where_array = component_obj.generate_top_level_where_array(dummy_model_data)
+        assert not where_array.any()
+        assert not set(component_obj.sets).difference(where_array.dims)
+
+    def test_generate_top_level_where_array_no_break_no_align(
+        self, dummy_model_data, component_obj
+    ):
+        component_obj.sets = ["nodes", "techs", "foos"]
+        component_obj._unparsed["where"] = "all_nan"
+        with pytest.warns(calliope.exceptions.BackendWarning):
+            where_array = component_obj.generate_top_level_where_array(
+                dummy_model_data, break_early=False, align_to_foreach_sets=False
+            )
+        assert not where_array.any()
+        assert set(component_obj.sets).difference(where_array.dims) == {"foos"}
+
+    def test_generate_top_level_where_array_no_break_align(
+        self, dummy_model_data, component_obj
+    ):
+        component_obj.sets = ["nodes", "techs"]
+        component_obj._unparsed["where"] = "all_nan AND all_true_carriers"
+        where_array = component_obj.generate_top_level_where_array(
+            dummy_model_data, break_early=False, align_to_foreach_sets=True
+        )
+        assert not where_array.any()
+        assert not set(component_obj.sets).difference(where_array.dims)
+
     def test_evaluate_where_fail(self, component_obj):
         component_obj._unparsed["where"] = "1[]"
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
@@ -686,7 +728,7 @@ class TestParsedBackendEquation:
             expression_parser.EvalSubExpressions,
             (expression_parser.EvalOperatorOperand),
         )
-        assert not found_sub_expressions.symmetric_difference(["foo", "bar"])
+        assert found_sub_expressions == {"foo", "bar"}
 
     @pytest.mark.parametrize(
         ["parse_string", "expected"],
@@ -714,7 +756,7 @@ class TestParsedBackendEquation:
             expression_parser.EvalSubExpressions,
             (),  # The above happens because we provide no eval classes to search inside
         )
-        assert not found_sub_expressions.symmetric_difference(expected)
+        assert found_sub_expressions == set(expected)
 
     @pytest.mark.parametrize(
         "parse_string",
@@ -737,7 +779,7 @@ class TestParsedBackendEquation:
         parsed = expression_string_parser.parse_string(parse_string, parse_all=True)
         equation_obj.expression = parsed
         found_slices = equation_obj.find_slices()
-        assert not found_slices.symmetric_difference(["tech1", "tech2"])
+        assert found_slices == {"tech1", "tech2"}
 
     @pytest.mark.parametrize(
         "parse_string",
@@ -755,7 +797,13 @@ class TestParsedBackendEquation:
         parsed = expression_string_parser.parse_string(parse_string, parse_all=True)
         equation_obj.expression = parsed
         found_slices = equation_obj.find_sub_expressions()
-        assert not found_slices.symmetric_difference(["foo", "bar"])
+        assert found_slices == {"foo", "bar"}
+
+    def test_find_single_sub_expression(self, expression_string_parser, equation_obj):
+        parsed = expression_string_parser.parse_string("$foo == 1", parse_all=True)
+        equation_obj.expression = parsed
+        found_sub_expressions = equation_obj.find_sub_expressions()
+        assert found_sub_expressions == {"foo"}
 
     @pytest.mark.parametrize(
         ["equation_expr", "sub_expression_exprs"],
@@ -785,7 +833,7 @@ class TestParsedBackendEquation:
             for sub_expression, expr_ in sub_expression_exprs.items()
         }
         found_slices = equation_obj.find_slices()
-        assert not found_slices.symmetric_difference(["tech1", "tech2"])
+        assert found_slices == {"tech1", "tech2"}
 
     @pytest.mark.parametrize("expression_group", ["sub_expressions", "slices"])
     def test_add_expression_group_combination(
@@ -902,7 +950,9 @@ class TestParsedBackendEquation:
         equation_obj.where = [
             where_string_parser.parse_string("[foo] in carrier_tiers", parse_all=True)
         ]
-        where = equation_obj.evaluate_where(dummy_model_data, exists_array)
+        where = equation_obj.evaluate_where(
+            dummy_model_data, initial_where=exists_array
+        )
         assert where.sel(carrier_tiers="foo").any()
         assert not where.sel(carrier_tiers="bar").any()
 
@@ -912,7 +962,9 @@ class TestParsedBackendEquation:
         equation_obj.sets = ["nodes", "techs"]
 
         equation_obj.where = [where_string_parser.parse_string("True", parse_all=True)]
-        where = equation_obj.evaluate_where(dummy_model_data, exists_array)
+        where = equation_obj.evaluate_where(
+            dummy_model_data, initial_where=exists_array
+        )
         aligned_where = equation_obj.drop_dims_not_in_foreach(where)
 
         assert set(where.dims).difference(["nodes", "techs"])
@@ -931,7 +983,7 @@ class TestParsedConstraint:
         dict_ = {
             "foreach": ["techs"],
             "where": "with_inf",
-            "equation": "$foo == 1",
+            "equations": [{"expression": "$foo == 1"}],
             "sub_expressions": {
                 "foo": [
                     {"expression": "only_techs + 2", "where": "False"},
@@ -941,6 +993,7 @@ class TestParsedConstraint:
         }
         parsed_ = parsing.ParsedBackendComponent("constraints", "foo", dict_)
         parsed_.equations = parsed_.parse_equations(["only_techs"])
+        parsed_.parse_top_level_where()
         return parsed_
 
     def test_parse_constraint_dict_sets(self, constraint_obj):
@@ -952,20 +1005,22 @@ class TestParsedConstraint:
     def test_parse_constraint_dict_empty_eq1(self, constraint_obj, dummy_model_data):
         assert not constraint_obj.equations[0].evaluate_where(dummy_model_data).any()
 
-    def test_parse_constraint_dict_evalaute_eq2(
+    def test_parse_constraint_dict_evaluate_eq2(
         self, constraint_obj, dummy_model_data, dummy_backend_interface
     ):
-        exists_array = constraint_obj.combine_exists_and_foreach(dummy_model_data)
-        top_level_where_array = constraint_obj.evaluate_where(
-            dummy_model_data, exists_array
-        )
+        # We ignore foreach here so we can do "== 1" below. With foreach, there is
+        # a random element that might create a where array that masks the only valid index item
+        top_level_where = constraint_obj.evaluate_where(dummy_model_data)
         valid_where = constraint_obj.equations[1].evaluate_where(
-            dummy_model_data, top_level_where_array
+            dummy_model_data, initial_where=top_level_where
         )
         aligned_where = constraint_obj.drop_dims_not_in_foreach(valid_where)
         references = set()
         comparison_tuple = constraint_obj.equations[1].evaluate_expression(
-            dummy_model_data, dummy_backend_interface, aligned_where, references
+            dummy_model_data,
+            dummy_backend_interface,
+            where=aligned_where,
+            references=references,
         )
         assert apply_comparison(comparison_tuple).sum() == 1
         assert references == {"only_techs"}
@@ -985,9 +1040,10 @@ class TestParsedVariable:
         assert len(variable_obj.equations) == 0
 
     def test_parse_variable_dict_empty_eq1(self, variable_obj, dummy_model_data):
-        exists_array = variable_obj.combine_exists_and_foreach(dummy_model_data)
-        variable_obj.parse_top_level_where()
-        assert not variable_obj.evaluate_where(dummy_model_data, exists_array).any()
+        top_level_where_where = variable_obj.generate_top_level_where_array(
+            dummy_model_data, break_early=False, align_to_foreach_sets=False
+        )
+        assert not top_level_where_where.any()
 
 
 class TestParsedObjective:
@@ -1013,11 +1069,11 @@ class TestParsedObjective:
     def test_parse_objective_dict_empty_eq1(self, objective_obj, dummy_model_data):
         assert not objective_obj.equations[0].evaluate_where(dummy_model_data).any()
 
-    def test_parse_objective_dict_evalaute_eq2(
+    def test_parse_objective_dict_evaluate_eq2(
         self, objective_obj, dummy_model_data, dummy_backend_interface
     ):
         valid_where = objective_obj.equations[1].evaluate_where(dummy_model_data)
         objective_expression = objective_obj.equations[1].evaluate_expression(
-            dummy_model_data, dummy_backend_interface, valid_where
+            dummy_model_data, dummy_backend_interface, where=valid_where
         )
         assert objective_expression.sum() == 12

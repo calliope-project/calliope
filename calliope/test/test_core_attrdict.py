@@ -1,12 +1,12 @@
-from io import StringIO
 import os
-
-import pytest
-import numpy as np
 import tempfile
+from io import StringIO
+
+import numpy as np
+import pytest
 import ruamel.yaml as ruamel_yaml
 
-from calliope.core.attrdict import AttrDict, _MISSING
+from calliope.core.attrdict import _MISSING, AttrDict
 from calliope.test.common.util import check_error_or_warning
 
 
@@ -58,7 +58,7 @@ class TestAttrDict:
 
     def test_init_from_nondict(self):
         with pytest.raises(ValueError) as excinfo:
-            d = AttrDict("foo")
+            AttrDict("foo")
         assert check_error_or_warning(excinfo, "Must pass a dict to AttrDict")
 
     def test_init_from_dict(self, regular_dict):

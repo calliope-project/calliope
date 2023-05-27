@@ -9,20 +9,19 @@ Functionality to build the model-internal data array and process
 time-varying param_dict.
 
 """
+import logging
 import os
 import re
-import logging
 
-import xarray as xr
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 import calliope
 from calliope import exceptions
-from calliope.core.attrdict import AttrDict
 from calliope._version import __version__
-from calliope.preprocess import checks
-from calliope.preprocess import time
+from calliope.core.attrdict import AttrDict
+from calliope.preprocess import checks, time
 
 
 class ModelDataFactory:
@@ -340,7 +339,6 @@ class ModelDataFactory:
 
     def _add_var_attrs(self):
         for var_data in self.model_data.data_vars.values():
-            var_data.attrs["parameters"] = 1
             var_data.attrs["is_result"] = 0
 
     @staticmethod
