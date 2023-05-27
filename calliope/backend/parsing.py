@@ -41,8 +41,7 @@ class UnparsedConstraintDict(TypedDict):
     description: NotRequired[str]
     foreach: Required[list]
     where: str
-    equation: NotRequired[str]
-    equations: NotRequired[list[UnparsedEquationDict]]
+    equations: Required[list[UnparsedEquationDict]]
     sub_expressions: NotRequired[dict[str, list[UnparsedEquationDict]]]
     slices: NotRequired[dict[str, list[UnparsedEquationDict]]]
 
@@ -69,8 +68,7 @@ class UnparsedVariableDict(TypedDict):
 
 class UnparsedObjectiveDict(TypedDict):
     description: NotRequired[str]
-    equation: NotRequired[str]
-    equations: NotRequired[list[UnparsedEquationDict]]
+    equations: Required[list[UnparsedEquationDict]]
     sub_expressions: NotRequired[dict[str, list[UnparsedEquationDict]]]
     domain: str
     sense: str
@@ -458,10 +456,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 The length of the list depends on the product of provided equations and sub-expression/slice references.
         """
         equation_expression_list: list[UnparsedEquationDict]
-        if "equation" in self._unparsed.keys():
-            equation_expression_list = [{"expression": self._unparsed["equation"]}]
-        else:
-            equation_expression_list = self._unparsed.get("equations", [])
+        equation_expression_list = self._unparsed.get("equations", [])
 
         equations = self.generate_expression_list(
             expression_parser=self.equation_expression_parser(valid_math_element_names),

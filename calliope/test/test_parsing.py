@@ -22,7 +22,8 @@ def component_obj():
     setup_string = """
     foreach: [A, A1]
     where: "True"
-    equation: 1 == 1
+    equations:
+        - expression: 1 == 1
     """
     variable_data = string_to_dict(setup_string)
     return parsing.ParsedBackendComponent("constraints", "foo", variable_data)
@@ -136,13 +137,12 @@ def parsed_slice_dict(component_obj, slice_parser):
 @pytest.fixture
 def obj_with_sub_expressions_and_slices():
     def _obj_with_sub_expressions_and_slices(equation_string):
-        if isinstance(equation_string, list):
-            equation_string = f"equations: {equation_string}"
-        elif isinstance(equation_string, str):
-            equation_string = f"equation: {equation_string}"
+        if isinstance(equation_string, str):
+            equation_string = f"[{{'expression': '{equation_string}'}}]"
+
         string_ = f"""
             foreach: [A, techs, A1]
-            {equation_string}
+            equations: {equation_string}
             sub_expressions:
                 foo:
                     - expression: 1 + foo
@@ -233,14 +233,11 @@ def dummy_backend_interface(dummy_model_data):
 @pytest.fixture(scope="function")
 def evaluatable_component_obj(valid_math_element_names):
     def _evaluatable_component_obj(equation_expressions):
-        if isinstance(equation_expressions, list):
-            equations = f"equations: {equation_expressions}"
-        elif isinstance(equation_expressions, str):
-            equations = f"equation: {equation_expressions}"
         setup_string = f"""
         foreach: [techs, nodes]
         where: with_inf
-        {equations}
+        equations:
+            - expression: {equation_expressions}
         sub_expressions:
             foo: [{{expression: with_inf * 2, where: only_techs}}]
         slices:
@@ -978,7 +975,7 @@ class TestParsedConstraint:
         dict_ = {
             "foreach": ["techs"],
             "where": "with_inf",
-            "equation": "$foo == 1",
+            "equations": [{"expression": "$foo == 1"}],
             "sub_expressions": {
                 "foo": [
                     {"expression": "only_techs + 2", "where": "False"},

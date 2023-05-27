@@ -2041,7 +2041,9 @@ class TestNewBackend:
         # add constraint without nan
         constraint_dict = {
             "foreach": ["techs", "carriers"],
-            "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100",
+            "equations": [
+                {"expression": "sum(carrier_prod, over=[nodes, timesteps]) >= 100"}
+            ],
             "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
         }
         constraint_name = "constraint-without-nan"
@@ -2060,7 +2062,9 @@ class TestNewBackend:
         # add constraint with nan
         constraint_dict = {
             "foreach": ["techs", "carriers"],
-            "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100",
+            "equations": [
+                {"expression": "sum(carrier_prod, over=[nodes, timesteps]) >= 100"}
+            ],
             # "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
         }
         constraint_name = "constraint-with-nan"
@@ -2086,7 +2090,7 @@ class TestNewBackend:
         # add expression without nan
         expression_dict = {
             "foreach": ["techs", "carriers"],
-            "equation": "sum(carrier_prod, over=[nodes, timesteps])",
+            "equations": [{"expression": "sum(carrier_prod, over=[nodes, timesteps])"}],
             "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
         }
         expression_name = "expression-without-nan"
@@ -2105,7 +2109,7 @@ class TestNewBackend:
 
         expression_dict = {
             "foreach": ["techs", "carriers"],
-            "equation": "sum(carrier_prod, over=[nodes, timesteps])",
+            "equations": [{"expression": "sum(carrier_prod, over=[nodes, timesteps])"}],
             # "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
         }
         expression_name = "expression-with-nan"
@@ -2134,7 +2138,7 @@ class TestNewBackend:
                 "techs",
                 "nodes",
             ],  # as 'nodes' is listed here, the constraint will have no excess dimensions
-            "equation": "energy_cap >= 100",
+            "equations": [{"expression": "energy_cap >= 100"}],
         }
         constraint_name = "constraint-without-excess-dimensions"
 
@@ -2154,7 +2158,7 @@ class TestNewBackend:
             "foreach": [
                 "techs"
             ],  # as 'nodes' is not listed here, the constraint will have excess dimensions
-            "equation": "energy_cap >= 100",
+            "equations": [{"expression": "energy_cap >= 100"}],
         }
         constraint_name = "constraint-with-excess-dimensions"
 
