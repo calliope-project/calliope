@@ -14,7 +14,6 @@ import logging
 import numpy as np
 import xarray as xr
 
-from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
 
 logger = logging.getLogger(__name__)

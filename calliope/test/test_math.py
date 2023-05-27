@@ -46,7 +46,11 @@ class TestBaseMath:
             # need the variable defined in a constraint/objective for it to appear in the LP file bounds
             "objectives": {
                 "foo": {
-                    "equations": [{"expression": "sum(energy_cap[techs=test_supply_elec], over=nodes)"}],
+                    "equations": [
+                        {
+                            "expression": "sum(energy_cap[techs=test_supply_elec], over=nodes)"
+                        }
+                    ],
                     "sense": "minimise",
                 }
             }

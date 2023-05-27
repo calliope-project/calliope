@@ -2,7 +2,7 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
 import re
-from typing import Any, Callable, Union
+from typing import Callable, Union
 
 import xarray as xr
 
