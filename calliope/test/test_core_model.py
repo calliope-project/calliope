@@ -118,7 +118,11 @@ class TestCustomMath:
         new_constraint = calliope.AttrDict(
             {
                 "constraints": {
-                    "constraint_name": {"foreach": [], "where": "", "equations": [{"expression": ""}]}
+                    "constraint_name": {
+                        "foreach": [],
+                        "where": "",
+                        "equations": [{"expression": ""}],
+                    }
                 }
             }
         )
@@ -318,7 +322,11 @@ class TestValidateMathDict:
     def test_custom_math(self, caplog, simple_supply, equation, where):
         with caplog.at_level(logging.INFO, logger=LOGGER):
             simple_supply.validate_math_strings(
-                {"constraints": {"foo": {"equations": [{"expression": equation}], "where": where}}}
+                {
+                    "constraints": {
+                        "foo": {"equations": [{"expression": equation}], "where": where}
+                    }
+                }
             )
         assert "Model: validated math strings" in [
             rec.message for rec in caplog.records
@@ -326,7 +334,10 @@ class TestValidateMathDict:
 
     @pytest.mark.parametrize(
         "component_dict",
-        [{"equations": [{"expression": "1 = 1"}]}, {"equations": [{"expression": "1 = 1"}], "where": "foo[bar]"}],
+        [
+            {"equations": [{"expression": "1 = 1"}]},
+            {"equations": [{"expression": "1 = 1"}], "where": "foo[bar]"},
+        ],
     )
     @pytest.mark.parametrize("both_fail", [True, False])
     def test_custom_math_fails(self, simple_supply, component_dict, both_fail):
