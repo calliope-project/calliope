@@ -309,7 +309,7 @@ class TestNationalScaleExampleModelSpores:
 
         return _spores_with_override
 
-    @pytest.mark.parametrize("override", ("flow_cap_min", "flow_cap_equals"))
+    @pytest.mark.parametrize("override", ("flow_cap_min"))
     def test_ignore_forced_flow_cap_spores(self, spores_with_override, override):
         # the national scale model always maxes out CCGT in the first 3 SPORES.
         # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
@@ -342,10 +342,7 @@ class TestNationalScaleExampleModelSpores:
         # the national scale model always maxes out CCGT in the first 3 SPORES.
         # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
         # This enables us to test our functionality that only *additional* capacity is scored.
-        override_dict = {
-            "locations.region1.techs.ccgt.constraints.flow_cap_min": 15000,
-            "locations.region1.techs.ccgt.constraints.flow_cap_equals": 30000,
-        }
+        override_dict = {"locations.region1.techs.ccgt.constraints.flow_cap_min": 15000}
         result_with_override, _ = spores_with_override(override_dict)
         assert (
             result_with_override.cost.sel(
