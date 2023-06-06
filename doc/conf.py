@@ -15,10 +15,13 @@ sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
 sys.path.append(os.path.abspath("_themes"))
 
-from helpers import generate_tables  # noqa: E402
+from helpers import generate_readable_schema, generate_tables  # noqa: E402
 
 # Generates the tables and source code files
 generate_tables.process()
+
+# Generates readable markdown files from YAML schema
+generate_readable_schema.process()
 
 # Redefine supported_image_types for the HTML builder to prefer PNG over SVG
 image_types = ["image/png", "image/svg+xml", "image/gif", "image/jpeg"]
@@ -52,9 +55,10 @@ extensions = [
     "sphinx.ext.extlinks",
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
-    "sphinx.ext.intersphinx",
     "sphinx_autodoc_typehints",
+    "sphinx.ext.intersphinx",
     "sphinx_search.extension",
+    "myst_parser",
 ]
 
 # The suffix of source filenames.

@@ -1,8 +1,8 @@
-from pathlib import Path
 import filecmp
+from pathlib import Path
 
-import pytest
 import numpy as np
+import pytest
 
 import calliope
 from calliope import AttrDict
@@ -46,7 +46,11 @@ class TestBaseMath:
             # need the variable defined in a constraint/objective for it to appear in the LP file bounds
             "objectives": {
                 "foo": {
-                    "equation": "sum(energy_cap[techs=test_supply_elec], over=nodes)",
+                    "equations": [
+                        {
+                            "expression": "sum(energy_cap[techs=test_supply_elec], over=nodes)"
+                        }
+                    ],
                     "sense": "minimise",
                 }
             }

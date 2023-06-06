@@ -1,17 +1,16 @@
 name: calliope
 
 channels:
-    - conda-forge
+  - conda-forge
 
 dependencies:
-    - bottleneck < 2
-    - coverage >= 4.4
-    - codecov < 3
-    - glpk = 5.0
-    - hdf5 < 2
-    - libnetcdf < 5
-    - pre-commit < 4
-    - pytest-cov < 5
-    - pytest-xdist < 4 # pytest distributed testing plugin
-    - pytest < 8
-
+  - bottleneck < 2
+  - coverage >= 4.4
+  - codecov < 3
+  - glpk = 5.0
+  - hdf5 < 2
+  - libnetcdf < 5
+  - pre-commit < 4
+  - pytest-cov < 5
+  - pytest-xdist < 4 # pytest distributed testing plugin
+  - pytest < 8

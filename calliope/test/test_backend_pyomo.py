@@ -1809,29 +1809,22 @@ class TestNewBackend:
         m.backend.verbose_strings()
         return m
 
-    def test_new_build_has_backend(self, simple_supply_new_build):
-        assert hasattr(simple_supply_new_build, "backend")
+    def test_new_build_has_backend(self, simple_supply):
+        assert hasattr(simple_supply, "backend")
 
-    def test_new_build_optimal(self, simple_supply_new_build):
-        assert hasattr(simple_supply_new_build, "results")
-        assert (
-            simple_supply_new_build._model_data.attrs["termination_condition"]
-            == "optimal"
-        )
+    def test_new_build_optimal(self, simple_supply):
+        assert hasattr(simple_supply, "results")
+        assert simple_supply._model_data.attrs["termination_condition"] == "optimal"
 
     @pytest.mark.parametrize(
         "component_type", ["variable", "global_expression", "parameter", "constraint"]
     )
-    def test_new_build_get_missing_component(
-        self, simple_supply_new_build, component_type
-    ):
-        returned_ = getattr(simple_supply_new_build.backend, f"get_{component_type}")(
-            "foo"
-        )
+    def test_new_build_get_missing_component(self, simple_supply, component_type):
+        returned_ = getattr(simple_supply.backend, f"get_{component_type}")("foo")
         assert returned_ is None
 
-    def test_new_build_get_variable(self, simple_supply_new_build):
-        var = simple_supply_new_build.backend.get_variable("energy_cap")
+    def test_new_build_get_variable(self, simple_supply):
+        var = simple_supply.backend.get_variable("energy_cap")
         assert (
             var.to_series().dropna().apply(lambda x: isinstance(x, pmo.variable)).all()
         )
@@ -1848,10 +1841,8 @@ class TestNewBackend:
             "coords_in_name": False,
         }
 
-    def test_new_build_get_variable_as_vals(self, simple_supply_new_build):
-        var = simple_supply_new_build.backend.get_variable(
-            "energy_cap", as_backend_objs=False
-        )
+    def test_new_build_get_variable_as_vals(self, simple_supply):
+        var = simple_supply.backend.get_variable("energy_cap", as_backend_objs=False)
         assert (
             not var.to_series()
             .dropna()
@@ -1859,8 +1850,8 @@ class TestNewBackend:
             .any()
         )
 
-    def test_new_build_get_parameter(self, simple_supply_new_build):
-        param = simple_supply_new_build.backend.get_parameter("energy_eff")
+    def test_new_build_get_parameter(self, simple_supply):
+        param = simple_supply.backend.get_parameter("energy_eff")
         assert (
             param.to_series()
             .dropna()
@@ -1875,14 +1866,12 @@ class TestNewBackend:
             "coords_in_name": False,
         }
 
-    def test_new_build_get_parameter_as_vals(self, simple_supply_new_build):
-        param = simple_supply_new_build.backend.get_parameter(
-            "energy_eff", as_backend_objs=False
-        )
+    def test_new_build_get_parameter_as_vals(self, simple_supply):
+        param = simple_supply.backend.get_parameter("energy_eff", as_backend_objs=False)
         assert param.dtype == np.dtype("float64")
 
-    def test_new_build_get_global_expression(self, simple_supply_new_build):
-        expr = simple_supply_new_build.backend.get_global_expression("cost_investment")
+    def test_new_build_get_global_expression(self, simple_supply):
+        expr = simple_supply.backend.get_global_expression("cost_investment")
         assert (
             expr.to_series()
             .dropna()
@@ -1897,22 +1886,22 @@ class TestNewBackend:
             "coords_in_name": False,
         }
 
-    def test_new_build_get_global_expression_as_str(self, simple_supply_new_build):
-        expr = simple_supply_new_build.backend.get_global_expression(
+    def test_new_build_get_global_expression_as_str(self, simple_supply):
+        expr = simple_supply.backend.get_global_expression(
             "cost", as_backend_objs=False
         )
         assert expr.to_series().dropna().apply(lambda x: isinstance(x, str)).all()
 
-    def test_new_build_get_global_expression_as_vals(self, simple_supply_new_build):
-        expr = simple_supply_new_build.backend.get_global_expression(
+    def test_new_build_get_global_expression_as_vals(self, simple_supply):
+        expr = simple_supply.backend.get_global_expression(
             "cost", as_backend_objs=False, eval_body=True
         )
         assert (
             expr.to_series().dropna().apply(lambda x: isinstance(x, (float, int))).all()
         )
 
-    def test_new_build_get_constraint(self, simple_supply_new_build):
-        constr = simple_supply_new_build.backend.get_constraint("system_balance")
+    def test_new_build_get_constraint(self, simple_supply):
+        constr = simple_supply.backend.get_constraint("system_balance")
         assert (
             constr.to_series()
             .dropna()
@@ -1926,8 +1915,8 @@ class TestNewBackend:
             "coords_in_name": False,
         }
 
-    def test_new_build_get_constraint_as_str(self, simple_supply_new_build):
-        constr = simple_supply_new_build.backend.get_constraint(
+    def test_new_build_get_constraint_as_str(self, simple_supply):
+        constr = simple_supply.backend.get_constraint(
             "system_balance", as_backend_objs=False
         )
         assert isinstance(constr, xr.Dataset)
@@ -1940,8 +1929,8 @@ class TestNewBackend:
             .all()
         )
 
-    def test_new_build_get_constraint_as_vals(self, simple_supply_new_build):
-        constr = simple_supply_new_build.backend.get_constraint(
+    def test_new_build_get_constraint_as_vals(self, simple_supply):
+        constr = simple_supply.backend.get_constraint(
             "system_balance", as_backend_objs=False, eval_body=True
         )
         assert (
@@ -1953,8 +1942,8 @@ class TestNewBackend:
         )
 
     @pytest.mark.parametrize("bound", ["lb", "ub"])
-    def test_new_build_get_constraint_bounds(self, simple_supply_new_build, bound):
-        constr = simple_supply_new_build.backend.get_constraint(
+    def test_new_build_get_constraint_bounds(self, simple_supply, bound):
+        constr = simple_supply.backend.get_constraint(
             "system_balance", as_backend_objs=False
         )
         assert (constr[bound].to_series().dropna() == 0).all()
@@ -1965,74 +1954,69 @@ class TestNewBackend:
             m.solve()
         assert check_error_or_warning(excinfo, "You must build the optimisation")
 
-    def test_solve_after_solve(self, simple_supply_new_build):
+    def test_solve_after_solve(self, simple_supply):
         with pytest.raises(exceptions.ModelError) as excinfo:
-            simple_supply_new_build.solve()
+            simple_supply.solve()
         assert check_error_or_warning(excinfo, "This model object already has results.")
 
-    def test_solve_operate_not_allowed(self, simple_supply_new_build):
-        simple_supply_new_build.run_config["mode"] = "operate"
-        simple_supply_new_build._model_data.attrs["allow_operate_mode"] = False
+    def test_solve_operate_not_allowed(self, simple_supply):
+        simple_supply.run_config["mode"] = "operate"
+        simple_supply._model_data.attrs["allow_operate_mode"] = False
 
         try:
             with pytest.raises(exceptions.ModelError) as excinfo:
-                simple_supply_new_build.solve(force=True)
+                simple_supply.solve(force=True)
             assert check_error_or_warning(excinfo, "Unable to run this model in op")
         except AssertionError as e:
-            simple_supply_new_build.run_config["mode"] = "plan"
-            simple_supply_new_build._model_data.attrs["allow_operate_mode"] = True
+            simple_supply.run_config["mode"] = "plan"
+            simple_supply._model_data.attrs["allow_operate_mode"] = True
             raise e
         else:
-            simple_supply_new_build.run_config["mode"] = "plan"
-            simple_supply_new_build._model_data.attrs["allow_operate_mode"] = True
+            simple_supply.run_config["mode"] = "plan"
+            simple_supply._model_data.attrs["allow_operate_mode"] = True
 
-    def test_solve_warmstart_not_possible(self, simple_supply_new_build):
+    def test_solve_warmstart_not_possible(self, simple_supply):
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            simple_supply_new_build.solve(force=True, warmstart=True)
+            simple_supply.solve(force=True, warmstart=True)
         assert check_error_or_warning(excinfo, "cbc, does not support warmstart")
 
-    def test_solve_non_optimal(self, simple_supply_new_build):
+    def test_solve_non_optimal(self, simple_supply):
         def _update_param(param):
             param.value = param.value * 1000
 
-        simple_supply_new_build.backend.apply_func(
+        simple_supply.backend.apply_func(
             _update_param,
-            simple_supply_new_build.backend.parameters.resource.loc[
+            simple_supply.backend.parameters.resource.loc[
                 {"techs": "test_demand_elec"}
             ],
         )
         with pytest.warns(exceptions.BackendWarning) as excinfo:
-            simple_supply_new_build.solve(force=True)
+            simple_supply.solve(force=True)
 
         assert check_error_or_warning(excinfo, "Model solution was non-optimal")
-        assert (
-            simple_supply_new_build._model_data.attrs["termination_condition"]
-            == "infeasible"
-        )
-        assert not simple_supply_new_build.results
-        assert "energy_cap" not in simple_supply_new_build._model_data.data_vars
+        assert simple_supply._model_data.attrs["termination_condition"] == "infeasible"
+        assert not simple_supply.results
+        assert "energy_cap" not in simple_supply._model_data.data_vars
 
-    def test_raise_error_on_preexistence_same_type(self, simple_supply_new_build):
+    def test_raise_error_on_preexistence_same_type(self, simple_supply):
         with pytest.raises(exceptions.BackendError) as excinfo:
-            simple_supply_new_build.backend.add_parameter("energy_eff", xr.DataArray(1))
+            simple_supply.backend.add_parameter("energy_eff", xr.DataArray(1))
 
         assert check_error_or_warning(
             excinfo,
             "Trying to add already existing `energy_eff` to backend model parameters.",
         )
 
-    def test_raise_error_on_preexistence_diff_type(self, simple_supply_new_build):
+    def test_raise_error_on_preexistence_diff_type(self, simple_supply):
         with pytest.raises(exceptions.BackendError) as excinfo:
-            simple_supply_new_build.backend.add_parameter(
-                "carrier_prod", xr.DataArray(1)
-            )
+            simple_supply.backend.add_parameter("carrier_prod", xr.DataArray(1))
 
         assert check_error_or_warning(
             excinfo,
             "Trying to add already existing *variable* `carrier_prod` as a backend model *parameter*.",
         )
 
-    def test_raise_error_on_constraint_with_nan(self, simple_supply_new_build):
+    def test_raise_error_on_constraint_with_nan(self, simple_supply):
         """
         A very simple constraint: For each tech, let the annual and regional sum of `carrier_prod` be larger than 100.
         However, not every tech has the variable `carrier_prod`.
@@ -2041,33 +2025,37 @@ class TestNewBackend:
         # add constraint without nan
         constraint_dict = {
             "foreach": ["techs", "carriers"],
-            "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100",
+            "equations": [
+                {"expression": "sum(carrier_prod, over=[nodes, timesteps]) >= 100"}
+            ],
             "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
         }
         constraint_name = "constraint-without-nan"
 
-        simple_supply_new_build.backend.add_constraint(
-            simple_supply_new_build.inputs,
+        simple_supply.backend.add_constraint(
+            simple_supply.inputs,
             constraint_name,
             constraint_dict,
         )
 
         assert (
-            simple_supply_new_build.backend.get_constraint(constraint_name).name
+            simple_supply.backend.get_constraint(constraint_name).name
             == constraint_name
         )
 
         # add constraint with nan
         constraint_dict = {
             "foreach": ["techs", "carriers"],
-            "equation": "sum(carrier_prod, over=[nodes, timesteps]) >= 100",
+            "equations": [
+                {"expression": "sum(carrier_prod, over=[nodes, timesteps]) >= 100"}
+            ],
             # "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
         }
         constraint_name = "constraint-with-nan"
 
         with pytest.raises(exceptions.BackendError) as error:
-            simple_supply_new_build.backend.add_constraint(
-                simple_supply_new_build.inputs,
+            simple_supply.backend.add_constraint(
+                simple_supply.inputs,
                 constraint_name,
                 constraint_dict,
             )
@@ -2077,7 +2065,7 @@ class TestNewBackend:
             f"(constraints, {constraint_name}): Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
         )
 
-    def test_raise_error_on_expression_with_nan(self, simple_supply_new_build):
+    def test_raise_error_on_expression_with_nan(self, simple_supply):
         """
         A very simple expression: The annual and regional sum of `carrier_prod` for each tech.
         However, not every tech has the variable `carrier_prod`.
@@ -2086,33 +2074,33 @@ class TestNewBackend:
         # add expression without nan
         expression_dict = {
             "foreach": ["techs", "carriers"],
-            "equation": "sum(carrier_prod, over=[nodes, timesteps])",
+            "equations": [{"expression": "sum(carrier_prod, over=[nodes, timesteps])"}],
             "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
         }
         expression_name = "expression-without-nan"
 
         # add expression with nan
-        simple_supply_new_build.backend.add_global_expression(
-            simple_supply_new_build.inputs,
+        simple_supply.backend.add_global_expression(
+            simple_supply.inputs,
             expression_name,
             expression_dict,
         )
 
         assert (
-            simple_supply_new_build.backend.get_global_expression(expression_name).name
+            simple_supply.backend.get_global_expression(expression_name).name
             == expression_name
         )
 
         expression_dict = {
             "foreach": ["techs", "carriers"],
-            "equation": "sum(carrier_prod, over=[nodes, timesteps])",
+            "equations": [{"expression": "sum(carrier_prod, over=[nodes, timesteps])"}],
             # "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
         }
         expression_name = "expression-with-nan"
 
         with pytest.raises(exceptions.BackendError) as error:
-            simple_supply_new_build.backend.add_global_expression(
-                simple_supply_new_build.inputs,
+            simple_supply.backend.add_global_expression(
+                simple_supply.inputs,
                 expression_name,
                 expression_dict,
             )
@@ -2122,7 +2110,7 @@ class TestNewBackend:
             f"(expressions, {expression_name}): Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
         )
 
-    def test_raise_error_on_excess_dimensions(self, simple_supply_new_build):
+    def test_raise_error_on_excess_dimensions(self, simple_supply):
         """
         A very simple constraint: For each tech, let the `energy_cap` be larger than 100.
         However, we forgot to include `nodes` in `foreach`.
@@ -2134,18 +2122,18 @@ class TestNewBackend:
                 "techs",
                 "nodes",
             ],  # as 'nodes' is listed here, the constraint will have no excess dimensions
-            "equation": "energy_cap >= 100",
+            "equations": [{"expression": "energy_cap >= 100"}],
         }
         constraint_name = "constraint-without-excess-dimensions"
 
-        simple_supply_new_build.backend.add_constraint(
-            simple_supply_new_build.inputs,
+        simple_supply.backend.add_constraint(
+            simple_supply.inputs,
             constraint_name,
             constraint_dict,
         )
 
         assert (
-            simple_supply_new_build.backend.get_constraint(constraint_name).name
+            simple_supply.backend.get_constraint(constraint_name).name
             == constraint_name
         )
 
@@ -2154,13 +2142,13 @@ class TestNewBackend:
             "foreach": [
                 "techs"
             ],  # as 'nodes' is not listed here, the constraint will have excess dimensions
-            "equation": "energy_cap >= 100",
+            "equations": [{"expression": "energy_cap >= 100"}],
         }
         constraint_name = "constraint-with-excess-dimensions"
 
         with pytest.raises(exceptions.BackendError) as error:
-            simple_supply_new_build.backend.add_constraint(
-                simple_supply_new_build.inputs,
+            simple_supply.backend.add_constraint(
+                simple_supply.inputs,
                 constraint_name,
                 constraint_dict,
             )
@@ -2173,87 +2161,80 @@ class TestNewBackend:
     @pytest.mark.parametrize(
         "component", ["parameters", "variables", "global_expressions", "constraints"]
     )
-    def test_create_and_delete_pyomo_list(self, simple_supply_new_build, component):
-        backend_instance = simple_supply_new_build.backend._instance
-        simple_supply_new_build.backend.create_obj_list("foo", component)
+    def test_create_and_delete_pyomo_list(self, simple_supply, component):
+        backend_instance = simple_supply.backend._instance
+        simple_supply.backend.create_obj_list("foo", component)
         assert "foo" in getattr(backend_instance, component).keys()
 
-        simple_supply_new_build.backend.delete_obj_list("foo", component)
+        simple_supply.backend.delete_obj_list("foo", component)
         assert "foo" not in getattr(backend_instance, component).keys()
 
     @pytest.mark.parametrize(
         "component", ["parameters", "variables", "global_expressions", "constraints"]
     )
-    def test_delete_inexistent_pyomo_list(self, simple_supply_new_build, component):
-        backend_instance = simple_supply_new_build.backend._instance
+    def test_delete_inexistent_pyomo_list(self, simple_supply, component):
+        backend_instance = simple_supply.backend._instance
         assert "bar" not in getattr(backend_instance, component).keys()
-        simple_supply_new_build.backend.delete_obj_list("bar", component)
+        simple_supply.backend.delete_obj_list("bar", component)
         assert "bar" not in getattr(backend_instance, component).keys()
 
     @pytest.mark.parametrize(
         ["component", "eq"],
         [("global_expressions", "energy_cap + 1"), ("constraints", "energy_cap >= 1")],
     )
-    def test_add_allnull_expr_or_constr(self, simple_supply_new_build, component, eq):
-        adder = getattr(
-            simple_supply_new_build.backend, "add_" + component.removesuffix("s")
-        )
+    def test_add_allnull_expr_or_constr(self, simple_supply, component, eq):
+        adder = getattr(simple_supply.backend, "add_" + component.removesuffix("s"))
         constr_dict = {
             "foreach": ["nodes", "techs"],
             "where": "True",
             "equations": [{"expression": eq, "where": "False"}],
         }
-        adder(simple_supply_new_build._model_data, "foo", constr_dict)
+        adder(simple_supply._model_data, "foo", constr_dict)
 
-        assert (
-            "foo"
-            not in getattr(simple_supply_new_build.backend._instance, component).keys()
-        )
-        assert "foo" not in simple_supply_new_build.backend._dataset.data_vars.keys()
+        assert "foo" not in getattr(simple_supply.backend._instance, component).keys()
+        assert "foo" not in simple_supply.backend._dataset.data_vars.keys()
 
-    def test_add_allnull_param_no_shape(self, simple_supply_new_build):
-        simple_supply_new_build.backend.add_parameter("foo", xr.DataArray(np.nan))
+    def test_add_allnull_param_no_shape(self, simple_supply):
+        simple_supply.backend.add_parameter("foo", xr.DataArray(np.nan))
 
-        assert "foo" not in simple_supply_new_build.backend._instance.parameters.keys()
+        assert "foo" not in simple_supply.backend._instance.parameters.keys()
         # We keep it in the dataset since it might be fillna'd by another param later.
-        assert "foo" in simple_supply_new_build.backend._dataset.data_vars.keys()
-        del simple_supply_new_build.backend._dataset["foo"]
+        assert "foo" in simple_supply.backend._dataset.data_vars.keys()
+        del simple_supply.backend._dataset["foo"]
 
-    def test_add_allnull_param_with_shape(self, simple_supply_new_build):
-        nan_array = simple_supply_new_build._model_data.energy_cap_max.where(
-            lambda x: x < 0
-        )
-        simple_supply_new_build.backend.add_parameter("foo", nan_array)
+    def test_add_allnull_param_with_shape(self, simple_supply):
+        nan_array = simple_supply._model_data.energy_cap_max.where(lambda x: x < 0)
+        simple_supply.backend.add_parameter("foo", nan_array)
 
-        assert "foo" not in simple_supply_new_build.backend._instance.parameters.keys()
+        assert "foo" not in simple_supply.backend._instance.parameters.keys()
         # We keep it in the dataset since it might be fillna'd by another param later.
-        assert "foo" in simple_supply_new_build.backend._dataset.data_vars.keys()
-        del simple_supply_new_build.backend._dataset["foo"]
+        assert "foo" in simple_supply.backend._dataset.data_vars.keys()
+        del simple_supply.backend._dataset["foo"]
 
-    def test_add_allnull_var(self, simple_supply_new_build):
-        simple_supply_new_build.backend.add_variable(
-            simple_supply_new_build._model_data,
+    def test_add_allnull_var(self, simple_supply):
+        simple_supply.backend.add_variable(
+            simple_supply._model_data,
             "foo",
             {"foreach": ["nodes"], "where": "False"},
         )
-        assert "foo" not in simple_supply_new_build.backend._instance.variables.keys()
-        assert "foo" not in simple_supply_new_build.backend._dataset.data_vars.keys()
+        assert "foo" not in simple_supply.backend._instance.variables.keys()
+        assert "foo" not in simple_supply.backend._dataset.data_vars.keys()
 
-    def test_add_allnull_obj(self, simple_supply_new_build):
+    def test_add_allnull_obj(self, simple_supply):
         eq = {"expression": "bigM", "where": "False"}
-        simple_supply_new_build.backend.add_objective(
-            simple_supply_new_build._model_data,
+        simple_supply.backend.add_objective(
+            simple_supply._model_data,
             "foo",
             {"equations": [eq, eq], "sense": "minimise"},
         )
-        assert len(simple_supply_new_build.backend._instance.objectives) == 1
-        assert "foo" not in simple_supply_new_build.backend._dataset.data_vars.keys()
+        assert len(simple_supply.backend._instance.objectives) == 1
+        assert "foo" not in simple_supply.backend._dataset.data_vars.keys()
 
-    def test_add_two_same_obj(self, simple_supply_new_build):
+    def test_add_two_same_obj(self, simple_supply):
         eq = {"expression": "bigM", "where": "True"}
         with pytest.raises(exceptions.BackendError) as excinfo:
-            simple_supply_new_build.backend.add_objective(
-                simple_supply_new_build._model_data,
+            simple_supply.backend.add_objective(
+                simple_supply._model_data,
                 "foo",
                 {"equations": [eq, eq], "sense": "minimise"},
             )
@@ -2262,19 +2243,19 @@ class TestNewBackend:
             "More than one foo objective is valid for this optimisation problem; only one is allowed.",
         )
 
-    def test_add_valid_obj(self, simple_supply_new_build):
+    def test_add_valid_obj(self, simple_supply):
         eq = {"expression": "bigM", "where": "True"}
-        simple_supply_new_build.backend.add_objective(
-            simple_supply_new_build._model_data,
+        simple_supply.backend.add_objective(
+            simple_supply._model_data,
             "foo",
             {"equations": [eq], "sense": "minimise"},
         )
-        assert "foo" in simple_supply_new_build.backend.objectives
-        assert not simple_supply_new_build.backend.objectives.foo.item().active
+        assert "foo" in simple_supply.backend.objectives
+        assert not simple_supply.backend.objectives.foo.item().active
 
-    def test_object_string_representation(self, simple_supply_new_build):
+    def test_object_string_representation(self, simple_supply):
         assert (
-            simple_supply_new_build.backend.variables.carrier_prod.sel(
+            simple_supply.backend.variables.carrier_prod.sel(
                 nodes="a",
                 techs="test_supply_elec",
                 carriers="electricity",
@@ -2284,7 +2265,7 @@ class TestNewBackend:
             .name
             == "variables[carrier_prod][0]"
         )
-        assert not simple_supply_new_build.backend.variables.carrier_prod.coords_in_name
+        assert not simple_supply.backend.variables.carrier_prod.coords_in_name
 
     @pytest.mark.parametrize(
         ["objname", "dims", "objtype"],

@@ -23,7 +23,7 @@ from calliope.backend import backends, latex_backend, parsing
 from calliope.core import io
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.logging import log_time
-from calliope.core.util.tools import copy_docstring, relative_path
+from calliope.core.util.tools import copy_docstring, relative_path, validate_dict
 from calliope.postprocess import results as postprocess_results
 from calliope.preprocess import model_run_from_dict, model_run_from_yaml
 from calliope.preprocess.model_data import ModelDataFactory
@@ -50,9 +50,10 @@ class Model(object):
 
     """
 
-    _BACKENDS: dict[str, Callable] = {
-        "pyomo": backends.PyomoBackendModel,
-    }
+    _BACKENDS: dict[str, Callable] = {"pyomo": backends.PyomoBackendModel}
+    _MATH_SCHEMA = AttrDict.from_yaml(
+        Path(calliope.__file__).parent / "config" / "math_schema.yaml"
+    )
 
     def __init__(
         self,
@@ -66,17 +67,28 @@ class Model(object):
         Returns a new Model from either the path to a YAML model
         configuration file or a dict fully specifying the model.
 
-        Parameters
-        ----------
-        config : str or dict or AttrDict
-            If str, must be the path to a model configuration file.
-            If dict or AttrDict, must fully specify the model.
-        model_data : Dataset, optional
-            Create a Model instance from a fully built model_data Dataset.
-            This is only used if `config` is explicitly set to None
-            and is primarily used to re-create a Model instance from
-            a model previously saved to a NetCDF file.
-
+        Args:
+            config (Optional[Union[str, dict]]):
+                If str, must be the path to a model configuration file.
+                If dict or AttrDict, must fully specify the model.
+            model_data (Optional[xarray.Dataset], optional):
+                Create a Model instance from a fully built model_data Dataset.
+                This is only used if `config` is explicitly set to None and is primarily used to re-create a Model instance from a model previously saved to a NetCDF file.
+                Defaults to None.
+            debug (bool, optional):
+                If True, additional debug data will be included in the built model.
+                Defaults to False.
+        Keyword Args:
+            timeseries_dataframes (dict[str, pd.DataFrame]):
+                If supplying `config` as a dictionary, in-memory timeseries data can be referred to using `df=...`.
+                The referenced data must be supplied here as a dicitionary of dataframes.
+            scenario (str):
+                Comma delimited string of pre-defined `scenarios` to apply to the model,
+            override_dict (dict):
+                Additional overrides to apply to `config`.
+                These will be applied *after* applying any defined `scenario` overrides.
+        Raises:
+            ValueError: `config` must be provided (as one of `str`, `int`, `None`).
         """
         self._timings: dict = {}
         self.defaults: AttrDict
@@ -106,9 +118,17 @@ class Model(object):
             raise ValueError(
                 "Input configuration must either be a string or a dictionary."
             )
-        self._check_future_deprecation_warnings()
 
-    def _init_from_model_run(self, model_run, debug_data, debug):
+    def _init_from_model_run(
+        self, model_run: calliope.AttrDict, debug_data: calliope.AttrDict, debug: bool
+    ) -> None:
+        """Initialise the model using a `model_run` dictionary, which may have been loaded from YAML.
+
+        Args:
+            model_run (calliope.AttrDict): Preprocessed model configuration.
+            debug_data (calliope.AttrDict): Additional data from processing the input configuration.
+            debug (bool): If True, `debug_data` will be attached to the Model object as the attribute `calliope.Model._debug_data`.
+        """
         self._model_run = model_run
         log_time(
             logger,
@@ -158,7 +178,15 @@ class Model(object):
             comment="Model: preprocessing complete",
         )
 
-    def _init_from_model_data(self, model_data):
+    def _init_from_model_data(self, model_data: xarray.Dataset) -> None:
+        """
+        Initialise the model using a pre-built xarray dataset.
+        This must be a Calliope-compatible dataset, usually a dataset from another Calliope model.
+
+        Args:
+            model_data (xarray.Dataset):
+                Model dataset with input parameters as arrays and configuration stored in the dataset attributes dictionary.
+        """
         if "_model_run" in model_data.attrs:
             self._model_run = AttrDict.from_yaml_string(model_data.attrs["_model_run"])
             del model_data.attrs["_model_run"]
@@ -180,6 +208,11 @@ class Model(object):
         )
 
     def _add_model_data_methods(self):
+        """
+        1. Filter model dataset to produce views on the input/results data
+        2. Add top-level configuration dictionaries simultaneously to the model data attributes and as attributes of this class.
+
+        """
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         self.results = self._model_data.filter_by_attrs(is_result=1)
         self._add_observed_dict("model_config")
@@ -342,6 +375,7 @@ class Model(object):
             comment="Model: Generated optimisation problem parameters",
         )
         self._add_run_mode_custom_math()
+        validate_dict(self.math, self._MATH_SCHEMA, "math")
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
         for components in [
@@ -351,7 +385,7 @@ class Model(object):
             "objectives",
         ]:
             component = components.removesuffix("s")
-            if components in ["variables", "expressions"]:
+            if components in ["variables", "global_expressions"]:
                 backend.valid_math_element_names.update(self.math[components].keys())
             for name, dict_ in self.math[components].items():
                 if dict_.get("active", True):
@@ -538,27 +572,21 @@ class Model(object):
             )
         self.backend.to_lp(path)
 
-    def info(self):
+    def info(self) -> str:
+        """Generate basic description of the model, combining its name and a rough indication of the model size.
+
+        Returns:
+            str: Basic description of the model.
+        """
         info_strings = []
         model_name = self.model_config.get("name", "None")
-        info_strings.append("Model name:   {}".format(model_name))
-        msize = "{nodes} nodes, {techs} technologies, {times} timesteps".format(
-            nodes=len(self._model_data.coords.get("nodes", [])),
-            techs=(
-                len(self._model_data.coords.get("techs_non_transmission", []))
-                + len(self._model_data.coords.get("techs_transmission_names", []))
-            ),
-            times=len(self._model_data.coords.get("timesteps", [])),
+        info_strings.append(f"Model name:   {model_name}")
+        msize = dict(self._model_data.dims)
+        msize_exists = (self._model_data.node_tech * self._model_data.carrier).sum()
+        info_strings.append(
+            f"Model size:   {msize} ({msize_exists.item()} valid node:tech:carrier:carrier_tier combinations)"
         )
-        info_strings.append("Model size:   {}".format(msize))
         return "\n".join(info_strings)
-
-    def _check_future_deprecation_warnings(self):
-        """
-        Method for all FutureWarnings and DeprecationWarnings. Comment above each
-        warning should specify Calliope version in which it was added, and the
-        version in which it should be updated/removed.
-        """
 
     def validate_math_strings(self, math_dict: dict) -> None:
         """Validate that `expression` and `where` strings of a dictionary containing string mathematical formulations can be successfully parsed. This function can be used to test custom math before attempting to build the optimisation problem.
@@ -573,7 +601,7 @@ class Model(object):
                         {
                             "foreach": ["nodes"],
                             "where": "inheritance(supply)",
-                            "equation": "sum(energy_cap, over=techs) >= 10"
+                            "equations": [{"expression": "sum(energy_cap, over=techs) >= 10"}]
                         }
                 }
 
@@ -582,6 +610,7 @@ class Model(object):
             If all components of the dictionary are parsed successfully, this function will log a success message to the INFO logging level and return None.
             Otherwise, a calliope.ModelError will be raised with parsing issues listed.
         """
+        validate_dict(math_dict, self._MATH_SCHEMA, "math")
         valid_math_element_names = [
             *self.math["variables"].keys(),
             *self.math["global_expressions"].keys(),
