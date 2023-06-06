@@ -107,6 +107,7 @@ MOCK_MODULES = ["xarray", "pandas", "numpy", "pyomo", "sklearn", "pyparsing"]
 autodoc_mock_imports = MOCK_MODULES
 autodoc_typehints = "both"
 autodoc_member_order = "bysource"
+autoclass_content = "both"
 
 intersphinx_mapping = {
     "python": ("http://docs.python.org/3", None),

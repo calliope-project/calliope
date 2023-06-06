@@ -3,7 +3,7 @@
 
 """
 helper_functions.py
-~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 Functions that can be used to process data in math `where` and `expression` strings.
 """
@@ -22,28 +22,32 @@ _registry: dict[
 
 
 class ParsingHelperFunction(ABC):
-    """
-    Abstract helper function class, which all helper functions must subclass.
-    The abstract properties and methods defined here must be defined by all helper functions.
-    """
-
     def __init__(
         self,
         as_latex: bool = False,
         **kwargs,
     ) -> None:
+        """
+        Abstract helper function class, which all helper functions must subclass.
+        The abstract properties and methods defined here must be defined by all helper functions.
+
+        Args:
+            as_latex (bool, optional):
+                If True, will return a LaTeX math string on calling the class.
+                Defaults to False.
+        """
         self._kwargs = kwargs
         self._as_latex = as_latex
 
     @property
     @abstractmethod
     def ALLOWED_IN(self) -> list[Literal["where", "expression"]]:
-        """List of parseable math strings that this function can be accessed from."""
+        "List of parseable math strings that this function can be accessed from."
 
     @property
     @abstractmethod
     def NAME(self) -> str:
-        """Helper function name that is used in the math expression/where string."""
+        "Helper function name that is used in the math expression/where string."
 
     @abstractmethod
     def as_latex(self, *args, **kwargs) -> str:
@@ -155,6 +159,7 @@ class Inheritance(ParsingHelperFunction):
 
 
 class WhereAny(ParsingHelperFunction):
+    # Class name doesn't match NAME to avoid a clash with typing.Any
     #:
     NAME = "any"
     #:
@@ -195,7 +200,7 @@ class WhereAny(ParsingHelperFunction):
         return bool_parameter_da
 
 
-class ExprSum(ParsingHelperFunction):
+class Sum(ParsingHelperFunction):
     #:
     NAME = "sum"
     #:
@@ -254,7 +259,7 @@ class ReduceCarrierDim(ParsingHelperFunction):
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        return ExprSum(as_latex=self._as_latex, **self._kwargs)(
+        return Sum(as_latex=self._as_latex, **self._kwargs)(
             array.where(
                 self._kwargs["model_data"]
                 .carrier.sel(carrier_tiers=carrier_tier)
@@ -287,7 +292,7 @@ class ReducePrimaryCarrierDim(ParsingHelperFunction):
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        return ExprSum(as_latex=self._as_latex, **self._kwargs)(
+        return Sum(as_latex=self._as_latex, **self._kwargs)(
             array.where(
                 getattr(
                     self._kwargs["model_data"], f"primary_carrier_{carrier_tier}"
