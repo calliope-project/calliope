@@ -3,12 +3,13 @@ import pyparsing
 import pytest
 import xarray as xr
 
-from calliope.backend import expression_parser, parsing, where_parser
+from calliope.backend import expression_parser, helper_functions, where_parser
 from calliope.core.attrdict import AttrDict
 from calliope.exceptions import BackendError
 from calliope.test.common.util import check_error_or_warning
 
 SUB_EXPRESSION_CLASSIFIER = expression_parser.SUB_EXPRESSION_CLASSIFIER
+
 BASE_DIMS = ["nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"]
 
 
@@ -89,7 +90,7 @@ def where(bool_operand, helper_function, data_var, comparison, subset):
 def eval_kwargs(dummy_model_data):
     return {
         "model_data": dummy_model_data,
-        "helper_func_dict": parsing.VALID_WHERE_HELPER_FUNCTIONS,
+        "helper_functions": helper_functions._registry["where"],
         "test": True,
         "errors": set(),
         "warnings": set(),

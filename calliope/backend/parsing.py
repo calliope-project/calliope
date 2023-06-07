@@ -15,20 +15,6 @@ from typing_extensions import NotRequired, Required, TypedDict
 from calliope import exceptions
 from calliope.backend import backends, expression_parser, helper_functions, where_parser
 
-VALID_EXPRESSION_HELPER_FUNCTIONS: dict[str, Callable] = {
-    "sum": helper_functions.expression_sum,
-    "squeeze_carriers": helper_functions.squeeze_carriers,
-    "squeeze_primary_carriers": helper_functions.squeeze_primary_carriers,
-    "select_from_lookup_arrays": helper_functions.select_from_lookup_arrays,
-    "get_val_at_index": helper_functions.get_val_at_index,
-    "roll": helper_functions.roll,
-}
-VALID_WHERE_HELPER_FUNCTIONS: dict[str, Callable] = {
-    "inheritance": helper_functions.inheritance,
-    "sum": helper_functions.where_sum,
-    "get_val_at_index": helper_functions.get_val_at_index,
-}
-
 TRUE_ARRAY = xr.DataArray(True)
 
 
@@ -277,12 +263,11 @@ class ParsedBackendEquation:
                 If `as_latex` is False: Boolean array defining on which index items a parsed component should be built.
                 If `as_latex` is True: Valid LaTeX math string defining the "where" conditions using logic notation.
         """
-
         evaluated_wheres = [
             where[0].eval(
-                model_data=model_data,
-                helper_func_dict=VALID_WHERE_HELPER_FUNCTIONS,
+                helper_functions=helper_functions._registry["where"],
                 as_latex=as_latex,
+                model_data=model_data,
             )
             for where in self.where
         ]
@@ -346,11 +331,11 @@ class ParsedBackendEquation:
             sub_expression_dict=self.sub_expressions,
             backend_interface=backend_interface,
             backend_dataset=backend_interface._dataset,
-            helper_func_dict=VALID_EXPRESSION_HELPER_FUNCTIONS,
             model_data=model_data,
             where=where,
             references=references if references is not None else set(),
             as_dict=False,
+            helper_functions=helper_functions._registry["expression"],
             as_latex=as_latex,
             apply_where=apply_where,
         )

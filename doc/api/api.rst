@@ -25,14 +25,6 @@ Time series
 .. automodule:: calliope.time.funcs
     :members: resample
 
-.. _api_backend_interface:
-
-Pyomo backend interface
-=======================
-
-.. autoclass:: calliope.backend.pyomo.interface.BackendInterfaceMethods
-    :members: access_model_inputs, update_param, activate_constraint, rerun
-
 .. _api_utility_classes:
 
 Utility classes: AttrDict, Exceptions, Logging
@@ -46,3 +38,11 @@ Utility classes: AttrDict, Exceptions, Logging
 
 .. automodule:: calliope.core.util.logging
     :members: set_log_verbosity
+
+Math formulation helper functions
+=================================
+
+.. automodule:: calliope.backend.helper_functions
+    :members:
+    :special-members: __call__
+    :inherited-members:

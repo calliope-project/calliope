@@ -38,7 +38,6 @@ T = TypeVar(
 def read_netcdf(path):
     """
     Return a Model object reconstructed from model data in a NetCDF file.
-
     """
     model_data = io.read_netcdf(path)
     return Model(config=None, model_data=model_data)
@@ -47,7 +46,6 @@ def read_netcdf(path):
 class Model(object):
     """
     A Calliope Model.
-
     """
 
     _BACKENDS: dict[str, Callable] = {"pyomo": backends.PyomoBackendModel}
@@ -78,6 +76,7 @@ class Model(object):
             debug (bool, optional):
                 If True, additional debug data will be included in the built model.
                 Defaults to False.
+
         Keyword Args:
             timeseries_dataframes (dict[str, pd.DataFrame]):
                 If supplying `config` as a dictionary, in-memory timeseries data can be referred to using `df=...`.
@@ -87,6 +86,7 @@ class Model(object):
             override_dict (dict):
                 Additional overrides to apply to `config`.
                 These will be applied *after* applying any defined `scenario` overrides.
+
         Raises:
             ValueError: `config` must be provided (as one of `str`, `int`, `None`).
         """

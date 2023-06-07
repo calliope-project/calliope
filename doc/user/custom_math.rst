@@ -1,3 +1,5 @@
+.. _custom_math:
+
 =======================
 Custom math formulation
 =======================

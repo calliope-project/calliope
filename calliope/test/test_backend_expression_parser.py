@@ -6,39 +6,32 @@ import pyparsing as pp
 import pytest
 
 from calliope import exceptions
-from calliope.backend import expression_parser
+from calliope.backend import expression_parser, helper_functions
 from calliope.test.common.util import check_error_or_warning
 
 SUB_EXPRESSION_CLASSIFIER = expression_parser.SUB_EXPRESSION_CLASSIFIER
 
 
-def dummy_func_1(as_latex=False, **kwargs):
-    def _dummy_func_1(x):
-        return x * 10
+class DummyFunc1(helper_functions.ParsingHelperFunction):
+    NAME = "dummy_func_1"
+    ALLOWED_IN = ["expression"]
 
-    def _as_latex(x):
+    def as_latex(self, x):
         return f"{x} * 10"
 
-    if as_latex:
-        return _as_latex
-    else:
-        return _dummy_func_1
+    def as_array(self, x):
+        return x * 10
 
 
-def dummy_func_2(as_latex=False, **kwargs):
-    def _dummy_func_2(x, y):
-        return x + y
+class DummyFunc2(helper_functions.ParsingHelperFunction):
+    NAME = "dummy_func_2"
+    ALLOWED_IN = ["expression"]
 
-    def _as_latex(x, y):
+    def as_latex(self, x, y):
         return f"{x} + {y}"
 
-    if as_latex:
-        return _as_latex
-    else:
-        return _dummy_func_2
-
-
-HELPER_FUNCS = {"dummy_func_1": dummy_func_1, "dummy_func_2": dummy_func_2}
+    def as_array(self, x):
+        return x * 10
 
 
 @pytest.fixture
@@ -178,7 +171,7 @@ def helper_function_one_parser_in_args(identifier, request):
 @pytest.fixture(scope="function")
 def eval_kwargs():
     return {
-        "helper_func_dict": HELPER_FUNCS,
+        "helper_functions": helper_functions._registry["expression"],
         "as_dict": True,
         "slice_dict": {},
         "sub_expression_dict": {},
@@ -633,11 +626,19 @@ class TestEquationParserElements:
     )
     def test_missing_function(self, string_val, helper_function, eval_kwargs):
         parsed_ = helper_function.parse_string(string_val, parse_all=True)
-
         with pytest.raises(exceptions.BackendError) as excinfo:
             parsed_[0].eval(**eval_kwargs)
 
         assert check_error_or_warning(excinfo, "Invalid helper function defined")
+
+    def test_function_mistype(self, helper_function, eval_kwargs):
+        parsed_ = helper_function.parse_string("dummy_func_1(1)", parse_all=True)
+
+        eval_kwargs["helper_functions"] = {"dummy_func_1": lambda **kwargs: lambda x: x}
+        with pytest.raises(TypeError) as excinfo:
+            parsed_[0].eval(**eval_kwargs)
+
+        assert check_error_or_warning(excinfo, "Helper function must be subclassed")
 
     @pytest.mark.parametrize(
         "string_val",
@@ -1023,7 +1024,7 @@ class TestAsLatex:
     @pytest.fixture
     def latex_eval_kwargs(self, dummy_latex_backend_model, dummy_model_data):
         return {
-            "helper_func_dict": HELPER_FUNCS,
+            "helper_functions": helper_functions._registry["expression"],
             "as_dict": False,
             "as_latex": True,
             "index_slice_dict": {},

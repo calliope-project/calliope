@@ -818,6 +818,9 @@ h2 + span + dl.function, h2 + dl.function {
 dl.function dd {
     padding-top: 5px;
 }
+dl.class dd {
+    padding-bottom: 10px;
+}
 
 .function code {
     word-break: break-all;

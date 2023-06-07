@@ -12,7 +12,7 @@ The capacity of a technology is usually a continuous decision variable, which ca
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/scenarios.yaml
    :language: yaml
-   :dedent: 8
+   :dedent: 4
    :start-after: # chp-start
    :end-before: # chp-end
 
@@ -25,7 +25,7 @@ The boiler does not have a unit limit, it still utilises the continuous variable
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/scenarios.yaml
    :language: yaml
-   :dedent: 8
+   :dedent: 4
    :start-after: # boiler-start
    :end-before: # boiler-end
 
@@ -41,7 +41,7 @@ The heat pipes which distribute thermal energy in the network may be prone to di
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/scenarios.yaml
    :language: yaml
-   :dedent: 8
+   :dedent: 4
    :start-after: # heat_pipes-start
    :end-before: # heat_pipes-end
 

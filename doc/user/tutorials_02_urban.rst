@@ -27,7 +27,7 @@ The definition of these technologies in the example model's configuration looks 
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # supply-start
    :end-before: # supply-end
 
@@ -41,7 +41,7 @@ The definition of this technology in the example model's configuration looks as 
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # pv-start
    :end-before: # pv-end
 
@@ -70,7 +70,7 @@ The definition of this technology in the example model's configuration looks as 
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # boiler-start
    :end-before: # boiler-end
 
@@ -88,7 +88,7 @@ This definition in the example model's configuration is more verbose:
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # chp-start
    :end-before: # chp-end
 
@@ -105,7 +105,7 @@ Electricity and heat demand are defined here:
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # demand-start
    :end-before: # demand-end
 
@@ -123,7 +123,7 @@ In this district, electricity and heat can be distributed between locations. Gas
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # transmission-start
    :end-before: # transmission-end
 
@@ -146,7 +146,7 @@ Let's now look at the first location definition:
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # X1-start
    :end-before: # X1-end
 
@@ -161,7 +161,7 @@ The remaining location definitions look like this:
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # other-locs-start
    :end-before: # other-locs-end
 
@@ -171,7 +171,7 @@ The remaining location definitions look like this:
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # N1-start
    :end-before: # N1-end
 
@@ -179,7 +179,7 @@ For transmission technologies, the model also needs to know which locations can 
 
 .. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # links-start
    :end-before: # links-end
 
