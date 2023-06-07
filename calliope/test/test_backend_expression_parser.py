@@ -6,39 +6,32 @@ import pyparsing as pp
 import pytest
 
 from calliope import exceptions
-from calliope.backend import equation_parser
+from calliope.backend import expression_parser, helper_functions
 from calliope.test.common.util import check_error_or_warning
 
-SUB_EXPRESSION_CLASSIFIER = equation_parser.SUB_EXPRESSION_CLASSIFIER
+SUB_EXPRESSION_CLASSIFIER = expression_parser.SUB_EXPRESSION_CLASSIFIER
 
 
-def dummy_func_1(as_latex=False, **kwargs):
-    def _dummy_func_1(x):
-        return x * 10
+class DummyFunc1(helper_functions.ParsingHelperFunction):
+    NAME = "dummy_func_1"
+    ALLOWED_IN = ["expression"]
 
-    def _as_latex(x):
+    def as_latex(self, x):
         return f"{x} * 10"
 
-    if as_latex:
-        return _as_latex
-    else:
-        return _dummy_func_1
+    def as_array(self, x):
+        return x * 10
 
 
-def dummy_func_2(as_latex=False, **kwargs):
-    def _dummy_func_2(x, y):
-        return x + y
+class DummyFunc2(helper_functions.ParsingHelperFunction):
+    NAME = "dummy_func_2"
+    ALLOWED_IN = ["expression"]
 
-    def _as_latex(x, y):
+    def as_latex(self, x, y):
         return f"{x} + {y}"
 
-    if as_latex:
-        return _as_latex
-    else:
-        return _dummy_func_2
-
-
-HELPER_FUNCS = {"dummy_func_1": dummy_func_1, "dummy_func_2": dummy_func_2}
+    def as_array(self, x):
+        return x * 10
 
 
 @pytest.fixture
@@ -56,7 +49,7 @@ def valid_math_element_names():
 
 @pytest.fixture
 def base_parser_elements():
-    number, identifier = equation_parser.setup_base_parser_elements()
+    number, identifier = expression_parser.setup_base_parser_elements()
     return number, identifier
 
 
@@ -72,7 +65,7 @@ def identifier(base_parser_elements):
 
 @pytest.fixture
 def evaluatable_identifier_elements(identifier, valid_math_element_names):
-    return equation_parser.evaluatable_identifier_parser(
+    return expression_parser.evaluatable_identifier_parser(
         identifier, valid_math_element_names
     )
 
@@ -90,7 +83,7 @@ def id_list(evaluatable_identifier_elements):
 @pytest.fixture
 def unsliced_param():
     def _unsliced_param(valid_math_element_names):
-        return equation_parser.unsliced_object_parser(valid_math_element_names)
+        return expression_parser.unsliced_object_parser(valid_math_element_names)
 
     return _unsliced_param
 
@@ -104,14 +97,14 @@ def unsliced_param_with_obj_names(unsliced_param, valid_math_element_names):
 def sliced_param(
     number, identifier, evaluatable_identifier, unsliced_param_with_obj_names
 ):
-    return equation_parser.sliced_param_or_var_parser(
+    return expression_parser.sliced_param_or_var_parser(
         number, identifier, evaluatable_identifier, unsliced_param_with_obj_names
     )
 
 
 @pytest.fixture
 def sub_expression(identifier):
-    return equation_parser.sub_expression_parser(identifier)
+    return expression_parser.sub_expression_parser(identifier)
 
 
 @pytest.fixture
@@ -123,7 +116,7 @@ def helper_function(
     identifier,
     id_list,
 ):
-    return equation_parser.helper_function_parser(
+    return expression_parser.helper_function_parser(
         sliced_param,
         sub_expression,
         unsliced_param_with_obj_names,
@@ -143,7 +136,7 @@ def helper_function_no_nesting(
     identifier,
     id_list,
 ):
-    return equation_parser.helper_function_parser(
+    return expression_parser.helper_function_parser(
         sliced_param,
         sub_expression,
         unsliced_param_with_obj_names,
@@ -165,7 +158,7 @@ def helper_function_no_nesting(
 def helper_function_one_parser_in_args(identifier, request):
     parser_element, valid_string, invalid_string = request.param
     return (
-        equation_parser.helper_function_parser(
+        expression_parser.helper_function_parser(
             request.getfixturevalue(parser_element),
             generic_identifier=identifier,
             allow_function_in_function=True,
@@ -178,12 +171,12 @@ def helper_function_one_parser_in_args(identifier, request):
 @pytest.fixture(scope="function")
 def eval_kwargs():
     return {
-        "helper_func_dict": HELPER_FUNCS,
+        "helper_functions": helper_functions._registry["expression"],
         "as_dict": True,
         "slice_dict": {},
         "sub_expression_dict": {},
         "equation_name": "foobar",
-        "apply_imask": False,
+        "apply_where": False,
         "references": set(),
     }
 
@@ -192,7 +185,7 @@ def eval_kwargs():
 def arithmetic(
     helper_function, number, sliced_param, sub_expression, unsliced_param_with_obj_names
 ):
-    return equation_parser.arithmetic_parser(
+    return expression_parser.arithmetic_parser(
         helper_function,
         sub_expression,
         sliced_param,
@@ -212,12 +205,12 @@ def helper_function_allow_arithmetic(
     id_list,
 ):
     arithmetic = pp.Forward()
-    helper_func = equation_parser.helper_function_parser(
+    helper_func = expression_parser.helper_function_parser(
         arithmetic,
         id_list,
         generic_identifier=identifier,
     )
-    return equation_parser.arithmetic_parser(
+    return expression_parser.arithmetic_parser(
         helper_func,
         sliced_param,
         sub_expression,
@@ -229,22 +222,22 @@ def helper_function_allow_arithmetic(
 
 @pytest.fixture
 def equation_comparison(arithmetic):
-    return equation_parser.equation_comparison_parser(arithmetic)
+    return expression_parser.equation_comparison_parser(arithmetic)
 
 
 @pytest.fixture
 def generate_equation(valid_math_element_names):
-    return equation_parser.generate_equation_parser(valid_math_element_names)
+    return expression_parser.generate_equation_parser(valid_math_element_names)
 
 
 @pytest.fixture
 def generate_slice(valid_math_element_names):
-    return equation_parser.generate_slice_parser(valid_math_element_names)
+    return expression_parser.generate_slice_parser(valid_math_element_names)
 
 
 @pytest.fixture
 def generate_sub_expression(valid_math_element_names):
-    return equation_parser.generate_sub_expression_parser(valid_math_element_names)
+    return expression_parser.generate_sub_expression_parser(valid_math_element_names)
 
 
 class TestEquationParserElements:
@@ -633,11 +626,19 @@ class TestEquationParserElements:
     )
     def test_missing_function(self, string_val, helper_function, eval_kwargs):
         parsed_ = helper_function.parse_string(string_val, parse_all=True)
-
         with pytest.raises(exceptions.BackendError) as excinfo:
             parsed_[0].eval(**eval_kwargs)
 
         assert check_error_or_warning(excinfo, "Invalid helper function defined")
+
+    def test_function_mistype(self, helper_function, eval_kwargs):
+        parsed_ = helper_function.parse_string("dummy_func_1(1)", parse_all=True)
+
+        eval_kwargs["helper_functions"] = {"dummy_func_1": lambda **kwargs: lambda x: x}
+        with pytest.raises(TypeError) as excinfo:
+            parsed_[0].eval(**eval_kwargs)
+
+        assert check_error_or_warning(excinfo, "Helper function must be subclassed")
 
     @pytest.mark.parametrize(
         "string_val",
@@ -1023,13 +1024,13 @@ class TestAsLatex:
     @pytest.fixture
     def latex_eval_kwargs(self, dummy_latex_backend_model, dummy_model_data):
         return {
-            "helper_func_dict": HELPER_FUNCS,
+            "helper_functions": helper_functions._registry["expression"],
             "as_dict": False,
             "as_latex": True,
             "index_slice_dict": {},
             "component_dict": {},
             "equation_name": "foobar",
-            "apply_imask": False,
+            "apply_where": False,
             "references": set(),
             "backend_interface": dummy_latex_backend_model,
             "backend_dataset": dummy_latex_backend_model._dataset,

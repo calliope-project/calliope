@@ -285,10 +285,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         equation_strings: list = []
 
         def _constraint_setter(
-            element: parsing.ParsedBackendEquation, imask: xr.DataArray, references: set
+            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
-            self._add_latex_strings(imask, element, equation_strings)
-            return imask.where(imask)
+            self._add_latex_strings(where, element, equation_strings)
+            return where.where(where)
 
         parsed_component = self._add_component(
             name,
@@ -314,10 +314,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         equation_strings: list = []
 
         def _expression_setter(
-            element: parsing.ParsedBackendEquation, imask: xr.DataArray, references: set
+            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
-            self._add_latex_strings(imask, element, equation_strings)
-            return imask.where(imask)
+            self._add_latex_strings(where, element, equation_strings)
+            return where.where(where)
 
         parsed_component = self._add_component(
             name,
@@ -346,16 +346,16 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             variable_dict = self.inputs.math["variables"][name]
 
         parsed_component = self._add_component(
-            name, variable_dict, lambda imask: imask, "variables", break_early=False
+            name, variable_dict, lambda where: where, "variables", break_early=False
         )
-        imask = self.variables[name]
+        where_array = self.variables[name]
 
         domain = domain_dict[variable_dict.get("domain", "real")]
         lb, ub = self._get_capacity_bounds(name, variable_dict["bounds"])
 
         self._generate_math_string(
             parsed_component,
-            imask,
+            where_array,
             equations=[lb, ub],
             sense=r"\forall" + domain,
         )
@@ -376,9 +376,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         equation_strings: list = []
 
         def _objective_setter(
-            element: parsing.ParsedBackendEquation, imask: xr.DataArray, references: set
+            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> None:
-            self._add_latex_strings(imask, element, equation_strings)
+            self._add_latex_strings(where, element, equation_strings)
             return None
 
         parsed_component = self._add_component(
@@ -434,12 +434,12 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         }
         return self._render(doc_template, components=components)
 
-    def _add_latex_strings(self, imask, element, equation_strings):
+    def _add_latex_strings(self, where, element, equation_strings):
         expr = element.evaluate_expression(self.inputs, self, as_latex=True)
-        imask_latex = element.evaluate_where(self.inputs, as_latex=True)
+        where_latex = element.evaluate_where(self.inputs, as_latex=True)
 
-        if self.include == "all" or (self.include == "valid" and imask.any()):
-            equation_strings.append({"expression": expr, "where": imask_latex})
+        if self.include == "all" or (self.include == "valid" and where.any()):
+            equation_strings.append({"expression": expr, "where": where_latex})
 
     def _generate_math_string(
         self,

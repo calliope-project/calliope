@@ -10,9 +10,9 @@ AttrDict, and building of associated debug information.
 
 """
 
-import os
-import logging
 import itertools
+import logging
+import os
 import warnings
 
 import pandas as pd
@@ -21,7 +21,7 @@ import calliope
 from calliope import exceptions
 from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import relative_path
-from calliope.preprocess import nodes, checks, util
+from calliope.preprocess import checks, nodes, util
 
 logger = logging.getLogger(__name__)
 

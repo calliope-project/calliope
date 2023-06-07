@@ -93,20 +93,20 @@ class PyomoBackendModel(backend_model.BackendModel):
         constraint_dict: Optional[parsing.UnparsedConstraintDict] = None,
     ) -> None:
         def _constraint_setter(
-            element: parsing.ParsedBackendEquation, imask: xr.DataArray, references: set
+            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
             lhs, op, rhs = element.evaluate_expression(
-                self.inputs, self, imask=imask, references=references
+                self.inputs, self, where=where, references=references
             )
             lhs = lhs.squeeze(drop=True)
             rhs = rhs.squeeze(drop=True)
 
-            self._check_expr_imask_consistency(lhs, imask, f"(constraints, {name})")
-            self._check_expr_imask_consistency(rhs, imask, f"(constraints, {name})")
+            self._check_expr_where_consistency(lhs, where, f"(constraints, {name})")
+            self._check_expr_where_consistency(rhs, where, f"(constraints, {name})")
 
             to_fill = self._apply_func(
                 self._to_pyomo_constraint,
-                imask,
+                where,
                 lhs,
                 rhs,
                 op=op,
@@ -122,18 +122,18 @@ class PyomoBackendModel(backend_model.BackendModel):
         expression_dict: Optional[parsing.UnparsedExpressionDict] = None,
     ) -> None:
         def _expression_setter(
-            element: parsing.ParsedBackendEquation, imask: xr.DataArray, references: set
+            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
             expr = element.evaluate_expression(
-                self.inputs, self, imask=imask, references=references
+                self.inputs, self, where=where, references=references
             )
             expr = expr.squeeze(drop=True)
 
-            self._check_expr_imask_consistency(expr, imask, f"(expressions, {name})")
+            self._check_expr_where_consistency(expr, where, f"(expressions, {name})")
 
             to_fill = self._apply_func(
                 self._to_pyomo_expression,
-                imask,
+                where,
                 expr,
                 name=name,
             )
@@ -157,13 +157,13 @@ class PyomoBackendModel(backend_model.BackendModel):
             variable_dict = self.inputs.math["variables"][name]
         self.valid_math_element_names.add(name)
 
-        def _variable_setter(imask):
+        def _variable_setter(where):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
 
             lb, ub = self._get_capacity_bounds(name, variable_dict["bounds"])
             return self._apply_func(
                 self._to_pyomo_variable,
-                imask,
+                where,
                 ub,
                 lb,
                 name=name,
@@ -186,7 +186,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         sense = sense_dict[objective_dict["sense"]]
 
         def _objective_setter(
-            element: parsing.ParsedBackendEquation, imask: xr.DataArray, references: set
+            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
             expr = element.evaluate_expression(self.inputs, self, references=references)
             objective = pmo.objective(expr.item(), sense=sense)
@@ -460,31 +460,31 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._apply_func(self._unfix_pyomo_variable, variable_da)
 
     @staticmethod
-    def _check_expr_imask_consistency(
-        expression: xr.DataArray, imask: xr.DataArray, description: str
+    def _check_expr_where_consistency(
+        expression: xr.DataArray, where: xr.DataArray, description: str
     ) -> None:
         """
-        Checks if a given constraint or global expression is consistent with the imask.
+        Checks if a given constraint or global expression is consistent with the where.
 
         Parameters:
             expression (xr.DataArray): array of linear expressions from a global expression or one side of a constraint equation.
-            imask (xr.DataArray): where array.
+            where (xr.DataArray): where array.
             description (str): Description to prefix the error message.
 
         Raises:
             BackendError:
-                Raised if there is a dimension in the expression that is not in the imask.
+                Raised if there is a dimension in the expression that is not in the where.
             BackendError:
-                Raised if the expression has any NaN where the imask applies.
+                Raised if the expression has any NaN where the where applies.
         """
-        # Check whether expression has a dim that does not exist in imask.
-        broadcast_dims_imask = set(expression.dims).difference(set(imask.dims))
-        if broadcast_dims_imask:
+        # Check whether expression has a dim that does not exist in where.
+        broadcast_dims_where = set(expression.dims).difference(set(where.dims))
+        if broadcast_dims_where:
             raise BackendError(
-                f"{description}: The linear expression array is indexed over dimensions not present in `foreach`: {broadcast_dims_imask}"
+                f"{description}: The linear expression array is indexed over dimensions not present in `foreach`: {broadcast_dims_where}"
             )
 
-        incomplete_constraints = expression.isnull() & imask
+        incomplete_constraints = expression.isnull() & where
         if incomplete_constraints.any():
             raise BackendError(
                 f"{description}: Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help."

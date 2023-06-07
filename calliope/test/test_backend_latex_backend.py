@@ -124,7 +124,7 @@ class TestLatexBackendModel:
             {
                 "foreach": ["nodes", "techs"],
                 "where": "with_inf",
-                "equation": "var + param",
+                "equations": [{"expression": "var + param"}],
             },
         )
         # some null values might be introduced by the foreach array, so we just check the upper bound
@@ -145,7 +145,7 @@ class TestLatexBackendModel:
             {
                 "foreach": ["nodes", "techs"],
                 "where": "with_inf",
-                "equation": "var >= param",
+                "equations": [{"expression": "var >= param"}],
             },
         )
         # some null values might be introduced by the foreach array, so we just check the upper bound
@@ -193,7 +193,10 @@ class TestLatexBackendModel:
     def test_add_objective(self, dummy_latex_backend_model):
         dummy_latex_backend_model.add_objective(
             "obj",
-            {"equation": "sum(var, over=[nodes, techs])", "sense": "minimize"},
+            {
+                "equations": [{"expression": "sum(var, over=[nodes, techs])"}],
+                "sense": "minimize",
+            },
         )
         assert dummy_latex_backend_model.objectives["obj"].isnull().all()
         assert "obj" not in dummy_latex_backend_model.valid_math_element_names
@@ -292,7 +295,7 @@ class TestLatexBackendModel:
     def test_generate_math_doc(self, dummy_model_data, format, expected):
         backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
         backend_model.add_global_expression(
-            "expr", {"equation": "1 + 2", "description": "foobar"}
+            "expr", {"equations": [{"expression": "1 + 2"}], "description": "foobar"}
         )
         doc = backend_model.generate_math_doc(format=format)
         assert doc == expected

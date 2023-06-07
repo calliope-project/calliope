@@ -68,7 +68,7 @@ class TestNationalScaleExampleModelSenseChecks:
 
     @pytest.mark.xfail(reason="no longer a constraint we're creating")
     def test_reserve_margin(self):
-        model = calliope.examples.national_scale(scenario="reserve_margin")
+        calliope.examples.national_scale(scenario="reserve_margin")
 
 
 @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")

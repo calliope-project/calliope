@@ -20,27 +20,14 @@ from typing import (
 
 import pyparsing as pp
 import xarray as xr
-from typing_extensions import NotRequired, TypedDict
+from typing_extensions import NotRequired, Required, TypedDict
 
 from calliope import exceptions
-from calliope.backend import equation_parser, helper_functions, subset_parser
+from calliope.backend import expression_parser, helper_functions, where_parser
 
 if TYPE_CHECKING:
     from calliope.backend import backend_model
 
-VALID_EXPRESSION_HELPER_FUNCTIONS: dict[str, Callable] = {
-    "sum": helper_functions.expression_sum,
-    "squeeze_carriers": helper_functions.squeeze_carriers,
-    "squeeze_primary_carriers": helper_functions.squeeze_primary_carriers,
-    "select_from_lookup_arrays": helper_functions.select_from_lookup_arrays,
-    "get_val_at_index": helper_functions.get_val_at_index,
-    "roll": helper_functions.roll,
-}
-VALID_IMASK_HELPER_FUNCTIONS: dict[str, Callable] = {
-    "inheritance": helper_functions.inheritance,
-    "sum": helper_functions.imask_sum,
-    "get_val_at_index": helper_functions.get_val_at_index,
-}
 
 TRUE_ARRAY = xr.DataArray(True)
 
@@ -54,8 +41,7 @@ class UnparsedConstraintDict(TypedDict):
     description: NotRequired[str]
     foreach: NotRequired[list]
     where: NotRequired[str]
-    equation: NotRequired[str]
-    equations: NotRequired[list[UnparsedEquationDict]]
+    equations: Required[list[UnparsedEquationDict]]
     sub_expressions: NotRequired[dict[str, list[UnparsedEquationDict]]]
     slices: NotRequired[dict[str, list[UnparsedEquationDict]]]
 
@@ -82,10 +68,8 @@ class UnparsedVariableDict(TypedDict):
 
 class UnparsedObjectiveDict(TypedDict):
     description: NotRequired[str]
-    equation: NotRequired[str]
-    equations: NotRequired[list[UnparsedEquationDict]]
+    equations: Required[list[UnparsedEquationDict]]
     sub_expressions: NotRequired[dict[str, list[UnparsedEquationDict]]]
-    domain: str
     sense: str
 
 
@@ -144,10 +128,10 @@ class ParsedBackendEquation:
             set[str]: Unique sub-expressions references.
         """
         valid_eval_classes: tuple = (
-            equation_parser.EvalOperatorOperand,
-            equation_parser.EvalFunction,
+            expression_parser.EvalOperatorOperand,
+            expression_parser.EvalFunction,
         )
-        to_find = equation_parser.EvalSubExpressions
+        to_find = expression_parser.EvalSubExpressions
         elements: list
         if isinstance(self.expression[0], to_find):
             elements = [self.expression[0]]
@@ -167,12 +151,12 @@ class ParsedBackendEquation:
 
         valid_eval_classes = tuple(
             [
-                equation_parser.EvalOperatorOperand,
-                equation_parser.EvalFunction,
-                equation_parser.EvalSlicedParameterOrVariable,
+                expression_parser.EvalOperatorOperand,
+                expression_parser.EvalFunction,
+                expression_parser.EvalSlicedParameterOrVariable,
             ]
         )
-        to_find = equation_parser.EvalIndexSlice
+        to_find = expression_parser.EvalIndexSlice
         elements: list = [
             self.expression[0].values,
             *list(self.sub_expressions.values()),
@@ -183,16 +167,16 @@ class ParsedBackendEquation:
     @staticmethod
     def _find_items_in_expression(
         parser_elements: Union[list, pp.ParseResults],
-        to_find: type[equation_parser.EvalString],
-        valid_eval_classes: tuple[type[equation_parser.EvalString], ...],
+        to_find: type[expression_parser.EvalString],
+        valid_eval_classes: tuple[type[expression_parser.EvalString], ...],
     ) -> set[str]:
         """
         Recursively find sub-expressions / index items defined in an equation expression.
 
         Args:
             parser_elements (pp.ParseResults): list of parser elements to check.
-            to_find (type[equation_parser.EvalString]): type of equation element to search for
-            valid_eval_classes (tuple[type(equation_parser.EvalString)]):
+            to_find (type[expression_parser.EvalString]): type of equation element to search for
+            valid_eval_classes (tuple[type(expression_parser.EvalString)]):
                 Other expression elements that can be recursively searched
 
         Returns:
@@ -262,7 +246,7 @@ class ParsedBackendEquation:
         self,
         model_data: xr.Dataset,
         as_latex: Literal[False] = False,
-        initial_imask: xr.DataArray = TRUE_ARRAY,
+        initial_where: xr.DataArray = TRUE_ARRAY,
     ) -> xr.DataArray:
         "Expecting array if not requesting latex string"
 
@@ -278,15 +262,14 @@ class ParsedBackendEquation:
         self,
         model_data: xr.Dataset,
         as_latex: bool = False,
-        initial_imask: xr.DataArray = TRUE_ARRAY,
+        initial_where: xr.DataArray = TRUE_ARRAY,
     ) -> Union[xr.DataArray, str]:
         """Evaluate parsed backend object dictionary `where` string.
-        NOTE: imask = inverse mask (application of "np.where" to an array)
 
         Args:
             model_data (xr.Dataset): Calliope model dataset.
-            initial_imask (xr.DataArray, optional):
-                If given, the imask resulting from evaluation will be further imasked by this array.
+            initial_where (xr.DataArray, optional):
+                If given, the where array resulting from evaluation will be further where'd by this array.
                 Defaults to xr.DataArray(True) (i.e., no effect).
 
         Returns:
@@ -294,12 +277,11 @@ class ParsedBackendEquation:
                 If `as_latex` is False: Boolean array defining on which index items a parsed component should be built.
                 If `as_latex` is True: Valid LaTeX math string defining the "where" conditions using logic notation.
         """
-
         evaluated_wheres = [
             where[0].eval(
-                model_data=model_data,
-                helper_func_dict=VALID_IMASK_HELPER_FUNCTIONS,
+                helper_functions=helper_functions._registry["where"],
                 as_latex=as_latex,
+                model_data=model_data,
             )
             for where in self.where
         ]
@@ -307,22 +289,22 @@ class ParsedBackendEquation:
             return r"\land{}".join(f"({i})" for i in evaluated_wheres if i != "true")
         else:
             return xr.DataArray(
-                functools.reduce(operator.and_, [initial_imask, *evaluated_wheres])
+                functools.reduce(operator.and_, [initial_where, *evaluated_wheres])
             )
 
-    def align_imask_with_foreach_sets(self, imask: xr.DataArray) -> xr.DataArray:
+    def drop_dims_not_in_foreach(self, where: xr.DataArray) -> xr.DataArray:
         """the dimensions not included in "foreach" are removed from the input array
 
         Args:
-            imask (xr.DataArray): Array with potentially unwanted dimensions
+            where (xr.DataArray): Array with potentially unwanted dimensions
 
         Returns:
             xr.DataArray:
                 Array with same dimensions as the user-defined foreach sets.
                 Dimensions are ordered to match the order given by the sets.
         """
-        unwanted_dims = set(imask.dims).difference(self.sets)
-        return (imask.sum(unwanted_dims) > 0).astype(bool).transpose(*self.sets)
+        unwanted_dims = set(where.dims).difference(self.sets)
+        return (where.sum(unwanted_dims) > 0).astype(bool).transpose(*self.sets)
 
     @overload  # noqa: F811
     def evaluate_expression(  # noqa: F811
@@ -331,7 +313,7 @@ class ParsedBackendEquation:
         backend_interface: backend_model.BackendModel,
         as_latex: Literal[False] = False,
         references: Optional[set] = None,
-        imask: Optional[xr.DataArray] = None,
+        where: Optional[xr.DataArray] = None,
     ) -> Any:
         "Expecting anything (most likely an array) if not requesting latex string"
 
@@ -351,25 +333,25 @@ class ParsedBackendEquation:
         backend_interface: backend_model.BackendModel,
         as_latex: bool = False,
         references: Optional[set] = None,
-        imask: Optional[xr.DataArray] = None,
+        where: Optional[xr.DataArray] = None,
     ) -> Any:
-        if imask is None:
-            apply_imask = False
+        if where is None:
+            apply_where = False
         else:
-            apply_imask = True
+            apply_where = True
         return self.expression[0].eval(
             equation_name=self.name,
             slice_dict=self.slices,
             sub_expression_dict=self.sub_expressions,
             backend_interface=backend_interface,
             backend_dataset=backend_interface._dataset,
-            helper_func_dict=VALID_EXPRESSION_HELPER_FUNCTIONS,
             model_data=model_data,
-            imask=imask,
+            where=where,
             references=references if references is not None else set(),
             as_dict=False,
+            helper_functions=helper_functions._registry["expression"],
             as_latex=as_latex,
-            apply_imask=apply_imask,
+            apply_where=apply_where,
         )
 
 
@@ -377,9 +359,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
     _ERR_BULLET: str = " * "
     _ERR_STRING_ORDER: list[str] = ["expression_group", "id", "expr_or_where"]
     PARSERS: dict[str, Callable] = {
-        "constraints": equation_parser.generate_equation_parser,
-        "global_expressions": equation_parser.generate_arithmetic_parser,
-        "objectives": equation_parser.generate_arithmetic_parser,
+        "constraints": expression_parser.generate_equation_parser,
+        "global_expressions": expression_parser.generate_arithmetic_parser,
+        "objectives": expression_parser.generate_arithmetic_parser,
         "variables": lambda x: None,
     }
 
@@ -471,10 +453,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 The length of the list depends on the product of provided equations and sub-expression/slice references.
         """
         equation_expression_list: list[UnparsedEquationDict]
-        if "equation" in self._unparsed.keys():
-            equation_expression_list = [{"expression": self._unparsed["equation"]}]
-        else:
-            equation_expression_list = self._unparsed.get("equations", [])
+        equation_expression_list = self._unparsed.get("equations", [])
 
         equations = self.generate_expression_list(
             expression_parser=self.equation_expression_parser(valid_math_element_names),
@@ -485,7 +464,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
 
         sub_expression_dict = {
             c_name: self.generate_expression_list(
-                expression_parser=equation_parser.generate_sub_expression_parser(
+                expression_parser=expression_parser.generate_sub_expression_parser(
                     valid_math_element_names
                 ),
                 expression_list=c_list,
@@ -496,7 +475,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         }
         slice_dict = {
             idx_name: self.generate_expression_list(
-                expression_parser=equation_parser.generate_slice_parser(
+                expression_parser=expression_parser.generate_slice_parser(
                     valid_math_element_names
                 ),
                 expression_list=idx_list,
@@ -570,7 +549,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
             pp.ParseResults: Parsed string. If any parsing errors are caught,
                 they will be logged to `self._errors` to raise later.
         """
-        parser = subset_parser.generate_where_string_parser()
+        parser = where_parser.generate_where_string_parser()
         self._tracker["expr_or_where"] = "where"
         return self._parse_string(parser, where_string)
 
@@ -677,24 +656,23 @@ class ParsedBackendComponent(ParsedBackendEquation):
             for parsed_item_combination in parsed_item_product
         ]
 
-    def evaluate_foreach(self, model_data: xr.Dataset) -> xr.DataArray:
+    def combine_exists_and_foreach(self, model_data: xr.Dataset) -> xr.DataArray:
         """
-        Generate a multi-dimensional imasking array based on the sets
-        over which the constraint is to be built (defined by "foreach").
-        Irrespective of the sets defined by "foreach", this array will always include
-        ["nodes", "techs", "carriers", "carrier_tiers"] to ensure only valid combinations
-        of technologies consuming/producing specific carriers at specific nodes are included in later imasking.
+        Generate a multi-dimensional boolean array based on the sets
+        over which the constraint is to be built (defined by "foreach") and the
+        model `exists` array.
+        The `exists` array is a boolean array defining the structure of the model and is True for valid combinations of technologies consuming/producing specific carriers at specific nodes. It is indexed over ["nodes", "techs", "carriers", "carrier_tiers"].
 
         Args:
             model_data (xr.Dataset): Calliope model dataset.
 
         Returns:
-            xr.DataArray: imasking boolean array.
+            xr.DataArray: boolean array indexed over ["nodes", "techs", "carriers", "carrier_tiers"] + any additional dimensions provided by `foreach`.
         """
         # Start with (carriers, carrier_tiers, nodes, techs) and go from there
-        initial_imask = model_data.carrier.notnull() * model_data.node_tech.notnull()
+        exists = model_data.carrier.notnull() * model_data.node_tech.notnull()
         # Add other dimensions (costs, timesteps, etc.)
-        add_dims = set(self.sets).difference(initial_imask.dims)
+        add_dims = set(self.sets).difference(exists.dims)
         if add_dims.difference(model_data.dims):
             exceptions.warn(
                 f"Not generating optimisation problem object `{self.name}` because it is "
@@ -702,8 +680,8 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 _class=exceptions.BackendWarning,
             )
             return xr.DataArray(False)
-        all_imasks = [initial_imask, *[model_data[i].notnull() for i in add_dims]]
-        return functools.reduce(operator.and_, all_imasks)
+        exists_and_foreach = [exists, *[model_data[i].notnull() for i in add_dims]]
+        return functools.reduce(operator.and_, exists_and_foreach)
 
     def generate_top_level_where_array(
         self,
@@ -727,18 +705,18 @@ class ParsedBackendComponent(ParsedBackendEquation):
         Returns:
             xr.DataArray: Boolean array defining on which index items a parsed component should be built.
         """
-        foreach_imask = self.evaluate_foreach(model_data)
-        if break_early and not foreach_imask.any():
-            return foreach_imask
+        foreach_where = self.combine_exists_and_foreach(model_data)
+        if break_early and not foreach_where.any():
+            return foreach_where
 
         self.parse_top_level_where()
-        imask = self.evaluate_where(model_data, initial_imask=foreach_imask)
-        if break_early and not imask.any():
-            return imask
+        where = self.evaluate_where(model_data, initial_where=foreach_where)
+        if break_early and not where.any():
+            return where
 
         if align_to_foreach_sets:
-            imask = self.align_imask_with_foreach_sets(imask)
-        return imask
+            where = self.drop_dims_not_in_foreach(where)
+        return where
 
     def raise_caught_errors(self):
         """If there are any parsing errors, pipe them to the ModelError bullet point list generator"""

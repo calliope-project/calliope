@@ -27,7 +27,7 @@ The definition of this technology in the example model's configuration looks as 
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # ccgt-start
    :end-before: # ccgt-end
 
@@ -50,7 +50,7 @@ This definition in the example model's configuration is more verbose:
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # csp-start
    :end-before: # csp-end
 
@@ -70,7 +70,7 @@ The second location allows a limited amount of battery storage to be deployed to
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # battery-start
    :end-before: # battery-end
 
@@ -88,7 +88,7 @@ Three more technologies are needed for a simple model. First, a definition of po
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # demand-start
    :end-before: # demand-end
 
@@ -103,7 +103,7 @@ What remains to set up is a simple transmission technology. Transmission technol
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # transmission-start
    :end-before: # transmission-end
 
@@ -127,7 +127,7 @@ Let's now look at the first location definition:
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model_config/locations.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # region-1-start
    :end-before: # region-1-end
 
@@ -141,7 +141,7 @@ The remaining location definitions look like this:
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model_config/locations.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # other-locs-start
    :end-before: # other-locs-end
 
@@ -151,7 +151,7 @@ For transmission technologies, the model also needs to know which locations can 
 
 .. literalinclude:: ../../calliope/example_models/national_scale/model_config/locations.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # links-start
    :end-before: # links-end
 

@@ -205,10 +205,10 @@ class BackendModelGenerator(ABC):
             component_type, name, component_dict
         )
 
-        top_level_imask = parsed_component.generate_top_level_where_array(
+        top_level_where = parsed_component.generate_top_level_where_array(
             self.inputs, align_to_foreach_sets=False, break_early=break_early
         )
-        if break_early and not top_level_imask.any():
+        if break_early and not top_level_where.any():
             return parsed_component
 
         self._create_obj_list(name, component_type)
@@ -216,24 +216,24 @@ class BackendModelGenerator(ABC):
         equations = parsed_component.parse_equations(self.valid_math_element_names)
         if not equations:
             component_da = component_setter(
-                parsed_component.align_imask_with_foreach_sets(top_level_imask)
+                parsed_component.drop_dims_not_in_foreach(top_level_where)
             )
         else:
             component_da = (
                 xr.DataArray()
-                .where(parsed_component.align_imask_with_foreach_sets(top_level_imask))
+                .where(parsed_component.drop_dims_not_in_foreach(top_level_where))
                 .astype(np.dtype("O"))
             )
         for element in equations:
-            imask = element.evaluate_where(self.inputs, initial_imask=top_level_imask)
-            if break_early and not imask.any():
+            where = element.evaluate_where(self.inputs, initial_where=top_level_where)
+            if break_early and not where.any():
                 continue
 
-            imask = parsed_component.align_imask_with_foreach_sets(imask)
+            where = parsed_component.drop_dims_not_in_foreach(where)
 
-            if component_da.where(imask).notnull().any():
+            if component_da.where(where).notnull().any():
                 if component_da.shape:
-                    overlap = component_da.where(imask).to_series().dropna().index
+                    overlap = component_da.where(where).to_series().dropna().index
                     substring = (
                         f"trying to set two equations for the same index:\n{overlap}"
                     )
@@ -245,7 +245,7 @@ class BackendModelGenerator(ABC):
                     f"({component_type.removesuffix('s')}, {element.name}): {substring}"
                 )
 
-            to_fill = component_setter(element, imask, references)
+            to_fill = component_setter(element, where, references)
             component_da = component_da.fillna(to_fill)
 
         if break_early and component_da.isnull().all():

@@ -47,6 +47,7 @@ from typing import (
 import pyparsing as pp
 import xarray as xr
 
+from calliope.backend.helper_functions import ParsingHelperFunction
 from calliope.exceptions import BackendError
 
 if TYPE_CHECKING:
@@ -131,8 +132,8 @@ class EvalOperatorOperand(EvalString):
         evaluated = to_eval.eval(as_latex=as_latex, **eval_kwargs)
         if not as_latex:
             evaluated = xr.DataArray(evaluated)
-            if eval_kwargs.get("apply_imask", True):
-                evaluated = evaluated.where(eval_kwargs["imask"])
+            if eval_kwargs.get("apply_where", True):
+                evaluated = evaluated.where(eval_kwargs["where"])
 
         return evaluated
 
@@ -300,7 +301,7 @@ class EvalFunction(EvalString):
                 Either the defined helper function is called, or only a dictionary with
                 parsed components is returned (if test=True).
         """
-        eval_kwargs["apply_imask"] = False
+        eval_kwargs["apply_where"] = False
 
         args_ = []
         for arg in self.args:
@@ -348,14 +349,14 @@ class EvalHelperFuncName(EvalString):
 
     def eval(
         self,
-        helper_func_dict: dict[str, Callable],
+        helper_functions: dict[str, type[ParsingHelperFunction]],
         as_dict: bool = False,
         **eval_kwargs,
     ) -> Optional[Union[str, Callable]]:
         """
 
         Args:
-            helper_func_dict (dict[str, Callable]): Allowed helper functions.
+            helper_functions (dict[str, type[ParsingHelperFunction]]): Allowed helper functions.
             test (bool, optional):
                 If True, return a string with the helper function name rather than
                 collecting the helper function from the dictionary of functions.
@@ -369,15 +370,20 @@ class EvalHelperFuncName(EvalString):
                 If test=True, only the helper function name is returned.
         """
 
-        if self.name not in helper_func_dict.keys():
+        if self.name not in helper_functions.keys():
             raise BackendError(
-                f"({eval_kwargs['equation_name']}, {self.instring}): Invalid helper function defined"
+                f"({eval_kwargs['equation_name']}, {self.instring}): Invalid helper function defined: {self.name}"
+            )
+        elif not isinstance(helper_functions[self.name], type(ParsingHelperFunction)):
+            raise TypeError(
+                f"({eval_kwargs['equation_name']}, {self.instring}): Helper function must be "
+                f"subclassed from calliope.backend.helper_functions.ParsingHelperFunction: {self.name}"
             )
         else:
             if as_dict:
                 return str(self.name)
             else:
-                return helper_func_dict[self.name](**eval_kwargs)
+                return helper_functions[self.name](**eval_kwargs)
 
 
 class EvalSlicedParameterOrVariable(EvalString):

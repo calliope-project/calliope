@@ -7,67 +7,154 @@ from calliope.backend import helper_functions
 from calliope.test.common.util import check_error_or_warning
 
 
-class TestFuncs:
-    def test_inheritance(self, dummy_model_data):
-        inheritance = helper_functions.inheritance(dummy_model_data)
-        boo_bool = inheritance("boo")
+@pytest.fixture(scope="module")
+def expression():
+    return helper_functions._registry["expression"]
+
+
+@pytest.fixture(scope="module")
+def where():
+    return helper_functions._registry["where"]
+
+
+@pytest.fixture(scope="class")
+def where_inheritance(where, parsing_kwargs):
+    return where["inheritance"](**parsing_kwargs)
+
+
+@pytest.fixture(scope="class")
+def where_any(where, parsing_kwargs):
+    return where["any"](**parsing_kwargs)
+
+
+@pytest.fixture(scope="class")
+def expression_sum(expression, parsing_kwargs):
+    return expression["sum"](**parsing_kwargs)
+
+
+@pytest.fixture(scope="class")
+def expression_reduce_carrier_dim(expression, parsing_kwargs):
+    return expression["reduce_carrier_dim"](**parsing_kwargs)
+
+
+@pytest.fixture(scope="class")
+def expression_reduce_primary_carrier_dim(expression, parsing_kwargs):
+    return expression["reduce_primary_carrier_dim"](**parsing_kwargs)
+
+
+@pytest.fixture(scope="class")
+def expression_select_from_lookup_arrays(expression, parsing_kwargs):
+    return expression["select_from_lookup_arrays"](**parsing_kwargs)
+
+
+@pytest.fixture(scope="class")
+def expression_get_val_at_index(expression, parsing_kwargs):
+    return expression["get_val_at_index"](**parsing_kwargs)
+
+
+@pytest.fixture(scope="class")
+def expression_roll(expression, parsing_kwargs):
+    return expression["roll"](**parsing_kwargs)
+
+
+class TestAsArray:
+    @pytest.fixture(scope="class")
+    def parsing_kwargs(self, dummy_model_data):
+        return {"model_data": dummy_model_data}
+
+    @pytest.mark.parametrize(
+        ["string_type", "func_name"], [("where", "inheritance"), ("expression", "sum")]
+    )
+    def test_duplicate_name_exception(self, string_type, func_name):
+        with pytest.raises(ValueError) as excinfo:
+
+            class MyNewFunc(helper_functions.ParsingHelperFunction):
+                NAME = func_name
+                ALLOWED_IN = [string_type]
+
+                def __call__(self):
+                    return None
+
+        assert check_error_or_warning(
+            excinfo,
+            f"`{string_type}` string helper function `{func_name}` already exists",
+        )
+
+    @pytest.mark.parametrize(
+        ["string_types", "func_name"],
+        [(["where"], "sum"), (["expression", "where"], "my_new_func")],
+    )
+    def test_new_func(self, string_types, func_name):
+        class MyNewFunc(helper_functions.ParsingHelperFunction):
+            NAME = func_name
+            ALLOWED_IN = string_types
+
+            def __call__(self):
+                return None
+
+        assert all(func_name in helper_functions._registry[i] for i in string_types)
+
+    def test_inheritance(self, where_inheritance, dummy_model_data):
+        boo_bool = where_inheritance("boo")
         assert boo_bool.equals(dummy_model_data.boo_inheritance_bool)
 
-    def test_imask_sum_not_exists(self, dummy_model_data):
-        imask_sum = helper_functions.imask_sum(dummy_model_data)
-        summed = imask_sum("foo", over="techs")
+    def test_any_not_exists(self, where_any):
+        summed = where_any("foo", over="techs")
         assert summed.equals(xr.DataArray(False))
 
     @pytest.mark.parametrize(
         ["var", "over", "expected"],
         [("with_inf", "techs", "nodes_true"), ("all_nan", "techs", "nodes_false")],
     )
-    def test_imask_sum_exists(self, dummy_model_data, var, over, expected):
-        imask_sum = helper_functions.imask_sum(dummy_model_data)
-        summed = imask_sum(var, over=over)
+    def test_any_exists(self, where_any, dummy_model_data, var, over, expected):
+        summed = where_any(var, over=over)
         assert summed.equals(dummy_model_data[expected])
 
     @pytest.mark.parametrize("over", ["techs", ["techs"]])
-    def test_expression_sum_one_dim(self, dummy_model_data, over):
-        expression_sum = helper_functions.expression_sum()
+    def test_sum_one_dim(self, expression_sum, dummy_model_data, over):
         summed_array = expression_sum(dummy_model_data.only_techs, over=over)
         assert not summed_array.shape
         assert summed_array == 6
 
     @pytest.mark.parametrize("over", ["techs", ["techs"]])
-    def test_expression_sum_one_of_two_dims(self, dummy_model_data, over):
-        expression_sum = helper_functions.expression_sum()
+    def test_sum_one_of_two_dims(self, expression_sum, dummy_model_data, over):
         summed_array = expression_sum(dummy_model_data.with_inf, over=over)
         assert summed_array.shape == (2,)
         assert np.array_equal(summed_array, [5, np.inf])
 
-    def test_expression_sum_two_dims(self, dummy_model_data):
-        expression_sum = helper_functions.expression_sum()
+    def test_expression_sum_two_dims(self, expression_sum, dummy_model_data):
         summed_array = expression_sum(
             dummy_model_data.with_inf_as_bool, over=["nodes", "techs"]
         )
         assert not summed_array.shape
         assert summed_array == 5
 
-    def test_squeeze_carriers(self, dummy_model_data):
-        squeeze_carriers = helper_functions.squeeze_carriers(dummy_model_data)
-        squeezed = squeeze_carriers(dummy_model_data.all_true_carriers, "foo")
+    def test_reduce_carrier_dim(self, expression_reduce_carrier_dim, dummy_model_data):
+        reduced = expression_reduce_carrier_dim(
+            dummy_model_data.all_true_carriers, "foo"
+        )
 
-        assert dummy_model_data.carrier.sel(carrier_tiers="foo").sum() == squeezed.sum()
-        assert not set(squeezed.dims).symmetric_difference(["techs"])
+        assert dummy_model_data.carrier.sel(carrier_tiers="foo").sum() == reduced.sum()
+        assert not set(reduced.dims).symmetric_difference(["techs"])
 
-    def test_squeeze_primary_carriers(self, dummy_model_data):
-        squeeze_carriers = helper_functions.squeeze_primary_carriers(dummy_model_data)
-        squeezed = squeeze_carriers(dummy_model_data.all_true_carriers, "out")
+    def test_reduce_primary_carrier_dim(
+        self, expression_reduce_primary_carrier_dim, dummy_model_data
+    ):
+        reduced = expression_reduce_primary_carrier_dim(
+            dummy_model_data.all_true_carriers, "out"
+        )
 
-        assert squeezed.sum() == 3
-        assert squeezed.max() == 1
-        assert not set(squeezed.dims).symmetric_difference(["techs"])
+        assert reduced.sum() == 3
+        assert reduced.max() == 1
+        assert not set(reduced.dims).symmetric_difference(["techs"])
 
-    def test_squeeze_primary_carriers_not_in_model(self, dummy_model_data):
-        squeeze_carriers = helper_functions.squeeze_primary_carriers(dummy_model_data)
+    def test_reduce_primary_carrier_dim_not_in_model(
+        self, expression_reduce_primary_carrier_dim, dummy_model_data
+    ):
         with pytest.raises(AttributeError):
-            squeeze_carriers(dummy_model_data.all_true_carriers, "foo")
+            expression_reduce_primary_carrier_dim(
+                dummy_model_data.all_true_carriers, "foo"
+            )
 
     @pytest.mark.parametrize(
         ["lookup", "expected"],
@@ -82,12 +169,10 @@ class TestFuncs:
             ),
         ],
     )
-    def test_select_from_lookup_arrays(self, dummy_model_data, lookup, expected):
-        select_from_lookup_arrays = helper_functions.select_from_lookup_arrays(
-            dummy_model_data
-        )
-
-        new_array = select_from_lookup_arrays(
+    def test_select_from_lookup_arrays(
+        self, expression_select_from_lookup_arrays, dummy_model_data, lookup, expected
+    ):
+        new_array = expression_select_from_lookup_arrays(
             dummy_model_data.with_inf,
             **{k: dummy_model_data[v] for k, v in lookup.items()},
         )
@@ -100,58 +185,64 @@ class TestFuncs:
             assert new_array[dim].equals(dummy_model_data[dim])
 
     def test_select_from_lookup_arrays_fail_dim_not_in_component(
-        self, dummy_model_data
+        self, expression_select_from_lookup_arrays, dummy_model_data
     ):
-        select_from_lookup_arrays = helper_functions.select_from_lookup_arrays(
-            dummy_model_data
-        )
         with pytest.raises(exceptions.BackendError) as excinfo:
-            select_from_lookup_arrays(
+            expression_select_from_lookup_arrays(
                 dummy_model_data.nodes_true,
                 techs=dummy_model_data.lookup_techs,
             )
         assert check_error_or_warning(
             excinfo,
-            "Cannot select items from `nodes_true` on the dimensions {'techs'} since the array is not indexed over the dimensions {'techs'}",
+            "Cannot select items from `nodes_true` on the dimensions {'techs'} since "
+            "the array is not indexed over the dimensions {'techs'}",
         )
 
-    def test_select_from_lookup_arrays_fail_dim_slicer_mismatch(self, dummy_model_data):
-        select_from_lookup_arrays = helper_functions.select_from_lookup_arrays(
-            dummy_model_data
-        )
+    def test_select_from_lookup_arrays_fail_dim_slicer_mismatch(
+        self, expression_select_from_lookup_arrays, dummy_model_data
+    ):
         with pytest.raises(exceptions.BackendError) as excinfo:
-            select_from_lookup_arrays(
+            expression_select_from_lookup_arrays(
                 dummy_model_data.with_inf,
                 techs=dummy_model_data.lookup_techs,
                 nodes=dummy_model_data.link_remote_nodes,
             )
-
         assert check_error_or_warning(
             excinfo,
             ["lookup arrays used to select items from `with_inf", "'techs'", "'nodes'"],
         )
 
-    @pytest.mark.parametrize(["ix", "expected"], [(0, "foo"), (1, "bar"), (-1, "bar")])
-    def test_get_val_at_index(self, dummy_model_data, ix, expected):
-        get_val_at_index = helper_functions.get_val_at_index(dummy_model_data)
-        assert get_val_at_index(dim="timesteps", idx=ix) == expected
+    @pytest.mark.parametrize(["idx", "expected"], [(0, "foo"), (1, "bar"), (-1, "bar")])
+    def test_get_val_at_index(self, expression_get_val_at_index, idx, expected):
+        assert expression_get_val_at_index(timesteps=idx) == expected
+
+    @pytest.mark.parametrize("mapping", [{}, {"foo": 1, "bar": 1}])
+    def test_get_val_at_index_not_one_mapping(
+        self, expression_get_val_at_index, mapping
+    ):
+        with pytest.raises(ValueError) as excinfo:
+            expression_get_val_at_index(**mapping)
+        assert check_error_or_warning(
+            excinfo, "Supply one (and only one) dimension:index mapping"
+        )
 
     @pytest.mark.parametrize(["to_roll", "expected"], [(1, 3), (1.0, 3), (-3.0, 3)])
-    def test_roll(self, dummy_model_data, to_roll, expected):
-        roll = helper_functions.roll()
-        rolled = roll(dummy_model_data.with_inf, techs=to_roll)
+    def test_roll(self, expression_roll, dummy_model_data, to_roll, expected):
+        rolled = expression_roll(dummy_model_data.with_inf, techs=to_roll)
         assert rolled.sel(nodes="foo", techs="foobar") == expected
 
 
 class TestAsLatex:
-    def test_inheritance(self, dummy_model_data):
-        inheritance = helper_functions.inheritance(dummy_model_data, as_latex=True)
-        assert inheritance("boo") == r"\text{tech_group=boo}"
+    @pytest.fixture(scope="class")
+    def parsing_kwargs(self, dummy_model_data):
+        return {"model_data": dummy_model_data, "as_latex": True}
 
-    def test_imask_sum_not_exists(self, dummy_model_data):
-        imask_sum = helper_functions.imask_sum(dummy_model_data, as_latex=True)
-        summed_string = imask_sum("foo", over="techs")
-        assert summed_string == r"\sum\limits_{\text{tech} \in \text{techs}} (foo)"
+    def test_inheritance(self, where_inheritance):
+        assert where_inheritance("boo") == r"\text{tech_group=boo}"
+
+    def test_any_not_exists(self, where_any):
+        summed_string = where_any("foo", over="techs")
+        assert summed_string == r"\bigvee\limits_{\text{tech} \in \text{techs}} (foo)"
 
     @pytest.mark.parametrize(
         ["over", "expected_substring"],
@@ -165,40 +256,32 @@ class TestAsLatex:
         ],
     )
     @pytest.mark.parametrize(
-        "func", [helper_functions.imask_sum, helper_functions.expression_sum]
+        ["func_string", "latex_func"],
+        [("where_any", r"\bigvee"), ("expression_sum", r"\sum")],
     )
-    def test_sum(self, dummy_model_data, over, expected_substring, func):
-        imask_sum = func(model_data=dummy_model_data, as_latex=True)
-        summed_string = imask_sum(r"\textit{with_inf}_\text{node,tech}", over=over)
+    def test_sum(self, request, over, expected_substring, func_string, latex_func):
+        func = request.getfixturevalue(func_string)
+        summed_string = func(r"\textit{with_inf}_\text{node,tech}", over=over)
         assert (
             summed_string
-            == rf"\sum\limits_{{{expected_substring}}} (\textit{{with_inf}}_\text{{node,tech}})"
+            == rf"{latex_func}\limits_{{{expected_substring}}} (\textit{{with_inf}}_\text{{node,tech}})"
         )
 
-    def test_squeeze_carriers(self, dummy_model_data):
-        squeeze_carriers = helper_functions.squeeze_carriers(
-            dummy_model_data, as_latex=True
-        )
-        squeezed_string = squeeze_carriers("foo", "out")
+    def test_squeeze_carriers(self, expression_reduce_carrier_dim):
+        reduced_string = expression_reduce_carrier_dim("foo", "out")
         assert (
-            squeezed_string
+            reduced_string
             == r"\sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (foo)"
         )
 
-    def test_squeeze_primary_carriers(self, dummy_model_data):
-        squeeze_carriers = helper_functions.squeeze_primary_carriers(
-            dummy_model_data, as_latex=True
-        )
-        squeezed_string = squeeze_carriers("foo", "out")
+    def test_squeeze_primary_carriers(self, expression_reduce_primary_carrier_dim):
+        reduced_string = expression_reduce_primary_carrier_dim("foo", "out")
         assert (
-            squeezed_string == r"\sum\limits_{\text{carrier=primary_carrier_out}} (foo)"
+            reduced_string == r"\sum\limits_{\text{carrier=primary_carrier_out}} (foo)"
         )
 
-    def test_select_from_lookup_arrays(self, dummy_model_data):
-        select_from_lookup_arrays = helper_functions.select_from_lookup_arrays(
-            dummy_model_data, as_latex=True
-        )
-        select_from_lookup_arrays_string = select_from_lookup_arrays(
+    def test_select_from_lookup_arrays(self, expression_select_from_lookup_arrays):
+        select_from_lookup_arrays_string = expression_select_from_lookup_arrays(
             r"\textit{node}_\text{node,tech}",
             nodes="new_nodes",
             techs=r"\textit{new_techs}_{node,tech}",
@@ -208,11 +291,8 @@ class TestAsLatex:
             == r"\textit{node}_\text{node=new_nodes[node],tech=\textit{new_techs}_{node,tech}[tech]}"
         )
 
-    def test_get_val_at_index(self, dummy_model_data):
-        get_val_at_index = helper_functions.get_val_at_index(
-            dummy_model_data, as_latex=True
-        )
-        outstring = get_val_at_index(dim="timesteps", idx=1)
+    def test_get_val_at_index(self, expression_get_val_at_index):
+        outstring = expression_get_val_at_index(timesteps="1")
         assert outstring == "timesteps[1]"
 
     @pytest.mark.parametrize(
@@ -227,7 +307,6 @@ class TestAsLatex:
             (r"\textit{foo}_\text{baz,foo,bar,foo}", r"baz,foo+1,bar,foo+1"),
         ],
     )
-    def test_roll(self, instring, expected_substring):
-        roll = helper_functions.roll(as_latex=True)
-        rolled_string = roll(instring, foo=-1)
+    def test_roll(self, expression_roll, instring, expected_substring):
+        rolled_string = expression_roll(instring, foo="-1")
         assert rolled_string == rf"\textit{{foo}}_\text{{{expected_substring}}}"
