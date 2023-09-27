@@ -10,7 +10,11 @@ Functions to read and save model results.
 """
 
 import os
+from typing import Union
 
+# We import netCDF4 before xarray to mitigate a numpy warning:
+# https://github.com/pydata/xarray/issues/7259
+import netCDF4  # noqa: F401
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -27,7 +31,7 @@ def read_netcdf(path):
 
     calliope_version = model_data.attrs.get("calliope_version", False)
     if calliope_version:
-        if not str(calliope_version) in __version__:
+        if str(calliope_version) not in __version__:
             exceptions.warn(
                 "This model data was created with Calliope version {}, "
                 "but you are running {}. Proceed with caution!".format(
@@ -43,6 +47,7 @@ def read_netcdf(path):
 
     # Convert empty strings back to np.NaN
     # TODO: revert when this issue is solved: https://github.com/pydata/xarray/issues/1647
+    # which it might be once this is merged: https://github.com/pydata/xarray/pull/7869
     for var_name, var_array in model_data.data_vars.items():
         if var_array.dtype.kind in ["U", "O"]:
             model_data[var_name] = var_array.where(lambda x: x != "")

@@ -521,7 +521,7 @@ def load_timeseries_from_dataframe(timeseries_dataframes, tskey):
 
 
 def _parser(x, dtformat):
-    return pd.to_datetime(x, format=dtformat, exact=False)
+    return pd.to_datetime(x, format=dtformat)
 
 
 def _get_names(config):
@@ -603,7 +603,7 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     if subset_time_config is not None:
         # Test parsing dates first, to make sure they fit our required subset format
         try:
-            subset_time = _parser(subset_time_config, "%Y-%m-%d %H:%M:%S")
+            subset_time = _parser(subset_time_config, "ISO8601")
         except ValueError as e:
             raise exceptions.ModelError(
                 "Timeseries subset must be in ISO format (anything up to the  "
