@@ -37,12 +37,9 @@ def read_netcdf(path):
                     calliope_version, __version__
                 )
             )
-    for attr in _pop_serialised_list(model_data.attrs, "serialised_dicts"):
-        model_data.attrs[attr] = AttrDict.from_yaml_string(model_data.attrs[attr])
-    for attr in _pop_serialised_list(model_data.attrs, "serialised_bools"):
-        model_data.attrs[attr] = bool(model_data.attrs[attr])
-    for attr in _pop_serialised_list(model_data.attrs, "serialised_nones"):
-        model_data.attrs[attr] = None
+    _deserialise(model_data.attrs)
+    for var in model_data.data_vars.values():
+        _deserialise(var.attrs)
 
     # Convert empty strings back to np.NaN
     # TODO: revert when this issue is solved: https://github.com/pydata/xarray/issues/1647
@@ -58,17 +55,82 @@ def read_netcdf(path):
     return model_data
 
 
-def _pop_serialised_list(attribute_dict, serialised_items):
-    serialised_ = attribute_dict.pop(serialised_items, [])
+def _pop_serialised_list(
+    attrs: dict, serialised_items: Union[str, list, np.ndarray]
+) -> Union[list, np.ndarray]:
+    serialised_ = attrs.pop(serialised_items, [])
     if not isinstance(serialised_, (list, np.ndarray)):
         return [serialised_]
     else:
         return serialised_
 
 
+def _serialise(attrs: dict) -> None:
+    """Convert troublesome datatypes to nicer ones in xarray attribute dictionaries.
+
+    This will tackle dictionaries (to string), booleans (to int), None (to string), and sets (to list).
+
+    Args:
+        attrs (dict):
+            Attribute dictionary from an xarray Dataset/DataArray.
+            Changes will be made in-place, so be sure to supply a copy of your dictionary if you want access to its original state.
+    """
+    # Convert dicts attrs to yaml strings
+    dict_attrs = [k for k, v in attrs.items() if isinstance(v, dict)]
+    attrs["serialised_dicts"] = dict_attrs
+    for attr in dict_attrs:
+        attrs[attr] = AttrDict(attrs[attr]).to_yaml()
+
+    # Convert boolean attrs to ints
+    bool_attrs = [k for k, v in attrs.items() if isinstance(v, bool)]
+    attrs["serialised_bools"] = bool_attrs
+    for attr in bool_attrs:
+        attrs[attr] = int(attrs[attr])
+
+    # Convert None attrs to 'None'
+    none_attrs = [k for k, v in attrs.items() if v is None]
+    attrs["serialised_nones"] = none_attrs
+    for attr in none_attrs:
+        attrs[attr] = "None"
+
+    # Convert set attrs to lists
+    set_attrs = [k for k, v in attrs.items() if isinstance(v, set)]
+    for attr in set_attrs:
+        attrs[attr] = list(attrs[attr])
+
+    list_attrs = [k for k, v in attrs.items() if isinstance(v, list)]
+    for attr in list_attrs:
+        if any(not isinstance(i, str) for i in attrs[attr]):
+            raise TypeError(
+                f"Cannot serialise a sequence of values stored in a model attribute unless all values are strings, found: {attrs[attr]}"
+            )
+    else:
+        attrs["serialised_sets"] = set_attrs
+
+
+def _deserialise(attrs: dict) -> None:
+    """Convert troublesome datatypes in xarray attribute dictionaries from their stored data type to the data types expected by Calliope.
+
+    This will tackle dictionaries (from string), booleans (from int), None (form string), and sets (from list).
+
+    Args:
+        attrs (dict):
+            Attribute dictionary from an xarray Dataset/DataArray.
+            Changes will be made in-place, so be sure to supply a copy of your dictionary if you want access to its original state.
+    """
+    for attr in _pop_serialised_list(attrs, "serialised_dicts"):
+        attrs[attr] = AttrDict.from_yaml_string(attrs[attr])
+    for attr in _pop_serialised_list(attrs, "serialised_bools"):
+        attrs[attr] = bool(attrs[attr])
+    for attr in _pop_serialised_list(attrs, "serialised_nones"):
+        attrs[attr] = None
+    for attr in _pop_serialised_list(attrs, "serialised_sets"):
+        attrs[attr] = set(attrs[attr])
+
+
 def save_netcdf(model_data, path, model=None):
     original_model_data_attrs = model_data.attrs
-    model_data_attrs = model_data.attrs.copy()
+    model_data_attrs = original_model_data_attrs.copy()
 
     if model is not None and hasattr(model, "_model_run"):
         # Attach _model_run and _debug_data to _model_data
@@ -79,23 +141,9 @@ def save_netcdf(model_data, path, model=None):
         if hasattr(model, "_debug_data"):
             model_data_attrs["_debug_data"] = model._debug_data.to_yaml()
 
-    # Convert dicts attrs to yaml strings
-    dict_attrs = [k for k, v in model_data_attrs.items() if isinstance(v, dict)]
-    model_data_attrs["serialised_dicts"] = dict_attrs
-    for k in dict_attrs:
-        model_data_attrs[k] = AttrDict(model_data_attrs[k]).to_yaml()
-
-    # Convert boolean attrs to ints
-    bool_attrs = [k for k, v in model_data_attrs.items() if isinstance(v, bool)]
-    model_data_attrs["serialised_bools"] = bool_attrs
-    for k in bool_attrs:
-        model_data_attrs[k] = int(model_data_attrs[k])
-
-    # Convert None attrs to 'None'
-    none_attrs = [k for k, v in model_data_attrs.items() if v is None]
-    model_data_attrs["serialised_nones"] = none_attrs
-    for k in none_attrs:
-        model_data_attrs[k] = "None"
+    _serialise(model_data_attrs)
+    for var in model_data.data_vars.values():
+        _serialise(var.attrs)
 
     encoding = {
         k: {"zlib": False, "_FillValue": None}
@@ -110,6 +158,8 @@ def save_netcdf(model_data, path, model=None):
         model_data.close()  # Force-close NetCDF file after writing
     finally:  # Revert model_data.attrs back
         model_data.attrs = original_model_data_attrs
+        for var in model_data.data_vars.values():
+            _deserialise(var.attrs)
 
 
 def save_csv(model_data, path, dropna=True):

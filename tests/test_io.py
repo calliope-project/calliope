@@ -5,21 +5,33 @@ import calliope
 import pytest  # noqa: F401
 import xarray as xr
 from calliope import exceptions
+from calliope.core import io
+from calliope.test.common.util import check_error_or_warning
 
 
 class TestIO:
     @pytest.fixture(scope="module")
-    def model(self):
+    def vars_to_add_attrs(self):
+        return ["resource", "energy_cap"]
+
+    @pytest.fixture(scope="module")
+    def model(self, vars_to_add_attrs):
         model = calliope.examples.national_scale()
-        model._model_data = model._model_data.assign_attrs(
-            foo_true=True,
-            foo_false=False,
-            foo_none=None,
-            foo_dict={"foo": {"a": 1}},
-            foo_attrdict=calliope.AttrDict({"foo": {"a": 1}}),
-        )
+        attrs = {
+            "foo_true": True,
+            "foo_false": False,
+            "foo_none": None,
+            "foo_dict": {"foo": {"a": 1}},
+            "foo_attrdict": calliope.AttrDict({"foo": {"a": 1}}),
+            "foo_set": set(["foo", "bar"]),
+        }
+        model._model_data = model._model_data.assign_attrs(**attrs)
         model.build()
         model.solve()
+
+        for var in vars_to_add_attrs:
+            model._model_data[var] = model._model_data[var].assign_attrs(**attrs)
+
         return model
 
     @pytest.fixture(scope="module")
@@ -53,23 +65,25 @@ class TestIO:
             ("foo_none", type(None), None),
             ("foo_dict", dict, {"foo": {"a": 1}}),
             ("foo_attrdict", calliope.AttrDict, calliope.AttrDict({"foo": {"a": 1}})),
+            ("foo_set", set, set(["foo", "bar"])),
         ],
     )
     @pytest.mark.parametrize("model_name", ["model", "model_from_file"])
     def test_serialised_attrs(
-        self, request, attr, expected_type, expected_val, model_name
+        self, request, attr, expected_type, expected_val, model_name, vars_to_add_attrs
     ):
         model = request.getfixturevalue(model_name)
-        # Ensure that boolean attrs have not changed
-
-        assert isinstance(model._model_data.attrs[attr], expected_type)
-        if expected_val is None:
-            assert model._model_data.attrs[attr] is None
-        else:
-            assert model._model_data.attrs[attr] == expected_val
+        var_attrs = [model._model_data[var].attrs for var in vars_to_add_attrs]
+        for attrs in [model._model_data.attrs, *var_attrs]:
+            assert isinstance(attrs[attr], expected_type)
+            if expected_val is None:
+                assert attrs[attr] is None
+            else:
+                assert attrs[attr] == expected_val
 
     @pytest.mark.parametrize(
-        "serialised_list", ["serialised_bools", "serialised_nones", "serialised_dicts"]
+        "serialised_list",
+        ["serialised_bools", "serialised_nones", "serialised_dicts", "serialised_sets"],
     )
     @pytest.mark.parametrize("model_name", ["model", "model_from_file"])
     def test_serialised_list_popped(self, request, serialised_list, model_name):
@@ -77,7 +91,7 @@ class TestIO:
         assert serialised_list not in model._model_data.attrs.keys()
 
     @pytest.mark.parametrize(
-        ["serialised_list", "list_elements"],
+        ["serialisation_list_name", "list_elements"],
         [
             ("serialised_bools", ["foo_true", "foo_false"]),
             ("serialised_nones", ["foo_none", "scenario"]),
@@ -92,14 +106,27 @@ class TestIO:
                     "math",
                 ],
             ),
+            ("serialised_sets", ["foo_set"]),
         ],
     )
-    def test_serialised_list(
-        self, model_from_file_no_processing, serialised_list, list_elements
+    def test_serialisation_lists(
+        self, model_from_file_no_processing, serialisation_list_name, list_elements
     ):
-        assert not set(
-            model_from_file_no_processing.attrs[serialised_list]
-        ).symmetric_difference(list_elements)
+        serialisation_list = io._pop_serialised_list(
+            model_from_file_no_processing.attrs, serialisation_list_name
+        )
+        assert not set(serialisation_list).symmetric_difference(list_elements)
+
+    @pytest.mark.parametrize(
+        "attrs", [{"foo": [1]}, {"foo": [None]}, {"foo": [1, "bar"]}, {"foo": set([1])}]
+    )
+    def test_non_strings_in_serialised_lists(self, attrs):
+        with pytest.raises(TypeError) as excinfo:
+            io._serialise(attrs)
+        assert check_error_or_warning(
+            excinfo,
+            f"Cannot serialise a sequence of values stored in a model attribute unless all values are strings, found: {attrs['foo']}",
+        )
 
     def test_save_csv_dir_mustnt_exist(self, model):
         with tempfile.TemporaryDirectory() as tempdir:
