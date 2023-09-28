@@ -66,8 +66,9 @@ def generate_custom_math_model(
 
 
 def generate_model_config() -> dict[str, dict]:
-    """
-    To generate the written mathematical formulation of all possible base constraints, we first create a dummy model that has all the relevant technology groups defining all their allowed parameters defined.
+    """To generate the written mathematical formulation of all possible base constraints, we first create a dummy model.
+
+    This dummy has all the relevant technology groups defining all their allowed parameters defined.
 
     Parameters that can be defined over a timeseries are forced to be defined over a timeseries. Accordingly, the parameters will have "timesteps" in their dimensions in the formulation.
     """

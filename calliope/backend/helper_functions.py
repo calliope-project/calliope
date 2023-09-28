@@ -7,11 +7,12 @@ helper_functions.py
 
 Functions that can be used to process data in math `where` and `expression` strings.
 """
+import functools
 import re
 from abc import ABC, abstractmethod
 from typing import Any, Literal, Mapping, Union, overload
 
-import pandas as pd
+import numpy as np
 import xarray as xr
 
 from calliope.exceptions import BackendError
@@ -189,12 +190,11 @@ class WhereAny(ParsingHelperFunction):
         """
         if parameter in self._kwargs["model_data"].data_vars:
             parameter_da = self._kwargs["model_data"][parameter]
-            with pd.option_context("mode.use_inf_as_na", True):
-                bool_parameter_da = (
-                    parameter_da.where(pd.notnull(parameter_da))  # type: ignore
-                    .notnull()
-                    .any(dim=over, keep_attrs=True)
-                )
+            bool_parameter_da = (
+                parameter_da.notnull()
+                & (parameter_da != np.inf)
+                & (parameter_da != -np.inf)
+            ).any(dim=over, keep_attrs=True)
         else:
             bool_parameter_da = xr.DataArray(False)
         return bool_parameter_da
@@ -227,7 +227,8 @@ class Sum(ParsingHelperFunction):
         Returns:
             xr.DataArray:
                 Array with dimensions reduced by applying a summation over the dimensions given in `over`.
-                NaNs are ignored (xarray.DataArray.sum arg: `skipna: True`) and if all values along the dimension(s) are NaN, the summation will lead to a NaN (xarray.DataArray.sum arg: `min_count=1`).
+                NaNs are ignored (xarray.DataArray.sum arg: `skipna: True`) and if all values along the dimension(s) are NaN,
+                the summation will lead to a NaN (xarray.DataArray.sum arg: `min_count=1`).
         """
         return array.sum(over, min_count=1, skipna=True)
 
@@ -282,7 +283,8 @@ class ReducePrimaryCarrierDim(ParsingHelperFunction):
         self, array: xr.DataArray, carrier_tier: Literal["in", "out"]
     ) -> xr.DataArray:
         """Reduce expression array data by selecting the carrier that corresponds to the primary carrier and then dropping the `carriers` dimension.
-        This function is only valid for `conversion_plus` technologies, so should only be included in a math component if the `where` string includes `inheritance(conversion_plus)` or an equivalent expression.
+        This function is only valid for `conversion_plus` technologies,
+        so should only be included in a math component if the `where` string includes `inheritance(conversion_plus)` or an equivalent expression.
 
         Args:
             array (xr.DataArray): Expression array.
@@ -353,6 +355,9 @@ class SelectFromLookupArrays(ParsingHelperFunction):
         The lookup array assigns the value at "B" to "A" and vice versa.
         "C" is masked since the lookup array value is NaN.
         """
+        # Inspired by https://github.com/pydata/xarray/issues/1553#issuecomment-748491929
+        # Reindex does not presently support vectorized lookups: https://github.com/pydata/xarray/issues/1553
+        # Sel does (e.g. https://github.com/pydata/xarray/issues/4630) but can't handle missing keys
 
         dims = set(lookup_arrays.keys())
         missing_dims_in_component = dims.difference(array.dims)
@@ -368,24 +373,30 @@ class SelectFromLookupArrays(ParsingHelperFunction):
                 f"All lookup arrays used to select items from `{array.name}` must be indexed over the dimensions {dims}"
             )
 
-        stacked_and_dense_lookup_arrays = {
-            # Although we have the lookup array, its values are backend objects,
-            # so we grab the same array from the unadulterated model data.
-            # FIXME: do not add lookup tables as backend objects.
-            dim_name: self._kwargs["model_data"][lookup.name]
-            # Stacking ensures that the dimensions on `component` are not reordered on calling `.sel()`.
-            .stack(idx=list(dims))
-            # Cannot select on NaNs, so we drop them all.
-            .dropna("idx")
-            for dim_name, lookup in lookup_arrays.items()
-        }
-        sliced_component = array.sel(stacked_and_dense_lookup_arrays)
+        dim = "dim_0"
+        ixs = {}
+        masks = []
 
-        return (
-            sliced_component.drop_vars(dims)
-            .unstack("idx")
-            .reindex_like(array, copy=False)
-        )
+        # Turn string lookup values to numeric ones.
+        # We stack the dimensions to handle multidimensional lookups
+        for index_dim, index in lookup_arrays.items():
+            stacked_lookup = self._kwargs["model_data"][index.name].stack({dim: dims})
+            ix = array.indexes[index_dim].get_indexer(stacked_lookup)
+            ixs[index_dim] = xr.DataArray(
+                np.fmax(0, ix),
+                coords={dim: stacked_lookup[dim]},
+            )
+            masks.append(ix >= 0)
+
+        # Create a mask to nullify any lookup values that are not given (i.e., are np.nan in the lookup array)
+        mask = functools.reduce(lambda x, y: x & y, masks)
+
+        result = array[ixs]
+
+        if not mask.all():
+            result[{dim: ~mask}] = np.nan
+        unstacked_result = result.drop_vars(dims).unstack(dim)
+        return unstacked_result
 
 
 class GetValAtIndex(ParsingHelperFunction):

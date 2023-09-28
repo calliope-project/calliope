@@ -570,7 +570,9 @@ class Model(object):
         return "\n".join(info_strings)
 
     def validate_math_strings(self, math_dict: dict) -> None:
-        """Validate that `expression` and `where` strings of a dictionary containing string mathematical formulations can be successfully parsed. This function can be used to test custom math before attempting to build the optimisation problem.
+        """Validate that `expression` and `where` strings of a dictionary containing string mathematical formulations can be successfully parsed.
+
+        This function can be used to test custom math before attempting to build the optimisation problem.
 
         NOTE: strings are not checked for evaluation validity. Evaluation issues will be raised only on calling `Model.build()`.
 

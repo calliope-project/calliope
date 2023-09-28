@@ -76,7 +76,9 @@ class MathDocumentation:
                 If given, will write the built mathematical formulation to a file with the given extension as the file format. Defaults to None.
 
             format (Optional["tex", "rst", "md"], optional):
-                Not required if filename is given (as the format will be automatically inferred). Required if expecting a string return from calling this function. The LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown). Defaults to None.
+                Not required if filename is given (as the format will be automatically inferred).
+                Required if expecting a string return from calling this function. The LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown).
+                Defaults to None.
 
         Raises:
             exceptions.ModelError: Math strings need to be built first (`build`)

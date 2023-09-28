@@ -44,7 +44,7 @@ model:
   time: {} # Optional settings to adjust time resolution, see :ref:`time_clustering` for the available options
   timeseries_data_path: null # Path to time series data
   timeseries_data: null # Dict of dataframes with time series data (when passing in dicts rather than YAML files to Model constructor)
-  timeseries_dateformat: "%Y-%m-%d %H:%M:%S" # Timestamp format of all time series data when read from file
+  timeseries_dateformat: "ISO8601" # Timestamp format of all time series data when read from file
   file_allowed: [
       "clustering_func",
       "energy_eff",

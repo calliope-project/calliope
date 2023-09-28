@@ -166,8 +166,10 @@ def generate_sbatch_script(
     )
 
     if ":" not in cluster_time:
-        # Assuming time given as minutes, so needs changing to %H:%M%S
-        cluster_time = pd.to_datetime(cluster_time, unit="m").strftime("%H:%M:%S")
+        # Assuming time given as minutes, so needs changing to %H:%M:%S
+        cluster_time = pd.to_datetime(float(cluster_time), unit="m").strftime(
+            "%H:%M:%S"
+        )
 
     lines = [
         "#!/bin/bash",

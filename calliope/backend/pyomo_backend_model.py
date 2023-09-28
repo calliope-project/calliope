@@ -555,17 +555,19 @@ class PyomoBackendModel(backend_model.BackendModel):
                 If both `val` and `default` are np.nan/None, return np.nan.
                 Otherwise return ObjParameter(val/default).
         """
-        with pd.option_context("mode.use_inf_as_na", use_inf_as_na):
-            if pd.isnull(val):
-                if pd.isnull(default):
-                    param = np.nan
-                else:
-                    param = ObjParameter(default)
-                    self._instance.parameters[name].append(param)
+        if use_inf_as_na:
+            val = np.nan if val in [np.inf, -np.inf] else val
+            default = np.nan if default in [np.inf, -np.inf] else default
+        if pd.isnull(val):
+            if pd.isnull(default):
+                param = np.nan
             else:
-                param = ObjParameter(val)
+                param = ObjParameter(default)
                 self._instance.parameters[name].append(param)
-            return param
+        else:
+            param = ObjParameter(val)
+            self._instance.parameters[name].append(param)
+        return param
 
     def _update_pyomo_param(self, orig: ObjParameter, new: Any) -> None:
         """Utility function to update pyomo parameter values in-place.

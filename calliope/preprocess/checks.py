@@ -105,7 +105,7 @@ def check_initial(config_model):
     # Check for version mismatch
     model_version = config_model.model.get("calliope_version", False)
     if model_version:
-        if not str(model_version) in __version__:
+        if str(model_version) not in __version__:
             model_warnings.append(
                 "Model configuration specifies calliope_version={}, "
                 "but you are running {}. Proceed with caution!".format(

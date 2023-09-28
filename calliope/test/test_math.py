@@ -1,8 +1,8 @@
-import filecmp
 from pathlib import Path
 
 import numpy as np
 import pytest
+from pyomo.repn.tests import lp_diff
 
 import calliope
 from calliope import AttrDict
@@ -18,8 +18,10 @@ def compare_lps(tmpdir_factory):
         expected_file = (
             Path(calliope.__file__).parent / "test" / "common" / "lp_files" / lp_file
         )
-
-        assert filecmp.cmp(generated_file, expected_file)
+        diff = lp_diff.load_and_compare_lp_baseline(
+            generated_file.as_posix(), expected_file.as_posix()
+        )
+        assert diff == ([], [])
 
     return _compare_lps
 

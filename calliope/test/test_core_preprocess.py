@@ -242,9 +242,8 @@ class TestModelRun:
         string/integer
         """
 
-        override = lambda param: AttrDict.from_yaml_string(
-            "model.subset_time: {}".format(param)
-        )
+        def override(param):
+            return AttrDict.from_yaml_string("model.subset_time: {}".format(param))
 
         # should fail: one string in list
         with pytest.raises(exceptions.ModelError):
@@ -1003,13 +1002,18 @@ class TestChecks:
         User can only define an export carrier if it is defined in
         ['carrier_out', 'carrier_out_2', 'carrier_out_3']
         """
-        override_supply = lambda param: AttrDict.from_yaml_string(
-            "techs.test_supply_elec.constraints.export_carrier: {}".format(param)
-        )
 
-        override_converison_plus = lambda param: AttrDict.from_yaml_string(
-            "techs.test_conversion_plus.constraints.export_carrier: {}".format(param)
-        )
+        def override_supply(param):
+            return AttrDict.from_yaml_string(
+                "techs.test_supply_elec.constraints.export_carrier: {}".format(param)
+            )
+
+        def override_converison_plus(param):
+            return AttrDict.from_yaml_string(
+                "techs.test_conversion_plus.constraints.export_carrier: {}".format(
+                    param
+                )
+            )
 
         # should fail: exporting `heat` not allowed for electricity supply tech
         with pytest.raises(exceptions.ModelError):
@@ -1116,9 +1120,12 @@ class TestChecks:
             )
         )
 
-        override = lambda param: AttrDict.from_yaml_string(
-            "techs.test_storage.constraints.{}: file=binary_one_day.csv".format(param)
-        )
+        def override(param):
+            return AttrDict.from_yaml_string(
+                "techs.test_storage.constraints.{}: file=binary_one_day.csv".format(
+                    param
+                )
+            )
 
         # should fail: Cannot have `file=` on the following constraints
         for param in allowed_constraints_no_file:
