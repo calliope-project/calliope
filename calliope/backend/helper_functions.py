@@ -13,7 +13,6 @@ from abc import ABC, abstractmethod
 from typing import Any, Literal, Mapping, Union, overload
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 
 from calliope.exceptions import BackendError
@@ -192,12 +191,10 @@ class WhereAny(ParsingHelperFunction):
         if parameter in self._kwargs["model_data"].data_vars:
             parameter_da = self._kwargs["model_data"][parameter]
             bool_parameter_da = (
-                parameter_da.where(
-                    pd.notnull(parameter_da) & ~np.isinf(parameter_da)
-                )  # type: ignore
-                .notnull()
-                .any(dim=over, keep_attrs=True)
-            )
+                parameter_da.notnull()
+                & (parameter_da != np.inf)
+                & (parameter_da != -np.inf)
+            ).any(dim=over, keep_attrs=True)
         else:
             bool_parameter_da = xr.DataArray(False)
         return bool_parameter_da

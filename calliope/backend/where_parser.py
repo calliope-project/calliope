@@ -7,7 +7,6 @@ import operator
 from typing import Any, Union
 
 import numpy as np
-import pandas as pd
 import pyparsing as pp
 import xarray as xr
 
@@ -179,8 +178,8 @@ class DataVarParser(expression_parser.EvalString):
 
     def _data_var_exists(self, model_data: xr.Dataset) -> xr.DataArray:
         "mask by setting all (NaN | INF/-INF) to False, otherwise True"
-        model_data_var = model_data.get(self.data_var, xr.DataArray(None))
-        return model_data_var.where(pd.notnull(model_data_var) & ~np.isinf(model_data_var)).notnull()  # type: ignore
+        var = model_data.get(self.data_var, xr.DataArray(np.nan))
+        return var.notnull() & (var != np.inf) & (var != -np.inf)
 
     def _data_var_with_default(self, model_data: xr.Dataset) -> xr.DataArray:
         "Access data var and fill with default values. Return default value as an array if var does not exist"
