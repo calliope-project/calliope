@@ -7,13 +7,15 @@ helper_functions.py
 
 Functions that can be used to process data in math `where` and `expression` strings.
 """
+import functools
 import re
 from abc import ABC, abstractmethod
 from typing import Any, Literal, Mapping, Union, overload
-import functools
+
+import numpy as np
 import pandas as pd
 import xarray as xr
-import numpy as np
+
 from calliope.exceptions import BackendError
 
 _registry: dict[
@@ -228,7 +230,8 @@ class Sum(ParsingHelperFunction):
         Returns:
             xr.DataArray:
                 Array with dimensions reduced by applying a summation over the dimensions given in `over`.
-                NaNs are ignored (xarray.DataArray.sum arg: `skipna: True`) and if all values along the dimension(s) are NaN, the summation will lead to a NaN (xarray.DataArray.sum arg: `min_count=1`).
+                NaNs are ignored (xarray.DataArray.sum arg: `skipna: True`) and if all values along the dimension(s) are NaN,
+                the summation will lead to a NaN (xarray.DataArray.sum arg: `min_count=1`).
         """
         return array.sum(over, min_count=1, skipna=True)
 
@@ -283,7 +286,8 @@ class ReducePrimaryCarrierDim(ParsingHelperFunction):
         self, array: xr.DataArray, carrier_tier: Literal["in", "out"]
     ) -> xr.DataArray:
         """Reduce expression array data by selecting the carrier that corresponds to the primary carrier and then dropping the `carriers` dimension.
-        This function is only valid for `conversion_plus` technologies, so should only be included in a math component if the `where` string includes `inheritance(conversion_plus)` or an equivalent expression.
+        This function is only valid for `conversion_plus` technologies,
+        so should only be included in a math component if the `where` string includes `inheritance(conversion_plus)` or an equivalent expression.
 
         Args:
             array (xr.DataArray): Expression array.

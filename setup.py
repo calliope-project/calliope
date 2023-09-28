@@ -33,7 +33,7 @@ def find_calliope_package_data():
 
 setup(
     name="calliope",
-    version=__version__,
+    version=__version__,  # noqa: F821
     author="Calliope contributors listed in AUTHORS",
     author_email="stefan@pfenninger.org",
     description="A multi-scale energy systems modelling framework",

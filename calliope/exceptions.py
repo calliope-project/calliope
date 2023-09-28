@@ -93,7 +93,9 @@ def print_warnings_and_raise_errors(
             List of error strings or dictionary of error strings.
             If None or an empty list, no errors will be raised.
             Defaults to None.
-        during (str, optional): substring that will be placed at the top of the concated list of warnings/errors to point to during which phase of data processing they occured. Defaults to "model processing".
+        during (str, optional):
+            Substring that will be placed at the top of the concated list of warnings/errors to point to during which phase of data processing they occured.
+            Defaults to "model processing".
         bullet (str, optional): Type of bullet points to use. Defaults to " * ".
 
     Raises:

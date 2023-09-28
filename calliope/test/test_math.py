@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from pyomo.repn.tests import lp_diff
+
 import calliope
 from calliope import AttrDict
 from calliope.test.common.util import build_lp, build_test_model
