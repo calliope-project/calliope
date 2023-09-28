@@ -344,11 +344,18 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
         self.valid_math_element_names.add(name)
 
+        def _variable_setter(where: xr.DataArray) -> xr.DataArray:
+            return where.where(where)
+
         if variable_dict is None:
             variable_dict = self.inputs.math["variables"][name]
 
         parsed_component = self._add_component(
-            name, variable_dict, lambda where: where, "variables", break_early=False
+            name,
+            variable_dict,
+            _variable_setter,
+            "variables",
+            break_early=False,
         )
         where_array = self.variables[name]
 
@@ -438,7 +445,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     def _add_latex_strings(self, where, element, equation_strings):
         expr = element.evaluate_expression(self.inputs, self, as_latex=True)
-        where_latex = element.evaluate_where(self.inputs, as_latex=True)
+        where_latex = element.evaluate_where(self.inputs, self._dataset, as_latex=True)
 
         if self.include == "all" or (self.include == "valid" and where.any()):
             equation_strings.append({"expression": expr, "where": where_latex})
@@ -453,7 +460,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         sets: Optional[list[str]] = None,
     ) -> None:
         if parsed_component is not None:
-            where = parsed_component.evaluate_where(self.inputs, as_latex=True)
+            where = parsed_component.evaluate_where(
+                self.inputs, self._dataset, as_latex=True
+            )
             sets = parsed_component.sets
 
         if self.include == "all" or (

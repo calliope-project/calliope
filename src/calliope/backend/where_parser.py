@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import operator
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import pyparsing as pp
@@ -162,12 +162,17 @@ class DataVarParser(expression_parser.EvalString):
         "Return string representation of the parsed grammar"
         return f"DATA_VAR:{self.data_var}"
 
-    def as_latex(self, model_data: xr.Dataset, apply_where: bool = True) -> str:
+    def as_latex(
+        self, data: xr.Dataset, data_var_type: str, apply_where: bool = True
+    ) -> str:
         """stringify conditional for use in a LaTex math formula"""
         # TODO: add dims from a YAML schema of params that includes default dims
-        data_var_string = rf"\textit{{{self.data_var}}}"
+        if data_var_type == "parameters":
+            data_var_string = rf"\textit{{{self.data_var}}}"
+        else:
+            data_var_string = rf"\textbf{{{self.data_var}}}"
 
-        var = model_data.get(self.data_var, None)
+        var = data.get(self.data_var, None)
         if var is not None and var.shape:
             data_var_string += (
                 rf"_\text{{{','.join(str(i).removesuffix('s') for i in var.dims)}}}"
@@ -176,10 +181,15 @@ class DataVarParser(expression_parser.EvalString):
             data_var_string = rf"\exists ({data_var_string})"
         return data_var_string
 
-    def _data_var_exists(self, model_data: xr.Dataset) -> xr.DataArray:
+    def _data_var_exists(
+        self, model_data: xr.Dataset, data_var_type: str
+    ) -> xr.DataArray:
         "mask by setting all (NaN | INF/-INF) to False, otherwise True"
         var = model_data.get(self.data_var, xr.DataArray(np.nan))
-        return var.notnull() & (var != np.inf) & (var != -np.inf)
+        if data_var_type == "parameters":
+            return var.notnull() & (var != np.inf) & (var != -np.inf)
+        else:
+            return var.notnull()
 
     def _data_var_with_default(self, model_data: xr.Dataset) -> xr.DataArray:
         "Access data var and fill with default values. Return default value as an array if var does not exist"
@@ -187,7 +197,11 @@ class DataVarParser(expression_parser.EvalString):
         return model_data.get(self.data_var, xr.DataArray(default)).fillna(default)
 
     def eval(
-        self, model_data: xr.Dataset, apply_where: bool = True, **kwargs
+        self,
+        model_data: xr.Dataset,
+        backend_dataset: Optional[xr.Dataset] = None,
+        apply_where: bool = True,
+        **kwargs,
     ) -> Union[str, np.bool_, xr.DataArray]:
         """
         Get parsed model data variable from the Calliope model dataset.
@@ -204,16 +218,40 @@ class DataVarParser(expression_parser.EvalString):
             Union[np.bool_, xr.DataArray]:
                 False if data variable not in model data, array otherwise.
         """
-        if kwargs.get("as_latex", False):
-            return self.as_latex(model_data, apply_where)
+        if backend_dataset is None:
+            backend_dataset = xr.Dataset()
+        if self.data_var in backend_dataset.data_vars.keys():
+            data_var_type = backend_dataset[self.data_var].attrs["obj_type"]
+        else:
+            data_var_type = "parameters"
 
-        if self.data_var not in model_data:
+        if data_var_type not in ["parameters", "global_expressions", "variables"]:
+            raise TypeError(
+                f"Cannot check values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
+                f"Received {data_var_type.removesuffix('s')}: `{self.data_var}`."
+            )
+        if data_var_type != "parameters" and not apply_where:
+            raise TypeError(
+                f"Can only check for existence of values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
+                "These arrays cannot be used for comparison with expected values. "
+                f"Received `{self.data_var}`."
+            )
+
+        if data_var_type == "parameters":
+            source_array = model_data
+        else:
+            source_array = backend_dataset
+
+        if kwargs.get("as_latex", False):
+            return self.as_latex(source_array, data_var_type, apply_where)
+
+        if data_var_type == "parameters" and self.data_var not in model_data:
             return np.False_
 
         if apply_where:
-            return self._data_var_exists(model_data)
+            return self._data_var_exists(source_array, data_var_type)
         else:
-            return self._data_var_with_default(model_data)
+            return self._data_var_with_default(source_array)
 
 
 class ComparisonParser(expression_parser.EvalComparisonOp):
