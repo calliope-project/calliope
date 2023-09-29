@@ -72,6 +72,7 @@ class TestClustering:
 
         # FIXME
 
+    @pytest.mark.time_intensive
     def test_hartigans_rule(self, model_national):
         data = model_national._model_data
 
