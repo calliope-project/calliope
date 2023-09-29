@@ -2231,7 +2231,7 @@ class TestNewBackend:
             )
         assert check_error_or_warning(
             excinfo,
-            "(objective, foo:1): trying to set two equations for the same component.",
+            "objectives:foo:1 | trying to set two equations for the same component.",
         )
 
     def test_add_valid_obj(self, simple_supply):
@@ -2334,7 +2334,7 @@ class TestNewBackend:
     def test_update_parameter_one_val(self, caplog, simple_supply):
         updated_param = 1000
         new_dims = {"nodes", "techs"}
-        caplog.set_level(logging.WARNING)
+        caplog.set_level(logging.DEBUG)
 
         simple_supply.backend.update_parameter("energy_eff", updated_param)
 
@@ -2364,12 +2364,13 @@ class TestNewBackend:
         )
 
         refs_to_update = {"balance_demand", "balance_transmission"}
-        caplog.set_level(logging.WARNING)
+        caplog.set_level(logging.DEBUG)
 
         simple_supply.backend.update_parameter("energy_eff", updated_param)
 
         assert (
-            f"Defining values for a previously fully/partially undefined parameter. The optimisation problem components {refs_to_update} will be re-built."
+            "Defining values for a previously fully/partially undefined parameter. "
+            f"The optimisation problem components {refs_to_update} will be re-built."
             in caplog.text
         )
 
@@ -2383,12 +2384,13 @@ class TestNewBackend:
         updated_param = simple_supply.inputs.energy_eff
 
         refs_to_update = {"carrier_production_max"}
-        caplog.set_level(logging.WARNING)
+        caplog.set_level(logging.DEBUG)
 
         simple_supply.backend.update_parameter("parasitic_eff", updated_param)
 
         assert (
-            f"Defining values for a previously fully/partially undefined parameter. The optimisation problem components {refs_to_update} will be re-built."
+            "Defining values for a previously fully/partially undefined parameter. "
+            f"The optimisation problem components {refs_to_update} will be re-built."
             in caplog.text
         )
 
@@ -2401,9 +2403,9 @@ class TestNewBackend:
     def test_update_parameter_no_refs_to_update(self, simple_supply):
         """units_equals isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
 
-        Updating it doesn't change the model in any way, because none of the existing constraints/expressions depend on it. Therefore, no warning is raised
+        Updating it doesn't change the model in any way, because none of the existing constraints/expressions depend on it.
+        Therefore, no warning is raised.
         """
-
         updated_param = 1
 
         simple_supply.backend.update_parameter("units_equals", updated_param)
@@ -2431,13 +2433,11 @@ class TestNewBackend:
         assert (bound_vals == 2).where(bound_vals.notnull()).all().all()
 
     def test_update_variable_single_bound_multi_val(self, caplog, simple_supply):
+        caplog.set_level(logging.INFO)
         bound_array = simple_supply.inputs.resource.sel(techs="test_demand_elec")
         simple_supply.backend.update_variable_bounds("carrier_con", min=bound_array)
         bound_vals = simple_supply.backend.get_variable_bounds("carrier_con").lb
-        assert (
-            "New `min` bounds for variable `carrier_con` will be broadcast"
-            in caplog.text
-        )
+        assert "New `min` bounds will be broadcast" in caplog.text
         assert bound_vals.equals(
             bound_array.where(bound_vals.notnull()).transpose(*bound_vals.dims)
         )
@@ -2447,7 +2447,8 @@ class TestNewBackend:
             simple_supply.backend.update_variable_bounds("energy_cap", min=1)
         assert check_error_or_warning(
             excinfo,
-            "Cannot update variable bounds that have been set by parameters. use `update_parameter('energy_cap_min')` to update the min bound of energy_cap",
+            "Cannot update variable bounds that have been set by parameters."
+            " Use `update_parameter('energy_cap_min')` to update the min bound of energy_cap.",
         )
 
     @staticmethod

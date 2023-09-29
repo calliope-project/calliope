@@ -615,11 +615,11 @@ class Model(object):
                 parsed.parse_top_level_where(errors="ignore")
                 parsed.parse_equations(set(valid_math_element_names), errors="ignore")
                 if not parsed._is_valid:
-                    collected_errors[f"({component_group}, {name})"] = parsed._errors
+                    collected_errors[f"{component_group}:{name}"] = parsed._errors
 
         if collected_errors:
             exceptions.print_warnings_and_raise_errors(
-                during="math string parsing (marker indicates where parsing stopped, not strictly the equation term that caused the failure)",
+                during="math string parsing (marker indicates where parsing stopped, which might not be the root cause of the issue; sorry...)",
                 errors=collected_errors,
             )
 

@@ -465,7 +465,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 self.log(
                     "variables",
                     name,
-                    f"New `{bound_name}` bounds will be broadcast along the {missing_dims_in_new_vals} dimension(s)."
+                    f"New `{bound_name}` bounds will be broadcast along the {missing_dims_in_new_vals} dimension(s).",
                     "info",
                 )
             self._apply_func(

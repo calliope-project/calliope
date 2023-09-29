@@ -175,7 +175,7 @@ class BackendModelGenerator(ABC):
             level (Literal["info", "warning", "debug", "error", "critical"], optional): Log level. Defaults to "debug".
         """
         getattr(LOGGER, level)(
-            f"Optimisation model | ({component_type}, {component_name}) | {message}"
+            f"Optimisation model | {component_type}:{component_name} | {message}"
         )
 
     def _add_component(
@@ -258,9 +258,7 @@ class BackendModelGenerator(ABC):
                     substring = "trying to set two equations for the same component."
 
                 self.delete_component(name, component_type)
-                raise BackendError(
-                    f"({component_type.removesuffix('s')}, {element.name}): {substring}"
-                )
+                raise BackendError(f"{element.name} | {substring}")
 
             to_fill = component_setter(element, where, references)
             component_da = component_da.fillna(to_fill)

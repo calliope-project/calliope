@@ -1,3 +1,4 @@
+import logging
 from io import StringIO
 from unittest.mock import patch
 
@@ -475,7 +476,7 @@ class TestParsedComponent:
             )
         assert check_error_or_warning(
             excinfo,
-            "(constraints, foo): Undefined sub_expressions found in equation: {'ba'}",
+            "constraints:foo: Undefined sub_expressions found in equation: {'ba'}",
         )
 
     @pytest.mark.parametrize(
@@ -548,7 +549,7 @@ class TestParsedComponent:
             )
         assert check_error_or_warning(
             excinfo,
-            "(constraints, foo): Undefined slices found in equation: {'node1'}",
+            "constraints:foo: Undefined slices found in equation: {'node1'}",
         )
 
     @pytest.mark.parametrize(
@@ -593,7 +594,7 @@ class TestParsedComponent:
         else:
             with pytest.raises(calliope.exceptions.ModelError) as excinfo:
                 component_obj.raise_caught_errors()
-            assert check_error_or_warning(excinfo, ["\n * (constraints, foo):"])
+            assert check_error_or_warning(excinfo, ["\n * constraints:foo:"])
 
     def test_parse_equations_fail(
         self, obj_with_sub_expressions_and_slices, valid_math_element_names
@@ -602,7 +603,7 @@ class TestParsedComponent:
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             component_obj.parse_equations(valid_math_element_names, errors="raise")
         expected_err_string = """
- * (constraints, my_constraint):
+ * constraints:my_constraint:
     * equations[0].expression (line 1, char 5): bar = 1
                                                     ^"""
         assert check_error_or_warning(excinfo, expected_err_string)
@@ -628,13 +629,11 @@ equations[0].expression (line 1, char 5): bar = 1
         assert not BASE_DIMS.difference(where.dims)
         assert not set(foreach).difference(where.dims)
 
-    def test_foreach_unidentified_name(self, dummy_model_data, component_obj):
+    def test_foreach_unidentified_name(self, caplog, dummy_model_data, component_obj):
         component_obj.sets = ["nodes", "techs", "foos"]
-        with pytest.warns(calliope.exceptions.BackendWarning) as excinfo:
-            component_obj.combine_exists_and_foreach(dummy_model_data)
-        assert check_error_or_warning(
-            excinfo, "Not generating optimisation problem object `foo`"
-        )
+        caplog.set_level(logging.DEBUG)
+        component_obj.combine_exists_and_foreach(dummy_model_data)
+        assert "indexed over unidentified set names" in caplog.text
 
     def test_evaluate_where_to_false(self, dummy_model_data, component_obj):
         component_obj.parse_top_level_where()
@@ -649,11 +648,15 @@ equations[0].expression (line 1, char 5): bar = 1
         assert check_error_or_warning(excinfo, "Errors during math string parsing")
 
     def test_generate_top_level_where_array_break_at_foreach(
-        self, dummy_model_data, component_obj
+        self, caplog, dummy_model_data, component_obj
     ):
         component_obj.sets = ["nodes", "techs", "foos"]
-        with pytest.warns(calliope.exceptions.BackendWarning):
-            where_array = component_obj.generate_top_level_where_array(dummy_model_data)
+        caplog.set_level(logging.DEBUG)
+        where_array = component_obj.generate_top_level_where_array(dummy_model_data)
+
+        assert "indexed over unidentified set names: `{'foos'}`" in caplog.text
+        assert "'foreach' does not apply anywhere." in caplog.text
+        assert "'where' does not apply anywhere." not in caplog.text
         assert not where_array.any()
         assert not where_array.shape
 
@@ -667,14 +670,19 @@ equations[0].expression (line 1, char 5): bar = 1
         assert not set(component_obj.sets).difference(where_array.dims)
 
     def test_generate_top_level_where_array_no_break_no_align(
-        self, dummy_model_data, component_obj
+        self, caplog, dummy_model_data, component_obj
     ):
         component_obj.sets = ["nodes", "techs", "foos"]
         component_obj._unparsed["where"] = "all_nan"
-        with pytest.warns(calliope.exceptions.BackendWarning):
-            where_array = component_obj.generate_top_level_where_array(
-                dummy_model_data, break_early=False, align_to_foreach_sets=False
-            )
+        caplog.set_level(logging.DEBUG)
+
+        where_array = component_obj.generate_top_level_where_array(
+            dummy_model_data, break_early=False, align_to_foreach_sets=False
+        )
+        assert "indexed over unidentified set names: `{'foos'}`" in caplog.text
+        assert "'foreach' does not apply anywhere." in caplog.text
+        assert "'where' does not apply anywhere." in caplog.text
+
         assert not where_array.any()
         assert set(component_obj.sets).difference(where_array.dims) == {"foos"}
 
@@ -694,7 +702,7 @@ equations[0].expression (line 1, char 5): bar = 1
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             component_obj.parse_top_level_where()
         expected_err_string = """
- * (constraints, foo):
+ * constraints:foo:
     * where (line 1, char 1): 1[]
                               ^"""
         assert check_error_or_warning(excinfo, expected_err_string)

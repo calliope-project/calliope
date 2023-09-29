@@ -264,12 +264,12 @@ class TestModelData:
         assert df.values[0] == list(data_dict.values())[0]
 
     def test_model_run_dict_to_dataset_no_match(self, caplog, model_data):
-        with caplog.at_level(logging.INFO):
-            model_data._model_run_dict_to_dataset(
-                "foo", "node", ["foobar"], ["nodes", "foobar"]
-            )
-        records = [r.msg for r in caplog.records]
-        assert "No relevant data found for `foo` group of parameters" in records
+        caplog.set_level(logging.DEBUG)
+
+        model_data._model_run_dict_to_dataset(
+            "foo", "node", ["foobar"], ["nodes", "foobar"]
+        )
+        assert "No relevant data found for `foo` group of parameters" in caplog.text
 
     @pytest.mark.parametrize(
         ("data", "idx", "cols", "out_idx"),

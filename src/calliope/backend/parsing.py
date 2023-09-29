@@ -402,7 +402,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
             name (str): Name of the optimisation problem component
             unparsed_data (T): Unparsed math formulation. Expected structure depends on the group to which the optimisation problem component belongs.
         """
-        self.name = f"({group}, {name})"
+        self.name = f"{group}:{name}"
         self._unparsed: dict = dict(unparsed_data)
 
         self.where: list[pp.ParseResults] = []
@@ -725,8 +725,11 @@ class ParsedBackendComponent(ParsedBackendEquation):
             xr.DataArray: Boolean array defining on which index items a parsed component should be built.
         """
         foreach_where = self.combine_exists_and_foreach(model_data)
-        if break_early and not foreach_where.any():
+
+        if not foreach_where.any():
             self.log_not_added("'foreach' does not apply anywhere.")
+
+        if break_early and not foreach_where.any():
             return foreach_where
 
         self.parse_top_level_where()
@@ -743,6 +746,6 @@ class ParsedBackendComponent(ParsedBackendEquation):
         if not self._is_valid:
             exceptions.print_warnings_and_raise_errors(
                 errors={f"{self.name}": self._errors},
-                during="math string parsing (marker indicates where parsing stopped, not strictly the equation term that caused the failure)",
+                during="math string parsing (marker indicates where parsing stopped, which might not be the root cause of the issue; sorry...)",
                 bullet=self._ERR_BULLET,
             )
