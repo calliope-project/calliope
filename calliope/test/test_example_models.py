@@ -14,6 +14,7 @@ class TestModelPreproccessing:
     def test_preprocess_national_scale(self):
         calliope.examples.national_scale()
 
+    @pytest.mark.time_intensive
     def test_preprocess_time_clustering(self):
         calliope.examples.time_clustering()
 
@@ -412,6 +413,7 @@ class TestNationalScaleResampledExampleModelSenseChecks:
             pytest.skip("GLPK not installed")
 
 
+@pytest.mark.time_intensive
 class TestNationalScaleClusteredExampleModelSenseChecks:
     def model_runner(
         self,
@@ -436,7 +438,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
         }
         if storage is False:
             override.update({"techs.battery.exists": False, "techs.csp.exists": False})
-        if solver_io:
+        if solver_io is not None:
             override["run.solver_io"] = solver_io
         if storage_inter_cluster and backend_runner == "solve":
             override["model.custom_math"] = ["storage_inter_cluster"]
