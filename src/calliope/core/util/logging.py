@@ -17,12 +17,11 @@ _time_format = "%Y-%m-%d %H:%M:%S"
 
 
 def setup_root_logger(verbosity, capture_warnings):
-    root_logger = logging.getLogger()  # Get the root logger
+    root_logger = logging.getLogger("calliope")  # Get the root logger
 
     # Remove any existing output handlers from root logger
     if root_logger.hasHandlers():
-        for handler in root_logger.handlers:
-            root_logger.removeHandler(handler)
+        root_logger.handlers.clear()
 
     # Create a console log handler with decent formatting and attach it
     formatter = logging.Formatter(
@@ -62,7 +61,7 @@ def set_log_verbosity(
         interactively.
 
     """
-    backend_logger = logging.getLogger("calliope.backend.backend_model")
+    backend_logger = logging.getLogger("calliope.backend.backend_model.<solve>")
     if include_solver_output is True:
         backend_logger.setLevel("DEBUG")
     else:

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import functools
 import itertools
+import logging
 import operator
 from typing import (
     TYPE_CHECKING,
@@ -19,6 +20,7 @@ from typing import (
 )
 
 import pyparsing as pp
+import termcolor
 import xarray as xr
 from typing_extensions import NotRequired, Required, TypedDict
 
@@ -80,6 +82,8 @@ UNPARSED_DICTS = Union[
     UnparsedObjectiveDict,
 ]
 T = TypeVar("T", bound=UNPARSED_DICTS)
+
+LOGGER = logging.getLogger(__name__)
 
 
 class ParsedBackendEquation:
@@ -288,9 +292,12 @@ class ParsedBackendEquation:
         if as_latex:
             return r"\land{}".join(f"({i})" for i in evaluated_wheres if i != "true")
         else:
-            return xr.DataArray(
+            where = xr.DataArray(
                 functools.reduce(operator.and_, [initial_where, *evaluated_wheres])
             )
+            if not where.any():
+                self.log_not_added("'where' does not apply anywhere.")
+            return where
 
     def drop_dims_not_in_foreach(self, where: xr.DataArray) -> xr.DataArray:
         """the dimensions not included in "foreach" are removed from the input array
@@ -354,6 +361,20 @@ class ParsedBackendEquation:
             apply_where=apply_where,
         )
 
+    def log_not_added(
+        self,
+        message: str,
+        level: Literal["info", "warning", "debug", "error", "critical"] = "debug",
+    ):
+        """Log to module-level logger with some prettification of the message
+
+        Args:
+            message (str): Message to log.
+            level (Literal["info", "warning", "debug", "error", "critical"], optional): Log level. Defaults to "debug".
+        """
+        text = termcolor.colored("Component not added", color="red")
+        getattr(LOGGER, level)(f"Math parsing | {self.name} | {text}; {message}")
+
 
 class ParsedBackendComponent(ParsedBackendEquation):
     _ERR_BULLET: str = " * "
@@ -381,8 +402,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
             name (str): Name of the optimisation problem component
             unparsed_data (T): Unparsed math formulation. Expected structure depends on the group to which the optimisation problem component belongs.
         """
-        self.name = name
-        self.group_name = group
+        self.name = f"({group}, {name})"
         self._unparsed: dict = dict(unparsed_data)
 
         self.where: list[pp.ParseResults] = []
@@ -643,7 +663,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         invalid_items = equation_items.difference(parsed_items.keys())
         if invalid_items:
             raise KeyError(
-                f"({self.group_name}, {self.name}): Undefined {expression_group} found in equation: {invalid_items}"
+                f"{self.name}: Undefined {expression_group} found in equation: {invalid_items}"
             )
 
         parsed_item_product = itertools.product(
@@ -674,10 +694,8 @@ class ParsedBackendComponent(ParsedBackendEquation):
         # Add other dimensions (costs, timesteps, etc.)
         add_dims = set(self.sets).difference(exists.dims)
         if add_dims.difference(model_data.dims):
-            exceptions.warn(
-                f"Not generating optimisation problem object `{self.name}` because it is "
-                f"indexed over unidentified set name(s): `{add_dims.difference(model_data.dims)}`.",
-                _class=exceptions.BackendWarning,
+            self.log_not_added(
+                f"indexed over unidentified set names: `{add_dims.difference(model_data.dims)}`."
             )
             return xr.DataArray(False)
         exists_and_foreach = [exists, *[model_data[i].notnull() for i in add_dims]]
@@ -708,6 +726,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         """
         foreach_where = self.combine_exists_and_foreach(model_data)
         if break_early and not foreach_where.any():
+            self.log_not_added("'foreach' does not apply anywhere.")
             return foreach_where
 
         self.parse_top_level_where()
@@ -723,7 +742,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         """If there are any parsing errors, pipe them to the ModelError bullet point list generator"""
         if not self._is_valid:
             exceptions.print_warnings_and_raise_errors(
-                errors={f"({self.group_name}, {self.name})": self._errors},
+                errors={f"{self.name}": self._errors},
                 during="math string parsing (marker indicates where parsing stopped, not strictly the equation term that caused the failure)",
                 bullet=self._ERR_BULLET,
             )

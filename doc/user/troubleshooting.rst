@@ -151,12 +151,29 @@ Particularly if your problem is large, you may not want to rebuild the backend t
 Debugging model errors
 ----------------------
 
-Calliope provides a method to save its fully built and commented internal representation of a model to a single YAML file with :python:`Model.save_commented_model_yaml(path)`. Comments in the resulting YAML file indicate where original values were overridden.
+Inspecting debug logs
+^^^^^^^^^^^^^^^^^^^^^
+At the `debug` logging level, we output a lot of information about your model build which may be useful to inspect.
+You can do so by setting :python:`calliope.set_log_verbosity("debug")` and then running your model.
 
-Because this is Calliope's internal representation of a model directly before the ``model_data`` ``xarray.Dataset`` is built, it can be useful for debugging possible issues in the model formulation, for example, undesired constraints that exist at specific locations because they were specified model-wide without having been superseded by location-specific settings.
+If you have a bit more Python experience, you can also consider accessing and working with loggers at different points in our internals using the `logging` package.
 
-Further processing of the data does occur before solving the model. The final values of parameters used by the backend solver to generate constraints can be analysed when running an interactive Python session by running :python:`model.backend.get_input_params()`. This provides a user with an xarray Dataset which will look very similar to :python:`model.inputs`, except that assumed :ref:`default values <defaults>` will be included. An attempt at running the model has to be made in order to be able to run this command.
+- For input YAML and CSV file processing: :python:`logging.getLogger("calliope.preprocess")`.
+- For processing of math syntax: :python:`logging.getLogger("calliope.backend")`.
+
+Validating your math syntax
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+You can do a (relatively) quick check of the validity of any custom math syntax in your model by running :python:`model.validate_math_strings(my_math_dict)`.
+This will tell you if any of the syntax is malformed, although it cannot tell you if the model will build when set to the backend to generate an optimisation model.
+
+Inspecting private data structures
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+There are private attributes of the Calliope `Model` object that you can access to gain additional insights into your model runs.
+
+- For the result of processing your input YAML files, the dictionary :python:`model._model_run`.
+- For all data variables in one place (i.e., the combination of `inputs` and `results`), the dataset :python:`model._model_data`.
+- For the build backend objects (e.g., Pyomo objects) in an array format, the dataset :python:`model.backend._dataset`.
 
 .. seealso::
 
-    If using Calliope interactively in a Python session, we recommend reading up on the `Python debugger <https://docs.python.org/3/library/pdb.html>`_ and (if using Jupyter notebooks) making use of the `%debug magic <https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-debug>`_.
+    If using Calliope interactively in a Python session, we recommend reading up on the `Python debugger <https://docs.python.org/3/library/pdb.html>`_ and making use of the `%debug magic <https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-debug>`_.

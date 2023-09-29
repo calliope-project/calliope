@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import textwrap
 import typing
 from pathlib import Path
@@ -13,6 +14,9 @@ from calliope.backend import backend_model, parsing
 from calliope.exceptions import ModelError
 
 _ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class MathDocumentation:
@@ -95,11 +99,14 @@ class MathDocumentation:
 
         if format is None and filename is not None:
             format = Path(filename).suffix.removeprefix(".")  # type: ignore
+            LOGGER.info(
+                f"Inferring math documentation format from filename as `{format}`."
+            )
 
         allowed_formats = typing.get_args(_ALLOWED_MATH_FILE_FORMATS)
         if format is None or format not in allowed_formats:
             raise ValueError(
-                f"Math documentation style must be one of {allowed_formats}, received `{format}`"
+                f"Math documentation format must be one of {allowed_formats}, received `{format}`"
             )
         populated_doc = self._instance.generate_math_doc(format)
 

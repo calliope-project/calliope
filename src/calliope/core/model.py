@@ -30,7 +30,7 @@ from calliope.postprocess import results as postprocess_results
 from calliope.preprocess import model_run_from_dict, model_run_from_yaml
 from calliope.preprocess.model_data import ModelDataFactory
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 T = TypeVar(
     "T",
@@ -103,7 +103,7 @@ class Model(object):
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
-        log_time(logger, self._timings, "model_creation", comment="Model: initialising")
+        log_time(LOGGER, self._timings, "model_creation", comment="Model: initialising")
         if isinstance(config, str):
             self._config_path = config
             model_run, debug_data = model_run_from_yaml(config, *args, **kwargs)
@@ -134,7 +134,7 @@ class Model(object):
         """
         self._model_run = model_run
         log_time(
-            logger,
+            LOGGER,
             self._timings,
             "model_run_creation",
             comment="Model: preprocessing stage 1 (model_run)",
@@ -155,7 +155,7 @@ class Model(object):
             self._model_data_pre_time = data_pre_time
             self._model_data_stripped_keys = stripped_keys
         log_time(
-            logger,
+            LOGGER,
             self._timings,
             "model_data_original_creation",
             comment="Model: preprocessing stage 2 (model_data)",
@@ -177,7 +177,7 @@ class Model(object):
         self.math_documentation.inputs = self._model_data
 
         log_time(
-            logger,
+            LOGGER,
             self._timings,
             "model_data_creation",
             comment="Model: preprocessing complete",
@@ -206,7 +206,7 @@ class Model(object):
         self._add_model_data_methods()
 
         log_time(
-            logger,
+            LOGGER,
             self._timings,
             "model_data_loaded",
             comment="Model: loaded model_data",
@@ -231,7 +231,7 @@ class Model(object):
         if len(results.data_vars) > 0:
             self.results = results
         log_time(
-            logger,
+            LOGGER,
             self._timings,
             "model_data_loaded",
             comment="Model: loaded model_data",
@@ -375,7 +375,7 @@ class Model(object):
 
     def _build(self, backend: T) -> T:
         log_time(
-            logger,
+            LOGGER,
             self._timings,
             "backend_parameters_generated",
             comment="Model: Generated optimisation problem parameters",
@@ -397,7 +397,7 @@ class Model(object):
                 getattr(backend, f"add_{component}")(name)
 
             log_time(
-                logger,
+                LOGGER,
                 self._timings,
                 f"backend_{components}_generated",
                 comment=f"Model: Generated optimisation problem {components}",
@@ -454,7 +454,7 @@ class Model(object):
             )
 
         log_time(
-            logger,
+            LOGGER,
             self._timings,
             "solve_start",
             comment=f"Backend: starting model solve in {run_mode} mode",
@@ -469,7 +469,7 @@ class Model(object):
         )
 
         log_time(
-            logger,
+            LOGGER,
             self._timings,
             "solver_exit",
             time_since_solve_start=True,
@@ -593,6 +593,7 @@ class Model(object):
             If all components of the dictionary are parsed successfully, this function will log a success message to the INFO logging level and return None.
             Otherwise, a calliope.ModelError will be raised with parsing issues listed.
         """
+
         validate_dict(math_dict, self._MATH_SCHEMA, "math")
         valid_math_element_names = [
             *self.math["variables"].keys(),
@@ -622,4 +623,4 @@ class Model(object):
                 errors=collected_errors,
             )
 
-        logger.info("Model: validated math strings")
+        LOGGER.info("Model: validated math strings")

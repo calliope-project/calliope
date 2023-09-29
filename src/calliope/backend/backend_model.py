@@ -35,7 +35,7 @@ _COMPONENTS_T = Literal[
     "variables", "constraints", "objectives", "parameters", "global_expressions"
 ]
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class BackendModelGenerator(ABC):
@@ -52,6 +52,7 @@ class BackendModelGenerator(ABC):
         self._dataset = xr.Dataset()
         self.inputs = inputs
         self.valid_math_element_names: set = set()
+        self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
     @abstractmethod
     def add_parameter(
@@ -160,6 +161,23 @@ class BackendModelGenerator(ABC):
                 Objective configuration dictionary, ready to be parsed and then evaluated.
         """
 
+    def log(
+        self,
+        component_type: _COMPONENTS_T,
+        component_name: str,
+        message: str,
+        level: Literal["info", "warning", "debug", "error", "critical"] = "debug",
+    ):
+        """Log to module-level logger with some prettification of the message
+
+        Args:
+            message (str): Message to log.
+            level (Literal["info", "warning", "debug", "error", "critical"], optional): Log level. Defaults to "debug".
+        """
+        getattr(LOGGER, level)(
+            f"Optimisation model | ({component_type}, {component_name}) | {message}"
+        )
+
     def _add_component(
         self,
         name: str,
@@ -194,9 +212,8 @@ class BackendModelGenerator(ABC):
             component_dict = self.inputs.math[component_type][name]
 
         if component_dict.get("active", False):
-            logger.debug(
-                f"({component_type.removesuffix('s')}, {name}): "
-                "Component deactivated and therefore not built."
+            self.log(
+                component_type, name, "Component deactivated and therefore not built."
             )
             return None
 
@@ -305,6 +322,9 @@ class BackendModelGenerator(ABC):
         for param_name, default_val in self.inputs.attrs["defaults"].items():
             if param_name in self.parameters.keys():
                 continue
+            self.log(
+                "parameters", param_name, "Component not defined; using default value."
+            )
             self.add_parameter(
                 param_name, xr.DataArray(default_val), use_inf_as_na=False
             )
