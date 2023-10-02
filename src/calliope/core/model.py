@@ -584,7 +584,7 @@ class Model(object):
                         {
                             "foreach": ["nodes"],
                             "where": "inheritance(supply)",
-                            "equations": [{"expression": "sum(energy_cap, over=techs) >= 10"}]
+                            "equations": [{"expression": "sum(flow_cap, over=techs) >= 10"}]
                         }
                 }
 

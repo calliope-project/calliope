@@ -198,7 +198,7 @@ def add_time_dimension(data, model_run):
 def add_max_demand_timesteps(model_data):
     model_data["max_demand_timesteps"] = (
         (
-            model_data.resource.where(model_data.resource < 0)
+            model_data.sink
             * model_data.carrier.loc[
                 {
                     "carrier_tiers": model_data.carrier_tiers.isin(
@@ -208,7 +208,7 @@ def add_max_demand_timesteps(model_data):
             ].sum("carrier_tiers")
         )
         .sum(["nodes", "techs"])
-        .idxmin("timesteps")
+        .idxmax("timesteps")
     )
     return model_data
 

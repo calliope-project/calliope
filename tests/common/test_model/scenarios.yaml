@@ -67,9 +67,9 @@ overrides:
             switches.cap_method: integer
             constraints:
               units_max: 1
-              energy_cap_per_unit: 15
+              flow_cap_per_unit: 15
               storage_cap_per_unit: 15
-            costs.monetary: { purchase: 1, energy_cap: 0 }
+            costs.monetary: { purchase: 1, flow_cap: 0 }
           test_demand_elec:
 
     links.a,b.exists: false
@@ -81,7 +81,7 @@ overrides:
           test_supply_elec:
             switches.cap_method: binary
             costs.monetary.purchase: 1
-            costs.monetary.energy_cap: 0
+            costs.monetary.flow_cap: 0
           test_demand_elec:
 
     links.a,b.exists: false
@@ -94,7 +94,7 @@ overrides:
             switches.cap_method: integer
             constraints:
               units_max: 1
-              energy_cap_per_unit: 15
+              flow_cap_per_unit: 15
           test_demand_elec:
       b.exists: false
     links.a,b.exists: false
@@ -158,7 +158,7 @@ overrides:
             switches.cap_method: integer
             constraints:
               units_max: 2
-              energy_cap_per_unit: 15
+              flow_cap_per_unit: 15
           test_demand_elec:
           test_demand_heat:
 
@@ -222,7 +222,7 @@ overrides:
             switches.cap_method: integer
             constraints:
               units_max: 2
-              energy_cap_per_unit: 10
+              flow_cap_per_unit: 10
               storage_cap_per_unit: 15
           test_demand_elec:
 
@@ -256,7 +256,7 @@ overrides:
       spores_number: 3
     run.objective_options.cost_class: { "monetary": 1, "spores_score": 0 }
 
-    techs.test_supply_elec.costs.spores_score.energy_cap: 0
+    techs.test_supply_elec.costs.spores_score.flow_cap: 0
     techs.test_supply_elec.costs.spores_score.interest_rate: 0
     techs.test_supply_elec.constraints.lifetime: 1
 
@@ -288,35 +288,35 @@ overrides:
         costs:
           monetary:
             interest_rate: 0.1
-            energy_cap: 10
+            flow_cap: 10
       supply_plus:
         constraints:
           lifetime: 25
         costs:
           monetary:
             interest_rate: 0.1
-            energy_cap: 10
+            flow_cap: 10
       storage:
         constraints:
           lifetime: 25
         costs:
           monetary:
             interest_rate: 0.1
-            energy_cap: 10
+            flow_cap: 10
       conversion:
         constraints:
           lifetime: 25
         costs:
           monetary:
             interest_rate: 0.1
-            energy_cap: 10
+            flow_cap: 10
       conversion_plus:
         constraints:
           lifetime: 25
         costs:
           monetary:
             interest_rate: 0.1
-            energy_cap: 10
+            flow_cap: 10
 
   explicit_cost_class:
     run.objective_options.cost_class.monetary: 1

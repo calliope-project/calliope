@@ -35,7 +35,7 @@ class TestBuildConversionPlusConstraints:
         m.build()
         assert "balance_conversion_plus_primary" in m.backend.constraints
 
-    def test_loc_techs_carrier_production_max_conversion_plus_constraint(
+    def test_loc_techs_flow_out_max_conversion_plus_constraint(
         self, simple_conversion_plus
     ):
         """
@@ -43,62 +43,61 @@ class TestBuildConversionPlusConstraints:
         if i not in sets.loc_techs_milp
         """
         assert (
-            "carrier_production_max_conversion_plus"
-            in simple_conversion_plus.backend.constraints
+            "flow_out_max_conversion_plus" in simple_conversion_plus.backend.constraints
         )
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_loc_techs_carrier_production_max_conversion_plus_milp_constraint(
+    def test_loc_techs_flow_out_max_conversion_plus_milp_constraint(
         self, conversion_plus_milp
     ):
         assert (
-            "carrier_production_max_conversion_plus"
+            "flow_out_max_conversion_plus"
             not in conversion_plus_milp.backend.constraints
         )
 
-    def test_loc_techs_carrier_production_min_conversion_plus_constraint(
+    def test_loc_techs_flow_out_min_conversion_plus_constraint(
         self, simple_conversion_plus
     ):
         """
         i for i in sets.loc_techs_conversion_plus
-        if constraint_exists(model_run, i, 'constraints.energy_cap_min_use')
+        if constraint_exists(model_run, i, 'constraints.flow_out_min_relative')
         and i not in sets.loc_techs_milp
         """
         assert (
-            "carrier_production_min_conversion_plus"
+            "flow_out_min_conversion_plus"
             not in simple_conversion_plus.backend.constraints
         )
 
         m = build_model(
-            {"techs.test_conversion_plus.constraints.energy_cap_min_use": 0.1},
+            {"techs.test_conversion_plus.constraints.flow_out_min_relative": 0.1},
             "simple_conversion_plus,two_hours,investment_costs",
         )
         m.build()
-        assert "carrier_production_min_conversion_plus" in m.backend.constraints
+        assert "flow_out_min_conversion_plus" in m.backend.constraints
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_loc_techs_carrier_production_min_conversion_plus_milp_constraint(
+    def test_loc_techs_flow_out_min_conversion_plus_milp_constraint(
         self, conversion_plus_milp
     ):
         assert (
-            "carrier_production_min_conversion_plus"
+            "flow_out_min_conversion_plus"
             not in conversion_plus_milp.backend.constraints
         )
 
         m = build_model(
-            {"techs.test_conversion_plus.constraints.energy_cap_min_use": 0.1},
+            {"techs.test_conversion_plus.constraints.flow_out_min_relative": 0.1},
             "conversion_plus_milp,two_hours,investment_costs",
         )
         m.build()
-        assert "carrier_production_min_conversion_plus" not in m.backend.constraints
+        assert "flow_out_min_conversion_plus" not in m.backend.constraints
 
-    @pytest.mark.parametrize("flow", ("prod", "con"))
+    @pytest.mark.parametrize("flow", ("out", "in"))
     def test_loc_techs_cost_var_conversion_plus_constraint(self, flow):
         """
         sets.loc_techs_om_cost_conversion_plus,
         """
 
-        # om_prod creates constraint and populates it with carrier_prod driven cost
+        # om_prod creates constraint and populates it with flow_out driven cost
         m = build_model(
             {f"techs.test_conversion_plus.costs.monetary.om_{flow}": 0.1},
             "simple_conversion_plus,two_hours,investment_costs",
@@ -111,7 +110,7 @@ class TestBuildConversionPlusConstraints:
         )
         assert not check_variable_exists(
             m.backend.get_expression("cost_var", as_backend_objs=False),
-            "carrier_prodcon".replace(flow, ""),
+            "flow_outin".replace(flow, ""),
         )
         assert (
             m.backend.expressions.cost_var.sel(techs="test_conversion_plus")
@@ -166,7 +165,7 @@ class TestBuildConversionPlusConstraints:
     ):
         """ """
         assert (
-            "conversion_plus_prod_con_to_zero"
+            "conversion_plus_flow_to_zero"
             not in simple_conversion_plus.backend.constraints
         )
 
@@ -177,7 +176,7 @@ class TestBuildConversionPlusConstraints:
             "simple_conversion_plus,two_hours,investment_costs",
         )
         m.build()
-        assert "conversion_plus_prod_con_to_zero" not in m.backend.constraints
+        assert "conversion_plus_flow_to_zero" not in m.backend.constraints
 
         m = build_model(
             {
@@ -186,12 +185,12 @@ class TestBuildConversionPlusConstraints:
             "simple_conversion_plus,one_day,investment_costs",
         )
         m.build()
-        assert "conversion_plus_prod_con_to_zero" in m.backend.constraints
+        assert "conversion_plus_flow_to_zero" in m.backend.constraints
         assert check_variable_exists(
             m.backend.get_constraint(
-                "conversion_plus_prod_con_to_zero", as_backend_objs=False
+                "conversion_plus_flow_to_zero", as_backend_objs=False
             ),
-            "carrier_prod",
+            "flow_out",
         )
 
         m = build_model(
@@ -208,18 +207,18 @@ class TestBuildConversionPlusConstraints:
             "simple_conversion_plus,one_day,investment_costs",
         )
         m.build()
-        assert "conversion_plus_prod_con_to_zero" in m.backend.constraints
+        assert "conversion_plus_flow_to_zero" in m.backend.constraints
         assert check_variable_exists(
             m.backend.get_constraint(
-                "conversion_plus_prod_con_to_zero", as_backend_objs=False
+                "conversion_plus_flow_to_zero", as_backend_objs=False
             ),
-            "carrier_prod",
+            "flow_out",
         )
         assert check_variable_exists(
             m.backend.get_constraint(
-                "conversion_plus_prod_con_to_zero", as_backend_objs=False
+                "conversion_plus_flow_to_zero", as_backend_objs=False
             ),
-            "carrier_con",
+            "flow_in",
         )
 
 
@@ -232,18 +231,18 @@ class TestConversionPlusConstraintResults:
         )
         m.build()
         m.solve()
-        carrier_prod_conversion_plus = (
-            m.results.carrier_prod.loc[{"techs": "test_conversion_plus"}]
+        flow_out_conversion_plus = (
+            m.results.flow_out.loc[{"techs": "test_conversion_plus"}]
             .sum("nodes")
             .to_pandas()
         )
-        where_all_zero = (carrier_prod_conversion_plus.loc["heat"] == 0) & (
-            carrier_prod_conversion_plus.loc["electricity"] == 0
+        where_all_zero = (flow_out_conversion_plus.loc["heat"] == 0) & (
+            flow_out_conversion_plus.loc["electricity"] == 0
         )
         assert all(
             (
-                carrier_prod_conversion_plus.loc["heat"].where(~where_all_zero)
-                / carrier_prod_conversion_plus.loc["electricity"].where(~where_all_zero)
+                flow_out_conversion_plus.loc["heat"].where(~where_all_zero)
+                / flow_out_conversion_plus.loc["electricity"].where(~where_all_zero)
             ).dropna()
             == 0.8
         )
@@ -267,27 +266,27 @@ class TestConversionPlusConstraintResults:
         )
         m.build()
         m.solve()
-        carrier_prod_conversion_plus = (
-            m.results.carrier_prod.loc[{"techs": "test_conversion_plus"}]
+        flow_out_conversion_plus = (
+            m.results.flow_out.loc[{"techs": "test_conversion_plus"}]
             .sum("nodes")
             .to_pandas()
         )
-        carrier_con_conversion_plus = -1 * (
-            m.results.carrier_con.loc[{"techs": "test_conversion_plus"}]
+        flow_in_conversion_plus = -1 * (
+            m.results.flow_in.loc[{"techs": "test_conversion_plus"}]
             .sum("nodes")
             .to_pandas()
         )
-        where_all_zero = (carrier_prod_conversion_plus.loc["heat"] == 0) & (
-            carrier_prod_conversion_plus.loc["electricity"] == 0
+        where_all_zero = (flow_out_conversion_plus.loc["heat"] == 0) & (
+            flow_out_conversion_plus.loc["electricity"] == 0
         )
         prod_ratios = (
-            carrier_prod_conversion_plus.loc["heat"].where(~where_all_zero)
-            / carrier_prod_conversion_plus.loc["electricity"].where(~where_all_zero)
+            flow_out_conversion_plus.loc["heat"].where(~where_all_zero)
+            / flow_out_conversion_plus.loc["electricity"].where(~where_all_zero)
         ).dropna()
 
         con_ratios = (
-            carrier_prod_conversion_plus.loc["electricity"].where(~where_all_zero)
-            / carrier_con_conversion_plus.loc["coal"].where(~where_all_zero)
+            flow_out_conversion_plus.loc["electricity"].where(~where_all_zero)
+            / flow_in_conversion_plus.loc["coal"].where(~where_all_zero)
         ).dropna()
 
         assert (

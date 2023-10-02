@@ -360,7 +360,7 @@ class BackendModelGenerator(ABC):
                 Dictionary describing the object being added, from which descriptor attributes will be extracted and added to the array attributes.
             references (set):
                 All other backend objects which are references in this backend object's linear expression(s).
-                E.g. the constraint "carrier_prod / energy_eff <= energy_cap" references the variables ["carrier_prod", "energy_cap"]
+                E.g. the constraint "flow_out / energy_eff <= flow_cap" references the variables ["flow_out", "flow_cap"]
                 and the parameter ["energy_eff"].
                 All referenced objects will have their "references" attribute updated with this object's name.
                 Defaults to None.
@@ -728,7 +728,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
         Update optimisation model object string representations to include the index coordinates of the object.
 
-        E.g., `variables(carrier_prod)[0]` will become `variables(carrier_prod)[power, region1, ccgt, 2005-01-01 00:00]`
+        E.g., `variables(flow_out)[0]` will become `variables(flow_out)[power, region1, ccgt, 2005-01-01 00:00]`
 
         This takes approximately 10% of the peak memory required to initially build the optimisation problem, so should only be invoked if inspecting the model in detail (e.g., debugging)
 

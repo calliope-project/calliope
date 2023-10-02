@@ -15,11 +15,11 @@ techs:
       carrier: electricity
     constraints:
       lifetime: 25
-      energy_cap_max: .inf
+      flow_cap_max: .inf
     costs:
       monetary:
         interest_rate: 0.1
-        energy_cap: 1000
+        flow_cap: 1000
         om_prod: 1
       emissions:
         om_prod: 2
@@ -31,11 +31,11 @@ techs:
       carrier: electricity
     constraints:
       lifetime: 25
-      energy_cap_max: .inf
+      flow_cap_max: .inf
     costs:
       monetary:
         interest_rate: 0.1
-        energy_cap: 2000
+        flow_cap: 2000
         om_prod: 2
       emissions:
         om_prod: 1
@@ -47,11 +47,11 @@ techs:
       carrier: electricity
     constraints:
       lifetime: 25
-      energy_cap_max: .inf
+      flow_cap_max: .inf
     costs:
       monetary:
         interest_rate: 0.1
-        energy_cap: 1500
+        flow_cap: 1500
         om_prod: 1.5
       emissions:
         om_prod: 1.5
@@ -62,7 +62,7 @@ techs:
       carrier: electricity
       parent: demand
     constraints:
-      resource: file=demand_elec.csv
+      sink: file=demand_elec.csv
 
 nodes:
   a,b:

@@ -12,11 +12,11 @@ overrides:
         switches.cap_method: integer
         constraints:
           units_max: 4
-          energy_cap_per_unit: 300
-          energy_cap_min_use: 0.2
+          flow_cap_per_unit: 300
+          flow_out_min_relative: 0.2
         costs:
           monetary:
-            energy_cap: 700
+            flow_cap: 700
             purchase: 40000
       # chp-end
       # boiler-start
@@ -24,13 +24,13 @@ overrides:
         switches.cap_method: binary
         costs:
           monetary:
-            energy_cap: 35
+            flow_cap: 35
             purchase: 2000
       # boiler-end
       # heat_pipes-start
       heat_pipes:
         constraints:
-          force_asynchronous_prod_con: true
+          force_asynchronous_flow: true
       # heat_pipes-end
 
   mapbox_ready:
@@ -55,29 +55,29 @@ overrides:
     nodes:
       X1:
         techs:
-          chp.constraints.energy_cap_max: 300
-          pv.constraints.energy_cap_max: 0
-          supply_grid_power.constraints.energy_cap_max: 40
-          supply_gas.constraints.energy_cap_max: 700
+          chp.constraints.flow_cap_max: 300
+          pv.constraints.flow_cap_max: 0
+          supply_grid_power.constraints.flow_cap_max: 40
+          supply_gas.constraints.flow_cap_max: 700
 
       X2:
         techs:
-          boiler.constraints.energy_cap_max: 200
-          pv.constraints.energy_cap_max: 70
-          supply_gas.constraints.energy_cap_max: 250
+          boiler.constraints.flow_cap_max: 200
+          pv.constraints.flow_cap_max: 70
+          supply_gas.constraints.flow_cap_max: 250
 
       X3:
         techs:
-          boiler.constraints.energy_cap_max: 0
-          pv.constraints.energy_cap_max: 50
-          supply_gas.constraints.energy_cap_max: 0
+          boiler.constraints.flow_cap_max: 0
+          pv.constraints.flow_cap_max: 50
+          supply_gas.constraints.flow_cap_max: 0
 
     links:
-      X1,X2.techs.power_lines.constraints.energy_cap_max: 300
-      X1,X3.techs.power_lines.constraints.energy_cap_max: 60
-      X1,N1.techs.heat_pipes.constraints.energy_cap_max: 300
-      N1,X2.techs.heat_pipes.constraints.energy_cap_max: 250
-      N1,X3.techs.heat_pipes.constraints.energy_cap_max: 320
+      X1,X2.techs.power_lines.constraints.flow_cap_max: 300
+      X1,X3.techs.power_lines.constraints.flow_cap_max: 60
+      X1,N1.techs.heat_pipes.constraints.flow_cap_max: 300
+      N1,X2.techs.heat_pipes.constraints.flow_cap_max: 250
+      N1,X3.techs.heat_pipes.constraints.flow_cap_max: 320
 
   time_masking:
     model.name: "Urban-scale example model with time masking"
@@ -85,10 +85,12 @@ overrides:
     # Resample time resolution to 6-hourly
     model.time:
       masks:
-        - {
-            function: extreme_diff,
-            options:
-              { tech0: demand_heat, tech1: demand_electricity, how: max, n: 2 },
-          }
+        - function: extreme_diff
+          options:
+            tech0: demand_heat
+            tech1: demand_electricity
+            how: max
+            n: 2
+            var: sink
       function: resample
       function_options: { resolution: 6H }

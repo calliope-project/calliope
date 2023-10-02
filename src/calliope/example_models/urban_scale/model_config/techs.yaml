@@ -22,13 +22,13 @@ techs:
       parent: supply
       carrier: electricity
     constraints:
-      resource: inf
-      energy_cap_max: 2000
+      source: inf
+      flow_cap_max: 2000
       lifetime: 25
     costs:
       monetary:
         interest_rate: 0.10
-        energy_cap: 15
+        flow_cap: 15
         om_con: 0.1 # 10p/kWh electricity price #ppt
 
   supply_gas:
@@ -38,13 +38,13 @@ techs:
       parent: supply
       carrier: gas
     constraints:
-      resource: inf
-      energy_cap_max: 2000
+      source: inf
+      flow_cap_max: 2000
       lifetime: 25
     costs:
       monetary:
         interest_rate: 0.10
-        energy_cap: 1
+        flow_cap: 1
         om_con: 0.025 # 2.5p/kWh gas price #ppt
   # supply-end
 
@@ -56,21 +56,21 @@ techs:
       color: "#F9D956"
       parent: supply_power_plus
     switches:
-      force_resource: true
-      resource_unit: energy_per_area
+      force_source: true
+      source_unit: energy_per_area
       export: true
     constraints:
-      resource_area_per_energy_cap: 7 # 7m2 of panels needed to fit 1kWp of panels
+      area_use_per_flow_cap: 7 # 7m2 of panels needed to fit 1kWp of panels
       export_carrier: electricity
-      resource: file=pv_resource.csv:per_area # Already accounts for panel efficiency - kWh/m2. Source: Renewables.ninja Solar PV Power - Version: 1.1 - License: https://creativecommons.org/licenses/by-nc/4.0/ - Reference: https://doi.org/10.1016/j.energy.2016.08.060
+      source: file=pv_resource.csv:per_area # Already accounts for panel efficiency - kWh/m2. Source: Renewables.ninja Solar PV Power - Version: 1.1 - License: https://creativecommons.org/licenses/by-nc/4.0/ - Reference: https://doi.org/10.1016/j.energy.2016.08.060
       parasitic_eff: 0.85 # inverter losses
-      energy_cap_max: 250
-      resource_area_max: 1500
+      flow_cap_max: 250
+      area_use_max: 1500
       lifetime: 25
     costs:
       monetary:
         interest_rate: 0.10
-        energy_cap: 1350
+        flow_cap: 1350
   # pv-end
 
   # Conversion
@@ -83,7 +83,7 @@ techs:
       carrier_out: heat
       carrier_in: gas
     constraints:
-      energy_cap_max: 600
+      flow_cap_max: 600
       energy_eff: 0.85
       lifetime: 25
     costs:
@@ -107,14 +107,14 @@ techs:
       export: true
     constraints:
       export_carrier: electricity
-      energy_cap_max: 1500
+      flow_cap_max: 1500
       energy_eff: 0.405
       carrier_ratios.carrier_out_2.heat: 0.8
       lifetime: 25
     costs:
       monetary:
         interest_rate: 0.10
-        energy_cap: 750
+        flow_cap: 750
         om_prod: 0.004 # .4p/kWh for 4500 operating hours/year
         export: file=export_power.csv
   # chp-end
@@ -145,13 +145,13 @@ techs:
       parent: transmission
       carrier: electricity
     constraints:
-      energy_cap_max: 2000
+      flow_cap_max: 2000
       energy_eff: 0.98
       lifetime: 25
     costs:
       monetary:
         interest_rate: 0.10
-        energy_cap_per_distance: 0.01
+        flow_cap_per_distance: 0.01
 
   heat_pipes:
     essentials:
@@ -160,11 +160,11 @@ techs:
       parent: transmission
       carrier: heat
     constraints:
-      energy_cap_max: 2000
+      flow_cap_max: 2000
       energy_eff_per_distance: 0.975
       lifetime: 25
     costs:
       monetary:
         interest_rate: 0.10
-        energy_cap_per_distance: 0.3
+        flow_cap_per_distance: 0.3
   # transmission-end

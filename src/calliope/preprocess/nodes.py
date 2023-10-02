@@ -244,13 +244,13 @@ def process_nodes(model_config, modelrun_techs):
             # and energy_con accordingly on both parts of the link
             if tech_settings.get_key("switches.one_way", False):
                 processed_links.set_key(
-                    "{}.links.{}.techs.{}.switches.allowed_carrier_prod".format(
+                    "{}.links.{}.techs.{}.switches.allowed_flow_out".format(
                         loc_from, loc_to, tech_name
                     ),
                     False,
                 )
                 processed_links.set_key(
-                    "{}.links.{}.techs.{}.switches.allowed_carrier_con".format(
+                    "{}.links.{}.techs.{}.switches.allowed_flow_in".format(
                         loc_to, loc_from, tech_name
                     ),
                     False,
@@ -377,20 +377,20 @@ def process_per_distance_constraints(
             )
 
         for k in tech_settings.get("costs", AttrDict()).keys_nested(subkeys_as="list"):
-            if "energy_cap_per_distance" in k:
-                energy_cap_costs_per_distance = (
+            if "flow_cap_per_distance" in k:
+                flow_cap_costs_per_distance = (
                     tech_settings.costs.get_key(k) * tech_settings.distance
                 )
-                tech_settings.costs[k.split(".")[0]].energy_cap = (
-                    tech_settings.costs[k.split(".")[0]].get_key("energy_cap", 0)
-                    + energy_cap_costs_per_distance
+                tech_settings.costs[k.split(".")[0]].flow_cap = (
+                    tech_settings.costs[k.split(".")[0]].get_key("flow_cap", 0)
+                    + flow_cap_costs_per_distance
                 )
                 tech_settings.costs.del_key(k)
                 nodes_comments.set_key(
                     "{}.links.{}.techs.{}.costs.{}".format(
                         loc_from, loc_to, tech_name, k
                     ),
-                    "Includes value computed from energy_cap_per_distance",
+                    "Includes value computed from flow_cap_per_distance",
                 )
             elif "purchase_per_distance" in k:
                 purchase_costs_per_distance = (

@@ -32,13 +32,13 @@ def base_math():
 class TestBaseMath:
     TEST_REGISTER: set = set()
 
-    def test_energy_cap(self, compare_lps):
-        self.TEST_REGISTER.add("variables.energy_cap")
+    def test_flow_cap(self, compare_lps):
+        self.TEST_REGISTER.add("variables.flow_cap")
         model = build_test_model(
             {
-                "nodes.b.techs.test_supply_elec.constraints.energy_cap_max": 100,
-                "nodes.a.techs.test_supply_elec.constraints.energy_cap_min": 1,
-                "nodes.a.techs.test_supply_elec.constraints.energy_cap_max": np.nan,
+                "nodes.b.techs.test_supply_elec.constraints.flow_cap_max": 100,
+                "nodes.a.techs.test_supply_elec.constraints.flow_cap_min": 1,
+                "nodes.a.techs.test_supply_elec.constraints.flow_cap_max": np.nan,
             },
             "simple_supply,two_hours,investment_costs",
         )
@@ -48,16 +48,16 @@ class TestBaseMath:
                 "foo": {
                     "equations": [
                         {
-                            "expression": "sum(energy_cap[techs=test_supply_elec], over=nodes)"
+                            "expression": "sum(flow_cap[techs=test_supply_elec], over=nodes)"
                         }
                     ],
                     "sense": "minimise",
                 }
             }
         }
-        compare_lps(model, custom_math, "energy_cap")
+        compare_lps(model, custom_math, "flow_cap")
 
-        # "energy_cap" is the name of the lp file
+        # "flow_cap" is the name of the lp file
 
     def test_storage_max(self, compare_lps):
         self.TEST_REGISTER.add("constraints.storage_max")
@@ -69,22 +69,20 @@ class TestBaseMath:
         }
         compare_lps(model, custom_math, "storage_max")
 
-    def test_carrier_production_max(self, compare_lps):
-        self.TEST_REGISTER.add("constraints.carrier_production_max")
+    def test_flow_out_max(self, compare_lps):
+        self.TEST_REGISTER.add("constraints.flow_out_max")
         model = build_test_model(
             {
-                "nodes.a.techs.test_supply_elec.constraints.energy_cap_min": 100,
-                "nodes.a.techs.test_supply_elec.constraints.energy_cap_max": 100,
+                "nodes.a.techs.test_supply_elec.constraints.flow_cap_min": 100,
+                "nodes.a.techs.test_supply_elec.constraints.flow_cap_max": 100,
             },
             "simple_supply,two_hours,investment_costs",
         )
 
         custom_math = {
-            "constraints": {
-                "carrier_production_max": model.math.constraints.carrier_production_max
-            }
+            "constraints": {"flow_out_max": model.math.constraints.flow_out_max}
         }
-        compare_lps(model, custom_math, "carrier_production_max")
+        compare_lps(model, custom_math, "flow_out_max")
 
     def test_balance_conversion(self, compare_lps):
         self.TEST_REGISTER.add("constraints.balance_conversion")
@@ -100,16 +98,16 @@ class TestBaseMath:
 
         compare_lps(model, custom_math, "balance_conversion")
 
-    def test_resource_max(self, compare_lps):
-        self.TEST_REGISTER.add("constraints.resource_max")
+    def test_source_max(self, compare_lps):
+        self.TEST_REGISTER.add("constraints.source_max")
         model = build_test_model(
             {},
             "simple_supply_plus,resample_two_days,investment_costs",
         )
         custom_math = {
-            "constraints": {"my_constraint": model.math.constraints.resource_max}
+            "constraints": {"my_constraint": model.math.constraints.source_max}
         }
-        compare_lps(model, custom_math, "resource_max")
+        compare_lps(model, custom_math, "source_max")
 
     @pytest.mark.xfail(reason="not all base math is in the test config dict yet")
     def test_all_math_registered(self, base_math):

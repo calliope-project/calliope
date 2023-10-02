@@ -149,7 +149,7 @@ class TestIO:
 
     def test_csv_contents(self, model_csv_dir):
         with open(
-            os.path.join(model_csv_dir, "inputs_energy_cap_max_systemwide.csv"), "r"
+            os.path.join(model_csv_dir, "inputs_flow_cap_max_systemwide.csv"), "r"
         ) as f:
             assert "demand_power" not in f.read()
 
@@ -159,7 +159,7 @@ class TestIO:
             model.to_csv(out_path, dropna=False)
 
             with open(
-                os.path.join(out_path, "inputs_energy_cap_max_systemwide.csv"), "r"
+                os.path.join(out_path, "inputs_flow_cap_max_systemwide.csv"), "r"
             ) as f:
                 assert "demand_power" in f.read()
 
@@ -213,7 +213,7 @@ class TestIO:
             model.backend.to_lp(out_path)
 
             with open(out_path, "r") as f:
-                assert "variables(energy_cap)" in f.read()
+                assert "variables(flow_cap)" in f.read()
 
     @pytest.mark.skip(
         reason="SPORES mode will fail until the cost max group constraint can be reproduced"

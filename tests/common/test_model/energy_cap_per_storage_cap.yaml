@@ -16,7 +16,7 @@ techs:
       carrier: electricity
       parent: demand
     constraints:
-      resource: file=demand_elec.csv
+      sink: file=demand_elec.csv
   my_storage:
     essentials:
       name: Storage
@@ -27,7 +27,7 @@ techs:
       lifetime: 60
     costs:
       monetary:
-        energy_cap: 1500000
+        flow_cap: 1500000
         storage_cap: 300000
         interest_rate: 0.1
 
@@ -38,13 +38,13 @@ nodes:
 
 overrides:
   equals:
-    techs.my_storage.constraints.energy_cap_per_storage_cap_equals: 10
+    techs.my_storage.constraints.flow_cap_per_storage_cap_equals: 10
   max:
-    techs.my_storage.constraints.energy_cap_per_storage_cap_max: 0.01
+    techs.my_storage.constraints.flow_cap_per_storage_cap_max: 0.01
   min:
-    techs.my_storage.constraints.energy_cap_per_storage_cap_min: 1
+    techs.my_storage.constraints.flow_cap_per_storage_cap_min: 1
   operate_mode_min:
-    techs.my_storage.constraints.energy_cap_per_storage_cap_min: 1
+    techs.my_storage.constraints.flow_cap_per_storage_cap_min: 1
     techs.my_storage.constraints.storage_cap_equals: 900
     run.mode: operate
     run.operation:

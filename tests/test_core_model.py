@@ -138,7 +138,7 @@ class TestCustomMath:
         new_constraint = calliope.AttrDict(
             {
                 "constraints": {
-                    "energy_capacity_per_storage_capacity_min": {"foreach": ["nodes"]}
+                    "flow_capacity_per_storage_capacity_min": {"foreach": ["nodes"]}
                 }
             }
         )
@@ -148,9 +148,9 @@ class TestCustomMath:
             "simple_supply,two_hours,investment_costs",
         )
         base = simple_supply.math["constraints"][
-            "energy_capacity_per_storage_capacity_min"
+            "flow_capacity_per_storage_capacity_min"
         ]
-        new = m.math["constraints"]["energy_capacity_per_storage_capacity_min"]
+        new = m.math["constraints"]["flow_capacity_per_storage_capacity_min"]
 
         for i in base.keys():
             if i == "foreach":
@@ -163,7 +163,7 @@ class TestCustomMath:
         for path_suffix, foreach in [(1, "nodes"), (2, "techs")]:
             constr = calliope.AttrDict(
                 {
-                    "constraints.energy_capacity_per_storage_capacity_min.foreach": [
+                    "constraints.flow_capacity_per_storage_capacity_min.foreach": [
                         foreach
                     ]
                 }
@@ -178,9 +178,9 @@ class TestCustomMath:
         )
 
         base = simple_supply.math["constraints"][
-            "energy_capacity_per_storage_capacity_min"
+            "flow_capacity_per_storage_capacity_min"
         ]
-        new = m.math["constraints"]["energy_capacity_per_storage_capacity_min"]
+        new = m.math["constraints"]["flow_capacity_per_storage_capacity_min"]
 
         for i in base.keys():
             if i == "foreach":
@@ -234,7 +234,7 @@ class TestCustomMath:
 
     def test_add_run_mode_custom_math_before_build(self, temp_path):
         """A user can override the run mode custom math by including it directly in the custom math string"""
-        custom_math = calliope.AttrDict({"variables": {"energy_cap": {"active": True}}})
+        custom_math = calliope.AttrDict({"variables": {"flow_cap": {"active": True}}})
         file_path = temp_path.join("custom-math.yaml")
         custom_math.to_yaml(file_path)
 
@@ -245,7 +245,7 @@ class TestCustomMath:
         m.run_config.mode = "operate"
         m._add_run_mode_custom_math()
 
-        assert m.math.variables.energy_cap.active
+        assert m.math.variables.flow_cap.active
 
     def test_run_mode_mismatch(self):
         m = build_model(
@@ -274,7 +274,7 @@ class TestValidateMathDict:
         [
             ("1 == 1", "True"),
             (
-                "carrier_prod * energy_eff + sum(cost, over=costs) <= .inf",
+                "flow_out * energy_eff + sum(cost, over=costs) <= .inf",
                 "inheritance(supply) and energy_eff>0",
             ),
         ],

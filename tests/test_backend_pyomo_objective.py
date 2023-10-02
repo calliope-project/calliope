@@ -16,14 +16,14 @@ class TestCostMinimisationObjective:
         model.build()
         model.solve()
 
-        assert model.results.energy_cap.sel(nodes="region1-2", techs="csp") == approx(
+        assert model.results.flow_cap.sel(nodes="region1-2", techs="csp") == approx(
             10000
         )
-        assert model.results.energy_cap.sel(
+        assert model.results.flow_cap.sel(
             nodes="region1", techs="ac_transmission:region2"
         ) == approx(10000)
 
-        assert model.results.carrier_prod.sum("timesteps").sel(
+        assert model.results.flow_out.sum("timesteps").sel(
             carriers="power", nodes="region1", techs="ccgt"
         ) == approx(66530.36492823533)
 
@@ -39,14 +39,14 @@ class TestCostMinimisationObjective:
         model.build()
         model.solve()
 
-        assert model.results.energy_cap.sel(nodes="region1-2", techs="csp") == approx(
+        assert model.results.flow_cap.sel(nodes="region1-2", techs="csp") == approx(
             10000.0
         )
-        assert model.results.energy_cap.sel(
+        assert model.results.flow_cap.sel(
             nodes="region1", techs="ac_transmission:region2"
         ) == approx(10000.0)
 
-        assert model.results.carrier_prod.sum("timesteps").sel(
+        assert model.results.flow_out.sum("timesteps").sel(
             carriers="power", nodes="region1", techs="ccgt"
         ) == approx(115569.4354)
 

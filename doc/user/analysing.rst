@@ -16,9 +16,9 @@ A model which solved successfully has two primary Datasets with data of interest
 Both of these are `xarray.Datasets <https://docs.xarray.dev/en/v2022.03.0/user-guide/data-structures.html#dataset>`_ and can be further processed with Python.
 
 Data is indexed over a subset of the core Calliope sets, e.g. `techs` (technologies), `nodes`, `timesteps`.
-Not all combinations of the set items will contain data; if you did not define your `PV` technology at node `X1` then there will be no data for :python:`model.inputs.energy_cap.sel(techs="PV", nodes="X1")`.
+Not all combinations of the set items will contain data; if you did not define your `PV` technology at node `X1` then there will be no data for :python:`model.inputs.flow_cap.sel(techs="PV", nodes="X1")`.
 In fact, there is likely to be more empty (`NaN`) data points than filled ones.
-In Python you can quickly "densify" your data to look at only filled data points: :python:`model.inputs.energy_cap.to_series().dropna()`
+In Python you can quickly "densify" your data to look at only filled data points: :python:`model.inputs.flow_cap.to_series().dropna()`
 
 .. note:: On saving to CSV (see the :ref:`command-line interface documentation <running_cli>`), each data variable is saved to its own file with all empty data points removed.
 

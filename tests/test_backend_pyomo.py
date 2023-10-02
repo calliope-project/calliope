@@ -41,7 +41,7 @@ class TestChecks:
         assert m._model_data.attrs["run_config"].cyclic_storage is False
 
     @pytest.mark.parametrize(
-        "param", [("energy_eff"), ("resource_eff"), ("parasitic_eff")]
+        "param", [("energy_eff"), ("source_eff"), ("parasitic_eff")]
     )
     def test_loading_timeseries_operate_efficiencies(self, param):
         m = build_model(
@@ -57,16 +57,16 @@ class TestChecks:
             m.build()  # will fail to complete run if there's a problem
 
     @pytest.mark.parametrize("force", (True, False))
-    def test_operate_energy_cap_min_use(self, force):
-        """If we depend on a finite energy_cap, we have to error on a user failing to define it"""
+    def test_operate_flow_out_min_relative(self, force):
+        """If we depend on a finite flow_cap, we have to error on a user failing to define it"""
         m = build_model(
             {
                 "techs.test_supply_elec": {
-                    "switches.force_resource": force,
+                    "switches.force_source": force,
                     "constraints": {
-                        "energy_cap_min_use": 0.1,
-                        "resource": "file=supply_plus_resource.csv:1",
-                        "energy_cap_equals": np.inf,
+                        "flow_out_min_relative": 0.1,
+                        "source": "file=supply_plus_resource.csv:1",
+                        "flow_cap_equals": np.inf,
                     },
                 }
             },
@@ -78,23 +78,23 @@ class TestChecks:
                 m.build()
 
         assert check_error_or_warning(
-            error, ["Operate mode: User must define a finite energy_cap"]
+            error, ["Operate mode: User must define a finite flow_cap"]
         )
 
     @pytest.mark.parametrize("force", (True, False))
-    def test_operate_energy_cap_resource_unit(self, force):
-        """If we depend on a finite energy_cap, we have to error on a user failing to define it"""
+    def test_operate_flow_cap_source_unit(self, force):
+        """If we depend on a finite flow_cap, we have to error on a user failing to define it"""
         m = build_model(
             {
                 "techs.test_supply_elec": {
                     "constraints": {
-                        "resource": "file=supply_plus_resource.csv:1",
-                        "energy_cap_equals": np.inf,
-                        "energy_cap_max": np.inf,
+                        "source": "file=supply_plus_resource.csv:1",
+                        "flow_cap_equals": np.inf,
+                        "flow_cap_max": np.inf,
                     },
                     "switches": {
-                        "force_resource": force,
-                        "resource_unit": "energy_per_cap",
+                        "force_source": force,
+                        "source_unit": "energy_per_cap",
                     },
                 }
             },
@@ -106,29 +106,29 @@ class TestChecks:
                 with pytest.warns(exceptions.ModelWarning):
                     m.build()
             assert check_error_or_warning(
-                error, ["Operate mode: User must define a finite energy_cap"]
+                error, ["Operate mode: User must define a finite flow_cap"]
             )
         elif force is False:
             with pytest.warns(exceptions.ModelWarning):
                 m.build()
 
     @pytest.mark.parametrize(
-        "resource_unit,force",
+        "source_unit,force",
         list(product(("energy", "energy_per_cap", "energy_per_area"), (True, False))),
     )
-    def test_operate_resource_unit_with_resource_area(self, resource_unit, force):
-        """Different resource unit affects the capacities which are set to infinite"""
+    def test_operate_source_unit_with_area_use(self, source_unit, force):
+        """Different source unit affects the capacities which are set to infinite"""
         m = build_model(
             {
                 "techs.test_supply_elec": {
                     "constraints": {
-                        "resource_area_max": 10,
-                        "energy_cap_max": 15,
-                        "resource": "file=supply_plus_resource.csv:1",
+                        "area_use_max": 10,
+                        "flow_cap_max": 15,
+                        "source": "file=supply_plus_resource.csv:1",
                     },
                     "switches": {
-                        "force_resource": force,
-                        "resource_unit": resource_unit,
+                        "force_source": force,
+                        "source_unit": source_unit,
                     },
                 }
             },
@@ -137,18 +137,18 @@ class TestChecks:
         with pytest.warns(exceptions.ModelWarning) as warning:
             m.build()
 
-        if resource_unit == "energy":
+        if source_unit == "energy":
             _warnings = [
-                "Energy capacity constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)",
-                "Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)",
+                "Energy capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
+                "Source area constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
             ]
-        elif resource_unit == "energy_per_area":
+        elif source_unit == "energy_per_area":
             _warnings = [
-                "Energy capacity constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_area`"
+                "Energy capacity constraint removed from 0::test_supply_elec as force_source is applied and source is linked to energy flow using `energy_per_area`"
             ]
-        elif resource_unit == "energy_per_cap":
+        elif source_unit == "energy_per_cap":
             _warnings = [
-                "Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_cap`"
+                "Source area constraint removed from 0::test_supply_elec as force_source is applied and source is linked to energy flow using `energy_per_cap`"
             ]
 
         if force is True:
@@ -157,20 +157,20 @@ class TestChecks:
             assert ~check_error_or_warning(warning, _warnings)
 
     @pytest.mark.parametrize(
-        "resource_unit", [("energy"), ("energy_per_cap"), ("energy_per_area")]
+        "source_unit", [("energy"), ("energy_per_cap"), ("energy_per_area")]
     )
-    def test_operate_resource_unit_without_resource_area(self, resource_unit):
-        """Different resource unit affects the capacities which are set to infinite"""
+    def test_operate_source_unit_without_area_use(self, source_unit):
+        """Different source unit affects the capacities which are set to infinite"""
         m = build_model(
             {
                 "techs.test_supply_elec": {
                     "constraints": {
-                        "resource": "file=supply_plus_resource.csv:1",
-                        "energy_cap_max": 15,
+                        "source": "file=supply_plus_resource.csv:1",
+                        "flow_cap_max": 15,
                     },
                     "switches": {
-                        "force_resource": True,
-                        "resource_unit": resource_unit,
+                        "force_source": True,
+                        "source_unit": source_unit,
                     },
                 }
             },
@@ -178,51 +178,51 @@ class TestChecks:
         )
 
         with pytest.warns(exceptions.ModelWarning) as warning:
-            # energy_per_area without a resource_cap will cause an error, which we have to catch here
-            if resource_unit == "energy_per_area":
+            # energy_per_area without a source_cap will cause an error, which we have to catch here
+            if source_unit == "energy_per_area":
                 with pytest.raises(exceptions.ModelError) as error:
                     m.build()
             else:
                 m.build()
 
-        if resource_unit == "energy":
+        if source_unit == "energy":
             _warnings = [
-                "Energy capacity constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)"
+                "Energy capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)"
             ]
             not_warnings = [
-                "Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)",
-                "Energy capacity constraint removed from 0::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)",
-                "Energy capacity constraint removed from 1::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)",
+                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
+                "Energy capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
+                "Energy capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
             ]
-        elif resource_unit == "energy_per_area":
+        elif source_unit == "energy_per_area":
             _warnings = [
-                "Energy capacity constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_area`"
+                "Energy capacity constraint removed from 0::test_supply_elec as force_source is applied and source is linked to energy flow using `energy_per_area`"
             ]
             not_warnings = [
-                "Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_cap`",
-                "Energy capacity constraint removed from 0::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)",
-                "Energy capacity constraint removed from 1::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)",
+                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is linked to energy flow using `energy_per_cap`",
+                "Energy capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
+                "Energy capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
             ]
-            # energy_per_area without a resource_cap will cause an error
+            # energy_per_area without a source_cap will cause an error
             check_error_or_warning(
                 error,
-                "Operate mode: User must define a finite resource_area "
-                "(via resource_area_equals or resource_area_max) for 0::test_supply_elec",
+                "Operate mode: User must define a finite area_use "
+                "(via area_use_equals or area_use_max) for 0::test_supply_elec",
             )
-        elif resource_unit == "energy_per_cap":
+        elif source_unit == "energy_per_cap":
             _warnings = []
             not_warnings = [
-                "Resource area constraint removed from 0::test_supply_elec as force_resource is applied and resource is linked to energy flow using `energy_per_cap`",
-                "Energy capacity constraint removed from 0::test_supply_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)",
-                "Energy capacity constraint removed from 0::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)",
-                "Energy capacity constraint removed from 1::test_demand_elec as force_resource is applied and resource is not linked to energy flow (resource_unit = `energy`)",
+                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is linked to energy flow using `energy_per_cap`",
+                "Energy capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
+                "Energy capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
+                "Energy capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
             ]
         assert check_error_or_warning(warning, _warnings)
         assert not check_error_or_warning(warning, not_warnings)
 
     def test_operate_storage(self, param):
         """Can't violate storage capacity constraints in the definition of a technology"""
-        param = "energy_cap_per_storage_cap_max"
+        param = "flow_cap_per_storage_cap_max"
         m = build_model(
             {f"techs.test_supply_plus.constraints.{param}": 0.1},
             "simple_supply_and_supply_plus,operate,investment_costs",
@@ -241,19 +241,19 @@ class TestChecks:
             warning,
             [
                 "Initial stored energy not defined",
-                "Resource capacity constraint defined and set to infinity",
+                "Source capacity constraint defined and set to infinity",
                 "Storage cannot be cyclic in operate run mode",
             ],
         )
 
     @pytest.mark.parametrize("on", (True, False))
-    def test_operate_resource_cap_max(self, on):
+    def test_operate_source_cap_max(self, on):
         """Some constraints, if not defined, will throw a warning and possibly change values in model_data"""
 
         if on is False:
             override = {}
         else:
-            override = {"techs.test_supply_plus.constraints.resource_cap_max": 1e6}
+            override = {"techs.test_supply_plus.constraints.source_cap_max": 1e6}
         m = build_model(
             override, "simple_supply_and_supply_plus,operate,investment_costs"
         )
@@ -262,16 +262,16 @@ class TestChecks:
             m.build()
         if on is False:
             assert check_error_or_warning(
-                warning, "Resource capacity constraint defined and set to infinity"
+                warning, "Source capacity constraint defined and set to infinity"
             )
             assert np.isinf(
-                m._model_data.resource_cap.loc["a", "test_supply_plus"].item()
+                m._model_data.source_cap.loc["a", "test_supply_plus"].item()
             )
         elif on is True:
             assert not check_error_or_warning(
-                warning, "Resource capacity constraint defined and set to infinity"
+                warning, "Source capacity constraint defined and set to infinity"
             )
-            assert m._model_data.resource_cap.loc["a", "test_supply_plus"].item() == 1e6
+            assert m._model_data.source_cap.loc["a", "test_supply_plus"].item() == 1e6
 
     @pytest.mark.parametrize("on", (True, False))
     def test_operate_storage_initial(self, on):
@@ -324,27 +324,27 @@ class TestBalanceConstraints:
         m = build_model(
             {
                 "techs.test_supply_elec.constraints.resource": 20,
-                "techs.test_supply_elec.switches.resource_unit": "energy_per_cap",
+                "techs.test_supply_elec.switches.source_unit": "energy_per_cap",
             },
             "simple_supply,two_hours,investment_costs",
         )
         m.build()
         assert check_variable_exists(
             m.backend.get_constraint("balance_supply", as_backend_objs=False),
-            "energy_cap",
+            "flow_cap",
         )
 
         m = build_model(
             {
                 "techs.test_supply_elec.constraints.resource": 20,
-                "techs.test_supply_elec.switches.resource_unit": "energy_per_area",
+                "techs.test_supply_elec.switches.source_unit": "energy_per_area",
             },
             "simple_supply,two_hours,investment_costs",
         )
         m.build()
         assert check_variable_exists(
             m.backend.get_constraint("balance_supply", as_backend_objs=False),
-            "resource_area",
+            "area_use",
         )
 
     def test_loc_techs_balance_demand_constraint(self, simple_supply):
@@ -354,23 +354,23 @@ class TestBalanceConstraints:
         assert "balance_demand" in simple_supply.backend.constraints
 
         m = build_model(
-            {"techs.test_demand_elec.switches.resource_unit": "energy_per_cap"},
+            {"techs.test_demand_elec.switches.source_unit": "energy_per_cap"},
             "simple_supply,two_hours,investment_costs",
         )
         m.build()
         assert check_variable_exists(
             m.backend.get_constraint("balance_demand", as_backend_objs=False),
-            "energy_cap",
+            "flow_cap",
         )
 
         m = build_model(
-            {"techs.test_demand_elec.switches.resource_unit": "energy_per_area"},
+            {"techs.test_demand_elec.switches.source_unit": "energy_per_area"},
             "simple_supply,two_hours,investment_costs",
         )
         m.build()
         assert check_variable_exists(
             m.backend.get_constraint("balance_demand", as_backend_objs=False),
-            "resource_area",
+            "area_use",
         )
 
     def test_loc_techs_resource_availability_supply_plus_constraint(
@@ -385,7 +385,7 @@ class TestBalanceConstraints:
         )
 
         m = build_model(
-            {"techs.test_supply_plus.switches.resource_unit": "energy_per_cap"},
+            {"techs.test_supply_plus.switches.source_unit": "energy_per_cap"},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.build()
@@ -393,11 +393,11 @@ class TestBalanceConstraints:
             m.backend.get_constraint(
                 "resource_availability_supply_plus", as_backend_objs=False
             ),
-            "energy_cap",
+            "flow_cap",
         )
 
         m = build_model(
-            {"techs.test_supply_plus.switches.resource_unit": "energy_per_area"},
+            {"techs.test_supply_plus.switches.source_unit": "energy_per_area"},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.build()
@@ -405,7 +405,7 @@ class TestBalanceConstraints:
             m.backend.get_constraint(
                 "resource_availability_supply_plus", as_backend_objs=False
             ),
-            "resource_area",
+            "area_use",
         )
 
     def test_loc_techs_balance_transmission_constraint(self, simple_supply):
@@ -565,7 +565,7 @@ class TestCostConstraints:
         }
         assert check_variable_exists(
             m.backend.get_expression("cost_var", as_backend_objs=False),
-            "carrier_prod",
+            "flow_out",
             idx,
         )
 
@@ -573,7 +573,7 @@ class TestCostConstraints:
         idx["techs"] = "test_transmission_elec:b"
         assert not check_variable_exists(
             m.backend.get_expression("cost_var", as_backend_objs=False),
-            "carrier_prod",
+            "flow_out",
             idx,
         )
 
@@ -677,7 +677,7 @@ class TestCapacityConstraints:
             {
                 "techs.test_storage.constraints": {
                     "units_max": 1,
-                    "energy_cap_per_unit": 20,
+                    "flow_cap_per_unit": 20,
                     "storage_cap_per_unit": 20,
                 }
             },
@@ -697,60 +697,54 @@ class TestCapacityConstraints:
             for j in ["max", "equals", "min"]
         ],
     )
-    def test_loc_techs_energy_capacity_storage_constraint(
-        self, scenario, tech, override
-    ):
+    def test_loc_techs_flow_capacity_storage_constraint(self, scenario, tech, override):
         """
-        i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_max')
+        i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.flow_cap_per_storage_cap_max')
         """
         m = build_model(
-            {f"techs.{tech}.constraints.energy_cap_per_storage_cap_{override}": 0.5},
+            {f"techs.{tech}.constraints.flow_cap_per_storage_cap_{override}": 0.5},
             f"{scenario},two_hours,investment_costs",
         )
         m.build()
-        assert (
-            f"energy_capacity_per_storage_capacity_{override}" in m.backend.constraints
-        )
+        assert f"flow_capacity_per_storage_capacity_{override}" in m.backend.constraints
 
         if override == "equals":
             assert not any(
-                "energy_capacity_per_storage_capacity_{i}" in m.backend.constraints
+                "flow_capacity_per_storage_capacity_{i}" in m.backend.constraints
                 for i in ["max", "min"]
             )
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     @pytest.mark.parametrize("override", (("max", "equals", "min")))
-    def test_loc_techs_energy_capacity_milp_storage_constraint(self, override):
+    def test_loc_techs_flow_capacity_milp_storage_constraint(self, override):
         """
-        i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_max')
+        i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.flow_cap_per_storage_cap_max')
         """
 
         m = build_model(
             {
-                f"techs.test_supply_plus.constraints.energy_cap_per_storage_cap_{override}": 0.5
+                f"techs.test_supply_plus.constraints.flow_cap_per_storage_cap_{override}": 0.5
             },
             "supply_and_supply_plus_milp,two_hours,investment_costs",
         )
         m.build()
-        assert (
-            f"energy_capacity_per_storage_capacity_{override}" in m.backend.constraints
-        )
+        assert f"flow_capacity_per_storage_capacity_{override}" in m.backend.constraints
         if override == "equals":
             assert not any(
-                "energy_capacity_per_storage_capacity_{i}" in m.backend.constraints
+                "flow_capacity_per_storage_capacity_{i}" in m.backend.constraints
                 for i in ["max", "min"]
             )
 
-    def test_no_loc_techs_energy_capacity_storage_constraint(self, caplog):
+    def test_no_loc_techs_flow_capacity_storage_constraint(self, caplog):
         """
-        i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.energy_cap_per_storage_cap_max')
+        i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.flow_cap_per_storage_cap_max')
         """
         with caplog.at_level(logging.INFO):
-            m = build_model(model_file="energy_cap_per_storage_cap.yaml")
+            m = build_model(model_file="flow_cap_per_storage_cap.yaml")
 
         m.build()
         assert not any(
-            "energy_capacity_storage_{i}" in m.backend.constraints
+            "flow_capacity_storage_{i}" in m.backend.constraints
             for i in ["max", "min", "equals"]
         )
 
@@ -797,101 +791,99 @@ class TestCapacityConstraints:
                 assert expr.lb == 10
                 assert np.isinf(expr.ub)
 
-    def test_loc_techs_resource_capacity_equals_energy_capacity_constraint(
+    def test_loc_techs_resource_capacity_equals_flow_capacity_constraint(
         self, simple_supply_and_supply_plus
     ):
         """
         i for i in sets.loc_techs_finite_resource_supply_plus
-        if constraint_exists(model_run, i, 'constraints.resource_cap_equals_energy_cap')
+        if constraint_exists(model_run, i, 'constraints.resource_cap_equals_flow_cap')
         """
         assert (
-            "resource_capacity_equals_energy_capacity"
+            "resource_capacity_equals_flow_capacity"
             not in simple_supply_and_supply_plus.backend.constraints
         )
 
         m = build_model(
-            {"techs.test_supply_plus.switches.resource_cap_equals_energy_cap": True},
+            {"techs.test_supply_plus.switches.resource_cap_equals_flow_cap": True},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.build()
-        assert "resource_capacity_equals_energy_capacity" in m.backend.constraints
+        assert "resource_capacity_equals_flow_capacity" in m.backend.constraints
 
-    def test_loc_techs_resource_area_constraint(self, simple_supply_and_supply_plus):
+    def test_loc_techs_area_use_constraint(self, simple_supply_and_supply_plus):
         """
         i for i in sets.loc_techs_area if i in sets.loc_techs_supply_plus
         """
-        assert "resource_area" not in simple_supply_and_supply_plus.backend.variables
+        assert "area_use" not in simple_supply_and_supply_plus.backend.variables
 
         m = build_model(
-            {"techs.test_supply_plus.constraints.resource_area_max": 10},
+            {"techs.test_supply_plus.constraints.area_use_max": 10},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.build()
-        assert "resource_area" in m.backend.variables
+        assert "area_use" in m.backend.variables
 
         m = build_model(
-            {"techs.test_supply_elec.constraints.resource_area_max": 10},
+            {"techs.test_supply_elec.constraints.area_use_max": 10},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.build()
-        assert "resource_area" in m.backend.variables
+        assert "area_use" in m.backend.variables
 
-        # Check that setting energy_cap_max to 0 also forces this constraint to 0
+        # Check that setting flow_cap_max to 0 also forces this constraint to 0
         m = build_model(
             {
                 "techs.test_supply_plus.constraints": {
-                    "resource_area_max": 10,
-                    "energy_cap_max": 0,
+                    "area_use_max": 10,
+                    "flow_cap_max": 0,
                 }
             },
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.build()
-        ub = m.backend.get_constraint(
-            "force_zero_resource_area", as_backend_objs=False
-        ).ub
+        ub = m.backend.get_constraint("force_zero_area_use", as_backend_objs=False).ub
 
         assert (ub.to_series().dropna() == 0).all()
 
-    def test_loc_techs_resource_area_per_energy_capacity_constraint(
+    def test_loc_techs_area_use_per_flow_capacity_constraint(
         self, simple_supply_and_supply_plus
     ):
         """
         i for i in sets.loc_techs_area if i in sets.loc_techs_supply_plus
-        and constraint_exists(model_run, i, 'constraints.resource_area_per_energy_cap')
+        and constraint_exists(model_run, i, 'constraints.area_use_per_flow_cap')
         """
         assert (
-            "resource_area_per_energy_capacity"
+            "area_use_per_flow_capacity"
             not in simple_supply_and_supply_plus.backend.constraints
         )
 
         m = build_model(
-            {"techs.test_supply_plus.constraints.resource_area_max": 10},
+            {"techs.test_supply_plus.constraints.area_use_max": 10},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.build()
-        assert "resource_area_per_energy_capacity" not in m.backend.constraints
+        assert "area_use_per_flow_capacity" not in m.backend.constraints
 
         m = build_model(
-            {"techs.test_supply_elec.constraints.resource_area_per_energy_cap": 10},
+            {"techs.test_supply_elec.constraints.area_use_per_flow_cap": 10},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.build()
-        assert "resource_area_per_energy_capacity" in m.backend.constraints
+        assert "area_use_per_flow_capacity" in m.backend.constraints
 
         m = build_model(
             {
                 "techs.test_supply_elec.constraints": {
-                    "resource_area_per_energy_cap": 10,
-                    "resource_area_max": 10,
+                    "area_use_per_flow_cap": 10,
+                    "area_use_max": 10,
                 }
             },
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.build()
-        assert "resource_area_per_energy_capacity" in m.backend.constraints
+        assert "area_use_per_flow_capacity" in m.backend.constraints
 
-    def test_locs_resource_area_capacity_per_loc_constraint(
+    def test_locs_area_use_capacity_per_loc_constraint(
         self, simple_supply_and_supply_plus
     ):
         """
@@ -899,7 +891,7 @@ class TestCapacityConstraints:
         if model_run.nodes[i].get_key('available_area', None) is not None
         """
         assert (
-            "resource_area_capacity_per_loc"
+            "area_use_capacity_per_loc"
             not in simple_supply_and_supply_plus.backend.constraints
         )
 
@@ -908,33 +900,33 @@ class TestCapacityConstraints:
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.build()
-        assert "resource_area_capacity_per_loc" not in m.backend.constraints
+        assert "area_use_capacity_per_loc" not in m.backend.constraints
 
         m = build_model(
             {
                 "nodes.a.available_area": 1,
-                "techs.test_supply_plus.constraints.resource_area_max": 10,
+                "techs.test_supply_plus.constraints.area_use_max": 10,
             },
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.build()
-        assert "resource_area_capacity_per_loc" in m.backend.constraints
+        assert "area_use_capacity_per_loc" in m.backend.constraints
 
-    def test_loc_techs_energy_capacity_constraint(self, simple_supply_and_supply_plus):
+    def test_loc_techs_flow_capacity_constraint(self, simple_supply_and_supply_plus):
         """
         i for i in sets.loc_techs
         if i not in sets.loc_techs_milp + sets.loc_techs_purchase
         """
         m2 = build_model(
-            {"techs.test_supply_elec.constraints.energy_cap_scale": 5},
+            {"techs.test_supply_elec.constraints.flow_cap_scale": 5},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m2.build()
         assert (
-            m2.backend.variables.energy_cap.sel(nodes="a", techs="test_supply_elec")
+            m2.backend.variables.flow_cap.sel(nodes="a", techs="test_supply_elec")
             .item()
             .ub
-            == simple_supply_and_supply_plus.backend.variables.energy_cap.sel(
+            == simple_supply_and_supply_plus.backend.variables.flow_cap.sel(
                 nodes="a", techs="test_supply_elec"
             )
             .item()
@@ -943,28 +935,28 @@ class TestCapacityConstraints:
         )
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_loc_techs_energy_capacity_milp_constraint(self):
+    def test_loc_techs_flow_capacity_milp_constraint(self):
         m = build_model(
             {}, "supply_milp,two_hours,investment_costs"
         )  # demand still is in loc_techs
         m.build()
         assert np.isinf(
-            m.backend.variables.energy_cap.sel(nodes="a", techs="test_demand_elec")
+            m.backend.variables.flow_cap.sel(nodes="a", techs="test_demand_elec")
             .item()
             .ub
         )
         assert (
-            m.backend.variables.energy_cap.sel(nodes="a", techs="test_supply_elec")
+            m.backend.variables.flow_cap.sel(nodes="a", techs="test_supply_elec")
             .item()
             .ub
             == 10
         )
 
     @pytest.mark.xfail(reason="This will be caught by typedconfig")
-    def test_loc_techs_energy_capacity_constraint_warning_on_infinite_equals(self):
+    def test_loc_techs_flow_capacity_constraint_warning_on_infinite_equals(self):
         # Check that setting `_equals` to infinity is caught:
         override = {
-            "nodes.a.techs.test_supply_elec.constraints.energy_cap_equals": np.inf
+            "nodes.a.techs.test_supply_elec.constraints.flow_cap_equals": np.inf
         }
         with pytest.raises(exceptions.ModelError) as error:
             m = build_model(override, "simple_supply,two_hours,investment_costs")
@@ -972,14 +964,14 @@ class TestCapacityConstraints:
 
         assert check_error_or_warning(
             error,
-            "Cannot use inf for energy_cap_equals for node, tech `('a', 'test_supply_elec')`",
+            "Cannot use inf for flow_cap_equals for node, tech `('a', 'test_supply_elec')`",
         )
 
     @pytest.mark.parametrize("bound", (("equals", "max")))
-    def test_techs_energy_capacity_systemwide_constraint(self, bound):
+    def test_techs_flow_capacity_systemwide_constraint(self, bound):
         """
         i for i in sets.techs
-        if model_run.get_key('techs.{}.constraints.energy_cap_max_systemwide'.format(i), None)
+        if model_run.get_key('techs.{}.constraints.flow_cap_max_systemwide'.format(i), None)
         """
 
         def check_bounds(constraint):
@@ -991,14 +983,14 @@ class TestCapacityConstraints:
 
         m = build_model(
             {
-                f"techs.test_supply_elec.constraints.energy_cap_{bound}_systemwide": 20
+                f"techs.test_supply_elec.constraints.flow_cap_{bound}_systemwide": 20
             },  # foo
             "simple_supply,two_hours,investment_costs",
         )
         m.build()
-        assert "energy_capacity_systemwide" in m.backend.constraints
+        assert "flow_capacity_systemwide" in m.backend.constraints
         assert isinstance(
-            m.backend.constraints.energy_capacity_systemwide.sel(
+            m.backend.constraints.flow_capacity_systemwide.sel(
                 techs="test_supply_elec"
             ).item(),
             pmo.constraint,
@@ -1006,99 +998,91 @@ class TestCapacityConstraints:
 
         check_bounds(
             m.backend.get_constraint(
-                "energy_capacity_systemwide", as_backend_objs=False
+                "flow_capacity_systemwide", as_backend_objs=False
             ).sel(techs="test_supply_elec")
         )
 
         # Check that a model without transmission techs doesn't cause an error
         m = build_model(
-            {f"techs.test_supply_elec.constraints.energy_cap_{bound}_systemwide": 20},
+            {f"techs.test_supply_elec.constraints.flow_cap_{bound}_systemwide": 20},
             "simple_supply,two_hours,investment_costs",
             model_file="model_minimal.yaml",
         )
         m.build()
-        assert "energy_capacity_systemwide" in m.backend.constraints
+        assert "flow_capacity_systemwide" in m.backend.constraints
         check_bounds(
             m.backend.get_constraint(
-                "energy_capacity_systemwide", as_backend_objs=False
+                "flow_capacity_systemwide", as_backend_objs=False
             ).sel(techs="test_supply_elec")
         )
 
     @pytest.mark.parametrize("bound", (("equals", "max")))
-    def test_techs_energy_capacity_systemwide_no_constraint(self, simple_supply, bound):
-        assert "energy_capacity_systemwide" not in simple_supply.backend.constraints
+    def test_techs_flow_capacity_systemwide_no_constraint(self, simple_supply, bound):
+        assert "flow_capacity_systemwide" not in simple_supply.backend.constraints
 
         # setting the constraint to infinity leads to no constraint being built
         m = build_model(
-            {
-                f"techs.test_supply_elec.constraints.energy_cap_{bound}_systemwide": np.inf
-            },
+            {f"techs.test_supply_elec.constraints.flow_cap_{bound}_systemwide": np.inf},
             "simple_supply,two_hours,investment_costs",
         )
         m.build()
-        assert "energy_capacity_systemwide" not in m.backend.constraints
+        assert "flow_capacity_systemwide" not in m.backend.constraints
 
 
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestDispatchConstraints:
     # dispatch.py
-    def test_loc_tech_carriers_carrier_production_max_constraint(self, simple_supply):
+    def test_loc_tech_carriers_flow_out_max_constraint(self, simple_supply):
         """
         i for i in sets.loc_tech_carriers_prod
         if i not in sets.loc_tech_carriers_conversion_plus
         and i.rsplit('::', 1)[0] not in sets.loc_techs_milp
         """
-        assert "carrier_production_max" in simple_supply.backend.constraints
+        assert "flow_out_max" in simple_supply.backend.constraints
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_loc_tech_carriers_carrier_production_max_milp_constraint(
-        self, supply_milp
-    ):
-        assert "carrier_production_max" not in supply_milp.backend.constraints
+    def test_loc_tech_carriers_flow_out_max_milp_constraint(self, supply_milp):
+        assert "flow_out_max" not in supply_milp.backend.constraints
 
-    def test_loc_tech_carriers_carrier_production_min_constraint(self, simple_supply):
+    def test_loc_tech_carriers_flow_out_min_constraint(self, simple_supply):
         """
         i for i in sets.loc_tech_carriers_prod
         if i not in sets.loc_tech_carriers_conversion_plus
-        and constraint_exists(model_run, i, 'constraints.energy_cap_min_use')
+        and constraint_exists(model_run, i, 'constraints.flow_out_min_relative')
         and i.rsplit('::', 1)[0] not in sets.loc_techs_milp
         """
-        assert "carrier_production_min" not in simple_supply.backend.constraints
+        assert "flow_out_min" not in simple_supply.backend.constraints
 
         m = build_model(
-            {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
+            {"techs.test_supply_elec.constraints.flow_out_min_relative": 0.1},
             "simple_supply,two_hours,investment_costs",
         )
         m.build()
-        assert "carrier_production_min" in m.backend.constraints
+        assert "flow_out_min" in m.backend.constraints
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_loc_tech_carriers_carrier_production_min_milp_constraint(
-        self, supply_milp
-    ):
-        assert "carrier_production_min" not in supply_milp.backend.constraints
+    def test_loc_tech_carriers_flow_out_min_milp_constraint(self, supply_milp):
+        assert "flow_out_min" not in supply_milp.backend.constraints
 
         m = build_model(
-            {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
+            {"techs.test_supply_elec.constraints.flow_out_min_relative": 0.1},
             "supply_milp,two_hours,investment_costs",
         )
         m.build()
-        assert "carrier_production_min" not in m.backend.constraints
+        assert "flow_out_min" not in m.backend.constraints
 
-    def test_loc_tech_carriers_carrier_consumption_max_constraint(self, simple_supply):
+    def test_loc_tech_carriers_flow_in_max_constraint(self, simple_supply):
         """
         i for i in sets.loc_tech_carriers_con
         if i.rsplit('::', 1)[0] in sets.loc_techs_demand +
             sets.loc_techs_storage + sets.loc_techs_transmission
         and i.rsplit('::', 1)[0] not in sets.loc_techs_milp
         """
-        assert "carrier_consumption_max" in simple_supply.backend.constraints
+        assert "flow_in_max" in simple_supply.backend.constraints
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    def test_loc_tech_carriers_carrier_consumption_max_milp_constraint(
-        self, supply_milp
-    ):
-        assert "carrier_consumption_max" in supply_milp.backend.constraints
+    def test_loc_tech_carriers_flow_in_max_milp_constraint(self, supply_milp):
+        assert "flow_in_max" in supply_milp.backend.constraints
 
     def test_loc_techs_resource_max_constraint(
         self, simple_supply, simple_supply_and_supply_plus
@@ -1175,7 +1159,7 @@ class TestMILPConstraints:
         assert "units" in supply_milp.backend.variables
         assert "units" not in supply_purchase.backend.variables
 
-    def test_loc_tech_carriers_carrier_production_max_milp_constraint(
+    def test_loc_tech_carriers_flow_out_max_milp_constraint(
         self, simple_supply, supply_milp, supply_purchase, conversion_plus_milp
     ):
         """
@@ -1183,16 +1167,13 @@ class TestMILPConstraints:
         if i not in sets.loc_tech_carriers_conversion_plus
         and i.rsplit('::', 1)[0] in sets.loc_techs_milp
         """
-        assert "carrier_production_max_milp" not in simple_supply.backend.constraints
-        assert "carrier_production_max_milp" in supply_milp.backend.constraints
+        assert "flow_out_max_milp" not in simple_supply.backend.constraints
+        assert "flow_out_max_milp" in supply_milp.backend.constraints
 
-        assert "carrier_production_max_milp" not in supply_purchase.backend.constraints
-        assert (
-            "carrier_production_max_milp"
-            not in conversion_plus_milp.backend.constraints
-        )
+        assert "flow_out_max_milp" not in supply_purchase.backend.constraints
+        assert "flow_out_max_milp" not in conversion_plus_milp.backend.constraints
 
-    def test_loc_techs_carrier_production_max_conversion_plus_milp_constraint(
+    def test_loc_techs_flow_out_max_conversion_plus_milp_constraint(
         self,
         simple_supply,
         supply_milp,
@@ -1206,118 +1187,108 @@ class TestMILPConstraints:
         """
 
         assert (
-            "carrier_production_max_conversion_plus_milp"
-            not in simple_supply.backend.constraints
+            "flow_out_max_conversion_plus_milp" not in simple_supply.backend.constraints
         )
         assert (
-            "carrier_production_max_conversion_plus_milp"
-            not in supply_milp.backend.constraints
+            "flow_out_max_conversion_plus_milp" not in supply_milp.backend.constraints
         )
         assert (
-            "carrier_production_max_conversion_plus_milp"
+            "flow_out_max_conversion_plus_milp"
             not in supply_purchase.backend.constraints
         )
         assert (
-            "carrier_production_max_conversion_plus_milp"
+            "flow_out_max_conversion_plus_milp"
             in conversion_plus_milp.backend.constraints
         )
         assert (
-            "carrier_production_max_conversion_plus_milp"
+            "flow_out_max_conversion_plus_milp"
             not in conversion_plus_purchase.backend.constraints
         )
 
-    def test_loc_tech_carriers_carrier_production_min_milp_constraint(self):
+    def test_loc_tech_carriers_flow_out_min_milp_constraint(self):
         """
         i for i in sets.loc_tech_carriers_prod
         if i not in sets.loc_tech_carriers_conversion_plus
-        and constraint_exists(model_run, i.rsplit('::', 1)[0], 'constraints.energy_cap_min_use')
+        and constraint_exists(model_run, i.rsplit('::', 1)[0], 'constraints.flow_out_min_relative')
         and i.rsplit('::', 1)[0] in sets.loc_techs_milp
         """
         m = build_model(
-            {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
+            {"techs.test_supply_elec.constraints.flow_out_min_relative": 0.1},
             "simple_supply,two_hours,investment_costs",
         )
         m.build()
-        assert "carrier_production_min_milp" not in m.backend.constraints
+        assert "flow_out_min_milp" not in m.backend.constraints
 
         m = build_model(
-            {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
+            {"techs.test_supply_elec.constraints.flow_out_min_relative": 0.1},
             "supply_milp,two_hours,investment_costs",
         )
         m.build()
-        assert "carrier_production_min_milp" in m.backend.constraints
+        assert "flow_out_min_milp" in m.backend.constraints
 
         m = build_model(
-            {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
+            {"techs.test_supply_elec.constraints.flow_out_min_relative": 0.1},
             "supply_purchase,two_hours,investment_costs",
         )
         m.build()
-        assert "carrier_production_min_milp" not in m.backend.constraints
+        assert "flow_out_min_milp" not in m.backend.constraints
 
         m = build_model(
-            {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
+            {"techs.test_supply_elec.constraints.flow_out_min_relative": 0.1},
             "conversion_plus_milp,two_hours,investment_costs",
         )
         m.build()
-        assert "carrier_production_min_milp" not in m.backend.constraints
+        assert "flow_out_min_milp" not in m.backend.constraints
 
         m = build_model(
-            {"techs.test_conversion_plus.constraints.energy_cap_min_use": 0.1},
+            {"techs.test_conversion_plus.constraints.flow_out_min_relative": 0.1},
             "conversion_plus_milp,two_hours,investment_costs",
         )
         m.build()
-        assert "carrier_production_min_milp" not in m.backend.constraints
+        assert "flow_out_min_milp" not in m.backend.constraints
 
-    def test_loc_techs_carrier_production_min_conversion_plus_milp_constraint(self):
+    def test_loc_techs_flow_out_min_conversion_plus_milp_constraint(self):
         """
         i for i in sets.loc_techs_conversion_plus
-        if constraint_exists(model_run, i, 'constraints.energy_cap_min_use')
+        if constraint_exists(model_run, i, 'constraints.flow_out_min_relative')
         and i in sets.loc_techs_milp
         """
         m = build_model(
-            {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
+            {"techs.test_supply_elec.constraints.flow_out_min_relative": 0.1},
             "simple_supply,two_hours,investment_costs",
         )
         m.build()
-        assert (
-            "carrier_production_min_conversion_plus_milp" not in m.backend.constraints
-        )
+        assert "flow_out_min_conversion_plus_milp" not in m.backend.constraints
 
         m = build_model(
-            {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
+            {"techs.test_supply_elec.constraints.flow_out_min_relative": 0.1},
             "supply_milp,two_hours,investment_costs",
         )
         m.build()
-        assert (
-            "carrier_production_min_conversion_plus_milp" not in m.backend.constraints
-        )
+        assert "flow_out_min_conversion_plus_milp" not in m.backend.constraints
 
         m = build_model(
-            {"techs.test_supply_elec.constraints.energy_cap_min_use": 0.1},
+            {"techs.test_supply_elec.constraints.flow_out_min_relative": 0.1},
             "conversion_plus_milp,two_hours,investment_costs",
         )
         m.build()
-        assert (
-            "carrier_production_min_conversion_plus_milp" not in m.backend.constraints
-        )
+        assert "flow_out_min_conversion_plus_milp" not in m.backend.constraints
 
         m = build_model(
-            {"techs.test_conversion_plus.constraints.energy_cap_min_use": 0.1},
+            {"techs.test_conversion_plus.constraints.flow_out_min_relative": 0.1},
             "conversion_plus_milp,two_hours,investment_costs",
         )
         m.build()
-        assert "carrier_production_min_conversion_plus_milp" in m.backend.constraints
+        assert "flow_out_min_conversion_plus_milp" in m.backend.constraints
 
         m = build_model(
-            {"techs.test_conversion_plus.constraints.energy_cap_min_use": 0.1},
+            {"techs.test_conversion_plus.constraints.flow_out_min_relative": 0.1},
             "conversion_plus_purchase,two_hours,investment_costs",
         )
         m.build()
-        assert (
-            "carrier_production_min_conversion_plus_milp" not in m.backend.constraints
-        )
+        assert "flow_out_min_conversion_plus_milp" not in m.backend.constraints
 
-    def test_loc_tech_carriers_carrier_consumption_max_milp_constraint(
+    def test_loc_tech_carriers_flow_in_max_milp_constraint(
         self, simple_supply, supply_milp, storage_milp, conversion_plus_milp
     ):
         """
@@ -1326,26 +1297,23 @@ class TestMILPConstraints:
             sets.loc_techs_storage + sets.loc_techs_transmission
         and i.rsplit('::', 1)[0] in sets.loc_techs_milp
         """
-        assert "carrier_consumption_max_milp" not in simple_supply.backend.constraints
-        assert "carrier_consumption_max_milp" not in supply_milp.backend.constraints
-        assert "carrier_consumption_max_milp" in storage_milp.backend.constraints
-        assert (
-            "carrier_consumption_max_milp"
-            not in conversion_plus_milp.backend.constraints
-        )
+        assert "flow_in_max_milp" not in simple_supply.backend.constraints
+        assert "flow_in_max_milp" not in supply_milp.backend.constraints
+        assert "flow_in_max_milp" in storage_milp.backend.constraints
+        assert "flow_in_max_milp" not in conversion_plus_milp.backend.constraints
 
-    def test_loc_techs_energy_capacity_units_milp_constraint(
+    def test_loc_techs_flow_capacity_units_milp_constraint(
         self, simple_supply, supply_milp, storage_milp, conversion_plus_milp
     ):
         """
         i for i in sets.loc_techs_milp
-        if constraint_exists(model_run, i, 'constraints.energy_cap_per_unit')
+        if constraint_exists(model_run, i, 'constraints.flow_cap_per_unit')
         is not None
         """
-        assert "energy_capacity_units_milp" not in simple_supply.backend.constraints
-        assert "energy_capacity_units_milp" in supply_milp.backend.constraints
-        assert "energy_capacity_units_milp" in storage_milp.backend.constraints
-        assert "energy_capacity_units_milp" in conversion_plus_milp.backend.constraints
+        assert "flow_capacity_units_milp" not in simple_supply.backend.constraints
+        assert "flow_capacity_units_milp" in supply_milp.backend.constraints
+        assert "flow_capacity_units_milp" in storage_milp.backend.constraints
+        assert "flow_capacity_units_milp" in conversion_plus_milp.backend.constraints
 
     def test_loc_techs_storage_capacity_units_milp_constraint(
         self,
@@ -1370,73 +1338,66 @@ class TestMILPConstraints:
             in supply_and_supply_plus_milp.backend.constraints
         )
 
-    def test_loc_techs_energy_capacity_max_purchase_milp_constraint(
+    def test_loc_techs_flow_capacity_max_purchase_milp_constraint(
         self, simple_supply, supply_milp, supply_purchase
     ):
         """
         i for i in sets.loc_techs_purchase
-        if (constraint_exists(model_run, i, 'constraints.energy_cap_equals') is not None
-            or constraint_exists(model_run, i, 'constraints.energy_cap_max') is not None)
+        if (constraint_exists(model_run, i, 'constraints.flow_cap_equals') is not None
+            or constraint_exists(model_run, i, 'constraints.flow_cap_max') is not None)
         """
         assert (
-            "energy_capacity_max_purchase_milp" not in simple_supply.backend.constraints
+            "flow_capacity_max_purchase_milp" not in simple_supply.backend.constraints
         )
-        assert (
-            "energy_capacity_max_purchase_milp" not in supply_milp.backend.constraints
-        )
-        assert (
-            "energy_capacity_max_purchase_milp" in supply_purchase.backend.constraints
-        )
+        assert "flow_capacity_max_purchase_milp" not in supply_milp.backend.constraints
+        assert "flow_capacity_max_purchase_milp" in supply_purchase.backend.constraints
 
         m = build_model(
             {
                 "techs.test_supply_elec.constraints": {
-                    "energy_cap_max": None,
-                    "energy_cap_equals": 15,
+                    "flow_cap_max": None,
+                    "flow_cap_equals": 15,
                 }
             },
             "supply_purchase,two_hours,investment_costs",
         )
         m.build()
-        assert "energy_capacity_max_purchase_milp" in m.backend.constraints
+        assert "flow_capacity_max_purchase_milp" in m.backend.constraints
 
-    def test_loc_techs_energy_capacity_min_purchase_milp_constraint(
+    def test_loc_techs_flow_capacity_min_purchase_milp_constraint(
         self, simple_supply, supply_milp, supply_purchase
     ):
         """
         i for i in sets.loc_techs_purchase
-        if (not constraint_exists(model_run, i, 'constraints.energy_cap_equals')
-            and constraint_exists(model_run, i, 'constraints.energy_cap_min'))
+        if (not constraint_exists(model_run, i, 'constraints.flow_cap_equals')
+            and constraint_exists(model_run, i, 'constraints.flow_cap_min'))
         """
         assert (
-            "energy_capacity_min_purchase_milp" not in simple_supply.backend.constraints
+            "flow_capacity_min_purchase_milp" not in simple_supply.backend.constraints
         )
+        assert "flow_capacity_min_purchase_milp" not in supply_milp.backend.constraints
         assert (
-            "energy_capacity_min_purchase_milp" not in supply_milp.backend.constraints
-        )
-        assert (
-            "energy_capacity_min_purchase_milp"
-            not in supply_purchase.backend.constraints
+            "flow_capacity_min_purchase_milp" not in supply_purchase.backend.constraints
         )
 
         m = build_model(
             {
                 "techs.test_supply_elec.constraints": {
-                    "energy_cap_max": None,
-                    "energy_cap_equals": 15,
+                    "flow_cap_max": None,
+                    "flow_cap_equals": 15,
                 }
             },
             "supply_purchase,two_hours,investment_costs",
         )
         m.build()
-        assert "energy_capacity_min_purchase_milp" not in m.backend.constraints
+        assert "flow_capacity_min_purchase_milp" not in m.backend.constraints
 
         m = build_model(
-            {"techs.test_supply_elec.constraints.energy_cap_min": 10},
+            {"techs.test_supply_elec.constraints.flow_cap_min": 10},
             "supply_purchase,two_hours,investment_costs",
         )
         m.build()
-        assert "energy_capacity_min_purchase_milp" in m.backend.constraints
+        assert "flow_capacity_min_purchase_milp" in m.backend.constraints
 
     def test_loc_techs_storage_capacity_max_purchase_milp_constraint(
         self, simple_storage, storage_milp, storage_purchase, supply_purchase
@@ -1466,7 +1427,7 @@ class TestMILPConstraints:
         i for i in set(sets.loc_techs_purchase).intersection(sets.loc_techs_store)
         if (not constraint_exists(model_run, i, 'constraints.storage_cap_equals')
             and (constraint_exists(model_run, i, 'constraints.storage_cap_min')
-                or constraint_exists(model_run, i, 'constraints.energy_cap_min')))
+                or constraint_exists(model_run, i, 'constraints.flow_cap_min')))
         """
         m = build_model(
             {"techs.test_storage.constraints.storage_cap_min": 10},
@@ -1562,7 +1523,7 @@ class TestMILPConstraints:
             "techs.test_conversion_plus.constraints.units_max_systemwide": 2,
             "nodes.b.techs.test_conversion_plus.constraints": {
                 "units_max": 2,
-                "energy_cap_per_unit": 5,
+                "flow_cap_per_unit": 5,
             },
         }
         m = build_model(override_max, "conversion_plus_milp,two_hours,investment_costs")
@@ -1656,19 +1617,19 @@ class TestMILPConstraints:
         assert "unit_capacity_systemwide_milp" in m.backend.constraints
 
     @pytest.mark.parametrize("tech", (("test_storage"), ("test_transmission_elec")))
-    def test_asynchronous_prod_con_constraint(self, tech):
+    def test_asynchronous_flow_constraint(self, tech):
         """
-        Binary switch for prod/con can be activated using the option
-        'asynchronous_prod_con'
+        Binary switch for flow in/out can be activated using the option
+        'asynchronous_flow'
         """
         m = build_model(
-            {f"techs.{tech}.constraints.force_asynchronous_prod_con": True},
+            {f"techs.{tech}.constraints.force_asynchronous_flow": True},
             "simple_storage,investment_costs",
         )
         m.build()
-        assert "prod_con_switch" in m.backend.variables
-        assert "asynchronous_con_milp" in m.backend.constraints
-        assert "asynchronous_prod_milp" in m.backend.constraints
+        assert "flow_switch" in m.backend.variables
+        assert "asynchronous_flow_in_milp" in m.backend.constraints
+        assert "asynchronous_flow_out_milp" in m.backend.constraints
 
 
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
@@ -1827,15 +1788,15 @@ class TestNewBackend:
             getattr(simple_supply.backend, f"get_{component_type}")("foo")
 
     def test_new_build_get_variable(self, simple_supply):
-        var = simple_supply.backend.get_variable("energy_cap")
+        var = simple_supply.backend.get_variable("flow_cap")
         assert (
             var.to_series().dropna().apply(lambda x: isinstance(x, pmo.variable)).all()
         )
         assert var.attrs == {
             "obj_type": "variables",
             "references": {
-                "carrier_consumption_max",
-                "carrier_production_max",
+                "flow_in_max",
+                "flow_out_max",
                 "cost_investment",
                 "symmetric_transmission",
             },
@@ -1845,7 +1806,7 @@ class TestNewBackend:
         }
 
     def test_new_build_get_variable_as_vals(self, simple_supply):
-        var = simple_supply.backend.get_variable("energy_cap", as_backend_objs=False)
+        var = simple_supply.backend.get_variable("flow_cap", as_backend_objs=False)
         assert (
             not var.to_series()
             .dropna()
@@ -1985,8 +1946,8 @@ class TestNewBackend:
 
     def test_solve_non_optimal(self, simple_supply):
         simple_supply.backend.update_parameter(
-            "resource",
-            simple_supply.inputs.resource.where(
+            "sink",
+            simple_supply.inputs.sink.where(
                 simple_supply.inputs.techs == "test_demand_elec"
             )
             * 1000,
@@ -1997,7 +1958,7 @@ class TestNewBackend:
         assert check_error_or_warning(excinfo, "Model solution was non-optimal")
         assert simple_supply._model_data.attrs["termination_condition"] == "infeasible"
         assert not simple_supply.results
-        assert "energy_cap" not in simple_supply._model_data.data_vars
+        assert "flow_cap" not in simple_supply._model_data.data_vars
 
     def test_raise_error_on_preexistence_same_type(self, simple_supply):
         with pytest.raises(exceptions.BackendError) as excinfo:
@@ -2010,26 +1971,26 @@ class TestNewBackend:
 
     def test_raise_error_on_preexistence_diff_type(self, simple_supply):
         with pytest.raises(exceptions.BackendError) as excinfo:
-            simple_supply.backend.add_parameter("carrier_prod", xr.DataArray(1))
+            simple_supply.backend.add_parameter("flow_out", xr.DataArray(1))
 
         assert check_error_or_warning(
             excinfo,
-            "Trying to add already existing *variable* `carrier_prod` as a backend model *parameter*.",
+            "Trying to add already existing *variable* `flow_out` as a backend model *parameter*.",
         )
 
     def test_raise_error_on_constraint_with_nan(self, simple_supply):
         """
-        A very simple constraint: For each tech, let the annual and regional sum of `carrier_prod` be larger than 100.
-        However, not every tech has the variable `carrier_prod`.
-        How to solve it? Let the constraint be active only where carrier_prod exists by setting 'where' accordingly.
+        A very simple constraint: For each tech, let the annual and regional sum of `flow_out` be larger than 100.
+        However, not every tech has the variable `flow_out`.
+        How to solve it? Let the constraint be active only where flow_out exists by setting 'where' accordingly.
         """
         # add constraint without nan
         constraint_dict = {
             "foreach": ["techs", "carriers"],
             "equations": [
-                {"expression": "sum(carrier_prod, over=[nodes, timesteps]) >= 100"}
+                {"expression": "sum(flow_out, over=[nodes, timesteps]) >= 100"}
             ],
-            "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
+            "where": "carrier AND allowed_flow_out=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
         }
         constraint_name = "constraint-without-nan"
 
@@ -2047,9 +2008,9 @@ class TestNewBackend:
         constraint_dict = {
             "foreach": ["techs", "carriers"],
             "equations": [
-                {"expression": "sum(carrier_prod, over=[nodes, timesteps]) >= 100"}
+                {"expression": "sum(flow_out, over=[nodes, timesteps]) >= 100"}
             ],
-            # "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
+            # "where": "carrier AND allowed_flow_out=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
         }
         constraint_name = "constraint-with-nan"
 
@@ -2066,15 +2027,15 @@ class TestNewBackend:
 
     def test_raise_error_on_expression_with_nan(self, simple_supply):
         """
-        A very simple expression: The annual and regional sum of `carrier_prod` for each tech.
-        However, not every tech has the variable `carrier_prod`.
-        How to solve it? Let the constraint be active only where carrier_prod exists by setting 'where' accordingly.
+        A very simple expression: The annual and regional sum of `flow_out` for each tech.
+        However, not every tech has the variable `flow_out`.
+        How to solve it? Let the constraint be active only where flow_out exists by setting 'where' accordingly.
         """
         # add expression without nan
         expression_dict = {
             "foreach": ["techs", "carriers"],
-            "equations": [{"expression": "sum(carrier_prod, over=[nodes, timesteps])"}],
-            "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
+            "equations": [{"expression": "sum(flow_out, over=[nodes, timesteps])"}],
+            "where": "carrier AND allowed_flow_out=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
         }
         expression_name = "expression-without-nan"
 
@@ -2091,8 +2052,8 @@ class TestNewBackend:
 
         expression_dict = {
             "foreach": ["techs", "carriers"],
-            "equations": [{"expression": "sum(carrier_prod, over=[nodes, timesteps])"}],
-            # "where": "carrier AND allowed_carrier_prod=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
+            "equations": [{"expression": "sum(flow_out, over=[nodes, timesteps])"}],
+            # "where": "carrier AND allowed_flow_out=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
         }
         expression_name = "expression-with-nan"
 
@@ -2109,7 +2070,7 @@ class TestNewBackend:
 
     def test_raise_error_on_excess_dimensions(self, simple_supply):
         """
-        A very simple constraint: For each tech, let the `energy_cap` be larger than 100.
+        A very simple constraint: For each tech, let the `flow_cap` be larger than 100.
         However, we forgot to include `nodes` in `foreach`.
         With `nodes` included, this constraint should build.
         """
@@ -2119,7 +2080,7 @@ class TestNewBackend:
                 "techs",
                 "nodes",
             ],  # as 'nodes' is listed here, the constraint will have no excess dimensions
-            "equations": [{"expression": "energy_cap >= 100"}],
+            "equations": [{"expression": "flow_cap >= 100"}],
         }
         constraint_name = "constraint-without-excess-dimensions"
 
@@ -2138,7 +2099,7 @@ class TestNewBackend:
             "foreach": [
                 "techs"
             ],  # as 'nodes' is not listed here, the constraint will have excess dimensions
-            "equations": [{"expression": "energy_cap >= 100"}],
+            "equations": [{"expression": "flow_cap >= 100"}],
         }
         constraint_name = "constraint-with-excess-dimensions"
 
@@ -2176,7 +2137,7 @@ class TestNewBackend:
 
     @pytest.mark.parametrize(
         ["component", "eq"],
-        [("global_expressions", "energy_cap + 1"), ("constraints", "energy_cap >= 1")],
+        [("global_expressions", "flow_cap + 1"), ("constraints", "flow_cap >= 1")],
     )
     def test_add_allnull_expr_or_constr(self, simple_supply, component, eq):
         adder = getattr(simple_supply.backend, "add_" + component.removesuffix("s"))
@@ -2199,7 +2160,7 @@ class TestNewBackend:
         del simple_supply.backend._dataset["foo"]
 
     def test_add_allnull_param_with_shape(self, simple_supply):
-        nan_array = simple_supply._model_data.energy_cap_max.where(lambda x: x < 0)
+        nan_array = simple_supply._model_data.flow_cap_max.where(lambda x: x < 0)
         simple_supply.backend.add_parameter("foo", nan_array)
 
         assert "foo" not in simple_supply.backend._instance.parameters.keys()
@@ -2244,7 +2205,7 @@ class TestNewBackend:
 
     def test_object_string_representation(self, simple_supply):
         assert (
-            simple_supply.backend.variables.carrier_prod.sel(
+            simple_supply.backend.variables.flow_out.sel(
                 nodes="a",
                 techs="test_supply_elec",
                 carriers="electricity",
@@ -2252,15 +2213,15 @@ class TestNewBackend:
             )
             .item()
             .name
-            == "variables[carrier_prod][0]"
+            == "variables[flow_out][0]"
         )
-        assert not simple_supply.backend.variables.carrier_prod.coords_in_name
+        assert not simple_supply.backend.variables.flow_out.coords_in_name
 
     @pytest.mark.parametrize(
         ["objname", "dims", "objtype"],
         [
             (
-                "carrier_prod",
+                "flow_out",
                 {
                     "nodes": "a",
                     "techs": "test_supply_elec",
@@ -2296,7 +2257,7 @@ class TestNewBackend:
         )
         assert (
             obj.sel(dims).body.item()
-            == f"parameters[energy_eff][{energy_eff_dims}]*variables[carrier_con][{', '.join(dims[i] for i in obj.dims)}]"
+            == f"parameters[energy_eff][{energy_eff_dims}]*variables[flow_in][{', '.join(dims[i] for i in obj.dims)}]"
         )
         assert not obj.coords_in_name
 
@@ -2311,7 +2272,7 @@ class TestNewBackend:
             "cost_investment", as_backend_objs=False
         )
 
-        assert "variables[energy_cap][a, test_supply_elec]" in obj.sel(dims).item()
+        assert "variables[flow_cap][a, test_supply_elec]" in obj.sel(dims).item()
         assert "parameters[annualisation_weight]" in obj.sel(dims).item()
 
         assert not obj.coords_in_name
@@ -2382,8 +2343,8 @@ class TestNewBackend:
         """parasitic_eff isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value"""
         updated_param = simple_supply.inputs.energy_eff
 
-        refs_to_update = {"carrier_production_max"}
-        caplog.set_level(logging.WARNING)
+        refs_to_update = {"flow_out_max"}
+        caplog.set_level(logging.DEBUG)
 
         simple_supply.backend.update_parameter("parasitic_eff", updated_param)
 
@@ -2417,37 +2378,36 @@ class TestNewBackend:
     def test_update_variable_single_bound_single_val(self, simple_supply, bound):
         translator = {"min": "lb", "max": "ub"}
 
-        simple_supply.backend.update_variable_bounds("carrier_prod", **{bound: 1})
+        simple_supply.backend.update_variable_bounds("flow_out", **{bound: 1})
 
-        bound_vals = simple_supply.backend.get_variable_bounds("carrier_prod")[
+        bound_vals = simple_supply.backend.get_variable_bounds("flow_out")[
             translator[bound]
         ]
 
         assert (bound_vals == 1).where(bound_vals.notnull()).all()
 
     def test_update_variable_bounds_single_val(self, simple_supply):
-        simple_supply.backend.update_variable_bounds("carrier_prod", min=2, max=2)
-        bound_vals = simple_supply.backend.get_variable_bounds("carrier_prod")
+        simple_supply.backend.update_variable_bounds("flow_out", min=2, max=2)
+        bound_vals = simple_supply.backend.get_variable_bounds("flow_out")
         assert (bound_vals == 2).where(bound_vals.notnull()).all().all()
 
     def test_update_variable_single_bound_multi_val(self, caplog, simple_supply):
-        bound_array = simple_supply.inputs.resource.sel(techs="test_demand_elec")
-        simple_supply.backend.update_variable_bounds("carrier_con", min=bound_array)
-        bound_vals = simple_supply.backend.get_variable_bounds("carrier_con").lb
-        assert (
-            "New `min` bounds for variable `carrier_con` will be broadcast"
-            in caplog.text
-        )
+        caplog.set_level(logging.INFO)
+        bound_array = simple_supply.inputs.sink.sel(techs="test_demand_elec")
+        simple_supply.backend.update_variable_bounds("flow_in", min=bound_array)
+        bound_vals = simple_supply.backend.get_variable_bounds("flow_in").lb
+        assert "New `min` bounds will be broadcast" in caplog.text
         assert bound_vals.equals(
             bound_array.where(bound_vals.notnull()).transpose(*bound_vals.dims)
         )
 
     def test_update_variable_error_update_parameter_instead(self, simple_supply):
         with pytest.raises(exceptions.BackendError) as excinfo:
-            simple_supply.backend.update_variable_bounds("energy_cap", min=1)
+            simple_supply.backend.update_variable_bounds("flow_cap", min=1)
         assert check_error_or_warning(
             excinfo,
-            "Cannot update variable bounds that have been set by parameters. use `update_parameter('energy_cap_min')` to update the min bound of energy_cap",
+            "Cannot update variable bounds that have been set by parameters."
+            " Use `update_parameter('flow_cap_min')` to update the min bound of flow_cap.",
         )
 
     @staticmethod
@@ -2456,26 +2416,26 @@ class TestNewBackend:
             return val.fixed
 
     def test_fix_variable(self, simple_supply):
-        simple_supply.backend.fix_variable("energy_cap")
+        simple_supply.backend.fix_variable("flow_cap")
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.energy_cap
+            self._is_fixed, simple_supply.backend.variables.flow_cap
         )
-        simple_supply.backend.unfix_variable("energy_cap")  # reset
+        simple_supply.backend.unfix_variable("flow_cap")  # reset
         assert fixed.where(fixed.notnull()).all()
 
     def test_fix_variable_where(self, simple_supply):
-        where = simple_supply.inputs.energy_cap_max.notnull()
-        simple_supply.backend.fix_variable("energy_cap", where=where)
+        where = simple_supply.inputs.flow_cap_max.notnull()
+        simple_supply.backend.fix_variable("flow_cap", where=where)
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.energy_cap
+            self._is_fixed, simple_supply.backend.variables.flow_cap
         )
-        simple_supply.backend.unfix_variable("energy_cap")  # reset
+        simple_supply.backend.unfix_variable("flow_cap")  # reset
         assert not fixed.sel(techs="test_demand_elec").any()
         assert fixed.where(where).all()
 
     def test_fix_variable_before_solve(self, simple_supply_longnames):
         with pytest.raises(exceptions.BackendError) as excinfo:
-            simple_supply_longnames.backend.fix_variable("energy_cap")
+            simple_supply_longnames.backend.fix_variable("flow_cap")
 
         assert check_error_or_warning(
             excinfo,
@@ -2483,20 +2443,20 @@ class TestNewBackend:
         )
 
     def test_unfix_variable(self, simple_supply):
-        simple_supply.backend.fix_variable("energy_cap")
-        simple_supply.backend.unfix_variable("energy_cap")
+        simple_supply.backend.fix_variable("flow_cap")
+        simple_supply.backend.unfix_variable("flow_cap")
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.energy_cap
+            self._is_fixed, simple_supply.backend.variables.flow_cap
         )
         assert not fixed.where(fixed.notnull()).all()
 
     def test_unfix_variable_where(self, simple_supply):
-        where = simple_supply.inputs.energy_cap_max.notnull()
-        simple_supply.backend.fix_variable("energy_cap")
-        simple_supply.backend.unfix_variable("energy_cap", where=where)
+        where = simple_supply.inputs.flow_cap_max.notnull()
+        simple_supply.backend.fix_variable("flow_cap")
+        simple_supply.backend.unfix_variable("flow_cap", where=where)
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.energy_cap
+            self._is_fixed, simple_supply.backend.variables.flow_cap
         )
-        simple_supply.backend.unfix_variable("energy_cap")  # reset
+        simple_supply.backend.unfix_variable("flow_cap")  # reset
         assert fixed.sel(techs="test_demand_elec").all()
         assert not fixed.where(where).all()

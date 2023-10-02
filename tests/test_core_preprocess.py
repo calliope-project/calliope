@@ -53,9 +53,9 @@ class TestModelRun:
 
             overrides:
                 one:
-                    techs.test_supply_gas.constraints.energy_cap_max: 20
+                    techs.test_supply_gas.constraints.flow_cap_max: 20
                 two:
-                    techs.test_supply_elec.constraints.energy_cap_max: 20
+                    techs.test_supply_elec.constraints.flow_cap_max: 20
 
             nodes:
                 a:
@@ -68,13 +68,11 @@ class TestModelRun:
         model = build_model(override_dict=override, scenario="scenario_1")
 
         assert (
-            model._model_run.nodes["a"].techs.test_supply_gas.constraints.energy_cap_max
+            model._model_run.nodes["a"].techs.test_supply_gas.constraints.flow_cap_max
             == 20
         )
         assert (
-            model._model_run.nodes[
-                "a"
-            ].techs.test_supply_elec.constraints.energy_cap_max
+            model._model_run.nodes["a"].techs.test_supply_elec.constraints.flow_cap_max
             == 20
         )
 
@@ -94,9 +92,9 @@ class TestModelRun:
 
             overrides:
                 one:
-                    techs.test_supply_gas.constraints.energy_cap_max: 20
+                    techs.test_supply_gas.constraints.flow_cap_max: 20
                 two:
-                    techs.test_supply_elec.constraints.energy_cap_max: 20
+                    techs.test_supply_elec.constraints.flow_cap_max: 20
                 new_location:
                     nodes.b.techs:
                         test_supply_elec:
@@ -112,13 +110,11 @@ class TestModelRun:
         model = build_model(override_dict=override, scenario="scenario_2")
 
         assert (
-            model._model_run.nodes["a"].techs.test_supply_gas.constraints.energy_cap_max
+            model._model_run.nodes["a"].techs.test_supply_gas.constraints.flow_cap_max
             == 20
         )
         assert (
-            model._model_run.nodes[
-                "b"
-            ].techs.test_supply_elec.constraints.energy_cap_max
+            model._model_run.nodes["b"].techs.test_supply_elec.constraints.flow_cap_max
             == 20
         )
 
@@ -192,8 +188,8 @@ class TestModelRun:
                         parent: supply
                         name: test
                     constraints:
-                        resource: .inf
-                        energy_cap_max: .inf
+                        source: .inf
+                        flow_cap_max: .inf
             nodes.1.techs.test_undefined_carrier:
             """
         )
@@ -299,8 +295,8 @@ class TestModelRun:
         # should pass: changing datetime format from default
         override1 = {
             "model.timeseries_dateformat": "%d/%m/%Y %H:%M:%S",
-            "techs.test_demand_heat.constraints.resource": "file=demand_heat_diff_dateformat.csv",
-            "techs.test_demand_elec.constraints.resource": "file=demand_heat_diff_dateformat.csv",
+            "techs.test_demand_heat.constraints.sink": "file=demand_heat_diff_dateformat.csv",
+            "techs.test_demand_elec.constraints.sink": "file=demand_heat_diff_dateformat.csv",
         }
         model = build_model(override_dict=override1, scenario="simple_conversion")
         assert all(
@@ -310,7 +306,7 @@ class TestModelRun:
 
         # should fail: wrong dateformat input for one file
         override2 = {
-            "techs.test_demand_heat.constraints.resource": "file=demand_heat_diff_dateformat.csv"
+            "techs.test_demand_heat.constraints.sink": "file=demand_heat_diff_dateformat.csv"
         }
 
         with pytest.raises(exceptions.ModelError):
@@ -324,7 +320,7 @@ class TestModelRun:
 
         # should fail: one value wrong in file
         override4 = {
-            "techs.test_demand_heat.constraints.resource": "file=demand_heat_wrong_dateformat.csv"
+            "techs.test_demand_heat.constraints.sink": "file=demand_heat_wrong_dateformat.csv"
         }
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
@@ -337,7 +333,7 @@ class TestModelRun:
         """
         # should fail: wrong length of demand_heat csv vs demand_elec
         override1 = {
-            "techs.test_demand_heat.constraints.resource": "file=demand_heat_wrong_length.csv"
+            "techs.test_demand_heat.constraints.sink": "file=demand_heat_wrong_length.csv"
         }
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
@@ -380,8 +376,8 @@ class TestModelRun:
         exploded location
         """
         override = {
-            "nodes.a.techs.test_supply_elec.constraints.resource": 10,
-            "nodes.a,b.techs.test_supply_elec.constraints.resource": 15,
+            "nodes.a.techs.test_supply_elec.constraints.source": 10,
+            "nodes.a,b.techs.test_supply_elec.constraints.source": 15,
         }
 
         with pytest.raises(KeyError):
@@ -395,7 +391,7 @@ class TestModelRun:
         we want to avoid that too.
         """
 
-        override1 = {"techs.test_supply_elec.costs.monetary.energy_cap": 10}
+        override1 = {"techs.test_supply_elec.costs.monetary.flow_cap": 10}
         with pytest.raises(exceptions.ModelError) as error:
             build_model(override_dict=override1, scenario="simple_supply,one_day")
         assert check_error_or_warning(
@@ -404,7 +400,7 @@ class TestModelRun:
 
         override2 = {
             "techs.test_supply_elec.constraints.lifetime": 10,
-            "techs.test_supply_elec.costs.monetary.energy_cap": 10,
+            "techs.test_supply_elec.costs.monetary.flow_cap": 10,
         }
         with pytest.raises(exceptions.ModelError) as error:
             build_model(override_dict=override2, scenario="simple_supply,one_day")
@@ -414,7 +410,7 @@ class TestModelRun:
 
         override3 = {
             "techs.test_supply_elec.costs.monetary.interest_rate": 0.1,
-            "techs.test_supply_elec.costs.monetary.energy_cap": 10,
+            "techs.test_supply_elec.costs.monetary.flow_cap": 10,
         }
         with pytest.raises(exceptions.ModelError) as error:
             build_model(override_dict=override3, scenario="simple_supply,one_day")
@@ -425,7 +421,7 @@ class TestModelRun:
         override4 = {
             "techs.test_supply_elec.constraints.lifetime": 10,
             "techs.test_supply_elec.costs.monetary.interest_rate": 0,
-            "techs.test_supply_elec.costs.monetary.energy_cap": 10,
+            "techs.test_supply_elec.costs.monetary.flow_cap": 10,
         }
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             build_model(override_dict=override4, scenario="simple_supply,one_day")
@@ -434,7 +430,7 @@ class TestModelRun:
         override5 = {
             "techs.test_supply_elec.constraints.lifetime": np.inf,
             "techs.test_supply_elec.costs.monetary.interest_rate": 0,
-            "techs.test_supply_elec.costs.monetary.energy_cap": 10,
+            "techs.test_supply_elec.costs.monetary.flow_cap": 10,
         }
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             build_model(override_dict=override5, scenario="simple_supply,one_day")
@@ -446,7 +442,7 @@ class TestModelRun:
         override6 = {
             "techs.test_supply_elec.constraints.lifetime": np.inf,
             "techs.test_supply_elec.costs.monetary.interest_rate": 0.1,
-            "techs.test_supply_elec.costs.monetary.energy_cap": 10,
+            "techs.test_supply_elec.costs.monetary.flow_cap": 10,
         }
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             build_model(override_dict=override6, scenario="simple_supply,one_day")
@@ -458,7 +454,7 @@ class TestModelRun:
         override7 = {
             "techs.test_supply_elec.constraints.lifetime": 10,
             "techs.test_supply_elec.costs.monetary.interest_rate": 0.1,
-            "techs.test_supply_elec.costs.monetary.energy_cap": 10,
+            "techs.test_supply_elec.costs.monetary.flow_cap": 10,
         }
         build_model(override_dict=override7, scenario="simple_supply,one_day")
 
@@ -507,7 +503,7 @@ class TestModelRun:
         If model config specifies dataframes to be loaded in (via df=...),
         these time series must be passed as arguments in calliope.Model(...).
         """
-        override = {"techs.test_demand_elec.constraints.resource": "df=demand_elec"}
+        override = {"techs.test_demand_elec.constraints.sink": "df=demand_elec"}
         with pytest.raises(exceptions.ModelError) as error:
             build_model(
                 model_file="model_minimal.yaml",
@@ -523,7 +519,7 @@ class TestModelRun:
         Any timeseries specified via df=... must correspond to a key in
         timeseries_dataframes. An error should be thrown.
         """
-        override = {"techs.test_demand_elec.constraints.resource": "df=key_1"}
+        override = {"techs.test_demand_elec.constraints.sink": "df=key_1"}
         ts_df = {"key_2": pd.DataFrame(np.arange(10))}
 
         with pytest.raises(exceptions.ModelError) as error:
@@ -540,7 +536,7 @@ class TestModelRun:
         """
         `timeseries_dataframes` should be dict of pandas DataFrames.
         """
-        override = {"techs.test_demand_elec.constraints.resource": "df=demand_elec"}
+        override = {"techs.test_demand_elec.constraints.sink": "df=demand_elec"}
 
         ts_df_nodict = pd.DataFrame(np.arange(10))  # Not a dict
         ts_df_numpy_arrays = {"demand_elec": np.arange(10)}  # No pd DataFrames
@@ -723,8 +719,8 @@ class TestChecks:
                         carrier: gas
                         parent: supply
                     constraints:
-                        energy_cap_max: 10
-                        resource: .inf
+                        flow_cap_max: 10
+                        source: .inf
             nodes:
                 1.techs.supply:
                 0.techs.supply:
@@ -744,7 +740,7 @@ class TestChecks:
     )
     @pytest.mark.xfail(reason="Planning to remove group constraints")
     def test_inexistent_group_constraint_loc_tech(self, loc_tech):
-        override = {"group_constraints.mygroup": {"energy_cap_max": 100, **loc_tech}}
+        override = {"group_constraints.mygroup": {"flow_cap_max": 100, **loc_tech}}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             m = build_model(override_dict=override, scenario="simple_supply")
@@ -760,9 +756,7 @@ class TestChecks:
 
     @pytest.mark.xfail(reason="Planning to remove group constraints")
     def test_inexistent_group_constraint_empty_loc_tech(self):
-        override = {
-            "group_constraints.mygroup": {"energy_cap_max": 100, "locs": ["foo"]}
-        }
+        override = {"group_constraints.mygroup": {"flow_cap_max": 100, "locs": ["foo"]}}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             m = build_model(override_dict=override, scenario="simple_supply")
@@ -807,8 +801,8 @@ class TestChecks:
                         name: Supply tech
                         carrier: gas
                     constraints:
-                        energy_cap_max: 10
-                        resource: .inf
+                        flow_cap_max: 10
+                        source: .inf
             nodes.b.techs.test_supply_no_parent:
             """
         )
@@ -829,8 +823,8 @@ class TestChecks:
                         carrier: gas
                         parent: test_supply_elec
                     constraints:
-                        energy_cap_max: 10
-                        resource: .inf
+                        flow_cap_max: 10
+                        source: .inf
             nodes.b.techs.test_supply_tech_parent:
             """
         )
@@ -848,8 +842,8 @@ class TestChecks:
                         carrier: gas
                         parent: test_supply_elec
                     constraints:
-                        energy_cap_max: 10
-                        resource: .inf
+                        flow_cap_max: 10
+                        source: .inf
             techs.test_supply_tech_parent.essentials:
                         name: Supply tech
                         parent: test_supply_group
@@ -863,9 +857,9 @@ class TestChecks:
             error, "tech_group `test_supply_group` has a tech as a parent"
         )
 
-    def test_resource_as_carrier(self):
+    def test_source_as_carrier(self):
         """
-        No carrier in technology or technology group can be called `resource`
+        No carrier in technology or technology group can be called `source`
         """
 
         override1 = AttrDict.from_yaml_string(
@@ -874,7 +868,7 @@ class TestChecks:
                 test_supply_elec:
                     essentials:
                         name: Supply tech
-                        carrier: resource
+                        carrier: source
                         parent: supply
             """
         )
@@ -888,7 +882,7 @@ class TestChecks:
                 test_supply_group:
                     essentials:
                         name: Supply tech
-                        carrier: resource
+                        carrier: source
                         parent: supply
             techs.test_supply_elec.essentials.parent: test_supply_group
             """
@@ -898,14 +892,14 @@ class TestChecks:
             build_model(override_dict=override2, scenario="simple_supply,one_day")
 
     @pytest.mark.filterwarnings(
-        "ignore:(?s).*defines force_resource but not a finite resource:calliope.exceptions.ModelWarning"
+        "ignore:(?s).*defines force_source but not a finite source:calliope.exceptions.ModelWarning"
     )
     def test_missing_required_constraints(self):
         """
         A technology within an abstract base technology must define a subset of
         hardcoded constraints in order to function
         """
-        # should fail: missing one of ['energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit']
+        # should fail: missing one of ['flow_cap_max', 'flow_cap_equals', 'flow_cap_per_unit']
         override_supply1 = AttrDict.from_yaml_string(
             """
             techs:
@@ -915,7 +909,7 @@ class TestChecks:
                         carrier: electricity
                         name: demand missing constraint
                     switches:
-                        resource_unit: power
+                        sink_unit: power
             nodes.b.techs.demand_missing_constraint:
             """
         )
@@ -924,7 +918,7 @@ class TestChecks:
                 override_dict=override_supply1, scenario="simple_supply,one_day"
             )
 
-        # should pass: giving one of ['energy_cap_max', 'energy_cap_equals', 'energy_cap_per_unit']
+        # should pass: giving one of ['flow_cap_max', 'flow_cap_equals', 'flow_cap_per_unit']
         override_supply2 = AttrDict.from_yaml_string(
             """
             techs:
@@ -933,7 +927,7 @@ class TestChecks:
                         parent: supply
                         carrier: electricity
                         name: supply missing constraint
-                    constraints.energy_cap_max: 10
+                    constraints.flow_cap_max: 10
             nodes.b.techs.supply_missing_constraint:
             """
         )
@@ -1240,10 +1234,10 @@ class TestChecks:
         ]
 
         for link in removed_prod_links:
-            assert m.backend.variables.carrier_prod.loc[link].isnull().all()
+            assert m.backend.variables.flow_out.loc[link].isnull().all()
 
         for link in removed_con_links:
-            assert m.backend.variables.carrier_con.loc[link].isnull().all()
+            assert m.backend.variables.flow_in.loc[link].isnull().all()
 
     def test_carrier_ratio_for_inexistent_carrier(self):
         """
@@ -1312,10 +1306,10 @@ class TestChecks:
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_constraints(self):
         """
-        If `units` is defined, but not `energy_cap_per_unit`, throw an error
+        If `units` is defined, but not `flow_cap_per_unit`, throw an error
         """
 
-        # should fail: no energy_cap_per_unit
+        # should fail: no flow_cap_per_unit
         override1 = AttrDict.from_yaml_string(
             "techs.test_supply_elec.constraints.units_max: 4"
         )
@@ -1323,26 +1317,26 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override1, scenario="simple_supply,one_day")
 
-        # should pass: energy_cap_per_unit given
+        # should pass: flow_cap_per_unit given
         override2 = AttrDict.from_yaml_string(
             """
             techs.test_supply_elec.constraints:
                         units_max: 4
-                        energy_cap_per_unit: 5
+                        flow_cap_per_unit: 5
             """
         )
 
         build_model(override_dict=override2, scenario="simple_supply,one_day")
 
-    def test_force_resource_ignored(self):
+    def test_force_source_ignored(self):
         """
-        If a technology is defines force_resource but is not in loc_techs_finite_resource
+        If a technology is defines force_source but is not in loc_techs_finite_source
         it will have no effect
         """
 
         override = {
-            "techs.test_supply_elec.constraints.resource": np.inf,
-            "techs.test_supply_elec.switches.force_resource": True,
+            "techs.test_supply_elec.constraints.source": np.inf,
+            "techs.test_supply_elec.switches.force_source": True,
         }
 
         with pytest.raises(exceptions.ModelError) as excinfo:
@@ -1350,7 +1344,7 @@ class TestChecks:
 
         assert check_error_or_warning(
             excinfo,
-            "Cannot have `force_resource` = True",
+            "Cannot have `force_source`=True",
         )
 
     def test_override_coordinates(self):
@@ -1402,14 +1396,14 @@ class TestChecks:
 
         assert check_error_or_warning(error, "cannot have cyclic storage")
 
-    def test_incorrect_resource_unit(self):
+    def test_incorrect_source_unit(self):
         """
         Only `energy`, `energy_per_cap`, or `energy_per_area` is allowed under
-        `resource unit`.
+        `source unit`.
         """
 
-        def _override(resource_unit):
-            return {"techs.test_supply_elec.switches.resource_unit": resource_unit}
+        def _override(source_unit):
+            return {"techs.test_supply_elec.switches.source_unit": source_unit}
 
         with pytest.raises(exceptions.ModelError) as error:
             build_model(_override("power"), scenario="simple_supply")
@@ -1419,15 +1413,15 @@ class TestChecks:
         build_model(_override("energy_per_area"), scenario="simple_supply")
 
         assert check_error_or_warning(
-            error, "`power` is an unknown resource unit for `test_supply_elec`"
+            error, "`power` is an unknown source unit for `test_supply_elec`"
         )
 
     @pytest.mark.parametrize(
         "constraints,costs",
         (
-            ({"units_max": 2, "energy_cap_per_unit": 5}, None),
-            ({"units_equals": 2, "energy_cap_per_unit": 5}, None),
-            ({"units_min": 2, "energy_cap_per_unit": 5}, None),
+            ({"units_max": 2, "flow_cap_per_unit": 5}, None),
+            ({"units_equals": 2, "flow_cap_per_unit": 5}, None),
+            ({"units_min": 2, "flow_cap_per_unit": 5}, None),
             (None, {"purchase": 2}),
         ),
     )
@@ -1460,19 +1454,19 @@ class TestChecks:
         "constraints,costs",
         (
             (
-                {"units_max": 2, "storage_cap_per_unit": 5, "energy_cap_per_unit": 5},
+                {"units_max": 2, "storage_cap_per_unit": 5, "flow_cap_per_unit": 5},
                 None,
             ),
             (
                 {
                     "units_equals": 2,
                     "storage_cap_per_unit": 5,
-                    "energy_cap_per_unit": 5,
+                    "flow_cap_per_unit": 5,
                 },
                 None,
             ),
             (
-                {"units_min": 2, "storage_cap_per_unit": 5, "energy_cap_per_unit": 5},
+                {"units_min": 2, "storage_cap_per_unit": 5, "flow_cap_per_unit": 5},
                 None,
             ),
             (None, {"purchase": 2}),
@@ -1642,9 +1636,9 @@ class TestTime:
             )
             # Create override dict telling calliope to load timeseries from df
             override_dict = {
-                "techs.csp.constraints.resource": "df=csp_resource",
-                "nodes.region1.techs.demand_power.constraints.resource": "df=demand_1:demand",
-                "nodes.region2.techs.demand_power.constraints.resource": "df=demand_2:demand",
+                "techs.csp.constraints.source": "df=csp_resource",
+                "nodes.region1.techs.demand_power.constraints.sink": "df=demand_1:demand",
+                "nodes.region2.techs.demand_power.constraints.sink": "df=demand_2:demand",
             }
             return calliope.examples.national_scale(
                 timeseries_dataframes=timeseries_dataframes, override_dict=override_dict
@@ -1680,16 +1674,16 @@ class TestTime:
         """
 
         model = model_national
-        assert model.inputs.resource.loc[("region1", "demand_power")].values[
-            0
-        ] == approx(-25284.48)
-        assert model.inputs.resource.loc[("region2", "demand_power")].values[
-            0
-        ] == approx(-2254.098)
-        assert model.inputs.resource.loc[("region1-1", "csp")].values[8] == approx(
+        assert model.inputs.sink.loc[("region1", "demand_power")].values[0] == approx(
+            25284.48
+        )
+        assert model.inputs.sink.loc[("region2", "demand_power")].values[0] == approx(
+            2254.098
+        )
+        assert model.inputs.source.loc[("region1-1", "csp")].values[8] == approx(
             0.263805
         )
-        assert model.inputs.resource.loc[("region1-2", "csp")].values[8] == approx(
+        assert model.inputs.source.loc[("region1-2", "csp")].values[8] == approx(
             0.096755
         )
-        assert model.inputs.resource.loc[("region1-3", "csp")].values[8] == approx(0.0)
+        assert model.inputs.source.loc[("region1-3", "csp")].values[8] == approx(0.0)

@@ -9,7 +9,7 @@ class TestDeprecationWarnings:
         model = build_model(scenario="simple_supply,one_day,investment_costs")
 
         with pytest.warns(DeprecationWarning) as warning:
-            model.get_formatted_array("resource")
+            model.get_formatted_array("source")
 
         assert check_error_or_warning(warning, "get_formatted_array() is deprecated")
 

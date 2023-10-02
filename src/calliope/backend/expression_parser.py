@@ -793,7 +793,7 @@ def sliced_param_or_var_parser(
 ) -> pp.ParserElement:
     """
     Parsing grammar to process strings representing sliced model parameters or variables,
-    e.g. "resource[node, tech]".
+    e.g. "source[node, tech]".
 
     If a parameter, must be a data variable in the Model._model_data xarray dataset.
 

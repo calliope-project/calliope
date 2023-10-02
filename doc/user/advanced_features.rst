@@ -111,19 +111,19 @@ For example:
                 parent: pv
                 name: 'Large-scale PV'
             constraints:
-                energy_cap_max: 2000
+                flow_cap_max: 2000
             costs:
                 monetary:
-                    energy_cap: 750
+                    flow_cap: 750
         pv_rooftop:
             essentials:
                 parent: pv
                 name: 'Rooftop PV'
             constraints:
-                energy_cap_max: 10000
+                flow_cap_max: 10000
             costs:
                 monetary:
-                    energy_cap: 1000
+                    flow_cap: 1000
 
 None of the ``tech_groups`` appear in model results, they are only used to group model configuration values.
 
@@ -150,7 +150,7 @@ Operational mode
 
 In planning mode, constraints are given as upper and lower boundaries and the model decides on an optimal system configuration. In operational mode, all capacity constraints are fixed and the system is operated with a receding horizon control algorithm.
 
-To specify a runnable operational model, capacities for all technologies at all locations must have be defined. This can be done by specifying ``energy_cap_equals``. In the absence of ``energy_cap_equals``, constraints given as ``energy_cap_max`` are assumed to be fixed in operational mode.
+To specify a runnable operational model, capacities for all technologies at all locations must have be defined. This can be done by specifying ``flow_cap_equals``. In the absence of ``flow_cap_equals``, constraints given as ``flow_cap_max`` are assumed to be fixed in operational mode.
 
 Operational mode runs a model with a receding horizon control algorithm. This requires two additional settings:
 
@@ -192,13 +192,13 @@ You will also need to manually set up some other parts of your model to deal wit
 
 .. code-block:: yaml
 
-    techs.ccgt.costs.spores_score.energy_cap: 0
+    techs.ccgt.costs.spores_score.flow_cap: 0
     techs.ccgt.costs.spores_score.interest_rate: 1
-    techs.csp.costs.spores_score.energy_cap: 0
+    techs.csp.costs.spores_score.flow_cap: 0
     techs.csp.costs.spores_score.interest_rate: 1
-    techs.battery.costs.spores_score.energy_cap: 0
+    techs.battery.costs.spores_score.flow_cap: 0
     techs.battery.costs.spores_score.interest_rate: 1
-    techs.ac_transmission.costs.spores_score.energy_cap: 0
+    techs.ac_transmission.costs.spores_score.flow_cap: 0
     techs.ac_transmission.costs.spores_score.interest_rate: 1
 
 .. note:: We use and recommend using 'spores_score' and 'systemwide_cost_max' to define the cost class and group constraint, respectively. However, these are user-defined, allowing you to choose terminology that best fits your use-case.
@@ -265,7 +265,7 @@ When using overrides (see :ref:`building_overrides`), it is possible to have ``i
     overrides:
         some_override:
             techs:
-                some_tech.constraints.energy_cap_max: 10
+                some_tech.constraints.flow_cap_max: 10
             import: [additional_definitions.yaml]
 
 ``additional_definitions.yaml``:
@@ -282,7 +282,7 @@ This is equivalent to the following override:
     overrides:
         some_override:
             techs:
-                some_tech.constraints.energy_cap_max: 10
+                some_tech.constraints.flow_cap_max: 10
                 some_other_tech.constraints.energy_eff: 0.1
 
 .. _backend_interface:

@@ -27,8 +27,8 @@ techs:
       carrier: gas
       parent: supply
     constraints:
-      energy_cap_max: 15
-      resource: .inf
+      flow_cap_max: 15
+      source: .inf
       energy_eff: 0.9
 
   test_supply_elec:
@@ -37,8 +37,8 @@ techs:
       carrier: electricity
       parent: supply
     constraints:
-      energy_cap_max: 10
-      resource: .inf
+      flow_cap_max: 10
+      source: .inf
       energy_eff: 0.9
 
   test_supply_coal:
@@ -47,8 +47,8 @@ techs:
       carrier: coal
       parent: supply
     constraints:
-      energy_cap_max: 10
-      resource: .inf
+      flow_cap_max: 10
+      source: .inf
       energy_eff: 0.9
 
   test_supply_plus:
@@ -57,12 +57,12 @@ techs:
       carrier: electricity
       parent: supply_plus
     constraints:
-      energy_cap_max: 15
-      resource: file=supply_plus_resource.csv
-      resource_eff: 0.9
+      flow_cap_max: 15
+      source: file=supply_plus_resource.csv
+      source_eff: 0.9
       energy_eff: 0.9
       storage_cap_max: 35
-      energy_cap_per_storage_cap_max: 0.5
+      flow_cap_per_storage_cap_max: 0.5
       storage_loss: 0.01
     switches:
       include_storage: true
@@ -73,9 +73,9 @@ techs:
       carrier: electricity
       parent: storage
     constraints:
-      energy_cap_max: 10
+      flow_cap_max: 10
       storage_cap_max: 15
-      energy_cap_per_storage_cap_max: 0.5
+      flow_cap_per_storage_cap_max: 0.5
       energy_eff: 0.9
       storage_loss: 0.01
 
@@ -86,7 +86,7 @@ techs:
       carrier_out: heat
       parent: conversion
     constraints:
-      energy_cap_max: 15
+      flow_cap_max: 15
       energy_eff: 0.9
 
   test_conversion_plus:
@@ -98,7 +98,7 @@ techs:
       carrier_out_2: heat
       parent: conversion_plus
     constraints:
-      energy_cap_max: 20
+      flow_cap_max: 20
       carrier_ratios:
         carrier_out_2: { heat: 0.8 }
 
@@ -108,7 +108,7 @@ techs:
       carrier: electricity
       parent: demand
     constraints:
-      resource: file=demand_elec.csv
+      sink: file=demand_elec.csv
 
   test_demand_heat:
     essentials:
@@ -116,7 +116,7 @@ techs:
       carrier: heat
       parent: demand
     constraints:
-      resource: file=demand_heat.csv
+      sink: file=demand_heat.csv
 
   test_transmission_elec:
     essentials:
@@ -124,7 +124,7 @@ techs:
       carrier: electricity
       parent: transmission
     constraints:
-      energy_cap_max: 10
+      flow_cap_max: 10
 
   test_transmission_heat:
     essentials:
@@ -132,7 +132,7 @@ techs:
       carrier: heat
       parent: transmission
     constraints:
-      energy_cap_max: 5
+      flow_cap_max: 5
 
 links:
   a,b:

@@ -23,7 +23,7 @@ An example use of ``supply_plus`` is to define a concentrating solar power (CSP)
 
 See the :ref:`listing of supply_plus configuration <abstract_base_tech_definitions>` in the abstract base tech group definitions for the additional constraints that are possible.
 
-.. Warning:: When analysing results from supply_plus, care must be taken to correctly account for the losses along the transformation from resource to carrier. For example, charging of storage from the resource may have a ``resource_eff``-associated loss with it, while discharging storage to produce the carrier may have a different loss resulting from a combination of ``energy_eff`` and ``parasitic_eff``. Such intermediate conversion losses need to be kept in mind when comparing discharge from storage with ``carrier_prod`` in the same time step.
+.. Warning:: When analysing results from supply_plus, care must be taken to correctly account for the losses along the transformation from resource to carrier. For example, charging of storage from the resource may have a ``source_eff``-associated loss with it, while discharging storage to produce the carrier may have a different loss resulting from a combination of ``energy_eff`` and ``parasitic_eff``. Such intermediate conversion losses need to be kept in mind when comparing discharge from storage with ``flow_out`` in the same time step.
 
 .. _conversion_plus:
 
@@ -68,7 +68,7 @@ A combined heat and power plant produces electricity, in this case from natural 
                     primary_carrier_out: electricity
                 constraints:
                     energy_eff: 0.45
-                    energy_cap_max: 100
+                    flow_cap_max: 100
                     carrier_ratios.carrier_out_2.heat: 0.8
 
 
@@ -90,7 +90,7 @@ The output energy from the heat pump can be *either* heat or cooling, simulating
 
         constraints:
             energy_eff: 1
-            energy_cap_max: 100
+            flow_cap_max: 100
             carrier_ratios:
                 carrier_out:
                     heat: 5
@@ -125,7 +125,7 @@ A CCHP plant can use generated heat to produce cooling via an absorption chiller
 
                 constraints:
                     energy_eff: 0.45
-                    energy_cap_max: 100
+                    flow_cap_max: 100
                     carrier_ratios.carrier_out_2: {heat: 0.8, cooling: 0.5}
 
 Advanced gas turbine
@@ -145,7 +145,7 @@ This technology can choose to burn methane (CH:sub:`4`) or send hydrogen (H:sub:
 
         constraints:
             energy_eff: 0.5
-            energy_cap_max: 100
+            flow_cap_max: 100
             carrier_ratios:
                 carrier_in: {methane: 1, hydrogen: 0.5}
 
@@ -176,7 +176,7 @@ There are few instances where using the full capacity of a conversion_plus tech 
 
                 constraints:
                     energy_eff: 1
-                    energy_cap_max: 100
+                    flow_cap_max: 100
                     carrier_ratios:
                         carrier_in: {coal: 1.2, gas: 1, oil: 1.6}
                         carrier_in_2: {biomass: 1, waste: 1.25}
@@ -188,26 +188,26 @@ A ``primary_carrier_out`` must be defined when there are multiple ``carrier_out`
 
 .. note:: ``Conversion_plus`` technologies can also export any one of their output carriers, by specifying that carrier as ``carrier_export``.
 
--------------------------
-Resource area constraints
--------------------------
+--------------------
+Area use constraints
+--------------------
 
 Several optional constraints can be used to specify area-related restrictions on technology use.
 
-To make use of these constraints, one should set ``resource_unit: energy_per_area`` for the given technologies. This scales the available resource at a given location for a given technology with its ``resource_area`` decision variable.
+To make use of these constraints, one should set ``source_unit: energy_per_area`` for the given technologies. This scales the available source at a given location for a given technology with its ``area_use`` decision variable.
 
 The following related settings are available:
 
-* ``resource_area_equals``, ``resource_area_max``, ``resource_area_min``: Set uppper or lower bounds on resource_area or force it to a specific value
-* ``resource_area_per_energy_cap``: False by default, but if set to true, it forces ``resource_area`` to follow ``energy_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``resource_area == 1.5 * energy_cap``)
+* ``area_use_equals``, ``area_use_max``, ``area_use_min``: Set uppper or lower bounds on area_use or force it to a specific value
+* ``area_use_per_flow_cap``: False by default, but if set to true, it forces ``area_use`` to follow ``flow_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``area_use == 1.5 * flow_cap``)
 
-By default, ``resource_area_max`` is infinite and ``resource_area_min`` is 0 (zero).
+By default, ``area_use_max`` is infinite and ``area_use_min`` is 0 (zero).
 
 ----------------------------------
 Per-distance constraints and costs
 ----------------------------------
 
-Transmission technologies can additionally specify per-distance efficiency (loss) with ``energy_eff_per_distance`` and per-distance costs with ``energy_cap_per_distance``:
+Transmission technologies can additionally specify per-distance efficiency (loss) with ``energy_eff_per_distance`` and per-distance costs with ``flow_cap_per_distance``:
 
 .. code-block:: yaml
 
@@ -221,7 +221,7 @@ Transmission technologies can additionally specify per-distance efficiency (loss
             costs:
                 monetary:
                     # cost per unit of distance
-                    energy_cap_per_distance: 10
+                    flow_cap_per_distance: 10
 
 The distance is specified in transmission links:
 
@@ -232,7 +232,7 @@ The distance is specified in transmission links:
             my_transmission_tech:
                 distance: 500
                 constraints:
-                    energy_cap.max: 10000
+                    flow_cap.max: 10000
 
 If no distance is given, but the locations have been given lat and lon coordinates, Calliope will compute distances automatically (based on the length of a straight line connecting the locations).
 
@@ -302,18 +302,18 @@ Possible ``group_share`` constraints with carrier-specific settings are:
 
 Possible ``group_share`` constraints with carrier-independent settings are:
 
-* ``energy_cap_min``
-* ``energy_cap_max``
-* ``energy_cap_equals``
+* ``flow_cap_min``
+* ``flow_cap_max``
+* ``flow_cap_equals``
 
-These can be implemented as, for example, to force at most 20% of ``energy_cap`` to come from the two listed technologies:
+These can be implemented as, for example, to force at most 20% of ``flow_cap`` to come from the two listed technologies:
 
 .. code-block:: yaml
 
     model:
         group_share:
             csp,cold_fusion:
-                energy_cap_max: 0.20
+                flow_cap_max: 0.20
 
 ------------------------------------
 Binary and mixed-integer constraints
@@ -331,10 +331,10 @@ By applying ``units.max``, ``units.min``, or ``units.equals`` to a technology, t
 
 .. seealso:: :ref:`milp_example_model`
 
-Asynchronous energy production/consumption
-------------------------------------------
+Asynchronous flow in/out
+------------------------
 
-The ``asynchronous_prod_con`` binary constraint ensures that only one of ``carrier_prod`` and ``carrier_con`` can be non-zero in a given timestep.
+The ``asynchronous_flow`` binary constraint ensures that only one of ``flow_out`` and ``flow_in`` can be non-zero in a given timestep.
 
 This constraint can be applied to storage or transmission technologies. This example shows use with a heat transmission technology:
 
@@ -344,7 +344,7 @@ This constraint can be applied to storage or transmission technologies. This exa
    :start-after: # heat_pipes-start
    :end-before: # heat_pipes-end
 
-In the above example, heat pipes which distribute thermal energy in the network may be prone to dissipating heat in an unphysical way. I.e. given that they have distribution losses associated with them, in any given timestep, a link could produce and consume energy in the same timestep, losing energy to the atmosphere in both instances, but having a net energy transmission of zero. This might allow e.g. a CHP facility to overproduce heat to produce more cheap electricity, and have some way of dumping that heat. Enabling the ``asynchronous_prod_con`` constraint ensures that this does not happen.
+In the above example, heat pipes which distribute thermal energy in the network may be prone to dissipating heat in an unphysical way. I.e. given that they have distribution losses associated with them, in any given timestep, a link could produce and consume energy in the same timestep, losing energy to the atmosphere in both instances, but having a net energy transmission of zero. This might allow e.g. a CHP facility to overproduce heat to produce more cheap electricity, and have some way of dumping that heat. Enabling the ``asynchronous_flow`` constraint ensures that this does not happen.
 
 -------------------------------
 User-defined custom constraints

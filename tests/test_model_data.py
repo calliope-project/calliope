@@ -368,7 +368,8 @@ class TestModelData:
         assert hasattr(model_data, "data_pre_time")
         assert hasattr(model_data, "model_data_pre_clustering")
 
-        assert "timesteps" in model_data.model_data.resource.dims
+        assert "timesteps" not in model_data.model_data.source.dims
+        assert "timesteps" in model_data.model_data.sink.dims
         assert "max_demand_timesteps" in model_data.model_data.data_vars.keys()
         for var in model_data.model_data.data_vars.values():
             var_ = var.astype(str)
