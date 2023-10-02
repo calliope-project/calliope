@@ -31,7 +31,7 @@ The definition of these technologies in the example model's configuration looks 
    :start-after: # supply-start
    :end-before: # supply-end
 
-The final supply technology is ``pv`` (solar photovoltaic power), which serves as an inflexible supply technology. It has a time-dependant source availablity, loaded from file, a maximum area over which it can capture its source (``area_use_max``) and a requirement that all available source must be used (``force_source: True``). This emulates the reality of solar technologies: once installed, their production matches the availability of solar energy.
+The final supply technology is ``pv`` (solar photovoltaic power), which serves as an inflexible supply technology. It has a time-dependant source availablity, loaded from file, a maximum area over which it can capture its source (``area_use_max``) and a requirement that all available source must be used (``source_equals`` rather than ``source_max``). This emulates the reality of solar technologies: once installed, their production matches the availability of solar energy.
 
 The efficiency of the DC to AC inverter (which occurs after conversion from source to energy carrier) is considered in ``parasitic_eff`` and the ``area_use_per_flow_cap`` gives a link between the installed area of solar panels to the installed capacity of those panels (i.e. kWp).
 

@@ -9,7 +9,7 @@ nodes:
     techs:
       demand_power:
         constraints:
-          sink: file=demand-1.csv:demand
+          sink_equals: file=demand-1.csv:demand
       ccgt:
         constraints:
           flow_cap_max: 30000 # increased to ensure no unmet_demand in first timestep
@@ -20,7 +20,7 @@ nodes:
     techs:
       demand_power:
         constraints:
-          sink: file=demand-2.csv:demand
+          sink_equals: file=demand-2.csv:demand
       battery:
 
   region1-1.coordinates: { lat: 41, lon: -2 }

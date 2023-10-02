@@ -110,9 +110,9 @@ class TestNationalScaleExampleModelSenseChecks:
 
     def test_fails_gracefully_without_timeseries(self):
         override = {
-            "nodes.region1.techs.demand_power.constraints.sink": 200,
-            "nodes.region2.techs.demand_power.constraints.sink": 400,
-            "techs.csp.constraints.source": 100,
+            "nodes.region1.techs.demand_power.constraints.sink_equals": 200,
+            "nodes.region2.techs.demand_power.constraints.sink_equals": 400,
+            "techs.csp.constraints.source_max": 100,
         }
         with pytest.raises(calliope.exceptions.ModelError):
             calliope.examples.national_scale(override_dict=override)
@@ -523,7 +523,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
 class TestUrbanScaleExampleModelSenseChecks:
     def example_tester(self, source_unit, solver="cbc", solver_io=None):
         unit_override = {
-            "techs.pv.constraints.source": "file=pv_resource.csv:{}".format(
+            "techs.pv.constraints.source_equals": "file=pv_resource.csv:{}".format(
                 source_unit
             ),
             "techs.pv.switches.source_unit": "energy_{}".format(source_unit),

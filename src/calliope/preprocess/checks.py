@@ -207,8 +207,6 @@ def check_initial(config_model):
     # Checks for techs and tech_groups:
     # * All user-defined tech and tech_groups must specify a parent
     # * techs cannot be parents, only tech groups can
-    # * No carrier may be called 'source' or 'sink'
-    disallowed_carrier_names = ["source", "sink"]
     default_tech_groups = list(DEFAULTS.tech_groups.keys())
     for tg_name, tg_config in config_model.tech_groups.items():
         if tg_name in default_tech_groups:
@@ -222,12 +220,6 @@ def check_initial(config_model):
                 "tech_group `{}` has a tech as a parent, only another tech_group "
                 "is allowed".format(tg_name)
             )
-        for disallowed_carrier_name in disallowed_carrier_names:
-            if disallowed_carrier_name in get_all_carriers(tg_config.essentials):
-                errors.append(
-                    f"No carrier called `{disallowed_carrier_name}` may "
-                    "be defined (tech_group: {})".format(tg_name)
-                )
 
     for t_name, t_config in config_model.techs.items():
         for key in t_config.keys():
@@ -244,14 +236,6 @@ def check_initial(config_model):
                 "tech `{}` has another tech as a parent, only a tech_group "
                 "is allowed".format(tg_name)
             )
-        for disallowed_carrier_name in disallowed_carrier_names:
-            if disallowed_carrier_name in get_all_carriers(
-                t_config.get("essentials", AttrDict())
-            ):
-                errors.append(
-                    f"No carrier called `{disallowed_carrier_name}` may "
-                    "be defined (tech: {})".format(t_name)
-                )
 
     # Check whether any unrecognised mid-level keys are defined in techs, nodes, or links
     for k, v in config_model.get("nodes", {}).items():
@@ -652,15 +636,11 @@ def check_model_data(model_data):
     comments = AttrDict()
 
     # Ensure that no loc-tech specifies infinite resource and force_resource=True
-    def _compare_force_with_param(x):
-        return model_data.get(f"force_{x}", xr.DataArray(False)).fillna(False).astype(
-            bool
-        ) & np.isinf(model_data.get(x, DEFAULTS.techs.default_tech.constraints[x]))
-
-    if (_compare_force_with_param("source") | _compare_force_with_param("sink")).any():
-        errors.append(
-            "Cannot have `force_source`=True/`force_sink`=True if setting infinite source/sink values"
-        )
+    if any(
+        np.any(np.isinf(model_data.get(f"{x}_equals", False)))
+        for x in ["source", "sink"]
+    ):
+        errors.append("Cannot include infinite values in `source_equals`/`sink_equals`")
 
     # Ensure that if a tech has negative costs, there is a max cap defined
     # FIXME: doesn't consider capacity being set by a linked constraint e.g.

@@ -142,7 +142,7 @@ constraints:
     equations:
       - expression: flow_in <= flow_cap * timestep_resolution
 
-  source_max:
+  source_use_max:
     description: "Set the upper bound of a `supply_plus` technology's source consumption."
     foreach: [nodes, techs, timesteps]
     where: inheritance(supply_plus)
@@ -183,48 +183,59 @@ constraints:
   balance_supply:
     description: "Set the upper bound on, or a fixed total of, a `supply` technology's ability to produce energy based on the quantity of  available source."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "source AND inheritance(supply)"
+    where: "(source_equals OR source_max) AND inheritance(supply)"
     equations:
-      - where: "force_source=True AND energy_eff > 0"
-        expression: "flow_out / energy_eff == $available_source"
-      - where: "NOT force_source=True AND energy_eff > 0"
-        expression: "flow_out / energy_eff <= $available_source"
+      - where: "source_equals AND energy_eff > 0"
+        expression: "flow_out / energy_eff == source_equals * $source_scaler"
+      - where: "(NOT source_equals) AND sink_max AND energy_eff > 0"
+        expression: "flow_out / energy_eff <= source_max * $source_scaler"
       - where: "energy_eff = 0"
         expression: "flow_out == 0"
     sub_expressions:
-      available_source: &available_source
+      source_scaler: &source_scaler
         - where: "source_unit=energy_per_area"
-          expression: "source * source_scale * area_use"
+          expression: "source_scale * area_use"
         - where: "source_unit=energy_per_cap"
-          expression: "source * source_scale * flow_cap"
+          expression: "source_scale * flow_cap"
         - where: "source_unit=energy"
-          expression: "source * source_scale"
+          expression: "source_scale"
 
   balance_supply_min_use:
-    description: "Set the lower bound on, or a fixed amount of, the energy a `supply` technology must consume in each timestep."
+    description: "Set the lower bound on the quantity of its source a `supply` technology must use in each timestep."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "source AND inheritance(supply) AND source_min_use AND energy_eff>0 AND NOT force_source=True"
+    where: "source_min AND NOT source_equals AND inheritance(supply) AND energy_eff>0"
     equations:
-      - expression: "source_min_use <= flow_out / energy_eff"
+      - expression: "flow_out / energy_eff >= source_min * $source_scaler"
+    sub_expressions:
+      source_scaler: *source_scaler
 
   balance_demand:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(demand)"
     equations:
-      - where: "force_sink=True"
-        expression: "$flow_in == $sink_requirements"
-      - where: "NOT force_sink=True"
-        expression: "$flow_in <= $sink_requirements"
+      - where: "sink_equals"
+        expression: "$flow_in == sink_equals * $sink_scaler"
+      - where: "NOT sink_equals AND sink_max"
+        expression: "$flow_in <= sink_max * $sink_scaler"
     sub_expressions:
       flow_in:
         - expression: flow_in * energy_eff
-      sink_requirements:
+      sink_scaler: &sink_scaler
         - where: "sink_unit=energy_per_area"
-          expression: "sink * sink_scale * area_use"
+          expression: "sink_scale * area_use"
         - where: "sink_unit=energy_per_cap"
-          expression: "sink * sink_scale * flow_cap"
+          expression: "sink_scale * flow_cap"
         - where: "sink_unit=energy"
-          expression: "sink * sink_scale"
+          expression: "sink_scale"
+
+  balance_demand_min_use:
+    description: "Set the lower bound on the quantity of energy a `demand` technology must dump to its sink in each timestep."
+    foreach: [nodes, techs, carriers, timesteps]
+    where: "sink_min AND NOT source_equals AND inheritance(supply) AND energy_eff>0"
+    equations:
+      - expression: "sink_min * $sink_scaler <= flow_in * energy_eff"
+    sub_expressions:
+      sink_scaler: *sink_scaler
 
   balance_supply_plus_no_storage:
     description: "Set the upper bound on, or a fixed total of, a `supply_plus` (without storage) technology's ability to produce energy based on only the quantity of consumed resource."
@@ -258,14 +269,14 @@ constraints:
   source_availability_supply_plus:
     description: "Set the upper bound on, or a fixed total of, a `supply_plus` technology's ability to consume its available energy resource."
     foreach: [nodes, techs, timesteps]
-    where: "source_use AND source"
+    where: "source_use AND (source_equals OR source_max)"
     equations:
-      - where: "force_source=True"
-        expression: "source_use == $available_source"
-      - where: "NOT force_source=True"
-        expression: "source_use <= $available_source"
+      - where: "source_equals"
+        expression: "source_use == source_equals * $source_scaler"
+      - where: "NOT source_equals AND source_max"
+        expression: "source_use <= source_max * $source_scaler"
     sub_expressions:
-      available_source: *available_source
+      source_scaler: *source_scaler
 
   balance_storage:
     description: "Fix the quantity of energy stored in a `storage` technology at the end of each timestep based on the net flow of energy charged and discharged and the quantity of energy stored at the start of the timestep."

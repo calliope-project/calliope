@@ -80,7 +80,7 @@ def generate_model_config() -> dict[str, dict]:
     dummy_techs = {
         "demand_tech": {
             "essentials": {"parent": "demand", "carrier": "electricity"},
-            "constraints": {"sink": "df=ts"},
+            "constraints": {"sink_equals": "df=ts"},
         }
     }
 

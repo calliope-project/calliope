@@ -19,7 +19,7 @@ techs:
       parent: supply
     constraints:
       flow_cap_max: 10
-      source: .inf
+      source_max: .inf
       energy_eff: 0.9
   test_demand_elec:
     essentials:
@@ -27,7 +27,7 @@ techs:
       carrier: electricity
       parent: demand
     constraints:
-      sink: file=demand_elec.csv
+      sink_equals: file=demand_elec.csv
 
 nodes:
   a:

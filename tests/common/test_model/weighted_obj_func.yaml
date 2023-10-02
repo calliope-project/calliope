@@ -62,7 +62,7 @@ techs:
       carrier: electricity
       parent: demand
     constraints:
-      sink: file=demand_elec.csv
+      sink_equals: file=demand_elec.csv
 
 nodes:
   a,b:

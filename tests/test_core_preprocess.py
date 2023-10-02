@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import pytest
 from calliope.core.attrdict import AttrDict
-from calliope.preprocess import time
 from pytest import approx
 
 from .common.util import build_test_model as build_model
@@ -188,7 +187,7 @@ class TestModelRun:
                         parent: supply
                         name: test
                     constraints:
-                        source: .inf
+                        source_max: .inf
                         flow_cap_max: .inf
             nodes.1.techs.test_undefined_carrier:
             """
@@ -295,8 +294,8 @@ class TestModelRun:
         # should pass: changing datetime format from default
         override1 = {
             "model.timeseries_dateformat": "%d/%m/%Y %H:%M:%S",
-            "techs.test_demand_heat.constraints.sink": "file=demand_heat_diff_dateformat.csv",
-            "techs.test_demand_elec.constraints.sink": "file=demand_heat_diff_dateformat.csv",
+            "techs.test_demand_heat.constraints.sink_equals": "file=demand_heat_diff_dateformat.csv",
+            "techs.test_demand_elec.constraints.sink_equals": "file=demand_heat_diff_dateformat.csv",
         }
         model = build_model(override_dict=override1, scenario="simple_conversion")
         assert all(
@@ -306,7 +305,7 @@ class TestModelRun:
 
         # should fail: wrong dateformat input for one file
         override2 = {
-            "techs.test_demand_heat.constraints.sink": "file=demand_heat_diff_dateformat.csv"
+            "techs.test_demand_heat.constraints.sink_equals": "file=demand_heat_diff_dateformat.csv"
         }
 
         with pytest.raises(exceptions.ModelError):
@@ -320,7 +319,7 @@ class TestModelRun:
 
         # should fail: one value wrong in file
         override4 = {
-            "techs.test_demand_heat.constraints.sink": "file=demand_heat_wrong_dateformat.csv"
+            "techs.test_demand_heat.constraints.sink_equals": "file=demand_heat_wrong_dateformat.csv"
         }
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
@@ -333,7 +332,7 @@ class TestModelRun:
         """
         # should fail: wrong length of demand_heat csv vs demand_elec
         override1 = {
-            "techs.test_demand_heat.constraints.sink": "file=demand_heat_wrong_length.csv"
+            "techs.test_demand_heat.constraints.sink_equals": "file=demand_heat_wrong_length.csv"
         }
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
@@ -376,8 +375,8 @@ class TestModelRun:
         exploded location
         """
         override = {
-            "nodes.a.techs.test_supply_elec.constraints.source": 10,
-            "nodes.a,b.techs.test_supply_elec.constraints.source": 15,
+            "nodes.a.techs.test_supply_elec.constraints.source_max": 10,
+            "nodes.a,b.techs.test_supply_elec.constraints.source_max": 15,
         }
 
         with pytest.raises(KeyError):
@@ -503,7 +502,7 @@ class TestModelRun:
         If model config specifies dataframes to be loaded in (via df=...),
         these time series must be passed as arguments in calliope.Model(...).
         """
-        override = {"techs.test_demand_elec.constraints.sink": "df=demand_elec"}
+        override = {"techs.test_demand_elec.constraints.sink_equals": "df=demand_elec"}
         with pytest.raises(exceptions.ModelError) as error:
             build_model(
                 model_file="model_minimal.yaml",
@@ -519,7 +518,7 @@ class TestModelRun:
         Any timeseries specified via df=... must correspond to a key in
         timeseries_dataframes. An error should be thrown.
         """
-        override = {"techs.test_demand_elec.constraints.sink": "df=key_1"}
+        override = {"techs.test_demand_elec.constraints.sink_equals": "df=key_1"}
         ts_df = {"key_2": pd.DataFrame(np.arange(10))}
 
         with pytest.raises(exceptions.ModelError) as error:
@@ -536,7 +535,7 @@ class TestModelRun:
         """
         `timeseries_dataframes` should be dict of pandas DataFrames.
         """
-        override = {"techs.test_demand_elec.constraints.sink": "df=demand_elec"}
+        override = {"techs.test_demand_elec.constraints.sink_equals": "df=demand_elec"}
 
         ts_df_nodict = pd.DataFrame(np.arange(10))  # Not a dict
         ts_df_numpy_arrays = {"demand_elec": np.arange(10)}  # No pd DataFrames
@@ -720,7 +719,7 @@ class TestChecks:
                         parent: supply
                     constraints:
                         flow_cap_max: 10
-                        source: .inf
+                        source_max: .inf
             nodes:
                 1.techs.supply:
                 0.techs.supply:
@@ -802,7 +801,7 @@ class TestChecks:
                         carrier: gas
                     constraints:
                         flow_cap_max: 10
-                        source: .inf
+                        source_max: .inf
             nodes.b.techs.test_supply_no_parent:
             """
         )
@@ -824,7 +823,7 @@ class TestChecks:
                         parent: test_supply_elec
                     constraints:
                         flow_cap_max: 10
-                        source: .inf
+                        source_max: .inf
             nodes.b.techs.test_supply_tech_parent:
             """
         )
@@ -843,7 +842,7 @@ class TestChecks:
                         parent: test_supply_elec
                     constraints:
                         flow_cap_max: 10
-                        source: .inf
+                        source_max: .inf
             techs.test_supply_tech_parent.essentials:
                         name: Supply tech
                         parent: test_supply_group
@@ -857,43 +856,6 @@ class TestChecks:
             error, "tech_group `test_supply_group` has a tech as a parent"
         )
 
-    def test_source_as_carrier(self):
-        """
-        No carrier in technology or technology group can be called `source`
-        """
-
-        override1 = AttrDict.from_yaml_string(
-            """
-            techs:
-                test_supply_elec:
-                    essentials:
-                        name: Supply tech
-                        carrier: source
-                        parent: supply
-            """
-        )
-
-        with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override1, scenario="simple_supply,one_day")
-
-        override2 = AttrDict.from_yaml_string(
-            """
-            tech_groups:
-                test_supply_group:
-                    essentials:
-                        name: Supply tech
-                        carrier: source
-                        parent: supply
-            techs.test_supply_elec.essentials.parent: test_supply_group
-            """
-        )
-
-        with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override2, scenario="simple_supply,one_day")
-
-    @pytest.mark.filterwarnings(
-        "ignore:(?s).*defines force_source but not a finite source:calliope.exceptions.ModelWarning"
-    )
     def test_missing_required_constraints(self):
         """
         A technology within an abstract base technology must define a subset of
@@ -1328,24 +1290,15 @@ class TestChecks:
 
         build_model(override_dict=override2, scenario="simple_supply,one_day")
 
-    def test_force_source_ignored(self):
-        """
-        If a technology is defines force_source but is not in loc_techs_finite_source
-        it will have no effect
-        """
-
+    def test_source_equals_cannot_be_inf(self):
         override = {
-            "techs.test_supply_elec.constraints.source": np.inf,
-            "techs.test_supply_elec.switches.force_source": True,
+            "techs.test_supply_elec.constraints.source_equals": np.inf,
         }
 
         with pytest.raises(exceptions.ModelError) as excinfo:
             build_model(override_dict=override, scenario="simple_supply,one_day")
 
-        assert check_error_or_warning(
-            excinfo,
-            "Cannot have `force_source`=True",
-        )
+        assert check_error_or_warning(excinfo, "Cannot include infinite values")
 
     def test_override_coordinates(self):
         """
@@ -1636,9 +1589,9 @@ class TestTime:
             )
             # Create override dict telling calliope to load timeseries from df
             override_dict = {
-                "techs.csp.constraints.source": "df=csp_resource",
-                "nodes.region1.techs.demand_power.constraints.sink": "df=demand_1:demand",
-                "nodes.region2.techs.demand_power.constraints.sink": "df=demand_2:demand",
+                "techs.csp.constraints.source_max": "df=csp_resource",
+                "nodes.region1.techs.demand_power.constraints.sink_equals": "df=demand_1:demand",
+                "nodes.region2.techs.demand_power.constraints.sink_equals": "df=demand_2:demand",
             }
             return calliope.examples.national_scale(
                 timeseries_dataframes=timeseries_dataframes, override_dict=override_dict
@@ -1652,18 +1605,6 @@ class TestTime:
             override_dict={"model.subset_time": ["2005-01-01", "2005-01-10"]}
         )
 
-    def test_add_max_demand_timesteps(self, model_urban):
-        data = model_urban._model_data_pre_clustering.copy()
-        data = time.add_max_demand_timesteps(data)
-
-        assert data["max_demand_timesteps"].loc[
-            dict(carriers="heat")
-        ].values == np.datetime64("2005-01-05T07:00:00")
-
-        assert data["max_demand_timesteps"].loc[
-            dict(carriers="electricity")
-        ].values == np.datetime64("2005-01-10T09:00:00")
-
     @pytest.mark.parametrize("load_timeseries_from_dataframes", [False, True])
     def test_timeseries_from_csv(self, model_national):
         """
@@ -1674,16 +1615,18 @@ class TestTime:
         """
 
         model = model_national
-        assert model.inputs.sink.loc[("region1", "demand_power")].values[0] == approx(
-            25284.48
-        )
-        assert model.inputs.sink.loc[("region2", "demand_power")].values[0] == approx(
-            2254.098
-        )
-        assert model.inputs.source.loc[("region1-1", "csp")].values[8] == approx(
+        assert model.inputs.sink_equals.loc[("region1", "demand_power")].values[
+            0
+        ] == approx(25284.48)
+        assert model.inputs.sink_equals.loc[("region2", "demand_power")].values[
+            0
+        ] == approx(2254.098)
+        assert model.inputs.source_max.loc[("region1-1", "csp")].values[8] == approx(
             0.263805
         )
-        assert model.inputs.source.loc[("region1-2", "csp")].values[8] == approx(
+        assert model.inputs.source_max.loc[("region1-2", "csp")].values[8] == approx(
             0.096755
         )
-        assert model.inputs.source.loc[("region1-3", "csp")].values[8] == approx(0.0)
+        assert model.inputs.source_max.loc[("region1-3", "csp")].values[8] == approx(
+            0.0
+        )

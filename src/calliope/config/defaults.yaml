@@ -53,8 +53,12 @@ model:
       "om_con",
       "om_prod",
       "parasitic_eff",
-      "source",
-      "sink",
+      "sink_min",
+      "sink_max",
+      "sink_equals",
+      "source_min",
+      "source_max",
+      "source_equals",
       "source_eff",
       "storage_loss",
       "carrier_ratios",
@@ -155,14 +159,21 @@ tech_groups:
       allowed_flow_in: true
       allowed_flow_out: true
   demand:
-    required_constraints: ["sink"]
-    allowed_constraints: ["sink", "area_use_equals", "sink_scale", "sink_unit"]
+    required_constraints: []
+    allowed_constraints:
+      [
+        "sink_min",
+        "sink_max",
+        "sink_equals",
+        "area_use_equals",
+        "sink_scale",
+        "sink_unit",
+      ]
     allowed_costs: [om_con]
-    allowed_switches: [sink_unit, force_sink, allowed_flow_in, allowed_flow_out]
+    allowed_switches: [sink_unit, allowed_flow_in, allowed_flow_out]
     essentials:
       parent: null
     switches:
-      force_sink: true
       sink_unit: energy
       allowed_flow_in: true
       allowed_flow_out: false
@@ -240,12 +251,13 @@ tech_groups:
         "export_max",
         "export_carrier",
         "lifetime",
-        "source",
         "area_use_equals",
         "area_use_max",
         "area_use_min",
         "area_use_per_flow_cap",
-        "source_min_use",
+        "source_min",
+        "source_max",
+        "source_equals",
         "source_scale",
         "units_equals",
         "units_equals_systemwide",
@@ -267,20 +279,12 @@ tech_groups:
         "area_use",
       ]
     allowed_switches:
-      [
-        cap_method,
-        source_unit,
-        force_source,
-        export,
-        allowed_flow_in,
-        allowed_flow_out,
-      ]
+      [cap_method, source_unit, export, allowed_flow_in, allowed_flow_out]
     essentials:
       parent: null
     switches:
       source_unit: energy
       cap_method: linear
-      force_source: false
       export: false
       allowed_flow_out: true
       allowed_flow_in: false
@@ -306,7 +310,6 @@ tech_groups:
         "export_carrier",
         "lifetime",
         "parasitic_eff",
-        "source",
         "area_use_equals",
         "area_use_max",
         "area_use_min",
@@ -315,7 +318,9 @@ tech_groups:
         "source_cap_max",
         "source_cap_min",
         "source_eff",
-        "source_min_use",
+        "source_min",
+        "source_max",
+        "source_equals",
         "source_scale",
         "storage_cap_equals",
         "storage_cap_max",
@@ -350,7 +355,6 @@ tech_groups:
         include_storage,
         source_unit,
         source_cap_equals_flow_cap,
-        force_source,
         export,
         allowed_flow_in,
         allowed_flow_out,
@@ -363,7 +367,6 @@ tech_groups:
       include_storage: False
       force_asynchronous_flow: false
       source_cap_equals_flow_cap: false
-      force_source: false
       export: false
       allowed_flow_out: true
       allowed_flow_in: False
@@ -428,7 +431,6 @@ techs:
       sink_unit: energy # name: Sink unit ¦ unit: N/A ¦ Sets the unit of ``Sink`` to either ``energy`` (i.e. kWh), ``energy_per_area`` (i.e. kWh/m2), or ``energy_per_cap`` (i.e. kWh/kW). ``energy_per_area`` uses the ``area_use`` decision variable to scale the sink while ``energy_per_cap`` uses the ``flow_cap`` decision variable.
       source_unit: energy # name: Source unit ¦ unit: N/A ¦ Sets the unit of ``Source`` to either ``energy`` (i.e. kWh), ``energy_per_area`` (i.e. kWh/m2), or ``energy_per_cap`` (i.e. kWh/kW). ``energy_per_area`` uses the ``area_use`` decision variable to scale the source while ``energy_per_cap`` uses the ``flow_cap`` decision variable.
       source_cap_equals_flow_cap: false # name: Source capacity equals flow capacity ¦ unit: boolean ¦ If true, ``source_cap`` is forced to equal ``flow_cap``
-      force_source: false # name: Force source ¦ unit: boolean ¦ Forces this technology to use all available ``source``, rather than making it a maximum upper boundary (for outflow) or minimum lower boundary (for consumption). Static boolean, or from file as timeseries
       one_way: false # name: One way ¦ unit: boolean ¦ Forces a transmission technology to only move energy in one direction on the link, in this case from `default_node_from` to `default_node_to`
       allowed_flow_in: false # name: Technology inflow ¦ unit: boolean ¦ Allow this technology to consume energy from the carrier (static boolean, or from file as timeseries).
       allowed_flow_out: false # name: Technology outflow ¦ unit: boolean ¦ Allow this technology to supply energy to the carrier (static boolean, or from file as timeseries).
@@ -453,8 +455,12 @@ techs:
       export_carrier: null # name: Export carrier ¦ unit: N/A ¦ Name of carrier to be exported. Must be an output carrier of the technology
       lifetime: null # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
       parasitic_eff: 1.0 # name: Plant parasitic efficiency ¦ unit: fraction ¦ Additional losses as energy gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption
-      sink: .inf # name: Sink to remove a commodity from the system (e.g., electricity demand, transport demand, water use) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Maximum available source (static, or from file as timeseries). Unit dictated by ``source_unit``
-      source: .inf # name: Source to add a commodity to the system (e.g., biofuel, coal, rainfall, wind energy) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Maximum available source (static, or from file as timeseries). Unit dictated by ``source_unit``
+      sink_min: 0 # name: Minimum bound on sink to remove a carrier from the system (e.g., electricity demand, transport distance) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Minimum sink use (static, or from file as timeseries). Unit dictated by ``source_unit``.
+      sink_max: .inf # name: Maximum bound on sink to remove a carrier from the system (e.g., electricity demand, transport distance) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Maximum sink use (static, or from file as timeseries). Unit dictated by ``source_unit``.
+      sink_equals: null # name: Required amount removal of a carrier from the system through a sink (e.g., electricity demand, transport distance) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Required sink (static, or from file as timeseries). Unit dictated by ``source_unit``.
+      source_min: 0 # name: Minimum bound on source to add to the system (e.g., biofuel, coal, rainfall, wind energy) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Minimum available source (static, or from file as timeseries). Unit dictated by ``source_unit``.
+      source_max: .inf # name: Maximum bound on source to add to the system (e.g., biofuel, coal, rainfall, wind energy) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Maximum available source (static, or from file as timeseries). Unit dictated by ``source_unit``.
+      source_equals: null # name: Exact amount of source to add to the system (e.g., biofuel, coal, rainfall, wind energy) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Required source (static, or from file as timeseries). Unit dictated by ``source_unit``.
       area_use_equals: null # name: Specific installed area use ¦ unit: m\ :sup:`2` ¦
       area_use_max: .inf # name: Maximum usable area ¦ unit: m\ :sup:`2` ¦ If set to a finite value, restricts the usable area of the technology to this value.
       area_use_min: 0 # name: Minimum usable area ¦ unit: m\ :sup:`2` ¦
@@ -463,7 +469,6 @@ techs:
       source_cap_max: .inf # name: Maximum installed source consumption capacity ¦ unit: kW ¦
       source_cap_min: 0 # name: Minimum installed source consumption capacity ¦ unit: kW ¦
       source_eff: 1.0 # name: Efficiency of converting a source into usable resource ¦ unit: fraction ¦ Efficiency (static, or from file as timeseries) in capturing source before it reaches storage (if storage is present) or conversion to carrier.
-      source_min_use: 0 # name: Minimum source consumption ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum source consumption.
       sink_scale: 1.0 # name: Sink scale ¦ unit: fraction ¦ Scale sink (either static value or all values in timeseries) by this value
       source_scale: 1.0 # name: Source scale ¦ unit: fraction ¦ Scale source (either static value or all values in timeseries) by this value
       storage_cap_equals: null # name: Specific storage capacity ¦ unit: kWh ¦ If not defined, ``flow_cap_equals`` * ``flow_cap_per_storage_cap_max`` will be used as the capacity and overrides ``_max`` and ``_min`` constraints.

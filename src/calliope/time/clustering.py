@@ -381,7 +381,7 @@ def get_clusters(
         Number of clusters to create. If none (default), will use Hartigan's rule
         to infer a reasonable number of clusters.
     variables : list, optional
-        data variables (e.g. `source`, `energy_eff`) by whose values the data
+        data variables (e.g. `source_max`, `energy_eff`) by whose values the data
         will be clustered. If none (default), all timeseries variables will be used.
     kwargs : dict
         Additional keyword arguments available depend on the `func`.

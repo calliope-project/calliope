@@ -91,6 +91,6 @@ overrides:
             tech1: demand_electricity
             how: max
             n: 2
-            var: sink
+            var: sink_equals
       function: resample
       function_options: { resolution: 6H }

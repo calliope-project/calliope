@@ -107,7 +107,7 @@ class TestClustering:
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
         override = {
-            "techs.test_demand_elec.constraints.sink": "file=demand_elec_15mins.csv",
+            "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15mins.csv",
             "model.subset_time": None,
         }
 
@@ -150,7 +150,7 @@ class TestClustering:
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
         override = {
-            "techs.test_demand_elec.constraints.sink": "file=demand_elec_15T_to_2h.csv",
+            "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15T_to_2h.csv",
             "model.subset_time": None,
         }
 
@@ -359,7 +359,7 @@ class TestMasks:
 
     def test_zero(self, model_national):
         data = model_national._model_data_pre_clustering.copy()
-        mask = masks.zero(data, "csp", var="source")
+        mask = masks.zero(data, "csp", var="source_max")
 
         dtindex = pd.DatetimeIndex(
             [
@@ -446,7 +446,7 @@ class TestMasks:
     def test_extreme(self, model_national):
         data = model_national._model_data_pre_clustering.copy()
         mask = masks.extreme(
-            data, "csp", var="source", how="max", length="2D", n=1, padding="2H"
+            data, "csp", var="source_max", how="max", length="2D", n=1, padding="2H"
         )
 
         dtindex = pd.DatetimeIndex(
@@ -514,7 +514,7 @@ class TestMasks:
             data,
             "demand_heat",
             "demand_electricity",
-            var="sink",
+            var="sink_equals",
             how="min",
             length="1D",
             n=2,
@@ -581,7 +581,7 @@ class TestMasks:
         mask = masks.extreme(
             data,
             "csp",
-            var="source",
+            var="source_max",
             how="max",
             length="1D",
             n=1,
@@ -599,7 +599,7 @@ class TestMasks:
             masks.extreme(
                 data,
                 "csp",
-                var="source",
+                var="source_max",
                 how="max",
                 length="2D",
                 n=1,
@@ -610,7 +610,7 @@ class TestMasks:
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
         override = {
-            "techs.test_demand_elec.constraints.sink": "file=demand_elec_15mins.csv",
+            "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15mins.csv",
             "model.subset_time": None,
         }
 
@@ -618,7 +618,7 @@ class TestMasks:
         data = model._model_data
 
         mask = masks.extreme(
-            data, "test_demand_elec", var="sink", how="max", length="1D"
+            data, "test_demand_elec", var="sink_equals", how="max", length="1D"
         )
 
         dtindex = pd.DatetimeIndex(
@@ -728,7 +728,7 @@ class TestMasks:
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
         override = {
-            "techs.test_demand_elec.constraints.sink": "file=demand_elec_15T_to_2h.csv",
+            "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15T_to_2h.csv",
             "model.subset_time": None,
         }
 
@@ -736,7 +736,7 @@ class TestMasks:
         data = model._model_data
 
         mask = masks.extreme(
-            data, "test_demand_elec", var="sink", how="max", length="1D"
+            data, "test_demand_elec", var="sink_equals", how="max", length="1D"
         )
 
         dtindex = pd.DatetimeIndex(
@@ -773,7 +773,7 @@ class TestResampling:
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
         override = {
-            "techs.test_demand_elec.constraints.sink": "file=demand_elec_15mins.csv",
+            "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15mins.csv",
             "model.subset_time": None,
             "model.time": {
                 "masks": [
@@ -782,7 +782,7 @@ class TestResampling:
                         "options": {
                             "tech": "test_demand_elec",
                             "how": "max",
-                            "var": "sink",
+                            "var": "sink_equals",
                         },
                     }
                 ],
@@ -925,7 +925,7 @@ class TestResampling:
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
         override = {
-            "techs.test_demand_elec.constraints.sink": "file=demand_elec_15mins.csv",
+            "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15mins.csv",
             "model.subset_time": None,
             "model.time": {
                 "function": "resample",
@@ -960,7 +960,7 @@ class TestResampling:
         CSV has daily timeseries varying from 15min to 2h resolution, resample all to 2h
         """
         override = {
-            "techs.test_demand_elec.constraints.sink": "file=demand_elec_15T_to_2h.csv",
+            "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15T_to_2h.csv",
             "model.subset_time": None,
             "model.time": {
                 "function": "resample",
@@ -1061,6 +1061,6 @@ class TestLoadTimeseries:
         assert check_error_or_warning(
             excinfo,
             [
-                "file:column combinations `[('demand_elec.csv', 'c') ('demand_elec.csv', 'd')]` not found, but are requested by parameter `sink`."
+                "file:column combinations `[('demand_elec.csv', 'c') ('demand_elec.csv', 'd')]` not found, but are requested by parameter `sink_equals`."
             ],
         )

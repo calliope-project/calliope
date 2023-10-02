@@ -105,7 +105,7 @@ class TestBaseMath:
             "simple_supply_plus,resample_two_days,investment_costs",
         )
         custom_math = {
-            "constraints": {"my_constraint": model.math.constraints.source_max}
+            "constraints": {"my_constraint": model.math.constraints.source_use_max}
         }
         compare_lps(model, custom_math, "source_max")
 

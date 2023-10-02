@@ -17,7 +17,7 @@ techs:
       parent: supply
       carrier_out: power
     constraints:
-      source: inf
+      source_max: inf
       energy_eff: 0.5
       flow_cap_max: 40000 # kW
       flow_cap_max_systemwide: 100000 # kW
@@ -44,7 +44,7 @@ techs:
       storage_cap_max: 614033
       flow_cap_per_storage_cap_max: 1
       storage_loss: 0.002
-      source: file=csp_resource.csv
+      source_max: file=csp_resource.csv
       energy_eff: 0.4
       parasitic_eff: 0.9
       area_use_max: inf

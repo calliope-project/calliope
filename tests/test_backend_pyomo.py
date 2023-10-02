@@ -56,16 +56,15 @@ class TestChecks:
         with pytest.warns(exceptions.ModelWarning):
             m.build()  # will fail to complete run if there's a problem
 
-    @pytest.mark.parametrize("force", (True, False))
-    def test_operate_flow_out_min_relative(self, force):
+    @pytest.mark.parametrize("constr", ("max", "equals"))
+    def test_operate_flow_out_min_relative(self, constr):
         """If we depend on a finite flow_cap, we have to error on a user failing to define it"""
         m = build_model(
             {
                 "techs.test_supply_elec": {
-                    "switches.force_source": force,
                     "constraints": {
                         "flow_out_min_relative": 0.1,
-                        "source": "file=supply_plus_resource.csv:1",
+                        f"source_{constr}": "file=supply_plus_resource.csv:1",
                         "flow_cap_equals": np.inf,
                     },
                 }
@@ -81,42 +80,41 @@ class TestChecks:
             error, ["Operate mode: User must define a finite flow_cap"]
         )
 
-    @pytest.mark.parametrize("force", (True, False))
-    def test_operate_flow_cap_source_unit(self, force):
+    @pytest.mark.parametrize("constr", ("max", "equals"))
+    def test_operate_flow_cap_source_unit(self, constr):
         """If we depend on a finite flow_cap, we have to error on a user failing to define it"""
         m = build_model(
             {
                 "techs.test_supply_elec": {
                     "constraints": {
-                        "source": "file=supply_plus_resource.csv:1",
+                        f"source_{constr}": "file=supply_plus_resource.csv:1",
                         "flow_cap_equals": np.inf,
                         "flow_cap_max": np.inf,
                     },
-                    "switches": {
-                        "force_source": force,
-                        "source_unit": "energy_per_cap",
-                    },
+                    "switches": {"source_unit": "energy_per_cap"},
                 }
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
         )
 
-        if force is True:
+        if constr == "equals":
             with pytest.raises(exceptions.ModelError) as error:
                 with pytest.warns(exceptions.ModelWarning):
                     m.build()
             assert check_error_or_warning(
                 error, ["Operate mode: User must define a finite flow_cap"]
             )
-        elif force is False:
+        else:
             with pytest.warns(exceptions.ModelWarning):
                 m.build()
 
     @pytest.mark.parametrize(
-        "source_unit,force",
-        list(product(("energy", "energy_per_cap", "energy_per_area"), (True, False))),
+        ["source_unit", "constr"],
+        list(
+            product(("energy", "energy_per_cap", "energy_per_area"), ("max", "equals"))
+        ),
     )
-    def test_operate_source_unit_with_area_use(self, source_unit, force):
+    def test_operate_source_unit_with_area_use(self, source_unit, constr):
         """Different source unit affects the capacities which are set to infinite"""
         m = build_model(
             {
@@ -124,12 +122,9 @@ class TestChecks:
                     "constraints": {
                         "area_use_max": 10,
                         "flow_cap_max": 15,
-                        "source": "file=supply_plus_resource.csv:1",
+                        f"source_{constr}": "file=supply_plus_resource.csv:1",
                     },
-                    "switches": {
-                        "force_source": force,
-                        "source_unit": source_unit,
-                    },
+                    "switches": {"source_unit": source_unit},
                 }
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
@@ -151,9 +146,9 @@ class TestChecks:
                 "Source area constraint removed from 0::test_supply_elec as force_source is applied and source is linked to energy flow using `energy_per_cap`"
             ]
 
-        if force is True:
+        if constr == "equals":
             assert check_error_or_warning(warning, _warnings)
-        elif force is False:
+        else:
             assert ~check_error_or_warning(warning, _warnings)
 
     @pytest.mark.parametrize(
@@ -1946,8 +1941,8 @@ class TestNewBackend:
 
     def test_solve_non_optimal(self, simple_supply):
         simple_supply.backend.update_parameter(
-            "sink",
-            simple_supply.inputs.sink.where(
+            "sink_equals",
+            simple_supply.inputs.sink_equals.where(
                 simple_supply.inputs.techs == "test_demand_elec"
             )
             * 1000,
@@ -2393,7 +2388,7 @@ class TestNewBackend:
 
     def test_update_variable_single_bound_multi_val(self, caplog, simple_supply):
         caplog.set_level(logging.INFO)
-        bound_array = simple_supply.inputs.sink.sel(techs="test_demand_elec")
+        bound_array = simple_supply.inputs.sink_equals.sel(techs="test_demand_elec")
         simple_supply.backend.update_variable_bounds("flow_in", min=bound_array)
         bound_vals = simple_supply.backend.get_variable_bounds("flow_in").lb
         assert "New `min` bounds will be broadcast" in caplog.text
