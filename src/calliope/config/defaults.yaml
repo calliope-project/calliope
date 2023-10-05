@@ -456,7 +456,7 @@ techs:
         source_cap: 0 # name: Cost of source flow capacity ¦ unit: kW :sup:`-1` ¦
         storage_cap: 0 # name: Cost of storage capacity ¦ unit: kWh :sup:`-1` ¦
         depreciation_rate: 1 # name: Depreciation rate for annualisation of investment costs ¦ unit: fraction ¦
-    exists: true
+    active: true
 
 nodes:
   default_node:
@@ -464,7 +464,7 @@ nodes:
     coordinates: {} # The node's x-y coordinates for distance calculations and plotting: {lat: ..., lon: ...} or {x: ..., y: ...}
     available_area: .inf # This node's available land area (required if constraining technology deployment by area).
     techs: null # A list of technologies, optionally with node-specific settings overriding the technology's global settings.
-    exists: true
+    active: true
 
 links:
   default_node_from,default_node_to:
@@ -472,4 +472,4 @@ links:
       default_tech:
         distance: null # Used for per_distance constraints, but automatically inferred from coordinates of nodes in a link if not given directly
 
-    exists: true
+    active: true

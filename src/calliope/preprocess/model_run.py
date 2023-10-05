@@ -293,8 +293,8 @@ def process_techs(config_model):
     debug_comments = AttrDict()
 
     for tech_id, tech_config in config_model.techs.items():
-        # If a tech specifies ``exists: false``, we skip it entirely
-        if not tech_config.get("exists", True):
+        # If a tech specifies ``active: false``, we skip it entirely
+        if not tech_config.get("active", True):
             continue
 
         tech_result = AttrDict()

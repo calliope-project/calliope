@@ -1,6 +1,7 @@
-import calliope
 import pytest
 from pytest import approx
+
+import calliope
 
 from .common.util import build_test_model as build_model
 
@@ -111,7 +112,7 @@ class TestModelSettings:
         def _run_model(feasibility, cap_val):
             override_dict = {
                 "nodes.a.techs": {"test_supply_elec": {}, "test_demand_elec": {}},
-                "links.a,b.exists": False,
+                "links.a,b.active": False,
                 # pick a time subset where demand is uniformally -10 throughout
                 "model.subset_time": ["2005-01-01 06:00:00", "2005-01-01 08:00:00"],
                 "run.ensure_feasibility": feasibility,

@@ -1,7 +1,8 @@
-import calliope
 import numpy as np
 import pandas as pd
 import pytest  # noqa: F401
+
+import calliope
 from calliope import exceptions
 from calliope.time import funcs, masks
 
@@ -1051,7 +1052,7 @@ class TestLoadTimeseries:
                 "d.techs": {"test_supply_elec": None, "test_demand_elec": None},
             },
             "links": {
-                "a,b": {"exists": False},
+                "a,b": {"active": False},
                 "c,d.techs": {"test_transmission_elec": None},
             },
         }

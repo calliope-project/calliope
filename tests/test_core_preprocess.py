@@ -1,12 +1,13 @@
 import os
 
-import calliope
-import calliope.exceptions as exceptions
 import numpy as np
 import pandas as pd
 import pytest
-from calliope.core.attrdict import AttrDict
 from pytest import approx
+
+import calliope
+import calliope.exceptions as exceptions
+from calliope.core.attrdict import AttrDict
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, defaults
@@ -764,7 +765,7 @@ class TestChecks:
             excinfo, "Constraint group `mygroup` will be completely ignored"
         )
 
-        assert m._model_run.group_constraints.mygroup.get("exists", True) is False
+        assert m._model_run.group_constraints.mygroup.get("active", True) is False
 
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Not building the link a,b:calliope.exceptions.ModelWarning"

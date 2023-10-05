@@ -1,19 +1,20 @@
 import pytest  # noqa: F401
+
 from calliope import exceptions
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
 
 
-class TestExistsFalse:
+class TestActiveFalse:
     """
     Test removal of techs, nodes, links, and transmission techs
-    with the ``exists: False`` configuration option.
+    with the ``active: False`` configuration option.
 
     """
 
-    def test_tech_exists_false(self):
-        overrides = {"techs.test_storage.exists": False}
+    def test_tech_active_false(self):
+        overrides = {"techs.test_storage.active": False}
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             model = build_model(overrides, "simple_storage,two_hours,investment_costs")
 
@@ -23,11 +24,11 @@ class TestExistsFalse:
         # Ensure warnings were raised
         assert check_error_or_warning(
             excinfo,
-            "Tech test_storage was removed by setting ``exists: False`` - not checking the consistency of its constraints at node a.",
+            "Tech test_storage was removed by setting ``active: False`` - not checking the consistency of its constraints at node a.",
         )
 
-    def test_node_exists_false(self):
-        overrides = {"nodes.b.exists": False}
+    def test_node_active_false(self):
+        overrides = {"nodes.b.active": False}
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             model = build_model(overrides, "simple_storage,two_hours,investment_costs")
 
@@ -37,11 +38,11 @@ class TestExistsFalse:
         # Ensure warnings were raised
         assert check_error_or_warning(
             excinfo,
-            "Not building the link a,b because one or both of its nodes have been removed from the model by setting ``exists: false``",
+            "Not building the link a,b because one or both of its nodes have been removed from the model by setting ``active: false``",
         )
 
-    def test_node_tech_exists_false(self):
-        overrides = {"nodes.b.techs.test_storage.exists": False}
+    def test_node_tech_active_false(self):
+        overrides = {"nodes.b.techs.test_storage.active": False}
         model = build_model(overrides, "simple_storage,two_hours,investment_costs")
 
         # Ensure what should be gone is gone
@@ -51,15 +52,15 @@ class TestExistsFalse:
             .item()
         )
 
-    def test_link_exists_false(self):
-        overrides = {"links.a,b.exists": False}
+    def test_link_active_false(self):
+        overrides = {"links.a,b.active": False}
         model = build_model(overrides, "simple_storage,two_hours,investment_costs")
 
         # Ensure what should be gone is gone
         assert not model._model_data.inheritance.str.endswith("transmission").any()
 
-    def test_link_tech_exists_false(self):
-        overrides = {"links.a,b.techs.test_transmission_elec.exists": False}
+    def test_link_tech_active_false(self):
+        overrides = {"links.a,b.techs.test_transmission_elec.active": False}
         model = build_model(overrides, "simple_storage,two_hours,investment_costs")
 
         # Ensure what should be gone is gone
