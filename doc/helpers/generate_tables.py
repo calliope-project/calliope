@@ -59,8 +59,7 @@ def process():
         get_section(defaults["techs"]["default_tech"]["costs"]["default_cost"]),
     )
 
-    write_csv("./user/includes/model_settings.csv", get_section(defaults["model"]))
-    write_csv("./user/includes/run_settings.csv", get_section(defaults["run"]))
+    write_csv("./user/includes/config.csv", get_section(defaults["config"]))
 
     y = yaml.YAML()
 

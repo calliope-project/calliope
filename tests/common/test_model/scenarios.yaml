@@ -241,7 +241,7 @@ overrides:
     links.a,b.exists: false
 
   clustering:
-    model.time:
+    config.init.time:
       function: apply_clustering
       function_options:
         clustering_func: file=cluster_days.csv:a
@@ -249,36 +249,38 @@ overrides:
         storage_inter_cluster: True
 
   spores:
-    run.mode: spores
-    run.spores_options:
-      score_cost_class: "spores_score"
-      slack: 0.1
-      spores_number: 3
-    run.objective_options.cost_class: { "monetary": 1, "spores_score": 0 }
+    config:
+      build.mode: spores
+      solve:
+        spores_score_cost_class: "spores_score"
+        spores_number: 3
+      parameters:
+        spores_slack: 0.1
+        objective_cost_class.data: { "monetary": 1, "spores_score": 0 }
 
     techs.test_supply_elec.costs.spores_score.flow_cap: 0
     techs.test_supply_elec.costs.spores_score.interest_rate: 0
     techs.test_supply_elec.constraints.lifetime: 1
 
   one_day:
-    model.subset_time: ["2005-01-01", "2005-01-01"]
+    config.init.subset_time: ["2005-01-01", "2005-01-01"]
 
   two_hours:
-    model.subset_time: ["2005-01-01 00:00:00", "2005-01-01 01:00:00"]
+    config.init.subset_time: ["2005-01-01 00:00:00", "2005-01-01 01:00:00"]
 
   resample_two_days:
-    model:
-      subset_time: ["2005-01-01", "2005-01-02"]
-      time:
-        function: resample
-        function_options.resolution: 24h
+    config:
+      init:
+        subset_time: ["2005-01-01", "2005-01-02"]
+        time:
+          function: resample
+          function_options.resolution: 24h
 
   operate:
-    run.mode: operate
-    model.subset_time: ["2005-01-01", "2005-01-04"]
-    run.operation:
-      window: 12
-      horizon: 24
+    config.build.mode: operate
+    config.init.subset_time: ["2005-01-01", "2005-01-04"]
+    config.solve.operate_window: 12
+    config.solve.operate_horizon: 24
 
   investment_costs:
     tech_groups:
@@ -319,4 +321,4 @@ overrides:
             flow_cap: 10
 
   explicit_cost_class:
-    run.objective_options.cost_class.monetary: 1
+    parameters.objective_cost_class.data: { moentary: 1 }

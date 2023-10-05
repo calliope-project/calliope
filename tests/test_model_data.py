@@ -269,7 +269,7 @@ class TestModelData:
         model_data._model_run_dict_to_dataset(
             "foo", "node", ["FOO"], ["nodes", "foobar"]
         )
-        assert "No relevant data found for `foo` group of parameters" in caplog.text
+        assert "No relevant data found for `FOO` group of parameters" in caplog.text
 
     @pytest.mark.parametrize(
         ("data", "idx", "cols", "out_idx"),

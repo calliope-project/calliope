@@ -4,8 +4,9 @@
 
 overrides:
   milp:
-    model.name: "Urban-scale example model with MILP"
-    run.solver_options.mipgap: 0.05
+    config:
+      init.name: "Urban-scale example model with MILP"
+      solve.solver_options: { mipgap: 0.05 }
     techs:
       # chp-start
       chp:
@@ -47,11 +48,13 @@ overrides:
       N1,X3.techs.heat_pipes.distance: 4
 
   operate:
-    run.mode: operate
-    run.operation:
-      window: 24
-      horizon: 48
-    model.subset_time: ["2005-07-01", "2005-07-10"]
+    config:
+      init.subset_time: ["2005-07-01", "2005-07-10"]
+      build.mode: operate
+      solve:
+        operate_window: 24
+        operate_horizon: 48
+
     nodes:
       X1:
         techs:
@@ -80,17 +83,19 @@ overrides:
       N1,X3.techs.heat_pipes.constraints.flow_cap_max: 320
 
   time_masking:
-    model.name: "Urban-scale example model with time masking"
-    model.subset_time: ["2005-01", "2005-01"]
-    # Resample time resolution to 6-hourly
-    model.time:
-      masks:
-        - function: extreme_diff
-          options:
-            tech0: demand_heat
-            tech1: demand_electricity
-            how: max
-            n: 2
-            var: sink_equals
-      function: resample
-      function_options: { resolution: 6H }
+    config:
+      init:
+      name: "Urban-scale example model with time masking"
+      subset_time: ["2005-01", "2005-01"]
+      # Resample time resolution to 6-hourly
+      time:
+        masks:
+          - function: extreme_diff
+            options:
+              tech0: demand_heat
+              tech1: demand_electricity
+              how: max
+              n: 2
+              var: sink_equals
+        function: resample
+        function_options: { resolution: 6H }

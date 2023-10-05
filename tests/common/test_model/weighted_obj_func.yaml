@@ -1,11 +1,12 @@
-model:
-  name: Cost capacity constraint test model
-  timeseries_data_path: "timeseries_data"
-  subset_time: ["2005-01-01", "2005-01-01"]
-
-run:
-  mode: plan
-  solver: cbc
+config:
+  init:
+    name: Cost capacity constraint test model
+    timeseries_data_path: "timeseries_data"
+    subset_time: ["2005-01-01", "2005-01-01"]
+  build:
+    mode: plan
+  solve:
+    solver: cbc
 
 techs:
   cheap_polluting_supply:
@@ -76,15 +77,15 @@ nodes:
 
 overrides:
   illegal_string_cost_class:
-    run.objective_options.cost_class: "monetary"
+    parameters.objective_cost_class.data: "monetary"
   emissions_objective_without_removing_monetary_default:
-    run.objective_options.cost_class: { "emissions": 0.1 }
+    parameters.objective_cost_class.data: { "emissions": 0.1 }
   monetary_objective:
-    run.objective_options.cost_class: { "monetary": 1 }
+    parameters.objective_cost_class.data: { "monetary": 1 }
   emissions_objective:
-    run.objective_options.cost_class: { "monetary": 0, "emissions": 1 }
+    parameters.objective_cost_class.data: { "monetary": 0, "emissions": 1 }
   weighted_objective:
-    run.objective_options.cost_class: { "monetary": 0.9, "emissions": 0.1 }
+    parameters.objective_cost_class.data: { "monetary": 0.9, "emissions": 0.1 }
   undefined_class_objective:
-    run.objective_options.cost_class:
+    parameters.objective_cost_class.data:
       { "monetary": 0.8, "emissions": 0.1, "random_class": 0.2 }

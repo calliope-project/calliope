@@ -83,22 +83,20 @@ class TestUrbanScaleMILP:
                 .dropna(how="all")
             )
 
-        m = calliope.examples.urban_scale(override_dict={"run.zero_threshold": 1e-6})
+        m = calliope.examples.urban_scale()
         m.build()
-        m.solve()
+        m.solve(zero_threshold=1e-6)
         _out = _get_flow(m, "out")
         _in = _get_flow(m, "in")
         assert any(((_in < 0) & (_out > 0)).any()) is True
 
         m_bin = calliope.examples.urban_scale(
             override_dict={
-                "techs.heat_pipes.constraints.force_async_flow": True,
-                "run.solver_options.mipgap": 0.05,
-                "run.zero_threshold": 1e-6,
+                "techs.heat_pipes.constraints.force_asynchronous_flow": True,
             }
         )
-        m_bin.build()
-        m_bin.solve()
+        m_bin.build(solver_options={"mipgap": 0.05})
+        m_bin.solve(zero_threshold=1e-6)
         _out = _get_flow(m_bin, "out")
         _in = _get_flow(m_bin, "in")
         assert any(((_in < 0) & (_out > 0)).any()) is False
@@ -113,9 +111,11 @@ class TestModelSettings:
                 "nodes.a.techs": {"test_supply_elec": {}, "test_demand_elec": {}},
                 "links.a,b.exists": False,
                 # pick a time subset where demand is uniformally -10 throughout
-                "model.subset_time": ["2005-01-01 06:00:00", "2005-01-01 08:00:00"],
-                "run.ensure_feasibility": feasibility,
-                "run.bigM": 1e3,
+                "config.init.subset_time": [
+                    "2005-01-01 06:00:00",
+                    "2005-01-01 08:00:00",
+                ],
+                "parameters.bigM": 1e3,
                 # Allow setting resource and flow_cap_max/equals to force infeasibility
                 "techs.test_supply_elec.constraints": {
                     "source_equals": cap_val,
@@ -126,7 +126,7 @@ class TestModelSettings:
             model = build_model(
                 override_dict=override_dict, scenario="investment_costs"
             )
-            model.build()
+            model.build(ensure_feasibility=feasibility)
             model.solve()
             return model
 
@@ -267,9 +267,7 @@ class TestEnergyCapacityPerStorageCapacity:
     def test_operate_mode_horizon_window(self, model_file, horizon_window):
         horizon, window = horizon_window
         override_dict = {
-            "model.subset_time": ["2005-01-01", "2005-01-05"],
-            "run.operation.horizon": horizon,
-            "run.operation.window": window,
+            "config.init.subset_time": ["2005-01-01", "2005-01-05"],
         }
         model = build_model(
             model_file=model_file,
@@ -277,4 +275,4 @@ class TestEnergyCapacityPerStorageCapacity:
             override_dict=override_dict,
         )
         model.build()
-        model.solve()
+        model.solve(operate_horizon=horizon, operate_window=window)

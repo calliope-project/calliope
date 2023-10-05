@@ -7,11 +7,11 @@ constraints:
   balance_supply_plus_with_storage:
     sub_expressions:
       storage_previous_step: &storage_previous_step
-        - where: timesteps=get_val_at_index(timesteps=0) AND NOT run.cyclic_storage=True
+        - where: timesteps=get_val_at_index(timesteps=0) AND NOT config.cyclic_storage=True
           expression: storage_initial * storage_cap
-        - where: ((timesteps=get_val_at_index(timesteps=0) AND run.cyclic_storage=True) OR NOT timesteps=get_val_at_index(timesteps=0)) AND NOT lookup_cluster_last_timestep
+        - where: ((timesteps=get_val_at_index(timesteps=0) AND config.cyclic_storage=True) OR NOT timesteps=get_val_at_index(timesteps=0)) AND NOT lookup_cluster_last_timestep
           expression: (1 - storage_loss) ** roll(timestep_resolution, timesteps=1) * roll(storage, timesteps=1)
-        - where: lookup_cluster_last_timestep AND NOT (timesteps=get_val_at_index(timesteps=0) AND NOT run.cyclic_storage=True)
+        - where: lookup_cluster_last_timestep AND NOT (timesteps=get_val_at_index(timesteps=0) AND NOT config.cyclic_storage=True)
           expression: "0"
 
   balance_storage:
@@ -69,14 +69,14 @@ constraints:
       - expression: storage_inter_cluster == $storage_previous_step + $storage_intra
     sub_expressions:
       storage_previous_step:
-        - where: datesteps=get_val_at_index(datesteps=0) AND NOT run.cyclic_storage=True
+        - where: datesteps=get_val_at_index(datesteps=0) AND NOT config.cyclic_storage=True
           expression: storage_initial
-        - where: (datesteps=get_val_at_index(datesteps=0) AND run.cyclic_storage=True) OR NOT datesteps=get_val_at_index(datesteps=0)
+        - where: (datesteps=get_val_at_index(datesteps=0) AND config.cyclic_storage=True) OR NOT datesteps=get_val_at_index(datesteps=0)
           expression: ((1 - storage_loss) ** 24) * roll(storage_inter_cluster, datesteps=1)
       storage_intra:
-        - where: datesteps=get_val_at_index(datesteps=0) AND NOT run.cyclic_storage=True
+        - where: datesteps=get_val_at_index(datesteps=0) AND NOT config.cyclic_storage=True
           expression: "0"
-        - where: NOT (datesteps=get_val_at_index(datesteps=0) AND NOT run.cyclic_storage=True)
+        - where: NOT (datesteps=get_val_at_index(datesteps=0) AND NOT config.cyclic_storage=True)
           expression: storage[timesteps=$final_step]
     slices:
       final_step:

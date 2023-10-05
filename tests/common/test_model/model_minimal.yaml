@@ -1,15 +1,19 @@
 import:
   - scenarios.yaml
 
-model:
-  name: Minimal test model
+config:
+  init:
+    name: Minimal test model
+    timeseries_data_path: "timeseries_data"
+  build:
+    mode: plan
+  solve:
+    solver: cbc
 
-  timeseries_data_path: "timeseries_data"
-
-run:
-  mode: plan
-  solver: cbc
-  objective_options.cost_class.monetary: 1
+parameters:
+  objective_cost_class:
+    data: { monetary: 1 }
+    dims: costs
 
 techs:
   test_supply_elec:

@@ -5,11 +5,13 @@ constraints:
   force_zero_area_use.active: false
   area_use_per_flow_capacity.active: false
   area_use_capacity_per_loc.active: false
-  flow_capacity_systemwide.active: false
+  flow_capacity_systemwide_max.active: false
+  flow_capacity_systemwide_min.active: false
   symmetric_transmission.active: false
   storage_capacity_units_milp.active: false
   flow_capacity_units_milp.active: false
-  unit_capacity_systemwide_milp.active: false
+  unit_capacity_max_systemwide_milp.active: false
+  unit_capacity_min_systemwide_milp.active: false
 
 variables:
   flow_cap.active: false

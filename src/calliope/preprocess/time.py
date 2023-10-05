@@ -17,7 +17,9 @@ from calliope.core.attrdict import AttrDict
 from calliope.core.util.tools import plugin_load
 
 
-def apply_time_clustering(model_data, model_run):
+def apply_time_clustering(
+    model_data: xr.Dataset, time_config: AttrDict, input_timeseries_dfs: pd.DataFrame
+):
     """
     Take a Calliope model_data post time dimension addition, prior to any time
     clustering, and apply relevant time clustering/masking techniques.
@@ -56,7 +58,6 @@ def apply_time_clustering(model_data, model_run):
         been updated as per user-defined clustering techniques (from model_run)
 
     """
-    time_config = model_run.model["time"]
 
     data = model_data.copy(deep=True)
 
@@ -90,13 +91,15 @@ def apply_time_clustering(model_data, model_run):
         func = plugin_load(time_config.function, builtin_module="calliope.time.funcs")
         func_kwargs = time_config.get("function_options", AttrDict()).as_dict()
         if "file=" in func_kwargs.get("clustering_func", ""):
-            func_kwargs.update({"model_run": model_run})
+            func_kwargs.update({"clustering_timeseries": input_timeseries_dfs})
         data = func(data=data, timesteps=timesteps, **func_kwargs)
 
     return data
 
 
-def add_time_dimension(data, model_run):
+def add_time_dimension(
+    data: xr.Dataset, timeseries_vars: set[str], timeseries_data: pd.DataFrame
+):
     """
     Once all constraints and costs have been loaded into the model dataset, any
     timeseries data is loaded from file and substituted into the model dataset
@@ -118,7 +121,7 @@ def add_time_dimension(data, model_run):
     """
     key_errors = []
     # Search through every constraint/cost for use of '='
-    for variable in model_run.timeseries_vars:
+    for variable in timeseries_vars:
         # 2) convert to a Pandas Series to do 'string contains' search
         data_series = data[variable].to_series().dropna()
 
@@ -146,7 +149,7 @@ def add_time_dimension(data, model_run):
 
         # 6) Get all timeseries data from dataframes stored in model_run
         try:
-            timeseries_data = model_run.timeseries_data.loc[:, tskeys.index]
+            var_timeseries_data = timeseries_data.loc[:, tskeys.index]
         except KeyError:
             key_errors.append(
                 f"file:column combinations `{tskeys.index.values}` not found, but are"
@@ -154,14 +157,14 @@ def add_time_dimension(data, model_run):
             )
             continue
 
-        timeseries_data.columns = pd.MultiIndex.from_frame(tskeys)
+        var_timeseries_data.columns = pd.MultiIndex.from_frame(tskeys)
 
         # 7) Add time dimension to the relevent DataArray and update the '='
         # dimensions with the time varying data (static data is just duplicated
         # at each timestep)
 
         data[variable] = (
-            xr.DataArray.from_series(timeseries_data.unstack())
+            xr.DataArray.from_series(var_timeseries_data.unstack())
             .reindex(data[variable].coords)
             .fillna(data[variable])
         )

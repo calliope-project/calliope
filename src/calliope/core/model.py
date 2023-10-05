@@ -10,11 +10,14 @@ Implements the core Model class.
 """
 from __future__ import annotations
 
+import importlib
 import logging
 import warnings
+from copy import deepcopy
 from pathlib import Path
-from typing import Callable, Literal, Optional, TypeVar, Union
+from typing import Callable, Optional, TypeVar, Union
 
+import pandas as pd
 import xarray
 
 import calliope
@@ -52,16 +55,15 @@ class Model(object):
     """
 
     _BACKENDS: dict[str, Callable] = {"pyomo": PyomoBackendModel}
-    _MATH_SCHEMA = AttrDict.from_yaml(
-        Path(calliope.__file__).parent / "config" / "math_schema.yaml"
-    )
 
     def __init__(
         self,
-        config: Optional[Union[str, dict]],
+        model_definition: Optional[Union[str, dict]] = None,
         model_data: Optional[xarray.Dataset] = None,
         debug: bool = False,
-        *args,
+        scenario: Optional[str] = None,
+        override_dict: Optional[dict] = None,
+        timeseries_dataframes: Optional[dict[str, pd.DataFrame]] = None,
         **kwargs,
     ):
         """
@@ -79,40 +81,50 @@ class Model(object):
             debug (bool, optional):
                 If True, additional debug data will be included in the built model.
                 Defaults to False.
-
-        Keyword Args:
-            timeseries_dataframes (dict[str, pd.DataFrame]):
-                If supplying `config` as a dictionary, in-memory timeseries data can be referred to using `df=...`.
-                The referenced data must be supplied here as a dicitionary of dataframes.
             scenario (str):
                 Comma delimited string of pre-defined `scenarios` to apply to the model,
             override_dict (dict):
                 Additional overrides to apply to `config`.
                 These will be applied *after* applying any defined `scenario` overrides.
+            timeseries_dataframes (dict[str, pd.DataFrame], optional):
+                If supplying `config` as a dictionary, in-memory timeseries data can be referred to using `df=...`.
+                The referenced data must be supplied here as a dicitionary of dataframes.
+                Defaults to None.
 
         Raises:
             ValueError: `config` must be provided (as one of `str`, `int`, `None`).
         """
         self._timings: dict = {}
         self.defaults: AttrDict
-        self.model_config: AttrDict
-        self.run_config: AttrDict
+        self.config: AttrDict
         self.math: AttrDict
-        self._config_path: Optional[str]
-        self.math_documentation = MathDocumentation(self._build)
+        self._model_def_path: Optional[str]
+        self.math_documentation = MathDocumentation()
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
         log_time(LOGGER, self._timings, "model_creation", comment="Model: initialising")
-        if isinstance(config, str):
-            self._config_path = config
-            model_run, debug_data = model_run_from_yaml(config, *args, **kwargs)
+        if isinstance(model_definition, str):
+            self._model_def_path = model_definition
+            model_run, debug_data = model_run_from_yaml(
+                model_definition,
+                scenario,
+                override_dict,
+                timeseries_dataframes,
+                **kwargs,
+            )
             self._init_from_model_run(model_run, debug_data, debug)
-        elif isinstance(config, dict):
-            self._config_path = None
-            model_run, debug_data = model_run_from_dict(config, *args, **kwargs)
+        elif isinstance(model_definition, dict):
+            self._model_def_path = None
+            model_run, debug_data = model_run_from_dict(
+                model_definition,
+                scenario,
+                override_dict,
+                timeseries_dataframes,
+                **kwargs,
+            )
             self._init_from_model_run(model_run, debug_data, debug)
-        elif model_data is not None and config is None:
+        elif model_data is not None and model_definition is None:
             self._init_from_model_data(model_data)
         else:
             # expected input is a string pointing to a YAML file of the run
@@ -121,6 +133,10 @@ class Model(object):
             raise ValueError(
                 "Input configuration must either be a string or a dictionary."
             )
+
+    @property
+    def name(self):
+        return self._model_data.attrs["name"]
 
     def _init_from_model_run(
         self, model_run: calliope.AttrDict, debug_data: calliope.AttrDict, debug: bool
@@ -162,20 +178,19 @@ class Model(object):
         )
 
         # Ensure model and run attributes of _model_data update themselves
-        model_config = {
-            k: v for k, v in model_run.get("model", {}).items() if k != "file_allowed"
-        }
+        init_config = model_run.config.pop("init")
+        build_solve_config = model_run.config
 
-        self._add_observed_dict("model_config", model_config)
-        self._add_observed_dict("run_config", model_run["run"])
+        self._add_observed_dict("config", build_solve_config)
         self._add_observed_dict("defaults", self._generate_default_dict())
 
-        math = self._add_math(model_config["custom_math"])
+        math = self._add_math(init_config.custom_math)
         self._add_observed_dict("math", math)
 
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         self.math_documentation.inputs = self._model_data
 
+        self._model_data.attrs["name"] = init_config["name"]
         log_time(
             LOGGER,
             self._timings,
@@ -220,8 +235,7 @@ class Model(object):
         """
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
         self.results = self._model_data.filter_by_attrs(is_result=1)
-        self._add_observed_dict("model_config")
-        self._add_observed_dict("run_config")
+        self._add_observed_dict("config")
         self._add_observed_dict("math")
 
         self.inputs = self._model_data.filter_by_attrs(is_result=0)
@@ -291,7 +305,7 @@ class Model(object):
             if not f"{filename}".endswith((".yaml", ".yml")):
                 yaml_filepath = math_dir / f"{filename}.yaml"
             else:
-                yaml_filepath = Path(relative_path(self._config_path, filename))
+                yaml_filepath = Path(relative_path(self._model_def_path, filename))
 
             if not yaml_filepath.is_file():
                 file_errors.append(filename)
@@ -304,6 +318,7 @@ class Model(object):
             raise exceptions.ModelError(
                 f"Attempted to load custom math that does not exist: {file_errors}"
             )
+        self._model_data.attrs["applied_custom_math"] = custom_math
         return base_math
 
     def _generate_default_dict(self) -> AttrDict:
@@ -335,26 +350,7 @@ class Model(object):
             }
         )
 
-    def _add_run_mode_custom_math(self) -> None:
-        """If not given in the custom_math list, override model math with run mode math"""
-        run_mode = self.run_config["mode"]
-        # FIXME: available modes should not be hardcoded here.
-        # They should come from a YAML schema.
-        not_run_mode = {"plan", "operate", "spores"}.difference([run_mode])
-        run_mode_mismatch = not_run_mode.intersection(self.model_config["custom_math"])
-        if run_mode_mismatch:
-            exceptions.warn(
-                f"Running in {run_mode} mode, but run mode(s) {run_mode_mismatch} custom "
-                "math being loaded from file via the model configuration"
-            )
-
-        if run_mode != "plan" and run_mode not in self.model_config["custom_math"]:
-            filepath = Path(calliope.__file__).parent / "math" / f"{run_mode}.yaml"
-            self.math.union(AttrDict.from_yaml(filepath), allow_override=True)
-
-    def build(
-        self, force: bool = False, backend_interface: Literal["pyomo"] = "pyomo"
-    ) -> None:
+    def build(self, force: bool = False, **kwargs) -> None:
         """Build description of the optimisation problem in the chosen backend interface.
 
         Args:
@@ -370,41 +366,13 @@ class Model(object):
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
-        backend = self._BACKENDS[backend_interface](self._model_data)
-        self.backend = self._build(backend)
+        backend_name = kwargs.get("backend", self.config.build.backend)
 
-    def _build(self, backend: T) -> T:
-        log_time(
-            LOGGER,
-            self._timings,
-            "backend_parameters_generated",
-            comment="Model: Generated optimisation problem parameters",
-        )
-        self._add_run_mode_custom_math()
-        validate_dict(self.math, self._MATH_SCHEMA, "math")
-        # The order of adding components matters!
-        # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
-        for components in [
-            "variables",
-            "global_expressions",
-            "constraints",
-            "objectives",
-        ]:
-            component = components.removesuffix("s")
-            if components in ["variables", "global_expressions"]:
-                backend.valid_math_element_names.update(self.math[components].keys())
-            for name in self.math[components]:
-                getattr(backend, f"add_{component}")(name)
+        backend = self._BACKENDS[backend_name](self._model_data, **kwargs)
+        backend._build()
+        self.backend = backend
 
-            log_time(
-                LOGGER,
-                self._timings,
-                f"backend_{components}_generated",
-                comment=f"Model: Generated optimisation problem {components}",
-            )
-        return backend
-
-    def solve(self, force: bool = False, warmstart: bool = False) -> None:
+    def solve(self, force: bool = False, warmstart: bool = False, **kwargs) -> None:
         """
         Run the built optimisation problem.
 
@@ -426,7 +394,9 @@ class Model(object):
             exceptions.ModelError: Cannot run the model if there are already results loaded, unless `force` is True.
             exceptions.ModelError: Some preprocessing steps will stop a run mode of "operate" from being possible.
         """
-        run_mode = self.run_config["mode"]
+        run_mode = self.config.build.mode
+        solver_config = deepcopy(self.config.solve)
+        solver_config.union(AttrDict(kwargs), allow_override=True)
 
         # Check that results exist and are non-empty
         if not hasattr(self, "backend"):
@@ -461,10 +431,10 @@ class Model(object):
         )
 
         termination_condition = self.backend.solve(
-            solver=self.run_config["solver"],
-            solver_io=self.run_config.get("solver_io", None),
-            solver_options=self.run_config.get("solver_options", None),
-            save_logs=self.run_config.get("save_logs", None),
+            solver=solver_config["solver"],
+            solver_io=solver_config["solver_io"],
+            solver_options=solver_config["solver_options"],
+            save_logs=solver_config["save_logs"],
             warmstart=warmstart,
         )
 
@@ -539,7 +509,7 @@ class Model(object):
             str: Basic description of the model.
         """
         info_strings = []
-        model_name = self.model_config.get("name", "None")
+        model_name = self.name
         info_strings.append(f"Model name:   {model_name}")
         msize = dict(self._model_data.dims)
         msize_exists = (self._model_data.node_tech * self._model_data.carrier).sum()
@@ -572,8 +542,10 @@ class Model(object):
             If all components of the dictionary are parsed successfully, this function will log a success message to the INFO logging level and return None.
             Otherwise, a calliope.ModelError will be raised with parsing issues listed.
         """
-
-        validate_dict(math_dict, self._MATH_SCHEMA, "math")
+        math_schema = AttrDict.from_yaml(
+            importlib.resources.files("calliope") / "config" / "math_schema.yaml"
+        )
+        validate_dict(math_dict, math_schema, "math")
         valid_math_element_names = [
             *self.math["variables"].keys(),
             *self.math["global_expressions"].keys(),
@@ -581,9 +553,6 @@ class Model(object):
             *math_dict.get("global_expressions", {}).keys(),
             *self.inputs.data_vars.keys(),
             *self.defaults.keys(),
-            # FIXME: these should not be hardcoded, but rather end up in model data keys
-            "bigM",
-            *["objective_" + k for k in self.run_config["objective_options"].keys()],
         ]
         collected_errors: dict = dict()
         for component_group, component_dicts in math_dict.items():

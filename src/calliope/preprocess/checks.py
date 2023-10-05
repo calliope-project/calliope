@@ -86,7 +86,7 @@ def check_overrides(config_model, override):
     return model_warnings
 
 
-def check_initial(config_model):
+def check_initial(config_model: AttrDict):
     """
     Perform initial checks of model and run config dicts.
 
@@ -103,8 +103,8 @@ def check_initial(config_model):
     model_warnings = []
 
     # Check for version mismatch
-    model_version = config_model.model.get("calliope_version", False)
-    if model_version:
+    model_version = config_model.config.init["calliope_version"]
+    if model_version is not None:
         if str(model_version) not in __version__:
             model_warnings.append(
                 "Model configuration specifies calliope_version={}, "
@@ -116,8 +116,8 @@ def check_initial(config_model):
     # Check top-level keys
     for k in config_model.keys():
         if k not in [
-            "model",
-            "run",
+            "config",
+            "parameters",
             "nodes",
             "locations",  # TODO: remove in v0.7.1
             "tech_groups",
@@ -125,14 +125,14 @@ def check_initial(config_model):
             "links",
             "overrides",
             "scenarios",
-            "config_path",
+            "_model_def_path",
         ]:
             model_warnings.append(
                 "Unrecognised top-level configuration item: {}".format(k)
             )
 
     # Check that all required top-level keys are specified
-    for k in ["model", "run", "nodes", "techs"]:
+    for k in ["config", "nodes", "techs"]:
         if k not in config_model.keys():
             if k == "nodes" and "locations" in config_model.keys():
                 # TODO: remove in v0.7.1
@@ -151,39 +151,28 @@ def check_initial(config_model):
     # Check run configuration
     # Exclude solver_options and objective_options.cost_class from checks,
     # as we don't know all possible options for all solvers
-    for k in config_model["run"].keys_nested():
-        if (
-            k not in DEFAULTS["run"].keys_nested()
-            and "solver_options" not in k
-            and "objective_options.cost_class" not in k
-        ):
-            model_warnings.append(
-                "Unrecognised setting in run configuration: {}".format(k)
-            )
+    for config_group in ["init", "build", "solve"]:
+        for k in config_model.config[config_group].keys():
+            if k not in DEFAULTS.config[config_group].keys():
+                model_warnings.append(
+                    f"Unrecognised setting in `{config_group}` configuration: {k}"
+                )
 
-    # Check model configuration, but top-level keys only
-    for k in config_model["model"].keys():
-        if k not in DEFAULTS["model"].keys():
-            model_warnings.append(
-                "Unrecognised setting in model configuration: {}".format(k)
-            )
     # If spores run mode is selected, check the correct definition of all needed parameters
-    if config_model.run.mode == "spores":
+    if config_model.config.build.mode == "spores":
         # Check that spores number is greater than 0, otherwise raise warning
-        if config_model.run.spores_options.spores_number == 0:
+        if config_model.config.solve.spores_number == 0:
             model_warnings.append(
                 "spores run mode is selected, but a number of 0 spores is requested"
             )
-        # Check that slack cost is greater than 0, otherwise set to default (0.1) and raise warning
-        if config_model.run.spores_options.slack <= 0:
-            config_model.run.spores_options.slack = 0.1
-            model_warnings.append(
-                "Slack must be greater than zero, setting slack to default value of 0.1 "
-            )
+        # Check that slack cost is greater than 0
+        if config_model.parameters.spores_slack <= 0:
+            errors.append("`parameters.spores_slack` must be > 0")
+
         # Check that score_cost_class is a string
-        _spores_cost_class = config_model.run.spores_options.get("score_cost_class", {})
+        _spores_cost_class = config_model.config.solve.spores_score_cost_class
         if not isinstance(_spores_cost_class, str):
-            errors.append("`run.spores_options.score_cost_class` must be a string")
+            errors.append("`config.solve.spores_score_cost_class` must be a string")
 
     # Only ['in', 'out', 'in_2', 'out_2', 'in_3', 'out_3']
     # are allowed as carrier tiers
@@ -309,72 +298,22 @@ def check_initial(config_model):
             "(i.e. `one_way: true`).".format(tech_end, ", ".join(duplicated_techs))
         )
 
-    # Error if a constraint is loaded from file that must not be
-    allowed_from_file = DEFAULTS.model.file_allowed
-    for k, v in config_model.as_dict_flat().items():
-        if "file=" in str(v):
-            possible_identifiers = k.split(".")
-            is_time_varying = any("_time_varying" in i for i in possible_identifiers)
-            if is_time_varying:
-                model_warnings.append(
-                    "Using custom constraint `{}` with time-varying data.".format(k)
-                )
-            elif (
-                not set(possible_identifiers).intersection(allowed_from_file)
-                and not is_time_varying
-            ):
-                errors.append(
-                    "Cannot load data from file for configuration `{}`.".format(k)
-                )
-
     # We no longer allow cost_class in objective_obtions to be a string
-    _cost_class = config_model.run.objective_options.get("cost_class", {})
+    _cost_class = config_model.parameters.objective_cost_class
 
-    if not isinstance(_cost_class, dict):
+    if not isinstance(_cost_class.data, dict):
         errors.append(
-            "`run.objective_options.cost_class` must be a dictionary."
+            "`parameters.objective_cost_class` must be a dictionary."
             "If you want to minimise or maximise with a single cost class, "
-            'use e.g. "{monetary: 1}", which gives the monetary cost class a weight '
+            'use e.g. "{"costs": {monetary: 1}}", which gives the monetary cost class a weight '
             "of 1 in the objective, and ignores any other cost classes."
         )
     else:
-        # This next check is only run if we have confirmed that cost_class is
-        # a dict, as it errors otherwise
-
-        # For cost minimisation objective, check for cost_class: None and set to one
-        for k, v in _cost_class.items():
-            if v is None:
-                config_model.run.objective_options.cost_class[k] = 1
-                model_warnings.append(
-                    "cost class {} has weight = None, setting weight to 1".format(k)
+        for _class, _val in _cost_class.data.as_dict_flat().items():
+            if not isinstance(_val, (int, float)):
+                errors.append(
+                    f"Objective cost class weights must be numeric, received {_class}:{_val}"
                 )
-
-    if (
-        isinstance(_cost_class, dict)
-        and _cost_class.get("monetary", 0) == 1
-        and len(_cost_class.keys()) > 1
-    ):
-        # Warn that {monetary: 1} is still in the objective, since it is not
-        # automatically overidden on setting another objective.
-        model_warnings.append(
-            "Monetary cost class with a weight of 1 is still included "
-            "in the objective. If you want to remove the monetary cost class, "
-            'add `{"monetary": 0}` to the dictionary nested under '
-            " `run.objective_options.cost_class`."
-        )
-
-    # Don't allow time clustering with cyclic storage if not also using
-    # storage_inter_cluster
-    storage_inter_cluster = "model.time.function_options.storage_inter_cluster"
-    if (
-        config_model.get_key("model.time.function", None) == "apply_clustering"
-        and config_model.get_key("run.cyclic_storage", True)
-        and not config_model.get_key(storage_inter_cluster, True)
-    ):
-        errors.append(
-            "When time clustering, cannot have cyclic storage constraints if "
-            "`storage_inter_cluster` decision variable is not activated."
-        )
 
     return model_warnings, errors
 
@@ -609,10 +548,6 @@ def check_final(model_run):
             errors.append(
                 "Time series `{}` contains non-unique timestamp values.".format(k)
             )
-
-    # FIXME:
-    # make sure `comments` is at the the base level:
-    # i.e. comments.model_run.xxxxx....
 
     return comments, model_warnings, errors
 
