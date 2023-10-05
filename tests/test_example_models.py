@@ -556,7 +556,7 @@ class TestUrbanScaleExampleModelSenseChecks:
         ) == approx(0.18720)
         assert model.results.area_use.sel(nodes="X2", techs="pv") == approx(830.064659)
 
-        assert float(model.results.carrier_export.sum()) == approx(122.7156)
+        assert float(model.results.flow_export.sum()) == approx(122.7156)
 
         # GLPK doesn't agree with commercial solvers, so we have to account for that here
         cost_sum = 430.097399 if solver == "glpk" else 430.089188
@@ -595,7 +595,7 @@ class TestUrbanScaleExampleModelSenseChecks:
         assert model.results.flow_out.sum("timesteps").sel(
             carriers="gas", nodes="X1", techs="supply_gas"
         ) == approx(12363.173036)
-        assert float(model.results.carrier_export.sum()) == approx(0)
+        assert float(model.results.flow_export.sum()) == approx(0)
 
         assert model.results.purchased.sel(nodes="X2", techs="boiler") == 1
         assert model.results.units.sel(nodes="X1", techs="chp") == 1

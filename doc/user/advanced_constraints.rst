@@ -186,7 +186,7 @@ There are few instances where using the full capacity of a conversion_plus tech 
 
 A ``primary_carrier_out`` must be defined when there are multiple ``carrier_out`` values defined, similarly ``primary_carrier_in`` can be defined for ``carrier_in``. `primary_carriers` can be defined as any carrier in a technology's input/output carriers (including secondary and tertiary carriers). The chosen output carrier will be the one to which production costs are applied (reciprocally, input carrier for consumption costs).
 
-.. note:: ``Conversion_plus`` technologies can also export any one of their output carriers, by specifying that carrier as ``carrier_export``.
+.. note:: ``Conversion_plus`` technologies can also export any one of their output carriers, by specifying that carrier as the ``export_carrier``.
 
 --------------------
 Area use constraints

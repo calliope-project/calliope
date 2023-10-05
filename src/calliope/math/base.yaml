@@ -167,11 +167,11 @@ constraints:
     description: "Set the global energy balance of the optimisation problem by fixing the total production of a given energy carrier to equal the total consumption of that carrier at every node in every timestep."
     foreach: [nodes, carriers, timesteps]
     equations:
-      - expression: "sum(flow_out, over=techs) - sum(flow_in, over=techs) - $carrier_export + $unmet_demand_and_unused_supply == 0"
+      - expression: "sum(flow_out, over=techs) - sum(flow_in, over=techs) - $flow_export + $unmet_demand_and_unused_supply == 0"
     sub_expressions:
-      carrier_export:
+      flow_export:
         - where: "any(export_carrier, over=techs)"
-          expression: sum(carrier_export, over=techs)
+          expression: sum(flow_export, over=techs)
         - where: "NOT any(export_carrier, over=techs)"
           expression: "0"
       unmet_demand_and_unused_supply:
@@ -321,17 +321,17 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "export_carrier AND export=True"
     equations:
-      - expression: flow_out >= carrier_export
+      - expression: flow_out >= flow_export
 
-  carrier_export_max:
+  flow_export_max:
     description: "Set the upper bound of a technology's carrier export, for any technologies that can export energy out of the system."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "carrier_export AND export_max"
+    where: "flow_export AND export_max"
     equations:
       - where: "cap_method=integer"
-        expression: carrier_export <= export_max * operating_units
+        expression: flow_export <= export_max * operating_units
       - where: "NOT cap_method=integer"
-        expression: carrier_export <= export_max
+        expression: flow_export <= export_max
 
   unit_commitment_milp:
     description: "Set the upper bound of the number of integer units of technology that can exist, for any technology using integer units to define its capacity."
@@ -506,7 +506,7 @@ variables:
       min: 0
       max: .inf
 
-  carrier_export:
+  flow_export:
     description: "The energy exported outside the system boundaries by a technology per timestep."
     unit: energy
     foreach: [nodes, techs, carriers, timesteps]
@@ -646,7 +646,7 @@ global_expressions:
     sub_expressions:
       cost_export:
         - where: "export_carrier AND cost_export"
-          expression: cost_export * sum(carrier_export, over=carriers)
+          expression: cost_export * sum(flow_export, over=carriers)
         - where: "NOT cost_export"
           expression: "0"
       cost_om_con:

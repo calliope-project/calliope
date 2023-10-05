@@ -587,7 +587,7 @@ class TestExportConstraints:
             simple_supply.backend.get_constraint(
                 "system_balance", as_backend_objs=False
             ),
-            "carrier_export",
+            "flow_export",
         )
 
     def test_loc_carriers_system_balance_export(self, supply_export):
@@ -595,7 +595,7 @@ class TestExportConstraints:
             supply_export.backend.get_constraint(
                 "system_balance", as_backend_objs=False
             ),
-            "carrier_export",
+            "flow_export",
         )
 
     def test_loc_tech_carriers_export_balance_constraint(self, supply_export):
@@ -619,7 +619,7 @@ class TestExportConstraints:
 
         assert check_variable_exists(
             m.backend.get_expression("cost_var", as_backend_objs=False),
-            "carrier_export",
+            "flow_export",
         )
 
     def test_loc_tech_carriers_export_max_constraint(self):
@@ -633,7 +633,7 @@ class TestExportConstraints:
             "supply_export,two_hours,investment_costs",
         )
         m.build()
-        assert "carrier_export_max" in m.backend.constraints
+        assert "flow_export_max" in m.backend.constraints
 
 
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
