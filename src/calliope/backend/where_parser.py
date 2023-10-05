@@ -94,18 +94,17 @@ class ConfigOptionParser(expression_parser.EvalString):
             tokens (pp.ParseResults):
                 Has two parsed elements: config group name (str) and config option (str).
         """
-        config_group, self.config_option = tokens
-        self.config_group = f"{config_group}_config"
+        self.config_option = tokens[0]
         self.instring = instring
         self.loc = loc
 
     def __repr__(self):
         "Return string representation of the parsed grammar"
-        return f"CONFIG:{self.config_group}.{self.config_option}"
+        return f"CONFIG:{self.config_option}"
 
     def as_latex(self) -> str:
         """Add return input string for use in a LaTex math formula"""
-        return rf"\text{{{self.config_group}.{self.config_option}}}"
+        return rf"\text{{config.{self.config_option}}}"
 
     def eval(
         self, model_data: xr.Dataset, **kwargs
@@ -120,17 +119,11 @@ class ConfigOptionParser(expression_parser.EvalString):
         Returns:
             Optional[Union[int, float, str, bool, np.bool_]]: Configuration option value.
         """
-        if self.config_group not in model_data.attrs:
-            raise BackendError(
-                f"(where, {self.instring}): Invalid configuration group defined"
-            )
-        elif kwargs.get("as_latex", False):
+
+        if kwargs.get("as_latex", False):
             return self.as_latex()
         else:
-            config_dict = model_data.attrs[self.config_group]
-            # TODO: either remove the default key return or make it optional with
-            # a "strict" arg
-            config_val = config_dict.get_key(self.config_option, np.nan)
+            config_val = model_data.attrs["config"].build[self.config_option]
 
             if not isinstance(config_val, (int, float, str, bool, np.bool_)):
                 raise BackendError(
@@ -410,13 +403,7 @@ def config_option_parser(generic_identifier: pp.ParserElement) -> pp.ParserEleme
             Parser for configuration options which will be accessed from the configuration
             dictionary attached to the attributes of the Calliope model dataset.
     """
-    config_group = generic_identifier + pp.FollowedBy(".")
-    config_options = pp.ZeroOrMore("." + generic_identifier)
-    data_var = (
-        config_group
-        + pp.Suppress(".")
-        + pp.Combine(generic_identifier + config_options)
-    )
+    data_var = pp.Suppress("config.") + generic_identifier
     data_var.set_parse_action(ConfigOptionParser)
 
     return data_var
@@ -555,8 +542,11 @@ def generate_where_string_parser() -> pp.ParserElement:
     config_option = config_option_parser(generic_identifier)
     bool_operand = bool_parser()
     evaluatable_string = evaluatable_string_parser(generic_identifier)
+    id_list = (
+        pp.Suppress("[") + pp.delimited_list(evaluatable_string) + pp.Suppress("]")
+    )
     helper_function = expression_parser.helper_function_parser(
-        evaluatable_string, number, generic_identifier=generic_identifier
+        evaluatable_string, number, id_list, generic_identifier=generic_identifier
     )
     comparison = comparison_parser(
         evaluatable_string,

@@ -217,10 +217,18 @@ def dummy_model_data():
     for param in model_data.data_vars.values():
         param.attrs["is_result"] = 0
 
-    model_data.attrs["run_config"] = AttrDict(
-        {"foo": True, "bar": {"foobar": "baz"}, "foobar": {"baz": {"foo": np.inf}}}
+    model_data.attrs["config"] = AttrDict(
+        {
+            "build": {
+                "foo": True,
+                "FOO": "baz",
+                "foo1": np.inf,
+                "bar": {"foobar": "baz"},
+                "a_b": 0,
+                "b_a": [1, 2],
+            }
+        }
     )
-    model_data.attrs["model_config"] = AttrDict({"a_b": 0, "b_a": [1, 2]})
 
     model_data.attrs["defaults"] = AttrDict(
         {"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100, "only_techs": 5}

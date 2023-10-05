@@ -111,7 +111,7 @@ def apply_clustering(
     normalize=True,
     scale_clusters="mean",
     storage_inter_cluster=True,
-    model_run=None,
+    clustering_timeseries=None,
     **kwargs,
 ):
     """
@@ -173,7 +173,7 @@ def apply_clustering(
         else:
             column = None
 
-        df = model_run.timeseries_data[file]
+        df = clustering_timeseries[file]
         if isinstance(df, pd.Series) and column is not None:
             exceptions.warn(
                 "{} given as time clustering column, but only one column to "

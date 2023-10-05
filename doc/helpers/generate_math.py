@@ -23,6 +23,19 @@ NONDEMAND_TECHGROUPS = [
     "conversion_plus",
     "supply_plus",
 ]
+POSSIBLE_TIMESERIES_DATA = [
+    "clustering_func",
+    "energy_eff",
+    "energy_ramping",
+    "export",
+    "om_con",
+    "om_prod",
+    "parasitic_eff",
+    "resource",
+    "resource_eff",
+    "storage_loss",
+    "carrier_ratios",
+]
 
 
 def generate_base_math_model(model_config: dict) -> calliope.Model:
@@ -67,9 +80,10 @@ def generate_custom_math_model(
 def generate_model_config() -> dict[str, dict]:
     """To generate the written mathematical formulation of all possible base constraints, we first create a dummy model.
 
-    This dummy has all the relevant technology groups defining all their allowed parameters defined.
+    This dummy has all the relevant technology groups defining all their allowed parameters.
 
-    Parameters that can be defined over a timeseries are forced to be defined over a timeseries. Accordingly, the parameters will have "timesteps" in their dimensions in the formulation.
+    Parameters that can be defined over a timeseries are forced to be defined over a timeseries.
+    Accordingly, the parameters will have "timesteps" in their dimensions in the formulation.
     """
     defaults = calliope.AttrDict.from_yaml(
         BASEPATH / ".." / ".." / "src" / "calliope" / "config" / "defaults.yaml"
@@ -107,13 +121,13 @@ def generate_model_config() -> dict[str, dict]:
         dummy_techs[f"{tech_group}_tech"] = {
             "essentials": {"parent": tech_group, **carriers},
             "constraints": {
-                k: _add_data(k, v, defaults)
+                k: _add_data(k, v)
                 for k, v in defaults.techs.default_tech.constraints.items()
                 if k in allowed_["constraints"][tech_group]
             },
             "costs": {
                 "monetary": {
-                    k: _add_data(k, v, defaults)
+                    k: _add_data(k, v)
                     for k, v in defaults.techs.default_tech.costs.default_cost.items()
                     if k in allowed_["costs"][tech_group]
                 }
@@ -130,9 +144,9 @@ def generate_model_config() -> dict[str, dict]:
     }
 
 
-def _add_data(name, default_val, defaults):
+def _add_data(name, default_val):
     "If timeseries is allowed, we reference timeseries data. Some parameters need hardcoded values to be returned"
-    if name in defaults["model"]["file_allowed"]:
+    if name in POSSIBLE_TIMESERIES_DATA:
         if name == "carrier_ratios":
             return {"carrier_in.electricity": "df=ts"}
         else:

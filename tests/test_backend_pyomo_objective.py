@@ -11,7 +11,7 @@ class TestCostMinimisationObjective:
     def test_nationalscale_minimize_emissions(self):
         model = calliope.examples.national_scale(
             scenario="minimize_emissions_costs",
-            override_dict={"model.subset_time": ["2005-01-01", "2005-01-01"]},
+            override_dict={"config.init.subset_time": ["2005-01-01", "2005-01-01"]},
         )
         model.build()
         model.solve()
@@ -34,7 +34,7 @@ class TestCostMinimisationObjective:
     def test_nationalscale_maximize_utility(self):
         model = calliope.examples.national_scale(
             scenario="maximize_utility_costs",
-            override_dict={"model.subset_time": ["2005-01-01", "2005-01-01"]},
+            override_dict={"config.init.subset_time": ["2005-01-01", "2005-01-01"]},
         )
         model.build()
         model.solve()

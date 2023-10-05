@@ -41,7 +41,7 @@ class TestCLI:
                     "--save_netcdf=output.nc",
                     # FIXME: should be CBC but a timeout error causes issues on OSX CI
                     # (likely fixed by updating pyomo)
-                    "--override_dict={'run.solver': 'glpk'}",
+                    "--override_dict={'config.solve.solver': 'glpk'}",
                 ],
             )
             assert result.exit_code == 0
@@ -62,7 +62,7 @@ class TestCLI:
                     _MODEL_NATIONAL,
                     "--save_netcdf=output.nc",
                     "--scenario=spores",
-                    "--override_dict={'run.spores_options.save_per_spore': True}",
+                    "--override_dict={'config.solve.spores_save_per_spore': True}",
                 ],
             )
             print(os.listdir(os.path.join(tempdir, "output")))
@@ -88,7 +88,7 @@ class TestCLI:
         assert result.exit_code == 1
 
     @pytest.mark.parametrize(
-        "arg", (("--scenario=test"), ("--override_dict={'model.name': 'test'}"))
+        "arg", (("--scenario=test"), ("--override_dict={'config.init.name': 'test'}"))
     )
     def test_unavailable_arguments(self, arg):
         runner = CliRunner()

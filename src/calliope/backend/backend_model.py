@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
+import importlib
 import logging
 import typing
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -20,10 +22,12 @@ from typing import (
 )
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 
+from calliope import exceptions
 from calliope.backend import parsing
+from calliope.core.attrdict import AttrDict
+from calliope.core.util.tools import validate_dict
 
 if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
@@ -42,7 +46,7 @@ class BackendModelGenerator(ABC):
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
     _COMPONENT_ATTR_METADATA = ["description", "unit"]
 
-    def __init__(self, inputs: xr.Dataset):
+    def __init__(self, inputs: xr.Dataset, **config_overrides):
         """Abstract base class to build a representation of the optimisation problem.
 
         Args:
@@ -50,7 +54,11 @@ class BackendModelGenerator(ABC):
         """
 
         self._dataset = xr.Dataset()
-        self.inputs = inputs
+        self.inputs = inputs.copy()
+        self.inputs.attrs = deepcopy(inputs.attrs)
+        self.inputs.attrs["config"].build.union(
+            AttrDict(config_overrides), allow_override=True
+        )
         self.valid_math_element_names: set = set()
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
@@ -178,6 +186,50 @@ class BackendModelGenerator(ABC):
             f"Optimisation model | {component_type}:{component_name} | {message}"
         )
 
+    def _build(self) -> None:
+        self._add_run_mode_custom_math()
+        # The order of adding components matters!
+        # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
+        for components in [
+            "variables",
+            "global_expressions",
+            "constraints",
+            "objectives",
+        ]:
+            component = components.removesuffix("s")
+            if components in ["variables", "global_expressions"]:
+                self.valid_math_element_names.update(
+                    self.inputs.math[components].keys()
+                )
+            for name in self.inputs.math[components]:
+                getattr(self, f"add_{component}")(name)
+            LOGGER.info(
+                f"Optimisation Model: Generated optimisation problem {components}"
+            )
+
+    def _add_run_mode_custom_math(self) -> None:
+        """If not given in the custom_math list, override model math with run mode math"""
+
+        # FIXME: available modes should not be hardcoded here. They should come from a YAML schema.
+        mode = self.inputs.attrs["config"].build.mode
+        custom_math = self.inputs.attrs["applied_custom_math"]
+        not_run_mode = {"plan", "operate", "spores"}.difference([mode])
+        run_mode_mismatch = not_run_mode.intersection(custom_math)
+        if run_mode_mismatch:
+            exceptions.warn(
+                f"Running in {mode} mode, but run mode(s) {run_mode_mismatch} custom "
+                "math being loaded from file via the model configuration"
+            )
+
+        if mode != "plan" and mode not in custom_math:
+            LOGGER.debug(f"Updating math formulation with {mode} mode custom math.")
+            filepath = importlib.resources.files("calliope") / "math" / f"{mode}.yaml"
+            self.inputs.math.union(AttrDict.from_yaml(filepath), allow_override=True)
+        math_schema = AttrDict.from_yaml(
+            importlib.resources.files("calliope") / "config" / "math_schema.yaml"
+        )
+        validate_dict(self.inputs.math, math_schema, "math")
+
     def _add_component(
         self,
         name: str,
@@ -211,7 +263,7 @@ class BackendModelGenerator(ABC):
         if component_dict is None:
             component_dict = self.inputs.math[component_type][name]
 
-        if break_early and component_dict.get("active", False):
+        if break_early and not component_dict.get("active", True):
             self.log(
                 component_type, name, "Component deactivated and therefore not built."
             )
@@ -302,19 +354,13 @@ class BackendModelGenerator(ABC):
 
     def _add_all_inputs_as_parameters(self) -> None:
         """
-        Add all parameters to backend dataset in-place, including those in the run configuration.
+        Add all parameters to backend dataset in-place.
         If model data does not include a parameter, their default values will be added here
         as unindexed backend dataset parameters.
-
-        TODO: Move the decision on which run config params to generate as backend params
-              earlier in the process.
-        Parameters in "objective_options" and the bigM parameter will be added from
-        run configuration.
 
         Args:
             model_data (xr.Dataset): Input model data.
             defaults (dict): Parameter defaults.
-            run_config (UpdateObserverDict): Run configuration dictionary.
         """
 
         for param_name, param_data in self.inputs.filter_by_attrs(
@@ -331,25 +377,7 @@ class BackendModelGenerator(ABC):
             self.add_parameter(
                 param_name, xr.DataArray(default_val), use_inf_as_na=False
             )
-
-        for option_name, option_val in self.inputs.run_config.get(
-            "objective_options", {}
-        ).items():
-            if option_name == "cost_class":
-                objective_cost_class = {
-                    k: v for k, v in option_val.items() if k in self.inputs.costs
-                }
-                self.add_parameter(
-                    "objective_cost_class",
-                    xr.DataArray.from_series(
-                        pd.Series(objective_cost_class).rename_axis(index="costs")
-                    ),
-                )
-            else:
-                self.add_parameter("objective_" + option_name, xr.DataArray(option_val))
-        self.add_parameter(
-            "bigM", xr.DataArray(self.inputs.run_config.get("bigM", 1e10))
-        )
+        LOGGER.info("Optimisation Model: Generated optimisation problem parameters")
 
     @staticmethod
     def _clean_arrays(*args) -> None:
@@ -493,14 +521,14 @@ class BackendModelGenerator(ABC):
 
 
 class BackendModel(BackendModelGenerator, Generic[T]):
-    def __init__(self, inputs: xr.Dataset, instance: T) -> None:
-        """Abstract base class to build bakcend models that interface with solvers.
+    def __init__(self, inputs: xr.Dataset, instance: T, **config_overrides) -> None:
+        """Abstract base class to build backend models that interface with solvers.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
             instance (T): Interface model instance.
         """
-        super().__init__(inputs)
+        super().__init__(inputs, **config_overrides)
         self._instance = instance
 
     @abstractmethod

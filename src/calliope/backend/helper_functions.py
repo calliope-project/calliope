@@ -194,10 +194,16 @@ class WhereAny(ParsingHelperFunction):
                 parameter_da.notnull()
                 & (parameter_da != np.inf)
                 & (parameter_da != -np.inf)
-            ).any(dim=over, keep_attrs=True)
+            )
+        elif parameter in self._kwargs.get("backend_dataset", xr.Dataset()).data_vars:
+            bool_parameter_da = self._kwargs["backend_dataset"][parameter].notnull()
         else:
             bool_parameter_da = xr.DataArray(False)
-        return bool_parameter_da
+        if not isinstance(over, list):
+            over = [over]
+        available_dims = set(bool_parameter_da.dims).intersection(over)
+
+        return bool_parameter_da.any(dim=available_dims, keep_attrs=True)
 
 
 class Sum(ParsingHelperFunction):

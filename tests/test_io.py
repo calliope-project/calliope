@@ -102,8 +102,7 @@ class TestIO:
                     "foo_dict",
                     "foo_attrdict",
                     "defaults",
-                    "model_config",
-                    "run_config",
+                    "config",
                     "math",
                 ],
             ),
@@ -166,7 +165,8 @@ class TestIO:
     @pytest.mark.xfail(reason="Not reimplemented the 'check feasibility' objective")
     def test_save_csv_not_optimal(self):
         model = calliope.examples.national_scale(
-            scenario="check_feasibility", override_dict={"run.cyclic_storage": False}
+            scenario="check_feasibility",
+            override_dict={"config.build.cyclic_storage": False},
         )
 
         model.build()
@@ -177,7 +177,7 @@ class TestIO:
             with pytest.warns(exceptions.ModelWarning):
                 model.to_csv(out_path, dropna=False)
 
-    @pytest.mark.parametrize("attr", ["run_config", "model_config", "math"])
+    @pytest.mark.parametrize("attr", ["config", "math"])
     def test_dicts_as_model_attrs_and_property(self, model_from_file, attr):
         assert attr in model_from_file._model_data.attrs.keys()
         assert hasattr(model_from_file, attr)
@@ -221,17 +221,12 @@ class TestIO:
     def test_save_per_spore(self):
         with tempfile.TemporaryDirectory() as tempdir:
             os.mkdir(os.path.join(tempdir, "output"))
-            model = calliope.examples.national_scale(
-                scenario="spores",
-                override_dict={
-                    "run.spores_options.save_per_spore": True,
-                    "run.spores_options.save_per_spore_path": os.path.join(
-                        tempdir, "output/spore_{}.nc"
-                    ),
-                },
-            )
+            model = calliope.examples.national_scale(scenario="spores")
             model.build()
-            model.solve()
+            model.solve(
+                spores_save_per_spore=True,
+                save_per_spore_path=os.path.join(tempdir, "output/spore_{}.nc"),
+            )
 
             for i in ["0", "1", "2", "3"]:
                 assert os.path.isfile(os.path.join(tempdir, "output", f"spore_{i}.nc"))

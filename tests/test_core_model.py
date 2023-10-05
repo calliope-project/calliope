@@ -1,6 +1,5 @@
 import logging
 import os
-from pathlib import Path
 
 import calliope
 import numpy as np
@@ -16,7 +15,7 @@ class TestModel:
     @pytest.fixture(scope="module")
     def national_scale_example(self):
         model = calliope.examples.national_scale(
-            override_dict={"model.subset_time": ["2005-01-01", "2005-01-01"]}
+            override_dict={"config.init.subset_time": ["2005-01-01", "2005-01-01"]}
         )
         return model
 
@@ -37,8 +36,8 @@ class TestModel:
         model.info()
 
     def test_update_observed_dict(self, national_scale_example):
-        national_scale_example.model_config.name = "foo"
-        assert national_scale_example._model_data.attrs["model_config"].name == "foo"
+        national_scale_example.config.build["backend"] = "foo"
+        assert national_scale_example._model_data.attrs["config"].build.backend == "foo"
 
     def test_add_observed_dict_from_model_data(
         self, national_scale_example, dict_to_add
@@ -77,7 +76,7 @@ class TestCustomMath:
         self,
     ):
         return build_model(
-            {"model.custom_math": ["storage_inter_cluster"]},
+            {"config.init.custom_math": ["storage_inter_cluster"]},
             "simple_supply,two_hours,investment_costs",
         )
 
@@ -106,7 +105,7 @@ class TestCustomMath:
     def test_allowed_internal_constraint(self, override, expected):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             build_model(
-                {"model.custom_math": override},
+                {"config.init.custom_math": override},
                 "simple_supply,two_hours,investment_costs",
             )
         assert check_error_or_warning(
@@ -128,7 +127,7 @@ class TestCustomMath:
         )
         new_constraint.to_yaml(temp_path.join("custom-math.yaml"))
         m = build_model(
-            {"model.custom_math": [temp_path.join("custom-math.yaml")]},
+            {"config.init.custom_math": [temp_path.join("custom-math.yaml")]},
             "simple_supply,two_hours,investment_costs",
         )
         assert "constraint_name" in m.math["constraints"].keys()
@@ -144,7 +143,7 @@ class TestCustomMath:
         )
         new_constraint.to_yaml(file_path)
         m = build_model(
-            {"model.custom_math": [file_path]},
+            {"config.init.custom_math": [file_path]},
             "simple_supply,two_hours,investment_costs",
         )
         base = simple_supply.math["constraints"][
@@ -173,7 +172,7 @@ class TestCustomMath:
             to_add.append(filepath)
 
         m = build_model(
-            {"model.custom_math": to_add},
+            {"config.init.custom_math": to_add},
             "simple_supply,two_hours,investment_costs",
         )
 
@@ -198,7 +197,7 @@ class TestCustomMath:
         new_constraint.to_yaml(file_path)
         m = build_model(
             {
-                "model.custom_math": [
+                "config.init.custom_math": [
                     "storage_inter_cluster",
                     file_path,
                 ]
@@ -218,47 +217,6 @@ class TestCustomMath:
                 )
             else:
                 assert base[i] == new[i]
-
-    @pytest.mark.parametrize("mode", ["operate", "spores"])
-    def test_add_run_mode_custom_math(self, simple_supply, mode):
-        mode_custom_math = calliope.AttrDict.from_yaml(
-            Path(calliope.__file__).parent / "math" / f"{mode}.yaml"
-        )
-        m = build_model(scenario="simple_supply,two_hours,investment_costs")
-        m.run_config.mode = mode
-        m._add_run_mode_custom_math()
-
-        base_math = simple_supply.math.copy()
-        base_math.union(mode_custom_math, allow_override=True)
-        assert m.math == base_math
-
-    def test_add_run_mode_custom_math_before_build(self, temp_path):
-        """A user can override the run mode custom math by including it directly in the custom math string"""
-        custom_math = calliope.AttrDict({"variables": {"flow_cap": {"active": True}}})
-        file_path = temp_path.join("custom-math.yaml")
-        custom_math.to_yaml(file_path)
-
-        m = build_model(
-            {"model.custom_math": ["operate", file_path]},
-            "simple_supply,two_hours,investment_costs",
-        )
-        m.run_config.mode = "operate"
-        m._add_run_mode_custom_math()
-
-        assert m.math.variables.flow_cap.active
-
-    def test_run_mode_mismatch(self):
-        m = build_model(
-            {"model.custom_math": ["operate"]},
-            "simple_supply,two_hours,investment_costs",
-        )
-        m.run_config.mode = "plan"
-        with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
-            m._add_run_mode_custom_math()
-
-        assert check_error_or_warning(
-            excinfo, "Running in plan mode, but run mode(s) {'operate'}"
-        )
 
 
 class TestValidateMathDict:

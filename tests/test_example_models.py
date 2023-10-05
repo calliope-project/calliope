@@ -39,14 +39,14 @@ class TestModelPreproccessing:
 class TestNationalScaleExampleModelSenseChecks:
     def example_tester(self, solver="cbc", solver_io=None):
         model = calliope.examples.national_scale(
-            override_dict={"model.subset_time": ["2005-01-01", "2005-01-01"]}
+            override_dict={"config.init.subset_time": ["2005-01-01", "2005-01-01"]}
         )
-
-        model.run_config["solver"] = solver
-        model.run_config["solver_io"] = solver_io
+        solve_kwargs = {"solver": solver}
+        if solver_io:
+            solve_kwargs["solver_io"] = solver_io
 
         model.build()
-        model.solve()
+        model.solve(**solve_kwargs)
 
         assert model.results.storage_cap.sel(nodes="region1-1", techs="csp") == approx(
             45129.950
@@ -121,11 +121,9 @@ class TestNationalScaleExampleModelSenseChecks:
 @pytest.mark.xfail(reason="Not reimplemented the 'check feasibility' objective")
 class TestNationalScaleExampleModelInfeasibility:
     def example_tester(self):
-        model = calliope.examples.national_scale(
-            scenario="check_feasibility", override_dict={"run.cyclic_storage": False}
-        )
+        model = calliope.examples.national_scale(scenario="check_feasibility")
 
-        model.build()
+        model.build(cyclic_storage=False)
         model.solve()
 
         assert model.results.termination_condition in [
@@ -145,7 +143,7 @@ class TestNationalScaleExampleModelOperate:
     def example_tester(self):
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
             model = calliope.examples.national_scale(
-                override_dict={"model.subset_time": ["2005-01-01", "2005-01-03"]},
+                override_dict={"config.init.subset_time": ["2005-01-01", "2005-01-03"]},
                 scenario="operate",
             )
             model.build()
@@ -170,13 +168,12 @@ class TestNationalScaleExampleModelOperate:
 class TestNationalScaleExampleModelSpores:
     def example_tester(self, solver="cbc", solver_io=None):
         model = calliope.examples.national_scale(
-            override_dict={
-                "model.subset_time": ["2005-01-01", "2005-01-03"],
-                "run.solver": solver,
-                "run.solver_io": solver_io,
-            },
+            override_dict={"config.init.subset_time": ["2005-01-01", "2005-01-03"]},
             scenario="spores",
         )
+        solve_kwargs = {"solver": solver}
+        if solver_io:
+            solve_kwargs["solver_io"] = solver_io
 
         model.build()
 
@@ -189,7 +186,7 @@ class TestNationalScaleExampleModelSpores:
             == 0
         )
 
-        model.solve()
+        model.solve(**solve_kwargs)
         # Expecting three spores + first optimal run
         assert np.allclose(model.results.spores, [0, 1, 2, 3])
 
@@ -198,7 +195,7 @@ class TestNationalScaleExampleModelSpores:
 
         # First run is the optimal run, everything else is coming up against the slack cost
         assert costs.loc[{"spores": 0, "costs": "monetary"}] * (
-            1 + model.run_config["spores_options"]["slack"]
+            1 + model.inputs.spores_slack
         ) == approx(slack_cost)
         assert all(
             costs.loc[{"spores": slice(1, None), "costs": "monetary"}]
@@ -239,15 +236,12 @@ class TestNationalScaleExampleModelSpores:
     @pytest.fixture
     def base_model_data(self):
         model = calliope.examples.national_scale(
-            override_dict={
-                "model.subset_time": ["2005-01-01", "2005-01-03"],
-                "run.solver": "cbc",
-            },
+            override_dict={"config.init.subset_time": ["2005-01-01", "2005-01-03"]},
             scenario="spores",
         )
 
         model.build()
-        model.solve()
+        model.solve(solver="cbc")
 
         return model._model_data
 
@@ -357,17 +351,14 @@ class TestNationalScaleExampleModelSpores:
 
 class TestNationalScaleResampledExampleModelSenseChecks:
     def example_tester(self, solver="cbc", solver_io=None):
-        override = {
-            "model.subset_time": ["2005-01-01", "2005-01-01"],
-            "run.solver": solver,
-        }
-
+        override = {"config.init.subset_time": ["2005-01-01", "2005-01-01"]}
+        solve_kwargs = {"solver": solver}
         if solver_io:
-            override["run.solver_io"] = solver_io
+            solve_kwargs["solver_io"] = solver_io
 
         model = calliope.examples.time_resampling(override_dict=override)
         model.build()
-        model.solve()
+        model.solve(**solve_kwargs)
 
         assert model.results.storage_cap.sel(nodes="region1-1", techs="csp") == approx(
             23563.444
@@ -425,25 +416,25 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
         backend_runner="run",
     ):
         override = {
-            "model.time.function_options": {
+            "config.init.time.function_options": {
                 "how": how,
                 "storage_inter_cluster": storage_inter_cluster,
             },
-            "run.solver": solver,
-            "run.cyclic_storage": cyclic,
         }
         if storage is False:
             override.update({"techs.battery.exists": False, "techs.csp.exists": False})
-        if solver_io is not None:
-            override["run.solver_io"] = solver_io
         if storage_inter_cluster and backend_runner == "solve":
-            override["model.custom_math"] = ["storage_inter_cluster"]
+            override["config.init.custom_math"] = ["storage_inter_cluster"]
+
+        solve_kwargs = {"solver": solver}
+        if solver_io:
+            solve_kwargs["solver_io"] = solver_io
 
         model = calliope.examples.time_clustering(override_dict=override)
         timesteps = model._model_data.timesteps.copy(deep=True)
 
-        model.build()
-        model.solve()
+        model.build(cyclic_storage=cyclic)
+        model.solve(**solve_kwargs)
 
         # make sure the dimension items have not been accidentally reordered
         assert timesteps.equals(model._model_data.timesteps)
@@ -527,17 +518,20 @@ class TestUrbanScaleExampleModelSenseChecks:
                 source_unit
             ),
             "techs.pv.switches.source_unit": source_unit,
-            "run.solver": solver,
         }
-        override = {"model.subset_time": ["2005-07-01", "2005-07-01"], **unit_override}
-
-        if solver_io:
-            override["run.solver_io"] = solver_io
+        override = {
+            "config.init.subset_time": ["2005-07-01", "2005-07-01"],
+            **unit_override,
+        }
 
         model = calliope.examples.urban_scale(override_dict=override)
 
+        solve_kwargs = {"solver": solver}
+        if solver_io:
+            solve_kwargs["solver_io"] = solver_io
+
         model.build()
-        model.solve()
+        model.solve(**solve_kwargs)
 
         assert model.results.flow_cap.sel(nodes="X1", techs="chp") == approx(250.090112)
 
@@ -580,8 +574,8 @@ class TestUrbanScaleExampleModelSenseChecks:
     def test_milp_example_results(self):
         model = calliope.examples.milp(
             override_dict={
-                "model.subset_time": ["2005-01-01", "2005-01-01"],
-                "run.solver_options.mipgap": 0.001,
+                "config.init.subset_time": ["2005-01-01", "2005-01-01"],
+                "config.solve.solver_options": {"mipgap": 0.001},
             }
         )
         model.build()
@@ -607,7 +601,7 @@ class TestUrbanScaleExampleModelSenseChecks:
     @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
     def test_operate_example_results(self):
         model = calliope.examples.operate(
-            override_dict={"model.subset_time": ["2005-07-01", "2005-07-04"]}
+            override_dict={"config.init.subset_time": ["2005-07-01", "2005-07-04"]}
         )
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
             model.build()

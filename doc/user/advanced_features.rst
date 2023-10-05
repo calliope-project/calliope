@@ -13,10 +13,11 @@ Models have a default timestep length (defined implicitly by the timesteps of th
 
 .. code-block:: yaml
 
-    model:
-        time:
-            function: resample
-            function_options: {'resolution': '6H'}
+    config:
+        init:
+            time:
+                function: resample
+                function_options: {'resolution': '6H'}
 
 In the above example, this would resample all time series data to 6-hourly timesteps.
 
@@ -30,13 +31,14 @@ The available options include:
 
 .. code-block:: yaml
 
-    model:
-        time:
-            function: apply_clustering
-            function_options:
-                clustering_func: kmeans
-                how: mean
-                k: 20
+    config:
+        init:
+            time:
+                function: apply_clustering
+                function_options:
+                    clustering_func: kmeans
+                    how: mean
+                    k: 20
 
 When using representative days, a number of additional constraints are added, based on the study undertaken by `Kotzur et al <https://doi.org/10.1016/j.apenergy.2018.01.023>`_. These constraints require a new decision variable ``storage_inter_cluster``, which tracks storage between all the dates of the original timeseries. This particular functionality can be disabled by including :yaml:`storage_inter_cluster: false` in the `function_options` given above.
 
@@ -48,13 +50,14 @@ When using representative days, a number of additional constraints are added, ba
 
 .. code-block:: yaml
 
-    model:
-        time:
-            masks:
-                - {function: extreme, options: {padding: 'calendar_week', tech: 'wind', how: 'max'}}
-                - {function: extreme, options: {padding: 'calendar_week', tech: 'wind', how: 'min'}}
-            function: resample
-            function_options: {'resolution': '6H'}
+    config:
+        init:
+            time:
+                masks:
+                    - {function: extreme, options: {padding: 'calendar_week', tech: 'wind', how: 'max'}}
+                    - {function: extreme, options: {padding: 'calendar_week', tech: 'wind', how: 'min'}}
+                function: resample
+                function_options: {'resolution': '6H'}
 
 .. Warning::
 
@@ -156,10 +159,9 @@ Operational mode runs a model with a receding horizon control algorithm. This re
 
 .. code-block:: yaml
 
-    run:
-        operation:
-            horizon: 48  # hours
-            window: 24  # hours
+    config.build:
+        operate_horizon: 48  # hours
+        operate_window: 24  # hours
 
 ``horizon`` specifies how far into the future the control algorithm optimises in each iteration. ``window`` specifies how many of the hours within ``horizon`` are actually used. In the above example, decisions on how to operate for each 24-hour window are made by optimising over 48-hour horizons (i.e., the second half of each optimisation run is discarded). For this reason, ``horizon`` must always be larger than ``window``.
 
@@ -172,12 +174,13 @@ As an example, if you wanted to generate 10 SPORES, all of which are within 10% 
 
 .. code-block:: yaml
 
-    run.mode: spores
-    run.spores_options:
+    config.build.mode: spores
+    config.solve:
         spores_number: 10  # The number of SPORES to generate
+        spores_score_cost_class: spores_score  # The cost class to optimise against when generating SPORES
+        spores_slack_cost_group: systemwide_cost_max  # The group constraint name in which the `cost_max` constraint is assigned, for use alongside the slack and cost-optimal cost
+    parameters:
         slack: 0.1  # The fraction above the cost-optimal cost to set the maximum cost during SPORES
-        score_cost_class: spores_score  # The cost class to optimise against when generating SPORES
-        slack_cost_group: systemwide_cost_max  # The group constraint name in which the `cost_max` constraint is assigned, for use alongside the slack and cost-optimal cost
 
 You will also need to manually set up some other parts of your model to deal with SPORES:
 
@@ -290,7 +293,7 @@ This is equivalent to the following override:
 Interfacing with the solver backend
 -----------------------------------
 
-On loading a model, there is no solver backend, only the input dataset. The backend is generated when a user calls `run()` on their model. Currently this will call back to Pyomo to build the model and send it off to the solver, given by the user in the run configuration :yaml:`run.solver`. Once built, solved, and returned, the user has access to the results dataset :python:`model.results` and interface functions with the backend :python:`model.backend`.
+On loading a model, there is no solver backend, only the input dataset. The backend is generated when a user calls `run()` on their model. Currently this will call back to Pyomo to build the model and send it off to the solver, given by the user in the run configuration :yaml:`config.solve.solver`. Once built, solved, and returned, the user has access to the results dataset :python:`model.results` and interface functions with the backend :python:`model.backend`.
 
 You can use this interface to:
 
@@ -326,7 +329,7 @@ Refer to the `Gurobi manual <https://www.gurobi.com/documentation/>`_, which con
 
 .. code-block:: yaml
 
-    run:
+    config.solve:
         solver: gurobi
         solver_options:
             Threads: 3
@@ -339,7 +342,7 @@ Refer to the `CPLEX parameter list <https://www.ibm.com/docs/en/icos/22.1.1?topi
 
 .. code-block:: yaml
 
-    run:
+    config.solve:
         solver: cplex
         solver_options:
             mipgap: 0.01

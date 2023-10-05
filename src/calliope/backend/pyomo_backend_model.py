@@ -50,8 +50,8 @@ COMPONENT_TRANSLATOR = {
 
 
 class PyomoBackendModel(backend_model.BackendModel):
-    def __init__(self, inputs: xr.Dataset):
-        super().__init__(inputs, instance=pmo.block())
+    def __init__(self, inputs: xr.Dataset, **config_overrides):
+        super().__init__(inputs, instance=pmo.block(), **config_overrides)
 
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()
@@ -159,7 +159,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         domain_dict = {"real": pmo.RealSet, "integer": pmo.IntegerSet}
 
         if variable_dict is None:
-            variable_dict = self.inputs.math["variables"][name]
+            variable_dict = self.inputs.attrs["math"]["variables"][name]
         self.valid_math_element_names.add(name)
 
         def _variable_setter(where):
@@ -186,15 +186,15 @@ class PyomoBackendModel(backend_model.BackendModel):
         sense_dict = {"minimize": 1, "minimise": 1, "maximize": -1, "maximise": -1}
 
         if objective_dict is None:
-            objective_dict = self.inputs.math["objectives"][name]
+            objective_dict = self.inputs.attrs["math"]["objectives"][name]
         sense = sense_dict[objective_dict["sense"]]
 
         def _objective_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
             expr = element.evaluate_expression(self.inputs, self, references=references)
-            objective = pmo.objective(expr.item(), sense=sense)
-            if name == self.inputs.run_config["objective"]:
+            objective = pmo.objective(xr.DataArray(expr).item(), sense=sense)
+            if name == self.inputs.attrs["config"].build.objective:
                 text = "activated"
                 objective.activate()
             else:
@@ -416,7 +416,9 @@ class PyomoBackendModel(backend_model.BackendModel):
                 )
             self.delete_component(name, "parameters")
             self.add_parameter(
-                name, new_values, default=self.inputs.defaults.get(name, np.nan)
+                name,
+                new_values,
+                default=self.inputs.attrs["defaults"].get(name, np.nan),
             )
             for ref in refs_to_update:
                 self._rebuild_reference(ref)
@@ -451,7 +453,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 )
                 continue
 
-            existing_bound_param = self.inputs.math.get_key(
+            existing_bound_param = self.inputs.attrs["math"].get_key(
                 f"variables.{name}.bounds.{bound_name}", None
             )
             if existing_bound_param in self.parameters:

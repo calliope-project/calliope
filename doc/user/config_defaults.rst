@@ -5,24 +5,13 @@ Configuration and defaults
 This section lists the available configuration options and constraints along with their default values.
 Defaults are automatically applied in constraints whenever there is no user input for a particular value.
 
-.. _config_reference_model:
+.. _config_reference_config:
 
 Model configuration
 -------------------
 
 .. csv-table::
-   :file: includes/model_settings.csv
-   :header: Setting,Default,Comments
-   :widths: 10, 5, 15
-   :stub-columns: 0
-
-.. _config_reference_run:
-
-Run configuration
------------------
-
-.. csv-table::
-   :file: includes/run_settings.csv
+   :file: includes/config.csv
    :header: Setting,Default,Comments
    :widths: 10, 5, 15
    :stub-columns: 0

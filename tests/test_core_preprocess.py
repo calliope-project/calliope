@@ -9,7 +9,7 @@ from calliope.core.attrdict import AttrDict
 from pytest import approx
 
 from .common.util import build_test_model as build_model
-from .common.util import check_error_or_warning, defaults
+from .common.util import check_error_or_warning
 
 
 class TestModelRun:
@@ -29,8 +29,11 @@ class TestModelRun:
             }
         )
         model_dict.union(node_dict)
-        model_dict.model["timeseries_data_path"] = os.path.join(
-            this_path, "common", "test_model", model_dict.model["timeseries_data_path"]
+        model_dict.config.init["timeseries_data_path"] = os.path.join(
+            this_path,
+            "common",
+            "test_model",
+            model_dict.config.init["timeseries_data_path"],
         )
         # test as AttrDict
         calliope.Model(model_dict)
@@ -238,7 +241,9 @@ class TestModelRun:
         """
 
         def override(param):
-            return AttrDict.from_yaml_string("model.subset_time: {}".format(param))
+            return AttrDict.from_yaml_string(
+                "config.init.subset_time: {}".format(param)
+            )
 
         # should fail: one string in list
         with pytest.raises(exceptions.ModelError):
@@ -293,7 +298,7 @@ class TestModelRun:
 
         # should pass: changing datetime format from default
         override1 = {
-            "model.timeseries_dateformat": "%d/%m/%Y %H:%M:%S",
+            "config.init.timeseries_dateformat": "%d/%m/%Y %H:%M:%S",
             "techs.test_demand_heat.constraints.sink_equals": "file=demand_heat_diff_dateformat.csv",
             "techs.test_demand_elec.constraints.sink_equals": "file=demand_heat_diff_dateformat.csv",
         }
@@ -312,7 +317,7 @@ class TestModelRun:
             build_model(override_dict=override2, scenario="simple_conversion")
 
         # should fail: wrong dateformat input for all files
-        override3 = {"model.timeseries_dateformat": "%d/%m/%Y %H:%M:%S"}
+        override3 = {"config.init.timeseries_dateformat": "%d/%m/%Y %H:%M:%S"}
 
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override3, scenario="simple_supply")
@@ -347,7 +352,7 @@ class TestModelRun:
         be inferred to be 1 hour
         """
         override1 = {
-            "model.subset_time": ["2005-01-01 00:00:00", "2005-01-01 00:00:00"]
+            "config.init.subset_time": ["2005-01-01 00:00:00", "2005-01-01 00:00:00"]
         }
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.warns(exceptions.ModelWarning) as warn_info:
@@ -553,10 +558,10 @@ class TestModelRun:
 
 
 class TestChecks:
-    def test_unrecognised_config_keys(self):
+    def test_unrecognised_top_level_keys(self):
         """
         Check that the only top level keys can be 'model', 'run', 'nodes',
-        'techs', 'tech_groups' (+ 'config_path', but that is an internal addition)
+        'techs', 'tech_groups' (+ '_model_def_path', but that is an internal addition)
         """
         override = {"nonsensical_key": "random_string"}
 
@@ -578,47 +583,20 @@ class TestChecks:
             excinfo, "Model is missing required top-level configuration item: nodes"
         )
 
-    def test_unrecognised_model_run_keys(self):
+    @pytest.mark.parametrize("top_level_key", ["init", "build", "solve"])
+    def test_unrecognised_config_keys(self, top_level_key):
         """
         Check that the only keys allowed in 'model' and 'run' are those in the
         model defaults
         """
-        override1 = {"model.nonsensical_key": "random_string"}
+        override = {f"config.{top_level_key}.nonsensical_key": "random_string"}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override1, scenario="simple_supply")
+            build_model(override_dict=override, scenario="simple_supply")
 
         assert check_error_or_warning(
-            excinfo, "Unrecognised setting in model configuration: nonsensical_key"
-        )
-
-        override2 = {"run.nonsensical_key": "random_string"}
-
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override2, scenario="simple_supply")
-
-        assert check_error_or_warning(
-            excinfo, "Unrecognised setting in run configuration: nonsensical_key"
-        )
-
-        # A key that should be in run but is given in model
-        override3 = {"model.solver": "glpk"}
-
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override3, scenario="simple_supply")
-
-        assert check_error_or_warning(
-            excinfo, "Unrecognised setting in model configuration: solver"
-        )
-
-        # A key that should be in model but is given in run
-        override4 = {"run.subset_time": None}
-
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            build_model(override_dict=override4, scenario="simple_supply")
-
-        assert check_error_or_warning(
-            excinfo, "Unrecognised setting in run configuration: subset_time"
+            excinfo,
+            f"Unrecognised setting in `{top_level_key}` configuration: nonsensical_key",
         )
 
     @pytest.mark.skip(
@@ -628,7 +606,7 @@ class TestChecks:
         """
         Check that spores number is greater than 0 if spores run mode is selected
         """
-        override = {"run.spores_options.spores_number": 0}
+        override = {"config.build.spores_number": 0}
 
         with pytest.warns(exceptions.ModelWarning) as warn:
             build_model(scenario="spores,simple_supply", override_dict=override)
@@ -644,13 +622,13 @@ class TestChecks:
         """
         Check that the score_cost_class for spores scoring is a string
         """
-        override = {"run.spores_options.score_cost_class": 0}
+        override = {"config.build.spores_score_cost_class": 0}
 
         with pytest.raises(exceptions.ModelError) as excinfo:
             build_model(scenario="spores,simple_supply", override_dict=override)
 
         assert check_error_or_warning(
-            excinfo, "`run.spores_options.score_cost_class` must be a string"
+            excinfo, "`config.build.spores_score_cost_class` must be a string"
         )
 
     @pytest.mark.parametrize(
@@ -667,10 +645,10 @@ class TestChecks:
 
     def test_model_version_mismatch(self):
         """
-        Model config says model.calliope_version = 0.1, which is not what we
+        Model config says config.init.calliope_version = 0.1, which is not what we
         are running, so we want a warning.
         """
-        override = {"model.calliope_version": 0.1}
+        override = {"config.init.calliope_version": 0.1}
 
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             build_model(override_dict=override, scenario="simple_supply,one_day")
@@ -1058,49 +1036,6 @@ class TestChecks:
         }
         build_model(override_dict=override, scenario="simple_supply,one_day")
 
-    def test_allowed_time_varying_constraints(self):
-        """
-        `file=` is only allowed on a hardcoded list of constraints, unless
-        `_time_varying` is appended to the constraint (i.e. user input)
-        """
-
-        allowed_constraints_no_file = list(
-            set(defaults.tech_groups.storage.allowed_constraints).difference(
-                defaults.model.file_allowed
-            )
-        )
-
-        allowed_constraints_file = list(
-            set(defaults.tech_groups.storage.allowed_constraints).intersection(
-                defaults.model.file_allowed
-            )
-        )
-
-        def override(param):
-            return AttrDict.from_yaml_string(
-                "techs.test_storage.constraints.{}: file=binary_one_day.csv".format(
-                    param
-                )
-            )
-
-        # should fail: Cannot have `file=` on the following constraints
-        for param in allowed_constraints_no_file:
-            with pytest.raises(exceptions.ModelError) as errors:
-                build_model(
-                    override_dict=override(param), scenario="simple_storage,one_day"
-                )
-            assert check_error_or_warning(
-                errors,
-                "Cannot load data from file for configuration"
-                " `techs.test_storage.constraints.{}`".format(param),
-            )
-
-        # should pass: can have `file=` on the following constraints
-        for param in allowed_constraints_file:
-            build_model(
-                override_dict=override(param), scenario="simple_storage,one_day"
-            )
-
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Updated from coordinate system:calliope.exceptions.ModelWarning"
     )
@@ -1180,7 +1115,7 @@ class TestChecks:
             "links.X1,N1.techs.heat_pipes.switches.one_way": True,
             "links.N1,X2.techs.heat_pipes.switches.one_way": True,
             "links.N1,X3.techs.heat_pipes.switches.one_way": True,
-            "model.subset_time": ["2005-01-01", "2005-01-01"],
+            "config.init.subset_time": ["2005-01-01", "2005-01-01"],
         }
         m = calliope.examples.urban_scale(override_dict=override)
         m.build()
@@ -1225,7 +1160,7 @@ class TestChecks:
             "Tech `test_conversion_plus` gives a carrier ratio for `another_carrier`, but does not actually",
         )
 
-    def test_carrier_ratio_for_specified_carrier(self):
+    def test_carrier_ratio_for_specified_carrier(self, recwarn):
         """
         The warning for not defining a carrier ratio for a carrier a tech does
         not actually use should not be triggered if the carrier is defined.
@@ -1237,16 +1172,14 @@ class TestChecks:
                     heat: 1.0
             """
         )
-        with pytest.warns() as excinfo:
-            build_model(
-                override_dict=override, scenario="simple_conversion_plus,one_day"
-            )
+
+        build_model(override_dict=override, scenario="simple_conversion_plus,one_day")
 
         assert "Tech `test_conversion_plus` gives a carrier ratio" not in [
-            str(i) for i in excinfo.list
+            str(i) for i in recwarn.list
         ]
 
-    def test_carrier_ratio_from_file(self):
+    def test_carrier_ratio_from_file(self, recwarn):
         """
         It is possible to load a timeseries carrier_ratio from file
         """
@@ -1256,13 +1189,10 @@ class TestChecks:
                 carrier_out.heat: file=carrier_ratio.csv
             """
         )
-        with pytest.warns() as excinfo:
-            build_model(
-                override_dict=override, scenario="simple_conversion_plus,one_day"
-            )
+        build_model(override_dict=override, scenario="simple_conversion_plus,one_day")
 
         assert "Cannot load data from file for configuration" not in [
-            str(i) for i in excinfo.list
+            str(i) for i in recwarn.list
         ]
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
@@ -1325,6 +1255,9 @@ class TestChecks:
 
         assert check_error_or_warning(excinfo, "Updated from coordinate system")
 
+    @pytest.mark.xfail(
+        reason="Removed this check because it has to happen *after* calling `build`"
+    )
     def test_clustering_and_cyclic_storage(self):
         """
         Don't allow time clustering with cyclic storage if not also using
@@ -1332,16 +1265,16 @@ class TestChecks:
         """
 
         override = {
-            "model.subset_time": ["2005-01-01", "2005-01-04"],
-            "model.time": {
+            "config.init.subset_time": ["2005-01-01", "2005-01-04"],
+            "config.init.time": {
                 "function": "apply_clustering",
                 "function_options": {
-                    "clustering_func": "file=cluster_days.csv:0",
+                    "clustering_func": "file=cluster_days.csv:a",
                     "how": "mean",
                     "storage_inter_cluster": False,
                 },
             },
-            "run.cyclic_storage": True,
+            "config.build.cyclic_storage": True,
         }
 
         with pytest.raises(exceptions.ModelError) as error:
@@ -1456,27 +1389,16 @@ class TestChecks:
             )
 
         assert check_error_or_warning(
-            exception, "`run.objective_options.cost_class` must be a dictionary."
-        )
-
-    def test_warn_on_using_default(self):
-        with pytest.warns(exceptions.ModelWarning) as warn:
-            build_model(
-                model_file="weighted_obj_func.yaml",
-                scenario="emissions_objective_without_removing_monetary_default",
-            )
-
-        assert check_error_or_warning(
-            warn, "Monetary cost class with a weight of 1 is still included"
+            exception, "`parameters.objective_cost_class` must be a dictionary."
         )
 
     @pytest.mark.parametrize(
         "override",
         [
-            ({"run.objective_options.cost_class": {"monetary": None}}),
+            ({"parameters.objective_cost_class.data": {"monetary": None}}),
             (
                 {
-                    "run.objective_options.cost_class": {
+                    "parameters.objective_cost_class.data": {
                         "monetary": None,
                         "emissions": None,
                     }
@@ -1485,17 +1407,11 @@ class TestChecks:
         ],
     )
     def test_warn_on_no_weight(self, override):
-        with pytest.warns(exceptions.ModelWarning) as warn:
-            model = build_model(
-                model_file="weighted_obj_func.yaml", override_dict=override
-            )
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            build_model(model_file="weighted_obj_func.yaml", override_dict=override)
 
         assert check_error_or_warning(
-            warn, "cost class monetary has weight = None, setting weight to 1"
-        )
-        assert all(
-            model.run_config["objective_options"]["cost_class"][i] == 1
-            for i in override["run.objective_options.cost_class"].keys()
+            excinfo, "Objective cost class weights must be numeric"
         )
 
     @pytest.mark.skip(reason="check is now taken care of in typedconfig")
@@ -1534,7 +1450,7 @@ class TestChecks:
         Check that the storage_inter_cluster is not used together with storage_discharge_depth
         """
         with pytest.raises(exceptions.ModelError) as error:
-            override = {"model.subset_time": ["2005-01-01", "2005-01-04"]}
+            override = {"config.init.subset_time": ["2005-01-01", "2005-01-04"]}
             build_model(override, "clustering,simple_storage,storage_discharge_depth")
 
         assert check_error_or_warning(
@@ -1602,7 +1518,7 @@ class TestTime:
     @pytest.fixture
     def model_urban(self):
         return calliope.examples.urban_scale(
-            override_dict={"model.subset_time": ["2005-01-01", "2005-01-10"]}
+            override_dict={"config.init.subset_time": ["2005-01-01", "2005-01-10"]}
         )
 
     @pytest.mark.parametrize("load_timeseries_from_dataframes", [False, True])

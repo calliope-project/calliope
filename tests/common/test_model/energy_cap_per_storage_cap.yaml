@@ -1,13 +1,15 @@
-model:
-  name: Test model for flow capacity per storage capacity
-  timeseries_data_path: "timeseries_data"
-  subset_time: ["2005-01-01 00:00", "2005-01-01 01:00"]
+config:
+  init:
+    name: Test model for energy capacity per storage capacity
+    timeseries_data_path: "timeseries_data"
+    subset_time: ["2005-01-01 00:00", "2005-01-01 01:00"]
 
-run:
-  mode: plan
-  solver: cbc
-  cyclic_storage: False # necessary so demand can be fed from stored carrier
-  ensure_feasibility: true
+  build:
+    mode: plan
+    cyclic_storage: False # necessary so demand can be fed from stored energy
+    ensure_feasibility: true
+  solve:
+    solver: cbc
 
 techs:
   electricity_demand:
@@ -45,8 +47,7 @@ overrides:
     techs.my_storage.constraints.flow_cap_per_storage_cap_min: 1
   operate_mode_min:
     techs.my_storage.constraints.flow_cap_per_storage_cap_min: 1
-    techs.my_storage.constraints.storage_cap_equals: 900
-    run.mode: operate
-    run.operation:
-      window: 24
-      horizon: 24
+    config:
+      build.mode: operate
+      solve.operate_window: 24
+      solve.operate_horizon: 24

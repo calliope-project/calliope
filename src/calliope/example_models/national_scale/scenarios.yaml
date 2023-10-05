@@ -10,35 +10,40 @@ scenarios:
 ##
 overrides:
   profiling:
-    model.name: "National-scale example model (profiling run)"
-    model.subset_time: ["2005-01-01", "2005-01-15"]
-    run.solver: cbc
+    config:
+      init.name: "National-scale example model (profiling run)"
+      init.subset_time: ["2005-01-01", "2005-01-15"]
+      solve.solver: cbc
 
   time_resampling:
-    model.name: "National-scale example model with time resampling"
-    model.subset_time: ["2005-01", "2005-01"]
-    # Resample time resolution to 6-hourly
-    model.time: { function: resample, function_options: { "resolution": "6H" } }
+    config:
+      init:
+        name: "National-scale example model with time resampling"
+        subset_time: ["2005-01", "2005-01"]
+        # Resample time resolution to 6-hourly
+        time: { function: resample, function_options: { "resolution": "6H" } }
 
   time_clustering:
-    model.random_seed: 23
-    model.name: "National-scale example model with time clustering"
-    model.subset_time: null # No time subsetting
-    # Cluster timesteps using k-means
-    model.time:
-      {
-        function: apply_clustering,
-        function_options: { clustering_func: "kmeans", how: "closest", k: 10 },
-      }
+    config:
+      init:
+        random_seed: 23
+        name: "National-scale example model with time clustering"
+        subset_time: null # No time subsetting
+        # Cluster timesteps using k-means
+        time:
+          function: apply_clustering
+          function_options: { clustering_func: "kmeans", how: "closest", k: 10 }
 
   spores:
-    run.mode: spores
-    run.spores_options:
-      score_cost_class: "spores_score"
-      slack: 0.1
-      spores_number: 3
-      objective_cost_class: { "monetary": 0, "spores_score": 1 }
-    run.objective_options.cost_class: { "monetary": 1, "spores_score": 0 }
+    config:
+      build.mode: spores
+      solve:
+        spores_score_cost_class: "spores_score"
+        spores_number: 3
+        spores_objective_cost_class: { "monetary": 0, "spores_score": 1 }
+    parameters:
+      spores_slack: 0.1
+      objective_cost_class.data: { "monetary": 1, "spores_score": 0 }
     # FIXME: replace group constraint in SPORES mode
     # group_constraints:
     #    systemwide_cost_max.cost_max.monetary: 1e10  # very large, non-infinite value
@@ -53,11 +58,12 @@ overrides:
     techs.ac_transmission.costs.spores_score.interest_rate: 1
 
   operate:
-    run.mode: operate
-    run.operation:
-      window: 12
-      horizon: 24
-    model.subset_time: ["2005-01-01", "2005-01-10"]
+    config:
+      init.subset_time: ["2005-01-01", "2005-01-10"]
+      build.mode: operate
+      solve:
+        operate_window: 12
+        operate_horizon: 24
     nodes:
       region1.techs.ccgt.constraints.flow_cap_equals: 30000
 
@@ -83,31 +89,33 @@ overrides:
       region1,region1-3.techs.free_transmission.constraints.flow_cap_equals: 2281
 
   check_feasibility:
-    run:
-      ensure_feasibility: False
-      objective: "check_feasibility"
-    model:
-      subset_time: ["2005-01-04", "2005-01-04"]
+    config:
+      build:
+        ensure_feasibility: False
+        objective: "check_feasibility"
+      init:
+        subset_time: ["2005-01-04", "2005-01-04"]
 
   reserve_margin:
-    model:
+    parameters:
       # Model-wide settings for the system-wide reserve margin
       # Even setting a reserve margin of zero activates the constraint,
       # forcing enough installed capacity to cover demand in
       # the maximum demand timestep
       reserve_margin:
-        power: 0.10 # 10% reserve margin for power
+        data: { power: 0.10 } # 10% reserve margin for power
+        dims: carriers
 
   ##
   # Overrides to demonstrate the run generator ("calliope generate_runs")
   ##
 
   run1:
-    model.subset_time: ["2005-01-01", "2005-01-31"]
+    config.init.subset_time: ["2005-01-01", "2005-01-31"]
   run2:
-    model.subset_time: ["2005-02-01", "2005-02-31"]
+    config.init.subset_time: ["2005-02-01", "2005-02-31"]
   run3:
-    model.subset_time: ["2005-01-01", "2005-01-31"]
+    config.init.subset_time: ["2005-01-01", "2005-01-31"]
     nodes.region1.techs.ccgt.constraints.flow_cap_max: 0 # Disallow CCGT
   run4:
     subset_time: ["2005-02-01", "2005-02-31"]
@@ -158,9 +166,8 @@ overrides:
   #                         flow_cap_max: 100000  # Increased to keep model feasible
 
   minimize_emissions_costs:
-    run:
-      objective_options:
-        cost_class: { "emissions": 1, "monetary": 0 }
+    parameters:
+      objective_cost_class.data: { "emissions": 1, "monetary": 0 }
     techs:
       ccgt:
         costs:
@@ -172,9 +179,8 @@ overrides:
             om_prod: 10 # kgCO2/kWh
 
   maximize_utility_costs:
-    run:
-      objective_options:
-        cost_class: { "utility": -1, "monetary": 0 }
+    parameters:
+      objective_cost_class.data: { "utility": -1, "monetary": 0 }
     techs:
       ccgt:
         costs:

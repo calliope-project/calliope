@@ -12,6 +12,7 @@ time-varying param_dict.
 import logging
 import os
 import re
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -61,12 +62,15 @@ class ModelDataFactory:
             in attributes.
 
         """
-        self.node_dict = model_run_dict.nodes.as_dict_flat()
-        self.tech_dict = model_run_dict.techs.as_dict_flat()
-        self.model_run = model_run_dict
-        self.model_data = xr.Dataset(
-            coords={"timesteps": model_run_dict.timeseries_data.index}
-        )
+        self.node_dict: dict = model_run_dict.nodes.as_dict_flat()
+        self.tech_dict: dict = model_run_dict.techs.as_dict_flat()
+        self.timeseries_vars: pd.DataFrame = model_run_dict.timeseries_vars
+        self.timeseries_data: set[str] = model_run_dict.timeseries_data
+        self.time_config: Optional[AttrDict] = model_run_dict.config.init.time
+        self.random_seed: Optional[int] = model_run_dict.config.init.random_seed
+        self.params: AttrDict = model_run_dict.parameters
+
+        self.model_data = xr.Dataset(coords={"timesteps": self.timeseries_data.index})
         self._add_attributes(model_run_dict)
         self.template_config = AttrDict.from_yaml(
             os.path.join(
@@ -78,6 +82,7 @@ class ModelDataFactory:
 
     def __call__(self):
         self._extract_node_tech_data()
+        self._add_top_level_params()
         self._add_time_dimension()
         self._clean_model_data()
 
@@ -92,17 +97,54 @@ class ModelDataFactory:
         self._add_param_from_template()
         self._clean_unused_techs_nodes_and_carriers()
 
+    def _add_top_level_params(self):
+        for param_name, param_data in self.params.items():
+            if param_name in self.model_data.data_vars:
+                raise KeyError(
+                    f"Trying to add top-level parameter with same name as a node/tech level parameter: {param_name}"
+                )
+            if isinstance(param_data.data, dict) and param_data.dims is None:
+                raise ValueError(
+                    f"Missing dimension names for top-level parameter: {param_name}"
+                )
+
+            param_da = (
+                pd.Series(param_data["data"], name=param_name)
+                .rename_axis(index=param_data.get("dims", None))
+                .to_xarray()
+            )
+            for coord_name, coord_data in param_da.coords.items():
+                if coord_name not in self.model_data.coords:
+                    LOGGER.debug(
+                        f"top-level parameter `{param_name}` is adding a new dimension to the model: {coord_name}"
+                    )
+                else:
+                    new_coord_data = coord_data[
+                        ~coord_data.isin(self.model_data.coords[coord_name])
+                    ]
+                    if new_coord_data.size > 0:
+                        LOGGER.debug(
+                            f"top-level parameter `{param_name}` is adding a new value to the "
+                            f"`{coord_name}` model coordinate: {new_coord_data.values}"
+                        )
+            self.model_data[param_name] = param_da
+
     def _add_time_dimension(self):
         self.data_pre_time = self.model_data.copy(deep=True)
-        self.model_data = time.add_time_dimension(self.model_data, self.model_run)
+        self.model_data = time.add_time_dimension(
+            self.model_data,
+            self.timeseries_vars,
+            self.timeseries_data,
+        )
         self._update_dtypes()
 
-        if self.model_run.get_key("model.random_seed", None):
-            np.random.seed(seed=self.model_run.model.random_seed)
+        # TODO: this is a legacy function, so should be updated to numpy best-practice
+        np.random.seed(seed=self.random_seed)
+
         self.model_data_pre_clustering = self.model_data.copy(deep=True)
-        if self.model_run.get_key("model.time", None):
+        if self.time_config is not None:
             self.model_data = time.apply_time_clustering(
-                self.model_data, self.model_run
+                self.model_data, self.time_config, self.timeseries_data
             )
 
         self.model_data["annualisation_weight"] = (
