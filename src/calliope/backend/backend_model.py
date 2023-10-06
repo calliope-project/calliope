@@ -765,7 +765,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             if expr.notnull().any()
         }
 
-        results = xr.Dataset({**all_variables, **all_global_expressions})
+        results = xr.Dataset({**all_variables, **all_global_expressions}).astype(float)
 
         return results
 

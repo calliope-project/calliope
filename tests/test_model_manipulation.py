@@ -66,10 +66,5 @@ class TestExistsFalse:
         # Ensure what should be gone is gone
         assert "test_transmission_elec:b" not in model._model_data.techs
         assert "test_transmission_elec:a" not in model._model_data.techs
-        assert (
-            model._model_data.definition_matrix.sel(
-                nodes="a", techs="test_transmission_heat:b"
-            )
-            .all(["carriers", "carrier_tiers"])
-            .item()
-        )
+        assert "test_transmission_heat:b" in model._model_data.techs
+        assert "test_transmission_heat:a" in model._model_data.techs

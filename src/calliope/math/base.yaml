@@ -65,14 +65,14 @@ constraints:
   flow_out_max_conversion_plus:
     description: "Set the upper bound in each timestep of a `conversion_plus` technology's total outflow on its `out` carrier flows."
     foreach: [nodes, techs, timesteps]
-    where: "inheritance(conversion_plus) AND NOT cap_method=integer"
+    where: "inheritance(conversion_plus) AND NOT operating_units"
     equations:
       - expression: reduce_carrier_dim(flow_out, carrier_tier=out) <= timestep_resolution * flow_cap
 
   flow_out_min_conversion_plus:
     description: "Set the lower bound in each timestep of a `conversion_plus` technology's total outflow on its `out` carrier flows."
     foreach: [nodes, techs, timesteps]
-    where: "flow_out_min_relative AND inheritance(conversion_plus) AND NOT cap_method=integer"
+    where: "flow_out_min_relative AND inheritance(conversion_plus) AND NOT operating_units"
     equations:
       - expression: reduce_carrier_dim(flow_out, carrier_tier=out) >= timestep_resolution * flow_cap * flow_out_min_relative
 
@@ -121,21 +121,21 @@ constraints:
   flow_out_max:
     description: "Set the upper bound of a non-`conversion_plus` technology's outflow."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "carrier AND NOT inheritance(conversion_plus) AND NOT cap_method=integer AND allowed_flow_out=True AND [out] in carrier_tiers"
+    where: "NOT inheritance(conversion_plus) AND NOT operating_units AND allowed_flow_out=True AND [out] in carrier_tiers"
     equations:
       - expression: flow_out <= flow_cap * timestep_resolution * parasitic_eff
 
   flow_out_min:
     description: "Set the lower bound of a non-`conversion_plus` technology's outflow."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "carrier AND flow_out_min_relative AND NOT inheritance(conversion_plus) AND NOT cap_method=integer AND allowed_flow_out=True AND [out] in carrier_tiers"
+    where: "flow_out_min_relative AND NOT inheritance(conversion_plus) AND NOT operating_units AND allowed_flow_out=True AND [out] in carrier_tiers"
     equations:
       - expression: flow_out >= flow_cap * timestep_resolution * flow_out_min_relative
 
   flow_in_max:
     description: "Set the upper bound of a non-`conversion_plus` technology's inflow."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "carrier AND (inheritance(transmission) OR inheritance(demand) OR inheritance(storage)) AND (NOT cap_method=integer OR inheritance(demand)) AND allowed_flow_in=True AND [in] in carrier_tiers"
+    where: "(inheritance(transmission) OR inheritance(demand) OR inheritance(storage)) AND (NOT operating_units OR inheritance(demand)) AND allowed_flow_in=True AND [in] in carrier_tiers"
     equations:
       - expression: flow_in <= flow_cap * timestep_resolution
 
@@ -325,22 +325,22 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "flow_export AND export_max"
     equations:
-      - where: "cap_method=integer"
+      - where: "operating_units"
         expression: flow_export <= export_max * operating_units
-      - where: "NOT cap_method=integer"
+      - where: "NOT operating_units"
         expression: flow_export <= export_max
 
   unit_commitment_milp:
     description: "Set the upper bound of the number of integer units of technology that can exist, for any technology using integer units to define its capacity."
     foreach: [nodes, techs, timesteps]
-    where: "cap_method=integer"
+    where: "operating_units"
     equations:
       - expression: operating_units <= units
 
   flow_out_max_milp:
     description: "Set the upper bound of a non-`conversion_plus` technology's ability to produce carriers, for any technology using integer units to define its capacity."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "operating_units AND carrier AND NOT inheritance(conversion_plus) AND allowed_flow_out=True"
+    where: "operating_units AND NOT inheritance(conversion_plus) AND allowed_flow_out=True"
     equations:
       - expression: flow_out <= operating_units * timestep_resolution * flow_cap_per_unit * parasitic_eff
 
@@ -361,7 +361,7 @@ constraints:
   flow_out_min_milp:
     description: "Set the lower bound of a non-`conversion_plus` technology's ability to produce carriers, for any technology using integer units to define its capacity."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "operating_units AND carrier AND flow_out_min_relative AND NOT inheritance(conversion_plus) AND allowed_flow_out=True"
+    where: "operating_units AND flow_out_min_relative AND NOT inheritance(conversion_plus) AND allowed_flow_out=True"
     equations:
       - expression: flow_out >= operating_units * timestep_resolution * flow_cap_per_unit * flow_out_min_relative
 
@@ -457,11 +457,11 @@ constraints:
       - expression: $flow - roll($flow, timesteps=1) <= flow_ramping * flow_cap
     sub_expressions:
       flow: &ramping_flow
-        - where: "carrier AND allowed_flow_out=True AND NOT allowed_flow_in=True"
+        - where: "allowed_flow_out=True AND NOT allowed_flow_in=True"
           expression: flow_out / timestep_resolution
-        - where: "carrier AND allowed_flow_in=True AND NOT allowed_flow_out=True"
+        - where: "allowed_flow_in=True AND NOT allowed_flow_out=True"
           expression: flow_in / timestep_resolution
-        - where: "carrier AND allowed_flow_in=True AND allowed_flow_out=True"
+        - where: "allowed_flow_in=True AND allowed_flow_out=True"
           expression: (flow_out - flow_in) / timestep_resolution
 
   ramping_down:

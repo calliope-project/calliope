@@ -345,9 +345,9 @@ class ReduceCarrierDim(ParsingHelperFunction):
         """
         return Sum(as_latex=self._as_latex, **self._kwargs)(
             array.where(
-                self._kwargs["model_data"]
-                .definition_matrix.sel(carrier_tiers=carrier_tier)
-                .notnull()
+                self._kwargs["model_data"].definition_matrix.sel(
+                    carrier_tiers=carrier_tier
+                )
             ),
             over="carriers",
         )

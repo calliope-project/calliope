@@ -1,0 +1,18 @@
+constraints:
+  annual_flow_out_group_balance:
+    foreach: [nodes]
+    equations:
+      - expression: "$annual_flow_out_group1 == $annual_flow_out_group2 * $factor2"
+    where: "defined(techs=[supply_gas, boiler], carriers=[gas], within=nodes, how=all)"
+    sub_expressions:
+      annual_flow_out_group1:
+        - expression: sum(flow_out[techs=$tech_group_1], over=[timesteps, carriers])
+      annual_flow_out_group2:
+        - expression: sum(flow_out[techs=$tech_group_2], over=[timesteps, carriers])
+      factor2:
+        - expression: "10"
+    slices:
+      tech_group_1:
+        - expression: supply_gas
+      tech_group_2:
+        - expression: boiler
