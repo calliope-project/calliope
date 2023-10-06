@@ -94,7 +94,7 @@ class ModelDataFactory:
 
     def _extract_node_tech_data(self):
         self._add_param_from_template()
-        self._add_top_level_params()
+        self._add_definition_matrix()
         self._clean_unused_techs_nodes_and_carriers()
 
     def _add_top_level_params(self):
@@ -435,17 +435,26 @@ class ModelDataFactory:
 
         self.model_data.attrs = attr_dict
 
+    def _add_definition_matrix(self):
+        self.model_data["definition_matrix"] = (
+            self.model_data.node_tech.notnull() & self.model_data.carrier.notnull()
+        )
+        self.model_data = self.model_data.drop_vars(["node_tech", "carrier"])
+
     def _clean_unused_techs_nodes_and_carriers(self):
         """
         Remove techs not assigned to nodes, nodes with no associated techs, and carriers associated with removed techs
         """
-        for dim in ["nodes", "techs"]:
+        self.model_data["definition_matrix"] = self.model_data.definition_matrix.where(
+            self.model_data.definition_matrix
+        )
+        for dim in ["nodes", "techs", "carriers", "carrier_tiers"]:
             self.model_data = self.model_data.dropna(
-                dim, how="all", subset=["node_tech"]
+                dim, how="all", subset=["definition_matrix"]
             )
-        for dim in ["carriers", "carrier_tiers"]:
-            self.model_data = self.model_data.dropna(dim, how="all")
-
+        self.model_data[
+            "definition_matrix"
+        ] = self.model_data.definition_matrix.notnull()
         self.model_data = self.model_data.drop_vars(
             [
                 var_name

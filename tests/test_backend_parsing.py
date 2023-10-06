@@ -2,10 +2,11 @@ import logging
 from io import StringIO
 from unittest.mock import patch
 
-import calliope
 import pyparsing as pp
 import pytest
 import ruamel.yaml as yaml
+
+import calliope
 from calliope.backend import backend_model, expression_parser, parsing, where_parser
 
 from .common.util import check_error_or_warning
@@ -33,7 +34,7 @@ def component_obj():
 @pytest.fixture(scope="function")
 def exists_array(component_obj, dummy_model_data):
     component_obj.sets = ["nodes", "techs"]
-    return component_obj.combine_exists_and_foreach(dummy_model_data)
+    return component_obj.combine_definition_matrix_and_foreach(dummy_model_data)
 
 
 @pytest.fixture
@@ -629,7 +630,7 @@ equations[0].expression (line 1, char 5): bar = 1
         self, dummy_model_data, component_obj, foreach
     ):
         component_obj.sets = foreach
-        where = component_obj.combine_exists_and_foreach(dummy_model_data)
+        where = component_obj.combine_definition_matrix_and_foreach(dummy_model_data)
 
         assert not BASE_DIMS.difference(where.dims)
         assert not set(foreach).difference(where.dims)
@@ -637,7 +638,7 @@ equations[0].expression (line 1, char 5): bar = 1
     def test_foreach_unidentified_name(self, caplog, dummy_model_data, component_obj):
         component_obj.sets = ["nodes", "techs", "foos"]
         caplog.set_level(logging.DEBUG)
-        component_obj.combine_exists_and_foreach(dummy_model_data)
+        component_obj.combine_definition_matrix_and_foreach(dummy_model_data)
         assert "indexed over unidentified set names" in caplog.text
 
     def test_evaluate_where_to_false(self, dummy_model_data, component_obj):

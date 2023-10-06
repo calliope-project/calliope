@@ -135,6 +135,13 @@ class ParsingHelperFunction(ABC):
         dim_singular = dim.removesuffix("s")
         return rf"\text{{{dim_singular}}} \in \text{{{dim}}}"
 
+    @staticmethod
+    def _listify(val: Union[list[str], str]) -> list[str]:
+        if isinstance(val, list):
+            return val
+        else:
+            return [val]
+
 
 class Inheritance(ParsingHelperFunction):
     #:
@@ -199,11 +206,81 @@ class WhereAny(ParsingHelperFunction):
             bool_parameter_da = self._kwargs["backend_dataset"][parameter].notnull()
         else:
             bool_parameter_da = xr.DataArray(False)
-        if not isinstance(over, list):
-            over = [over]
+        over = self._listify(over)
         available_dims = set(bool_parameter_da.dims).intersection(over)
 
         return bool_parameter_da.any(dim=available_dims, keep_attrs=True)
+
+
+class Defined(ParsingHelperFunction):
+    #:
+    NAME = "defined"
+    #:
+    ALLOWED_IN = ["where"]
+
+    def as_latex(self, *, within: str, how: Literal["all", "any"], **dims) -> str:
+        substrings = []
+        for name, vals in dims.items():
+            substrings.append(self._latex_substring(how, name, vals, within))
+        if len(substrings) == 1:
+            return substrings[0]
+        else:
+            return rf"\bigwedge({', '.join(substrings)})"
+
+    def as_array(
+        self, *, within: str, how: Literal["all", "any"], **dims
+    ) -> xr.DataArray:
+        """
+        Reduce the boolean where array of a model parameter by applying `any` over some dimension(s).
+
+        Args:
+            parameter (str): Reference to a model input parameter
+            over (Union[str, list[str]]): dimension(s) over which to apply `any`.
+
+        Returns:
+            xr.DataArray:
+                If the parameter exists in the model, returns a boolean array with dimensions reduced by applying a boolean OR operation along the dimensions given in `over`.
+                If the parameter does not exist, returns a dimensionless False array.
+        """
+        dim_names = list(dims.keys())
+        dims_with_list_vals = {dim: self._listify(vals) for dim, vals in dims.items()}
+        definition_matrix = self._kwargs["model_data"].definition_matrix
+        dim_within_da = definition_matrix.any(self._dims_to_remove(dim_names, within))
+        within_da = getattr(dim_within_da.sel(**dims_with_list_vals), how)(dim_names)
+
+        return within_da
+
+    def _dims_to_remove(self, dim_names: list[str], within: str) -> set:
+        definition_matrix = self._kwargs["model_data"].definition_matrix
+        missing_dims = set([*dim_names, within]).difference(definition_matrix.dims)
+        if missing_dims:
+            raise ValueError(
+                f"Unexpected model dimension referenced in `{self.NAME}` helper function. "
+                "Only dimensions given by `model.inputs.definition_matrix` can be used. "
+                f"Received: {missing_dims}"
+            )
+        return set(definition_matrix.dims).difference([*dim_names, within])
+
+    def _latex_substring(
+        self,
+        how: Literal["all", "any"],
+        dim: str,
+        vals: Union[str, list[str]],
+        within: str,
+    ) -> str:
+        if how == "all":
+            # Using wedge for "collective-and"
+            tex_how = "wedge"
+        elif how == "any":
+            # Using vee for "collective-or"
+            tex_how = "vee"
+
+        vals = self._listify(vals)
+        within_singular = within.removesuffix("s")
+        dim_singular = dim.removesuffix("s")
+        selection = rf"\text{{{dim_singular}}} \in \text{{[{','.join(vals)}]}}"
+
+        return rf"\big{tex_how}\limits_{{\substack{{{selection}}}}}\text{{{dim_singular} defined in {within_singular}}}"
 
 
 class Sum(ParsingHelperFunction):
@@ -269,7 +346,7 @@ class ReduceCarrierDim(ParsingHelperFunction):
         return Sum(as_latex=self._as_latex, **self._kwargs)(
             array.where(
                 self._kwargs["model_data"]
-                .carrier.sel(carrier_tiers=carrier_tier)
+                .definition_matrix.sel(carrier_tiers=carrier_tier)
                 .notnull()
             ),
             over="carriers",

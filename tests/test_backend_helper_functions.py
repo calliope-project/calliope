@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import xarray as xr
+
 from calliope import exceptions
 from calliope.backend import helper_functions
 
@@ -134,8 +135,11 @@ class TestAsArray:
             dummy_model_data.all_true_carriers, "foo"
         )
 
-        assert dummy_model_data.carrier.sel(carrier_tiers="foo").sum() == reduced.sum()
-        assert not set(reduced.dims).symmetric_difference(["techs"])
+        assert (
+            dummy_model_data.definition_matrix.sel(carrier_tiers="foo").sum()
+            == reduced.sum()
+        )
+        assert not set(reduced.dims).symmetric_difference(["nodes", "techs"])
 
     def test_reduce_primary_carrier_dim(
         self, expression_reduce_primary_carrier_dim, dummy_model_data

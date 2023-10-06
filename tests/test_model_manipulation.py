@@ -1,4 +1,5 @@
 import pytest  # noqa: F401
+
 from calliope import exceptions
 
 from .common.util import build_test_model as build_model
@@ -45,10 +46,10 @@ class TestExistsFalse:
         model = build_model(overrides, "simple_storage,two_hours,investment_costs")
 
         # Ensure what should be gone is gone
-        assert (
-            model._model_data.node_tech.sel(techs="test_storage", nodes="b")
-            .isnull()
-            .item()
+        assert not (
+            model._model_data.definition_matrix.sel(
+                techs="test_storage", nodes="b"
+            ).any(["carriers", "carrier_tiers"])
         )
 
     def test_link_exists_false(self):
@@ -66,7 +67,9 @@ class TestExistsFalse:
         assert "test_transmission_elec:b" not in model._model_data.techs
         assert "test_transmission_elec:a" not in model._model_data.techs
         assert (
-            model._model_data.node_tech.sel(nodes="a", techs="test_transmission_heat:b")
-            .notnull()
+            model._model_data.definition_matrix.sel(
+                nodes="a", techs="test_transmission_heat:b"
+            )
+            .all(["carriers", "carrier_tiers"])
             .item()
         )

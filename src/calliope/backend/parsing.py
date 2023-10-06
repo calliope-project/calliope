@@ -681,7 +681,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
             for parsed_item_combination in parsed_item_product
         ]
 
-    def combine_exists_and_foreach(self, model_data: xr.Dataset) -> xr.DataArray:
+    def combine_definition_matrix_and_foreach(
+        self, model_data: xr.Dataset
+    ) -> xr.DataArray:
         """Generate a multi-dimensional boolean array based on the sets over which the constraint is to be built (defined by "foreach") and the model `exists` array.
 
         The `exists` array is a boolean array defining the structure of the model and is True for valid combinations of technologies consuming/producing specific carriers at specific nodes.
@@ -694,7 +696,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
             xr.DataArray: boolean array indexed over ["nodes", "techs", "carriers", "carrier_tiers"] + any additional dimensions provided by `foreach`.
         """
         # Start with (carriers, carrier_tiers, nodes, techs) and go from there
-        exists = model_data.carrier.notnull() * model_data.node_tech.notnull()
+        exists = model_data.definition_matrix
         # Add other dimensions (costs, timesteps, etc.)
         add_dims = set(self.sets).difference(exists.dims)
         if add_dims.difference(model_data.dims):
@@ -729,7 +731,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         Returns:
             xr.DataArray: Boolean array defining on which index items a parsed component should be built.
         """
-        foreach_where = self.combine_exists_and_foreach(model_data)
+        foreach_where = self.combine_definition_matrix_and_foreach(model_data)
 
         if not foreach_where.any():
             self.log_not_added("'foreach' does not apply anywhere.")

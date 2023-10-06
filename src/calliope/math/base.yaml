@@ -486,7 +486,7 @@ variables:
     description: "The outflow of a technology per timestep, also known as the flow discharged (from `storage` technologies) or the flow received (by `transmission` technologies) on a link."
     unit: energy
     foreach: [nodes, techs, carriers, timesteps]
-    where: "carrier AND allowed_flow_out=True AND [out, out_2, out_3] in carrier_tiers"
+    where: "allowed_flow_out=True AND [out, out_2, out_3] in carrier_tiers"
     bounds:
       min: 0
       max: .inf
@@ -495,7 +495,7 @@ variables:
     description: "The inflow to a technology per timestep, also known as the flow consumed (by `storage` technologies) or the flow sent (by `transmission` technologies) on a link."
     unit: energy
     foreach: [nodes, techs, carriers, timesteps]
-    where: "carrier AND allowed_flow_in=True AND [in, in_2, in_3] in carrier_tiers"
+    where: "allowed_flow_in=True AND [in, in_2, in_3] in carrier_tiers"
     bounds:
       min: 0
       max: .inf

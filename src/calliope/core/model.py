@@ -512,7 +512,7 @@ class Model(object):
         model_name = self.name
         info_strings.append(f"Model name:   {model_name}")
         msize = dict(self._model_data.dims)
-        msize_exists = (self._model_data.node_tech * self._model_data.carrier).sum()
+        msize_exists = self._model_data.definition_matrix.sum()
         info_strings.append(
             f"Model size:   {msize} ({msize_exists.item()} valid node:tech:carrier:carrier_tier combinations)"
         )

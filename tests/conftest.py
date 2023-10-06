@@ -3,6 +3,7 @@ from itertools import chain, combinations
 import numpy as np
 import pytest
 import xarray as xr
+
 from calliope import AttrDict
 from calliope.backend import latex_backend_model, pyomo_backend_model
 
@@ -135,13 +136,9 @@ def dummy_model_data():
             for dim in ALL_DIMS
         },
         data_vars={
-            "node_tech": (
-                ["nodes", "techs"],
-                np.random.choice(a=[np.nan, True], p=[0.05, 0.95], size=(2, 4)),
-            ),
-            "carrier": (
-                ["carrier_tiers", "carriers", "techs"],
-                np.random.choice(a=[np.nan, True], p=[0.05, 0.95], size=(2, 2, 4)),
+            "definition_matrix": (
+                ["nodes", "techs", "carrier_tiers", "carriers"],
+                np.random.choice(a=[False, True], p=[0.05, 0.95], size=(2, 4, 2, 2)),
             ),
             "with_inf": (
                 ["nodes", "techs"],
