@@ -25,7 +25,7 @@ The first is ``ccgt`` (combined-cycle gas turbine), which serves as an example o
 
 The definition of this technology in the example model's configuration looks as follows:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
    :dedent: 2
    :start-after: # ccgt-start
@@ -48,7 +48,7 @@ The second technology is ``csp`` (concentrating solar power), and serves as an e
 
 This definition in the example model's configuration is more verbose:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
    :dedent: 2
    :start-after: # csp-start
@@ -68,7 +68,7 @@ The second location allows a limited amount of battery storage to be deployed to
 
    A storage node with an :math:`energy_{eff}` and :math:`storage_{loss}`.
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
    :dedent: 2
    :start-after: # battery-start
@@ -86,7 +86,7 @@ Three more technologies are needed for a simple model. First, a definition of po
 
    A simple demand node.
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
    :dedent: 2
    :start-after: # demand-start
@@ -101,7 +101,7 @@ What remains to set up is a simple transmission technology. Transmission technol
 
    A simple transmission node with an :math:`energy_{eff}`.
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
    :dedent: 2
    :start-after: # transmission-start
@@ -125,7 +125,7 @@ The technologies are set up in these locations as follows:
 
 Let's now look at the first location definition:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/locations.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/locations.yaml
    :language: yaml
    :dedent: 2
    :start-after: # region-1-start
@@ -139,7 +139,7 @@ There are several things to note here:
 
 The remaining location definitions look like this:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/locations.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/locations.yaml
    :language: yaml
    :dedent: 2
    :start-after: # other-locs-start
@@ -149,7 +149,7 @@ The remaining location definitions look like this:
 
 For transmission technologies, the model also needs to know which locations can be linked, and this is set up in the model configuration as follows:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/locations.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/locations.yaml
    :language: yaml
    :dedent: 2
    :start-after: # links-start

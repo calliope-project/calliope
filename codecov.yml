@@ -1,6 +1,0 @@
-coverage:
-  status:
-    patch: off
-
-comment:
-  layout: "diff, flags, files"

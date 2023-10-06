@@ -37,9 +37,9 @@ Calliope comes with several built-in analysis and visualisation tools. Having so
 
 ## Quick start
 
-Calliope can run on Windows, macOS and Linux. Installing it is quickest with the `conda` package manager by running a single command: `conda create -c conda-forge -n calliope calliope`.
+Calliope can run on Windows, macOS and Linux. Installing it is quickest with the `mamba` package manager by running a single command: `mamba create -c conda-forge -n calliope calliope`.
 
-See the documentation for more [information on installing](https://calliope.readthedocs.io/en/stable/user/installation.html), including what to do if you are having issues with `conda`.
+See the documentation for more [information on installing](https://calliope.readthedocs.io/en/stable/user/installation.html).
 
 Several easy to understand example models are [included with Calliope](calliope/example_models) and accessible through the `calliope.examples` submodule.
 
@@ -51,8 +51,8 @@ More fully-featured examples that have been used in peer-reviewed scientific pub
 
 Documentation is available on Read the Docs:
 
-* [Read the documentation online (recommended)](https://calliope.readthedocs.io/en/stable/)
-* [Download all documentation in a single PDF file](https://readthedocs.org/projects/calliope/downloads/pdf/stable/)
+- [Read the documentation online (recommended)](https://calliope.readthedocs.io/en/stable/)
+- [Download all documentation in a single PDF file](https://readthedocs.org/projects/calliope/downloads/pdf/stable/)
 
 ## Contributing
 

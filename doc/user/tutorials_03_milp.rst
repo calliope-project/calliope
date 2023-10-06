@@ -10,7 +10,7 @@ Units
 
 The capacity of a technology is usually a continuous decision variable, which can be within the range of 0 and ``energy_cap_max`` (the maximum capacity of a technology). In this model, we introduce a unit limit on the CHP instead:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/scenarios.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/scenarios.yaml
    :language: yaml
    :dedent: 4
    :start-after: # chp-start
@@ -23,7 +23,7 @@ Purchase cost
 
 The boiler does not have a unit limit, it still utilises the continuous variable for its capacity. However, we have introduced a ``purchase`` cost:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/scenarios.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/scenarios.yaml
    :language: yaml
    :dedent: 4
    :start-after: # boiler-start
@@ -39,7 +39,7 @@ Asynchronous energy production/consumption
 The heat pipes which distribute thermal energy in the network may be prone to dissipating heat in an unphysical way. I.e. given that they have distribution losses associated with them, in any given timestep, a link could produce and consume energy in the same timestep, losing energy to the atmosphere in both instances, but having a net energy transmission of zero. This allows e.g. a CHP facility to overproduce heat to produce more cheap electricity, and have some way of dumping that heat. The ``asynchronous_prod_con`` binary constraint ensures this phenomenon is avoided:
 
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/scenarios.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/scenarios.yaml
    :language: yaml
    :dedent: 4
    :start-after: # heat_pipes-start

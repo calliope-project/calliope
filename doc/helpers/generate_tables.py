@@ -43,7 +43,7 @@ def write_csv(filename, iterable):
 
 
 def process():
-    with open("../calliope/config/defaults.yaml", "r") as f:
+    with open("../src/calliope/config/defaults.yaml", "r") as f:
         defaults = yaml.round_trip_load(f)
 
     write_csv(

@@ -11,6 +11,14 @@ Model class
 .. autoclass:: calliope.Model
     :members:
 
+.. _api_backend_interface:
+
+Optimisation backend interface
+==============================
+
+.. automodule:: calliope.backend.backends
+    :members: BackendModel
+
 .. _api_time_masks:
 
 Time series

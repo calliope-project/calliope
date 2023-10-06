@@ -1,0 +1,73 @@
+name: Pull Request CI
+
+on:
+  pull_request:
+    branches:
+      - "main"
+      - "0.6"
+    paths-ignore:
+      - README.md
+      - changelog.rst
+      - LICENSE
+      - CITATION
+      - AUTHORS
+      - doc/**
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+concurrency:
+  # Use github.run_id on main branch
+  # Use github.event.pull_request.number on pull requests, so it's unique per pull request
+  # Use github.ref on other branches, so it's unique per branch
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        py3version: ["9", "11"]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: mamba-org/setup-micromamba@v1
+      with:
+        micromamba-version: latest
+        environment-name: ${{ github.event.repository.name }}-${{ matrix.os }}-3${{ matrix.py3version }}
+        environment-file: requirements/base.txt
+        create-args: >-
+          -f requirements/dev.txt
+          python=3.${{ matrix.py3version }}
+        post-cleanup: all
+        cache-environment: true
+
+    - name: Install package
+      run: pip install --no-dependencies -e .
+
+    - name: install CBC (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        wget https://github.com/coin-or/Cbc/releases/download/releases%2F2.10.10/Cbc-releases.2.10.10-w64-msvc17-md.zip -O cbc.zip
+        unzip cbc.zip -d ${HOME}/cbc
+        echo "${HOME}/cbc/bin" >> $GITHUB_PATH
+
+    - name: install CBC (Unix)
+      if: matrix.os != 'windows-latest'
+      run: micromamba install coin-or-cbc
+
+    - name: Install jupyter kernel
+      run: python -m ipykernel install --user --name calliope
+
+    - name: run tests
+      run: pytest
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      if: matrix.os == 'ubuntu-latest' && matrix.py3version == '11'
+      env:
+        directory: "./reports/coverage/"

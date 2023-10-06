@@ -338,7 +338,7 @@ The ``asynchronous_prod_con`` binary constraint ensures that only one of ``carri
 
 This constraint can be applied to storage or transmission technologies. This example shows use with a heat transmission technology:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/scenarios.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/scenarios.yaml
    :language: yaml
    :dedent: 4
    :start-after: # heat_pipes-start
