@@ -43,7 +43,7 @@ class TestModelData:
         ]:
             assert hasattr(model_data, attr)
 
-        for var in ["node_tech", "link_remote_techs", "link_remote_nodes"]:
+        for var in ["definition_matrix", "link_remote_techs", "link_remote_nodes"]:
             assert var in model_data.model_data.data_vars.keys()
 
         assert model_data.model_data.attrs != {}
@@ -55,11 +55,11 @@ class TestModelData:
             ("b", "test_demand_elec"),
             ("b", "test_supply_elec"),
         ]
-        assert len(model_data.model_data.node_tech.to_series().dropna()) == 8
+        assert len(model_data.model_data.definition_matrix.to_series().dropna()) == 8
         assert len(model_data.model_data.link_remote_techs.to_series().dropna()) == 4
         assert len(model_data.model_data.link_remote_nodes.to_series().dropna()) == 4
         assert (
-            model_data.model_data.node_tech.to_series()
+            model_data.model_data.definition_matrix.to_series()
             .dropna()
             .index.difference(
                 model_data.model_data.link_remote_techs.to_series().dropna().index
