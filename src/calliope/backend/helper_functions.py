@@ -228,19 +228,56 @@ class Defined(ParsingHelperFunction):
             return rf"\bigwedge({', '.join(substrings)})"
 
     def as_array(
-        self, *, within: str, how: Literal["all", "any"], **dims
+        self, *, within: str, how: Literal["all", "any"], **dims: str
     ) -> xr.DataArray:
-        """
-        Reduce the boolean where array of a model parameter by applying `any` over some dimension(s).
+        """Find whether members of a model dimension are defined inside another.
+
+        For instance, whether a node defines a specific tech (or group of techs).
+        Or, whether a tech defines a specific carrier.
 
         Args:
-            parameter (str): Reference to a model input parameter
-            over (Union[str, list[str]]): dimension(s) over which to apply `any`.
+            within (str): the model dimension to check.
+            how (Literal[all, any]): Whether to return True for `any` match of nested members or for `all` nested members.
+
+        Kwargs:
+            dims (dict[str, str]):
+                **key**: dimension whose members will be searched for as being defined under the primary dimension (`within`).
+                **value**: subset of the dimension members to find.
+                `dims` must be one of the core model dimensions: [nodes, techs, carriers, carrier_tiers]
 
         Returns:
             xr.DataArray:
-                If the parameter exists in the model, returns a boolean array with dimensions reduced by applying a boolean OR operation along the dimensions given in `over`.
-                If the parameter does not exist, returns a dimensionless False array.
+                For each member of `within`, True if any/all member(s) in `dims` is nested within that member.
+
+        Examples:
+            Check for any of a list of techs being defined at nodes.
+            Assuming a YAML definition of:
+
+            ```yaml
+            nodes:
+                node1
+                    techs:
+                        tech1:
+                        tech3:
+                node2:
+                    techs:
+                        tech2:
+                        tech3:
+            ```
+            Then:
+            ```
+                >>> defined(techs=[tech1, tech2], within=nodes, how=any)
+                [out] <xarray.DataArray (nodes: 2)>
+                      array([ True, False])
+                      Coordinates:
+                      * nodes    (nodes) <U5 'node1' 'node2'
+
+                >>> defined(techs=[tech1, tech2], within=nodes, how=all)
+                [out] <xarray.DataArray (nodes: 2)>
+                      array([ False, False])
+                      Coordinates:
+                      * nodes    (nodes) <U5 'node1' 'node2'
+            ```
         """
         dim_names = list(dims.keys())
         dims_with_list_vals = {dim: self._listify(vals) for dim, vals in dims.items()}
@@ -251,6 +288,20 @@ class Defined(ParsingHelperFunction):
         return within_da
 
     def _dims_to_remove(self, dim_names: list[str], within: str) -> set:
+        """From the definition matrix, get the dimensions that have not been defined.
+
+        This includes dimensions not defined as keys of `dims` or as the value of `within`.
+
+        Args:
+            dim_names (list[str]): Keys of `dims`.
+            within (str): dimension whose members are being checked.
+
+        Raises:
+            ValueError: Can only define dimensions that exist in model.definition_matrix.
+
+        Returns:
+            set: Undefined dimensions to remove from the definition matrix.
+        """
         definition_matrix = self._kwargs["model_data"].definition_matrix
         missing_dims = set([*dim_names, within]).difference(definition_matrix.dims)
         if missing_dims:
