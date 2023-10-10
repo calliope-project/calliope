@@ -1528,12 +1528,12 @@ class TestTime:
         assert model.inputs.sink_equals.loc[("region2", "demand_power")].values[
             0
         ] == approx(2254.098)
-        assert model.inputs.source_max.loc[("region1-1", "csp")].values[8] == approx(
+        assert model.inputs.source_max.loc[("region1_1", "csp")].values[8] == approx(
             0.263805
         )
-        assert model.inputs.source_max.loc[("region1-2", "csp")].values[8] == approx(
+        assert model.inputs.source_max.loc[("region1_2", "csp")].values[8] == approx(
             0.096755
         )
-        assert model.inputs.source_max.loc[("region1-3", "csp")].values[8] == approx(
+        assert model.inputs.source_max.loc[("region1_3", "csp")].values[8] == approx(
             0.0
         )

@@ -1,0 +1,37 @@
+constraints:
+  net_import_share_max:
+    foreach: [nodes, timesteps]
+    where: "defined(techs=ac_transmission, within=nodes, how=any)"
+    equations:
+      - expression: net_import_share * sum(flow_in[techs=$transmission_techs, carriers=power], over=techs) <= $total_energy_balance
+    sub_expressions:
+      total_energy_balance:
+        - expression: sum(flow_out[carriers=power], over=techs) - sum(flow_in[carriers=power], over=techs)
+    slices:
+      transmission_techs:
+        - expression: get_transmission_techs(ac_transmission)
+
+  net_annual_import_share_max:
+    foreach: [nodes]
+    where: "defined(techs=ac_transmission, within=nodes, how=any)"
+    equations:
+      - expression: net_import_share * sum(flow_in[techs=$transmission_techs, carriers=power], over=[techs, timesteps]) <= $total_energy_balance
+    sub_expressions:
+      total_energy_balance:
+        - expression: sum(flow_out[carriers=power], over=[techs, timesteps]) - sum(flow_in[carriers=power], over=[techs, timesteps])
+    slices:
+      transmission_techs:
+        - expression: get_transmission_techs([ac_transmission, free_transmission])
+
+  net_annual_import_share_max_node_group:
+    where: "[power] in carriers"
+    equations:
+      - expression: net_import_share * sum(flow_in[techs=$transmission_techs, carriers=power, nodes=$node_group], over=[nodes, techs, timesteps]) <= $total_energy_balance
+    sub_expressions:
+      total_energy_balance:
+        - expression: sum(flow_out[carriers=power, nodes=$node_group], over=[nodes, techs, timesteps]) - sum(flow_in[carriers=power, nodes=$node_group], over=[nodes, techs, timesteps])
+    slices:
+      transmission_techs:
+        - expression: get_transmission_techs(free_transmission)
+      node_group:
+        - expression: "[region1_1, region1_2, region1_3]"

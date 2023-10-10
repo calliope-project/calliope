@@ -23,11 +23,11 @@ nodes:
           sink_equals: file=demand-2.csv:demand
       battery:
 
-  region1-1.coordinates: { lat: 41, lon: -2 }
-  region1-2.coordinates: { lat: 39, lon: -1 }
-  region1-3.coordinates: { lat: 39, lon: -2 }
+  region1_1.coordinates: { lat: 41, lon: -2 }
+  region1_2.coordinates: { lat: 39, lon: -1 }
+  region1_3.coordinates: { lat: 39, lon: -2 }
 
-  region1-1, region1-2, region1-3:
+  region1_1, region1_2, region1_3:
     techs:
       csp:
   # other-locs-end
@@ -43,13 +43,13 @@ links:
       ac_transmission:
         constraints:
           flow_cap_max: 10000
-  region1,region1-1:
+  region1,region1_1:
     techs:
       free_transmission:
-  region1,region1-2:
+  region1,region1_2:
     techs:
       free_transmission:
-  region1,region1-3:
+  region1,region1_3:
     techs:
       free_transmission:
   # links-end
