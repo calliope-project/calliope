@@ -277,14 +277,14 @@ constraints:
 
   balance_storage:
     description: "Fix the quantity of carrier stored in a `storage` technology at the end of each timestep based on the net flow of carrier charged and discharged and the quantity of carrier stored at the start of the timestep."
-    foreach: [nodes, techs, carriers, timesteps]
+    foreach: [nodes, techs, timesteps]
     where: "inheritance(storage)"
     equations:
-      - expression: storage == $storage_previous_step - $flow_out + flow_in * flow_eff
+      - expression: storage == $storage_previous_step - $flow_out + reduce_carrier_dim(flow_in, carrier=in) * flow_eff
     sub_expressions:
       flow_out:
         - where: flow_eff > 0
-          expression: flow_out / flow_eff
+          expression: reduce_carrier_dim(flow_out, carrier=out) / flow_eff
         - where: flow_eff = 0
           expression: "0"
       storage_previous_step: *storage_previous_step
@@ -540,7 +540,7 @@ variables:
     description: "The upper limit on a carrier that can be stored by a `supply_plus` or `storage` technology in any timestep."
     unit: energy
     foreach: [nodes, techs]
-    where: "(inheritance(storage) OR inheritance(supply_plus)) AND include_storage=True"
+    where: "include_storage=True"
     bounds:
       min: storage_cap_min
       max: storage_cap_max
@@ -549,7 +549,7 @@ variables:
     description: "The carrier stored by a `supply_plus` or `storage` technology in each timestep."
     unit: energy
     foreach: [nodes, techs, timesteps]
-    where: "(inheritance(storage) OR inheritance(supply_plus)) AND include_storage=True"
+    where: "include_storage=True"
     bounds:
       min: 0
       max: .inf

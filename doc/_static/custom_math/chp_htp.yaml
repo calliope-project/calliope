@@ -1,0 +1,110 @@
+# Set Combined heat and power (CHP) plant heat to power operational zones.
+# The first two (extraction (cv) and backpressure (cb) lines) refer to the bounding operating limits for extraction/condensing turbines:
+# ^
+# |Electricity
+# |
+# |----
+# |    \-------   Cv
+# |            \-------
+# |                    \-------
+# |                            \------
+# |                              --/
+# |    operating region       --/
+# |                        --/
+# |                     --/
+# |                  --/
+# |               --/
+# |            --/   Cb
+# |         --/
+# |      --/
+# |   --/
+# | -/                              Heat
+# -------------------------------------->
+
+# The third is for an extraction turbine with no back-pressure component. This requires scaling the line by the maximum heat-to-power ratio of the technology (`flow_cap_ratio`).
+# ^
+# |Electricity
+# |
+# |-
+# | \-
+# |   \-
+# |     \-
+# |       \-
+# |         \-
+# |           \-
+# |             \-  Cv
+# |               \-
+# |                 \-
+# |                   \-
+# |                     \-
+# |                       \-
+# |    operating region     \-
+# |                           \-
+# |                             \-  Heat
+# -------------------------------------->
+
+# It is possible to achieve the case of only having a backpressure line (and therefore no operating region; the output must follow the backpressure line) by setting a technology's `carrier_ratio` for heat to equal the `power_to_heat_ratio`, i.e. `techs.my_chp.constraints.carrier_ratios.carrier_out_2.heat: ...`. This means none of the custom math in this file are required.
+# ^
+# |Electricity
+# |
+# |
+# |
+# |
+# |                                  /-
+# |                               /--
+# |                             /-
+# |                          /--
+# |                       /--
+# |               Cb   /--
+# |                 /--
+# |               /-
+# |            /--
+# |         /--
+# |      /--
+# |    /-
+# | /--                             Heat
+# -------------------------------------->
+
+# New technology-level parameters:
+# power_loss_factor
+# power_to_heat_ratio
+# flow_cap_ratio
+
+constraints:
+  chp_extraction_line:
+    description: >
+      Set the extraction line for combined heat and power plants with extraction/condensing turbines.
+      `power_loss_factor` is also referred to as simply `cv`.
+    foreach: [nodes, techs, timesteps]
+    where: power_loss_factor AND inheritance(conversion_plus)
+    equations:
+      - expression: >
+          reduce_carrier_dim(flow_out, carrier=out)
+          <= flow_cap - reduce_carrier_dim(flow_out, carrier=out_2) * power_loss_factor
+
+  chp_backpressure_line:
+    description: >
+      Set the backpressure line for combined heat and power plants with extraction/condensing turbines.
+      `power_to_heat_ratio` is also referred to as the `backpressure ratio` or simply `cb`.
+    foreach: [nodes, techs, timesteps]
+    where: power_to_heat_ratio AND inheritance(conversion_plus)
+    equations:
+      - expression: >
+          reduce_carrier_dim(flow_out, carrier=out) <=
+          reduce_carrier_dim(flow_out, carrier=out_2) * power_to_heat_ratio
+
+  chp_power_to_heat_ratio:
+    description: >
+      Set power-to-heat tail for CHPs that allow trading off power output for heat.
+      The `flow_cap_ratio` is the ratio between maximum possible heat output and maximum possible electricity output.
+    foreach: [nodes, techs, timesteps]
+    where: power_to_heat_ratio AND flow_cap_ratio AND inheritance(conversion_plus)
+    equations:
+      - expression: >
+          reduce_carrier_dim(flow_out, carrier=out)
+          <= $slope * (
+            (flow_cap * flow_cap_ratio) - reduce_carrier_dim(flow_out, carrier=out_2)
+          )
+    sub_expressions:
+      slope:
+        - expression: power_to_heat_ratio / (flow_cap_ratio - 1)

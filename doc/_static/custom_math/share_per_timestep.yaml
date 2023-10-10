@@ -1,0 +1,29 @@
+# Set the per-timestep share of a technology's (or group thereof) out/inflow met by other technologies to specific values.
+# If a single technology, it needs to be explicitly defined (e.g., `flow_in[techs=demand_power]`).
+# If a group of technologies, they can be explicitly defined as a list or can be consolidated by a shared attribute (e.g., they produce a specific carrier: `flow_out[carriers=power]`)
+# The parameters (demand_share_per_timestep_equals, supply_share_per_timestep_equals) can be defined per technology (and optionally per node) as a single value or as a time varying value (e.g., `techs.my_tech.constraints.demand_share_per_timestep_equals: file=my_file.csv`)
+
+# New technology-level parameters:
+# demand_share_per_timestep_equals
+# supply_share_per_timestep_equals
+
+constraints:
+  demand_share_per_timestep_equals_per_tech:
+    description: Set the per-timestep outflow of certain technologies which produce the `power` carrier to a share of demand inflow.
+    foreach: [nodes, techs, timesteps]
+    where: demand_share_per_timestep_equals AND [power] in carriers
+    equations:
+      - expression: >
+          sum(flow_out, over=nodes) ==
+          * sum(flow_in[techs=demand_power], over=nodes)
+          * demand_share_per_timestep_equals
+
+  supply_share_per_timestep_equals_per_tech:
+    description: Set the per-timestep outflow of certain technologies which produce the `power` carrier to a share of all `power` outflow in each node.
+    foreach: [nodes, techs, timesteps]
+    where: supply_share_per_timestep_equals
+    equations:
+      - expression: >
+          sum(flow_out[carriers=power], over=nodes) ==
+          * sum(flow_out[carriers=power], over=techs)
+          * supply_share_per_timestep_equals
