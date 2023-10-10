@@ -280,11 +280,11 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(storage)"
     equations:
-      - expression: storage == $storage_previous_step - $flow_out + reduce_carrier_dim(flow_in, carrier=in) * flow_eff
+      - expression: storage == $storage_previous_step - $flow_out + reduce_carrier_dim(flow_in, carrier_tier=in) * flow_eff
     sub_expressions:
       flow_out:
         - where: flow_eff > 0
-          expression: reduce_carrier_dim(flow_out, carrier=out) / flow_eff
+          expression: reduce_carrier_dim(flow_out, carrier_tier=out) / flow_eff
         - where: flow_eff = 0
           expression: "0"
       storage_previous_step: *storage_previous_step
