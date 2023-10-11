@@ -2270,6 +2270,15 @@ class TestNewBackend:
                 "variables",
             ),
             ("energy_eff", {"nodes": "a", "techs": "test_supply_elec"}, "parameters"),
+            (
+                "system_balance",
+                {
+                    "nodes": "a",
+                    "carriers": "electricity",
+                    "timesteps": "2005-01-01 00:00",
+                },
+                "constraints",
+            ),
         ],
     )
     def test_verbose_strings(self, simple_supply_longnames, objname, dims, objtype):
@@ -2298,7 +2307,7 @@ class TestNewBackend:
             obj.sel(dims).body.item()
             == f"parameters[energy_eff][{energy_eff_dims}]*variables[carrier_con][{', '.join(dims[i] for i in obj.dims)}]"
         )
-        assert not obj.coords_in_name
+        assert obj.coords_in_name
 
     def test_verbose_strings_expression(self, simple_supply_longnames):
         dims = {
@@ -2403,7 +2412,6 @@ class TestNewBackend:
 
         Updating it doesn't change the model in any way, because none of the existing constraints/expressions depend on it. Therefore, no warning is raised
         """
-
         updated_param = 1
 
         simple_supply.backend.update_parameter("units_equals", updated_param)

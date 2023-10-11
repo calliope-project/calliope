@@ -6,62 +6,62 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_u_constraints(carrier_production_max)(0)_:
+c_u_constraints(carrier_production_max)(a__test_supply_elec__electricity__2005_01_01_00_00)_:
 +1 variables(carrier_prod)(a__test_supply_elec__electricity__2005_01_01_00_00)
 -1.0 variables(energy_cap)(a__test_supply_elec)
 <= 0.0
 
-c_u_constraints(carrier_production_max)(1)_:
+c_u_constraints(carrier_production_max)(a__test_supply_elec__electricity__2005_01_01_01_00)_:
 -1.0 variables(energy_cap)(a__test_supply_elec)
 +1 variables(carrier_prod)(a__test_supply_elec__electricity__2005_01_01_01_00)
 <= 0.0
 
-c_u_constraints(carrier_production_max)(2)_:
+c_u_constraints(carrier_production_max)(a__test_transmission_elec_b__electricity__2005_01_01_00_00)_:
 +1 variables(carrier_prod)(a__test_transmission_elec_b__electricity__2005_01_01_00_00)
 -1.0 variables(energy_cap)(a__test_transmission_elec_b)
 <= 0.0
 
-c_u_constraints(carrier_production_max)(3)_:
+c_u_constraints(carrier_production_max)(a__test_transmission_elec_b__electricity__2005_01_01_01_00)_:
 -1.0 variables(energy_cap)(a__test_transmission_elec_b)
 +1 variables(carrier_prod)(a__test_transmission_elec_b__electricity__2005_01_01_01_00)
 <= 0.0
 
-c_u_constraints(carrier_production_max)(4)_:
+c_u_constraints(carrier_production_max)(a__test_transmission_heat_b__heat__2005_01_01_00_00)_:
 +1 variables(carrier_prod)(a__test_transmission_heat_b__heat__2005_01_01_00_00)
 -1.0 variables(energy_cap)(a__test_transmission_heat_b)
 <= 0.0
 
-c_u_constraints(carrier_production_max)(5)_:
+c_u_constraints(carrier_production_max)(a__test_transmission_heat_b__heat__2005_01_01_01_00)_:
 -1.0 variables(energy_cap)(a__test_transmission_heat_b)
 +1 variables(carrier_prod)(a__test_transmission_heat_b__heat__2005_01_01_01_00)
 <= 0.0
 
-c_u_constraints(carrier_production_max)(6)_:
+c_u_constraints(carrier_production_max)(b__test_supply_elec__electricity__2005_01_01_00_00)_:
 +1 variables(carrier_prod)(b__test_supply_elec__electricity__2005_01_01_00_00)
 -1.0 variables(energy_cap)(b__test_supply_elec)
 <= 0.0
 
-c_u_constraints(carrier_production_max)(7)_:
+c_u_constraints(carrier_production_max)(b__test_supply_elec__electricity__2005_01_01_01_00)_:
 -1.0 variables(energy_cap)(b__test_supply_elec)
 +1 variables(carrier_prod)(b__test_supply_elec__electricity__2005_01_01_01_00)
 <= 0.0
 
-c_u_constraints(carrier_production_max)(8)_:
+c_u_constraints(carrier_production_max)(b__test_transmission_elec_a__electricity__2005_01_01_00_00)_:
 +1 variables(carrier_prod)(b__test_transmission_elec_a__electricity__2005_01_01_00_00)
 -1.0 variables(energy_cap)(b__test_transmission_elec_a)
 <= 0.0
 
-c_u_constraints(carrier_production_max)(9)_:
+c_u_constraints(carrier_production_max)(b__test_transmission_elec_a__electricity__2005_01_01_01_00)_:
 -1.0 variables(energy_cap)(b__test_transmission_elec_a)
 +1 variables(carrier_prod)(b__test_transmission_elec_a__electricity__2005_01_01_01_00)
 <= 0.0
 
-c_u_constraints(carrier_production_max)(10)_:
+c_u_constraints(carrier_production_max)(b__test_transmission_heat_a__heat__2005_01_01_00_00)_:
 +1 variables(carrier_prod)(b__test_transmission_heat_a__heat__2005_01_01_00_00)
 -1.0 variables(energy_cap)(b__test_transmission_heat_a)
 <= 0.0
 
-c_u_constraints(carrier_production_max)(11)_:
+c_u_constraints(carrier_production_max)(b__test_transmission_heat_a__heat__2005_01_01_01_00)_:
 -1.0 variables(energy_cap)(b__test_transmission_heat_a)
 +1 variables(carrier_prod)(b__test_transmission_heat_a__heat__2005_01_01_01_00)
 <= 0.0
