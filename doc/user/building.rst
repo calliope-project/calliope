@@ -156,10 +156,12 @@ Or it can be indexed over one or more model dimension(s):
 
     parameters:
         my_indexed_param:
-            data: { monetary: 100 }
+            data: 100
+            index: [monetary]
             dims: costs
         my_multiindexed_param:
-            data: { (monetary, electricity): 2, (monetary, heat): 10 }
+            data: [2, 10]
+            index: [(monetary, electricity), (monetary, heat)]
             dims: [costs, carriers]
 
 which can be accessed in the model inputs and custom math, e.g., `model.inputs.my_multiindexed_param.sel(costs="monetary")` and `my_multiindexed_param`.

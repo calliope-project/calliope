@@ -1381,26 +1381,15 @@ class TestChecks:
             "Integer and / or binary decision variables are included in this model",
         )
 
-    def test_fail_on_string(self):
-        with pytest.raises(calliope.exceptions.ModelError) as exception:
-            build_model(
-                model_file="weighted_obj_func.yaml",
-                scenario="illegal_string_cost_class",
-            )
-
-        assert check_error_or_warning(
-            exception, "`parameters.objective_cost_class` must be a dictionary."
-        )
-
     @pytest.mark.parametrize(
         "override",
         [
-            ({"parameters.objective_cost_class.data": {"monetary": None}}),
+            ({"parameters.objective_cost_class.data": None}),
             (
                 {
-                    "parameters.objective_cost_class.data": {
-                        "monetary": None,
-                        "emissions": None,
+                    "parameters.objective_cost_class": {
+                        "data": [None, 1],
+                        "index": ["monetary", "emissions"],
                     }
                 }
             ),

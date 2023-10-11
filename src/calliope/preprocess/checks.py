@@ -298,22 +298,18 @@ def check_initial(config_model: AttrDict):
             "(i.e. `one_way: true`).".format(tech_end, ", ".join(duplicated_techs))
         )
 
-    # We no longer allow cost_class in objective_obtions to be a string
+    # We no longer allow cost_class in objective_options to be a string
     _cost_class = config_model.parameters.objective_cost_class
 
-    if not isinstance(_cost_class.data, dict):
-        errors.append(
-            "`parameters.objective_cost_class` must be a dictionary."
-            "If you want to minimise or maximise with a single cost class, "
-            'use e.g. "{"costs": {monetary: 1}}", which gives the monetary cost class a weight '
-            "of 1 in the objective, and ignores any other cost classes."
-        )
+    if not isinstance(_cost_class.data, list):
+        _data = [_cost_class.data]
     else:
-        for _class, _val in _cost_class.data.as_dict_flat().items():
-            if not isinstance(_val, (int, float)):
-                errors.append(
-                    f"Objective cost class weights must be numeric, received {_class}:{_val}"
-                )
+        _data = _cost_class.data
+    for _val in _data:
+        if not isinstance(_val, (int, float)):
+            errors.append(
+                f"Objective cost class weights must be numeric, received:{_val}"
+            )
 
     return model_warnings, errors
 

@@ -12,7 +12,8 @@ config:
 
 parameters:
   objective_cost_class:
-    data: { monetary: 1 }
+    data: 1
+    index: [monetary]
     dims: costs
 
 techs:

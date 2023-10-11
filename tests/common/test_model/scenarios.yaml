@@ -319,6 +319,3 @@ overrides:
           monetary:
             interest_rate: 0.1
             flow_cap: 10
-
-  explicit_cost_class:
-    parameters.objective_cost_class.data: { moentary: 1 }
