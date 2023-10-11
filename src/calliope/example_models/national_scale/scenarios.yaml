@@ -40,10 +40,16 @@ overrides:
       solve:
         spores_score_cost_class: "spores_score"
         spores_number: 3
-        spores_objective_cost_class: { "monetary": 0, "spores_score": 1 }
     parameters:
-      spores_slack: 0.1
-      objective_cost_class.data: { "monetary": 1, "spores_score": 0 }
+      spores_slack:
+        data: 0.1
+      objective_cost_class:
+        data: [1, 0]
+        index: ["monetary", "spores_score"]
+      spores_objective_cost_class:
+        data: [1, 0]
+        index: [spores_score, monetary]
+        dims: costs
     # FIXME: replace group constraint in SPORES mode
     # group_constraints:
     #    systemwide_cost_max.cost_max.monetary: 1e10  # very large, non-infinite value
@@ -103,7 +109,8 @@ overrides:
       # forcing enough installed capacity to cover demand in
       # the maximum demand timestep
       reserve_margin:
-        data: { power: 0.10 } # 10% reserve margin for power
+        data: 0.10 # 10% reserve margin for power
+        index: power
         dims: carriers
 
   ##

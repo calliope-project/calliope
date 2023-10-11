@@ -103,16 +103,16 @@ class ModelDataFactory:
                 raise KeyError(
                     f"Trying to add top-level parameter with same name as a node/tech level parameter: {param_name}"
                 )
-            if isinstance(param_data.data, dict) and param_data.dims is None:
-                raise ValueError(
-                    f"Missing dimension names for top-level parameter: {param_name}"
-                )
+            if "dims" in param_data:
+                idx = pd.Index(data=param_data["index"], name=param_data["dims"])
+                param_da = pd.Series(
+                    data=param_data["data"],
+                    index=idx,
+                    name=param_name,
+                ).to_xarray()
+            else:
+                param_da = xr.DataArray(param_data["data"], name=param_name)
 
-            param_da = (
-                pd.Series(param_data["data"], name=param_name)
-                .rename_axis(index=param_data.get("dims", None))
-                .to_xarray()
-            )
             for coord_name, coord_data in param_da.coords.items():
                 if coord_name not in self.model_data.coords:
                     LOGGER.debug(
@@ -127,7 +127,7 @@ class ModelDataFactory:
                             f"top-level parameter `{param_name}` is adding a new value to the "
                             f"`{coord_name}` model coordinate: {new_coord_data.values}"
                         )
-            self.model_data[param_name] = param_da
+            self.model_data = self.model_data.merge(param_da.to_dataset())
 
     def _add_time_dimension(self):
         self.data_pre_time = self.model_data.copy(deep=True)

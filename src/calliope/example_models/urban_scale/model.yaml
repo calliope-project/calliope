@@ -21,7 +21,8 @@ config:
 
 parameters:
   objective_cost_class:
-    data: { monetary: 1 }
+    data: 1
+    index: [monetary]
     dims: costs
   bigM:
     data: 1e6 # setting the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge

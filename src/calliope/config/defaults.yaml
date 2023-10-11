@@ -40,18 +40,13 @@ config:
     solver: cbc
     zero_threshold: 1e-10
 
+
 parameters:
   bigM:
     data: 1e9
   objective_cost_class:
-    data: { "monetary": 1 }
-    dims: costs
-  spores_slack:
-    data: 0.1
-  spores_objective_cost_class:
-    data:
-      spores_score: 1
-      monetary: 0
+    data: 1
+    index: [monetary]
     dims: costs
 
 ##
