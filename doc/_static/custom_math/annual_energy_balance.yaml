@@ -1,42 +1,51 @@
 # Limit or set the total (e.g. annual) outflow of a technology to a specified absolute value.
 
+# New technology-level parameters:
+# annual_flow_max
+# annual_source_max
+
 # New top-level parameters:
-# Any limit defined as numeric in the below constraints.
+# annual_flow_max (if grouping technologies and/or nodes)
+# flow_max_group (if grouping technologies and/or nodes)
 
 constraints:
-  # Upper limit could be defined in the model "parameters" and then referenced here by name.
-  annual_energy_balance_global_one_tech:
-    description: Limit total CSP annual energy production across all possible deployment sites.
+  annual_energy_balance_per_tech_and_node:
+    description: Limit total technology annual energy production at each possible deployment site.
+    foreach: [nodes, techs]
+    where: annual_flow_max
     equations:
-      - expression: "sum(flow_out[techs=csp], over=[nodes, carriers, timesteps]) <= 7e5"
+      - expression: "sum(flow_out, over=[carriers, timesteps]) <= annual_flow_max"
+
+  annual_energy_balance_global_per_tech:
+    description: Limit total technology annual energy production across all possible deployment sites.
+    foreach: [techs]
+    where: annual_flow_max
+    equations:
+      - expression: "sum(flow_out, over=[nodes, carriers, timesteps]) <= annual_flow_max"
 
   annual_energy_balance_global_multi_tech:
-    description: Limit total CSP and battery annual energy production across all possible deployment sites.
+    description: Limit total combined technology annual energy production across all possible deployment sites.
     # To slice a model component with a list of values, we need to use referenced `slices`.
+    where: annual_flow_max AND flow_max_group
     equations:
-      - expression: "sum(flow_out[techs=$techs], over=[nodes, techs, carriers, timesteps]) <= 7.2e5"
+      - expression: "sum(flow_out[techs=$techs], over=[nodes, techs, carriers, timesteps]) <= annual_flow_max"
     slices:
       techs:
-        - expression: "[csp, battery]"
+        - expression: flow_max_group
 
-  annual_energy_balance_per_node:
-    description: Limit CSP annual energy production at each possible deployment site.
-    foreach: [nodes]
-    # We need this `where` to statement so we don't try applying this constraint at nodes where `csp` has not been defined.
-    where: "defined(techs=csp, within=nodes, how=all)"
-    equations:
-      - expression: "sum(flow_out[techs=csp], over=[carriers, timesteps]) <= 6e5"
-
-  total_source_availability:
+  annual_energy_balance_total_source_availability:
     description: >
       Limit total flow into the system from a particular source.
       NOTE: this only works for supply_plus technologies.
         For `supply` technologies you will need to convert `flow_out` to `flow_in` using `energy_eff` and limit that.
-    where: source_use
+    foreach: [techs]
+    where: source_use AND annual_source_max
     equations:
-      - expression: "sum(source_use[techs=csp], over=[nodes, timesteps]) <= 3e6"
+      - expression: "sum(source_use, over=[nodes, techs, timesteps]) <= annual_source_max"
 
-  total_sink_availability:
+  annual_energy_balance_total_sink_availability:
     description: Limit total flow out of the system into a sink that is not pinned by `sink_equals`.
+    foreach: [techs]
+    where: inheritance(demand) AND annual_sink_max
     equations:
-      - expression: "sum(flow_in[techs=waste_sink], over=[nodes, carriers, timesteps]) <= 3e6"
+      - expression: "sum(flow_in, over=[nodes, carriers, timesteps]) <= annual_sink_max"

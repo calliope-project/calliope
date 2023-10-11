@@ -88,7 +88,7 @@ def check_variable_exists(
 def build_lp(
     model: calliope.Model,
     outfile: Union[str, Path],
-    math: Optional[dict] = None,
+    math: Optional[dict[Union[dict, list]]] = None,
     backend: Literal["pyomo"] = "pyomo",
 ) -> None:
     """
@@ -106,12 +106,15 @@ def build_lp(
     for name, dict_ in model.math["variables"].items():
         backend_instance.add_variable(name, dict_)
 
-    if math is not None:
+    if isinstance(math, dict):
         for component_group, component_math in math.items():
-            for name, dict_ in component_math.items():
-                getattr(backend_instance, f"add_{component_group.removesuffix('s')}")(
-                    name, dict_
-                )
+            component = component_group.removesuffix("s")
+            if isinstance(component_math, dict):
+                for name, dict_ in component_math.items():
+                    getattr(backend_instance, f"add_{component}")(name, dict_)
+            elif isinstance(component_math, list):
+                for name in component_math:
+                    getattr(backend_instance, f"add_{component}")(name)
 
     # MUST have an objective for a valid LP file
     if math is None or "objectives" not in math.keys():

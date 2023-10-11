@@ -500,7 +500,10 @@ class EvalIndexSlice(EvalString):
         if eval_kwargs.get("as_dict"):
             return {"slice_reference": self.name}
         elif slice_dict is not None:
-            return slice_dict[self.name][0].eval(as_values=True, **eval_kwargs)
+            slicer = slice_dict[self.name][0].eval(as_values=True, **eval_kwargs)
+            if isinstance(slicer, xr.DataArray) and slicer.isnull().any():
+                slicer = slicer.notnull()
+            return slicer
 
 
 class EvalSubExpressions(EvalString):

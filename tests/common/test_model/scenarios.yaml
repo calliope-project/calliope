@@ -319,3 +319,8 @@ overrides:
           monetary:
             interest_rate: 0.1
             flow_cap: 10
+
+  demand_elec_max:
+    techs.test_demand_elec.constraints:
+      sink_equals: null
+      sink_max: file=demand_elec.csv
