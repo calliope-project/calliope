@@ -9,9 +9,11 @@
 variables:
   piecewise_cost_investment:
     description: Investment cost that increases monotonically
-    foreach: [nodes, techs, costs, pieces]
+    foreach: [nodes, techs, costs]
     where: cost_flow_cap_piecewise_slopes AND cost_flow_cap_piecewise_intercept AND purchased
-
+    bounds:
+      min: 0
+      max: .inf
 
 constraints:
   piecewise_costs:
@@ -35,6 +37,6 @@ global_expressions:
     sub_expressions:
       piecewise_cost_investment:
         - where: "piecewise_cost_investment"
-          expression: piecewise_cost_investment
+          expression: annualisation_weight * cost_depreciation_rate * piecewise_cost_investment
         - where: "NOT piecewise_cost_investment"
           expression: "0"

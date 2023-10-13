@@ -124,8 +124,12 @@ def build_lp(
         )
         backend_instance._instance.objectives["dummy_obj"][0].activate()
     elif "objectives" in math.keys():
-        objective = list(math["objectives"].keys())[0]
-        backend_instance._instance.objectives[objective][0].activate()
+        if isinstance(math["objectives"], dict):
+            objectives = list(math["objectives"].keys())
+        else:
+            objectives = math["objectives"]
+        assert len(objectives) == 1, "Can only test with one objective"
+        backend_instance._instance.objectives[objectives[0]][0].activate()
 
     backend_instance.verbose_strings()
 
@@ -140,3 +144,4 @@ def build_lp(
 
     # reintroduce the trailing newline since both Pyomo and file formatters love them.
     Path(outfile).write_text("\n".join(stripped_lines) + "\n")
+    return backend_instance

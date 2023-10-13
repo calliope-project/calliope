@@ -102,6 +102,16 @@ techs:
       carrier_ratios:
         carrier_out_2: { heat: 0.8 }
 
+  test_chp:
+    essentials:
+      name: Conversion plus tech
+      primary_carrier_out: electricity
+      carrier_in: gas
+      carrier_out: [electricity, heat]
+      parent: conversion_plus
+    constraints:
+      flow_cap_max: 20
+
   test_demand_elec:
     essentials:
       name: Demand elec tech
@@ -117,6 +127,14 @@ techs:
       parent: demand
     constraints:
       sink_equals: file=demand_heat.csv
+
+  test_demand_coal:
+    essentials:
+      name: Demand coal tech
+      carrier: coal
+      parent: demand
+    constraints:
+      sink_max: 10
 
   test_transmission_elec:
     essentials:

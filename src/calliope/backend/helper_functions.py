@@ -512,6 +512,13 @@ class SelectFromLookupArrays(ParsingHelperFunction):
         for index_dim, index in lookup_arrays.items():
             stacked_lookup = self._kwargs["model_data"][index.name].stack({dim: dims})
             ix = array.indexes[index_dim].get_indexer(stacked_lookup)
+            if (ix == -1).all():
+                received_lookup = (
+                    self._kwargs["model_data"][index.name].to_series().dropna()
+                )
+                raise IndexError(
+                    f"Trying to select items on the dimension {index_dim} from the {index.name} lookup array, but no matches found. Received: {received_lookup}"
+                )
             ixs[index_dim] = xr.DataArray(
                 np.fmax(0, ix),
                 coords={dim: stacked_lookup[dim]},

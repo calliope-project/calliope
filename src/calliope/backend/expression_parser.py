@@ -133,7 +133,12 @@ class EvalOperatorOperand(EvalString):
         if not as_latex:
             evaluated = xr.DataArray(evaluated)
             if eval_kwargs.get("apply_where", True):
-                evaluated = evaluated.where(eval_kwargs["where"])
+                try:
+                    evaluated = evaluated.where(eval_kwargs["where"])
+                except AttributeError:
+                    evaluated = evaluated.broadcast_like(eval_kwargs["where"]).where(
+                        eval_kwargs["where"]
+                    )
 
         return evaluated
 

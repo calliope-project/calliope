@@ -14,7 +14,7 @@ variables:
     where: operating_units AND flow_cap_max AND NOT flow_cap_per_unit
     bounds:
       min: 0
-      max: .inf
+      max: flow_cap_max
 
 constraints:
   piecewise_efficiency:
@@ -25,8 +25,8 @@ constraints:
     where: flow_eff_piecewise_slopes AND flow_eff_piecewise_intercept AND available_flow_cap
     equations:
       - expression: >
-          reduce_carrier_dim(flow_in, carrier=in) >=
-          flow_eff_piecewise_slopes * reduce_carrier_dim(flow_out, carrier=out)
+          reduce_carrier_dim(flow_in, carrier_tier=in) >=
+          flow_eff_piecewise_slopes * reduce_carrier_dim(flow_out, carrier_tier=out)
           + flow_eff_piecewise_intercept * available_flow_cap
 
   available_flow_cap_binary:

@@ -16,7 +16,7 @@ variables:
       Positive values indicate carrier imports at a node, negative values for carrier exports.
     foreach: [nodes, carriers, timesteps]
     # change [fuel1, fuel2] to match the carriers you want to allow to be distributed within the system.
-    where: "[fuel1, fuel2] in carriers AND defined(carriers=[fuel1, fuel2], within=nodes, how=any)"
+    where: "allow_fuel_distribution"
     bounds:
       min: -.inf
       max: .inf
@@ -93,5 +93,5 @@ objectives:
       cost_fuel_distribution_sum:
         - where: "cost_fuel_distribution"
           expression: sum(sum(cost_fuel_distribution, over=[nodes, carriers, timesteps]) * objective_cost_class, over=costs)
-        - where: "NOT cost_fuel_distribution"
+        - where: "NOT any(cost_fuel_distribution, over=[nodes, carriers, costs, timesteps])"
           expression: "0"

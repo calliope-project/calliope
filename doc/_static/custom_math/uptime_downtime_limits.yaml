@@ -19,10 +19,10 @@ constraints:
     where: capacity_factor_min
     equations:
       - expression: >
-          sum(flow_out * timestep_weights, over=timesteps) >=
+          sum(reduce_carrier_dim(flow_out, carrier_tier=out) * timestep_weights, over=timesteps) >=
           flow_cap * capacity_factor_min * $total_time
     sub_expressions:
-      total_time:
+      total_time: &total_time
         - expression: sum(timestep_resolution * timestep_weights, over=timesteps)
 
   annual_capacity_factor_max:
@@ -31,22 +31,21 @@ constraints:
     where: capacity_factor_max
     equations:
       - expression: >
-          sum(flow_out * timestep_weights, over=[timesteps]) <=
+          sum(reduce_carrier_dim(flow_out, carrier_tier=out) * timestep_weights, over=[timesteps]) <=
           flow_cap * capacity_factor_max * $total_time
     sub_expressions:
-      total_time:
-        - expression: sum(timestep_resolution * timestep_weights, over=timesteps)
+      total_time: *total_time
 
   downtime_period:
     description: Force outflow to zero in pre-defined timesteps of technology downtime.
-    foreach: [node, techs, timesteps]
+    foreach: [nodes, techs, timesteps]
     where: downtime_periods
     equations:
       - expression: sum(flow_out, over=carriers) == 0
 
   downtime_period_decision:
     description: Force operation to zero in an integer number of timesteps, for technologies with integer decision variables activated.
-    foreach: [node, techs]
+    foreach: [nodes, techs]
     where: operating_units AND uptime_limit
     equations:
       - expression: sum(operating_units * timestep_weights, over=timesteps) <= uptime_limit
