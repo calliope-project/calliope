@@ -9,7 +9,6 @@ import logging
 import operator
 from typing import (
     TYPE_CHECKING,
-    Any,
     Callable,
     Iterable,
     Literal,
@@ -247,8 +246,8 @@ class ParsedBackendEquation:
     @overload  # noqa: F811
     def evaluate_where(  # noqa: F811
         self,
-        model_data: xr.Dataset,
-        backend_dataset: Optional[xr.Dataset],
+        backend_interface: backend_model.BackendModel,
+        *,
         as_latex: Literal[False] = False,
         initial_where: xr.DataArray = TRUE_ARRAY,
     ) -> xr.DataArray:
@@ -257,23 +256,26 @@ class ParsedBackendEquation:
     @overload  # noqa: F811
     def evaluate_where(  # noqa: F811
         self,
-        model_data: xr.Dataset,
-        backend_dataset: Optional[xr.Dataset],
+        backend_interface: backend_model.BackendModel,
+        *,
         as_latex: Literal[True],
     ) -> str:
         "Expecting string if requesting latex string"
 
     def evaluate_where(  # noqa: F811
         self,
-        model_data: xr.Dataset,
-        backend_dataset: Optional[xr.Dataset] = None,
+        backend_interface: backend_model.BackendModel,
+        *,
         as_latex: bool = False,
         initial_where: xr.DataArray = TRUE_ARRAY,
     ) -> Union[xr.DataArray, str]:
         """Evaluate parsed backend object dictionary `where` string.
 
         Args:
-            model_data (xr.Dataset): Calliope model dataset.
+            backend_interface (calliope.backend.backend_model.BackendModel): Interface to a optimisation backend.
+
+        Keyword Args:
+            as_latex (bool, optional): If True, return LaTex math string. Defaults to False.
             initial_where (xr.DataArray, optional):
                 If given, the where array resulting from evaluation will be further where'd by this array.
                 Defaults to xr.DataArray(True) (i.e., no effect).
@@ -285,10 +287,11 @@ class ParsedBackendEquation:
         """
         evaluated_wheres = [
             where[0].eval(
+                equation_name=self.name,
                 helper_functions=helper_functions._registry["where"],
                 as_latex=as_latex,
-                model_data=model_data,
-                backend_dataset=backend_dataset,
+                input_data=backend_interface.inputs,
+                backend_interface=backend_interface,
             )
             for where in self.where
         ]
@@ -319,19 +322,19 @@ class ParsedBackendEquation:
     @overload  # noqa: F811
     def evaluate_expression(  # noqa: F811
         self,
-        model_data: xr.Dataset,
         backend_interface: backend_model.BackendModel,
+        *,
         as_latex: Literal[False] = False,
         references: Optional[set] = None,
         where: Optional[xr.DataArray] = None,
-    ) -> Any:
+    ) -> xr.DataArray:
         "Expecting anything (most likely an array) if not requesting latex string"
 
     @overload  # noqa: F811
     def evaluate_expression(  # noqa: F811
         self,
-        model_data: xr.Dataset,
         backend_interface: backend_model.BackendModel,
+        *,
         as_latex: Literal[True],
         references: Optional[set] = None,
     ) -> str:
@@ -339,30 +342,69 @@ class ParsedBackendEquation:
 
     def evaluate_expression(  # noqa: F811
         self,
-        model_data: xr.Dataset,
         backend_interface: backend_model.BackendModel,
+        *,
         as_latex: bool = False,
         references: Optional[set] = None,
-        where: Optional[xr.DataArray] = None,
-    ) -> Any:
-        if where is None:
-            apply_where = False
-        else:
-            apply_where = True
-        return self.expression[0].eval(
+        where: xr.DataArray = TRUE_ARRAY,
+    ) -> Union[str, xr.DataArray]:
+        """Evaluate a math string to produce either an array of backend objects or a LaTex math string.
+
+        Args:
+            backend_interface (calliope.backend.backend_model.BackendModel): Interface to a optimisation backend.
+
+        Keyword Args:
+            as_latex (bool, optional): If True, return LaTex math string. Defaults to False.
+            references (Optional[set], optional): If given, any references in the math string to other model components will be logged here. Defaults to None.
+            where (Optional[xr.DataArray], optional): If given, should be a boolean array to mask any produced dataarrays. Defaults to None.
+
+        Returns:
+            Union[str, xr.DataArray]:
+                If `as_latex` is True, a string will be returned, otherwise an array of values.
+                This could be a zero-dimensional array, and that's OK.
+        """
+        evaluated = self.expression[0].eval(
             equation_name=self.name,
             slice_dict=self.slices,
             sub_expression_dict=self.sub_expressions,
             backend_interface=backend_interface,
-            backend_dataset=backend_interface._dataset,
-            model_data=model_data,
-            where=where,
+            input_data=backend_interface.inputs,
+            where_array=where,
             references=references if references is not None else set(),
-            as_dict=False,
             helper_functions=helper_functions._registry["expression"],
             as_latex=as_latex,
-            apply_where=apply_where,
         )
+        if not as_latex:
+            self.raise_error_on_where_expr_mismatch(evaluated, where)
+        return evaluated
+
+    def raise_error_on_where_expr_mismatch(
+        self, expression: xr.DataArray, where: xr.DataArray
+    ) -> None:
+        """
+        Checks if an evaluated expression is consistent with the `where` array.
+
+        Args:
+            expression (xr.DataArray): array of linear expressions or one side of a constraint equation.
+            where (xr.DataArray): where array; there should be a valid expression value for all True elements.
+
+        Raises:
+            BackendError:
+                Raised if there is a dimension in the expression that is not in the where.
+            BackendError:
+                Raised if the expression has any NaN where the where applies.
+        """
+        broadcast_dims_where = set(expression.dims).difference(set(where.dims))
+        if broadcast_dims_where:
+            raise exceptions.BackendError(
+                f"{self.name} | The linear expression array is indexed over dimensions not present in `foreach`: {broadcast_dims_where}"
+            )
+        # Check whether expression has NaN values in elements where the expression should be valid.
+        incomplete_constraints = expression.isnull() & where
+        if incomplete_constraints.any():
+            raise exceptions.BackendError(
+                f"{self.name} | Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help."
+            )
 
     def log_not_added(
         self,
@@ -682,7 +724,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         ]
 
     def combine_definition_matrix_and_foreach(
-        self, model_data: xr.Dataset
+        self, input_data: xr.Dataset
     ) -> xr.DataArray:
         """Generate a multi-dimensional boolean array based on the sets over which the constraint is to be built (defined by "foreach") and the model `exists` array.
 
@@ -690,27 +732,27 @@ class ParsedBackendComponent(ParsedBackendEquation):
         It is indexed over ["nodes", "techs", "carriers", "carrier_tiers"].
 
         Args:
-            model_data (xr.Dataset): Calliope model dataset.
+            input_data (xr.Dataset): Calliope model dataset.
 
         Returns:
             xr.DataArray: boolean array indexed over ["nodes", "techs", "carriers", "carrier_tiers"] + any additional dimensions provided by `foreach`.
         """
         # Start with (carriers, carrier_tiers, nodes, techs) and go from there
-        exists = model_data.definition_matrix
+        exists = input_data.definition_matrix
         # Add other dimensions (costs, timesteps, etc.)
         add_dims = set(self.sets).difference(exists.dims)
-        if add_dims.difference(model_data.dims):
+        if add_dims.difference(input_data.dims):
             self.log_not_added(
-                f"indexed over unidentified set names: `{add_dims.difference(model_data.dims)}`."
+                f"indexed over unidentified set names: `{add_dims.difference(input_data.dims)}`."
             )
             return xr.DataArray(False)
-        exists_and_foreach = [exists, *[model_data[i].notnull() for i in add_dims]]
+        exists_and_foreach = [exists, *[input_data[i].notnull() for i in add_dims]]
         return functools.reduce(operator.and_, exists_and_foreach)
 
     def generate_top_level_where_array(
         self,
-        model_data: xr.Dataset,
-        backend_dataset: Optional[xr.Dataset] = None,
+        backend_interface: backend_model.BackendModel,
+        *,
         align_to_foreach_sets: bool = True,
         break_early: bool = True,
     ) -> xr.DataArray:
@@ -719,7 +761,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         and apply the component top-level where to the array.
 
         Args:
-            model_data (xr.Dataset): Calliope model input data.
+            backend_interface (calliope.backend.backend_model.BackendModel): Interface to a optimisation backend.
             align_to_foreach_sets (bool, optional):
                 By default, all foreach arrays have the dimensions ("nodes", "techs", "carriers", "carrier_tiers") as well as any additional dimensions provided by the component's "foreach" key.
                 If this argument is True, the dimensions not included in "foreach" are removed from the array.
@@ -731,7 +773,8 @@ class ParsedBackendComponent(ParsedBackendEquation):
         Returns:
             xr.DataArray: Boolean array defining on which index items a parsed component should be built.
         """
-        foreach_where = self.combine_definition_matrix_and_foreach(model_data)
+        input_data = backend_interface.inputs
+        foreach_where = self.combine_definition_matrix_and_foreach(input_data)
 
         if not foreach_where.any():
             self.log_not_added("'foreach' does not apply anywhere.")
@@ -740,9 +783,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
             return foreach_where
 
         self.parse_top_level_where()
-        where = self.evaluate_where(
-            model_data, backend_dataset, initial_where=foreach_where
-        )
+        where = self.evaluate_where(backend_interface, initial_where=foreach_where)
         if break_early and not where.any():
             return where
 

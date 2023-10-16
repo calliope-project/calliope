@@ -10,11 +10,12 @@ Functions that can be used to process data in math `where` and `expression` stri
 import functools
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Literal, Mapping, Union, overload
+from typing import Any, Literal, Mapping, Optional, Union, overload
 
 import numpy as np
 import xarray as xr
 
+from calliope.backend.backend_model import BackendModel
 from calliope.exceptions import BackendError
 
 _registry: dict[
@@ -25,7 +26,10 @@ _registry: dict[
 class ParsingHelperFunction(ABC):
     def __init__(
         self,
+        equation_name: str,
+        input_data: xr.Dataset,
         as_latex: bool = False,
+        backend_interface: Optional[type[BackendModel]] = None,
         **kwargs,
     ) -> None:
         """Abstract helper function class, which all helper functions must subclass.
@@ -37,7 +41,9 @@ class ParsingHelperFunction(ABC):
                 If True, will return a LaTeX math string on calling the class.
                 Defaults to False.
         """
-        self._kwargs = kwargs
+        self._equation_name = equation_name
+        self._input_data = input_data
+        self._backend_interface = backend_interface
         self._as_latex = as_latex
 
     @property
@@ -158,9 +164,7 @@ class Inheritance(ParsingHelperFunction):
         Args:
             model_data (xr.Dataset): Calliope model data
         """
-        inheritance_lists = (
-            self._kwargs["model_data"].inheritance.to_series().str.split(".")
-        )
+        inheritance_lists = self._input_data.inheritance.to_series().str.split(".")
         return inheritance_lists.apply(lambda x: tech_group in x).to_xarray()
 
 
@@ -192,15 +196,18 @@ class WhereAny(ParsingHelperFunction):
                 If the parameter exists in the model, returns a boolean array with dimensions reduced by applying a boolean OR operation along the dimensions given in `over`.
                 If the parameter does not exist, returns a dimensionless False array.
         """
-        if parameter in self._kwargs["model_data"].data_vars:
-            parameter_da = self._kwargs["model_data"][parameter]
+        if parameter in self._input_data.data_vars:
+            parameter_da = self._input_data[parameter]
             bool_parameter_da = (
                 parameter_da.notnull()
                 & (parameter_da != np.inf)
                 & (parameter_da != -np.inf)
             )
-        elif parameter in self._kwargs.get("backend_dataset", xr.Dataset()).data_vars:
-            bool_parameter_da = self._kwargs["backend_dataset"][parameter].notnull()
+        elif (
+            self._backend_interface is not None
+            and parameter in self._backend_interface._dataset
+        ):
+            bool_parameter_da = self._backend_interface._dataset[parameter].notnull()
         else:
             bool_parameter_da = xr.DataArray(False)
         over = self._listify(over)
@@ -278,7 +285,7 @@ class Defined(ParsingHelperFunction):
         """
         dim_names = list(dims.keys())
         dims_with_list_vals = {dim: self._listify(vals) for dim, vals in dims.items()}
-        definition_matrix = self._kwargs["model_data"].definition_matrix
+        definition_matrix = self._input_data.definition_matrix
         dim_within_da = definition_matrix.any(self._dims_to_remove(dim_names, within))
         within_da = getattr(dim_within_da.sel(**dims_with_list_vals), how)(dim_names)
 
@@ -299,7 +306,7 @@ class Defined(ParsingHelperFunction):
         Returns:
             set: Undefined dimensions to remove from the definition matrix.
         """
-        definition_matrix = self._kwargs["model_data"].definition_matrix
+        definition_matrix = self._input_data.definition_matrix
         missing_dims = set([*dim_names, within]).difference(definition_matrix.dims)
         if missing_dims:
             raise ValueError(
@@ -390,11 +397,14 @@ class ReduceCarrierDim(ParsingHelperFunction):
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        return Sum(as_latex=self._as_latex, **self._kwargs)(
+        sum_helper = Sum(
+            as_latex=self._as_latex,
+            equation_name=self._equation_name,
+            input_data=self._input_data,
+        )
+        return sum_helper(
             array.where(
-                self._kwargs["model_data"].definition_matrix.sel(
-                    carrier_tiers=carrier_tier
-                )
+                self._input_data.definition_matrix.sel(carrier_tiers=carrier_tier)
             ),
             over="carriers",
         )
@@ -425,11 +435,14 @@ class ReducePrimaryCarrierDim(ParsingHelperFunction):
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        return Sum(as_latex=self._as_latex, **self._kwargs)(
+        sum_helper = Sum(
+            as_latex=self._as_latex,
+            equation_name=self._equation_name,
+            input_data=self._input_data,
+        )
+        return sum_helper(
             array.where(
-                getattr(
-                    self._kwargs["model_data"], f"primary_carrier_{carrier_tier}"
-                ).notnull()
+                getattr(self._input_data, f"primary_carrier_{carrier_tier}").notnull()
             ),
             over="carriers",
         )
@@ -510,12 +523,10 @@ class SelectFromLookupArrays(ParsingHelperFunction):
         # Turn string lookup values to numeric ones.
         # We stack the dimensions to handle multidimensional lookups
         for index_dim, index in lookup_arrays.items():
-            stacked_lookup = self._kwargs["model_data"][index.name].stack({dim: dims})
+            stacked_lookup = self._input_data[index.name].stack({dim: dims})
             ix = array.indexes[index_dim].get_indexer(stacked_lookup)
             if (ix == -1).all():
-                received_lookup = (
-                    self._kwargs["model_data"][index.name].to_series().dropna()
-                )
+                received_lookup = self._input_data[index.name].to_series().dropna()
                 raise IndexError(
                     f"Trying to select items on the dimension {index_dim} from the {index.name} lookup array, but no matches found. Received: {received_lookup}"
                 )
@@ -577,7 +588,7 @@ class GetValAtIndex(ParsingHelperFunction):
                 timesteps  <U16 '2000-01-01 02:00'
         """
         dim, idx = self._mapping_to_dim_idx(**dim_idx_mapping)
-        return self._kwargs["model_data"].coords[dim][int(idx)]
+        return self._input_data.coords[dim][int(idx)]
 
     @overload
     @staticmethod

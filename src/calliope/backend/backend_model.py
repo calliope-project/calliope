@@ -275,8 +275,7 @@ class BackendModelGenerator(ABC):
         )
 
         top_level_where = parsed_component.generate_top_level_where_array(
-            self.inputs,
-            self._dataset,
+            self,
             align_to_foreach_sets=False,
             break_early=break_early,
         )
@@ -297,9 +296,7 @@ class BackendModelGenerator(ABC):
                 .astype(np.dtype("O"))
             )
         for element in equations:
-            where = element.evaluate_where(
-                self.inputs, self._dataset, initial_where=top_level_where
-            )
+            where = element.evaluate_where(self, initial_where=top_level_where)
             if break_early and not where.any():
                 continue
 
@@ -462,6 +459,7 @@ class BackendModelGenerator(ABC):
             kwargs=kwargs,
             vectorize=True,
             keep_attrs=True,
+            dask="parallelized",
             output_dtypes=[np.dtype("O")],
             output_core_dims=output_core_dims,
         )

@@ -65,7 +65,7 @@ def expression_roll(expression, parsing_kwargs):
 class TestAsArray:
     @pytest.fixture(scope="class")
     def parsing_kwargs(self, dummy_model_data):
-        return {"model_data": dummy_model_data}
+        return {"input_data": dummy_model_data, "equation_name": "foo"}
 
     @pytest.fixture(scope="function")
     def is_defined_any(self, dummy_model_data):
@@ -320,7 +320,11 @@ class TestAsArray:
 class TestAsLatex:
     @pytest.fixture(scope="class")
     def parsing_kwargs(self, dummy_model_data):
-        return {"model_data": dummy_model_data, "as_latex": True}
+        return {
+            "input_data": dummy_model_data,
+            "as_latex": True,
+            "equation_name": "foo",
+        }
 
     def test_inheritance(self, where_inheritance):
         assert where_inheritance("boo") == r"\text{tech_group=boo}"

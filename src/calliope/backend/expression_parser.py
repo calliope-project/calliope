@@ -31,19 +31,19 @@
 from __future__ import annotations
 
 import re
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     Iterable,
     Iterator,
-    Literal,
     Optional,
     Union,
-    overload,
 )
 
+import numpy as np
+import pandas as pd
 import pyparsing as pp
 import xarray as xr
 
@@ -61,6 +61,34 @@ SUB_EXPRESSION_CLASSIFIER = "$"
 class EvalString(ABC):
     "Parent class for all string evaluation classes - used in type hinting"
     name: str
+
+    def __eq__(self, other):
+        return self.__repr__() == other
+
+    @abstractmethod
+    def eval(self, *args, **kwargs) -> Union[str, xr.DataArray, Callable, list[str]]:
+        """Evaluate math string expression.
+
+        Args:
+            as_latex (bool, optional): If True, return a valid LaTex math string. Defaults to False.
+        Keyword Args:
+            equation_name (str): Name of math component in which expression is defined.
+            slice_dict (dict): Dictionary mapping the index slice name to a parsed equation expression.
+            sub_expression_dict (dict): Dictionary mapping the sub-expression name to a parsed equation expression.
+            backend_interface (backend_model.BackendModel): Interface to optimisation backend.
+            input_data (xr.Dataset): Input parameter arrays.
+            where_array (xr.DataArray): boolean array with which to mask evaluated expressions.
+            references (set): any references in the math string to other model components.
+            helper_functions (dict[str, type[ParsingHelperFunction]]): Dictionary of allowed helper functions.
+            as_values (bool, optional): Return array as numeric values, not backend objects. Defaults to False.
+        Returns:
+            Union[str, xr.DataArray, Callable, list[str]]:
+                If expression is a helper function, returns Callable.
+                If expression is a list of strings, returns a list of strings
+                If `as_latex` is True, returns a valid LaTex math string.
+                If a string without model reference, returns string.
+                Otherwise, returns xarray DataArray.
+        """
 
 
 class EvalOperatorOperand(EvalString):
@@ -126,25 +154,30 @@ class EvalOperatorOperand(EvalString):
     def _eval(
         self,
         to_eval: pp.ParseResults,
+        *,
         as_latex: bool = False,
+        where_array: xr.DataArray,
         **eval_kwargs,
     ) -> Any:
-        evaluated = to_eval.eval(as_latex=as_latex, **eval_kwargs)
+        "eval util function to apply where arrays to non-latex strings"
+        evaluated = to_eval.eval(
+            as_latex=as_latex,
+            where_array=where_array,
+            **eval_kwargs,
+        )
         if not as_latex:
             evaluated = xr.DataArray(evaluated)
-            if eval_kwargs.get("apply_where", True):
-                try:
-                    evaluated = evaluated.where(eval_kwargs["where"])
-                except AttributeError:
-                    evaluated = evaluated.broadcast_like(eval_kwargs["where"]).where(
-                        eval_kwargs["where"]
-                    )
+            try:
+                evaluated = evaluated.where(where_array)
+            except AttributeError:
+                evaluated = evaluated.broadcast_like(where_array).where(where_array)
 
         return evaluated
 
     def operate(
         self, val: xr.DataArray, evaluated_operand: xr.DataArray, operator_: str
     ) -> xr.DataArray:
+        "Apply operation between two values"
         if operator_ == "**":
             val = val**evaluated_operand
         elif operator_ == "*":
@@ -157,29 +190,11 @@ class EvalOperatorOperand(EvalString):
             val = val - evaluated_operand
         return val
 
-    @overload  # noqa: F811
-    def eval(  # noqa: F811
-        self, as_latex: Literal[False] = False, **eval_kwargs
-    ) -> xr.DataArray:
-        "Expecting array if not requesting latex string"
-
-    @overload  # noqa: F811
-    def eval(self, as_latex: Literal[True], **eval_kwargs) -> str:  # noqa: F811
-        "Expecting string if requesting latex string"
-
-    def eval(  # noqa: F811
-        self, as_latex: bool = False, **eval_kwargs
-    ) -> Union[str, xr.DataArray]:
-        """
-        Returns:
-            Any:
-                If all operands are numeric, returns float, otherwise returns an
-                expression to use in an optimisation model constraint.
-        """
-        val = self._eval(self.value[0], as_latex, **eval_kwargs)
+    def eval(self, as_latex: bool = False, **eval_kwargs) -> Union[str, xr.DataArray]:
+        val = self._eval(self.value[0], as_latex=as_latex, **eval_kwargs)
 
         for operator_, operand in self.operatorOperands(self.value[1:]):
-            evaluated_operand = self._eval(operand, as_latex, **eval_kwargs)
+            evaluated_operand = self._eval(operand, as_latex=as_latex, **eval_kwargs)
             if as_latex:
                 val = self.as_latex(
                     val,
@@ -214,9 +229,9 @@ class EvalSignOp(EvalString):
         """Add sign to stringified data for use in a LaTex math formula"""
         return self.sign + val
 
-    def eval(self, **eval_kwargs) -> Any:
-        val = self.value.eval(**eval_kwargs)
-        if eval_kwargs.get("as_latex", False):
+    def eval(self, as_latex: bool = False, **eval_kwargs) -> Union[xr.DataArray, str]:
+        val = self.value.eval(as_latex=as_latex, **eval_kwargs)
+        if as_latex:
             return self.as_latex(val)
         elif self.sign == "+":
             return val
@@ -246,20 +261,43 @@ class EvalComparisonOp(EvalString):
         """Add operator between two sets of stringified data for use in a LaTex math formula"""
         return lhs + self.OP_TRANSLATOR[self.op] + rhs
 
-    def eval(self, **eval_kwargs) -> Any:
-        """
-        Returns:
-            Any:
-                If LHS and RHS are numeric, returns bool, otherwise returns an equation
-                to use as an optimisation model constraint.
-        """
-        lhs = self.lhs.eval(**eval_kwargs)
-        rhs = self.rhs.eval(**eval_kwargs)
+    def _compare_bitwise(self, where: bool, lhs: Any, rhs: Any) -> Any:
+        if not where or pd.isnull(lhs) or pd.isnull(rhs):
+            return np.nan
+        elif self.op == "==":
+            constraint = lhs == rhs
+        elif self.op == "<=":
+            constraint = lhs <= rhs
+        elif self.op == ">=":
+            constraint = lhs >= rhs
+        return constraint
 
-        if eval_kwargs.get("as_latex", False):
+    def compare(
+        self,
+        lhs: xr.DataArray,
+        rhs: xr.DataArray,
+        *,
+        where_array: xr.DataArray,
+        backend_interface: BackendModel,
+        **eval_kwargs,
+    ) -> xr.DataArray:
+        "Compare RHS and LHS by doing a bitwise comparison, ignoring any elements where `where_array` is False."
+        return backend_interface._apply_func(
+            self._compare_bitwise, where_array, lhs, rhs
+        )
+
+    def eval(
+        self,
+        as_latex: bool = False,
+        **eval_kwargs,
+    ) -> Union[xr.DataArray, str]:
+        lhs = self.lhs.eval(as_latex=as_latex, **eval_kwargs)
+        rhs = self.rhs.eval(as_latex=as_latex, **eval_kwargs)
+
+        if as_latex:
             return self.as_latex(lhs, rhs)
         else:
-            return xr.DataArray(lhs), self.op, xr.DataArray(rhs)
+            return self.compare(lhs, rhs, **eval_kwargs)
 
 
 class EvalFunction(EvalString):
@@ -281,7 +319,8 @@ class EvalFunction(EvalString):
 
     def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
-        return f"{str(self.func_name)}(args={self.args}, kwargs={self.kwargs})"
+        _kwargs = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
+        return f"{str(self.func_name)}(args={self.args}, kwargs={{{_kwargs}}})"
 
     def arg_eval(self, arg, **eval_kwargs):
         if isinstance(arg, pp.ParseResults):
@@ -292,21 +331,8 @@ class EvalFunction(EvalString):
             evaluated_ = arg.eval(**eval_kwargs)
         return evaluated_
 
-    def eval(self, **eval_kwargs) -> Any:
-        """
-
-        Args:
-            test (bool, optional):
-                If True, return a dictionary with parsed components rather than
-                calling the helper function with the defined args and kwargs.
-                Defaults to False.
-
-        Returns:
-            Any:
-                Either the defined helper function is called, or only a dictionary with
-                parsed components is returned (if test=True).
-        """
-        eval_kwargs["apply_where"] = False
+    def eval(self, **eval_kwargs) -> Union[str, xr.DataArray]:
+        eval_kwargs["where_array"] = xr.DataArray(True)
 
         args_ = []
         for arg in self.args:
@@ -317,15 +343,9 @@ class EvalFunction(EvalString):
             kwargs_[kwarg_name] = self.arg_eval(kwarg_val, **eval_kwargs)
 
         helper_function = self.func_name.eval(**eval_kwargs)
-        if eval_kwargs.get("as_dict"):
-            return {
-                "function": helper_function,
-                "args": args_,
-                "kwargs": kwargs_,
-            }
-        else:
-            eval_func = helper_function(*args_, **kwargs_)
-            return eval_func
+
+        eval_func = helper_function(*args_, **kwargs_)
+        return eval_func
 
 
 class EvalHelperFuncName(EvalString):
@@ -355,26 +375,8 @@ class EvalHelperFuncName(EvalString):
     def eval(
         self,
         helper_functions: dict[str, type[ParsingHelperFunction]],
-        as_dict: bool = False,
         **eval_kwargs,
-    ) -> Optional[Union[str, Callable]]:
-        """
-
-        Args:
-            helper_functions (dict[str, type[ParsingHelperFunction]]): Allowed helper functions.
-            test (bool, optional):
-                If True, return a string with the helper function name rather than
-                collecting the helper function from the dictionary of functions.
-                Defaults to False.
-
-        Returns:
-            str, Callable:
-                Helper functions are expected to be two-tiered, with the first level
-                taking the generic eval kwargs (e.g. model_data) and the second level
-                taking the user-defined input arguments.
-                If test=True, only the helper function name is returned.
-        """
-
+    ) -> Callable:
         if self.name not in helper_functions.keys():
             raise BackendError(
                 f"({eval_kwargs['equation_name']}, {self.instring}): Invalid helper function defined: {self.name}"
@@ -385,10 +387,7 @@ class EvalHelperFuncName(EvalString):
                 f"subclassed from calliope.backend.helper_functions.ParsingHelperFunction: {self.name}"
             )
         else:
-            if as_dict:
-                return str(self.name)
-            else:
-                return helper_functions[self.name](**eval_kwargs)
+            return helper_functions[self.name](**eval_kwargs)
 
 
 class EvalSlicedParameterOrVariable(EvalString):
@@ -446,28 +445,16 @@ class EvalSlicedParameterOrVariable(EvalString):
         obj_parser.set_parse_action(self.replace_rule(singular_slice_refs))
         return obj_parser.parse_string(evaluated_obj, parse_all=True)[0]
 
-    def eval(self, **eval_kwargs) -> Optional[Union[str, dict, xr.DataArray]]:
-        """
-        Returns:
-            Optional[Union[dict, xr.DataArray]]:
-                If `eval_kwargs["as_dict"]` is True, returns separated key:val pairs for parameter/variable name and index items;
-                else, `eval_kwargs` has a backend dataset, returns sliced xarray object;
-                else, returns None.
-        """
+    def eval(self, as_latex: bool = False, **eval_kwargs) -> Union[str, xr.DataArray]:
         slices: dict[str, Any] = {
             k: v.eval(**eval_kwargs) for k, v in self.slices.items()
         }
 
-        if eval_kwargs.get("as_dict", False):
-            return {"dimensions": slices, **self.obj_name.eval(**eval_kwargs)}
-        elif eval_kwargs.get("backend_dataset", None) is not None:
-            evaluated_obj = self.obj_name.eval(**eval_kwargs)
-            if eval_kwargs.get("as_latex", False):
-                return self.as_latex(evaluated_obj, slices)
-            else:
-                return evaluated_obj.sel(**slices)
+        evaluated_obj = self.obj_name.eval(as_latex=as_latex, **eval_kwargs)
+        if as_latex:
+            return self.as_latex(evaluated_obj, slices)
         else:
-            return None
+            return evaluated_obj.sel(**slices)
 
 
 class EvalIndexSlice(EvalString):
@@ -489,26 +476,13 @@ class EvalIndexSlice(EvalString):
 
     def eval(
         self,
-        slice_dict: Optional[dict[str, pp.ParseResults]] = None,
+        slice_dict: dict[str, pp.ParseResults],
         **eval_kwargs,
-    ) -> Any:
-        """
-        Args:
-            slice_dict (Optional[dict[str, pp.ParseResults]]):
-                Dictionary mapping the index slice name to a parsed equation expression.
-                Default is None.
-
-        Returns:
-            Any: If eval_kwargs["as_dict"] is True, returns a dictionary,
-            otherwise attempts to evaluate the referenced index slice.
-        """
-        if eval_kwargs.get("as_dict"):
-            return {"slice_reference": self.name}
-        elif slice_dict is not None:
-            slicer = slice_dict[self.name][0].eval(as_values=True, **eval_kwargs)
-            if isinstance(slicer, xr.DataArray) and slicer.isnull().any():
-                slicer = slicer.notnull()
-            return slicer
+    ) -> Union[xr.DataArray, str, list[str]]:
+        slicer = slice_dict[self.name][0].eval(as_values=True, **eval_kwargs)
+        if isinstance(slicer, xr.DataArray) and slicer.isnull().any():
+            slicer = slicer.notnull()
+        return slicer
 
 
 class EvalSubExpressions(EvalString):
@@ -530,24 +504,10 @@ class EvalSubExpressions(EvalString):
 
     def eval(
         self,
-        sub_expression_dict: Optional[dict[str, pp.ParseResults]] = None,
+        sub_expression_dict: Optional[dict[str, pp.ParseResults]],
         **eval_kwargs,
-    ) -> Any:
-        """
-        Args:
-            sub_expression_dict (Optional[dict[str, pp.ParseResults]]):
-                Dictionary mapping the sub-expression name to a parsed equation expression.
-                Default is None.
-
-        Returns:
-            Any: If sub-expression dictionary is given, find the expression matching
-            the sub-expression name and evaluate it.
-            If not given, return a dictionary giving the sub-expression name.
-        """
-        if eval_kwargs.get("as_dict"):
-            return {"sub_expression": self.name}
-        elif sub_expression_dict is not None:
-            return sub_expression_dict[self.name][0].eval(**eval_kwargs)
+    ) -> Union[str, xr.DataArray]:
+        return sub_expression_dict[self.name][0].eval(**eval_kwargs)
 
 
 class EvalUnslicedParameterOrVariable(EvalString):
@@ -585,41 +545,22 @@ class EvalUnslicedParameterOrVariable(EvalString):
     def eval(
         self,
         references: set,
-        as_dict: bool = False,
+        as_latex: bool = False,
         as_values: bool = False,
-        backend_dataset: Optional[xr.Dataset] = None,
         backend_interface: Optional[BackendModel] = None,
         **eval_kwargs,
-    ) -> Optional[Union[dict, xr.DataArray, str]]:
-        """
-        Args:
-            references (set):
-            as_dict (bool, optional):
-            as_values(bool, optional):
-                If True, return values rather than backend objects
-        Returns:
-            Optional[Union[dict, xr.DataArray]]:
-                If `eval_kwargs["as_dict"]` is True, returns separated key:val pairs for parameter/variable name and index items;
-                else, `eval_kwargs` has a backend dataset, returns sliced xarray object;
-                else, returns None.
-        """
+    ) -> Union[xr.DataArray, str]:
         references.add(self.name)
-        evaluated: Optional[Union[dict, xr.DataArray, str]]
-        as_latex = eval_kwargs.get("as_latex", False)
-        if as_dict:
-            evaluated = {"param_or_var_name": self.name}
-        elif backend_interface is not None and backend_dataset is not None:
-            if as_values and not as_latex:
-                evaluated = backend_interface.get_parameter(
-                    self.name, as_backend_objs=False
-                )
-            else:
-                evaluated = backend_dataset[self.name]
 
-            if as_latex:
-                evaluated = self.as_latex(evaluated)
+        if as_values and not as_latex:
+            evaluated = backend_interface.get_parameter(
+                self.name, as_backend_objs=False
+            )
         else:
-            evaluated = None
+            evaluated = backend_interface._dataset[self.name]
+
+        if as_latex:
+            evaluated = self.as_latex(evaluated)
 
         return evaluated
 
@@ -649,17 +590,12 @@ class EvalNumber(EvalString):
             f"{evaluated:.6g}",
         )
 
-    def eval(self, **eval_kwargs) -> float:
-        """
-        Returns:
-            float: Input string as a float, even if given as an integer.
-        """
-
+    def eval(self, as_latex: bool = False, **eval_kwargs) -> Union[str, xr.DataArray]:
         evaluated = float(self.value)
-        if eval_kwargs.get("as_latex", False):
+        if as_latex:
             return self.as_latex(evaluated)
         else:
-            return evaluated
+            return xr.DataArray(evaluated)
 
 
 class StringListParser(EvalString):
@@ -682,10 +618,9 @@ class StringListParser(EvalString):
         """Stingify evaluated object for use in a LaTex math formula"""
         return evaluated
 
-    def eval(self, **eval_kwargs) -> list[str]:
-        "Return input as list of strings."
+    def eval(self, as_latex: bool = False, **eval_kwargs) -> Union[str, list[str]]:
         evaluated = [val.eval() for val in self.val]
-        if eval_kwargs.get("as_latex", False):
+        if as_latex:
             return self.as_latex(evaluated)
         else:
             return evaluated
@@ -711,10 +646,9 @@ class GenericStringParser(EvalString):
         """Stingify evaluated string for use in a LaTex math formula"""
         return evaluated
 
-    def eval(self, **eval_kwargs) -> str:
-        "Return input as string."
+    def eval(self, as_latex: bool = False, **eval_kwargs) -> str:
         evaluated = str(self.val)
-        if eval_kwargs.get("as_latex", False):
+        if as_latex:
             return self.as_latex(evaluated)
         else:
             return evaluated

@@ -87,14 +87,12 @@ def where(bool_operand, helper_function, data_var, comparison, subset):
 
 
 @pytest.fixture(scope="function")
-def eval_kwargs(dummy_model_data, dummy_pyomo_backend_model):
+def eval_kwargs(dummy_pyomo_backend_model):
     return {
-        "model_data": dummy_model_data,
-        "backend_dataset": dummy_pyomo_backend_model._dataset,
+        "input_data": dummy_pyomo_backend_model.inputs,
+        "backend_interface": dummy_pyomo_backend_model,
         "helper_functions": helper_functions._registry["where"],
-        "test": True,
-        "errors": set(),
-        "warnings": set(),
+        "equation_name": "foo",
     }
 
 
