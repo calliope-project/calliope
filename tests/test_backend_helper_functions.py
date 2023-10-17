@@ -65,7 +65,11 @@ def expression_roll(expression, parsing_kwargs):
 class TestAsArray:
     @pytest.fixture(scope="class")
     def parsing_kwargs(self, dummy_model_data):
-        return {"input_data": dummy_model_data, "equation_name": "foo"}
+        return {
+            "input_data": dummy_model_data,
+            "equation_name": "foo",
+            "return_type": "array",
+        }
 
     @pytest.fixture(scope="function")
     def is_defined_any(self, dummy_model_data):
@@ -322,7 +326,7 @@ class TestAsLatex:
     def parsing_kwargs(self, dummy_model_data):
         return {
             "input_data": dummy_model_data,
-            "as_latex": True,
+            "return_type": "math_string",
             "equation_name": "foo",
         }
 

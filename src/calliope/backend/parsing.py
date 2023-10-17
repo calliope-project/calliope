@@ -155,7 +155,7 @@ class ParsedBackendEquation:
             [
                 expression_parser.EvalOperatorOperand,
                 expression_parser.EvalFunction,
-                expression_parser.EvalSlicedParameterOrVariable,
+                expression_parser.EvalSlicedComponent,
             ]
         )
         to_find = expression_parser.EvalIndexSlice
@@ -287,11 +287,12 @@ class ParsedBackendEquation:
         """
         evaluated_wheres = [
             where[0].eval(
+                return_type="math_string" if as_latex else "array",
                 equation_name=self.name,
                 helper_functions=helper_functions._registry["where"],
-                as_latex=as_latex,
                 input_data=backend_interface.inputs,
                 backend_interface=backend_interface,
+                apply_where=True,
             )
             for where in self.where
         ]
@@ -364,6 +365,7 @@ class ParsedBackendEquation:
                 This could be a zero-dimensional array, and that's OK.
         """
         evaluated = self.expression[0].eval(
+            return_type="math_string" if as_latex else "array",
             equation_name=self.name,
             slice_dict=self.slices,
             sub_expression_dict=self.sub_expressions,
@@ -372,7 +374,6 @@ class ParsedBackendEquation:
             where_array=where,
             references=references if references is not None else set(),
             helper_functions=helper_functions._registry["expression"],
-            as_latex=as_latex,
         )
         if not as_latex:
             self.raise_error_on_where_expr_mismatch(evaluated, where)
@@ -501,13 +502,13 @@ class ParsedBackendComponent(ParsedBackendEquation):
 
     def parse_equations(
         self,
-        valid_math_element_names: Iterable[str],
+        valid_component_names: Iterable[str],
         errors: Literal["raise", "ignore"] = "raise",
     ) -> list[ParsedBackendEquation]:
         """Parse `expression` and `where` strings of math component dictionary.
 
         Args:
-            valid_math_element_names (Iterable[str]):
+            valid_component_names (Iterable[str]):
                 strings referring to valid backend objects to allow the parser to differentiate between them and generic strings.
             errors (Literal["raise", "ignore"], optional):
                 Collected parsing errors can be raised directly or ignored.
@@ -522,7 +523,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         equation_expression_list = self._unparsed.get("equations", [])
 
         equations = self.generate_expression_list(
-            expression_parser=self.equation_expression_parser(valid_math_element_names),
+            expression_parser=self.equation_expression_parser(valid_component_names),
             expression_list=equation_expression_list,
             expression_group="equations",
             id_prefix=self.name,
@@ -531,7 +532,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         sub_expression_dict = {
             c_name: self.generate_expression_list(
                 expression_parser=expression_parser.generate_sub_expression_parser(
-                    valid_math_element_names
+                    valid_component_names
                 ),
                 expression_list=c_list,
                 expression_group="sub_expressions",
@@ -542,7 +543,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         slice_dict = {
             idx_name: self.generate_expression_list(
                 expression_parser=expression_parser.generate_slice_parser(
-                    valid_math_element_names
+                    valid_component_names
                 ),
                 expression_list=idx_list,
                 expression_group="slices",

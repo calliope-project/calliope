@@ -287,7 +287,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         use_inf_as_na: bool = False,
     ) -> None:
         self._add_to_dataset(parameter_name, parameter_values, "parameters", {})
-        self.valid_math_element_names.add(parameter_name)
 
     def add_constraint(
         self,
@@ -321,8 +320,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         name: str,
         expression_dict: Optional[parsing.UnparsedExpressionDict] = None,
     ) -> None:
-        self.valid_math_element_names.add(name)
-
         equation_strings: list = []
 
         def _expression_setter(
@@ -351,8 +348,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         variable_dict: Optional[parsing.UnparsedVariableDict] = None,
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
-
-        self.valid_math_element_names.add(name)
 
         def _variable_setter(where: xr.DataArray) -> xr.DataArray:
             return where.where(where)
@@ -504,9 +499,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             ],
         }
         parsed_bounds = parsing.ParsedBackendComponent("constraints", name, bound_dict)
-        equations = parsed_bounds.parse_equations(
-            self.valid_math_element_names,
-        )
+        equations = parsed_bounds.parse_equations(self.valid_component_names)
         return tuple(
             {"expression": eq.evaluate_expression(self, as_latex=True)}
             for eq in equations

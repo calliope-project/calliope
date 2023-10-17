@@ -93,6 +93,7 @@ def eval_kwargs(dummy_pyomo_backend_model):
         "backend_interface": dummy_pyomo_backend_model,
         "helper_functions": helper_functions._registry["where"],
         "equation_name": "foo",
+        "return_type": "array",
     }
 
 
@@ -274,7 +275,8 @@ class TestParserElements:
     )
     def test_boolean_parser(self, bool_operand, bool_string, expected_true):
         parsed_ = bool_operand.parse_string(bool_string, parse_all=True)
-        assert parsed_[0].eval() if expected_true else not parsed_[0].eval()
+        evaluated = parsed_[0].eval(return_type="array")
+        assert evaluated if expected_true else not evaluated
 
     @pytest.mark.parametrize(
         "bool_string", ["tru e", "_TRUE", "True_", "false1", "1false", "1", "foo"]
@@ -287,7 +289,7 @@ class TestParserElements:
     @pytest.mark.parametrize("instring", ["foo", "foo_bar", "FOO", "foo10", "foo_10"])
     def test_evaluatable_string_parser(self, evaluatable_string, instring):
         parsed_ = evaluatable_string.parse_string(instring, parse_all=True)
-        parsed_[0].eval() == instring
+        parsed_[0].eval(return_type="array") == instring
 
     @pytest.mark.parametrize(
         "instring", ["_foo", "1foo", ".foo", "$foo", "__foo__", "foo bar", "foo-bar"]
@@ -393,7 +395,7 @@ class TestParserElements:
     def test_subsetting_parser(self, subset, subset_string, expected_subset):
         parsed_ = subset.parse_string(f"{subset_string} in foo", parse_all=True)
         assert parsed_[0].set_name == "foo"
-        assert [i.eval() for i in parsed_[0].subset] == expected_subset
+        assert [i.eval(return_type="array") for i in parsed_[0].val] == expected_subset
 
     @pytest.mark.parametrize(
         "subset_string",
@@ -580,7 +582,7 @@ class TestParserMasking:
 class TestAsLatex:
     @pytest.fixture
     def latex_eval_kwargs(self, eval_kwargs):
-        eval_kwargs["as_latex"] = True
+        eval_kwargs["return_type"] = "math_string"
         return eval_kwargs
 
     @pytest.mark.parametrize(

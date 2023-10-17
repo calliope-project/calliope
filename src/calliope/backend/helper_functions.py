@@ -26,9 +26,10 @@ _registry: dict[
 class ParsingHelperFunction(ABC):
     def __init__(
         self,
+        return_type: Literal["array", "math_string"],
+        *,
         equation_name: str,
         input_data: xr.Dataset,
-        as_latex: bool = False,
         backend_interface: Optional[type[BackendModel]] = None,
         **kwargs,
     ) -> None:
@@ -36,15 +37,11 @@ class ParsingHelperFunction(ABC):
 
         The abstract properties and methods defined here must be defined by all helper functions.
 
-        Args:
-            as_latex (bool, optional):
-                If True, will return a LaTeX math string on calling the class.
-                Defaults to False.
         """
         self._equation_name = equation_name
         self._input_data = input_data
         self._backend_interface = backend_interface
-        self._as_latex = as_latex
+        self._return_type = return_type
 
     @property
     @abstractmethod
@@ -57,27 +54,27 @@ class ParsingHelperFunction(ABC):
         "Helper function name that is used in the math expression/where string."
 
     @abstractmethod
-    def as_latex(self, *args, **kwargs) -> str:
+    def as_math_string(self, *args, **kwargs) -> str:
         """Method to update LaTeX math strings to include the action applied by the helper function.
 
-        This method is called when the class is initialised with ``as_latex=True``.
+        This method is called when the class is initialised with ``return_type=math_string``.
         """
 
     @abstractmethod
     def as_array(self, *args, **kwargs) -> xr.DataArray:
         """Method to apply the helper function to provide an n-dimensional array output.
 
-        This method is called when the class is initialised with ``as_latex=False``.
+        This method is called when the class is initialised with ``return_type=array``.
         """
 
     def __call__(self, *args, **kwargs) -> Any:
         """
         When a helper function is accessed by evaluating a parsing string, this method is called.
-        The value of `as_latex` on initialisation of the class defines whether this method returns a string (``as_latex=True``) or :meth:xr.DataArray (``as_latex=False``)
+        The value of `return_type` on initialisation of the class defines whether this method returns a string (``return_type=math_string``) or :meth:xr.DataArray (``return_type=array``)
         """
-        if self._as_latex:
-            return self.as_latex(*args, **kwargs)
-        else:
+        if self._return_type == "math_string":
+            return self.as_math_string(*args, **kwargs)
+        elif self._return_type == "array":
             return self.as_array(*args, **kwargs)
 
     def __init_subclass__(cls):
@@ -153,7 +150,7 @@ class Inheritance(ParsingHelperFunction):
     #:
     NAME = "inheritance"
 
-    def as_latex(self, tech_group: str) -> str:
+    def as_math_string(self, tech_group: str) -> str:
         return rf"\text{{tech_group={tech_group}}}"
 
     def as_array(self, tech_group: str) -> xr.DataArray:
@@ -175,7 +172,7 @@ class WhereAny(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["where"]
 
-    def as_latex(self, array: str, *, over: Union[str, list[str]]) -> str:
+    def as_math_string(self, array: str, *, over: Union[str, list[str]]) -> str:
         if isinstance(over, str):
             overstring = self._instr(over)
         else:
@@ -222,7 +219,7 @@ class Defined(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["where"]
 
-    def as_latex(self, *, within: str, how: Literal["all", "any"], **dims) -> str:
+    def as_math_string(self, *, within: str, how: Literal["all", "any"], **dims) -> str:
         substrings = []
         for name, vals in dims.items():
             substrings.append(self._latex_substring(how, name, vals, within))
@@ -344,7 +341,7 @@ class Sum(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_latex(self, array: str, *, over: Union[str, list[str]]) -> str:
+    def as_math_string(self, array: str, *, over: Union[str, list[str]]) -> str:
         if isinstance(over, str):
             overstring = self._instr(over)
         else:
@@ -376,7 +373,7 @@ class ReduceCarrierDim(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_latex(
+    def as_math_string(
         self,
         array: str,
         carrier_tier: Literal["in", "out", "in_2", "out_2", "in_3", "out_3"],
@@ -398,7 +395,7 @@ class ReduceCarrierDim(ParsingHelperFunction):
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
         sum_helper = Sum(
-            as_latex=self._as_latex,
+            return_type=self._return_type,
             equation_name=self._equation_name,
             input_data=self._input_data,
         )
@@ -416,7 +413,7 @@ class ReducePrimaryCarrierDim(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_latex(self, array: str, carrier_tier: Literal["in", "out"]) -> str:
+    def as_math_string(self, array: str, carrier_tier: Literal["in", "out"]) -> str:
         return rf"\sum\limits_{{\text{{carrier=primary_carrier_{carrier_tier}}}}} ({array})"
 
     def as_array(
@@ -436,7 +433,7 @@ class ReducePrimaryCarrierDim(ParsingHelperFunction):
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
         sum_helper = Sum(
-            as_latex=self._as_latex,
+            return_type=self._return_type,
             equation_name=self._equation_name,
             input_data=self._input_data,
         )
@@ -454,7 +451,7 @@ class SelectFromLookupArrays(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_latex(self, array: str, **lookup_arrays: str) -> str:
+    def as_math_string(self, array: str, **lookup_arrays: str) -> str:
         new_strings = {
             (iterator := dim.removesuffix("s")): rf"={array}[{iterator}]"
             for dim, array in lookup_arrays.items()
@@ -553,7 +550,7 @@ class GetValAtIndex(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression", "where"]
 
-    def as_latex(self, **dim_idx_mapping: str) -> str:
+    def as_math_string(self, **dim_idx_mapping: str) -> str:
         dim, idx = self._mapping_to_dim_idx(**dim_idx_mapping)
         return f"{dim}[{idx}]"
 
@@ -598,7 +595,7 @@ class GetValAtIndex(ParsingHelperFunction):
     @overload
     @staticmethod
     def _mapping_to_dim_idx(**dim_idx_mapping: str) -> tuple[str, str]:
-        "used in as_latex"
+        "used in as_math_string"
 
     @staticmethod
     def _mapping_to_dim_idx(**dim_idx_mapping) -> tuple[str, Union[str, int]]:
@@ -613,7 +610,7 @@ class Roll(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_latex(self, array: str, **roll_kwargs: str) -> str:
+    def as_math_string(self, array: str, **roll_kwargs: str) -> str:
         new_strings = {
             k.removesuffix("s"): f"{-1 * int(v):+d}" for k, v in roll_kwargs.items()
         }

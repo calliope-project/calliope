@@ -17,7 +17,7 @@ class DummyFunc1(helper_functions.ParsingHelperFunction):
     NAME = "dummy_func_1"
     ALLOWED_IN = ["expression"]
 
-    def as_latex(self, x):
+    def as_math_string(self, x):
         return f"{x} * 10"
 
     def as_array(self, x):
@@ -28,7 +28,7 @@ class DummyFunc2(helper_functions.ParsingHelperFunction):
     NAME = "dummy_func_2"
     ALLOWED_IN = ["expression"]
 
-    def as_latex(self, x, y):
+    def as_math_string(self, x, y):
         return f"{x} + {y}"
 
     def as_array(self, x, y):
@@ -36,7 +36,7 @@ class DummyFunc2(helper_functions.ParsingHelperFunction):
 
 
 @pytest.fixture
-def valid_math_element_names():
+def valid_component_names():
     return [
         "foo",
         "with_inf",
@@ -64,33 +64,28 @@ def identifier(base_parser_elements):
 
 
 @pytest.fixture
-def evaluatable_identifier_elements(identifier, valid_math_element_names):
+def evaluatable_identifier(identifier, valid_component_names):
     return expression_parser.evaluatable_identifier_parser(
-        identifier, valid_math_element_names
+        identifier, valid_component_names
     )
 
 
 @pytest.fixture
-def evaluatable_identifier(evaluatable_identifier_elements):
-    return evaluatable_identifier_elements[0]
-
-
-@pytest.fixture
-def id_list(evaluatable_identifier_elements):
-    return evaluatable_identifier_elements[1]
+def id_list(number, evaluatable_identifier):
+    return expression_parser.list_parser(number, evaluatable_identifier)
 
 
 @pytest.fixture
 def unsliced_param():
-    def _unsliced_param(valid_math_element_names):
-        return expression_parser.unsliced_object_parser(valid_math_element_names)
+    def _unsliced_param(valid_component_names):
+        return expression_parser.unsliced_object_parser(valid_component_names)
 
     return _unsliced_param
 
 
 @pytest.fixture
-def unsliced_param_with_obj_names(unsliced_param, valid_math_element_names):
-    return unsliced_param(valid_math_element_names)
+def unsliced_param_with_obj_names(unsliced_param, valid_component_names):
+    return unsliced_param(valid_component_names)
 
 
 @pytest.fixture
@@ -179,6 +174,7 @@ def eval_kwargs(dummy_pyomo_backend_model):
         "references": set(),
         "backend_interface": dummy_pyomo_backend_model,
         "input_data": dummy_pyomo_backend_model.inputs,
+        "return_type": "array",
     }
 
 
@@ -227,18 +223,18 @@ def equation_comparison(arithmetic):
 
 
 @pytest.fixture
-def generate_equation(valid_math_element_names):
-    return expression_parser.generate_equation_parser(valid_math_element_names)
+def generate_equation(valid_component_names):
+    return expression_parser.generate_equation_parser(valid_component_names)
 
 
 @pytest.fixture
-def generate_slice(valid_math_element_names):
-    return expression_parser.generate_slice_parser(valid_math_element_names)
+def generate_slice(valid_component_names):
+    return expression_parser.generate_slice_parser(valid_component_names)
 
 
 @pytest.fixture
-def generate_sub_expression(valid_math_element_names):
-    return expression_parser.generate_sub_expression_parser(valid_math_element_names)
+def generate_sub_expression(valid_component_names):
+    return expression_parser.generate_sub_expression_parser(valid_component_names)
 
 
 class TestEquationParserElements:
@@ -260,7 +256,7 @@ class TestEquationParserElements:
     )
     def test_numbers(self, number, string_val, expected):
         parsed_ = number.parse_string(string_val, parse_all=True)
-        assert parsed_[0].eval() == expected
+        assert parsed_[0].eval(return_type="array") == expected
 
     @pytest.mark.parametrize(
         "string_val",
@@ -338,9 +334,11 @@ class TestEquationParserElements:
         parsed_ = id_list.parse_string("[hello, there]", parse_all=True)
         assert parsed_[0].eval(**eval_kwargs) == ["hello", "there"]
 
-    @pytest.mark.parametrize(
-        "string_val", ["1", "inf", "foo", "$foo", "dummy_func_1(1)"]
-    )
+    def test_id_list_with_numeric(self, id_list, eval_kwargs):
+        parsed_ = id_list.parse_string("[hello, 1, 1.0, there]", parse_all=True)
+        assert parsed_[0].eval(**eval_kwargs) == ["hello", 1.0, 1.0, "there"]
+
+    @pytest.mark.parametrize("string_val", ["foo", "$foo", "dummy_func_1(1)"])
     def test_id_list_fail(self, id_list, string_val):
         with pytest.raises(pp.ParseException):
             id_list.parse_string(f"[{string_val}, there]", parse_all=True)
@@ -372,22 +370,22 @@ class TestEquationParserElements:
     @pytest.mark.parametrize(
         ["string_val", "expected"],
         [
-            ("foo[techs=tech]", "SLICED_PARAM_OR_VAR:foo[techs=STRING:tech]"),
+            ("foo[techs=tech]", "SLICED_COMPONENT:foo[techs=STRING:tech]"),
             (
                 f"foo[techs={SUB_EXPRESSION_CLASSIFIER}tech]",
-                "SLICED_PARAM_OR_VAR:foo[techs=REFERENCE:tech]",
+                "SLICED_COMPONENT:foo[techs=REFERENCE:tech]",
             ),
             (
                 f"foo[techs=tech,bars={SUB_EXPRESSION_CLASSIFIER}bar]",
-                "SLICED_PARAM_OR_VAR:foo[techs=STRING:tech,bars=REFERENCE:bar]",
+                "SLICED_COMPONENT:foo[techs=STRING:tech,bars=REFERENCE:bar]",
             ),
             (
                 f"foo[ bars={SUB_EXPRESSION_CLASSIFIER}bar, techs=tech ]",
-                "SLICED_PARAM_OR_VAR:foo[bars=REFERENCE:bar,techs=STRING:tech]",
+                "SLICED_COMPONENT:foo[bars=REFERENCE:bar,techs=STRING:tech]",
             ),
             (
                 "with_inf[techs=tech, nodes=node]",
-                "SLICED_PARAM_OR_VAR:with_inf[techs=STRING:tech,nodes=STRING:node]",
+                "SLICED_COMPONENT:with_inf[techs=STRING:tech,nodes=STRING:node]",
             ),
         ],
     )
@@ -452,11 +450,11 @@ class TestEquationParserElements:
         [
             (
                 f"dummy_func_1(foo[bars={SUB_EXPRESSION_CLASSIFIER}bar])",
-                "dummy_func_1(args=[SLICED_PARAM_OR_VAR:foo[bars=REFERENCE:bar]], kwargs={})",
+                "dummy_func_1(args=[SLICED_COMPONENT:foo[bars=REFERENCE:bar]], kwargs={})",
             ),
             (
                 "dummy_func_1(1, x=foo[bars=bar1])",
-                "dummy_func_1(args=[NUM:1], kwargs={x=SLICED_PARAM_OR_VAR:foo[bars=STRING:bar1]})",
+                "dummy_func_1(args=[NUM:1], kwargs={x=SLICED_COMPONENT:foo[bars=STRING:bar1]})",
             ),
             (
                 "dummy_func_1($foo)",
@@ -468,11 +466,11 @@ class TestEquationParserElements:
             ),
             (
                 "dummy_func_1(dummy_func_2(foo[bars=bar1], y=$foo))",
-                "dummy_func_1(args=[dummy_func_2(args=[SLICED_PARAM_OR_VAR:foo[bars=STRING:bar1]], kwargs={y=SUB_EXPRESSION:foo})], kwargs={})",
+                "dummy_func_1(args=[dummy_func_2(args=[SLICED_COMPONENT:foo[bars=STRING:bar1]], kwargs={y=SUB_EXPRESSION:foo})], kwargs={})",
             ),
             (
                 "dummy_func_1(1, dummy_func_2(1, foo[bars=$bar]), $foo, 1, foo, x=foo[foos=foo1, bars=bar1])",
-                "dummy_func_1(args=[NUM:1, dummy_func_2(args=[NUM:1, SLICED_PARAM_OR_VAR:foo[bars=REFERENCE:bar]], kwargs={}), SUB_EXPRESSION:foo, NUM:1, PARAM_OR_VAR:foo], kwargs={x=SLICED_PARAM_OR_VAR:foo[foos=STRING:foo1, bars=STRING:bar1]})",
+                "dummy_func_1(args=[NUM:1, dummy_func_2(args=[NUM:1, SLICED_COMPONENT:foo[bars=REFERENCE:bar]], kwargs={}), SUB_EXPRESSION:foo, NUM:1, COMPONENT:foo], kwargs={x=SLICED_COMPONENT:foo[foos=STRING:foo1, bars=STRING:bar1]})",
             ),
         ],
     )
@@ -710,8 +708,8 @@ class TestEquationParserArithmetic:
     def test_repr(self, arithmetic):
         parse_string = "1 + foo - foo[foos=foo1, bars=$bar] + (foo / $foo) ** -2"
         expected = (
-            "(NUM:1 + PARAM_OR_VAR:foo - SLICED_PARAM_OR_VAR:foo[foos=STRING:foo1, bars=REFERENCE:bar]"
-            " + ((PARAM_OR_VAR:foo / SUB_EXPRESSION:foo) ** (-)NUM:2))"
+            "(NUM:1 + COMPONENT:foo - SLICED_COMPONENT:foo[foos=STRING:foo1, bars=REFERENCE:bar]"
+            " + ((COMPONENT:foo / SUB_EXPRESSION:foo) ** (-)NUM:2))"
         )
         parsed_ = arithmetic.parse_string(parse_string, parse_all=True)
         assert str(parsed_[0]) == expected
@@ -768,10 +766,10 @@ class TestEquationParserComparison:
         "1/2": "(NUM:1 / NUM:2)",
         "2**2.0": "(NUM:2 ** NUM:2.0)",
         ".inf": "NUM:inf",
-        "with_inf": "PARAM_OR_VAR:with_inf",
-        "foo[foos=foo1, bars=bar1]": "SLICED_PARAM_OR_VAR:foo[foos=STRING:foo1, bars=STRING:bar1]",
+        "with_inf": "COMPONENT:with_inf",
+        "foo[foos=foo1, bars=bar1]": "SLICED_COMPONENT:foo[foos=STRING:foo1, bars=STRING:bar1]",
         "$foo": "SUB_EXPRESSION:foo",
-        "dummy_func_1(1, y=foo[bars=$bar])": "dummy_func_1(args=[NUM:1], kwargs={y=SLICED_PARAM_OR_VAR:foo[bars=REFERENCE:bar]})",
+        "dummy_func_1(1, y=foo[bars=$bar])": "dummy_func_1(args=[NUM:1], kwargs={y=SLICED_COMPONENT:foo[bars=REFERENCE:bar]})",
     }
 
     @pytest.fixture(params=EXPR_PARAMS_AND_EXPECTED_EVAL.keys())
@@ -867,8 +865,8 @@ class TestEquationParserComparison:
     def test_repr(self, equation_comparison):
         parse_string = "1 + foo - foo[foos=foo1, bars=$bar] >= (foo / $foo) ** -2"
         expected = (
-            "(NUM:1 + PARAM_OR_VAR:foo - SLICED_PARAM_OR_VAR:foo[foos=STRING:foo1, bars=REFERENCE:bar])"
-            " >= ((PARAM_OR_VAR:foo / SUB_EXPRESSION:foo) ** (-)NUM:2)"
+            "(NUM:1 + COMPONENT:foo - SLICED_COMPONENT:foo[foos=STRING:foo1, bars=REFERENCE:bar])"
+            " >= ((COMPONENT:foo / SUB_EXPRESSION:foo) ** (-)NUM:2)"
         )
         parsed_ = equation_comparison.parse_string(parse_string, parse_all=True)
         assert str(parsed_[0]) == expected
@@ -879,7 +877,7 @@ class TestAsLatex:
     def latex_eval_kwargs(self, dummy_latex_backend_model):
         return {
             "helper_functions": helper_functions._registry["expression"],
-            "as_latex": True,
+            "return_type": "math_string",
             "index_slice_dict": {},
             "component_dict": {},
             "equation_name": "foobar",
@@ -899,7 +897,7 @@ class TestAsLatex:
             ("number", "-1", "-1"),
             ("number", "2000000", "2\\mathord{\\times}10^{+06}"),
             ("evaluatable_identifier", "hello_there", "hello_there"),
-            ("id_list", "[hello, hello_there]", ["hello", "hello_there"]),
+            ("id_list", "[hello, hello_there]", "[hello,hello_there]"),
             ("unsliced_param_with_obj_names", "no_dims", r"\textit{no_dims}"),
             (
                 "unsliced_param_with_obj_names",

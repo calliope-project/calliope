@@ -90,7 +90,6 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         parameter_da.attrs["original_dtype"] = parameter_values.dtype
         self._add_to_dataset(parameter_name, parameter_da, "parameters", {})
-        self.valid_math_element_names.add(parameter_name)
 
     def add_constraint(
         self,
@@ -132,8 +131,6 @@ class PyomoBackendModel(backend_model.BackendModel):
             self._clean_arrays(expr)
             return to_fill
 
-        self.valid_math_element_names.add(name)
-
         self._add_component(
             name, expression_dict, _expression_setter, "global_expressions"
         )
@@ -147,7 +144,6 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         if variable_dict is None:
             variable_dict = self.inputs.attrs["math"]["variables"][name]
-        self.valid_math_element_names.add(name)
 
         def _variable_setter(where):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
@@ -160,8 +156,6 @@ class PyomoBackendModel(backend_model.BackendModel):
                 name=name,
                 domain_type=domain_type,
             )
-
-        self.valid_math_element_names.add(name)
 
         self._add_component(name, variable_dict, _variable_setter, "variables")
 

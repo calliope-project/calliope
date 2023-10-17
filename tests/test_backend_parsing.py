@@ -38,28 +38,28 @@ def exists_array(component_obj, dummy_model_data):
 
 
 @pytest.fixture
-def valid_math_element_names(dummy_model_data):
+def valid_component_names(dummy_model_data):
     return ["foo", "bar", "baz", "foobar", *dummy_model_data.data_vars.keys()]
 
 
 @pytest.fixture
-def expression_string_parser(valid_math_element_names):
-    return expression_parser.generate_equation_parser(valid_math_element_names)
+def expression_string_parser(valid_component_names):
+    return expression_parser.generate_equation_parser(valid_component_names)
 
 
 @pytest.fixture
-def arithmetic_string_parser(valid_math_element_names):
-    return expression_parser.generate_arithmetic_parser(valid_math_element_names)
+def arithmetic_string_parser(valid_component_names):
+    return expression_parser.generate_arithmetic_parser(valid_component_names)
 
 
 @pytest.fixture
-def slice_parser(valid_math_element_names):
-    return expression_parser.generate_slice_parser(valid_math_element_names)
+def slice_parser(valid_component_names):
+    return expression_parser.generate_slice_parser(valid_component_names)
 
 
 @pytest.fixture
-def sub_expression_parser(valid_math_element_names):
-    return expression_parser.generate_sub_expression_parser(valid_math_element_names)
+def sub_expression_parser(valid_component_names):
+    return expression_parser.generate_sub_expression_parser(valid_component_names)
 
 
 @pytest.fixture
@@ -240,7 +240,7 @@ def dummy_backend_interface(dummy_model_data):
 
 
 @pytest.fixture(scope="function")
-def evaluatable_component_obj(valid_math_element_names):
+def evaluatable_component_obj(valid_component_names):
     def _evaluatable_component_obj(equation_expressions):
         setup_string = f"""
         foreach: [techs, nodes]
@@ -260,7 +260,7 @@ def evaluatable_component_obj(valid_math_element_names):
                     self, "constraints", "foo", dict_
                 )
                 self.parse_top_level_where()
-                self.equations = self.parse_equations(valid_math_element_names)
+                self.equations = self.parse_equations(valid_component_names)
 
         return DummyParsedBackendComponent(sub_expression_dict)
 
@@ -354,7 +354,9 @@ class TestParsedComponent:
             expression_string_parser, [expression_dict], "equations", id_prefix="foo"
         )
 
-        assert parsed_list[0].where[0][0].eval() == expected_where_eval
+        assert (
+            parsed_list[0].where[0][0].eval(return_type="array") == expected_where_eval
+        )
         assert isinstance(parsed_list[0].expression, pp.ParseResults)
 
     @pytest.mark.parametrize("n_dicts", [1, 2, 3])
@@ -505,6 +507,7 @@ class TestParsedComponent:
                 sub_expression_dict=component_sub_dict,
                 backend_interface=dummy_backend_interface,
                 where_array=xr.DataArray(True),
+                return_type="array",
             )
 
             assert comparison_expr == expected
@@ -575,12 +578,12 @@ class TestParsedComponent:
     def test_parse_equations(
         self,
         obj_with_sub_expressions_and_slices,
-        valid_math_element_names,
+        valid_component_names,
         eq_string,
         expected_n_equations,
     ):
         component_obj = obj_with_sub_expressions_and_slices(eq_string)
-        parsed_equations = component_obj.parse_equations(valid_math_element_names)
+        parsed_equations = component_obj.parse_equations(valid_component_names)
 
         assert len(parsed_equations) == expected_n_equations
         assert len(set(eq.name for eq in parsed_equations)) == expected_n_equations
@@ -596,11 +599,11 @@ class TestParsedComponent:
             assert check_error_or_warning(excinfo, ["\n * constraints:foo:"])
 
     def test_parse_equations_fail(
-        self, obj_with_sub_expressions_and_slices, valid_math_element_names
+        self, obj_with_sub_expressions_and_slices, valid_component_names
     ):
         component_obj = obj_with_sub_expressions_and_slices("bar = 1")
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            component_obj.parse_equations(valid_math_element_names, errors="raise")
+            component_obj.parse_equations(valid_component_names, errors="raise")
         expected_err_string = """
  * constraints:my_constraint:
     * equations[0].expression (line 1, char 5): bar = 1
@@ -608,10 +611,10 @@ class TestParsedComponent:
         assert check_error_or_warning(excinfo, expected_err_string)
 
     def test_parse_equations_fail_no_raise(
-        self, obj_with_sub_expressions_and_slices, valid_math_element_names
+        self, obj_with_sub_expressions_and_slices, valid_component_names
     ):
         component_obj = obj_with_sub_expressions_and_slices("bar = 1")
-        component_obj.parse_equations(valid_math_element_names, errors="ignore")
+        component_obj.parse_equations(valid_component_names, errors="ignore")
 
         expected_err_string = """\
 equations[0].expression (line 1, char 5): bar = 1
