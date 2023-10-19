@@ -119,7 +119,7 @@ class TestModelSettings:
                 # Allow setting resource and flow_cap_max/equals to force infeasibility
                 "techs.test_supply_elec.constraints": {
                     "resource": cap_val,
-                    "energy_eff": 1,
+                    "flow_eff": 1,
                     "flow_cap_equals": 15,
                 },
                 "techs.test_supply_elec.switches.force_resource": True,

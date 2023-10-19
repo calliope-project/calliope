@@ -1,12 +1,12 @@
 model:
-  name: Test model for energy capacity per storage capacity
+  name: Test model for flow capacity per storage capacity
   timeseries_data_path: "timeseries_data"
   subset_time: ["2005-01-01 00:00", "2005-01-01 01:00"]
 
 run:
   mode: plan
   solver: cbc
-  cyclic_storage: False # necessary so demand can be fed from stored energy
+  cyclic_storage: False # necessary so demand can be fed from stored carrier
   ensure_feasibility: true
 
 techs:

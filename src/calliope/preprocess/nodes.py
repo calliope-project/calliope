@@ -240,8 +240,8 @@ def process_nodes(model_config, modelrun_techs):
                 tech_settings.copy(),
             )
 
-            # If this is a one-way link, we set the constraints for energy_prod
-            # and energy_con accordingly on both parts of the link
+            # If this is a one-way link, we set the constraints for flow_out
+            # and flow_in accordingly on both parts of the link
             if tech_settings.get_key("switches.one_way", False):
                 processed_links.set_key(
                     "{}.links.{}.techs.{}.switches.allowed_flow_out".format(
@@ -359,21 +359,20 @@ def process_per_distance_constraints(
 
         # Add per-distance values to their not-per-distance cousins
         # FIXME these are hardcoded for now
-        if "energy_eff_per_distance" in tech_settings.constraints:
-            distance_energy_eff = (
-                tech_settings.constraints.energy_eff_per_distance
+        if "flow_eff_per_distance" in tech_settings.constraints:
+            distance_flow_eff = (
+                tech_settings.constraints.flow_eff_per_distance
                 ** tech_settings.distance
             )
-            tech_settings.constraints.energy_eff = (
-                tech_settings.constraints.get_key("energy_eff", 1.0)
-                * distance_energy_eff
+            tech_settings.constraints.flow_eff = (
+                tech_settings.constraints.get_key("flow_eff", 1.0) * distance_flow_eff
             )
-            del tech_settings.constraints["energy_eff_per_distance"]
+            del tech_settings.constraints["flow_eff_per_distance"]
             nodes_comments.set_key(
-                "{}.links.{}.techs.{}.constraints.energy_eff".format(
+                "{}.links.{}.techs.{}.constraints.flow_eff".format(
                     loc_from, loc_to, tech_name
                 ),
-                "Includes value computed from energy_eff_per_distance",
+                "Includes value computed from flow_eff_per_distance",
             )
 
         for k in tech_settings.get("costs", AttrDict()).keys_nested(subkeys_as="list"):

@@ -214,7 +214,7 @@ class TestCustomMath:
                 assert new[i]["max"] == new[i]["max"]
             elif i == "description":
                 assert new[i].startswith(
-                    "The virtual energy stored by a `supply_plus` or `storage` technology"
+                    "The virtual carrier stored by a `supply_plus` or `storage` technology"
                 )
             else:
                 assert base[i] == new[i]
@@ -274,8 +274,8 @@ class TestValidateMathDict:
         [
             ("1 == 1", "True"),
             (
-                "flow_out * energy_eff + sum(cost, over=costs) <= .inf",
-                "inheritance(supply) and energy_eff>0",
+                "flow_out * flow_eff + sum(cost, over=costs) <= .inf",
+                "inheritance(supply) and flow_eff>0",
             ),
         ],
     )

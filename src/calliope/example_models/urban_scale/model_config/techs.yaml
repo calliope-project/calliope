@@ -56,7 +56,7 @@ techs:
       color: "#F9D956"
       parent: supply_power_plus
     switches:
-      source_unit: energy_per_area
+      source_unit: per_area
       export: true
     constraints:
       area_use_per_flow_cap: 7 # 7m2 of panels needed to fit 1kWp of panels
@@ -83,7 +83,7 @@ techs:
       carrier_in: gas
     constraints:
       flow_cap_max: 600
-      energy_eff: 0.85
+      flow_eff: 0.85
       lifetime: 25
     costs:
       monetary:
@@ -107,7 +107,7 @@ techs:
     constraints:
       export_carrier: electricity
       flow_cap_max: 1500
-      energy_eff: 0.405
+      flow_eff: 0.405
       carrier_ratios.carrier_out_2.heat: 0.8
       lifetime: 25
     costs:
@@ -145,7 +145,7 @@ techs:
       carrier: electricity
     constraints:
       flow_cap_max: 2000
-      energy_eff: 0.98
+      flow_eff: 0.98
       lifetime: 25
     costs:
       monetary:
@@ -160,7 +160,7 @@ techs:
       carrier: heat
     constraints:
       flow_cap_max: 2000
-      energy_eff_per_distance: 0.975
+      flow_eff_per_distance: 0.975
       lifetime: 25
     costs:
       monetary:

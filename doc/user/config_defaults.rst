@@ -62,13 +62,13 @@ Abstract base technology groups
 
 Technologies must always define a parent, and this can either be one of the pre-defined abstract base technology groups or a user-defined group (see :ref:`tech_groups`). The pre-defined groups are:
 
-* ``supply``: Supplies energy to a carrier from an external source.
-* ``supply_plus``: Supplies energy to a carrier from an external source. Additional possible constraints, including efficiencies and storage, distinguish this from ``supply``.
-* ``demand``: Demands energy from a carrier to supply to an external sink.
-* ``storage``: Stores energy.
-* ``transmission``: Transmits energy from one location to another.
-* ``conversion``: Converts energy from one carrier to another.
-* ``conversion_plus``: Converts energy from one or more carrier(s) to one or more different carrier(s).
+* ``supply``: Draws from a source to produce a carrier.
+* ``supply_plus``: Draws from a source to produce a carrier. Additional possible constraints, including efficiencies and storage, distinguish this from ``supply``.
+* ``demand``: Consumes a carrier to supply to an external sink.
+* ``storage``: Stores a carrier.
+* ``transmission``: Transmits a carrier from one location to another.
+* ``conversion``: Converts a carrier from one to another.
+* ``conversion_plus``: Converts a carrier / carriers to one or more different carrier(s).
 
 A technology inherits the configuration that its parent group specifies (which, in turn, may inherit from its own parent).
 

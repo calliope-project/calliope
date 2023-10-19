@@ -1351,7 +1351,7 @@ class TestChecks:
 
     def test_incorrect_source_unit(self):
         """
-        Only `energy`, `energy_per_cap`, or `energy_per_area` is allowed under
+        Only `absolute`, `per_cap`, or `per_area` is allowed under
         `source unit`.
         """
 
@@ -1361,9 +1361,9 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError) as error:
             build_model(_override("power"), scenario="simple_supply")
 
-        build_model(_override("energy"), scenario="simple_supply")
-        build_model(_override("energy_per_cap"), scenario="simple_supply")
-        build_model(_override("energy_per_area"), scenario="simple_supply")
+        build_model(_override("absolute"), scenario="simple_supply")
+        build_model(_override("per_cap"), scenario="simple_supply")
+        build_model(_override("per_area"), scenario="simple_supply")
 
         assert check_error_or_warning(
             error, "`power` is an unknown source unit for `test_supply_elec`"

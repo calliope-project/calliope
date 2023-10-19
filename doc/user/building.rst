@@ -2,7 +2,7 @@
 Building a model
 ================
 
-In short, a Calliope model works like this: **supply technologies** can take a **source** from outside of the modeled system and turn it into a specific energy **carrier** in the system. The model specifies one or more **locations** along with the technologies allowed at those locations. **Transmission technologies** can move energy of the same carrier from one location to another, while **conversion technologies** can convert one carrier into another at the same location. **Demand technologies** remove energy from the system, while **storage technologies** can store energy at a specific location. Putting all of these possibilities together allows a modeller to specify as simple or as complex a model as necessary to answer a given research question.
+In short, a Calliope model works like this: **supply technologies** can take a **source** from outside of the modeled system and turn it into a specific **carrier** in the system. The model specifies one or more **locations** along with the technologies allowed at those locations. **Transmission technologies** can move the same carrier from one location to another, while **conversion technologies** can convert one carrier into another at the same location. **Demand technologies** remove carriers from the system, while **storage technologies** can store carriers at a specific location. Putting all of these possibilities together allows a modeller to specify as simple or as complex a model as necessary to answer a given research question.
 
 In more technical terms, Calliope allows a modeller to define technologies with arbitrary characteristics by "inheriting" basic traits from a number of included base tech groups -- ``supply``, ``supply_plus``, ``demand``, ``conversion``, ``conversion_plus``, and ``transmission``. These groups are described in more detail in :ref:`abstract_base_tech_definitions`.
 
@@ -12,11 +12,11 @@ Terminology
 
 The terminology defined here is used throughout the documentation and the model code and configuration files:
 
-* **Technology**: a technology that produces, consumes, converts or transports energy
-* **Location**: a site which can contain multiple technologies and which may contain other locations for energy balancing purposes
-* **Source**: a source of energy that can (or must) be used by a technology to introduce energy into the system
-* **Sink**: an energy sink that can (or must) be used by a technology to introduce remove energy from the system
-* **Carrier**: an energy carrier that groups technologies together into the same network, for example ``electricity`` or ``heat``.
+* **Technology**: a technology that produces, consumes, converts or transports carriers
+* **Location**: a site which can contain multiple technologies and which may contain other locations for carrier balancing purposes
+* **Source**: a source of commodity that can (or must) be used by a technology to introduce carriers into the system
+* **Sink**: a commodity sink that can (or must) be used by a technology to introduce remove carriers from the system
+* **Carrier**: a carrier that groups technologies together into the same network, for example ``electricity`` or ``heat``.
 
 As more generally in constrained optimisation, the following terms are also used:
 
@@ -112,10 +112,10 @@ The following example shows the definition of a ``ccgt`` technology, i.e. a comb
             carrier_out: power
         constraints:
             source: inf
-            energy_eff: 0.5
+            flow_eff: 0.5
             flow_cap_max: 40000  # kW
             flow_cap_max_systemwide: 100000  # kW
-            energy_ramping: 0.8
+            flow_ramping: 0.8
             lifetime: 25
         costs:
             monetary:
@@ -123,7 +123,7 @@ The following example shows the definition of a ``ccgt`` technology, i.e. a comb
                 flow_cap: 750  # USD per kW
                 om_con: 0.02  # USD per kWh
 
-Each technology must specify some ``essentials``, most importantly a name, the abstract base technology it is inheriting from (``parent``), and its energy carrier (``carrier_out`` in the case of a ``supply`` technology). Specifying a ``color`` is optional but useful for using the built-in visualisation tools (see :doc:`analysing`).
+Each technology must specify some ``essentials``, most importantly a name, the abstract base technology it is inheriting from (``parent``), and its carrier (``carrier_out`` in the case of a ``supply`` technology). Specifying a ``color`` is optional but useful for using the built-in visualisation tools (see :doc:`analysing`).
 
 The ``constraints`` section gives all constraints for the technology, such as allowed capacities, conversion efficiencies, the life time (used in levelised cost calculations), and the resource it consumes (in the above example, the source is set to infinite via ``inf``).
 
@@ -151,7 +151,7 @@ For a model to find a feasible solution, supply must always be able to meet dema
     run:
         ensure_feasibility: true
 
-This will create an ``unmet_demand`` decision variable in the optimisation, which can pick up any mismatch between supply and demand, across all energy carriers. It has a very high cost associated with its use, so it will only appear when absolutely necessary.
+This will create an ``unmet_demand`` decision variable in the optimisation, which can pick up any mismatch between supply and demand, across all carriers. It has a very high cost associated with its use, so it will only appear when absolutely necessary.
 
 .. note::
     When ensuring feasibility, you can also set a `big M value <https://en.wikipedia.org/wiki/Big_M_method>`_ (:yaml:`run.bigM`). This is the "cost" of unmet demand. It is possible to make model convergence very slow if bigM is set too high. default bigM is 1x10 :sup:`9`, but should be close to the maximum total system cost that you can imagine. This is perhaps closer to 1x10 :sup:`6` for urban scale models.
@@ -259,7 +259,7 @@ The time series index must be ISO 8601 compatible time stamps and can be a stand
 Locations and links (``locations``, ``links``)
 ----------------------------------------------
 
-A model can specify any number of locations. These locations are linked together by transmission technologies. By consuming an energy carrier in one location and outputting it in another, linked location, transmission technologies allow resources to be drawn from the system at a different location from where they are brought into it.
+A model can specify any number of locations. These locations are linked together by transmission technologies. By consuming a carrier in one location and outputting it in another, linked location, transmission technologies allow resources to be drawn from the system at a different location from where they are brought into it.
 
 The ``locations`` section specifies each location:
 

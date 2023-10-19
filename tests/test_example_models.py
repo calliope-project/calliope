@@ -526,7 +526,7 @@ class TestUrbanScaleExampleModelSenseChecks:
             "techs.pv.constraints.source_equals": "file=pv_resource.csv:{}".format(
                 source_unit
             ),
-            "techs.pv.switches.source_unit": "energy_{}".format(source_unit),
+            "techs.pv.switches.source_unit": source_unit,
             "run.solver": solver,
         }
         override = {"model.subset_time": ["2005-07-01", "2005-07-01"], **unit_override}
@@ -613,7 +613,7 @@ class TestUrbanScaleExampleModelSenseChecks:
             model.build()
 
         expected_warnings = [
-            "Energy capacity constraint removed",
+            "Flow capacity constraint removed",
             "Source capacity constraint defined and set to infinity for all supply_plus techs",
             "Storage cannot be cyclic in operate run mode, setting `run.cyclic_storage` to False for this run",
         ]

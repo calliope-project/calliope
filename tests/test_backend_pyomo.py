@@ -40,9 +40,7 @@ class TestChecks:
             assert not check_warn
         assert m._model_data.attrs["run_config"].cyclic_storage is False
 
-    @pytest.mark.parametrize(
-        "param", [("energy_eff"), ("source_eff"), ("parasitic_eff")]
-    )
+    @pytest.mark.parametrize("param", [("flow_eff"), ("source_eff"), ("parasitic_eff")])
     def test_loading_timeseries_operate_efficiencies(self, param):
         m = build_model(
             {
@@ -91,7 +89,7 @@ class TestChecks:
                         "flow_cap_equals": np.inf,
                         "flow_cap_max": np.inf,
                     },
-                    "switches": {"source_unit": "energy_per_cap"},
+                    "switches": {"source_unit": "per_cap"},
                 }
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
@@ -110,9 +108,7 @@ class TestChecks:
 
     @pytest.mark.parametrize(
         ["source_unit", "constr"],
-        list(
-            product(("energy", "energy_per_cap", "energy_per_area"), ("max", "equals"))
-        ),
+        list(product(("absolute", "per_cap", "per_area"), ("max", "equals"))),
     )
     def test_operate_source_unit_with_area_use(self, source_unit, constr):
         """Different source unit affects the capacities which are set to infinite"""
@@ -132,18 +128,18 @@ class TestChecks:
         with pytest.warns(exceptions.ModelWarning) as warning:
             m.build()
 
-        if source_unit == "energy":
+        if source_unit == "absolute":
             _warnings = [
-                "Energy capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
-                "Source area constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
+                "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to inflow (source_unit = `absolute`)",
+                "Source area constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to inflow (source_unit = `absolute`)",
             ]
-        elif source_unit == "energy_per_area":
+        elif source_unit == "per_area":
             _warnings = [
-                "Energy capacity constraint removed from 0::test_supply_elec as force_source is applied and source is linked to energy flow using `energy_per_area`"
+                "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_area`"
             ]
-        elif source_unit == "energy_per_cap":
+        elif source_unit == "per_cap":
             _warnings = [
-                "Source area constraint removed from 0::test_supply_elec as force_source is applied and source is linked to energy flow using `energy_per_cap`"
+                "Source area constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_cap`"
             ]
 
         if constr == "equals":
@@ -151,9 +147,7 @@ class TestChecks:
         else:
             assert ~check_error_or_warning(warning, _warnings)
 
-    @pytest.mark.parametrize(
-        "source_unit", [("energy"), ("energy_per_cap"), ("energy_per_area")]
-    )
+    @pytest.mark.parametrize("source_unit", [("absolute"), ("per_cap"), ("per_area")])
     def test_operate_source_unit_without_area_use(self, source_unit):
         """Different source unit affects the capacities which are set to infinite"""
         m = build_model(
@@ -173,44 +167,44 @@ class TestChecks:
         )
 
         with pytest.warns(exceptions.ModelWarning) as warning:
-            # energy_per_area without a source_cap will cause an error, which we have to catch here
-            if source_unit == "energy_per_area":
+            # per_area without a source_cap will cause an error, which we have to catch here
+            if source_unit == "per_area":
                 with pytest.raises(exceptions.ModelError) as error:
                     m.build()
             else:
                 m.build()
 
-        if source_unit == "energy":
+        if source_unit == "absolute":
             _warnings = [
-                "Energy capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)"
+                "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)"
             ]
             not_warnings = [
-                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
-                "Energy capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
-                "Energy capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
+                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+                "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+                "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
             ]
-        elif source_unit == "energy_per_area":
+        elif source_unit == "per_area":
             _warnings = [
-                "Energy capacity constraint removed from 0::test_supply_elec as force_source is applied and source is linked to energy flow using `energy_per_area`"
+                "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_area`"
             ]
             not_warnings = [
-                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is linked to energy flow using `energy_per_cap`",
-                "Energy capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
-                "Energy capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
+                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_cap`",
+                "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+                "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
             ]
-            # energy_per_area without a source_cap will cause an error
+            # per_area without a source_cap will cause an error
             check_error_or_warning(
                 error,
                 "Operate mode: User must define a finite area_use "
                 "(via area_use_equals or area_use_max) for 0::test_supply_elec",
             )
-        elif source_unit == "energy_per_cap":
+        elif source_unit == "per_cap":
             _warnings = []
             not_warnings = [
-                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is linked to energy flow using `energy_per_cap`",
-                "Energy capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
-                "Energy capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
-                "Energy capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to energy flow (source_unit = `energy`)",
+                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_cap`",
+                "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+                "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+                "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
             ]
         assert check_error_or_warning(warning, _warnings)
         assert not check_error_or_warning(warning, not_warnings)
@@ -229,13 +223,13 @@ class TestChecks:
 
         assert check_error_or_warning(
             error,
-            "fixed storage capacity * {} is not larger than fixed energy "
+            "fixed storage capacity * {} is not larger than fixed flow "
             "capacity for loc, tech {}".format(param, ("a", "test_supply_plus")),
         )
         assert check_error_or_warning(
             warning,
             [
-                "Initial stored energy not defined",
+                "Initial stored carrier not defined",
                 "Source capacity constraint defined and set to infinity",
                 "Storage cannot be cyclic in operate run mode",
             ],
@@ -283,13 +277,13 @@ class TestChecks:
         with pytest.warns(exceptions.ModelWarning) as warning:
             m.build()
         if on is False:
-            assert check_error_or_warning(warning, "Initial stored energy not defined")
+            assert check_error_or_warning(warning, "Initial stored carrier not defined")
             assert (
                 m._model_data.storage_initial.loc["a", "test_supply_plus"].item() == 0
             )
         elif on is True:
             assert not check_error_or_warning(
-                warning, "Initial stored energy not defined"
+                warning, "Initial stored carrier not defined"
             )
             assert (
                 m._model_data.storage_initial.loc["a", "test_supply_plus"].item() == 0.5
@@ -319,7 +313,7 @@ class TestBalanceConstraints:
         m = build_model(
             {
                 "techs.test_supply_elec.constraints.resource": 20,
-                "techs.test_supply_elec.switches.source_unit": "energy_per_cap",
+                "techs.test_supply_elec.switches.source_unit": "per_cap",
             },
             "simple_supply,two_hours,investment_costs",
         )
@@ -332,7 +326,7 @@ class TestBalanceConstraints:
         m = build_model(
             {
                 "techs.test_supply_elec.constraints.resource": 20,
-                "techs.test_supply_elec.switches.source_unit": "energy_per_area",
+                "techs.test_supply_elec.switches.source_unit": "per_area",
             },
             "simple_supply,two_hours,investment_costs",
         )
@@ -349,7 +343,7 @@ class TestBalanceConstraints:
         assert "balance_demand" in simple_supply.backend.constraints
 
         m = build_model(
-            {"techs.test_demand_elec.switches.source_unit": "energy_per_cap"},
+            {"techs.test_demand_elec.switches.source_unit": "per_cap"},
             "simple_supply,two_hours,investment_costs",
         )
         m.build()
@@ -359,7 +353,7 @@ class TestBalanceConstraints:
         )
 
         m = build_model(
-            {"techs.test_demand_elec.switches.source_unit": "energy_per_area"},
+            {"techs.test_demand_elec.switches.source_unit": "per_area"},
             "simple_supply,two_hours,investment_costs",
         )
         m.build()
@@ -380,7 +374,7 @@ class TestBalanceConstraints:
         )
 
         m = build_model(
-            {"techs.test_supply_plus.switches.source_unit": "energy_per_cap"},
+            {"techs.test_supply_plus.switches.source_unit": "per_cap"},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.build()
@@ -392,7 +386,7 @@ class TestBalanceConstraints:
         )
 
         m = build_model(
-            {"techs.test_supply_plus.switches.source_unit": "energy_per_area"},
+            {"techs.test_supply_plus.switches.source_unit": "per_area"},
             "simple_supply_and_supply_plus,two_hours,investment_costs",
         )
         m.build()
@@ -1114,7 +1108,7 @@ class TestDispatchConstraints:
         assert "ramping_down" not in simple_supply.backend.constraints
 
         m = build_model(
-            {"techs.test_supply_elec.constraints.energy_ramping": 0.1},
+            {"techs.test_supply_elec.constraints.flow_ramping": 0.1},
             "simple_supply,two_hours,investment_costs",
         )
         m.build()
@@ -1122,7 +1116,7 @@ class TestDispatchConstraints:
         assert "ramping_down" in m.backend.constraints
 
         m = build_model(
-            {"techs.test_conversion.constraints.energy_ramping": 0.1},
+            {"techs.test_conversion.constraints.flow_ramping": 0.1},
             "simple_conversion,two_hours,investment_costs",
         )
         m.build()
@@ -1795,7 +1789,7 @@ class TestNewBackend:
                 "cost_investment",
                 "symmetric_transmission",
             },
-            "description": "A technology's energy capacity, also known as its nominal or nameplate capacity.",
+            "description": "A technology's flow capacity, also known as its nominal or nameplate capacity.",
             "unit": "power",
             "coords_in_name": False,
         }
@@ -1810,7 +1804,7 @@ class TestNewBackend:
         )
 
     def test_new_build_get_parameter(self, simple_supply):
-        param = simple_supply.backend.get_parameter("energy_eff")
+        param = simple_supply.backend.get_parameter("flow_eff")
         assert (
             param.to_series()
             .dropna()
@@ -1826,7 +1820,7 @@ class TestNewBackend:
         }
 
     def test_new_build_get_parameter_as_vals(self, simple_supply):
-        param = simple_supply.backend.get_parameter("energy_eff", as_backend_objs=False)
+        param = simple_supply.backend.get_parameter("flow_eff", as_backend_objs=False)
         assert param.dtype == np.dtype("float64")
 
     def test_new_build_get_global_expression(self, simple_supply):
@@ -1870,7 +1864,7 @@ class TestNewBackend:
         assert constr.attrs == {
             "obj_type": "constraints",
             "references": set(),
-            "description": "Set the global energy balance of the optimisation problem by fixing the total production of a given energy carrier to equal the total consumption of that carrier at every node in every timestep.",
+            "description": "Set the global carrier balance of the optimisation problem by fixing the total production of a given carrier to equal the total consumption of that carrier at every node in every timestep.",
             "coords_in_name": False,
         }
 
@@ -1957,11 +1951,11 @@ class TestNewBackend:
 
     def test_raise_error_on_preexistence_same_type(self, simple_supply):
         with pytest.raises(exceptions.BackendError) as excinfo:
-            simple_supply.backend.add_parameter("energy_eff", xr.DataArray(1))
+            simple_supply.backend.add_parameter("flow_eff", xr.DataArray(1))
 
         assert check_error_or_warning(
             excinfo,
-            "Trying to add already existing `energy_eff` to backend model parameters.",
+            "Trying to add already existing `flow_eff` to backend model parameters.",
         )
 
     def test_raise_error_on_preexistence_diff_type(self, simple_supply):
@@ -2225,7 +2219,7 @@ class TestNewBackend:
                 },
                 "variables",
             ),
-            ("energy_eff", {"nodes": "a", "techs": "test_supply_elec"}, "parameters"),
+            ("flow_eff", {"nodes": "a", "techs": "test_supply_elec"}, "parameters"),
         ],
     )
     def test_verbose_strings(self, simple_supply_longnames, objname, dims, objtype):
@@ -2247,12 +2241,12 @@ class TestNewBackend:
         obj = simple_supply_longnames.backend.get_constraint(
             "balance_demand", as_backend_objs=False
         )
-        energy_eff_dims = ", ".join(
-            dims[i] for i in simple_supply_longnames.backend.parameters.energy_eff.dims
+        flow_eff_dims = ", ".join(
+            dims[i] for i in simple_supply_longnames.backend.parameters.flow_eff.dims
         )
         assert (
             obj.sel(dims).body.item()
-            == f"parameters[energy_eff][{energy_eff_dims}]*variables[flow_in][{', '.join(dims[i] for i in obj.dims)}]"
+            == f"parameters[flow_eff][{flow_eff_dims}]*variables[flow_in][{', '.join(dims[i] for i in obj.dims)}]"
         )
         assert not obj.coords_in_name
 
@@ -2279,11 +2273,11 @@ class TestNewBackend:
         assert obj.coords_in_name
 
     def test_update_parameter(self, simple_supply):
-        updated_param = simple_supply.inputs.energy_eff * 1000
-        simple_supply.backend.update_parameter("energy_eff", updated_param)
+        updated_param = simple_supply.inputs.flow_eff * 1000
+        simple_supply.backend.update_parameter("flow_eff", updated_param)
 
         expected = simple_supply.backend.get_parameter(
-            "energy_eff", as_backend_objs=False
+            "flow_eff", as_backend_objs=False
         )
         assert expected.where(updated_param.notnull()).equals(updated_param)
 
@@ -2292,37 +2286,37 @@ class TestNewBackend:
         new_dims = {"nodes", "techs"}
         caplog.set_level(logging.WARNING)
 
-        simple_supply.backend.update_parameter("energy_eff", updated_param)
+        simple_supply.backend.update_parameter("flow_eff", updated_param)
 
         assert (
             f"New values will be broadcast along the {new_dims} dimension(s)"
             in caplog.text
         )
         expected = simple_supply.backend.get_parameter(
-            "energy_eff", as_backend_objs=False
+            "flow_eff", as_backend_objs=False
         )
         assert (expected == updated_param).all()
 
     def test_update_parameter_replace_defaults(self, simple_supply):
-        updated_param = simple_supply.inputs.energy_eff.fillna(0.1)
+        updated_param = simple_supply.inputs.flow_eff.fillna(0.1)
 
-        simple_supply.backend.update_parameter("energy_eff", updated_param)
+        simple_supply.backend.update_parameter("flow_eff", updated_param)
 
         expected = simple_supply.backend.get_parameter(
-            "energy_eff", as_backend_objs=False
+            "flow_eff", as_backend_objs=False
         )
         assert expected.equals(updated_param)
 
     def test_update_parameter_add_dim(self, caplog, simple_supply):
-        """energy_eff doesn't have the time dimension in the simple model, we add it here."""
-        updated_param = simple_supply.inputs.energy_eff.where(
+        """flow_eff doesn't have the time dimension in the simple model, we add it here."""
+        updated_param = simple_supply.inputs.flow_eff.where(
             simple_supply.inputs.timesteps.notnull()
         )
 
         refs_to_update = {"balance_demand", "balance_transmission"}
         caplog.set_level(logging.WARNING)
 
-        simple_supply.backend.update_parameter("energy_eff", updated_param)
+        simple_supply.backend.update_parameter("flow_eff", updated_param)
 
         assert (
             f"Defining values for a previously fully/partially undefined parameter. The optimisation problem components {refs_to_update} will be re-built."
@@ -2330,13 +2324,13 @@ class TestNewBackend:
         )
 
         expected = simple_supply.backend.get_parameter(
-            "energy_eff", as_backend_objs=False
+            "flow_eff", as_backend_objs=False
         )
         assert "timesteps" in expected.dims
 
     def test_update_parameter_replace_undefined(self, caplog, simple_supply):
         """parasitic_eff isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value"""
-        updated_param = simple_supply.inputs.energy_eff
+        updated_param = simple_supply.inputs.flow_eff
 
         refs_to_update = {"flow_out_max"}
         caplog.set_level(logging.DEBUG)

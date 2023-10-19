@@ -23,7 +23,7 @@ An example use of ``supply_plus`` is to define a concentrating solar power (CSP)
 
 See the :ref:`listing of supply_plus configuration <abstract_base_tech_definitions>` in the abstract base tech group definitions for the additional constraints that are possible.
 
-.. Warning:: When analysing results from supply_plus, care must be taken to correctly account for the losses along the transformation from resource to carrier. For example, charging of storage from the resource may have a ``source_eff``-associated loss with it, while discharging storage to produce the carrier may have a different loss resulting from a combination of ``energy_eff`` and ``parasitic_eff``. Such intermediate conversion losses need to be kept in mind when comparing discharge from storage with ``flow_out`` in the same time step.
+.. Warning:: When analysing results from supply_plus, care must be taken to correctly account for the losses along the transformation from resource to carrier. For example, charging of storage from the resource may have a ``source_eff``-associated loss with it, while discharging storage to produce the carrier may have a different loss resulting from a combination of ``flow_eff`` and ``parasitic_eff``. Such intermediate conversion losses need to be kept in mind when comparing discharge from storage with ``flow_out`` in the same time step.
 
 .. _conversion_plus:
 
@@ -67,7 +67,7 @@ A combined heat and power plant produces electricity, in this case from natural 
                     carrier_out_2: heat
                     primary_carrier_out: electricity
                 constraints:
-                    energy_eff: 0.45
+                    flow_eff: 0.45
                     flow_cap_max: 100
                     carrier_ratios.carrier_out_2.heat: 0.8
 
@@ -89,7 +89,7 @@ The output energy from the heat pump can be *either* heat or cooling, simulating
             primary_carrier_out: heat
 
         constraints:
-            energy_eff: 1
+            flow_eff: 1
             flow_cap_max: 100
             carrier_ratios:
                 carrier_out:
@@ -124,14 +124,14 @@ A CCHP plant can use generated heat to produce cooling via an absorption chiller
                     primary_carrier_out: electricity
 
                 constraints:
-                    energy_eff: 0.45
+                    flow_eff: 0.45
                     flow_cap_max: 100
                     carrier_ratios.carrier_out_2: {heat: 0.8, cooling: 0.5}
 
 Advanced gas turbine
 --------------------
 
-This technology can choose to burn methane (CH:sub:`4`) or send hydrogen (H:sub:`2`) through a fuel cell to produce electricity. One unit of carrier_in can be met by any combination of methane and hydrogen. If all methane, 0.5 units of carrier_out would be produced for 1 unit of carrier_in (energy_eff). If all hydrogen, 0.25 units of carrier_out would be produced for the same amount of carrier_in (energy_eff * hydrogen carrier ratio).
+This technology can choose to burn methane (CH:sub:`4`) or send hydrogen (H:sub:`2`) through a fuel cell to produce electricity. One unit of carrier_in can be met by any combination of methane and hydrogen. If all methane, 0.5 units of carrier_out would be produced for 1 unit of carrier_in (flow_eff). If all hydrogen, 0.25 units of carrier_out would be produced for the same amount of carrier_in (flow_eff * hydrogen carrier ratio).
 
 .. figure:: images/conversion_plus_gas.*
 
@@ -144,7 +144,7 @@ This technology can choose to burn methane (CH:sub:`4`) or send hydrogen (H:sub:
             carrier_out: electricity
 
         constraints:
-            energy_eff: 0.5
+            flow_eff: 0.5
             flow_cap_max: 100
             carrier_ratios:
                 carrier_in: {methane: 1, hydrogen: 0.5}
@@ -175,7 +175,7 @@ There are few instances where using the full capacity of a conversion_plus tech 
                     primary_carrier_out: electricity
 
                 constraints:
-                    energy_eff: 1
+                    flow_eff: 1
                     flow_cap_max: 100
                     carrier_ratios:
                         carrier_in: {coal: 1.2, gas: 1, oil: 1.6}
@@ -194,7 +194,7 @@ Area use constraints
 
 Several optional constraints can be used to specify area-related restrictions on technology use.
 
-To make use of these constraints, one should set ``source_unit: energy_per_area`` for the given technologies. This scales the available source at a given location for a given technology with its ``area_use`` decision variable.
+To make use of these constraints, one should set ``source_unit: per_area`` for the given technologies. This scales the available source at a given location for a given technology with its ``area_use`` decision variable.
 
 The following related settings are available:
 
@@ -207,7 +207,7 @@ By default, ``area_use_max`` is infinite and ``area_use_min`` is 0 (zero).
 Per-distance constraints and costs
 ----------------------------------
 
-Transmission technologies can additionally specify per-distance efficiency (loss) with ``energy_eff_per_distance`` and per-distance costs with ``flow_cap_per_distance``:
+Transmission technologies can additionally specify per-distance efficiency (loss) with ``flow_eff_per_distance`` and per-distance costs with ``flow_cap_per_distance``:
 
 .. code-block:: yaml
 
@@ -217,7 +217,7 @@ Transmission technologies can additionally specify per-distance efficiency (loss
                 ...
             constraints:
                 # "efficiency" (1-loss) per unit of distance
-                energy_eff_per_distance: 0.99
+                flow_eff_per_distance: 0.99
             costs:
                 monetary:
                     # cost per unit of distance
@@ -270,7 +270,7 @@ Revenue and export
 
 It is possible to specify revenues for technologies simply by setting a negative cost value. For example, to consider a feed-in tariff for PV generation, it could be given a negative operational cost equal to the real operational cost minus the level of feed-in tariff received.
 
-Export is an extension of this, allowing an energy carrier to be removed from the system without meeting demand. This is analogous to e.g. domestic PV technologies being able to export excess electricity to the national grid. A cost (or negative cost: revenue) can then be applied to export.
+Export is an extension of this, allowing a carrier to be removed from the system without meeting demand. This is analogous to e.g. domestic PV technologies being able to export excess electricity to the national grid. A cost (or negative cost: revenue) can then be applied to export.
 
 .. note:: Negative costs can be applied to capacity costs, but the user must an ensure a capacity limit has been set. Otherwise, optimisation will be unbounded.
 

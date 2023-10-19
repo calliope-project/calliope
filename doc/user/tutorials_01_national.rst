@@ -21,7 +21,7 @@ The first is ``ccgt`` (combined-cycle gas turbine), which serves as an example o
 .. figure:: images/supply.*
    :alt: Supply node
 
-   The layout of a supply node, in this case ``ccgt``, which has an infinite source, a carrier conversion efficiency (:math:`energy_{eff}`), and a constraint on its maximum built :math:`flow_{cap}` (which puts an upper limit on :math:`flow_{out}`).
+   The layout of a supply node, in this case ``ccgt``, which has an infinite source, a carrier conversion efficiency (:math:`flow_{eff}`), and a constraint on its maximum built :math:`flow_{cap}` (which puts an upper limit on :math:`flow_{out}`).
 
 The definition of this technology in the example model's configuration looks as follows:
 
@@ -56,7 +56,7 @@ This definition in the example model's configuration is more verbose:
 
 Again, ``csp`` has the definitions for name, color, parent, and carrier_out. Its constraints are more numerous: it defines a maximum storage capacity (``storage_cap_max``), an hourly storage loss rate (``storage_loss``), then specifies that its source should be read from a file (more on that below). It also defines a carrier conversion efficiency of 0.4 and a parasitic efficiency of 0.9 (i.e., an internal loss of 0.1). Finally, the source collector area and the installed carrier conversion capacity are constrained to a maximum.
 
-The costs are more numerous as well, and include monetary costs for all relevant components along the conversion from source to carrier (power): storage capacity, source collector area, source conversion capacity, energy conversion capacity, and variable operational and maintenance costs. Finally, it also overrides the default value for the monetary interest rate.
+The costs are more numerous as well, and include monetary costs for all relevant components along the conversion from source to carrier (power): storage capacity, source collector area, source conversion capacity, carrier conversion capacity, and variable operational and maintenance costs. Finally, it also overrides the default value for the monetary interest rate.
 
 Storage technologies
 ====================
@@ -66,7 +66,7 @@ The second location allows a limited amount of battery storage to be deployed to
 .. figure:: images/storage.*
    :alt: Transmission node
 
-   A storage node with an :math:`energy_{eff}` and :math:`storage_{loss}`.
+   A storage node with an :math:`flow_{eff}` and :math:`storage_{loss}`.
 
 .. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
@@ -74,7 +74,7 @@ The second location allows a limited amount of battery storage to be deployed to
    :start-after: # battery-start
    :end-before: # battery-end
 
-The contraints give a maximum installed generation capacity for battery storage together with a maximum ratio of energy capacity to storage capacity (``flow_cap_per_storage_cap_max``) of 4, which in turn limits the storage capacity. The ratio is the charge/discharge rate / storage capacity (a.k.a the battery `reservoir`). In the case of a storage technology, ``energy_eff`` applies twice: on charging and discharging. In addition, storage technologies can lose stored energy over time -- in this case, we set this loss to zero.
+The contraints give a maximum installed generation capacity for battery storage together with a maximum ratio of flow capacity to storage capacity (``flow_cap_per_storage_cap_max``) of 4, which in turn limits the storage capacity. The ratio is the charge/discharge rate / storage capacity (a.k.a the battery `reservoir`). In the case of a storage technology, ``flow_eff`` applies twice: on charging and discharging. In addition, storage technologies can lose stored carrier over time -- in this case, we set this loss to zero.
 
 Other technologies
 ==================
@@ -99,7 +99,7 @@ What remains to set up is a simple transmission technology. Transmission technol
 .. figure:: images/transmission.*
    :alt: Transmission node
 
-   A simple transmission node with an :math:`energy_{eff}`.
+   A simple transmission node with an :math:`flow_{eff}`.
 
 .. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml

@@ -491,25 +491,25 @@ def _check_tech_final(
                 )
 
     # Error if non-allowed `source_unit` is defined
-    if tech_config.switches.get("source_unit", "energy") not in [
-        "energy",
-        "energy_per_cap",
-        "energy_per_area",
+    if tech_config.switches.get("source_unit", "absolute") not in [
+        "absolute",
+        "per_cap",
+        "per_area",
     ]:
         errors.append(
             "`{}` is an unknown source unit for `{}` at `{}`. "
-            "Only `energy`, `energy_per_cap`, or `energy_per_area` is allowed.".format(
+            "Only `absolute`, `per_cap`, or `per_area` is allowed.".format(
                 tech_config.switches.source_unit, tech_id, loc_id
             )
         )
     # Error if non-allowed `sink_unit` is defined
-    if tech_config.switches.get("sink_unit", "energy") not in [
-        "energy",
-        "energy_per_area",
+    if tech_config.switches.get("sink_unit", "absolute") not in [
+        "absolute",
+        "per_area",
     ]:
         errors.append(
             "`{}` is an unknown sink unit for `{}` at `{}`. "
-            "Only `energy`, or `energy_per_area` is allowed.".format(
+            "Only `absolute`, or `per_area` is allowed.".format(
                 tech_config.switches.sink_unit, tech_id, loc_id
             )
         )

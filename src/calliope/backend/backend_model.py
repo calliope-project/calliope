@@ -360,8 +360,8 @@ class BackendModelGenerator(ABC):
                 Dictionary describing the object being added, from which descriptor attributes will be extracted and added to the array attributes.
             references (set):
                 All other backend objects which are references in this backend object's linear expression(s).
-                E.g. the constraint "flow_out / energy_eff <= flow_cap" references the variables ["flow_out", "flow_cap"]
-                and the parameter ["energy_eff"].
+                E.g. the constraint "flow_out / flow_eff <= flow_cap" references the variables ["flow_out", "flow_cap"]
+                and the parameter ["flow_eff"].
                 All referenced objects will have their "references" attribute updated with this object's name.
                 Defaults to None.
         """

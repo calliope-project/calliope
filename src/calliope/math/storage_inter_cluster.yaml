@@ -1,4 +1,4 @@
-# Constraints and variables to improve the representation of storage technologies in a model using time clustering to optimise using representative days. Although the pattern of storage fluctuations is fixed for all days linked to a specific representative day, an excess or deficit of stored energy can exist at the end of each of these days and can be utilised by the next representative day in the timeseries.
+# Constraints and variables to improve the representation of storage technologies in a model using time clustering to optimise using representative days. Although the pattern of storage fluctuations is fixed for all days linked to a specific representative day, an excess or deficit of stored carrier can exist at the end of each of these days and can be utilised by the next representative day in the timeseries.
 
 constraints:
   storage_max:
@@ -26,7 +26,7 @@ constraints:
         - expression: get_val_at_index(datesteps=-1)
 
   storage_intra_max:
-    description: "Set the upper bound of a `storage` technology's stored energy within a clustered day"
+    description: "Set the upper bound of a `storage` technology's stored carrier within a clustered day"
     foreach: [nodes, techs, timesteps]
     where: "include_storage=True"
     equations:
@@ -36,7 +36,7 @@ constraints:
         - expression: timestep_cluster
 
   storage_intra_min:
-    description: "Set the lower bound of a `storage` technology's stored energy within a clustered day"
+    description: "Set the lower bound of a `storage` technology's stored carrier within a clustered day"
     foreach: [nodes, techs, timesteps]
     where: "include_storage=True"
     equations:
@@ -44,7 +44,7 @@ constraints:
     slices: *timestep_cluster_slice
 
   storage_inter_max:
-    description: "Set the upper bound of a `storage` technology's stored energy across all days in the timeseries"
+    description: "Set the upper bound of a `storage` technology's stored carrier across all days in the timeseries"
     foreach: [nodes, techs, datesteps]
     where: "include_storage=True"
     equations:
@@ -54,7 +54,7 @@ constraints:
         - expression: lookup_datestep_cluster
 
   storage_inter_min:
-    description: "Set the lower bound of a `storage` technology's stored energy across all days in the timeseries"
+    description: "Set the lower bound of a `storage` technology's stored carrier across all days in the timeseries"
     foreach: [nodes, techs, datesteps]
     where: "include_storage=True"
     equations:
@@ -62,7 +62,7 @@ constraints:
     slices: *datestep_cluster_slice
 
   balance_storage_inter:
-    description: "Fix the relationship between one day and the next of a `storage` technology's available stored energy, according to the previous day's representative storage fluctuations and the excess stored energy available from all days up to this day."
+    description: "Fix the relationship between one day and the next of a `storage` technology's available stored carrier, according to the previous day's representative storage fluctuations and the excess stored carrier available from all days up to this day."
     foreach: [nodes, techs, datesteps]
     where: "include_storage=True"
     equations:
@@ -84,13 +84,13 @@ constraints:
 
 variables:
   storage:
-    description: "The virtual energy stored by a `supply_plus` or `storage` technology in each timestep of a clustered day. Stored energy can be negative so long as it does not go below the energy stored in `storage_inter_cluster`. Only together with `storage_inter_cluster` does this variable's values gain physical significance."
+    description: "The virtual carrier stored by a `supply_plus` or `storage` technology in each timestep of a clustered day. Stored carrier can be negative so long as it does not go below the carrier stored in `storage_inter_cluster`. Only together with `storage_inter_cluster` does this variable's values gain physical significance."
     unit: energy
     bounds:
       min: -.inf
 
   storage_inter_cluster:
-    description: "The virtual energy stored by a `supply_plus` or `storage` technology between days of the entire timeseries. Only together with `storage` does this variable's values gain physical significance."
+    description: "The virtual carrier stored by a `supply_plus` or `storage` technology between days of the entire timeseries. Only together with `storage` does this variable's values gain physical significance."
     foreach: [nodes, techs, datesteps]
     where: "include_storage=True"
     bounds:
