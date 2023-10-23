@@ -211,7 +211,7 @@ class BackendModelGenerator(ABC):
         if component_dict is None:
             component_dict = self.inputs.math[component_type][name]
 
-        if component_dict.get("active", False):
+        if break_early and component_dict.get("active", False):
             self.log(
                 component_type, name, "Component deactivated and therefore not built."
             )
@@ -223,7 +223,10 @@ class BackendModelGenerator(ABC):
         )
 
         top_level_where = parsed_component.generate_top_level_where_array(
-            self.inputs, align_to_foreach_sets=False, break_early=break_early
+            self.inputs,
+            self._dataset,
+            align_to_foreach_sets=False,
+            break_early=break_early,
         )
         if break_early and not top_level_where.any():
             return parsed_component
@@ -242,7 +245,9 @@ class BackendModelGenerator(ABC):
                 .astype(np.dtype("O"))
             )
         for element in equations:
-            where = element.evaluate_where(self.inputs, initial_where=top_level_where)
+            where = element.evaluate_where(
+                self.inputs, self._dataset, initial_where=top_level_where
+            )
             if break_early and not where.any():
                 continue
 

@@ -249,6 +249,7 @@ class ParsedBackendEquation:
     def evaluate_where(  # noqa: F811
         self,
         model_data: xr.Dataset,
+        backend_dataset: Optional[xr.Dataset],
         as_latex: Literal[False] = False,
         initial_where: xr.DataArray = TRUE_ARRAY,
     ) -> xr.DataArray:
@@ -258,6 +259,7 @@ class ParsedBackendEquation:
     def evaluate_where(  # noqa: F811
         self,
         model_data: xr.Dataset,
+        backend_dataset: Optional[xr.Dataset],
         as_latex: Literal[True],
     ) -> str:
         "Expecting string if requesting latex string"
@@ -265,6 +267,7 @@ class ParsedBackendEquation:
     def evaluate_where(  # noqa: F811
         self,
         model_data: xr.Dataset,
+        backend_dataset: Optional[xr.Dataset] = None,
         as_latex: bool = False,
         initial_where: xr.DataArray = TRUE_ARRAY,
     ) -> Union[xr.DataArray, str]:
@@ -286,6 +289,7 @@ class ParsedBackendEquation:
                 helper_functions=helper_functions._registry["where"],
                 as_latex=as_latex,
                 model_data=model_data,
+                backend_dataset=backend_dataset,
             )
             for where in self.where
         ]
@@ -704,6 +708,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
     def generate_top_level_where_array(
         self,
         model_data: xr.Dataset,
+        backend_dataset: Optional[xr.Dataset] = None,
         align_to_foreach_sets: bool = True,
         break_early: bool = True,
     ) -> xr.DataArray:
@@ -733,7 +738,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
             return foreach_where
 
         self.parse_top_level_where()
-        where = self.evaluate_where(model_data, initial_where=foreach_where)
+        where = self.evaluate_where(
+            model_data, backend_dataset, initial_where=foreach_where
+        )
         if break_early and not where.any():
             return where
 
