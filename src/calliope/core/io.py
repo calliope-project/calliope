@@ -10,6 +10,7 @@ Functions to read and save model results.
 """
 
 import os
+from typing import Union
 
 # We import netCDF4 before xarray to mitigate a numpy warning:
 # https://github.com/pydata/xarray/issues/7259
