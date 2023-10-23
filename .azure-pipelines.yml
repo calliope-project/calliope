@@ -55,12 +55,16 @@ strategy:
       IMAGE_NAME: ubuntu-latest
       PYTHON_VERSION: 3.9
       CODECOV: True  # Only run on one build
-    macos-py3.9:
+    linux-py3.11:
+      IMAGE_NAME: ubuntu-latest
+      PYTHON_VERSION: 3.11
+      CODECOV: True  # Only run on one build
+    macos-py3.11:
       IMAGE_NAME: macOS-latest
-      PYTHON_VERSION: 3.9
-    windows-py3.9:
+      PYTHON_VERSION: 3.11
+    windows-py3.11:
       IMAGE_NAME: windows-latest
-      PYTHON_VERSION: 3.9
+      PYTHON_VERSION: 3.11
 
 steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
