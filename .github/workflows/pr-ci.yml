@@ -28,7 +28,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
-        py3version: ["9", "11"]
+        py3version: ["9", "10", "11"]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
