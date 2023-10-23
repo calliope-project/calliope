@@ -9,8 +9,8 @@ import jinja2
 import numpy as np
 import xarray as xr
 
-from calliope.backend import backends, parsing
-from calliope.exceptions import BackendError, ModelError
+from calliope.backend import backend_model, parsing
+from calliope.exceptions import ModelError
 
 _ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
 
@@ -21,9 +21,10 @@ class MathDocumentation:
 
         Args:
             backend_builder (Callable):
-                Method to generate all optimisation problem components on a calliope.backends.BackendModel object.
+                Method to generate all optimisation problem components on a calliope.backend_model.BackendModel object.
         """
         self._builder = backend_builder
+        self._inputs: xr.Dataset
 
     def build(
         self,
@@ -36,9 +37,17 @@ class MathDocumentation:
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
         """
 
-        backend = LatexBackendModel(include=include)
+        backend = LatexBackendModel(self._inputs, include=include)
 
         self._instance = self._builder(backend)
+
+    @property
+    def inputs(self):
+        return self._inputs
+
+    @inputs.setter
+    def inputs(self, val: xr.Dataset):
+        self._inputs = val
 
     @overload  # noqa: F811
     def write(  # noqa: F811
@@ -101,30 +110,30 @@ class MathDocumentation:
             return None
 
 
-class LatexBackendModel(backends.BackendModel):
+class LatexBackendModel(backend_model.BackendModelGenerator):
     # \negthickspace used to counter the introduction of spaces to separate the curly braces
     # in \text. Curly braces need separating otherwise jinja2 gets confused.
     LATEX_EQUATION_ELEMENT = textwrap.dedent(
         r"""
         \begin{array}{r}
-        {% if sets is defined and sets%}
+        {% if sets is defined and sets %}
             \forall{}
         {% for set in sets %}
             \text{ {{set|removesuffix("s")}} }\negthickspace \in \negthickspace\text{ {{set + "," if not loop.last else set }} }
         {% endfor %}
             \\
         {% endif %}
-        {% if sense is defined %}
+        {% if sense is defined and sense %}
             {{sense}}
         {% endif %}
-        {% if where is defined and where != "" %}
+        {% if where is defined and where and where != "" %}
             \text{if } {{where}}
         {% endif %}
         \end{array}
         \begin{cases}
         {% for equation in equations %}
             {{equation["expression"]}}&\quad
-        {% if "where" in equation and equation["where"] != "" %}
+        {% if "where" in equation and equation.where != "" %}
             \text{if } {{equation["where"]}}
         {% endif %}
             \\
@@ -246,15 +255,19 @@ class LatexBackendModel(backends.BackendModel):
     )
     FORMAT_STRINGS = {"rst": RST_DOC, "tex": TEX_DOC, "md": MD_DOC}
 
-    def __init__(self, include: Literal["all", "valid"] = "all") -> None:
+    def __init__(
+        self, inputs: xr.Dataset, include: Literal["all", "valid"] = "all"
+    ) -> None:
         """Interface to build a string representation of the mathematical formulation using LaTeX math notation.
 
         Args:
             include (Literal["all", "valid"], optional):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
         """
-        backends.BackendModel.__init__(self, instance=dict())
+        super().__init__(inputs)
         self.include = include
+
+        self._add_all_inputs_as_parameters()
 
     def add_parameter(
         self,
@@ -268,148 +281,129 @@ class LatexBackendModel(backends.BackendModel):
 
     def add_constraint(
         self,
-        model_data: xr.Dataset,
         name: str,
-        constraint_dict: parsing.UnparsedConstraintDict,
+        constraint_dict: Optional[parsing.UnparsedConstraintDict] = None,
     ) -> None:
-        self._add_constraint_or_expression(
-            model_data,
+        equation_strings: list = []
+
+        def _constraint_setter(
+            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
+        ) -> xr.DataArray:
+            self._add_latex_strings(where, element, equation_strings)
+            return where.where(where)
+
+        parsed_component = self._add_component(
             name,
             constraint_dict,
-            lambda x: None,
+            _constraint_setter,
             "constraints",
+            break_early=False,
+        )
+
+        self._generate_math_string(
+            parsed_component,
+            self.constraints[name],
+            equations=equation_strings,
         )
 
     def add_global_expression(
         self,
-        model_data: xr.Dataset,
         name: str,
-        expression_dict: parsing.UnparsedConstraintDict,
+        expression_dict: Optional[parsing.UnparsedExpressionDict] = None,
     ) -> None:
         self.valid_math_element_names.add(name)
 
-        self._add_constraint_or_expression(
-            model_data,
+        equation_strings: list = []
+
+        def _expression_setter(
+            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
+        ) -> xr.DataArray:
+            self._add_latex_strings(where, element, equation_strings)
+            return where.where(where)
+
+        parsed_component = self._add_component(
             name,
             expression_dict,
-            lambda x: None,
+            _expression_setter,
             "global_expressions",
+            break_early=False,
+        )
+
+        self._generate_math_string(
+            parsed_component,
+            self.global_expressions[name],
+            equations=equation_strings,
         )
 
     def add_variable(
         self,
-        model_data: xr.Dataset,
         name: str,
-        variable_dict: parsing.UnparsedVariableDict,
+        variable_dict: Optional[parsing.UnparsedVariableDict] = None,
     ) -> None:
+        domain_dict = {"real": r"\R", "integer": r"\Z"}
+
         self.valid_math_element_names.add(name)
-        self._raise_error_on_preexistence(name, "variables")
 
-        parsed_variable = parsing.ParsedBackendComponent(
-            "variables", name, variable_dict
+        if variable_dict is None:
+            variable_dict = self.inputs.math["variables"][name]
+
+        parsed_component = self._add_component(
+            name, variable_dict, lambda where: where, "variables", break_early=False
         )
-        where_array = parsed_variable.generate_top_level_where_array(
-            model_data, break_early=False
+        where_array = self.variables[name]
+
+        domain = domain_dict[variable_dict.get("domain", "real")]
+        lb, ub = self._get_capacity_bounds(name, variable_dict["bounds"])
+
+        self._generate_math_string(
+            parsed_component,
+            where_array,
+            equations=[lb, ub],
+            sense=r"\forall" + domain,
         )
-
-        # add early to be accessed when creating bound strings.
-        self._add_to_dataset(name, where_array, "variables", variable_dict)
-
-        where_latex = parsed_variable.evaluate_where(model_data, as_latex=True)
-        lb, ub = self._get_capacity_bounds(variable_dict["bounds"], name, model_data)
-
-        if self.include == "all" or (self.include == "valid" and where_array.any()):
-            self._generate_math_string(
-                where_array,
-                sets=parsed_variable.sets,
-                where=where_latex if where_latex != "" else None,
-                equations=[lb, ub],
-            )
-        # add again to ensure "math_string" attribute is there.
-        self._add_to_dataset(name, where_array, "variables", variable_dict)
 
     def add_objective(
         self,
-        model_data: xr.Dataset,
         name: str,
-        objective_dict: parsing.UnparsedObjectiveDict,
+        objective_dict: Optional[parsing.UnparsedObjectiveDict] = None,
     ) -> None:
-        self._raise_error_on_preexistence(name, "objectives")
         sense_dict = {
             "minimize": r"\min{}",
             "maximize": r"\max{}",
             "minimise": r"\min{}",
             "maximise": r"\max{}",
         }
-        parsed_objective = parsing.ParsedBackendComponent(
-            "objectives", name, objective_dict
-        )
-        equations = parsed_objective.parse_equations(self.valid_math_element_names)
-        equation_strings = []
-        for element in equations:
-            if self.include == "valid":
-                where_array = element.evaluate_where(model_data)
-            where_latex = element.evaluate_where(model_data, as_latex=True)
-            expr = element.evaluate_expression(model_data, self, as_latex=True)
+        if objective_dict is None:
+            objective_dict = self.inputs.math["objectives"][name]
+        equation_strings: list = []
 
-            if self.include == "all" or (self.include == "valid" and where_array.any()):
-                equation_strings.append({"expression": expr, "where": where_latex})
-        objective_da = xr.DataArray()
-        if equation_strings:
-            self._generate_math_string(
-                objective_da,
-                sense=sense_dict[objective_dict["sense"]],
-                equations=equation_strings,
-            )
-        self._add_to_dataset(name, objective_da, "objectives", objective_dict)
+        def _objective_setter(
+            element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
+        ) -> None:
+            self._add_latex_strings(where, element, equation_strings)
+            return None
 
-    def get_parameter(
-        self, parameter_name: str, as_backend_objs: bool = True
-    ) -> Optional[xr.DataArray]:
-        return self.parameters.get(parameter_name, None)
-
-    def create_obj_list(self, key: str, component_type: backends._COMPONENTS_T) -> None:
-        return None
-
-    def delete_obj_list(self, key: str, component_type: backends._COMPONENTS_T) -> None:
-        return None
-
-    def get_constraint(
-        self,
-        constraint_name: str,
-        as_backend_objs: bool = True,
-        eval_body: bool = False,
-    ) -> Optional[Union[xr.DataArray, xr.Dataset]]:
-        return self.constraints.get(constraint_name, None)
-
-    def get_variable(
-        self, variable_name: str, as_backend_objs: bool = True
-    ) -> Optional[xr.DataArray]:
-        return self.variables.get(variable_name, None)
-
-    def get_global_expression(
-        self, expression_name: str, as_backend_objs: bool = True, eval_body: bool = True
-    ) -> Optional[xr.DataArray]:
-        return self.global_expressions.get(expression_name, None)
-
-    def solve(
-        self,
-        solver: str,
-        solver_io: Optional[str] = None,
-        solver_options: Optional[dict] = None,
-        save_logs: Optional[str] = None,
-        warmstart: bool = False,
-        **solve_kwargs,
-    ):
-        raise BackendError(
-            "Cannot solve a LaTex backend model - this only exists to produce a string representation of the model math"
+        parsed_component = self._add_component(
+            name, objective_dict, _objective_setter, "objectives", break_early=False
         )
 
-    def verbose_strings(self):
+        self._generate_math_string(
+            parsed_component,
+            self.objectives[name],
+            equations=equation_strings,
+            sense=sense_dict[objective_dict["sense"]],
+        )
+
+    def _create_obj_list(
+        self, key: str, component_type: backend_model._COMPONENTS_T
+    ) -> None:
         return None
 
-    def to_lp(self, path: Union[str, Path]):
-        return None
+    def delete_component(
+        self, key: str, component_type: backend_model._COMPONENTS_T
+    ) -> None:
+        if key in self._dataset and self._dataset[key].obj_type == component_type:
+            del self._dataset[key]
 
     def generate_math_doc(self, format: _ALLOWED_MATH_FILE_FORMATS = "tex") -> str:
         """Generate the math documentation by embedding LaTeX math in a template.
@@ -442,64 +436,37 @@ class LatexBackendModel(backends.BackendModel):
         }
         return self._render(doc_template, components=components)
 
-    def _add_constraint_or_expression(
-        self,
-        model_data: xr.Dataset,
-        name: str,
-        component_dict: Union[
-            parsing.UnparsedConstraintDict, parsing.UnparsedExpressionDict
-        ],
-        component_setter: Callable,
-        component_type: Literal["constraints", "global_expressions"],
-    ) -> None:
-        parsed_component = parsing.ParsedBackendComponent(
-            component_type, name, component_dict
-        )
+    def _add_latex_strings(self, where, element, equation_strings):
+        expr = element.evaluate_expression(self.inputs, self, as_latex=True)
+        where_latex = element.evaluate_where(self.inputs, as_latex=True)
 
-        top_level_where = parsed_component.generate_top_level_where_array(
-            model_data, break_early=False
-        )
-        component_da = xr.DataArray().where(
-            parsed_component.drop_dims_not_in_foreach(top_level_where)
-        )
-        top_level_where_latex = parsed_component.evaluate_where(
-            model_data, as_latex=True
-        )
-
-        self._raise_error_on_preexistence(name, component_type)
-
-        equations = parsed_component.parse_equations(self.valid_math_element_names)
-        equation_strings = []
-        for element in equations:
-            where_array = element.evaluate_where(
-                model_data, initial_where=top_level_where
-            )
-            where_array = parsed_component.drop_dims_not_in_foreach(where_array)
-
-            expr = element.evaluate_expression(model_data, self, as_latex=True)
-            where_latex = element.evaluate_where(model_data, as_latex=True)
-
-            if self.include == "all" or (self.include == "valid" and where_array.any()):
-                equation_strings.append({"expression": expr, "where": where_latex})
-            component_da = component_da.fillna(where_array.where(where_array))
-        if equation_strings:
-            self._generate_math_string(
-                component_da,
-                sets=parsed_component.sets,
-                where=top_level_where_latex,
-                equations=equation_strings,
-            )
-        self._add_to_dataset(
-            name, component_da.fillna(0), component_type, component_dict
-        )
+        if self.include == "all" or (self.include == "valid" and where.any()):
+            equation_strings.append({"expression": expr, "where": where_latex})
 
     def _generate_math_string(
         self,
-        da: xr.DataArray,
-        **kwargs,
+        parsed_component: Optional[parsing.ParsedBackendComponent],
+        where_array: xr.DataArray,
+        equations: Optional[list[dict[str, str]]] = None,
+        sense: Optional[str] = None,
+        where: Optional[str] = None,
+        sets: Optional[list[str]] = None,
     ) -> None:
-        equation_element_string = self._render(self.LATEX_EQUATION_ELEMENT, **kwargs)
-        da.attrs.update({"math_string": equation_element_string})
+        if parsed_component is not None:
+            where = parsed_component.evaluate_where(self.inputs, as_latex=True)
+            sets = parsed_component.sets
+
+        if self.include == "all" or (
+            self.include == "valid" and where_array.fillna(0).any()
+        ):
+            equation_element_string = self._render(
+                self.LATEX_EQUATION_ELEMENT,
+                equations=equations if equations is not None else [],
+                sense=sense,
+                where=where,
+                sets=sets,
+            )
+            where_array.attrs.update({"math_string": equation_element_string})
         return None
 
     @staticmethod
@@ -510,13 +477,10 @@ class LatexBackendModel(backends.BackendModel):
 
     def _get_capacity_bounds(
         self,
-        bounds: parsing.UnparsedVariableBoundDict,
         name: str,
-        model_data: xr.Dataset,
+        bounds: parsing.UnparsedVariableBoundDict,
     ) -> tuple[dict[str, str], ...]:
         bound_dict: parsing.UnparsedConstraintDict = {
-            "foreach": [],
-            "where": "True",
             "equations": [
                 {"expression": f"{bounds['min']} <= {name}"},
                 {"expression": f"{name} <= {bounds['max']}"},
@@ -527,6 +491,6 @@ class LatexBackendModel(backends.BackendModel):
             self.valid_math_element_names,
         )
         return tuple(
-            {"expression": eq.evaluate_expression(model_data, self, as_latex=True)}
+            {"expression": eq.evaluate_expression(self.inputs, self, as_latex=True)}
             for eq in equations
         )

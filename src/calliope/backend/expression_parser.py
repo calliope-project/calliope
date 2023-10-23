@@ -51,7 +51,7 @@ from calliope.backend.helper_functions import ParsingHelperFunction
 from calliope.exceptions import BackendError
 
 if TYPE_CHECKING:
-    from calliope.backend.backends import BackendModel
+    from calliope.backend.backend_model import BackendModel
 
 pp.ParserElement.enablePackrat()
 

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 import xarray as xr
 from calliope import exceptions
-from calliope.backend import latex_backend
+from calliope.backend import latex_backend_model
 
 from .common.util import build_test_model, check_error_or_warning
 
@@ -67,8 +67,8 @@ class TestMathDocumentation:
 
 class TestLatexBackendModel:
     @pytest.fixture(scope="class")
-    def valid_latex_backend(self):
-        return latex_backend.LatexBackendModel(include="valid")
+    def valid_latex_backend(self, dummy_model_data):
+        return latex_backend_model.LatexBackendModel(dummy_model_data, include="valid")
 
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
@@ -85,7 +85,6 @@ class TestLatexBackendModel:
     def test_add_variable(self, request, dummy_model_data, backend_obj):
         latex_backend_model = request.getfixturevalue(backend_obj)
         latex_backend_model.add_variable(
-            dummy_model_data,
             "var",
             {
                 "foreach": ["nodes", "techs"],
@@ -101,9 +100,8 @@ class TestLatexBackendModel:
         assert "var" in latex_backend_model.valid_math_element_names
         assert "math_string" in latex_backend_model.variables["var"].attrs
 
-    def test_add_variable_not_valid(self, dummy_model_data, valid_latex_backend):
+    def test_add_variable_not_valid(self, valid_latex_backend):
         valid_latex_backend.add_variable(
-            dummy_model_data,
             "invalid_var",
             {
                 "foreach": ["nodes", "techs"],
@@ -122,7 +120,6 @@ class TestLatexBackendModel:
     def test_add_expression(self, request, dummy_model_data, backend_obj):
         latex_backend_model = request.getfixturevalue(backend_obj)
         latex_backend_model.add_global_expression(
-            dummy_model_data,
             "expr",
             {
                 "foreach": ["nodes", "techs"],
@@ -144,7 +141,6 @@ class TestLatexBackendModel:
     def test_add_constraint(self, request, dummy_model_data, backend_obj):
         latex_backend_model = request.getfixturevalue(backend_obj)
         latex_backend_model.add_constraint(
-            dummy_model_data,
             "constr",
             {
                 "foreach": ["nodes", "techs"],
@@ -160,9 +156,8 @@ class TestLatexBackendModel:
         assert "constr" not in latex_backend_model.valid_math_element_names
         assert "math_string" in latex_backend_model.constraints["constr"].attrs
 
-    def test_add_constraint_not_valid(self, dummy_model_data, valid_latex_backend):
+    def test_add_constraint_not_valid(self, valid_latex_backend):
         valid_latex_backend.add_constraint(
-            dummy_model_data,
             "invalid_constr",
             {
                 "foreach": ["nodes", "techs"],
@@ -173,14 +168,13 @@ class TestLatexBackendModel:
                 ],
             },
         )
-        assert not valid_latex_backend.constraints["invalid_constr"].any()
+        assert valid_latex_backend.constraints["invalid_constr"].isnull().all()
         assert (
             "math_string" not in valid_latex_backend.constraints["invalid_constr"].attrs
         )
 
-    def test_add_constraint_one_not_valid(self, dummy_model_data, valid_latex_backend):
+    def test_add_constraint_one_not_valid(self, valid_latex_backend):
         valid_latex_backend.add_constraint(
-            dummy_model_data,
             "valid_constr",
             {
                 "foreach": ["nodes", "techs"],
@@ -196,9 +190,8 @@ class TestLatexBackendModel:
             not in valid_latex_backend.constraints["valid_constr"].attrs["math_string"]
         )
 
-    def test_add_objective(self, dummy_model_data, dummy_latex_backend_model):
+    def test_add_objective(self, dummy_latex_backend_model):
         dummy_latex_backend_model.add_objective(
-            dummy_model_data,
             "obj",
             {
                 "equations": [{"expression": "sum(var, over=[nodes, techs])"}],
@@ -209,29 +202,8 @@ class TestLatexBackendModel:
         assert "obj" not in dummy_latex_backend_model.valid_math_element_names
         assert len(dummy_latex_backend_model.objectives.data_vars) == 1
 
-    def test_get_parameter(self, dummy_latex_backend_model):
-        param = dummy_latex_backend_model.get_parameter("param")
-        assert param.equals(xr.DataArray(1))
-
     def test_create_obj_list(self, dummy_latex_backend_model):
-        assert dummy_latex_backend_model.create_obj_list("var", "variables") is None
-
-    def test_get_constraint(self, dummy_latex_backend_model):
-        constr = dummy_latex_backend_model.get_constraint("constr")
-        assert constr.equals(dummy_latex_backend_model.constraints["constr"])
-
-    def test_get_variable(self, dummy_latex_backend_model):
-        var = dummy_latex_backend_model.get_variable("var")
-        assert var.equals(dummy_latex_backend_model.variables["var"])
-
-    def test_get_expression(self, dummy_latex_backend_model):
-        expr = dummy_latex_backend_model.get_global_expression("expr")
-        assert expr.equals(dummy_latex_backend_model.global_expressions["expr"])
-
-    def test_solve(self, dummy_latex_backend_model):
-        with pytest.raises(exceptions.BackendError) as excinfo:
-            dummy_latex_backend_model.solve("cbc")
-        assert check_error_or_warning(excinfo, "Cannot solve a LaTex backend model")
+        assert dummy_latex_backend_model._create_obj_list("var", "variables") is None
 
     @pytest.mark.parametrize(
         ["format", "expected"],
@@ -321,13 +293,11 @@ class TestLatexBackendModel:
         ],
     )
     def test_generate_math_doc(self, dummy_model_data, format, expected):
-        latex_backend_model = latex_backend.LatexBackendModel()
-        latex_backend_model.add_global_expression(
-            dummy_model_data,
-            "expr",
-            {"equations": [{"expression": "1 + 2"}], "description": "foobar"},
+        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+        backend_model.add_global_expression(
+            "expr", {"equations": [{"expression": "1 + 2"}], "description": "foobar"}
         )
-        doc = latex_backend_model.generate_math_doc(format=format)
+        doc = backend_model.generate_math_doc(format=format)
         assert doc == expected
 
     @pytest.mark.parametrize(
@@ -403,7 +373,7 @@ class TestLatexBackendModel:
     )
     def test_generate_math_string(self, dummy_latex_backend_model, kwargs, expected):
         da = xr.DataArray()
-        dummy_latex_backend_model._generate_math_string(da, **kwargs)
+        dummy_latex_backend_model._generate_math_string(None, da, **kwargs)
         assert da.math_string == expected
 
     @pytest.mark.parametrize(
@@ -418,11 +388,9 @@ class TestLatexBackendModel:
         rendered = dummy_latex_backend_model._render(instring, **kwargs)
         assert rendered == expected
 
-    def test_get_capacity_bounds(self, dummy_latex_backend_model, dummy_model_data):
+    def test_get_capacity_bounds(self, dummy_latex_backend_model):
         bounds = {"min": 1, "max": 2e6}
-        lb, ub = dummy_latex_backend_model._get_capacity_bounds(
-            bounds, "multi_dim_var", dummy_model_data
-        )
+        lb, ub = dummy_latex_backend_model._get_capacity_bounds("multi_dim_var", bounds)
         assert lb == {"expression": r"1 \leq \textbf{multi_dim_var}_\text{node,tech}"}
         assert ub == {
             "expression": r"\textbf{multi_dim_var}_\text{node,tech} \leq 2\mathord{\times}10^{+06}"

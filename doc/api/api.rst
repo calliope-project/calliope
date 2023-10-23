@@ -33,6 +33,15 @@ Time series
 .. automodule:: calliope.time.funcs
     :members: resample
 
+.. _api_backend_interface:
+
+Methods to interface with the optimisation problem (a.k.a., `backend`)
+======================================================================
+
+.. autoclass:: calliope.backend.backend_model.BackendModel
+    :members:
+    :inherited-members:
+
 .. _api_utility_classes:
 
 Utility classes: AttrDict, Exceptions, Logging

@@ -261,46 +261,6 @@ class TestCustomMath:
         )
 
 
-class TestVerboseStrings:
-    def test_verbose_strings_not_implemented(self):
-        m = build_model(
-            {},
-            "simple_supply,two_hours,investment_costs",
-        )
-        with pytest.raises(NotImplementedError) as excinfo:
-            m.verbose_strings()
-
-        assert check_error_or_warning(
-            excinfo,
-            "Call `build()` to generate an optimisation problem before calling this function.",
-        )
-
-    def test_verbose_strings(self, simple_supply):
-        def _compare_to_string(group, component, dims, verbose):
-            component_obj = simple_supply.backend._dataset[component]
-            if verbose:
-                dim_list = ", ".join(dims[k] for k in component_obj.dims)
-                expected = f"{group}[{component}][{dim_list}]"
-            else:
-                expected = f"{group}[{component}][0]"
-            return component_obj.sel(**dims).item().to_string() == expected
-
-        dims_param = {
-            "nodes": "a",
-            "techs": "test_demand_elec",
-            "timesteps": "2005-01-01 00:00",
-        }
-        dims_var = {"carriers": "electricity", **dims_param}
-
-        assert _compare_to_string("parameters", "resource", dims_param, False)
-        assert _compare_to_string("variables", "carrier_con", dims_var, False)
-
-        simple_supply.verbose_strings()
-
-        assert _compare_to_string("parameters", "resource", dims_param, True)
-        assert _compare_to_string("variables", "carrier_con", dims_var, True)
-
-
 class TestValidateMathDict:
     def test_base_math(self, caplog, simple_supply):
         with caplog.at_level(logging.INFO, logger=LOGGER):

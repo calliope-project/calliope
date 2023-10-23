@@ -6,14 +6,28 @@ from __future__ import annotations
 import functools
 import itertools
 import operator
-from typing import Any, Callable, Iterable, Literal, Optional, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Iterable,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import pyparsing as pp
 import xarray as xr
 from typing_extensions import NotRequired, Required, TypedDict
 
 from calliope import exceptions
-from calliope.backend import backends, expression_parser, helper_functions, where_parser
+from calliope.backend import expression_parser, helper_functions, where_parser
+
+if TYPE_CHECKING:
+    from calliope.backend import backend_model
+
 
 TRUE_ARRAY = xr.DataArray(True)
 
@@ -25,8 +39,8 @@ class UnparsedEquationDict(TypedDict):
 
 class UnparsedConstraintDict(TypedDict):
     description: NotRequired[str]
-    foreach: Required[list]
-    where: str
+    foreach: NotRequired[list]
+    where: NotRequired[str]
     equations: Required[list[UnparsedEquationDict]]
     sub_expressions: NotRequired[dict[str, list[UnparsedEquationDict]]]
     slices: NotRequired[dict[str, list[UnparsedEquationDict]]]
@@ -296,7 +310,7 @@ class ParsedBackendEquation:
     def evaluate_expression(  # noqa: F811
         self,
         model_data: xr.Dataset,
-        backend_interface: backends.BackendModel,
+        backend_interface: backend_model.BackendModel,
         as_latex: Literal[False] = False,
         references: Optional[set] = None,
         where: Optional[xr.DataArray] = None,
@@ -307,7 +321,7 @@ class ParsedBackendEquation:
     def evaluate_expression(  # noqa: F811
         self,
         model_data: xr.Dataset,
-        backend_interface: backends.BackendModel,
+        backend_interface: backend_model.BackendModel,
         as_latex: Literal[True],
         references: Optional[set] = None,
     ) -> str:
@@ -316,7 +330,7 @@ class ParsedBackendEquation:
     def evaluate_expression(  # noqa: F811
         self,
         model_data: xr.Dataset,
-        backend_interface: backends.BackendModel,
+        backend_interface: backend_model.BackendModel,
         as_latex: bool = False,
         references: Optional[set] = None,
         where: Optional[xr.DataArray] = None,

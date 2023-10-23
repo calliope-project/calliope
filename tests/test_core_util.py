@@ -9,13 +9,7 @@ import jsonschema
 import pytest
 from calliope.core.util.generate_runs import generate_runs
 from calliope.core.util.logging import log_time
-from calliope.core.util.tools import (
-    copy_docstring,
-    memoize,
-    memoize_instancemethod,
-    validate_dict,
-)
-from calliope.exceptions import ModelError
+from calliope.core.util.tools import memoize, memoize_instancemethod, validate_dict
 
 from .common.util import check_error_or_warning, python36_or_higher
 
@@ -56,19 +50,28 @@ class TestLogging:
 
         assert logging.getLogger("calliope").getEffectiveLevel() == 50
         assert logging.getLogger("py.warnings").getEffectiveLevel() == 50
-        assert logging.getLogger("calliope.backend.backends").getEffectiveLevel() == 10
+        assert (
+            logging.getLogger("calliope.backend.backend_model").getEffectiveLevel()
+            == 10
+        )
 
         calliope.set_log_verbosity("CRITICAL", include_solver_output=False)
 
         assert logging.getLogger("calliope").getEffectiveLevel() == 50
         assert logging.getLogger("py.warnings").getEffectiveLevel() == 50
-        assert logging.getLogger("calliope.backend.backends").getEffectiveLevel() == 50
+        assert (
+            logging.getLogger("calliope.backend.backend_model").getEffectiveLevel()
+            == 50
+        )
 
         calliope.set_log_verbosity()
 
         assert logging.getLogger("calliope").getEffectiveLevel() == 20
         assert logging.getLogger("py.warnings").getEffectiveLevel() == 20
-        assert logging.getLogger("calliope.backend.backends").getEffectiveLevel() == 10
+        assert (
+            logging.getLogger("calliope.backend.backend_model").getEffectiveLevel()
+            == 10
+        )
 
     def test_timing_log(self):
         timings = {"model_creation": datetime.datetime.now()}
@@ -139,20 +142,6 @@ class TestPandasExport:
             pass
 
 
-class TestCopyDocstring:
-    def test_copy_docstring(self):
-        def _func_w_docstring():
-            "foobar"
-            pass
-
-        def _func(foo, bar):
-            return foo + bar
-
-        docified_func = copy_docstring(_func_w_docstring)(_func)
-        assert docified_func.__doc__ == "foobar"
-        assert docified_func(1, 2) == 3
-
-
 class TestValidateDict:
     @pytest.mark.parametrize(
         ["schema", "expected_path"],
@@ -195,7 +184,7 @@ class TestValidateDict:
             },
             "additionalProperties": False,
         }
-        with pytest.raises(ModelError) as err:
+        with pytest.raises(calliope.exceptions.ModelError) as err:
             validate_dict(to_validate, schema, "foobar")
         assert check_error_or_warning(
             err,

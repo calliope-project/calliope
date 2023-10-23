@@ -284,7 +284,7 @@ def run(
                     bold=True,
                 )
             model.build()
-            model.to_lp(save_lp)
+            model.backend.to_lp(save_lp)
             print_end_time(start_time)
 
         # Else run the model, then save outputs

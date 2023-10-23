@@ -182,7 +182,7 @@ class TestIO:
     def test_save_lp(self, model):
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = os.path.join(tempdir, "model.lp")
-            model.to_lp(out_path)
+            model.backend.to_lp(out_path)
 
             with open(out_path, "r") as f:
                 assert "variables(energy_cap)" in f.read()
