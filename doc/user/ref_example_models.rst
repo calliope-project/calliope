@@ -43,22 +43,22 @@ The layout of the model directory is as follows (``+`` denotes directories, ``-`
 
 ``model.yaml``:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model.yaml
    :language: yaml
 
 ``scenarios.yaml``:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/scenarios.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/scenarios.yaml
    :language: yaml
 
 ``techs.yaml``:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
 
 ``locations.yaml``:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/locations.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/locations.yaml
    :language: yaml
 
 Urban-scale example
@@ -73,20 +73,20 @@ Model settings
 
 ``model.yaml``:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/model.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/model.yaml
    :language: yaml
 
 ``scenarios.yaml``:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/scenarios.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/scenarios.yaml
    :language: yaml
 
 ``techs.yaml``:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
 
 ``locations.yaml``:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/model_config/locations.yaml
    :language: yaml

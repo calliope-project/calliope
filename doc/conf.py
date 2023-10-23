@@ -11,7 +11,7 @@ from sphinx.builders.singlehtml import SingleFileHTMLBuilder, StandaloneHTMLBuil
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath("../src"))
 sys.path.insert(0, os.path.abspath("."))
 sys.path.append(os.path.abspath("_themes"))
 
@@ -37,7 +37,7 @@ copyright = "Since 2013 Calliope contributors listed in ><a href='https://github
 
 __version__ = ""
 # Sets the __version__ variable
-exec(open("../calliope/_version.py").read())
+exec(open("../src/calliope/_version.py").read())
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

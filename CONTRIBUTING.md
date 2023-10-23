@@ -63,7 +63,7 @@ Please try to write clear commit messages. One-line messages are fine for small 
 
 We have existing test coverage for the key functionality of Calliope.
 
-All tests are in the ``calliope/test`` directory and use [pytest](https://docs.pytest.org/en/latest/).
+All tests are in the ``tests`` directory and use [pytest](https://docs.pytest.org/en/latest/).
 
 Our test coverage is not perfect and an easy way to contribute code is to work on better tests.
 

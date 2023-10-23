@@ -16,7 +16,7 @@ Also see the list of `open issues <https://github.com/calliope-project/calliope/
 Installing a development version
 --------------------------------
 
-As when installing a stable version, using ``conda`` is recommended.
+As when installing a stable version, using ``mamba`` is recommended.
 
 To actively contribute to Calliope development, or simply track the latest development version, you'll instead want to clone our GitHub repository. This will provide you with the main branch in a known location on your local device.
 
@@ -31,15 +31,13 @@ Then install all development requirements for Calliope into a new environment, c
   .. code-block:: fishshell
 
    $ cd calliope
-   $ conda config --add channels conda-forge # since we cannot explicitly request it with `conda env update`, we add the `conda-forge` package channel to the user's conda configuration file.
-   $ conda create -n calliope_dev python=3.11 # to ensure the correct python version is installed
-   $ conda env update -f requirements.yml -n calliope_dev # to install the calliope non-python dependencies and testing/coverage python packages
-   $ conda env update -f requirements.txt -n calliope_dev # to install the pinned calliope python dependencies
-   $ conda activate calliope_dev
+   $ mamba create -n calliope_dev --file requirements/base.txt --file requirements/dev.txt python=3.11
+   $ mamba activate calliope_dev
    $ pip install --no-deps -e . # installs from your local clone of the calliope repository
 
+Only calliope itself should be installed from pip, the rest will have been installed with mamba and will be marked as `Requirement already satisfied` on running the above command.
 
-.. Note:: Most of our tests depend on having the CBC solver also installed, as we have found it to be more stable than GPLK. If you are running on a Unix system, then you can run ``conda install coincbc`` to also install the CBC solver. To install solvers other than CBC, and for Windows systems, see our :ref:`solver installation instructions <install_solvers>`.
+.. Note:: Most of our tests depend on having the CBC solver also installed, as we have found it to be more stable than GPLK. If you are running on a Unix system, then you can run ``mamba install coincbc`` to also install the CBC solver. To install solvers other than CBC, and for Windows systems, see our :ref:`solver installation instructions <install_solvers>`.
 
 We use the code formatter `black <https://github.com/psf/black/>`_ and before you contribute any code, you should ensure that you have run it through black. If you don't have a process for doing this already, you can install our configured `pre-commit <https://pre-commit.com/>`_ hook which will automatically run black on each commit:
 
@@ -157,27 +155,26 @@ When making a change you may need to run your tests multiple times until you hav
 Since the whole test suite takes ~25 minutes to run, you can do some things to speed up the process:
 
 #. parallelise tests
-   If you have installed the calliope development environment, it includes the `pytest-xdist <https://pytest-xdist.readthedocs.io/en/stable/>`_ package, which allows you to run tests in parallel.
-   To do so with calliope with the maximum available threads on your device, run:
-
-   .. code-block:: fishshell
-
-      $ pytest -n=auto --dist=loadscope
-
-   `--dist=loadscope` ensures that _within_ test classes, the tests run in series, since some might depend on changes made to `fixtures <https://docs.pytest.org/en/6.2.x/fixture.html>`_ by previous tests.
+   If you have installed the calliope development environment, it includes the `pytest-xdist <https://pytest-xdist.readthedocs.io/en/stable/>`_ package and will run tests in parallel on as many cores as possible by default.
 
 #. run specific tests.
    E.g., for `test_function_name` inside `test_filename.py` and under the class name `TestClassName`, you would run:
 
    .. code-block:: fishshell
 
-      $ pytest calliope/test/test_filename.py::TestClassName::test_function_name
+      $ pytest tests/test_filename.py::TestClassName::test_function_name
 
    You can also run only those tests that previously failed with `--lf`:
 
    .. code-block:: fishshell
 
       $ pytest --lf
+
+   You can also avoid running the tests on the example notebooks by pointing only to the test directory:
+
+   .. code-block:: fishshell
+
+      $ pytest tests/
 
 #. Avoid time intensive tests.
    You can run most of the test suite but avoid running the more time intensive tests (which are mostly concerned with timeseries clustering) by activating the following pytest marker:

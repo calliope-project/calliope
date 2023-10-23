@@ -19,15 +19,15 @@ Running Calliope requires four things:
 Recommended installation method
 ===============================
 
-The easiest way to get a working Calliope installation is to use the free ``conda`` package manager, which can install all of the four things described above in a single step.
+The easiest way to get a working Calliope installation is to use the free ``mamba`` package manager, which can install all of the four things described above in a single step.
 
-To get ``conda``, `download and install the "Miniconda" distribution for your operating system <https://conda.io/miniconda.html>`_ (using the version for Python 3).
+To get ``mamba``, `download and install the "Mambaforge" distribution for your operating system <https://mamba.readthedocs.io/en/latest/index.html>`_ (using the version for Python 3).
 
-With Miniconda installed, you can create a new environment called ``"calliope"`` with all the necessary modules, including the free and open source GLPK solver, by running the following command in a terminal or command-line window
+With mamba installed, you can create a new environment called ``calliope`` with all the necessary modules, including the free and open source GLPK solver, by running the following command in a terminal or command-line window
 
   .. code-block:: fishshell
 
-    $ conda create -c conda-forge -n calliope calliope
+    $ mamba create -c conda-forge -n calliope calliope
 
 This will install calliope with Python version 3.11.
 
@@ -35,15 +35,11 @@ To use Calliope, you need to activate the ``calliope`` environment each time
 
   .. code-block:: fishshell
 
-    $ conda activate calliope
+    $ mamba activate calliope
 
-You are now ready to use Calliope together with the free and open source GLPK solver. However, we recommend to not use this solver where possible, since it performs relatively poorly (both in solution time and stability of result). Indeed, our example models use the free and open source CBC solver instead, but installing it on Windows requires an extra step. Read the next section for more information on installing alternative solvers.
-
-.. note::
-
-    Windows users may have trouble with the recommended installation method, due to conda not solving the environment successfully.
-    If this occurs, we recommend using the more efficient reimplementation of ``conda``: `Mamba <https://mamba.readthedocs.io/en/latest/index.html>`_.
-    First install mamba in your base conda environment (``conda install -c conda-forge -n base mamba``), then proceed with the installation as before, simply using ``mamba`` in place of ``conda`` (``mamba create -c conda-forge -n calliope calliope``).
+You are now ready to use Calliope together with the free and open source GLPK solver.
+However, we recommend to not use this solver where possible, since it performs relatively poorly (both in solution time and stability of result).
+Indeed, our example models use the free and open source CBC solver instead, but installing it on Windows requires an extra step. Read the next section for more information on installing alternative solvers.
 
 .. warning::
 
@@ -53,11 +49,11 @@ You are now ready to use Calliope together with the free and open source GLPK so
 Updating an existing installation
 =================================
 
-If following the recommended installation method above, the following command, assuming the conda environment is active, will update Calliope to the newest version
+If following the recommended installation method above, the following command, assuming the mamba environment is active, will update Calliope to the newest version
 
   .. code-block:: fishshell
 
-    $ conda update -c conda-forge calliope
+    $ mamba update -c conda-forge calliope
 
 .. _install_solvers:
 
@@ -69,7 +65,7 @@ You need at least one of the solvers supported by Pyomo installed. CBC (open-sou
 CBC
 ---
 
-`CBC <https://github.com/coin-or/Cbc>`_ is our recommended option if you want a free and open-source solver. CBC can be installed via conda on Linux and macOS by running ```conda install -c conda-forge coincbc```. Windows binary packages are somewhat more difficult to install, due to limited information on `the CBC website <https://github.com/coin-or/Cbc>`_, but can be found within their `binary archive <https://www.coin-or.org/download/binary/Cbc/>`_ and are included in their `package releases on GitHub <https://github.com/coin-or/Cbc/releases>`_. The GitHub releases are more up-to-date. We recommend you download the relevant binary for `CBC 2.10.8 <https://github.com/coin-or/Cbc/releases/download/releases%2F2.10.8/Cbc-releases.2.10.8-w64-msvc17-md.zip>`_ and add `cbc.exe` to a directory known to PATH (e.g. an Anaconda environment 'bin' directory).
+`CBC <https://github.com/coin-or/Cbc>`_ is our recommended option if you want a free and open-source solver. CBC can be installed via conda on Linux and macOS by running ```mamba install -c conda-forge coincbc```. Windows binary packages are somewhat more difficult to install, due to limited information on `the CBC website <https://github.com/coin-or/Cbc>`_, but can be found within their `binary archive <https://www.coin-or.org/download/binary/Cbc/>`_ and are included in their `package releases on GitHub <https://github.com/coin-or/Cbc/releases>`_. The GitHub releases are more up-to-date. We recommend you download the relevant binary for `CBC 2.10.8 <https://github.com/coin-or/Cbc/releases/download/releases%2F2.10.8/Cbc-releases.2.10.8-w64-msvc17-md.zip>`_ and add `cbc.exe` to a directory known to PATH (e.g. an Anaconda environment 'bin' directory).
 
 GLPK
 ----
@@ -81,7 +77,7 @@ Gurobi
 
 `Gurobi <https://www.gurobi.com/>`_ is commercial but significantly faster than CBC and GLPK, which is relevant for larger problems. It needs a license to work, which can be obtained for free for academic use by creating an account on gurobi.com.
 
-While Gurobi can be installed via conda (:sh:`conda install -c gurobi gurobi`) we recommend downloading and installing the installer from the `Gurobi website <https://www.gurobi.com/>`_, as the conda package has repeatedly shown various issues.
+While Gurobi can be installed via conda (:sh:`mamba install -c gurobi gurobi`) we recommend downloading and installing the installer from the `Gurobi website <https://www.gurobi.com/>`_, as the conda package has repeatedly shown various issues.
 
 After installing, log on to the `Gurobi website <https://www.gurobi.com/>`_ and obtain a (free academic or paid commercial) license, then activate it on your system via the instructions given online (using the ``grbgetkey`` command).
 

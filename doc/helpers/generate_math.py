@@ -10,9 +10,8 @@ Generate LaTeX math to include in the documentation.
 """
 from pathlib import Path
 
-import pandas as pd
-
 import calliope
+import pandas as pd
 
 BASEPATH = Path(__file__).resolve().parent
 STATICPATH = BASEPATH / ".." / "_static"
@@ -73,7 +72,7 @@ def generate_model_config() -> dict[str, dict]:
     Parameters that can be defined over a timeseries are forced to be defined over a timeseries. Accordingly, the parameters will have "timesteps" in their dimensions in the formulation.
     """
     defaults = calliope.AttrDict.from_yaml(
-        BASEPATH / ".." / ".." / "calliope" / "config" / "defaults.yaml"
+        BASEPATH / ".." / ".." / "src" / "calliope" / "config" / "defaults.yaml"
     )
 
     allowed_: dict[str, dict] = {i: {"all": set()} for i in ["costs", "constraints"]}

@@ -1,0 +1,52 @@
+model:
+  name: Test model for energy capacity per storage capacity
+  timeseries_data_path: "timeseries_data"
+  subset_time: ["2005-01-01 00:00", "2005-01-01 01:00"]
+
+run:
+  mode: plan
+  solver: cbc
+  cyclic_storage: False # necessary so demand can be fed from stored energy
+  ensure_feasibility: true
+
+techs:
+  electricity_demand:
+    essentials:
+      name: Electricity demand
+      carrier: electricity
+      parent: demand
+    constraints:
+      resource: file=demand_elec.csv
+  my_storage:
+    essentials:
+      name: Storage
+      carrier: electricity
+      parent: storage
+    constraints:
+      storage_initial: 1.0
+      lifetime: 60
+    costs:
+      monetary:
+        energy_cap: 1500000
+        storage_cap: 300000
+        interest_rate: 0.1
+
+nodes:
+  a.techs:
+    my_storage:
+    electricity_demand:
+
+overrides:
+  equals:
+    techs.my_storage.constraints.energy_cap_per_storage_cap_equals: 10
+  max:
+    techs.my_storage.constraints.energy_cap_per_storage_cap_max: 0.01
+  min:
+    techs.my_storage.constraints.energy_cap_per_storage_cap_min: 1
+  operate_mode_min:
+    techs.my_storage.constraints.energy_cap_per_storage_cap_min: 1
+    techs.my_storage.constraints.storage_cap_equals: 900
+    run.mode: operate
+    run.operation:
+      window: 24
+      horizon: 24
