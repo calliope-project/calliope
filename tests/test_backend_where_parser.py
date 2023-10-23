@@ -87,9 +87,10 @@ def where(bool_operand, helper_function, data_var, comparison, subset):
 
 
 @pytest.fixture(scope="function")
-def eval_kwargs(dummy_model_data):
+def eval_kwargs(dummy_model_data, dummy_pyomo_backend_model):
     return {
         "model_data": dummy_model_data,
+        "backend_dataset": dummy_pyomo_backend_model._dataset,
         "helper_functions": helper_functions._registry["where"],
         "test": True,
         "errors": set(),
@@ -109,7 +110,11 @@ def parse_where_string(eval_kwargs, where):
 class TestParserElements:
     @pytest.mark.parametrize(
         ["data_var_string", "expected"],
-        [("with_inf", "with_inf"), ("all_inf", "all_inf"), ("all_nan", "all_nan")],
+        [
+            ("with_inf", "with_inf"),
+            ("all_inf", "all_inf"),
+            ("all_nan", "all_nan"),
+        ],
     )
     def test_data_var(
         self, data_var, dummy_model_data, data_var_string, expected, eval_kwargs
@@ -130,18 +135,36 @@ class TestParserElements:
             ("all_nan", "all_false"),
         ],
     )
+    @pytest.mark.parametrize("kwarg", [{"apply_where": True}, {}])
     def test_data_var_with_where(
-        self, data_var, dummy_model_data, data_var_string, expected, eval_kwargs
+        self, data_var, dummy_model_data, data_var_string, expected, eval_kwargs, kwarg
     ):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
 
-        # apply_where=True is the default, but we also test being explicit.
         assert (
-            parsed_[0]
-            .eval(apply_where=True, **eval_kwargs)
-            .equals(dummy_model_data[expected])
+            parsed_[0].eval(**kwarg, **eval_kwargs).equals(dummy_model_data[expected])
         )
-        assert parsed_[0].eval(**eval_kwargs).equals(dummy_model_data[expected])
+
+    @pytest.mark.parametrize(
+        ["data_var_string", "expected_similar"],
+        [
+            ("multi_dim_var", "with_inf_as_bool"),
+            ("multi_dim_expr", "all_true"),
+        ],
+    )
+    def test_data_var_with_where_decision_variable_or_expr(
+        self, data_var, dummy_model_data, data_var_string, expected_similar, eval_kwargs
+    ):
+        """
+        Can't quite compare in the same way for decision variables / global expressions
+        as with params, because there is a random element to the `node_tech` initialisation array
+        """
+        parsed_ = data_var.parse_string(data_var_string, parse_all=True)
+        evaluated = parsed_[0].eval(**eval_kwargs)
+
+        # There's a chance that some values that *should* be True in evaluated are made False by a NaN value in `node_tech`,
+        # #so we check that at least all the remaining True values match
+        assert (evaluated & dummy_model_data[expected_similar]).equals(evaluated)
 
     @pytest.mark.parametrize(
         "data_var_string", ["_foo", "__type__", "1foo", "with _ inf"]
@@ -152,12 +175,35 @@ class TestParserElements:
         assert check_error_or_warning(excinfo, "Expected")
 
     @pytest.mark.parametrize("data_var_string", ["foo", "with_INF", "all_infs"])
-    def test_data_var_fail_not_in_model(
-        self, data_var, dummy_model_data, data_var_string, eval_kwargs
-    ):
+    def test_data_var_fail_not_in_model(self, data_var, data_var_string, eval_kwargs):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
         evaluated_ = parsed_[0].eval(**eval_kwargs)
         assert not evaluated_
+
+    @pytest.mark.parametrize(
+        "data_var_string", ["multi_dim_var", "no_dim_var", "multi_dim_expr"]
+    )
+    def test_data_var_fail_not_parameter_where_false(
+        self, data_var, data_var_string, eval_kwargs
+    ):
+        parsed_ = data_var.parse_string(data_var_string, parse_all=True)
+        with pytest.raises(TypeError) as excinfo:
+            parsed_[0].eval(apply_where=False, **eval_kwargs)
+        assert check_error_or_warning(
+            excinfo,
+            [
+                "Can only check for existence of values",
+                f"Received `{data_var_string}`",
+            ],
+        )
+
+    def test_data_var_fail_cannot_handle_constraint(self, data_var, eval_kwargs):
+        parsed_ = data_var.parse_string("no_dim_constr", parse_all=True)
+        with pytest.raises(TypeError) as excinfo:
+            parsed_[0].eval(**eval_kwargs)
+        assert check_error_or_warning(
+            excinfo, ["Cannot check values", "Received constraint: `no_dim_constr`"]
+        )
 
     @pytest.mark.parametrize(
         ["config_string", "expected_val"],

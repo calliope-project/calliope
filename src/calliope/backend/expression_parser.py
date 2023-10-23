@@ -597,17 +597,18 @@ class EvalUnslicedParameterOrVariable(EvalString):
         """
         references.add(self.name)
         evaluated: Optional[Union[dict, xr.DataArray, str]]
+        as_latex = eval_kwargs.get("as_latex", False)
         if as_dict:
             evaluated = {"param_or_var_name": self.name}
         elif backend_interface is not None and backend_dataset is not None:
-            if as_values:
+            if as_values and not as_latex:
                 evaluated = backend_interface.get_parameter(
                     self.name, as_backend_objs=False
                 )
             else:
                 evaluated = backend_dataset[self.name]
 
-            if eval_kwargs.get("as_latex", False):
+            if as_latex:
                 evaluated = self.as_latex(evaluated)
         else:
             evaluated = None

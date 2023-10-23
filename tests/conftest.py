@@ -234,10 +234,29 @@ def populate_backend_model(backend):
         {
             "foreach": ["nodes", "techs"],
             "where": "with_inf",
-            "bounds": {"min": "0", "max": ".inf"},
+            "bounds": {"min": -np.inf, "max": np.inf},
         },
     )
-    backend.add_variable("no_dim_var", {"bounds": {"min": "-1", "max": "1"}})
+    backend.add_variable("no_dim_var", {"bounds": {"min": -1, "max": 1}})
+    backend.add_global_expression(
+        "multi_dim_expr",
+        {
+            "foreach": ["nodes", "techs"],
+            "where": "all_true",
+            "equations": [{"expression": "multi_dim_var * all_true"}],
+        },
+    )
+    backend.add_constraint(
+        "no_dim_constr",
+        {
+            "foreach": [],
+            "equations": [
+                {
+                    "expression": "sum(multi_dim_expr, over=[nodes, techs]) + no_dim_var <= 2"
+                }
+            ],
+        },
+    )
     return backend
 
 
@@ -250,4 +269,10 @@ def dummy_pyomo_backend_model(dummy_model_data):
 @pytest.fixture(scope="module")
 def dummy_latex_backend_model(dummy_model_data):
     backend = latex_backend_model.LatexBackendModel(dummy_model_data)
+    return populate_backend_model(backend)
+
+
+@pytest.fixture(scope="class")
+def valid_latex_backend(dummy_model_data):
+    backend = latex_backend_model.LatexBackendModel(dummy_model_data, include="valid")
     return populate_backend_model(backend)

@@ -66,10 +66,6 @@ class TestMathDocumentation:
 
 
 class TestLatexBackendModel:
-    @pytest.fixture(scope="class")
-    def valid_latex_backend(self, dummy_model_data):
-        return latex_backend_model.LatexBackendModel(dummy_model_data, include="valid")
-
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
     )
@@ -123,8 +119,8 @@ class TestLatexBackendModel:
             "expr",
             {
                 "foreach": ["nodes", "techs"],
-                "where": "with_inf",
-                "equations": [{"expression": "var + param"}],
+                "where": "multi_dim_var",
+                "equations": [{"expression": "multi_dim_var + no_dims"}],
             },
         )
         # some null values might be introduced by the foreach array, so we just check the upper bound
@@ -138,6 +134,32 @@ class TestLatexBackendModel:
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
     )
+    def test_add_expression_with_variable_in_where(
+        self, request, dummy_model_data, backend_obj
+    ):
+        latex_backend_model = request.getfixturevalue(backend_obj)
+        latex_backend_model.add_global_expression(
+            "var_init_expr",
+            {
+                "foreach": ["nodes", "techs"],
+                "where": "with_inf",
+                "equations": [{"expression": "multi_dim_var + no_dims"}],
+            },
+        )
+        # some null values might be introduced by the foreach array, so we just check the upper bound
+        assert (
+            latex_backend_model.global_expressions["var_init_expr"].sum()
+            <= dummy_model_data.with_inf_as_bool.sum()
+        )
+        assert "var_init_expr" in latex_backend_model.valid_math_element_names
+        assert (
+            "math_string"
+            in latex_backend_model.global_expressions["var_init_expr"].attrs
+        )
+
+    @pytest.mark.parametrize(
+        "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
+    )
     def test_add_constraint(self, request, dummy_model_data, backend_obj):
         latex_backend_model = request.getfixturevalue(backend_obj)
         latex_backend_model.add_constraint(
@@ -145,7 +167,7 @@ class TestLatexBackendModel:
             {
                 "foreach": ["nodes", "techs"],
                 "where": "with_inf",
-                "equations": [{"expression": "var >= param"}],
+                "equations": [{"expression": "multi_dim_var >= no_dims"}],
             },
         )
         # some null values might be introduced by the foreach array, so we just check the upper bound
@@ -156,6 +178,29 @@ class TestLatexBackendModel:
         assert "constr" not in latex_backend_model.valid_math_element_names
         assert "math_string" in latex_backend_model.constraints["constr"].attrs
 
+    @pytest.mark.parametrize(
+        "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
+    )
+    def test_add_constraint_with_variable_and_expression_in_where(
+        self, request, dummy_model_data, backend_obj
+    ):
+        latex_backend_model = request.getfixturevalue(backend_obj)
+        latex_backend_model.add_constraint(
+            "var_init_constr",
+            {
+                "foreach": ["nodes", "techs"],
+                "where": "multi_dim_var and multi_dim_expr",
+                "equations": [{"expression": "no_dim_var >= multi_dim_var"}],
+            },
+        )
+        # some null values might be introduced by the foreach array, so we just check the upper bound
+        assert (
+            latex_backend_model.constraints["var_init_constr"].sum()
+            <= dummy_model_data.with_inf_as_bool.sum()
+        )
+        assert "var_init_constr" not in latex_backend_model.valid_math_element_names
+        assert "math_string" in latex_backend_model.constraints["var_init_constr"].attrs
+
     def test_add_constraint_not_valid(self, valid_latex_backend):
         valid_latex_backend.add_constraint(
             "invalid_constr",
@@ -163,8 +208,8 @@ class TestLatexBackendModel:
                 "foreach": ["nodes", "techs"],
                 "where": "False",
                 "equations": [
-                    {"expression": "var >= param"},
-                    {"expression": "var >= expr"},
+                    {"expression": "multi_dim_var >= no_dims"},
+                    {"expression": "multi_dim_var >= multi_dim_expr"},
                 ],
             },
         )
@@ -180,13 +225,13 @@ class TestLatexBackendModel:
                 "foreach": ["nodes", "techs"],
                 "where": "with_inf",
                 "equations": [
-                    {"expression": "var >= param"},
-                    {"expression": "var <= expr", "where": "False"},
+                    {"expression": "multi_dim_var >= no_dims"},
+                    {"expression": "multi_dim_var >= multi_dim_expr", "where": "False"},
                 ],
             },
         )
         assert (
-            "expr"
+            "multi_dim_expr"
             not in valid_latex_backend.constraints["valid_constr"].attrs["math_string"]
         )
 
@@ -194,7 +239,7 @@ class TestLatexBackendModel:
         dummy_latex_backend_model.add_objective(
             "obj",
             {
-                "equations": [{"expression": "sum(var, over=[nodes, techs])"}],
+                "equations": [{"expression": "sum(no_dim_var, over=[nodes, techs])"}],
                 "sense": "minimize",
             },
         )
