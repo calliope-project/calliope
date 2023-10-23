@@ -193,7 +193,7 @@ class BackendModelGenerator(ABC):
         if component_dict is None:
             component_dict = self.inputs.math[component_type][name]
 
-        if component_dict.get("active", False):
+        if break_early and component_dict.get("active", False):
             logger.debug(
                 f"({component_type.removesuffix('s')}, {name}): "
                 "Component deactivated and therefore not built."

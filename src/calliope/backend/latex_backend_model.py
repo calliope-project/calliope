@@ -340,7 +340,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         name: str,
         variable_dict: Optional[parsing.UnparsedVariableDict] = None,
     ) -> None:
-        domain_dict = {"real": r"\R", "integer": r"\Z"}
+        domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
 
         self.valid_math_element_names.add(name)
 
