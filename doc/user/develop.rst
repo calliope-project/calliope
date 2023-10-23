@@ -148,13 +148,47 @@ Finally, push the branch online, so it's existence is also in your remote fork o
 
     $ git push -u origin new-fix-or-feature
 
-Now the files in your local directory can be edited with complete freedom. Once you have made the necessary changes, you'll need to test that they don't break anything. This can be done easily by changing to the directory into which you cloned your fork using the terminal / command line, and running `pytest <https://docs.pytest.org/en/latest/index.html>`_ (make sure you have activated the conda environment and you have pytest installed: `conda install pytest`). Any change you make should also be covered by a test. Add it into the relevant test file, making sure the function starts with 'test\_'. Since the whole test suite takes ~25 minutes to run, you can run specific tests, such as those you add in
-
-  .. code-block:: fishshell
-
-    $ pytest calliope/test/test_filename.py::ClassName::function_name
+Now the files in your local directory can be edited with complete freedom. Once you have made the necessary changes, you'll need to test that they don't break anything. This can be done easily by changing to the directory into which you cloned your fork using the terminal / command line, and running `pytest <https://docs.pytest.org/en/latest/index.html>`_ (make sure you have activated the conda environment and you have pytest installed: `conda install pytest`). Any change you make should also be covered by a test. Add it into the relevant test file, making sure the function starts with 'test\_'.
 
 If tests are failing, you can debug them by using the pytest arguments ``-x`` (stop at the first failed test) and ``--pdb`` (enter into the debug console).
+
+Speeding up your tests
+^^^^^^^^^^^^^^^^^^^^^^
+When making a change you may need to run your tests multiple times until you have made the relevant code changes for everything to pass; remember that *all* tests need to pass, not only those you've recently added.
+Since the whole test suite takes ~25 minutes to run, you can do some things to speed up the process:
+
+#. parallelise tests
+   If you have installed the calliope development environment, it includes the `pytest-xdist <https://pytest-xdist.readthedocs.io/en/stable/>`_ package, which allows you to run tests in parallel.
+   To do so with calliope with the maximum available threads on your device, run:
+
+   .. code-block:: fishshell
+
+      $ pytest -n=auto --dist=loadscope
+
+   `--dist=loadscope` ensures that _within_ test classes, the tests run in series, since some might depend on changes made to `fixtures <https://docs.pytest.org/en/6.2.x/fixture.html>`_ by previous tests.
+
+#. run specific tests.
+   E.g., for `test_function_name` inside `test_filename.py` and under the class name `TestClassName`, you would run:
+
+   .. code-block:: fishshell
+
+      $ pytest calliope/test/test_filename.py::TestClassName::test_function_name
+
+   You can also run only those tests that previously failed with `--lf`:
+
+   .. code-block:: fishshell
+
+      $ pytest --lf
+
+#. Avoid time intensive tests.
+   You can run most of the test suite but avoid running the more time intensive tests (which are mostly concerned with timeseries clustering) by activating the following pytest marker:
+
+   .. code-block:: fishshell
+
+      $ pytest -m "not time_intensive"
+
+Contributing a change
+---------------------
 
 Once everything has been updated as you'd like (see the contribution checklist below for more on this), you can commit those changes. This stores all edited files in the directory, ready for pushing online
 
