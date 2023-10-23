@@ -6,7 +6,8 @@ import pytest  # noqa: F401
 import xarray as xr
 from calliope import exceptions
 from calliope.core import io
-from calliope.test.common.util import check_error_or_warning
+
+from .common.util import check_error_or_warning
 
 
 class TestIO:
