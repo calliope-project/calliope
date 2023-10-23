@@ -161,6 +161,8 @@ If you have a bit more Python experience, you can also consider accessing and wo
 - For input YAML and CSV file processing: :python:`logging.getLogger("calliope.preprocess")`.
 - For processing of math syntax: :python:`logging.getLogger("calliope.backend")`.
 
+For more examples of using loggers, see :nbviewer_docs:`this notebook <_static/notebooks/logging.ipynb>`.
+
 Validating your math syntax
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 You can do a (relatively) quick check of the validity of any custom math syntax in your model by running :python:`model.validate_math_strings(my_math_dict)`.
