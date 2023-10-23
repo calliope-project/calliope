@@ -22,7 +22,10 @@ def _stack_data(data, dates, times):
     Stack all non-time dimensions of an xarray DataArray
     """
     data_to_stack = data.assign_coords(
-        timesteps=pd.MultiIndex.from_product([dates, times], names=["dates", "times"])
+        xr.Coordinates.from_pandas_multiindex(
+            pd.MultiIndex.from_product([dates, times], names=["dates", "times"]),
+            "timesteps",
+        )
     ).unstack("timesteps")
     non_date_dims = list(set(data_to_stack.dims).difference(["dates", "times"])) + [
         "times"
@@ -270,7 +273,7 @@ def map_clusters_to_data(
     timesteps_per_day = len(daily_timesteps)
     idx = clusters.index
     new_idx = _timesteps_from_daily_index(idx, daily_timesteps)
-    clusters_timeseries = clusters.reindex(new_idx).fillna(method="ffill").astype(int)
+    clusters_timeseries = clusters.reindex(new_idx).ffill().astype(int)
 
     new_data = get_mean_from_clusters(data, clusters_timeseries, timesteps_per_day)
     new_data.attrs = data.attrs
@@ -312,9 +315,10 @@ def map_clusters_to_data(
                 "closest day".format(cluster_diff)
             )
             timestamps = timestamps.drop_duplicates()
+            clusters = pd.Series(index=clusterdays_timeseries.index, dtype=int)
             for cluster, date in timestamps.items():
-                clusterdays_timeseries.loc[clusterdays_timeseries == date] = cluster
-            clusters = clusterdays_timeseries.astype(int).resample("1D").mean()
+                clusters.loc[clusterdays_timeseries == date] = cluster
+            clusters = clusters.resample("1D").mean()
 
     _clusters = xr.DataArray(
         data=np.full(len(new_data.timesteps.values), np.nan),
@@ -328,7 +332,7 @@ def map_clusters_to_data(
     new_data["timestep_cluster"] = _clusters.astype(int)
     weights = value_counts.reindex(
         _timesteps_from_daily_index(value_counts.index, daily_timesteps)
-    ).fillna(method="ffill")
+    ).ffill()
     new_data["timestep_weights"] = xr.DataArray(weights, dims=["timesteps"])
     days = np.unique(new_data.timesteps.to_index().date)
     new_data["timestep_resolution"] = xr.DataArray(

@@ -727,7 +727,9 @@ class TestEquationParserArithmetic:
         if np.isinf(float1) and np.isinf(float2) and sign in ["-", "/"]:
             assert np.isnan(evaluated_)
         else:
-            assert evaluated_ == getattr(operator, sign_name)(float1, float2)
+            assert evaluated_ == pytest.approx(
+                getattr(operator, sign_name)(float1, float2)
+            )
 
     @pytest.mark.parametrize(["sign", "sign_name"], [("+", "pos"), ("-", "neg")])
     @pytest.mark.parametrize(

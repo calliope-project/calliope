@@ -159,11 +159,12 @@ def apply_clustering(
 
     for dim in data_to_cluster.dims:
         data_to_cluster[dim] = data[dim]
-    with pd.option_context("mode.use_inf_as_na", True):
-        if normalize:
-            data_normalized = normalized_copy(data_to_cluster)
-        else:
-            data_normalized = data_to_cluster
+
+    data_to_cluster = data_to_cluster.where(~np.isinf(data_to_cluster))
+    if normalize:
+        data_normalized = normalized_copy(data_to_cluster)
+    else:
+        data_normalized = data_to_cluster
 
     if "file=" in clustering_func:
         file = clustering_func.split("=")[1]

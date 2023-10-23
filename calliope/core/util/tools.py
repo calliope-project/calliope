@@ -9,9 +9,8 @@ import os
 import sys
 from typing import Callable, TypeVar
 
-from typing_extensions import ParamSpec
-
 import jsonschema
+from typing_extensions import ParamSpec
 
 from calliope.exceptions import print_warnings_and_raise_errors
 

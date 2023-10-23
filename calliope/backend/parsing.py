@@ -616,7 +616,8 @@ class ParsedBackendComponent(ParsedBackendEquation):
 
         Returns:
             list[ParsedBackendEquation]:
-                Expanded list of parsed equations with the product of all references to items from the `expression_group` producing a new equation object. E.g., if the input equation object has a reference to an slice which itself has two expression options, two equation objects will be added to the return list.
+                Expanded list of parsed equations with the product of all references to items from the `expression_group` producing a new equation object.
+                E.g., if the input equation object has a reference to an slice which itself has two expression options, two equation objects will be added to the return list.
         """
         if expression_group == "sub_expressions":
             equation_items = parsed_equation.find_sub_expressions()
@@ -643,11 +644,10 @@ class ParsedBackendComponent(ParsedBackendEquation):
         ]
 
     def combine_exists_and_foreach(self, model_data: xr.Dataset) -> xr.DataArray:
-        """
-        Generate a multi-dimensional boolean array based on the sets
-        over which the constraint is to be built (defined by "foreach") and the
-        model `exists` array.
-        The `exists` array is a boolean array defining the structure of the model and is True for valid combinations of technologies consuming/producing specific carriers at specific nodes. It is indexed over ["nodes", "techs", "carriers", "carrier_tiers"].
+        """Generate a multi-dimensional boolean array based on the sets over which the constraint is to be built (defined by "foreach") and the model `exists` array.
+
+        The `exists` array is a boolean array defining the structure of the model and is True for valid combinations of technologies consuming/producing specific carriers at specific nodes.
+        It is indexed over ["nodes", "techs", "carriers", "carrier_tiers"].
 
         Args:
             model_data (xr.Dataset): Calliope model dataset.
@@ -682,7 +682,8 @@ class ParsedBackendComponent(ParsedBackendEquation):
         Args:
             model_data (xr.Dataset): Calliope model input data.
             align_to_foreach_sets (bool, optional):
-                By default, all foreach arrays have the dimensions ("nodes", "techs", "carriers", "carrier_tiers") as well as any additional dimensions provided by the component's "foreach" key. If this argument is True, the dimensions not included in "foreach" are removed from the array.
+                By default, all foreach arrays have the dimensions ("nodes", "techs", "carriers", "carrier_tiers") as well as any additional dimensions provided by the component's "foreach" key.
+                If this argument is True, the dimensions not included in "foreach" are removed from the array.
                 Defaults to True.
             break_early (bool, optional):
                 If any intermediate array has no valid elements (i.e. all are False), the function will return that array rather than continuing - this saves time and memory on large models.
