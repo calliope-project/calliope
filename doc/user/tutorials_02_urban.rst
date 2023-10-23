@@ -25,7 +25,7 @@ The first two are ``supply_gas`` and ``supply_grid_power``, referring to the sup
 
 The definition of these technologies in the example model's configuration looks as follows:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
    :dedent: 2
    :start-after: # supply-start
@@ -39,7 +39,7 @@ In most cases, domestic PV panels are able to export excess energy to the nation
 
 The definition of this technology in the example model's configuration looks as follows:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
    :dedent: 2
    :start-after: # pv-start
@@ -47,7 +47,7 @@ The definition of this technology in the example model's configuration looks as 
 
 Finally, the parent of the PV technology is not ``supply_plus``, but rather ``supply_power_plus``. We use this to show the possibility of an intermediate technology group, which provides the information on the energy carrier (``electricity``) and the ultimate abstract base technology (``supply_plus``):
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
    :start-after: # supply_power_plus-start
    :end-before: # supply_power_plus-end
@@ -68,7 +68,7 @@ The first is ``boiler`` (natural gas boiler), which serves as an example of a si
 
 The definition of this technology in the example model's configuration looks as follows:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
    :dedent: 2
    :start-after: # boiler-start
@@ -86,7 +86,7 @@ The second technology is ``chp`` (combined heat and power), and serves as an exa
 
 This definition in the example model's configuration is more verbose:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
    :dedent: 2
    :start-after: # chp-start
@@ -103,7 +103,7 @@ Demand technologies
 
 Electricity and heat demand are defined here:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
    :dedent: 2
    :start-after: # demand-start
@@ -121,7 +121,7 @@ In this district, electricity and heat can be distributed between locations. Gas
 
    A simple transmission node with an :math:`energy_{eff}`.
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/model_config/techs.yaml
    :language: yaml
    :dedent: 2
    :start-after: # transmission-start
@@ -144,7 +144,7 @@ The technologies are set up in these locations as follows:
 
 Let's now look at the first location definition:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/model_config/locations.yaml
    :language: yaml
    :dedent: 2
    :start-after: # X1-start
@@ -159,7 +159,7 @@ There are several things to note here:
 
 The remaining location definitions look like this:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/model_config/locations.yaml
    :language: yaml
    :dedent: 2
    :start-after: # other-locs-start
@@ -169,7 +169,7 @@ The remaining location definitions look like this:
 
 ``N1`` differs to the others by virtue of containing no technologies. It acts as a branching station for the heat network, allowing connections to one or both of ``X2`` and ``X3`` without double counting the pipeline from ``X1`` to ``N1``. Its definition look like this:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/model_config/locations.yaml
    :language: yaml
    :dedent: 2
    :start-after: # N1-start
@@ -177,7 +177,7 @@ The remaining location definitions look like this:
 
 For transmission technologies, the model also needs to know which locations can be linked, and this is set up in the model configuration as follows:
 
-.. literalinclude:: ../../calliope/example_models/urban_scale/model_config/locations.yaml
+.. literalinclude:: ../../src/calliope/example_models/urban_scale/model_config/locations.yaml
    :language: yaml
    :dedent: 2
    :start-after: # links-start

@@ -3,12 +3,12 @@ default_language_version:
 
 repos:
   - repo: https://github.com/psf/black
-    rev: 23.7.0
+    rev: 23.10.0
     hooks:
       - id: black
 
   - repo: https://github.com/astral-sh/ruff-pre-commit # https://beta.ruff.rs/docs/usage/#github-action
-    rev: v0.0.287
+    rev: v0.1.1
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -19,3 +19,7 @@ repos:
       - id: nbqa-black
       - id: nbqa-ruff
         args: [--fix, --exit-non-zero-on-fix]
+
+ci:  # https://pre-commit.ci/
+  autofix_prs: false
+  autoupdate_schedule: monthly

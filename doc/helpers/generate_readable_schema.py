@@ -50,6 +50,6 @@ def customise_markdown(lines: list[str]) -> list[str]:
 
 
 def process():
-    math_schema = Path("../calliope/config/math_schema.yaml")
+    math_schema = Path("../src/calliope/config/math_schema.yaml")
     assert math_schema.is_file()
     schema_to_md(math_schema, "./user/includes/math_schema.md")
