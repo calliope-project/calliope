@@ -6,7 +6,7 @@ minversion = "6.0"
 # `-nauto` - parallelise over as many threads as possible (uses pytest-xdist). If debugging (`--pdb`), this will default to one thread.
 # `--nbmake --nbmake-kernel=calliope` - test example notebooks using the "calliope" notebook kernel (uses nbmake)
 # `--cov --cov-report=xml --cov-config=pyproject.toml` - generate coverage report for tests (uses pytest-cov; call `--no-cov` in CLI to switch off; `--cov-config` include to avoid bug)
-addopts = "-rav --dist=loadscope --strict-markers -n2 --nbmake --nbmake-kernel=calliope --cov --cov-report=xml --cov-config=pyproject.toml"
+addopts = "-rav --dist=loadscope --strict-markers -nauto --nbmake --nbmake-kernel=calliope --cov --cov-report=xml --cov-config=pyproject.toml"
 # TODO: add testpath once notebooks are fixed: "doc/_static/notebooks"
 testpaths = ["tests"]
 

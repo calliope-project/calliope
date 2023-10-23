@@ -155,27 +155,26 @@ When making a change you may need to run your tests multiple times until you hav
 Since the whole test suite takes ~25 minutes to run, you can do some things to speed up the process:
 
 #. parallelise tests
-   If you have installed the calliope development environment, it includes the `pytest-xdist <https://pytest-xdist.readthedocs.io/en/stable/>`_ package, which allows you to run tests in parallel.
-   To do so with calliope with the maximum available threads on your device, run:
-
-   .. code-block:: fishshell
-
-      $ pytest -n=auto --dist=loadscope
-
-   `--dist=loadscope` ensures that _within_ test classes, the tests run in series, since some might depend on changes made to `fixtures <https://docs.pytest.org/en/6.2.x/fixture.html>`_ by previous tests.
+   If you have installed the calliope development environment, it includes the `pytest-xdist <https://pytest-xdist.readthedocs.io/en/stable/>`_ package and will run tests in parallel on as many cores as possible by default.
 
 #. run specific tests.
    E.g., for `test_function_name` inside `test_filename.py` and under the class name `TestClassName`, you would run:
 
    .. code-block:: fishshell
 
-      $ pytest calliope/test/test_filename.py::TestClassName::test_function_name
+      $ pytest tests/test_filename.py::TestClassName::test_function_name
 
    You can also run only those tests that previously failed with `--lf`:
 
    .. code-block:: fishshell
 
       $ pytest --lf
+
+   You can also avoid running the tests on the example notebooks by pointing only to the test directory:
+
+   .. code-block:: fishshell
+
+      $ pytest tests/
 
 #. Avoid time intensive tests.
    You can run most of the test suite but avoid running the more time intensive tests (which are mostly concerned with timeseries clustering) by activating the following pytest marker:

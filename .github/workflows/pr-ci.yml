@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - "main"
-      - "0.6"
     paths-ignore:
       - README.md
       - changelog.rst
