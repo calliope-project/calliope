@@ -3,7 +3,6 @@ from itertools import chain, combinations
 import numpy as np
 import pytest
 import xarray as xr
-
 from calliope import AttrDict
 from calliope.backend import backends, latex_backend
 

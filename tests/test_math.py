@@ -1,11 +1,10 @@
 from pathlib import Path
 
+import calliope
 import numpy as np
 import pytest
-from pyomo.repn.tests import lp_diff
-
-import calliope
 from calliope import AttrDict
+from pyomo.repn.tests import lp_diff
 
 from .common.util import build_lp, build_test_model
 
