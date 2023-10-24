@@ -99,8 +99,8 @@ class TestNationalScaleExampleModelSenseChecks:
 
     def test_considers_supply_generation_only_in_total_levelised_cost(self):
         # calculation of expected value:
-        # costs = model.get_formatted_array("cost").sum(dim="locs")
-        # gen = model.get_formatted_array("flow_out").sum(dim=["timesteps", "locs"])
+        # costs = model.inputs.cost.sum(dim="locs")
+        # gen = model.inputs.flow_out.sum(dim=["timesteps", "locs"])
         # lcoe = costs.sum(dim="techs") / gen.sel(techs=["ccgt", "csp"]).sum(dim="techs")
         model = calliope.examples.national_scale()
         model.build()
