@@ -1,7 +1,6 @@
 constraints:
   flow_capacity_per_storage_capacity_min.active: false
   flow_capacity_per_storage_capacity_max.active: false
-  flow_capacity_per_storage_capacity_equals.active: false
   source_capacity_equals_flow_capacity.active: false
   force_zero_area_use.active: false
   area_use_per_flow_capacity.active: false

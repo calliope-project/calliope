@@ -150,7 +150,7 @@ Operational mode
 
 In planning mode, constraints are given as upper and lower boundaries and the model decides on an optimal system configuration. In operational mode, all capacity constraints are fixed and the system is operated with a receding horizon control algorithm.
 
-To specify a runnable operational model, capacities for all technologies at all locations must have be defined. This can be done by specifying ``flow_cap_equals``. In the absence of ``flow_cap_equals``, constraints given as ``flow_cap_max`` are assumed to be fixed in operational mode.
+To specify a runnable operational model, capacities for all technologies at all locations must be defined. This can be done by specifying ``flow_cap_max``, which will be assumed to be the fixed capacity of the technology in operational mode.
 
 Operational mode runs a model with a receding horizon control algorithm. This requires two additional settings:
 

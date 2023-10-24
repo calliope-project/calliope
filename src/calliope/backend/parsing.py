@@ -128,7 +128,7 @@ class ParsedBackendEquation:
         """Identify all the references to sub_expressions in the parsed expression.
 
         Returns:
-            set[str]: Unique sub-expressions references.
+            set[str]: Unique sub-expression references.
         """
         valid_eval_classes: tuple = (
             expression_parser.EvalOperatorOperand,

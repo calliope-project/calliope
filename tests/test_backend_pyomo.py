@@ -63,7 +63,7 @@ class TestChecks:
                     "constraints": {
                         "flow_out_min_relative": 0.1,
                         f"source_{constr}": "file=supply_plus_resource.csv:1",
-                        "flow_cap_equals": np.inf,
+                        "flow_cap_max": np.inf,
                     },
                 }
             },
@@ -86,7 +86,6 @@ class TestChecks:
                 "techs.test_supply_elec": {
                     "constraints": {
                         f"source_{constr}": "file=supply_plus_resource.csv:1",
-                        "flow_cap_equals": np.inf,
                         "flow_cap_max": np.inf,
                     },
                     "switches": {"source_unit": "per_cap"},
@@ -633,6 +632,7 @@ class TestExportConstraints:
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestCapacityConstraints:
     # capacity.py
+    @pytest.mark.xfail(reason="storage_cap_equals is no more")
     def test_loc_techs_storage_capacity_constraint(
         self, simple_storage, simple_supply_and_supply_plus
     ):
@@ -683,7 +683,7 @@ class TestCapacityConstraints:
                 ("simple_supply_and_supply_plus", "test_supply_plus"),
                 ("simple_storage", "test_storage"),
             ]
-            for j in ["max", "equals", "min"]
+            for j in ["max", "min"]
         ],
     )
     def test_loc_techs_flow_capacity_storage_constraint(self, scenario, tech, override):
@@ -695,16 +695,13 @@ class TestCapacityConstraints:
             f"{scenario},two_hours,investment_costs",
         )
         m.build()
-        assert f"flow_capacity_per_storage_capacity_{override}" in m.backend.constraints
-
-        if override == "equals":
-            assert not any(
-                "flow_capacity_per_storage_capacity_{i}" in m.backend.constraints
-                for i in ["max", "min"]
-            )
+        assert hasattr(
+            m._backend_model,
+            "flow_capacity_per_storage_capacity_{}_constraint".format(override),
+        )
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    @pytest.mark.parametrize("override", (("max", "equals", "min")))
+    @pytest.mark.parametrize("override", (("max", "min")))
     def test_loc_techs_flow_capacity_milp_storage_constraint(self, override):
         """
         i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.flow_cap_per_storage_cap_max')
@@ -717,12 +714,10 @@ class TestCapacityConstraints:
             "supply_and_supply_plus_milp,two_hours,investment_costs",
         )
         m.build()
-        assert f"flow_capacity_per_storage_capacity_{override}" in m.backend.constraints
-        if override == "equals":
-            assert not any(
-                "flow_capacity_per_storage_capacity_{i}" in m.backend.constraints
-                for i in ["max", "min"]
-            )
+        assert hasattr(
+            m._backend_model,
+            f"flow_capacity_per_storage_capacity_{override}_constraint",
+        )
 
     def test_no_loc_techs_flow_capacity_storage_constraint(self, caplog):
         """
@@ -733,11 +728,15 @@ class TestCapacityConstraints:
 
         m.build()
         assert not any(
-            "flow_capacity_storage_{i}" in m.backend.constraints
-            for i in ["max", "min", "equals"]
+            [
+                hasattr(
+                    m._backend_model, "flow_capacity_storage_{}_constraint".format(i)
+                )
+                for i in ["max", "min"]
+            ]
         )
 
-    @pytest.mark.parametrize("override", ((None, "max", "equals", "min")))
+    @pytest.mark.parametrize("override", ((None, "max", "min")))
     def test_loc_techs_resource_capacity_constraint(self, override):
         """
         i for i in sets.loc_techs_finite_resource_supply_plus
@@ -773,9 +772,6 @@ class TestCapacityConstraints:
             if override == "max":
                 assert expr.ub == 10
                 assert expr.lb == 0
-            elif override == "equals":
-                assert expr.ub == 10
-                assert expr.lb == 10
             if override == "min":
                 assert expr.lb == 10
                 assert np.isinf(expr.ub)
@@ -901,6 +897,7 @@ class TestCapacityConstraints:
         m.build()
         assert "area_use_capacity_per_loc" in m.backend.constraints
 
+    @pytest.mark.xfail(reason="flow_cap_scale is no more")
     def test_loc_techs_flow_capacity_constraint(self, simple_supply_and_supply_plus):
         """
         i for i in sets.loc_techs
@@ -941,7 +938,7 @@ class TestCapacityConstraints:
             == 10
         )
 
-    @pytest.mark.xfail(reason="This will be caught by typedconfig")
+    @pytest.mark.xfail(reason="flow_cap_equals is no more")
     def test_loc_techs_flow_capacity_constraint_warning_on_infinite_equals(self):
         # Check that setting `_equals` to infinity is caught:
         override = {
@@ -956,7 +953,7 @@ class TestCapacityConstraints:
             "Cannot use inf for flow_cap_equals for node, tech `('a', 'test_supply_elec')`",
         )
 
-    @pytest.mark.parametrize("bound", (("equals", "max")))
+    @pytest.mark.parametrize("bound", (("max")))
     def test_techs_flow_capacity_systemwide_constraint(self, bound):
         """
         i for i in sets.techs
@@ -965,8 +962,6 @@ class TestCapacityConstraints:
 
         def check_bounds(constraint):
             assert constraint.ub.item() == 20
-            if bound == "equals":
-                assert constraint.lb.item() == 20
             if bound == "max":
                 assert constraint.lb.item() is None
 
@@ -1327,6 +1322,7 @@ class TestMILPConstraints:
             in supply_and_supply_plus_milp.backend.constraints
         )
 
+    @pytest.mark.xfail(reason="flow_cap_equals is no more")
     def test_loc_techs_flow_capacity_max_purchase_milp_constraint(
         self, simple_supply, supply_milp, supply_purchase
     ):
@@ -1444,18 +1440,6 @@ class TestMILPConstraints:
         m.build()
         assert "storage_capacity_min_purchase_milp" in m.backend.constraints
 
-        m = build_model(
-            {
-                "techs.test_storage.constraints": {
-                    "storage_cap_equals": 10,
-                    "storage_cap_min": 10,
-                }
-            },
-            "storage_purchase,two_hours,investment_costs",
-        )
-        m.build()
-        assert "storage_capacity_min_purchase_milp" not in m.backend.constraints
-
     @pytest.mark.parametrize(
         ("scenario", "exists", "override_dict"),
         (
@@ -1527,6 +1511,7 @@ class TestMILPConstraints:
             == 2
         )
 
+    @pytest.mark.xfail(reason="unit_cap_equals_systemwide is no more")
     def test_techs_unit_capacity_equals_systemwide_milp_constraint(self):
         """
         sets.techs if unit_cap_max_systemwide or unit_cap_equals_systemwide
@@ -1594,7 +1579,7 @@ class TestMILPConstraints:
 
     def test_techs_unit_capacity_max_systemwide_no_transmission_milp_constraint(self):
         override_no_transmission = {
-            "techs.test_supply_elec.constraints.units_equals_systemwide": 1,
+            "techs.test_supply_elec.constraints.units_max_systemwide": 1,
             "nodes.b.techs.test_supply_elec.costs.monetary.purchase": 1,
         }
         m = build_model(
@@ -2360,17 +2345,19 @@ class TestNewBackend:
         assert expected.equals(updated_param.fillna(default_val))
 
     def test_update_parameter_no_refs_to_update(self, simple_supply):
-        """units_equals isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
+        """flow_cap_per_storage_cap_equals isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
 
         Updating it doesn't change the model in any way, because none of the existing constraints/expressions depend on it.
         Therefore, no warning is raised.
         """
         updated_param = 1
 
-        simple_supply.backend.update_parameter("units_equals", updated_param)
+        simple_supply.backend.update_parameter(
+            "flow_cap_per_storage_cap_equals", updated_param
+        )
 
         expected = simple_supply.backend.get_parameter(
-            "units_equals", as_backend_objs=False
+            "flow_cap_per_storage_cap_equals", as_backend_objs=False
         )
         assert expected == 1
 

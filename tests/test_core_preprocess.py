@@ -1373,7 +1373,6 @@ class TestChecks:
         "constraints,costs",
         (
             ({"units_max": 2, "flow_cap_per_unit": 5}, None),
-            ({"units_equals": 2, "flow_cap_per_unit": 5}, None),
             ({"units_min": 2, "flow_cap_per_unit": 5}, None),
             (None, {"purchase": 2}),
         ),

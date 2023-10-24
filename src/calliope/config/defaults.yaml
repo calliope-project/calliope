@@ -74,21 +74,18 @@ tech_groups:
     required_constraints: []
     allowed_constraints:
       [
-        "flow_cap_equals",
-        "flow_cap_equals_systemwide",
         "flow_cap_max",
         "flow_cap_max_systemwide",
         "flow_cap_min",
+        "flow_cap_min_systemwide",
         "flow_out_min_relative",
         "flow_cap_per_unit",
-        "flow_cap_scale",
         "flow_eff",
         "flow_ramping",
         "export_max",
         "export_carrier",
         "lifetime",
-        "units_equals",
-        "units_equals_systemwide",
+        "units_min_systemwide",
         "units_max",
         "units_max_systemwide",
         "units_min",
@@ -119,21 +116,18 @@ tech_groups:
     allowed_constraints:
       [
         "carrier_ratios",
-        "flow_cap_equals",
-        "flow_cap_equals_systemwide",
+        "flow_cap_min_systemwide",
         "flow_cap_max",
         "flow_cap_max_systemwide",
         "flow_cap_min",
         "flow_out_min_relative",
         "flow_cap_per_unit",
-        "flow_cap_scale",
         "flow_eff",
         "flow_ramping",
         "export_max",
         "export_carrier",
         "lifetime",
-        "units_equals",
-        "units_equals_systemwide",
+        "units_min_systemwide",
         "units_max",
         "units_max_systemwide",
         "units_min",
@@ -160,15 +154,7 @@ tech_groups:
       allowed_flow_out: true
   demand:
     required_constraints: []
-    allowed_constraints:
-      [
-        "sink_min",
-        "sink_max",
-        "sink_equals",
-        "area_use_equals",
-        "sink_scale",
-        "sink_unit",
-      ]
+    allowed_constraints: ["sink_min", "sink_max", "sink_equals", "sink_unit"]
     allowed_costs: [om_con]
     allowed_switches: [sink_unit, allowed_flow_in, allowed_flow_out]
     essentials:
@@ -182,23 +168,19 @@ tech_groups:
     allowed_constraints:
       [
         "flow_cap_per_storage_cap_min",
-        "flow_cap_per_storage_cap_equals",
         "flow_cap_per_storage_cap_max",
-        "flow_cap_equals",
-        "flow_cap_equals_systemwide",
+        "flow_cap_min_systemwide",
         "flow_cap_max",
         "flow_cap_max_systemwide",
         "flow_cap_min",
         "flow_out_min_relative",
         "flow_cap_per_unit",
-        "flow_cap_scale",
         "flow_eff",
         "flow_ramping",
         "export_max",
         "export_carrier",
         "force_async_flow",
         "lifetime",
-        "storage_cap_equals",
         "storage_cap_max",
         "storage_cap_min",
         "storage_cap_per_unit",
@@ -206,8 +188,7 @@ tech_groups:
         "storage_loss",
         "storage_time_max",
         "storage_discharge_depth",
-        "units_equals",
-        "units_equals_systemwide",
+        "units_min_systemwide",
         "units_max",
         "units_max_systemwide",
         "units_min",
@@ -238,29 +219,24 @@ tech_groups:
     required_constraints: []
     allowed_constraints:
       [
-        "flow_cap_equals",
-        "flow_cap_equals_systemwide",
+        "flow_cap_min_systemwide",
         "flow_cap_max",
         "flow_cap_max_systemwide",
         "flow_cap_min",
         "flow_out_min_relative",
         "flow_cap_per_unit",
-        "flow_cap_scale",
         "flow_eff",
         "flow_ramping",
         "export_max",
         "export_carrier",
         "lifetime",
-        "area_use_equals",
         "area_use_max",
         "area_use_min",
         "area_use_per_flow_cap",
         "source_min",
         "source_max",
         "source_equals",
-        "source_scale",
-        "units_equals",
-        "units_equals_systemwide",
+        "units_min_systemwide",
         "units_max",
         "units_max_systemwide",
         "units_min",
@@ -294,42 +270,34 @@ tech_groups:
     allowed_constraints:
       [
         "flow_cap_per_storage_cap_min",
-        "flow_cap_per_storage_cap_equals",
         "flow_cap_per_storage_cap_max",
-        "flow_cap_equals",
-        "flow_cap_equals_systemwide",
+        "flow_cap_min_systemwide",
         "flow_cap_max",
         "flow_cap_max_systemwide",
         "flow_cap_min",
         "flow_out_min_relative",
         "flow_cap_per_unit",
-        "flow_cap_scale",
         "flow_eff",
         "flow_ramping",
         "export_max",
         "export_carrier",
         "lifetime",
         "parasitic_eff",
-        "area_use_equals",
         "area_use_max",
         "area_use_min",
         "area_use_per_flow_cap",
-        "source_cap_equals",
         "source_cap_max",
         "source_cap_min",
         "source_eff",
         "source_min",
         "source_max",
         "source_equals",
-        "source_scale",
-        "storage_cap_equals",
         "storage_cap_max",
         "storage_cap_min",
         "storage_cap_per_unit",
         "storage_initial",
         "storage_loss",
-        "units_equals",
-        "units_equals_systemwide",
+        "units_min_systemwide",
         "units_max",
         "units_max_systemwide",
         "units_min",
@@ -375,11 +343,9 @@ tech_groups:
     required_constraints: []
     allowed_constraints:
       [
-        "flow_cap_equals",
         "flow_cap_min",
         "flow_cap_max",
         "flow_cap_per_unit",
-        "flow_cap_scale",
         "flow_eff",
         "flow_eff_per_distance",
         "force_async_flow",
@@ -440,18 +406,16 @@ techs:
       flow_cap_per_storage_cap_min: 0 # name: Minimum flow capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of minimum charge/discharge (kW) for a given storage capacity (kWh).
       flow_cap_per_storage_cap_max: .inf # name: Maximum flow capacity per storage capacity ¦ unit: hour :sup:`-1` ¦ ratio of maximum charge/discharge (kW) for a given storage capacity (kWh).
       flow_cap_per_storage_cap_equals: null # name: Tie flow capacity to storage capacity ¦ unit: hour :sup:`-1` ¦
-      flow_cap_equals: null # name: Specific installed flow capacity ¦ unit: kW ¦ fixes maximum/minimum if decision variables ``flow_out``/``flow_in`` and overrides ``_max`` and ``_min`` constraints.
-      flow_cap_equals_systemwide: null # name: System-wide specific installed flow capacity ¦ unit: kW ¦ fixes the sum to a maximum/minimum, for a particular technology, of the decision variables ``flow_out``/``flow_in`` over all nodes.
       flow_cap_max: .inf # name: Maximum installed flow capacity ¦ unit: kW ¦ Limits decision variables ``flow_out``/``flow_in`` to a maximum/minimum.
       flow_cap_max_systemwide: .inf # name: System-wide maximum installed flow capacity ¦ unit: kW ¦ Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``flow_out``/``flow_in`` over all nodes.
       flow_cap_min: 0 # name: Minimum installed flow capacity ¦ unit: kW ¦ Limits decision variables ``flow_out``/``flow_in`` to a minimum/maximum.
+      flow_cap_min_systemwide: 0 # name: System-wide specific installed flow capacity ¦ unit: kW ¦ sets the lower bound of the sum across all nodes of the decision variable `flow_cap` for a particular technology.
       flow_out_min_relative: 0 # name: Minimum outflow ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum outflow as a fraction of the technology maximum flow capacity. If non-zero and technology is not defined by ``units``, this will force the technology to operate above its minimum value at every timestep.
       flow_cap_per_unit: null # name: Flow capacity per purchased unit ¦ unit: kW/unit ¦ Set the capacity of each integer unit of a technology purchased
-      flow_cap_scale: 1.0 # name: Flow capacity scale ¦ unit: float ¦ Scale all ``flow_cap`` min/max/equals/total_max/total_equals constraints by this value
       flow_eff: 1.0 # name: Flow efficiency ¦ unit: fraction ¦ conversion efficiency (static, or from file as timeseries), from ``source``/``flow_in`` (tech dependent) to ``flow_out``/``sink``.
-      flow_eff_per_distance: 1.0 # name: Flow efficiency per distance ¦ unit: fraction/distance ¦ Set as value between 1 (no loss) and 0 (all flow lost).
+      flow_eff_per_distance: 1.0 # name: Flow efficiency per distance ¦ unit: fraction/distance ¦ Set as value between 1 (no loss) and 0 (all lost).
       flow_ramping: 1 # name: Ramping rate ¦ unit: fraction / hour ¦ Set to ``false`` to disable ramping constraints, otherwise limit maximum outflow to a fraction of maximum capacity, which increases by that fraction at each timestep.
-      export_max: .inf # name: Maximum allowed export ¦ unit: kW ¦ Maximum allowed export of produced flow carrier for a technology.
+      export_max: .inf # name: Maximum allowed export ¦ unit: kW ¦ Maximum allowed export of produced carrier for a technology.
       export_carrier: null # name: Export carrier ¦ unit: N/A ¦ Name of carrier to be exported. Must be an output carrier of the technology
       lifetime: null # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
       parasitic_eff: 1.0 # name: Plant parasitic efficiency ¦ unit: fraction ¦ Additional losses as flow gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption
@@ -461,28 +425,22 @@ techs:
       source_min: 0 # name: Minimum bound on source to add to the system (e.g., biofuel, coal, rainfall, wind flow) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Minimum available source (static, or from file as timeseries). Unit dictated by ``source_unit``.
       source_max: .inf # name: Maximum bound on source to add to the system (e.g., biofuel, coal, rainfall, wind flow) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Maximum available source (static, or from file as timeseries). Unit dictated by ``source_unit``.
       source_equals: null # name: Exact amount of source to add to the system (e.g., biofuel, coal, rainfall, wind flow) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Required source (static, or from file as timeseries). Unit dictated by ``source_unit``.
-      area_use_equals: null # name: Specific installed area use ¦ unit: m\ :sup:`2` ¦
       area_use_max: .inf # name: Maximum usable area ¦ unit: m\ :sup:`2` ¦ If set to a finite value, restricts the usable area of the technology to this value.
       area_use_min: 0 # name: Minimum usable area ¦ unit: m\ :sup:`2` ¦
       area_use_per_flow_cap: null # name: Area use per flow capacity ¦ unit: m\ :sup: `2`/kW ¦ If set, forces ``area_use`` to follow ``flow_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``area_use == 1.5 * flow_cap``)
-      source_cap_equals: null # name: Specific installed source consumption capacity ¦ unit: kW ¦ overrides ``_max`` and ``_min`` constraints.
       source_cap_max: .inf # name: Maximum installed source consumption capacity ¦ unit: kW ¦
       source_cap_min: 0 # name: Minimum installed source consumption capacity ¦ unit: kW ¦
       source_eff: 1.0 # name: Efficiency of converting a source into usable resource ¦ unit: fraction ¦ Efficiency (static, or from file as timeseries) in capturing source before it reaches storage (if storage is present) or conversion to carrier.
-      sink_scale: 1.0 # name: Sink scale ¦ unit: fraction ¦ Scale sink (either static value or all values in timeseries) by this value
-      source_scale: 1.0 # name: Source scale ¦ unit: fraction ¦ Scale source (either static value or all values in timeseries) by this value
-      storage_cap_equals: null # name: Specific storage capacity ¦ unit: kWh ¦ If not defined, ``flow_cap_equals`` * ``flow_cap_per_storage_cap_max`` will be used as the capacity and overrides ``_max`` and ``_min`` constraints.
       storage_cap_max: .inf # name: Maximum storage capacity ¦ unit: kWh ¦ If not defined, ``flow_cap_max`` * ``flow_cap_per_storage_cap_max`` will be used as the capacity.
       storage_cap_min: 0 # name: Minimum storage capacity ¦ unit: kWh ¦
       storage_cap_per_unit: null # name: Storage capacity per purchased unit ¦ unit: kWh/unit ¦ Set the storage capacity of each integer unit of a technology purchased.
       storage_discharge_depth: 0 # name: Storage depth of discharge ¦ unit: fraction ¦ Defines the minimum level of storage state of charge, as a fraction of total storage capacity
       storage_initial: 0 # name: Initial storage level ¦ unit: fraction ¦ Set stored flow in device at the first timestep, as a fraction of total storage capacity
       storage_loss: 0 # name: Storage loss rate ¦ unit: fraction/hour ¦ rate of storage loss per hour (static, or from file as timeseries), used to calculate lost stored flow as ``(1 - storage_loss)^hours_per_timestep``
-      units_equals: null # name: Specific number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
-      units_equals_systemwide: null # name: System-wide specific installed flow capacity ¦ unit: kW ¦ fixes the sum to a specific value, for a particular technology, of the decision variables ``flow_out``/``flow_in`` over all nodes.
-      units_max: .inf # name: Maximum number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
-      units_max_systemwide: .inf # name: System-wide maximum installed flow capacity ¦ unit: kW ¦ Limits the sum to a maximum/minimum, for a particular technology, of the decision variables ``flow_out``/``flow_in`` over all nodes.
+      units_min_systemwide: 0 # name: System-wide minimum installed flow capacity ¦ unit: integer ¦ sets the lower bound of the sum across all nodes of the decision variable `units`for a particular technology.
+      units_max_systemwide: .inf # name: System-wide minimum installed flow capacity ¦ unit: integer ¦ sets the upper bound of the sum across all nodes of the decision variable `units`for a particular technology.
       units_min: 0 # name: Minimum number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
+      units_max: .inf # name: Maximum number of purchased units ¦ unit: integer ¦ Turns the model from LP to MILP.
     costs:
       default_cost: # These costs are used for any value not defined for a given cost class
         flow_cap: 0 # name: Cost of flow capacity ¦ unit: kW :sub:`gross` :sup:`-1` ¦

@@ -47,6 +47,11 @@ def expression_string_parser(valid_math_element_names):
 
 
 @pytest.fixture
+def arithmetic_string_parser(valid_math_element_names):
+    return expression_parser.generate_arithmetic_parser(valid_math_element_names)
+
+
+@pytest.fixture
 def slice_parser(valid_math_element_names):
     return expression_parser.generate_slice_parser(valid_math_element_names)
 
@@ -811,6 +816,14 @@ class TestParsedBackendEquation:
 
     def test_find_single_sub_expression(self, expression_string_parser, equation_obj):
         parsed = expression_string_parser.parse_string("$foo == 1", parse_all=True)
+        equation_obj.expression = parsed
+        found_sub_expressions = equation_obj.find_sub_expressions()
+        assert found_sub_expressions == {"foo"}
+
+    def test_find_single_sub_expression_in_global_expression(
+        self, arithmetic_string_parser, equation_obj
+    ):
+        parsed = arithmetic_string_parser.parse_string("$foo", parse_all=True)
         equation_obj.expression = parsed
         found_sub_expressions = equation_obj.find_sub_expressions()
         assert found_sub_expressions == {"foo"}

@@ -435,7 +435,7 @@ def _check_tech_final(
     ):
         errors.append(
             f"`{tech_id}` at `{loc_id}` fails to define flow_cap_per_unit when "
-            "specifying technology in units_max/min/equals"
+            "specifying technology in units_max/min"
         )
 
     # If a technology is defined by units & is a storage tech, it must define storage_cap_per_unit
@@ -447,7 +447,7 @@ def _check_tech_final(
     ):
         errors.append(
             f"`{tech_id}` at `{loc_id}` fails to define storage_cap_per_unit when "
-            "specifying technology in units_max/min/equals"
+            "specifying technology in units_max/min"
         )
 
     # Gather remaining unallowed constraints
@@ -652,7 +652,6 @@ def check_model_data(model_data):
         if (
             (model_data[cap.group(0)] < 0)
             & model_data.get(f"{cap.group(1)}_max", xr.DataArray(np.nan)).isnull()
-            & model_data.get(f"{cap.group(1)}_equals", xr.DataArray(np.nan)).isnull()
         ).any():
             errors.append(
                 f"Cannot have a negative {cap.group(0)} as there is an unset "

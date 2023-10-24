@@ -165,12 +165,11 @@ class PyomoBackendModel(backend_model.BackendModel):
         def _variable_setter(where):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
 
-            lb, ub = self._get_capacity_bounds(name, variable_dict["bounds"])
             return self._apply_func(
                 self._to_pyomo_variable,
                 where,
-                ub,
-                lb,
+                self._get_capacity_bound(variable_dict["bounds"]["max"], name=name),
+                self._get_capacity_bound(variable_dict["bounds"]["min"], name=name),
                 name=name,
                 domain_type=domain_type,
             )
@@ -520,54 +519,30 @@ class PyomoBackendModel(backend_model.BackendModel):
                 f"{description}: Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help."
             )
 
-    def _get_capacity_bounds(
-        self, name: str, bounds: parsing.UnparsedVariableBoundDict
-    ) -> tuple[xr.DataArray, xr.DataArray]:
+    def _get_capacity_bound(self, bound: Any, name: str) -> xr.DataArray:
         """
-        Generate arrays corresponding to upper and lower bounds of a decision variable.
-        If `equals` is given, then everywhere it is not None/np.nan it will be applied
-        as the simultaneous upper and lower bound. Everywhere it is None/np.nan, it will
-        be filled by `min` (for lower bound) and `max` (for upper bound).
-        Upper and lower bounds will be scaled by `scale`, if `scale` is not None/np.nan.
+        Generate array for the upper/lower bound of a decision variable.
+        Any NaN values will be replaced by None, which Pyomo will correctly interpret as there being no bound to apply.
 
         Args:
-            bounds (dict): Dictionary of optional keys `min`, `max`, `equals`, and `scale`.
+            bound (Any): The bound name (corresponding to an array in the model input data) or value.
             name (str): Name of decision variable.
 
         Returns:
-            tuple[xr.DataArray, xr.DataArray]:
-                (upper bounds, lower bounds). Where unbounded, the array entry will be None.
+            xr.DataArray: Where unbounded, the array entry will be None, otherwise a float value.
         """
 
-        def __get_bound(bound):
-            this_bound = bounds.get(bound, None)
-            if isinstance(this_bound, str):
-                text1 = bound
-                text2 = this_bound
-                self.log(
-                    "variables",
-                    name,
-                    f"{text1} bound applied according to the {text2} parameter values.",
-                )
-                return self.get_parameter(this_bound)
-            else:
-                # TODO: decide if this parameter should be added to the backend dataset too
-                name_ = f"__{name}_{bound}"
-                self._create_obj_list(name_, "parameters")
-                return xr.DataArray(self._to_pyomo_param(this_bound, name=name_))
+        if isinstance(bound, str):
+            self.log(
+                "variables",
+                name,
+                f"Applying bound according to the {bound} parameter values.",
+            )
+            bound_array = self.get_parameter(bound)
+        else:
+            bound_array = xr.DataArray(bound)
 
-        scale = __get_bound("scale")
-        equals_ = __get_bound("equals")
-        min_ = __get_bound("min")
-        max_ = __get_bound("max")
-
-        lb = equals_.fillna(min_)
-        ub = equals_.fillna(max_)
-        if scale.notnull().any():
-            lb = lb * scale
-            ub = ub * scale
-
-        return lb.fillna(None), ub.fillna(None)
+        return bound_array.fillna(None)
 
     def _to_pyomo_param(
         self, val: Any, *, name: str, default: Any = np.nan, use_inf_as_na: bool = True
