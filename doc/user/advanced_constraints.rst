@@ -334,7 +334,7 @@ By applying ``units.max``, ``units.min``, or ``units.equals`` to a technology, t
 Asynchronous flow in/out
 ------------------------
 
-The ``flow_switch`` binary variable ensures that only one of ``flow_out`` and ``flow_in`` can be non-zero in a given timestep.
+The ``async_flow_switch`` binary variable ensures that only one of ``flow_out`` and ``flow_in`` can be non-zero in a given timestep.
 
 This constraint can be applied to storage or transmission technologies. This example shows use with a heat transmission technology:
 

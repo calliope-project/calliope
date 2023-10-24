@@ -442,16 +442,16 @@ constraints:
   async_flow_in_milp:
     description: "Set a technology's ability to have inflow in the same timestep that it has outflow, for any technology using the asynchronous flow binary switch."
     foreach: [nodes, techs, timesteps]
-    where: "flow_switch"
+    where: "async_flow_switch"
     equations:
-      - expression: reduce_carrier_dim(flow_in, carrier_tier=in) <= (1 - flow_switch) * bigM
+      - expression: reduce_carrier_dim(flow_in, carrier_tier=in) <= (1 - async_flow_switch) * bigM
 
   async_flow_out_milp:
     description: "Set a technology's ability to have outflow in the same timestep that it has inflow, for any technology using the asynchronous flow binary switch."
     foreach: [nodes, techs, timesteps]
-    where: "flow_switch"
+    where: "async_flow_switch"
     equations:
-      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) <= flow_switch * bigM
+      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) <= async_flow_switch * bigM
 
   ramping_up:
     description: "Set the upper bound on a technology's ability to ramp outflow up beyond a certain percentage compared to the previous timestep."
@@ -594,7 +594,7 @@ variables:
       min: 0
       max: .inf
 
-  flow_switch:
+  async_flow_switch:
     description: "Binary switch to force asynchronous outflow/consumption of a `storage`/`supply_plus`/`transmission` technology. This ensures that a technology with carrier flow efficiencies < 100% cannot produce and consume a flow simultaneously to remove unwanted carrier from the system."
     unit: integer
     foreach: [nodes, techs, timesteps]
