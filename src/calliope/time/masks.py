@@ -35,7 +35,7 @@ def _get_array(data, var, tech, **kwargs):
     return arr
 
 
-def zero(data, tech, var="resource", **kwargs):
+def zero(data, tech, var="source_max", **kwargs):
     """
     Returns timesteps where ``var`` for the technology ``tech`` is zero.
 
@@ -82,7 +82,7 @@ def _get_minmax_timestamps(series, length, n, how="max", padding=None):
 def extreme(
     data,
     tech,
-    var="resource",
+    var="source_max",
     how="max",
     length="1D",
     n=1,
@@ -102,7 +102,7 @@ def extreme(
     tech : str
         Technology whose `var` to find extreme for.
     var : str, optional
-        default 'resource'
+        default 'source_max'
     how : str, optional
         'max' (default) or 'min'.
     length : str, optional
@@ -139,7 +139,7 @@ def extreme_diff(
     data,
     tech0,
     tech1,
-    var="resource",
+    var="source_max",
     how="max",
     length="1D",
     n=1,
@@ -161,7 +161,7 @@ def extreme_diff(
     tech1 : str
         Second technology for which we find the extreme of `var`
     var : str, optional
-        default 'resource'
+        default 'source_max'
     how : str, optional
         'max' (default) or 'min'.
     length : str, optional

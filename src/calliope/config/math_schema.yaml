@@ -64,7 +64,7 @@ properties:
                       description: math equation sub-expression which can be one term or a combination of terms using the operators [+, -, *, /, **].
           slices: &slices
             type: object
-            description: Array index slices which are used to replace any instances in which they are referenced in decision variables/parameters/global expressions in the component equation(s) or sub-expressions. Index slices are referenced by their name preceded with the "$" symbol, e.g., `foo` in `energy_eff[techs=$foo]`.
+            description: Array index slices which are used to replace any instances in which they are referenced in decision variables/parameters/global expressions in the component equation(s) or sub-expressions. Index slices are referenced by their name preceded with the "$" symbol, e.g., `foo` in `flow_eff[techs=$foo]`.
             additionalProperties: false
             patternProperties:
               '[^\d^_\W][\w\d]+':

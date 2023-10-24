@@ -5,12 +5,12 @@ nodes:
       chp:
       pv:
       supply_grid_power:
-        costs.monetary.energy_cap: 100 # cost of transformers
+        costs.monetary.flow_cap: 100 # cost of transformers
       supply_gas:
       demand_electricity:
-        constraints.resource: file=demand_power.csv
+        constraints.sink_equals: file=demand_power.csv
       demand_heat:
-        constraints.resource: file=demand_heat.csv
+        constraints.sink_equals: file=demand_heat.csv
     available_area: 500
     coordinates: { x: 2, y: 7 }
   # X1-end
@@ -18,33 +18,33 @@ nodes:
   X2:
     techs:
       boiler:
-        costs.monetary.energy_cap: 43.1 # different boiler costs
+        costs.monetary.flow_cap: 43.1 # different boiler costs
       pv:
         costs.monetary:
           om_prod: -0.0203 # revenue for just producing electricity
           export: -0.0491 # FIT return for PV export
       supply_gas:
       demand_electricity:
-        constraints.resource: file=demand_power.csv
+        constraints.sink_equals: file=demand_power.csv
       demand_heat:
-        constraints.resource: file=demand_heat.csv
+        constraints.sink_equals: file=demand_heat.csv
     available_area: 1300
     coordinates: { x: 8, y: 7 }
 
   X3:
     techs:
       boiler:
-        costs.monetary.energy_cap: 78 # different boiler costs
+        costs.monetary.flow_cap: 78 # different boiler costs
       pv:
         constraints:
-          energy_cap_max: 50 # changing tariff structure below 50kW
+          flow_cap_max: 50 # changing tariff structure below 50kW
         costs.monetary:
           om_annual: -80.5 # reimbursement per kWp from FIT
       supply_gas:
       demand_electricity:
-        constraints.resource: file=demand_power.csv
+        constraints.sink_equals: file=demand_power.csv
       demand_heat:
-        constraints.resource: file=demand_heat.csv
+        constraints.sink_equals: file=demand_heat.csv
     available_area: 900
     coordinates: { x: 5, y: 3 }
   # other-locs-end

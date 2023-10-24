@@ -36,11 +36,11 @@ def subset_sum_squeeze(data, subset={}, sum_dims=None, squeeze=False):
 
     Examples
     --------
-    (in) data = carrier_prod, dimensions = (locs: 2, techs: 5, carriers: 1, timesteps: 100)
+    (in) data = flow_out, dimensions = (locs: 2, techs: 5, carriers: 1, timesteps: 100)
     subset_sum_squeeze(
         data, subset={'techs': ['ccgt', 'csp']}, sum_dims='locs', squeeze=True
     )
-    (out) data = carrier_prod, dimensions = (techs: 2, timesteps: 100)
+    (out) data = flow_out, dimensions = (techs: 2, timesteps: 100)
 
     """
     if subset:  # first, subset the data

@@ -207,7 +207,6 @@ def check_initial(config_model):
     # Checks for techs and tech_groups:
     # * All user-defined tech and tech_groups must specify a parent
     # * techs cannot be parents, only tech groups can
-    # * No carrier may be called 'resource'
     default_tech_groups = list(DEFAULTS.tech_groups.keys())
     for tg_name, tg_config in config_model.tech_groups.items():
         if tg_name in default_tech_groups:
@@ -220,11 +219,6 @@ def check_initial(config_model):
             errors.append(
                 "tech_group `{}` has a tech as a parent, only another tech_group "
                 "is allowed".format(tg_name)
-            )
-        if "resource" in get_all_carriers(tg_config.essentials):
-            errors.append(
-                "No carrier called `resource` may "
-                "be defined (tech_group: {})".format(tg_name)
             )
 
     for t_name, t_config in config_model.techs.items():
@@ -241,11 +235,6 @@ def check_initial(config_model):
             errors.append(
                 "tech `{}` has another tech as a parent, only a tech_group "
                 "is allowed".format(tg_name)
-            )
-        if "resource" in get_all_carriers(t_config.get("essentials", AttrDict())):
-            errors.append(
-                "No carrier called `resource` may "
-                "be defined (tech: {})".format(t_name)
             )
 
     # Check whether any unrecognised mid-level keys are defined in techs, nodes, or links
@@ -439,13 +428,13 @@ def _check_tech_final(
                 "configure `{c}` as a carrier.".format(t=tech_id, c=carrier)
             )
 
-    # If a technology is defined by units (i.e. integer decision variable), it must define energy_cap_per_unit
+    # If a technology is defined by units (i.e. integer decision variable), it must define flow_cap_per_unit
     if (
         any(["units_" in k for k in tech_config.get("constraints", {}).keys()])
-        and "energy_cap_per_unit" not in tech_config.get("constraints", {}).keys()
+        and "flow_cap_per_unit" not in tech_config.get("constraints", {}).keys()
     ):
         errors.append(
-            f"`{tech_id}` at `{loc_id}` fails to define energy_cap_per_unit when "
+            f"`{tech_id}` at `{loc_id}` fails to define flow_cap_per_unit when "
             "specifying technology in units_max/min/equals"
         )
 
@@ -501,16 +490,27 @@ def _check_tech_final(
                     "{} cost: `{}`".format(tech_id, loc_id, cost_class, k)
                 )
 
-    # Error if non-allowed `resource_unit` is defined
-    if tech_config.switches.get("resource_unit", "energy") not in [
-        "energy",
-        "energy_per_cap",
-        "energy_per_area",
+    # Error if non-allowed `source_unit` is defined
+    if tech_config.switches.get("source_unit", "absolute") not in [
+        "absolute",
+        "per_cap",
+        "per_area",
     ]:
         errors.append(
-            "`{}` is an unknown resource unit for `{}` at `{}`. "
-            "Only `energy`, `energy_per_cap`, or `energy_per_area` is allowed.".format(
-                tech_config.switches.resource_unit, tech_id, loc_id
+            "`{}` is an unknown source unit for `{}` at `{}`. "
+            "Only `absolute`, `per_cap`, or `per_area` is allowed.".format(
+                tech_config.switches.source_unit, tech_id, loc_id
+            )
+        )
+    # Error if non-allowed `sink_unit` is defined
+    if tech_config.switches.get("sink_unit", "absolute") not in [
+        "absolute",
+        "per_area",
+    ]:
+        errors.append(
+            "`{}` is an unknown sink unit for `{}` at `{}`. "
+            "Only `absolute`, or `per_area` is allowed.".format(
+                tech_config.switches.sink_unit, tech_id, loc_id
             )
         )
 
@@ -636,21 +636,15 @@ def check_model_data(model_data):
     comments = AttrDict()
 
     # Ensure that no loc-tech specifies infinite resource and force_resource=True
-    if (
-        (
-            model_data.get("force_resource", False)
-            * np.isinf(model_data.resource).max("timesteps")
-        )
-        .fillna(False)
-        .any()
+    if any(
+        np.any(np.isinf(model_data.get(f"{x}_equals", False)))
+        for x in ["source", "sink"]
     ):
-        errors.append(
-            "Cannot have `force_resource` = True if setting infinite resource values"
-        )
+        errors.append("Cannot include infinite values in `source_equals`/`sink_equals`")
 
     # Ensure that if a tech has negative costs, there is a max cap defined
     # FIXME: doesn't consider capacity being set by a linked constraint e.g.
-    # `resource_cap_per_energy_cap`.
+    # `source_cap_per_flow_cap`.
     relevant_caps = set(
         [re.search(r"cost_(\w+_cap)", i) for i in model_data.data_vars.keys()]
     ).difference([None])
@@ -665,18 +659,6 @@ def check_model_data(model_data):
                 "corresponding capacity constraint"
             )
 
-    if (model_data.inheritance.str.endswith("demand") * model_data.resource).max() > 0:
-        relevant_node_techs = (
-            (model_data.inheritance.str.endswith("demand") * model_data.resource)
-            .max("timesteps")
-            .where(lambda x: x > 0)
-            .to_series()
-            .dropna()
-        )
-        errors.append(
-            f"Positive resource given for demands {relevant_node_techs.index}. "
-            "All demands must have negative resource"
-        )
     # TODO: fix operate mode by implementing windowsteps, etc., which should make this
     # issue of resolution changes redundant
     # Check if we're allowed to use operate mode

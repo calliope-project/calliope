@@ -80,37 +80,37 @@ def postprocess_model_results(results, model_data, timings):
 
 def capacity_factor(results, model_data, systemwide=False):
     """
-    # In operate mode, energy_cap is an input parameter
-    if "energy_cap" not in results.keys():
-        energy_cap = model_data.energy_cap
+    # In operate mode, flow_cap is an input parameter
+    if "flow_cap" not in results.keys():
+        flow_cap = model_data.flow_cap
     else:
-        energy_cap = results.energy_cap
+        flow_cap = results.flow_cap
 
-    capacity_factors = (results["carrier_prod"] / energy_cap).fillna(0)
+    capacity_factors = (results["flow_out"] / flow_cap).fillna(0)
 
     The weight of timesteps is considered when computing systemwide capacity factors,
     such that higher-weighted timesteps have a stronger influence
     on the resulting system-wide time-averaged capacity factor.
 
     """
-    # In operate mode, energy_cap is an input parameter
-    if "energy_cap" not in results.keys():
-        energy_cap = model_data.energy_cap
+    # In operate mode, flow_cap is an input parameter
+    if "flow_cap" not in results.keys():
+        flow_cap = model_data.flow_cap
     else:
-        energy_cap = results.energy_cap
+        flow_cap = results.flow_cap
 
     if systemwide:
-        prod_sum = (results["carrier_prod"] * model_data.timestep_weights).sum(
+        prod_sum = (results["flow_out"] * model_data.timestep_weights).sum(
             dim=["timesteps", "nodes"], min_count=1
         )
 
-        cap_sum = energy_cap.where(lambda x: x > 0).sum(dim="nodes", min_count=1)
+        cap_sum = flow_cap.where(lambda x: x > 0).sum(dim="nodes", min_count=1)
         time_sum = (model_data.timestep_resolution * model_data.timestep_weights).sum()
 
         capacity_factors = (prod_sum / (cap_sum * time_sum)).fillna(0)
     else:
         capacity_factors = (
-            results["carrier_prod"] / energy_cap.where(lambda x: x > 0)
+            results["flow_out"] / flow_cap.where(lambda x: x > 0)
         ).fillna(0)
 
     return capacity_factors
@@ -144,27 +144,27 @@ def systemwide_levelised_cost(results, model_data, total=False):
 
     """
     # Here we scale production by timestep weight
-    carrier_prod = results["carrier_prod"] * model_data.timestep_weights
+    flow_out = results["flow_out"] * model_data.timestep_weights
     cost = results["cost"].sum(dim="nodes", min_count=1)
-    carrier_prod = (results["carrier_prod"] * model_data.timestep_weights).sum(
+    flow_out = (results["flow_out"] * model_data.timestep_weights).sum(
         dim=["timesteps", "nodes"], min_count=1
     )
 
     if total:
         # cost is the total cost of the system
-        # carrier_prod is only the carrier_prod of supply and conversion technologies
+        # flow_out is only the flow_out of supply and conversion technologies
         allowed_techs = ("supply", "supply_plus", "conversion", "conversion_plus")
         valid_techs = model_data.inheritance.to_series().str.endswith(allowed_techs)
         cost = cost.sum(dim="techs", min_count=1)
-        carrier_prod = carrier_prod.loc[{"techs": valid_techs[valid_techs].index}].sum(
+        flow_out = flow_out.loc[{"techs": valid_techs[valid_techs].index}].sum(
             dim="techs", min_count=1
         )
 
     levelised_cost = []
 
-    for carrier in carrier_prod["carriers"].values:
+    for carrier in flow_out["carriers"].values:
         levelised_cost.append(
-            cost / carrier_prod.loc[{"carriers": carrier}].where(lambda x: x > 0)
+            cost / flow_out.loc[{"carriers": carrier}].where(lambda x: x > 0)
         )
 
     return xr.concat(levelised_cost, dim="carriers")

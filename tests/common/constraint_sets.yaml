@@ -9,7 +9,7 @@ national_scale: # checked
         '("region1", "power")',
         '("region2", "power")',
       ]
-    carrier_consumption_max:
+    flow_in_max:
       [
         '("region1-1", "free_transmission:region1", "power")',
         '("region1-2", "free_transmission:region1", "power")',
@@ -23,7 +23,7 @@ national_scale: # checked
         '("region2", "battery", "power")',
         '("region2", "demand_power", "power")',
       ]
-    carrier_production_max:
+    flow_out_max:
       [
         '("region1-1", "csp", "power")',
         '("region1-1", "free_transmission:region1", "power")',
@@ -57,16 +57,16 @@ national_scale: # checked
         '("region1", "free_transmission:region1-3")',
         '("region2", "ac_transmission:region1")',
       ]
-    energy_capacity_per_storage_capacity_max:
+    flow_capacity_per_storage_capacity_max:
       [
         '("region1-1", "csp")',
         '("region1-2", "csp")',
         '("region1-3", "csp")',
         '("region2", "battery")',
       ]
-    resource_availability_supply_plus:
+    source_availability_supply_plus:
       ['("region1-1", "csp")', '("region1-2", "csp")', '("region1-3", "csp")']
-    resource_max:
+    source_max:
       ['("region1-1", "csp")', '("region1-2", "csp")', '("region1-3", "csp")']
     storage_max:
       [
@@ -86,7 +86,7 @@ national_scale: # checked
         '("region1", "free_transmission:region1-3")',
         '("region2", "ac_transmission:region1")',
       ]
-    energy_capacity_systemwide: ['"ccgt"']
+    flow_capacity_systemwide: ['"ccgt"']
   global_expressions:
     cost:
       [
@@ -129,7 +129,7 @@ national_scale: # checked
         '("monetary", "region1", "free_transmission:region1-3")',
         '("monetary", "region2", "ac_transmission:region1")',
       ]
-    required_resource:
+    required_sink:
       ['("region1", "demand_power")', '("region2", "demand_power")']
 urban_scale: # checked
   constraints:
@@ -152,7 +152,7 @@ urban_scale: # checked
         '("X2", "electricity")',
         '("X3", "electricity")',
       ]
-    carrier_consumption_max:
+    flow_in_max:
       [
         '("N1", "heat_pipes:X1", "heat")',
         '("N1", "heat_pipes:X2", "heat")',
@@ -171,7 +171,7 @@ urban_scale: # checked
         '("X3", "heat_pipes:N1", "heat")',
         '("X3", "power_lines:X1", "electricity")',
       ]
-    carrier_production_max:
+    flow_out_max:
       [
         '("N1", "heat_pipes:X1", "heat")',
         '("N1", "heat_pipes:X2", "heat")',
@@ -226,12 +226,11 @@ urban_scale: # checked
         '("X3", "heat_pipes:N1")',
         '("X3", "power_lines:X1")',
       ]
-    carrier_production_max_conversion_plus: ['("X1", "chp")']
-    resource_area_per_energy_capacity:
+    flow_out_max_conversion_plus: ['("X1", "chp")']
+    area_use_per_flow_capacity: ['("X1", "pv")', '("X2", "pv")', '("X3", "pv")']
+    source_availability_supply_plus:
       ['("X1", "pv")', '("X2", "pv")', '("X3", "pv")']
-    resource_availability_supply_plus:
-      ['("X1", "pv")', '("X2", "pv")', '("X3", "pv")']
-    resource_max: ['("X1", "pv")', '("X2", "pv")', '("X3", "pv")']
+    source_max: ['("X1", "pv")', '("X2", "pv")', '("X3", "pv")']
     symmetric_transmission:
       [
         '("N1", "heat_pipes:X1")',
@@ -245,7 +244,7 @@ urban_scale: # checked
         '("X3", "heat_pipes:N1")',
         '("X3", "power_lines:X1")',
       ]
-    resource_area_capacity_per_loc: ['"X1"', '"X2"', '"X3"']
+    area_use_capacity_per_loc: ['"X1"', '"X2"', '"X3"']
   global_expressions:
     cost:
       [
@@ -304,7 +303,7 @@ urban_scale: # checked
         '("monetary", "X3", "boiler")',
         '("monetary", "X1", "chp")',
       ]
-    required_resource:
+    required_sink:
       [
         '("X1", "demand_electricity")',
         '("X1", "demand_heat")',
@@ -334,7 +333,7 @@ milp: # checked
         '("X2", "electricity")',
         '("X3", "electricity")',
       ]
-    carrier_consumption_max:
+    flow_in_max:
       [
         '("N1", "heat_pipes:X1", "heat")',
         '("N1", "heat_pipes:X2", "heat")',
@@ -353,7 +352,7 @@ milp: # checked
         '("X3", "heat_pipes:N1", "heat")',
         '("X3", "power_lines:X1", "electricity")',
       ]
-    carrier_production_max:
+    flow_out_max:
       [
         '("N1", "heat_pipes:X1", "heat")',
         '("N1", "heat_pipes:X2", "heat")',
@@ -408,15 +407,14 @@ milp: # checked
         '("X3", "heat_pipes:N1")',
         '("X3", "power_lines:X1")',
       ]
-    carrier_production_max_conversion_plus_milp: ['("X1", "chp")']
-    carrier_production_min_conversion_plus_milp: ['("X1", "chp")']
-    energy_capacity_max_purchase_milp: ['("X2", "boiler")', '("X3", "boiler")']
-    energy_capacity_units_milp: ['("X1", "chp")']
-    resource_area_per_energy_capacity:
+    flow_out_max_conversion_plus_milp: ['("X1", "chp")']
+    flow_out_min_conversion_plus_milp: ['("X1", "chp")']
+    flow_capacity_max_purchase_milp: ['("X2", "boiler")', '("X3", "boiler")']
+    flow_capacity_units_milp: ['("X1", "chp")']
+    area_use_per_flow_capacity: ['("X1", "pv")', '("X2", "pv")', '("X3", "pv")']
+    source_availability_supply_plus:
       ['("X1", "pv")', '("X2", "pv")', '("X3", "pv")']
-    resource_availability_supply_plus:
-      ['("X1", "pv")', '("X2", "pv")', '("X3", "pv")']
-    resource_max: ['("X1", "pv")', '("X2", "pv")', '("X3", "pv")']
+    source_max: ['("X1", "pv")', '("X2", "pv")', '("X3", "pv")']
     symmetric_transmission:
       [
         '("N1", "heat_pipes:X1")',
@@ -434,7 +432,7 @@ milp: # checked
     update_costs_investment_purchase_milp:
       ['("X2", "boiler")', '("X3", "boiler")']
     update_costs_investment_units_milp: ['("X1", "chp")']
-    asynchronous_prod_milp:
+    async_flow_out_milp:
       [
         '("N1", "heat_pipes:X1")',
         '("X2", "heat_pipes:N1")',
@@ -443,7 +441,7 @@ milp: # checked
         '("N1", "heat_pipes:X2")',
         '("X1", "heat_pipes:N1")',
       ]
-    asynchronous_con_milp:
+    async_flow_in_milp:
       [
         '("N1", "heat_pipes:X1")',
         '("X2", "heat_pipes:N1")',
@@ -452,7 +450,7 @@ milp: # checked
         '("N1", "heat_pipes:X2")',
         '("X1", "heat_pipes:N1")',
       ]
-    resource_area_capacity_per_loc: ['"X1"', '"X2"', '"X3"']
+    area_use_capacity_per_loc: ['"X1"', '"X2"', '"X3"']
   global_expressions:
     cost:
       [
@@ -511,7 +509,7 @@ milp: # checked
         '("monetary", "X3", "boiler")',
         '("monetary", "X1", "chp")',
       ]
-    required_resource:
+    required_sink:
       [
         '("X1", "demand_electricity")',
         '("X1", "demand_heat")',

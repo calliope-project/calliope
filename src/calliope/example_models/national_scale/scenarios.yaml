@@ -43,13 +43,13 @@ overrides:
     # group_constraints:
     #    systemwide_cost_max.cost_max.monetary: 1e10  # very large, non-infinite value
 
-    techs.ccgt.costs.spores_score.energy_cap: 0
+    techs.ccgt.costs.spores_score.flow_cap: 0
     techs.ccgt.costs.spores_score.interest_rate: 1
-    techs.csp.costs.spores_score.energy_cap: 0
+    techs.csp.costs.spores_score.flow_cap: 0
     techs.csp.costs.spores_score.interest_rate: 1
-    techs.battery.costs.spores_score.energy_cap: 0
+    techs.battery.costs.spores_score.flow_cap: 0
     techs.battery.costs.spores_score.interest_rate: 1
-    techs.ac_transmission.costs.spores_score.energy_cap: 0
+    techs.ac_transmission.costs.spores_score.flow_cap: 0
     techs.ac_transmission.costs.spores_score.interest_rate: 1
 
   operate:
@@ -59,28 +59,28 @@ overrides:
       horizon: 24
     model.subset_time: ["2005-01-01", "2005-01-10"]
     nodes:
-      region1.techs.ccgt.constraints.energy_cap_equals: 30000
+      region1.techs.ccgt.constraints.flow_cap_equals: 30000
 
-      region2.techs.battery.constraints.energy_cap_equals: 1000
+      region2.techs.battery.constraints.flow_cap_equals: 1000
       region2.techs.battery.constraints.storage_cap_equals: 5240
 
-      region1-1.techs.csp.constraints.energy_cap_equals: 10000
+      region1-1.techs.csp.constraints.flow_cap_equals: 10000
       region1-1.techs.csp.constraints.storage_cap_equals: 244301
-      region1-1.techs.csp.constraints.resource_area_equals: 130385
+      region1-1.techs.csp.constraints.area_use_equals: 130385
 
-      region1-2.techs.csp.constraints.energy_cap_equals: 0
+      region1-2.techs.csp.constraints.flow_cap_equals: 0
       region1-2.techs.csp.constraints.storage_cap_equals: 0
-      region1-2.techs.csp.constraints.resource_area_equals: 0
+      region1-2.techs.csp.constraints.area_use_equals: 0
 
-      region1-3.techs.csp.constraints.energy_cap_equals: 2534
+      region1-3.techs.csp.constraints.flow_cap_equals: 2534
       region1-3.techs.csp.constraints.storage_cap_equals: 25301
-      region1-3.techs.csp.constraints.resource_area_equals: 8487
+      region1-3.techs.csp.constraints.area_use_equals: 8487
 
     links:
-      region1,region2.techs.ac_transmission.constraints.energy_cap_equals: 3231
-      region1,region1-1.techs.free_transmission.constraints.energy_cap_equals: 9000
-      region1,region1-2.techs.free_transmission.constraints.energy_cap_equals: 0
-      region1,region1-3.techs.free_transmission.constraints.energy_cap_equals: 2281
+      region1,region2.techs.ac_transmission.constraints.flow_cap_equals: 3231
+      region1,region1-1.techs.free_transmission.constraints.flow_cap_equals: 9000
+      region1,region1-2.techs.free_transmission.constraints.flow_cap_equals: 0
+      region1,region1-3.techs.free_transmission.constraints.flow_cap_equals: 2281
 
   check_feasibility:
     run:
@@ -108,10 +108,10 @@ overrides:
     model.subset_time: ["2005-02-01", "2005-02-31"]
   run3:
     model.subset_time: ["2005-01-01", "2005-01-31"]
-    nodes.region1.techs.ccgt.constraints.energy_cap_max: 0 # Disallow CCGT
+    nodes.region1.techs.ccgt.constraints.flow_cap_max: 0 # Disallow CCGT
   run4:
     subset_time: ["2005-02-01", "2005-02-31"]
-    nodes.region1.techs.ccgt.constraints.energy_cap_max: 0 # Disallow CCGT
+    nodes.region1.techs.ccgt.constraints.flow_cap_max: 0 # Disallow CCGT
 
   ##
   # Overrides to demonstrate group constraints
@@ -126,12 +126,12 @@ overrides:
           parent: supply
           carrier_out: power
         constraints:
-          energy_cap_max: 10000
+          flow_cap_max: 10000
           lifetime: 50
         costs:
           monetary:
             interest_rate: 0.20
-            energy_cap: 100
+            flow_cap: 100
     nodes.region1.techs.cold_fusion: null
     nodes.region2.techs.cold_fusion: null
 
@@ -148,14 +148,14 @@ overrides:
   #     group_constraints:
   #         max_cap_share_group:
   #             techs: ['csp', 'cold_fusion']
-  #             # At most 20% of total energy_cap can come from CSP and cold fusion together
-  #             energy_cap_share_max: 0.20
+  #             # At most 20% of total flow_cap can come from CSP and cold fusion together
+  #             flow_cap_share_max: 0.20
   #     nodes:
   #         region1:
   #             techs:
   #                 ccgt:
   #                     constraints:
-  #                         energy_cap_max: 100000  # Increased to keep model feasible
+  #                         flow_cap_max: 100000  # Increased to keep model feasible
 
   minimize_emissions_costs:
     run:
@@ -188,7 +188,3 @@ overrides:
   capacity_factor:
     techs.ccgt.constraints.capacity_factor_min: 0.8
     techs.ccgt.constraints.capacity_factor_max: 0.9
-
-  eurocalliope:
-    techs.battery.constraints.link_con_to_prod: [ccgt]
-    locations.region2.techs.ccgt.constraints.energy_cap_max: 1000

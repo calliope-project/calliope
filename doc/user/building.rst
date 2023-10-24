@@ -2,7 +2,7 @@
 Building a model
 ================
 
-In short, a Calliope model works like this: **supply technologies** can take a **resource** from outside of the modeled system and turn it into a specific energy **carrier** in the system. The model specifies one or more **locations** along with the technologies allowed at those locations. **Transmission technologies** can move energy of the same carrier from one location to another, while **conversion technologies** can convert one carrier into another at the same location. **Demand technologies** remove energy from the system, while **storage technologies** can store energy at a specific location. Putting all of these possibilities together allows a modeller to specify as simple or as complex a model as necessary to answer a given research question.
+In short, a Calliope model works like this: **supply technologies** can take a **source** from outside of the modeled system and turn it into a specific **carrier** in the system. The model specifies one or more **locations** along with the technologies allowed at those locations. **Transmission technologies** can move the same carrier from one location to another, while **conversion technologies** can convert one carrier into another at the same location. **Demand technologies** remove carriers from the system through a **sink**, while **storage technologies** can store carriers at a specific location. Putting all of these possibilities together allows a modeller to specify as simple or as complex a model as necessary to answer a given research question.
 
 In more technical terms, Calliope allows a modeller to define technologies with arbitrary characteristics by "inheriting" basic traits from a number of included base tech groups -- ``supply``, ``supply_plus``, ``demand``, ``conversion``, ``conversion_plus``, and ``transmission``. These groups are described in more detail in :ref:`abstract_base_tech_definitions`.
 
@@ -12,10 +12,11 @@ Terminology
 
 The terminology defined here is used throughout the documentation and the model code and configuration files:
 
-* **Technology**: a technology that produces, consumes, converts or transports energy
-* **Location**: a site which can contain multiple technologies and which may contain other locations for energy balancing purposes
-* **Resource**: a source or sink of energy that can (or must) be used by a technology to introduce into or remove energy from the system
-* **Carrier**: an energy carrier that groups technologies together into the same network, for example ``electricity`` or ``heat``.
+* **Technology**: a technology that produces, consumes, converts or transports carriers
+* **Location**: a site which can contain multiple technologies and which may contain other locations for carrier balancing purposes
+* **Source**: a source of commodity that can (or must) be used by a technology to introduce carriers into the system
+* **Sink**: a commodity sink that can (or must) be used by a technology to remove carriers from the system
+* **Carrier**: a carrier that groups technologies together into the same network, for example ``electricity`` or ``heat``.
 
 As more generally in constrained optimisation, the following terms are also used:
 
@@ -110,21 +111,21 @@ The following example shows the definition of a ``ccgt`` technology, i.e. a comb
             parent: supply
             carrier_out: power
         constraints:
-            resource: inf
-            energy_eff: 0.5
-            energy_cap_max: 40000  # kW
-            energy_cap_max_systemwide: 100000  # kW
-            energy_ramping: 0.8
+            source: inf
+            flow_eff: 0.5
+            flow_cap_max: 40000  # kW
+            flow_cap_max_systemwide: 100000  # kW
+            flow_ramping: 0.8
             lifetime: 25
         costs:
             monetary:
                 interest_rate: 0.10
-                energy_cap: 750  # USD per kW
+                flow_cap: 750  # USD per kW
                 om_con: 0.02  # USD per kWh
 
-Each technology must specify some ``essentials``, most importantly a name, the abstract base technology it is inheriting from (``parent``), and its energy carrier (``carrier_out`` in the case of a ``supply`` technology). Specifying a ``color`` is optional but useful for using the built-in visualisation tools (see :doc:`analysing`).
+Each technology must specify some ``essentials``, most importantly a name, the abstract base technology it is inheriting from (``parent``), and its carrier (``carrier_out`` in the case of a ``supply`` technology). Specifying a ``color`` is optional but useful for using the built-in visualisation tools (see :doc:`analysing`).
 
-The ``constraints`` section gives all constraints for the technology, such as allowed capacities, conversion efficiencies, the life time (used in levelised cost calculations), and the resource it consumes (in the above example, the resource is set to infinite via ``inf``).
+The ``constraints`` section gives all constraints for the technology, such as allowed capacities, conversion efficiencies, the life time (used in levelised cost calculations), and the resource it consumes (in the above example, the source is set to infinite via ``inf``).
 
 The ``costs`` section gives costs for the technology. Calliope uses the concept of "cost classes" to allow accounting for more than just monetary costs. The above example specifies only the ``monetary`` cost class, but any number of other classes could be used, for example ``co2`` to account for emissions. Additional cost classes can be created simply by adding them to the definition of costs for a technology.
 
@@ -150,7 +151,7 @@ For a model to find a feasible solution, supply must always be able to meet dema
     run:
         ensure_feasibility: true
 
-This will create an ``unmet_demand`` decision variable in the optimisation, which can pick up any mismatch between supply and demand, across all energy carriers. It has a very high cost associated with its use, so it will only appear when absolutely necessary.
+This will create an ``unmet_demand`` decision variable in the optimisation, which can pick up any mismatch between supply and demand, across all carriers. It has a very high cost associated with its use, so it will only appear when absolutely necessary.
 
 .. note::
     When ensuring feasibility, you can also set a `big M value <https://en.wikipedia.org/wiki/Big_M_method>`_ (:yaml:`run.bigM`). This is the "cost" of unmet demand. It is possible to make model convergence very slow if bigM is set too high. default bigM is 1x10 :sup:`9`, but should be close to the maximum total system cost that you can imagine. This is perhaps closer to 1x10 :sup:`6` for urban scale models.
@@ -170,9 +171,9 @@ Reading in CSV files is possible from both the command-line tool as well running
 
 Reading in CSV files
 --------------------
-To read in CSV files, specify :yaml:`resource: file=filename.csv` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
+To read in CSV files, specify e.g., :yaml:`source: file=filename.csv` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
 
-By default, Calliope looks for a column in the CSV file with the same name as the location. It is also possible to specify a column to use when setting ``resource`` per location, by giving the column name with a colon following the filename: :yaml:`resource: file=filename.csv:column`
+By default, Calliope looks for a column in the CSV file with the same name as the location. It is also possible to specify a column to use when setting ``source`` per location, by giving the column name with a colon following the filename: :yaml:`source: file=filename.csv:column`
 
 For example, a simple photovoltaic (PV) tech using a time series of hour-by-hour electricity generation data might look like this:
 
@@ -185,12 +186,12 @@ For example, a simple photovoltaic (PV) tech using a time series of hour-by-hour
             parent: supply
             carrier_out: power
         constraints:
-            resource: file=pv_resource.csv
-            energy_cap_max: 10000  # kW
+            source: file=pv_resource.csv
+            flow_cap_max: 10000  # kW
 
 By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting :yaml:`model.timeseries_dateformat` based on ``strftime` directives <https://strftime.org/>`_, which defaults to ``'%Y-%m-%d %H:%M:%S'``.
 
-For example, the first few lines of a CSV file, called ``pv_resource.csv`` giving a resource potential for two locations might look like this, with the first column in the file always being read as the date-time index:
+For example, the first few lines of a CSV file, called ``pv_resource.csv`` giving a source potential for two locations might look like this, with the first column in the file always being read as the date-time index:
 
 .. code-block:: text
 
@@ -205,7 +206,7 @@ For example, the first few lines of a CSV file, called ``pv_resource.csv`` givin
 
 Reading in timeseries from ``pandas`` dataframes
 ------------------------------------------------
-When running models from python scripts or shells, it is also possible to pass timeseries directly as ``pandas`` dataframes. This is done by specifying :yaml:`resource: df=tskey` where ``tskey`` is the key in a dictionary containing the relevant dataframes. For example, if the same timeseries as above is to be passed, a dataframe called ``pv_resource`` may be in the python namespace:
+When running models from python scripts or shells, it is also possible to pass timeseries directly as ``pandas`` dataframes. This is done by specifying :yaml:`source: df=tskey` where ``tskey`` is the key in a dictionary containing the relevant dataframes. For example, if the same timeseries as above is to be passed, a dataframe called ``pv_resource`` may be in the python namespace:
 
 .. code-block:: python
 
@@ -226,7 +227,7 @@ To pass this timeseries into the model, create a dictionary, called ``timeseries
 
     timeseries_dataframes = {'pv_resource': pv_resource}
 
-The keys in this dictionary must match the ``tskey`` specified in the YAML files. In this example, specifying :yaml:`resource: df=pv_resource` will identify the ``pv_resource`` key in ``timeseries_dataframes``. All relevant timeseries must be put in this dictionary. For example, if a model contains three timeseries referred to in the configuration YAML files, called ``demand_1``, ``demand_2`` and ``pv_resource``, the ``timeseries_dataframes`` dictionary may look like
+The keys in this dictionary must match the ``tskey`` specified in the YAML files. In this example, specifying :yaml:`source: df=pv_resource` will identify the ``pv_resource`` key in ``timeseries_dataframes``. All relevant timeseries must be put in this dictionary. For example, if a model contains three timeseries referred to in the configuration YAML files, called ``demand_1``, ``demand_2`` and ``pv_resource``, the ``timeseries_dataframes`` dictionary may look like
 
 .. code-block:: python
 
@@ -240,7 +241,7 @@ where ``demand_1``, ``demand_2`` and ``pv_resource`` are dataframes of the relev
 
     model = calliope.Model('model.yaml', timeseries_dataframes=timeseries_dataframes)
 
-Just like when using CSV files (see above), Calliope looks for a column in the dataframe with the same name as the location. It is also possible to specify a column to use when setting ``resource`` per location, by giving the column name with a colon following the filename: :yaml:`resource: df=tskey:column`.
+Just like when using CSV files (see above), Calliope looks for a column in the dataframe with the same name as the location. It is also possible to specify a column to use when setting ``source`` per location, by giving the column name with a colon following the filename: :yaml:`source: df=tskey:column`.
 
 The time series index must be ISO 8601 compatible time stamps and can be a standard ``pandas`` DateTimeIndex (see discussion above).
 
@@ -249,7 +250,7 @@ The time series index must be ISO 8601 compatible time stamps and can be a stand
 
    * If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific definitions, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource). However, each model must contain at least one time series.
    * Only the subset of parameters listed in `file_allowed` in the :ref:`model configuration <config_reference_model>` can be loaded from file or dataframe in this way. It is advised not to update this default list unless you are developing the core code, since the model will likely behave unexpectedly.
-   * You _cannot_ have a space around the ``=`` symbol when pointing to a timeseries file or dataframe key, i.e. :yaml:`resource: file = filename.csv` is not valid.
+   * You _cannot_ have a space around the ``=`` symbol when pointing to a timeseries file or dataframe key, i.e. :yaml:`source: file = filename.csv` is not valid.
    * If running from a command line interface (see :doc:`running`), timeseries must be read from CSV and cannot be passed from dataframes via ``df=...``.
    * It's possible to mix reading in from CSVs and dataframes, by setting some config values as ``file=...`` and some as ``df=...``.
    * The default value of ``timeseries_dataframes`` is ``None``, so if you want to read all timeseries in from CSVs, you can omit this argument. When running from command line, this is done automatically.
@@ -258,7 +259,7 @@ The time series index must be ISO 8601 compatible time stamps and can be a stand
 Locations and links (``locations``, ``links``)
 ----------------------------------------------
 
-A model can specify any number of locations. These locations are linked together by transmission technologies. By consuming an energy carrier in one location and outputting it in another, linked location, transmission technologies allow resources to be drawn from the system at a different location from where they are brought into it.
+A model can specify any number of locations. These locations are linked together by transmission technologies. By consuming a carrier in one location and outputting it in another, linked location, transmission technologies allow resources to be drawn from the system at a different location from where they are brought into it.
 
 The ``locations`` section specifies each location:
 
@@ -272,7 +273,7 @@ The ``locations`` section specifies each location:
                 demand_power:
                 ccgt:
                     constraints:
-                        energy_cap_max: 30000
+                        flow_cap_max: 30000
 
 Locations can optionally specify ``coordinates`` (used in visualisation or to compute distance between them) and must specify ``techs`` allowed at that location. As seen in the example above, each allowed tech must be listed, and can optionally specify additional location-specific parameters (constraints or costs). If given, location-specific parameters supersede any group constraints a technology defines in the ``techs`` section for that location.
 
@@ -285,9 +286,9 @@ The ``links`` section specifies possible transmission links between locations in
             techs:
                 ac_transmission:
                     constraints:
-                        energy_cap_max: 10000
+                        flow_cap_max: 10000
                     costs.monetary:
-                        energy_cap: 100
+                        flow_cap: 100
 
 In the above example, an high-voltage AC transmission line is specified to connect ``region1`` with ``region2``. For this to work, a ``transmission`` technology called ``ac_transmission`` must have previously been defined in the model's ``techs`` section. There, it can be given group constraints or costs. As in the case of locations, the ``links`` section can specify per-link parameters (constraints or costs) that supersede any model-wide parameters.
 
@@ -347,7 +348,7 @@ To make it easier to run a given model multiple times with slightly changed sett
 
     overrides:
         high_cost:
-            techs.onshore_wind.costs.monetary.energy_cap: 2000
+            techs.onshore_wind.costs.monetary.flow_cap: 2000
         year2005:
             model.subset_time: ['2005-01-01', '2005-12-31']
         year2006:

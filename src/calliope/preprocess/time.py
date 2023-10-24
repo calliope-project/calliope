@@ -195,24 +195,6 @@ def add_time_dimension(data, model_run):
     return data
 
 
-def add_max_demand_timesteps(model_data):
-    model_data["max_demand_timesteps"] = (
-        (
-            model_data.resource.where(model_data.resource < 0)
-            * model_data.carrier.loc[
-                {
-                    "carrier_tiers": model_data.carrier_tiers.isin(
-                        (["in", "in_2", "in_3"])
-                    )
-                }
-            ].sum("carrier_tiers")
-        )
-        .sum(["nodes", "techs"])
-        .idxmin("timesteps")
-    )
-    return model_data
-
-
 def update_dtypes(model_data):
     """
     Update dtypes to not be 'Object', if possible.

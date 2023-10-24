@@ -17,16 +17,16 @@ class TestNationalScaleExampleModelSenseChecks:
         model.build()
         model.solve()
 
-        df_carrier_prod = (
-            model.results.carrier_prod.loc[dict(carriers="power")]
+        df_flow_out = (
+            model.results.flow_out.loc[dict(carriers="power")]
             .sum("nodes")
             .sum("timesteps")
             .to_pandas()
         )
 
         prod_share = (
-            df_carrier_prod.loc[["cold_fusion", "csp"]].sum()
-            / df_carrier_prod.loc[["ccgt", "cold_fusion", "csp"]].sum()
+            df_flow_out.loc[["cold_fusion", "csp"]].sum()
+            / df_flow_out.loc[["ccgt", "cold_fusion", "csp"]].sum()
         )
 
         assert prod_share == approx(0.85)
@@ -42,8 +42,8 @@ class TestNationalScaleExampleModelSenseChecks:
         model.solve()
 
         cap_share = (
-            model._model_data.energy_cap.loc[{"techs": ["cold_fusion", "csp"]}].sum()
-            / model._model_data.energy_cap.loc[
+            model._model_data.flow_cap.loc[{"techs": ["cold_fusion", "csp"]}].sum()
+            / model._model_data.flow_cap.loc[
                 {"techs": ["ccgt", "cold_fusion", "csp"]}
             ].sum()
         )
@@ -53,16 +53,16 @@ class TestNationalScaleExampleModelSenseChecks:
     def test_systemwide_equals(self):
         model = calliope.examples.national_scale(
             override_dict={
-                "techs.ccgt.constraints.energy_cap_max_systemwide": 10000,
-                "techs.ac_transmission.constraints.energy_cap_equals_systemwide": 6000,
+                "techs.ccgt.constraints.flow_cap_max_systemwide": 10000,
+                "techs.ac_transmission.constraints.flow_cap_equals_systemwide": 6000,
             }
         )
         model.build()
         model.solve()
         # Check that setting `_equals` to a finite value leads to forcing
-        assert model._model_data.energy_cap.loc[{"techs": "ccgt"}].sum() == 10000
+        assert model._model_data.flow_cap.loc[{"techs": "ccgt"}].sum() == 10000
         assert (
-            model._model_data.energy_cap.loc[{"techs": "ac_transmission:region1"}].sum()
+            model._model_data.flow_cap.loc[{"techs": "ac_transmission:region1"}].sum()
             == 6000
         )
 
@@ -74,10 +74,10 @@ class TestNationalScaleExampleModelSenseChecks:
 @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestUrbanScaleMILP:
-    def test_asynchronous_prod_con(self):
-        def _get_prod_con(model, prod_con):
+    def test_asynchronous_flow(self):
+        def _get_flow(model, flow):
             return (
-                model._model_data[f"carrier_{prod_con}"]
+                model._model_data[f"carrier_{flow}"]
                 .loc[{"techs": "heat_pipes:X1", "carriers": "heat"}]
                 .to_pandas()
                 .dropna(how="all")
@@ -86,22 +86,22 @@ class TestUrbanScaleMILP:
         m = calliope.examples.urban_scale(override_dict={"run.zero_threshold": 1e-6})
         m.build()
         m.solve()
-        _prod = _get_prod_con(m, "prod")
-        _con = _get_prod_con(m, "con")
-        assert any(((_con < 0) & (_prod > 0)).any()) is True
+        _out = _get_flow(m, "out")
+        _in = _get_flow(m, "in")
+        assert any(((_in < 0) & (_out > 0)).any()) is True
 
         m_bin = calliope.examples.urban_scale(
             override_dict={
-                "techs.heat_pipes.constraints.force_asynchronous_prod_con": True,
+                "techs.heat_pipes.constraints.force_async_flow": True,
                 "run.solver_options.mipgap": 0.05,
                 "run.zero_threshold": 1e-6,
             }
         )
         m_bin.build()
         m_bin.solve()
-        _prod = _get_prod_con(m_bin, "prod")
-        _con = _get_prod_con(m_bin, "con")
-        assert any(((_con < 0) & (_prod > 0)).any()) is False
+        _out = _get_flow(m_bin, "out")
+        _in = _get_flow(m_bin, "in")
+        assert any(((_in < 0) & (_out > 0)).any()) is False
 
 
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
@@ -116,13 +116,12 @@ class TestModelSettings:
                 "model.subset_time": ["2005-01-01 06:00:00", "2005-01-01 08:00:00"],
                 "run.ensure_feasibility": feasibility,
                 "run.bigM": 1e3,
-                # Allow setting resource and energy_cap_max/equals to force infeasibility
+                # Allow setting resource and flow_cap_max/equals to force infeasibility
                 "techs.test_supply_elec.constraints": {
-                    "resource": cap_val,
-                    "energy_eff": 1,
-                    "energy_cap_equals": 15,
+                    "source_equals": cap_val,
+                    "flow_eff": 1,
+                    "flow_cap_equals": 15,
                 },
-                "techs.test_supply_elec.switches.force_resource": True,
             }
             model = build_model(
                 override_dict=override_dict, scenario="investment_costs"
@@ -195,49 +194,49 @@ class TestModelSettings:
 class TestEnergyCapacityPerStorageCapacity:
     @pytest.fixture
     def model_file(self):
-        return "energy_cap_per_storage_cap.yaml"
+        return "flow_cap_per_storage_cap.yaml"
 
     @pytest.mark.filterwarnings(
-        "ignore:(?s).*`energy_cap_per_storage_cap_min/max/equals`:calliope.exceptions.ModelWarning"
+        "ignore:(?s).*`flow_cap_per_storage_cap_min/max/equals`:calliope.exceptions.ModelWarning"
     )
     def test_no_constraint_set(self, model_file):
         model = build_model(model_file=model_file)
         model.build()
         model.solve()
         assert model.results.termination_condition == "optimal"
-        energy_capacity = (
-            model._model_data.energy_cap.loc[{"techs": "my_storage"}].sum().item()
+        flow_capacity = (
+            model._model_data.flow_cap.loc[{"techs": "my_storage"}].sum().item()
         )
         storage_capacity = (
             model._model_data.storage_cap.loc[{"techs": "my_storage"}].sum().item()
         )
-        assert storage_capacity != pytest.approx(1 / 10 * energy_capacity)
+        assert storage_capacity != pytest.approx(1 / 10 * flow_capacity)
 
     def test_equals(self, model_file):
         model = build_model(model_file=model_file, scenario="equals")
         model.build()
         model.solve()
         assert model.results.termination_condition == "optimal"
-        energy_capacity = (
-            model._model_data.energy_cap.loc[{"techs": "my_storage"}].sum().item()
+        flow_capacity = (
+            model._model_data.flow_cap.loc[{"techs": "my_storage"}].sum().item()
         )
         storage_capacity = (
             model._model_data.storage_cap.loc[{"techs": "my_storage"}].sum().item()
         )
-        assert storage_capacity == pytest.approx(1 / 10 * energy_capacity)
+        assert storage_capacity == pytest.approx(1 / 10 * flow_capacity)
 
     def test_max(self, model_file):
         model = build_model(model_file=model_file, scenario="max")
         model.build()
         model.solve()
         assert model.results.termination_condition == "optimal"
-        energy_capacity = (
-            model._model_data.energy_cap.loc[{"techs": "my_storage"}].sum().item()
+        flow_capacity = (
+            model._model_data.flow_cap.loc[{"techs": "my_storage"}].sum().item()
         )
         storage_capacity = (
             model._model_data.storage_cap.loc[{"techs": "my_storage"}].sum().item()
         )
-        assert energy_capacity == pytest.approx(5)
+        assert flow_capacity == pytest.approx(5)
         assert storage_capacity == pytest.approx(500)
 
     def test_min(self, model_file):
@@ -246,13 +245,13 @@ class TestEnergyCapacityPerStorageCapacity:
         model.solve()
 
         assert model.results.termination_condition == "optimal"
-        energy_capacity = (
-            model._model_data.energy_cap.loc[{"techs": "my_storage"}].sum().item()
+        flow_capacity = (
+            model._model_data.flow_cap.loc[{"techs": "my_storage"}].sum().item()
         )
         storage_capacity = (
             model._model_data.storage_cap.loc[{"techs": "my_storage"}].sum().item()
         )
-        assert energy_capacity == pytest.approx(10)
+        assert flow_capacity == pytest.approx(10)
         assert storage_capacity == pytest.approx(10)
 
     @pytest.mark.skip(reason="Not expecting operate mode to work at the moment")
