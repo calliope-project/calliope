@@ -58,7 +58,11 @@ extensions = [
 ]
 
 # The suffix of source filenames.
-source_suffix = ".rst"
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
+
 
 # A string of reStructuredText that will be included at the beginning of every
 # source file that is read
