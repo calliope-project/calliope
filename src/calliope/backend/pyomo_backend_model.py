@@ -24,7 +24,6 @@ import numpy as np
 import pandas as pd
 import pyomo.environ as pe  # type: ignore
 import pyomo.kernel as pmo  # type: ignore
-import termcolor
 import xarray as xr
 from pyomo.common.tempfiles import TempfileManager  # type: ignore
 from pyomo.opt import SolverFactory  # type: ignore
@@ -81,8 +80,11 @@ class PyomoBackendModel(backend_model.BackendModel):
             use_inf_as_na=use_inf_as_na,
         )
         if parameter_da.isnull().all():
-            text = termcolor.colored("Component not added", color="blue")
-            self.log("parameters", parameter_name, f"{text}; no data found in array.")
+            self.log(
+                "parameters",
+                parameter_name,
+                "Component not added; no data found in array.",
+            )
             self.delete_component(parameter_name, "parameters")
             parameter_da = parameter_da.astype(float)
 
@@ -194,10 +196,10 @@ class PyomoBackendModel(backend_model.BackendModel):
             expr = element.evaluate_expression(self.inputs, self, references=references)
             objective = pmo.objective(expr.item(), sense=sense)
             if name == self.inputs.run_config["objective"]:
-                text = termcolor.colored("activated", color="green")
+                text = "activated"
                 objective.activate()
             else:
-                text = termcolor.colored("deactivated", color="red")
+                text = "deactivated"
                 objective.deactivate()
             self.log("objectives", name, f"Objective {text}.")
 
@@ -446,7 +448,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 self.log(
                     "variables",
                     name,
-                    f"{bound_name} bound {termcolor.colored('not', color='red')} being updated as it has not been defined.",
+                    f"{bound_name} bound not being updated as it has not been defined.",
                 )
                 continue
 
@@ -540,8 +542,8 @@ class PyomoBackendModel(backend_model.BackendModel):
         def __get_bound(bound):
             this_bound = bounds.get(bound, None)
             if isinstance(this_bound, str):
-                text1 = termcolor.colored(bound, color="blue")
-                text2 = termcolor.colored(this_bound, color="blue")
+                text1 = bound
+                text2 = this_bound
                 self.log(
                     "variables",
                     name,

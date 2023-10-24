@@ -267,7 +267,7 @@ class TestModelData:
         caplog.set_level(logging.DEBUG)
 
         model_data._model_run_dict_to_dataset(
-            "foo", "node", ["foobar"], ["nodes", "foobar"]
+            "foo", "node", ["FOO"], ["nodes", "foobar"]
         )
         assert "No relevant data found for `foo` group of parameters" in caplog.text
 

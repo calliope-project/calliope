@@ -303,7 +303,7 @@ class ModelDataFactory:
         data_dict = self._reformat_model_run_dict(
             model_run_subdict, expected_nesting, **kwargs
         )
-        if not data_dict:
+        if data_dict is None:
             LOGGER.debug(
                 f"Model build | No relevant data found for `{group_name}` group of parameters"
             )

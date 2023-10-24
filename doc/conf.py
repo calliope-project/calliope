@@ -111,7 +111,6 @@ MOCK_MODULES = [
     "sklearn",
     "pyparsing",
     "netCDF4",
-    "termcolor",
 ]
 autodoc_mock_imports = MOCK_MODULES
 autodoc_typehints = "both"

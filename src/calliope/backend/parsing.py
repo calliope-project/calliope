@@ -20,7 +20,6 @@ from typing import (
 )
 
 import pyparsing as pp
-import termcolor
 import xarray as xr
 from typing_extensions import NotRequired, Required, TypedDict
 
@@ -376,8 +375,9 @@ class ParsedBackendEquation:
             message (str): Message to log.
             level (Literal["info", "warning", "debug", "error", "critical"], optional): Log level. Defaults to "debug".
         """
-        text = termcolor.colored("Component not added", color="red")
-        getattr(LOGGER, level)(f"Math parsing | {self.name} | {text}; {message}")
+        getattr(LOGGER, level)(
+            f"Math parsing | {self.name} | Component not added; {message}"
+        )
 
 
 class ParsedBackendComponent(ParsedBackendEquation):
