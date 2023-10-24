@@ -25,6 +25,7 @@ concurrency:
 
 jobs:
   test:
+    if: github.event.pull_request.draft == false
     strategy:
       matrix:
         os: [ubuntu-latest]

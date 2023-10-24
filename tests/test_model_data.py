@@ -264,7 +264,7 @@ class TestModelData:
         assert df.values[0] == list(data_dict.values())[0]
 
     def test_model_run_dict_to_dataset_no_match(self, caplog, model_data):
-        caplog.set_level(logging.DEBUG)
+        caplog.set_level(logging.DEBUG, logger="calliope.preprocess.model_data")
 
         model_data._model_run_dict_to_dataset(
             "foo", "node", ["FOO"], ["nodes", "foobar"]
