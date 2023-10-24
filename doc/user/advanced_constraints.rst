@@ -334,7 +334,7 @@ By applying ``units.max``, ``units.min``, or ``units.equals`` to a technology, t
 Asynchronous flow in/out
 ------------------------
 
-The ``asynchronous_flow`` binary constraint ensures that only one of ``flow_out`` and ``flow_in`` can be non-zero in a given timestep.
+The ``async_flow_switch`` binary variable ensures that only one of ``flow_out`` and ``flow_in`` can be non-zero in a given timestep.
 
 This constraint can be applied to storage or transmission technologies. This example shows use with a heat transmission technology:
 
@@ -344,7 +344,7 @@ This constraint can be applied to storage or transmission technologies. This exa
    :start-after: # heat_pipes-start
    :end-before: # heat_pipes-end
 
-In the above example, heat pipes which distribute thermal energy in the network may be prone to dissipating heat in an unphysical way. I.e. given that they have distribution losses associated with them, in any given timestep, a link could produce and consume energy in the same timestep, losing energy to the atmosphere in both instances, but having a net energy transmission of zero. This might allow e.g. a CHP facility to overproduce heat to produce more cheap electricity, and have some way of dumping that heat. Enabling the ``asynchronous_flow`` constraint ensures that this does not happen.
+In the above example, heat pipes which distribute thermal energy in the network may be prone to dissipating heat in an unphysical way. I.e. given that they have distribution losses associated with them, in any given timestep, a link could produce and consume energy in the same timestep, losing energy to the atmosphere in both instances, but having a net energy transmission of zero. This might allow e.g. a CHP facility to overproduce heat to produce more cheap electricity, and have some way of dumping that heat. Enabling the ``force_async_flow`` parameter ensures that this does not happen.
 
 -------------------------------
 User-defined custom constraints

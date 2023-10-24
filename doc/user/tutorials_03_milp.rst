@@ -36,7 +36,7 @@ MILP functionality can be easily applied, but convergence is slower as a result 
 Asynchronous flow in/out
 ========================
 
-The heat pipes which distribute thermal energy in the network may be prone to dissipating heat in an unphysical way. I.e. given that they have distribution losses associated with them, in any given timestep, a link could produce and consume energy in the same timestep, losing energy to the atmosphere in both instances, but having a net energy transmission of zero. This allows e.g. a CHP facility to overproduce heat to produce more cheap electricity, and have some way of dumping that heat. The ``asynchronous_flow`` binary constraint ensures this phenomenon is avoided:
+The heat pipes which distribute thermal energy in the network may be prone to dissipating heat in an unphysical way. I.e. given that they have distribution losses associated with them, in any given timestep, a link could produce and consume energy in the same timestep, losing energy to the atmosphere in both instances, but having a net energy transmission of zero. This allows e.g. a CHP facility to overproduce heat to produce more cheap electricity, and have some way of dumping that heat. The ``async_flow_switch`` binary variable (triggered by the ``force_async_flow`` parameter) ensures this phenomenon is avoided:
 
 
 .. literalinclude:: ../../src/calliope/example_models/urban_scale/scenarios.yaml
