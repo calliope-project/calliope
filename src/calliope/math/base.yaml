@@ -439,14 +439,14 @@ constraints:
         - where: units
           expression: sum(units, over=nodes)
 
-  asynchronous_flow_in_milp:
+  async_flow_in_milp:
     description: "Set a technology's ability to have inflow in the same timestep that it has outflow, for any technology using the asynchronous flow binary switch."
     foreach: [nodes, techs, timesteps]
     where: "flow_switch"
     equations:
       - expression: reduce_carrier_dim(flow_in, carrier_tier=in) <= (1 - flow_switch) * bigM
 
-  asynchronous_flow_out_milp:
+  async_flow_out_milp:
     description: "Set a technology's ability to have outflow in the same timestep that it has inflow, for any technology using the asynchronous flow binary switch."
     foreach: [nodes, techs, timesteps]
     where: "flow_switch"
@@ -598,7 +598,7 @@ variables:
     description: "Binary switch to force asynchronous outflow/consumption of a `storage`/`supply_plus`/`transmission` technology. This ensures that a technology with carrier flow efficiencies < 100% cannot produce and consume a flow simultaneously to remove unwanted carrier from the system."
     unit: integer
     foreach: [nodes, techs, timesteps]
-    where: "force_asynchronous_flow=True"
+    where: "force_async_flow=True"
     domain: integer
     bounds:
       min: 0

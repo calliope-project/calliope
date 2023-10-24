@@ -92,7 +92,7 @@ class TestUrbanScaleMILP:
 
         m_bin = calliope.examples.urban_scale(
             override_dict={
-                "techs.heat_pipes.constraints.force_asynchronous_flow": True,
+                "techs.heat_pipes.constraints.force_async_flow": True,
                 "run.solver_options.mipgap": 0.05,
                 "run.zero_threshold": 1e-6,
             }

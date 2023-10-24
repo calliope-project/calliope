@@ -1612,13 +1612,13 @@ class TestMILPConstraints:
         'asynchronous_flow'
         """
         m = build_model(
-            {f"techs.{tech}.constraints.force_asynchronous_flow": True},
+            {f"techs.{tech}.constraints.force_async_flow": True},
             "simple_storage,investment_costs",
         )
         m.build()
         assert "flow_switch" in m.backend.variables
-        assert "asynchronous_flow_in_milp" in m.backend.constraints
-        assert "asynchronous_flow_out_milp" in m.backend.constraints
+        assert "async_flow_in_milp" in m.backend.constraints
+        assert "async_flow_out_milp" in m.backend.constraints
 
 
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")

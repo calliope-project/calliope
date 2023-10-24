@@ -432,7 +432,7 @@ milp: # checked
     update_costs_investment_purchase_milp:
       ['("X2", "boiler")', '("X3", "boiler")']
     update_costs_investment_units_milp: ['("X1", "chp")']
-    asynchronous_flow_out_milp:
+    async_flow_out_milp:
       [
         '("N1", "heat_pipes:X1")',
         '("X2", "heat_pipes:N1")',
@@ -441,7 +441,7 @@ milp: # checked
         '("N1", "heat_pipes:X2")',
         '("X1", "heat_pipes:N1")',
       ]
-    asynchronous_flow_in_milp:
+    async_flow_in_milp:
       [
         '("N1", "heat_pipes:X1")',
         '("X2", "heat_pipes:N1")',

@@ -30,7 +30,7 @@ overrides:
       # heat_pipes-start
       heat_pipes:
         constraints:
-          force_asynchronous_flow: true
+          force_async_flow: true
       # heat_pipes-end
 
   mapbox_ready:

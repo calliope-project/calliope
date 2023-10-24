@@ -196,7 +196,7 @@ tech_groups:
         "flow_ramping",
         "export_max",
         "export_carrier",
-        "force_asynchronous_flow",
+        "force_async_flow",
         "lifetime",
         "storage_cap_equals",
         "storage_cap_max",
@@ -365,7 +365,7 @@ tech_groups:
       source_unit: absolute
       cap_method: linear
       include_storage: False
-      force_asynchronous_flow: false
+      force_async_flow: false
       source_cap_equals_flow_cap: false
       export: false
       allowed_flow_out: true
@@ -382,7 +382,7 @@ tech_groups:
         "flow_cap_scale",
         "flow_eff",
         "flow_eff_per_distance",
-        "force_asynchronous_flow",
+        "force_async_flow",
         "lifetime",
         "one_way",
       ]
@@ -427,7 +427,7 @@ techs:
     switches:
       cap_method: linear # name: capacity method switch, one of 'linear' (LP model), 'binary' (uses purchase decision variable), or 'integer' (uses units and operating _units decision variables)
       include_storage: False # name: boolean storage method swtich. Used for supply plus technologies to define a storage between source consumption and outflow
-      force_asynchronous_flow: false # name: Force asynchronous out/inflow ¦ unit: boolean ¦ If True, flow_out and flow_in cannot both occur in the same timestep
+      force_async_flow: false # name: Force asynchronous out/inflow ¦ unit: boolean ¦ If True, flow_out and flow_in cannot both occur in the same timestep
       sink_unit: absolute # name: Sink unit ¦ unit: N/A ¦ Sets the unit of ``Sink`` to either ``absolute`` (e.g. kWh), ``per_area`` (e.g. kWh/m2), or ``per_cap`` (e.g. kWh/kW). ``per_area`` uses the ``area_use`` decision variable to scale the sink while ``per_cap`` uses the ``flow_cap`` decision variable.
       source_unit: absolute # name: Source unit ¦ unit: N/A ¦ Sets the unit of ``Source`` to either ``absolute`` (e.g. kWh), ``per_area`` (e.g. kWh/m2), or ``per_cap`` (e.g. kWh/kW). ``per_area`` uses the ``area_use`` decision variable to scale the source while ``per_cap`` uses the ``flow_cap`` decision variable.
       source_cap_equals_flow_cap: false # name: Source capacity equals flow capacity ¦ unit: boolean ¦ If true, ``source_cap`` is forced to equal ``flow_cap``
