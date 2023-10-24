@@ -333,7 +333,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 val.calliope_coords = idx
 
         with self._datetime_as_string(self._dataset):
-            for component_type in ["parameters", "variables"]:
+            for component_type in ["parameters", "variables", "constraints"]:
                 for da in self._dataset.filter_by_attrs(
                     coords_in_name=False, **{"obj_type": component_type}
                 ).values():
@@ -630,7 +630,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         *,
         op: Literal["==", ">=", "<="],
         name: str,
-    ) -> Union[type[pmo.constraint], float]:
+    ) -> Union[type[ObjConstraint], float]:
         """
         Utility function to generate a pyomo constraint for every element of an
         xarray DataArray.
@@ -647,7 +647,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             name (str): Name of constraint
 
         Returns:
-            Union[type[pmo.constraint], float]:
+            Union[type[ObjConstraint], float]:
                 If mask is True, return np.nan.
                 Otherwise return pmo_constraint(expr=lhs op rhs).
         """
@@ -655,11 +655,11 @@ class PyomoBackendModel(backend_model.BackendModel):
         if not mask:
             return np.nan
         elif op == "==":
-            constraint = pmo.constraint(expr=lhs == rhs)
+            constraint = ObjConstraint(expr=lhs == rhs)
         elif op == "<=":
-            constraint = pmo.constraint(expr=lhs <= rhs)
+            constraint = ObjConstraint(expr=lhs <= rhs)
         elif op == ">=":
-            constraint = pmo.constraint(expr=lhs >= rhs)
+            constraint = ObjConstraint(expr=lhs >= rhs)
         self._instance.constraints[name].append(constraint)
         return constraint
 
@@ -750,12 +750,12 @@ class PyomoBackendModel(backend_model.BackendModel):
 
     @staticmethod
     def _from_pyomo_constraint(
-        val: pmo.constraint, *, eval_body: bool = False
+        val: ObjConstraint, *, eval_body: bool = False
     ) -> pd.Series:
         """Evaluate Pyomo constraint object.
 
         Args:
-            val (pmo.constraint): constraint object to be evaluated
+            val (ObjConstraint): constraint object to be evaluated
         Kwargs:
             eval_body (bool, optional):
                 If True, attempt to evaluate the constraint object `body`, which will evaluate the
@@ -912,3 +912,17 @@ class ObjVariable(pmo.variable, CoordObj):
 
     def getname(self, *args, **kwargs):
         return self._update_name(pmo.variable.getname(self, *args, **kwargs))
+
+
+class ObjConstraint(pmo.constraint, CoordObj):
+    """
+    A pyomo constraint with a `name` property setter (via the `pmo.constraint.getname` method) which replaces a list position as a name with a list of strings.
+
+    """
+
+    def __init__(self, **kwds):
+        pmo.constraint.__init__(self, **kwds)
+        CoordObj.__init__(self)
+
+    def getname(self, *args, **kwargs):
+        return self._update_name(pmo.constraint.getname(self, *args, **kwargs))
