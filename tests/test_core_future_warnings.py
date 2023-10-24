@@ -5,14 +5,6 @@ from .common.util import check_error_or_warning
 
 
 class TestDeprecationWarnings:
-    def test_get_formatted_array_deprecationwarning(self):
-        model = build_model(scenario="simple_supply,one_day,investment_costs")
-
-        with pytest.warns(DeprecationWarning) as warning:
-            model.get_formatted_array("source_max")
-
-        assert check_error_or_warning(warning, "get_formatted_array() is deprecated")
-
     def test_run_deprecationwarning(self):
         model = build_model(scenario="simple_supply,two_hours,investment_costs")
 
