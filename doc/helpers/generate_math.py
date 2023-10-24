@@ -23,16 +23,23 @@ NONDEMAND_TECHGROUPS = [
     "conversion_plus",
     "supply_plus",
 ]
+
+# TODO: find another way to define this
 POSSIBLE_TIMESERIES_DATA = [
     "clustering_func",
-    "energy_eff",
-    "energy_ramping",
+    "flow_eff",
+    "flow_ramping",
     "export",
     "om_con",
     "om_prod",
     "parasitic_eff",
-    "resource",
-    "resource_eff",
+    "source_max",
+    "source_min",
+    "source_equals",
+    "sink_min",
+    "sink_max",
+    "sink_equals",
+    "source_eff",
     "storage_loss",
     "carrier_ratios",
 ]

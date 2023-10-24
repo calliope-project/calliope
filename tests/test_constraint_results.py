@@ -115,7 +115,7 @@ class TestModelSettings:
                     "2005-01-01 06:00:00",
                     "2005-01-01 08:00:00",
                 ],
-                "parameters.bigM": 1e3,
+                "parameters.bigM.data": 1e3,
                 # Allow setting resource and flow_cap_max/equals to force infeasibility
                 "techs.test_supply_elec.constraints": {
                     "source_equals": cap_val,

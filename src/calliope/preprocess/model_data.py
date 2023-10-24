@@ -82,7 +82,6 @@ class ModelDataFactory:
 
     def __call__(self):
         self._extract_node_tech_data()
-        self._add_top_level_params()
         self._add_time_dimension()
         self._clean_model_data()
 
@@ -95,6 +94,7 @@ class ModelDataFactory:
 
     def _extract_node_tech_data(self):
         self._add_param_from_template()
+        self._add_top_level_params()
         self._clean_unused_techs_nodes_and_carriers()
 
     def _add_top_level_params(self):
@@ -104,14 +104,35 @@ class ModelDataFactory:
                     f"Trying to add top-level parameter with same name as a node/tech level parameter: {param_name}"
                 )
             if "dims" in param_data:
-                idx = pd.Index(data=param_data["index"], name=param_data["dims"])
-                param_da = pd.Series(
+                param_series = pd.Series(
                     data=param_data["data"],
-                    index=idx,
+                    index=param_data["index"],
                     name=param_name,
-                ).to_xarray()
+                )
+                if isinstance(param_data["dims"], list) and len(param_data["dims"]) > 1:
+                    param_series.index = pd.MultiIndex.from_tuples(
+                        param_series.index, names=param_data["dims"]
+                    )
+                else:
+                    param_series = param_series.rename_axis(param_data["dims"])
+                param_da = param_series.to_xarray()
             else:
                 param_da = xr.DataArray(param_data["data"], name=param_name)
+
+            coords_to_update = {}
+            for coord_name, coord_data in param_da.coords.items():
+                if (
+                    self.model_data.coords.get(coord_name, xr.DataArray()).dtype.kind
+                    == "M"
+                ):
+                    LOGGER.debug(
+                        f"Updating `{param_name}` {coord_name} dimension index values to datetime format"
+                    )
+                    coords_to_update[coord_name] = pd.to_datetime(
+                        coord_data, format="ISO8601"
+                    )
+            for coord_name, coord_data in coords_to_update.items():
+                param_da.coords[coord_name] = coord_data
 
             for coord_name, coord_data in param_da.coords.items():
                 if coord_name not in self.model_data.coords:
