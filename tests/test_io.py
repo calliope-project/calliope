@@ -13,7 +13,7 @@ from .common.util import check_error_or_warning
 class TestIO:
     @pytest.fixture(scope="module")
     def vars_to_add_attrs(self):
-        return ["resource", "energy_cap"]
+        return ["source_max", "flow_cap"]
 
     @pytest.fixture(scope="module")
     def model(self, vars_to_add_attrs):

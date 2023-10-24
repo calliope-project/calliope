@@ -303,14 +303,14 @@ class TestValidateMathDict:
     def test_custom_math_fails(self, simple_supply, component_dict, both_fail):
         math_dict = {"constraints": {"foo": component_dict}}
         errors_to_check = [
-            "math string parsing (marker indicates where parsing stopped, not strictly the equation term that caused the failure)",
-            " * (constraints, foo):",
+            "math string parsing (marker indicates where parsing stopped, which might not be the root cause of the issue; sorry...)",
+            " * constraints:foo:",
             "equations[0].expression",
             "where",
         ]
         if both_fail:
             math_dict["constraints"]["bar"] = component_dict
-            errors_to_check.append("* (constraints, bar):")
+            errors_to_check.append("* constraints:bar:")
         else:
             math_dict["constraints"]["bar"] = {"equations": [{"expression": "1 == 1"}]}
 

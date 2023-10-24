@@ -103,7 +103,15 @@ extlinks = {"nbviewer_docs": (nbviewer_url + docs_base_url + "%s", None)}
 
 # Mock modules for Read The Docs autodoc generation
 
-MOCK_MODULES = ["xarray", "pandas", "numpy", "pyomo", "sklearn", "pyparsing", "netCDF4"]
+MOCK_MODULES = [
+    "xarray",
+    "pandas",
+    "numpy",
+    "pyomo",
+    "sklearn",
+    "pyparsing",
+    "netCDF4",
+]
 autodoc_mock_imports = MOCK_MODULES
 autodoc_typehints = "both"
 autodoc_member_order = "bysource"

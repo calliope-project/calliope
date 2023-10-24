@@ -38,7 +38,7 @@ _COMPONENTS_T = Literal[
     "variables", "constraints", "objectives", "parameters", "global_expressions"
 ]
 
-logger = logging.getLogger("calliope.backend.backend_model")
+LOGGER = logging.getLogger(__name__)
 
 COMPONENT_TRANSLATOR = {
     "parameter": "parameter",
@@ -80,6 +80,11 @@ class PyomoBackendModel(backend_model.BackendModel):
             use_inf_as_na=use_inf_as_na,
         )
         if parameter_da.isnull().all():
+            self.log(
+                "parameters",
+                parameter_name,
+                "Component not added; no data found in array.",
+            )
             self.delete_component(parameter_name, "parameters")
             parameter_da = parameter_da.astype(float)
 
@@ -191,9 +196,12 @@ class PyomoBackendModel(backend_model.BackendModel):
             expr = element.evaluate_expression(self.inputs, self, references=references)
             objective = pmo.objective(expr.item(), sense=sense)
             if name == self.inputs.run_config["objective"]:
+                text = "activated"
                 objective.activate()
             else:
+                text = "deactivated"
                 objective.deactivate()
+            self.log("objectives", name, f"Objective {text}.")
 
             self._instance.objectives[name].append(objective)
             return xr.DataArray(objective)
@@ -214,8 +222,14 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         param_as_vals = self._apply_func(self._from_pyomo_param, parameter)
         if parameter.original_dtype.kind == "M":  # i.e., np.datetime64
+            self.log("parameters", name, "Converting Pyomo object to datetime dtype.")
             return xr.apply_ufunc(pd.to_datetime, param_as_vals)
         else:
+            self.log(
+                "parameters",
+                name,
+                f"Converting Pyomo object to {parameter.original_dtype} dtype.",
+            )
             return param_as_vals.astype(parameter.original_dtype)
 
     def get_constraint(
@@ -303,8 +317,8 @@ class PyomoBackendModel(backend_model.BackendModel):
             )
             warmstart = False
 
-        with redirect_stdout(LogWriter(logger, "debug", strip=True)):  # type: ignore
-            with redirect_stderr(LogWriter(logger, "error", strip=True)):  # type: ignore
+        with redirect_stdout(LogWriter(self._solve_logger, "debug", strip=True)):  # type: ignore
+            with redirect_stderr(LogWriter(self._solve_logger, "error", strip=True)):  # type: ignore
                 # Ignore most of gurobipy's logging, as it's output is
                 # already captured through STDOUT
                 logging.getLogger("gurobipy").setLevel(logging.ERROR)
@@ -316,12 +330,12 @@ class PyomoBackendModel(backend_model.BackendModel):
             self._instance.load_solution(results.solution[0])
 
         else:
-            logger.critical("Problem status:")
+            self._solve_logger.critical("Problem status:")
             for line in str(results.problem[0]).split("\n"):
-                logger.critical(line)
-            logger.critical("Solver status:")
+                self._solve_logger.critical(line)
+            self._solve_logger.critical("Solver status:")
             for line in str(results.solver[0]).split("\n"):
-                logger.critical(line)
+                self._solve_logger.critical(line)
 
             model_warn("Model solution was non-optimal.", _class=BackendWarning)
 
@@ -333,7 +347,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 val.calliope_coords = idx
 
         with self._datetime_as_string(self._dataset):
-            for component_type in ["parameters", "variables"]:
+            for component_type in ["parameters", "variables", "constraints"]:
                 for da in self._dataset.filter_by_attrs(
                     coords_in_name=False, **{"obj_type": component_type}
                 ).values():
@@ -394,8 +408,12 @@ class PyomoBackendModel(backend_model.BackendModel):
         ):
             refs_to_update = self._find_all_references(parameter_da.attrs["references"])
             if refs_to_update:
-                logger.warning(
-                    f"Defining values for a previously fully/partially undefined parameter. The optimisation problem components {refs_to_update} will be re-built."
+                self.log(
+                    "parameters",
+                    name,
+                    "Defining values for a previously fully/partially undefined parameter. "
+                    f"The optimisation problem components {refs_to_update} will be re-built.",
+                    "info",
                 )
             self.delete_component(name, "parameters")
             self.add_parameter(
@@ -406,8 +424,11 @@ class PyomoBackendModel(backend_model.BackendModel):
             return None
 
         if missing_dims_in_new_vals:
-            logger.warning(
+            self.log(
+                "parameters",
+                name,
                 f"New values will be broadcast along the {missing_dims_in_new_vals} dimension(s)."
+                "info",
             )
 
         self._apply_func(self._update_pyomo_param, parameter_da, new_values)
@@ -424,6 +445,11 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         for bound_name, new_bounds in {"min": min, "max": max}.items():
             if new_bounds is None:
+                self.log(
+                    "variables",
+                    name,
+                    f"{bound_name} bound not being updated as it has not been defined.",
+                )
                 continue
 
             existing_bound_param = self.inputs.math.get_key(
@@ -431,14 +457,18 @@ class PyomoBackendModel(backend_model.BackendModel):
             )
             if existing_bound_param in self.parameters:
                 raise BackendError(
-                    f"Cannot update variable bounds that have been set by parameters. use `update_parameter('{existing_bound_param}')` to update the {bound_name} bound of {name}."
+                    "Cannot update variable bounds that have been set by parameters. "
+                    f"Use `update_parameter('{existing_bound_param}')` to update the {bound_name} bound of {name}."
                 )
 
             bound_da = xr.DataArray(new_bounds)
             missing_dims_in_new_vals = set(variable_da.dims).difference(bound_da.dims)
             if missing_dims_in_new_vals:
-                logger.warning(
-                    f"New `{bound_name}` bounds for variable `{name}` will be broadcast along the {missing_dims_in_new_vals} dimension(s)."
+                self.log(
+                    "variables",
+                    name,
+                    f"New `{bound_name}` bounds will be broadcast along the {missing_dims_in_new_vals} dimension(s).",
+                    "info",
                 )
             self._apply_func(
                 self._update_pyomo_variable,
@@ -512,6 +542,13 @@ class PyomoBackendModel(backend_model.BackendModel):
         def __get_bound(bound):
             this_bound = bounds.get(bound, None)
             if isinstance(this_bound, str):
+                text1 = bound
+                text2 = this_bound
+                self.log(
+                    "variables",
+                    name,
+                    f"{text1} bound applied according to the {text2} parameter values.",
+                )
                 return self.get_parameter(this_bound)
             else:
                 # TODO: decide if this parameter should be added to the backend dataset too
@@ -630,7 +667,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         *,
         op: Literal["==", ">=", "<="],
         name: str,
-    ) -> Union[type[pmo.constraint], float]:
+    ) -> Union[type[ObjConstraint], float]:
         """
         Utility function to generate a pyomo constraint for every element of an
         xarray DataArray.
@@ -647,7 +684,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             name (str): Name of constraint
 
         Returns:
-            Union[type[pmo.constraint], float]:
+            Union[type[ObjConstraint], float]:
                 If mask is True, return np.nan.
                 Otherwise return pmo_constraint(expr=lhs op rhs).
         """
@@ -655,11 +692,11 @@ class PyomoBackendModel(backend_model.BackendModel):
         if not mask:
             return np.nan
         elif op == "==":
-            constraint = pmo.constraint(expr=lhs == rhs)
+            constraint = ObjConstraint(expr=lhs == rhs)
         elif op == "<=":
-            constraint = pmo.constraint(expr=lhs <= rhs)
+            constraint = ObjConstraint(expr=lhs <= rhs)
         elif op == ">=":
-            constraint = pmo.constraint(expr=lhs >= rhs)
+            constraint = ObjConstraint(expr=lhs >= rhs)
         self._instance.constraints[name].append(constraint)
         return constraint
 
@@ -750,12 +787,12 @@ class PyomoBackendModel(backend_model.BackendModel):
 
     @staticmethod
     def _from_pyomo_constraint(
-        val: pmo.constraint, *, eval_body: bool = False
+        val: ObjConstraint, *, eval_body: bool = False
     ) -> pd.Series:
         """Evaluate Pyomo constraint object.
 
         Args:
-            val (pmo.constraint): constraint object to be evaluated
+            val (ObjConstraint): constraint object to be evaluated
         Kwargs:
             eval_body (bool, optional):
                 If True, attempt to evaluate the constraint object `body`, which will evaluate the
@@ -912,3 +949,17 @@ class ObjVariable(pmo.variable, CoordObj):
 
     def getname(self, *args, **kwargs):
         return self._update_name(pmo.variable.getname(self, *args, **kwargs))
+
+
+class ObjConstraint(pmo.constraint, CoordObj):
+    """
+    A pyomo constraint with a `name` property setter (via the `pmo.constraint.getname` method) which replaces a list position as a name with a list of strings.
+
+    """
+
+    def __init__(self, **kwds):
+        pmo.constraint.__init__(self, **kwds)
+        CoordObj.__init__(self)
+
+    def getname(self, *args, **kwargs):
+        return self._update_name(pmo.constraint.getname(self, *args, **kwargs))

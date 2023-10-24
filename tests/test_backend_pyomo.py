@@ -2181,7 +2181,7 @@ class TestNewBackend:
             )
         assert check_error_or_warning(
             excinfo,
-            "(objective, foo:1): trying to set two equations for the same component.",
+            "objectives:foo:1 | trying to set two equations for the same component.",
         )
 
     def test_add_valid_obj(self, simple_supply):
@@ -2220,6 +2220,15 @@ class TestNewBackend:
                 "variables",
             ),
             ("flow_eff", {"nodes": "a", "techs": "test_supply_elec"}, "parameters"),
+            (
+                "system_balance",
+                {
+                    "nodes": "a",
+                    "carriers": "electricity",
+                    "timesteps": "2005-01-01 00:00",
+                },
+                "constraints",
+            ),
         ],
     )
     def test_verbose_strings(self, simple_supply_longnames, objname, dims, objtype):
@@ -2248,7 +2257,7 @@ class TestNewBackend:
             obj.sel(dims).body.item()
             == f"parameters[flow_eff][{flow_eff_dims}]*variables[flow_in][{', '.join(dims[i] for i in obj.dims)}]"
         )
-        assert not obj.coords_in_name
+        assert obj.coords_in_name
 
     def test_verbose_strings_expression(self, simple_supply_longnames):
         dims = {
@@ -2284,7 +2293,7 @@ class TestNewBackend:
     def test_update_parameter_one_val(self, caplog, simple_supply):
         updated_param = 1000
         new_dims = {"nodes", "techs"}
-        caplog.set_level(logging.WARNING)
+        caplog.set_level(logging.DEBUG)
 
         simple_supply.backend.update_parameter("flow_eff", updated_param)
 
@@ -2314,12 +2323,13 @@ class TestNewBackend:
         )
 
         refs_to_update = {"balance_demand", "balance_transmission"}
-        caplog.set_level(logging.WARNING)
+        caplog.set_level(logging.DEBUG)
 
         simple_supply.backend.update_parameter("flow_eff", updated_param)
 
         assert (
-            f"Defining values for a previously fully/partially undefined parameter. The optimisation problem components {refs_to_update} will be re-built."
+            "Defining values for a previously fully/partially undefined parameter. "
+            f"The optimisation problem components {refs_to_update} will be re-built."
             in caplog.text
         )
 
@@ -2338,7 +2348,8 @@ class TestNewBackend:
         simple_supply.backend.update_parameter("parasitic_eff", updated_param)
 
         assert (
-            f"Defining values for a previously fully/partially undefined parameter. The optimisation problem components {refs_to_update} will be re-built."
+            "Defining values for a previously fully/partially undefined parameter. "
+            f"The optimisation problem components {refs_to_update} will be re-built."
             in caplog.text
         )
 
@@ -2351,9 +2362,9 @@ class TestNewBackend:
     def test_update_parameter_no_refs_to_update(self, simple_supply):
         """units_equals isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
 
-        Updating it doesn't change the model in any way, because none of the existing constraints/expressions depend on it. Therefore, no warning is raised
+        Updating it doesn't change the model in any way, because none of the existing constraints/expressions depend on it.
+        Therefore, no warning is raised.
         """
-
         updated_param = 1
 
         simple_supply.backend.update_parameter("units_equals", updated_param)

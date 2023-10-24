@@ -6,22 +6,22 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_e_constraints(balance_conversion)(0)_:
+c_e_constraints(balance_conversion)(a__test_conversion__2005_01_01_00_00)_:
 +1 variables(flow_out)(a__test_conversion__heat__2005_01_01_00_00)
 -0.9 variables(flow_in)(a__test_conversion__gas__2005_01_01_00_00)
 = 0.0
 
-c_e_constraints(balance_conversion)(1)_:
+c_e_constraints(balance_conversion)(a__test_conversion__2005_01_01_01_00)_:
 +1 variables(flow_out)(a__test_conversion__heat__2005_01_01_01_00)
 -0.9 variables(flow_in)(a__test_conversion__gas__2005_01_01_01_00)
 = 0.0
 
-c_e_constraints(balance_conversion)(2)_:
+c_e_constraints(balance_conversion)(b__test_conversion__2005_01_01_00_00)_:
 +1 variables(flow_out)(b__test_conversion__heat__2005_01_01_00_00)
 -0.9 variables(flow_in)(b__test_conversion__gas__2005_01_01_00_00)
 = 0.0
 
-c_e_constraints(balance_conversion)(3)_:
+c_e_constraints(balance_conversion)(b__test_conversion__2005_01_01_01_00)_:
 +1 variables(flow_out)(b__test_conversion__heat__2005_01_01_01_00)
 -0.9 variables(flow_in)(b__test_conversion__gas__2005_01_01_01_00)
 = 0.0

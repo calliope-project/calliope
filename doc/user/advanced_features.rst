@@ -98,7 +98,7 @@ For example:
                 parent: supply
                 carrier: power
             constraints:
-                resource: file=pv_resource.csv
+                source_max: file=pv_resource.csv
                 lifetime: 30
             costs:
                 monetary:

@@ -23,6 +23,8 @@ from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
 from calliope.preprocess import checks, time
 
+LOGGER = logging.getLogger(__name__)
+
 
 class ModelDataFactory:
     UNWANTED_TECH_KEYS = [
@@ -300,9 +302,9 @@ class ModelDataFactory:
         data_dict = self._reformat_model_run_dict(
             model_run_subdict, expected_nesting, **kwargs
         )
-        if not data_dict:
-            logging.info(
-                f"No relevant data found for `{group_name}` group of parameters"
+        if data_dict is None:
+            LOGGER.debug(
+                f"Model build | No relevant data found for `{group_name}` group of parameters"
             )
             return None
         df = self._dict_to_df(data_dict, data_dimensions, **kwargs)
