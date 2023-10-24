@@ -370,7 +370,7 @@ def _check_tech_final(
     ):
         errors.append(
             f"`{tech_id}` at `{loc_id}` fails to define flow_cap_per_unit when "
-            "specifying technology in units_max/min/equals"
+            "specifying technology in units_max/min"
         )
 
     # If a technology is defined by units & is a storage tech, it must define storage_cap_per_unit
@@ -382,7 +382,7 @@ def _check_tech_final(
     ):
         errors.append(
             f"`{tech_id}` at `{loc_id}` fails to define storage_cap_per_unit when "
-            "specifying technology in units_max/min/equals"
+            "specifying technology in units_max/min"
         )
 
     # Gather remaining unallowed constraints

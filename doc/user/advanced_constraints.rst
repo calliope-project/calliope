@@ -274,47 +274,6 @@ Export is an extension of this, allowing a carrier to be removed from the system
 
 .. note:: Negative costs can be applied to capacity costs, but the user must an ensure a capacity limit has been set. Otherwise, optimisation will be unbounded.
 
-.. _group_share:
-
--------------------------------------------
-The ``group_share`` constraint (deprecated)
--------------------------------------------
-
-.. Warning:: ``group_share`` is deprecated as of v0.6.4 and will be removed in v0.7.0.
-
-The ``group_share`` constraint can be used to force groups of technologies to fulfill certain shares of supply or capacity.
-
-For example, assuming a model containing a ``csp`` and a ``cold_fusion`` power generation technology, we could force at least 85% of power generation in the model to come from these two technologies with the following constraint definition in the ``model`` settings:
-
-.. code-block:: yaml
-
-    model:
-        group_share:
-            csp,cold_fusion:
-                carrier_prod_min:
-                    power: 0.85
-
-Possible ``group_share`` constraints with carrier-specific settings are:
-
-* ``carrier_prod_min``
-* ``carrier_prod_max``
-* ``carrier_prod_equals``
-
-Possible ``group_share`` constraints with carrier-independent settings are:
-
-* ``flow_cap_min``
-* ``flow_cap_max``
-* ``flow_cap_equals``
-
-These can be implemented as, for example, to force at most 20% of ``flow_cap`` to come from the two listed technologies:
-
-.. code-block:: yaml
-
-    model:
-        group_share:
-            csp,cold_fusion:
-                flow_cap_max: 0.20
-
 ------------------------------------
 Binary and mixed-integer constraints
 ------------------------------------
@@ -323,7 +282,7 @@ Calliope models are purely linear by default. However, several constraints can t
 
 By applying a ``purchase`` cost to a technology, that technology will have a binary variable associated with it, describing whether or not it has been "purchased".
 
-By applying ``units.max``, ``units.min``, or ``units.equals`` to a technology, that technology will have a integer variable associated with it, describing how many of that technology have been "purchased". If a ``purchase`` cost has been applied to this same technology, the purchasing cost will be applied per unit.
+By applying ``units_max`` or ``units_min`` to a technology, that technology will have a integer variable associated with it, describing how many of that technology have been "purchased". If a ``purchase`` cost has been applied to this same technology, the purchasing cost will be applied per unit.
 
 .. Warning::
 

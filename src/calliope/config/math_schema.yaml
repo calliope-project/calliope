@@ -139,12 +139,6 @@ properties:
               max:
                 type: [string, number]
                 description: Decision variable upper bound, either as a reference to an input parameter or as a number.
-              equals:
-                type: [string, number]
-                description: Decision variable equality bound, either as a reference to an input parameter or as a number, which simultanously forces the lower and uppere bound to the same value.
-              scale:
-                type: [string, number]
-                description: Scaling factor, either as a reference to an input parameter or as a number, which will be applied to all bounds.
 
   objectives:
     type: object
