@@ -19,32 +19,31 @@ config:
     timeseries_dateformat: "ISO8601" # Timestamp format of all time series data when read from file
     custom_math: [] # List of references to files which contain custom mathematical formulations. If referring to an in-built Calliope custom math file (see documentation for available files), do not append the reference with ".yaml". If referring to your own custom math file, ensure the file type is given as a suffix (".yaml" or ".yml"). Relative paths will be assumed to be relative to the `config` file given when creating a calliope Model (`calliope.Model(config)`)
   build:
-    backend: pyomo
-    cyclic_storage: true
-    ensure_feasibility: false
-    mode: plan
+    backend: pyomo  # Module with which to build the optimisation problem
+    cyclic_storage: true  # whether or not to link storage levels in the last model timestep with the first model timestep. `inter_cluster_storage` custom math must be included if using time clustering and setting this to True.
+    ensure_feasibility: false  # whether to include decision variables in the model which will meet unmet demand or consume unused supply in the model so that the optimisation solves successfully. This should only be used as a debugging option (as any unmet demand/unused supply is a sign of improper model formulation).
+    mode: plan  # Mode in which to run the optimisation. Options: [plan, operate, spores]
     objective: minmax_cost_optimisation # Name of internal objective function to use, currently only min/max cost-based optimisation is available
   solve:
-    operate_window: null
-    operate_horizon: null
-    operate_use_cap_results: false
-    spores_number: 3
-    spores_score_cost_class: spores_score
-    spores_slack_cost_group: null
-    spores_save_per_spore: false
-    spores_save_per_spore_path: null
-    spores_skip_cost_op: false
-    save_logs: null
-    solver_io: null
-    solver_options: null
-    solver: cbc
-    zero_threshold: 1e-10
-
+    operate_window: null  # Operate mode rolling `window`
+    operate_horizon: null  # Operate mode rolling `horizon` (≥ `window`)
+    operate_use_cap_results: false  # If the model already contains `plan` mode results, use those optimal capacities as input parameters to the `operate` mode run.
+    spores_number: 3  # SPORES mode number of iterations after the initial base run.
+    spores_score_cost_class: spores_score  # SPORES mode cost class to vary between iterations after the initial base run.
+    spores_slack_cost_group: null  # SPORES mode cost class to keep below the given `slack` (usually "monetary").
+    spores_save_per_spore: false  # Whether or not to save the result of each SPORES mode run between iterations. If False, will consolidate all iterations into one dataset after completion of N iterations (defined by `spores_number`) and save that one dataset.
+    spores_save_per_spore_path: null  # If saving per spore, the path to save to.
+    spores_skip_cost_op: false  # If the model already contains `plan` mode results, use those as the initial base run results and start with SPORES iterations immediately.
+    save_logs: null  # If given, should be a path to a directory in which to save optimisation logs.
+    solver_io: null  # Some solvers have different interfaces that perform differently. For instance, setting `solver_io="python"` when using the solver `gurobi` tends to reduce the time to send the optimisation problem to the solver.
+    solver_options: null  # Any solver options, as key-value pairs, to pass to the chosen solver
+    solver: cbc  # Solver to use. Any solvers that have Pyomo interfaces can be used. Refer to the Pyomo documentation for the latest list.
+    zero_threshold: 1e-10  # On postprocessing the optimisation results, values smaller than this threshold will be considered as optimisation artefacts and will be set to zero.
 
 parameters:
-  bigM:
+  bigM:  # Large value used to define certain optimisation problems. See https://en.wikipedia.org/wiki/Big_M_method for more information. This value should be larger than the largest values that any decision variables can take, but should not be **too** large (i.e., do not set it greater than 3 orders of magnitude above the numeric range of the model). If too large, numerical problems may arise in the optimisation.
     data: 1e9
-  objective_cost_class:
+  objective_cost_class: # Weightings for cost classes to apply in the objective function.
     data: 1
     index: [monetary]
     dims: costs
