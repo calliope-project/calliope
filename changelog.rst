@@ -20,6 +20,8 @@ User-facing changes
 
 |changed| |backwards-incompatible| The `loc::tech` and `loc::tech::carrier` sets have been removed. Model components are now indexed separately over `node`, `tech`, and `carrier` (where applicable). Although primarily an internal change, this affects the xarray dataset structure and hence how users access data in `model.inputs` and `model.results`. For example, `model.inputs.energy_cap_max.loc[{"loc_techs": "X:pv"}]` in v0.6 needs to be changed to `model.inputs.energy_cap_max.loc[{"nodes": "X", "techs": "pv"}]` in v0.7. This is functionally equivalent to first calling `model.get_formatted_array("energy_cap_max")` in v0.6, which is no longer necessary in v0.7.
 
+|changed| |backwards-incompatible| `get_formatted_array` has been removed in favour of directly accessing the data, since we no longer concatenate sets. E.g., `model.get_formatted_array("storage")` -> `model.results.storage`.
+
 |changed| |backwards-incompatible| The dimensions of the model data no longer include all possible subsets. E.g. a user can no longer access `loc_techs_supply` to view the location/technology pairs which have defined `supply` as their top-level parent. Instead, the same subset can be supplied by calling `model.inputs.inheritance.str.endswith('supply')` to create a boolean array of technologies with `supply` as their top-level parent.
 
 |changed| |backwards-incompatible| Group constraints have been removed. They will be replaced by `custom constraint` functionality.

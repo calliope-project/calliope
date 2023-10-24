@@ -510,27 +510,6 @@ class Model(object):
         self.build(force=force_rerun)
         self.solve(force=force_rerun)
 
-    def get_formatted_array(self, var):
-        """
-        Return an xarray.DataArray with nodes, techs, and carriers as
-        separate dimensions.
-
-        Parameters
-        ----------
-        var : str
-            Decision variable for which to return a DataArray.
-
-        """
-        warnings.warn(
-            "get_formatted_array() is deprecated and will be removed in a "
-            "future version. Use `model.results[var]` instead.",
-            DeprecationWarning,
-        )
-        if var not in self._model_data.data_vars:
-            raise KeyError("Variable {} not in Model data".format(var))
-
-        return self._model_data[var]
-
     def to_netcdf(self, path):
         """
         Save complete model data (inputs and, if available, results)

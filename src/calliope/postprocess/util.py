@@ -18,9 +18,7 @@ def subset_sum_squeeze(data, subset={}, sum_dims=None, squeeze=False):
     Parameters
     ----------
     data : xarray DataArray
-        A Calliope model data variable, either input or output, which has been
-        reformatted to deconcatenate loc_techs (or loc_tech_carriers/loc_carriers)
-        using calliope.Model().get_formatted_array(original_data)
+        A Calliope model data variable.
     subset : dict, default {}
         key:value pairs for indexing data. Uses xarray `loc[]` to index.
     sum_dims : str or list of strings, default None
