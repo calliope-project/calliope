@@ -15,7 +15,7 @@ The terminology defined here is used throughout the documentation and the model 
 * **Technology**: a technology that produces, consumes, converts or transports carriers
 * **Location**: a site which can contain multiple technologies and which may contain other locations for carrier balancing purposes
 * **Source**: a source of commodity that can (or must) be used by a technology to introduce carriers into the system
-* **Sink**: a commodity sink that can (or must) be used by a technology to introduce remove carriers from the system
+* **Sink**: a commodity sink that can (or must) be used by a technology to remove carriers from the system
 * **Carrier**: a carrier that groups technologies together into the same network, for example ``electricity`` or ``heat``.
 
 As more generally in constrained optimisation, the following terms are also used:
