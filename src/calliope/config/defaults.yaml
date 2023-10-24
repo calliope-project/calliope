@@ -455,6 +455,7 @@ techs:
         area_use: 0 # name: Cost of area use ¦ unit: m\ :sup:`-2` ¦
         source_cap: 0 # name: Cost of source flow capacity ¦ unit: kW :sup:`-1` ¦
         storage_cap: 0 # name: Cost of storage capacity ¦ unit: kWh :sup:`-1` ¦
+        depreciation_rate: 1 # name: Depreciation rate for annualisation of investment costs ¦ unit: fraction ¦
     exists: true
 
 nodes:
