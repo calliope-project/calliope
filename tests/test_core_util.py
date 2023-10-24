@@ -45,32 +45,30 @@ class TestMemoization:
 
 
 class TestLogging:
-    def test_set_log_verbosity(self):
-        calliope.set_log_verbosity("CRITICAL", include_solver_output=True)
+    @pytest.mark.parametrize(
+        ["level", "include_solver_output", "expected_level", "expected_solver_level"],
+        [
+            ("CRITICAL", True, 50, 10),
+            ("CRITICAL", False, 50, 50),
+            ("info", True, 20, 10),
+        ],
+    )
+    def test_set_log_verbosity(
+        self, level, include_solver_output, expected_level, expected_solver_level
+    ):
+        calliope.set_log_verbosity(level, include_solver_output=include_solver_output)
 
-        assert logging.getLogger("calliope").getEffectiveLevel() == 50
-        assert logging.getLogger("py.warnings").getEffectiveLevel() == 50
+        assert logging.getLogger("calliope").getEffectiveLevel() == expected_level
+        assert logging.getLogger("py.warnings").getEffectiveLevel() == expected_level
         assert (
             logging.getLogger("calliope.backend.backend_model").getEffectiveLevel()
-            == 10
+            == expected_level
         )
-
-        calliope.set_log_verbosity("CRITICAL", include_solver_output=False)
-
-        assert logging.getLogger("calliope").getEffectiveLevel() == 50
-        assert logging.getLogger("py.warnings").getEffectiveLevel() == 50
         assert (
-            logging.getLogger("calliope.backend.backend_model").getEffectiveLevel()
-            == 50
-        )
-
-        calliope.set_log_verbosity()
-
-        assert logging.getLogger("calliope").getEffectiveLevel() == 20
-        assert logging.getLogger("py.warnings").getEffectiveLevel() == 20
-        assert (
-            logging.getLogger("calliope.backend.backend_model").getEffectiveLevel()
-            == 10
+            logging.getLogger(
+                "calliope.backend.backend_model.<solve>"
+            ).getEffectiveLevel()
+            == expected_solver_level
         )
 
     def test_timing_log(self):
