@@ -1,9 +1,10 @@
 coverage:
+  project:
+    default:
+      paths:
+        - "src"
   status:
     patch: off
 
 comment:
   layout: "diff, flags, files"
-
-fixes:
-  - "src/calliope/::calliope/"
