@@ -13,6 +13,7 @@ AttrDict, and building of associated debug information.
 import itertools
 import logging
 import os
+from pathlib import Path
 from typing import Optional
 
 import pandas as pd
@@ -64,7 +65,7 @@ def model_run_from_yaml(
 
     """
     config = AttrDict.from_yaml(model_file)
-    config._model_def_path = model_file
+    config._model_def_path = Path(model_file).as_posix()
 
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict

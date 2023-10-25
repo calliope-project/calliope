@@ -58,7 +58,7 @@ class Model(object):
 
     def __init__(
         self,
-        model_definition: Optional[Union[str, dict]] = None,
+        model_definition: Optional[Union[str, Path, dict]] = None,
         model_data: Optional[xarray.Dataset] = None,
         debug: bool = False,
         scenario: Optional[str] = None,
@@ -71,7 +71,7 @@ class Model(object):
         configuration file or a dict fully specifying the model.
 
         Args:
-            config (Optional[Union[str, dict]]):
+            config (Optional[Union[str, Path, dict]]):
                 If str, must be the path to a model configuration file.
                 If dict or AttrDict, must fully specify the model.
             model_data (Optional[xarray.Dataset], optional):
@@ -104,8 +104,8 @@ class Model(object):
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
         log_time(LOGGER, self._timings, "model_creation", comment="Model: initialising")
-        if isinstance(model_definition, str):
-            self._model_def_path = model_definition
+        if isinstance(model_definition, (str, Path)):
+            self._model_def_path = Path(model_definition).as_posix()
             model_run, debug_data = model_run_from_yaml(
                 model_definition,
                 scenario,

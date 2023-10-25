@@ -1479,18 +1479,20 @@ class TestTime:
         """
         if load_timeseries_from_dataframes:
             # Create dictionary with dataframes
-            timeseries_data_path = os.path.join(
-                calliope.examples._PATHS["national_scale"], "timeseries_data/"
+            timeseries_data_path = (
+                calliope.examples.EXAMPLE_MODEL_DIR
+                / "national_scale"
+                / "timeseries_data"
             )
             timeseries_dataframes = {}
             timeseries_dataframes["csp_resource"] = pd.read_csv(
-                os.path.join(timeseries_data_path, "csp_resource.csv"), index_col=0
+                timeseries_data_path / "csp_resource.csv", index_col=0
             )
             timeseries_dataframes["demand_1"] = pd.read_csv(
-                os.path.join(timeseries_data_path, "demand-1.csv"), index_col=0
+                timeseries_data_path / "demand-1.csv", index_col=0
             )
             timeseries_dataframes["demand_2"] = pd.read_csv(
-                os.path.join(timeseries_data_path, "demand-2.csv"), index_col=0
+                timeseries_data_path / "demand-2.csv", index_col=0
             )
             # Create override dict telling calliope to load timeseries from df
             override_dict = {
