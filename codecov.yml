@@ -8,3 +8,6 @@ coverage:
 
 comment:
   layout: "diff, flags, files"
+
+fixes:
+  - "calliope/::src/calliope/"
