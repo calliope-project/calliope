@@ -10,4 +10,4 @@ comment:
   layout: "diff, flags, files"
 
 fixes:
-  - "calliope/::src/calliope/"
+  - "^calliope/calliope/::calliope/calliope/src/"
