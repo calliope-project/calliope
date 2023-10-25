@@ -764,7 +764,7 @@ class TestChecks:
             excinfo, "Constraint group `mygroup` will be completely ignored"
         )
 
-        assert m._model_run.group_constraints.mygroup.get("exists", True) is False
+        assert m._model_run.group_constraints.mygroup.get("active", True) is False
 
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Not building the link a,b:calliope.exceptions.ModelWarning"

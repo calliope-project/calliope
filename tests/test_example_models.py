@@ -430,9 +430,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             "run.cyclic_storage": cyclic,
         }
         if storage is False:
-            override.update({"techs.battery.exists": False, "techs.csp.exists": False})
-        if solver_io is not None:
-            override["run.solver_io"] = solver_io
+            override.update({"techs.battery.active": False, "techs.csp.active": False})
         if storage_inter_cluster and backend_runner == "solve":
             override["model.custom_math"] = ["storage_inter_cluster"]
 
