@@ -1,8 +1,7 @@
+import calliope
 import numpy as np
 import pandas as pd
 import pytest  # noqa: F401
-
-import calliope
 from calliope import exceptions
 from calliope.time import funcs, masks
 

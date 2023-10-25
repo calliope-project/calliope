@@ -1,13 +1,12 @@
 import os
 
+import calliope
+import calliope.exceptions as exceptions
 import numpy as np
 import pandas as pd
 import pytest
-from pytest import approx
-
-import calliope
-import calliope.exceptions as exceptions
 from calliope.core.attrdict import AttrDict
+from pytest import approx
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, defaults

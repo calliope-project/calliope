@@ -1,5 +1,4 @@
 import pytest  # noqa: F401
-
 from calliope import exceptions
 
 from .common.util import build_test_model as build_model

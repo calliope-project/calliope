@@ -1,12 +1,11 @@
 import shutil
 
+import calliope
 import numpy as np
 import pandas as pd
 import pytest
-from pytest import approx
-
-import calliope
 from calliope import exceptions
+from pytest import approx
 
 from .common.util import check_error_or_warning
 
