@@ -1057,7 +1057,7 @@ class TestLoadTimeseries:
                 "d.techs": {"test_supply_elec": None, "test_demand_elec": None},
             },
             "links": {
-                "a,b": {"exists": False},
+                "a,b": {"active": False},
                 "c,d.techs": {"test_transmission_elec": None},
             },
         }

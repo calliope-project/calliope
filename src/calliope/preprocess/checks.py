@@ -323,7 +323,7 @@ def _check_tech_final(
     """
     if tech_id not in model_run.techs:
         model_warnings.append(
-            "Tech {} was removed by setting ``exists: False`` - not checking "
+            "Tech {} was removed by setting ``active: False`` - not checking "
             "the consistency of its constraints at node {}.".format(tech_id, loc_id)
         )
         return model_warnings, errors

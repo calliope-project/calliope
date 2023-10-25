@@ -419,7 +419,7 @@ class TestNationalScaleClusteredExampleModelSenseChecks:
             },
         }
         if storage is False:
-            override.update({"techs.battery.exists": False, "techs.csp.exists": False})
+            override.update({"techs.battery.active": False, "techs.csp.active": False})
         if storage_inter_cluster and backend_runner == "solve":
             override["config.init.custom_math"] = ["storage_inter_cluster"]
 
