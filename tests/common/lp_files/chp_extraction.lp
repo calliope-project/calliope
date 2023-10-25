@@ -6,24 +6,24 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_u_constraints(chp_extraction_line)(0)_:
+c_u_constraints(chp_extraction_line)(a__test_chp__2005_01_01_00_00)_:
 +1 variables(flow_out)(a__test_chp__electricity__2005_01_01_00_00)
 -0.6 variables(flow_in)(a__test_chp__gas__2005_01_01_00_00)
 +0.1 variables(flow_out)(a__test_chp__heat__2005_01_01_00_00)
 <= 0.0
 
-c_u_constraints(chp_extraction_line)(1)_:
+c_u_constraints(chp_extraction_line)(a__test_chp__2005_01_01_01_00)_:
 +1 variables(flow_out)(a__test_chp__electricity__2005_01_01_01_00)
 -0.6 variables(flow_in)(a__test_chp__gas__2005_01_01_01_00)
 +0.1 variables(flow_out)(a__test_chp__heat__2005_01_01_01_00)
 <= 0.0
 
-c_u_constraints(chp_backpressure_line_min)(0)_:
+c_u_constraints(chp_backpressure_line_min)(a__test_chp__2005_01_01_00_00)_:
 -1 variables(flow_out)(a__test_chp__electricity__2005_01_01_00_00)
 +2.0 variables(flow_out)(a__test_chp__heat__2005_01_01_00_00)
 <= 0.0
 
-c_u_constraints(chp_backpressure_line_min)(1)_:
+c_u_constraints(chp_backpressure_line_min)(a__test_chp__2005_01_01_01_00)_:
 -1 variables(flow_out)(a__test_chp__electricity__2005_01_01_01_00)
 +2.0 variables(flow_out)(a__test_chp__heat__2005_01_01_01_00)
 <= 0.0

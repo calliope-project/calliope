@@ -6,12 +6,12 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_u_constraints(annual_energy_balance_total_sink_availability)(0)_:
+c_u_constraints(annual_energy_balance_total_sink_availability)(test_demand_elec)_:
 +1 variables(flow_in)(a__test_demand_elec__electricity__2005_01_01_00_00)
 +1 variables(flow_in)(a__test_demand_elec__electricity__2005_01_01_01_00)
 +1 variables(flow_in)(b__test_demand_elec__electricity__2005_01_01_00_00)
 +1 variables(flow_in)(b__test_demand_elec__electricity__2005_01_01_01_00)
-<= 10
+<= 10.0
 
 bounds
    1 <= ONE_VAR_CONSTANT <= 1

@@ -6,7 +6,7 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_e_constraints(supply_share_equals_per_tech)(0)_:
+c_e_constraints(supply_share_equals_per_tech)(a__test_supply_elec)_:
 +0.5 variables(flow_out)(a__test_supply_elec__electricity__2005_01_01_00_00)
 +0.5 variables(flow_out)(a__test_supply_elec__electricity__2005_01_01_01_00)
 -0.5 variables(flow_out)(a__test_supply_plus__electricity__2005_01_01_00_00)
@@ -15,7 +15,7 @@ c_e_constraints(supply_share_equals_per_tech)(0)_:
 -0.5 variables(flow_out)(a__test_transmission_elec_b__electricity__2005_01_01_01_00)
 = 0.0
 
-c_e_constraints(supply_share_equals_per_tech)(1)_:
+c_e_constraints(supply_share_equals_per_tech)(b__test_supply_elec)_:
 +0.19999999999999996 variables(flow_out)(b__test_supply_elec__electricity__2005_01_01_00_00)
 +0.19999999999999996 variables(flow_out)(b__test_supply_elec__electricity__2005_01_01_01_00)
 -0.8 variables(flow_out)(b__test_supply_plus__electricity__2005_01_01_00_00)

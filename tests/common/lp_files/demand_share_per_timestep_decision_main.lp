@@ -6,42 +6,42 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_u_constraints(demand_share_per_timestep_decision_main_min)(0)_:
+c_u_constraints(demand_share_per_timestep_decision_main_min)(a__test_conversion_plus__2005_01_01_00_00)_:
 +4.95 variables(demand_share_per_timestep_decision)(a__test_conversion_plus)
 -1 variables(flow_out)(a__test_conversion_plus__electricity__2005_01_01_00_00)
 <= 0.0
 
-c_u_constraints(demand_share_per_timestep_decision_main_min)(1)_:
+c_u_constraints(demand_share_per_timestep_decision_main_min)(a__test_conversion_plus__2005_01_01_01_00)_:
 +4.95 variables(demand_share_per_timestep_decision)(a__test_conversion_plus)
 -1 variables(flow_out)(a__test_conversion_plus__electricity__2005_01_01_01_00)
 <= 0.0
 
-c_u_constraints(demand_share_per_timestep_decision_main_min)(2)_:
+c_u_constraints(demand_share_per_timestep_decision_main_min)(a__test_supply_elec__2005_01_01_00_00)_:
 +4.95 variables(demand_share_per_timestep_decision)(a__test_supply_elec)
 -1 variables(flow_out)(a__test_supply_elec__electricity__2005_01_01_00_00)
 <= 0.0
 
-c_u_constraints(demand_share_per_timestep_decision_main_min)(3)_:
+c_u_constraints(demand_share_per_timestep_decision_main_min)(a__test_supply_elec__2005_01_01_01_00)_:
 +4.95 variables(demand_share_per_timestep_decision)(a__test_supply_elec)
 -1 variables(flow_out)(a__test_supply_elec__electricity__2005_01_01_01_00)
 <= 0.0
 
-c_u_constraints(demand_share_per_timestep_decision_main_max)(0)_:
+c_u_constraints(demand_share_per_timestep_decision_main_max)(a__test_conversion_plus__2005_01_01_00_00)_:
 -5.05 variables(demand_share_per_timestep_decision)(a__test_conversion_plus)
 +1 variables(flow_out)(a__test_conversion_plus__electricity__2005_01_01_00_00)
 <= 0.0
 
-c_u_constraints(demand_share_per_timestep_decision_main_max)(1)_:
+c_u_constraints(demand_share_per_timestep_decision_main_max)(a__test_conversion_plus__2005_01_01_01_00)_:
 -5.05 variables(demand_share_per_timestep_decision)(a__test_conversion_plus)
 +1 variables(flow_out)(a__test_conversion_plus__electricity__2005_01_01_01_00)
 <= 0.0
 
-c_u_constraints(demand_share_per_timestep_decision_main_max)(2)_:
+c_u_constraints(demand_share_per_timestep_decision_main_max)(a__test_supply_elec__2005_01_01_00_00)_:
 -5.05 variables(demand_share_per_timestep_decision)(a__test_supply_elec)
 +1 variables(flow_out)(a__test_supply_elec__electricity__2005_01_01_00_00)
 <= 0.0
 
-c_u_constraints(demand_share_per_timestep_decision_main_max)(3)_:
+c_u_constraints(demand_share_per_timestep_decision_main_max)(a__test_supply_elec__2005_01_01_01_00)_:
 -5.05 variables(demand_share_per_timestep_decision)(a__test_supply_elec)
 +1 variables(flow_out)(a__test_supply_elec__electricity__2005_01_01_01_00)
 <= 0.0

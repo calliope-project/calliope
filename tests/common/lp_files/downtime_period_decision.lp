@@ -6,7 +6,7 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_u_constraints(downtime_period_decision)(0)_:
+c_u_constraints(downtime_period_decision)(a__test_supply_elec)_:
 +1.0 variables(operating_units)(a__test_supply_elec__2005_01_01_00_00)
 +1.0 variables(operating_units)(a__test_supply_elec__2005_01_01_01_00)
 <= 1.0

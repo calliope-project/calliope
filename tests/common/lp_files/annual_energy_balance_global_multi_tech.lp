@@ -6,7 +6,7 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_u_constraints(annual_energy_balance_global_multi_tech)(0)_:
+c_u_constraints(annual_energy_balance_global_multi_tech)_:
 +1 variables(flow_out)(a__test_supply_elec__electricity__2005_01_01_00_00)
 +1 variables(flow_out)(a__test_supply_elec__electricity__2005_01_01_01_00)
 +1 variables(flow_out)(a__test_supply_plus__electricity__2005_01_01_00_00)

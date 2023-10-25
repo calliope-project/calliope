@@ -6,12 +6,12 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_e_constraints(demand_share_per_timestep_decision_sum)(0)_:
+c_e_constraints(demand_share_per_timestep_decision_sum)(a__2005_01_01_00_00)_:
 +1 variables(demand_share_per_timestep_decision)(a__test_conversion_plus)
 +1 variables(demand_share_per_timestep_decision)(a__test_supply_elec)
 = 0.5
 
-c_e_constraints(demand_share_per_timestep_decision_sum)(1)_:
+c_e_constraints(demand_share_per_timestep_decision_sum)(a__2005_01_01_01_00)_:
 +1 variables(demand_share_per_timestep_decision)(a__test_conversion_plus)
 +1 variables(demand_share_per_timestep_decision)(a__test_supply_elec)
 = 0.5

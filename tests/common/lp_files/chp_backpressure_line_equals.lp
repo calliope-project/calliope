@@ -6,12 +6,12 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_e_constraints(chp_backpressure_line_equals)(0)_:
+c_e_constraints(chp_backpressure_line_equals)(a__test_chp__2005_01_01_00_00)_:
 +1 variables(flow_out)(a__test_chp__electricity__2005_01_01_00_00)
 -1.25 variables(flow_out)(a__test_chp__heat__2005_01_01_00_00)
 = 0.0
 
-c_e_constraints(chp_backpressure_line_equals)(1)_:
+c_e_constraints(chp_backpressure_line_equals)(a__test_chp__2005_01_01_01_00)_:
 +1 variables(flow_out)(a__test_chp__electricity__2005_01_01_01_00)
 -1.25 variables(flow_out)(a__test_chp__heat__2005_01_01_01_00)
 = 0.0

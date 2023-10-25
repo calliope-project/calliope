@@ -6,7 +6,7 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_u_constraints(annual_energy_balance_total_source_availability)(0)_:
+c_u_constraints(annual_energy_balance_total_source_availability)(test_supply_plus)_:
 +1 variables(source_use)(a__test_supply_plus__2005_01_01_00_00)
 +1 variables(source_use)(a__test_supply_plus__2005_01_01_01_00)
 +1 variables(source_use)(b__test_supply_plus__2005_01_01_00_00)

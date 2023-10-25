@@ -6,19 +6,19 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_u_constraints(restrict_nodal_imports)(0)_:
+c_u_constraints(restrict_nodal_imports)(b__coal__2005_01_01_00_00)_:
 +1 variables(fuel_distributor)(b__coal__2005_01_01_00_00)
 <= 5.0
 
-c_u_constraints(restrict_nodal_imports)(1)_:
+c_u_constraints(restrict_nodal_imports)(b__coal__2005_01_01_01_00)_:
 +1 variables(fuel_distributor)(b__coal__2005_01_01_01_00)
 <= 5.0
 
-c_u_constraints(restrict_nodal_exports)(0)_:
+c_u_constraints(restrict_nodal_exports)(a__coal__2005_01_01_00_00)_:
 -1.0 variables(fuel_distributor)(a__coal__2005_01_01_00_00)
 <= 3.0
 
-c_u_constraints(restrict_nodal_exports)(1)_:
+c_u_constraints(restrict_nodal_exports)(a__coal__2005_01_01_01_00)_:
 -1.0 variables(fuel_distributor)(a__coal__2005_01_01_01_00)
 <= 3.0
 

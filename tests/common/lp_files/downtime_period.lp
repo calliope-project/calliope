@@ -6,7 +6,7 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_e_constraints(downtime_period)(0)_:
+c_e_constraints(downtime_period)(a__test_supply_elec__2005_01_01_00_00)_:
 +1 variables(flow_out)(a__test_supply_elec__electricity__2005_01_01_00_00)
 = 0.0
 

@@ -166,7 +166,7 @@ overrides:
           test_demand_elec:
           test_demand_heat:
 
-    links.a,b.active: false
+    links.a,b.exists: false
 
   conversion_milp:
     techs:
@@ -225,7 +225,7 @@ overrides:
           test_demand_elec:
           test_demand_heat:
 
-    links.a,b.active: false
+    links.a,b.exists: false
 
   fuel_distribution:
     techs:
@@ -244,7 +244,7 @@ overrides:
           test_demand_elec:
           test_demand_coal:
 
-    links.a,b.active: false
+    links.a,b.exists: false
 
   simple_storage:
     nodes:

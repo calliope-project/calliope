@@ -6,22 +6,22 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_u_constraints(max_time_varying_storage)(0)_:
+c_u_constraints(max_time_varying_storage)(a__test_storage__2005_01_01_00_00)_:
 +1 variables(flow_out)(a__test_storage__electricity__2005_01_01_00_00)
 -0.8 variables(storage)(a__test_storage__2005_01_01_00_00)
 <= 0.0
 
-c_u_constraints(max_time_varying_storage)(1)_:
+c_u_constraints(max_time_varying_storage)(a__test_storage__2005_01_01_01_00)_:
 +1 variables(flow_out)(a__test_storage__electricity__2005_01_01_01_00)
 -0.5 variables(storage)(a__test_storage__2005_01_01_01_00)
 <= 0.0
 
-c_u_constraints(max_time_varying_storage)(2)_:
+c_u_constraints(max_time_varying_storage)(b__test_storage__2005_01_01_00_00)_:
 +1 variables(flow_out)(b__test_storage__electricity__2005_01_01_00_00)
 -0.8 variables(storage)(b__test_storage__2005_01_01_00_00)
 <= 0.0
 
-c_u_constraints(max_time_varying_storage)(3)_:
+c_u_constraints(max_time_varying_storage)(b__test_storage__2005_01_01_01_00)_:
 +1 variables(flow_out)(b__test_storage__electricity__2005_01_01_01_00)
 -0.5 variables(storage)(b__test_storage__2005_01_01_01_00)
 <= 0.0

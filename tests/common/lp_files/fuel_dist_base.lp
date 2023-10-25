@@ -6,80 +6,80 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_e_constraints(system_balance)(0)_:
+c_e_constraints(system_balance)(a__coal__2005_01_01_00_00)_:
 +1 variables(flow_out)(a__test_supply_coal__coal__2005_01_01_00_00)
 -1 variables(flow_in)(a__test_conversion_plus__coal__2005_01_01_00_00)
 -1 variables(flow_in)(a__test_demand_coal__coal__2005_01_01_00_00)
 +1 variables(fuel_distributor)(a__coal__2005_01_01_00_00)
 = 0.0
 
-c_e_constraints(system_balance)(1)_:
+c_e_constraints(system_balance)(a__coal__2005_01_01_01_00)_:
 +1 variables(flow_out)(a__test_supply_coal__coal__2005_01_01_01_00)
 -1 variables(flow_in)(a__test_conversion_plus__coal__2005_01_01_01_00)
 -1 variables(flow_in)(a__test_demand_coal__coal__2005_01_01_01_00)
 +1 variables(fuel_distributor)(a__coal__2005_01_01_01_00)
 = 0.0
 
-c_e_constraints(system_balance)(2)_:
+c_e_constraints(system_balance)(b__coal__2005_01_01_00_00)_:
 +1 variables(flow_out)(b__test_supply_coal__coal__2005_01_01_00_00)
 -1 variables(flow_in)(b__test_conversion_plus__coal__2005_01_01_00_00)
 -1 variables(flow_in)(b__test_demand_coal__coal__2005_01_01_00_00)
 +1 variables(fuel_distributor)(b__coal__2005_01_01_00_00)
 = 0.0
 
-c_e_constraints(system_balance)(3)_:
+c_e_constraints(system_balance)(b__coal__2005_01_01_01_00)_:
 +1 variables(flow_out)(b__test_supply_coal__coal__2005_01_01_01_00)
 -1 variables(flow_in)(b__test_conversion_plus__coal__2005_01_01_01_00)
 -1 variables(flow_in)(b__test_demand_coal__coal__2005_01_01_01_00)
 +1 variables(fuel_distributor)(b__coal__2005_01_01_01_00)
 = 0.0
 
-c_e_constraints(system_balance)(4)_:
+c_e_constraints(system_balance)(a__electricity__2005_01_01_00_00)_:
 +1 variables(flow_out)(a__test_conversion_plus__electricity__2005_01_01_00_00)
 -1 variables(flow_in)(a__test_demand_elec__electricity__2005_01_01_00_00)
 = 0.0
 
-c_e_constraints(system_balance)(5)_:
+c_e_constraints(system_balance)(a__electricity__2005_01_01_01_00)_:
 +1 variables(flow_out)(a__test_conversion_plus__electricity__2005_01_01_01_00)
 -1 variables(flow_in)(a__test_demand_elec__electricity__2005_01_01_01_00)
 = 0.0
 
-c_e_constraints(system_balance)(6)_:
+c_e_constraints(system_balance)(a__gas__2005_01_01_00_00)_:
 +1 variables(flow_out)(a__test_supply_gas__gas__2005_01_01_00_00)
 -1 variables(flow_in)(a__test_conversion_plus__gas__2005_01_01_00_00)
 = 0.0
 
-c_e_constraints(system_balance)(7)_:
+c_e_constraints(system_balance)(a__gas__2005_01_01_01_00)_:
 +1 variables(flow_out)(a__test_supply_gas__gas__2005_01_01_01_00)
 -1 variables(flow_in)(a__test_conversion_plus__gas__2005_01_01_01_00)
 = 0.0
 
-c_e_constraints(system_balance)(8)_:
+c_e_constraints(system_balance)(b__electricity__2005_01_01_00_00)_:
 +1 variables(flow_out)(b__test_conversion_plus__electricity__2005_01_01_00_00)
 -1 variables(flow_in)(b__test_demand_elec__electricity__2005_01_01_00_00)
 = 0.0
 
-c_e_constraints(system_balance)(9)_:
+c_e_constraints(system_balance)(b__electricity__2005_01_01_01_00)_:
 +1 variables(flow_out)(b__test_conversion_plus__electricity__2005_01_01_01_00)
 -1 variables(flow_in)(b__test_demand_elec__electricity__2005_01_01_01_00)
 = 0.0
 
-c_e_constraints(system_balance)(10)_:
+c_e_constraints(system_balance)(b__gas__2005_01_01_00_00)_:
 +1 variables(flow_out)(b__test_supply_gas__gas__2005_01_01_00_00)
 -1 variables(flow_in)(b__test_conversion_plus__gas__2005_01_01_00_00)
 = 0.0
 
-c_e_constraints(system_balance)(11)_:
+c_e_constraints(system_balance)(b__gas__2005_01_01_01_00)_:
 +1 variables(flow_out)(b__test_supply_gas__gas__2005_01_01_01_00)
 -1 variables(flow_in)(b__test_conversion_plus__gas__2005_01_01_01_00)
 = 0.0
 
-c_e_constraints(restrict_total_imports_and_exports)(0)_:
+c_e_constraints(restrict_total_imports_and_exports)(coal__2005_01_01_00_00)_:
 +1 variables(fuel_distributor)(a__coal__2005_01_01_00_00)
 +1 variables(fuel_distributor)(b__coal__2005_01_01_00_00)
 = 0.0
 
-c_e_constraints(restrict_total_imports_and_exports)(1)_:
+c_e_constraints(restrict_total_imports_and_exports)(coal__2005_01_01_01_00)_:
 +1 variables(fuel_distributor)(a__coal__2005_01_01_01_00)
 +1 variables(fuel_distributor)(b__coal__2005_01_01_01_00)
 = 0.0

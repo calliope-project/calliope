@@ -6,18 +6,18 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_u_constraints(piecewise_costs)(0)_:
+c_u_constraints(piecewise_costs)(a__test_supply_elec__monetary__0)_:
 +5 variables(flow_cap)(a__test_supply_elec)
 -1 variables(piecewise_cost_investment)(a__test_supply_elec__monetary)
 <= 0.0
 
-c_u_constraints(piecewise_costs)(1)_:
+c_u_constraints(piecewise_costs)(a__test_supply_elec__monetary__1)_:
 +7 variables(flow_cap)(a__test_supply_elec)
 -1 variables(piecewise_cost_investment)(a__test_supply_elec__monetary)
 -2 variables(purchased)(a__test_supply_elec)
 <= 0.0
 
-c_u_constraints(piecewise_costs)(2)_:
+c_u_constraints(piecewise_costs)(a__test_supply_elec__monetary__2)_:
 +14 variables(flow_cap)(a__test_supply_elec)
 -1 variables(piecewise_cost_investment)(a__test_supply_elec__monetary)
 -16 variables(purchased)(a__test_supply_elec)

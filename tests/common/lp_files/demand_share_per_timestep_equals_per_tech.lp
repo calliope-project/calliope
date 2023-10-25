@@ -6,22 +6,22 @@ objectives(dummy_obj)(0):
 
 s.t.
 
-c_e_constraints(demand_share_per_timestep_equals_per_tech)(0)_:
+c_e_constraints(demand_share_per_timestep_equals_per_tech)(a__test_supply_elec__2005_01_01_00_00)_:
 +1 variables(flow_out)(a__test_supply_elec__electricity__2005_01_01_00_00)
 -0.5 variables(flow_in)(a__test_demand_elec__electricity__2005_01_01_00_00)
 = 0.0
 
-c_e_constraints(demand_share_per_timestep_equals_per_tech)(1)_:
+c_e_constraints(demand_share_per_timestep_equals_per_tech)(a__test_supply_elec__2005_01_01_01_00)_:
 +1 variables(flow_out)(a__test_supply_elec__electricity__2005_01_01_01_00)
 -0.5 variables(flow_in)(a__test_demand_elec__electricity__2005_01_01_01_00)
 = 0.0
 
-c_e_constraints(demand_share_per_timestep_equals_per_tech)(2)_:
+c_e_constraints(demand_share_per_timestep_equals_per_tech)(b__test_supply_elec__2005_01_01_00_00)_:
 +1 variables(flow_out)(b__test_supply_elec__electricity__2005_01_01_00_00)
 -0.8 variables(flow_in)(b__test_demand_elec__electricity__2005_01_01_00_00)
 = 0.0
 
-c_e_constraints(demand_share_per_timestep_equals_per_tech)(3)_:
+c_e_constraints(demand_share_per_timestep_equals_per_tech)(b__test_supply_elec__2005_01_01_01_00)_:
 +1 variables(flow_out)(b__test_supply_elec__electricity__2005_01_01_01_00)
 -0.8 variables(flow_in)(b__test_demand_elec__electricity__2005_01_01_01_00)
 = 0.0
