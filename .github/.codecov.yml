@@ -1,9 +1,9 @@
 coverage:
-  project:
-    default:
-      paths:
-        - "src"
   status:
+    project:
+      default:
+        paths:
+          - "src"
     patch: off
 
 comment:
