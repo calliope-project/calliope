@@ -94,6 +94,7 @@ class ModelDataFactory:
 
     def _extract_node_tech_data(self):
         self._add_param_from_template()
+        self._add_top_level_params()
         self._clean_unused_techs_nodes_and_carriers()
 
     def _add_top_level_params(self):
@@ -442,18 +443,31 @@ class ModelDataFactory:
             self.model_data.node_tech + self.model_data.carrier
         )
         for dim in self.model_data["definition_matrix"].dims:
+            orig_dim_vals = set(self.model_data.coords[dim].data)
             self.model_data = self.model_data.dropna(
                 dim, how="all", subset=["definition_matrix"]
             )
+            deleted_dim_vals = orig_dim_vals.difference(
+                set(self.model_data.coords[dim].data)
+            )
+            if deleted_dim_vals:
+                LOGGER.debug(
+                    f"Deleting {dim} values as they are not defined anywhere in the model: {deleted_dim_vals}"
+                )
+
         self.model_data[
             "definition_matrix"
         ] = self.model_data.definition_matrix.notnull()
+
+        vars_to_delete = [
+            var_name
+            for var_name, var in self.model_data.data_vars.items()
+            if var.isnull().all()
+        ]
+        if vars_to_delete:
+            LOGGER.debug(f"Deleting empty parameters: {vars_to_delete}")
         self.model_data = self.model_data.drop_vars(
-            [
-                var_name
-                for var_name, var in self.model_data.data_vars.items()
-                if var.isnull().all() or var_name in ["node_tech", "carrier"]
-            ]
+            vars_to_delete + ["node_tech", "carrier"]
         )
 
     def _add_param_from_template(self):

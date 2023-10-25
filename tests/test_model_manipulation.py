@@ -41,7 +41,7 @@ class TestExistsFalse:
             "Not building the link a,b because one or both of its nodes have been removed from the model by setting ``exists: false``",
         )
 
-    def test_node_tech_exists_false(self):
+    def test_definition_matrix_exists_false(self):
         overrides = {"nodes.b.techs.test_storage.exists": False}
         model = build_model(overrides, "simple_storage,two_hours,investment_costs")
 
