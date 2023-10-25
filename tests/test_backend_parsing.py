@@ -2,11 +2,10 @@ import logging
 from io import StringIO
 from unittest.mock import patch
 
+import calliope
 import pyparsing as pp
 import pytest
 import ruamel.yaml as yaml
-
-import calliope
 from calliope.backend import backend_model, expression_parser, parsing, where_parser
 
 from .common.util import check_error_or_warning

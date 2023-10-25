@@ -1,11 +1,10 @@
 import logging
 from pathlib import Path
 
+import calliope.exceptions as exceptions
 import numpy as np
 import pandas as pd
 import pytest
-
-import calliope.exceptions as exceptions
 from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
 from calliope.preprocess import model_run_from_yaml
