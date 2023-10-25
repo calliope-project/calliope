@@ -516,12 +516,10 @@ class TestUrbanScaleExampleModelSenseChecks:
             ),
             "techs.pv.switches.source_unit": source_unit,
         }
-        override = {
-            "config.init.subset_time": ["2005-07-01", "2005-07-01"],
-            **unit_override,
-        }
 
-        model = calliope.examples.urban_scale(override_dict=override)
+        model = calliope.examples.urban_scale(
+            override_dict=unit_override, subset_time=["2005-07-01", "2005-07-01"]
+        )
 
         solve_kwargs = {"solver": solver}
         if solver_io:

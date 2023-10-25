@@ -1115,9 +1115,10 @@ class TestChecks:
             "links.X1,N1.techs.heat_pipes.switches.one_way": True,
             "links.N1,X2.techs.heat_pipes.switches.one_way": True,
             "links.N1,X3.techs.heat_pipes.switches.one_way": True,
-            "config.init.subset_time": ["2005-01-01", "2005-01-01"],
         }
-        m = calliope.examples.urban_scale(override_dict=override)
+        m = calliope.examples.urban_scale(
+            override_dict=override, subset_time=["2005-01-01", "2005-01-01"]
+        )
         m.build()
         removed_prod_links = [
             {"nodes": "X1", "techs": "heat_pipes:N1"},
