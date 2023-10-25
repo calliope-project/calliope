@@ -7,11 +7,29 @@ Defaults are automatically applied in constraints whenever there is no user inpu
 
 .. _config_reference_config:
 
-Model configuration
--------------------
+Model initialisation configuration
+----------------------------------
 
 .. csv-table::
-   :file: includes/config.csv
+   :file: includes/config_init.csv
+   :header: Setting,Default,Comments
+   :widths: 10, 5, 15
+   :stub-columns: 0
+
+Optimisation problem build configuration
+----------------------------------------
+
+.. csv-table::
+   :file: includes/config_build.csv
+   :header: Setting,Default,Comments
+   :widths: 10, 5, 15
+   :stub-columns: 0
+
+Optimisation problem solve configuration
+----------------------------------------
+
+.. csv-table::
+   :file: includes/config_solve.csv
    :header: Setting,Default,Comments
    :widths: 10, 5, 15
    :stub-columns: 0

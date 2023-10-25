@@ -180,7 +180,8 @@ As an example, if you wanted to generate 10 SPORES, all of which are within 10% 
         spores_score_cost_class: spores_score  # The cost class to optimise against when generating SPORES
         spores_slack_cost_group: systemwide_cost_max  # The group constraint name in which the `cost_max` constraint is assigned, for use alongside the slack and cost-optimal cost
     parameters:
-        slack: 0.1  # The fraction above the cost-optimal cost to set the maximum cost during SPORES
+        slack:
+            data: 0.1  # The fraction above the cost-optimal cost to set the maximum cost during SPORES
 
 You will also need to manually set up some other parts of your model to deal with SPORES:
 

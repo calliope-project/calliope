@@ -255,7 +255,7 @@ overrides:
         spores_score_cost_class: "spores_score"
         spores_number: 3
       parameters:
-        spores_slack: 0.1
+        spores_slack.data: 0.1
         objective_cost_class.data: { "monetary": 1, "spores_score": 0 }
 
     techs.test_supply_elec.costs.spores_score.flow_cap: 0

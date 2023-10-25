@@ -105,7 +105,7 @@ None of the configuration options are _required_ as there is a default value for
 To test your model pipeline, `config.init.subset_time` is a good way to limit your model size by slicing the time dimension to a smaller range.
 
 `config.build.mode`
-~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^
 
 In the ``build`` section we have ``mode``.
 A model can run in ``plan``, ``operate``, or ``spores`` mode.
@@ -113,7 +113,7 @@ In `plan` mode, capacities are determined by the model, whereas in `operate` mod
 In `spores` mode, the model is first run in `plan` mode, then run `N` number of times to find alternative system configurations with similar monetary cost, but maximally different choice of technology capacity and location.
 
 `config.solve.solver`
-~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^
 Possible options for solver include ``glpk``, ``gurobi``, ``cplex``, and ``cbc``.
 The interface to these solvers is done through the Pyomo library. Any `solver compatible with Pyomo <https://pyomo.readthedocs.io/en/6.5.0/solving_pyomo_models.html#supported-solvers>`_ should work with Calliope.
 
@@ -238,7 +238,7 @@ To use a single alternative cost class, disabling the consideration of the defau
     :ref:`config_reference_constraints`, :ref:`config_reference_costs`, :doc:`tutorials <tutorials>`, :doc:`built-in examples <ref_example_models>`
 
 Allowing for unmet demand
--------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 For a model to find a feasible solution, supply must always be able to meet demand. To avoid the solver failing to find a solution, you can ensure feasibility:
 
@@ -266,7 +266,7 @@ For parameters that vary in time, time series data can be added to a model in tw
 Reading in CSV files is possible from both the command-line tool as well running interactively with python (see :doc:`running` for details). However, passing dataframes as arguments in ``calliope.Model`` is possible only when running from a python session.
 
 Reading in CSV files
---------------------
+^^^^^^^^^^^^^^^^^^^^
 To read in CSV files, specify e.g., :yaml:`source: file=filename.csv` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
 
 By default, Calliope looks for a column in the CSV file with the same name as the location. It is also possible to specify a column to use when setting ``source`` per location, by giving the column name with a colon following the filename: :yaml:`source: file=filename.csv:column`
@@ -301,7 +301,7 @@ For example, the first few lines of a CSV file, called ``pv_resource.csv`` givin
     2005-01-01 06:00:00,90,458
 
 Reading in timeseries from ``pandas`` dataframes
-------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 When running models from python scripts or shells, it is also possible to pass timeseries directly as ``pandas`` dataframes. This is done by specifying :yaml:`source: df=tskey` where ``tskey`` is the key in a dictionary containing the relevant dataframes. For example, if the same timeseries as above is to be passed, a dataframe called ``pv_resource`` may be in the python namespace:
 
 .. code-block:: python
@@ -345,7 +345,6 @@ The time series index must be ISO 8601 compatible time stamps and can be a stand
 .. Note::
 
    * If a parameter is not explicit in time and space, it can be specified as a single value in the model definition (or, using location-specific definitions, be made spatially explicit). This applies both to parameters that never vary through time (for example, cost of installed capacity) and for those that may be time-varying (for example, a technology's available resource). However, each model must contain at least one time series.
-   * Only the subset of parameters listed in `file_allowed` in the :ref:`model configuration <config_reference_model>` can be loaded from file or dataframe in this way. It is advised not to update this default list unless you are developing the core code, since the model will likely behave unexpectedly.
    * You _cannot_ have a space around the ``=`` symbol when pointing to a timeseries file or dataframe key, i.e. :yaml:`source: file = filename.csv` is not valid.
    * If running from a command line interface (see :doc:`running`), timeseries must be read from CSV and cannot be passed from dataframes via ``df=...``.
    * It's possible to mix reading in from CSVs and dataframes, by setting some config values as ``file=...`` and some as ``df=...``.

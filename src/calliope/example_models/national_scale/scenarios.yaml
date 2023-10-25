@@ -41,12 +41,12 @@ overrides:
         spores_score_cost_class: "spores_score"
         spores_number: 3
     parameters:
-      spores_slack:
+      spores_slack: # In SPORES mode, slack to apply when setting the upper limit on system `spores_slack_cost_group` costs. The constraint will limit the costs to `(spores_slack + 1) * sum(costs[cost=spores_slack_cost_group])`.
         data: 0.1
       objective_cost_class:
         data: [1, 0]
         index: ["monetary", "spores_score"]
-      spores_objective_cost_class:
+      spores_objective_cost_class:  # In SPORES mode, the new objective function cost class weightings to apply after the initial base run.
         data: [1, 0]
         index: [spores_score, monetary]
         dims: costs
