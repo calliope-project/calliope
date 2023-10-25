@@ -10,7 +10,7 @@ All built-in Calliope math can be found in the calliope `math directory <https:/
 
 By default, the :ref:`base math <base_math>` is loaded from file.
 If you want to overwrite the base math with other built-in math, you can do so by referring to the file by its name (without the file extension) in :yaml:`model.custom_math`, e.g. :yaml:`model.custom_math: [storage_inter_cluster]`.
-When solving the model in a :ref:`run mode <config_reference_config>` other than `plan`, some built-in custom math will be applied automatically from a file of the same name (`spores` mode custom math is stored in `math/spores.yaml <https://github.com/calliope-project/calliope/blob/main/calliope/math/spores.yaml>`_).
+When solving the model in a :ref:`run mode <config_reference_config>` other than `plan`, some built-in custom math will be applied automatically from a file of the same name (e.g., `spores` mode custom math is stored in `math/spores.yaml <https://github.com/calliope-project/calliope/blob/main/calliope/math/spores.yaml>`_).
 The changes made by the built-in custom math are detailed in this page.
 
 .. note:: Custom math is applied in the order it appears in the :yaml:`model.custom_math` list. By default, any run mode custom math will be applied as the final step. If you want to apply your own custom math *after* the run mode custom math, you should add it explicitly to the :yaml:`model.custom_math` list, e.g., :yaml:`model.custom_math: [operate, my_custom_math.yaml]`.
