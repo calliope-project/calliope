@@ -162,7 +162,7 @@ def apply_overrides(model_dict, scenario=None, override_dict=None):
     )
 
     # Interpret timeseries_data_path as relative
-    if "timeseries_data_path" in model_dict.config.init:
+    if "timeseries_data_path" in model_dict.get_key("config.init", default={}):
         model_dict.config.init.timeseries_data_path = relative_path(
             model_dict._model_def_path, model_dict.config.init.timeseries_data_path
         )

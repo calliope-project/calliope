@@ -24,26 +24,6 @@ NONDEMAND_TECHGROUPS = [
     "supply_plus",
 ]
 
-# TODO: find another way to define this
-POSSIBLE_TIMESERIES_DATA = [
-    "clustering_func",
-    "flow_eff",
-    "flow_ramping",
-    "export",
-    "om_con",
-    "om_prod",
-    "parasitic_eff",
-    "source_max",
-    "source_min",
-    "source_equals",
-    "sink_min",
-    "sink_max",
-    "sink_equals",
-    "source_eff",
-    "storage_loss",
-    "carrier_ratios",
-]
-
 
 def generate_base_math_model(model_config: dict) -> calliope.Model:
     """Generate RST file for the base math
@@ -54,7 +34,9 @@ def generate_base_math_model(model_config: dict) -> calliope.Model:
     Returns:
         calliope.Model: Base math model to use in generating custom math docs.
     """
-    model = calliope.Model(config=model_config, timeseries_dataframes=_ts_dfs())
+    model = calliope.Model(
+        model_definition=model_config, timeseries_dataframes=_ts_dfs()
+    )
     model.math_documentation.build()
     model.math_documentation.write(STATICPATH / "math.rst")
     return model
@@ -78,7 +60,9 @@ def generate_custom_math_model(
     model_config = calliope.AttrDict(model_config)
     model_config_updates = calliope.AttrDict(model_config_updates)
     model_config.union(model_config_updates)
-    model = calliope.Model(config=model_config, timeseries_dataframes=_ts_dfs())
+    model = calliope.Model(
+        model_definition=model_config, timeseries_dataframes=_ts_dfs()
+    )
     _keep_only_changes(base_model, model)
 
     model.math_documentation.write(STATICPATH / f"math_{name}.rst")
@@ -142,8 +126,6 @@ def generate_model_config() -> dict[str, dict]:
         }
 
     return {
-        "model": {},
-        "run": {"objective_options": {"cost_class": {"monetary": 1}}},
         "nodes": {
             "A": {"techs": {k: None for k in dummy_techs.keys()}, "available_area": 1}
         },
@@ -152,12 +134,9 @@ def generate_model_config() -> dict[str, dict]:
 
 
 def _add_data(name, default_val):
-    "If timeseries is allowed, we reference timeseries data. Some parameters need hardcoded values to be returned"
-    if name in POSSIBLE_TIMESERIES_DATA:
-        if name == "carrier_ratios":
-            return {"carrier_in.electricity": "df=ts"}
-        else:
-            return "df=ts"
+    "Some parameters need hardcoded values to be returned"
+    if name == "carrier_ratios":
+        return {"carrier_in.electricity": 1}
     elif name == "export_carrier":
         return "electricity"
     elif default_val is None or name == "interest_rate":
@@ -208,7 +187,7 @@ def _ts_dfs() -> dict[str, pd.DataFrame]:
         index=pd.date_range("2005-01-01 00:00", "2005-01-01 02:00", freq="H"),
         columns=["A"],
     )
-    return {"ts": ts, "ts_neg": -1 * ts}
+    return {"ts": ts}
 
 
 if __name__ == "__main__":
@@ -219,16 +198,18 @@ if __name__ == "__main__":
         base_model,
         base_model_config,
         {
-            "model": {
-                "custom_math": ["storage_inter_cluster"],
-                "time": {
-                    "function": "apply_clustering",
-                    "function_options": {
-                        "clustering_func": "kmeans",
-                        "how": "mean",
-                        "k": 1,
+            "config": {
+                "init": {
+                    "custom_math": ["storage_inter_cluster"],
+                    "time": {
+                        "function": "apply_clustering",
+                        "function_options": {
+                            "clustering_func": "kmeans",
+                            "how": "mean",
+                            "k": 1,
+                        },
                     },
-                },
+                }
             },
         },
         "storage_inter_cluster",

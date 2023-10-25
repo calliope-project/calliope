@@ -129,8 +129,6 @@ In the case of Gurobi, for example, it is usually fastest to use the direct Pyth
 
 .. note:: The opposite is currently true for CPLEX, which runs faster with the default ``solver_io``.
 
-Further optional settings, including debug settings, can be specified in the run configuration.
-
 .. seealso::
 
     :ref:`config_reference_config`, :doc:`troubleshooting`, :ref:`solver_options`, :ref:`documentation on operate mode <operational_mode>`, :ref:`documentation on SPORES mode <spores_mode>`, :doc:`built-in examples <ref_example_models>`
