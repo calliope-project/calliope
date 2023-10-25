@@ -29,12 +29,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        py3version: ["9", "10", "11"]
-        include:
-          - os: windows-latest
-            py3version: "11"
-          - os: macos-latest
-            py3version: "11"
+        py3version: ["11"]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -76,6 +71,14 @@ jobs:
     - name: run tests without coverage
       if: matrix.os != 'ubuntu-latest' || matrix.py3version != '11'
       run: pytest
+
+    - name: Upload coverage report as an artefact
+      if: matrix.os == 'ubuntu-latest' && matrix.py3version == '11'
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: "./reports/coverage/"
+        retention-days: 3
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
