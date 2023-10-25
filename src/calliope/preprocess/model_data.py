@@ -104,17 +104,25 @@ class ModelDataFactory:
                     f"Trying to add top-level parameter with same name as a node/tech level parameter: {param_name}"
                 )
             if "dims" in param_data:
+                index = param_data.get("index", None)
+                if index is None or not isinstance(index, list):
+                    raise ValueError(
+                        f"(parameters, {param_name}) | Expected list for `index`, received: {index}"
+                    )
+                _index = [
+                    tuple(idx) if isinstance(idx, list) else tuple([idx])
+                    for idx in param_data["index"]
+                ]
+                _dims = (
+                    param_data["dims"]
+                    if isinstance(param_data["dims"], list)
+                    else [param_data["dims"]]
+                )
                 param_series = pd.Series(
                     data=param_data["data"],
-                    index=param_data["index"],
+                    index=pd.MultiIndex.from_tuples(_index, names=_dims),
                     name=param_name,
                 )
-                if isinstance(param_data["dims"], list) and len(param_data["dims"]) > 1:
-                    param_series.index = pd.MultiIndex.from_tuples(
-                        param_series.index, names=param_data["dims"]
-                    )
-                else:
-                    param_series = param_series.rename_axis(param_data["dims"])
                 param_da = param_series.to_xarray()
             else:
                 param_da = xr.DataArray(param_data["data"], name=param_name)
@@ -126,7 +134,7 @@ class ModelDataFactory:
                     == "M"
                 ):
                     LOGGER.debug(
-                        f"Updating `{param_name}` {coord_name} dimension index values to datetime format"
+                        f"(parameters, {param_name}) | Updating {coord_name} dimension index values to datetime format"
                     )
                     coords_to_update[coord_name] = pd.to_datetime(
                         coord_data, format="ISO8601"
@@ -137,7 +145,7 @@ class ModelDataFactory:
             for coord_name, coord_data in param_da.coords.items():
                 if coord_name not in self.model_data.coords:
                     LOGGER.debug(
-                        f"top-level parameter `{param_name}` is adding a new dimension to the model: {coord_name}"
+                        f"(parameters, {param_name}) | Adding a new dimension to the model: {coord_name}"
                     )
                 else:
                     new_coord_data = coord_data[
@@ -145,7 +153,7 @@ class ModelDataFactory:
                     ]
                     if new_coord_data.size > 0:
                         LOGGER.debug(
-                            f"top-level parameter `{param_name}` is adding a new value to the "
+                            f"(parameters, {param_name}) | Adding a new value to the "
                             f"`{coord_name}` model coordinate: {new_coord_data.values}"
                         )
             self.model_data = self.model_data.merge(param_da.to_dataset())
