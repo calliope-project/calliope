@@ -1,10 +1,10 @@
-[![Chat on Gitter](https://img.shields.io/gitter/room/calliope-project/calliope.svg?style=flat-square)](https://app.gitter.im/#/room/#calliope-project_calliope:gitter.im)
+[![Chat on Gitter](https://img.shields.io/gitter/room/calliope-project/calliope.svg)](https://app.gitter.im/#/room/#calliope-project_calliope:gitter.im)
 [![Main branch build status](https://github.com/calliope-project/calliope/actions/workflows/commit-ci.yml/badge.svg?branch=main)](https://github.com/calliope-project/calliope/actions/workflows/commit-ci.yml)
-[![Documentation build status](https://img.shields.io/readthedocs/calliope.svg?style=flat-square)](https://readthedocs.org/projects/calliope/builds/)
+[![Documentation build status](https://img.shields.io/readthedocs/calliope.svg?version=latest)](https://readthedocs.org/projects/calliope/builds/)
 [![Test coverage](https://codecov.io/gh/calliope-project/calliope/graph/badge.svg?token=UM542yaYrh)](https://codecov.io/gh/calliope-project/calliope)
-[![PyPI version](https://img.shields.io/pypi/v/calliope.svg?style=flat-square)](https://pypi.python.org/pypi/calliope)
-[![Anaconda.org/conda-forge version](https://img.shields.io/conda/vn/conda-forge/calliope.svg?style=flat-square&label=conda)](https://anaconda.org/conda-forge/calliope)
-[![JOSS DOI](https://img.shields.io/badge/JOSS-10.21105/joss.00825-green.svg?style=flat-square)](https://doi.org/10.21105/joss.00825)
+[![PyPI version](https://img.shields.io/pypi/v/calliope.svg)](https://pypi.python.org/pypi/calliope)
+[![Anaconda.org/conda-forge version](https://img.shields.io/conda/vn/conda-forge/calliope.svg?label=conda)](https://anaconda.org/conda-forge/calliope)
+[![JOSS DOI](https://img.shields.io/badge/JOSS-10.21105/joss.00825-green.svg)](https://doi.org/10.21105/joss.00825)
 
 ---
 
