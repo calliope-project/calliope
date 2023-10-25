@@ -3,13 +3,12 @@ import logging
 from copy import deepcopy
 from itertools import product
 
+import calliope.exceptions as exceptions
 import numpy as np
 import pandas as pd
 import pyomo.kernel as pmo
 import pytest  # noqa: F401
 import xarray as xr
-
-import calliope.exceptions as exceptions
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.core.attrdict import AttrDict
 
