@@ -89,7 +89,7 @@ The ``init`` configuration items are accessed when you initialise your model (`c
 The ``build`` configuration items are accessed when you build your optimisation problem (`calliope.Model.build(...)`).
 The ``solve`` configuration items are accessed when you solve your optimisation problem (`calliope.Model.solve(...)`).
 
-At each of these stages you can override what you have put in your YAML file, or the default calliope will use when you have defined nothing, by providing additional keyword arguments on calling `calliope.Model` or its methods. E.g.,:
+At each of these stages you can override what you have put in your YAML file (or if not in your YAML file, the default that Calliope uses), by providing additional keyword arguments on calling `calliope.Model` or its methods. E.g.,:
 
 .. code-block:: python
 
