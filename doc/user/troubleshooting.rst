@@ -12,9 +12,9 @@ General strategies
 *
   **Analysing the optimisation problem without running the model**: If you are comfortable with navigating Pyomo objects, then you can inspect the Pyomo model backend after building it using :python:`model.build()`.
   Pyomo objects are then accessible within :python:`model.backend`.
-  For instance, the constraints limiting outflows can be viewed by calling :python:`model.get_constraint("flow_out_max")`.
-  A single Pyomo object can be then accessed by slicing the resulting array: :python:`model.get_constraint("flow_out_max").sel(techs=...)`.
-  You can also view the data in a more readable format by using setting the `as_backend_objs` option to false: :python:`constr = model.get_constraint("flow_out_max", as_backend_objs=False)`.
+  For instance, the constraints limiting outflows can be viewed by calling :python:`model.backend.get_constraint("flow_out_max")`.
+  A single Pyomo object can be then accessed by slicing the resulting array: :python:`model.backend.get_constraint("flow_out_max").sel(techs=...)`.
+  You can also view the data in a more readable format by using setting the `as_backend_objs` option to false: :python:`constr = model.backend.get_constraint("flow_out_max", as_backend_objs=False)`.
   This will allow you to inspect constraint upper bounds (`constr.ub`), lower bounds (`constr.lb`), and bodies as math strings (`constr.body`).
 
   Alternatively, if you are working from the command line or have little experience with Pyomo, you can generate an LP file.
