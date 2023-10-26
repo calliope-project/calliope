@@ -614,7 +614,7 @@ variables:
 
 objectives:
   minmax_cost_optimisation:
-    description: "Minimise the total cost of installing and operation all technologies in the system. If multiple cost classes are present (e.g., monetary and co2 emissions), the weighted sum of total costs is minimised. Cost class weights can be defined in `config.objective_options.cost_class`."
+    description: "Minimise the total cost of installing and operation all technologies in the system. If multiple cost classes are present (e.g., monetary and co2 emissions), the weighted sum of total costs is minimised. Cost class weights can be defined in the top-level parameter `objective_cost_class`."
     equations:
       - where: "any(cost, over=[nodes, techs, costs])"
         expression: sum(sum(cost, over=[nodes, techs]) * objective_cost_class, over=costs) + $unmet_demand

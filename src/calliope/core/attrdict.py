@@ -177,7 +177,7 @@ class AttrDict(dict):
             overrides definitions in the imported file.
 
         """
-        if isinstance(f, str) or isinstance(f, Path):
+        if isinstance(f, (str, Path)):
             with open(
                 f,
                 "r",

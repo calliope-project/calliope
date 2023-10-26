@@ -323,7 +323,7 @@ def _check_tech_final(
     """
     if tech_id not in model_run.techs:
         model_warnings.append(
-            "Tech {} was removed by setting ``exists: False`` - not checking "
+            "Tech {} was removed by setting ``active: False`` - not checking "
             "the consistency of its constraints at node {}.".format(tech_id, loc_id)
         )
         return model_warnings, errors
@@ -597,7 +597,10 @@ def check_model_data(model_data):
             model_data.timestep_resolution.loc[i].values
             for i in np.unique(model_data.timesteps.to_index().strftime("%Y-%m-%d"))
         ]
-        if not np.all(daily_timesteps == daily_timesteps[0]):
+        daily_timestep_shapes = set(day.shape for day in daily_timesteps)
+        if len(daily_timestep_shapes) > 1 or not np.all(
+            daily_timesteps == daily_timesteps[0]
+        ):
             model_data.attrs["allow_operate_mode"] = 0
             model_warnings.append(
                 "Operational mode requires the same timestep resolution profile "

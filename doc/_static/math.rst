@@ -5,7 +5,7 @@ Objective
 minmax_cost_optimisation
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Minimise the total cost of installing and operation all technologies in the system. If multiple cost classes are present (e.g., monetary and co2 emissions), the weighted sum of total costs is minimised. Cost class weights can be defined in `run.objective_options.cost_class`.
+Minimise the total cost of installing and operation all technologies in the system. If multiple cost classes are present (e.g., monetary and co2 emissions), the weighted sum of total costs is minimised. Cost class weights can be defined in the top-level parameter `objective_cost_class`.
 
 .. container:: scrolling-wrapper
 
@@ -15,40 +15,26 @@ Minimise the total cost of installing and operation all technologies in the syst
         \end{array}
         \begin{cases}
             \sum\limits_{\text{cost} \in \text{costs}} (\sum\limits_{\substack{\text{node} \in \text{nodes} \\ \text{tech} \in \text{techs}}} (\textbf{cost}_\text{node,tech,cost}) \times \textit{objective_cost_class}_\text{cost}) + \sum\limits_{\text{timestep} \in \text{timesteps}} (\sum\limits_{\substack{\text{carrier} \in \text{carriers} \\ \text{node} \in \text{nodes}}} (\textbf{unmet_demand}_\text{node,carrier,timestep} - \textbf{unused_supply}_\text{node,carrier,timestep}) \times \textit{timestep_weights}_\text{timestep}) \times \textit{bigM}&\quad
-            \text{if } (\text{run_config.ensure_feasibility}\mathord{=}\text{true})
+            \text{if } (\bigvee\limits_{\substack{\text{node} \in \text{nodes} \\ \text{tech} \in \text{techs} \\ \text{cost} \in \text{costs}}} (cost))\land{}(\text{config.ensure_feasibility}\mathord{=}\text{true})
             \\
             \sum\limits_{\text{cost} \in \text{costs}} (\sum\limits_{\substack{\text{node} \in \text{nodes} \\ \text{tech} \in \text{techs}}} (\textbf{cost}_\text{node,tech,cost}) \times \textit{objective_cost_class}_\text{cost})&\quad
-            \text{if } (\neg (\text{run_config.ensure_feasibility}\mathord{=}\text{true}))
+            \text{if } (\bigvee\limits_{\substack{\text{node} \in \text{nodes} \\ \text{tech} \in \text{techs} \\ \text{cost} \in \text{costs}}} (cost))\land{}(\neg (\text{config.ensure_feasibility}\mathord{=}\text{true}))
+            \\
+            \sum\limits_{\text{timestep} \in \text{timesteps}} (\sum\limits_{\substack{\text{carrier} \in \text{carriers} \\ \text{node} \in \text{nodes}}} (\textbf{unmet_demand}_\text{node,carrier,timestep} - \textbf{unused_supply}_\text{node,carrier,timestep}) \times \textit{timestep_weights}_\text{timestep}) \times \textit{bigM}&\quad
+            \text{if } (\neg (\bigvee\limits_{\substack{\text{node} \in \text{nodes} \\ \text{tech} \in \text{techs} \\ \text{cost} \in \text{costs}}} (cost)))\land{}(\text{config.ensure_feasibility}\mathord{=}\text{true})
+            \\
+            0&\quad
+            \text{if } (\neg (\bigvee\limits_{\substack{\text{node} \in \text{nodes} \\ \text{tech} \in \text{techs} \\ \text{cost} \in \text{costs}}} (cost)))\land{}(\neg (\text{config.ensure_feasibility}\mathord{=}\text{true}))
             \\
         \end{cases}
 
 Subject to
 ----------
 
-energy_capacity_per_storage_capacity_min
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+flow_capacity_per_storage_capacity_min
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set the lower bound of a `storage`/`supply_plus` technology's energy capacity relative to its storage capacity.
-
-.. container:: scrolling-wrapper
-
-    .. math::
-        \begin{array}{r}
-            \forall{}
-            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
-            \text{ tech }\negthickspace \in \negthickspace\text{ techs }
-            \\
-            \text{if } (\exists (\textbf{storage_cap}_\text{node,tech}) \land \exists (\textit{energy_cap_per_storage_cap_min}_\text{node,tech}) \land \neg (\exists (\textit{energy_cap_per_storage_cap_equals}_\text{node,tech})))
-        \end{array}
-        \begin{cases}
-            \textbf{energy_cap}_\text{node,tech} \geq \textbf{storage_cap}_\text{node,tech} \times \textit{energy_cap_per_storage_cap_min}_\text{node,tech}&\quad
-            \\
-        \end{cases}
-
-energy_capacity_per_storage_capacity_max
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Set the upper bound of a `storage`/`supply_plus` technology's energy capacity relative to its storage capacity.
+Set the lower bound of a `storage`/`supply_plus` technology's flow capacity relative to its storage capacity.
 
 .. container:: scrolling-wrapper
 
@@ -58,17 +44,17 @@ Set the upper bound of a `storage`/`supply_plus` technology's energy capacity re
             \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
             \text{ tech }\negthickspace \in \negthickspace\text{ techs }
             \\
-            \text{if } (\exists (\textbf{storage_cap}_\text{node,tech}) \land \exists (\textit{energy_cap_per_storage_cap_max}_\text{node,tech}) \land \neg (\exists (\textit{energy_cap_per_storage_cap_equals}_\text{node,tech})))
+            \text{if } (\exists (\textbf{storage_cap}_\text{node,tech}) \land \exists (\textit{flow_cap_per_storage_cap_min}_\text{node,tech}))
         \end{array}
         \begin{cases}
-            \textbf{energy_cap}_\text{node,tech} \leq \textbf{storage_cap}_\text{node,tech} \times \textit{energy_cap_per_storage_cap_max}_\text{node,tech}&\quad
+            \textbf{flow_cap}_\text{node,tech} \geq \textbf{storage_cap}_\text{node,tech} \times \textit{flow_cap_per_storage_cap_min}_\text{node,tech}&\quad
             \\
         \end{cases}
 
-energy_capacity_per_storage_capacity_equals
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+flow_capacity_per_storage_capacity_max
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set a fixed relationship between a `storage`/`supply_plus` technology's energy capacity and its storage capacity.
+Set the upper bound of a `storage`/`supply_plus` technology's flow capacity relative to its storage capacity.
 
 .. container:: scrolling-wrapper
 
@@ -78,17 +64,17 @@ Set a fixed relationship between a `storage`/`supply_plus` technology's energy c
             \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
             \text{ tech }\negthickspace \in \negthickspace\text{ techs }
             \\
-            \text{if } (\exists (\textbf{storage_cap}_\text{node,tech}) \land \exists (\textit{energy_cap_per_storage_cap_equals}_\text{node,tech}))
+            \text{if } (\exists (\textbf{storage_cap}_\text{node,tech}) \land \exists (\textit{flow_cap_per_storage_cap_max}_\text{node,tech}))
         \end{array}
         \begin{cases}
-            \textbf{energy_cap}_\text{node,tech} = \textbf{storage_cap}_\text{node,tech} \times \textit{energy_cap_per_storage_cap_equals}_\text{node,tech}&\quad
+            \textbf{flow_cap}_\text{node,tech} \leq \textbf{storage_cap}_\text{node,tech} \times \textit{flow_cap_per_storage_cap_max}_\text{node,tech}&\quad
             \\
         \end{cases}
 
-resource_capacity_equals_energy_capacity
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+source_capacity_equals_flow_capacity
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set a `supply_plus` technology's energy capacity to equal its resource capacity.
+Set a `supply_plus` technology's flow capacity to equal its source capacity.
 
 .. container:: scrolling-wrapper
 
@@ -98,17 +84,17 @@ Set a `supply_plus` technology's energy capacity to equal its resource capacity.
             \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
             \text{ tech }\negthickspace \in \negthickspace\text{ techs }
             \\
-            \text{if } (\exists (\textbf{resource_cap}_\text{node,tech}) \land \textit{resource_cap_equals_energy_cap}_\text{node,tech}\mathord{=}\text{true})
+            \text{if } (\exists (\textbf{source_cap}_\text{node,tech}) \land \textit{source_cap_equals_flow_cap}_\text{node,tech}\mathord{=}\text{true})
         \end{array}
         \begin{cases}
-            \textbf{resource_cap}_\text{node,tech} = \textbf{energy_cap}_\text{node,tech}&\quad
+            \textbf{source_cap}_\text{node,tech} = \textbf{flow_cap}_\text{node,tech}&\quad
             \\
         \end{cases}
 
-force_zero_resource_area
-^^^^^^^^^^^^^^^^^^^^^^^^
+force_zero_area_use
+^^^^^^^^^^^^^^^^^^^
 
-Set a technology's resource area to zero if its energy capacity upper bound is zero.
+Set a technology's area use to zero if its flow capacity upper bound is zero.
 
 .. container:: scrolling-wrapper
 
@@ -118,17 +104,17 @@ Set a technology's resource area to zero if its energy capacity upper bound is z
             \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
             \text{ tech }\negthickspace \in \negthickspace\text{ techs }
             \\
-            \text{if } (\exists (\textbf{resource_area}_\text{node,tech}) \land \textit{energy_cap_max}_\text{node,tech}\mathord{=}\text{0})
+            \text{if } (\exists (\textbf{area_use}_\text{node,tech}) \land \textit{flow_cap_max}_\text{node,tech}\mathord{=}\text{0})
         \end{array}
         \begin{cases}
-            \textbf{resource_area}_\text{node,tech} = 0&\quad
+            \textbf{area_use}_\text{node,tech} = 0&\quad
             \\
         \end{cases}
 
-resource_area_per_energy_capacity
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+area_use_per_flow_capacity
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set a fixed relationship between a technology's energy capacity and its resource area.
+Set a fixed relationship between a technology's flow capacity and its area use.
 
 .. container:: scrolling-wrapper
 
@@ -138,17 +124,17 @@ Set a fixed relationship between a technology's energy capacity and its resource
             \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
             \text{ tech }\negthickspace \in \negthickspace\text{ techs }
             \\
-            \text{if } (\exists (\textbf{resource_area}_\text{node,tech}) \land \exists (\textit{resource_area_per_energy_cap}_\text{node,tech}))
+            \text{if } (\exists (\textbf{area_use}_\text{node,tech}) \land \exists (\textit{area_use_per_flow_cap}_\text{node,tech}))
         \end{array}
         \begin{cases}
-            \textbf{resource_area}_\text{node,tech} = \textbf{energy_cap}_\text{node,tech} \times \textit{resource_area_per_energy_cap}_\text{node,tech}&\quad
+            \textbf{area_use}_\text{node,tech} = \textbf{flow_cap}_\text{node,tech} \times \textit{area_use_per_flow_cap}_\text{node,tech}&\quad
             \\
         \end{cases}
 
-resource_area_capacity_per_loc
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+area_use_capacity_per_loc
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set an upper bound on the total area that all technologies with a resource_area can occupy at a given node.
+Set an upper bound on the total area that all technologies with a area_use can occupy at a given node.
 
 .. container:: scrolling-wrapper
 
@@ -157,17 +143,17 @@ Set an upper bound on the total area that all technologies with a resource_area 
             \forall{}
             \text{ node }\negthickspace \in \negthickspace\text{ nodes }
             \\
-            \text{if } (\exists (\textbf{resource_area}_\text{node,tech}) \land \exists (\textit{available_area}_\text{node}))
+            \text{if } (\exists (\textbf{area_use}_\text{node,tech}) \land \exists (\textit{available_area}_\text{node}))
         \end{array}
         \begin{cases}
-            \sum\limits_{\text{tech} \in \text{techs}} (\textbf{resource_area}_\text{node,tech}) \leq \textit{available_area}_\text{node}&\quad
+            \sum\limits_{\text{tech} \in \text{techs}} (\textbf{area_use}_\text{node,tech}) \leq \textit{available_area}_\text{node}&\quad
             \\
         \end{cases}
 
-energy_capacity_systemwide
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+flow_capacity_systemwide_max
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set an upper bound on, or a fixed total of, energy capacity of a technology across all nodes in which the technology exists.
+Set an upper bound on flow capacity of a technology across all nodes in which the technology exists.
 
 .. container:: scrolling-wrapper
 
@@ -176,21 +162,36 @@ Set an upper bound on, or a fixed total of, energy capacity of a technology acro
             \forall{}
             \text{ tech }\negthickspace \in \negthickspace\text{ techs }
             \\
-            \text{if } (\exists (\textit{energy_cap_equals_systemwide}_\text{tech}) \lor \exists (\textit{energy_cap_max_systemwide}_\text{tech}))
+            \text{if } (\exists (\textit{flow_cap_max_systemwide}_\text{tech}))
         \end{array}
         \begin{cases}
-            \sum\limits_{\text{node} \in \text{nodes}} (\textbf{energy_cap}_\text{node,tech}) = \textit{energy_cap_equals_systemwide}_\text{tech}&\quad
-            \text{if } (\exists (\textit{energy_cap_equals_systemwide}_\text{tech}))
+            \sum\limits_{\text{node} \in \text{nodes}} (\textbf{flow_cap}_\text{node,tech}) \leq \textit{flow_cap_max_systemwide}_\text{tech}&\quad
             \\
-            \sum\limits_{\text{node} \in \text{nodes}} (\textbf{energy_cap}_\text{node,tech}) \leq \textit{energy_cap_max_systemwide}_\text{tech}&\quad
-            \text{if } (\neg (\exists (\textit{energy_cap_equals_systemwide}_\text{tech})))
+        \end{cases}
+
+flow_capacity_systemwide_min
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Set a lower bound on flow capacity of a technology across all nodes in which the technology exists.
+
+.. container:: scrolling-wrapper
+
+    .. math::
+        \begin{array}{r}
+            \forall{}
+            \text{ tech }\negthickspace \in \negthickspace\text{ techs }
+            \\
+            \text{if } (\exists (\textit{flow_cap_min_systemwide}_\text{tech}))
+        \end{array}
+        \begin{cases}
+            \sum\limits_{\text{node} \in \text{nodes}} (\textbf{flow_cap}_\text{node,tech}) \geq \textit{flow_cap_min_systemwide}_\text{tech}&\quad
             \\
         \end{cases}
 
 balance_conversion_plus_primary
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Fix the relationship between total carrier production and total carrier consumption of `conversion_plus` technologies for `in` (consumption) and `out` (production) carrier flows.
+Fix the relationship between total outflow and total inflow of `conversion_plus` technologies for `in` (consumption) and `out` (production) carrier flows.
 
 .. container:: scrolling-wrapper
 
@@ -201,17 +202,17 @@ Fix the relationship between total carrier production and total carrier consumpt
             \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\text{tech_group=conversion_plus} \land \textit{carrier_ratios}_\text{node,tech,carrier_tier,carrier,timestep}\mathord{>}\text{0})
+            \text{if } (\text{tech_group=conversion_plus} \land \textit{carrier_ratios}_\text{node,tech,carrier_tier,carrier}\mathord{>}\text{0})
         \end{array}
         \begin{cases}
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out,carrier,timestep} }) = -1 \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{carrier_ratios}_\text{node,tech,carrier_tier=in,carrier,timestep}) \times \textit{energy_eff}_\text{node,tech,timestep}&\quad
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out,carrier} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{carrier_ratios}_\text{node,tech,carrier_tier=in,carrier}) \times \textit{flow_eff}_\text{node,tech}&\quad
             \\
         \end{cases}
 
-carrier_production_max_conversion_plus
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+flow_out_max_conversion_plus
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set the upper bound in each timestep of a `conversion_plus` technology's total carrier production on its `out` carrier flows.
+Set the upper bound in each timestep of a `conversion_plus` technology's total outflow on its `out` carrier flows.
 
 .. container:: scrolling-wrapper
 
@@ -225,14 +226,14 @@ Set the upper bound in each timestep of a `conversion_plus` technology's total c
             \text{if } (\text{tech_group=conversion_plus} \land \neg (\textit{cap_method}_\text{node,tech}\mathord{=}\text{integer}))
         \end{array}
         \begin{cases}
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) \leq \textit{timestep_resolution}_\text{timestep} \times \textbf{energy_cap}_\text{node,tech}&\quad
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) \leq \textit{timestep_resolution}_\text{timestep} \times \textbf{flow_cap}_\text{node,tech}&\quad
             \\
         \end{cases}
 
-carrier_production_min_conversion_plus
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+flow_out_min_conversion_plus
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set the lower bound in each timestep of a `conversion_plus` technology's total carrier production on its `out` carrier flows.
+Set the lower bound in each timestep of a `conversion_plus` technology's total outflow on its `out` carrier flows.
 
 .. container:: scrolling-wrapper
 
@@ -243,10 +244,10 @@ Set the lower bound in each timestep of a `conversion_plus` technology's total c
             \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\exists (\textit{energy_cap_min_use}_\text{node,tech}) \land \text{tech_group=conversion_plus} \land \neg (\textit{cap_method}_\text{node,tech}\mathord{=}\text{integer}))
+            \text{if } (\exists (\textit{flow_out_min_relative}_\text{node,tech}) \land \text{tech_group=conversion_plus} \land \neg (\textit{cap_method}_\text{node,tech}\mathord{=}\text{integer}))
         \end{array}
         \begin{cases}
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) \geq \textit{timestep_resolution}_\text{timestep} \times \textbf{energy_cap}_\text{node,tech} \times \textit{energy_cap_min_use}_\text{node,tech}&\quad
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) \geq \textit{timestep_resolution}_\text{timestep} \times \textbf{flow_cap}_\text{node,tech} \times \textit{flow_out_min_relative}_\text{node,tech}&\quad
             \\
         \end{cases}
 
@@ -265,37 +266,37 @@ Fix the relationship between a `conversion_plus` technology's total `in_2`/`in_3
             \text{ carrier_tier }\negthickspace \in \negthickspace\text{ carrier_tiers, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\text{tech_group=conversion_plus} \land \text{carrier_tier} \in \text{[in_2,out_2,in_3,out_3]} \land \textit{carrier_ratios}_\text{node,tech,carrier_tier,carrier,timestep}\mathord{>}\text{0})
+            \text{if } (\text{tech_group=conversion_plus} \land \text{carrier_tier} \in \text{[in_2,out_2,in_3,out_3]} \land \textit{carrier_ratios}_\text{node,tech,carrier_tier,carrier}\mathord{>}\text{0})
         \end{array}
         \begin{cases}
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\frac{ \textbf{carrier_con}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in,carrier,timestep} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(in_2)}} (\frac{ \textbf{carrier_con}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in_2,carrier,timestep} })&\quad
-            \text{if } (\text{carrier_tier} \in \text{[in_2]})\land{}(\text{carrier_tier} \in \text{[in_2,in_3]})
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\frac{ \textbf{flow_in}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in,carrier} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(in_2)}} (\frac{ \textbf{flow_in}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in_2,carrier} })&\quad
+            \text{if } (\text{carrier_tier} \in \text{[in_2,in_3]})\land{}(\text{carrier_tier} \in \text{[in_2]})
             \\
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out,carrier,timestep} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(in_2)}} (\frac{ \textbf{carrier_con}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in_2,carrier,timestep} })&\quad
-            \text{if } (\text{carrier_tier} \in \text{[in_2]})\land{}(\text{carrier_tier} \in \text{[out_2,out_3]})
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\frac{ \textbf{flow_in}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in,carrier} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(in_3)}} (\frac{ \textbf{flow_in}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in_3,carrier} })&\quad
+            \text{if } (\text{carrier_tier} \in \text{[in_2,in_3]})\land{}(\text{carrier_tier} \in \text{[in_3]})
             \\
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\frac{ \textbf{carrier_con}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in,carrier,timestep} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(in_3)}} (\frac{ \textbf{carrier_con}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in_3,carrier,timestep} })&\quad
-            \text{if } (\text{carrier_tier} \in \text{[in_3]})\land{}(\text{carrier_tier} \in \text{[in_2,in_3]})
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\frac{ \textbf{flow_in}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in,carrier} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(out_2)}} (\frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out_2,carrier} })&\quad
+            \text{if } (\text{carrier_tier} \in \text{[in_2,in_3]})\land{}(\text{carrier_tier} \in \text{[out_2]})
             \\
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out,carrier,timestep} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(in_3)}} (\frac{ \textbf{carrier_con}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in_3,carrier,timestep} })&\quad
-            \text{if } (\text{carrier_tier} \in \text{[in_3]})\land{}(\text{carrier_tier} \in \text{[out_2,out_3]})
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\frac{ \textbf{flow_in}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in,carrier} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(out_3)}} (\frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out_3,carrier} })&\quad
+            \text{if } (\text{carrier_tier} \in \text{[in_2,in_3]})\land{}(\text{carrier_tier} \in \text{[out_3]})
             \\
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\frac{ \textbf{carrier_con}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in,carrier,timestep} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(out_2)}} (\frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out_2,carrier,timestep} })&\quad
-            \text{if } (\text{carrier_tier} \in \text{[out_2]})\land{}(\text{carrier_tier} \in \text{[in_2,in_3]})
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out,carrier} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(in_2)}} (\frac{ \textbf{flow_in}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in_2,carrier} })&\quad
+            \text{if } (\text{carrier_tier} \in \text{[out_2,out_3]})\land{}(\text{carrier_tier} \in \text{[in_2]})
             \\
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out,carrier,timestep} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(out_2)}} (\frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out_2,carrier,timestep} })&\quad
-            \text{if } (\text{carrier_tier} \in \text{[out_2]})\land{}(\text{carrier_tier} \in \text{[out_2,out_3]})
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out,carrier} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(in_3)}} (\frac{ \textbf{flow_in}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in_3,carrier} })&\quad
+            \text{if } (\text{carrier_tier} \in \text{[out_2,out_3]})\land{}(\text{carrier_tier} \in \text{[in_3]})
             \\
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\frac{ \textbf{carrier_con}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=in,carrier,timestep} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(out_3)}} (\frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out_3,carrier,timestep} })&\quad
-            \text{if } (\text{carrier_tier} \in \text{[out_3]})\land{}(\text{carrier_tier} \in \text{[in_2,in_3]})
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out,carrier} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(out_2)}} (\frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out_2,carrier} })&\quad
+            \text{if } (\text{carrier_tier} \in \text{[out_2,out_3]})\land{}(\text{carrier_tier} \in \text{[out_2]})
             \\
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out,carrier,timestep} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(out_3)}} (\frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out_3,carrier,timestep} })&\quad
-            \text{if } (\text{carrier_tier} \in \text{[out_3]})\land{}(\text{carrier_tier} \in \text{[out_2,out_3]})
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out,carrier} }) = \sum\limits_{\text{carrier} \in \text{carrier_tier(out_3)}} (\frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{carrier_ratios}_\text{node,tech,carrier_tier=out_3,carrier} })&\quad
+            \text{if } (\text{carrier_tier} \in \text{[out_2,out_3]})\land{}(\text{carrier_tier} \in \text{[out_3]})
             \\
         \end{cases}
 
-conversion_plus_prod_con_to_zero
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+conversion_plus_flow_to_zero
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Set a `conversion_plus` technology's carrier flow to zero if its `carrier_ratio` is zero.
 
@@ -309,13 +310,13 @@ Set a `conversion_plus` technology's carrier flow to zero if its `carrier_ratio`
             \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\textit{carrier_ratios}_\text{node,tech,carrier_tier,carrier,timestep}\mathord{=}\text{0} \land \text{tech_group=conversion_plus})
+            \text{if } (\textit{carrier_ratios}_\text{node,tech,carrier_tier,carrier}\mathord{=}\text{0} \land \text{tech_group=conversion_plus})
         \end{array}
         \begin{cases}
-            \textbf{carrier_con}_\text{node,tech,carrier,timestep} = 0&\quad
+            \textbf{flow_in}_\text{node,tech,carrier,timestep} = 0&\quad
             \text{if } (\text{carrier_tier} \in \text{[in,in_2,in_3]})
             \\
-            \textbf{carrier_prod}_\text{node,tech,carrier,timestep} = 0&\quad
+            \textbf{flow_out}_\text{node,tech,carrier,timestep} = 0&\quad
             \text{if } (\text{carrier_tier} \in \text{[out,out_2,out_3]})
             \\
         \end{cases}
@@ -323,7 +324,7 @@ Set a `conversion_plus` technology's carrier flow to zero if its `carrier_ratio`
 balance_conversion
 ^^^^^^^^^^^^^^^^^^
 
-Fix the relationship between a `conversion` technology's carrier production and consumption.
+Fix the relationship between a `conversion` technology's outflow and consumption.
 
 .. container:: scrolling-wrapper
 
@@ -337,80 +338,80 @@ Fix the relationship between a `conversion` technology's carrier production and 
             \text{if } (\text{tech_group=conversion})
         \end{array}
         \begin{cases}
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) = -1 \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}) \times \textit{energy_eff}_\text{node,tech,timestep}&\quad
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) = \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}) \times \textit{flow_eff}_\text{node,tech}&\quad
             \\
         \end{cases}
 
-carrier_production_max
-^^^^^^^^^^^^^^^^^^^^^^
-
-Set the upper bound of a non-`conversion_plus` technology's carrier production.
-
-.. container:: scrolling-wrapper
-
-    .. math::
-        \begin{array}{r}
-            \forall{}
-            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
-            \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
-            \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
-            \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
-            \\
-            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \neg (\text{tech_group=conversion_plus}) \land \neg (\textit{cap_method}_\text{node,tech}\mathord{=}\text{integer}) \land \textit{allowed_carrier_prod}_\text{node,tech}\mathord{=}\text{true} \land \text{carrier_tier} \in \text{[out]})
-        \end{array}
-        \begin{cases}
-            \textbf{carrier_prod}_\text{node,tech,carrier,timestep} \leq \textbf{energy_cap}_\text{node,tech} \times \textit{timestep_resolution}_\text{timestep} \times \textit{parasitic_eff}_\text{node,tech,timestep}&\quad
-            \\
-        \end{cases}
-
-carrier_production_min
-^^^^^^^^^^^^^^^^^^^^^^
-
-Set the lower bound of a non-`conversion_plus` technology's carrier production.
-
-.. container:: scrolling-wrapper
-
-    .. math::
-        \begin{array}{r}
-            \forall{}
-            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
-            \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
-            \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
-            \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
-            \\
-            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \exists (\textit{energy_cap_min_use}_\text{node,tech}) \land \neg (\text{tech_group=conversion_plus}) \land \neg (\textit{cap_method}_\text{node,tech}\mathord{=}\text{integer}) \land \textit{allowed_carrier_prod}_\text{node,tech}\mathord{=}\text{true} \land \text{carrier_tier} \in \text{[out]})
-        \end{array}
-        \begin{cases}
-            \textbf{carrier_prod}_\text{node,tech,carrier,timestep} \geq \textbf{energy_cap}_\text{node,tech} \times \textit{timestep_resolution}_\text{timestep} \times \textit{energy_cap_min_use}_\text{node,tech}&\quad
-            \\
-        \end{cases}
-
-carrier_consumption_max
-^^^^^^^^^^^^^^^^^^^^^^^
-
-Set the upper bound of a non-`conversion_plus` technology's carrier consumption.
-
-.. container:: scrolling-wrapper
-
-    .. math::
-        \begin{array}{r}
-            \forall{}
-            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
-            \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
-            \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
-            \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
-            \\
-            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land (\text{tech_group=transmission} \lor \text{tech_group=demand} \lor \text{tech_group=storage}) \land (\neg (\textit{cap_method}_\text{node,tech}\mathord{=}\text{integer}) \lor \text{tech_group=demand}) \land \textit{allowed_carrier_con}_\text{node,tech}\mathord{=}\text{true} \land \text{carrier_tier} \in \text{[in]})
-        \end{array}
-        \begin{cases}
-            \textbf{carrier_con}_\text{node,tech,carrier,timestep} \geq -1 \times \textbf{energy_cap}_\text{node,tech} \times \textit{timestep_resolution}_\text{timestep}&\quad
-            \\
-        \end{cases}
-
-resource_max
+flow_out_max
 ^^^^^^^^^^^^
 
-Set the upper bound of a `supply_plus` technology's resource consumption.
+Set the upper bound of a non-`conversion_plus` technology's outflow.
+
+.. container:: scrolling-wrapper
+
+    .. math::
+        \begin{array}{r}
+            \forall{}
+            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
+            \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
+            \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
+            \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
+            \\
+            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \neg (\text{tech_group=conversion_plus}) \land \neg (\textit{cap_method}_\text{node,tech}\mathord{=}\text{integer}) \land \textit{allowed_flow_out}_\text{node,tech}\mathord{=}\text{true} \land \text{carrier_tier} \in \text{[out]})
+        \end{array}
+        \begin{cases}
+            \textbf{flow_out}_\text{node,tech,carrier,timestep} \leq \textbf{flow_cap}_\text{node,tech} \times \textit{timestep_resolution}_\text{timestep} \times \textit{parasitic_eff}_\text{node,tech}&\quad
+            \\
+        \end{cases}
+
+flow_out_min
+^^^^^^^^^^^^
+
+Set the lower bound of a non-`conversion_plus` technology's outflow.
+
+.. container:: scrolling-wrapper
+
+    .. math::
+        \begin{array}{r}
+            \forall{}
+            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
+            \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
+            \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
+            \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
+            \\
+            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \exists (\textit{flow_out_min_relative}_\text{node,tech}) \land \neg (\text{tech_group=conversion_plus}) \land \neg (\textit{cap_method}_\text{node,tech}\mathord{=}\text{integer}) \land \textit{allowed_flow_out}_\text{node,tech}\mathord{=}\text{true} \land \text{carrier_tier} \in \text{[out]})
+        \end{array}
+        \begin{cases}
+            \textbf{flow_out}_\text{node,tech,carrier,timestep} \geq \textbf{flow_cap}_\text{node,tech} \times \textit{timestep_resolution}_\text{timestep} \times \textit{flow_out_min_relative}_\text{node,tech}&\quad
+            \\
+        \end{cases}
+
+flow_in_max
+^^^^^^^^^^^
+
+Set the upper bound of a non-`conversion_plus` technology's inflow.
+
+.. container:: scrolling-wrapper
+
+    .. math::
+        \begin{array}{r}
+            \forall{}
+            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
+            \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
+            \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
+            \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
+            \\
+            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land (\text{tech_group=transmission} \lor \text{tech_group=demand} \lor \text{tech_group=storage}) \land (\neg (\textit{cap_method}_\text{node,tech}\mathord{=}\text{integer}) \lor \text{tech_group=demand}) \land \textit{allowed_flow_in}_\text{node,tech}\mathord{=}\text{true} \land \text{carrier_tier} \in \text{[in]})
+        \end{array}
+        \begin{cases}
+            \textbf{flow_in}_\text{node,tech,carrier,timestep} \leq \textbf{flow_cap}_\text{node,tech} \times \textit{timestep_resolution}_\text{timestep}&\quad
+            \\
+        \end{cases}
+
+source_use_max
+^^^^^^^^^^^^^^
+
+Set the upper bound of a `supply_plus` technology's source consumption.
 
 .. container:: scrolling-wrapper
 
@@ -424,14 +425,14 @@ Set the upper bound of a `supply_plus` technology's resource consumption.
             \text{if } (\text{tech_group=supply_plus})
         \end{array}
         \begin{cases}
-            \textbf{resource_con}_\text{node,tech,timestep} \leq \textit{timestep_resolution}_\text{timestep} \times \textbf{resource_cap}_\text{node,tech}&\quad
+            \textbf{source_use}_\text{node,tech,timestep} \leq \textit{timestep_resolution}_\text{timestep} \times \textbf{source_cap}_\text{node,tech}&\quad
             \\
         \end{cases}
 
 storage_max
 ^^^^^^^^^^^
 
-Set the upper bound of the amount of energy a `storage`/`supply_plus` technology can store.
+Set the upper bound of the amount of carrier a `storage`/`supply_plus` technology can store.
 
 .. container:: scrolling-wrapper
 
@@ -452,7 +453,7 @@ Set the upper bound of the amount of energy a `storage`/`supply_plus` technology
 storage_discharge_depth_limit
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set the lower bound of the stored energy a `storage`/`supply_plus` technology must keep in reserve at all times.
+Set the lower bound of the stored carrier a `storage`/`supply_plus` technology must keep in reserve at all times.
 
 .. container:: scrolling-wrapper
 
@@ -473,7 +474,7 @@ Set the lower bound of the stored energy a `storage`/`supply_plus` technology mu
 system_balance
 ^^^^^^^^^^^^^^
 
-Set the global energy balance of the optimisation problem by fixing the total production of a given energy carrier to equal the total consumption of that carrier at every node in every timestep.
+Set the global carrier balance of the optimisation problem by fixing the total production of a given carrier to equal the total consumption of that carrier at every node in every timestep.
 
 .. container:: scrolling-wrapper
 
@@ -486,24 +487,24 @@ Set the global energy balance of the optimisation problem by fixing the total pr
             \\
         \end{array}
         \begin{cases}
-            \sum\limits_{\text{tech} \in \text{techs}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \sum\limits_{\text{tech} \in \text{techs}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}) - \sum\limits_{\text{tech} \in \text{techs}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \textbf{unmet_demand}_\text{node,carrier,timestep} + \textbf{unused_supply}_\text{node,carrier,timestep} = 0&\quad
-            \text{if } (\text{run_config.ensure_feasibility}\mathord{=}\text{true})\land{}(\bigvee\limits_{\text{tech} \in \text{techs}} (export_carrier))
+            \sum\limits_{\text{tech} \in \text{techs}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) - \sum\limits_{\text{tech} \in \text{techs}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}) - \sum\limits_{\text{tech} \in \text{techs}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \textbf{unmet_demand}_\text{node,carrier,timestep} + \textbf{unused_supply}_\text{node,carrier,timestep} = 0&\quad
+            \text{if } (\text{config.ensure_feasibility}\mathord{=}\text{true})\land{}(\bigvee\limits_{\text{tech} \in \text{techs}} (export_carrier))
             \\
-            \sum\limits_{\text{tech} \in \text{techs}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \sum\limits_{\text{tech} \in \text{techs}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}) + \textbf{unmet_demand}_\text{node,carrier,timestep} + \textbf{unused_supply}_\text{node,carrier,timestep} = 0&\quad
-            \text{if } (\text{run_config.ensure_feasibility}\mathord{=}\text{true})\land{}(\neg (\bigvee\limits_{\text{tech} \in \text{techs}} (export_carrier)))
+            \sum\limits_{\text{tech} \in \text{techs}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) - \sum\limits_{\text{tech} \in \text{techs}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}) + \textbf{unmet_demand}_\text{node,carrier,timestep} + \textbf{unused_supply}_\text{node,carrier,timestep} = 0&\quad
+            \text{if } (\text{config.ensure_feasibility}\mathord{=}\text{true})\land{}(\neg (\bigvee\limits_{\text{tech} \in \text{techs}} (export_carrier)))
             \\
-            \sum\limits_{\text{tech} \in \text{techs}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \sum\limits_{\text{tech} \in \text{techs}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}) - \sum\limits_{\text{tech} \in \text{techs}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) = 0&\quad
-            \text{if } (\neg (\text{run_config.ensure_feasibility}\mathord{=}\text{true}))\land{}(\bigvee\limits_{\text{tech} \in \text{techs}} (export_carrier))
+            \sum\limits_{\text{tech} \in \text{techs}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) - \sum\limits_{\text{tech} \in \text{techs}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}) - \sum\limits_{\text{tech} \in \text{techs}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) = 0&\quad
+            \text{if } (\neg (\text{config.ensure_feasibility}\mathord{=}\text{true}))\land{}(\bigvee\limits_{\text{tech} \in \text{techs}} (export_carrier))
             \\
-            \sum\limits_{\text{tech} \in \text{techs}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \sum\limits_{\text{tech} \in \text{techs}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}) = 0&\quad
-            \text{if } (\neg (\text{run_config.ensure_feasibility}\mathord{=}\text{true}))\land{}(\neg (\bigvee\limits_{\text{tech} \in \text{techs}} (export_carrier)))
+            \sum\limits_{\text{tech} \in \text{techs}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) - \sum\limits_{\text{tech} \in \text{techs}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}) = 0&\quad
+            \text{if } (\neg (\text{config.ensure_feasibility}\mathord{=}\text{true}))\land{}(\neg (\bigvee\limits_{\text{tech} \in \text{techs}} (export_carrier)))
             \\
         \end{cases}
 
 balance_supply
 ^^^^^^^^^^^^^^
 
-Set the upper bound on, or a fixed total of, a `supply` technology's ability to produce energy based on the quantity of  available resource.
+Set the upper bound on, or a fixed total of, a `supply` technology's ability to produce a carrier based on the quantity of  available source.
 
 .. container:: scrolling-wrapper
 
@@ -515,36 +516,36 @@ Set the upper bound on, or a fixed total of, a `supply` technology's ability to 
             \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\exists (\textit{resource}_\text{node,tech,timestep}) \land \text{tech_group=supply})
+            \text{if } ((\exists (\textit{source_equals}_\text{node,tech}) \lor \exists (\textit{source_max}_\text{node,tech})) \land \text{tech_group=supply})
         \end{array}
         \begin{cases}
-            \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{energy_eff}_\text{node,tech,timestep} } = \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech} \times \textbf{resource_area}_\text{node,tech}&\quad
-            \text{if } (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true} \land \textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0})\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy_per_area})
+            \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{flow_eff}_\text{node,tech} } = \textit{source_equals}_\text{node,tech} \times \textbf{area_use}_\text{node,tech}&\quad
+            \text{if } (\exists (\textit{source_equals}_\text{node,tech}) \land \textit{flow_eff}_\text{node,tech}\mathord{>}\text{0})\land{}(\textit{source_unit}_\text{node,tech}\mathord{=}\text{per_area})
             \\
-            \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{energy_eff}_\text{node,tech,timestep} } = \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech} \times \textbf{energy_cap}_\text{node,tech}&\quad
-            \text{if } (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true} \land \textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0})\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy_per_cap})
+            \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{flow_eff}_\text{node,tech} } = \textit{source_equals}_\text{node,tech} \times \textbf{flow_cap}_\text{node,tech}&\quad
+            \text{if } (\exists (\textit{source_equals}_\text{node,tech}) \land \textit{flow_eff}_\text{node,tech}\mathord{>}\text{0})\land{}(\textit{source_unit}_\text{node,tech}\mathord{=}\text{per_cap})
             \\
-            \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{energy_eff}_\text{node,tech,timestep} } = \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech}&\quad
-            \text{if } (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true} \land \textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0})\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy})
+            \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{flow_eff}_\text{node,tech} } = \textit{source_equals}_\text{node,tech} \times 1&\quad
+            \text{if } (\exists (\textit{source_equals}_\text{node,tech}) \land \textit{flow_eff}_\text{node,tech}\mathord{>}\text{0})\land{}(\textit{source_unit}_\text{node,tech}\mathord{=}\text{absolute})
             \\
-            \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{energy_eff}_\text{node,tech,timestep} } \leq \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech} \times \textbf{resource_area}_\text{node,tech}&\quad
-            \text{if } (\neg (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true}) \land \textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0})\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy_per_area})
+            \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{flow_eff}_\text{node,tech} } \leq \textit{source_max}_\text{node,tech} \times \textbf{area_use}_\text{node,tech}&\quad
+            \text{if } (\neg (\exists (\textit{source_equals}_\text{node,tech})) \land \exists (\textit{sink_max}) \land \textit{flow_eff}_\text{node,tech}\mathord{>}\text{0})\land{}(\textit{source_unit}_\text{node,tech}\mathord{=}\text{per_area})
             \\
-            \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{energy_eff}_\text{node,tech,timestep} } \leq \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech} \times \textbf{energy_cap}_\text{node,tech}&\quad
-            \text{if } (\neg (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true}) \land \textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0})\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy_per_cap})
+            \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{flow_eff}_\text{node,tech} } \leq \textit{source_max}_\text{node,tech} \times \textbf{flow_cap}_\text{node,tech}&\quad
+            \text{if } (\neg (\exists (\textit{source_equals}_\text{node,tech})) \land \exists (\textit{sink_max}) \land \textit{flow_eff}_\text{node,tech}\mathord{>}\text{0})\land{}(\textit{source_unit}_\text{node,tech}\mathord{=}\text{per_cap})
             \\
-            \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{energy_eff}_\text{node,tech,timestep} } \leq \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech}&\quad
-            \text{if } (\neg (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true}) \land \textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0})\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy})
+            \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{flow_eff}_\text{node,tech} } \leq \textit{source_max}_\text{node,tech} \times 1&\quad
+            \text{if } (\neg (\exists (\textit{source_equals}_\text{node,tech})) \land \exists (\textit{sink_max}) \land \textit{flow_eff}_\text{node,tech}\mathord{>}\text{0})\land{}(\textit{source_unit}_\text{node,tech}\mathord{=}\text{absolute})
             \\
-            \textbf{carrier_prod}_\text{node,tech,carrier,timestep} = 0&\quad
-            \text{if } (\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0})
+            \textbf{flow_out}_\text{node,tech,carrier,timestep} = 0&\quad
+            \text{if } (\textit{flow_eff}_\text{node,tech}\mathord{=}\text{0})
             \\
         \end{cases}
 
 balance_supply_min_use
 ^^^^^^^^^^^^^^^^^^^^^^
 
-Set the lower bound on, or a fixed amount of, the energy a `supply` technology must consume in each timestep.
+Set the lower bound on the quantity of its source a `supply` technology must use in each timestep.
 
 .. container:: scrolling-wrapper
 
@@ -556,10 +557,17 @@ Set the lower bound on, or a fixed amount of, the energy a `supply` technology m
             \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\exists (\textit{resource}_\text{node,tech,timestep}) \land \text{tech_group=supply} \land \exists (\textit{resource_min_use}_\text{node,tech}) \land \textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0} \land \neg (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true}))
+            \text{if } (\exists (\textit{source_min}_\text{node,tech}) \land \neg (\exists (\textit{source_equals}_\text{node,tech})) \land \text{tech_group=supply} \land \textit{flow_eff}_\text{node,tech}\mathord{>}\text{0})
         \end{array}
         \begin{cases}
-            \textit{resource_min_use}_\text{node,tech} \leq \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{energy_eff}_\text{node,tech,timestep} }&\quad
+            \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{flow_eff}_\text{node,tech} } \geq \textit{source_min}_\text{node,tech} \times \textbf{area_use}_\text{node,tech}&\quad
+            \text{if } (\textit{source_unit}_\text{node,tech}\mathord{=}\text{per_area})
+            \\
+            \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{flow_eff}_\text{node,tech} } \geq \textit{source_min}_\text{node,tech} \times \textbf{flow_cap}_\text{node,tech}&\quad
+            \text{if } (\textit{source_unit}_\text{node,tech}\mathord{=}\text{per_cap})
+            \\
+            \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{flow_eff}_\text{node,tech} } \geq \textit{source_min}_\text{node,tech} \times 1&\quad
+            \text{if } (\textit{source_unit}_\text{node,tech}\mathord{=}\text{absolute})
             \\
         \end{cases}
 
@@ -580,30 +588,59 @@ balance_demand
             \text{if } (\text{tech_group=demand})
         \end{array}
         \begin{cases}
-            \textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep} = \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech} \times \textbf{resource_area}_\text{node,tech}&\quad
-            \text{if } (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true})\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy_per_area})
+            \textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech} = \textit{sink_equals}_\text{node,tech,timestep} \times \textbf{area_use}_\text{node,tech}&\quad
+            \text{if } (\exists (\textit{sink_equals}_\text{node,tech,timestep}))\land{}(\textit{sink_unit}_\text{node,tech}\mathord{=}\text{per_area})
             \\
-            \textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep} = \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech} \times \textbf{energy_cap}_\text{node,tech}&\quad
-            \text{if } (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true})\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy_per_cap})
+            \textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech} = \textit{sink_equals}_\text{node,tech,timestep} \times \textbf{flow_cap}_\text{node,tech}&\quad
+            \text{if } (\exists (\textit{sink_equals}_\text{node,tech,timestep}))\land{}(\textit{sink_unit}_\text{node,tech}\mathord{=}\text{per_cap})
             \\
-            \textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep} = \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech}&\quad
-            \text{if } (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true})\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy})
+            \textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech} = \textit{sink_equals}_\text{node,tech,timestep} \times 1&\quad
+            \text{if } (\exists (\textit{sink_equals}_\text{node,tech,timestep}))\land{}(\textit{sink_unit}_\text{node,tech}\mathord{=}\text{absolute})
             \\
-            \textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep} \geq \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech} \times \textbf{resource_area}_\text{node,tech}&\quad
-            \text{if } (\neg (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true}))\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy_per_area})
+            \textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech} \leq \textit{sink_max} \times \textbf{area_use}_\text{node,tech}&\quad
+            \text{if } (\neg (\exists (\textit{sink_equals}_\text{node,tech,timestep})) \land \exists (\textit{sink_max}))\land{}(\textit{sink_unit}_\text{node,tech}\mathord{=}\text{per_area})
             \\
-            \textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep} \geq \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech} \times \textbf{energy_cap}_\text{node,tech}&\quad
-            \text{if } (\neg (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true}))\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy_per_cap})
+            \textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech} \leq \textit{sink_max} \times \textbf{flow_cap}_\text{node,tech}&\quad
+            \text{if } (\neg (\exists (\textit{sink_equals}_\text{node,tech,timestep})) \land \exists (\textit{sink_max}))\land{}(\textit{sink_unit}_\text{node,tech}\mathord{=}\text{per_cap})
             \\
-            \textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep} \geq \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech}&\quad
-            \text{if } (\neg (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true}))\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy})
+            \textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech} \leq \textit{sink_max} \times 1&\quad
+            \text{if } (\neg (\exists (\textit{sink_equals}_\text{node,tech,timestep})) \land \exists (\textit{sink_max}))\land{}(\textit{sink_unit}_\text{node,tech}\mathord{=}\text{absolute})
+            \\
+        \end{cases}
+
+balance_demand_min_use
+^^^^^^^^^^^^^^^^^^^^^^
+
+Set the lower bound on the quantity of flow a `demand` technology must dump to its sink in each timestep.
+
+.. container:: scrolling-wrapper
+
+    .. math::
+        \begin{array}{r}
+            \forall{}
+            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
+            \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
+            \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
+            \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
+            \\
+            \text{if } (\exists (\textit{sink_min}) \land \neg (\exists (\textit{source_equals}_\text{node,tech})) \land \text{tech_group=supply} \land \textit{flow_eff}_\text{node,tech}\mathord{>}\text{0})
+        \end{array}
+        \begin{cases}
+            \textit{sink_min} \times \textbf{area_use}_\text{node,tech} \leq \textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech}&\quad
+            \text{if } (\textit{sink_unit}_\text{node,tech}\mathord{=}\text{per_area})
+            \\
+            \textit{sink_min} \times \textbf{flow_cap}_\text{node,tech} \leq \textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech}&\quad
+            \text{if } (\textit{sink_unit}_\text{node,tech}\mathord{=}\text{per_cap})
+            \\
+            \textit{sink_min} \times 1 \leq \textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech}&\quad
+            \text{if } (\textit{sink_unit}_\text{node,tech}\mathord{=}\text{absolute})
             \\
         \end{cases}
 
 balance_supply_plus_no_storage
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set the upper bound on, or a fixed total of, a `supply_plus` (without storage) technology's ability to produce energy based on only the quantity of consumed resource.
+Set the upper bound on, or a fixed total of, a `supply_plus` (without storage) technology's ability to produce flow based on only the quantity of consumed resource.
 
 .. container:: scrolling-wrapper
 
@@ -618,18 +655,18 @@ Set the upper bound on, or a fixed total of, a `supply_plus` (without storage) t
             \text{if } (\text{tech_group=supply_plus} \land \neg (\textit{include_storage}_\text{node,tech}\mathord{=}\text{true}))
         \end{array}
         \begin{cases}
-            \textbf{resource_con}_\text{node,tech,timestep} \times \textit{resource_eff}_\text{node,tech,timestep} = 0&\quad
-            \text{if } (\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech,timestep}\mathord{=}\text{0})
+            \textbf{source_use}_\text{node,tech,timestep} \times \textit{source_eff}_\text{node,tech} = 0&\quad
+            \text{if } (\textit{flow_eff}_\text{node,tech}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech}\mathord{=}\text{0})
             \\
-            \textbf{resource_con}_\text{node,tech,timestep} \times \textit{resource_eff}_\text{node,tech,timestep} = \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ (\textit{energy_eff}_\text{node,tech,timestep} \times \textit{parasitic_eff}_\text{node,tech,timestep}) }&\quad
-            \text{if } (\neg (\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech,timestep}\mathord{=}\text{0}))
+            \textbf{source_use}_\text{node,tech,timestep} \times \textit{source_eff}_\text{node,tech} = \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ (\textit{flow_eff}_\text{node,tech} \times \textit{parasitic_eff}_\text{node,tech}) }&\quad
+            \text{if } (\neg (\textit{flow_eff}_\text{node,tech}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech}\mathord{=}\text{0}))
             \\
         \end{cases}
 
 balance_supply_plus_with_storage
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set the upper bound on, or a fixed total of, a `supply_plus` (with storage) technology's ability to produce energy based on the quantity of consumed resource and available stored energy.
+Set the upper bound on, or a fixed total of, a `supply_plus` (with storage) technology's ability to produce flow based on the quantity of consumed resource and available stored carrier.
 
 .. container:: scrolling-wrapper
 
@@ -644,30 +681,30 @@ Set the upper bound on, or a fixed total of, a `supply_plus` (with storage) tech
             \text{if } (\exists (\textbf{storage}_\text{node,tech,timestep}) \land \text{tech_group=supply_plus})
         \end{array}
         \begin{cases}
-            \textbf{storage}_\text{node,tech,timestep} = \textit{storage_initial}_\text{node,tech} \times \textbf{storage_cap}_\text{node,tech} + (\textbf{resource_con}_\text{node,tech,timestep} \times \textit{resource_eff}_\text{node,tech,timestep})&\quad
-            \text{if } (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true}))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech,timestep}\mathord{=}\text{0})
+            \textbf{storage}_\text{node,tech,timestep} = \textit{storage_initial}_\text{node,tech} \times \textbf{storage_cap}_\text{node,tech} + (\textbf{source_use}_\text{node,tech,timestep} \times \textit{source_eff}_\text{node,tech})&\quad
+            \text{if } (\textit{flow_eff}_\text{node,tech}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech}\mathord{=}\text{0})\land{}(\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{config.cyclic_storage}\mathord{=}\text{true}))
             \\
-            \textbf{storage}_\text{node,tech,timestep} = \textit{storage_initial}_\text{node,tech} \times \textbf{storage_cap}_\text{node,tech} + (\textbf{resource_con}_\text{node,tech,timestep} \times \textit{resource_eff}_\text{node,tech,timestep}) - \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ (\textit{energy_eff}_\text{node,tech,timestep} \times \textit{parasitic_eff}_\text{node,tech,timestep}) }&\quad
-            \text{if } (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true}))\land{}(\neg (\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech,timestep}\mathord{=}\text{0}))
+            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech})^{\textit{timestep_resolution}_\text{timestep-1}}) \times \textbf{storage}_\text{node,tech,timestep-1} + (\textbf{source_use}_\text{node,tech,timestep} \times \textit{source_eff}_\text{node,tech})&\quad
+            \text{if } (\textit{flow_eff}_\text{node,tech}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech}\mathord{=}\text{0})\land{}(((\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \text{config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]})) \land \neg (\textit{lookup_cluster_first_timestep}\mathord{=}\text{true}))
             \\
-            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech,timestep})^{\textit{timestep_resolution}_\text{timestep-1}}) \times \textbf{storage}_\text{node,tech,timestep-1} + (\textbf{resource_con}_\text{node,tech,timestep} \times \textit{resource_eff}_\text{node,tech,timestep})&\quad
-            \text{if } (((\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \text{run_config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]})) \land \neg (\textit{lookup_cluster_first_timestep}\mathord{=}\text{true}))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech,timestep}\mathord{=}\text{0})
+            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech})^{\textit{timestep_resolution}_\text{timestep=lookup_cluster_last_timestep[timestep]}}) \times \textbf{storage}_\text{node,tech,timestep=lookup_cluster_last_timestep[timestep]} + (\textbf{source_use}_\text{node,tech,timestep} \times \textit{source_eff}_\text{node,tech})&\quad
+            \text{if } (\textit{flow_eff}_\text{node,tech}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech}\mathord{=}\text{0})\land{}(\textit{lookup_cluster_first_timestep}\mathord{=}\text{true} \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{config.cyclic_storage}\mathord{=}\text{true})))
             \\
-            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech,timestep})^{\textit{timestep_resolution}_\text{timestep-1}}) \times \textbf{storage}_\text{node,tech,timestep-1} + (\textbf{resource_con}_\text{node,tech,timestep} \times \textit{resource_eff}_\text{node,tech,timestep}) - \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ (\textit{energy_eff}_\text{node,tech,timestep} \times \textit{parasitic_eff}_\text{node,tech,timestep}) }&\quad
-            \text{if } (((\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \text{run_config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]})) \land \neg (\textit{lookup_cluster_first_timestep}\mathord{=}\text{true}))\land{}(\neg (\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech,timestep}\mathord{=}\text{0}))
+            \textbf{storage}_\text{node,tech,timestep} = \textit{storage_initial}_\text{node,tech} \times \textbf{storage_cap}_\text{node,tech} + (\textbf{source_use}_\text{node,tech,timestep} \times \textit{source_eff}_\text{node,tech}) - \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ (\textit{flow_eff}_\text{node,tech} \times \textit{parasitic_eff}_\text{node,tech}) }&\quad
+            \text{if } (\neg (\textit{flow_eff}_\text{node,tech}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech}\mathord{=}\text{0}))\land{}(\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{config.cyclic_storage}\mathord{=}\text{true}))
             \\
-            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech,timestep})^{\textit{timestep_resolution}_\text{timestep=lookup_cluster_last_timestep[timestep]}}) \times \textbf{storage}_\text{node,tech,timestep=lookup_cluster_last_timestep[timestep]} + (\textbf{resource_con}_\text{node,tech,timestep} \times \textit{resource_eff}_\text{node,tech,timestep})&\quad
-            \text{if } (\textit{lookup_cluster_first_timestep}\mathord{=}\text{true} \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true})))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech,timestep}\mathord{=}\text{0})
+            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech})^{\textit{timestep_resolution}_\text{timestep-1}}) \times \textbf{storage}_\text{node,tech,timestep-1} + (\textbf{source_use}_\text{node,tech,timestep} \times \textit{source_eff}_\text{node,tech}) - \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ (\textit{flow_eff}_\text{node,tech} \times \textit{parasitic_eff}_\text{node,tech}) }&\quad
+            \text{if } (\neg (\textit{flow_eff}_\text{node,tech}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech}\mathord{=}\text{0}))\land{}(((\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \text{config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]})) \land \neg (\textit{lookup_cluster_first_timestep}\mathord{=}\text{true}))
             \\
-            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech,timestep})^{\textit{timestep_resolution}_\text{timestep=lookup_cluster_last_timestep[timestep]}}) \times \textbf{storage}_\text{node,tech,timestep=lookup_cluster_last_timestep[timestep]} + (\textbf{resource_con}_\text{node,tech,timestep} \times \textit{resource_eff}_\text{node,tech,timestep}) - \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ (\textit{energy_eff}_\text{node,tech,timestep} \times \textit{parasitic_eff}_\text{node,tech,timestep}) }&\quad
-            \text{if } (\textit{lookup_cluster_first_timestep}\mathord{=}\text{true} \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true})))\land{}(\neg (\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech,timestep}\mathord{=}\text{0}))
+            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech})^{\textit{timestep_resolution}_\text{timestep=lookup_cluster_last_timestep[timestep]}}) \times \textbf{storage}_\text{node,tech,timestep=lookup_cluster_last_timestep[timestep]} + (\textbf{source_use}_\text{node,tech,timestep} \times \textit{source_eff}_\text{node,tech}) - \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ (\textit{flow_eff}_\text{node,tech} \times \textit{parasitic_eff}_\text{node,tech}) }&\quad
+            \text{if } (\neg (\textit{flow_eff}_\text{node,tech}\mathord{=}\text{0} \lor \textit{parasitic_eff}_\text{node,tech}\mathord{=}\text{0}))\land{}(\textit{lookup_cluster_first_timestep}\mathord{=}\text{true} \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{config.cyclic_storage}\mathord{=}\text{true})))
             \\
         \end{cases}
 
-resource_availability_supply_plus
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+source_availability_supply_plus
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set the upper bound on, or a fixed total of, a `supply_plus` technology's ability to consume its available energy resource.
+Set the upper bound on, or a fixed total of, a `supply_plus` technology's ability to consume its available resource.
 
 .. container:: scrolling-wrapper
 
@@ -678,33 +715,33 @@ Set the upper bound on, or a fixed total of, a `supply_plus` technology's abilit
             \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\exists (\textbf{resource_con}_\text{node,tech,timestep}) \land \exists (\textit{resource}_\text{node,tech,timestep}))
+            \text{if } (\exists (\textbf{source_use}_\text{node,tech,timestep}) \land (\exists (\textit{source_equals}_\text{node,tech}) \lor \exists (\textit{source_max}_\text{node,tech})))
         \end{array}
         \begin{cases}
-            \textbf{resource_con}_\text{node,tech,timestep} = \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech} \times \textbf{resource_area}_\text{node,tech}&\quad
-            \text{if } (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true})\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy_per_area})
+            \textbf{source_use}_\text{node,tech,timestep} = \textit{source_equals}_\text{node,tech} \times \textbf{area_use}_\text{node,tech}&\quad
+            \text{if } (\exists (\textit{source_equals}_\text{node,tech}))\land{}(\textit{source_unit}_\text{node,tech}\mathord{=}\text{per_area})
             \\
-            \textbf{resource_con}_\text{node,tech,timestep} = \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech} \times \textbf{energy_cap}_\text{node,tech}&\quad
-            \text{if } (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true})\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy_per_cap})
+            \textbf{source_use}_\text{node,tech,timestep} = \textit{source_equals}_\text{node,tech} \times \textbf{flow_cap}_\text{node,tech}&\quad
+            \text{if } (\exists (\textit{source_equals}_\text{node,tech}))\land{}(\textit{source_unit}_\text{node,tech}\mathord{=}\text{per_cap})
             \\
-            \textbf{resource_con}_\text{node,tech,timestep} = \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech}&\quad
-            \text{if } (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true})\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy})
+            \textbf{source_use}_\text{node,tech,timestep} = \textit{source_equals}_\text{node,tech} \times 1&\quad
+            \text{if } (\exists (\textit{source_equals}_\text{node,tech}))\land{}(\textit{source_unit}_\text{node,tech}\mathord{=}\text{absolute})
             \\
-            \textbf{resource_con}_\text{node,tech,timestep} \leq \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech} \times \textbf{resource_area}_\text{node,tech}&\quad
-            \text{if } (\neg (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true}))\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy_per_area})
+            \textbf{source_use}_\text{node,tech,timestep} \leq \textit{source_max}_\text{node,tech} \times \textbf{area_use}_\text{node,tech}&\quad
+            \text{if } (\neg (\exists (\textit{source_equals}_\text{node,tech})) \land \exists (\textit{source_max}_\text{node,tech}))\land{}(\textit{source_unit}_\text{node,tech}\mathord{=}\text{per_area})
             \\
-            \textbf{resource_con}_\text{node,tech,timestep} \leq \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech} \times \textbf{energy_cap}_\text{node,tech}&\quad
-            \text{if } (\neg (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true}))\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy_per_cap})
+            \textbf{source_use}_\text{node,tech,timestep} \leq \textit{source_max}_\text{node,tech} \times \textbf{flow_cap}_\text{node,tech}&\quad
+            \text{if } (\neg (\exists (\textit{source_equals}_\text{node,tech})) \land \exists (\textit{source_max}_\text{node,tech}))\land{}(\textit{source_unit}_\text{node,tech}\mathord{=}\text{per_cap})
             \\
-            \textbf{resource_con}_\text{node,tech,timestep} \leq \textit{resource}_\text{node,tech,timestep} \times \textit{resource_scale}_\text{node,tech}&\quad
-            \text{if } (\neg (\textit{force_resource}_\text{node,tech}\mathord{=}\text{true}))\land{}(\textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy})
+            \textbf{source_use}_\text{node,tech,timestep} \leq \textit{source_max}_\text{node,tech} \times 1&\quad
+            \text{if } (\neg (\exists (\textit{source_equals}_\text{node,tech})) \land \exists (\textit{source_max}_\text{node,tech}))\land{}(\textit{source_unit}_\text{node,tech}\mathord{=}\text{absolute})
             \\
         \end{cases}
 
 balance_storage
 ^^^^^^^^^^^^^^^
 
-Fix the quantity of energy stored in a `storage` technology at the end of each timestep based on the net flow of energy charged and discharged and the quantity of energy stored at the start of the timestep.
+Fix the quantity of carrier stored in a `storage` technology at the end of each timestep based on the net flow of carrier charged and discharged and the quantity of carrier stored at the start of the timestep.
 
 .. container:: scrolling-wrapper
 
@@ -719,30 +756,30 @@ Fix the quantity of energy stored in a `storage` technology at the end of each t
             \text{if } (\text{tech_group=storage})
         \end{array}
         \begin{cases}
-            \textbf{storage}_\text{node,tech,timestep} = \textit{storage_initial}_\text{node,tech} \times \textbf{storage_cap}_\text{node,tech} - \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{energy_eff}_\text{node,tech,timestep} } - (\textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep})&\quad
-            \text{if } (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true}))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0})
+            \textbf{storage}_\text{node,tech,timestep} = \textit{storage_initial}_\text{node,tech} \times \textbf{storage_cap}_\text{node,tech} - \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{flow_eff}_\text{node,tech} } + (\textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech})&\quad
+            \text{if } (\textit{flow_eff}_\text{node,tech}\mathord{>}\text{0})\land{}(\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{config.cyclic_storage}\mathord{=}\text{true}))
             \\
-            \textbf{storage}_\text{node,tech,timestep} = \textit{storage_initial}_\text{node,tech} \times \textbf{storage_cap}_\text{node,tech} - (\textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep})&\quad
-            \text{if } (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true}))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0})
+            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech})^{\textit{timestep_resolution}_\text{timestep-1}}) \times \textbf{storage}_\text{node,tech,timestep-1} - \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{flow_eff}_\text{node,tech} } + (\textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech})&\quad
+            \text{if } (\textit{flow_eff}_\text{node,tech}\mathord{>}\text{0})\land{}(((\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \text{config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]})) \land \neg (\textit{lookup_cluster_first_timestep}\mathord{=}\text{true}))
             \\
-            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech,timestep})^{\textit{timestep_resolution}_\text{timestep-1}}) \times \textbf{storage}_\text{node,tech,timestep-1} - \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{energy_eff}_\text{node,tech,timestep} } - (\textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep})&\quad
-            \text{if } (((\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \text{run_config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]})) \land \neg (\textit{lookup_cluster_first_timestep}\mathord{=}\text{true}))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0})
+            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech})^{\textit{timestep_resolution}_\text{timestep=lookup_cluster_last_timestep[timestep]}}) \times \textbf{storage}_\text{node,tech,timestep=lookup_cluster_last_timestep[timestep]} - \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{flow_eff}_\text{node,tech} } + (\textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech})&\quad
+            \text{if } (\textit{flow_eff}_\text{node,tech}\mathord{>}\text{0})\land{}(\textit{lookup_cluster_first_timestep}\mathord{=}\text{true} \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{config.cyclic_storage}\mathord{=}\text{true})))
             \\
-            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech,timestep})^{\textit{timestep_resolution}_\text{timestep-1}}) \times \textbf{storage}_\text{node,tech,timestep-1} - (\textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep})&\quad
-            \text{if } (((\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \text{run_config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]})) \land \neg (\textit{lookup_cluster_first_timestep}\mathord{=}\text{true}))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0})
+            \textbf{storage}_\text{node,tech,timestep} = \textit{storage_initial}_\text{node,tech} \times \textbf{storage_cap}_\text{node,tech} + (\textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech})&\quad
+            \text{if } (\textit{flow_eff}_\text{node,tech}\mathord{=}\text{0})\land{}(\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{config.cyclic_storage}\mathord{=}\text{true}))
             \\
-            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech,timestep})^{\textit{timestep_resolution}_\text{timestep=lookup_cluster_last_timestep[timestep]}}) \times \textbf{storage}_\text{node,tech,timestep=lookup_cluster_last_timestep[timestep]} - \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{energy_eff}_\text{node,tech,timestep} } - (\textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep})&\quad
-            \text{if } (\textit{lookup_cluster_first_timestep}\mathord{=}\text{true} \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true})))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0})
+            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech})^{\textit{timestep_resolution}_\text{timestep-1}}) \times \textbf{storage}_\text{node,tech,timestep-1} + (\textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech})&\quad
+            \text{if } (\textit{flow_eff}_\text{node,tech}\mathord{=}\text{0})\land{}(((\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \text{config.cyclic_storage}\mathord{=}\text{true}) \lor \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]})) \land \neg (\textit{lookup_cluster_first_timestep}\mathord{=}\text{true}))
             \\
-            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech,timestep})^{\textit{timestep_resolution}_\text{timestep=lookup_cluster_last_timestep[timestep]}}) \times \textbf{storage}_\text{node,tech,timestep=lookup_cluster_last_timestep[timestep]} - (\textbf{carrier_con}_\text{node,tech,carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep})&\quad
-            \text{if } (\textit{lookup_cluster_first_timestep}\mathord{=}\text{true} \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{run_config.cyclic_storage}\mathord{=}\text{true})))\land{}(\textit{energy_eff}_\text{node,tech,timestep}\mathord{=}\text{0})
+            \textbf{storage}_\text{node,tech,timestep} = ((1 - \textit{storage_loss}_\text{node,tech})^{\textit{timestep_resolution}_\text{timestep=lookup_cluster_last_timestep[timestep]}}) \times \textbf{storage}_\text{node,tech,timestep=lookup_cluster_last_timestep[timestep]} + (\textbf{flow_in}_\text{node,tech,carrier,timestep} \times \textit{flow_eff}_\text{node,tech})&\quad
+            \text{if } (\textit{flow_eff}_\text{node,tech}\mathord{=}\text{0})\land{}(\textit{lookup_cluster_first_timestep}\mathord{=}\text{true} \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]} \land \neg (\text{config.cyclic_storage}\mathord{=}\text{true})))
             \\
         \end{cases}
 
 set_storage_initial
 ^^^^^^^^^^^^^^^^^^^
 
-Fix the relationship between energy stored in a `storage` technology at the start and end of the whole model period.
+Fix the relationship between carrier stored in a `storage` technology at the start and end of the whole model period.
 
 .. container:: scrolling-wrapper
 
@@ -752,17 +789,17 @@ Fix the relationship between energy stored in a `storage` technology at the star
             \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
             \text{ tech }\negthickspace \in \negthickspace\text{ techs }
             \\
-            \text{if } (\exists (\textbf{storage}_\text{node,tech,timestep}) \land \exists (\textit{storage_initial}_\text{node,tech}) \land \text{run_config.cyclic_storage}\mathord{=}\text{true})
+            \text{if } (\exists (\textbf{storage}_\text{node,tech,timestep}) \land \exists (\textit{storage_initial}_\text{node,tech}) \land \text{config.cyclic_storage}\mathord{=}\text{true})
         \end{array}
         \begin{cases}
-            \textbf{storage}_\text{node,tech,timestep=timesteps[-1]} \times ((1 - \textit{storage_loss}_\text{node,tech,timestep})^{\textit{timestep_resolution}_\text{timestep=timesteps[-1]}}) = \textit{storage_initial}_\text{node,tech} \times \textbf{storage_cap}_\text{node,tech}&\quad
+            \textbf{storage}_\text{node,tech,timestep=timesteps[-1]} \times ((1 - \textit{storage_loss}_\text{node,tech})^{\textit{timestep_resolution}_\text{timestep=timesteps[-1]}}) = \textit{storage_initial}_\text{node,tech} \times \textbf{storage_cap}_\text{node,tech}&\quad
             \\
         \end{cases}
 
 balance_transmission
 ^^^^^^^^^^^^^^^^^^^^
 
-Fix the relationship between between energy flowing into and out of a `transmission` link in each timestep.
+Fix the relationship between between carrier flowing into and out of a `transmission` link in each timestep.
 
 .. container:: scrolling-wrapper
 
@@ -774,17 +811,17 @@ Fix the relationship between between energy flowing into and out of a `transmiss
             \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\text{tech_group=transmission} \land \textit{allowed_carrier_prod}_\text{node,tech}\mathord{=}\text{true})
+            \text{if } (\text{tech_group=transmission} \land \textit{allowed_flow_out}_\text{node,tech}\mathord{=}\text{true})
         \end{array}
         \begin{cases}
-            \textbf{carrier_prod}_\text{node,tech,carrier,timestep} = -1 \times \textbf{carrier_con}_\text{node=link_remote_nodes[node],tech=link_remote_techs[tech],carrier,timestep} \times \textit{energy_eff}_\text{node,tech,timestep}&\quad
+            \textbf{flow_out}_\text{node,tech,carrier,timestep} = \textbf{flow_in}_\text{node=link_remote_nodes[node],tech=link_remote_techs[tech],carrier,timestep} \times \textit{flow_eff}_\text{node,tech}&\quad
             \\
         \end{cases}
 
 symmetric_transmission
 ^^^^^^^^^^^^^^^^^^^^^^
 
-Fix the energy capacity of two `transmission` technologies representing the same link in the system.
+Fix the flow capacity of two `transmission` technologies representing the same link in the system.
 
 .. container:: scrolling-wrapper
 
@@ -797,14 +834,14 @@ Fix the energy capacity of two `transmission` technologies representing the same
             \text{if } (\text{tech_group=transmission})
         \end{array}
         \begin{cases}
-            \textbf{energy_cap}_\text{node,tech} = \textbf{energy_cap}_\text{node=link_remote_nodes[node],tech=link_remote_techs[tech]}&\quad
+            \textbf{flow_cap}_\text{node,tech} = \textbf{flow_cap}_\text{node=link_remote_nodes[node],tech=link_remote_techs[tech]}&\quad
             \\
         \end{cases}
 
 export_balance
 ^^^^^^^^^^^^^^
 
-Set the lower bound of a technology's carrier production to a technology's carrier export, for any technologies that can export energy out of the system.
+Set the lower bound of a technology's outflow to a technology's carrier export, for any technologies that can export carriers out of the system.
 
 .. container:: scrolling-wrapper
 
@@ -819,14 +856,14 @@ Set the lower bound of a technology's carrier production to a technology's carri
             \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \textit{export}_\text{node,tech}\mathord{=}\text{true})
         \end{array}
         \begin{cases}
-            \textbf{carrier_prod}_\text{node,tech,carrier,timestep} \geq \textbf{carrier_export}_\text{node,tech,carrier,timestep}&\quad
+            \textbf{flow_out}_\text{node,tech,carrier,timestep} \geq \textbf{flow_export}_\text{node,tech,carrier,timestep}&\quad
             \\
         \end{cases}
 
-carrier_export_max
-^^^^^^^^^^^^^^^^^^
+flow_export_max
+^^^^^^^^^^^^^^^
 
-Set the upper bound of a technology's carrier export, for any technologies that can export energy out of the system.
+Set the upper bound of a technology's carrier export, for any technologies that can export carriers out of the system.
 
 .. container:: scrolling-wrapper
 
@@ -838,13 +875,13 @@ Set the upper bound of a technology's carrier export, for any technologies that 
             \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\exists (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) \land \exists (\textit{export_max}_\text{node,tech}))
+            \text{if } (\exists (\textbf{flow_export}_\text{node,tech,carrier,timestep}) \land \exists (\textit{export_max}_\text{node,tech}))
         \end{array}
         \begin{cases}
-            \textbf{carrier_export}_\text{node,tech,carrier,timestep} \leq \textit{export_max}_\text{node,tech} \times \textbf{operating_units}_\text{node,tech,timestep}&\quad
+            \textbf{flow_export}_\text{node,tech,carrier,timestep} \leq \textit{export_max}_\text{node,tech} \times \textbf{operating_units}_\text{node,tech,timestep}&\quad
             \text{if } (\textit{cap_method}_\text{node,tech}\mathord{=}\text{integer})
             \\
-            \textbf{carrier_export}_\text{node,tech,carrier,timestep} \leq \textit{export_max}_\text{node,tech}&\quad
+            \textbf{flow_export}_\text{node,tech,carrier,timestep} \leq \textit{export_max}_\text{node,tech}&\quad
             \text{if } (\neg (\textit{cap_method}_\text{node,tech}\mathord{=}\text{integer}))
             \\
         \end{cases}
@@ -870,53 +907,10 @@ Set the upper bound of the number of integer units of technology that can exist,
             \\
         \end{cases}
 
-carrier_production_max_milp
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+flow_out_max_milp
+^^^^^^^^^^^^^^^^^
 
-Set the upper bound of a non-`conversion_plus` technology's ability to produce energy, for any technology using integer units to define its capacity.
-
-.. container:: scrolling-wrapper
-
-    .. math::
-        \begin{array}{r}
-            \forall{}
-            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
-            \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
-            \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
-            \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
-            \\
-            \text{if } (\exists (\textbf{operating_units}_\text{node,tech,timestep}) \land \exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \neg (\text{tech_group=conversion_plus}) \land \textit{allowed_carrier_prod}_\text{node,tech}\mathord{=}\text{true})
-        \end{array}
-        \begin{cases}
-            \textbf{carrier_prod}_\text{node,tech,carrier,timestep} \leq \textbf{operating_units}_\text{node,tech,timestep} \times \textit{timestep_resolution}_\text{timestep} \times \textit{energy_cap_per_unit}_\text{node,tech} \times \textit{parasitic_eff}_\text{node,tech,timestep}&\quad
-            \\
-        \end{cases}
-
-carrier_production_max_conversion_plus_milp
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Set the upper bound of a `conversion_plus` technology's ability to produce energy across all of its `out` energy carriers, if it uses integer units to define its capacity.
-
-.. container:: scrolling-wrapper
-
-    .. math::
-        \begin{array}{r}
-            \forall{}
-            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
-            \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
-            \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
-            \\
-            \text{if } (\exists (\textbf{operating_units}_\text{node,tech,timestep}) \land \text{tech_group=conversion_plus} \land \textit{allowed_carrier_prod}_\text{node,tech}\mathord{=}\text{true})
-        \end{array}
-        \begin{cases}
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) \leq \textbf{operating_units}_\text{node,tech,timestep} \times \textit{timestep_resolution}_\text{timestep} \times \textit{energy_cap_per_unit}_\text{node,tech}&\quad
-            \\
-        \end{cases}
-
-carrier_consumption_max_milp
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Set the upper bound of a non-`conversion_plus` technology's ability to consume energy, for any technology using integer units to define its capacity.
+Set the upper bound of a non-`conversion_plus` technology's ability to produce carriers, for any technology using integer units to define its capacity.
 
 .. container:: scrolling-wrapper
 
@@ -928,17 +922,38 @@ Set the upper bound of a non-`conversion_plus` technology's ability to consume e
             \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\exists (\textbf{operating_units}_\text{node,tech,timestep}) \land \neg (\text{tech_group=conversion_plus}) \land \textit{allowed_carrier_con}_\text{node,tech}\mathord{=}\text{true})
+            \text{if } (\exists (\textbf{operating_units}_\text{node,tech,timestep}) \land \exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \neg (\text{tech_group=conversion_plus}) \land \textit{allowed_flow_out}_\text{node,tech}\mathord{=}\text{true})
         \end{array}
         \begin{cases}
-            \textbf{carrier_con}_\text{node,tech,carrier,timestep} \geq -1 \times \textbf{operating_units}_\text{node,tech,timestep} \times \textit{timestep_resolution}_\text{timestep} \times \textit{energy_cap_per_unit}_\text{node,tech}&\quad
+            \textbf{flow_out}_\text{node,tech,carrier,timestep} \leq \textbf{operating_units}_\text{node,tech,timestep} \times \textit{timestep_resolution}_\text{timestep} \times \textit{flow_cap_per_unit}_\text{node,tech} \times \textit{parasitic_eff}_\text{node,tech}&\quad
             \\
         \end{cases}
 
-carrier_production_min_milp
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+flow_out_max_conversion_plus_milp
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set the lower bound of a non-`conversion_plus` technology's ability to produce energy, for any technology using integer units to define its capacity.
+Set the upper bound of a `conversion_plus` technology's ability to outflow across all of its `out` carriers, if it uses integer units to define its capacity.
+
+.. container:: scrolling-wrapper
+
+    .. math::
+        \begin{array}{r}
+            \forall{}
+            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
+            \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
+            \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
+            \\
+            \text{if } (\exists (\textbf{operating_units}_\text{node,tech,timestep}) \land \text{tech_group=conversion_plus} \land \textit{allowed_flow_out}_\text{node,tech}\mathord{=}\text{true})
+        \end{array}
+        \begin{cases}
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) \leq \textbf{operating_units}_\text{node,tech,timestep} \times \textit{timestep_resolution}_\text{timestep} \times \textit{flow_cap_per_unit}_\text{node,tech}&\quad
+            \\
+        \end{cases}
+
+flow_in_max_milp
+^^^^^^^^^^^^^^^^
+
+Set the upper bound of a non-`conversion_plus` technology's ability to consume carriers, for any technology using integer units to define its capacity.
 
 .. container:: scrolling-wrapper
 
@@ -950,17 +965,39 @@ Set the lower bound of a non-`conversion_plus` technology's ability to produce e
             \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\exists (\textbf{operating_units}_\text{node,tech,timestep}) \land \exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \exists (\textit{energy_cap_min_use}_\text{node,tech}) \land \neg (\text{tech_group=conversion_plus}) \land \textit{allowed_carrier_prod}_\text{node,tech}\mathord{=}\text{true})
+            \text{if } (\exists (\textbf{operating_units}_\text{node,tech,timestep}) \land \neg (\text{tech_group=conversion_plus}) \land \textit{allowed_flow_in}_\text{node,tech}\mathord{=}\text{true})
         \end{array}
         \begin{cases}
-            \textbf{carrier_prod}_\text{node,tech,carrier,timestep} \geq \textbf{operating_units}_\text{node,tech,timestep} \times \textit{timestep_resolution}_\text{timestep} \times \textit{energy_cap_per_unit}_\text{node,tech} \times \textit{energy_cap_min_use}_\text{node,tech}&\quad
+            \textbf{flow_in}_\text{node,tech,carrier,timestep} \leq \textbf{operating_units}_\text{node,tech,timestep} \times \textit{timestep_resolution}_\text{timestep} \times \textit{flow_cap_per_unit}_\text{node,tech}&\quad
             \\
         \end{cases}
 
-carrier_production_min_conversion_plus_milp
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+flow_out_min_milp
+^^^^^^^^^^^^^^^^^
 
-Set the lower bound of a `conversion_plus` technology's ability to produce energy across all of its `out` energy carriers, if it uses integer units to define its capacity.
+Set the lower bound of a non-`conversion_plus` technology's ability to produce carriers, for any technology using integer units to define its capacity.
+
+.. container:: scrolling-wrapper
+
+    .. math::
+        \begin{array}{r}
+            \forall{}
+            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
+            \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
+            \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
+            \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
+            \\
+            \text{if } (\exists (\textbf{operating_units}_\text{node,tech,timestep}) \land \exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \exists (\textit{flow_out_min_relative}_\text{node,tech}) \land \neg (\text{tech_group=conversion_plus}) \land \textit{allowed_flow_out}_\text{node,tech}\mathord{=}\text{true})
+        \end{array}
+        \begin{cases}
+            \textbf{flow_out}_\text{node,tech,carrier,timestep} \geq \textbf{operating_units}_\text{node,tech,timestep} \times \textit{timestep_resolution}_\text{timestep} \times \textit{flow_cap_per_unit}_\text{node,tech} \times \textit{flow_out_min_relative}_\text{node,tech}&\quad
+            \\
+        \end{cases}
+
+flow_out_min_conversion_plus_milp
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Set the lower bound of a `conversion_plus` technology's ability to outflow across all of its `out` carriers, if it uses integer units to define its capacity.
 
 .. container:: scrolling-wrapper
 
@@ -971,10 +1008,10 @@ Set the lower bound of a `conversion_plus` technology's ability to produce energ
             \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\exists (\textbf{operating_units}_\text{node,tech,timestep}) \land \exists (\textit{energy_cap_min_use}_\text{node,tech}) \land \text{tech_group=conversion_plus} \land \textit{allowed_carrier_prod}_\text{node,tech}\mathord{=}\text{true})
+            \text{if } (\exists (\textbf{operating_units}_\text{node,tech,timestep}) \land \exists (\textit{flow_out_min_relative}_\text{node,tech}) \land \text{tech_group=conversion_plus} \land \textit{allowed_flow_out}_\text{node,tech}\mathord{=}\text{true})
         \end{array}
         \begin{cases}
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) \geq \textbf{operating_units}_\text{node,tech,timestep} \times \textit{timestep_resolution}_\text{timestep} \times \textit{energy_cap_per_unit}_\text{node,tech} \times \textit{energy_cap_min_use}_\text{node,tech}&\quad
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) \geq \textbf{operating_units}_\text{node,tech,timestep} \times \textit{timestep_resolution}_\text{timestep} \times \textit{flow_cap_per_unit}_\text{node,tech} \times \textit{flow_out_min_relative}_\text{node,tech}&\quad
             \\
         \end{cases}
 
@@ -998,10 +1035,10 @@ Fix the storage capacity of any technology using integer units to define its cap
             \\
         \end{cases}
 
-energy_capacity_units_milp
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+flow_capacity_units_milp
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-Fix the energy capacity of any technology using integer units to define its capacity.
+Fix the flow capacity of any technology using integer units to define its capacity.
 
 .. container:: scrolling-wrapper
 
@@ -1011,17 +1048,17 @@ Fix the energy capacity of any technology using integer units to define its capa
             \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
             \text{ tech }\negthickspace \in \negthickspace\text{ techs }
             \\
-            \text{if } (\exists (\textbf{operating_units}_\text{node,tech,timestep}) \land \exists (\textit{energy_cap_per_unit}_\text{node,tech}))
+            \text{if } (\exists (\textbf{operating_units}_\text{node,tech,timestep}) \land \exists (\textit{flow_cap_per_unit}_\text{node,tech}))
         \end{array}
         \begin{cases}
-            \textbf{energy_cap}_\text{node,tech} = \textbf{units}_\text{node,tech} \times \textit{energy_cap_per_unit}_\text{node,tech}&\quad
+            \textbf{flow_cap}_\text{node,tech} = \textbf{units}_\text{node,tech} \times \textit{flow_cap_per_unit}_\text{node,tech}&\quad
             \\
         \end{cases}
 
-energy_capacity_max_purchase_milp
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+flow_capacity_max_purchase_milp
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set the upper bound on, or a fixed total of, a technology's energy capacity, for any technology with binary capacity purchasing.
+Set the upper bound on, or a fixed total of, a technology's flow capacity, for any technology with binary capacity purchasing.
 
 .. container:: scrolling-wrapper
 
@@ -1031,21 +1068,17 @@ Set the upper bound on, or a fixed total of, a technology's energy capacity, for
             \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
             \text{ tech }\negthickspace \in \negthickspace\text{ techs }
             \\
-            \text{if } (\exists (\textbf{purchased}_\text{node,tech}) \land (\exists (\textit{energy_cap_max}_\text{node,tech}) \lor \exists (\textit{energy_cap_equals}_\text{node,tech})))
+            \text{if } (\exists (\textbf{purchased}_\text{node,tech}) \land \exists (\textit{flow_cap_max}_\text{node,tech}))
         \end{array}
         \begin{cases}
-            \textbf{energy_cap}_\text{node,tech} = \textit{energy_cap_equals}_\text{node,tech} \times \textit{energy_cap_scale}_\text{node,tech} \times \textbf{purchased}_\text{node,tech}&\quad
-            \text{if } (\exists (\textit{energy_cap_equals}_\text{node,tech}))
-            \\
-            \textbf{energy_cap}_\text{node,tech} \leq \textit{energy_cap_max}_\text{node,tech} \times \textit{energy_cap_scale}_\text{node,tech} \times \textbf{purchased}_\text{node,tech}&\quad
-            \text{if } (\neg (\exists (\textit{energy_cap_equals}_\text{node,tech})))
+            \textbf{flow_cap}_\text{node,tech} \leq \textit{flow_cap_max}_\text{node,tech} \times \textbf{purchased}_\text{node,tech}&\quad
             \\
         \end{cases}
 
-energy_capacity_min_purchase_milp
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+flow_capacity_min_purchase_milp
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set the lower bound on a technology's energy capacity, for any technology with binary capacity purchasing.
+Set the lower bound on a technology's flow capacity, for any technology with binary capacity purchasing.
 
 .. container:: scrolling-wrapper
 
@@ -1055,10 +1088,10 @@ Set the lower bound on a technology's energy capacity, for any technology with b
             \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
             \text{ tech }\negthickspace \in \negthickspace\text{ techs }
             \\
-            \text{if } (\exists (\textbf{purchased}_\text{node,tech}) \land \exists (\textit{energy_cap_min}_\text{node,tech}) \land \neg (\exists (\textit{energy_cap_equals}_\text{node,tech})))
+            \text{if } (\exists (\textbf{purchased}_\text{node,tech}) \land \exists (\textit{flow_cap_min}_\text{node,tech}) \land \neg (\exists (\textit{flow_cap_equals})))
         \end{array}
         \begin{cases}
-            \textbf{energy_cap}_\text{node,tech} \geq \textit{energy_cap_min}_\text{node,tech} \times \textit{energy_cap_scale}_\text{node,tech} \times \textbf{purchased}_\text{node,tech}&\quad
+            \textbf{flow_cap}_\text{node,tech} \geq \textit{flow_cap_min}_\text{node,tech} \times \textbf{purchased}_\text{node,tech}&\quad
             \\
         \end{cases}
 
@@ -1075,14 +1108,10 @@ Set the upper bound on, or a fixed total of, a technology's storage capacity, fo
             \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
             \text{ tech }\negthickspace \in \negthickspace\text{ techs }
             \\
-            \text{if } (\exists (\textbf{purchased}_\text{node,tech}) \land (\exists (\textit{storage_cap_max}_\text{node,tech}) \lor \exists (\textit{storage_cap_equals}_\text{node,tech})))
+            \text{if } (\exists (\textbf{purchased}_\text{node,tech}) \land \exists (\textit{storage_cap_max}_\text{node,tech}))
         \end{array}
         \begin{cases}
-            \textbf{storage_cap}_\text{node,tech} = \textit{storage_cap_equals}_\text{node,tech} \times \textbf{purchased}_\text{node,tech}&\quad
-            \text{if } (\exists (\textit{storage_cap_equals}_\text{node,tech}))
-            \\
             \textbf{storage_cap}_\text{node,tech} \leq \textit{storage_cap_max}_\text{node,tech} \times \textbf{purchased}_\text{node,tech}&\quad
-            \text{if } (\neg (\exists (\textit{storage_cap_equals}_\text{node,tech})))
             \\
         \end{cases}
 
@@ -1099,17 +1128,17 @@ Set the lower bound on a technology's storage capacity, for any technology with 
             \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
             \text{ tech }\negthickspace \in \negthickspace\text{ techs }
             \\
-            \text{if } (\exists (\textbf{purchased}_\text{node,tech}) \land \exists (\textit{storage_cap_min}_\text{node,tech}) \land \neg (\exists (\textit{storage_cap_equals}_\text{node,tech})))
+            \text{if } (\exists (\textbf{purchased}_\text{node,tech}) \land \exists (\textit{storage_cap_min}_\text{node,tech}) \land \neg (\exists (\textit{storage_cap_equals})))
         \end{array}
         \begin{cases}
             \textbf{storage_cap}_\text{node,tech} \geq \textit{storage_cap_min}_\text{node,tech} \times \textbf{purchased}_\text{node,tech}&\quad
             \\
         \end{cases}
 
-unit_capacity_systemwide_milp
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+unit_capacity_max_systemwide_milp
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set the upper bound on, or a fixed total of, the total number of units of a technology that can be purchased across all nodes where the technology can exist, for any technology using integer units to define its capacity.
+Set the upper bound on the total number of units of a technology that can be purchased across all nodes where the technology can exist, for any technology using integer units to define its capacity.
 
 .. container:: scrolling-wrapper
 
@@ -1118,27 +1147,44 @@ Set the upper bound on, or a fixed total of, the total number of units of a tech
             \forall{}
             \text{ tech }\negthickspace \in \negthickspace\text{ techs }
             \\
-            \text{if } ((\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech})) \land (\exists (\textit{units_max_systemwide}_\text{tech}) \lor \exists (\textit{units_equals_systemwide}_\text{tech})))
+            \text{if } ((\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech})) \land \exists (\textit{units_max_systemwide}_\text{tech}))
         \end{array}
         \begin{cases}
-            \sum\limits_{\text{node} \in \text{nodes}} (\textbf{purchased}_\text{node,tech}) = \textit{units_equals_systemwide}_\text{tech}&\quad
-            \text{if } (\exists (\textit{units_equals_systemwide}_\text{tech}))\land{}(\exists (\textbf{purchased}_\text{node,tech}))
-            \\
-            \sum\limits_{\text{node} \in \text{nodes}} (\textbf{units}_\text{node,tech}) = \textit{units_equals_systemwide}_\text{tech}&\quad
-            \text{if } (\exists (\textit{units_equals_systemwide}_\text{tech}))\land{}(\exists (\textbf{units}_\text{node,tech}))
-            \\
             \sum\limits_{\text{node} \in \text{nodes}} (\textbf{purchased}_\text{node,tech}) \leq \textit{units_max_systemwide}_\text{tech}&\quad
-            \text{if } (\neg (\exists (\textit{units_equals_systemwide}_\text{tech})))\land{}(\exists (\textbf{purchased}_\text{node,tech}))
+            \text{if } (\exists (\textbf{purchased}_\text{node,tech}))
             \\
             \sum\limits_{\text{node} \in \text{nodes}} (\textbf{units}_\text{node,tech}) \leq \textit{units_max_systemwide}_\text{tech}&\quad
-            \text{if } (\neg (\exists (\textit{units_equals_systemwide}_\text{tech})))\land{}(\exists (\textbf{units}_\text{node,tech}))
+            \text{if } (\exists (\textbf{units}_\text{node,tech}))
             \\
         \end{cases}
 
-asynchronous_con_milp
-^^^^^^^^^^^^^^^^^^^^^
+unit_capacity_min_systemwide_milp
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set a technology's ability to consume energy in the same timestep that it is producing energy, for any technology using the asynchronous production/consumption binary switch.
+Set the lower bound on the total number of units of a technology that can be purchased across all nodes where the technology can exist, for any technology using integer units to define its capacity.
+
+.. container:: scrolling-wrapper
+
+    .. math::
+        \begin{array}{r}
+            \forall{}
+            \text{ tech }\negthickspace \in \negthickspace\text{ techs }
+            \\
+            \text{if } ((\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech})) \land \exists (\textit{units_min_systemwide}_\text{tech}))
+        \end{array}
+        \begin{cases}
+            \sum\limits_{\text{node} \in \text{nodes}} (\textbf{purchased}_\text{node,tech}) \geq \textit{units_min_systemwide}_\text{tech}&\quad
+            \text{if } (\exists (\textbf{purchased}_\text{node,tech}))
+            \\
+            \sum\limits_{\text{node} \in \text{nodes}} (\textbf{units}_\text{node,tech}) \geq \textit{units_min_systemwide}_\text{tech}&\quad
+            \text{if } (\exists (\textbf{units}_\text{node,tech}))
+            \\
+        \end{cases}
+
+async_flow_in_milp
+^^^^^^^^^^^^^^^^^^
+
+Set a technology's ability to have inflow in the same timestep that it has outflow, for any technology using the asynchronous flow binary switch.
 
 .. container:: scrolling-wrapper
 
@@ -1149,17 +1195,17 @@ Set a technology's ability to consume energy in the same timestep that it is pro
             \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\exists (\textbf{prod_con_switch}_\text{node,tech,timestep}))
+            \text{if } (\exists (\textbf{async_flow_switch}_\text{node,tech,timestep}))
         \end{array}
         \begin{cases}
-            -1 \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}) \leq (1 - \textbf{prod_con_switch}_\text{node,tech,timestep}) \times \textit{bigM}&\quad
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}) \leq (1 - \textbf{async_flow_switch}_\text{node,tech,timestep}) \times \textit{bigM}&\quad
             \\
         \end{cases}
 
-asynchronous_prod_milp
-^^^^^^^^^^^^^^^^^^^^^^
+async_flow_out_milp
+^^^^^^^^^^^^^^^^^^^
 
-Set a technology's ability to produce energy in the same timestep that it is consuming energy, for any technology using the asynchronous production/consumption binary switch.
+Set a technology's ability to have outflow in the same timestep that it has inflow, for any technology using the asynchronous flow binary switch.
 
 .. container:: scrolling-wrapper
 
@@ -1170,17 +1216,17 @@ Set a technology's ability to produce energy in the same timestep that it is con
             \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\exists (\textbf{prod_con_switch}_\text{node,tech,timestep}))
+            \text{if } (\exists (\textbf{async_flow_switch}_\text{node,tech,timestep}))
         \end{array}
         \begin{cases}
-            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) \leq \textbf{prod_con_switch}_\text{node,tech,timestep} \times \textit{bigM}&\quad
+            \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) \leq \textbf{async_flow_switch}_\text{node,tech,timestep} \times \textit{bigM}&\quad
             \\
         \end{cases}
 
 ramping_up
 ^^^^^^^^^^
 
-Set the upper bound on a technology's ability to ramp energy production up beyond a certain percentage compared to the previous timestep.
+Set the upper bound on a technology's ability to ramp outflow up beyond a certain percentage compared to the previous timestep.
 
 .. container:: scrolling-wrapper
 
@@ -1192,24 +1238,24 @@ Set the upper bound on a technology's ability to ramp energy production up beyon
             \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\exists (\textit{energy_ramping}_\text{node,tech,timestep}) \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]}))
+            \text{if } (\exists (\textit{flow_ramping}_\text{node,tech}) \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]}))
         \end{array}
         \begin{cases}
-            \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{timestep_resolution}_\text{timestep} } - \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep-1} }{ \textit{timestep_resolution}_\text{timestep-1} } \leq \textit{energy_ramping}_\text{node,tech,timestep} \times \textbf{energy_cap}_\text{node,tech}&\quad
-            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_carrier_prod}_\text{node,tech}\mathord{=}\text{true} \land \neg (\textit{allowed_carrier_con}_\text{node,tech}\mathord{=}\text{true}))
+            \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{timestep_resolution}_\text{timestep} } - \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep-1} }{ \textit{timestep_resolution}_\text{timestep-1} } \leq \textit{flow_ramping}_\text{node,tech} \times \textbf{flow_cap}_\text{node,tech}&\quad
+            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_flow_out}_\text{node,tech}\mathord{=}\text{true} \land \neg (\textit{allowed_flow_in}_\text{node,tech}\mathord{=}\text{true}))
             \\
-            \frac{ \textbf{carrier_con}_\text{node,tech,carrier,timestep} }{ \textit{timestep_resolution}_\text{timestep} } - \frac{ \textbf{carrier_con}_\text{node,tech,carrier,timestep-1} }{ \textit{timestep_resolution}_\text{timestep-1} } \leq \textit{energy_ramping}_\text{node,tech,timestep} \times \textbf{energy_cap}_\text{node,tech}&\quad
-            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_carrier_con}_\text{node,tech}\mathord{=}\text{true} \land \neg (\textit{allowed_carrier_prod}_\text{node,tech}\mathord{=}\text{true}))
+            \frac{ \textbf{flow_in}_\text{node,tech,carrier,timestep} }{ \textit{timestep_resolution}_\text{timestep} } - \frac{ \textbf{flow_in}_\text{node,tech,carrier,timestep-1} }{ \textit{timestep_resolution}_\text{timestep-1} } \leq \textit{flow_ramping}_\text{node,tech} \times \textbf{flow_cap}_\text{node,tech}&\quad
+            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_flow_in}_\text{node,tech}\mathord{=}\text{true} \land \neg (\textit{allowed_flow_out}_\text{node,tech}\mathord{=}\text{true}))
             \\
-            \frac{ (\textbf{carrier_con}_\text{node,tech,carrier,timestep} + \textbf{carrier_prod}_\text{node,tech,carrier,timestep}) }{ \textit{timestep_resolution}_\text{timestep} } - \frac{ (\textbf{carrier_con}_\text{node,tech,carrier,timestep-1} + \textbf{carrier_prod}_\text{node,tech,carrier,timestep-1}) }{ \textit{timestep_resolution}_\text{timestep-1} } \leq \textit{energy_ramping}_\text{node,tech,timestep} \times \textbf{energy_cap}_\text{node,tech}&\quad
-            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_carrier_con}_\text{node,tech}\mathord{=}\text{true} \land \textit{allowed_carrier_prod}_\text{node,tech}\mathord{=}\text{true})
+            \frac{ (\textbf{flow_out}_\text{node,tech,carrier,timestep} - \textbf{flow_in}_\text{node,tech,carrier,timestep}) }{ \textit{timestep_resolution}_\text{timestep} } - \frac{ (\textbf{flow_out}_\text{node,tech,carrier,timestep-1} - \textbf{flow_in}_\text{node,tech,carrier,timestep-1}) }{ \textit{timestep_resolution}_\text{timestep-1} } \leq \textit{flow_ramping}_\text{node,tech} \times \textbf{flow_cap}_\text{node,tech}&\quad
+            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_flow_in}_\text{node,tech}\mathord{=}\text{true} \land \textit{allowed_flow_out}_\text{node,tech}\mathord{=}\text{true})
             \\
         \end{cases}
 
 ramping_down
 ^^^^^^^^^^^^
 
-Set the upper bound on a technology's ability to ramp energy production down beyond a certain percentage compared to the previous timestep.
+Set the upper bound on a technology's ability to ramp outflow down beyond a certain percentage compared to the previous timestep.
 
 .. container:: scrolling-wrapper
 
@@ -1221,17 +1267,17 @@ Set the upper bound on a technology's ability to ramp energy production down bey
             \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\exists (\textit{energy_ramping}_\text{node,tech,timestep}) \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]}))
+            \text{if } (\exists (\textit{flow_ramping}_\text{node,tech}) \land \neg (\textit{timesteps}_\text{timestep}\mathord{=}\text{timesteps[0]}))
         \end{array}
         \begin{cases}
-            -1 \times \textit{energy_ramping}_\text{node,tech,timestep} \times \textbf{energy_cap}_\text{node,tech} \leq \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep} }{ \textit{timestep_resolution}_\text{timestep} } - \frac{ \textbf{carrier_prod}_\text{node,tech,carrier,timestep-1} }{ \textit{timestep_resolution}_\text{timestep-1} }&\quad
-            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_carrier_prod}_\text{node,tech}\mathord{=}\text{true} \land \neg (\textit{allowed_carrier_con}_\text{node,tech}\mathord{=}\text{true}))
+            -1 \times \textit{flow_ramping}_\text{node,tech} \times \textbf{flow_cap}_\text{node,tech} \leq \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep} }{ \textit{timestep_resolution}_\text{timestep} } - \frac{ \textbf{flow_out}_\text{node,tech,carrier,timestep-1} }{ \textit{timestep_resolution}_\text{timestep-1} }&\quad
+            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_flow_out}_\text{node,tech}\mathord{=}\text{true} \land \neg (\textit{allowed_flow_in}_\text{node,tech}\mathord{=}\text{true}))
             \\
-            -1 \times \textit{energy_ramping}_\text{node,tech,timestep} \times \textbf{energy_cap}_\text{node,tech} \leq \frac{ \textbf{carrier_con}_\text{node,tech,carrier,timestep} }{ \textit{timestep_resolution}_\text{timestep} } - \frac{ \textbf{carrier_con}_\text{node,tech,carrier,timestep-1} }{ \textit{timestep_resolution}_\text{timestep-1} }&\quad
-            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_carrier_con}_\text{node,tech}\mathord{=}\text{true} \land \neg (\textit{allowed_carrier_prod}_\text{node,tech}\mathord{=}\text{true}))
+            -1 \times \textit{flow_ramping}_\text{node,tech} \times \textbf{flow_cap}_\text{node,tech} \leq \frac{ \textbf{flow_in}_\text{node,tech,carrier,timestep} }{ \textit{timestep_resolution}_\text{timestep} } - \frac{ \textbf{flow_in}_\text{node,tech,carrier,timestep-1} }{ \textit{timestep_resolution}_\text{timestep-1} }&\quad
+            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_flow_in}_\text{node,tech}\mathord{=}\text{true} \land \neg (\textit{allowed_flow_out}_\text{node,tech}\mathord{=}\text{true}))
             \\
-            -1 \times \textit{energy_ramping}_\text{node,tech,timestep} \times \textbf{energy_cap}_\text{node,tech} \leq \frac{ (\textbf{carrier_con}_\text{node,tech,carrier,timestep} + \textbf{carrier_prod}_\text{node,tech,carrier,timestep}) }{ \textit{timestep_resolution}_\text{timestep} } - \frac{ (\textbf{carrier_con}_\text{node,tech,carrier,timestep-1} + \textbf{carrier_prod}_\text{node,tech,carrier,timestep-1}) }{ \textit{timestep_resolution}_\text{timestep-1} }&\quad
-            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_carrier_con}_\text{node,tech}\mathord{=}\text{true} \land \textit{allowed_carrier_prod}_\text{node,tech}\mathord{=}\text{true})
+            -1 \times \textit{flow_ramping}_\text{node,tech} \times \textbf{flow_cap}_\text{node,tech} \leq \frac{ (\textbf{flow_out}_\text{node,tech,carrier,timestep} - \textbf{flow_in}_\text{node,tech,carrier,timestep}) }{ \textit{timestep_resolution}_\text{timestep} } - \frac{ (\textbf{flow_out}_\text{node,tech,carrier,timestep-1} - \textbf{flow_in}_\text{node,tech,carrier,timestep-1}) }{ \textit{timestep_resolution}_\text{timestep-1} }&\quad
+            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_flow_in}_\text{node,tech}\mathord{=}\text{true} \land \textit{allowed_flow_out}_\text{node,tech}\mathord{=}\text{true})
             \\
         \end{cases}
 
@@ -1253,98 +1299,98 @@ The operating costs per timestep of a technology
             \text{ cost }\negthickspace \in \negthickspace\text{ costs, }
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
-            \text{if } (\exists (\textit{cost_export}_\text{node,tech,cost,timestep}) \lor \exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \lor \exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}))
+            \text{if } (\exists (\textit{cost_export}_\text{node,tech,cost}) \lor \exists (\textit{cost_om_con}_\text{node,tech,cost}) \lor \exists (\textit{cost_om_prod}_\text{node,tech,cost}))
         \end{array}
         \begin{cases}
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times \textbf{resource_con}_\text{node,tech,timestep})&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=supply_plus})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \textbf{source_use}_\text{node,tech,timestep})&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=supply_plus})\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times \textbf{resource_con}_\text{node,tech,timestep})&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=supply_plus})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus}))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \textbf{source_use}_\text{node,tech,timestep})&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=supply_plus})\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times \textbf{resource_con}_\text{node,tech,timestep})&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=supply_plus})\land{}(\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep})))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \frac{ \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) }{ \textit{flow_eff}_\text{node,tech} })&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=supply} \land \textit{flow_eff}_\text{node,tech}\mathord{>}\text{0} \land \text{carrier_tier} \in \text{[out]})\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \frac{ \textit{cost_om_con}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) }{ \textit{energy_eff}_\text{node,tech,timestep} })&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=supply} \land \textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0} \land \text{carrier_tier} \in \text{[out]})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \frac{ \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) }{ \textit{flow_eff}_\text{node,tech} })&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=supply} \land \textit{flow_eff}_\text{node,tech}\mathord{>}\text{0} \land \text{carrier_tier} \in \text{[out]})\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \frac{ \textit{cost_om_con}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) }{ \textit{energy_eff}_\text{node,tech,timestep} })&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=supply} \land \textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0} \land \text{carrier_tier} \in \text{[out]})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus}))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_in}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \frac{ \textit{cost_om_con}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) }{ \textit{energy_eff}_\text{node,tech,timestep} })&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=supply} \land \textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0} \land \text{carrier_tier} \in \text{[out]})\land{}(\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep})))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_in}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times -1 \times \sum\limits_{\text{carrier=primary_carrier_in}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus} \lor \text{tech_group=supply_plus} \lor \text{tech_group=supply}) \land \text{carrier_tier} \in \text{[in]})\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times -1 \times \sum\limits_{\text{carrier=primary_carrier_in}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus}))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus} \lor \text{tech_group=supply_plus} \lor \text{tech_group=supply}) \land \text{carrier_tier} \in \text{[in]})\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times -1 \times \sum\limits_{\text{carrier=primary_carrier_in}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})\land{}(\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep})))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\neg (\exists (\textit{cost_om_con}_\text{node,tech,cost})))\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times -1 \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus} \lor \text{tech_group=supply_plus} \lor \text{tech_group=supply}) \land \text{carrier_tier} \in \text{[in]})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\neg (\exists (\textit{cost_om_con}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times -1 \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus} \lor \text{tech_group=supply_plus} \lor \text{tech_group=supply}) \land \text{carrier_tier} \in \text{[in]})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus}))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \textbf{source_use}_\text{node,tech,timestep})&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=supply_plus})\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times -1 \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus} \lor \text{tech_group=supply_plus} \lor \text{tech_group=supply}) \land \text{carrier_tier} \in \text{[in]})\land{}(\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep})))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \textbf{source_use}_\text{node,tech,timestep})&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=supply_plus})\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\neg (\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \frac{ \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) }{ \textit{flow_eff}_\text{node,tech} })&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=supply} \land \textit{flow_eff}_\text{node,tech}\mathord{>}\text{0} \land \text{carrier_tier} \in \text{[out]})\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\neg (\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus}))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \frac{ \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) }{ \textit{flow_eff}_\text{node,tech} })&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=supply} \land \textit{flow_eff}_\text{node,tech}\mathord{>}\text{0} \land \text{carrier_tier} \in \text{[out]})\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{carrier_export}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost,timestep}))\land{}(\neg (\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep})))\land{}(\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep})))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_in}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times \textbf{resource_con}_\text{node,tech,timestep})&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=supply_plus})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_in}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times \textbf{resource_con}_\text{node,tech,timestep})&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=supply_plus})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus}))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus} \lor \text{tech_group=supply_plus} \lor \text{tech_group=supply}) \land \text{carrier_tier} \in \text{[in]})\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_con}_\text{node,tech,cost,timestep} \times \textbf{resource_con}_\text{node,tech,timestep})&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=supply_plus})\land{}(\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep})))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus}))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus} \lor \text{tech_group=supply_plus} \lor \text{tech_group=supply}) \land \text{carrier_tier} \in \text{[in]})\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \frac{ \textit{cost_om_con}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) }{ \textit{energy_eff}_\text{node,tech,timestep} })&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=supply} \land \textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0} \land \text{carrier_tier} \in \text{[out]})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus}))\land{}(\neg (\exists (\textit{cost_om_con}_\text{node,tech,cost})))\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \frac{ \textit{cost_om_con}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) }{ \textit{energy_eff}_\text{node,tech,timestep} })&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=supply} \land \textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0} \land \text{carrier_tier} \in \text{[out]})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus}))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\exists (\textit{cost_om_prod}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus}))\land{}(\neg (\exists (\textit{cost_om_con}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\frac{ \textit{cost_om_con}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) }{ \textit{energy_eff}_\text{node,tech,timestep} })&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=supply} \land \textit{energy_eff}_\text{node,tech,timestep}\mathord{>}\text{0} \land \text{carrier_tier} \in \text{[out]})\land{}(\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep})))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \textbf{source_use}_\text{node,tech,timestep})&\quad
+            \text{if } (\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=supply_plus})\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times -1 \times \sum\limits_{\text{carrier=primary_carrier_in}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_con}_\text{node,tech,cost} \times \textbf{source_use}_\text{node,tech,timestep})&\quad
+            \text{if } (\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=supply_plus})\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times -1 \times \sum\limits_{\text{carrier=primary_carrier_in}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus}))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \frac{ \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) }{ \textit{flow_eff}_\text{node,tech} })&\quad
+            \text{if } (\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=supply} \land \textit{flow_eff}_\text{node,tech}\mathord{>}\text{0} \land \text{carrier_tier} \in \text{[out]})\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_con}_\text{node,tech,cost,timestep} \times -1 \times \sum\limits_{\text{carrier=primary_carrier_in}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})\land{}(\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep})))
+            \textit{timestep_weights}_\text{timestep} \times (\frac{ \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{flow_out}_\text{node,tech,carrier,timestep}) }{ \textit{flow_eff}_\text{node,tech} })&\quad
+            \text{if } (\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=supply} \land \textit{flow_eff}_\text{node,tech}\mathord{>}\text{0} \land \text{carrier_tier} \in \text{[out]})\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times -1 \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus} \lor \text{tech_group=supply_plus} \lor \text{tech_group=supply}) \land \text{carrier_tier} \in \text{[in]})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_in}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost,timestep} \times -1 \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus} \lor \text{tech_group=supply_plus} \lor \text{tech_group=supply}) \land \text{carrier_tier} \in \text{[in]})\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus}))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier=primary_carrier_in}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \text{tech_group=conversion_plus})\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_con}_\text{node,tech,cost,timestep} \times -1 \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{carrier_con}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus} \lor \text{tech_group=supply_plus} \lor \text{tech_group=supply}) \land \text{carrier_tier} \in \text{[in]})\land{}(\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep})))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}) + \textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus} \lor \text{tech_group=supply_plus} \lor \text{tech_group=supply}) \land \text{carrier_tier} \in \text{[in]})\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier=primary_carrier_out}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\neg (\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \text{tech_group=conversion_plus})
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_con}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(in)}} (\textbf{flow_in}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_om_con}_\text{node,tech,cost}) \land \neg (\text{tech_group=conversion_plus} \lor \text{tech_group=supply_plus} \lor \text{tech_group=supply}) \land \text{carrier_tier} \in \text{[in]})\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
-            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_om_prod}_\text{node,tech,cost,timestep} \times \sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (\textbf{carrier_prod}_\text{node,tech,carrier,timestep}))&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\neg (\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep})))\land{}(\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep}) \land \neg (\text{tech_group=conversion_plus}))
+            \textit{timestep_weights}_\text{timestep} \times (\textit{cost_export}_\text{node,tech,cost} \times \sum\limits_{\text{carrier} \in \text{carriers}} (\textbf{flow_export}_\text{node,tech,carrier,timestep}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_om_con}_\text{node,tech,cost})))\land{}(\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \exists (\textit{cost_export}_\text{node,tech,cost}))
             \\
             \textit{timestep_weights}_\text{timestep} \times (0)&\quad
-            \text{if } (\neg (\exists (\textit{cost_export}_\text{node,tech,cost,timestep})))\land{}(\neg (\exists (\textit{cost_om_con}_\text{node,tech,cost,timestep})))\land{}(\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost,timestep})))
+            \text{if } (\neg (\exists (\textit{cost_om_prod}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_om_con}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_export}_\text{node,tech,cost})))
             \\
         \end{cases}
 
@@ -1362,296 +1408,296 @@ The installation costs of a technology, including annualised investment costs an
             \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
             \text{ cost }\negthickspace \in \negthickspace\text{ costs }
             \\
-            \text{if } (\exists (\textit{cost_energy_cap}_\text{node,tech,cost}) \lor \exists (\textit{cost_om_annual}_\text{node,tech,cost}) \lor \exists (\textit{cost_om_annual_investment_fraction}_\text{node,tech,cost}) \lor \exists (\textit{cost_purchase}_\text{node,tech,cost}) \lor \exists (\textit{cost_resource_area}_\text{node,tech,cost}) \lor \exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \lor \exists (\textit{cost_storage_cap}_\text{node,tech,cost}))
+            \text{if } (\exists (\textit{cost_flow_cap}_\text{node,tech,cost}) \lor \exists (\textit{cost_om_annual}_\text{node,tech,cost}) \lor \exists (\textit{cost_om_annual_investment_fraction}_\text{node,tech,cost}) \lor \exists (\textit{cost_purchase}_\text{node,tech,cost}) \lor \exists (\textit{cost_area_use}_\text{node,tech,cost}) \lor \exists (\textit{cost_source_cap}_\text{node,tech,cost}) \lor \exists (\textit{cost_storage_cap}_\text{node,tech,cost}))
         \end{array}
         \begin{cases}
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (0) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_purchase}_\text{node,tech,cost} \times \textbf{purchased}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{purchased}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_storage_cap}_\text{node,tech,cost} \times \textbf{storage_cap}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech} + \textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_purchase}_\text{node,tech,cost} \times \textbf{units}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land \exists (\textbf{units}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_source_cap}_\text{node,tech,cost} \times \textbf{source_cap}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech}))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_energy_cap}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\exists (\textit{cost_energy_cap}_\text{node,tech,cost}))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (0) \times (0.5 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\text{tech_group=transmission})\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech} + \textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech} + \textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_cap}_\text{node,tech,cost} \times \textbf{resource_cap}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_area_use}_\text{node,tech,cost} \times \textbf{area_use}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech}))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_resource_area}_\text{node,tech,cost} \times \textbf{resource_area}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech}))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (\textit{cost_flow_cap}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\exists (\textit{cost_flow_cap}_\text{node,tech,cost}))
             \\
-            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (0) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{energy_cap}_\text{node,tech}))&\quad
-            \text{if } (\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_energy_cap}_\text{node,tech,cost})))\land{}(\neg (\exists (\textit{cost_resource_cap}_\text{node,tech,cost}) \land \exists (\textbf{resource_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_resource_area}_\text{node,tech,cost}) \land \exists (\textbf{resource_area}_\text{node,tech})))
+            \textit{annualisation_weight} \times ((\textit{cost_depreciation_rate}_\text{node,tech,cost} \times (0) \times (1 + \textit{cost_om_annual_investment_fraction}_\text{node,tech,cost})) + (\textit{cost_om_annual}_\text{node,tech,cost} \times \textbf{flow_cap}_\text{node,tech}))&\quad
+            \text{if } (\neg (\exists (\textit{cost_purchase}_\text{node,tech,cost}) \land (\exists (\textbf{purchased}_\text{node,tech}) \lor \exists (\textbf{units}_\text{node,tech}))))\land{}(\neg (\exists (\textit{cost_storage_cap}_\text{node,tech,cost}) \land \exists (\textbf{storage_cap}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_source_cap}_\text{node,tech,cost}) \land \exists (\textbf{source_cap}_\text{node,tech})))\land{}(\neg (\text{tech_group=transmission}))\land{}(\neg (\exists (\textit{cost_area_use}_\text{node,tech,cost}) \land \exists (\textbf{area_use}_\text{node,tech})))\land{}(\neg (\exists (\textit{cost_flow_cap}_\text{node,tech,cost})))
             \\
         \end{cases}
 
@@ -1673,26 +1719,26 @@ The total annualised costs of a technology, including installation and operation
         \end{array}
         \begin{cases}
             \textbf{cost_investment}_\text{node,tech,cost} + \sum\limits_{\text{timestep} \in \text{timesteps}} (\textbf{cost_var}_\text{node,tech,cost,timestep})&\quad
-            \text{if } (\exists (\textbf{cost_investment}_\text{node,tech,cost}))\land{}(\exists (\textbf{cost_var}_\text{node,tech,cost,timestep}))
-            \\
-            \textbf{cost_investment}_\text{node,tech,cost}&\quad
-            \text{if } (\exists (\textbf{cost_investment}_\text{node,tech,cost}))\land{}(\neg (\exists (\textbf{cost_var}_\text{node,tech,cost,timestep})))
+            \text{if } (\exists (\textbf{cost_var}_\text{node,tech,cost,timestep}))\land{}(\exists (\textbf{cost_investment}_\text{node,tech,cost}))
             \\
             \sum\limits_{\text{timestep} \in \text{timesteps}} (\textbf{cost_var}_\text{node,tech,cost,timestep})&\quad
-            \text{if } (\neg (\exists (\textbf{cost_investment}_\text{node,tech,cost})))\land{}(\exists (\textbf{cost_var}_\text{node,tech,cost,timestep}))
+            \text{if } (\exists (\textbf{cost_var}_\text{node,tech,cost,timestep}))\land{}(\neg (\exists (\textbf{cost_investment}_\text{node,tech,cost})))
+            \\
+            \textbf{cost_investment}_\text{node,tech,cost}&\quad
+            \text{if } (\neg (\exists (\textbf{cost_var}_\text{node,tech,cost,timestep})))\land{}(\exists (\textbf{cost_investment}_\text{node,tech,cost}))
             \\
             0&\quad
-            \text{if } (\neg (\exists (\textbf{cost_investment}_\text{node,tech,cost})))\land{}(\neg (\exists (\textbf{cost_var}_\text{node,tech,cost,timestep})))
+            \text{if } (\neg (\exists (\textbf{cost_var}_\text{node,tech,cost,timestep})))\land{}(\neg (\exists (\textbf{cost_investment}_\text{node,tech,cost})))
             \\
         \end{cases}
 
 Decision Variables
 ------------------
 
-energy_cap
-^^^^^^^^^^
+flow_cap
+^^^^^^^^
 
-A technology's energy capacity, also known as its nominal or nameplate capacity.
+A technology's flow capacity, also known as its nominal or nameplate capacity.
 
 .. container:: scrolling-wrapper
 
@@ -1705,16 +1751,16 @@ A technology's energy capacity, also known as its nominal or nameplate capacity.
             \forall\mathbb{R}\;
         \end{array}
         \begin{cases}
-            \textit{energy_cap_min}_\text{node,tech} \leq \textbf{energy_cap}_\text{node,tech}&\quad
+            \textit{flow_cap_min}_\text{node,tech} \leq \textbf{flow_cap}_\text{node,tech}&\quad
             \\
-            \textbf{energy_cap}_\text{node,tech} \leq \textit{energy_cap_max}_\text{node,tech}&\quad
+            \textbf{flow_cap}_\text{node,tech} \leq \textit{flow_cap_max}_\text{node,tech}&\quad
             \\
         \end{cases}
 
-carrier_prod
-^^^^^^^^^^^^
+flow_out
+^^^^^^^^
 
-The energy produced by a technology per timestep, also known as the energy discharged (from `storage` technologies) or the energy received (by `transmission` technologies) on a link.
+The outflow of a technology per timestep, also known as the flow discharged (from `storage` technologies) or the flow received (by `transmission` technologies) on a link.
 
 .. container:: scrolling-wrapper
 
@@ -1727,44 +1773,44 @@ The energy produced by a technology per timestep, also known as the energy disch
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
             \forall\mathbb{R}\;
-            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_carrier_prod}_\text{node,tech}\mathord{=}\text{true} \land \text{carrier_tier} \in \text{[out,out_2,out_3]})
+            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_flow_out}_\text{node,tech}\mathord{=}\text{true} \land \text{carrier_tier} \in \text{[out,out_2,out_3]})
         \end{array}
         \begin{cases}
-            0 \leq \textbf{carrier_prod}_\text{node,tech,carrier,timestep}&\quad
+            0 \leq \textbf{flow_out}_\text{node,tech,carrier,timestep}&\quad
             \\
-            \textbf{carrier_prod}_\text{node,tech,carrier,timestep} \leq inf&\quad
+            \textbf{flow_out}_\text{node,tech,carrier,timestep} \leq inf&\quad
             \\
         \end{cases}
 
-carrier_con
+flow_in
+^^^^^^^
+
+The inflow to a technology per timestep, also known as the flow consumed (by `storage` technologies) or the flow sent (by `transmission` technologies) on a link.
+
+.. container:: scrolling-wrapper
+
+    .. math::
+        \begin{array}{r}
+            \forall{}
+            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
+            \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
+            \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
+            \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
+            \\
+            \forall\mathbb{R}\;
+            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_flow_in}_\text{node,tech}\mathord{=}\text{true} \land \text{carrier_tier} \in \text{[in,in_2,in_3]})
+        \end{array}
+        \begin{cases}
+            0 \leq \textbf{flow_in}_\text{node,tech,carrier,timestep}&\quad
+            \\
+            \textbf{flow_in}_\text{node,tech,carrier,timestep} \leq inf&\quad
+            \\
+        \end{cases}
+
+flow_export
 ^^^^^^^^^^^
 
-The energy consumed by a technology per timestep, also known as the energy consumed (by `storage` technologies) or the energy sent (by `transmission` technologies) on a link.
-
-.. container:: scrolling-wrapper
-
-    .. math::
-        \begin{array}{r}
-            \forall{}
-            \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
-            \text{ tech }\negthickspace \in \negthickspace\text{ techs, }
-            \text{ carrier }\negthickspace \in \negthickspace\text{ carriers, }
-            \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
-            \\
-            \forall\mathbb{R}\;
-            \text{if } (\exists (\textit{carrier}_\text{tech,carrier_tier,carrier}) \land \textit{allowed_carrier_con}_\text{node,tech}\mathord{=}\text{true} \land \text{carrier_tier} \in \text{[in,in_2,in_3]})
-        \end{array}
-        \begin{cases}
-            -inf \leq \textbf{carrier_con}_\text{node,tech,carrier,timestep}&\quad
-            \\
-            \textbf{carrier_con}_\text{node,tech,carrier,timestep} \leq 0&\quad
-            \\
-        \end{cases}
-
-carrier_export
-^^^^^^^^^^^^^^
-
-The energy exported outside the system boundaries by a technology per timestep.
+The flow of a carrier exported outside the system boundaries by a technology per timestep.
 
 .. container:: scrolling-wrapper
 
@@ -1780,14 +1826,14 @@ The energy exported outside the system boundaries by a technology per timestep.
             \text{if } (\exists (\textit{export_carrier}_\text{node,tech,carrier}) \land \textit{export}_\text{node,tech}\mathord{=}\text{true})
         \end{array}
         \begin{cases}
-            0 \leq \textbf{carrier_export}_\text{node,tech,carrier,timestep}&\quad
+            0 \leq \textbf{flow_export}_\text{node,tech,carrier,timestep}&\quad
             \\
-            \textbf{carrier_export}_\text{node,tech,carrier,timestep} \leq inf&\quad
+            \textbf{flow_export}_\text{node,tech,carrier,timestep} \leq inf&\quad
             \\
         \end{cases}
 
-resource_area
-^^^^^^^^^^^^^
+area_use
+^^^^^^^^
 
 The area in space utilised directly (e.g., solar PV panels) or indirectly (e.g., biofuel crops) by a technology.
 
@@ -1800,19 +1846,19 @@ The area in space utilised directly (e.g., solar PV panels) or indirectly (e.g.,
             \text{ tech }\negthickspace \in \negthickspace\text{ techs }
             \\
             \forall\mathbb{R}\;
-            \text{if } (\exists (\textit{resource_area_min}_\text{node,tech}) \lor \exists (\textit{resource_area_max}_\text{node,tech}) \lor \exists (\textit{resource_area_equals}_\text{node,tech}) \lor \exists (\textit{resource_area_per_energy_cap}_\text{node,tech}) \lor \textit{resource_unit}_\text{node,tech}\mathord{=}\text{energy_per_area})
+            \text{if } (\exists (\textit{area_use_min}_\text{node,tech}) \lor \exists (\textit{area_use_max}_\text{node,tech}) \lor \exists (\textit{area_use_per_flow_cap}_\text{node,tech}) \lor \textit{sink_unit}_\text{node,tech}\mathord{=}\text{per_area} \lor \textit{source_unit}_\text{node,tech}\mathord{=}\text{per_area})
         \end{array}
         \begin{cases}
-            \textit{resource_area_min}_\text{node,tech} \leq \textbf{resource_area}_\text{node,tech}&\quad
+            \textit{area_use_min}_\text{node,tech} \leq \textbf{area_use}_\text{node,tech}&\quad
             \\
-            \textbf{resource_area}_\text{node,tech} \leq \textit{resource_area_max}_\text{node,tech}&\quad
+            \textbf{area_use}_\text{node,tech} \leq \textit{area_use_max}_\text{node,tech}&\quad
             \\
         \end{cases}
 
-resource_con
-^^^^^^^^^^^^
+source_use
+^^^^^^^^^^
 
-The energy consumed from outside the system boundaries by a `supply_plus` technology.
+The carrier flow consumed from outside the system boundaries by a `supply_plus` technology.
 
 .. container:: scrolling-wrapper
 
@@ -1827,16 +1873,16 @@ The energy consumed from outside the system boundaries by a `supply_plus` techno
             \text{if } (\text{tech_group=supply_plus})
         \end{array}
         \begin{cases}
-            0 \leq \textbf{resource_con}_\text{node,tech,timestep}&\quad
+            0 \leq \textbf{source_use}_\text{node,tech,timestep}&\quad
             \\
-            \textbf{resource_con}_\text{node,tech,timestep} \leq inf&\quad
+            \textbf{source_use}_\text{node,tech,timestep} \leq inf&\quad
             \\
         \end{cases}
 
-resource_cap
-^^^^^^^^^^^^
+source_cap
+^^^^^^^^^^
 
-The upper limit on energy that can be consumed from outside the system boundaries by a `supply_plus` technology in each timestep.
+The upper limit on a flow that can be consumed from outside the system boundaries by a `supply_plus` technology in each timestep.
 
 .. container:: scrolling-wrapper
 
@@ -1850,16 +1896,16 @@ The upper limit on energy that can be consumed from outside the system boundarie
             \text{if } (\text{tech_group=supply_plus})
         \end{array}
         \begin{cases}
-            \textit{resource_cap_min}_\text{node,tech} \leq \textbf{resource_cap}_\text{node,tech}&\quad
+            \textit{source_cap_min}_\text{node,tech} \leq \textbf{source_cap}_\text{node,tech}&\quad
             \\
-            \textbf{resource_cap}_\text{node,tech} \leq \textit{resource_cap_max}_\text{node,tech}&\quad
+            \textbf{source_cap}_\text{node,tech} \leq \textit{source_cap_max}_\text{node,tech}&\quad
             \\
         \end{cases}
 
 storage_cap
 ^^^^^^^^^^^
 
-The upper limit on energy that can be stored by a `supply_plus` or `storage` technology in any timestep.
+The upper limit on a carrier that can be stored by a `supply_plus` or `storage` technology in any timestep.
 
 .. container:: scrolling-wrapper
 
@@ -1882,7 +1928,7 @@ The upper limit on energy that can be stored by a `supply_plus` or `storage` tec
 storage
 ^^^^^^^
 
-The energy stored by a `supply_plus` or `storage` technology in each timestep.
+The carrier stored by a `supply_plus` or `storage` technology in each timestep.
 
 .. container:: scrolling-wrapper
 
@@ -1929,7 +1975,7 @@ Binary switch defining whether a technology has been purchased or not, for any t
 units
 ^^^^^
 
-Integer number of a technology that has been purchased, for any technology set to require inteter capacity purchasing. This is used to allow installation of fixed capacity units of technologies. Since technology capacity is no longer a continuous decision variable, it is possible for these technologies to have a lower bound set on carrier production/consumption which will only be enforced in those timesteps that the technology is operating (otherwise, the same lower bound forces the technology to produce/consume that minimum amount of energy in *every* timestep).
+Integer number of a technology that has been purchased, for any technology set to require inteter capacity purchasing. This is used to allow installation of fixed capacity units of technologies. Since technology capacity is no longer a continuous decision variable, it is possible for these technologies to have a lower bound set on outflow/consumption which will only be enforced in those timesteps that the technology is operating (otherwise, the same lower bound forces the technology to produce/consume that minimum amount of carrier in *every* timestep).
 
 .. container:: scrolling-wrapper
 
@@ -1973,10 +2019,10 @@ Integer number of a technology that is operating in each timestep, for any techn
             \\
         \end{cases}
 
-prod_con_switch
-^^^^^^^^^^^^^^^
+async_flow_switch
+^^^^^^^^^^^^^^^^^
 
-Binary switch to force asynchronous carrier production/consumption of a `storage`/`supply_plus`/`transmission` technology. This ensures that a technology with carrier flow efficiencies < 100% cannot produce and consume energy simultaneously to remove unwanted energy from the system.
+Binary switch to force asynchronous outflow/consumption of a `storage`/`supply_plus`/`transmission` technology. This ensures that a technology with carrier flow efficiencies < 100% cannot produce and consume a flow simultaneously to remove unwanted carrier from the system.
 
 .. container:: scrolling-wrapper
 
@@ -1988,19 +2034,19 @@ Binary switch to force asynchronous carrier production/consumption of a `storage
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
             \forall\mathbb{Z}\;
-            \text{if } (\textit{force_asynchronous_prod_con}_\text{node,tech}\mathord{=}\text{true})
+            \text{if } (\textit{force_async_flow}_\text{node,tech}\mathord{=}\text{true})
         \end{array}
         \begin{cases}
-            0 \leq \textbf{prod_con_switch}_\text{node,tech,timestep}&\quad
+            0 \leq \textbf{async_flow_switch}_\text{node,tech,timestep}&\quad
             \\
-            \textbf{prod_con_switch}_\text{node,tech,timestep} \leq 1&\quad
+            \textbf{async_flow_switch}_\text{node,tech,timestep} \leq 1&\quad
             \\
         \end{cases}
 
 unmet_demand
 ^^^^^^^^^^^^
 
-Virtual source of energy to ensure model feasibility. This should only be considered a debugging rather than a modelling tool as it may distort the model in other ways due to the large impact it has on the objective function value. When present in a model in which it has been requested, it indicates an inability for technologies in the model to reach a sufficient combined supply capacity to meet demand.
+Virtual source of carrier flow to ensure model feasibility. This should only be considered a debugging rather than a modelling tool as it may distort the model in other ways due to the large impact it has on the objective function value. When present in a model in which it has been requested, it indicates an inability for technologies in the model to reach a sufficient combined supply capacity to meet demand.
 
 .. container:: scrolling-wrapper
 
@@ -2012,7 +2058,7 @@ Virtual source of energy to ensure model feasibility. This should only be consid
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
             \forall\mathbb{R}\;
-            \text{if } (\text{run_config.ensure_feasibility}\mathord{=}\text{true})
+            \text{if } (\text{config.ensure_feasibility}\mathord{=}\text{true})
         \end{array}
         \begin{cases}
             0 \leq \textbf{unmet_demand}_\text{node,carrier,timestep}&\quad
@@ -2024,7 +2070,7 @@ Virtual source of energy to ensure model feasibility. This should only be consid
 unused_supply
 ^^^^^^^^^^^^^
 
-Virtual sink of energy to ensure model feasibility. This should only be considered a debugging rather than a modelling tool as it may distort the model in other ways due to the large impact it has on the objective function value. In model results, the negation of this variable is combined with `unmet_demand` and presented as only one variable: `unmet_demand`. When present in a model in which it has been requested, it indicates an inability for technologies in the model to reach a sufficient combined consumption capacity to meet required energy production (e.g. from renewables without the possibility of curtailment).
+Virtual sink of carrier flow to ensure model feasibility. This should only be considered a debugging rather than a modelling tool as it may distort the model in other ways due to the large impact it has on the objective function value. In model results, the negation of this variable is combined with `unmet_demand` and presented as only one variable: `unmet_demand`. When present in a model in which it has been requested, it indicates an inability for technologies in the model to reach a sufficient combined consumption capacity to meet required outflow (e.g. from renewables without the possibility of curtailment).
 
 .. container:: scrolling-wrapper
 
@@ -2036,7 +2082,7 @@ Virtual sink of energy to ensure model feasibility. This should only be consider
             \text{ timestep }\negthickspace \in \negthickspace\text{ timesteps }
             \\
             \forall\mathbb{R}\;
-            \text{if } (\text{run_config.ensure_feasibility}\mathord{=}\text{true})
+            \text{if } (\text{config.ensure_feasibility}\mathord{=}\text{true})
         \end{array}
         \begin{cases}
             -inf \leq \textbf{unused_supply}_\text{node,carrier,timestep}&\quad

@@ -6,6 +6,7 @@ import functools
 import importlib
 import os
 import sys
+from pathlib import Path
 from typing import TypeVar
 
 import jsonschema
@@ -67,7 +68,7 @@ def relative_path(base_path_file, path):
 
     """
     # Check if base_path_file is a string because it might be an AttrDict
-    if not os.path.isabs(path) and isinstance(base_path_file, str):
+    if not os.path.isabs(path) and isinstance(base_path_file, (str, Path)):
         path = os.path.join(os.path.dirname(base_path_file), path)
     return path
 

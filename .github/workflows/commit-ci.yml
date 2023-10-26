@@ -40,5 +40,16 @@ jobs:
     - name: Install jupyter kernel
       run: python -m ipykernel install --user --name calliope
 
-    - name: run tests
+    - name: run tests without coverage
+      if: github.ref != 'refs/heads/main'
       run: pytest
+
+    - name: run tests with coverage
+      if: github.ref == 'refs/heads/main'
+      run: pytest --cov
+
+    - name: upload coverage report to Codecov
+      if: github.ref == 'refs/heads/main'
+      uses: codecov/codecov-action@v3
+      env:
+        directory: "./reports/coverage/"

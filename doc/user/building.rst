@@ -89,7 +89,7 @@ The ``init`` configuration items are accessed when you initialise your model (`c
 The ``build`` configuration items are accessed when you build your optimisation problem (`calliope.Model.build(...)`).
 The ``solve`` configuration items are accessed when you solve your optimisation problem (`calliope.Model.solve(...)`).
 
-At each of these stages you can override what you have put in your YAML file, or the default calliope will use when you have defined nothing, by providing additional keyword arguments on calling `calliope.Model` or its methods. E.g.,:
+At each of these stages you can override what you have put in your YAML file (or if not in your YAML file, the default that Calliope uses), by providing additional keyword arguments on calling `calliope.Model` or its methods. E.g.,:
 
 .. code-block:: python
 
@@ -129,8 +129,6 @@ In the case of Gurobi, for example, it is usually fastest to use the direct Pyth
 
 .. note:: The opposite is currently true for CPLEX, which runs faster with the default ``solver_io``.
 
-Further optional settings, including debug settings, can be specified in the run configuration.
-
 .. seealso::
 
     :ref:`config_reference_config`, :doc:`troubleshooting`, :ref:`solver_options`, :ref:`documentation on operate mode <operational_mode>`, :ref:`documentation on SPORES mode <spores_mode>`, :doc:`built-in examples <ref_example_models>`
@@ -146,7 +144,15 @@ This could be a single value:
 .. code-block:: yaml
 
     parameters:
-        my_param: { data: 10 }
+        my_param: 10
+
+or (equivalent):
+
+.. code-block:: yaml
+
+    parameters:
+        my_param:
+            data: 10
 
 which can then be accessed in the model inputs `model.inputs.my_param` and used in custom math as `my_param`.
 

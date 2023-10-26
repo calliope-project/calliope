@@ -72,7 +72,7 @@ overrides:
             costs.monetary: { purchase: 1, flow_cap: 0 }
           test_demand_elec:
 
-    links.a,b.exists: false
+    links.a,b.active: false
 
   supply_purchase:
     nodes:
@@ -84,7 +84,7 @@ overrides:
             costs.monetary.flow_cap: 0
           test_demand_elec:
 
-    links.a,b.exists: false
+    links.a,b.active: false
 
   supply_milp:
     nodes:
@@ -96,8 +96,8 @@ overrides:
               units_max: 1
               flow_cap_per_unit: 15
           test_demand_elec:
-      b.exists: false
-    links.a,b.exists: false
+      b.active: false
+    links.a,b.active: false
 
   supply_export:
     techs:
@@ -146,7 +146,7 @@ overrides:
           test_demand_elec:
           test_demand_heat:
 
-    links.a,b.exists: false
+    links.a,b.active: false
 
   conversion_plus_milp:
     nodes:
@@ -162,7 +162,7 @@ overrides:
           test_demand_elec:
           test_demand_heat:
 
-    links.a,b.exists: false
+    links.a,b.active: false
 
   conversion_plus_purchase:
     nodes:
@@ -178,7 +178,7 @@ overrides:
           test_demand_elec:
           test_demand_heat:
 
-    links.a,b.exists: false
+    links.a,b.active: false
 
   simple_conversion_plus:
     nodes:
@@ -191,7 +191,7 @@ overrides:
           test_demand_elec:
           test_demand_heat:
 
-    links.a,b.exists: false
+    links.a,b.active: false
 
   simple_storage:
     nodes:
@@ -226,7 +226,7 @@ overrides:
               storage_cap_per_unit: 15
           test_demand_elec:
 
-    links.a,b.exists: false
+    links.a,b.active: false
 
   storage_purchase:
     nodes:
@@ -238,7 +238,7 @@ overrides:
             costs.monetary: { purchase: 1 }
           test_demand_elec:
 
-    links.a,b.exists: false
+    links.a,b.active: false
 
   clustering:
     config.init.time:

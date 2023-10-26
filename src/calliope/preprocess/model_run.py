@@ -13,6 +13,7 @@ AttrDict, and building of associated debug information.
 import itertools
 import logging
 import os
+from pathlib import Path
 from typing import Optional
 
 import pandas as pd
@@ -64,7 +65,7 @@ def model_run_from_yaml(
 
     """
     config = AttrDict.from_yaml(model_file)
-    config._model_def_path = model_file
+    config._model_def_path = Path(model_file).as_posix()
 
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
@@ -162,7 +163,7 @@ def apply_overrides(model_dict, scenario=None, override_dict=None):
     )
 
     # Interpret timeseries_data_path as relative
-    if "timeseries_data_path" in model_dict.config.init:
+    if "timeseries_data_path" in model_dict.get_key("config.init", default={}):
         model_dict.config.init.timeseries_data_path = relative_path(
             model_dict._model_def_path, model_dict.config.init.timeseries_data_path
         )
@@ -260,8 +261,8 @@ def process_techs(config_model):
     debug_comments = AttrDict()
 
     for tech_id, tech_config in config_model.techs.items():
-        # If a tech specifies ``exists: false``, we skip it entirely
-        if not tech_config.get("exists", True):
+        # If a tech specifies ``active: false``, we skip it entirely
+        if not tech_config.get("active", True):
             continue
 
         tech_result = AttrDict()
