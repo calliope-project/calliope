@@ -293,14 +293,6 @@ overrides:
 
     links.a,b.active: false
 
-  clustering:
-    config.init.time:
-      function: apply_clustering
-      function_options:
-        clustering_func: file=cluster_days.csv:a
-        how: "mean"
-        storage_inter_cluster: True
-
   spores:
     config:
       build.mode: spores
@@ -316,22 +308,20 @@ overrides:
     techs.test_supply_elec.constraints.lifetime: 1
 
   one_day:
-    config.init.subset_time: ["2005-01-01", "2005-01-01"]
+    config.init.time_subset: ["2005-01-01", "2005-01-01"]
 
   two_hours:
-    config.init.subset_time: ["2005-01-01 00:00:00", "2005-01-01 01:00:00"]
+    config.init.time_subset: ["2005-01-01 00:00:00", "2005-01-01 01:00:00"]
 
   resample_two_days:
     config:
       init:
-        subset_time: ["2005-01-01", "2005-01-02"]
-        time:
-          function: resample
-          function_options.resolution: 24h
+        time_subset: ["2005-01-01", "2005-01-02"]
+        time_resample: 24h
 
   operate:
     config.build.mode: operate
-    config.init.subset_time: ["2005-01-01", "2005-01-04"]
+    config.init.time_subset: ["2005-01-01", "2005-01-04"]
     config.solve.operate_window: 12
     config.solve.operate_horizon: 24
 

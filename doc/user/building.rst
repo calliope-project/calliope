@@ -78,8 +78,8 @@ We will discuss each of these in turn, starting with ``config``:
     config:
         init:
             name: 'My energy model'
-            timeseries_data_path: 'timeseries_data'
-            subset_time: ['2005-01-01', '2005-01-05']
+            time_data_path: 'timeseries_data'
+            time_subset: ['2005-01-01', '2005-01-05']
         build:
             mode: plan
         solve:
@@ -94,15 +94,15 @@ At each of these stages you can override what you have put in your YAML file (or
 .. code-block:: python
 
     # Overriding `config.init` items in `calliope.Model`
-    model = calliope.Model("path/to/model.yaml", subset_time=["2005-01", "2005-02"])
+    model = calliope.Model("path/to/model.yaml", time_subset=["2005-01", "2005-02"])
     # Overriding `config.build` items in `calliope.Model.build`
     model.build(ensure_feasibility=True)
     # Overriding `config.solve` items in `calliope.Model.solve`
     model.solve(save_logs="path/to/logs/dir")
 
-None of the configuration options are _required_ as there is a default value for them all, but you will likely want to set `init.name`, `init.calliope_version`, `init.timeseries_data_path`, `build.mode`, and `solve.solver`.
+None of the configuration options are _required_ as there is a default value for them all, but you will likely want to set `init.name`, `init.calliope_version`, `init.time_data_path`, `build.mode`, and `solve.solver`.
 
-To test your model pipeline, `config.init.subset_time` is a good way to limit your model size by slicing the time dimension to a smaller range.
+To test your model pipeline, `config.init.time_subset` is a good way to limit your model size by slicing the time dimension to a smaller range.
 
 `config.build.mode`
 ^^^^^^^^^^^^^^^^^^^
@@ -273,7 +273,7 @@ Reading in CSV files is possible from both the command-line tool as well running
 
 Reading in CSV files
 ^^^^^^^^^^^^^^^^^^^^
-To read in CSV files, specify e.g., :yaml:`source: file=filename.csv` to pick the desired CSV file from within the configured timeseries data path (``model.timeseries_data_path``).
+To read in CSV files, specify e.g., :yaml:`source: file=filename.csv` to pick the desired CSV file from within the configured timeseries data path (``model.time_data_path``).
 
 By default, Calliope looks for a column in the CSV file with the same name as the location. It is also possible to specify a column to use when setting ``source`` per location, by giving the column name with a colon following the filename: :yaml:`source: file=filename.csv:column`
 
@@ -291,7 +291,7 @@ For example, a simple photovoltaic (PV) tech using a time series of hour-by-hour
             source: file=pv_resource.csv
             flow_cap_max: 10000  # kW
 
-By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting :yaml:`model.timeseries_dateformat` based on ``strftime` directives <https://strftime.org/>`_, which defaults to ``'%Y-%m-%d %H:%M:%S'``.
+By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting :yaml:`model.time_format` based on ``strftime` directives <https://strftime.org/>`_, which defaults to ``'%Y-%m-%d %H:%M:%S'``.
 
 For example, the first few lines of a CSV file, called ``pv_resource.csv`` giving a source potential for two locations might look like this, with the first column in the file always being read as the date-time index:
 
@@ -417,9 +417,9 @@ To make it easier to run a given model multiple times with slightly changed sett
         high_cost:
             techs.onshore_wind.costs.monetary.flow_cap: 2000
         year2005:
-            model.subset_time: ['2005-01-01', '2005-12-31']
+            model.time_subset: ['2005-01-01', '2005-12-31']
         year2006:
-            model.subset_time: ['2006-01-01', '2006-12-31']
+            model.time_subset: ['2006-01-01', '2006-12-31']
 
     config:
         ...

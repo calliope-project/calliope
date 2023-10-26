@@ -137,10 +137,7 @@ class AttrDict(dict):
             raise ValueError("`import` must be a list.")
 
         for k in imports:
-            if base_path:
-                path = relative_path(base_path, k)
-            else:
-                path = k
+            path = relative_path(base_path, k)
             imported = cls.from_yaml(path)
             # loaded is added to imported (i.e. it takes precedence)
             imported.union(loaded_dict)
@@ -156,7 +153,7 @@ class AttrDict(dict):
         return loaded
 
     @classmethod
-    def from_yaml(cls, f, resolve_imports=True):
+    def from_yaml(cls, filename, resolve_imports=True):
         """
         Returns an AttrDict initialized from the given path or
         file object ``f``, which must point to a YAML file. The path can
@@ -165,7 +162,7 @@ class AttrDict(dict):
         Parameters
         ----------
 
-        f : str or pathlib.Path
+        filename : str or pathlib.Path
         resolve_imports : bool or str, optional
             If ``resolve_imports`` is True, top-level ``import:`` statements
             are resolved recursively.
@@ -177,16 +174,9 @@ class AttrDict(dict):
             overrides definitions in the imported file.
 
         """
-        if isinstance(f, (str, Path)):
-            with open(
-                f,
-                "r",
-                encoding="utf-8",
-            ) as src:
-                loaded = cls(_yaml_load(src))
-        else:
-            loaded = cls(_yaml_load(f))
-        loaded = cls._resolve_imports(loaded, resolve_imports, base_path=f)
+        filename = Path(filename)
+        loaded = cls(_yaml_load(filename.read_text(encoding="utf-8")))
+        loaded = cls._resolve_imports(loaded, resolve_imports, filename)
         return loaded
 
     @classmethod

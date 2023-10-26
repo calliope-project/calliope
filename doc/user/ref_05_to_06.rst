@@ -91,7 +91,7 @@ Each group defines any number of overrides to the technology, location, link, mo
         techs.ccgt.costs.monetary.energy_cap: 10
         locations.region2.techs.csp.costs.monetary.energy_cap: 100
     winter:
-        model.subset_time: ['2005-01-01', '2005-02-28']
+        model.time_subset: ['2005-01-01', '2005-02-28']
 
 Running in the command line:
 
@@ -138,7 +138,7 @@ Building on the simplified way to define overrides (see above) and on lessons le
 Location and technology subsets
 ===============================
 
-In model configuration, `subset_x` and `subset_y` (subsetting the used locations and technologies, respectively) no longer exist. `subset_t`, now called `subset_time`, does still exist.
+In model configuration, `subset_x` and `subset_y` (subsetting the used locations and technologies, respectively) no longer exist. `subset_t`, now called `time_subset`, does still exist.
 
 To remove specific technologies or locations from a model, the new and much more powerful ``exists`` option can be used.
 

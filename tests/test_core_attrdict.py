@@ -1,6 +1,6 @@
 import os
 import tempfile
-from io import StringIO
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -38,8 +38,9 @@ class TestAttrDict:
     """
 
     @pytest.fixture
-    def yaml_file(self):
-        return StringIO(self.setup_string)
+    def yaml_filepath(self):
+        this_path = Path(__file__).parent
+        return this_path / "common" / "yaml_file.yaml"
 
     @pytest.fixture
     def yaml_string(self):
@@ -69,15 +70,8 @@ class TestAttrDict:
         d = AttrDict({"foo.bar.baz": 1})
         assert d.foo.bar.baz == 1
 
-    def test_from_yaml_fobj(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
-        assert d.a == 1
-        assert d.c.z.II == 2
-
-    def test_from_yaml_path(self):
-        this_path = os.path.dirname(__file__)
-        yaml_path = os.path.join(this_path, "common", "yaml_file.yaml")
-        d = AttrDict.from_yaml(yaml_path)
+    def test_from_yaml_path(self, yaml_filepath):
+        d = AttrDict.from_yaml(yaml_filepath)
         assert d.a == 1
         assert d.c.z.II == 2
 
@@ -290,8 +284,8 @@ class TestAttrDict:
         attr_dict.del_key("c.z.I")
         assert "I" not in attr_dict.c.z
 
-    def test_to_yaml(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
+    def test_to_yaml(self, yaml_filepath):
+        d = AttrDict.from_yaml(yaml_filepath)
         d.set_key("numpy.some_int", np.int32(10))
         d.set_key("numpy.some_float", np.float64(0.5))
         d.a_list = [0, 1, 2]
@@ -306,8 +300,8 @@ class TestAttrDict:
             assert "some_float: 0.5" in result
             assert "a_list:\n- 0\n- 1\n- 2" in result
 
-    def test_to_yaml_string(self, yaml_file):
-        d = AttrDict.from_yaml(yaml_file)
+    def test_to_yaml_string(self, yaml_filepath):
+        d = AttrDict.from_yaml(yaml_filepath)
         result = d.to_yaml()
         assert "a: 1" in result
 
@@ -328,7 +322,7 @@ class TestAttrDict:
         # imports not to be resolved
         assert d["import"] == ["somefile.yaml"]
 
-    def test_nested_import(self, yaml_file):
+    def test_nested_import(self):
         with tempfile.TemporaryDirectory() as tempdir:
             imported_file = os.path.join(tempdir, "test_import.yaml")
             imported_yaml = """

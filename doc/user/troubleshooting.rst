@@ -5,7 +5,7 @@ Troubleshooting
 General strategies
 ------------------
 
-* **Building a smaller model**: :yaml:`model.subset_time` allows specifying a subset of timesteps to be used. This can be useful for debugging purposes as it can dramatically speed up model solution times. The timestep subset can be specified as :yaml:`[startdate, enddate]`, e.g. :yaml:`['2005-01-01', '2005-01-31']`, or as a single time period, such as :yaml:`2005-01` to select January only. The subsets are processed before building the model and applying time resolution adjustments, so time resolution reduction functions will only see the reduced set of data.
+* **Building a smaller model**: :yaml:`model.time_subset` allows specifying a subset of timesteps to be used. This can be useful for debugging purposes as it can dramatically speed up model solution times. The timestep subset can be specified as :yaml:`[startdate, enddate]`, e.g. :yaml:`['2005-01-01', '2005-01-31']`, or as a single time period, such as :yaml:`2005-01` to select January only. The subsets are processed before building the model and applying time resolution adjustments, so time resolution reduction functions will only see the reduced set of data.
 
 * **Retaining logs and temporary files**: The setting :yaml:`config.solve.save_logs`, disabled by default, sets the directory into which to save logs and temporary files from the backend, to inspect solver logs and solver-generated model files. This also turns on symbolic solver labels in the Pyomo backend, so that all model components in the backend model are named according to the corresponding Calliope model components (by default, Pyomo uses short random names for all generated model components).
 

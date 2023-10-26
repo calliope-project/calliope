@@ -9,16 +9,16 @@ Functionality to build the model-internal data array and process
 time-varying param_dict.
 
 """
+import importlib
 import logging
-import os
 import re
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
-import calliope
 from calliope import exceptions
 from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
@@ -64,19 +64,20 @@ class ModelDataFactory:
         """
         self.node_dict: dict = model_run_dict.nodes.as_dict_flat()
         self.tech_dict: dict = model_run_dict.techs.as_dict_flat()
-        self.timeseries_vars: pd.DataFrame = model_run_dict.timeseries_vars
-        self.timeseries_data: set[str] = model_run_dict.timeseries_data
-        self.time_config: Optional[AttrDict] = model_run_dict.config.init.time
-        self.random_seed: Optional[int] = model_run_dict.config.init.random_seed
+        self.timeseries_vars: set[str] = model_run_dict.timeseries_vars
+        self.timeseries_data: pd.DataFrame = model_run_dict.timeseries_data
+        self.time_data_path: Path = model_run_dict.config.init.time_data_path
+        self.time_resample: Optional[str] = model_run_dict.config.init.time_resample
+        self.time_cluster: Optional[str] = model_run_dict.config.init.time_cluster
+        self.time_format: str = model_run_dict.config.init.time_format
         self.params: AttrDict = model_run_dict.parameters
 
         self.model_data = xr.Dataset(coords={"timesteps": self.timeseries_data.index})
         self._add_attributes(model_run_dict)
         self.template_config = AttrDict.from_yaml(
-            os.path.join(
-                os.path.dirname(calliope.__file__), "config", "model_data_lookup.yaml"
-            )
+            importlib.resources.files("calliope") / "config" / "model_data_lookup.yaml"
         )
+
         self._strip_unwanted_keys()
         self._add_node_tech_sets()
 
@@ -191,14 +192,12 @@ class ModelDataFactory:
         )
         self._update_dtypes()
 
-        # TODO: this is a legacy function, so should be updated to numpy best-practice
-        np.random.seed(seed=self.random_seed)
-
         self.model_data_pre_clustering = self.model_data.copy(deep=True)
-        if self.time_config is not None:
-            self.model_data = time.apply_time_clustering(
-                self.model_data, self.time_config, self.timeseries_data
-            )
+        if self.time_resample is not None:
+            self.model_data = time.resample(self.model_data, self.time_resample)
+        if self.time_cluster is not None:
+            cluster_data = self.timeseries_data.loc[:, self.time_cluster].squeeze()
+            self.model_data = time.cluster(self.model_data, cluster_data)
 
         self.model_data["annualisation_weight"] = (
             self.model_data.timestep_resolution * self.model_data.timestep_weights

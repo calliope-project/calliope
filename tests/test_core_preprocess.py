@@ -29,11 +29,11 @@ class TestModelRun:
             }
         )
         model_dict.union(node_dict)
-        model_dict.config.init["timeseries_data_path"] = os.path.join(
+        model_dict.config.init["time_data_path"] = os.path.join(
             this_path,
             "common",
             "test_model",
-            model_dict.config.init["timeseries_data_path"],
+            model_dict.config.init["time_data_path"],
         )
         # test as AttrDict
         calliope.Model(model_dict)
@@ -235,14 +235,14 @@ class TestModelRun:
 
     def test_incorrect_subset_time(self):
         """
-        If subset_time is a list, it must have two entries (start_time, end_time)
-        If subset_time is not a list, it should successfully subset on the given
+        If time_subset is a list, it must have two entries (start_time, end_time)
+        If time_subset is not a list, it should successfully subset on the given
         string/integer
         """
 
         def override(param):
             return AttrDict.from_yaml_string(
-                "config.init.subset_time: {}".format(param)
+                "config.init.time_subset: {}".format(param)
             )
 
         # should fail: one string in list
@@ -298,7 +298,7 @@ class TestModelRun:
 
         # should pass: changing datetime format from default
         override1 = {
-            "config.init.timeseries_dateformat": "%d/%m/%Y %H:%M:%S",
+            "config.init.time_format": "%d/%m/%Y %H:%M:%S",
             "techs.test_demand_heat.constraints.sink_equals": "file=demand_heat_diff_dateformat.csv",
             "techs.test_demand_elec.constraints.sink_equals": "file=demand_heat_diff_dateformat.csv",
         }
@@ -317,7 +317,7 @@ class TestModelRun:
             build_model(override_dict=override2, scenario="simple_conversion")
 
         # should fail: wrong dateformat input for all files
-        override3 = {"config.init.timeseries_dateformat": "%d/%m/%Y %H:%M:%S"}
+        override3 = {"config.init.time_format": "%d/%m/%Y %H:%M:%S"}
 
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override3, scenario="simple_supply")
@@ -352,7 +352,7 @@ class TestModelRun:
         be inferred to be 1 hour
         """
         override1 = {
-            "config.init.subset_time": ["2005-01-01 00:00:00", "2005-01-01 00:00:00"]
+            "config.init.time_subset": ["2005-01-01 00:00:00", "2005-01-01 00:00:00"]
         }
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.warns(exceptions.ModelWarning) as warn_info:
@@ -1117,7 +1117,7 @@ class TestChecks:
             "links.N1,X3.techs.heat_pipes.switches.one_way": True,
         }
         m = calliope.examples.urban_scale(
-            override_dict=override, subset_time=["2005-01-01", "2005-01-01"]
+            override_dict=override, time_subset=["2005-01-01", "2005-01-01"]
         )
         m.build()
         removed_prod_links = [
@@ -1266,15 +1266,8 @@ class TestChecks:
         """
 
         override = {
-            "config.init.subset_time": ["2005-01-01", "2005-01-04"],
-            "config.init.time": {
-                "function": "apply_clustering",
-                "function_options": {
-                    "clustering_func": "file=cluster_days.csv:a",
-                    "how": "mean",
-                    "storage_inter_cluster": False,
-                },
-            },
+            "config.init.time_subset": ["2005-01-01", "2005-01-04"],
+            "config.init.time_cluster": "cluster_days.csv",
             "config.build.cyclic_storage": True,
         }
 
@@ -1439,7 +1432,7 @@ class TestChecks:
         Check that the storage_inter_cluster is not used together with storage_discharge_depth
         """
         with pytest.raises(exceptions.ModelError) as error:
-            override = {"config.init.subset_time": ["2005-01-01", "2005-01-04"]}
+            override = {"config.init.time_subset": ["2005-01-01", "2005-01-04"]}
             build_model(override, "clustering,simple_storage,storage_discharge_depth")
 
         assert check_error_or_warning(
@@ -1479,20 +1472,20 @@ class TestTime:
         """
         if load_timeseries_from_dataframes:
             # Create dictionary with dataframes
-            timeseries_data_path = (
+            time_data_path = (
                 calliope.examples.EXAMPLE_MODEL_DIR
                 / "national_scale"
                 / "timeseries_data"
             )
             timeseries_dataframes = {}
             timeseries_dataframes["csp_resource"] = pd.read_csv(
-                timeseries_data_path / "csp_resource.csv", index_col=0
+                time_data_path / "csp_resource.csv", index_col=0
             )
             timeseries_dataframes["demand_1"] = pd.read_csv(
-                timeseries_data_path / "demand-1.csv", index_col=0
+                time_data_path / "demand-1.csv", index_col=0
             )
             timeseries_dataframes["demand_2"] = pd.read_csv(
-                timeseries_data_path / "demand-2.csv", index_col=0
+                time_data_path / "demand-2.csv", index_col=0
             )
             # Create override dict telling calliope to load timeseries from df
             override_dict = {
@@ -1509,7 +1502,7 @@ class TestTime:
     @pytest.fixture
     def model_urban(self):
         return calliope.examples.urban_scale(
-            override_dict={"config.init.subset_time": ["2005-01-01", "2005-01-10"]}
+            override_dict={"config.init.time_subset": ["2005-01-01", "2005-01-10"]}
         )
 
     @pytest.mark.parametrize("load_timeseries_from_dataframes", [False, True])

@@ -12,11 +12,12 @@ config:
   init:
     name: null # Model name
     calliope_version: null # Calliope framework version this model is intended for
-    random_seed: null # Seed for random number generator used during clustering
-    subset_time: null # Subset of timesteps as a two-element list giving the range, e.g. ['2005-01-01', '2005-01-05'], or a single string, e.g. '2005-01'
-    time: null # Optional settings to adjust time resolution, see :ref:`time_clustering` for the available options
-    timeseries_data_path: null # Path to time series data
-    timeseries_dateformat: "ISO8601" # Timestamp format of all time series data when read from file. "ISO8601" means "YYYY-mm-dd HH:MM:SS".
+    time_subset: null # (Optional) Subset of timesteps as a two-element list giving the range, e.g. ['2005-01-01', '2005-01-05'], or a single string, e.g. '2005-01'
+    time_resample: null # (Optional) setting to adjust time resolution, e.g. "2H" for 2-hourly
+    time_cluster: null # (Optional) setting to cluster the timeseries, must be a path to a file where each date is linked to a representative date that also exists in the timeseries.
+    random_seed: null
+    time_data_path: "." # Path to time series data. If relative, it will be relative to the base model definition file.
+    time_format: "ISO8601" # Timestamp format of all time series data when read from file. "ISO8601" means "YYYY-mm-dd HH:MM:SS".
     custom_math: [] # List of references to files which contain custom mathematical formulations. If referring to an in-built Calliope custom math file (see documentation for available files), do not append the reference with ".yaml". If referring to your own custom math file, ensure the file type is given as a suffix (".yaml" or ".yml"). Relative paths will be assumed to be relative to the `config` file given when creating a calliope Model (`calliope.Model(config)`)
   build:
     backend: pyomo  # Module with which to build the optimisation problem

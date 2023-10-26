@@ -45,26 +45,6 @@ We use the code formatter `black <https://github.com/psf/black/>`_ and before yo
 
    $ pre-commit install
 
----------------------------
-Creating modular extensions
----------------------------
-
-As of version 0.6.0, dynamic loading of custom constraint generator extensions has been removed due it not not being used by users of Calliope. The ability to dynamically load custom functions to adjust time resolution remains (see below).
-
-Time functions and masks
-------------------------
-
-Custom functions that adjust time resolution can be loaded dynamically during model initialisation. By default, Calliope first checks whether the name of a function or time mask refers to a function from the :mod:`calliope.core.time.masks` or :mod:`calliope.core.time.funcs` module, and if not, attempts to load the function from an importable module:
-
-.. code-block:: yaml
-
-   time:
-      masks:
-          - {function: week, options: {day_func: 'extreme', tech: 'wind', how: 'min'}}
-          - {function: my_custom_module.my_custom_mask, options: {...}}
-      function: my_custom_module.my_custom_function
-      function_options: {...}
-
 ----------------------------------------------
 Understanding Calliope internal implementation
 ----------------------------------------------

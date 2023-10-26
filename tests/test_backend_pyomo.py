@@ -1626,14 +1626,8 @@ class TestClusteringConstraints:
         storage_initial=False,
     ):
         override = {
-            "config.init.subset_time": ["2005-01-01", "2005-01-04"],
-            "config.init.time": {
-                "function": "apply_clustering",
-                "function_options": {
-                    "clustering_func": "file=cluster_days.csv:a",
-                    "how": how,
-                },
-            },
+            "config.init.time_subset": ["2005-01-01", "2005-01-04"],
+            "config.init.time_cluster": "cluster_days.csv",
             "config.init.custom_math": ["storage_inter_cluster"]
             if storage_inter_cluster
             else [],

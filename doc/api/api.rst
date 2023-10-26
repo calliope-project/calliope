@@ -11,20 +11,6 @@ Model class
 .. autoclass:: calliope.Model
     :members:
 
-.. _api_time_masks:
-
-Time series
-===========
-
-.. automodule:: calliope.time.clustering
-    :members: get_clusters
-
-.. automodule:: calliope.time.masks
-    :members: extreme, extreme_diff
-
-.. automodule:: calliope.time.funcs
-    :members: resample
-
 .. _api_backend_interface:
 
 Methods to interface with the optimisation problem (a.k.a., `backend`)

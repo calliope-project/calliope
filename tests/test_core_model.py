@@ -15,7 +15,7 @@ class TestModel:
     @pytest.fixture(scope="module")
     def national_scale_example(self):
         model = calliope.examples.national_scale(
-            override_dict={"config.init.subset_time": ["2005-01-01", "2005-01-01"]}
+            override_dict={"config.init.time_subset": ["2005-01-01", "2005-01-01"]}
         )
         return model
 
