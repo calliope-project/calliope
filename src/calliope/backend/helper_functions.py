@@ -28,8 +28,8 @@ class ParsingHelperFunction(ABC):
         as_latex: bool = False,
         **kwargs,
     ) -> None:
-        """
-        Abstract helper function class, which all helper functions must subclass.
+        """Abstract helper function class, which all helper functions must subclass.
+
         The abstract properties and methods defined here must be defined by all helper functions.
 
         Args:
@@ -52,15 +52,15 @@ class ParsingHelperFunction(ABC):
 
     @abstractmethod
     def as_latex(self, *args, **kwargs) -> str:
-        """
-        Method to update LaTeX math strings to include the action applied by the helper function.
+        """Method to update LaTeX math strings to include the action applied by the helper function.
+
         This method is called when the class is initialised with ``as_latex=True``.
         """
 
     @abstractmethod
     def as_array(self, *args, **kwargs) -> xr.DataArray:
-        """
-        Method to apply the helper function to provide an n-dimensional array output.
+        """Method to apply the helper function to provide an n-dimensional array output.
+
         This method is called when the class is initialised with ``as_latex=False``.
         """
 
@@ -75,8 +75,8 @@ class ParsingHelperFunction(ABC):
             return self.as_array(*args, **kwargs)
 
     def __init_subclass__(cls):
-        """
-        Override subclass definition in two ways:
+        """Override subclass definition in two ways:
+
         1. Do not allow new helper functions to have a name that is already defined (be it a built-in function or a custom function).
         2. Wrap helper function __call__ in a check for the function being allowed in specific parsing string types.
         """
@@ -91,8 +91,7 @@ class ParsingHelperFunction(ABC):
 
     @staticmethod
     def _add_to_iterator(instring: str, iterator_converter: dict[str, str]) -> str:
-        """
-        Utility function for generating latex strings in multiple helper functions.
+        """Utility function for generating latex strings in multiple helper functions.
 
         Find an iterator in the iterator substring of the component string
         (anything wrapped in `_text{}`). Other parts of the iterator substring can be anything
@@ -123,8 +122,7 @@ class ParsingHelperFunction(ABC):
 
     @staticmethod
     def _instr(dim: str) -> str:
-        """
-        Utility function for generating latex strings in multiple helper functions.
+        """Utility function for generating latex strings in multiple helper functions.
 
         Args:
             dim (str): Dimension suffixed with a "s" (e.g., "techs")
@@ -134,6 +132,13 @@ class ParsingHelperFunction(ABC):
         """
         dim_singular = dim.removesuffix("s")
         return rf"\text{{{dim_singular}}} \in \text{{{dim}}}"
+
+    @staticmethod
+    def _listify(val: Union[list[str], str]) -> list[str]:
+        if isinstance(val, list):
+            return val
+        else:
+            return [val]
 
 
 class Inheritance(ParsingHelperFunction):
@@ -146,8 +151,8 @@ class Inheritance(ParsingHelperFunction):
         return rf"\text{{tech_group={tech_group}}}"
 
     def as_array(self, tech_group: str) -> xr.DataArray:
-        """
-        Find all technologies which inherit from a particular technology group.
+        """Find all technologies which inherit from a particular technology group.
+
         The technology group can be an abstract base group (e.g., `supply`, `storage`) or a user-defined technology group which itself inherits from one of the abstract base groups.
 
         Args:
@@ -176,8 +181,7 @@ class WhereAny(ParsingHelperFunction):
         return rf"\bigvee\limits_{{{overstring}}} ({array})"
 
     def as_array(self, parameter: str, *, over: Union[str, list[str]]) -> xr.DataArray:
-        """
-        Reduce the boolean where array of a model parameter by applying `any` over some dimension(s).
+        """Reduce the boolean where array of a model parameter by applying `any` over some dimension(s).
 
         Args:
             parameter (str): Reference to a model input parameter
@@ -199,11 +203,132 @@ class WhereAny(ParsingHelperFunction):
             bool_parameter_da = self._kwargs["backend_dataset"][parameter].notnull()
         else:
             bool_parameter_da = xr.DataArray(False)
-        if not isinstance(over, list):
-            over = [over]
+        over = self._listify(over)
         available_dims = set(bool_parameter_da.dims).intersection(over)
 
         return bool_parameter_da.any(dim=available_dims, keep_attrs=True)
+
+
+class Defined(ParsingHelperFunction):
+    #:
+    NAME = "defined"
+    #:
+    ALLOWED_IN = ["where"]
+
+    def as_latex(self, *, within: str, how: Literal["all", "any"], **dims) -> str:
+        substrings = []
+        for name, vals in dims.items():
+            substrings.append(self._latex_substring(how, name, vals, within))
+        if len(substrings) == 1:
+            return substrings[0]
+        else:
+            return rf"\bigwedge({', '.join(substrings)})"
+
+    def as_array(
+        self, *, within: str, how: Literal["all", "any"], **dims: str
+    ) -> xr.DataArray:
+        """Find whether members of a model dimension are defined inside another.
+
+        For instance, whether a node defines a specific tech (or group of techs).
+        Or, whether a tech defines a specific carrier.
+
+        Args:
+            within (str): the model dimension to check.
+            how (Literal[all, any]): Whether to return True for `any` match of nested members or for `all` nested members.
+
+        Kwargs:
+            dims (dict[str, str]):
+                **key**: dimension whose members will be searched for as being defined under the primary dimension (`within`).
+                **value**: subset of the dimension members to find.
+                `dims` must be one of the core model dimensions: [nodes, techs, carriers, carrier_tiers]
+
+        Returns:
+            xr.DataArray:
+                For each member of `within`, True if any/all member(s) in `dims` is nested within that member.
+
+        Examples:
+            Check for any of a list of techs being defined at nodes.
+            Assuming a YAML definition of:
+
+            ```yaml
+            nodes:
+                node1:
+                    techs:
+                        tech1:
+                        tech3:
+                node2:
+                    techs:
+                        tech2:
+                        tech3:
+            ```
+            Then:
+            ```
+                >>> defined(techs=[tech1, tech2], within=nodes, how=any)
+                [out] <xarray.DataArray (nodes: 2)>
+                      array([ True, False])
+                      Coordinates:
+                      * nodes    (nodes) <U5 'node1' 'node2'
+
+                >>> defined(techs=[tech1, tech2], within=nodes, how=all)
+                [out] <xarray.DataArray (nodes: 2)>
+                      array([ False, False])
+                      Coordinates:
+                      * nodes    (nodes) <U5 'node1' 'node2'
+            ```
+        """
+        dim_names = list(dims.keys())
+        dims_with_list_vals = {dim: self._listify(vals) for dim, vals in dims.items()}
+        definition_matrix = self._kwargs["model_data"].definition_matrix
+        dim_within_da = definition_matrix.any(self._dims_to_remove(dim_names, within))
+        within_da = getattr(dim_within_da.sel(**dims_with_list_vals), how)(dim_names)
+
+        return within_da
+
+    def _dims_to_remove(self, dim_names: list[str], within: str) -> set:
+        """From the definition matrix, get the dimensions that have not been defined.
+
+        This includes dimensions not defined as keys of `dims` or as the value of `within`.
+
+        Args:
+            dim_names (list[str]): Keys of `dims`.
+            within (str): dimension whose members are being checked.
+
+        Raises:
+            ValueError: Can only define dimensions that exist in model.definition_matrix.
+
+        Returns:
+            set: Undefined dimensions to remove from the definition matrix.
+        """
+        definition_matrix = self._kwargs["model_data"].definition_matrix
+        missing_dims = set([*dim_names, within]).difference(definition_matrix.dims)
+        if missing_dims:
+            raise ValueError(
+                f"Unexpected model dimension referenced in `{self.NAME}` helper function. "
+                "Only dimensions given by `model.inputs.definition_matrix` can be used. "
+                f"Received: {missing_dims}"
+            )
+        return set(definition_matrix.dims).difference([*dim_names, within])
+
+    def _latex_substring(
+        self,
+        how: Literal["all", "any"],
+        dim: str,
+        vals: Union[str, list[str]],
+        within: str,
+    ) -> str:
+        if how == "all":
+            # Using wedge for "collective-and"
+            tex_how = "wedge"
+        elif how == "any":
+            # Using vee for "collective-or"
+            tex_how = "vee"
+
+        vals = self._listify(vals)
+        within_singular = within.removesuffix("s")
+        dim_singular = dim.removesuffix("s")
+        selection = rf"\text{{{dim_singular}}} \in \text{{[{','.join(vals)}]}}"
+
+        return rf"\big{tex_how}\limits_{{\substack{{{selection}}}}}\text{{{dim_singular} defined in {within_singular}}}"
 
 
 class Sum(ParsingHelperFunction):
@@ -223,8 +348,7 @@ class Sum(ParsingHelperFunction):
     def as_array(
         self, array: xr.DataArray, *, over: Union[str, list[str]]
     ) -> xr.DataArray:
-        """
-        Sum an expression array over the given dimension(s).
+        """Sum an expression array over the given dimension(s).
 
         Args:
             array (xr.DataArray): expression array
@@ -268,9 +392,9 @@ class ReduceCarrierDim(ParsingHelperFunction):
         """
         return Sum(as_latex=self._as_latex, **self._kwargs)(
             array.where(
-                self._kwargs["model_data"]
-                .carrier.sel(carrier_tiers=carrier_tier)
-                .notnull()
+                self._kwargs["model_data"].definition_matrix.sel(
+                    carrier_tiers=carrier_tier
+                )
             ),
             over="carriers",
         )
@@ -289,6 +413,7 @@ class ReducePrimaryCarrierDim(ParsingHelperFunction):
         self, array: xr.DataArray, carrier_tier: Literal["in", "out"]
     ) -> xr.DataArray:
         """Reduce expression array data by selecting the carrier that corresponds to the primary carrier and then dropping the `carriers` dimension.
+
         This function is only valid for `conversion_plus` technologies,
         so should only be included in a math component if the `where` string includes `inheritance(conversion_plus)` or an equivalent expression.
 
@@ -327,8 +452,7 @@ class SelectFromLookupArrays(ParsingHelperFunction):
     def as_array(
         self, array: xr.DataArray, **lookup_arrays: xr.DataArray
     ) -> xr.DataArray:
-        """
-        Apply vectorised indexing on an arbitrary number of an input array's dimensions.
+        """Apply vectorised indexing on an arbitrary number of an input array's dimensions.
 
         Args:
             array (xr.DataArray): Array on which to apply vectorised indexing.
@@ -417,7 +541,8 @@ class GetValAtIndex(ParsingHelperFunction):
 
     def as_array(self, **dim_idx_mapping: int) -> xr.DataArray:
         """Get value of a model dimension at a given integer index.
-        This function is primarily useful for timeseries data
+
+        This function is primarily useful for timeseries data.
 
         Keyword Args:
             key (str): Model dimension in which to extract value.
@@ -478,8 +603,7 @@ class Roll(ParsingHelperFunction):
         return component
 
     def as_array(self, array: xr.DataArray, **roll_kwargs: int) -> xr.DataArray:
-        """
-        Roll (a.k.a., shift) the array along the given dimension(s) by the given number of places.
+        """Roll (a.k.a., shift) the array along the given dimension(s) by the given number of places.
         Rolling keeps the array index labels in the same position, but moves the data by the given number of places.
 
         Args:

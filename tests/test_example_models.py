@@ -525,6 +525,10 @@ class TestUrbanScaleExampleModelSenseChecks:
         if solver_io:
             solve_kwargs["solver_io"] = solver_io
 
+        solve_kwargs = {"solver": solver}
+        if solver_io:
+            solve_kwargs["solver_io"] = solver_io
+
         model.build()
         model.solve(**solve_kwargs)
 

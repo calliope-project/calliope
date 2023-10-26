@@ -24,6 +24,26 @@ NONDEMAND_TECHGROUPS = [
     "supply_plus",
 ]
 
+# TODO: find another way to define this
+POSSIBLE_TIMESERIES_DATA = [
+    "clustering_func",
+    "flow_eff",
+    "flow_ramping",
+    "export",
+    "om_con",
+    "om_prod",
+    "parasitic_eff",
+    "source_max",
+    "source_min",
+    "source_equals",
+    "sink_min",
+    "sink_max",
+    "sink_equals",
+    "source_eff",
+    "storage_loss",
+    "carrier_ratios",
+]
+
 
 def generate_base_math_model(model_config: dict) -> calliope.Model:
     """Generate RST file for the base math

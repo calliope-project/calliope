@@ -371,8 +371,13 @@ class TestModelData:
         model_data._add_param_from_template()
         model_data._clean_unused_techs_nodes_and_carriers()
         model_data_new = model_data.model_data
-        for data_var in ["link_remote_techs", "link_remote_nodes", "node_tech"]:
+        for data_var in ["link_remote_techs", "link_remote_nodes"]:
             assert model_data_init[data_var].equals(model_data_new[data_var])
+        assert "definition_matrix" not in model_data_init
+        assert "definition_matrix" in model_data_new
+        for data_var in ["node_tech", "carrier"]:
+            assert data_var not in model_data_new
+        assert model_data_new.definition_matrix.dtype.kind == "b"
 
     def test_add_time_dimension(self, model_data_w_params):
         assert not hasattr(model_data_w_params, "data_pre_time")
