@@ -136,15 +136,15 @@ None of the ``tech_groups`` appear in model results, they are only used to group
 Removing techs, locations and links
 -----------------------------------
 
-By specifying :yaml:`exists: false` in the model configuration, which can be done for example through overrides, model components can be removed for debugging or scenario analysis.
+By specifying :yaml:`active: false` in the model configuration, which can be done for example through overrides, model components can be removed for debugging or scenario analysis.
 
 This works for:
 
-* Techs: :yaml:`techs.tech_name.exists: false`
-* Locations: :yaml:`locations.location_name.exists: false`
-* Links: :yaml:`links.location1,location2.exists: false`
-* Techs at a specific location:  :yaml:`locations.location_name.techs.tech_name.exists: false`
-* Transmission techs at a specific location: :yaml:`links.location1,location2.techs.transmission_tech.exists: false`
+* Techs: :yaml:`techs.tech_name.active: false`
+* Locations: :yaml:`locations.location_name.active: false`
+* Links: :yaml:`links.location1,location2.active: false`
+* Techs at a specific location:  :yaml:`locations.location_name.techs.tech_name.active: false`
+* Transmission techs at a specific location: :yaml:`links.location1,location2.techs.transmission_tech.active: false`
 
 .. _operational_mode:
 

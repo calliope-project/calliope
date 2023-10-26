@@ -5,11 +5,13 @@ import calliope.exceptions as exceptions
 import numpy as np
 import pandas as pd
 import pytest
+import xarray as xr
 from calliope._version import __version__
 from calliope.core.attrdict import AttrDict
 from calliope.preprocess import model_run_from_yaml
 from calliope.preprocess.model_data import ModelDataFactory
 
+from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
 
 
@@ -19,11 +21,12 @@ def model_run():
     return model_run_from_yaml(filepath.as_posix(), scenario="simple_supply")[0]
 
 
-class TestModelData:
-    @pytest.fixture(scope="function")
-    def model_data(self, model_run):
-        return ModelDataFactory(model_run)
+@pytest.fixture(scope="function")
+def model_data(model_run):
+    return ModelDataFactory(model_run)
 
+
+class TestModelData:
     @pytest.fixture(scope="class")
     def model_data_w_params(self, model_run):
         model_data = ModelDataFactory(model_run)
@@ -418,3 +421,206 @@ class TestModelData:
         attr_dict["calliope_version"] == __version__
         assert attr_dict["applied_overrides"] == "foo"
         assert attr_dict["scenario"] == "bar"
+
+
+class TestTopLevelParams:
+    @pytest.fixture(scope="function")
+    def run_and_test(self, model_data):
+        def _run_and_test(in_dict, out_dict, dims):
+            model_data._extract_node_tech_data()
+            model_data._add_time_dimension()
+            model_data.params = {"my_val": in_dict}
+            model_data._add_top_level_params()
+
+            _data = pd.Series(out_dict).rename_axis(index=dims)
+            pd.testing.assert_series_equal(
+                model_data.model_data.my_val.to_series().dropna().reindex(_data.index),
+                _data,
+                check_dtype=False,
+                check_names=False,
+                check_exact=False,
+            )
+
+        return _run_and_test
+
+    def test_protected_parameter_names(self):
+        with pytest.raises(KeyError) as excinfo:
+            build_model(
+                {"parameters.flow_eff.data": 1},
+                "simple_supply,two_hours",
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "Trying to add top-level parameter with same name as a node/tech level parameter: flow_eff",
+        )
+
+    @pytest.mark.parametrize("val", [1, 1.0, np.inf, "foo"])
+    @pytest.mark.parametrize("dict_nesting", ["", ".data"])
+    def test_top_level_param_single_val(self, val, dict_nesting):
+        model = build_model(
+            {f"parameters.my_val{dict_nesting}": val},
+            "simple_supply,two_hours",
+        )
+        assert model.inputs.my_val == xr.DataArray(val)
+
+    @pytest.mark.parametrize("val", [None, np.nan])
+    @pytest.mark.parametrize("dict_nesting", ["", ".data"])
+    def test_top_level_param_single_val_cleaned_out_in_preprocessing(
+        self, val, dict_nesting
+    ):
+        model = build_model(
+            {f"parameters.my_val{dict_nesting}": val},
+            "simple_supply,two_hours",
+        )
+        assert "my_val" not in model.inputs
+
+    def test_top_level_param_dims_no_index(self):
+        with pytest.raises(ValueError) as excinfo:
+            build_model(
+                {"parameters.my_val": {"data": 1, "dims": "techs"}},
+                "simple_supply,two_hours",
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "(parameters, my_val) | Expected list for `index`, received: None",
+        )
+
+    def test_top_level_param_dims_not_list_index(self):
+        with pytest.raises(ValueError) as excinfo:
+            build_model(
+                {"parameters.my_val": {"data": 1, "dims": "techs", "index": "foo"}},
+                "simple_supply,two_hours",
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "(parameters, my_val) | Expected list for `index`, received: foo",
+        )
+
+    @pytest.mark.parametrize("val", [1, 1.0, np.inf, "foo"])
+    def test_top_level_param_single_data_single_known_dim(self, val, run_and_test):
+        run_and_test(
+            {
+                "data": val,
+                "index": ["test_supply_elec"],
+                "dims": "techs",
+            },
+            {"test_supply_elec": val},
+            "techs",
+        )
+
+    def test_top_level_param_multi_data_single_known_dim(self, run_and_test):
+        run_and_test(
+            {
+                "data": [1, "foo"],
+                "index": ["test_supply_elec", "test_demand_elec"],
+                "dims": "techs",
+            },
+            {"test_supply_elec": 1, "test_demand_elec": "foo"},
+            "techs",
+        )
+
+    def test_top_level_param_single_data_multi_known_dim(self, run_and_test):
+        run_and_test(
+            {
+                "data": 10,
+                "index": [["a", "test_supply_elec"], ["b", "test_demand_elec"]],
+                "dims": ["nodes", "techs"],
+            },
+            {("a", "test_supply_elec"): 10, ("b", "test_demand_elec"): 10},
+            ["nodes", "techs"],
+        )
+
+    def test_top_level_param_multi_data_multi_known_dim(self, run_and_test):
+        run_and_test(
+            {
+                "data": [10, 20],
+                "index": [["a", "test_supply_elec"], ["b", "test_demand_elec"]],
+                "dims": ["nodes", "techs"],
+            },
+            {("a", "test_supply_elec"): 10, ("b", "test_demand_elec"): 20},
+            ["nodes", "techs"],
+        )
+
+    def test_top_level_param_unknown_dim_only(self, caplog, run_and_test):
+        caplog.set_level(logging.DEBUG, logger="calliope.preprocess.model_data")
+        run_and_test(
+            {"data": 10, "index": ["foo"], "dims": "bar"},
+            {"foo": 10},
+            "bar",
+        )
+        assert (
+            "(parameters, my_val) | Adding a new dimension to the model: bar"
+            in caplog.text
+        )
+
+    def test_top_level_param_multi_unknown_dim(self, caplog, run_and_test):
+        caplog.set_level(logging.DEBUG, logger="calliope.preprocess.model_data")
+        run_and_test(
+            {
+                "data": 10,
+                "index": [["foo", "foobar"]],
+                "dims": ["bar", "baz"],
+            },
+            {("foo", "foobar"): 10},
+            ["bar", "baz"],
+        )
+        assert (
+            "(parameters, my_val) | Adding a new dimension to the model: bar"
+            in caplog.text
+        )
+        assert (
+            "(parameters, my_val) | Adding a new dimension to the model: baz"
+            in caplog.text
+        )
+
+    def test_top_level_param_unknown_dim_mixed(self, caplog, run_and_test):
+        caplog.set_level(logging.DEBUG, logger="calliope.preprocess.model_data")
+        run_and_test(
+            {
+                "data": 10,
+                "index": [["test_supply_elec", "foobar"]],
+                "dims": ["techs", "baz"],
+            },
+            {("test_supply_elec", "foobar"): 10},
+            ["techs", "baz"],
+        )
+        assert (
+            "(parameters, my_val) | Adding a new dimension to the model: baz"
+            in caplog.text
+        )
+
+    def test_top_level_param_timeseries(self, caplog, run_and_test):
+        caplog.set_level(logging.DEBUG, logger="calliope.preprocess.model_data")
+        run_and_test(
+            {
+                "data": 10,
+                "index": ["2005-01-01"],
+                "dims": ["timesteps"],
+            },
+            {pd.to_datetime("2005-01-01"): 10},
+            "timesteps",
+        )
+        assert (
+            "(parameters, my_val) | Updating timesteps dimension index values to datetime format"
+            in caplog.text
+        )
+
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Operational mode requires the same timestep resolution:calliope.exceptions.ModelWarning"
+    )
+    def test_top_level_param_extend_dim_vals(self, caplog, run_and_test):
+        # We do this test with timesteps as all other dimension elements are filtered out if there is no matching True element in `definition_matrix`
+        caplog.set_level(logging.DEBUG, logger="calliope.preprocess.model_data")
+        run_and_test(
+            {
+                "data": 10,
+                "index": ["2006-01-01"],
+                "dims": ["timesteps"],
+            },
+            {pd.to_datetime("2006-01-01"): 10},
+            "timesteps",
+        )
+        assert (
+            "(parameters, my_val) | Adding a new value to the `timesteps` model coordinate: ['2006-01-01T00:00:00.000000000']"
+            in caplog.text
+        )

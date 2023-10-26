@@ -66,7 +66,7 @@ def process_nodes(model_config, modelrun_techs):
     # Kill any nodes that the modeller does not want to exist
     ##
     for loc in list(nodes.keys()):
-        if not nodes[loc].get("exists", True):
+        if not nodes[loc].get("active", True):
             nodes.del_key(loc)
 
     ##
@@ -74,7 +74,7 @@ def process_nodes(model_config, modelrun_techs):
     ##
     techs_to_delete = []
     for tech_name in techs_in:
-        if not techs_in[tech_name].get("exists", True):
+        if not techs_in[tech_name].get("active", True):
             techs_to_delete.append(tech_name)
             continue
         # Get inheritance chain generated in process_techs()
@@ -165,9 +165,9 @@ def process_nodes(model_config, modelrun_techs):
             )
 
             # Now merge the tech settings into the node-specific
-            # tech dict -- but if a tech specifies ``exists: false``,
+            # tech dict -- but if a tech specifies ``active: false``,
             # we kill it at this node
-            if not tech_settings.get("exists", True):
+            if not tech_settings.get("active", True):
                 node_techs_to_delete.append("{}.techs.{}".format(loc_name, tech_name))
             else:
                 nodes[loc_name].techs[tech_name].union(
@@ -182,7 +182,7 @@ def process_nodes(model_config, modelrun_techs):
     for link in links_in:
         loc_from, loc_to = [i.strip() for i in link.split(",")]
         # Skip this link entirely if it has been told not to exist
-        if not links_in[link].get("exists", True):
+        if not links_in[link].get("active", True):
             continue
         # Also skip this link - and warn about it - if it links to a
         # now-inexistant (because removed) node
@@ -190,14 +190,14 @@ def process_nodes(model_config, modelrun_techs):
             warnings.append(
                 "Not building the link {},{} because one or both of its "
                 "nodes have been removed from the model by setting "
-                "``exists: false``".format(loc_from, loc_to)
+                "``active: false``".format(loc_from, loc_to)
             )
             continue
         processed_transmission_techs = AttrDict()
         for tech_name in links_in[link].techs:
             # Skip techs that have been told not to exist
             # for this particular link
-            if not links_in[link].get_key("techs.{}.exists".format(tech_name), True):
+            if not links_in[link].get_key("techs.{}.active".format(tech_name), True):
                 continue
             if tech_name not in processed_transmission_techs:
                 tech_settings = AttrDict()

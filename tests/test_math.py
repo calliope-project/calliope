@@ -283,8 +283,8 @@ class TestMaxTimeVarying(CustomMathExamples):
                 "flow_cap_max_relative_per_ts": {
                     "data": [0.8, 0.5],
                     "index": [
-                        ("test_supply_elec", "2005-01-01 00:00"),
-                        ("test_supply_elec", "2005-01-01 01:00"),
+                        ["test_supply_elec", "2005-01-01 00:00"],
+                        ["test_supply_elec", "2005-01-01 01:00"],
                     ],
                     "dims": ["techs", "timesteps"],
                 },
@@ -302,8 +302,8 @@ class TestMaxTimeVarying(CustomMathExamples):
                 "storage_max_relative_per_ts": {
                     "data": [0.8, 0.5],
                     "index": [
-                        ("test_storage", "2005-01-01 00:00"),
-                        ("test_storage", "2005-01-01 01:00"),
+                        ["test_storage", "2005-01-01 00:00"],
+                        ["test_storage", "2005-01-01 01:00"],
                     ],
                     "dims": ["techs", "timesteps"],
                 },
@@ -589,12 +589,12 @@ class TestFuelDist(CustomMathExamples):
                 },
                 "fuel_import_max": {
                     "data": 5,
-                    "index": [("coal", "b")],
+                    "index": [["coal", "b"]],
                     "dims": ["carriers", "nodes"],
                 },
                 "fuel_export_max": {
                     "data": 3,
-                    "index": [("coal", "a")],
+                    "index": [["coal", "a"]],
                     "dims": ["carriers", "nodes"],
                 },
             },
@@ -618,7 +618,7 @@ class TestFuelDist(CustomMathExamples):
                 },
                 "fuel_distributor_costs": {
                     "data": 5,
-                    "index": [("coal", "monetary")],
+                    "index": [["coal", "monetary"]],
                     "dims": ["carriers", "costs"],
                 },
             },
@@ -667,7 +667,7 @@ class TestUptimeDowntime(CustomMathExamples):
             "parameters": {
                 "downtime_periods": {
                     "data": True,
-                    "index": [("test_supply_elec", "a", "2005-01-01 00:00")],
+                    "index": [["test_supply_elec", "a", "2005-01-01 00:00"]],
                     "dims": ["techs", "nodes", "timesteps"],
                 },
             },

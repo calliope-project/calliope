@@ -69,11 +69,17 @@ jobs:
     - name: Install jupyter kernel
       run: python -m ipykernel install --user --name calliope
 
-    - name: run tests
+    - name: run tests with coverage
+      if: matrix.os == 'ubuntu-latest' && matrix.py3version == '11'
+      run: pytest --cov
+
+    - name: run tests without coverage
+      if: matrix.os != 'ubuntu-latest' || matrix.py3version != '11'
       run: pytest
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
       if: matrix.os == 'ubuntu-latest' && matrix.py3version == '11'
-      env:
+      with:
+        fail_ci_if_error: true
         directory: "./reports/coverage/"

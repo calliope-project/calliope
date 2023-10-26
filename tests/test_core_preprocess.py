@@ -742,7 +742,7 @@ class TestChecks:
             excinfo, "Constraint group `mygroup` will be completely ignored"
         )
 
-        assert m._model_run.group_constraints.mygroup.get("exists", True) is False
+        assert m._model_run.group_constraints.mygroup.get("active", True) is False
 
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Not building the link a,b:calliope.exceptions.ModelWarning"
@@ -1115,9 +1115,10 @@ class TestChecks:
             "links.X1,N1.techs.heat_pipes.switches.one_way": True,
             "links.N1,X2.techs.heat_pipes.switches.one_way": True,
             "links.N1,X3.techs.heat_pipes.switches.one_way": True,
-            "config.init.subset_time": ["2005-01-01", "2005-01-01"],
         }
-        m = calliope.examples.urban_scale(override_dict=override)
+        m = calliope.examples.urban_scale(
+            override_dict=override, subset_time=["2005-01-01", "2005-01-01"]
+        )
         m.build()
         removed_prod_links = [
             {"nodes": "X1", "techs": "heat_pipes:N1"},
@@ -1478,18 +1479,20 @@ class TestTime:
         """
         if load_timeseries_from_dataframes:
             # Create dictionary with dataframes
-            timeseries_data_path = os.path.join(
-                calliope.examples._PATHS["national_scale"], "timeseries_data/"
+            timeseries_data_path = (
+                calliope.examples.EXAMPLE_MODEL_DIR
+                / "national_scale"
+                / "timeseries_data"
             )
             timeseries_dataframes = {}
             timeseries_dataframes["csp_resource"] = pd.read_csv(
-                os.path.join(timeseries_data_path, "csp_resource.csv"), index_col=0
+                timeseries_data_path / "csp_resource.csv", index_col=0
             )
             timeseries_dataframes["demand_1"] = pd.read_csv(
-                os.path.join(timeseries_data_path, "demand-1.csv"), index_col=0
+                timeseries_data_path / "demand-1.csv", index_col=0
             )
             timeseries_dataframes["demand_2"] = pd.read_csv(
-                os.path.join(timeseries_data_path, "demand-2.csv"), index_col=0
+                timeseries_data_path / "demand-2.csv", index_col=0
             )
             # Create override dict telling calliope to load timeseries from df
             override_dict = {
