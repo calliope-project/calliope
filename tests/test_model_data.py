@@ -531,7 +531,7 @@ class TestTopLevelParams:
         )
 
     def test_top_level_param_unknown_dim_only(self, caplog, run_and_test):
-        caplog.set_level(logging.DEBUG)
+        caplog.set_level(logging.DEBUG, logger="calliope.preprocess.model_data")
         run_and_test(
             {"data": 10, "index": ["foo"], "dims": "bar"},
             {"foo": 10},
@@ -543,7 +543,7 @@ class TestTopLevelParams:
         )
 
     def test_top_level_param_multi_unknown_dim(self, caplog, run_and_test):
-        caplog.set_level(logging.DEBUG)
+        caplog.set_level(logging.DEBUG, logger="calliope.preprocess.model_data")
         run_and_test(
             {
                 "data": 10,
@@ -563,7 +563,7 @@ class TestTopLevelParams:
         )
 
     def test_top_level_param_unknown_dim_mixed(self, caplog, run_and_test):
-        caplog.set_level(logging.DEBUG)
+        caplog.set_level(logging.DEBUG, logger="calliope.preprocess.model_data")
         run_and_test(
             {
                 "data": 10,
@@ -579,7 +579,7 @@ class TestTopLevelParams:
         )
 
     def test_top_level_param_timeseries(self, caplog, run_and_test):
-        caplog.set_level(logging.DEBUG)
+        caplog.set_level(logging.DEBUG, logger="calliope.preprocess.model_data")
         run_and_test(
             {
                 "data": 10,
@@ -599,7 +599,7 @@ class TestTopLevelParams:
     )
     def test_top_level_param_extend_dim_vals(self, caplog, run_and_test):
         # We do this test with timesteps as all other dimension elements are filtered out if there is no matching True element in `definition_matrix`
-        caplog.set_level(logging.DEBUG)
+        caplog.set_level(logging.DEBUG, logger="calliope.preprocess.model_data")
         run_and_test(
             {
                 "data": 10,
