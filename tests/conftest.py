@@ -188,10 +188,8 @@ def dummy_model_data():
                 ["carriers", "techs"],
                 [[1.0, np.nan, 1.0, np.nan], [np.nan, 1.0, np.nan, np.nan]],
             ),
-            "lookup_techs": (
-                ["techs"],
-                ["foobar", np.nan, "foobaz", np.nan],
-            ),
+            "lookup_techs": (["techs"], ["foobar", np.nan, "foobaz", np.nan]),
+            "lookup_techs_no_match": (["techs"], ["foo", np.nan, "bar", np.nan]),
             "link_remote_nodes": (
                 ["nodes", "techs"],
                 [["bar", np.nan, "bar", np.nan], ["foo", np.nan, np.nan, np.nan]],
