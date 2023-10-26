@@ -11,14 +11,14 @@
 import:
   - scenarios.yaml
 
-model:
-  name: Test model
-
-  timeseries_data_path: "timeseries_data"
-
-run:
-  mode: plan
-  solver: cbc
+config:
+  init:
+    name: Test model
+    timeseries_data_path: "timeseries_data"
+  build:
+    mode: plan
+  solve:
+    solver: cbc
 
 techs:
   test_supply_gas:

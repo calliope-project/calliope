@@ -42,7 +42,7 @@ def postprocess_model_results(results, model_data, timings):
     """
     log_time(logger, timings, "post_process_start", comment="Postprocessing: started")
 
-    run_config = model_data.attrs["run_config"]
+    zero_threshold = model_data.config.solve.zero_threshold
     results["capacity_factor"] = capacity_factor(results, model_data)
     results["systemwide_capacity_factor"] = capacity_factor(
         results, model_data, systemwide=True
@@ -53,7 +53,7 @@ def postprocess_model_results(results, model_data, timings):
     results["total_levelised_cost"] = systemwide_levelised_cost(
         results, model_data, total=True
     )
-    results = clean_results(results, run_config.get("zero_threshold", 0), timings)
+    results = clean_results(results, zero_threshold, timings)
 
     for var_data in results.data_vars.values():
         if "is_result" not in var_data.attrs.keys():

@@ -172,9 +172,9 @@ constraints:
         - where: "NOT any(export_carrier, over=techs)"
           expression: "0"
       unmet_demand_and_unused_supply:
-        - where: "run.ensure_feasibility=True"
+        - where: "config.ensure_feasibility=True"
           expression: unmet_demand + unused_supply
-        - where: "NOT run.ensure_feasibility=True"
+        - where: "NOT config.ensure_feasibility=True"
           expression: "0"
 
   balance_supply:
@@ -256,11 +256,11 @@ constraints:
     sub_expressions:
       flow_out: *flow_out_with_parasitic
       storage_previous_step: &storage_previous_step
-        - where: timesteps=get_val_at_index(timesteps=0) AND NOT run.cyclic_storage=True
+        - where: timesteps=get_val_at_index(timesteps=0) AND NOT config.cyclic_storage=True
           expression: storage_initial * storage_cap
-        - where: ((timesteps=get_val_at_index(timesteps=0) AND run.cyclic_storage=True) OR NOT timesteps=get_val_at_index(timesteps=0)) AND NOT lookup_cluster_first_timestep=True
+        - where: ((timesteps=get_val_at_index(timesteps=0) AND config.cyclic_storage=True) OR NOT timesteps=get_val_at_index(timesteps=0)) AND NOT lookup_cluster_first_timestep=True
           expression: (1 - storage_loss) ** roll(timestep_resolution, timesteps=1) * roll(storage, timesteps=1)
-        - where: lookup_cluster_first_timestep=True AND NOT (timesteps=get_val_at_index(timesteps=0) AND NOT run.cyclic_storage=True)
+        - where: lookup_cluster_first_timestep=True AND NOT (timesteps=get_val_at_index(timesteps=0) AND NOT config.cyclic_storage=True)
           expression: (1 - storage_loss) ** select_from_lookup_arrays(timestep_resolution, timesteps=lookup_cluster_last_timestep) * select_from_lookup_arrays(storage, timesteps=lookup_cluster_last_timestep)
 
   source_availability_supply_plus:
@@ -292,7 +292,7 @@ constraints:
   set_storage_initial:
     description: "Fix the relationship between carrier stored in a `storage` technology at the start and end of the whole model period."
     foreach: [nodes, techs]
-    where: "storage AND storage_initial AND run.cyclic_storage=True"
+    where: "storage AND storage_initial AND config.cyclic_storage=True"
     equations:
       - expression: storage[timesteps=$final_step] * ((1 - storage_loss) ** timestep_resolution[timesteps=$final_step]) == storage_initial * storage_cap
     slices:
@@ -598,7 +598,7 @@ variables:
     description: "Virtual source of carrier flow to ensure model feasibility. This should only be considered a debugging rather than a modelling tool as it may distort the model in other ways due to the large impact it has on the objective function value. When present in a model in which it has been requested, it indicates an inability for technologies in the model to reach a sufficient combined supply capacity to meet demand."
     unit: energy
     foreach: [nodes, carriers, timesteps]
-    where: "run.ensure_feasibility=True"
+    where: "config.ensure_feasibility=True"
     bounds:
       min: 0
       max: .inf
@@ -607,21 +607,24 @@ variables:
     description: "Virtual sink of carrier flow to ensure model feasibility. This should only be considered a debugging rather than a modelling tool as it may distort the model in other ways due to the large impact it has on the objective function value. In model results, the negation of this variable is combined with `unmet_demand` and presented as only one variable: `unmet_demand`. When present in a model in which it has been requested, it indicates an inability for technologies in the model to reach a sufficient combined consumption capacity to meet required outflow (e.g. from renewables without the possibility of curtailment)."
     unit: energy
     foreach: [nodes, carriers, timesteps]
-    where: "run.ensure_feasibility=True"
+    where: "config.ensure_feasibility=True"
     bounds:
       min: -.inf
       max: 0
 
 objectives:
   minmax_cost_optimisation:
-    description: "Minimise the total cost of installing and operation all technologies in the system. If multiple cost classes are present (e.g., monetary and co2 emissions), the weighted sum of total costs is minimised. Cost class weights can be defined in `run.objective_options.cost_class`."
+    description: "Minimise the total cost of installing and operation all technologies in the system. If multiple cost classes are present (e.g., monetary and co2 emissions), the weighted sum of total costs is minimised. Cost class weights can be defined in the top-level parameter `objective_cost_class`."
     equations:
-      - expression: sum(sum(cost, over=[nodes, techs]) * objective_cost_class, over=costs) + $unmet_demand
+      - where: "any(cost, over=[nodes, techs, costs])"
+        expression: sum(sum(cost, over=[nodes, techs]) * objective_cost_class, over=costs) + $unmet_demand
+      - where: "NOT any(cost, over=[nodes, techs, costs])"
+        expression: $unmet_demand
     sub_expressions:
       unmet_demand:
-        - where: "run.ensure_feasibility=True"
+        - where: "config.ensure_feasibility=True"
           expression: sum(sum(unmet_demand - unused_supply, over=[carriers, nodes])  * timestep_weights, over=timesteps) * bigM
-        - where: "NOT run.ensure_feasibility=True"
+        - where: "NOT config.ensure_feasibility=True"
           expression: "0"
     sense: minimise
 

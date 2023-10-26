@@ -13,8 +13,8 @@ class TestClustering:
     def model_national(self, scope="module"):
         return calliope.examples.national_scale(
             override_dict={
-                "model.random_seed": 23,
-                "model.subset_time": ["2005-01-01", "2005-03-31"],
+                "config.init.random_seed": 23,
+                "config.init.subset_time": ["2005-01-01", "2005-03-31"],
             }
         )
 
@@ -108,7 +108,7 @@ class TestClustering:
         # it is only different for '2005-01-02'
         override = {
             "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15mins.csv",
-            "model.subset_time": None,
+            "config.init.subset_time": None,
         }
 
         model = build_test_model(override, scenario="simple_supply,one_day")
@@ -151,7 +151,7 @@ class TestClustering:
         # it is only different for '2005-01-02'
         override = {
             "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15T_to_2h.csv",
-            "model.subset_time": None,
+            "config.init.subset_time": None,
         }
 
         model = build_test_model(override, scenario="simple_supply,one_day")
@@ -235,8 +235,8 @@ class TestClustering:
     @pytest.fixture
     def predefined_cluster_override(self):
         return {
-            "model.subset_time": ["2005-01-01", "2005-01-04"],
-            "model.time": {
+            "config.init.subset_time": ["2005-01-01", "2005-01-04"],
+            "config.init.time": {
                 "function": "apply_clustering",
                 "function_options": {
                     "clustering_func": "file=clusters.csv:a",
@@ -255,7 +255,7 @@ class TestClustering:
         override2 = {
             **predefined_cluster_override,
             **{
-                "model.time.function_options.clustering_func": "file=cluster_days.csv:b"
+                "config.init.time.function_options.clustering_func": "file=cluster_days.csv:b"
             },
         }
 
@@ -272,8 +272,8 @@ class TestClustering:
         override3 = {
             **predefined_cluster_override,
             **{
-                "model.time.function_options.clustering_func": "file=cluster_days.csv:b",
-                "model.time.function_options.how": "closest",
+                "config.init.time.function_options.clustering_func": "file=cluster_days.csv:b",
+                "config.init.time.function_options.how": "closest",
             },
         }
 
@@ -283,8 +283,8 @@ class TestClustering:
 
     def test_predefined_clusters_fail(self):
         override = {
-            "model.subset_time": ["2005-01-01", "2005-01-04"],
-            "model.time": {
+            "config.init.subset_time": ["2005-01-01", "2005-01-04"],
+            "config.init.time": {
                 "function": "apply_clustering",
                 "function_options": {
                     "clustering_func": "file=clusters.csv:a",
@@ -295,7 +295,9 @@ class TestClustering:
         # should fail - no CSV data column defined
         override1 = {
             **override,
-            **{"model.time.function_options.clustering_func": "file=clusters.csv"},
+            **{
+                "config.init.time.function_options.clustering_func": "file=clusters.csv"
+            },
         }
         with pytest.raises(exceptions.ModelError) as error:
             build_test_model(override1, scenario="simple_supply")
@@ -305,7 +307,9 @@ class TestClustering:
         # should fail - unknown CSV data column defined
         override2 = {
             **override,
-            **{"model.time.function_options.clustering_func": "file=clusters.csv:1"},
+            **{
+                "config.init.time.function_options.clustering_func": "file=clusters.csv:1"
+            },
         }
 
         with pytest.raises(KeyError) as error:
@@ -316,7 +320,9 @@ class TestClustering:
         # should fail - more than one cluster given to any one day
         override3 = {
             **override,
-            **{"model.time.function_options.clustering_func": "file=clusters.csv:b"},
+            **{
+                "config.init.time.function_options.clustering_func": "file=clusters.csv:b"
+            },
         }
 
         with pytest.raises(exceptions.ModelError) as error:
@@ -330,8 +336,8 @@ class TestClustering:
         override4 = {
             **override,
             **{
-                "model.subset_time": ["2005-01-01", "2005-01-06"],
-                "model.time.function_options.clustering_func": "file=cluster_days.csv:b",
+                "config.init.subset_time": ["2005-01-01", "2005-01-06"],
+                "config.init.time.function_options.clustering_func": "file=cluster_days.csv:b",
             },
         }
 
@@ -348,13 +354,13 @@ class TestMasks:
     @pytest.fixture
     def model_national(self, scope="module"):
         return calliope.examples.national_scale(
-            override_dict={"model.subset_time": ["2005-01-01", "2005-01-31"]}
+            override_dict={"config.init.subset_time": ["2005-01-01", "2005-01-31"]}
         )
 
     @pytest.fixture
     def model_urban(self, scope="module"):
         return calliope.examples.urban_scale(
-            override_dict={"model.subset_time": ["2005-01-01", "2005-01-31"]}
+            override_dict={"config.init.subset_time": ["2005-01-01", "2005-01-31"]}
         )
 
     def test_zero(self, model_national):
@@ -611,7 +617,7 @@ class TestMasks:
         # it is only different for '2005-01-02'
         override = {
             "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15mins.csv",
-            "model.subset_time": None,
+            "config.init.subset_time": None,
         }
 
         model = build_test_model(override, scenario="simple_supply,one_day")
@@ -729,7 +735,7 @@ class TestMasks:
         # it is only different for '2005-01-02'
         override = {
             "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15T_to_2h.csv",
-            "model.subset_time": None,
+            "config.init.subset_time": None,
         }
 
         model = build_test_model(override, scenario="simple_supply,one_day")
@@ -774,8 +780,8 @@ class TestResampling:
         # it is only different for '2005-01-02'
         override = {
             "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15mins.csv",
-            "model.subset_time": None,
-            "model.time": {
+            "config.init.subset_time": None,
+            "config.init.time": {
                 "masks": [
                     {
                         "function": "extreme",
@@ -926,8 +932,8 @@ class TestResampling:
         # it is only different for '2005-01-02'
         override = {
             "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15mins.csv",
-            "model.subset_time": None,
-            "model.time": {
+            "config.init.subset_time": None,
+            "config.init.time": {
                 "function": "resample",
                 "function_options": {"resolution": "6H"},
             },
@@ -961,8 +967,8 @@ class TestResampling:
         """
         override = {
             "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15T_to_2h.csv",
-            "model.subset_time": None,
-            "model.time": {
+            "config.init.subset_time": None,
+            "config.init.time": {
                 "function": "resample",
                 "function_options": {"resolution": "2H"},
             },
@@ -1019,7 +1025,7 @@ class TestFuncs:
     @pytest.fixture
     def model_national(self, scope="module"):
         return calliope.examples.national_scale(
-            override_dict={"model.subset_time": ["2005-01", "2005-01"]}
+            override_dict={"config.init.subset_time": ["2005-01", "2005-01"]}
         )
 
     def test_drop_invalid_timesteps(self, model_national):

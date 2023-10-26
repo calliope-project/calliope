@@ -13,7 +13,8 @@ AttrDict, and building of associated debug information.
 import itertools
 import logging
 import os
-import warnings
+from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 
@@ -42,7 +43,7 @@ _DEFAULT_PALETTE = [
 
 
 def model_run_from_yaml(
-    model_file, timeseries_dataframes=None, scenario=None, override_dict=None
+    model_file, scenario=None, override_dict=None, timeseries_dataframes=None, **kwargs
 ):
     """
     Generate processed ModelRun configuration from a
@@ -64,11 +65,12 @@ def model_run_from_yaml(
 
     """
     config = AttrDict.from_yaml(model_file)
-    config.config_path = model_file
+    config._model_def_path = Path(model_file).as_posix()
 
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
     )
+    config_with_overrides.union(AttrDict({"config.init": kwargs}), allow_override=True)
 
     return generate_model_run(
         config_with_overrides,
@@ -80,7 +82,7 @@ def model_run_from_yaml(
 
 
 def model_run_from_dict(
-    config_dict, timeseries_dataframes=None, scenario=None, override_dict=None
+    config_dict, scenario=None, override_dict=None, timeseries_dataframes=None, **kwargs
 ):
     """
     Generate processed ModelRun configuration from a
@@ -104,11 +106,12 @@ def model_run_from_dict(
         config = AttrDict(config_dict)
     else:
         config = config_dict
-    config.config_path = None
+    config._model_def_path = None
 
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
     )
+    config_with_overrides.union(AttrDict({"config.init": kwargs}), allow_override=True)
 
     return generate_model_run(
         config_with_overrides,
@@ -140,13 +143,13 @@ def combine_overrides(config_model, overrides):
     return override_dict
 
 
-def apply_overrides(config, scenario=None, override_dict=None):
+def apply_overrides(model_dict, scenario=None, override_dict=None):
     """
     Generate processed Model configuration, applying any scenarios overrides.
 
     Parameters
     ----------
-    config : AttrDict
+    model_dict : AttrDict
         a model configuration AttrDict
     scenario : str, optional
     override_dict : str or dict or AttrDict, optional
@@ -155,24 +158,19 @@ def apply_overrides(config, scenario=None, override_dict=None):
     """
     debug_comments = AttrDict()
 
-    config_model = AttrDict.from_yaml(
+    default_model_dict = AttrDict.from_yaml(
         os.path.join(os.path.dirname(calliope.__file__), "config", "defaults.yaml")
     )
 
     # Interpret timeseries_data_path as relative
-    if "timeseries_data_path" in config.model:
-        config.model.timeseries_data_path = relative_path(
-            config.config_path, config.model.timeseries_data_path
+    if "timeseries_data_path" in model_dict.get_key("config.init", default={}):
+        model_dict.config.init.timeseries_data_path = relative_path(
+            model_dict._model_def_path, model_dict.config.init.timeseries_data_path
         )
 
-    # FutureWarning: check if config includes an explicit objective cost class.
-    # Added in 0.6.4-dev, to be removed in v0.7.0-dev.
-    has_explicit_cost_class = isinstance(
-        config.get_key("run.objective_options.cost_class", None), dict
-    )
-
     # The input files are allowed to override other model defaults
-    config_model.union(config, allow_override=True)
+    default_model_dict.union(model_dict, allow_override=True)
+    config_model = default_model_dict.copy()
 
     # First pass of applying override dict before applying scenarios,
     # so that can override scenario definitions by override_dict
@@ -184,13 +182,6 @@ def apply_overrides(config, scenario=None, override_dict=None):
 
         warning_messages = checks.check_overrides(config_model, override_dict)
         exceptions.print_warnings_and_raise_errors(warnings=warning_messages)
-
-        # FutureWarning: If config does not include an explicit objective cost class, check override dict.
-        # Added in 0.6.4-dev, to be removed in v0.7.0-dev.
-        if has_explicit_cost_class is False:
-            has_explicit_cost_class = isinstance(
-                override_dict.get_key("run.objective_options.cost_class", None), dict
-            )
 
         config_model.union(override_dict, allow_override=True, allow_replacement=True)
 
@@ -211,16 +202,6 @@ def apply_overrides(config, scenario=None, override_dict=None):
         warning_messages = checks.check_overrides(config_model, overrides_from_scenario)
         exceptions.print_warnings_and_raise_errors(warnings=warning_messages)
 
-        # FutureWarning: If config nor override_dict include an explicit objective cost class, check scenario dict.
-        # Added in 0.6.4-dev, to be removed in v0.7.0-dev
-        if has_explicit_cost_class is False:
-            has_explicit_cost_class = isinstance(
-                overrides_from_scenario.get_key(
-                    "run.objective_options.cost_class", None
-                ),
-                dict,
-            )
-
         config_model.union(
             overrides_from_scenario, allow_override=True, allow_replacement=True
         )
@@ -237,19 +218,6 @@ def apply_overrides(config, scenario=None, override_dict=None):
             debug_comments.set_key(
                 "{}".format(k), "Overridden via override dictionary."
             )
-
-    # FutureWarning: raise cost class warning here.
-    # Warning that there will be no default cost class in 0.7.0 #
-    # Added in 0.6.4-dev, to be removed in v0.7.0-dev
-    if has_explicit_cost_class is False:
-        warnings.warn(
-            "There will be no default cost class for the objective function in "
-            'v0.7.0 (currently "monetary" with a weight of 1). '
-            "Explicitly specify the cost class(es) you would like to use "
-            'under `run.objective_options.cost_class`. E.g. `{"monetary": 1}` to '
-            "replicate the current default.",
-            FutureWarning,
-        )
 
     # Drop default nodes, links, and techs
     config_model.del_key("techs.default_tech")
@@ -468,8 +436,8 @@ def process_tech_groups(config_model, techs):
     return tech_groups
 
 
-def load_timeseries_from_file(config_model, tskey):
-    file_path = os.path.join(config_model.model.timeseries_data_path, tskey)
+def load_timeseries_from_file(timeseries_data_path, tskey):
+    file_path = os.path.join(timeseries_data_path, tskey)
     df = pd.read_csv(file_path, index_col=0)
     df.columns = pd.MultiIndex.from_product(
         [[tskey], df.columns], names=["source", "column"]
@@ -542,22 +510,24 @@ def _get_names(config):
     return set(tsnames), set(tsvars)
 
 
-def process_timeseries_data(config_model, model_run, timeseries_dataframes):
-    timeseries_data = config_model.model.get("timeseries_data", None)
-
-    dtformat = config_model.model["timeseries_dateformat"]
-
+def process_timeseries_data(
+    model_run: AttrDict,
+    timeseries_dfs: Optional[pd.DataFrame],
+    timeseries_data_path: Optional[str],
+    time_config: Optional[AttrDict],
+    subset_time_config: Optional[list[str]],
+    datetime_format: str,
+):
     # Generate set of all files and dataframes we want to load
-    node_config = model_run.nodes.as_dict_flat()
-    model_config = config_model.model.as_dict_flat()
-
-    constraint_tsnames, constraint_tsvars = _get_names(node_config)
-    cluster_tsnames, cluster_tsvars = _get_names(model_config)
+    constraint_tsnames, constraint_tsvars = _get_names(model_run.nodes.as_dict_flat())
+    cluster_tsnames = set()
+    if time_config is not None:
+        cluster_tsnames, _ = _get_names(time_config.as_dict_flat())
 
     # Check if timeseries_dataframes is in the correct format (dict of
     # pandas DataFrames)
-    if timeseries_dataframes is not None:
-        check_timeseries_dataframes(timeseries_dataframes)
+    if timeseries_dfs is not None:
+        check_timeseries_dataframes(timeseries_dfs)
 
     # Check there is at least one timeseries present
     if len(constraint_tsnames) == 0:
@@ -568,13 +538,14 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
 
     # Load each timeseries into timeseries data. tskey is either a filename
     # (called by file=...) or a key in timeseries_dataframes (called by df=...)
+    timeseries_data = pd.DataFrame(dtype=float)
     for tskey in constraint_tsnames | cluster_tsnames:
         # If tskey is a CSV path, load the CSV, else load the dataframe
 
         if tskey[0] == "file":
-            df = load_timeseries_from_file(config_model, tskey[1])
+            df = load_timeseries_from_file(timeseries_data_path, tskey[1])
         elif tskey[0] == "df":
-            df = load_timeseries_from_dataframe(timeseries_dataframes, tskey[1])
+            df = load_timeseries_from_dataframe(timeseries_dfs, tskey[1])
         else:
             raise KeyError(f"Unrecognised timeseries data source {tskey[0]}")
 
@@ -587,19 +558,15 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
             )
         # Parse the dates, checking for errors specific to this
         try:
-            df.index = _parser(df.index, dtformat)
+            df.index = _parser(df.index, datetime_format)
         except ValueError as e:
             raise exceptions.ModelError(
                 "Error in parsing dates in timeseries data from {}, "
-                "using datetime format `{}`: {}".format(tskey[1], dtformat, e)
+                "using datetime format `{}`: {}".format(tskey[1], datetime_format, e)
             )
-        if timeseries_data is None:
-            timeseries_data = df
-        else:
-            timeseries_data = pd.concat([timeseries_data, df], axis=1)
+        timeseries_data = pd.concat([timeseries_data, df], axis=1)
 
     # Apply time subsetting, if supplied in model_run
-    subset_time_config = config_model.model.get("subset_time", None)
     if subset_time_config is not None:
         # Test parsing dates first, to make sure they fit our required subset format
         try:
@@ -711,11 +678,18 @@ def generate_model_run(
     (
         model_run["timeseries_data"],
         model_run["timeseries_vars"],
-    ) = process_timeseries_data(config, model_run, timeseries_dataframes)
+    ) = process_timeseries_data(
+        model_run,
+        timeseries_dataframes,
+        config.config.init.timeseries_data_path,
+        config.config.init.time,
+        config.config.init.subset_time,
+        config.config.init.timeseries_dateformat,
+    )
 
     # 6) Grab additional relevant bits from run and model config
-    model_run["run"] = config["run"]
-    model_run["model"] = config["model"]
+    model_run["config"] = config.config
+    model_run["parameters"] = config.parameters
 
     # 8) Final sense-checking
     final_check_comments, warning_messages, errors = checks.check_final(model_run)

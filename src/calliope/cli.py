@@ -182,7 +182,7 @@ def new(path, template, debug):
     with format_exceptions(debug):
         if template is None:
             template = "national_scale"
-        source_path = examples._PATHS[template]
+        source_path = examples.EXAMPLE_MODEL_DIR / template
         click.echo("Copying {} template to target directory: {}".format(template, path))
         shutil.copytree(source_path, path)
 
@@ -292,7 +292,7 @@ def run(
             click.secho("Starting model run...")
 
             if save_logs:
-                model.run_config["save_logs"] = save_logs
+                model.config.set_key("solve.save_logs", save_logs)
 
             if save_csv is None and save_netcdf is None:
                 click.secho(
@@ -304,12 +304,11 @@ def run(
             # If save_netcdf is used, override the 'save_per_spore_path' to point to a
             # directory of the same name as the planned netcdf
 
-            if save_netcdf and model.run_config.get("spores_options", {}).get(
-                "save_per_spore", False
-            ):
-                model.run_config["spores_options"][
-                    "save_per_spore_path"
-                ] = save_netcdf.replace(".nc", "/spore_{}.nc")
+            if save_netcdf and model.config.solve.spores_save_per_spore:
+                model.config.set_key(
+                    "solve.spores_save_per_spore_path",
+                    save_netcdf.replace(".nc", "/spore_{}.nc"),
+                )
 
             model.build()
             model.solve()

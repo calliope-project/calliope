@@ -208,10 +208,10 @@ class TestParserElements:
     @pytest.mark.parametrize(
         ["config_string", "expected_val"],
         [
-            ("run.foo", True),
-            ("run.bar.foobar", "baz"),
-            ("run.foobar.baz.foo", np.inf),
-            ("model.a_b", 0),
+            ("config.foo", True),
+            ("config.FOO", "baz"),
+            ("config.foo1", np.inf),
+            ("config.a_b", 0),
         ],
     )
     def test_config_option_valid(
@@ -220,32 +220,37 @@ class TestParserElements:
         parsed_ = config_option.parse_string(config_string, parse_all=True)
         assert parsed_[0].eval(**eval_kwargs) == expected_val
 
-    @pytest.mark.parametrize("config_string", ["run.a", "run.a.b", "model.a.b.c"])
-    def test_config_option_missing_but_valid(
-        self, config_option, config_string, eval_kwargs
-    ):
+    @pytest.mark.parametrize("config_string", ["config.a"])
+    def test_config_option_missing(self, config_option, config_string, eval_kwargs):
         parsed_ = config_option.parse_string(config_string, parse_all=True)
-        assert np.isnan(parsed_[0].eval(**eval_kwargs))
+        with pytest.raises(KeyError):
+            parsed_[0].eval(**eval_kwargs)
 
     @pytest.mark.parametrize(
-        "config_string", ["run.", "run.", "RUN", "r un.foo", "model,a_b", "scenarios"]
+        "config_string",
+        ["config.", "config.bar.foobar", "RUN", "r un.foo", "model,a_b", "scenarios"],
     )
     def test_config_fail_malformed_string(self, config_option, config_string):
         with pytest.raises(pyparsing.ParseException) as excinfo:
             config_option.parse_string(config_string, parse_all=True)
         assert check_error_or_warning(excinfo, "Expected")
 
-    @pytest.mark.parametrize("config_string", ["foo.bar", "all_inf.is_result"])
-    def test_config_missing_config_group(
-        self, config_option, eval_kwargs, config_string
-    ):
+    @pytest.mark.parametrize(
+        "config_string", ["CONFIG.bar", "foo.bar", "all_inf.is_result"]
+    )
+    def test_config_missing_config_identifier(self, config_option, config_string):
+        with pytest.raises(pyparsing.ParseException) as excinfo:
+            config_option.parse_string(config_string, parse_all=True)
+        assert check_error_or_warning(excinfo, "Expected")
+
+    @pytest.mark.parametrize("config_string", ["config.nonexistent", "config.config"])
+    def test_config_missing_from_data(self, config_option, eval_kwargs, config_string):
         parsed_ = config_option.parse_string(config_string, parse_all=True)
-        with pytest.raises(BackendError) as excinfo:
+        with pytest.raises(KeyError):
             parsed_[0].eval(**eval_kwargs)
-        assert check_error_or_warning(excinfo, "Invalid configuration group")
 
     @pytest.mark.parametrize(
-        ["config_string", "type_"], [("model.b_a", "list"), ("run.bar", "AttrDict")]
+        ["config_string", "type_"], [("config.b_a", "list"), ("config.bar", "AttrDict")]
     )
     def test_config_fail_datatype(
         self, config_option, eval_kwargs, config_string, type_
@@ -343,16 +348,13 @@ class TestParserElements:
     @pytest.mark.parametrize(
         ["config_string", "comparison_val", "expected_true"],
         [
-            ("run.foo", "True", True),
-            ("run.foo", "False", False),
-            ("run.foo", 1, True),
-            ("run.bar.foobar", "baz", True),
-            ("run.bar.foobar", True, False),
-            ("run.bar.foobar", "aaa", False),
-            ("model.a_b", 0, True),
-            ("model.a_b", 0.0, True),
-            ("model.a_b", False, True),  # FIXME: should this be expected (0 == False)?
-            ("model.a_b", 1, False),
+            ("config.foo", "True", True),
+            ("config.foo", "False", False),
+            ("config.foo", 1, True),
+            ("config.a_b", 0, True),
+            ("config.a_b", 0.0, True),
+            ("config.a_b", False, True),  # FIXME: should this be expected (0 == False)?
+            ("config.a_b", 1, False),
         ],
     )
     def test_comparison_parser_model_config(
@@ -367,12 +369,12 @@ class TestParserElements:
         "comparison_string",
         [
             "1=1",
-            "run.foo==bar",
+            "config.foo==bar",
             "all_inf=__type__",
             "$foo=bar",
             "foo=$bar",
-            "foo=run.bar",
-            "run.foo=_bar",
+            "foo=config.bar",
+            "config.foo=_bar",
         ],
     )
     def test_comparison_malformed_string(self, comparison, comparison_string):
@@ -415,9 +417,9 @@ class TestParserElements:
         ["parser_name", "parse_string", "expected"],
         [
             ("data_var", "foo", "DATA_VAR:foo"),
-            ("config_option", "model.bar", "CONFIG:model_config.bar"),
+            ("config_option", "config.bar", "CONFIG:bar"),
             ("bool_operand", "TRUE", "BOOL:true"),
-            ("comparison", "model.bar=True", "CONFIG:model_config.bar=BOOL:true"),
+            ("comparison", "config.bar=True", "CONFIG:bar=BOOL:true"),
             ("subset", "[foo, 1] in foos", "SUBSET:foos[STRING:foo, NUM:1]"),
         ],
     )
@@ -432,7 +434,7 @@ class TestParserMasking:
         ["instring", "expected"],
         [
             ("all_inf", "all_false"),
-            ("run.foo=True", True),
+            ("config.foo=True", True),
             ("inheritance(boo)", "boo_inheritance_bool"),
         ],
     )
@@ -448,11 +450,11 @@ class TestParserMasking:
     @pytest.mark.parametrize(
         ["instring", "expected_true"],
         [
-            ("run.foo=True and model.a_b=0", True),
-            ("run.foo=False And model.a_b=0", False),
-            ("run.foo=True AND model.a_b=1", False),
-            ("run.foo=False and model.a_b=1", False),
-            ("run.foo=1  and  model.a_b=0", True),
+            ("config.foo=True and config.a_b=0", True),
+            ("config.foo=False And config.a_b=0", False),
+            ("config.foo=True AND config.a_b=1", False),
+            ("config.foo=False and config.a_b=1", False),
+            ("config.foo=1  and  config.a_b=0", True),
         ],
     )
     def test_where_string_and(self, parse_where_string, instring, expected_true):
@@ -462,11 +464,11 @@ class TestParserMasking:
     @pytest.mark.parametrize(
         ["instring", "expected_true"],
         [
-            ("run.foo=True or model.a_b=0", True),
-            ("run.foo=False Or model.a_b=0", True),
-            ("run.foo=True OR model.a_b=1", True),
-            ("run.foo=False or model.a_b=1", False),
-            ("run.foo=1 or model.a_b=0", True),
+            ("config.foo=True or config.a_b=0", True),
+            ("config.foo=False Or config.a_b=0", True),
+            ("config.foo=True OR config.a_b=1", True),
+            ("config.foo=False or config.a_b=1", False),
+            ("config.foo=1 or config.a_b=0", True),
         ],
     )
     def test_where_string_or(self, parse_where_string, instring, expected_true):
@@ -476,11 +478,11 @@ class TestParserMasking:
     @pytest.mark.parametrize(
         ["instring", "expected_true"],
         [
-            ("not run.foo=True", False),
-            ("Not run.foo=False and model.a_b=0", True),
-            ("run.foo=True and NOT model.a_b=1", True),
-            ("not run.foo=False and not model.a_b=1", True),
-            ("run.foo=False or not model.a_b=0", False),
+            ("not config.foo=True", False),
+            ("Not config.foo=False and config.a_b=0", True),
+            ("config.foo=True and NOT config.a_b=1", True),
+            ("not config.foo=False and not config.a_b=1", True),
+            ("config.foo=False or not config.a_b=0", False),
         ],
     )
     def test_where_string_not(self, parse_where_string, instring, expected_true):
@@ -539,11 +541,11 @@ class TestParserMasking:
     @pytest.mark.parametrize(
         ["instring", "expected"],
         [
-            ("all_inf and all_nan or run.foo=True", "all_true"),
-            ("all_inf and (all_nan or run.foo=True)", "all_false"),
-            ("not all_inf and not run.foo=False ", "all_true"),
+            ("all_inf and all_nan or config.foo=True", "all_true"),
+            ("all_inf and (all_nan or config.foo=True)", "all_false"),
+            ("not all_inf and not config.foo=False ", "all_true"),
             (
-                "(all_inf=inf and with_inf) or (run.foo=True and all_nan)",
+                "(all_inf=inf and with_inf) or (config.foo=True and all_nan)",
                 "with_inf_as_bool",
             ),
         ],
@@ -567,8 +569,8 @@ class TestParserMasking:
             "and all_inf",
             "with_inf not and all_inf",
             "with_inf and or all_inf",
-            "run.foo=True and and run.foo=True",
-            "run.foo=True andnot all_inf",
+            "config.foo=True and and config.foo=True",
+            "config.foo=True andnot all_inf",
         ],
     )
     def test_where_malformed(self, where, instring):
@@ -589,9 +591,9 @@ class TestAsLatex:
             ("data_var", "with_inf", r"\exists (\textit{with_inf}_\text{node,tech})"),
             ("data_var", "foo", r"\exists (\textit{foo})"),
             ("data_var", "no_dims", r"\exists (\textit{no_dims})"),
-            ("config_option", "run.foo", r"\text{run_config.foo}"),
+            ("config_option", "config.foo", r"\text{config.foo}"),
             ("bool_operand", "True", "true"),
-            ("comparison", "run.foo>1", r"\text{run_config.foo}\mathord{>}\text{1}"),
+            ("comparison", "config.foo>1", r"\text{config.foo}\mathord{>}\text{1}"),
             (
                 "comparison",
                 "with_inf=True",
@@ -611,8 +613,8 @@ class TestAsLatex:
             ),
             (
                 "where",
-                "no_dims AND (with_inf OR run.foo>1)",
-                r"\exists (\textit{no_dims}) \land (\exists (\textit{with_inf}_\text{node,tech}) \lor \text{run_config.foo}\mathord{>}\text{1})",
+                "no_dims AND (with_inf OR config.foo>1)",
+                r"\exists (\textit{no_dims}) \land (\exists (\textit{with_inf}_\text{node,tech}) \lor \text{config.foo}\mathord{>}\text{1})",
             ),
         ],
     )
