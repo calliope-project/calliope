@@ -49,10 +49,7 @@ More fully-featured examples that have been used in peer-reviewed scientific pub
 
 ## Documentation
 
-Documentation is available on Read the Docs:
-
-- [Read the documentation online (recommended)](https://calliope.readthedocs.io/en/stable/)
-- [Download all documentation in a single PDF file](https://readthedocs.org/projects/calliope/downloads/pdf/stable/)
+Documentation is available on [Read the Docs](https://calliope.readthedocs.io/en/stable/).
 
 ## Contributing
 
