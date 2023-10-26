@@ -21,11 +21,12 @@ def model_run():
     return model_run_from_yaml(filepath.as_posix(), scenario="simple_supply")[0]
 
 
-class TestModelData:
-    @pytest.fixture(scope="function")
-    def model_data(self, model_run):
-        return ModelDataFactory(model_run)
+@pytest.fixture(scope="function")
+def model_data(model_run):
+    return ModelDataFactory(model_run)
 
+
+class TestModelData:
     @pytest.fixture(scope="class")
     def model_data_w_params(self, model_run):
         model_data = ModelDataFactory(model_run)
@@ -419,15 +420,16 @@ class TestModelData:
 
 class TestTopLevelParams:
     @pytest.fixture(scope="function")
-    def run_and_test(self):
+    def run_and_test(self, model_data):
         def _run_and_test(in_dict, out_dict, dims):
-            model = build_model(
-                {"parameters.my_val": in_dict},
-                "simple_supply,two_hours",
-            )
+            model_data._extract_node_tech_data()
+            model_data._add_time_dimension()
+            model_data.params = {"my_val": in_dict}
+            model_data._add_top_level_params()
+
             _data = pd.Series(out_dict).rename_axis(index=dims)
             pd.testing.assert_series_equal(
-                model.inputs.my_val.to_series().dropna().reindex(_data.index),
+                model_data.model_data.my_val.to_series().dropna().reindex(_data.index),
                 _data,
                 check_dtype=False,
                 check_names=False,
@@ -448,17 +450,21 @@ class TestTopLevelParams:
         )
 
     @pytest.mark.parametrize("val", [1, 1.0, np.inf, "foo"])
-    def test_top_level_param_single_val(self, val):
+    @pytest.mark.parametrize("dict_nesting", ["", ".data"])
+    def test_top_level_param_single_val(self, val, dict_nesting):
         model = build_model(
-            {"parameters.my_val.data": val},
+            {f"parameters.my_val{dict_nesting}": val},
             "simple_supply,two_hours",
         )
         assert model.inputs.my_val == xr.DataArray(val)
 
     @pytest.mark.parametrize("val", [None, np.nan])
-    def test_top_level_param_single_val_cleaned_out_in_preprocessing(self, val):
+    @pytest.mark.parametrize("dict_nesting", ["", ".data"])
+    def test_top_level_param_single_val_cleaned_out_in_preprocessing(
+        self, val, dict_nesting
+    ):
         model = build_model(
-            {"parameters.my_val.data": val},
+            {f"parameters.my_val{dict_nesting}": val},
             "simple_supply,two_hours",
         )
         assert "my_val" not in model.inputs

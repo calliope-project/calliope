@@ -103,6 +103,10 @@ class ModelDataFactory:
                 raise KeyError(
                     f"Trying to add top-level parameter with same name as a node/tech level parameter: {param_name}"
                 )
+
+            if not isinstance(param_data, dict):
+                param_data = {"data": param_data}
+
             if "dims" in param_data:
                 index = param_data.get("index", None)
                 if index is None or not isinstance(index, list):
@@ -127,36 +131,56 @@ class ModelDataFactory:
             else:
                 param_da = xr.DataArray(param_data["data"], name=param_name)
 
-            coords_to_update = {}
-            for coord_name, coord_data in param_da.coords.items():
-                if (
-                    self.model_data.coords.get(coord_name, xr.DataArray()).dtype.kind
-                    == "M"
-                ):
-                    LOGGER.debug(
-                        f"(parameters, {param_name}) | Updating {coord_name} dimension index values to datetime format"
-                    )
-                    coords_to_update[coord_name] = pd.to_datetime(
-                        coord_data, format="ISO8601"
-                    )
-            for coord_name, coord_data in coords_to_update.items():
-                param_da.coords[coord_name] = coord_data
+            self._update_param_coords(param_name, param_da)
+            self._log_param_updates(param_name, param_da)
 
-            for coord_name, coord_data in param_da.coords.items():
-                if coord_name not in self.model_data.coords:
-                    LOGGER.debug(
-                        f"(parameters, {param_name}) | Adding a new dimension to the model: {coord_name}"
-                    )
-                else:
-                    new_coord_data = coord_data[
-                        ~coord_data.isin(self.model_data.coords[coord_name])
-                    ]
-                    if new_coord_data.size > 0:
-                        LOGGER.debug(
-                            f"(parameters, {param_name}) | Adding a new value to the "
-                            f"`{coord_name}` model coordinate: {new_coord_data.values}"
-                        )
             self.model_data = self.model_data.merge(param_da.to_dataset())
+
+    def _update_param_coords(self, param_name: str, param_da: xr.DataArray) -> None:
+        """
+        Check array coordinates to see if any should be in datetime format,
+        if the base model coordinate is in datetime format.
+
+        Args:
+            param_name (str): name of parameter being added to the model.
+            param_da (xr.DataArray): array of parameter data.
+        """
+        coords_to_update = {}
+        for coord_name, coord_data in param_da.coords.items():
+            if self.model_data.coords.get(coord_name, xr.DataArray()).dtype.kind == "M":
+                LOGGER.debug(
+                    f"(parameters, {param_name}) | Updating {coord_name} dimension index values to datetime format"
+                )
+                coords_to_update[coord_name] = pd.to_datetime(
+                    coord_data, format="ISO8601"
+                )
+        for coord_name, coord_data in coords_to_update.items():
+            param_da.coords[coord_name] = coord_data
+
+    def _log_param_updates(self, param_name: str, param_da: xr.DataArray) -> None:
+        """
+        Check array coordinates to see if:
+            1. any are new compared to the base model dimensions.
+            2. any are adding new elements to an existing base model dimension.
+
+        Args:
+            param_name (str): name of parameter being added to the model.
+            param_da (xr.DataArray): array of parameter data.
+        """
+        for coord_name, coord_data in param_da.coords.items():
+            if coord_name not in self.model_data.coords:
+                LOGGER.debug(
+                    f"(parameters, {param_name}) | Adding a new dimension to the model: {coord_name}"
+                )
+            else:
+                new_coord_data = coord_data[
+                    ~coord_data.isin(self.model_data.coords[coord_name])
+                ]
+                if new_coord_data.size > 0:
+                    LOGGER.debug(
+                        f"(parameters, {param_name}) | Adding a new value to the "
+                        f"`{coord_name}` model coordinate: {new_coord_data.values}"
+                    )
 
     def _add_time_dimension(self):
         self.data_pre_time = self.model_data.copy(deep=True)

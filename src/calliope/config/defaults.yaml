@@ -41,8 +41,12 @@ config:
     zero_threshold: 1e-10  # On postprocessing the optimisation results, values smaller than this threshold will be considered as optimisation artefacts and will be set to zero.
 
 parameters:
-  bigM:  # Large value used to define certain optimisation problems. See https://en.wikipedia.org/wiki/Big_M_method for more information. This value should be larger than the largest values that any decision variables can take, but should not be **too** large (i.e., do not set it greater than 3 orders of magnitude above the numeric range of the model). If too large, numerical problems may arise in the optimisation.
-    data: 1e9
+  # BigM is a large value used to define certain optimisation problems.
+  # See https://en.wikipedia.org/wiki/Big_M_method for more information.
+  # This value should be larger than the largest values that any decision variables can take,
+  # but should not be **too** large (i.e., do not set it greater than 3 orders of magnitude above the numeric range of the model).
+  # if too large, numerical problems may arise in the optimisation.
+  bigM: 1e9
   objective_cost_class: # Weightings for cost classes to apply in the objective function.
     data: 1
     index: [monetary]
