@@ -144,7 +144,15 @@ This could be a single value:
 .. code-block:: yaml
 
     parameters:
-        my_param: { data: 10 }
+        my_param: 10
+
+or (equivalent):
+
+.. code-block:: yaml
+
+    parameters:
+        my_param:
+            data: 10
 
 which can then be accessed in the model inputs `model.inputs.my_param` and used in custom math as `my_param`.
 
