@@ -55,15 +55,6 @@ Instead, we recommend you use other timeseries processing tools applied to your 
    This means that costs and production values are not consistent without manually post-processing them by either multiplying production by weight (production would then be inconsistent with capacity) or dividing costs by weight.
    The computation of levelised costs and of capacity factors takes weighting into account, so these values are consistent and can be used as usual.
 
-Setting a random seed
----------------------
-
-By specifying :yaml:`model.random_seed` in the model configuration, any alphanumeric string can be used to initialise the random number generator at the very start of model processing.
-
-This is useful for full reproducibility of model results where time series clustering is used, as clustering methods such as k-means depend on randomly generated initial conditions.
-
-Note that this affects only the random number generator used in Calliope's model preprocessing and not in any way the solver used to solve the model (any solver-specific options need to be set specifically for that solver; see :ref:`solver_options`).
-
 .. _tech_groups:
 
 Using ``tech_groups`` to group configuration
