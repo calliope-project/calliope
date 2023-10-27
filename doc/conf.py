@@ -16,9 +16,9 @@ sys.path.insert(0, os.path.abspath("."))
 sys.path.append(os.path.abspath("_themes"))
 
 from helpers import (  # noqa: E402
+    generate_custom_constraints,
     generate_readable_schema,
     generate_tables,
-    generate_custom_constraints,
 )
 
 # Generates the tables and source code files
