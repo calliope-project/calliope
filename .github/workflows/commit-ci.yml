@@ -1,0 +1,55 @@
+name: Branch Push CI
+
+on:
+  push:
+    branches:
+      - "**"
+    paths-ignore:
+      - README.md
+      - changelog.rst
+      - LICENSE
+      - CITATION
+      - AUTHORS
+      - doc/**
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: mamba-org/setup-micromamba@v1
+      with:
+        micromamba-version: latest
+        environment-name: ${{ github.event.repository.name }}-ubuntu-latest-311
+        environment-file: requirements/base.txt
+        create-args: >-
+          -f requirements/dev.txt
+          python=3.11
+          coin-or-cbc
+        post-cleanup: all
+        cache-environment: true
+
+    - name: Install package
+      run: pip install --no-dependencies -e .
+
+    - name: Install jupyter kernel
+      run: python -m ipykernel install --user --name calliope
+
+    - name: run tests without coverage
+      if: github.ref != 'refs/heads/main'
+      run: pytest
+
+    - name: run tests with coverage
+      if: github.ref == 'refs/heads/main'
+      run: pytest --cov
+
+    - name: upload coverage report to Codecov
+      if: github.ref == 'refs/heads/main'
+      uses: codecov/codecov-action@v3
+      env:
+        directory: "./reports/coverage/"

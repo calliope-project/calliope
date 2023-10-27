@@ -13,7 +13,7 @@ The :doc:`first tutorial <tutorials_01_national>` builds a model for part of a n
 The :doc:`second tutorial <tutorials_02_urban>` builds a model for part of a district network, exhibiting the following Calliope functionality:
 
 * Use of supply, demand, conversion, conversion_plus, and transmission technologies
-* Use of multiple energy carriers
+* Use of multiple carriers
 * Revenue generation, by carrier export
 
 The :doc:`third tutorial <tutorials_03_milp>` extends the second tutorial, exhibiting binary and integer decision variable functionality (extended an LP model to a MILP model)

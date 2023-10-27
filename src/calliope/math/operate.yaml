@@ -1,0 +1,29 @@
+constraints:
+  flow_capacity_per_storage_capacity_min.active: false
+  flow_capacity_per_storage_capacity_max.active: false
+  source_capacity_equals_flow_capacity.active: false
+  force_zero_area_use.active: false
+  area_use_per_flow_capacity.active: false
+  area_use_capacity_per_loc.active: false
+  flow_capacity_systemwide_max.active: false
+  flow_capacity_systemwide_min.active: false
+  symmetric_transmission.active: false
+  storage_capacity_units_milp.active: false
+  flow_capacity_units_milp.active: false
+  unit_capacity_max_systemwide_milp.active: false
+  unit_capacity_min_systemwide_milp.active: false
+
+variables:
+  flow_cap.active: false
+  area_use.active: false
+  source_cap.active: false
+  storage_cap.active: false
+  purchased.active: false
+  units.active: false
+
+global_expressions:
+  cost_investment.active: false
+  cost:
+    where: "cost_export OR cost_om_con OR cost_om_prod"
+    equations:
+      - expression: $cost_var_sum

@@ -1,0 +1,203 @@
+##
+# Scenarios are optional, named combinations of overrides
+##
+scenarios:
+  cold_fusion_with_production_share: ["cold_fusion", "cold_fusion_prod_share"]
+  cold_fusion_with_capacity_share: ["cold_fusion", "cold_fusion_cap_share"]
+
+##
+# Overrides are the building blocks from which scenarios can be defined
+##
+overrides:
+  profiling:
+    config:
+      init.name: "National-scale example model (profiling run)"
+      init.subset_time: ["2005-01-01", "2005-01-15"]
+      solve.solver: cbc
+
+  time_resampling:
+    config:
+      init:
+        name: "National-scale example model with time resampling"
+        subset_time: ["2005-01", "2005-01"]
+        # Resample time resolution to 6-hourly
+        time: { function: resample, function_options: { "resolution": "6H" } }
+
+  time_clustering:
+    config:
+      init:
+        random_seed: 23
+        name: "National-scale example model with time clustering"
+        subset_time: null # No time subsetting
+        # Cluster timesteps using k-means
+        time:
+          function: apply_clustering
+          function_options: { clustering_func: "kmeans", how: "closest", k: 10 }
+
+  spores:
+    config:
+      build.mode: spores
+      solve:
+        spores_score_cost_class: "spores_score"
+        spores_number: 3
+    parameters:
+      spores_slack: # In SPORES mode, slack to apply when setting the upper limit on system `spores_slack_cost_group` costs. The constraint will limit the costs to `(spores_slack + 1) * sum(costs[cost=spores_slack_cost_group])`.
+        data: 0.1
+      objective_cost_class:
+        data: [1, 0]
+        index: ["monetary", "spores_score"]
+      spores_objective_cost_class:  # In SPORES mode, the new objective function cost class weightings to apply after the initial base run.
+        data: [1, 0]
+        index: [spores_score, monetary]
+        dims: costs
+    # FIXME: replace group constraint in SPORES mode
+    # group_constraints:
+    #    systemwide_cost_max.cost_max.monetary: 1e10  # very large, non-infinite value
+
+    techs.ccgt.costs.spores_score.flow_cap: 0
+    techs.ccgt.costs.spores_score.interest_rate: 1
+    techs.csp.costs.spores_score.flow_cap: 0
+    techs.csp.costs.spores_score.interest_rate: 1
+    techs.battery.costs.spores_score.flow_cap: 0
+    techs.battery.costs.spores_score.interest_rate: 1
+    techs.ac_transmission.costs.spores_score.flow_cap: 0
+    techs.ac_transmission.costs.spores_score.interest_rate: 1
+
+  operate:
+    config:
+      init.subset_time: ["2005-01-01", "2005-01-10"]
+      build.mode: operate
+      solve:
+        operate_window: 12
+        operate_horizon: 24
+    nodes:
+      region1.techs.ccgt.constraints.flow_cap_max: 30000
+
+      region2.techs.battery.constraints.flow_cap_max: 1000
+      region2.techs.battery.constraints.storage_cap_max: 5240
+
+      region1-1.techs.csp.constraints.flow_cap_max: 10000
+      region1-1.techs.csp.constraints.storage_cap_max: 244301
+      region1-1.techs.csp.constraints.area_use_max: 130385
+
+      region1-2.techs.csp.constraints.flow_cap_max: 0
+      region1-2.techs.csp.constraints.storage_cap_max: 0
+      region1-2.techs.csp.constraints.area_use_max: 0
+
+      region1-3.techs.csp.constraints.flow_cap_max: 2534
+      region1-3.techs.csp.constraints.storage_cap_max: 25301
+      region1-3.techs.csp.constraints.area_use_max: 8487
+
+    links:
+      region1,region2.techs.ac_transmission.constraints.flow_cap_max: 3231
+      region1,region1-1.techs.free_transmission.constraints.flow_cap_max: 9000
+      region1,region1-2.techs.free_transmission.constraints.flow_cap_max: 0
+      region1,region1-3.techs.free_transmission.constraints.flow_cap_max: 2281
+
+  check_feasibility:
+    config:
+      build:
+        ensure_feasibility: False
+        objective: "check_feasibility"
+      init:
+        subset_time: ["2005-01-04", "2005-01-04"]
+
+  reserve_margin:
+    parameters:
+      # Model-wide settings for the system-wide reserve margin
+      # Even setting a reserve margin of zero activates the constraint,
+      # forcing enough installed capacity to cover demand in
+      # the maximum demand timestep
+      reserve_margin:
+        data: 0.10 # 10% reserve margin for power
+        index: power
+        dims: carriers
+
+  ##
+  # Overrides to demonstrate the run generator ("calliope generate_runs")
+  ##
+
+  run1:
+    config.init.subset_time: ["2005-01-01", "2005-01-31"]
+  run2:
+    config.init.subset_time: ["2005-02-01", "2005-02-31"]
+  run3:
+    config.init.subset_time: ["2005-01-01", "2005-01-31"]
+    nodes.region1.techs.ccgt.constraints.flow_cap_max: 0 # Disallow CCGT
+  run4:
+    subset_time: ["2005-02-01", "2005-02-31"]
+    nodes.region1.techs.ccgt.constraints.flow_cap_max: 0 # Disallow CCGT
+
+  ##
+  # Overrides to demonstrate group constraints
+  ##
+
+  cold_fusion: # Defines a hypothetical cold fusion tech to use in group constraints
+    techs:
+      cold_fusion:
+        essentials:
+          name: "Cold fusion"
+          color: "#233B39"
+          parent: supply
+          carrier_out: power
+        constraints:
+          flow_cap_max: 10000
+          lifetime: 50
+        costs:
+          monetary:
+            interest_rate: 0.20
+            flow_cap: 100
+    nodes.region1.techs.cold_fusion: null
+    nodes.region2.techs.cold_fusion: null
+
+  # TODO: replace with non-group constraint
+  # cold_fusion_prod_share:
+  #     group_constraints:
+  #         min_carrier_prod_share_group:
+  #             techs: ['csp', 'cold_fusion']
+  #             carrier_prod_share_min:
+  #                 # At least 85% of power supply must come from CSP and cold fusion together
+  #                 power: 0.85
+
+  # cold_fusion_cap_share:
+  #     group_constraints:
+  #         max_cap_share_group:
+  #             techs: ['csp', 'cold_fusion']
+  #             # At most 20% of total flow_cap can come from CSP and cold fusion together
+  #             flow_cap_share_max: 0.20
+  #     nodes:
+  #         region1:
+  #             techs:
+  #                 ccgt:
+  #                     constraints:
+  #                         flow_cap_max: 100000  # Increased to keep model feasible
+
+  minimize_emissions_costs:
+    parameters:
+      objective_cost_class.data: { "emissions": 1, "monetary": 0 }
+    techs:
+      ccgt:
+        costs:
+          emissions:
+            om_prod: 100 # kgCO2/kWh
+      csp:
+        costs:
+          emissions:
+            om_prod: 10 # kgCO2/kWh
+
+  maximize_utility_costs:
+    parameters:
+      objective_cost_class.data: { "utility": -1, "monetary": 0 }
+    techs:
+      ccgt:
+        costs:
+          utility:
+            om_prod: 10 # arbitrary utility value
+      csp:
+        costs:
+          utility:
+            om_prod: 100 # arbitrary utility value
+
+  capacity_factor:
+    techs.ccgt.constraints.capacity_factor_min: 0.8
+    techs.ccgt.constraints.capacity_factor_max: 0.9

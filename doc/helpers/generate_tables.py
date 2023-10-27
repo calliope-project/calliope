@@ -11,6 +11,7 @@ for the documentation.
 """
 
 import csv
+
 import ruamel.yaml as yaml
 
 
@@ -42,7 +43,7 @@ def write_csv(filename, iterable):
 
 
 def process():
-    with open("../calliope/config/defaults.yaml", "r") as f:
+    with open("../src/calliope/config/defaults.yaml", "r") as f:
         defaults = yaml.round_trip_load(f)
 
     write_csv(
@@ -58,8 +59,15 @@ def process():
         get_section(defaults["techs"]["default_tech"]["costs"]["default_cost"]),
     )
 
-    write_csv("./user/includes/model_settings.csv", get_section(defaults["model"]))
-    write_csv("./user/includes/run_settings.csv", get_section(defaults["run"]))
+    write_csv(
+        "./user/includes/config_init.csv", get_section(defaults["config"]["init"])
+    )
+    write_csv(
+        "./user/includes/config_build.csv", get_section(defaults["config"]["build"])
+    )
+    write_csv(
+        "./user/includes/config_solve.csv", get_section(defaults["config"]["solve"])
+    )
 
     y = yaml.YAML()
 

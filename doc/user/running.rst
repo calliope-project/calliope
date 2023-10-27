@@ -110,7 +110,7 @@ There are two ways to override a base model when running interactively, analogou
 
         model = calliope.Model(
             'model.yaml',
-            override_dict={'run.solver': 'gurobi'}
+            override_dict={'config.solve.solver': 'gurobi'}
         )
 
 .. note:: Both `scenario` and `override_dict` can be defined at once. They will be applied in order, such that scenarios are applied first, followed by dictionary overrides. As such, the `override_dict` can be used to override scenarios.

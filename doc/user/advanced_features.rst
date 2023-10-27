@@ -13,10 +13,11 @@ Models have a default timestep length (defined implicitly by the timesteps of th
 
 .. code-block:: yaml
 
-    model:
-        time:
-            function: resample
-            function_options: {'resolution': '6H'}
+    config:
+        init:
+            time:
+                function: resample
+                function_options: {'resolution': '6H'}
 
 In the above example, this would resample all time series data to 6-hourly timesteps.
 
@@ -30,13 +31,14 @@ The available options include:
 
 .. code-block:: yaml
 
-    model:
-        time:
-            function: apply_clustering
-            function_options:
-                clustering_func: kmeans
-                how: mean
-                k: 20
+    config:
+        init:
+            time:
+                function: apply_clustering
+                function_options:
+                    clustering_func: kmeans
+                    how: mean
+                    k: 20
 
 When using representative days, a number of additional constraints are added, based on the study undertaken by `Kotzur et al <https://doi.org/10.1016/j.apenergy.2018.01.023>`_. These constraints require a new decision variable ``storage_inter_cluster``, which tracks storage between all the dates of the original timeseries. This particular functionality can be disabled by including :yaml:`storage_inter_cluster: false` in the `function_options` given above.
 
@@ -48,13 +50,14 @@ When using representative days, a number of additional constraints are added, ba
 
 .. code-block:: yaml
 
-    model:
-        time:
-            masks:
-                - {function: extreme, options: {padding: 'calendar_week', tech: 'wind', how: 'max'}}
-                - {function: extreme, options: {padding: 'calendar_week', tech: 'wind', how: 'min'}}
-            function: resample
-            function_options: {'resolution': '6H'}
+    config:
+        init:
+            time:
+                masks:
+                    - {function: extreme, options: {padding: 'calendar_week', tech: 'wind', how: 'max'}}
+                    - {function: extreme, options: {padding: 'calendar_week', tech: 'wind', how: 'min'}}
+                function: resample
+                function_options: {'resolution': '6H'}
 
 .. Warning::
 
@@ -98,7 +101,7 @@ For example:
                 parent: supply
                 carrier: power
             constraints:
-                resource: file=pv_resource.csv
+                source_max: file=pv_resource.csv
                 lifetime: 30
             costs:
                 monetary:
@@ -111,19 +114,19 @@ For example:
                 parent: pv
                 name: 'Large-scale PV'
             constraints:
-                energy_cap_max: 2000
+                flow_cap_max: 2000
             costs:
                 monetary:
-                    energy_cap: 750
+                    flow_cap: 750
         pv_rooftop:
             essentials:
                 parent: pv
                 name: 'Rooftop PV'
             constraints:
-                energy_cap_max: 10000
+                flow_cap_max: 10000
             costs:
                 monetary:
-                    energy_cap: 1000
+                    flow_cap: 1000
 
 None of the ``tech_groups`` appear in model results, they are only used to group model configuration values.
 
@@ -133,15 +136,15 @@ None of the ``tech_groups`` appear in model results, they are only used to group
 Removing techs, locations and links
 -----------------------------------
 
-By specifying :yaml:`exists: false` in the model configuration, which can be done for example through overrides, model components can be removed for debugging or scenario analysis.
+By specifying :yaml:`active: false` in the model configuration, which can be done for example through overrides, model components can be removed for debugging or scenario analysis.
 
 This works for:
 
-* Techs: :yaml:`techs.tech_name.exists: false`
-* Locations: :yaml:`locations.location_name.exists: false`
-* Links: :yaml:`links.location1,location2.exists: false`
-* Techs at a specific location:  :yaml:`locations.location_name.techs.tech_name.exists: false`
-* Transmission techs at a specific location: :yaml:`links.location1,location2.techs.transmission_tech.exists: false`
+* Techs: :yaml:`techs.tech_name.active: false`
+* Locations: :yaml:`locations.location_name.active: false`
+* Links: :yaml:`links.location1,location2.active: false`
+* Techs at a specific location:  :yaml:`locations.location_name.techs.tech_name.active: false`
+* Transmission techs at a specific location: :yaml:`links.location1,location2.techs.transmission_tech.active: false`
 
 .. _operational_mode:
 
@@ -150,16 +153,15 @@ Operational mode
 
 In planning mode, constraints are given as upper and lower boundaries and the model decides on an optimal system configuration. In operational mode, all capacity constraints are fixed and the system is operated with a receding horizon control algorithm.
 
-To specify a runnable operational model, capacities for all technologies at all locations must have be defined. This can be done by specifying ``energy_cap_equals``. In the absence of ``energy_cap_equals``, constraints given as ``energy_cap_max`` are assumed to be fixed in operational mode.
+To specify a runnable operational model, capacities for all technologies at all locations must be defined. This can be done by specifying ``flow_cap_max``, which will be assumed to be the fixed capacity of the technology in operational mode.
 
 Operational mode runs a model with a receding horizon control algorithm. This requires two additional settings:
 
 .. code-block:: yaml
 
-    run:
-        operation:
-            horizon: 48  # hours
-            window: 24  # hours
+    config.build:
+        operate_horizon: 48  # hours
+        operate_window: 24  # hours
 
 ``horizon`` specifies how far into the future the control algorithm optimises in each iteration. ``window`` specifies how many of the hours within ``horizon`` are actually used. In the above example, decisions on how to operate for each 24-hour window are made by optimising over 48-hour horizons (i.e., the second half of each optimisation run is discarded). For this reason, ``horizon`` must always be larger than ``window``.
 
@@ -172,12 +174,14 @@ As an example, if you wanted to generate 10 SPORES, all of which are within 10% 
 
 .. code-block:: yaml
 
-    run.mode: spores
-    run.spores_options:
+    config.build.mode: spores
+    config.solve:
         spores_number: 10  # The number of SPORES to generate
-        slack: 0.1  # The fraction above the cost-optimal cost to set the maximum cost during SPORES
-        score_cost_class: spores_score  # The cost class to optimise against when generating SPORES
-        slack_cost_group: systemwide_cost_max  # The group constraint name in which the `cost_max` constraint is assigned, for use alongside the slack and cost-optimal cost
+        spores_score_cost_class: spores_score  # The cost class to optimise against when generating SPORES
+        spores_slack_cost_group: systemwide_cost_max  # The group constraint name in which the `cost_max` constraint is assigned, for use alongside the slack and cost-optimal cost
+    parameters:
+        slack:
+            data: 0.1  # The fraction above the cost-optimal cost to set the maximum cost during SPORES
 
 You will also need to manually set up some other parts of your model to deal with SPORES:
 
@@ -192,13 +196,13 @@ You will also need to manually set up some other parts of your model to deal wit
 
 .. code-block:: yaml
 
-    techs.ccgt.costs.spores_score.energy_cap: 0
+    techs.ccgt.costs.spores_score.flow_cap: 0
     techs.ccgt.costs.spores_score.interest_rate: 1
-    techs.csp.costs.spores_score.energy_cap: 0
+    techs.csp.costs.spores_score.flow_cap: 0
     techs.csp.costs.spores_score.interest_rate: 1
-    techs.battery.costs.spores_score.energy_cap: 0
+    techs.battery.costs.spores_score.flow_cap: 0
     techs.battery.costs.spores_score.interest_rate: 1
-    techs.ac_transmission.costs.spores_score.energy_cap: 0
+    techs.ac_transmission.costs.spores_score.flow_cap: 0
     techs.ac_transmission.costs.spores_score.interest_rate: 1
 
 .. note:: We use and recommend using 'spores_score' and 'systemwide_cost_max' to define the cost class and group constraint, respectively. However, these are user-defined, allowing you to choose terminology that best fits your use-case.
@@ -265,7 +269,7 @@ When using overrides (see :ref:`building_overrides`), it is possible to have ``i
     overrides:
         some_override:
             techs:
-                some_tech.constraints.energy_cap_max: 10
+                some_tech.constraints.flow_cap_max: 10
             import: [additional_definitions.yaml]
 
 ``additional_definitions.yaml``:
@@ -273,7 +277,7 @@ When using overrides (see :ref:`building_overrides`), it is possible to have ``i
 .. code-block:: yaml
 
     techs:
-        some_other_tech.constraints.energy_eff: 0.1
+        some_other_tech.constraints.flow_eff: 0.1
 
 This is equivalent to the following override:
 
@@ -282,15 +286,15 @@ This is equivalent to the following override:
     overrides:
         some_override:
             techs:
-                some_tech.constraints.energy_cap_max: 10
-                some_other_tech.constraints.energy_eff: 0.1
+                some_tech.constraints.flow_cap_max: 10
+                some_other_tech.constraints.flow_eff: 0.1
 
 .. _backend_interface:
 
 Interfacing with the solver backend
 -----------------------------------
 
-On loading a model, there is no solver backend, only the input dataset. The backend is generated when a user calls `run()` on their model. Currently this will call back to Pyomo to build the model and send it off to the solver, given by the user in the run configuration :yaml:`run.solver`. Once built, solved, and returned, the user has access to the results dataset :python:`model.results` and interface functions with the backend :python:`model.backend`.
+On loading a model, there is no solver backend, only the input dataset. The backend is generated when a user calls `run()` on their model. Currently this will call back to Pyomo to build the model and send it off to the solver, given by the user in the run configuration :yaml:`config.solve.solver`. Once built, solved, and returned, the user has access to the results dataset :python:`model.results` and interface functions with the backend :python:`model.backend`.
 
 You can use this interface to:
 
@@ -298,7 +302,7 @@ You can use this interface to:
     By running :python:`model.backend.get_input_params()` a user get an xarray Dataset which will look very similar to :python:`model.inputs`, except that assumed default values will be included. You may also spot a bug, where a value in :python:`model.inputs` is different to the value returned by this function.
 
 2. Update a parameter value.
-    If you are interested in updating a few values in the model, you can run :python:`model.backend.update_param()`. For example, to update the energy efficiency of your `ccgt` technology in location `region1` from 0.5 to 0.1, you can run :python:`model.backend.update_param('energy_eff', {'region1::ccgt`: 0.1})`. This will not affect results at this stage, you'll need to rerun the backend (point 4) to optimise with these new values.
+    If you are interested in updating a few values in the model, you can run :python:`model.backend.update_param()`. For example, to update the energy efficiency of your `ccgt` technology in location `region1` from 0.5 to 0.1, you can run :python:`model.backend.update_param('flow_eff', {'region1::ccgt`: 0.1})`. This will not affect results at this stage, you'll need to rerun the backend (point 4) to optimise with these new values.
 
 .. note:: If you are interested in updating the objective function cost class weights, you will need to set 'objective_cost_class' as the parameter, e.g. :python:`model.backend.update_param('objective_cost_class', {'monetary': 0.5})`.
 
@@ -326,7 +330,7 @@ Refer to the `Gurobi manual <https://www.gurobi.com/documentation/>`_, which con
 
 .. code-block:: yaml
 
-    run:
+    config.solve:
         solver: gurobi
         solver_options:
             Threads: 3
@@ -339,7 +343,7 @@ Refer to the `CPLEX parameter list <https://www.ibm.com/docs/en/icos/22.1.1?topi
 
 .. code-block:: yaml
 
-    run:
+    config.solve:
         solver: cplex
         solver_options:
             mipgap: 0.01

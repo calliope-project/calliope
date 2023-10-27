@@ -1,3 +1,39 @@
+[tool.pytest.ini_options]
+minversion = "6.0"
+# opts:
+# `--dist=loadscope ` - run tests within classes in series
+# `--strict-markers` - Raise error on unexpected pytest markers being used (add new markers to `markers` config)
+# `-nauto` - parallelise over as many threads as possible (uses pytest-xdist). If debugging (`--pdb`), this will default to one thread.
+# `--nbmake --nbmake-kernel=calliope` - test example notebooks using the "calliope" notebook kernel (uses nbmake)
+# `--cov-report=xml --cov-config=pyproject.toml` - coverage report config for when running in tests (uses pytest-cov; call `--cov` in CLI to switch coverage on; `--cov-config` include to avoid bug)
+addopts = "-rav --dist=loadscope --strict-markers -nauto --nbmake --nbmake-kernel=calliope --cov-report=xml --cov-config=pyproject.toml"
+# TODO: add testpath once notebooks are fixed: "doc/_static/notebooks"
+testpaths = ["tests"]
+
+# to mark a test, decorate it with `@pytest.mark.[marker-name]`
+markers = ["serial", "time_intensive"]
+filterwarnings = [
+  # https://github.com/pytest-dev/pytest-xdist/issues/825
+  "ignore:The --rsyncdir command line argument and rsyncdirs config variable are deprecated.:DeprecationWarning",
+  "ignore:.*`group_share` constraints will be removed in v0.7.0.*:FutureWarning:",
+  "ignore:.*Plotting will no longer be available as a method.*:FutureWarning:",
+  "ignore:.*There will be no default cost class for the objective function in v0.7.0.*:FutureWarning:",
+  "ignore:.*`charge_rate` is renamed to `energy_cap_per_storage_cap_max` and will be removed in v0.7.0.*:FutureWarning:",
+  "ignore:.*Deprecated, pass a TempConstr or use Model.addLConstr.*:DeprecationWarning:pyomo",
+  "ignore:.*distutils Version classes are deprecated.*:DeprecationWarning:",
+  "ignore:.*`np.float` is a deprecated alias.*:DeprecationWarning:",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["src/"]
+
+[tool.coverage.html]
+directory = "reports/coverage"
+
+[tool.coverage.xml]
+output = "reports/coverage/coverage.xml"
+
 [tool.black]
 line-length = 88
 target-version = ['py37', 'py38']
@@ -21,3 +57,81 @@ exclude = '''
   | requirements
 )/
 '''
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I", "Q", "W"]
+# line too long; Black will handle these
+ignore = ["E501"]
+
+[tool.ruff.mccabe]
+# Unlike Flake8, default to a complexity level of 10.
+max-complexity = 10
+
+# Ignore `E402` (import violations) and `F401` (unused imports) in all `__init__.py` files
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["E402", "F401"]
+"*.ipynb" = ["E402"]
+
+[tool.ruff.flake8-quotes]
+docstring-quotes = "double"
+
+[tool.ruff.pydocstyle]
+convention = "google"
+
+[tool.ruff.pycodestyle]
+max-doc-length = 200
+ignore-overlong-task-comments = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["calliope*"]
+
+[tool.setuptools.package-data]
+calliope = ["config/*", "math/*", "example_models/**/*"]
+
+[tool.setuptools]
+license-files = ["LICENSE", "CITATION"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "calliope"
+authors = [
+  { name = "Calliope contributors listed in AUTHORS", email = "stefan@pfenninger.org" },
+]
+maintainers = [
+  { name = "Stefan Pfenninger", email = "stefan@pfenninger.org" },
+  { name = "Bryn Pickering", email = "17178478+brynpickering@users.noreply.github.com" },
+]
+description = "A multi-scale energy systems modelling framework."
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = ["energy systems", "optimisation", "mathematical programming"]
+license = { text = "Apache 2.0" }
+classifiers = [
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+]
+dynamic = ["version", "dependencies", "optional-dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements/base.txt"] }
+version = { attr = "calliope._version.__version__" }
+
+[project.scripts]
+calliope = "calliope.cli:cli"
+
+[tool.setuptools.dynamic.optional-dependencies]
+dev = { file = ["requirements/dev.txt"] }
+
+[project.urls]
+website = "https://www.callio.pe/"
+repository = "https://github.com/calliope-project/calliope"
+documentation = "https://calliope.readthedocs.io"
+changelog = "https://github.com/calliope-project/calliope/changelog.rst"

@@ -1,7 +1,7 @@
 [![Chat on Gitter](https://img.shields.io/gitter/room/calliope-project/calliope.svg?style=flat-square)](https://app.gitter.im/#/room/#calliope-project_calliope:gitter.im)
-[![Main branch build status](https://img.shields.io/azure-devops/build/calliope-project/371cbbaa-fa6b-4efb-9b23-c4283a8e33eb/1?style=flat-square)](https://dev.azure.com/calliope-project/calliope/_build?definitionId=1)
+[![Main branch build status](https://github.com/calliope-project/calliope/actions/workflows/commit-ci.yml/badge.svg?branch=main)](https://github.com/calliope-project/calliope/actions/workflows/commit-ci.yml)
 [![Documentation build status](https://img.shields.io/readthedocs/calliope.svg?style=flat-square)](https://readthedocs.org/projects/calliope/builds/)
-[![Test coverage](https://img.shields.io/codecov/c/github/calliope-project/calliope?style=flat-square&token=b4fd170f0e7b43679a8bf649719e1cea)](https://codecov.io/gh/calliope-project/calliope)
+[![Test coverage](https://codecov.io/gh/calliope-project/calliope/graph/badge.svg?token=UM542yaYrh)](https://codecov.io/gh/calliope-project/calliope)
 [![PyPI version](https://img.shields.io/pypi/v/calliope.svg?style=flat-square)](https://pypi.python.org/pypi/calliope)
 [![Anaconda.org/conda-forge version](https://img.shields.io/conda/vn/conda-forge/calliope.svg?style=flat-square&label=conda)](https://anaconda.org/conda-forge/calliope)
 [![JOSS DOI](https://img.shields.io/badge/JOSS-10.21105/joss.00825-green.svg?style=flat-square)](https://doi.org/10.21105/joss.00825)
@@ -37,9 +37,9 @@ Calliope comes with several built-in analysis and visualisation tools. Having so
 
 ## Quick start
 
-Calliope can run on Windows, macOS and Linux. Installing it is quickest with the `conda` package manager by running a single command: `conda create -c conda-forge -n calliope calliope`.
+Calliope can run on Windows, macOS and Linux. Installing it is quickest with the `mamba` package manager by running a single command: `mamba create -c conda-forge -n calliope calliope`.
 
-See the documentation for more [information on installing](https://calliope.readthedocs.io/en/stable/user/installation.html), including what to do if you are having issues with `conda`.
+See the documentation for more [information on installing](https://calliope.readthedocs.io/en/stable/user/installation.html).
 
 Several easy to understand example models are [included with Calliope](calliope/example_models) and accessible through the `calliope.examples` submodule.
 
@@ -51,8 +51,8 @@ More fully-featured examples that have been used in peer-reviewed scientific pub
 
 Documentation is available on Read the Docs:
 
-* [Read the documentation online (recommended)](https://calliope.readthedocs.io/en/stable/)
-* [Download all documentation in a single PDF file](https://readthedocs.org/projects/calliope/downloads/pdf/stable/)
+- [Read the documentation online (recommended)](https://calliope.readthedocs.io/en/stable/)
+- [Download all documentation in a single PDF file](https://readthedocs.org/projects/calliope/downloads/pdf/stable/)
 
 ## Contributing
 

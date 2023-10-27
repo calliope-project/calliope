@@ -1,0 +1,321 @@
+# This file contains overrides for model.yaml
+
+##
+# WARNING: When adding tests for new constraints, we now
+# want to create separate models, as in the example of
+# `model_demand_share.yaml`, which can double as minimal
+# working examples of the given functionality.
+##
+
+overrides:
+  simple_supply:
+    nodes:
+      a:
+        techs:
+          test_supply_elec:
+          test_demand_elec:
+
+      b:
+        techs:
+          test_supply_elec:
+          test_demand_elec:
+
+  simple_supply_locations:
+    locations:
+      a:
+        techs:
+          test_supply_elec:
+          test_demand_elec:
+
+      b:
+        techs:
+          test_supply_elec:
+          test_demand_elec:
+
+  simple_supply_plus: # does not have a solution
+    nodes:
+      a:
+        techs:
+          test_supply_plus:
+          test_demand_elec:
+
+      b:
+        techs:
+          test_supply_plus:
+          test_demand_elec:
+
+  simple_supply_and_supply_plus:
+    nodes:
+      a:
+        techs:
+          test_supply_elec:
+          test_supply_plus:
+          test_demand_elec:
+
+      b:
+        techs:
+          test_supply_elec:
+          test_supply_plus:
+          test_demand_elec:
+
+  supply_and_supply_plus_milp:
+    nodes:
+      a:
+        techs:
+          test_supply_elec:
+          test_supply_plus:
+            switches.cap_method: integer
+            constraints:
+              units_max: 1
+              flow_cap_per_unit: 15
+              storage_cap_per_unit: 15
+            costs.monetary: { purchase: 1, flow_cap: 0 }
+          test_demand_elec:
+
+    links.a,b.active: false
+
+  supply_purchase:
+    nodes:
+      a:
+        techs:
+          test_supply_elec:
+            switches.cap_method: binary
+            costs.monetary.purchase: 1
+            costs.monetary.flow_cap: 0
+          test_demand_elec:
+
+    links.a,b.active: false
+
+  supply_milp:
+    nodes:
+      a:
+        techs:
+          test_supply_elec:
+            switches.cap_method: integer
+            constraints:
+              units_max: 1
+              flow_cap_per_unit: 15
+          test_demand_elec:
+      b.active: false
+    links.a,b.active: false
+
+  supply_export:
+    techs:
+      test_supply_elec:
+        switches.export: true
+        constraints.export_carrier: electricity
+        costs.monetary.export: 0.01
+    nodes:
+      a:
+        techs:
+          test_supply_elec:
+          test_demand_elec:
+
+      b:
+        techs:
+          test_supply_elec:
+          test_demand_elec:
+
+  simple_conversion:
+    nodes:
+      a:
+        techs:
+          test_supply_elec:
+          test_supply_gas:
+          test_conversion:
+          test_demand_elec:
+          test_demand_heat:
+
+      b:
+        techs:
+          test_supply_elec:
+          test_supply_gas:
+          test_conversion:
+          test_demand_elec:
+          test_demand_heat:
+
+  conversion_and_conversion_plus:
+    nodes:
+      a:
+        techs:
+          test_supply_elec:
+          test_supply_gas:
+          test_supply_coal:
+          test_conversion:
+          test_conversion_plus:
+          test_demand_elec:
+          test_demand_heat:
+
+    links.a,b.active: false
+
+  conversion_plus_milp:
+    nodes:
+      a:
+        techs:
+          test_supply_elec:
+          test_supply_gas:
+          test_conversion_plus:
+            switches.cap_method: integer
+            constraints:
+              units_max: 2
+              flow_cap_per_unit: 15
+          test_demand_elec:
+          test_demand_heat:
+
+    links.a,b.active: false
+
+  conversion_plus_purchase:
+    nodes:
+      a:
+        techs:
+          test_supply_elec:
+          test_supply_gas:
+          test_conversion_plus:
+            switches.cap_method: binary
+            costs:
+              monetary:
+                purchase: 1
+          test_demand_elec:
+          test_demand_heat:
+
+    links.a,b.active: false
+
+  simple_conversion_plus:
+    nodes:
+      a:
+        techs:
+          test_supply_elec:
+          test_supply_gas:
+          test_supply_coal:
+          test_conversion_plus:
+          test_demand_elec:
+          test_demand_heat:
+
+    links.a,b.active: false
+
+  simple_storage:
+    nodes:
+      a:
+        techs:
+          test_supply_elec:
+          test_storage:
+          test_demand_elec:
+
+      b:
+        techs:
+          test_supply_elec:
+          test_storage:
+          test_demand_elec:
+
+  storage_discharge_depth:
+    techs:
+      test_storage:
+        constraints:
+          storage_discharge_depth: 0.8
+
+  storage_milp:
+    nodes:
+      a:
+        techs:
+          test_supply_elec:
+          test_storage:
+            switches.cap_method: integer
+            constraints:
+              units_max: 2
+              flow_cap_per_unit: 10
+              storage_cap_per_unit: 15
+          test_demand_elec:
+
+    links.a,b.active: false
+
+  storage_purchase:
+    nodes:
+      a:
+        techs:
+          test_supply_elec:
+          test_storage:
+            switches.cap_method: binary
+            costs.monetary: { purchase: 1 }
+          test_demand_elec:
+
+    links.a,b.active: false
+
+  clustering:
+    config.init.time:
+      function: apply_clustering
+      function_options:
+        clustering_func: file=cluster_days.csv:a
+        how: "mean"
+        storage_inter_cluster: True
+
+  spores:
+    config:
+      build.mode: spores
+      solve:
+        spores_score_cost_class: "spores_score"
+        spores_number: 3
+      parameters:
+        spores_slack.data: 0.1
+        objective_cost_class.data: { "monetary": 1, "spores_score": 0 }
+
+    techs.test_supply_elec.costs.spores_score.flow_cap: 0
+    techs.test_supply_elec.costs.spores_score.interest_rate: 0
+    techs.test_supply_elec.constraints.lifetime: 1
+
+  one_day:
+    config.init.subset_time: ["2005-01-01", "2005-01-01"]
+
+  two_hours:
+    config.init.subset_time: ["2005-01-01 00:00:00", "2005-01-01 01:00:00"]
+
+  resample_two_days:
+    config:
+      init:
+        subset_time: ["2005-01-01", "2005-01-02"]
+        time:
+          function: resample
+          function_options.resolution: 24h
+
+  operate:
+    config.build.mode: operate
+    config.init.subset_time: ["2005-01-01", "2005-01-04"]
+    config.solve.operate_window: 12
+    config.solve.operate_horizon: 24
+
+  investment_costs:
+    tech_groups:
+      supply:
+        constraints:
+          lifetime: 25
+        costs:
+          monetary:
+            interest_rate: 0.1
+            flow_cap: 10
+      supply_plus:
+        constraints:
+          lifetime: 25
+        costs:
+          monetary:
+            interest_rate: 0.1
+            flow_cap: 10
+      storage:
+        constraints:
+          lifetime: 25
+        costs:
+          monetary:
+            interest_rate: 0.1
+            flow_cap: 10
+      conversion:
+        constraints:
+          lifetime: 25
+        costs:
+          monetary:
+            interest_rate: 0.1
+            flow_cap: 10
+      conversion_plus:
+        constraints:
+          lifetime: 25
+        costs:
+          monetary:
+            interest_rate: 0.1
+            flow_cap: 10

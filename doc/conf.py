@@ -11,14 +11,17 @@ from sphinx.builders.singlehtml import SingleFileHTMLBuilder, StandaloneHTMLBuil
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath("../src"))
 sys.path.insert(0, os.path.abspath("."))
 sys.path.append(os.path.abspath("_themes"))
 
-from helpers import generate_tables  # noqa: E402
+from helpers import generate_readable_schema, generate_tables  # noqa: E402
 
 # Generates the tables and source code files
 generate_tables.process()
+
+# Generates readable markdown files from YAML schema
+generate_readable_schema.process()
 
 # Redefine supported_image_types for the HTML builder to prefer PNG over SVG
 image_types = ["image/png", "image/svg+xml", "image/gif", "image/jpeg"]
@@ -34,7 +37,7 @@ copyright = "Since 2013 Calliope contributors listed in ><a href='https://github
 
 __version__ = ""
 # Sets the __version__ variable
-exec(open("../calliope/_version.py").read())
+exec(open("../src/calliope/_version.py").read())
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -55,6 +58,7 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx.ext.intersphinx",
     "sphinx_search.extension",
+    "myst_parser",
 ]
 
 # The suffix of source filenames.
@@ -103,9 +107,19 @@ extlinks = {"nbviewer_docs": (nbviewer_url + docs_base_url + "%s", None)}
 
 # Mock modules for Read The Docs autodoc generation
 
-MOCK_MODULES = ["xarray", "pandas", "numpy", "pyomo", "sklearn", "pyparsing"]
+MOCK_MODULES = [
+    "xarray",
+    "pandas",
+    "numpy",
+    "pyomo",
+    "sklearn",
+    "pyparsing",
+    "netCDF4",
+]
 autodoc_mock_imports = MOCK_MODULES
 autodoc_typehints = "both"
+autodoc_member_order = "bysource"
+autoclass_content = "both"
 
 intersphinx_mapping = {
     "python": ("http://docs.python.org/3", None),

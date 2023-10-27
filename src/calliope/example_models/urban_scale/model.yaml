@@ -1,0 +1,27 @@
+import: # Import other files from paths relative to this file, or absolute paths
+  - "model_config/techs.yaml"
+  - "model_config/locations.yaml"
+  - "scenarios.yaml"
+
+config:
+  init:
+    name: Urban-scale example model
+    # What version of Calliope this model is intended for
+    calliope_version: 0.7.0
+    # Time series data path - can either be a path relative to this file, or an absolute path
+    timeseries_data_path: "timeseries_data"
+    subset_time: ["2005-07-01", "2005-07-02"] # Subset of timesteps
+
+  build:
+    mode: plan # Choices: plan, operate
+    ensure_feasibility: true # Switching on unmet demand
+
+  solve:
+    solver: cbc
+
+parameters:
+  objective_cost_class:
+    data: 1
+    index: [monetary]
+    dims: costs
+  bigM: 1e6 # setting the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge

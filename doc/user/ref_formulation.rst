@@ -1,81 +1,67 @@
-------------------------
+.. role:: green
+.. role:: red
+.. role:: yellow
+
 Mathematical formulation
-------------------------
+########################
 
-This section details the mathematical formulation of the different components. For each component, a link to the actual implementing function in the Calliope code is given.
+This section details the mathematical formulation that is loaded when creating a Calliope model.
+All built-in Calliope math can be found in the calliope `math directory <https://github.com/calliope-project/calliope/tree/main/calliope/math>`_.
 
-.. note::
-    Make sure to also refer to the detailed :doc:`listing of constraints and costs along with their units and default values <config_defaults>`.
+By default, the :ref:`base math <base_math>` is loaded from file.
+If you want to overwrite the base math with other built-in math, you can do so by referring to the file by its name (without the file extension) in :yaml:`model.custom_math`, e.g. :yaml:`model.custom_math: [storage_inter_cluster]`.
+When solving the model in a :ref:`run mode <config_reference_config>` other than `plan`, some built-in custom math will be applied automatically from a file of the same name (e.g., `spores` mode custom math is stored in `math/spores.yaml <https://github.com/calliope-project/calliope/blob/main/calliope/math/spores.yaml>`_).
+The changes made by the built-in custom math are detailed in this page.
 
-Objective functions
--------------------
+.. note:: Custom math is applied in the order it appears in the :yaml:`model.custom_math` list. By default, any run mode custom math will be applied as the final step. If you want to apply your own custom math *after* the run mode custom math, you should add it explicitly to the :yaml:`model.custom_math` list, e.g., :yaml:`model.custom_math: [operate, my_custom_math.yaml]`.
 
-.. automodule:: calliope.backend.pyomo.objective
-    :members:
 
-.. _api_constraints:
+A guide to the math documentation
+=================================
 
-Constraints
-===========
+If a math component's initial conditions are met (those to the left of the curly brace), it will be applied to a model.
+For each objective, constraint and global expression, a number of subconditions then apply (those to the right of the curly brace) to decide on the specific expression to apply at a given iteration of the component dimensions.
 
-Energy Balance
---------------
+In the following expressions, terms in **bold** font are decision variables and terms in *italic* font are parameters. A list of the decision variables is given at the end of this page. A detailed listing of parameters along with their units and default values is given  :doc:`here <config_defaults>`.
+Those parameters which are defined over time (`timesteps`) in the expressions can be defined by a user as a single, time invariant value, or as a timeseries that is :ref:`loaded from file or dataframe <configuration_timeseries>`.
 
-.. automodule:: calliope.backend.pyomo.constraints.energy_balance
-    :members:
 
-.. _constraint_capacity:
+Writing your own math documentation
+===================================
 
-Capacity
---------
+To view only the mathematical formulation valid for your own model, you can write a LaTeX or reStructuredText file as follows:
 
-.. automodule:: calliope.backend.pyomo.constraints.capacity
-    :members:
+.. code-block:: python
 
-Dispatch
---------
+    model = calliope.Model("path/to/model.yaml")
+    model.build_math_documentation(include="valid")
+    model.write_math_documentation(filename="path/to/output/file.[tex|rst]")
 
-.. automodule:: calliope.backend.pyomo.constraints.dispatch
-    :members:
+.. _base_math:
 
-Costs
------
+Base math
+=========
 
-.. automodule:: calliope.backend.pyomo.constraints.costs
-    :members:
+.. include:: ../_static/math.rst
 
-Export
-------
+.. _storage_inter_cluster_math:
 
-.. automodule:: calliope.backend.pyomo.constraints.export
-    :members:
+Inter-cluster storage custom math
+=================================
+Below are the changes from the base math introduced by the built-in custom math file ``storage_inter_cluster``.
 
-MILP
-----
+.. include:: ../_static/math_storage_inter_cluster.rst
 
-.. automodule:: calliope.backend.pyomo.constraints.milp
-    :members:
+Operate mode custom math
+========================
+Below are the changes from the base math introduced by the built-in custom math file ``operate``.
+These changes are applied automatically if selecting the run mode ``operate``
 
-Conversion
-----------
+TODO: Add operate math
 
-.. automodule:: calliope.backend.pyomo.constraints.conversion
-    :members:
+SPORES mode custom math
+========================
+Below are the changes from the base math introduced by the built-in custom math file ``spores``.
+These changes are applied automatically if selecting the run mode ``spores``
 
-Conversion_plus
----------------
-
-.. automodule:: calliope.backend.pyomo.constraints.conversion_plus
-    :members:
-
-Network
--------
-
-.. automodule:: calliope.backend.pyomo.constraints.network
-    :members:
-
-Policy
-------
-
-.. automodule:: calliope.backend.pyomo.constraints.policy
-    :members:
+TODO: Add spores math

@@ -16,18 +16,18 @@ Supply-side technologies
 
 The example model defines two power supply technologies.
 
-The first is ``ccgt`` (combined-cycle gas turbine), which serves as an example of a simple technology with an infinite resource. Its only constraints are the cost of built capacity (``energy_cap``) and a constraint on its maximum built capacity.
+The first is ``ccgt`` (combined-cycle gas turbine), which serves as an example of a simple technology with an infinite source. Its only constraints are the cost of built capacity (``flow_cap``) and a constraint on its maximum built capacity.
 
 .. figure:: images/supply.*
    :alt: Supply node
 
-   The layout of a supply node, in this case ``ccgt``, which has an infinite resource, a carrier conversion efficiency (:math:`energy_{eff}`), and a constraint on its maximum built :math:`energy_{cap}` (which puts an upper limit on :math:`energy_{prod}`).
+   The layout of a supply node, in this case ``ccgt``, which has an infinite source, a carrier conversion efficiency (:math:`flow_{eff}`), and a constraint on its maximum built :math:`flow_{cap}` (which puts an upper limit on :math:`flow_{out}`).
 
 The definition of this technology in the example model's configuration looks as follows:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # ccgt-start
    :end-before: # ccgt-end
 
@@ -37,26 +37,26 @@ There are a few things to note. First, ``ccgt`` defines essential information: a
 
 The second technology is ``csp`` (concentrating solar power), and serves as an example of a complex supply_plus technology making use of:
 
-* a finite resource based on time series data
+* a finite source based on time series data
 * built-in storage
 * plant-internal losses (``parasitic_eff``)
 
 .. figure:: images/supply_plus.*
-   :alt: More complex node, with resource storage
+   :alt: More complex node, with source storage
 
    The layout of a more complex node, in this case ``csp``, which makes use of most node-level functionality available.
 
 This definition in the example model's configuration is more verbose:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # csp-start
    :end-before: # csp-end
 
-Again, ``csp`` has the definitions for name, color, parent, and carrier_out. Its constraints are more numerous: it defines a maximum storage capacity (``storage_cap_max``), an hourly storage loss rate (``storage_loss``), then specifies that its resource should be read from a file (more on that below). It also defines a carrier conversion efficiency of 0.4 and a parasitic efficiency of 0.9 (i.e., an internal loss of 0.1). Finally, the resource collector area and the installed carrier conversion capacity are constrained to a maximum.
+Again, ``csp`` has the definitions for name, color, parent, and carrier_out. Its constraints are more numerous: it defines a maximum storage capacity (``storage_cap_max``), an hourly storage loss rate (``storage_loss``), then specifies that its source should be read from a file (more on that below). It also defines a carrier conversion efficiency of 0.4 and a parasitic efficiency of 0.9 (i.e., an internal loss of 0.1). Finally, the source collector area and the installed carrier conversion capacity are constrained to a maximum.
 
-The costs are more numerous as well, and include monetary costs for all relevant components along the conversion from resource to carrier (power): storage capacity, resource collector area, resource conversion capacity, energy conversion capacity, and variable operational and maintenance costs. Finally, it also overrides the default value for the monetary interest rate.
+The costs are more numerous as well, and include monetary costs for all relevant components along the conversion from source to carrier (power): storage capacity, source collector area, source conversion capacity, carrier conversion capacity, and variable operational and maintenance costs. Finally, it also overrides the default value for the monetary interest rate.
 
 Storage technologies
 ====================
@@ -66,15 +66,15 @@ The second location allows a limited amount of battery storage to be deployed to
 .. figure:: images/storage.*
    :alt: Transmission node
 
-   A storage node with an :math:`energy_{eff}` and :math:`storage_{loss}`.
+   A storage node with an :math:`flow_{eff}` and :math:`storage_{loss}`.
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # battery-start
    :end-before: # battery-end
 
-The contraints give a maximum installed generation capacity for battery storage together with a maximum ratio of energy capacity to storage capacity (``energy_cap_per_storage_cap_max``) of 4, which in turn limits the storage capacity. The ratio is the charge/discharge rate / storage capacity (a.k.a the battery `reservoir`). In the case of a storage technology, ``energy_eff`` applies twice: on charging and discharging. In addition, storage technologies can lose stored energy over time -- in this case, we set this loss to zero.
+The contraints give a maximum installed generation capacity for battery storage together with a maximum ratio of flow capacity to storage capacity (``flow_cap_per_storage_cap_max``) of 4, which in turn limits the storage capacity. The ratio is the charge/discharge rate / storage capacity (a.k.a the battery `reservoir`). In the case of a storage technology, ``flow_eff`` applies twice: on charging and discharging. In addition, storage technologies can lose stored carrier over time -- in this case, we set this loss to zero.
 
 Other technologies
 ==================
@@ -86,9 +86,9 @@ Three more technologies are needed for a simple model. First, a definition of po
 
    A simple demand node.
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # demand-start
    :end-before: # demand-end
 
@@ -99,11 +99,11 @@ What remains to set up is a simple transmission technology. Transmission technol
 .. figure:: images/transmission.*
    :alt: Transmission node
 
-   A simple transmission node with an :math:`energy_{eff}`.
+   A simple transmission node with an :math:`flow_{eff}`.
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/techs.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/techs.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # transmission-start
    :end-before: # transmission-end
 
@@ -125,23 +125,23 @@ The technologies are set up in these locations as follows:
 
 Let's now look at the first location definition:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/locations.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/locations.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # region-1-start
    :end-before: # region-1-end
 
 There are several things to note here:
 
 * The location specifies a dictionary of technologies that it allows (``techs``), with each key of the dictionary referring to the name of technologies defined in our ``techs.yaml`` file. Note that technologies listed here must have been defined elsewhere in the model configuration.
-* It also overrides some options for both ``demand_power`` and ``ccgt``. For the latter, it simply sets a location-specific maximum capacity constraint. For ``demand_power``, the options set here are related to reading the demand time series from a CSV file. CSV is a simple text-based format that stores tables by comma-separated rows. Note that we did not define any ``resource`` option in the definition of the ``demand_power`` technology. Instead, this is done directly via a location-specific override. For this location, the file ``demand-1.csv`` is loaded and the column ``demand`` is taken (the text after the colon). If no column is specified, Calliope will assume that the column name matches the location name ``region1-1``. Note that in Calliope, a supply is positive and a demand is negative, so the stored CSV data will be negative.
+* It also overrides some options for both ``demand_power`` and ``ccgt``. For the latter, it simply sets a location-specific maximum capacity constraint. For ``demand_power``, the options set here are related to reading the demand time series from a CSV file. CSV is a simple text-based format that stores tables by comma-separated rows. Note that we did not define any ``sink`` option in the definition of the ``demand_power`` technology. Instead, this is done directly via a location-specific override. For this location, the file ``demand-1.csv`` is loaded and the column ``demand`` is taken (the text after the colon). If no column is specified, Calliope will assume that the column name matches the location name ``region1-1``. Note that in Calliope, a supply is positive and a demand is negative, so the stored CSV data will be negative.
 * Coordinates are defined by latitude (``lat``) and longitude (``lon``), which will be used to calculate distance of transmission lines (unless we specify otherwise later on) and for location-based visualisation.
 
 The remaining location definitions look like this:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/locations.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/locations.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # other-locs-start
    :end-before: # other-locs-end
 
@@ -149,9 +149,9 @@ The remaining location definitions look like this:
 
 For transmission technologies, the model also needs to know which locations can be linked, and this is set up in the model configuration as follows:
 
-.. literalinclude:: ../../calliope/example_models/national_scale/model_config/locations.yaml
+.. literalinclude:: ../../src/calliope/example_models/national_scale/model_config/locations.yaml
    :language: yaml
-   :dedent: 4
+   :dedent: 2
    :start-after: # links-start
    :end-before: # links-end
 

@@ -1,0 +1,60 @@
+national_scale:
+  capacity:
+    - '"type": "dropdown", "x": 0, "xanchor": "left", "y": 1.13'
+    - '"yaxis": {"showticklabels": true, "title": {"text": "Node"}}'
+    - '"showLink": false'
+    - '"modeBarButtonsToRemove": ["sendDataToCloud"]'
+  timeseries:
+    - '"type": "scatter",'
+    - '"x": ["2005-01-01", "2005-01-01 01:00:00",'
+    - '"y": [27538.578, 26518.588, 25820.82,'
+    - '"name": "Concentrating solar power"'
+    - '"title": {"text": "Carrier flow: power"},'
+    - '"showLink": false'
+    - '"modeBarButtonsToRemove": ["sendDataToCloud"]'
+  transmission:
+    - '"type": "scattergeo",'
+    - '"lat": [40, 40, null],'
+    - '"lon": [-2, -8, null],'
+    - '"name": "AC power transmission"'
+    - '"scope": "world"'
+    - '"showcountries": true'
+    - '"type": "mercator"'
+    - '"showLink": false'
+    - '"modeBarButtonsToRemove": ["sendDataToCloud"]'
+  flows:
+    - '"type": "scattergeo"'
+    - '"lon": [-2, -2],'
+    - '"lat": [41, 40],'
+    - '"name": "Concentrating<br>solar power"'
+    - '"symbol": "circle-dot"'
+    - '"mode": "markers"'
+
+milp:
+  capacity:
+    - '"type": "bar"'
+    - '"y": ["X3", "X2", "X1", "N1"]'
+    - '"name": "Natural gas boiler"'
+    - '"showLink": false'
+    - '"modeBarButtonsToRemove": ["sendDataToCloud"]'
+  timeseries:
+    - '"type": "scatter"'
+    - '"x": ["2005-07-01", "2005-07-01 01:00:00",'
+    - '"showLink": false'
+    - '"modeBarButtonsToRemove": ["sendDataToCloud"]'
+  transmission:
+    - '"type": "scatter"'
+    - '"x": [5, 2, null]'
+    - '"y": [7, 7, null]'
+    - '"name": "District heat distribution"'
+    - '"name": "Nodes",'
+    - '"hovermode": "closest"'
+    - '"showLink": false'
+    - '"modeBarButtonsToRemove": ["sendDataToCloud"]'
+
+clustering:
+  timeseries:
+    - '"type": "category"'
+    - '"tickvals": [11.5, 35.5],'
+    - '"title": {"text": "Clusters"}'
+    - '"title": "Storage at start of each day in unclustered timeseries"'
