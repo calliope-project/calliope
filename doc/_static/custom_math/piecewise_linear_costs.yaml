@@ -1,10 +1,16 @@
-# Add a piecewise cost function that steadily increases investment costs with increasing technology rated capacity.
-# This requires the user to switch on the binary purchase decision variable for any relevant technology.
-# Without the purchase decision variable, the technology will have non-zero costs irrespective even if the technology capacity is zero.
+# title: Piecewise linear costs
 
-# New top-level parameters:
-# cost_flow_cap_piecewise_slopes (defining the new parameter `pieces`)
-# cost_flow_cap_piecewise_intercept (defining the new parameter `pieces`)
+# description: |
+#   Add a piecewise cost function that steadily increases investment costs with increasing technology rated capacity.
+#   This requires the user to switch on the binary purchase decision variable for any relevant technology.
+#   Without the purchase decision variable, the technology will have non-zero costs irrespective even if the technology capacity is zero.
+#
+#   New top-level parameters:
+#
+#   * ``cost_flow_cap_piecewise_slopes`` (defining the new parameter `pieces`)
+#   * ``cost_flow_cap_piecewise_intercept`` (defining the new parameter `pieces`)
+
+# ---
 
 variables:
   piecewise_cost_investment:

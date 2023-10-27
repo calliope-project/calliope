@@ -1,10 +1,16 @@
-# Add a piecewise technology efficiency function that steadily increases technology efficiency as outflow increases.
-# This requires the user to switch on the integer operating_units decision variable for any relevant technology.
-# Without the operating_units decision variable, the technology will have non-zero inflow requirements even if the technology capacity is zero and it has no outflow.
+# title: Piecewise linear efficiency
 
-# New top-level parameters:
-# flow_eff_piecewise_slopes (defining the new parameter `pieces`)
-# flow_eff_piecewise_intercept (defining the new parameter `pieces`)
+# description: |
+#   Add a piecewise technology efficiency function that steadily increases technology efficiency as outflow increases.
+#   This requires the user to switch on the integer operating_units decision variable for any relevant technology.
+#   Without the operating_units decision variable, the technology will have non-zero inflow requirements even if the technology capacity is zero and it has no outflow.
+#
+#   New top-level parameters:
+#
+#   * ``flow_eff_piecewise_slopes`` (defining the new parameter `pieces`)
+#   * ``flow_eff_piecewise_intercept`` (defining the new parameter `pieces`)
+
+# ---
 
 variables:
   available_flow_cap:

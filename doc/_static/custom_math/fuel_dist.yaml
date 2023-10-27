@@ -1,13 +1,19 @@
-# Here, we add in the ability to track the distribution of commodities in the system that do not travel along distinct networks.
-# This allows the commodities to imported/exported to/from nodes without tracking exactly where they have come from / where they are going.
-# The advantage is a simpler model definition; the disadvantage is not being able to track the source of a commodity that has been imported.
-# We refer to "fuels" instead of "commodities" in the below math, but this could refer equally to other commodities that have a corresponding carrier (waste, water, ...).
+# title: Commodity distribution
 
-# New top-level parameters:
-# fuel_import_max
-# fuel_export_max
-# fuel_distribution_max
-# fuel_distributor_costs
+# description: |
+#   Here, we add in the ability to track the distribution of commodities in the system that do not travel along distinct networks.
+#   This allows the commodities to imported/exported to/from nodes without tracking exactly where they have come from / where they are going.
+#   The advantage is a simpler model definition; the disadvantage is not being able to track the source of a commodity that has been imported.
+#   We refer to "fuels" instead of "commodities" in the below math, but this could refer equally to other commodities that have a corresponding carrier (waste, water, ...).
+#
+#   New top-level parameters:
+#
+#   * ``fuel_import_max``
+#   * ``fuel_export_max``
+#   * ``fuel_distribution_max``
+#   * ``fuel_distributor_costs``
+
+# ---
 
 variables:
   fuel_distributor:

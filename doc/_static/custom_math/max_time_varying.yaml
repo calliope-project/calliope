@@ -1,11 +1,17 @@
-# Set per-timestep variations in limits to out/inflows, which would otherwise be limited by a static value.
-# For example, `flow_cap` can be made to fluctuate per timestep above/below its rated value.
-# User-defined timeseries parameters need to be in the model inputs for these constraints.
-# This can be achieved by defining them for each relevant technology in your YAML and linking it to a CSV file (e.g., `techs.my_tech.constraints.flow_cap_max_relative_per_ts: file=my_file.csv`).
+# title: Max time varying
+#
+# description: |
+#   Set per-timestep variations in limits to out/inflows, which would otherwise be limited by a static value.
+#   For example, `flow_cap` can be made to fluctuate per timestep above/below its rated value.
+#   User-defined timeseries parameters need to be in the model inputs for these constraints.
+#   This can be achieved by defining them for each relevant technology in your YAML and linking it to a CSV file (e.g., `techs.my_tech.constraints.flow_cap_max_relative_per_ts: file=my_file.csv`).
+#
+#   New top-level parameters:
+#
+#   * ``flow_cap_max_relative_per_ts``
+#   * ``storage_max_relative_per_ts``
 
-# New top-level parameters:
-# flow_cap_max_relative_per_ts
-# storage_max_relative_per_ts
+# ---
 
 constraints:
   max_time_varying_flow_cap:

@@ -15,13 +15,20 @@ sys.path.insert(0, os.path.abspath("../src"))
 sys.path.insert(0, os.path.abspath("."))
 sys.path.append(os.path.abspath("_themes"))
 
-from helpers import generate_readable_schema, generate_tables  # noqa: E402
+from helpers import (
+    generate_readable_schema,
+    generate_tables,
+    generate_custom_constraints,
+)  # noqa: E402
 
 # Generates the tables and source code files
 generate_tables.process()
 
 # Generates readable markdown files from YAML schema
 generate_readable_schema.process()
+
+# Generate listing of custom constraints
+generate_custom_constraints.process()
 
 # Redefine supported_image_types for the HTML builder to prefer PNG over SVG
 image_types = ["image/png", "image/svg+xml", "image/gif", "image/jpeg"]
@@ -33,7 +40,7 @@ SingleFileHTMLBuilder.supported_image_types = image_types
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "Calliope"
-copyright = "Since 2013 Calliope contributors listed in ><a href='https://github.com/calliope-project/calliope/blob/main/AUTHORS'>AUTHORS</a> (Apache 2.0 licensed)<br><a href='https://joss.theoj.org/papers/10.21105/joss.00825'>Academic reference</a>"
+copyright = "since 2013 Calliope contributors listed in <a href='https://github.com/calliope-project/calliope/blob/main/AUTHORS'>AUTHORS</a> (Apache 2.0 licensed). <a href='https://joss.theoj.org/papers/10.21105/joss.00825'>Academic reference</a>"
 
 __version__ = ""
 # Sets the __version__ variable

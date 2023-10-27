@@ -52,6 +52,7 @@ User guide
    user/advanced_constraints
    user/advanced_features
    user/custom_math
+   _generated/custom_math_examples
    user/ref_formulation
    user/config_defaults
    user/troubleshooting

@@ -1,12 +1,19 @@
-# Limit or set the total (e.g. annual) outflow of a technology to a specified absolute value.
+# title: Annual energy balance
 
-# New technology-level parameters:
-# annual_flow_max
-# annual_source_max
+# description: |
+#   Limit or set the total (e.g. annual) outflow of a technology to a specified absolute value.
+#
+#   New technology-level parameters:
+#
+#   * ``annual_flow_max``
+#   * ``annual_source_max``
+#
+#   New top-level parameters:
+#
+#   * ``annual_flow_max`` (if grouping technologies and/or nodes)
+#   * ``flow_max_group`` (if grouping technologies and/or nodes)
 
-# New top-level parameters:
-# annual_flow_max (if grouping technologies and/or nodes)
-# flow_max_group (if grouping technologies and/or nodes)
+# ---
 
 constraints:
   annual_energy_balance_per_tech_and_node:
