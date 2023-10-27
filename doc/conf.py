@@ -15,11 +15,11 @@ sys.path.insert(0, os.path.abspath("../src"))
 sys.path.insert(0, os.path.abspath("."))
 sys.path.append(os.path.abspath("_themes"))
 
-from helpers import (
+from helpers import (  # noqa: E402
     generate_readable_schema,
     generate_tables,
     generate_custom_constraints,
-)  # noqa: E402
+)
 
 # Generates the tables and source code files
 generate_tables.process()
