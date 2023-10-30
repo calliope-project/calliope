@@ -38,7 +38,7 @@ constraints:
     slices:
       transmission_techs:
         - expression: get_transmission_techs(test_transmission_heat)
-      node_group:
+      node_group:  # The subset of nodes for which to limit heat imports
         - expression: "[a, c]"
       carrier:
         - expression: heat
