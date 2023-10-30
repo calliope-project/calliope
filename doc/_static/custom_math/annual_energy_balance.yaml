@@ -8,6 +8,10 @@
 # annual_flow_max (if summing over technologies and/or nodes)
 # flow_max_group (if summing over technologies and/or nodes)
 
+# helper functions used
+# inheritance (where)
+# sum (expression)
+
 constraints:
   annual_energy_balance_per_tech_and_node:
     description: Limit total technology annual energy production at each possible deployment site.

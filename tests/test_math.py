@@ -689,3 +689,36 @@ class TestUptimeDowntime(CustomMathExamples):
         build_and_compare(
             "downtime_period_decision", "supply_milp,two_hours", overrides
         )
+
+
+class TestNetImportShare(CustomMathExamples):
+    YAML_FILEPATH = "net_import_share.yaml"
+    shared_overrides = {
+        "parameters.net_import_share": 1.5,
+        "nodes.c.techs": {
+            "test_demand_heat": {"constraints.sink_equals": "file=demand_heat.csv:a"}
+        },
+        "links.a,c.techs": {
+            "test_transmission_heat": None,
+            "test_transmission_elec": None,
+        },
+    }
+
+    def test_net_import_share_max(self, build_and_compare):
+        build_and_compare(
+            "net_import_share_max", "simple_supply,two_hours", self.shared_overrides
+        )
+
+    def test_net_annual_import_share_max(self, build_and_compare):
+        build_and_compare(
+            "net_annual_import_share_max",
+            "simple_supply,two_hours",
+            self.shared_overrides,
+        )
+
+    def test_net_annual_import_share_max_node_group(self, build_and_compare):
+        build_and_compare(
+            "net_annual_import_share_max_node_group",
+            "simple_supply,two_hours",
+            self.shared_overrides,
+        )
