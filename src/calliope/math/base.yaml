@@ -546,7 +546,7 @@ variables:
       max: storage_cap_max
 
   storage:
-    description: "The carrier stored by a `supply_plus` or `storage` technology in each timestep."
+    description: "The carrier stored by a `storage` technology in each timestep."
     unit: energy
     foreach: [nodes, techs, timesteps]
     where: "include_storage=True"

@@ -290,6 +290,18 @@ class TestAsArray:
             ["lookup arrays used to select items from `with_inf", "'techs'", "'nodes'"],
         )
 
+    def test_select_from_lookup_arrays_no_match(
+        self, expression_select_from_lookup_arrays, dummy_model_data
+    ):
+        with pytest.raises(IndexError) as excinfo:
+            expression_select_from_lookup_arrays(
+                dummy_model_data.with_inf, techs=dummy_model_data.lookup_techs_no_match
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "Trying to select items on the dimension techs from the lookup_techs_no_match lookup array, but no matches found.",
+        )
+
     @pytest.mark.parametrize(["idx", "expected"], [(0, "foo"), (1, "bar"), (-1, "bar")])
     def test_get_val_at_index(self, expression_get_val_at_index, idx, expected):
         assert expression_get_val_at_index(timesteps=idx) == expected
