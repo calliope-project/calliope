@@ -44,7 +44,7 @@ jobs:
     - uses: mamba-org/setup-micromamba@v1
       with:
         micromamba-version: latest
-        environment-name: ${{ github.event.repository.name }}-${{ matrix.os }}-3${{ matrix.py3version }}
+        environment-name: ${{ github.event.repository.name }}-${{ matrix.os }}-3${{ matrix.py3version }}-${{ hashFiles('requirements/dev.txt') }}
         environment-file: requirements/base.txt
         create-args: >-
           -f requirements/dev.txt

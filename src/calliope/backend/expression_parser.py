@@ -133,7 +133,12 @@ class EvalOperatorOperand(EvalString):
         if not as_latex:
             evaluated = xr.DataArray(evaluated)
             if eval_kwargs.get("apply_where", True):
-                evaluated = evaluated.where(eval_kwargs["where"])
+                try:
+                    evaluated = evaluated.where(eval_kwargs["where"])
+                except AttributeError:
+                    evaluated = evaluated.broadcast_like(eval_kwargs["where"]).where(
+                        eval_kwargs["where"]
+                    )
 
         return evaluated
 
@@ -500,7 +505,10 @@ class EvalIndexSlice(EvalString):
         if eval_kwargs.get("as_dict"):
             return {"slice_reference": self.name}
         elif slice_dict is not None:
-            return slice_dict[self.name][0].eval(as_values=True, **eval_kwargs)
+            slicer = slice_dict[self.name][0].eval(as_values=True, **eval_kwargs)
+            if isinstance(slicer, xr.DataArray) and slicer.isnull().any():
+                slicer = slicer.notnull()
+            return slicer
 
 
 class EvalSubExpressions(EvalString):
