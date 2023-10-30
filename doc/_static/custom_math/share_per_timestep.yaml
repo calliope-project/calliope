@@ -7,6 +7,10 @@
 # demand_share_per_timestep_equals
 # supply_share_per_timestep_equals
 
+# helper functions used:
+# sum (expression)
+# reduce_carrier_dim (expression)
+
 constraints:
   demand_share_per_timestep_equals_per_tech:
     description: Set the per-timestep outflow of certain technologies which produce the `power` carrier to a share of demand inflow.

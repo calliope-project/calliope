@@ -8,6 +8,11 @@
 # fuel_export_max
 # fuel_distribution_max
 # fuel_distributor_costs
+# allow_fuel_distribution <- lookup array with a value of `True` for each carrier where you want to track its distribution
+
+# helper functions used:
+# any (where)
+# sum (expression)
 
 variables:
   fuel_distributor:

@@ -45,14 +45,14 @@ class TestNationalScaleExampleModelSenseChecks:
         model.build()
         model.solve(**solve_kwargs)
 
-        assert model.results.storage_cap.sel(nodes="region1-1", techs="csp") == approx(
+        assert model.results.storage_cap.sel(nodes="region1_1", techs="csp") == approx(
             45129.950
         )
         assert model.results.storage_cap.sel(
             nodes="region2", techs="battery"
         ) == approx(6675.173)
 
-        assert model.results.flow_cap.sel(nodes="region1-1", techs="csp") == approx(
+        assert model.results.flow_cap.sel(nodes="region1_1", techs="csp") == approx(
             4626.588
         )
         assert model.results.flow_cap.sel(nodes="region2", techs="battery") == approx(
@@ -355,14 +355,14 @@ class TestNationalScaleResampledExampleModelSenseChecks:
         model.build()
         model.solve(**solve_kwargs)
 
-        assert model.results.storage_cap.sel(nodes="region1-1", techs="csp") == approx(
+        assert model.results.storage_cap.sel(nodes="region1_1", techs="csp") == approx(
             23563.444
         )
         assert model.results.storage_cap.sel(
             nodes="region2", techs="battery"
         ) == approx(6315.78947)
 
-        assert model.results.flow_cap.sel(nodes="region1-1", techs="csp") == approx(
+        assert model.results.flow_cap.sel(nodes="region1_1", techs="csp") == approx(
             1440.8377
         )
         assert model.results.flow_cap.sel(nodes="region2", techs="battery") == approx(

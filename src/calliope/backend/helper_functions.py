@@ -136,12 +136,51 @@ class ParsingHelperFunction(ABC):
         dim_singular = dim.removesuffix("s")
         return rf"\text{{{dim_singular}}} \in \text{{{dim}}}"
 
-    @staticmethod
-    def _listify(val: Union[list[str], str]) -> list[str]:
-        if isinstance(val, list):
-            return val
-        else:
-            return [val]
+    def _listify(
+        self, vals: Union[list[str], str], expand_link_techs: bool = False
+    ) -> list[str]:
+        """Force a string to a list of length one if not already provided as a list.
+
+        Args:
+            vals (Union[list[str], str]): Values (or single value) to force to a list.
+            expand_link_techs (bool, optional):
+                If True, search resulting list for any transmission tech names and expand them to their link names.
+                Defaults to False.
+
+        Returns:
+            list[str]: Input forced to a list.
+        """
+        if not isinstance(vals, list):
+            vals = [vals]
+        if expand_link_techs:
+            vals = self._expand_link_techs(vals)
+        return vals
+
+    def _expand_link_techs(self, vals: list[str]) -> list[str]:
+        """Expand list of technology names to link tech names.
+
+        This searches the names provided and tries to match them up with auto-generated link names, which are the transmission tech name + remote node name
+        (e.g., `ac_transmission` -> [`ac_transmission:A`, `ac_transmission:B`]).
+
+        It will match any provided name with any name in the techs that starts with that name followed by a colon (`:`).
+
+        Args:
+            vals (list[str]): List of techs which could include general transmission tech names.
+
+        Returns:
+            list[str]: Expanded list, including all non-transmission tech names and transmission tech names replaced with link names.
+        """
+        to_remove = []
+        to_add = []
+        for val in vals:
+            link_techs = self._input_data.techs.str.startswith(val + ":")
+            if link_techs.any():
+                to_add.extend(list(link_techs[link_techs].techs.data))
+                to_remove.append(val)
+        for i in to_remove:
+            vals.remove(i)
+        vals.extend(to_add)
+        return vals
 
 
 class Inheritance(ParsingHelperFunction):
@@ -243,8 +282,10 @@ class Defined(ParsingHelperFunction):
         Kwargs:
             dims (dict[str, str]):
                 **key**: dimension whose members will be searched for as being defined under the primary dimension (`within`).
+                Must be one of the core model dimensions: [nodes, techs, carriers, carrier_tiers]
                 **value**: subset of the dimension members to find.
-                `dims` must be one of the core model dimensions: [nodes, techs, carriers, carrier_tiers]
+                Transmission techs can be called using the base tech name (e.g., `ac_transmission`) and all link techs will be collected (e.g., [`ac_transmission:region1`, `ac_transmission:region2`]).
+
 
         Returns:
             xr.DataArray:
@@ -281,7 +322,12 @@ class Defined(ParsingHelperFunction):
             ```
         """
         dim_names = list(dims.keys())
-        dims_with_list_vals = {dim: self._listify(vals) for dim, vals in dims.items()}
+        dims_with_list_vals = {
+            dim: self._listify(vals, expand_link_techs=True)
+            if dim == "techs"
+            else self._listify(vals, expand_link_techs=False)
+            for dim, vals in dims.items()
+        }
         definition_matrix = self._input_data.definition_matrix
         dim_within_da = definition_matrix.any(self._dims_to_remove(dim_names, within))
         within_da = getattr(dim_within_da.sel(**dims_with_list_vals), how)(dim_names)
@@ -326,8 +372,8 @@ class Defined(ParsingHelperFunction):
         elif how == "any":
             # Using vee for "collective-or"
             tex_how = "vee"
-
-        vals = self._listify(vals)
+        expand_link_techs = True if dim == "techs" else False
+        vals = self._listify(vals, expand_link_techs=expand_link_techs)
         within_singular = within.removesuffix("s")
         dim_singular = dim.removesuffix("s")
         selection = rf"\text{{{dim_singular}}} \in \text{{[{','.join(vals)}]}}"
@@ -642,3 +688,50 @@ class Roll(ParsingHelperFunction):
         """
         roll_kwargs_int: Mapping = {k: int(v) for k, v in roll_kwargs.items()}
         return array.roll(roll_kwargs_int)
+
+
+class GetTransmissionTechs(ParsingHelperFunction):
+    #:
+    NAME = "get_transmission_techs"
+    #:
+    ALLOWED_IN = ["expression"]
+
+    def as_math_string(self, vals: Union[str, list[str]]) -> str:
+        expanded_vals = self._listify(vals, expand_link_techs=True)
+        return f"techs=[{','.join(expanded_vals)}]"
+
+    def as_array(self, vals: Union[str, list[str]]) -> xr.DataArray:
+        """Get an array of model techs marking which are linked to a base transmission tech(s).
+
+        This function is useful for slicing an array's `techs` dimension for all transmission techs linked to the same base tech(s).
+
+        Args:
+            base_tech_name: Transmission tech base name or list of names, i.e., without remote node attached to the tech (`ac_transmission` instead of `ac_transmission:region1`).
+
+        Returns:
+            xr.DataArray: Coordinate `techs` array containing only members linked to the provided base transmission tech(s).
+
+        Examples:
+            ```yaml
+            links:
+                node1,node2:
+                    techs:
+                        ac_transmission:
+                node1,node3:
+                    techs:
+                        free_transmission:
+            ```
+            Then:
+            ```
+            >>> get_transmission_techs(ac_transmission)
+            [out] <xarray.DataArray (techs: 2)>
+                  array(['ac_transmission:node1', 'ac_transmission:node2'], dtype=object)
+            >>> get_transmission_techs(free_transmission)
+            [out] <xarray.DataArray (techs: 2)>
+                  array(['free_transmission:node1', 'free_transmission:node3'], dtype=object)
+            >>> get_transmission_techs([free_transmission, ac_transmission])
+            [out] <xarray.DataArray (techs: 2)>
+                  array(['free_transmission:node1', 'free_transmission:node3', 'ac_transmission:node1', 'ac_transmission:node2'], dtype=object)
+            ```
+        """
+        return xr.DataArray(self._listify(vals, expand_link_techs=True), dims=["techs"])

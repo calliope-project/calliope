@@ -7,6 +7,9 @@
 # flow_cap_max_relative_per_ts
 # storage_max_relative_per_ts
 
+# helper functions used:
+# reduce_carrier_dim (expression)
+
 constraints:
   max_time_varying_flow_cap:
     description: Limit flow out in each hour according to a time varying fractional limit that is multiplied by the technology flow cap. This represents, for instance, the impact of outdoor temperature on the maximum output of a technology relative to its rated max output.

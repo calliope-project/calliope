@@ -579,7 +579,7 @@ class TestParserMasking:
         assert check_error_or_warning(excinfo, "Expected")
 
 
-class TestAsLatex:
+class TestAsMathString:
     @pytest.fixture
     def latex_eval_kwargs(self, eval_kwargs):
         eval_kwargs["return_type"] = "math_string"

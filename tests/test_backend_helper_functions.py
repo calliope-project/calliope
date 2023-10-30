@@ -4,7 +4,7 @@ import xarray as xr
 from calliope import exceptions
 from calliope.backend import helper_functions
 
-from .common.util import check_error_or_warning
+from .common.util import build_test_model, check_error_or_warning
 
 
 @pytest.fixture(scope="module")
@@ -60,6 +60,11 @@ def expression_get_val_at_index(expression, parsing_kwargs):
 @pytest.fixture(scope="class")
 def expression_roll(expression, parsing_kwargs):
     return expression["roll"](**parsing_kwargs)
+
+
+@pytest.fixture(scope="class")
+def expression_get_transmission_techs(expression, parsing_kwargs):
+    return expression["get_transmission_techs"](**parsing_kwargs)
 
 
 class TestAsArray:
@@ -321,7 +326,41 @@ class TestAsArray:
         assert rolled.sel(nodes="foo", techs="foobar") == expected
 
 
-class TestAsLatex:
+class TestAsArrayGetTransmission:
+    @pytest.fixture(scope="class")
+    def parsing_kwargs(self):
+        model = build_test_model(scenario="simple_supply,two_hours")
+        return {
+            "input_data": model._model_data,
+            "equation_name": "foo",
+            "return_type": "array",
+        }
+
+    def test_expression_get_transmission_one_tech(
+        self, expression_get_transmission_techs
+    ):
+        transmission_techs = expression_get_transmission_techs("test_transmission_elec")
+        assert not set(transmission_techs.data).symmetric_difference(
+            ["test_transmission_elec:a", "test_transmission_elec:b"]
+        )
+
+    def test_expression_get_transmission_multi_tech(
+        self, expression_get_transmission_techs
+    ):
+        transmission_techs = expression_get_transmission_techs(
+            ["test_transmission_elec", "test_transmission_heat"]
+        )
+        assert not set(transmission_techs.data).symmetric_difference(
+            [
+                "test_transmission_elec:a",
+                "test_transmission_elec:b",
+                "test_transmission_heat:a",
+                "test_transmission_heat:b",
+            ]
+        )
+
+
+class TestAsMathString:
     @pytest.fixture(scope="class")
     def parsing_kwargs(self, dummy_model_data):
         return {
@@ -444,3 +483,36 @@ class TestAsLatex:
     def test_roll(self, expression_roll, instring, expected_substring):
         rolled_string = expression_roll(instring, foo="-1")
         assert rolled_string == rf"\textit{{foo}}_\text{{{expected_substring}}}"
+
+
+class TestAsMathStringGetTransmission:
+    @pytest.fixture(scope="class")
+    def parsing_kwargs(self):
+        model = build_test_model(scenario="simple_supply,two_hours")
+        return {
+            "input_data": model._model_data,
+            "return_type": "math_string",
+            "equation_name": "foo",
+        }
+
+    def test_expression_get_transmission_one_tech(
+        self, expression_get_transmission_techs
+    ):
+        transmission_tech_string = expression_get_transmission_techs(
+            "test_transmission_elec"
+        )
+        assert (
+            transmission_tech_string
+            == "techs=[test_transmission_elec:a,test_transmission_elec:b]"
+        )
+
+    def test_expression_get_transmission_multi_tech(
+        self, expression_get_transmission_techs
+    ):
+        transmission_tech_string = expression_get_transmission_techs(
+            ["test_transmission_elec", "test_transmission_heat"]
+        )
+        assert (
+            transmission_tech_string
+            == "techs=[test_transmission_elec:a,test_transmission_elec:b,test_transmission_heat:a,test_transmission_heat:b]"
+        )

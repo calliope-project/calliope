@@ -71,23 +71,23 @@ overrides:
       region2.techs.battery.constraints.flow_cap_max: 1000
       region2.techs.battery.constraints.storage_cap_max: 5240
 
-      region1-1.techs.csp.constraints.flow_cap_max: 10000
-      region1-1.techs.csp.constraints.storage_cap_max: 244301
-      region1-1.techs.csp.constraints.area_use_max: 130385
+      region1_1.techs.csp.constraints.flow_cap_max: 10000
+      region1_1.techs.csp.constraints.storage_cap_max: 244301
+      region1_1.techs.csp.constraints.area_use_max: 130385
 
-      region1-2.techs.csp.constraints.flow_cap_max: 0
-      region1-2.techs.csp.constraints.storage_cap_max: 0
-      region1-2.techs.csp.constraints.area_use_max: 0
+      region1_2.techs.csp.constraints.flow_cap_max: 0
+      region1_2.techs.csp.constraints.storage_cap_max: 0
+      region1_2.techs.csp.constraints.area_use_max: 0
 
-      region1-3.techs.csp.constraints.flow_cap_max: 2534
-      region1-3.techs.csp.constraints.storage_cap_max: 25301
-      region1-3.techs.csp.constraints.area_use_max: 8487
+      region1_3.techs.csp.constraints.flow_cap_max: 2534
+      region1_3.techs.csp.constraints.storage_cap_max: 25301
+      region1_3.techs.csp.constraints.area_use_max: 8487
 
     links:
       region1,region2.techs.ac_transmission.constraints.flow_cap_max: 3231
-      region1,region1-1.techs.free_transmission.constraints.flow_cap_max: 9000
-      region1,region1-2.techs.free_transmission.constraints.flow_cap_max: 0
-      region1,region1-3.techs.free_transmission.constraints.flow_cap_max: 2281
+      region1,region1_1.techs.free_transmission.constraints.flow_cap_max: 9000
+      region1,region1_2.techs.free_transmission.constraints.flow_cap_max: 0
+      region1,region1_3.techs.free_transmission.constraints.flow_cap_max: 2281
 
   check_feasibility:
     config:

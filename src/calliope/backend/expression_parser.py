@@ -151,9 +151,10 @@ class EvalToCallable(EvalString):
         **eval_kwargs: Unpack[EvalAttrs],  # type: ignore
     ) -> Callable:
         """Evaluate math string expression.
+        Args and kwargs are passed on directly to helper function.
 
         Args:
-            as_latex (bool, optional): If True, return a valid LaTex math string. Defaults to False.
+            return_type (str): Whether to return a math string or xarray DataArray.
         Keyword Args:
             equation_name (str): Name of math component in which expression is defined.
             slice_dict (dict): Dictionary mapping the index slice name to a parsed equation expression.

@@ -248,7 +248,7 @@ class ParsedBackendEquation:
         self,
         backend_interface: backend_model.BackendModel,
         *,
-        as_latex: Literal[False] = False,
+        return_type: Literal["array"] = "array",
         initial_where: xr.DataArray = TRUE_ARRAY,
     ) -> xr.DataArray:
         "Expecting array if not requesting latex string"
@@ -258,7 +258,7 @@ class ParsedBackendEquation:
         self,
         backend_interface: backend_model.BackendModel,
         *,
-        as_latex: Literal[True],
+        return_type: Literal["math_string"],
     ) -> str:
         "Expecting string if requesting latex string"
 
@@ -266,7 +266,7 @@ class ParsedBackendEquation:
         self,
         backend_interface: backend_model.BackendModel,
         *,
-        as_latex: bool = False,
+        return_type: str = "array",
         initial_where: xr.DataArray = TRUE_ARRAY,
     ) -> Union[xr.DataArray, str]:
         """Evaluate parsed backend object dictionary `where` string.
@@ -275,19 +275,21 @@ class ParsedBackendEquation:
             backend_interface (calliope.backend.backend_model.BackendModel): Interface to a optimisation backend.
 
         Keyword Args:
-            as_latex (bool, optional): If True, return LaTex math string. Defaults to False.
+            return_type (str, optional):
+                If "array", return xarray.DataArray. If "math_string", return LaTex math string.
+                Defaults to "array".
             initial_where (xr.DataArray, optional):
                 If given, the where array resulting from evaluation will be further where'd by this array.
                 Defaults to xr.DataArray(True) (i.e., no effect).
 
         Returns:
             Union[xr.DataArray, str]:
-                If `as_latex` is False: Boolean array defining on which index items a parsed component should be built.
-                If `as_latex` is True: Valid LaTeX math string defining the "where" conditions using logic notation.
+                If return_type == `array`: Boolean array defining on which index items a parsed component should be built.
+                If return_type == `math_string`: Valid LaTeX math string defining the "where" conditions using logic notation.
         """
         evaluated_wheres = [
             where[0].eval(
-                return_type="math_string" if as_latex else "array",
+                return_type,
                 equation_name=self.name,
                 helper_functions=helper_functions._registry["where"],
                 input_data=backend_interface.inputs,
@@ -296,7 +298,7 @@ class ParsedBackendEquation:
             )
             for where in self.where
         ]
-        if as_latex:
+        if return_type == "math_string":
             return r"\land{}".join(f"({i})" for i in evaluated_wheres if i != "true")
         else:
             where = xr.DataArray(
@@ -325,7 +327,7 @@ class ParsedBackendEquation:
         self,
         backend_interface: backend_model.BackendModel,
         *,
-        as_latex: Literal[False] = False,
+        return_type: Literal["array"] = "array",
         references: Optional[set] = None,
         where: Optional[xr.DataArray] = None,
     ) -> xr.DataArray:
@@ -336,7 +338,7 @@ class ParsedBackendEquation:
         self,
         backend_interface: backend_model.BackendModel,
         *,
-        as_latex: Literal[True],
+        return_type: Literal["math_string"],
         references: Optional[set] = None,
     ) -> str:
         "Expecting string if requesting latex string"
@@ -345,27 +347,29 @@ class ParsedBackendEquation:
         self,
         backend_interface: backend_model.BackendModel,
         *,
-        as_latex: bool = False,
+        return_type: str = "array",
         references: Optional[set] = None,
         where: xr.DataArray = TRUE_ARRAY,
-    ) -> Union[str, xr.DataArray]:
+    ) -> Union[xr.DataArray, str]:
         """Evaluate a math string to produce either an array of backend objects or a LaTex math string.
 
         Args:
             backend_interface (calliope.backend.backend_model.BackendModel): Interface to a optimisation backend.
 
         Keyword Args:
-            as_latex (bool, optional): If True, return LaTex math string. Defaults to False.
+            return_type (str, optional):
+                If "array", return xarray.DataArray. If "math_string", return LaTex math string.
+                Defaults to "array".
             references (Optional[set], optional): If given, any references in the math string to other model components will be logged here. Defaults to None.
-            where (Optional[xr.DataArray], optional): If given, should be a boolean array to mask any produced dataarrays. Defaults to None.
+            where (Optional[xr.DataArray], optional): If given, should be a boolean array with which to mask any produced arrays. Defaults to xr.DataArray(True).
 
         Returns:
-            Union[str, xr.DataArray]:
-                If `as_latex` is True, a string will be returned, otherwise an array of values.
-                This could be a zero-dimensional array, and that's OK.
+            Union[xr.DataArray, str]:
+                If return_type == `array`: array of backend expression objects.
+                If return_type == `math_string`: Valid LaTeX math string defining the "where" conditions using logic notation.
         """
         evaluated = self.expression[0].eval(
-            return_type="math_string" if as_latex else "array",
+            return_type,
             equation_name=self.name,
             slice_dict=self.slices,
             sub_expression_dict=self.sub_expressions,
@@ -375,7 +379,7 @@ class ParsedBackendEquation:
             references=references if references is not None else set(),
             helper_functions=helper_functions._registry["expression"],
         )
-        if not as_latex:
+        if not return_type == "math_string":
             self.raise_error_on_where_expr_mismatch(evaluated, where)
         return evaluated
 

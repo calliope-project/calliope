@@ -449,8 +449,8 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         return self._render(doc_template, components=components)
 
     def _add_latex_strings(self, where, element, equation_strings):
-        expr = element.evaluate_expression(self, as_latex=True)
-        where_latex = element.evaluate_where(self, as_latex=True)
+        expr = element.evaluate_expression(self, return_type="math_string")
+        where_latex = element.evaluate_where(self, return_type="math_string")
 
         if self.include == "all" or (self.include == "valid" and where.any()):
             equation_strings.append({"expression": expr, "where": where_latex})
@@ -465,7 +465,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         sets: Optional[list[str]] = None,
     ) -> None:
         if parsed_component is not None:
-            where = parsed_component.evaluate_where(self, as_latex=True)
+            where = parsed_component.evaluate_where(self, return_type="math_string")
             sets = parsed_component.sets
 
         if self.include == "all" or (
@@ -501,6 +501,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         parsed_bounds = parsing.ParsedBackendComponent("constraints", name, bound_dict)
         equations = parsed_bounds.parse_equations(self.valid_component_names)
         return tuple(
-            {"expression": eq.evaluate_expression(self, as_latex=True)}
+            {"expression": eq.evaluate_expression(self, return_type="math_string")}
             for eq in equations
         )
