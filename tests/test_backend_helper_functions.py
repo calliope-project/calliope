@@ -321,7 +321,7 @@ class TestAsArray:
         assert rolled.sel(nodes="foo", techs="foobar") == expected
 
 
-class TestAsLatex:
+class TestAsMathString:
     @pytest.fixture(scope="class")
     def parsing_kwargs(self, dummy_model_data):
         return {

@@ -872,7 +872,7 @@ class TestEquationParserComparison:
         assert str(parsed_[0]) == expected
 
 
-class TestAsLatex:
+class TestAsMathString:
     @pytest.fixture
     def latex_eval_kwargs(self, dummy_latex_backend_model):
         return {
