@@ -343,14 +343,14 @@ Internal changes
 0.6.0 (2018-04-20)
 ------------------
 
-Version 0.6.0 is an almost complete rewrite of most of Calliope's internals. See :doc:`user/ref_05_to_06` for a more detailed description of the many changes.
+Version 0.6.0 is an almost complete rewrite of most of Calliope's internals. See https://calliope.readthedocs.io/en/v0.6.0/user/whatsnew.html for a more detailed description of the many changes.
 
 Major changes
 ~~~~~~~~~~~~~
 
 |changed| |backwards-incompatible| Substantial changes to model configuration format, including more verbose names for most settings, and removal of run configuration files.
 
-|new| |backwards-incompatible| Complete rewrite of Pyomo backend, including new various new and improved functionality to interact with a built model (see :doc:`user/ref_05_to_06`).
+|new| |backwards-incompatible| Complete rewrite of Pyomo backend, including new various new and improved functionality to interact with a built model (see https://calliope.readthedocs.io/en/v0.6.0/user/whatsnew.html).
 
 |new| Addition of a ``calliope convert`` CLI tool to convert 0.5.x models to 0.6.0.
 

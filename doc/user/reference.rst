@@ -11,4 +11,3 @@ We suggest you read the :doc:`building`, :doc:`running` and :doc:`analysing` sec
 
    ref_example_models
    ref_config
-   ref_05_to_06
