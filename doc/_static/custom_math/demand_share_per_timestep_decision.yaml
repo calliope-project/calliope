@@ -12,6 +12,10 @@
 # demand_share_limit.
 # decide_demand_share <- Link supply technologies to the demand technology they are going to be a share of.
 
+# helper functions used
+# sum (expression)
+# select_from_lookup_arrays (expression)
+
 variables:
   demand_share_per_timestep_decision:
     description: Relative share of demand that a given technology must meet per node.

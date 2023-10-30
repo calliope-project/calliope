@@ -16,7 +16,7 @@ class TestCostMinimisationObjective:
         model.build()
         model.solve()
 
-        assert model.results.flow_cap.sel(nodes="region1-2", techs="csp") == approx(
+        assert model.results.flow_cap.sel(nodes="region1_2", techs="csp") == approx(
             10000
         )
         assert model.results.flow_cap.sel(
@@ -39,7 +39,7 @@ class TestCostMinimisationObjective:
         model.build()
         model.solve()
 
-        assert model.results.flow_cap.sel(nodes="region1-2", techs="csp") == approx(
+        assert model.results.flow_cap.sel(nodes="region1_2", techs="csp") == approx(
             10000.0
         )
         assert model.results.flow_cap.sel(

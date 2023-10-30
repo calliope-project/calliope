@@ -6,6 +6,9 @@
 # flow_eff_piecewise_slopes (defining the new parameter `pieces`)
 # flow_eff_piecewise_intercept (defining the new parameter `pieces`)
 
+# helper functions used
+# reduce_carrier_dim (expression)
+
 variables:
   available_flow_cap:
     description: Flow capacity that will be set to zero if the technology is not operating in a given timestep and will be set to the value of the decision variable `flow_cap` otherwise.
