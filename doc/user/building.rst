@@ -291,7 +291,7 @@ For example, a simple photovoltaic (PV) tech using a time series of hour-by-hour
             source: file=pv_resource.csv
             flow_cap_max: 10000  # kW
 
-By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting :yaml:`model.time_format` based on ``strftime` directives <https://strftime.org/>`_, which defaults to ``'%Y-%m-%d %H:%M:%S'``.
+By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting :yaml:`model.time_format` based on ``strftime` directives <https://strftime.org/>`_, which defaults to ``"ISO8601"``.
 
 For example, the first few lines of a CSV file, called ``pv_resource.csv`` giving a source potential for two locations might look like this, with the first column in the file always being read as the date-time index:
 
