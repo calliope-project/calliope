@@ -15,7 +15,7 @@ Models have a default timestep length (defined implicitly by the timesteps of th
 
     config:
         init:
-            time_subset: 6H
+            time_resample: 6H
 
 In the above example, this would resample all time series data to 6-hourly timesteps.
 Any `pandas-compatible rule describing the target resolution <https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.resample.html>`_ can be used.
