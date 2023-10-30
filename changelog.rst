@@ -16,6 +16,8 @@ User-facing changes
 
 |new| Files containing user-defined mathematical formulations can be referenced in the model configuration. User-defined mathematical formulations must follow the new Calliope YAML math syntax (see "Internal changes" below).
 
+|changed| |backwards-incompatible| Time masking and clustering capabilities have been severely reduced. Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.time_resample: 2H`, `config.init.time_cluster: cluster_file.csv`. Clustering is simplified to only matching model dates to representative days, with those representative days being in the clustered timeseries. Masking/clustering data should now be undertaken by the user prior to initialising a Calliope model.
+
 |changed| |backwards-incompatible| `Locations` (abbreviated to `locs`) are now referred to as `nodes` (no abbreviation). For users, this requires updating the top-level YAML key "locations" to "nodes" and accessing data in `model.inputs` and `model.results` on the set "nodes" rather than "locs".
 
 |changed| |backwards-incompatible| The `loc::tech` and `loc::tech::carrier` sets have been removed. Model components are now indexed separately over `node`, `tech`, and `carrier` (where applicable). Although primarily an internal change, this affects the xarray dataset structure and hence how users access data in `model.inputs` and `model.results`. For example, `model.inputs.energy_cap_max.loc[{"loc_techs": "X:pv"}]` in v0.6 needs to be changed to `model.inputs.energy_cap_max.loc[{"nodes": "X", "techs": "pv"}]` in v0.7. This is functionally equivalent to first calling `model.get_formatted_array("energy_cap_max")` in v0.6, which is no longer necessary in v0.7.
