@@ -136,6 +136,17 @@ class ParsingHelperFunction(ABC):
     def _listify(
         self, vals: Union[list[str], str], expand_link_techs: bool = False
     ) -> list[str]:
+        """Force a string to a list of length one if not already provided as a list.
+
+        Args:
+            vals (Union[list[str], str]): Values (or single value) to force to a list.
+            expand_link_techs (bool, optional):
+                If True, search resulting list for any transmission tech names and expand them to their link names.
+                Defaults to False.
+
+        Returns:
+            list[str]: Input forced to a list.
+        """
         if not isinstance(vals, list):
             vals = [vals]
         if expand_link_techs:
@@ -143,6 +154,19 @@ class ParsingHelperFunction(ABC):
         return vals
 
     def _expand_link_techs(self, vals: list[str]) -> list[str]:
+        """Expand list of technology names to link tech names.
+
+        This searches the names provided and tries to match them up with auto-generated link names, which are the transmission tech name + remote node name
+        (e.g., `ac_transmission` -> [`ac_transmission:A`, `ac_transmission:B`]).
+
+        It will match any provided name with any name in the techs that starts with that name followed by a colon (`:`).
+
+        Args:
+            vals (list[str]): List of techs which could include general transmission tech names.
+
+        Returns:
+            list[str]: Expanded list, including all non-transmission tech names and transmission tech names replaced with link names.
+        """
         to_remove = []
         to_add = []
         for val in vals:
@@ -296,6 +320,8 @@ class Defined(ParsingHelperFunction):
         dim_names = list(dims.keys())
         dims_with_list_vals = {
             dim: self._listify(vals, expand_link_techs=True)
+            if dim == "techs"
+            else self._listify(vals, expand_link_techs=False)
             for dim, vals in dims.items()
         }
         definition_matrix = self._kwargs["model_data"].definition_matrix
@@ -342,8 +368,8 @@ class Defined(ParsingHelperFunction):
         elif how == "any":
             # Using vee for "collective-or"
             tex_how = "vee"
-
-        vals = self._listify(vals, expand_link_techs=True)
+        expand_link_techs = True if dim == "techs" else False
+        vals = self._listify(vals, expand_link_techs=expand_link_techs)
         within_singular = within.removesuffix("s")
         dim_singular = dim.removesuffix("s")
         selection = rf"\text{{{dim_singular}}} \in \text{{[{','.join(vals)}]}}"

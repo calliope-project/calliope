@@ -2,6 +2,14 @@
 # Imports of transmission technologies are defined by `flow_out` (outflow from a transmission technology that originated in a remote node).
 # We assume that transmission technologies `test_transmission_elec` and `test_transmission_heat` have been defined.
 
+# New top-level parameters:
+# net_import_share
+
+# helper functions used
+# defined (where)
+# sum (expression)
+# get_transmission_techs (expression)
+
 constraints:
   net_import_share_max:
     description: Limit upper bound on electricity imports within nodes as a share of all electricity flows at each node.
@@ -39,7 +47,7 @@ constraints:
     slices:
       transmission_techs:
         - expression: get_transmission_techs(test_transmission_heat)
-      node_group:  # The subset of nodes for which to limit heat imports
+      node_group:  # The subset of nodes in which to limit heat imports
         - expression: "[a, c]"
       carrier:  # The carrier for which to limit imports
         - expression: heat
