@@ -199,7 +199,7 @@ def cluster(
     clustering_timeseries: pd.Series,
 ):
     """
-    Apply the given clustering function to the given data.
+    Apply the given clustering time series to the given data.
 
     Parameters
     ----------
