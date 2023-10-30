@@ -287,7 +287,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         use_inf_as_na: bool = False,
     ) -> None:
         self._add_to_dataset(parameter_name, parameter_values, "parameters", {})
-        self.valid_math_element_names.add(parameter_name)
 
     def add_constraint(
         self,
@@ -321,8 +320,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         name: str,
         expression_dict: Optional[parsing.UnparsedExpressionDict] = None,
     ) -> None:
-        self.valid_math_element_names.add(name)
-
         equation_strings: list = []
 
         def _expression_setter(
@@ -351,8 +348,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         variable_dict: Optional[parsing.UnparsedVariableDict] = None,
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
-
-        self.valid_math_element_names.add(name)
 
         def _variable_setter(where: xr.DataArray) -> xr.DataArray:
             return where.where(where)
@@ -454,8 +449,8 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         return self._render(doc_template, components=components)
 
     def _add_latex_strings(self, where, element, equation_strings):
-        expr = element.evaluate_expression(self.inputs, self, as_latex=True)
-        where_latex = element.evaluate_where(self.inputs, self._dataset, as_latex=True)
+        expr = element.evaluate_expression(self, return_type="math_string")
+        where_latex = element.evaluate_where(self, return_type="math_string")
 
         if self.include == "all" or (self.include == "valid" and where.any()):
             equation_strings.append({"expression": expr, "where": where_latex})
@@ -470,9 +465,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         sets: Optional[list[str]] = None,
     ) -> None:
         if parsed_component is not None:
-            where = parsed_component.evaluate_where(
-                self.inputs, self._dataset, as_latex=True
-            )
+            where = parsed_component.evaluate_where(self, return_type="math_string")
             sets = parsed_component.sets
 
         if self.include == "all" or (
@@ -506,10 +499,8 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             ],
         }
         parsed_bounds = parsing.ParsedBackendComponent("constraints", name, bound_dict)
-        equations = parsed_bounds.parse_equations(
-            self.valid_math_element_names,
-        )
+        equations = parsed_bounds.parse_equations(self.valid_component_names)
         return tuple(
-            {"expression": eq.evaluate_expression(self.inputs, self, as_latex=True)}
+            {"expression": eq.evaluate_expression(self, return_type="math_string")}
             for eq in equations
         )

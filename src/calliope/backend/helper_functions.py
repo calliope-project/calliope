@@ -10,11 +10,12 @@ Functions that can be used to process data in math `where` and `expression` stri
 import functools
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Literal, Mapping, Union, overload
+from typing import Any, Literal, Mapping, Optional, Union, overload
 
 import numpy as np
 import xarray as xr
 
+from calliope.backend.backend_model import BackendModel
 from calliope.exceptions import BackendError
 
 _registry: dict[
@@ -25,20 +26,22 @@ _registry: dict[
 class ParsingHelperFunction(ABC):
     def __init__(
         self,
-        as_latex: bool = False,
+        return_type: Literal["array", "math_string"],
+        *,
+        equation_name: str,
+        input_data: xr.Dataset,
+        backend_interface: Optional[type[BackendModel]] = None,
         **kwargs,
     ) -> None:
         """Abstract helper function class, which all helper functions must subclass.
 
         The abstract properties and methods defined here must be defined by all helper functions.
 
-        Args:
-            as_latex (bool, optional):
-                If True, will return a LaTeX math string on calling the class.
-                Defaults to False.
         """
-        self._kwargs = kwargs
-        self._as_latex = as_latex
+        self._equation_name = equation_name
+        self._input_data = input_data
+        self._backend_interface = backend_interface
+        self._return_type = return_type
 
     @property
     @abstractmethod
@@ -51,27 +54,27 @@ class ParsingHelperFunction(ABC):
         "Helper function name that is used in the math expression/where string."
 
     @abstractmethod
-    def as_latex(self, *args, **kwargs) -> str:
+    def as_math_string(self, *args, **kwargs) -> str:
         """Method to update LaTeX math strings to include the action applied by the helper function.
 
-        This method is called when the class is initialised with ``as_latex=True``.
+        This method is called when the class is initialised with ``return_type=math_string``.
         """
 
     @abstractmethod
     def as_array(self, *args, **kwargs) -> xr.DataArray:
         """Method to apply the helper function to provide an n-dimensional array output.
 
-        This method is called when the class is initialised with ``as_latex=False``.
+        This method is called when the class is initialised with ``return_type=array``.
         """
 
     def __call__(self, *args, **kwargs) -> Any:
         """
         When a helper function is accessed by evaluating a parsing string, this method is called.
-        The value of `as_latex` on initialisation of the class defines whether this method returns a string (``as_latex=True``) or :meth:xr.DataArray (``as_latex=False``)
+        The value of `return_type` on initialisation of the class defines whether this method returns a string (``return_type=math_string``) or :meth:xr.DataArray (``return_type=array``)
         """
-        if self._as_latex:
-            return self.as_latex(*args, **kwargs)
-        else:
+        if self._return_type == "math_string":
+            return self.as_math_string(*args, **kwargs)
+        elif self._return_type == "array":
             return self.as_array(*args, **kwargs)
 
     def __init_subclass__(cls):
@@ -170,7 +173,7 @@ class ParsingHelperFunction(ABC):
         to_remove = []
         to_add = []
         for val in vals:
-            link_techs = self._kwargs["model_data"].techs.str.startswith(val + ":")
+            link_techs = self._input_data.techs.str.startswith(val + ":")
             if link_techs.any():
                 to_add.extend(list(link_techs[link_techs].techs.data))
                 to_remove.append(val)
@@ -186,7 +189,7 @@ class Inheritance(ParsingHelperFunction):
     #:
     NAME = "inheritance"
 
-    def as_latex(self, tech_group: str) -> str:
+    def as_math_string(self, tech_group: str) -> str:
         return rf"\text{{tech_group={tech_group}}}"
 
     def as_array(self, tech_group: str) -> xr.DataArray:
@@ -197,9 +200,7 @@ class Inheritance(ParsingHelperFunction):
         Args:
             model_data (xr.Dataset): Calliope model data
         """
-        inheritance_lists = (
-            self._kwargs["model_data"].inheritance.to_series().str.split(".")
-        )
+        inheritance_lists = self._input_data.inheritance.to_series().str.split(".")
         return inheritance_lists.apply(lambda x: tech_group in x).to_xarray()
 
 
@@ -210,7 +211,7 @@ class WhereAny(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["where"]
 
-    def as_latex(self, array: str, *, over: Union[str, list[str]]) -> str:
+    def as_math_string(self, array: str, *, over: Union[str, list[str]]) -> str:
         if isinstance(over, str):
             overstring = self._instr(over)
         else:
@@ -231,15 +232,18 @@ class WhereAny(ParsingHelperFunction):
                 If the parameter exists in the model, returns a boolean array with dimensions reduced by applying a boolean OR operation along the dimensions given in `over`.
                 If the parameter does not exist, returns a dimensionless False array.
         """
-        if parameter in self._kwargs["model_data"].data_vars:
-            parameter_da = self._kwargs["model_data"][parameter]
+        if parameter in self._input_data.data_vars:
+            parameter_da = self._input_data[parameter]
             bool_parameter_da = (
                 parameter_da.notnull()
                 & (parameter_da != np.inf)
                 & (parameter_da != -np.inf)
             )
-        elif parameter in self._kwargs.get("backend_dataset", xr.Dataset()).data_vars:
-            bool_parameter_da = self._kwargs["backend_dataset"][parameter].notnull()
+        elif (
+            self._backend_interface is not None
+            and parameter in self._backend_interface._dataset
+        ):
+            bool_parameter_da = self._backend_interface._dataset[parameter].notnull()
         else:
             bool_parameter_da = xr.DataArray(False)
         over = self._listify(over)
@@ -254,7 +258,7 @@ class Defined(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["where"]
 
-    def as_latex(self, *, within: str, how: Literal["all", "any"], **dims) -> str:
+    def as_math_string(self, *, within: str, how: Literal["all", "any"], **dims) -> str:
         substrings = []
         for name, vals in dims.items():
             substrings.append(self._latex_substring(how, name, vals, within))
@@ -324,7 +328,7 @@ class Defined(ParsingHelperFunction):
             else self._listify(vals, expand_link_techs=False)
             for dim, vals in dims.items()
         }
-        definition_matrix = self._kwargs["model_data"].definition_matrix
+        definition_matrix = self._input_data.definition_matrix
         dim_within_da = definition_matrix.any(self._dims_to_remove(dim_names, within))
         within_da = getattr(dim_within_da.sel(**dims_with_list_vals), how)(dim_names)
 
@@ -345,7 +349,7 @@ class Defined(ParsingHelperFunction):
         Returns:
             set: Undefined dimensions to remove from the definition matrix.
         """
-        definition_matrix = self._kwargs["model_data"].definition_matrix
+        definition_matrix = self._input_data.definition_matrix
         missing_dims = set([*dim_names, within]).difference(definition_matrix.dims)
         if missing_dims:
             raise ValueError(
@@ -383,7 +387,7 @@ class Sum(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_latex(self, array: str, *, over: Union[str, list[str]]) -> str:
+    def as_math_string(self, array: str, *, over: Union[str, list[str]]) -> str:
         if isinstance(over, str):
             overstring = self._instr(over)
         else:
@@ -415,7 +419,7 @@ class ReduceCarrierDim(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_latex(
+    def as_math_string(
         self,
         array: str,
         carrier_tier: Literal["in", "out", "in_2", "out_2", "in_3", "out_3"],
@@ -436,11 +440,14 @@ class ReduceCarrierDim(ParsingHelperFunction):
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        return Sum(as_latex=self._as_latex, **self._kwargs)(
+        sum_helper = Sum(
+            return_type=self._return_type,
+            equation_name=self._equation_name,
+            input_data=self._input_data,
+        )
+        return sum_helper(
             array.where(
-                self._kwargs["model_data"].definition_matrix.sel(
-                    carrier_tiers=carrier_tier
-                )
+                self._input_data.definition_matrix.sel(carrier_tiers=carrier_tier)
             ),
             over="carriers",
         )
@@ -452,7 +459,7 @@ class ReducePrimaryCarrierDim(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_latex(self, array: str, carrier_tier: Literal["in", "out"]) -> str:
+    def as_math_string(self, array: str, carrier_tier: Literal["in", "out"]) -> str:
         return rf"\sum\limits_{{\text{{carrier=primary_carrier_{carrier_tier}}}}} ({array})"
 
     def as_array(
@@ -471,11 +478,14 @@ class ReducePrimaryCarrierDim(ParsingHelperFunction):
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
         """
-        return Sum(as_latex=self._as_latex, **self._kwargs)(
+        sum_helper = Sum(
+            return_type=self._return_type,
+            equation_name=self._equation_name,
+            input_data=self._input_data,
+        )
+        return sum_helper(
             array.where(
-                getattr(
-                    self._kwargs["model_data"], f"primary_carrier_{carrier_tier}"
-                ).notnull()
+                getattr(self._input_data, f"primary_carrier_{carrier_tier}").notnull()
             ),
             over="carriers",
         )
@@ -487,7 +497,7 @@ class SelectFromLookupArrays(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_latex(self, array: str, **lookup_arrays: str) -> str:
+    def as_math_string(self, array: str, **lookup_arrays: str) -> str:
         new_strings = {
             (iterator := dim.removesuffix("s")): rf"={array}[{iterator}]"
             for dim, array in lookup_arrays.items()
@@ -556,12 +566,10 @@ class SelectFromLookupArrays(ParsingHelperFunction):
         # Turn string lookup values to numeric ones.
         # We stack the dimensions to handle multidimensional lookups
         for index_dim, index in lookup_arrays.items():
-            stacked_lookup = self._kwargs["model_data"][index.name].stack({dim: dims})
+            stacked_lookup = self._input_data[index.name].stack({dim: dims})
             ix = array.indexes[index_dim].get_indexer(stacked_lookup)
             if (ix == -1).all():
-                received_lookup = (
-                    self._kwargs["model_data"][index.name].to_series().dropna()
-                )
+                received_lookup = self._input_data[index.name].to_series().dropna()
                 raise IndexError(
                     f"Trying to select items on the dimension {index_dim} from the {index.name} lookup array, but no matches found. Received: {received_lookup}"
                 )
@@ -588,7 +596,7 @@ class GetValAtIndex(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression", "where"]
 
-    def as_latex(self, **dim_idx_mapping: str) -> str:
+    def as_math_string(self, **dim_idx_mapping: str) -> str:
         dim, idx = self._mapping_to_dim_idx(**dim_idx_mapping)
         return f"{dim}[{idx}]"
 
@@ -623,7 +631,7 @@ class GetValAtIndex(ParsingHelperFunction):
                 timesteps  <U16 '2000-01-01 02:00'
         """
         dim, idx = self._mapping_to_dim_idx(**dim_idx_mapping)
-        return self._kwargs["model_data"].coords[dim][int(idx)]
+        return self._input_data.coords[dim][int(idx)]
 
     @overload
     @staticmethod
@@ -633,7 +641,7 @@ class GetValAtIndex(ParsingHelperFunction):
     @overload
     @staticmethod
     def _mapping_to_dim_idx(**dim_idx_mapping: str) -> tuple[str, str]:
-        "used in as_latex"
+        "used in as_math_string"
 
     @staticmethod
     def _mapping_to_dim_idx(**dim_idx_mapping) -> tuple[str, Union[str, int]]:
@@ -648,7 +656,7 @@ class Roll(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_latex(self, array: str, **roll_kwargs: str) -> str:
+    def as_math_string(self, array: str, **roll_kwargs: str) -> str:
         new_strings = {
             k.removesuffix("s"): f"{-1 * int(v):+d}" for k, v in roll_kwargs.items()
         }
@@ -688,7 +696,7 @@ class GetTransmissionTechs(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_latex(self, vals: Union[str, list[str]]) -> str:
+    def as_math_string(self, vals: Union[str, list[str]]) -> str:
         expanded_vals = self._listify(vals, expand_link_techs=True)
         return f"techs=[{','.join(expanded_vals)}]"
 

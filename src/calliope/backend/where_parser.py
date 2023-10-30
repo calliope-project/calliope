@@ -4,37 +4,52 @@
 from __future__ import annotations
 
 import operator
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Callable, Union
 
 import numpy as np
 import pyparsing as pp
 import xarray as xr
+from typing_extensions import NotRequired, TypedDict
 
 from calliope.backend import expression_parser
 from calliope.exceptions import BackendError
+
+if TYPE_CHECKING:
+    from calliope.backend.backend_model import BackendModel
+
 
 pp.ParserElement.enablePackrat()
 
 BOOLEANTYPE = Union[np.bool_, np.typing.NDArray[np.bool_]]
 
 
-class EvalNot(expression_parser.EvalSignOp):
-    "Parse action to process successfully parsed expressions with a leading `not`"
+class EvalAttrs(TypedDict):
+    equation_name: str
+    backend_interface: BackendModel
+    input_data: xr.DataArray
+    helper_functions: dict[str, Callable]
+    apply_where: NotRequired[bool]
 
-    def as_latex(self, val: str) -> str:
+
+class EvalWhere(expression_parser.EvalToArrayStr):
+    "Update type reference for `eval_attrs` to match `where` evaluation kwargs"
+    eval_attrs: EvalAttrs = {}
+
+
+class EvalNot(EvalWhere, expression_parser.EvalSignOp):
+    "Parse action to process successfully parsed expressions with a leading `not`."
+
+    def as_math_string(self) -> str:
         """Add sign to stringified data for use in a LaTex math formula"""
-        return rf"\neg ({val})"
+        evaluated = self.value.eval("math_string", **self.eval_attrs)
+        return rf"\neg ({evaluated})"
 
-    def eval(self, **kwargs) -> Union[BOOLEANTYPE, str]:
-        "Return inverted bool / boolean array"
-        evaluated = self.value.eval(**kwargs)
-        if kwargs.get("as_latex", False):
-            return self.as_latex(evaluated)
-        else:
-            return ~evaluated
+    def as_array(self) -> xr.DataArray:
+        evaluated = self.value.eval("array", **self.eval_attrs)
+        return ~evaluated
 
 
-class EvalAndOr(expression_parser.EvalOperatorOperand):
+class EvalAndOr(EvalWhere, expression_parser.EvalOperatorOperand):
     """
     Parse action to process successfully parsed expressions with operands separated
     by an and/or operator (OPERAND OPERATOR OPERAND OPERATOR OPERAND ...)
@@ -44,44 +59,34 @@ class EvalAndOr(expression_parser.EvalOperatorOperand):
         "and": r"{val} \land {operand}",
         "or": r"{val} \lor {operand}",
     }
+    SKIP_IF = ["and", "or"]
 
-    def bool_operate(
-        self, val: BOOLEANTYPE, evaluated_operand: BOOLEANTYPE, operator_: str
-    ) -> BOOLEANTYPE:
+    def _skip_component_on_conditional(self, component: str, operator_: str) -> bool:
+        return component == "true" and operator_ in self.SKIP_IF
+
+    @staticmethod
+    def _operate(
+        val: xr.DataArray, evaluated_operand: xr.DataArray, operator_: str
+    ) -> xr.DataArray:
+        "Apply bitwise comparison between boolean xarray dataarrays."
         if operator_ == "and":
             val = operator.and_(val, evaluated_operand)
         elif operator_ == "or":
             val = operator.or_(val, evaluated_operand)
         return val
 
-    def _as_latex(
-        self, val: str, operand: str, operator_: str, val_type: Any, operand_type: Any
-    ) -> str:
-        if val == "true":
-            val = operand
-        elif operand != "true":
-            val = self.as_latex(val, operand, operator_, val_type, operand_type)
-        return val
+    def _apply_where_array(self, evaluated: xr.DataArray) -> xr.DataArray:
+        "Override func from parent class to effectively do nothing."
+        return evaluated
 
-    def eval(self, as_latex: bool = False, **kwargs) -> Any:
-        "Return combined bools / boolean arrays"
-        val = self.value[0].eval(as_latex=as_latex, **kwargs)
-        for operator_, operand in self.operatorOperands(self.value[1:]):
-            evaluated_operand = operand.eval(as_latex=as_latex, **kwargs)
-            if as_latex:
-                val = self._as_latex(
-                    val,
-                    evaluated_operand,
-                    operator_,
-                    type(self.value[0]),
-                    type(operand),
-                )
-            else:
-                val = self.bool_operate(val, evaluated_operand, operator_)
-        return val
+    def as_math_string(self) -> str:
+        return super().as_math_string()
+
+    def as_array(self) -> xr.DataArray:
+        return super().as_array()
 
 
-class ConfigOptionParser(expression_parser.EvalString):
+class ConfigOptionParser(EvalWhere):
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed configuration option names.
@@ -99,42 +104,26 @@ class ConfigOptionParser(expression_parser.EvalString):
         self.loc = loc
 
     def __repr__(self):
-        "Return string representation of the parsed grammar"
         return f"CONFIG:{self.config_option}"
 
-    def as_latex(self) -> str:
-        """Add return input string for use in a LaTex math formula"""
+    def as_math_string(self) -> str:
         return rf"\text{{config.{self.config_option}}}"
 
-    def eval(
-        self, model_data: xr.Dataset, **kwargs
-    ) -> Union[int, float, str, bool, np.bool_]:
-        """
-        If the parsed configuration group and configuration option are valid then
-        return the option value, otherwise add to provided errors list inplace.
+    def as_array(self) -> xr.DataArray:
+        config_val = (
+            self.eval_attrs["input_data"].attrs["config"].build[self.config_option]
+        )
 
-        Args:
-            model_data (xr.Dataset): Calliope model data.
-
-        Returns:
-            Optional[Union[int, float, str, bool, np.bool_]]: Configuration option value.
-        """
-
-        if kwargs.get("as_latex", False):
-            return self.as_latex()
+        if not isinstance(config_val, (int, float, str, bool, np.bool_)):
+            raise BackendError(
+                f"(where, {self.instring}): Configuration option resolves to invalid "
+                f"type `{type(config_val).__name__}`, expected a number, string, or boolean."
+            )
         else:
-            config_val = model_data.attrs["config"].build[self.config_option]
-
-            if not isinstance(config_val, (int, float, str, bool, np.bool_)):
-                raise BackendError(
-                    f"(where, {self.instring}): Configuration option resolves to invalid "
-                    f"type `{type(config_val).__name__}`, expected a number, string, or boolean."
-                )
-            else:
-                return config_val
+            return xr.DataArray(config_val)
 
 
-class DataVarParser(expression_parser.EvalString):
+class DataVarParser(EvalWhere):
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed model data variable names.
@@ -152,69 +141,18 @@ class DataVarParser(expression_parser.EvalString):
         self.loc = loc
 
     def __repr__(self):
-        "Return string representation of the parsed grammar"
         return f"DATA_VAR:{self.data_var}"
 
-    def as_latex(
-        self, data: xr.Dataset, data_var_type: str, apply_where: bool = True
-    ) -> str:
-        """stringify conditional for use in a LaTex math formula"""
-        # TODO: add dims from a YAML schema of params that includes default dims
-        if data_var_type == "parameters":
-            data_var_string = rf"\textit{{{self.data_var}}}"
-        else:
-            data_var_string = rf"\textbf{{{self.data_var}}}"
+    def _preprocess(self) -> tuple[xr.DataArray, str]:
+        """Get data variable from the optimisation problem dataset.
 
-        var = data.get(self.data_var, None)
-        if var is not None and var.shape:
-            data_var_string += (
-                rf"_\text{{{','.join(str(i).removesuffix('s') for i in var.dims)}}}"
-            )
-        if apply_where:
-            data_var_string = rf"\exists ({data_var_string})"
-        return data_var_string
-
-    def _data_var_exists(
-        self, model_data: xr.Dataset, data_var_type: str
-    ) -> xr.DataArray:
-        "mask by setting all (NaN | INF/-INF) to False, otherwise True"
-        var = model_data.get(self.data_var, xr.DataArray(np.nan))
-        if data_var_type == "parameters":
-            return var.notnull() & (var != np.inf) & (var != -np.inf)
-        else:
-            return var.notnull()
-
-    def _data_var_with_default(self, model_data: xr.Dataset) -> xr.DataArray:
-        "Access data var and fill with default values. Return default value as an array if var does not exist"
-        default = model_data.attrs["defaults"].get(self.data_var)
-        return model_data.get(self.data_var, xr.DataArray(default)).fillna(default)
-
-    def eval(
-        self,
-        model_data: xr.Dataset,
-        backend_dataset: Optional[xr.Dataset] = None,
-        apply_where: bool = True,
-        **kwargs,
-    ) -> Union[str, np.bool_, xr.DataArray]:
+        Raises:
+            TypeError: Cannot work with math components of type `constraint` or `objective`.
+            TypeError: Cannot check array contents (`apply_where=False`) of `variable` or `global_expression` math components.
         """
-        Get parsed model data variable from the Calliope model dataset.
-        If it isn't there, return False.
-
-        Args:
-            model_data (xr.Dataset): Calliope model dataset.
-            apply_where (bool, optional):
-                If True, return boolean array corresponding to whether there is data or
-                not in each element of the array. If False, return original array.
-                Defaults to True.
-
-        Returns:
-            Union[np.bool_, xr.DataArray]:
-                False if data variable not in model data, array otherwise.
-        """
-        if backend_dataset is None:
-            backend_dataset = xr.Dataset()
-        if self.data_var in backend_dataset.data_vars.keys():
-            data_var_type = backend_dataset[self.data_var].attrs["obj_type"]
+        backend_interface = self.eval_attrs["backend_interface"]
+        if self.data_var in backend_interface._dataset.data_vars.keys():
+            data_var_type = backend_interface._dataset[self.data_var].attrs["obj_type"]
         else:
             data_var_type = "parameters"
 
@@ -223,6 +161,7 @@ class DataVarParser(expression_parser.EvalString):
                 f"Cannot check values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
                 f"Received {data_var_type.removesuffix('s')}: `{self.data_var}`."
             )
+        apply_where = self.eval_attrs.get("apply_where", True)
         if data_var_type != "parameters" and not apply_where:
             raise TypeError(
                 f"Can only check for existence of values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
@@ -231,23 +170,60 @@ class DataVarParser(expression_parser.EvalString):
             )
 
         if data_var_type == "parameters":
-            source_array = model_data
+            source_array = self.eval_attrs["input_data"]
         else:
-            source_array = backend_dataset
+            source_array = backend_interface._dataset
 
-        if kwargs.get("as_latex", False):
-            return self.as_latex(source_array, data_var_type, apply_where)
+        return source_array, data_var_type
 
-        if data_var_type == "parameters" and self.data_var not in model_data:
-            return np.False_
+    def _data_var_exists(
+        self, source_array: xr.DataArray, data_var_type: str
+    ) -> xr.DataArray:
+        "mask by setting all (NaN | INF/-INF) to False, otherwise True"
+        var = source_array.get(self.data_var, xr.DataArray(np.nan))
+        if data_var_type == "parameters":
+            return var.notnull() & (var != np.inf) & (var != -np.inf)
+        else:
+            return var.notnull()
 
-        if apply_where:
+    def _data_var_with_default(self, source_array: xr.Dataset) -> xr.DataArray:
+        "Access data var and fill with default values. Return default value as an array if var does not exist"
+        default = source_array.attrs["defaults"].get(self.data_var)
+        return source_array.get(self.data_var, xr.DataArray(default)).fillna(default)
+
+    def as_math_string(self) -> str:
+        # TODO: add dims from a YAML schema of params that includes default dims
+        source_array, data_var_type = self._preprocess()
+        if data_var_type == "parameters":
+            data_var_string = rf"\textit{{{self.data_var}}}"
+        else:
+            data_var_string = rf"\textbf{{{self.data_var}}}"
+
+        var = source_array.get(self.data_var, None)
+        if var is not None and var.shape:
+            data_var_string += (
+                rf"_\text{{{','.join(str(i).removesuffix('s') for i in var.dims)}}}"
+            )
+        if self.eval_attrs.get("apply_where", True):
+            data_var_string = rf"\exists ({data_var_string})"
+        return data_var_string
+
+    def as_array(self) -> xr.DataArray:
+        source_array, data_var_type = self._preprocess()
+
+        if (
+            data_var_type == "parameters"
+            and self.data_var not in self.eval_attrs["input_data"]
+        ):
+            return xr.DataArray(np.False_)
+
+        if self.eval_attrs.get("apply_where", True):
             return self._data_var_exists(source_array, data_var_type)
         else:
             return self._data_var_with_default(source_array)
 
 
-class ComparisonParser(expression_parser.EvalComparisonOp):
+class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):
     "Parse action to process successfully parsed strings of the form x=y"
     OP_TRANSLATOR = {
         "<=": r"\mathord{\leq}",
@@ -261,41 +237,30 @@ class ComparisonParser(expression_parser.EvalComparisonOp):
         "Return string representation of the parsed grammar"
         return f"{self.lhs}{self.op}{self.rhs}"
 
-    def eval(self, **kwargs) -> Union[str, BOOLEANTYPE]:
-        """
-        Compare LHS (any) and RHS (numeric, string, bool) and return a bool/boolean array
+    def as_math_string(self) -> str:
+        self.eval_attrs["apply_where"] = False
+        lhs, rhs = self._eval("math_string")
+        if r"\text" not in rhs:
+            rhs = rf"\text{{{rhs}}}"
+        return lhs + self.OP_TRANSLATOR[self.op] + rhs
 
-        Returns:
-            BOOLEANTYPE: Same shape as LHS.
-            str: latex representation of the comparison.
-        """
-        kwargs["apply_where"] = False
-        lhs = self.lhs.eval(**kwargs)
-        rhs = self.rhs.eval(**kwargs)
-
-        if kwargs.get("as_latex", False):
-            if r"\text" not in rhs:
-                rhs = rf"\text{{{rhs}}}"
-            comparison = self.as_latex(lhs, rhs)
-        else:
-            if self.op == "<=":
-                comparison = lhs <= rhs
-            elif self.op == ">=":
-                comparison = lhs >= rhs
-            if self.op == "<":
-                comparison = lhs < rhs
-            elif self.op == ">":
-                comparison = lhs > rhs
-            elif self.op == "=":
-                comparison = lhs == rhs
-
-        if isinstance(comparison, bool):
-            # enables the "~" operator to later invert `comparison` if required.
-            comparison = np.bool_(comparison)
-        return comparison
+    def as_array(self) -> xr.DataArray:
+        self.eval_attrs["apply_where"] = False
+        lhs, rhs = self._eval("array")
+        if self.op == "<=":
+            comparison = lhs <= rhs
+        elif self.op == ">=":
+            comparison = lhs >= rhs
+        if self.op == "<":
+            comparison = lhs < rhs
+        elif self.op == ">":
+            comparison = lhs > rhs
+        elif self.op == "=":
+            comparison = lhs == rhs
+        return xr.DataArray(comparison)
 
 
-class SubsetParser(expression_parser.EvalString):
+class SubsetParser(EvalWhere):
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed dimension subsetting.
@@ -308,30 +273,31 @@ class SubsetParser(expression_parser.EvalString):
             tokens (pp.ParseResults):
                 Has two parsed elements: model set name (str), set items (Any).
         """
-        self.subset, self.set_name = tokens
+        self.val, self.set_name = tokens
         self.instring = instring
         self.loc = loc
 
     def __repr__(self):
-        "Return string representation of the parsed grammar"
-        return f"SUBSET:{self.set_name}{self.subset}"
+        return f"SUBSET:{self.set_name}{self.val}"
 
-    def as_latex(self, subset: list) -> str:
-        """stringify subset for use in a LaTex math formula"""
+    def _eval(self) -> list[str | float]:
+        "Evaluate each element of the subset list"
+        values = [val.eval("array", **self.eval_attrs) for val in self.val]
+        return [val.item() if isinstance(val, xr.DataArray) else val for val in values]
+
+    def as_math_string(self) -> str:
+        subset = self._eval()
         set_singular = self.set_name.removesuffix("s")
         subset_string = "[" + ",".join(str(i) for i in subset) + "]"
         return rf"\text{{{set_singular}}} \in \text{{{subset_string}}}"
 
-    def eval(self, model_data: xr.Dataset, **kwargs) -> Union[str, xr.DataArray]:
-        subset = [i.eval(**kwargs) for i in self.subset]
-        if kwargs.get("as_latex", False):
-            set_item_in_subset = self.as_latex(subset)
-        else:
-            set_item_in_subset = model_data[self.set_name].isin(subset)
+    def as_array(self) -> xr.DataArray:
+        subset = self._eval()
+        set_item_in_subset = self.eval_attrs["input_data"][self.set_name].isin(subset)
         return set_item_in_subset
 
 
-class BoolOperandParser:
+class BoolOperandParser(EvalWhere):
     def __init__(self, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed boolean strings.
@@ -342,23 +308,36 @@ class BoolOperandParser:
         self.val = tokens[0].lower()
 
     def __repr__(self):
-        "Return string representation of the parsed grammar"
         return f"BOOL:{self.val}"
 
-    def as_latex(self):
-        "Return boolean as a string in the domain {true, false}"
+    def as_math_string(self):
         return self.val
 
-    def eval(self, **kwargs) -> np.bool_:
-        "evaluate string to numpy boolean object."
-        if kwargs.get("as_latex", False):
-            bool_val = self.as_latex()
-        else:
-            if self.val == "true":
-                bool_val = np.True_
-            elif self.val == "false":
-                bool_val = np.False_
+    def as_array(self) -> xr.DataArray:
+        if self.val == "true":
+            bool_val = xr.DataArray(np.True_)
+        elif self.val == "false":
+            bool_val = xr.DataArray(np.False_)
         return bool_val
+
+
+class GenericStringParser(expression_parser.EvalString):
+    def __init__(self, tokens: pp.ParseResults) -> None:
+        """
+        Parse action to process successfully parsed generic strings.
+        This is required since we call "eval()" on all elements of the where string,
+        so even arbitrary strings (used in comparison operations) need to be evaluatable.
+
+        Args:
+            tokens (pp.ParseResults): Has one parsed element: string name (str).
+        """
+        self.val = tokens[0]
+
+    def __repr__(self) -> str:
+        return f"STRING:{self.val}"
+
+    def eval(self, *args, **eval_kwargs) -> str:
+        return str(self.val)
 
 
 def data_var_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
@@ -422,7 +401,7 @@ def bool_parser() -> pp.ParserElement:
 def evaluatable_string_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
     "Parsing grammar to make generic strings used in comparison operations evaluatable"
     evaluatable_identifier = generic_identifier.copy()
-    evaluatable_identifier.set_parse_action(expression_parser.GenericStringParser)
+    evaluatable_identifier.set_parse_action(GenericStringParser)
 
     return evaluatable_identifier
 

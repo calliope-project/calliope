@@ -546,7 +546,7 @@ class Model(object):
             importlib.resources.files("calliope") / "config" / "math_schema.yaml"
         )
         validate_dict(math_dict, math_schema, "math")
-        valid_math_element_names = [
+        valid_component_names = [
             *self.math["variables"].keys(),
             *self.math["global_expressions"].keys(),
             *math_dict.get("variables", {}).keys(),
@@ -561,7 +561,7 @@ class Model(object):
                     component_group, name, component_dict
                 )
                 parsed.parse_top_level_where(errors="ignore")
-                parsed.parse_equations(set(valid_math_element_names), errors="ignore")
+                parsed.parse_equations(set(valid_component_names), errors="ignore")
                 if not parsed._is_valid:
                     collected_errors[f"{component_group}:{name}"] = parsed._errors
 

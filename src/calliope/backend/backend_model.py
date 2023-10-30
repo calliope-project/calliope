@@ -59,7 +59,6 @@ class BackendModelGenerator(ABC):
         self.inputs.attrs["config"].build.union(
             AttrDict(config_overrides), allow_override=True
         )
-        self.valid_math_element_names: set = set()
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
     @abstractmethod
@@ -197,10 +196,6 @@ class BackendModelGenerator(ABC):
             "objectives",
         ]:
             component = components.removesuffix("s")
-            if components in ["variables", "global_expressions"]:
-                self.valid_math_element_names.update(
-                    self.inputs.math[components].keys()
-                )
             for name in self.inputs.math[components]:
                 getattr(self, f"add_{component}")(name)
             LOGGER.info(
@@ -275,8 +270,7 @@ class BackendModelGenerator(ABC):
         )
 
         top_level_where = parsed_component.generate_top_level_where_array(
-            self.inputs,
-            self._dataset,
+            self,
             align_to_foreach_sets=False,
             break_early=break_early,
         )
@@ -285,7 +279,7 @@ class BackendModelGenerator(ABC):
 
         self._create_obj_list(name, component_type)
 
-        equations = parsed_component.parse_equations(self.valid_math_element_names)
+        equations = parsed_component.parse_equations(self.valid_component_names)
         if not equations:
             component_da = component_setter(
                 parsed_component.drop_dims_not_in_foreach(top_level_where)
@@ -297,9 +291,7 @@ class BackendModelGenerator(ABC):
                 .astype(np.dtype("O"))
             )
         for element in equations:
-            where = element.evaluate_where(
-                self.inputs, self._dataset, initial_where=top_level_where
-            )
+            where = element.evaluate_where(self, initial_where=top_level_where)
             if break_early and not where.any():
                 continue
 
@@ -462,6 +454,7 @@ class BackendModelGenerator(ABC):
             kwargs=kwargs,
             vectorize=True,
             keep_attrs=True,
+            dask="parallelized",
             output_dtypes=[np.dtype("O")],
             output_core_dims=output_core_dims,
         )
@@ -518,6 +511,19 @@ class BackendModelGenerator(ABC):
     def objectives(self):
         "Slice of backend dataset to show only built objectives"
         return self._dataset.filter_by_attrs(obj_type="objectives")
+
+    @property
+    def valid_component_names(self):
+        def _filter(val):
+            return val in ["variables", "parameters", "global_expressions"]
+
+        in_data = set(self._dataset.filter_by_attrs(obj_type=_filter).data_vars.keys())
+        in_math = set(
+            name
+            for component in ["variables", "global_expressions"]
+            for name in self.inputs.math[component].keys()
+        )
+        return in_data.union(in_math)
 
 
 class BackendModel(BackendModelGenerator, Generic[T]):

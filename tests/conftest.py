@@ -227,6 +227,9 @@ def dummy_model_data():
     model_data.attrs["defaults"] = AttrDict(
         {"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100, "only_techs": 5}
     )
+    model_data.attrs["math"] = AttrDict(
+        {"constraints": {}, "variables": {}, "global_expressions": {}, "objectives": {}}
+    )
     return model_data
 
 

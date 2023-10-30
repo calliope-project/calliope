@@ -2020,7 +2020,7 @@ class TestNewBackend:
 
         assert check_error_or_warning(
             error,
-            f"(constraints, {constraint_name}): Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
+            f"constraints:{constraint_name}:0 | Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
         )
 
     def test_raise_error_on_expression_with_nan(self, simple_supply):
@@ -2063,7 +2063,7 @@ class TestNewBackend:
 
         assert check_error_or_warning(
             error,
-            f"(expressions, {expression_name}): Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
+            f"global_expressions:{expression_name}:0 | Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
         )
 
     def test_raise_error_on_excess_dimensions(self, simple_supply):
@@ -2109,7 +2109,7 @@ class TestNewBackend:
 
         assert check_error_or_warning(
             error,
-            f"(constraints, {constraint_name}): The linear expression array is indexed over dimensions not present in `foreach`: {{'nodes'}}",
+            f"constraints:{constraint_name}:0 | The linear expression array is indexed over dimensions not present in `foreach`: {{'nodes'}}",
         )
 
     @pytest.mark.parametrize(
