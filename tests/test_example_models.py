@@ -52,13 +52,13 @@ class TestNationalScaleExampleModelSenseChecks:
             nodes="region2", techs="battery"
         ) == approx(6675.173)
 
-        assert model.results.flow_cap.sel(nodes="region1-1", techs="csp") == approx(
+        assert model.results.flow_out_cap.sel(nodes="region1-1", techs="csp") == approx(
             4626.588
         )
-        assert model.results.flow_cap.sel(nodes="region2", techs="battery") == approx(
-            1000
-        )
-        assert model.results.flow_cap.sel(nodes="region1", techs="ccgt") == approx(
+        assert model.results.flow_out_cap.sel(
+            nodes="region2", techs="battery"
+        ) == approx(1000)
+        assert model.results.flow_out_cap.sel(nodes="region1", techs="ccgt") == approx(
             30000
         )
 
@@ -129,7 +129,7 @@ class TestNationalScaleExampleModelInfeasibility:
         ]  # glpk gives 'other' as result
 
         assert len(model.results.data_vars) == 0
-        assert "flow_cap" not in model._model_data.data_vars
+        assert "flow_out_cap" not in model._model_data.data_vars
 
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
@@ -227,7 +227,9 @@ class TestNationalScaleExampleModelSpores:
         gurobi_persistent_data = self.example_tester(
             solver="gurobi_persistent", solver_io="python"
         )
-        assert np.allclose(gurobi_data.flow_cap, gurobi_persistent_data.flow_cap)
+        assert np.allclose(
+            gurobi_data.flow_out_cap, gurobi_persistent_data.flow_out_cap
+        )
         assert np.allclose(gurobi_data.cost, gurobi_persistent_data.cost)
 
     @pytest.fixture
@@ -275,8 +277,8 @@ class TestNationalScaleExampleModelSpores:
         def _spores_with_override(override_dict):
             result_without_override = self.example_tester()
             result_with_override = self.example_tester(**override_dict)
-            assert result_without_override.flow_cap.round(5).equals(
-                result_with_override.flow_cap.round(5)
+            assert result_without_override.flow_out_cap.round(5).equals(
+                result_with_override.flow_out_cap.round(5)
             )
             assert (
                 result_without_override.cost.sel(costs="spores_score")
@@ -300,8 +302,8 @@ class TestNationalScaleExampleModelSpores:
 
         return _spores_with_override
 
-    @pytest.mark.parametrize("override", ("flow_cap_min"))
-    def test_ignore_forced_flow_cap_spores(self, spores_with_override, override):
+    @pytest.mark.parametrize("override", ("flow_out_cap_min"))
+    def test_ignore_forced_flow_out_cap_spores(self, spores_with_override, override):
         # the national scale model always maxes out CCGT in the first 3 SPORES.
         # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
         # This enables us to test our functionality that only *additional* capacity is scored.
@@ -314,11 +316,15 @@ class TestNationalScaleExampleModelSpores:
             == 0
         )
 
-    def test_ignore_forced_flow_cap_spores_some_ccgt_score(self, spores_with_override):
+    def test_ignore_forced_flow_out_cap_spores_some_ccgt_score(
+        self, spores_with_override
+    ):
         # the national scale model always maxes out CCGT in the first 3 SPORES.
         # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
         # This enables us to test our functionality that only *additional* capacity is scored.
-        override_dict = {"locations.region1.techs.ccgt.constraints.flow_cap_min": 15000}
+        override_dict = {
+            "locations.region1.techs.ccgt.constraints.flow_out_cap_min": 15000
+        }
         result_with_override, _ = spores_with_override(override_dict)
         assert (
             result_with_override.cost.sel(
@@ -327,13 +333,15 @@ class TestNationalScaleExampleModelSpores:
             > 0
         )
 
-    def test_ignore_forced_flow_cap_spores_no_double_counting(
+    def test_ignore_forced_flow_out_cap_spores_no_double_counting(
         self, spores_with_override
     ):
         # the national scale model always maxes out CCGT in the first 3 SPORES.
         # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
         # This enables us to test our functionality that only *additional* capacity is scored.
-        override_dict = {"locations.region1.techs.ccgt.constraints.flow_cap_min": 15000}
+        override_dict = {
+            "locations.region1.techs.ccgt.constraints.flow_out_cap_min": 15000
+        }
         result_with_override, _ = spores_with_override(override_dict)
         assert (
             result_with_override.cost.sel(
@@ -362,13 +370,13 @@ class TestNationalScaleResampledExampleModelSenseChecks:
             nodes="region2", techs="battery"
         ) == approx(6315.78947)
 
-        assert model.results.flow_cap.sel(nodes="region1-1", techs="csp") == approx(
+        assert model.results.flow_out_cap.sel(nodes="region1-1", techs="csp") == approx(
             1440.8377
         )
-        assert model.results.flow_cap.sel(nodes="region2", techs="battery") == approx(
-            1000
-        )
-        assert model.results.flow_cap.sel(nodes="region1", techs="ccgt") == approx(
+        assert model.results.flow_out_cap.sel(
+            nodes="region2", techs="battery"
+        ) == approx(1000)
+        assert model.results.flow_out_cap.sel(nodes="region1", techs="ccgt") == approx(
             30000
         )
 
@@ -415,7 +423,9 @@ class TestUrbanScaleExampleModelSenseChecks:
         model.build()
         model.solve(**solve_kwargs)
 
-        assert model.results.flow_cap.sel(nodes="X1", techs="chp") == approx(250.090112)
+        assert model.results.flow_out_cap.sel(nodes="X1", techs="chp") == approx(
+            250.090112
+        )
 
         # GLPK isn't able to get the same answer both times, so we have to account for that here
         if source_unit == "per_cap" and solver == "glpk":
@@ -423,9 +433,9 @@ class TestUrbanScaleExampleModelSenseChecks:
         else:
             heat_pipe_approx = 182.19260
 
-        assert model.results.flow_cap.sel(nodes="X2", techs="heat_pipes:N1") == approx(
-            heat_pipe_approx
-        )
+        assert model.results.flow_out_cap.sel(
+            nodes="X2", techs="heat_pipes:N1"
+        ) == approx(heat_pipe_approx)
 
         assert model.results.flow_out.sum("timesteps").sel(
             carriers="heat", nodes="X3", techs="boiler"
@@ -463,10 +473,10 @@ class TestUrbanScaleExampleModelSenseChecks:
         model.build()
         model.solve()
 
-        assert model.results.flow_cap.sel(nodes="X1", techs="chp") == 300
-        assert model.results.flow_cap.sel(nodes="X2", techs="heat_pipes:N1") == approx(
-            188.363137
-        )
+        assert model.results.flow_out_cap.sel(nodes="X1", techs="chp") == 300
+        assert model.results.flow_out_cap.sel(
+            nodes="X2", techs="heat_pipes:N1"
+        ) == approx(188.363137)
 
         assert model.results.flow_out.sum("timesteps").sel(
             carriers="gas", nodes="X1", techs="supply_gas"

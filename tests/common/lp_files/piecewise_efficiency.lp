@@ -52,24 +52,24 @@ c_u_constraints(available_flow_cap_binary)(a__test_conversion__2005_01_01_01_00)
 
 c_u_constraints(available_flow_cap_continuous)(a__test_conversion__2005_01_01_00_00)_:
 +1 variables(available_flow_cap)(a__test_conversion__2005_01_01_00_00)
--1 variables(flow_cap)(a__test_conversion)
+-1 variables(flow_out_cap)(a__test_conversion)
 <= 0.0
 
 c_u_constraints(available_flow_cap_continuous)(a__test_conversion__2005_01_01_01_00)_:
 +1 variables(available_flow_cap)(a__test_conversion__2005_01_01_01_00)
--1 variables(flow_cap)(a__test_conversion)
+-1 variables(flow_out_cap)(a__test_conversion)
 <= 0.0
 
 c_u_constraints(available_flow_cap_binary_continuous_switch)(a__test_conversion__2005_01_01_00_00)_:
 -1 variables(available_flow_cap)(a__test_conversion__2005_01_01_00_00)
 +15.0 variables(operating_units)(a__test_conversion__2005_01_01_00_00)
-+1 variables(flow_cap)(a__test_conversion)
++1 variables(flow_out_cap)(a__test_conversion)
 <= 15.0
 
 c_u_constraints(available_flow_cap_binary_continuous_switch)(a__test_conversion__2005_01_01_01_00)_:
 -1 variables(available_flow_cap)(a__test_conversion__2005_01_01_01_00)
 +15.0 variables(operating_units)(a__test_conversion__2005_01_01_01_00)
-+1 variables(flow_cap)(a__test_conversion)
++1 variables(flow_out_cap)(a__test_conversion)
 <= 15.0
 
 bounds
@@ -82,7 +82,7 @@ bounds
    0 <= variables(available_flow_cap)(a__test_conversion__2005_01_01_01_00) <= 15.0
    0 <= variables(operating_units)(a__test_conversion__2005_01_01_00_00) <= +inf
    0 <= variables(operating_units)(a__test_conversion__2005_01_01_01_00) <= +inf
-   0 <= variables(flow_cap)(a__test_conversion) <= 15.0
+   0 <= variables(flow_out_cap)(a__test_conversion) <= 15.0
 general
   variables(operating_units)(a__test_conversion__2005_01_01_00_00)
   variables(operating_units)(a__test_conversion__2005_01_01_01_00)

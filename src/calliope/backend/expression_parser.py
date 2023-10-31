@@ -229,7 +229,7 @@ class EvalOperatorOperand(EvalToArrayStr):
     def _skip_component_on_conditional(self, component: str, operator_: str) -> bool:
         """Conditional to skip adding to math string if element evaluates to zero.
 
-        E.g., "0 + flow_cap" is better evaluated as simply "flow_cap".
+        E.g., "0 + flow_out_cap" is better evaluated as simply "flow_out_cap".
         """
         return component == "0" and operator_ in self.SKIP_IF
 

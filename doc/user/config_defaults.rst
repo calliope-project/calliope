@@ -39,7 +39,7 @@ Optimisation problem solve (``config.solve``)
 Per-tech constraints
 --------------------
 
-The following table lists all available technology constraint settings and their default values. All of these can be set by :yaml:`tech_identifier.constraints.constraint_name`, e.g. :yaml:`nuclear.constraints.flow_cap_max`.
+The following table lists all available technology constraint settings and their default values. All of these can be set by :yaml:`tech_identifier.constraints.constraint_name`, e.g. :yaml:`nuclear.constraints.flow_out_cap_max`.
 
 .. csv-table::
    :file: includes/default_constraints.csv
@@ -52,7 +52,7 @@ The following table lists all available technology constraint settings and their
 Per-tech costs
 --------------
 
-These are all the available costs, which are set to :math:`0` by default for every defined cost class. Costs are set by :yaml:`tech_identifier.costs.cost_class.cost_name`, e.g. :yaml:`nuclear.costs.monetary.flow_cap`.
+These are all the available costs, which are set to :math:`0` by default for every defined cost class. Costs are set by :yaml:`tech_identifier.costs.cost_class.cost_name`, e.g. :yaml:`nuclear.costs.monetary.flow_in_cap`.
 
 .. csv-table::
    :file: includes/default_costs.csv

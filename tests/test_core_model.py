@@ -137,7 +137,7 @@ class TestCustomMath:
         new_constraint = calliope.AttrDict(
             {
                 "constraints": {
-                    "flow_capacity_per_storage_capacity_min": {"foreach": ["nodes"]}
+                    "flow_in_capacity_per_storage_capacity_min": {"foreach": ["nodes"]}
                 }
             }
         )
@@ -147,9 +147,9 @@ class TestCustomMath:
             "simple_supply,two_hours,investment_costs",
         )
         base = simple_supply.math["constraints"][
-            "flow_capacity_per_storage_capacity_min"
+            "flow_in_capacity_per_storage_capacity_min"
         ]
-        new = m.math["constraints"]["flow_capacity_per_storage_capacity_min"]
+        new = m.math["constraints"]["flow_in_capacity_per_storage_capacity_min"]
 
         for i in base.keys():
             if i == "foreach":
@@ -162,7 +162,7 @@ class TestCustomMath:
         for path_suffix, foreach in [(1, "nodes"), (2, "techs")]:
             constr = calliope.AttrDict(
                 {
-                    "constraints.flow_capacity_per_storage_capacity_min.foreach": [
+                    "constraints.flow_in_capacity_per_storage_capacity_min.foreach": [
                         foreach
                     ]
                 }
@@ -177,9 +177,9 @@ class TestCustomMath:
         )
 
         base = simple_supply.math["constraints"][
-            "flow_capacity_per_storage_capacity_min"
+            "flow_in_capacity_per_storage_capacity_min"
         ]
-        new = m.math["constraints"]["flow_capacity_per_storage_capacity_min"]
+        new = m.math["constraints"]["flow_in_capacity_per_storage_capacity_min"]
 
         for i in base.keys():
             if i == "foreach":
@@ -232,8 +232,8 @@ class TestValidateMathDict:
         [
             ("1 == 1", "True"),
             (
-                "flow_out * flow_eff + sum(cost, over=costs) <= .inf",
-                "inheritance(supply) and flow_eff>0",
+                "flow_out * flow_out_eff + sum(cost, over=costs) <= .inf",
+                "inheritance(supply) and flow_out_eff>0",
             ),
         ],
     )

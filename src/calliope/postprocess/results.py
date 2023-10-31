@@ -80,24 +80,15 @@ def postprocess_model_results(results, model_data, timings):
 
 def capacity_factor(results, model_data, systemwide=False):
     """
-    # In operate mode, flow_cap is an input parameter
-    if "flow_cap" not in results.keys():
-        flow_cap = model_data.flow_cap
-    else:
-        flow_cap = results.flow_cap
-
-    capacity_factors = (results["flow_out"] / flow_cap).fillna(0)
-
     The weight of timesteps is considered when computing systemwide capacity factors,
-    such that higher-weighted timesteps have a stronger influence
-    on the resulting system-wide time-averaged capacity factor.
+    such that higher-weighted timesteps have a stronger influence on the resulting system-wide time-averaged capacity factor.
 
     """
-    # In operate mode, flow_cap is an input parameter
-    if "flow_cap" not in results.keys():
-        flow_cap = model_data.flow_cap
+    # In operate mode, flow_out_cap is an input parameter
+    if "flow_out_cap" not in results.keys():
+        flow_cap = model_data.flow_out_cap
     else:
-        flow_cap = results.flow_cap
+        flow_cap = results.flow_out_cap
 
     if systemwide:
         prod_sum = (results["flow_out"] * model_data.timestep_weights).sum(

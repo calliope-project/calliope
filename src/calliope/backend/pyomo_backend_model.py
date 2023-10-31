@@ -335,7 +335,9 @@ class PyomoBackendModel(backend_model.BackendModel):
                     da.attrs["coords_in_name"] = True
 
     def to_lp(self, path: Union[str, Path]) -> None:
-        self._instance.write(str(path), format="lp", symbolic_solver_labels=True)
+        self._instance.write(
+            Path(path).as_posix(), format="lp", symbolic_solver_labels=True
+        )
 
     def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         """Attach an empty pyomo kernel list object to the pyomo model object.

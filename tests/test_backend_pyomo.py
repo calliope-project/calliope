@@ -44,7 +44,7 @@ class TestChecks:
             assert not check_warn
         assert m._model_data.attrs["config"].build.cyclic_storage is False
 
-    @pytest.mark.parametrize("param", [("flow_eff"), ("source_eff"), ("parasitic_eff")])
+    @pytest.mark.parametrize("param", [("flow_out_eff"), ("source_eff")])
     def test_loading_timeseries_operate_efficiencies(self, param):
         m = build_model(
             {
@@ -515,13 +515,13 @@ class TestCostConstraints:
     @pytest.mark.parametrize(
         "tech,scenario,cost",
         (
-            ("test_supply_elec", "simple_supply", "om_prod"),
-            ("test_supply_elec", "simple_supply", "om_con"),
-            ("test_supply_plus", "simple_supply_and_supply_plus", "om_con"),
-            ("test_demand_elec", "simple_supply", "om_con"),
-            ("test_transmission_elec", "simple_supply", "om_prod"),
-            ("test_conversion", "simple_conversion", "om_con"),
-            ("test_conversion_plus", "simple_conversion_plus", "om_prod"),
+            ("test_supply_elec", "simple_supply", "flow_out"),
+            ("test_supply_elec", "simple_supply", "flow_in"),
+            ("test_supply_plus", "simple_supply_and_supply_plus", "flow_in"),
+            ("test_demand_elec", "simple_supply", "flow_in"),
+            ("test_transmission_elec", "simple_supply", "flow_out"),
+            ("test_conversion", "simple_conversion", "flow_in"),
+            ("test_conversion_plus", "simple_conversion_plus", "flow_out"),
         ),
     )
     def test_loc_techs_cost_var_constraint(self, tech, scenario, cost):
@@ -538,11 +538,11 @@ class TestCostConstraints:
 
     def test_one_way_om_cost(self):
         """
-        With one_way transmission, it should still be possible to set an om_prod cost.
+        With one_way transmission, it should still be possible to set an flow_out cost.
         """
         m = build_model(
             {
-                "techs.test_transmission_elec.costs.monetary.om_prod": 1,
+                "techs.test_transmission_elec.costs.monetary.flow_out": 1,
                 "links.a,b.techs.test_transmission_elec.switches.one_way": True,
             },
             "simple_supply,two_hours",
@@ -607,7 +607,7 @@ class TestExportConstraints:
         assert "cost_var" in supply_export.backend.expressions
 
         m = build_model(
-            {"techs.test_supply_elec.costs.monetary.om_prod": 0.1},
+            {"techs.test_supply_elec.costs.monetary.flow_out": 0.1},
             "supply_export,two_hours,investment_costs",
         )
         m.build()
@@ -1097,24 +1097,24 @@ class TestDispatchConstraints:
         i for i in sets.loc_tech_carriers_prod
         if i.rsplit('::', 1)[0] in sets.loc_techs_ramping
         """
-        assert "ramping_up" not in simple_supply.backend.constraints
-        assert "ramping_down" not in simple_supply.backend.constraints
+        assert "ramping_up_out" not in simple_supply.backend.constraints
+        assert "ramping_down_out" not in simple_supply.backend.constraints
 
         m = build_model(
-            {"techs.test_supply_elec.constraints.flow_ramping": 0.1},
+            {"techs.test_supply_elec.constraints.flow_out_ramping": 0.1},
             "simple_supply,two_hours,investment_costs",
         )
         m.build()
-        assert "ramping_up" in m.backend.constraints
-        assert "ramping_down" in m.backend.constraints
+        assert "ramping_up_out" in m.backend.constraints
+        assert "ramping_down_out" in m.backend.constraints
 
         m = build_model(
-            {"techs.test_conversion.constraints.flow_ramping": 0.1},
+            {"techs.test_conversion.constraints.flow_out_ramping": 0.1},
             "simple_conversion,two_hours,investment_costs",
         )
         m.build()
-        assert "ramping_up" in m.backend.constraints
-        assert "ramping_down" in m.backend.constraints
+        assert "ramping_up_out" in m.backend.constraints
+        assert "ramping_down_out" in m.backend.constraints
 
 
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
@@ -1586,21 +1586,6 @@ class TestConversionConstraints:
 
 
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
-class TestNetworkConstraints:
-    # network.py
-    def test_loc_techs_symmetric_transmission_constraint(
-        self, simple_supply, simple_conversion_plus
-    ):
-        """
-        sets.loc_techs_transmission,
-        """
-        assert "symmetric_transmission" in simple_supply.backend.constraints
-        assert (
-            "symmetric_transmission" not in simple_conversion_plus.backend.constraints
-        )
-
-
-@pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestClusteringConstraints:
     def constraints(self):
         return [
@@ -1738,7 +1723,14 @@ class TestNewBackend:
     def test_add_run_mode_custom_math_before_build(self, caplog, temp_path):
         """A user can override the run mode custom math by including it directly in the custom math string"""
         caplog.set_level(logging.DEBUG)
-        custom_math = AttrDict({"variables": {"flow_cap": {"active": True}}})
+        custom_math = AttrDict(
+            {
+                "variables": {
+                    "flow_out_cap": {"active": True},
+                    "flow_in_cap": {"active": True},
+                }
+            }
+        )
         file_path = temp_path.join("custom-math.yaml")
         custom_math.to_yaml(file_path)
 
@@ -1755,7 +1747,8 @@ class TestNewBackend:
         )
 
         # operate mode set it to false, then our custom math set it back to active
-        assert m.math.variables.flow_cap.active
+        assert m.math.variables.flow_out_cap.active
+        assert m.math.variables.flow_in_cap.active
         # operate mode set it to false and our custom math did not override that
         assert not m.math.variables.storage_cap.active
 
@@ -1780,17 +1773,15 @@ class TestNewBackend:
             getattr(simple_supply.backend, f"get_{component_type}")("foo")
 
     def test_new_build_get_variable(self, simple_supply):
-        var = simple_supply.backend.get_variable("flow_cap")
+        var = simple_supply.backend.get_variable("flow_out_cap")
         assert (
             var.to_series().dropna().apply(lambda x: isinstance(x, pmo.variable)).all()
         )
         assert var.attrs == {
             "obj_type": "variables",
             "references": {
-                "flow_in_max",
                 "flow_out_max",
                 "cost_investment",
-                "symmetric_transmission",
             },
             "description": "A technology's flow capacity, also known as its nominal or nameplate capacity.",
             "unit": "power",
@@ -1798,7 +1789,7 @@ class TestNewBackend:
         }
 
     def test_new_build_get_variable_as_vals(self, simple_supply):
-        var = simple_supply.backend.get_variable("flow_cap", as_backend_objs=False)
+        var = simple_supply.backend.get_variable("flow_out_cap", as_backend_objs=False)
         assert (
             not var.to_series()
             .dropna()
@@ -1807,13 +1798,8 @@ class TestNewBackend:
         )
 
     def test_new_build_get_parameter(self, simple_supply):
-        param = simple_supply.backend.get_parameter("flow_eff")
-        assert (
-            param.to_series()
-            .dropna()
-            .apply(lambda x: isinstance(x, pmo.parameter))
-            .all()
-        )
+        param = simple_supply.backend.get_parameter("flow_in_eff")
+        assert isinstance(param.item(), pmo.parameter)
         assert param.attrs == {
             "obj_type": "parameters",
             "is_result": 0,
@@ -1823,7 +1809,9 @@ class TestNewBackend:
         }
 
     def test_new_build_get_parameter_as_vals(self, simple_supply):
-        param = simple_supply.backend.get_parameter("flow_eff", as_backend_objs=False)
+        param = simple_supply.backend.get_parameter(
+            "flow_in_eff", as_backend_objs=False
+        )
         assert param.dtype == np.dtype("float64")
 
     def test_new_build_get_global_expression(self, simple_supply):
@@ -1950,15 +1938,15 @@ class TestNewBackend:
         assert check_error_or_warning(excinfo, "Model solution was non-optimal")
         assert simple_supply._model_data.attrs["termination_condition"] == "infeasible"
         assert not simple_supply.results
-        assert "flow_cap" not in simple_supply._model_data.data_vars
+        assert "flow_out_cap" not in simple_supply._model_data.data_vars
 
     def test_raise_error_on_preexistence_same_type(self, simple_supply):
         with pytest.raises(exceptions.BackendError) as excinfo:
-            simple_supply.backend.add_parameter("flow_eff", xr.DataArray(1))
+            simple_supply.backend.add_parameter("flow_out_eff", xr.DataArray(1))
 
         assert check_error_or_warning(
             excinfo,
-            "Trying to add already existing `flow_eff` to backend model parameters.",
+            "Trying to add already existing `flow_out_eff` to backend model parameters.",
         )
 
     def test_raise_error_on_preexistence_diff_type(self, simple_supply):
@@ -2062,17 +2050,15 @@ class TestNewBackend:
 
     def test_raise_error_on_excess_dimensions(self, simple_supply):
         """
-        A very simple constraint: For each tech, let the `flow_cap` be larger than 100.
+        A very simple constraint: For each tech, force the `flow_out_cap` to be larger than 100.
         However, we forgot to include `nodes` in `foreach`.
         With `nodes` included, this constraint should build.
         """
         # add constraint without excess dimensions
         constraint_dict = {
-            "foreach": [
-                "techs",
-                "nodes",
-            ],  # as 'nodes' is listed here, the constraint will have no excess dimensions
-            "equations": [{"expression": "flow_cap >= 100"}],
+            # as 'nodes' is listed here, the constraint will have no excess dimensions
+            "foreach": ["techs", "nodes"],
+            "equations": [{"where": "flow_out", "expression": "flow_out_cap >= 100"}],
         }
         constraint_name = "constraint-without-excess-dimensions"
 
@@ -2091,7 +2077,7 @@ class TestNewBackend:
             "foreach": [
                 "techs"
             ],  # as 'nodes' is not listed here, the constraint will have excess dimensions
-            "equations": [{"expression": "flow_cap >= 100"}],
+            "equations": [{"where": "flow_out", "expression": "flow_out_cap >= 100"}],
         }
         constraint_name = "constraint-with-excess-dimensions"
 
@@ -2129,7 +2115,10 @@ class TestNewBackend:
 
     @pytest.mark.parametrize(
         ["component", "eq"],
-        [("global_expressions", "flow_cap + 1"), ("constraints", "flow_cap >= 1")],
+        [
+            ("global_expressions", "flow_in_cap + 1"),
+            ("constraints", "flow_in_cap >= 1"),
+        ],
     )
     def test_add_allnull_expr_or_constr(self, simple_supply, component, eq):
         adder = getattr(simple_supply.backend, "add_" + component.removesuffix("s"))
@@ -2152,7 +2141,7 @@ class TestNewBackend:
         del simple_supply.backend._dataset["foo"]
 
     def test_add_allnull_param_with_shape(self, simple_supply):
-        nan_array = simple_supply._model_data.flow_cap_max.where(lambda x: x < 0)
+        nan_array = simple_supply._model_data.flow_in_cap_max.where(lambda x: x < 0)
         simple_supply.backend.add_parameter("foo", nan_array)
 
         assert "foo" not in simple_supply.backend._instance.parameters.keys()
@@ -2222,7 +2211,7 @@ class TestNewBackend:
                 },
                 "variables",
             ),
-            ("flow_eff", {"nodes": "a", "techs": "test_supply_elec"}, "parameters"),
+            ("flow_out_eff", {"nodes": "a", "techs": "test_supply_elec"}, "parameters"),
             (
                 "system_balance",
                 {
@@ -2253,12 +2242,9 @@ class TestNewBackend:
         obj = simple_supply_longnames.backend.get_constraint(
             "balance_demand", as_backend_objs=False
         )
-        flow_eff_dims = ", ".join(
-            dims[i] for i in simple_supply_longnames.backend.parameters.flow_eff.dims
-        )
         assert (
             obj.sel(dims).body.item()
-            == f"parameters[flow_eff][{flow_eff_dims}]*variables[flow_in][{', '.join(dims[i] for i in obj.dims)}]"
+            == f"parameters[flow_in_eff]*variables[flow_in][{', '.join(dims[i] for i in obj.dims)}]"
         )
         assert obj.coords_in_name
 
@@ -2273,7 +2259,7 @@ class TestNewBackend:
             "cost_investment", as_backend_objs=False
         )
 
-        assert "variables[flow_cap][a, test_supply_elec]" in obj.sel(dims).item()
+        assert "variables[flow_out_cap][a, test_supply_elec]" in obj.sel(dims).item()
         assert "parameters[annualisation_weight]" in obj.sel(dims).item()
 
         assert not obj.coords_in_name
@@ -2285,11 +2271,11 @@ class TestNewBackend:
         assert obj.coords_in_name
 
     def test_update_parameter(self, simple_supply):
-        updated_param = simple_supply.inputs.flow_eff * 1000
-        simple_supply.backend.update_parameter("flow_eff", updated_param)
+        updated_param = simple_supply.inputs.flow_out_eff * 1000
+        simple_supply.backend.update_parameter("flow_out_eff", updated_param)
 
         expected = simple_supply.backend.get_parameter(
-            "flow_eff", as_backend_objs=False
+            "flow_out_eff", as_backend_objs=False
         )
         assert expected.where(updated_param.notnull()).equals(updated_param)
 
@@ -2298,37 +2284,37 @@ class TestNewBackend:
         new_dims = {"nodes", "techs"}
         caplog.set_level(logging.DEBUG)
 
-        simple_supply.backend.update_parameter("flow_eff", updated_param)
+        simple_supply.backend.update_parameter("flow_out_eff", updated_param)
 
         assert (
             f"New values will be broadcast along the {new_dims} dimension(s)"
             in caplog.text
         )
         expected = simple_supply.backend.get_parameter(
-            "flow_eff", as_backend_objs=False
+            "flow_out_eff", as_backend_objs=False
         )
         assert (expected == updated_param).all()
 
     def test_update_parameter_replace_defaults(self, simple_supply):
-        updated_param = simple_supply.inputs.flow_eff.fillna(0.1)
+        updated_param = simple_supply.inputs.flow_out_eff.fillna(0.1)
 
-        simple_supply.backend.update_parameter("flow_eff", updated_param)
+        simple_supply.backend.update_parameter("flow_out_eff", updated_param)
 
         expected = simple_supply.backend.get_parameter(
-            "flow_eff", as_backend_objs=False
+            "flow_out_eff", as_backend_objs=False
         )
         assert expected.equals(updated_param)
 
     def test_update_parameter_add_dim(self, caplog, simple_supply):
-        """flow_eff doesn't have the time dimension in the simple model, we add it here."""
-        updated_param = simple_supply.inputs.flow_eff.where(
+        """flow_out_eff doesn't have the time dimension in the simple model, we add it here."""
+        updated_param = simple_supply.inputs.flow_out_eff.where(
             simple_supply.inputs.timesteps.notnull()
         )
 
-        refs_to_update = {"balance_demand", "balance_transmission"}
+        refs_to_update = {"balance_transmission"}
         caplog.set_level(logging.DEBUG)
 
-        simple_supply.backend.update_parameter("flow_eff", updated_param)
+        simple_supply.backend.update_parameter("flow_out_eff", updated_param)
 
         assert (
             "Defining values for a previously fully/partially undefined parameter. "
@@ -2337,18 +2323,18 @@ class TestNewBackend:
         )
 
         expected = simple_supply.backend.get_parameter(
-            "flow_eff", as_backend_objs=False
+            "flow_out_eff", as_backend_objs=False
         )
         assert "timesteps" in expected.dims
 
     def test_update_parameter_replace_undefined(self, caplog, simple_supply):
-        """parasitic_eff isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value"""
-        updated_param = simple_supply.inputs.flow_eff
+        """flow_in_eff isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value"""
+        updated_param = simple_supply.inputs.flow_out_eff
 
-        refs_to_update = {"flow_out_max"}
+        refs_to_update = {"balance_demand", "balance_transmission"}
         caplog.set_level(logging.DEBUG)
 
-        simple_supply.backend.update_parameter("parasitic_eff", updated_param)
+        simple_supply.backend.update_parameter("flow_in_eff", updated_param)
 
         assert (
             "Defining values for a previously fully/partially undefined parameter. "
@@ -2357,13 +2343,13 @@ class TestNewBackend:
         )
 
         expected = simple_supply.backend.get_parameter(
-            "parasitic_eff", as_backend_objs=False
+            "flow_in_eff", as_backend_objs=False
         )
-        default_val = simple_supply._model_data.defaults["parasitic_eff"]
+        default_val = simple_supply._model_data.defaults["flow_in_eff"]
         assert expected.equals(updated_param.fillna(default_val))
 
     def test_update_parameter_no_refs_to_update(self, simple_supply):
-        """flow_cap_per_storage_cap_equals isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
+        """flow_out_cap_per_storage_cap_min isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
 
         Updating it doesn't change the model in any way, because none of the existing constraints/expressions depend on it.
         Therefore, no warning is raised.
@@ -2371,11 +2357,11 @@ class TestNewBackend:
         updated_param = 1
 
         simple_supply.backend.update_parameter(
-            "flow_cap_per_storage_cap_equals", updated_param
+            "flow_out_cap_per_storage_cap_min", updated_param
         )
 
         expected = simple_supply.backend.get_parameter(
-            "flow_cap_per_storage_cap_equals", as_backend_objs=False
+            "flow_out_cap_per_storage_cap_min", as_backend_objs=False
         )
         assert expected == 1
 
@@ -2408,11 +2394,11 @@ class TestNewBackend:
 
     def test_update_variable_error_update_parameter_instead(self, simple_supply):
         with pytest.raises(exceptions.BackendError) as excinfo:
-            simple_supply.backend.update_variable_bounds("flow_cap", min=1)
+            simple_supply.backend.update_variable_bounds("flow_out_cap", min=1)
         assert check_error_or_warning(
             excinfo,
             "Cannot update variable bounds that have been set by parameters."
-            " Use `update_parameter('flow_cap_min')` to update the min bound of flow_cap.",
+            " Use `update_parameter('flow_out_cap_min')` to update the min bound of flow_out_cap.",
         )
 
     @staticmethod
@@ -2421,26 +2407,26 @@ class TestNewBackend:
             return val.fixed
 
     def test_fix_variable(self, simple_supply):
-        simple_supply.backend.fix_variable("flow_cap")
+        simple_supply.backend.fix_variable("flow_in_cap")
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.flow_cap
+            self._is_fixed, simple_supply.backend.variables.flow_in_cap
         )
-        simple_supply.backend.unfix_variable("flow_cap")  # reset
+        simple_supply.backend.unfix_variable("flow_in_cap")  # reset
         assert fixed.where(fixed.notnull()).all()
 
     def test_fix_variable_where(self, simple_supply):
-        where = simple_supply.inputs.flow_cap_max.notnull()
-        simple_supply.backend.fix_variable("flow_cap", where=where)
+        where = simple_supply.inputs.flow_in_cap_max.notnull()
+        simple_supply.backend.fix_variable("flow_in_cap", where=where)
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.flow_cap
+            self._is_fixed, simple_supply.backend.variables.flow_in_cap
         )
-        simple_supply.backend.unfix_variable("flow_cap")  # reset
+        simple_supply.backend.unfix_variable("flow_in_cap")  # reset
         assert not fixed.sel(techs="test_demand_elec").any()
         assert fixed.where(where).all()
 
     def test_fix_variable_before_solve(self, simple_supply_longnames):
         with pytest.raises(exceptions.BackendError) as excinfo:
-            simple_supply_longnames.backend.fix_variable("flow_cap")
+            simple_supply_longnames.backend.fix_variable("flow_out_cap")
 
         assert check_error_or_warning(
             excinfo,
@@ -2448,20 +2434,20 @@ class TestNewBackend:
         )
 
     def test_unfix_variable(self, simple_supply):
-        simple_supply.backend.fix_variable("flow_cap")
-        simple_supply.backend.unfix_variable("flow_cap")
+        simple_supply.backend.fix_variable("flow_in_cap")
+        simple_supply.backend.unfix_variable("flow_in_cap")
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.flow_cap
+            self._is_fixed, simple_supply.backend.variables.flow_in_cap
         )
         assert not fixed.where(fixed.notnull()).all()
 
     def test_unfix_variable_where(self, simple_supply):
-        where = simple_supply.inputs.flow_cap_max.notnull()
-        simple_supply.backend.fix_variable("flow_cap")
-        simple_supply.backend.unfix_variable("flow_cap", where=where)
+        where = simple_supply.inputs.flow_in_cap_max.notnull()
+        simple_supply.backend.fix_variable("flow_in_cap")
+        simple_supply.backend.unfix_variable("flow_in_cap", where=where)
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.flow_cap
+            self._is_fixed, simple_supply.backend.variables.flow_in_cap
         )
-        simple_supply.backend.unfix_variable("flow_cap")  # reset
+        simple_supply.backend.unfix_variable("flow_in_cap")  # reset
         assert fixed.sel(techs="test_demand_elec").all()
         assert not fixed.where(where).all()

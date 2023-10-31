@@ -5,7 +5,7 @@ nodes:
       chp:
       pv:
       supply_grid_power:
-        costs.monetary.flow_cap: 100 # cost of transformers
+        costs.monetary.flow_out_cap: 100 # cost of transformers
       supply_gas:
       demand_electricity:
         constraints.sink_equals: file=demand_power.csv
@@ -18,10 +18,10 @@ nodes:
   X2:
     techs:
       boiler:
-        costs.monetary.flow_cap: 43.1 # different boiler costs
+        costs.monetary.flow_out_cap: 43.1 # different boiler costs
       pv:
         costs.monetary:
-          om_prod: -0.0203 # revenue for just producing electricity
+          flow_out: -0.0203 # revenue for just producing electricity
           export: -0.0491 # FIT return for PV export
       supply_gas:
       demand_electricity:
@@ -34,12 +34,12 @@ nodes:
   X3:
     techs:
       boiler:
-        costs.monetary.flow_cap: 78 # different boiler costs
+        costs.monetary.flow_out_cap: 78 # different boiler costs
       pv:
         constraints:
-          flow_cap_max: 50 # changing tariff structure below 50kW
+          flow_out_cap_max: 50 # changing tariff structure below 50kW
         costs.monetary:
-          om_annual: -80.5 # reimbursement per kWp from FIT
+          flow_out_cap_annual: -80.5 # reimbursement per kWp from FIT
       supply_gas:
       demand_electricity:
         constraints.sink_equals: file=demand_power.csv

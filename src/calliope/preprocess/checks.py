@@ -364,12 +364,14 @@ def _check_tech_final(
             )
 
     # If a technology is defined by units (i.e. integer decision variable), it must define flow_cap_per_unit
-    if (
-        any(["units_" in k for k in tech_config.get("constraints", {}).keys()])
-        and "flow_cap_per_unit" not in tech_config.get("constraints", {}).keys()
+    if any(
+        ["units_" in k for k in tech_config.get("constraints", {}).keys()]
+    ) and not any(
+        f"flow_{direction}_cap_per_unit" in tech_config.get("constraints", {}).keys()
+        for direction in ["in", "out"]
     ):
         errors.append(
-            f"`{tech_id}` at `{loc_id}` fails to define flow_cap_per_unit when "
+            f"`{tech_id}` at `{loc_id}` fails to define flow_out[/in]_cap_per_unit when "
             "specifying technology in units_max/min"
         )
 

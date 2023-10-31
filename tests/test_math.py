@@ -48,13 +48,13 @@ class TestBaseMath:
     def base_math(self):
         return AttrDict.from_yaml(CALLIOPE_DIR / "math" / "base.yaml")
 
-    def test_flow_cap(self, compare_lps):
-        self.TEST_REGISTER.add("variables.flow_cap")
+    def test_flow_out_cap(self, compare_lps):
+        self.TEST_REGISTER.add("variables.flow_out_cap")
         model = build_test_model(
             {
-                "nodes.b.techs.test_supply_elec.constraints.flow_cap_max": 100,
-                "nodes.a.techs.test_supply_elec.constraints.flow_cap_min": 1,
-                "nodes.a.techs.test_supply_elec.constraints.flow_cap_max": np.nan,
+                "nodes.b.techs.test_supply_elec.constraints.flow_out_cap_max": 100,
+                "nodes.a.techs.test_supply_elec.constraints.flow_out_cap_min": 1,
+                "nodes.a.techs.test_supply_elec.constraints.flow_out_cap_max": np.nan,
             },
             "simple_supply,two_hours,investment_costs",
         )
@@ -64,16 +64,16 @@ class TestBaseMath:
                 "foo": {
                     "equations": [
                         {
-                            "expression": "sum(flow_cap[techs=test_supply_elec], over=nodes)"
+                            "expression": "sum(flow_out_cap[techs=test_supply_elec], over=nodes)"
                         }
                     ],
                     "sense": "minimise",
                 }
             }
         }
-        compare_lps(model, custom_math, "flow_cap")
+        compare_lps(model, custom_math, "flow_out_cap")
 
-        # "flow_cap" is the name of the lp file
+        # "flow_out_cap" is the name of the lp file
 
     def test_storage_max(self, compare_lps):
         self.TEST_REGISTER.add("constraints.storage_max")
@@ -89,8 +89,8 @@ class TestBaseMath:
         self.TEST_REGISTER.add("constraints.flow_out_max")
         model = build_test_model(
             {
-                "nodes.a.techs.test_supply_elec.constraints.flow_cap_min": 100,
-                "nodes.a.techs.test_supply_elec.constraints.flow_cap_max": 100,
+                "nodes.a.techs.test_supply_elec.constraints.flow_out_cap_min": 100,
+                "nodes.a.techs.test_supply_elec.constraints.flow_out_cap_max": 100,
             },
             "simple_supply,two_hours,investment_costs",
         )
@@ -492,12 +492,12 @@ class TestPiecewiseCosts(CustomMathExamples):
             "techs.test_supply_elec.constraints.lifetime": 10,
             "techs.test_supply_elec.costs.monetary.interest_rate": 0.1,
             "parameters": {
-                "cost_flow_cap_piecewise_slopes": {
+                "cost_flow_out_cap_piecewise_slopes": {
                     "data": [5, 7, 14],
                     "index": [0, 1, 2],
                     "dims": "pieces",
                 },
-                "cost_flow_cap_piecewise_intercept": {
+                "cost_flow_out_cap_piecewise_intercept": {
                     "data": [0, -2, -16],
                     "index": [0, 1, 2],
                     "dims": "pieces",
@@ -522,12 +522,12 @@ class TestPiecewiseEfficiency(CustomMathExamples):
     def test_piecewise(self, build_and_compare):
         overrides = {
             "parameters": {
-                "flow_eff_piecewise_slopes": {
+                "flow_out_eff_piecewise_slopes": {
                     "data": [5, 7, 14],
                     "index": [0, 1, 2],
                     "dims": "pieces",
                 },
-                "flow_eff_piecewise_intercept": {
+                "flow_out_eff_piecewise_intercept": {
                     "data": [0, -2, -16],
                     "index": [0, 1, 2],
                     "dims": "pieces",

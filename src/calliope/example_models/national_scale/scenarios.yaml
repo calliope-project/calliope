@@ -49,13 +49,13 @@ overrides:
     # group_constraints:
     #    systemwide_cost_max.cost_max.monetary: 1e10  # very large, non-infinite value
 
-    techs.ccgt.costs.spores_score.flow_cap: 0
+    techs.ccgt.costs.spores_score.flow_out_cap: 0
     techs.ccgt.costs.spores_score.interest_rate: 1
-    techs.csp.costs.spores_score.flow_cap: 0
+    techs.csp.costs.spores_score.flow_out_cap: 0
     techs.csp.costs.spores_score.interest_rate: 1
-    techs.battery.costs.spores_score.flow_cap: 0
+    techs.battery.costs.spores_score.flow_out_cap: 0
     techs.battery.costs.spores_score.interest_rate: 1
-    techs.ac_transmission.costs.spores_score.flow_cap: 0
+    techs.ac_transmission.costs.spores_score.flow_out_cap: 0
     techs.ac_transmission.costs.spores_score.interest_rate: 1
 
   operate:
@@ -66,28 +66,28 @@ overrides:
         operate_window: 12
         operate_horizon: 24
     nodes:
-      region1.techs.ccgt.constraints.flow_cap_max: 30000
+      region1.techs.ccgt.constraints.flow_out_cap_max: 30000
 
-      region2.techs.battery.constraints.flow_cap_max: 1000
+      region2.techs.battery.constraints.flow_out_cap_max: 1000
       region2.techs.battery.constraints.storage_cap_max: 5240
 
-      region1-1.techs.csp.constraints.flow_cap_max: 10000
+      region1-1.techs.csp.constraints.flow_out_cap_max: 10000
       region1-1.techs.csp.constraints.storage_cap_max: 244301
       region1-1.techs.csp.constraints.area_use_max: 130385
 
-      region1-2.techs.csp.constraints.flow_cap_max: 0
+      region1-2.techs.csp.constraints.flow_out_cap_max: 0
       region1-2.techs.csp.constraints.storage_cap_max: 0
       region1-2.techs.csp.constraints.area_use_max: 0
 
-      region1-3.techs.csp.constraints.flow_cap_max: 2534
+      region1-3.techs.csp.constraints.flow_out_cap_max: 2534
       region1-3.techs.csp.constraints.storage_cap_max: 25301
       region1-3.techs.csp.constraints.area_use_max: 8487
 
     links:
-      region1,region2.techs.ac_transmission.constraints.flow_cap_max: 3231
-      region1,region1-1.techs.free_transmission.constraints.flow_cap_max: 9000
-      region1,region1-2.techs.free_transmission.constraints.flow_cap_max: 0
-      region1,region1-3.techs.free_transmission.constraints.flow_cap_max: 2281
+      region1,region2.techs.ac_transmission.constraints.flow_out_cap_max: 3231
+      region1,region1-1.techs.free_transmission.constraints.flow_out_cap_max: 9000
+      region1,region1-2.techs.free_transmission.constraints.flow_out_cap_max: 0
+      region1,region1-3.techs.free_transmission.constraints.flow_out_cap_max: 2281
 
   check_feasibility:
     config:
@@ -118,10 +118,10 @@ overrides:
     config.init.time_subset: ["2005-02-01", "2005-02-31"]
   run3:
     config.init.time_subset: ["2005-01-01", "2005-01-31"]
-    nodes.region1.techs.ccgt.constraints.flow_cap_max: 0 # Disallow CCGT
+    nodes.region1.techs.ccgt.constraints.flow_out_cap_max: 0 # Disallow CCGT
   run4:
     time_subset: ["2005-02-01", "2005-02-31"]
-    nodes.region1.techs.ccgt.constraints.flow_cap_max: 0 # Disallow CCGT
+    nodes.region1.techs.ccgt.constraints.flow_out_cap_max: 0 # Disallow CCGT
 
   ##
   # Overrides to demonstrate group constraints
@@ -136,12 +136,12 @@ overrides:
           parent: supply
           carrier_out: power
         constraints:
-          flow_cap_max: 10000
+          flow_out_cap_max: 10000
           lifetime: 50
         costs:
           monetary:
             interest_rate: 0.20
-            flow_cap: 100
+            flow_out_cap: 100
     nodes.region1.techs.cold_fusion: null
     nodes.region2.techs.cold_fusion: null
 
@@ -174,11 +174,11 @@ overrides:
       ccgt:
         costs:
           emissions:
-            om_prod: 100 # kgCO2/kWh
+            flow_out: 100 # kgCO2/kWh
       csp:
         costs:
           emissions:
-            om_prod: 10 # kgCO2/kWh
+            flow_out: 10 # kgCO2/kWh
 
   maximize_utility_costs:
     parameters:
@@ -187,11 +187,11 @@ overrides:
       ccgt:
         costs:
           utility:
-            om_prod: 10 # arbitrary utility value
+            flow_out: 10 # arbitrary utility value
       csp:
         costs:
           utility:
-            om_prod: 100 # arbitrary utility value
+            flow_out: 100 # arbitrary utility value
 
   capacity_factor:
     techs.ccgt.constraints.capacity_factor_min: 0.8

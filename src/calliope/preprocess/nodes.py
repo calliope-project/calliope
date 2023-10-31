@@ -359,39 +359,44 @@ def process_per_distance_constraints(
 
         # Add per-distance values to their not-per-distance cousins
         # FIXME these are hardcoded for now
-        if "flow_eff_per_distance" in tech_settings.constraints:
-            distance_flow_eff = (
-                tech_settings.constraints.flow_eff_per_distance
-                ** tech_settings.distance
-            )
-            tech_settings.constraints.flow_eff = (
-                tech_settings.constraints.get_key("flow_eff", 1.0) * distance_flow_eff
-            )
-            del tech_settings.constraints["flow_eff_per_distance"]
-            nodes_comments.set_key(
-                "{}.links.{}.techs.{}.constraints.flow_eff".format(
-                    loc_from, loc_to, tech_name
-                ),
-                "Includes value computed from flow_eff_per_distance",
-            )
+        for direction in ["in", "out"]:
+            if f"flow_{direction}_eff_per_distance" in tech_settings.constraints:
+                distance_flow_eff = (
+                    tech_settings.constraints[f"flow_{direction}_eff_per_distance"]
+                    ** tech_settings.distance
+                )
+                tech_settings.constraints[f"flow_{direction}_eff"] = (
+                    tech_settings.constraints.get_key(f"flow_{direction}_eff", 1.0)
+                    * distance_flow_eff
+                )
+                del tech_settings.constraints[f"flow_{direction}_eff_per_distance"]
+                nodes_comments.set_key(
+                    "{}.links.{}.techs.{}.constraints.flow_{}_eff".format(
+                        loc_from, loc_to, tech_name, direction
+                    ),
+                    f"Includes value computed from flow_{direction}_eff_per_distance",
+                )
 
         for k in tech_settings.get("costs", AttrDict()).keys_nested(subkeys_as="list"):
-            if "flow_cap_per_distance" in k:
-                flow_cap_costs_per_distance = (
-                    tech_settings.costs.get_key(k) * tech_settings.distance
-                )
-                tech_settings.costs[k.split(".")[0]].flow_cap = (
-                    tech_settings.costs[k.split(".")[0]].get_key("flow_cap", 0)
-                    + flow_cap_costs_per_distance
-                )
-                tech_settings.costs.del_key(k)
-                nodes_comments.set_key(
-                    "{}.links.{}.techs.{}.costs.{}".format(
-                        loc_from, loc_to, tech_name, k
-                    ),
-                    "Includes value computed from flow_cap_per_distance",
-                )
-            elif "purchase_per_distance" in k:
+            for direction in ["in", "out"]:
+                if f"flow_{direction}_cap_per_distance" in k:
+                    flow_cap_costs_per_distance = (
+                        tech_settings.costs.get_key(k) * tech_settings.distance
+                    )
+                    tech_settings.costs[k.split(".")[0]][f"flow_{direction}_cap"] = (
+                        tech_settings.costs[k.split(".")[0]].get_key(
+                            f"flow_{direction}_cap", 0
+                        )
+                        + flow_cap_costs_per_distance
+                    )
+                    tech_settings.costs.del_key(k)
+                    nodes_comments.set_key(
+                        "{}.links.{}.techs.{}.costs.{}".format(
+                            loc_from, loc_to, tech_name, k
+                        ),
+                        f"Includes value computed from flow_{direction}_cap_per_distance",
+                    )
+            if "purchase_per_distance" in k:
                 purchase_costs_per_distance = (
                     tech_settings.costs.get_key(k) * tech_settings.distance
                 )

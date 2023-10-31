@@ -27,9 +27,9 @@ techs:
       carrier: gas
       parent: supply
     constraints:
-      flow_cap_max: 15
+      flow_out_cap_max: 15
       source_max: .inf
-      flow_eff: 0.9
+      flow_out_eff: 0.9
 
   test_supply_elec:
     essentials:
@@ -37,9 +37,9 @@ techs:
       carrier: electricity
       parent: supply
     constraints:
-      flow_cap_max: 10
+      flow_out_cap_max: 10
       source_max: .inf
-      flow_eff: 0.9
+      flow_out_eff: 0.9
 
   test_supply_coal:
     essentials:
@@ -47,9 +47,9 @@ techs:
       carrier: coal
       parent: supply
     constraints:
-      flow_cap_max: 10
+      flow_out_cap_max: 10
       source_max: .inf
-      flow_eff: 0.9
+      flow_out_eff: 0.9
 
   test_supply_plus:
     essentials:
@@ -57,12 +57,12 @@ techs:
       carrier: electricity
       parent: supply_plus
     constraints:
-      flow_cap_max: 15
+      flow_out_cap_max: 15
       source_max: file=supply_plus_resource.csv
       source_eff: 0.9
-      flow_eff: 0.9
+      flow_out_eff: 0.9
       storage_cap_max: 35
-      flow_cap_per_storage_cap_max: 0.5
+      flow_out_cap_per_storage_cap_max: 0.5
       storage_loss: 0.01
     switches:
       include_storage: true
@@ -73,10 +73,11 @@ techs:
       carrier: electricity
       parent: storage
     constraints:
-      flow_cap_max: 10
+      flow_out_cap_max: 10
       storage_cap_max: 15
-      flow_cap_per_storage_cap_max: 0.5
-      flow_eff: 0.9
+      flow_out_cap_per_storage_cap_max: 0.5
+      flow_in_eff: 0.9
+      flow_out_eff: 0.9
       storage_loss: 0.01
 
   test_conversion:
@@ -86,8 +87,8 @@ techs:
       carrier_out: heat
       parent: conversion
     constraints:
-      flow_cap_max: 15
-      flow_eff: 0.9
+      flow_out_cap_max: 15
+      flow_in_eff: 0.9
 
   test_conversion_plus:
     essentials:
@@ -98,7 +99,7 @@ techs:
       carrier_out_2: heat
       parent: conversion_plus
     constraints:
-      flow_cap_max: 20
+      flow_out_cap_max: 20
       carrier_ratios:
         carrier_out_2: { heat: 0.8 }
 
@@ -110,7 +111,7 @@ techs:
       carrier_out: [electricity, heat]
       parent: conversion_plus
     constraints:
-      flow_cap_max: 20
+      flow_out_cap_max: 20
 
   test_demand_elec:
     essentials:
@@ -142,7 +143,7 @@ techs:
       carrier: electricity
       parent: transmission
     constraints:
-      flow_cap_max: 10
+      flow_out_cap_max: 10
 
   test_transmission_heat:
     essentials:
@@ -150,7 +151,7 @@ techs:
       carrier: heat
       parent: transmission
     constraints:
-      flow_cap_max: 5
+      flow_out_cap_max: 5
 
 links:
   a,b:

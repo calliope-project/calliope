@@ -8,7 +8,7 @@ This example is based on the :ref:`urban scale example model <urban_scale_exampl
 Units
 =====
 
-The capacity of a technology is usually a continuous decision variable, which can be within the range of 0 and ``flow_cap_max`` (the maximum capacity of a technology). In this model, we introduce a unit limit on the CHP instead:
+The capacity of a technology is usually a continuous decision variable, which can be within the range of 0 and ``flow_out[/in]_cap_max`` (the maximum capacity of a technology). In this model, we introduce a unit limit on the CHP instead:
 
 .. literalinclude:: ../../src/calliope/example_models/urban_scale/scenarios.yaml
    :language: yaml
@@ -16,7 +16,7 @@ The capacity of a technology is usually a continuous decision variable, which ca
    :start-after: # chp-start
    :end-before: # chp-end
 
-A unit maximum allows a discrete, integer number of CHP to be purchased, each having a capacity of ``flow_cap_per_unit``. ``flow_cap_max`` and ``flow_cap_min`` are now ignored, in favour of ``units_max`` or ``units_min``. A useful feature unlocked by introducing this is the ability to set a minimum operating capacity which is *only* enforced when the technology is operating. In the LP model, ``flow_out_min_relative`` would force the technology to operate at least at that proportion of its maximum capacity at each time step. In this model, the newly introduced ``flow_out_min_relative`` of 0.2 will ensure that the output of the CHP is 20% of its maximum capacity in any time step in which it has a non-zero output.
+A unit maximum allows a discrete, integer number of CHP to be purchased, each having a capacity of ``flow_out_cap_per_unit``. ``flow_out_cap_max`` and ``flow_out_cap_min`` are now ignored, in favour of ``units_max`` or ``units_min``. A useful feature unlocked by introducing this is the ability to set a minimum operating capacity which is *only* enforced when the technology is operating. In the LP model, ``flow_out_min_relative`` would force the technology to operate at least at that proportion of its maximum capacity at each time step. In this model, the newly introduced ``flow_out_min_relative`` of 0.2 will ensure that the output of the CHP is 20% of its maximum capacity in any time step in which it has a non-zero output.
 
 Purchase cost
 =============
@@ -29,7 +29,7 @@ The boiler does not have a unit limit, it still utilises the continuous variable
    :start-after: # boiler-start
    :end-before: # boiler-end
 
-By introducing this, the boiler now has a binary decision variable associated with it, which is 1 if the boiler has a non-zero ``flow_cap`` (i.e. the optimisation results in investment in a boiler) and 0 if the capacity is 0. The purchase cost is applied to the binary result, providing a fixed cost on purchase of the technology, irrespective of the technology size. In physical terms, this may be associated with the cost of pipework, land purchase, etc. The purchase cost is also imposed on the CHP, which is applied to the number of integer CHP units in which the solver chooses to invest.
+By introducing this, the boiler now has a binary decision variable associated with it, which is 1 if the boiler has a non-zero ``flow_out_cap`` (i.e. the optimisation results in investment in a boiler) and 0 if the capacity is 0. The purchase cost is applied to the binary result, providing a fixed cost on purchase of the technology, irrespective of the technology size. In physical terms, this may be associated with the cost of pipework, land purchase, etc. The purchase cost is also imposed on the CHP, which is applied to the number of integer CHP units in which the solver chooses to invest.
 
 MILP functionality can be easily applied, but convergence is slower as a result of integer/binary variables. It is recommended to use a commercial solver (e.g. Gurobi, CPLEX) if you wish to utilise these variables outside this example model.
 

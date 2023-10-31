@@ -29,7 +29,7 @@ techs:
       lifetime: 60
     costs:
       monetary:
-        flow_cap: 1500000
+        flow_out_cap: 1500000
         storage_cap: 300000
         interest_rate: 0.1
 
@@ -40,11 +40,11 @@ nodes:
 
 overrides:
   max:
-    techs.my_storage.constraints.flow_cap_per_storage_cap_max: 0.01
+    techs.my_storage.constraints.flow_out_cap_per_storage_cap_max: 0.01
   min:
-    techs.my_storage.constraints.flow_cap_per_storage_cap_min: 1
+    techs.my_storage.constraints.flow_out_cap_per_storage_cap_min: 1
   operate_mode_min:
-    techs.my_storage.constraints.flow_cap_per_storage_cap_min: 1
+    techs.my_storage.constraints.flow_out_cap_per_storage_cap_min: 1
     config:
       build.mode: operate
       solve.operate_window: 24

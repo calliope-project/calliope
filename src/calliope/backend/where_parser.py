@@ -180,9 +180,13 @@ class DataVarParser(EvalWhere):
         self, source_array: xr.DataArray, data_var_type: str
     ) -> xr.DataArray:
         "mask by setting all (NaN | INF/-INF) to False, otherwise True"
+
         var = source_array.get(self.data_var, xr.DataArray(np.nan))
         if data_var_type == "parameters":
-            return var.notnull() & (var != np.inf) & (var != -np.inf)
+            if self.data_var not in self.eval_attrs["input_data"]:
+                return xr.DataArray(np.False_)
+            else:
+                return var.notnull() & (var != np.inf) & (var != -np.inf)
         else:
             return var.notnull()
 
@@ -210,12 +214,6 @@ class DataVarParser(EvalWhere):
 
     def as_array(self) -> xr.DataArray:
         source_array, data_var_type = self._preprocess()
-
-        if (
-            data_var_type == "parameters"
-            and self.data_var not in self.eval_attrs["input_data"]
-        ):
-            return xr.DataArray(np.False_)
 
         if self.eval_attrs.get("apply_where", True):
             return self._data_var_exists(source_array, data_var_type)

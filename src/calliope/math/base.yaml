@@ -1,38 +1,59 @@
 constraints:
-  flow_capacity_per_storage_capacity_min:
-    description: "Set the lower bound of a `storage`/`supply_plus` technology's flow capacity relative to its storage capacity."
+  flow_in_capacity_per_storage_capacity_min:
+    description: "Set the lower bound of a `storage`/`supply_plus` technology's inflow capacity relative to its storage capacity."
     foreach: [nodes, techs]
-    where: "storage_cap AND flow_cap_per_storage_cap_min"
+    where: "storage_cap AND flow_in_cap_per_storage_cap_min"
     equations:
-      - expression: flow_cap >= storage_cap * flow_cap_per_storage_cap_min
+      - expression: flow_in_cap >= storage_cap * flow_in_cap_per_storage_cap_min
 
-  flow_capacity_per_storage_capacity_max:
-    description: "Set the upper bound of a `storage`/`supply_plus` technology's flow capacity relative to its storage capacity."
+  flow_out_capacity_per_storage_capacity_min:
+    description: "Set the lower bound of a `storage`/`supply_plus` technology's outflow capacity relative to its storage capacity."
     foreach: [nodes, techs]
-    where: "storage_cap AND flow_cap_per_storage_cap_max"
+    where: "storage_cap AND flow_out_cap_per_storage_cap_min"
     equations:
-      - expression: flow_cap <= storage_cap * flow_cap_per_storage_cap_max
+      - expression: flow_out_cap >= storage_cap * flow_out_cap_per_storage_cap_min
+
+  flow_in_capacity_per_storage_capacity_max:
+    description: "Set the upper bound of a `storage`/`supply_plus` technology's inflow capacity relative to its storage capacity."
+    foreach: [nodes, techs]
+    where: "storage_cap AND flow_in_cap_per_storage_cap_max"
+    equations:
+      - expression: flow_in_cap <= storage_cap * flow_in_cap_per_storage_cap_max
+
+  flow_out_capacity_per_storage_capacity_max:
+    description: "Set the upper bound of a `storage`/`supply_plus` technology's outflow capacity relative to its storage capacity."
+    foreach: [nodes, techs]
+    where: "storage_cap AND flow_out_cap_per_storage_cap_max"
+    equations:
+      - expression: flow_out_cap <= storage_cap * flow_out_cap_per_storage_cap_max
 
   source_capacity_equals_flow_capacity:
-    description: "Set a `supply_plus` technology's flow capacity to equal its source capacity."
+    description: "Set a `supply_plus` technology's inflow capacity to equal its source capacity."
     foreach: [nodes, techs]
     where: source_cap AND source_cap_equals_flow_cap=True
     equations:
-      - expression: source_cap == flow_cap
+      - expression: source_cap == flow_in_cap
 
   force_zero_area_use:
-    description: "Set a technology's area use to zero if its flow capacity upper bound is zero."
+    description: "Set a technology's area use to zero if its inflow or outflow capacity upper bound is zero."
     foreach: [nodes, techs]
-    where: "area_use AND flow_cap_max=0"
+    where: "area_use AND (flow_in_cap_max=0 OR flow_out_cap_max=0)"
     equations:
       - expression: area_use == 0
 
-  area_use_per_flow_capacity:
-    description: "Set a fixed relationship between a technology's flow capacity and its area use."
+  area_use_per_inflow_capacity:
+    description: "Set a fixed relationship between a technology's inflow capacity and its area use."
     foreach: [nodes, techs]
-    where: "area_use AND area_use_per_flow_cap"
+    where: "area_use AND area_use_per_flow_in_cap"
     equations:
-      - expression: area_use == flow_cap * area_use_per_flow_cap
+      - expression: area_use == flow_in_cap * area_use_per_flow_in_cap
+
+  area_use_per_outflow_capacity:
+    description: "Set a fixed relationship between a technology's outflow capacity and its area use."
+    foreach: [nodes, techs]
+    where: "area_use AND area_use_per_flow_out_cap"
+    equations:
+      - expression: area_use == flow_out_cap * area_use_per_flow_out_cap
 
   area_use_capacity_per_loc:
     description: "Set an upper bound on the total area that all technologies with a area_use can occupy at a given node."
@@ -41,40 +62,54 @@ constraints:
     equations:
       - expression: sum(area_use, over=techs) <= available_area
 
-  flow_capacity_systemwide_max:
-    description: "Set an upper bound on flow capacity of a technology across all nodes in which the technology exists."
+  flow_in_capacity_systemwide_max:
+    description: "Set an upper bound on inflow capacity of a technology across all nodes in which the technology exists."
     foreach: [techs]
-    where: "flow_cap_max_systemwide"
+    where: "flow_in_cap_max_systemwide"
     equations:
-      - expression: sum(flow_cap, over=nodes) <= flow_cap_max_systemwide
+      - expression: sum(flow_in_cap, over=nodes) <= flow_in_cap_max_systemwide
 
-  flow_capacity_systemwide_min:
-    description: "Set a lower bound on flow capacity of a technology across all nodes in which the technology exists."
+  flow_out_capacity_systemwide_max:
+    description: "Set an upper bound on outflow capacity of a technology across all nodes in which the technology exists."
     foreach: [techs]
-    where: "flow_cap_min_systemwide"
+    where: "flow_out_cap_max_systemwide"
     equations:
-      - expression: sum(flow_cap, over=nodes) >= flow_cap_min_systemwide
+      - expression: sum(flow_out_cap, over=nodes) <= flow_out_cap_max_systemwide
+
+  flow_in_capacity_systemwide_min:
+    description: "Set a lower bound on inflow capacity of a technology across all nodes in which the technology exists."
+    foreach: [techs]
+    where: "flow_in_cap_min_systemwide"
+    equations:
+      - expression: sum(flow_in_cap, over=nodes) >= flow_in_cap_min_systemwide
+
+  flow_out_capacity_systemwide_min:
+    description: "Set a lower bound on outflow capacity of a technology across all nodes in which the technology exists."
+    foreach: [techs]
+    where: "flow_out_cap_min_systemwide"
+    equations:
+      - expression: sum(flow_out_cap, over=nodes) >= flow_out_cap_min_systemwide
 
   balance_conversion_plus_primary:
     description: "Fix the relationship between total outflow and total inflow of `conversion_plus` technologies for `in` (consumption) and `out` (production) carrier flows."
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion_plus) AND carrier_ratios>0"
     equations:
-      - expression: reduce_carrier_dim(flow_out / carrier_ratios[carrier_tiers=out], carrier_tier=out) == reduce_carrier_dim(flow_in * carrier_ratios[carrier_tiers=in], carrier_tier=in) * flow_eff
+      - expression: reduce_carrier_dim(flow_out / carrier_ratios[carrier_tiers=out], carrier_tier=out) == reduce_carrier_dim(flow_in * carrier_ratios[carrier_tiers=in], carrier_tier=in) * flow_in_eff * flow_out_eff
 
   flow_out_max_conversion_plus:
     description: "Set the upper bound in each timestep of a `conversion_plus` technology's total outflow on its `out` carrier flows."
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion_plus) AND NOT operating_units"
     equations:
-      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) <= timestep_resolution * flow_cap
+      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) <= timestep_resolution * flow_out_cap
 
   flow_out_min_conversion_plus:
     description: "Set the lower bound in each timestep of a `conversion_plus` technology's total outflow on its `out` carrier flows."
     foreach: [nodes, techs, timesteps]
     where: "flow_out_min_relative AND inheritance(conversion_plus) AND NOT operating_units"
     equations:
-      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) >= timestep_resolution * flow_cap * flow_out_min_relative
+      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) >= timestep_resolution * flow_out_cap * flow_out_min_relative
 
   balance_conversion_plus_non_primary:
     description: "Fix the relationship between a `conversion_plus` technology's total `in_2`/`in_3` (consumption) and `out_2`/`out_3` (production) carrier flows and its `in` (consumption) and `out` (production) carrier flows."
@@ -116,28 +151,35 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion)"
     equations:
-      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) == reduce_carrier_dim(flow_in, carrier_tier=in) * flow_eff
+      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) == reduce_carrier_dim(flow_in, carrier_tier=in) * flow_in_eff * (flow_out_eff * parasitic_eff)
 
   flow_out_max:
     description: "Set the upper bound of a non-`conversion_plus` technology's outflow."
     foreach: [nodes, techs, carriers, timesteps]
     where: "NOT inheritance(conversion_plus) AND NOT operating_units AND allowed_flow_out=True AND [out] in carrier_tiers"
     equations:
-      - expression: flow_out <= flow_cap * timestep_resolution * parasitic_eff
+      - expression: flow_out <= flow_out_cap * timestep_resolution * parasitic_eff
 
   flow_out_min:
     description: "Set the lower bound of a non-`conversion_plus` technology's outflow."
     foreach: [nodes, techs, carriers, timesteps]
     where: "flow_out_min_relative AND NOT inheritance(conversion_plus) AND NOT operating_units AND allowed_flow_out=True AND [out] in carrier_tiers"
     equations:
-      - expression: flow_out >= flow_cap * timestep_resolution * flow_out_min_relative
+      - expression: flow_out >= flow_out_cap * timestep_resolution * flow_out_min_relative
 
   flow_in_max:
     description: "Set the upper bound of a non-`conversion_plus` technology's inflow."
     foreach: [nodes, techs, carriers, timesteps]
     where: "(inheritance(transmission) OR inheritance(demand) OR inheritance(storage)) AND (NOT operating_units OR inheritance(demand)) AND allowed_flow_in=True AND [in] in carrier_tiers"
     equations:
-      - expression: flow_in <= flow_cap * timestep_resolution
+      - expression: flow_in <= flow_in_cap * timestep_resolution
+
+  flow_in_min:
+    description: "Set the lower bound of a non-`conversion_plus` technology's inflow."
+    foreach: [nodes, techs, carriers, timesteps]
+    where: "flow_in_min_relative AND NOT inheritance(conversion_plus) AND NOT operating_units AND allowed_flow_in=True AND [in] in carrier_tiers"
+    equations:
+      - expression: flow_in >= flow_in_cap * timestep_resolution * flow_in_min_relative
 
   source_use_max:
     description: "Set the upper bound of a `supply_plus` technology's source consumption."
@@ -151,7 +193,7 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: "storage"
     equations:
-      - expression: storage - storage_cap <= 0
+      - expression: storage <= storage_cap
 
   storage_discharge_depth_limit:
     description: "Set the lower bound of the stored carrier a `storage`/`supply_plus` technology must keep in reserve at all times."
@@ -182,27 +224,25 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "(source_equals OR source_max) AND inheritance(supply)"
     equations:
-      - where: "source_equals AND flow_eff > 0"
-        expression: "flow_out / flow_eff == source_equals * $source_scaler"
-      - where: "(NOT source_equals) AND sink_max AND flow_eff > 0"
-        expression: "flow_out / flow_eff <= source_max * $source_scaler"
-      - where: "flow_eff = 0"
-        expression: "flow_out == 0"
+      - where: "source_equals"
+        expression: "flow_out == source_equals * $source_scaler * flow_out_eff  * parasitic_eff"
+      - where: "(NOT source_equals) AND sink_max"
+        expression: "flow_out <= source_max * $source_scaler * flow_out_eff  * parasitic_eff"
     sub_expressions:
       source_scaler: &source_scaler
         - where: "source_unit=per_area"
           expression: "area_use"
         - where: "source_unit=per_cap"
-          expression: "flow_cap"
+          expression: "flow_out_cap"
         - where: "source_unit=absolute"
           expression: "1"
 
   balance_supply_min_use:
     description: "Set the lower bound on the quantity of its source a `supply` technology must use in each timestep."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "source_min AND NOT source_equals AND inheritance(supply) AND flow_eff>0"
+    where: "source_min AND NOT source_equals AND inheritance(supply)"
     equations:
-      - expression: "flow_out / flow_eff >= source_min * $source_scaler"
+      - expression: "flow_out / (flow_out_eff * parasitic_eff) >= source_min * $source_scaler"
     sub_expressions:
       source_scaler: *source_scaler
 
@@ -211,26 +251,24 @@ constraints:
     where: "inheritance(demand)"
     equations:
       - where: "sink_equals"
-        expression: "$flow_in == sink_equals * $sink_scaler"
+        expression: "flow_in * flow_in_eff == sink_equals * $sink_scaler"
       - where: "NOT sink_equals AND sink_max"
-        expression: "$flow_in <= sink_max * $sink_scaler"
+        expression: "flow_in * flow_in_eff <= sink_max * $sink_scaler"
     sub_expressions:
-      flow_in:
-        - expression: flow_in * flow_eff
       sink_scaler: &sink_scaler
         - where: "sink_unit=per_area"
           expression: "area_use"
         - where: "sink_unit=per_cap"
-          expression: "flow_cap"
+          expression: "flow_in_cap"
         - where: "sink_unit=absolute"
           expression: "1"
 
   balance_demand_min_use:
     description: "Set the lower bound on the quantity of flow a `demand` technology must dump to its sink in each timestep."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "sink_min AND NOT source_equals AND inheritance(supply) AND flow_eff>0"
+    where: "sink_min AND NOT source_equals AND inheritance(supply)"
     equations:
-      - expression: "sink_min * $sink_scaler <= flow_in * flow_eff"
+      - expression: "flow_in * flow_in_eff >= sink_min * $sink_scaler"
     sub_expressions:
       sink_scaler: *sink_scaler
 
@@ -239,22 +277,15 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(supply_plus) AND NOT include_storage=True"
     equations:
-      - expression: source_use * source_eff == $flow_out
-    sub_expressions:
-      flow_out: &flow_out_with_parasitic
-        - where: flow_eff=0 OR parasitic_eff=0
-          expression: "0"
-        - where: NOT (flow_eff=0 OR parasitic_eff=0)
-          expression: flow_out / (flow_eff * parasitic_eff)
+      - expression: flow_out == source_use * source_eff * flow_out_eff * parasitic_eff
 
   balance_supply_plus_with_storage:
     description: "Set the upper bound on, or a fixed total of, a `supply_plus` (with storage) technology's ability to produce flow based on the quantity of consumed resource and available stored carrier."
     foreach: [nodes, techs, carriers, timesteps]
     where: "storage AND inheritance(supply_plus)"
     equations:
-      - expression: storage == $storage_previous_step + source_use * source_eff - $flow_out
+      - expression: storage == $storage_previous_step + source_use * source_eff - flow_out / (flow_out_eff * parasitic_eff)
     sub_expressions:
-      flow_out: *flow_out_with_parasitic
       storage_previous_step: &storage_previous_step
         - where: timesteps=get_val_at_index(timesteps=0) AND NOT config.cyclic_storage=True
           expression: storage_initial * storage_cap
@@ -280,13 +311,8 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(storage)"
     equations:
-      - expression: storage == $storage_previous_step - $flow_out + reduce_carrier_dim(flow_in, carrier_tier=in) * flow_eff
+      - expression: storage == $storage_previous_step - reduce_carrier_dim(flow_out, carrier_tier=out) / (flow_out_eff * parasitic_eff) + reduce_carrier_dim(flow_in, carrier_tier=in) * flow_in_eff
     sub_expressions:
-      flow_out:
-        - where: flow_eff > 0
-          expression: reduce_carrier_dim(flow_out, carrier_tier=out) / flow_eff
-        - where: flow_eff = 0
-          expression: "0"
       storage_previous_step: *storage_previous_step
 
   set_storage_initial:
@@ -304,14 +330,14 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(transmission) AND allowed_flow_out=True"
     equations:
-      - expression: "flow_out == select_from_lookup_arrays(flow_in, techs=link_remote_techs, nodes=link_remote_nodes) * flow_eff"
+      - expression: "flow_out == select_from_lookup_arrays(flow_in * flow_in_eff, techs=link_remote_techs, nodes=link_remote_nodes) * (flow_out_eff * parasitic_eff)"
 
   symmetric_transmission:
     description: "Fix the flow capacity of two `transmission` technologies representing the same link in the system."
     foreach: [nodes, techs]
     where: "inheritance(transmission)"
     equations:
-      - expression: flow_cap == select_from_lookup_arrays(flow_cap, techs=link_remote_techs, nodes=link_remote_nodes)
+      - expression: flow_in_cap == select_from_lookup_arrays(flow_out_cap, techs=link_remote_techs, nodes=link_remote_nodes)
 
   export_balance:
     description: "Set the lower bound of a technology's outflow to a technology's carrier export, for any technologies that can export carriers out of the system."
@@ -342,35 +368,35 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "operating_units AND NOT inheritance(conversion_plus) AND allowed_flow_out=True"
     equations:
-      - expression: flow_out <= operating_units * timestep_resolution * flow_cap_per_unit * parasitic_eff
+      - expression: flow_out <= operating_units * timestep_resolution * flow_out_cap_per_unit * parasitic_eff
 
   flow_out_max_conversion_plus_milp:
     description: "Set the upper bound of a `conversion_plus` technology's ability to outflow across all of its `out` carriers, if it uses integer units to define its capacity."
     foreach: [nodes, techs, timesteps]
     where: "operating_units AND inheritance(conversion_plus) AND allowed_flow_out=True"
     equations:
-      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) <= operating_units * timestep_resolution * flow_cap_per_unit
+      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) <= operating_units * timestep_resolution * flow_out_cap_per_unit
 
   flow_in_max_milp:
     description: "Set the upper bound of a non-`conversion_plus` technology's ability to consume carriers, for any technology using integer units to define its capacity."
     foreach: [nodes, techs, carriers, timesteps]
     where: "operating_units AND NOT inheritance(conversion_plus) AND allowed_flow_in=True"
     equations:
-      - expression: flow_in <= operating_units * timestep_resolution * flow_cap_per_unit
+      - expression: flow_in <= operating_units * timestep_resolution * flow_in_cap_per_unit
 
   flow_out_min_milp:
     description: "Set the lower bound of a non-`conversion_plus` technology's ability to produce carriers, for any technology using integer units to define its capacity."
     foreach: [nodes, techs, carriers, timesteps]
     where: "operating_units AND flow_out_min_relative AND NOT inheritance(conversion_plus) AND allowed_flow_out=True"
     equations:
-      - expression: flow_out >= operating_units * timestep_resolution * flow_cap_per_unit * flow_out_min_relative
+      - expression: flow_out >= operating_units * timestep_resolution * flow_out_cap_per_unit * flow_out_min_relative
 
   flow_out_min_conversion_plus_milp:
     description: "Set the lower bound of a `conversion_plus` technology's ability to outflow across all of its `out` carriers, if it uses integer units to define its capacity."
     foreach: [nodes, techs, timesteps]
     where: "operating_units AND flow_out_min_relative AND inheritance(conversion_plus) AND allowed_flow_out=True"
     equations:
-      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) >= operating_units * timestep_resolution * flow_cap_per_unit * flow_out_min_relative
+      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) >= operating_units * timestep_resolution * flow_out_cap_per_unit * flow_out_min_relative
 
   storage_capacity_units_milp:
     description: "Fix the storage capacity of any technology using integer units to define its capacity."
@@ -379,26 +405,47 @@ constraints:
     equations:
       - expression: storage_cap == units * storage_cap_per_unit
 
-  flow_capacity_units_milp:
-    description: "Fix the flow capacity of any technology using integer units to define its capacity."
+  flow_in_capacity_units_milp:
+    description: "Fix the inflow capacity of any technology using integer units to define its capacity."
     foreach: [nodes, techs]
-    where: "operating_units AND flow_cap_per_unit"
+    where: "operating_units AND flow_in_cap_per_unit"
     equations:
-      - expression: flow_cap == units * flow_cap_per_unit
+      - expression: flow_in_cap == units * flow_in_cap_per_unit
 
-  flow_capacity_max_purchase_milp:
-    description: "Set the upper bound on, or a fixed total of, a technology's flow capacity, for any technology with binary capacity purchasing."
+  flow_out_capacity_units_milp:
+    description: "Fix the outflow capacity of any technology using integer units to define its capacity."
     foreach: [nodes, techs]
-    where: "purchased AND flow_cap_max"
+    where: "operating_units AND flow_out_cap_per_unit"
     equations:
-      - expression: flow_cap <= flow_cap_max * purchased
+      - expression: flow_out_cap == units * flow_out_cap_per_unit
 
-  flow_capacity_min_purchase_milp:
-    description: "Set the lower bound on a technology's flow capacity, for any technology with binary capacity purchasing."
+  flow_in_capacity_max_purchase_milp:
+    description: "Set the upper bound on a technology's inflow capacity, for any technology with binary capacity purchasing."
     foreach: [nodes, techs]
-    where: "purchased AND flow_cap_min AND NOT flow_cap_equals"
+    where: "purchased AND flow_in_cap"
     equations:
-      - expression: flow_cap >= flow_cap_min * purchased
+      - expression: flow_in_cap <= bigM * purchased
+
+  flow_out_capacity_max_purchase_milp:
+    description: "Set the upper bound on a technology's outflow capacity, for any technology with binary capacity purchasing."
+    foreach: [nodes, techs]
+    where: "purchased AND flow_out_cap"
+    equations:
+      - expression: flow_out_cap <= bigM * purchased
+
+  flow_in_capacity_min_purchase_milp:
+    description: "Set the lower bound on a technology's inflow capacity, for any technology with binary capacity purchasing."
+    foreach: [nodes, techs]
+    where: "purchased AND flow_in_cap_min"
+    equations:
+      - expression: flow_in_cap >= flow_in_cap_min * purchased
+
+  flow_out_capacity_min_purchase_milp:
+    description: "Set the lower bound on a technology's outflow capacity, for any technology with binary capacity purchasing."
+    foreach: [nodes, techs]
+    where: "purchased AND flow_out_cap_min"
+    equations:
+      - expression: flow_out_cap >= flow_out_cap_min * purchased
 
   storage_capacity_max_purchase_milp:
     description: "Set the upper bound on, or a fixed total of, a technology's storage capacity, for any technology with binary capacity purchasing."
@@ -414,27 +461,6 @@ constraints:
     equations:
       - expression: storage_cap >= storage_cap_min * purchased
 
-  unit_capacity_max_systemwide_milp:
-    description: "Set the upper bound on the total number of units of a technology that can be purchased across all nodes where the technology can exist, for any technology using integer units to define its capacity."
-    foreach: [techs]
-    where: "(purchased OR units) AND units_max_systemwide"
-    equations:
-      - expression: $summed_components <= units_max_systemwide
-    sub_expressions: &unit_capacity_systemwide_milp_sub_exprs
-      summed_components:
-        - where: purchased
-          expression: sum(purchased, over=nodes)
-        - where: units
-          expression: sum(units, over=nodes)
-
-  unit_capacity_min_systemwide_milp:
-    description: "Set the lower bound on the total number of units of a technology that can be purchased across all nodes where the technology can exist, for any technology using integer units to define its capacity."
-    foreach: [techs]
-    where: "(purchased OR units) AND units_min_systemwide"
-    equations:
-      - expression: $summed_components >= units_min_systemwide
-    sub_expressions: *unit_capacity_systemwide_milp_sub_exprs
-
   async_flow_in_milp:
     description: "Set a technology's ability to have inflow in the same timestep that it has outflow, for any technology using the asynchronous flow binary switch."
     foreach: [nodes, techs, timesteps]
@@ -449,38 +475,62 @@ constraints:
     equations:
       - expression: reduce_carrier_dim(flow_out, carrier_tier=out) <= async_flow_switch * bigM
 
-  ramping_up:
+  ramping_up_in:
+    description: "Set the upper bound on a technology's ability to ramp inflow up beyond a certain percentage compared to the previous timestep."
+    foreach: [nodes, techs, carriers, timesteps]
+    where: "flow_in_ramping AND NOT timesteps=get_val_at_index(timesteps=0)"
+    equations:
+      - expression: $ramping_flow_in - roll($ramping_flow_in, timesteps=1) <= flow_in_ramping * flow_in_cap
+    sub_expressions:
+      ramping_flow_in: &ramping_flow_in
+        - expression: flow_in / timestep_resolution
+
+  ramping_down_in:
+    description: "Set the upper bound on a technology's ability to ramp inflow down beyond a certain percentage compared to the previous timestep."
+    foreach: [nodes, techs, carriers, timesteps]
+    where: "flow_in_ramping AND NOT timesteps=get_val_at_index(timesteps=0)"
+    equations:
+      - expression: -1 * flow_in_ramping * flow_in_cap <= $ramping_flow_in - roll($ramping_flow_in, timesteps=1)
+    sub_expressions:
+      ramping_flow_in: *ramping_flow_in
+
+  ramping_up_out:
     description: "Set the upper bound on a technology's ability to ramp outflow up beyond a certain percentage compared to the previous timestep."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "flow_ramping AND NOT timesteps=get_val_at_index(timesteps=0)"
+    where: "flow_out_ramping AND NOT timesteps=get_val_at_index(timesteps=0)"
     equations:
-      - expression: $flow - roll($flow, timesteps=1) <= flow_ramping * flow_cap
+      - expression: $ramping_flow_out - roll($ramping_flow_out, timesteps=1) <= flow_out_ramping * flow_out_cap
     sub_expressions:
-      flow: &ramping_flow
-        - where: "allowed_flow_out=True AND NOT allowed_flow_in=True"
-          expression: flow_out / timestep_resolution
-        - where: "allowed_flow_in=True AND NOT allowed_flow_out=True"
-          expression: flow_in / timestep_resolution
-        - where: "allowed_flow_in=True AND allowed_flow_out=True"
-          expression: (flow_out - flow_in) / timestep_resolution
+      ramping_flow_out: &ramping_flow_out
+        - expression: flow_out / timestep_resolution
 
-  ramping_down:
+  ramping_down_out:
     description: "Set the upper bound on a technology's ability to ramp outflow down beyond a certain percentage compared to the previous timestep."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "flow_ramping AND NOT timesteps=get_val_at_index(timesteps=0)"
+    where: "flow_out_ramping AND NOT timesteps=get_val_at_index(timesteps=0)"
     equations:
-      - expression: -1 * flow_ramping * flow_cap <= $flow - roll($flow, timesteps=1)
+      - expression: -1 * flow_out_ramping * flow_out_cap <= $ramping_flow_out - roll($ramping_flow_out, timesteps=1)
     sub_expressions:
-      flow: *ramping_flow
+      ramping_flow_out: *ramping_flow_out
 
 variables:
-  flow_cap:
+  flow_in_cap:
     description: "A technology's flow capacity, also known as its nominal or nameplate capacity."
+    where: allowed_flow_in=True
     unit: power
     foreach: [nodes, techs]
     bounds:
-      min: flow_cap_min
-      max: flow_cap_max
+      min: flow_in_cap_min
+      max: flow_in_cap_max
+
+  flow_out_cap:
+    description: "A technology's flow capacity, also known as its nominal or nameplate capacity."
+    where: allowed_flow_out=True
+    unit: power
+    foreach: [nodes, techs]
+    bounds:
+      min: flow_out_cap_min
+      max: flow_out_cap_max
 
   flow_out:
     description: "The outflow of a technology per timestep, also known as the flow discharged (from `storage` technologies) or the flow received (by `transmission` technologies) on a link."
@@ -513,7 +563,7 @@ variables:
     description: "The area in space utilised directly (e.g., solar PV panels) or indirectly (e.g., biofuel crops) by a technology."
     unit: area
     foreach: [nodes, techs]
-    where: "(area_use_min OR area_use_max OR area_use_per_flow_cap OR sink_unit=per_area OR source_unit=per_area)"
+    where: "(area_use_min OR area_use_max OR area_use_per_flow_in_cap OR area_use_per_flow_out_cap OR sink_unit=per_area OR source_unit=per_area)"
     bounds:
       min: area_use_min
       max: area_use_max
@@ -633,47 +683,47 @@ global_expressions:
     description: "The operating costs per timestep of a technology"
     unit: cost_per_time
     foreach: [nodes, techs, costs, timesteps]
-    where: "cost_export OR cost_om_con OR cost_om_prod"
+    where: "cost_export OR cost_flow_in OR cost_flow_out"
     equations:
-      - expression: timestep_weights * ($cost_export + $cost_om_prod + $cost_om_con)
+      - expression: timestep_weights * ($cost_export + $cost_flow_out + $cost_flow_in)
     sub_expressions:
       cost_export:
         - where: "export_carrier AND cost_export"
           expression: cost_export * sum(flow_export, over=carriers)
         - where: "NOT cost_export"
           expression: "0"
-      cost_om_con:
-        - where: "cost_om_con AND inheritance(supply_plus)"
-          expression: cost_om_con * source_use
-        - where: "cost_om_con AND inheritance(supply) AND flow_eff>0 AND [out] in carrier_tiers"
-          expression: cost_om_con * reduce_carrier_dim(flow_out, carrier_tier=out) / flow_eff
-        - where: "cost_om_con AND inheritance(conversion_plus)"
-          expression: cost_om_con * reduce_primary_carrier_dim(flow_in, carrier_tier=in)
-        - where: "cost_om_con AND NOT (inheritance(conversion_plus) OR inheritance(supply_plus) OR inheritance(supply)) AND [in] in carrier_tiers"
-          expression: cost_om_con * reduce_carrier_dim(flow_in, carrier_tier=in)
-        - where: "NOT cost_om_con"
+      cost_flow_in:
+        - where: "cost_flow_in AND inheritance(supply_plus)"
+          expression: cost_flow_in * source_use
+        - where: "cost_flow_in AND inheritance(supply) AND [out] in carrier_tiers"
+          expression: cost_flow_in * reduce_carrier_dim(flow_out, carrier_tier=out) / flow_out_eff
+        - where: "cost_flow_in AND inheritance(conversion_plus)"
+          expression: cost_flow_in * reduce_primary_carrier_dim(flow_in, carrier_tier=in)
+        - where: "cost_flow_in AND NOT (inheritance(conversion_plus) OR inheritance(supply_plus) OR inheritance(supply)) AND [in] in carrier_tiers"
+          expression: cost_flow_in * reduce_carrier_dim(flow_in, carrier_tier=in)
+        - where: "NOT cost_flow_in"
           expression: "0"
-      cost_om_prod:
-        - where: "cost_om_prod AND inheritance(conversion_plus)"
-          expression: cost_om_prod * reduce_primary_carrier_dim(flow_out, carrier_tier=out)
-        - where: "cost_om_prod AND NOT inheritance(conversion_plus)"
-          expression: cost_om_prod * reduce_carrier_dim(flow_out, carrier_tier=out)
-        - where: "NOT cost_om_prod"
+      cost_flow_out:
+        - where: "cost_flow_out AND inheritance(conversion_plus)"
+          expression: cost_flow_out * reduce_primary_carrier_dim(flow_out, carrier_tier=out)
+        - where: "cost_flow_out AND NOT inheritance(conversion_plus)"
+          expression: cost_flow_out * reduce_carrier_dim(flow_out, carrier_tier=out)
+        - where: "NOT cost_flow_out"
           expression: "0"
 
   cost_investment:
     description: "The installation costs of a technology, including annualised investment costs and annual maintenance costs."
     unit: cost
     foreach: [nodes, techs, costs]
-    where: "(cost_flow_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_area_use OR cost_source_cap OR cost_storage_cap)"
+    where: "(cost_flow_in_cap OR cost_flow_out_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_area_use OR cost_source_cap OR cost_storage_cap)"
     equations:
       - expression: >
           annualisation_weight * (
             cost_depreciation_rate * (
-                $cost_flow_cap + $cost_storage_cap + $cost_source_cap
+                $cost_flow_in_cap + $cost_flow_out_cap + $cost_storage_cap + $cost_source_cap
                 + $cost_area_use + $cost_of_purchase
               ) * ($multiplier + cost_om_annual_investment_fraction)
-              + cost_om_annual * flow_cap
+              + $cost_flow_out_cap_annual + $cost_flow_in_cap_annual
           )
     sub_expressions:
       multiplier:
@@ -681,10 +731,15 @@ global_expressions:
           expression: "0.5"
         - where: "NOT inheritance(transmission)"
           expression: "1"
-      cost_flow_cap:
-        - where: "cost_flow_cap"
-          expression: cost_flow_cap * flow_cap
-        - where: "NOT cost_flow_cap"
+      cost_flow_in_cap:
+        - where: "cost_flow_in_cap AND flow_in_cap"
+          expression: cost_flow_in_cap * flow_in_cap
+        - where: "NOT cost_flow_in_cap"
+          expression: "0"
+      cost_flow_out_cap:
+        - where: "cost_flow_out_cap AND flow_out_cap"
+          expression: cost_flow_out_cap * flow_out_cap
+        - where: "NOT cost_flow_out_cap"
           expression: "0"
       cost_storage_cap:
         - where: "cost_storage_cap AND storage_cap"
@@ -707,6 +762,16 @@ global_expressions:
         - where: "cost_purchase AND units"
           expression: "cost_purchase * units"
         - where: "NOT (cost_purchase AND (purchased OR units))"
+          expression: "0"
+      cost_flow_out_cap_annual:
+        - where: cost_flow_out_cap_annual AND flow_out_cap
+          expression: cost_flow_out_cap_annual * flow_out_cap
+        - where: NOT cost_flow_out_cap_annual
+          expression: "0"
+      cost_flow_in_cap_annual:
+        - where: cost_flow_in_cap_annual AND flow_in_cap
+          expression: cost_flow_in_cap_annual * flow_in_cap
+        - where: NOT cost_flow_in_cap_annual
           expression: "0"
 
   cost:

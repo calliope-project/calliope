@@ -214,16 +214,15 @@ The following example shows the definition of a ``ccgt`` technology, i.e. a comb
             carrier_out: power
         constraints:
             source: inf
-            flow_eff: 0.5
-            flow_cap_max: 40000  # kW
-            flow_cap_max_systemwide: 100000  # kW
-            flow_ramping: 0.8
+            flow_out_eff: 0.5
+            flow_out_cap_max: 40000  # kW
+            flow_out_ramping: 0.8
             lifetime: 25
         costs:
             monetary:
                 interest_rate: 0.10
-                flow_cap: 750  # USD per kW
-                om_con: 0.02  # USD per kWh
+                flow_out_cap: 750  # USD per kW
+                flow_in: 0.02  # USD per kWh
 
 Each technology must specify some ``essentials``, most importantly a name, the abstract base technology it is inheriting from (``parent``), and its carrier (``carrier_out`` in the case of a ``supply`` technology). Specifying a ``color`` is optional but useful for using the built-in visualisation tools (see :doc:`analysing`).
 
@@ -289,7 +288,7 @@ For example, a simple photovoltaic (PV) tech using a time series of hour-by-hour
             carrier_out: power
         constraints:
             source: file=pv_resource.csv
-            flow_cap_max: 10000  # kW
+            flow_out_cap_max: 10000  # kW
 
 By default, Calliope expects time series data in a model to be indexed by ISO 8601 compatible time stamps in the format ``YYYY-MM-DD hh:mm:ss``, e.g. ``2005-01-01 00:00:00``. This can be changed by setting :yaml:`model.time_format` based on ``strftime` directives <https://strftime.org/>`_, which defaults to ``"ISO8601"``.
 
@@ -374,7 +373,7 @@ The ``locations`` section specifies each location:
                 demand_power:
                 ccgt:
                     constraints:
-                        flow_cap_max: 30000
+                        flow_out_cap_max: 30000
 
 Locations can optionally specify ``coordinates`` (used in visualisation or to compute distance between them) and must specify ``techs`` allowed at that location. As seen in the example above, each allowed tech must be listed, and can optionally specify additional location-specific parameters (constraints or costs). If given, location-specific parameters supersede any group constraints a technology defines in the ``techs`` section for that location.
 
@@ -387,9 +386,9 @@ The ``links`` section specifies possible transmission links between locations in
             techs:
                 ac_transmission:
                     constraints:
-                        flow_cap_max: 10000
+                        flow_out_cap_max: 10000
                     costs.monetary:
-                        flow_cap: 100
+                        flow_out_cap: 100
 
 In the above example, an high-voltage AC transmission line is specified to connect ``region1`` with ``region2``. For this to work, a ``transmission`` technology called ``ac_transmission`` must have previously been defined in the model's ``techs`` section. There, it can be given group constraints or costs. As in the case of locations, the ``links`` section can specify per-link parameters (constraints or costs) that supersede any model-wide parameters.
 
@@ -415,7 +414,7 @@ To make it easier to run a given model multiple times with slightly changed sett
 
     overrides:
         high_cost:
-            techs.onshore_wind.costs.monetary.flow_cap: 2000
+            techs.onshore_wind.costs.monetary.flow_out_cap: 2000
         year2005:
             model.time_subset: ['2005-01-01', '2005-12-31']
         year2006:

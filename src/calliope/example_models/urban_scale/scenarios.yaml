@@ -13,11 +13,11 @@ overrides:
         switches.cap_method: integer
         constraints:
           units_max: 4
-          flow_cap_per_unit: 300
+          flow_out_cap_per_unit: 300
           flow_out_min_relative: 0.2
         costs:
           monetary:
-            flow_cap: 700
+            flow_out_cap: 700
             purchase: 40000
       # chp-end
       # boiler-start
@@ -25,7 +25,7 @@ overrides:
         switches.cap_method: binary
         costs:
           monetary:
-            flow_cap: 35
+            flow_out_cap: 35
             purchase: 2000
       # boiler-end
       # heat_pipes-start
@@ -58,26 +58,26 @@ overrides:
     nodes:
       X1:
         techs:
-          chp.constraints.flow_cap_max: 300
-          pv.constraints.flow_cap_max: 0
-          supply_grid_power.constraints.flow_cap_max: 40
-          supply_gas.constraints.flow_cap_max: 700
+          chp.constraints.flow_out_cap_max: 300
+          pv.constraints.flow_out_cap_max: 0
+          supply_grid_power.constraints.flow_out_cap_max: 40
+          supply_gas.constraints.flow_out_cap_max: 700
 
       X2:
         techs:
-          boiler.constraints.flow_cap_max: 200
-          pv.constraints.flow_cap_max: 70
-          supply_gas.constraints.flow_cap_max: 250
+          boiler.constraints.flow_out_cap_max: 200
+          pv.constraints.flow_out_cap_max: 70
+          supply_gas.constraints.flow_out_cap_max: 250
 
       X3:
         techs:
-          boiler.constraints.flow_cap_max: 0
-          pv.constraints.flow_cap_max: 50
-          supply_gas.constraints.flow_cap_max: 0
+          boiler.constraints.flow_out_cap_max: 0
+          pv.constraints.flow_out_cap_max: 50
+          supply_gas.constraints.flow_out_cap_max: 0
 
     links:
-      X1,X2.techs.power_lines.constraints.flow_cap_max: 300
-      X1,X3.techs.power_lines.constraints.flow_cap_max: 60
-      X1,N1.techs.heat_pipes.constraints.flow_cap_max: 300
-      N1,X2.techs.heat_pipes.constraints.flow_cap_max: 250
-      N1,X3.techs.heat_pipes.constraints.flow_cap_max: 320
+      X1,X2.techs.power_lines.constraints.flow_out_cap_max: 300
+      X1,X3.techs.power_lines.constraints.flow_out_cap_max: 60
+      X1,N1.techs.heat_pipes.constraints.flow_out_cap_max: 300
+      N1,X2.techs.heat_pipes.constraints.flow_out_cap_max: 250
+      N1,X3.techs.heat_pipes.constraints.flow_out_cap_max: 320

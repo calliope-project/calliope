@@ -67,9 +67,9 @@ overrides:
             switches.cap_method: integer
             constraints:
               units_max: 1
-              flow_cap_per_unit: 15
+              flow_out_cap_per_unit: 15
               storage_cap_per_unit: 15
-            costs.monetary: { purchase: 1, flow_cap: 0 }
+            costs.monetary: { purchase: 1, flow_out_cap: 0 }
           test_demand_elec:
 
     links.a,b.active: false
@@ -81,7 +81,7 @@ overrides:
           test_supply_elec:
             switches.cap_method: binary
             costs.monetary.purchase: 1
-            costs.monetary.flow_cap: 0
+            costs.monetary.flow_out_cap: 0
           test_demand_elec:
 
     links.a,b.active: false
@@ -92,7 +92,7 @@ overrides:
         switches.cap_method: integer
         constraints:
           units_max: 1
-          flow_cap_per_unit: 15
+          flow_out_cap_per_unit: 15
     nodes:
       a:
         techs:
@@ -156,7 +156,7 @@ overrides:
         switches.cap_method: integer
         constraints:
           units_max: 2
-          flow_cap_per_unit: 15
+          flow_out_cap_per_unit: 15
     nodes:
       a:
         techs:
@@ -174,7 +174,7 @@ overrides:
         switches.cap_method: integer
         constraints:
           units_max: 1
-          flow_cap_per_unit: null
+          flow_out_cap_per_unit: null
     nodes:
       a:
         techs:
@@ -275,7 +275,7 @@ overrides:
             switches.cap_method: integer
             constraints:
               units_max: 2
-              flow_cap_per_unit: 10
+              flow_out_cap_per_unit: 10
               storage_cap_per_unit: 15
           test_demand_elec:
 
@@ -303,7 +303,7 @@ overrides:
         spores_slack.data: 0.1
         objective_cost_class.data: { "monetary": 1, "spores_score": 0 }
 
-    techs.test_supply_elec.costs.spores_score.flow_cap: 0
+    techs.test_supply_elec.costs.spores_score.flow_out_cap: 0
     techs.test_supply_elec.costs.spores_score.interest_rate: 0
     techs.test_supply_elec.constraints.lifetime: 1
 
@@ -333,35 +333,35 @@ overrides:
         costs:
           monetary:
             interest_rate: 0.1
-            flow_cap: 10
+            flow_out_cap: 10
       supply_plus:
         constraints:
           lifetime: 25
         costs:
           monetary:
             interest_rate: 0.1
-            flow_cap: 10
+            flow_out_cap: 10
       storage:
         constraints:
           lifetime: 25
         costs:
           monetary:
             interest_rate: 0.1
-            flow_cap: 10
+            flow_out_cap: 10
       conversion:
         constraints:
           lifetime: 25
         costs:
           monetary:
             interest_rate: 0.1
-            flow_cap: 10
+            flow_out_cap: 10
       conversion_plus:
         constraints:
           lifetime: 25
         costs:
           monetary:
             interest_rate: 0.1
-            flow_cap: 10
+            flow_out_cap: 10
 
   demand_elec_max:
     techs.test_demand_elec.constraints:

@@ -16,12 +16,12 @@ Supply-side technologies
 
 The example model defines two power supply technologies.
 
-The first is ``ccgt`` (combined-cycle gas turbine), which serves as an example of a simple technology with an infinite source. Its only constraints are the cost of built capacity (``flow_cap``) and a constraint on its maximum built capacity.
+The first is ``ccgt`` (combined-cycle gas turbine), which serves as an example of a simple technology with an infinite source. Its only constraints are the cost of built output capacity (``flow_out_cap``) and a constraint on its maximum built capacity.
 
 .. figure:: images/supply.*
    :alt: Supply node
 
-   The layout of a supply node, in this case ``ccgt``, which has an infinite source, a carrier conversion efficiency (:math:`flow_{eff}`), and a constraint on its maximum built :math:`flow_{cap}` (which puts an upper limit on :math:`flow_{out}`).
+   The layout of a supply node, in this case ``ccgt``, which has an infinite source, a carrier conversion efficiency (:math:`flow_{out}^{eff}`), and a constraint on its maximum built :math:`flow_{out}^{cap}` (which puts an upper limit on :math:`flow_{out}`).
 
 The definition of this technology in the example model's configuration looks as follows:
 
@@ -74,7 +74,7 @@ The second location allows a limited amount of battery storage to be deployed to
    :start-after: # battery-start
    :end-before: # battery-end
 
-The contraints give a maximum installed generation capacity for battery storage together with a maximum ratio of flow capacity to storage capacity (``flow_cap_per_storage_cap_max``) of 4, which in turn limits the storage capacity. The ratio is the charge/discharge rate / storage capacity (a.k.a the battery `reservoir`). In the case of a storage technology, ``flow_eff`` applies twice: on charging and discharging. In addition, storage technologies can lose stored carrier over time -- in this case, we set this loss to zero.
+The contraints give a maximum installed generation capacity for battery storage together with a maximum ratio of flow capacity to storage capacity (``flow_out_cap_per_storage_cap_max``) of 4, which in turn limits the storage capacity. The ratio is the charge/discharge rate / storage capacity (a.k.a the battery `reservoir`). In the case of a storage technology, charging and discharging have the potential to have different efficiencies (`flow_in_eff` and `flow_out_eff`, respectively). In addition, storage technologies can lose stored carrier over time -- in this case, we set this loss to zero.
 
 Other technologies
 ==================

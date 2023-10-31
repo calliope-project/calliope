@@ -23,7 +23,7 @@ An example use of ``supply_plus`` is to define a concentrating solar power (CSP)
 
 See the :ref:`listing of supply_plus configuration <abstract_base_tech_definitions>` in the abstract base tech group definitions for the additional constraints that are possible.
 
-.. Warning:: When analysing results from supply_plus, care must be taken to correctly account for the losses along the transformation from resource to carrier. For example, charging of storage from the resource may have a ``source_eff``-associated loss with it, while discharging storage to produce the carrier may have a different loss resulting from a combination of ``flow_eff`` and ``parasitic_eff``. Such intermediate conversion losses need to be kept in mind when comparing discharge from storage with ``flow_out`` in the same time step.
+.. Warning:: When analysing results from supply_plus, care must be taken to correctly account for the losses along the transformation from resource to carrier. For example, charging of storage from the resource may have a ``source_eff``-associated loss with it, while discharging storage to produce the carrier may have a different loss resulting ``flow_out_eff``. Such intermediate conversion losses need to be kept in mind when comparing discharge from storage with ``flow_out`` in the same time step.
 
 .. _conversion_plus:
 
@@ -67,8 +67,8 @@ A combined heat and power plant produces electricity, in this case from natural 
                     carrier_out_2: heat
                     primary_carrier_out: electricity
                 constraints:
-                    flow_eff: 0.45
-                    flow_cap_max: 100
+                    flow_out_eff: 0.45
+                    flow_out_cap_max: 100
                     carrier_ratios.carrier_out_2.heat: 0.8
 
 
@@ -89,8 +89,8 @@ The output energy from the heat pump can be *either* heat or cooling, simulating
             primary_carrier_out: heat
 
         constraints:
-            flow_eff: 1
-            flow_cap_max: 100
+            flow_in_eff: 1
+            flow_out_cap_max: 100
             carrier_ratios:
                 carrier_out:
                     heat: 5
@@ -124,14 +124,14 @@ A CCHP plant can use generated heat to produce cooling via an absorption chiller
                     primary_carrier_out: electricity
 
                 constraints:
-                    flow_eff: 0.45
-                    flow_cap_max: 100
+                    flow_out_eff: 0.45
+                    flow_out_cap_max: 100
                     carrier_ratios.carrier_out_2: {heat: 0.8, cooling: 0.5}
 
 Advanced gas turbine
 --------------------
 
-This technology can choose to burn methane (CH:sub:`4`) or send hydrogen (H:sub:`2`) through a fuel cell to produce electricity. One unit of carrier_in can be met by any combination of methane and hydrogen. If all methane, 0.5 units of carrier_out would be produced for 1 unit of carrier_in (flow_eff). If all hydrogen, 0.25 units of carrier_out would be produced for the same amount of carrier_in (flow_eff * hydrogen carrier ratio).
+This technology can choose to burn methane (CH:sub:`4`) or send hydrogen (H:sub:`2`) through a fuel cell to produce electricity. One unit of carrier_in can be met by any combination of methane and hydrogen. If all methane, 0.5 units of carrier_out would be produced for 1 unit of carrier_in (flow_out_eff). If all hydrogen, 0.25 units of carrier_out would be produced for the same amount of carrier_in (flow_out_eff * hydrogen carrier ratio).
 
 .. figure:: images/conversion_plus_gas.*
 
@@ -144,8 +144,8 @@ This technology can choose to burn methane (CH:sub:`4`) or send hydrogen (H:sub:
             carrier_out: electricity
 
         constraints:
-            flow_eff: 0.5
-            flow_cap_max: 100
+            flow_out_eff: 0.5
+            flow_out_cap_max: 100
             carrier_ratios:
                 carrier_in: {methane: 1, hydrogen: 0.5}
 
@@ -175,8 +175,8 @@ There are few instances where using the full capacity of a conversion_plus tech 
                     primary_carrier_out: electricity
 
                 constraints:
-                    flow_eff: 1
-                    flow_cap_max: 100
+                    flow_out_eff: 1
+                    flow_out_cap_max: 100
                     carrier_ratios:
                         carrier_in: {coal: 1.2, gas: 1, oil: 1.6}
                         carrier_in_2: {biomass: 1, waste: 1.25}
@@ -199,7 +199,7 @@ To make use of these constraints, one should set ``source_unit: per_area`` for t
 The following related settings are available:
 
 * ``area_use_max``, ``area_use_min``: Set upper or lower bounds on area_use
-* ``area_use_per_flow_cap``: False by default, but if set to true, it forces ``area_use`` to follow ``flow_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``area_use == 1.5 * flow_cap``)
+* ``area_use_per_flow_in_cap``/``area_use_per_flow_out_cap``: deactivated by default, but if set to a numeric value, it forces ``area_use`` to follow ``flow_in[/out]_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``area_use == 1.5 * flow_in[/out]_cap``)
 
 By default, ``area_use_max`` is infinite and ``area_use_min`` is 0 (zero).
 
@@ -207,7 +207,7 @@ By default, ``area_use_max`` is infinite and ``area_use_min`` is 0 (zero).
 Per-distance constraints and costs
 ----------------------------------
 
-Transmission technologies can additionally specify per-distance efficiency (loss) with ``flow_eff_per_distance`` and per-distance costs with ``flow_cap_per_distance``:
+Transmission technologies can additionally specify per-distance efficiency (loss) with ``flow_eff_per_distance`` and per-distance costs with ``flow_out_cap_per_distance``:
 
 .. code-block:: yaml
 
@@ -221,7 +221,7 @@ Transmission technologies can additionally specify per-distance efficiency (loss
             costs:
                 monetary:
                     # cost per unit of distance
-                    flow_cap_per_distance: 10
+                    flow_out_cap_per_distance: 10
 
 The distance is specified in transmission links:
 
@@ -232,7 +232,7 @@ The distance is specified in transmission links:
             my_transmission_tech:
                 distance: 500
                 constraints:
-                    flow_cap.max: 10000
+                    flow_out_cap_max: 10000
 
 If no distance is given, but the locations have been given lat and lon coordinates, Calliope will compute distances automatically (based on the length of a straight line connecting the locations).
 

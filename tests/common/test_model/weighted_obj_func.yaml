@@ -16,14 +16,14 @@ techs:
       carrier: electricity
     constraints:
       lifetime: 25
-      flow_cap_max: .inf
+      flow_out_cap_max: .inf
     costs:
       monetary:
         interest_rate: 0.1
-        flow_cap: 1000
-        om_prod: 1
+        flow_out_cap: 1000
+        flow_out: 1
       emissions:
-        om_prod: 2
+        flow_out: 2
 
   expensive_clean_supply:
     essentials:
@@ -32,14 +32,14 @@ techs:
       carrier: electricity
     constraints:
       lifetime: 25
-      flow_cap_max: .inf
+      flow_out_cap_max: .inf
     costs:
       monetary:
         interest_rate: 0.1
-        flow_cap: 2000
-        om_prod: 2
+        flow_out_cap: 2000
+        flow_out: 2
       emissions:
-        om_prod: 1
+        flow_out: 1
 
   mean_supply:
     essentials:
@@ -48,14 +48,14 @@ techs:
       carrier: electricity
     constraints:
       lifetime: 25
-      flow_cap_max: .inf
+      flow_out_cap_max: .inf
     costs:
       monetary:
         interest_rate: 0.1
-        flow_cap: 1500
-        om_prod: 1.5
+        flow_out_cap: 1500
+        flow_out: 1.5
       emissions:
-        om_prod: 1.5
+        flow_out: 1.5
 
   electricity_demand:
     essentials:

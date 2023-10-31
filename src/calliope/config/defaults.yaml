@@ -65,6 +65,10 @@ tech_groups:
         "flow_out_cap_max",
         "flow_in_cap_min",
         "flow_out_cap_min",
+        "flow_in_cap_max_systemwide",
+        "flow_out_cap_max_systemwide",
+        "flow_in_cap_min_systemwide",
+        "flow_out_cap_min_systemwide",
         "flow_in_min_relative",
         "flow_out_min_relative",
         "flow_in_cap_per_unit",
@@ -76,6 +80,7 @@ tech_groups:
         "export_max",
         "export_carrier",
         "lifetime",
+        "parasitic_eff",
         "units_max",
         "units_min",
       ]
@@ -86,7 +91,8 @@ tech_groups:
         "flow_out_cap",
         "export",
         "interest_rate",
-        "om_annual",
+        "flow_in_cap_annual",
+        "flow_out_cap_annual",
         "om_annual_investment_fraction",
         "flow_in",
         "flow_out",
@@ -110,6 +116,10 @@ tech_groups:
         "flow_out_cap_max",
         "flow_in_cap_min",
         "flow_out_cap_min",
+        "flow_in_cap_max_systemwide",
+        "flow_out_cap_max_systemwide",
+        "flow_in_cap_min_systemwide",
+        "flow_out_cap_min_systemwide",
         "flow_in_min_relative",
         "flow_out_min_relative",
         "flow_in_cap_per_unit",
@@ -131,7 +141,8 @@ tech_groups:
         "flow_out_cap",
         "export",
         "interest_rate",
-        "om_annual",
+        "flow_in_cap_annual",
+        "flow_out_cap_annual",
         "om_annual_investment_fraction",
         "flow_in",
         "flow_out",
@@ -147,8 +158,17 @@ tech_groups:
       allowed_flow_out: true
   demand:
     required_constraints: []
-    allowed_constraints: ["sink_min", "sink_max", "sink_equals", "sink_unit"]
-    allowed_costs: [om_con]
+    allowed_constraints: [
+      "sink_min",
+      "sink_max",
+      "sink_equals",
+      "sink_unit",
+      "flow_in_cap_max",
+      "flow_in_cap_min",
+      "flow_in_cap_max_systemwide",
+      "flow_in_cap_min_systemwide"
+    ]
+    allowed_costs: [flow_in]
     allowed_switches: [sink_unit, allowed_flow_in, allowed_flow_out]
     essentials:
       parent: null
@@ -168,6 +188,10 @@ tech_groups:
         "flow_out_cap_max",
         "flow_in_cap_min",
         "flow_out_cap_min",
+        "flow_in_cap_max_systemwide",
+        "flow_out_cap_max_systemwide",
+        "flow_in_cap_min_systemwide",
+        "flow_out_cap_min_systemwide",
         "flow_in_min_relative",
         "flow_out_min_relative",
         "flow_in_cap_per_unit",
@@ -180,6 +204,7 @@ tech_groups:
         "export_carrier",
         "force_async_flow",
         "lifetime",
+        "parasitic_eff",
         "storage_cap_max",
         "storage_cap_min",
         "storage_cap_per_unit",
@@ -197,7 +222,8 @@ tech_groups:
         "flow_out_cap",
         "export",
         "interest_rate",
-        "om_annual",
+        "flow_in_cap_annual",
+        "flow_out_cap_annual",
         "om_annual_investment_fraction",
         "flow_in",
         "flow_out",
@@ -220,6 +246,8 @@ tech_groups:
       [
         "flow_out_cap_max",
         "flow_out_cap_min",
+        "flow_out_cap_max_systemwide",
+        "flow_out_cap_min_systemwide",
         "flow_out_min_relative",
         "flow_out_cap_per_unit",
         "flow_out_eff",
@@ -227,9 +255,11 @@ tech_groups:
         "export_max",
         "export_carrier",
         "lifetime",
+        "parasitic_eff",
         "area_use_max",
         "area_use_min",
-        "area_use_per_flow_cap",
+        "area_use_per_flow_out_cap",
+        "area_use_per_flow_in_cap",
         "source_min",
         "source_max",
         "source_equals",
@@ -243,7 +273,7 @@ tech_groups:
         "flow_out_cap",
         "export",
         "interest_rate",
-        "om_annual",
+        "flow_out_cap_annual",
         "om_annual_investment_fraction",
         "flow_in",
         "flow_out",
@@ -273,6 +303,10 @@ tech_groups:
         "flow_out_cap_max",
         "flow_in_cap_min",
         "flow_out_cap_min",
+        "flow_in_cap_max_systemwide",
+        "flow_out_cap_max_systemwide",
+        "flow_in_cap_min_systemwide",
+        "flow_out_cap_min_systemwide",
         "flow_in_min_relative",
         "flow_out_min_relative",
         "flow_in_cap_per_unit",
@@ -284,9 +318,11 @@ tech_groups:
         "export_max",
         "export_carrier",
         "lifetime",
+        "parasitic_eff",
         "area_use_max",
         "area_use_min",
-        "area_use_per_flow_cap",
+        "area_use_per_flow_out_cap",
+        "area_use_per_flow_in_cap",
         "source_cap_max",
         "source_cap_min",
         "source_eff",
@@ -308,7 +344,8 @@ tech_groups:
         "flow_out_cap",
         "export",
         "interest_rate",
-        "om_annual",
+        "flow_in_cap_annual",
+        "flow_out_cap_annual",
         "om_annual_investment_fraction",
         "flow_in",
         "flow_out",
@@ -356,6 +393,7 @@ tech_groups:
         "force_async_flow",
         "lifetime",
         "one_way",
+        "parasitic_eff"
       ]
     allowed_costs:
       [
@@ -365,7 +403,8 @@ tech_groups:
         "flow_in_cap_per_distance",
         "flow_out_cap_per_distance",
         "interest_rate",
-        "om_annual",
+        "flow_in_cap_annual",
+        "flow_out_cap_annual",
         "om_annual_investment_fraction",
         "flow_in",
         "flow_out",
@@ -404,7 +443,7 @@ techs:
       force_async_flow: false # name: Force asynchronous out/inflow ¦ unit: boolean ¦ If True, flow_out and flow_in cannot both occur in the same timestep
       sink_unit: absolute # name: Sink unit ¦ unit: N/A ¦ Sets the unit of ``Sink`` to either ``absolute`` (e.g. kWh), ``per_area`` (e.g. kWh/m2), or ``per_cap`` (e.g. kWh/kW). ``per_area`` uses the ``area_use`` decision variable to scale the sink while ``per_cap`` uses the ``flow_in_cap`` decision variable.
       source_unit: absolute # name: Source unit ¦ unit: N/A ¦ Sets the unit of ``Source`` to either ``absolute`` (e.g. kWh), ``per_area`` (e.g. kWh/m2), or ``per_cap`` (e.g. kWh/kW). ``per_area`` uses the ``area_use`` decision variable to scale the source while ``per_cap`` uses the ``flow_out_cap`` decision variable.
-      source_cap_equals_flow_cap: false # name: Source capacity equals flow capacity ¦ unit: boolean ¦ If true, ``source_cap`` is forced to equal ``flow_cap``
+      source_cap_equals_flow_cap: false # name: Source capacity equals inflow capacity ¦ unit: boolean ¦ If true, ``source_cap`` is forced to equal ``flow_in_cap``
       one_way: false # name: One way ¦ unit: boolean ¦ Forces a transmission technology to only move flow in one direction on the link, in this case from `default_node_from` to `default_node_to`
       allowed_flow_in: false # name: Technology inflow ¦ unit: boolean ¦ Allow this technology to consume flow from the carrier (static boolean, or from file as timeseries).
       allowed_flow_out: false # name: Technology outflow ¦ unit: boolean ¦ Allow this technology to supply flow to the carrier (static boolean, or from file as timeseries).
@@ -419,6 +458,10 @@ techs:
       flow_out_cap_max: .inf # name: Maximum installed outflow capacity ¦ unit: kW ¦ Limits decision variable ``flow_out_cap`` to a maximum.
       flow_in_cap_min: 0 # name: Minimum installed inflow capacity ¦ unit: kW ¦ Limits decision variable ``flow_in_cap`` to a minimum.
       flow_out_cap_min: 0 # name: Minimum installed outflow capacity ¦ unit: kW ¦ Limits decision variable ``flow_out_cap`` to a minimum.
+      flow_in_cap_max_systemwide: 0 # name: System-wide maximum installed inflow capacity ¦ unit: kW ¦ sets the upper bound of the sum across all nodes of the decision variable `flow_in_cap` for a particular technology.
+      flow_out_cap_max_systemwide: 0 # name: System-wide maximum installed outflow capacity ¦ unit: kW ¦ sets the upper bound of the sum across all nodes of the decision variable `flow_out_cap` for a particular technology.
+      flow_in_cap_min_systemwide: 0 # name: System-wide minimum installed inflow capacity ¦ unit: kW ¦ sets the lower bound of the sum across all nodes of the decision variable `flow_in_cap` for a particular technology.
+      flow_out_cap_min_systemwide: 0 # name: System-wide minimum installed outflow capacity ¦ unit: kW ¦ sets the lower bound of the sum across all nodes of the decision variable `flow_out_cap` for a particular technology.
       flow_in_min_relative: 0 # name: Minimum inflow ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum inflow as a fraction of the technology maximum inflow capacity. If non-zero and technology is not defined by ``units``, this will force the technology to operate above its minimum value at every timestep.
       flow_out_min_relative: 0 # name: Minimum outflow ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum outflow as a fraction of the technology maximum flow capacity. If non-zero and technology is not defined by ``units``, this will force the technology to operate above its minimum value at every timestep.
       flow_in_cap_per_unit: null # name: Inflow capacity per purchased unit ¦ unit: kW/unit ¦ Set the capacity of each integer unit of a technology purchased
@@ -432,6 +475,7 @@ techs:
       export_max: .inf # name: Maximum allowed export ¦ unit: kW ¦ Maximum allowed export of produced carrier for a technology.
       export_carrier: null # name: Export carrier ¦ unit: N/A ¦ Name of carrier to be exported. Must be an output carrier of the technology
       lifetime: null # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
+      parasitic_eff: 1.0 # name: Plant parasitic efficiency ¦ unit: fraction ¦ Additional losses as outflow gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption
       sink_min: 0 # name: Minimum bound on sink to remove a carrier from the system (e.g., electricity demand, transport distance) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Minimum sink use (static, or from file as timeseries). Unit dictated by ``source_unit``.
       sink_max: .inf # name: Maximum bound on sink to remove a carrier from the system (e.g., electricity demand, transport distance) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Maximum sink use (static, or from file as timeseries). Unit dictated by ``source_unit``.
       sink_equals: null # name: Required amount removal of a carrier from the system through a sink (e.g., electricity demand, transport distance) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Required sink (static, or from file as timeseries). Unit dictated by ``source_unit``.
@@ -445,7 +489,7 @@ techs:
       source_cap_max: .inf # name: Maximum installed source consumption capacity ¦ unit: kW ¦
       source_cap_min: 0 # name: Minimum installed source consumption capacity ¦ unit: kW ¦
       source_eff: 1.0 # name: Efficiency of converting a source into usable resource ¦ unit: fraction ¦ Efficiency (static, or from file as timeseries) in capturing source before it reaches storage (if storage is present) or conversion to carrier.
-      storage_cap_max: .inf # name: Maximum storage capacity ¦ unit: kWh ¦ If not defined, ``flow_cap_max`` * ``flow_cap_per_storage_cap_max`` will be used as the capacity.
+      storage_cap_max: .inf # name: Maximum storage capacity ¦ unit: kWh ¦ If not defined, ``flow_in_cap`` * ``flow_in_cap_per_storage_cap_max`` or ``flow_out_cap`` * ``flow_out_cap_per_storage_cap_max`` will be used as the capacity.
       storage_cap_min: 0 # name: Minimum storage capacity ¦ unit: kWh ¦
       storage_cap_per_unit: null # name: Storage capacity per purchased unit ¦ unit: kWh/unit ¦ Set the storage capacity of each integer unit of a technology purchased.
       storage_discharge_depth: 0 # name: Storage depth of discharge ¦ unit: fraction ¦ Defines the minimum level of storage state of charge, as a fraction of total storage capacity
@@ -463,7 +507,8 @@ techs:
         flow_out_cap_per_distance: 0 # name: Cost of outflow (i.e., import) capacity, per unit distance ¦ unit: kW :sub:`gross` :sup:`-1` / distance ¦ Applied to transmission links only
         export: 0 # name: Carrier export cost ¦ unit: kWh :sup:`-1` ¦ Usually used in the negative sense, as a subsidy.
         interest_rate: 0 # name: Interest rate ¦ unit: fraction ¦ Used when computing levelized costs
-        om_annual: 0 # name: Yearly O&M costs ¦ unit: kW :sub:`flow_cap` :sup:`-1` ¦
+        flow_out_cap_annual: 0 # name: Yearly O&M costs ¦ unit: kW :sub:`flow_out_cap` :sup:`-1` ¦
+        flow_in_cap_annual: 0 # name: Yearly O&M costs ¦ unit: kW :sub:`flow_out_cap` :sup:`-1` ¦
         om_annual_investment_fraction: 0 # name: Fractional yearly O&M costs ¦ unit: fraction / total investment ¦
         flow_in: 0 # name: Carrier inflow cost ¦ unit: kWh :sup:`-1` ¦ Applied to inflow of a technology
         flow_out: 0 # name: Carrier outflow cost ¦ unit: kWh :sup:`-1` ¦ Applied to outflow of a technology
