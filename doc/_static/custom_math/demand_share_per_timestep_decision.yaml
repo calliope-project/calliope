@@ -12,7 +12,7 @@
 # demand_share_limit.
 # decide_demand_share <- Link supply technologies to the demand technology they are going to be a share of.
 
-# helper functions used
+# helper functions used:
 # sum (expression)
 # select_from_lookup_arrays (expression)
 

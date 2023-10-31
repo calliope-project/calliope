@@ -8,93 +8,15 @@ time.py
 Functionality to add and process time varying parameters
 
 """
+import logging
+
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
-from calliope.core.attrdict import AttrDict
-from calliope.core.util.tools import plugin_load
 
-
-def apply_time_clustering(
-    model_data: xr.Dataset, time_config: AttrDict, input_timeseries_dfs: pd.DataFrame
-):
-    """
-    Take a Calliope model_data post time dimension addition, prior to any time
-    clustering, and apply relevant time clustering/masking techniques.
-    See doi: 10.1016/j.apenergy.2017.03.051 for applications.
-
-    Techniques include:
-    - Clustering timeseries into a selected number of 'representative' days.
-        Days with similar profiles and daily magnitude are grouped together and
-        represented by one 'representative' day with a greater weight per time
-        step.
-    - Masking timeseries, leading to variable timestep length
-        Only certain parts of the input are shown at full resolution, with other
-        periods being clustered together into a single timestep.
-        E.g. Keep high resolution in the week with greatest wind power variability,
-        smooth all other timesteps to 12H
-    - Timestep resampling
-        Used to reduce problem size by reducing resolution of all timeseries data.
-        E.g. resample from 1H to 6H timesteps
-
-
-    Parameters
-    ----------
-    model_data : xarray Dataset
-        Preprocessed Calliope model_data, as produced using
-        `calliope.preprocess.build_model_data`
-        and found in model._model_data_original
-    model_run : bool
-        preprocessed model_run dictionary, as produced by
-        Calliope.preprocess_model
-
-    Returns
-    -------
-    data : xarray Dataset
-        Dataset with optimisation parameters as variables, optimisation sets as
-        coordinates, and other information in attributes. Time dimension has
-        been updated as per user-defined clustering techniques (from model_run)
-
-    """
-
-    data = model_data.copy(deep=True)
-
-    ##
-    # Process masking and get list of timesteps to keep at high res
-    ##
-    if "masks" in time_config:
-        masks = {}
-        # time.masks is a list of {'function': .., 'options': ..} dicts
-        for entry in time_config.masks:
-            entry = AttrDict(entry)
-            mask_func = plugin_load(
-                entry.function, builtin_module="calliope.time.masks"
-            )
-            mask_kwargs = entry.get_key("options", default=AttrDict()).as_dict()
-            masks[entry.to_yaml()] = mask_func(data, **mask_kwargs)
-        data.attrs["masks"] = masks
-        # Concatenate the DatetimeIndexes by using dummy Series
-        chosen_timesteps = pd.concat(
-            [pd.Series(0, index=m) for m in masks.values()]
-        ).index
-        # timesteps: a list of timesteps NOT picked by masks
-        timesteps = pd.Index(data.timesteps.values).difference(chosen_timesteps)
-    else:
-        timesteps = None
-
-    ##
-    # Process function, apply resolution adjustments
-    ##
-    if "function" in time_config:
-        func = plugin_load(time_config.function, builtin_module="calliope.time.funcs")
-        func_kwargs = time_config.get("function_options", AttrDict()).as_dict()
-        if "file=" in func_kwargs.get("clustering_func", ""):
-            func_kwargs.update({"clustering_timeseries": input_timeseries_dfs})
-        data = func(data=data, timesteps=timesteps, **func_kwargs)
-
-    return data
+LOGGER = logging.getLogger(__name__)
 
 
 def add_time_dimension(
@@ -220,3 +142,124 @@ def update_dtypes(model_data):
                     except ValueError:
                         None
     return model_data
+
+
+def resample(data: xr.Dataset, resolution: str):
+    """
+    Function to resample timeseries data from the input resolution (e.g. 1H), to
+    the given resolution (e.g. 2H)
+
+    Parameters
+    ----------
+    data : xarray.Dataset
+        calliope model data, containing only timeseries data variables
+    timesteps : str or list; optional
+        If given, apply resampling to a subset of the timeseries data
+    resolution : str
+        time resolution of the output data, given in Pandas time frequency format.
+        E.g. 1H = 1 hour, 1W = 1 week, 1M = 1 month, 1T = 1 minute. Multiples allowed.
+
+    """
+    resample_kwargs = {"indexer": {"timesteps": resolution}, "skipna": True}
+    data_non_ts = data.drop_dims("timesteps")
+    data_ts = data.drop(data_non_ts.data_vars)
+    data_ts_resampled = data_ts.resample(**resample_kwargs).first(keep_attrs=True)
+
+    for var_name, var_data in data_ts.data_vars.items():
+        resampler = var_data.resample(**resample_kwargs)
+        if var_name in [
+            "timestep_resolution",
+            "source_min",
+            "sink_min",
+            "source_max",
+            "sink_max",
+            "source_equals",
+            "sink_equals",
+        ]:
+            method = "sum"
+        elif var_data.dtype.kind in ["f", "i"]:
+            method = "mean"
+        else:
+            method = "first"
+        data_ts_resampled[var_name] = getattr(resampler, method)(keep_attrs=True)
+        LOGGER.debug(
+            f"Time Resampling | {var_name} | resampling function used: {method}"
+        )
+
+    data_new = xr.merge([data_non_ts, data_ts_resampled])
+
+    # Resampling still permits operational mode
+    data_new.attrs["allow_operate_mode"] = 1
+
+    return data_new
+
+
+def cluster(
+    data: xr.Dataset,
+    clustering_timeseries: pd.Series,
+):
+    """
+    Apply the given clustering time series to the given data.
+
+    Parameters
+    ----------
+    data : xarray.Dataset
+    clustering_timeseries
+
+    Returns
+    -------
+    data_new_scaled : xarray.Dataset
+
+    """
+    representative_days = pd.to_datetime(clustering_timeseries.dropna()).dt.date
+    grouper = representative_days.to_frame("clusters").groupby("clusters")
+    data_new = data.sel(
+        timesteps=data.timesteps.dt.date.isin(representative_days.values)
+    )
+    date_series = data_new.timesteps.dt.date.to_series()
+    data_new["timestep_cluster"] = xr.DataArray(
+        grouper.ngroup().reindex(date_series).values, dims="timesteps"
+    )
+    data_new["timestep_weights"] = xr.DataArray(
+        grouper.value_counts().reindex(date_series).values, dims="timesteps"
+    )
+    data_new.coords["datesteps"] = representative_days.index.rename("datesteps")
+    data_new.coords["clusters"] = np.unique(data_new["timestep_cluster"].values)
+    # Clustering no longer permits operational mode
+    data_new.attrs["allow_operate_mode"] = 0
+    _lookup_clusters(data_new, grouper)
+
+    return data_new
+
+
+def _lookup_clusters(dataset: xr.Dataset, grouper: pd.Series) -> xr.Dataset:
+    """
+    For any given timestep in a time clustered model, get:
+    1. the first and last timestep of the cluster,
+    2. the last timestep of the cluster corresponding to a date in the original timeseries
+    """
+
+    dataset["lookup_cluster_first_timestep"] = dataset.timesteps.isin(
+        dataset.timesteps.groupby("timesteps.date").first()
+    )
+    dataset["lookup_cluster_last_timestep"] = dataset.timesteps.isin(
+        dataset.timesteps.groupby("timesteps.date").last()
+    )
+
+    dataset["lookup_datestep_cluster"] = xr.DataArray(
+        grouper.ngroup(), dims="datesteps"
+    )
+
+    last_timesteps = (
+        dataset.timestep_cluster.to_series()
+        .reset_index()
+        .groupby("timestep_cluster")
+        .last()
+    )
+    dataset["lookup_datestep_last_cluster_timestep"] = (
+        dataset.lookup_datestep_cluster.to_series()
+        .map(last_timesteps.timesteps)
+        .to_xarray()
+    )
+
+    return dataset

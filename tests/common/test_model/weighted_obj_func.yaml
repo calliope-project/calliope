@@ -1,8 +1,8 @@
 config:
   init:
     name: Cost capacity constraint test model
-    timeseries_data_path: "timeseries_data"
-    subset_time: ["2005-01-01", "2005-01-01"]
+    time_data_path: "timeseries_data"
+    time_subset: ["2005-01-01", "2005-01-01"]
   build:
     mode: plan
   solve:

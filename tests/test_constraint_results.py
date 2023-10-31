@@ -111,7 +111,7 @@ class TestModelSettings:
                 "nodes.a.techs": {"test_supply_elec": {}, "test_demand_elec": {}},
                 "links.a,b.active": False,
                 # pick a time subset where demand is uniformally -10 throughout
-                "config.init.subset_time": [
+                "config.init.time_subset": [
                     "2005-01-01 06:00:00",
                     "2005-01-01 08:00:00",
                 ],
@@ -267,7 +267,7 @@ class TestEnergyCapacityPerStorageCapacity:
     def test_operate_mode_horizon_window(self, model_file, horizon_window):
         horizon, window = horizon_window
         override_dict = {
-            "config.init.subset_time": ["2005-01-01", "2005-01-05"],
+            "config.init.time_subset": ["2005-01-01", "2005-01-05"],
         }
         model = build_model(
             model_file=model_file,

@@ -5,7 +5,7 @@
 # New top-level parameters:
 # net_import_share
 
-# helper functions used
+# helper functions used:
 # defined (where)
 # sum (expression)
 # get_transmission_techs (expression)

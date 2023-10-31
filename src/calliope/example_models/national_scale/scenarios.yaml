@@ -12,27 +12,22 @@ overrides:
   profiling:
     config:
       init.name: "National-scale example model (profiling run)"
-      init.subset_time: ["2005-01-01", "2005-01-15"]
+      init.time_subset: ["2005-01-01", "2005-01-15"]
       solve.solver: cbc
 
   time_resampling:
     config:
       init:
         name: "National-scale example model with time resampling"
-        subset_time: ["2005-01", "2005-01"]
-        # Resample time resolution to 6-hourly
-        time: { function: resample, function_options: { "resolution": "6H" } }
+        time_subset: ["2005-01", "2005-01"]
+        time_resample: "6H"
 
   time_clustering:
     config:
       init:
-        random_seed: 23
         name: "National-scale example model with time clustering"
-        subset_time: null # No time subsetting
-        # Cluster timesteps using k-means
-        time:
-          function: apply_clustering
-          function_options: { clustering_func: "kmeans", how: "closest", k: 10 }
+        time_subset: null # No time subsetting
+        time_cluster: cluster_days.csv
 
   spores:
     config:
@@ -65,7 +60,7 @@ overrides:
 
   operate:
     config:
-      init.subset_time: ["2005-01-01", "2005-01-10"]
+      init.time_subset: ["2005-01-01", "2005-01-10"]
       build.mode: operate
       solve:
         operate_window: 12
@@ -100,7 +95,7 @@ overrides:
         ensure_feasibility: False
         objective: "check_feasibility"
       init:
-        subset_time: ["2005-01-04", "2005-01-04"]
+        time_subset: ["2005-01-04", "2005-01-04"]
 
   reserve_margin:
     parameters:
@@ -118,14 +113,14 @@ overrides:
   ##
 
   run1:
-    config.init.subset_time: ["2005-01-01", "2005-01-31"]
+    config.init.time_subset: ["2005-01-01", "2005-01-31"]
   run2:
-    config.init.subset_time: ["2005-02-01", "2005-02-31"]
+    config.init.time_subset: ["2005-02-01", "2005-02-31"]
   run3:
-    config.init.subset_time: ["2005-01-01", "2005-01-31"]
+    config.init.time_subset: ["2005-01-01", "2005-01-31"]
     nodes.region1.techs.ccgt.constraints.flow_cap_max: 0 # Disallow CCGT
   run4:
-    subset_time: ["2005-02-01", "2005-02-31"]
+    time_subset: ["2005-02-01", "2005-02-31"]
     nodes.region1.techs.ccgt.constraints.flow_cap_max: 0 # Disallow CCGT
 
   ##

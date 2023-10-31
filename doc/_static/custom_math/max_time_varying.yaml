@@ -7,7 +7,7 @@
 # flow_cap_max_relative_per_ts
 # storage_max_relative_per_ts
 
-# helper functions used
+# helper functions used:
 # reduce_carrier_dim (expression)
 
 constraints:

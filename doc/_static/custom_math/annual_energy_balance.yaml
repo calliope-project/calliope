@@ -8,7 +8,7 @@
 # annual_flow_max (if summing over technologies and/or nodes)
 # flow_max_group (if summing over technologies and/or nodes)
 
-# helper functions used
+# helper functions used:
 # inheritance (where)
 # sum (expression)
 

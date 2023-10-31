@@ -14,7 +14,7 @@ import:
 config:
   init:
     name: Test model
-    timeseries_data_path: "timeseries_data"
+    time_data_path: "timeseries_data"
   build:
     mode: plan
   solve:

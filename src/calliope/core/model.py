@@ -98,14 +98,14 @@ class Model(object):
         self.defaults: AttrDict
         self.config: AttrDict
         self.math: AttrDict
-        self._model_def_path: Optional[str]
+        self._model_def_path: Optional[Path]
         self.math_documentation = MathDocumentation()
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
         log_time(LOGGER, self._timings, "model_creation", comment="Model: initialising")
         if isinstance(model_definition, (str, Path)):
-            self._model_def_path = Path(model_definition).as_posix()
+            self._model_def_path = Path(model_definition)
             model_run, debug_data = model_run_from_yaml(
                 model_definition,
                 scenario,
@@ -305,7 +305,7 @@ class Model(object):
             if not f"{filename}".endswith((".yaml", ".yml")):
                 yaml_filepath = math_dir / f"{filename}.yaml"
             else:
-                yaml_filepath = Path(relative_path(self._model_def_path, filename))
+                yaml_filepath = relative_path(self._model_def_path, filename)
 
             if not yaml_filepath.is_file():
                 file_errors.append(filename)

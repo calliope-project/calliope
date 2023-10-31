@@ -12,7 +12,7 @@
 # downtime_periods (from CSV as a timeseries)
 # uptime_limit
 
-# helper functions used
+# helper functions used:
 # sum (expression)
 # reduce_carrier_dim (expression)
 

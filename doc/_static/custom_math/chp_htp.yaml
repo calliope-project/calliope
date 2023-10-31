@@ -65,7 +65,7 @@
 # power_to_heat_ratio
 # boiler_eff
 
-# helper functions used
+# helper functions used:
 # reduce_carrier_dim (expression)
 
 constraints:

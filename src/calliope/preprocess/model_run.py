@@ -65,7 +65,7 @@ def model_run_from_yaml(
 
     """
     config = AttrDict.from_yaml(model_file)
-    config._model_def_path = Path(model_file).as_posix()
+    config._model_def_path = Path(model_file)
 
     config_with_overrides, debug_comments, overrides, scenario = apply_overrides(
         config, scenario=scenario, override_dict=override_dict
@@ -162,15 +162,13 @@ def apply_overrides(model_dict, scenario=None, override_dict=None):
         os.path.join(os.path.dirname(calliope.__file__), "config", "defaults.yaml")
     )
 
-    # Interpret timeseries_data_path as relative
-    if "timeseries_data_path" in model_dict.get_key("config.init", default={}):
-        model_dict.config.init.timeseries_data_path = relative_path(
-            model_dict._model_def_path, model_dict.config.init.timeseries_data_path
-        )
-
     # The input files are allowed to override other model defaults
     default_model_dict.union(model_dict, allow_override=True)
     config_model = default_model_dict.copy()
+
+    config_model.config.init.time_data_path = relative_path(
+        model_dict._model_def_path, model_dict.config.init.time_data_path
+    )
 
     # First pass of applying override dict before applying scenarios,
     # so that can override scenario definitions by override_dict
@@ -436,8 +434,8 @@ def process_tech_groups(config_model, techs):
     return tech_groups
 
 
-def load_timeseries_from_file(timeseries_data_path, tskey):
-    file_path = os.path.join(timeseries_data_path, tskey)
+def load_timeseries_from_file(time_data_path, tskey):
+    file_path = os.path.join(time_data_path, tskey)
     df = pd.read_csv(file_path, index_col=0)
     df.columns = pd.MultiIndex.from_product(
         [[tskey], df.columns], names=["source", "column"]
@@ -513,16 +511,13 @@ def _get_names(config):
 def process_timeseries_data(
     model_run: AttrDict,
     timeseries_dfs: Optional[pd.DataFrame],
-    timeseries_data_path: Optional[str],
-    time_config: Optional[AttrDict],
+    time_data_path: Optional[str],
+    time_cluster: Optional[str],
     subset_time_config: Optional[list[str]],
     datetime_format: str,
 ):
     # Generate set of all files and dataframes we want to load
     constraint_tsnames, constraint_tsvars = _get_names(model_run.nodes.as_dict_flat())
-    cluster_tsnames = set()
-    if time_config is not None:
-        cluster_tsnames, _ = _get_names(time_config.as_dict_flat())
 
     # Check if timeseries_dataframes is in the correct format (dict of
     # pandas DataFrames)
@@ -539,11 +534,11 @@ def process_timeseries_data(
     # Load each timeseries into timeseries data. tskey is either a filename
     # (called by file=...) or a key in timeseries_dataframes (called by df=...)
     timeseries_data = pd.DataFrame(dtype=float)
-    for tskey in constraint_tsnames | cluster_tsnames:
+    for tskey in constraint_tsnames:
         # If tskey is a CSV path, load the CSV, else load the dataframe
 
         if tskey[0] == "file":
-            df = load_timeseries_from_file(timeseries_data_path, tskey[1])
+            df = load_timeseries_from_file(time_data_path, tskey[1])
         elif tskey[0] == "df":
             df = load_timeseries_from_dataframe(timeseries_dfs, tskey[1])
         else:
@@ -566,11 +561,22 @@ def process_timeseries_data(
             )
         timeseries_data = pd.concat([timeseries_data, df], axis=1)
 
+    if time_cluster is not None:
+        df = load_timeseries_from_file(time_data_path, time_cluster)
+        try:
+            df.index = _parser(df.index, datetime_format)
+        except ValueError as e:
+            raise exceptions.ModelError(
+                "Error in parsing dates in timeseries data from {}, "
+                "using datetime format `{}`: {}".format(tskey[1], datetime_format, e)
+            )
+        timeseries_data = pd.concat([timeseries_data, df], axis=1)
+
     # Apply time subsetting, if supplied in model_run
     if subset_time_config is not None:
         # Test parsing dates first, to make sure they fit our required subset format
         try:
-            subset_time = _parser(subset_time_config, "ISO8601")
+            time_subset = _parser(subset_time_config, "ISO8601")
         except ValueError as e:
             raise exceptions.ModelError(
                 "Timeseries subset must be in ISO format (anything up to the  "
@@ -582,8 +588,8 @@ def process_timeseries_data(
 
             # Don't allow slicing outside the range of input data
             if (
-                pd.Timestamp(subset_time[0].date()) < timeseries_data.index[0]
-                or pd.Timestamp(subset_time[1].date()) > timeseries_data.index[-1]
+                pd.Timestamp(time_subset[0].date()) < timeseries_data.index[0]
+                or pd.Timestamp(time_subset[1].date()) > timeseries_data.index[-1]
             ):
                 raise exceptions.ModelError(
                     "subset time range {} is outside the input data time range "
@@ -595,7 +601,7 @@ def process_timeseries_data(
                 )
         else:
             raise exceptions.ModelError(
-                "subset_time must be a list of two datetime strings, not: {}".format(
+                "time_subset must be a list of two datetime strings, not: {}".format(
                     subset_time_config
                 )
             )
@@ -609,20 +615,6 @@ def process_timeseries_data(
             )
 
     if timeseries_data[[i[1] for i in constraint_tsnames]].isna().any().any():
-        raise exceptions.ModelError(
-            "Missing data for the timeseries array(s) {}.".format(
-                timeseries_data.columns[timeseries_data.isna().any()].values
-            )
-        )
-    if (
-        cluster_tsnames
-        and timeseries_data[[i[1] for i in cluster_tsnames]]
-        .resample("1D")
-        .mean()
-        .isna()
-        .any()
-        .any()
-    ):
         raise exceptions.ModelError(
             "Missing data for the timeseries array(s) {}.".format(
                 timeseries_data.columns[timeseries_data.isna().any()].values
@@ -681,10 +673,10 @@ def generate_model_run(
     ) = process_timeseries_data(
         model_run,
         timeseries_dataframes,
-        config.config.init.timeseries_data_path,
-        config.config.init.time,
-        config.config.init.subset_time,
-        config.config.init.timeseries_dateformat,
+        config.config.init.time_data_path,
+        config.config.init.time_cluster,
+        config.config.init.time_subset,
+        config.config.init.time_format,
     )
 
     # 6) Grab additional relevant bits from run and model config

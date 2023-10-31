@@ -9,8 +9,8 @@ config:
     # What version of Calliope this model is intended for
     calliope_version: 0.7.0
     # Time series data path - can either be a path relative to this file, or an absolute path
-    timeseries_data_path: "timeseries_data"
-    subset_time: ["2005-07-01", "2005-07-02"] # Subset of timesteps
+    time_data_path: "timeseries_data"
+    time_subset: ["2005-07-01", "2005-07-02"] # Subset of timesteps
 
   build:
     mode: plan # Choices: plan, operate

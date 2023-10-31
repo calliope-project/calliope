@@ -9,39 +9,13 @@ import jsonschema
 import pytest
 from calliope.core.util.generate_runs import generate_runs
 from calliope.core.util.logging import log_time
-from calliope.core.util.tools import memoize, memoize_instancemethod, validate_dict
+from calliope.core.util.tools import validate_dict
 
 from .common.util import check_error_or_warning, python36_or_higher
 
 _EXAMPLES_DIR = importlib_resources.files("calliope") / "example_models"
 _MODEL_NATIONAL = (_EXAMPLES_DIR / "national_scale" / "model.yaml").as_posix()
 _MODEL_URBAN = (_EXAMPLES_DIR / "urban_scale" / "model.yaml").as_posix()
-
-
-class TestMemoization:
-    @memoize_instancemethod
-    def instance_method(self, a, b):
-        return a + b
-
-    def test_memoize_one_arg(self):
-        @memoize
-        def test(a):
-            return a + 1
-
-        assert test(1) == 2
-        assert test(1) == 2
-
-    def test_memoize_two_args(self):
-        @memoize
-        def test(a, b):
-            return a + b
-
-        assert test(1, 2) == 3
-        assert test(1, 2) == 3
-
-    def test_memoize_instancemethod(self):
-        assert self.instance_method(1, 2) == 3
-        assert self.instance_method(1, 2) == 3
 
 
 class TestLogging:
@@ -118,7 +92,7 @@ class TestGenerateRuns:
             _MODEL_URBAN,
             scenarios=None,
         )
-        assert len(runs) == 4
+        assert len(runs) == 3
         assert runs[0].endswith("--scenario milp --save_netcdf out_1_milp.nc")
 
 

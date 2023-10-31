@@ -63,7 +63,7 @@ It is also possible to use the `--override_dict` option to pass a YAML string th
 
   .. code-block:: fishshell
 
-    $ calliope run testmodel/model.yaml --override_dict="{'model.subset_time': ['2005-01-01', '2005-01-31']}" --save_netcdf=results.nc
+    $ calliope run testmodel/model.yaml --override_dict="{'model.time_subset': ['2005-01-01', '2005-01-31']}" --save_netcdf=results.nc
 
 .. seealso::
 
