@@ -905,10 +905,10 @@ class TestChecks:
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, scenario="simple_supply,one_day")
 
-        # should fail: om_prod not allowed for demand tech
+        # should fail: flow_out not allowed for demand tech
         override = AttrDict.from_yaml_string(
             """
-            techs.test_demand_elec.costs.monetary.om_prod: 10
+            techs.test_demand_elec.costs.monetary.flow_out: 10
             """
         )
         with pytest.raises(exceptions.ModelError):

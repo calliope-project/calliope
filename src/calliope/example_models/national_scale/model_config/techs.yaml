@@ -18,7 +18,7 @@ techs:
       carrier_out: power
     constraints:
       source_max: inf
-      flow_eff: 0.5
+      flow_out_eff: 0.5
       flow_cap_max: 40000 # kW
       flow_cap_max_systemwide: 100000 # kW
       flow_ramping: 0.8
@@ -27,7 +27,7 @@ techs:
       monetary:
         interest_rate: 0.10
         flow_cap: 750 # USD per kW
-        om_con: 0.02 # USD per kWh
+        flow_in: 0.02 # USD per kWh
   # ccgt-end
 
   # csp-start
@@ -45,7 +45,7 @@ techs:
       flow_cap_per_storage_cap_max: 1
       storage_loss: 0.002
       source_max: file=csp_resource.csv
-      flow_eff: 0.4
+      flow_out_eff: 0.4
       parasitic_eff: 0.9
       area_use_max: inf
       flow_cap_max: 10000
@@ -57,7 +57,7 @@ techs:
         area_use: 200
         source_cap: 200
         flow_cap: 1000
-        om_prod: 0.002
+        flow_out: 0.002
   # csp-end
 
   ##
@@ -74,7 +74,9 @@ techs:
       flow_cap_max: 1000 # kW
       storage_cap_max: inf
       flow_cap_per_storage_cap_max: 4
-      flow_eff: 0.95 # 0.95 * 0.95 = 0.9025 round trip efficiency
+      # 0.95 * 0.95 = 0.9025 round trip efficiency
+      flow_out_eff: 0.95
+      flow_in_eff: 0.95
       storage_loss: 0 # No loss over time assumed
       lifetime: 25
     costs:
@@ -107,13 +109,13 @@ techs:
       parent: transmission
       carrier: power
     constraints:
-      flow_eff: 0.85
+      flow_out_eff: 0.85
       lifetime: 25
     costs:
       monetary:
         interest_rate: 0.10
         flow_cap: 200
-        om_prod: 0.002
+        flow_out: 0.002
 
   free_transmission:
     essentials:
@@ -123,8 +125,8 @@ techs:
       carrier: power
     constraints:
       flow_cap_max: inf
-      flow_eff: 1.0
+      flow_out_eff: 1.0
     costs:
       monetary:
-        om_prod: 0
+        flow_out: 0
   # transmission-end

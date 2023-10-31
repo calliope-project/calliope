@@ -214,7 +214,7 @@ The following example shows the definition of a ``ccgt`` technology, i.e. a comb
             carrier_out: power
         constraints:
             source: inf
-            flow_eff: 0.5
+            flow_out_eff: 0.5
             flow_cap_max: 40000  # kW
             flow_cap_max_systemwide: 100000  # kW
             flow_ramping: 0.8
@@ -223,7 +223,7 @@ The following example shows the definition of a ``ccgt`` technology, i.e. a comb
             monetary:
                 interest_rate: 0.10
                 flow_cap: 750  # USD per kW
-                om_con: 0.02  # USD per kWh
+                flow_in: 0.02  # USD per kWh
 
 Each technology must specify some ``essentials``, most importantly a name, the abstract base technology it is inheriting from (``parent``), and its carrier (``carrier_out`` in the case of a ``supply`` technology). Specifying a ``color`` is optional but useful for using the built-in visualisation tools (see :doc:`analysing`).
 

@@ -174,11 +174,11 @@ overrides:
       ccgt:
         costs:
           emissions:
-            om_prod: 100 # kgCO2/kWh
+            flow_out: 100 # kgCO2/kWh
       csp:
         costs:
           emissions:
-            om_prod: 10 # kgCO2/kWh
+            flow_out: 10 # kgCO2/kWh
 
   maximize_utility_costs:
     parameters:
@@ -187,11 +187,11 @@ overrides:
       ccgt:
         costs:
           utility:
-            om_prod: 10 # arbitrary utility value
+            flow_out: 10 # arbitrary utility value
       csp:
         costs:
           utility:
-            om_prod: 100 # arbitrary utility value
+            flow_out: 100 # arbitrary utility value
 
   capacity_factor:
     techs.ccgt.constraints.capacity_factor_min: 0.8

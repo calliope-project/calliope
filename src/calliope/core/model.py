@@ -340,6 +340,11 @@ class Model(object):
         default_node_dict = {
             "available_area": raw_defaults.nodes.default_node.available_area
         }
+        default_link_dict = {
+            "distance": raw_defaults.links[
+                "default_node_from,default_node_to"
+            ].techs.default_tech.distance
+        }
 
         return AttrDict(
             {
@@ -347,6 +352,7 @@ class Model(object):
                 **default_tech_dict.switches.as_dict(),
                 **default_cost_dict,
                 **default_node_dict,
+                **default_link_dict,
             }
         )
 

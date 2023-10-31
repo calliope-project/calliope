@@ -97,7 +97,7 @@ class TestBuildConversionPlusConstraints:
         sets.loc_techs_om_cost_conversion_plus,
         """
 
-        # om_prod creates constraint and populates it with flow_out driven cost
+        # flow_out creates constraint and populates it with flow_out driven cost
         m = build_model(
             {f"techs.test_conversion_plus.costs.monetary.om_{flow}": 0.1},
             "simple_conversion_plus,two_hours,investment_costs",
@@ -226,7 +226,7 @@ class TestBuildConversionPlusConstraints:
 class TestConversionPlusConstraintResults:
     def test_carrier_ratio(self):
         m = build_model(
-            {"techs.test_conversion.costs.monetary.om_prod": 3},
+            {"techs.test_conversion.costs.monetary.flow_out": 3},
             "conversion_and_conversion_plus,one_day,investment_costs",
         )
         m.build()
@@ -259,7 +259,7 @@ class TestConversionPlusConstraintResults:
                         "carrier_in": ["gas", "coal"],
                         "primary_carrier_in": "gas",
                     },
-                    "costs.monetary": {"om_con": 2, "om_prod": -1},
+                    "costs.monetary": {"flow_in": 2, "flow_out": -1},
                 }
             },
             "conversion_and_conversion_plus,one_day,investment_costs",

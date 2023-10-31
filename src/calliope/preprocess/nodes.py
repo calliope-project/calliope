@@ -338,74 +338,25 @@ def cleanup_undesired_keys(tech_settings):
 def process_per_distance_constraints(
     tech_name, tech_settings, nodes, nodes_comments, loc_from, loc_to
 ):
-    # Process distance, if any per_distance constraints exist
-    if any("per_distance" in i for i in tech_settings.keys_nested(subkeys_as="list")):
-        # If no distance was given, we calculate it from coordinates
-        if "distance" not in tech_settings:
-            # Simple check - earlier sense-checking already ensures
-            # that all nodes have either lat/lon or x/y coords
-            loc1 = nodes[loc_from].coordinates
-            loc2 = nodes[loc_to].coordinates
-            if "lat" in nodes[loc_from].coordinates:
-                distance = vincenty([loc1.lat, loc1.lon], [loc2.lat, loc2.lon])
-            else:
-                distance = math.sqrt((loc1.x - loc2.x) ** 2 + (loc1.y - loc2.y) ** 2)
+    # Process distance from coordinates, if distance not defined
+    if "distance" not in tech_settings:
+        # Simple check - earlier sense-checking already ensures
+        # that all nodes have either lat/lon or x/y coords
+        loc1 = nodes[loc_from].get("coordinates", None)
+        loc2 = nodes[loc_to].get("coordinates", None)
+        if loc1 is None or loc2 is None:
+            return tech_settings
 
-            tech_settings.distance = distance
-            nodes_comments.set_key(
-                "{}.links.{}.techs.{}.distance".format(loc_from, loc_to, tech_name),
-                "Distance automatically computed from coordinates",
-            )
+        if "lat" in nodes[loc_from].coordinates:
+            distance = vincenty([loc1.lat, loc1.lon], [loc2.lat, loc2.lon])
+        else:
+            distance = math.sqrt((loc1.x - loc2.x) ** 2 + (loc1.y - loc2.y) ** 2)
 
-        # Add per-distance values to their not-per-distance cousins
-        # FIXME these are hardcoded for now
-        if "flow_eff_per_distance" in tech_settings.constraints:
-            distance_flow_eff = (
-                tech_settings.constraints.flow_eff_per_distance
-                ** tech_settings.distance
-            )
-            tech_settings.constraints.flow_eff = (
-                tech_settings.constraints.get_key("flow_eff", 1.0) * distance_flow_eff
-            )
-            del tech_settings.constraints["flow_eff_per_distance"]
-            nodes_comments.set_key(
-                "{}.links.{}.techs.{}.constraints.flow_eff".format(
-                    loc_from, loc_to, tech_name
-                ),
-                "Includes value computed from flow_eff_per_distance",
-            )
-
-        for k in tech_settings.get("costs", AttrDict()).keys_nested(subkeys_as="list"):
-            if "flow_cap_per_distance" in k:
-                flow_cap_costs_per_distance = (
-                    tech_settings.costs.get_key(k) * tech_settings.distance
-                )
-                tech_settings.costs[k.split(".")[0]].flow_cap = (
-                    tech_settings.costs[k.split(".")[0]].get_key("flow_cap", 0)
-                    + flow_cap_costs_per_distance
-                )
-                tech_settings.costs.del_key(k)
-                nodes_comments.set_key(
-                    "{}.links.{}.techs.{}.costs.{}".format(
-                        loc_from, loc_to, tech_name, k
-                    ),
-                    "Includes value computed from flow_cap_per_distance",
-                )
-            elif "purchase_per_distance" in k:
-                purchase_costs_per_distance = (
-                    tech_settings.costs.get_key(k) * tech_settings.distance
-                )
-                tech_settings.costs[k.split(".")[0]].purchase = (
-                    tech_settings.costs[k.split(".")[0]].get_key("purchase", 0)
-                    + purchase_costs_per_distance
-                )
-                tech_settings.costs.del_key(k)
-                nodes_comments.set_key(
-                    "{}.links.{}.techs.{}.costs.{}".format(
-                        loc_from, loc_to, tech_name, k
-                    ),
-                    "Includes value computed from purchase_per_distance",
-                )
+        tech_settings.distance = distance
+        nodes_comments.set_key(
+            "{}.links.{}.techs.{}.distance".format(loc_from, loc_to, tech_name),
+            "Distance automatically computed from coordinates",
+        )
 
     return tech_settings
 

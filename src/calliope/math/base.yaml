@@ -60,7 +60,7 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion_plus) AND carrier_ratios>0"
     equations:
-      - expression: reduce_carrier_dim(flow_out / carrier_ratios[carrier_tiers=out], carrier_tier=out) == reduce_carrier_dim(flow_in * carrier_ratios[carrier_tiers=in], carrier_tier=in) * flow_eff
+      - expression: reduce_carrier_dim(flow_out / carrier_ratios[carrier_tiers=out], carrier_tier=out) == reduce_carrier_dim(flow_in * carrier_ratios[carrier_tiers=in], carrier_tier=in) * flow_in_eff * flow_out_eff
 
   flow_out_max_conversion_plus:
     description: "Set the upper bound in each timestep of a `conversion_plus` technology's total outflow on its `out` carrier flows."
@@ -116,7 +116,7 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion)"
     equations:
-      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) == reduce_carrier_dim(flow_in, carrier_tier=in) * flow_eff
+      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) == reduce_carrier_dim(flow_in, carrier_tier=in) * flow_in_eff * (flow_out_eff * parasitic_eff)
 
   flow_out_max:
     description: "Set the upper bound of a non-`conversion_plus` technology's outflow."
@@ -182,12 +182,10 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "(source_equals OR source_max) AND inheritance(supply)"
     equations:
-      - where: "source_equals AND flow_eff > 0"
-        expression: "flow_out / flow_eff == source_equals * $source_scaler"
-      - where: "(NOT source_equals) AND sink_max AND flow_eff > 0"
-        expression: "flow_out / flow_eff <= source_max * $source_scaler"
-      - where: "flow_eff = 0"
-        expression: "flow_out == 0"
+      - where: "source_equals"
+        expression: "flow_out == source_equals * $source_scaler * flow_out_eff  * parasitic_eff"
+      - where: "(NOT source_equals) AND sink_max"
+        expression: "flow_out <= source_max * $source_scaler * flow_out_eff  * parasitic_eff"
     sub_expressions:
       source_scaler: &source_scaler
         - where: "source_unit=per_area"
@@ -200,9 +198,9 @@ constraints:
   balance_supply_min_use:
     description: "Set the lower bound on the quantity of its source a `supply` technology must use in each timestep."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "source_min AND NOT source_equals AND inheritance(supply) AND flow_eff>0"
+    where: "source_min AND NOT source_equals AND inheritance(supply)"
     equations:
-      - expression: "flow_out / flow_eff >= source_min * $source_scaler"
+      - expression: "flow_out / (flow_out_eff * parasitic_eff) >= source_min * $source_scaler"
     sub_expressions:
       source_scaler: *source_scaler
 
@@ -211,12 +209,10 @@ constraints:
     where: "inheritance(demand)"
     equations:
       - where: "sink_equals"
-        expression: "$flow_in == sink_equals * $sink_scaler"
+        expression: "flow_in * flow_in_eff == sink_equals * $sink_scaler"
       - where: "NOT sink_equals AND sink_max"
-        expression: "$flow_in <= sink_max * $sink_scaler"
+        expression: "flow_in * flow_in_eff <= sink_max * $sink_scaler"
     sub_expressions:
-      flow_in:
-        - expression: flow_in * flow_eff
       sink_scaler: &sink_scaler
         - where: "sink_unit=per_area"
           expression: "area_use"
@@ -228,9 +224,9 @@ constraints:
   balance_demand_min_use:
     description: "Set the lower bound on the quantity of flow a `demand` technology must dump to its sink in each timestep."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "sink_min AND NOT source_equals AND inheritance(supply) AND flow_eff>0"
+    where: "sink_min AND NOT source_equals AND inheritance(supply)"
     equations:
-      - expression: "sink_min * $sink_scaler <= flow_in * flow_eff"
+      - expression: "flow_in * flow_in_eff >= sink_min * $sink_scaler"
     sub_expressions:
       sink_scaler: *sink_scaler
 
@@ -239,22 +235,15 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(supply_plus) AND NOT include_storage=True"
     equations:
-      - expression: source_use * source_eff == $flow_out
-    sub_expressions:
-      flow_out: &flow_out_with_parasitic
-        - where: flow_eff=0 OR parasitic_eff=0
-          expression: "0"
-        - where: NOT (flow_eff=0 OR parasitic_eff=0)
-          expression: flow_out / (flow_eff * parasitic_eff)
+      - expression: flow_out == source_use * source_eff * flow_out_eff * parasitic_eff
 
   balance_supply_plus_with_storage:
     description: "Set the upper bound on, or a fixed total of, a `supply_plus` (with storage) technology's ability to produce flow based on the quantity of consumed resource and available stored carrier."
     foreach: [nodes, techs, carriers, timesteps]
     where: "storage AND inheritance(supply_plus)"
     equations:
-      - expression: storage == $storage_previous_step + source_use * source_eff - $flow_out
+      - expression: storage == $storage_previous_step + source_use * source_eff - flow_out / (flow_out_eff * parasitic_eff)
     sub_expressions:
-      flow_out: *flow_out_with_parasitic
       storage_previous_step: &storage_previous_step
         - where: timesteps=get_val_at_index(timesteps=0) AND NOT config.cyclic_storage=True
           expression: storage_initial * storage_cap
@@ -280,13 +269,8 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(storage)"
     equations:
-      - expression: storage == $storage_previous_step - $flow_out + reduce_carrier_dim(flow_in, carrier_tier=in) * flow_eff
+      - expression: storage == $storage_previous_step - reduce_carrier_dim(flow_out, carrier_tier=out) / (flow_out_eff * parasitic_eff) + reduce_carrier_dim(flow_in, carrier_tier=in) * flow_in_eff
     sub_expressions:
-      flow_out:
-        - where: flow_eff > 0
-          expression: reduce_carrier_dim(flow_out, carrier_tier=out) / flow_eff
-        - where: flow_eff = 0
-          expression: "0"
       storage_previous_step: *storage_previous_step
 
   set_storage_initial:
@@ -304,7 +288,18 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(transmission) AND allowed_flow_out=True"
     equations:
-      - expression: "flow_out == select_from_lookup_arrays(flow_in, techs=link_remote_techs, nodes=link_remote_nodes) * flow_eff"
+      - expression: "flow_out == select_from_lookup_arrays(flow_in * flow_in_eff * $distance_flow_in_eff, techs=link_remote_techs, nodes=link_remote_nodes) * (flow_out_eff * parasitic_eff * $distance_flow_out_eff)"
+    sub_expressions:
+      distance_flow_out_eff:
+        - where: flow_out_eff_per_distance AND distance
+          expression: flow_out_eff_per_distance ** distance
+        - where: NOT (flow_out_eff_per_distance AND distance)
+          expression: "1"
+      distance_flow_in_eff:
+        - where: flow_in_eff_per_distance AND distance
+          expression: flow_in_eff_per_distance ** distance
+        - where: NOT (flow_in_eff_per_distance AND distance)
+          expression: "1"
 
   symmetric_transmission:
     description: "Fix the flow capacity of two `transmission` technologies representing the same link in the system."
@@ -633,45 +628,47 @@ global_expressions:
     description: "The operating costs per timestep of a technology"
     unit: cost_per_time
     foreach: [nodes, techs, costs, timesteps]
-    where: "cost_export OR cost_om_con OR cost_om_prod"
+    where: "cost_export OR cost_flow_in OR cost_flow_out"
     equations:
-      - expression: timestep_weights * ($cost_export + $cost_om_prod + $cost_om_con)
+      - expression: timestep_weights * ($cost_export + $cost_flow_out + $cost_flow_in)
     sub_expressions:
       cost_export:
         - where: "export_carrier AND cost_export"
           expression: cost_export * sum(flow_export, over=carriers)
         - where: "NOT cost_export"
           expression: "0"
-      cost_om_con:
-        - where: "cost_om_con AND inheritance(supply_plus)"
-          expression: cost_om_con * source_use
-        - where: "cost_om_con AND inheritance(supply) AND flow_eff>0 AND [out] in carrier_tiers"
-          expression: cost_om_con * reduce_carrier_dim(flow_out, carrier_tier=out) / flow_eff
-        - where: "cost_om_con AND inheritance(conversion_plus)"
-          expression: cost_om_con * reduce_primary_carrier_dim(flow_in, carrier_tier=in)
-        - where: "cost_om_con AND NOT (inheritance(conversion_plus) OR inheritance(supply_plus) OR inheritance(supply)) AND [in] in carrier_tiers"
-          expression: cost_om_con * reduce_carrier_dim(flow_in, carrier_tier=in)
-        - where: "NOT cost_om_con"
+      cost_flow_in:
+        - where: "cost_flow_in AND inheritance(supply_plus)"
+          expression: cost_flow_in * source_use
+        - where: "cost_flow_in AND inheritance(supply) AND [out] in carrier_tiers"
+          expression: cost_flow_in * reduce_carrier_dim(flow_out, carrier_tier=out) / flow_out_eff
+        - where: "cost_flow_in AND inheritance(conversion_plus)"
+          expression: cost_flow_in * reduce_primary_carrier_dim(flow_in, carrier_tier=in)
+        - where: "cost_flow_in AND NOT (inheritance(conversion_plus) OR inheritance(supply_plus) OR inheritance(supply)) AND [in] in carrier_tiers"
+          expression: cost_flow_in * reduce_carrier_dim(flow_in, carrier_tier=in)
+        - where: "NOT cost_flow_in"
           expression: "0"
-      cost_om_prod:
-        - where: "cost_om_prod AND inheritance(conversion_plus)"
-          expression: cost_om_prod * reduce_primary_carrier_dim(flow_out, carrier_tier=out)
-        - where: "cost_om_prod AND NOT inheritance(conversion_plus)"
-          expression: cost_om_prod * reduce_carrier_dim(flow_out, carrier_tier=out)
-        - where: "NOT cost_om_prod"
+      cost_flow_out:
+        - where: "cost_flow_out AND inheritance(conversion_plus)"
+          expression: cost_flow_out * reduce_primary_carrier_dim(flow_out, carrier_tier=out)
+        - where: "cost_flow_out AND NOT inheritance(conversion_plus)"
+          expression: cost_flow_out * reduce_carrier_dim(flow_out, carrier_tier=out)
+        - where: "NOT cost_flow_out"
           expression: "0"
 
   cost_investment:
     description: "The installation costs of a technology, including annualised investment costs and annual maintenance costs."
     unit: cost
     foreach: [nodes, techs, costs]
-    where: "(cost_flow_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_area_use OR cost_source_cap OR cost_storage_cap)"
+    where: "(cost_flow_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_area_use OR cost_source_cap OR cost_storage_cap OR cost_flow_cap_per_distance OR cost_purchase_per_distance)"
     equations:
       - expression: >
           annualisation_weight * (
             cost_depreciation_rate * (
-                $cost_flow_cap + $cost_storage_cap + $cost_source_cap
-                + $cost_area_use + $cost_of_purchase
+                $cost_flow_cap + $distance_cost_flow_cap
+                + $cost_storage_cap + $cost_source_cap
+                + $cost_area_use
+                + $cost_of_purchase + $distance_cost_of_purchase
               ) * ($multiplier + cost_om_annual_investment_fraction)
               + cost_om_annual * flow_cap
           )
@@ -685,6 +682,11 @@ global_expressions:
         - where: "cost_flow_cap"
           expression: cost_flow_cap * flow_cap
         - where: "NOT cost_flow_cap"
+          expression: "0"
+      distance_cost_flow_cap:
+        - where: "cost_flow_cap_per_distance AND distance"
+          expression: cost_flow_cap_per_distance * flow_cap * distance
+        - where: "NOT (cost_flow_cap_per_distance AND distance)"
           expression: "0"
       cost_storage_cap:
         - where: "cost_storage_cap AND storage_cap"
@@ -707,6 +709,13 @@ global_expressions:
         - where: "cost_purchase AND units"
           expression: "cost_purchase * units"
         - where: "NOT (cost_purchase AND (purchased OR units))"
+          expression: "0"
+      distance_cost_of_purchase:
+        - where: "cost_purchase_per_distance AND distance AND purchased"
+          expression: cost_purchase_per_distance * purchased * distance
+        - where: "cost_purchase_per_distance AND distance AND units"
+          expression: cost_purchase_per_distance * units * distance
+        - where: "NOT (cost_purchase_per_distance AND distance AND (purchased OR units))"
           expression: "0"
 
   cost:
