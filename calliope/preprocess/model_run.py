@@ -541,6 +541,7 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     # Generate set of all files and dataframes we want to load
     location_config = model_run.locations.as_dict_flat()
     model_config = config_model.model.as_dict_flat()
+    group_constraint_config = config_model.group_constraints.as_dict_flat()
 
     # Find names of csv files (file=) or dataframes (df=) called in config
     def get_names(datatype, config):
@@ -556,6 +557,7 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     cluster_filenames = get_names("file", model_config)
     constraint_dfnames = get_names("df", location_config)
     cluster_dfnames = get_names("df", model_config)
+    group_constraint_filenames = get_names("file", group_constraint_config)
 
     # Check if timeseries_dataframes is in the correct format (dict of
     # pandas DataFrames)
@@ -572,6 +574,7 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
             | cluster_filenames
             | constraint_dfnames
             | cluster_dfnames
+            | group_constraint_filenames
         )
         == 0
     ):
@@ -583,10 +586,10 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     # Load each timeseries into timeseries data. tskey is either a filename
     # (called by file=...) or a key in timeseries_dataframes (called by df=...)
     for tskey in (
-        constraint_filenames | cluster_filenames | constraint_dfnames | cluster_dfnames
+        constraint_filenames | cluster_filenames | constraint_dfnames | cluster_dfnames | group_constraint_filenames
     ):  # Filenames or dict keys
         # If tskey is a CSV path, load the CSV, else load the dataframe
-        if tskey in constraint_filenames | cluster_filenames:
+        if tskey in constraint_filenames | cluster_filenames | group_constraint_filenames:
             df = load_timeseries_from_file(config_model, tskey)
         elif tskey in constraint_dfnames | cluster_dfnames:
             df = load_timeseries_from_dataframe(timeseries_dataframes, tskey)
