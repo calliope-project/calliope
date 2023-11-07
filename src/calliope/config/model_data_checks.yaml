@@ -1,0 +1,14 @@
+fail:
+  - where: cost_flow_cap<0 and not flow_cap ...
+    message: "Cannot have a negative investment cost as there is an unset corresponding capacity constraint"
+  - where: source_equals=inf or sink_equals=inf
+    message: "Cannot include infinite values in `source_equals`/`sink_equals`"
+  - where: (any(latitude, over=nodes) or any(longitude, over=nodes)) and not latitude or not longitude
+    message: "Must define node latitude and longitude for _all_ nodes or _no_ nodes."
+  - where: inheritance(supply) and carrier_in
+    message: `supply` techs cannot define `carrier_in`
+    - where: inheritance(demand) and carrier_out
+    message: `demand` techs cannot define `carrier_out`
+warn:
+  - where: cost_flow_cap and not flow_cap ...
+    message:

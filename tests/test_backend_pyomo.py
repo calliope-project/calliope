@@ -9,8 +9,8 @@ import pandas as pd
 import pyomo.kernel as pmo
 import pytest  # noqa: F401
 import xarray as xr
+from calliope.attrdict import AttrDict
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
-from calliope.core.attrdict import AttrDict
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, check_variable_exists

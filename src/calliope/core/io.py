@@ -21,7 +21,7 @@ import xarray as xr
 
 from calliope import exceptions
 from calliope._version import __version__
-from calliope.core.attrdict import AttrDict
+from calliope.attrdict import AttrDict
 
 
 def read_netcdf(path):

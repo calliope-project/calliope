@@ -10,42 +10,30 @@ overrides:
     techs:
       # chp-start
       chp:
-        switches.cap_method: integer
-        constraints:
-          units_max: 4
-          flow_cap_per_unit: 300
-          flow_out_min_relative: 0.2
-        costs:
-          monetary:
-            flow_cap: 700
-            purchase: 40000
+        cap_method: integer
+        units_max: 4
+        flow_cap_per_unit: 300
+        flow_out_min_relative: 0.2
+        cost_flow_cap.data: 700
+        cost_purchase:
+          data: 40000
+          index: monetary
+          dims: costs
       # chp-end
       # boiler-start
       boiler:
-        switches.cap_method: binary
-        costs:
-          monetary:
-            flow_cap: 35
-            purchase: 2000
+        cap_method: binary
+        cost_flow_cap.data: 35
+        cost_purchase:
+          data: 2000
+          index: monetary
+          dims: costs
       # boiler-end
       # heat_pipes-start
+    link_groups:
       heat_pipes:
-        constraints:
-          force_async_flow: true
+        force_async_flow: true
       # heat_pipes-end
-
-  mapbox_ready:
-    nodes:
-      X1.coordinates: { lat: 51.4596158, lon: -0.1613446 }
-      X2.coordinates: { lat: 51.4652373, lon: -0.1141548 }
-      X3.coordinates: { lat: 51.4287016, lon: -0.1310635 }
-      N1.coordinates: { lat: 51.4450766, lon: -0.1247183 }
-    links:
-      X1,X2.techs.power_lines.distance: 10
-      X1,X3.techs.power_lines.distance: 5
-      X1,N1.techs.heat_pipes.distance: 3
-      N1,X2.techs.heat_pipes.distance: 3
-      N1,X3.techs.heat_pipes.distance: 4
 
   operate:
     config:
@@ -58,26 +46,26 @@ overrides:
     nodes:
       X1:
         techs:
-          chp.constraints.flow_cap_max: 300
-          pv.constraints.flow_cap_max: 0
-          supply_grid_power.constraints.flow_cap_max: 40
-          supply_gas.constraints.flow_cap_max: 700
+          chp.flow_cap_max: 300
+          pv.flow_cap_max: 0
+          supply_grid_power.flow_cap_max: 40
+          supply_gas.flow_cap_max: 700
 
       X2:
         techs:
-          boiler.constraints.flow_cap_max: 200
-          pv.constraints.flow_cap_max: 70
-          supply_gas.constraints.flow_cap_max: 250
+          boiler.flow_cap_max: 200
+          pv.flow_cap_max: 70
+          supply_gas.flow_cap_max: 250
 
       X3:
         techs:
-          boiler.constraints.flow_cap_max: 0
-          pv.constraints.flow_cap_max: 50
-          supply_gas.constraints.flow_cap_max: 0
+          boiler.flow_cap_max: 0
+          pv.flow_cap_max: 50
+          supply_gas.flow_cap_max: 0
 
-    links:
-      X1,X2.techs.power_lines.constraints.flow_cap_max: 300
-      X1,X3.techs.power_lines.constraints.flow_cap_max: 60
-      X1,N1.techs.heat_pipes.constraints.flow_cap_max: 300
-      N1,X2.techs.heat_pipes.constraints.flow_cap_max: 250
-      N1,X3.techs.heat_pipes.constraints.flow_cap_max: 320
+    techs:
+      X1_to_X2.flow_cap_max: 300
+      X1_to_X3.flow_cap_max: 60
+      X1_to_N1.flow_cap_max: 300
+      N1_to_X2.flow_cap_max: 250
+      N1_to_X3.flow_cap_max: 320

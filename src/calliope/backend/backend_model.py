@@ -25,9 +25,9 @@ import numpy as np
 import xarray as xr
 
 from calliope import exceptions
+from calliope.attrdict import AttrDict
 from calliope.backend import parsing
-from calliope.core.attrdict import AttrDict
-from calliope.core.util.tools import validate_dict
+from calliope.util.tools import validate_dict
 
 if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
@@ -358,9 +358,9 @@ class BackendModelGenerator(ABC):
         for param_name, param_data in self.inputs.filter_by_attrs(
             is_result=0
         ).data_vars.items():
-            default_val = self.inputs.attrs["defaults"].get(param_name, np.nan)
+            default_val = param_data.attrs.get("default", np.nan)
             self.add_parameter(param_name, param_data, default_val)
-        for param_name, default_val in self.inputs.attrs["defaults"].items():
+        for param_name, default_val in self.inputs.attrs["default"].items():
             if param_name in self.parameters.keys():
                 continue
             self.log(

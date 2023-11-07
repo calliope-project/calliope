@@ -1,45 +1,69 @@
-# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
-# Licensed under the Apache 2.0 License (see LICENSE file).
-
-"""
-model_data.py
-~~~~~~~~~~~~~~~~~~
-
-Functionality to build the model-internal data array and process
-time-varying param_dict.
-
-"""
-import importlib
+import itertools
 import logging
-import re
-from pathlib import Path
-from typing import Optional
+from copy import deepcopy
+from typing import Literal, Optional
 
 import numpy as np
 import pandas as pd
 import xarray as xr
+from geographiclib import geodesic
+from typing_extensions import NotRequired, TypedDict
 
-from calliope import exceptions
-from calliope._version import __version__
-from calliope.core.attrdict import AttrDict
-from calliope.preprocess import checks, time
+from calliope.attrdict import AttrDict
+from calliope.preprocess import time
+from calliope.util import tools
+
+LOGGER = logging.getLogger(__name__)
+
+DATA_T = Optional[float | int | bool | str] | list[Optional[float | int | bool | str]]
+
+
+class Param(TypedDict):
+    data: DATA_T
+    index: list[list[str]]
+    dims: list[str]
+
+
+class ModelDefinition(TypedDict):
+    techs: AttrDict
+    nodes: AttrDict
+    tech_groups: NotRequired[AttrDict]
+    node_groups: NotRequired[AttrDict]
+    parameters: NotRequired[AttrDict]
+
 
 LOGGER = logging.getLogger(__name__)
 
 
 class ModelDataFactory:
-    UNWANTED_TECH_KEYS = [
-        "allowed_constraints",
-        "required_constraints",
-        "allowed_costs",
-        "allowed_switches",
-        "constraints",
-        "essentials.carrier",
+    LOOKUP_PARAMS = {
+        "carrier_in": "carriers",
+        "carrier_out": "carriers",
+        "carrier_export": "carriers",
+    }
+
+    # Output of: sns.color_palette('cubehelix', 10).as_hex()
+    _DEFAULT_PALETTE = [
+        "#19122b",
+        "#17344c",
+        "#185b48",
+        "#3c7632",
+        "#7e7a36",
+        "#bc7967",
+        "#d486af",
+        "#caa9e7",
+        "#c2d2f3",
+        "#d6f0ef",
     ]
 
-    LOOKUP_STR = "[\\w\\-]*"  # all alphanumerics + `_` and `-`
-
-    def __init__(self, model_run_dict):
+    def __init__(
+        self,
+        model_config: dict,
+        model_definition: ModelDefinition,
+        attributes: dict,
+        param_attributes: dict[str, dict],
+        model_def_schema: dict,
+    ):
         """
         Take a Calliope model_run and convert it into an xarray Dataset, ready for
         constraint generation. Timeseries data is also extracted from file at this
@@ -62,80 +86,388 @@ class ModelDataFactory:
             in attributes.
 
         """
-        self.node_dict: dict = model_run_dict.nodes.as_dict_flat()
-        self.tech_dict: dict = model_run_dict.techs.as_dict_flat()
-        self.timeseries_vars: set[str] = model_run_dict.timeseries_vars
-        self.timeseries_data: pd.DataFrame = model_run_dict.timeseries_data
-        self.time_data_path: Path = model_run_dict.config.init.time_data_path
-        self.time_resample: Optional[str] = model_run_dict.config.init.time_resample
-        self.time_cluster: Optional[str] = model_run_dict.config.init.time_cluster
-        self.time_format: str = model_run_dict.config.init.time_format
-        self.params: AttrDict = model_run_dict.parameters
+        self.config: dict = model_config
+        self.model_definition: ModelDefinition = model_definition.copy()
+        self.schema = model_def_schema
+        self.model_data = xr.Dataset(attrs=AttrDict({**attributes, **param_attributes}))
 
-        self.model_data = xr.Dataset(coords={"timesteps": self.timeseries_data.index})
-        self._add_attributes(model_run_dict)
-        self.template_config = AttrDict.from_yaml(
-            importlib.resources.files("calliope") / "config" / "model_data_lookup.yaml"
+        flipped_attributes: dict[str, dict] = dict()
+        for key, val in param_attributes.items():
+            for subkey, subval in val.items():
+                flipped_attributes.setdefault(subkey, {})
+                flipped_attributes[subkey][key] = subval
+        self.param_attrs = flipped_attributes
+
+    def add_node_tech_data(self):
+        active_node_dict = self._inherit_defs("nodes")
+        links_at_nodes = self._links_to_node_format(active_node_dict)
+
+        node_tech_data = []
+        for node_name, node_data in active_node_dict.items():
+            techs_this_node = node_data.pop("techs")
+            if techs_this_node is None:
+                techs_this_node = AttrDict()
+            node_ref_vars = self._get_relevant_node_refs(techs_this_node, node_name)
+            techs_this_node_incl_inheritance = self._inherit_defs(
+                "techs",
+                techs_this_node,
+                err_message_prefix=f"(nodes, {node_name}), ",
+            )
+
+            tools.validate_dict(
+                {"techs": techs_this_node_incl_inheritance},
+                self.schema,
+                f"tech definition at node `{node_name}`",
+            )
+            techs_this_node_incl_inheritance.union(
+                links_at_nodes.get(node_name, AttrDict())
+            )
+
+            tech_ds = self._definition_dict_to_ds(
+                techs_this_node_incl_inheritance, "techs"
+            )
+            tech_ds.coords["nodes"] = node_name
+            for ref_var in node_ref_vars:
+                tech_ds[ref_var] = tech_ds[ref_var].expand_dims("nodes")
+            tech_ds = self._add_active_node_tech(tech_ds)
+            node_tech_data.append(tech_ds)
+
+        node_tech_ds = xr.combine_nested(
+            node_tech_data,
+            concat_dim="nodes",
+            data_vars="different",
+            combine_attrs="no_conflicts",
+            coords="different",
         )
 
-        self._strip_unwanted_keys()
-        self._add_node_tech_sets()
+        node_ds = self._definition_dict_to_ds(active_node_dict, "nodes")
+        self.model_data = xr.merge([self.model_data, node_tech_ds, node_ds])
 
-    def __call__(self):
-        self._extract_node_tech_data()
-        self._add_time_dimension()
-        self._clean_model_data()
-
-        return (
-            self.model_data_pre_clustering,
-            self.model_data,
-            self.data_pre_time,
-            self.stripped_keys,
-        )
-
-    def _extract_node_tech_data(self):
-        self._add_param_from_template()
-        self._add_top_level_params()
-        self._clean_unused_techs_nodes_and_carriers()
-
-    def _add_top_level_params(self):
-        for param_name, param_data in self.params.items():
+    def add_top_level_params(self):
+        for param_name, param_data in self.model_definition["parameters"].items():
             if param_name in self.model_data.data_vars:
                 raise KeyError(
                     f"Trying to add top-level parameter with same name as a node/tech level parameter: {param_name}"
                 )
-
-            if not isinstance(param_data, dict):
-                param_data = {"data": param_data}
-
-            if "dims" in param_data:
-                index = param_data.get("index", None)
-                if index is None or not isinstance(index, list):
-                    raise ValueError(
-                        f"(parameters, {param_name}) | Expected list for `index`, received: {index}"
-                    )
-                _index = [
-                    tuple(idx) if isinstance(idx, list) else tuple([idx])
-                    for idx in param_data["index"]
-                ]
-                _dims = (
-                    param_data["dims"]
-                    if isinstance(param_data["dims"], list)
-                    else [param_data["dims"]]
-                )
-                param_series = pd.Series(
-                    data=param_data["data"],
-                    index=pd.MultiIndex.from_tuples(_index, names=_dims),
-                    name=param_name,
-                )
-                param_da = param_series.to_xarray()
-            else:
-                param_da = xr.DataArray(param_data["data"], name=param_name)
-
+            param_dict = self._prepare_param_dict(param_name, param_data)
+            param_da = self._param_dict_to_array(param_name, param_dict)
             self._update_param_coords(param_name, param_da)
             self._log_param_updates(param_name, param_da)
+            param_ds = param_da.to_dataset()
 
-            self.model_data = self.model_data.merge(param_da.to_dataset())
+            if "techs" in param_da.dims and "nodes" in param_da.dims:
+                param_ds = self._add_active_node_tech(param_ds)
+
+            self.model_data = self.model_data.merge(param_ds)
+
+    def add_time_dimension(self, timeseries_dfs: Optional[dict[str, pd.DataFrame]]):
+        self.model_data = time.add_time_dimension(
+            self.model_data, self.config, timeseries_dfs
+        )
+        self.model_data = time.add_inferred_time_params(self.model_data)
+        if self.config["time_resample"] is not None:
+            self.model_data = time.resample(
+                self.model_data, self.config["time_resample"]
+            )
+        if self.config["time_cluster"] is not None:
+            self.model_data = time.cluster(self.model_data, self.config["time_cluster"])
+
+        self._update_dtypes()
+
+    def clean_data_from_undefined_members(self):
+        def_matrix = self.model_data.active.notnull() & (
+            self.model_data.carrier_in.notnull() | self.model_data.carrier_out.notnull()
+        )
+        # NaNing values where they are irrelevant requires definition_matrix to be boolean
+        for var_name, var_data in self.model_data.data_vars.items():
+            non_dims = set(def_matrix.dims).difference(var_data.dims)
+            self.model_data[var_name] = var_data.where(def_matrix.any(non_dims))
+
+        # dropping index values where they are irrelevant requires definition_matrix to be NaN where False
+        self.model_data["definition_matrix"] = def_matrix.where(def_matrix)
+        for dim in def_matrix.dims:
+            orig_dim_vals = set(self.model_data.coords[dim].data)
+            self.model_data = self.model_data.dropna(
+                dim, how="all", subset=["definition_matrix"]
+            )
+            deleted_dim_vals = orig_dim_vals.difference(
+                set(self.model_data.coords[dim].data)
+            )
+            if deleted_dim_vals:
+                LOGGER.debug(
+                    f"Deleting {dim} values as they are not defined anywhere in the model: {deleted_dim_vals}"
+                )
+
+        # The boolean version of definition_matrix is what we keep
+        self.model_data["definition_matrix"] = def_matrix
+
+        vars_to_delete = [
+            var_name
+            for var_name, var in self.model_data.data_vars.items()
+            if var.isnull().all()
+        ]
+        if vars_to_delete:
+            LOGGER.debug(f"Deleting empty parameters: {vars_to_delete}")
+        self.model_data = self.model_data.drop_vars(vars_to_delete)
+
+    def add_link_distances(self):
+        # If no distance was given, we calculate it from coordinates
+        if (
+            "latitude" in self.model_data.data_vars
+            and "longitude" in self.model_data.data_vars
+        ):
+            geod = geodesic.Geodesic.WGS84
+            distances = {}
+            for tech in self.model_data.techs:
+                latitudes = self.model_data.latitude.sel(techs=tech).dropna("nodes")
+                longitudes = self.model_data.longitude.sel(techs=tech).dropna("nodes")
+                node1, node2 = latitudes.nodes.values
+                distances[tech] = geod.Inverse(
+                    latitudes.sel(nodes=node1),
+                    longitudes.sel(nodes=node1),
+                    latitudes.sel(nodes=node2),
+                    longitudes.sel(nodes=node2),
+                )["s12"]
+            distance_array = pd.Series(distances).rename_axis(index="techs").to_xarray()
+        else:
+            distance_array = xr.DataArray(np.nan)
+
+        if "distance" not in self.model_data.data_vars:
+            self.model_data["distance"] = distance_array
+            LOGGER.debug(
+                "Link distance matrix automatically computed from lat/lon coordinates."
+            )
+        else:
+            self.model_data["distance"].fillna(distance_array)
+            LOGGER.debug(
+                "Missing link distances automatically computed from lat/lon coordinates."
+            )
+
+    def assign_input_attr(self):
+        for var_name, var_data in self.model_data.data_vars.items():
+            self.model_data[var_name] = var_data.assign_attrs(is_result=False)
+
+    def _get_relevant_node_refs(self, tech_dict: AttrDict, node: str):
+        refs = set()
+        for key, val in tech_dict.as_dict_flat().items():
+            if (
+                isinstance(val, str)
+                and val.startswith(("file=", "df="))
+                and ":" not in val
+            ):
+                tech_dict.set_key(key, val + ":" + node)
+
+        for tech, _dict in tech_dict.items():
+            if _dict is None:
+                continue
+            else:
+                refs.update(_dict.keys())
+        return list(refs)
+
+    @staticmethod
+    def _add_active_node_tech(ds: xr.Dataset) -> xr.Dataset:
+        if not ds.nodes.shape:
+            ds["nodes"] = ds["nodes"].expand_dims("nodes")
+
+        ds["active"] = xr.DataArray(
+            data=True,
+            dims=("nodes", "techs"),
+            coords={"nodes": ds.nodes, "techs": ds.techs},
+        )
+        return ds
+
+    def _param_dict_to_array(self, param_name: str, param_data: Param) -> xr.DataArray:
+        if param_data["dims"]:
+            param_series = pd.Series(
+                data=param_data["data"],
+                index=[tuple(idx) for idx in param_data["index"]],
+            )
+            param_series.index = pd.MultiIndex.from_tuples(
+                param_series.index, names=param_data["dims"]
+            )
+            param_da = param_series.to_xarray()
+        else:
+            param_da = xr.DataArray(param_data["data"])
+        param_da = param_da.rename(param_name).assign_attrs(
+            self.param_attrs.get(param_name, {})
+        )
+        return param_da
+
+    def _combine_param_dicts_to_dataset(self, params: dict[str, Param]) -> xr.Dataset:
+        param_ds = xr.combine_by_coords(
+            [
+                self._param_dict_to_array(param_name, param_data)
+                for param_name, param_data in params.items()
+            ]
+        )
+        return param_ds
+
+    def _definition_dict_to_ds(
+        self,
+        dim_dict: dict[str, dict[str, dict | list[str] | DATA_T]],
+        dim_name: str,
+    ) -> xr.Dataset:
+        param_ds = xr.Dataset()
+        for idx_name, idx_params in dim_dict.items():
+            params: dict[str, Param] = {}
+            for param_name, param_data in idx_params.items():
+                param_dict = self._prepare_param_dict(param_name, param_data)
+                param_dict["index"] = [[idx_name] + idx for idx in param_dict["index"]]
+                param_dict["dims"].insert(0, dim_name)
+                params[param_name] = param_dict
+            param_ds = xr.merge(
+                [param_ds, self._combine_param_dicts_to_dataset(params)]
+            )
+
+        return param_ds
+
+    def _prepare_param_dict(
+        self, param_name: str, param_data: dict | list[str] | DATA_T
+    ) -> Param:
+        if isinstance(param_data, dict):
+            data = param_data["data"]
+            index_items = [
+                tools.listify(idx) for idx in tools.listify(param_data["index"])
+            ]
+            dims = tools.listify(param_data["dims"])
+        elif param_name in self.LOOKUP_PARAMS.keys():
+            data = True
+            index_items = [[i] for i in tools.listify(param_data)]
+            dims = [self.LOOKUP_PARAMS[param_name]]
+        else:
+            data = param_data
+            index_items = [[]]
+            dims = []
+        return {
+            "data": data,
+            "index": index_items,
+            "dims": dims,
+        }
+
+    def _inherit_defs(
+        self,
+        dim_name: Literal["nodes", "techs"],
+        dim_dict: Optional[AttrDict] = None,
+        err_message_prefix: str = "",
+    ) -> AttrDict:
+        updated_defs = AttrDict()
+        if dim_dict is None:
+            dim_dict = self.model_definition[dim_name]
+
+        for item_name, item_def in dim_dict.items():
+            if item_def is None:
+                item_def = AttrDict()
+            if not item_def.get("active", True):
+                LOGGER.debug(f"({dim_name}, {item_name}) | Deactivated.")
+                continue
+            if dim_name == "techs":
+                base_def = self.model_definition["techs"]
+                if item_name not in base_def:
+                    raise KeyError(
+                        f"{err_message_prefix}({dim_name}, {item_name}) | Reference to item not defined in {dim_name}"
+                    )
+
+                item_base_def = deepcopy(base_def[item_name])
+                item_base_def.union(item_def, allow_override=True)
+            else:
+                item_base_def = item_def
+            updated_defs[item_name], inheritance = self._climb_inheritance_tree(
+                item_base_def, dim_name, item_name
+            )
+            if inheritance is not None:
+                updated_defs[item_name][f"{dim_name}_inheritance"] = ",".join(
+                    inheritance
+                )
+                updated_defs.del_key(f"{item_name}.inherit")
+        return updated_defs
+
+    def _climb_inheritance_tree(
+        self,
+        dim_item_dict: AttrDict,
+        dim_name: str,
+        item_name: str,
+        inheritance: Optional[list] = None,
+    ) -> tuple[AttrDict, Optional[list]]:
+        dim_name_singular = dim_name.removesuffix("s")
+        dim_group_def = self.model_definition.get(f"{dim_name_singular}_groups", None)
+        to_inherit = dim_item_dict.get("inherit", None)
+        if to_inherit is None:
+            updated_dim_item_dict = dim_item_dict
+        elif dim_group_def is None or to_inherit not in dim_group_def:
+            raise KeyError(
+                f"({dim_name}, {item_name}) | Cannot find `{to_inherit}` in inheritance tree."
+            )
+        else:
+            base_def_dict, inheritance = self._climb_inheritance_tree(
+                dim_group_def[to_inherit], dim_name_singular, to_inherit, inheritance
+            )
+            updated_dim_item_dict = deepcopy(base_def_dict)
+            updated_dim_item_dict.union(dim_item_dict, allow_override=True)
+            if inheritance is not None:
+                inheritance.append(to_inherit)
+            else:
+                inheritance = [to_inherit]
+        return updated_dim_item_dict, inheritance
+
+    @staticmethod
+    def _duplicate_link_techs(link_name, link_tech_def, linked_nodes):
+        new_tech_dict = {
+            node: {link_name: v for k, v in link_tech_def.items()}
+            for node in linked_nodes
+        }
+        return new_tech_dict
+
+    def _links_to_node_format(self, active_node_dict: AttrDict) -> AttrDict:
+        active_link_techs = AttrDict(
+            {
+                tech: tech_def
+                for tech, tech_def in self._inherit_defs("techs").items()
+                if tech_def["parent"] == "transmission"
+            }
+        )
+        tools.validate_dict(
+            {"techs": active_link_techs},
+            self.schema,
+            "link tech definition",
+        )
+        link_tech_dict = AttrDict()
+        if not active_link_techs:
+            LOGGER.debug("links | No links between nodes defined.")
+
+        for link_name, link_data in active_link_techs.items():
+            node_from, node_to = link_data.pop("from"), link_data.pop("to")
+            if not any(node in active_node_dict for node in [node_from, node_to]):
+                LOGGER.debug(
+                    f"(links, {link_name}) | Deactivated due to missing/deactivated `from` or to `node`."
+                )
+                continue
+
+            link_tech_dict.union(
+                AttrDict(
+                    {node: {link_name: link_data} for node in [node_from, node_to]}
+                )
+            )
+
+        return link_tech_dict
+
+    def add_colors(self) -> xr.DataArray:
+        techs = self.model_data.techs
+        color_array = self.model_data.get("color")
+        default_palette_cycler = itertools.cycle(range(len(self._DEFAULT_PALETTE)))
+        new_color_array = xr.DataArray(
+            [self._DEFAULT_PALETTE[next(default_palette_cycler)] for tech in techs],
+            coords={"techs": techs},
+        )
+        if color_array is None:
+            LOGGER.debug("Building technology color array from default palette.")
+            return new_color_array
+        elif color_array.isnull().any():
+            LOGGER.debug(
+                "Filling missing technology color array values from default palette."
+            )
+            return color_array.fillna(new_color_array)
+        else:
+            return color_array
 
     def _update_param_coords(self, param_name: str, param_da: xr.DataArray) -> None:
         """
@@ -183,334 +515,12 @@ class ModelDataFactory:
                         f"`{coord_name}` model coordinate: {new_coord_data.values}"
                     )
 
-    def _add_time_dimension(self):
-        self.data_pre_time = self.model_data.copy(deep=True)
-        self.model_data = time.add_time_dimension(
-            self.model_data,
-            self.timeseries_vars,
-            self.timeseries_data,
-        )
-        self._update_dtypes()
-
-        self.model_data_pre_clustering = self.model_data.copy(deep=True)
-        if self.time_resample is not None:
-            self.model_data = time.resample(self.model_data, self.time_resample)
-        if self.time_cluster is not None:
-            cluster_data = self.timeseries_data.loc[:, self.time_cluster].squeeze()
-            self.model_data = time.cluster(self.model_data, cluster_data)
-
-        self.model_data["annualisation_weight"] = (
-            self.model_data.timestep_resolution * self.model_data.timestep_weights
-        ).sum() / 8760
-
-    def _clean_model_data(self):
-        self._add_var_attrs()
-        self._update_dtypes()
-        self._check_data()
-
-    @staticmethod
-    def _empty_or_invalid(var):
-        if isinstance(var, str):
-            return False
-        elif isinstance(var, list):
-            return not var or pd.isnull(var).any()
-        elif isinstance(var, (tuple, set, dict)):
-            return not var
-        else:
-            return pd.isnull(var)
-
-    def _strip_unwanted_keys(self):
-        """
-        These are keys in `model_run` that we don't need in `model_data`.
-        Removing them now ensures they don't end up in model_data by mistake
-        and that the final `tech_dict` and `node_dicts` should be empty if all
-        relevant data *has* made it through to model_data.
-        """
-        self.stripped_keys = list(
-            self._reformat_model_run_dict(
-                self.tech_dict,
-                [],
-                get_method="pop",
-                end="({})".format("|".join(self.UNWANTED_TECH_KEYS)),
-            ).keys()
-        )
-
-        for subdict in ["tech", "node"]:
-            for key, val in list(getattr(self, f"{subdict}_dict").items()):
-                if self._empty_or_invalid(val):
-                    self.stripped_keys.append(key)
-                    getattr(self, f"{subdict}_dict").pop(key)
-
-    def _add_node_tech_sets(self):
-        """
-        Run through the whole `model_run` and extract all the valid combinations of techs
-        at nodes.
-        """
-        kwargs = {"get_method": "get", "end": "\\.({0}).*"}
-        df = self._dict_to_df(
-            data_dict=self._reformat_model_run_dict(
-                self.node_dict, ["techs"], **kwargs
-            ),
-            data_dimensions=["nodes", "techs"],
-            is_link=False,
-            var_name="node_tech",
-        )
-
-        link_data_dict = self._reformat_model_run_dict(
-            self.node_dict, ["links", "techs"], **kwargs
-        )
-        if not link_data_dict:
-            self.link_techs = pd.Series([None])
-        else:
-            df_link = self._dict_to_df(
-                link_data_dict,
-                data_dimensions=["nodes", "node_to", "techs"],
-                is_link=True,
-                var_name="node_tech",
-            )
-            self._get_link_remotes(link_data_dict)
-            df = pd.concat([df, df_link])
-
-        df = self._all_df_to_true(df)
-
-        self.model_data = self.model_data.merge(xr.Dataset.from_dataframe(df))
-
-    def _get_link_remotes(self, link_data_dict):
-        df = self._dict_to_df(
-            data_dict=link_data_dict,
-            data_dimensions=["nodes", "node_to", "techs"],
-            is_link=False,
-            var_name="node_tech",
-        )
-        df = df.assign(
-            link_remote_techs=df.index.get_level_values("techs")
-            + ":"
-            + df.index.get_level_values("nodes"),
-            link_remote_nodes=df.index.get_level_values("node_to"),
-            base_techs=df.index.get_level_values("techs"),
-        )
-        df_all_link_techs = self._update_link_idx_levels(df)
-        self.link_techs = df_all_link_techs["base_techs"].groupby(level="techs").first()
-
-        self.model_data = self.model_data.merge(
-            xr.Dataset.from_dataframe(
-                df_all_link_techs.drop(["node_tech", "base_techs"], axis=1)
-            )
-        )
-
-    def _format_lookup(self, string_to_format):
-        return string_to_format.format(self.LOOKUP_STR)
-
-    def _get_key_matching_nesting(
-        self, nesting, key_to_check, start="({0})\\.", end="\\.({0})", **kwargs
-    ):
-        nesting_string = "\\.({0})\\.".join(nesting)
-        search_string = self._format_lookup(f"^{start}{nesting_string}{end}$")
-        return re.search(search_string, key_to_check)
-
-    def _reformat_model_run_dict(
-        self,
-        model_run_subdict,
-        expected_nesting,
-        get_method="pop",
-        values_as_dimension=False,
-        **kwargs,
-    ):
-        """
-        Extract key:value pairs from `model_run` which match the expected dictionary
-        nesting. If value is a list, return it as a `.` concatenated string.
-        """
-        data_dict = {}
-
-        for key in list(model_run_subdict.keys()):
-            key_match = self._get_key_matching_nesting(expected_nesting, key, **kwargs)
-            if key_match is None:
-                continue
-
-            groups = [tuple(key_match.groups())]
-            val = getattr(model_run_subdict, get_method)(key)
-            if self._empty_or_invalid(val):
-                continue
-            if values_as_dimension:
-                # this if/else is for multiple carriers defined under one carrier tier
-                if isinstance(val, list):
-                    groups = [groups[0] + (v,) for v in val]
-                else:
-                    groups[0] += (val,)
-                val = 1
-            if isinstance(val, list):
-                val = ".".join(val)
-            for group in groups:
-                data_dict[group] = val
-
-        if not data_dict:
-            return None
-        else:
-            return data_dict
-
-    def _dict_to_df(
-        self,
-        data_dict,
-        data_dimensions,
-        var_name=None,
-        var_name_prefix=None,
-        is_link=False,
-        **kwargs,
-    ):
-        """
-        Take in a dictionary with tuple keys and turn it into a pandas multi-index dataframe.
-        Index levels are data dimensions; columns are data variables.
-        """
-        df = pd.Series(data_dict)
-        if len(data_dimensions) < len(df.index.names):
-            df = df.unstack(-1)
-        elif var_name is not None:
-            df = df.to_frame(var_name)
-        df = df.rename_axis(index=data_dimensions)
-
-        if "var_name" in data_dimensions:
-            df = df.unstack(data_dimensions.index("var_name"))
-
-        if var_name_prefix is not None:
-            df = df.rename(columns=lambda x: var_name_prefix + "_" + x)
-
-        if is_link:
-            df = self._update_link_idx_levels(df)
-
-        return df
-
-    def _model_run_dict_to_dataset(
-        self,
-        group_name,
-        model_run_subdict_name,
-        expected_nesting,
-        data_dimensions,
-        **kwargs,
-    ):
-        """
-        Pop out key:value pairs from `model_run` nodes or techs subdicts,
-        and turn them into beautifully tabulated, multi-dimensional data in an
-        xarray dataset.
-        """
-        model_run_subdict = getattr(self, f"{model_run_subdict_name}_dict")
-        data_dict = self._reformat_model_run_dict(
-            model_run_subdict, expected_nesting, **kwargs
-        )
-        if data_dict is None:
-            LOGGER.debug(
-                f"Model build | No relevant data found for `{group_name}` group of parameters"
-            )
-            return None
-        df = self._dict_to_df(data_dict, data_dimensions, **kwargs)
-        if model_run_subdict_name == "tech":
-            df = self._update_link_tech_names(df)
-        new_model_data_vars = xr.Dataset.from_dataframe(df)
-
-        self.model_data = self.model_data.combine_first(new_model_data_vars)
-
-    def _update_link_tech_names(self, df):
-        """
-        tech-specific information will only have info on link techs by their base name,
-        but the data needs to be duplicated across all link techs, i.e. for every node
-        that tech is linking: (`tech_name` -> [`tech_name:node1`, `tech_name:node2`, ...])
-        """
-        if isinstance(df.index, pd.MultiIndex):
-            idx_to_stack = df.index.names.difference(["techs"])
-            df = df.unstack(idx_to_stack)
-        else:
-            idx_to_stack = []
-        if df.index.intersection(self.link_techs.values).empty:
-            return df.stack(idx_to_stack)
-        df_link_tech_data = df.reindex(self.link_techs.values)
-        df_link_tech_data.index = self.link_techs.index
-        df = (
-            pd.concat([df, df_link_tech_data])
-            .drop(self.link_techs.unique(), errors="ignore")
-            .dropna(how="all")
-            .stack(idx_to_stack)
-        )
-
-        return df
-
-    def _add_var_attrs(self):
-        for var_data in self.model_data.data_vars.values():
-            var_data.attrs["is_result"] = 0
-
-    @staticmethod
-    def _update_link_idx_levels(df):
-        """
-        ([(`tech_name`, `node1`), (`tech_name`, `node2`)] -> [`tech_name:node1`, `tech_name:node2`])
-        """
-        new_tech = (
-            df.index.get_level_values("techs")
-            + ":"
-            + df.index.get_level_values("node_to")
-        )
-        df = (
-            df.assign(techs=new_tech)
-            .droplevel(["techs", "node_to"])
-            .set_index("techs", append=True)
-        )
-        return df
-
-    @staticmethod
-    def _all_df_to_true(df):
-        return df == df
-
-    def _add_attributes(self, model_run):
-        attr_dict = AttrDict()
-
-        attr_dict["calliope_version"] = __version__
-        attr_dict["applied_overrides"] = model_run["applied_overrides"]
-        attr_dict["scenario"] = model_run["scenario"]
-
-        self.model_data.attrs = attr_dict
-
-    def _clean_unused_techs_nodes_and_carriers(self):
-        """
-        Remove techs not assigned to nodes, nodes with no associated techs, and carriers associated with removed techs
-        """
-        self.model_data["definition_matrix"] = (
-            self.model_data.node_tech + self.model_data.carrier
-        )
-        for dim in self.model_data["definition_matrix"].dims:
-            orig_dim_vals = set(self.model_data.coords[dim].data)
-            self.model_data = self.model_data.dropna(
-                dim, how="all", subset=["definition_matrix"]
-            )
-            deleted_dim_vals = orig_dim_vals.difference(
-                set(self.model_data.coords[dim].data)
-            )
-            if deleted_dim_vals:
-                LOGGER.debug(
-                    f"Deleting {dim} values as they are not defined anywhere in the model: {deleted_dim_vals}"
-                )
-
-        self.model_data[
-            "definition_matrix"
-        ] = self.model_data.definition_matrix.notnull()
-
-        vars_to_delete = [
-            var_name
-            for var_name, var in self.model_data.data_vars.items()
-            if var.isnull().all()
-        ]
-        if vars_to_delete:
-            LOGGER.debug(f"Deleting empty parameters: {vars_to_delete}")
-        self.model_data = self.model_data.drop_vars(
-            vars_to_delete + ["node_tech", "carrier"]
-        )
-
-    def _add_param_from_template(self):
-        for group, group_config in self.template_config.items():
-            self._model_run_dict_to_dataset(group_name=group, **group_config)
-
     def _update_dtypes(self):
         """
         Update dtypes to not be 'Object', if possible.
         Order of preference is: bool, int, float
         """
-        # TODO: this should be redundant once typedconfig is in (params will have predefined dtypes)
+        # TODO: this should be redundant once we load data from file and can check types from the schema
         for var_name, var in self.model_data.data_vars.items():
             if var.dtype.kind == "O":
                 no_nans = var.where(var != "nan", drop=True)
@@ -528,14 +538,3 @@ class ModelDataFactory:
                             )
                         except ValueError:
                             None
-
-    def _check_data(self):
-        if self.node_dict or self.tech_dict:
-            raise exceptions.ModelError(
-                "Some data not extracted from inputs into model dataset:\n"
-                f"{self.node_dict}"
-            )
-        self.model_data, final_check_comments, warns, errors = checks.check_model_data(
-            self.model_data
-        )
-        exceptions.print_warnings_and_raise_errors(warnings=warns, errors=errors)

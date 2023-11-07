@@ -2,8 +2,8 @@ import numpy as np
 import pyparsing
 import pytest
 import xarray as xr
+from calliope.attrdict import AttrDict
 from calliope.backend import expression_parser, helper_functions, where_parser
-from calliope.core.attrdict import AttrDict
 from calliope.exceptions import BackendError
 
 from .common.util import check_error_or_warning

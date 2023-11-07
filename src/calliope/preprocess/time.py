@@ -9,6 +9,8 @@ Functionality to add and process time varying parameters
 
 """
 import logging
+from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -20,7 +22,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 def add_time_dimension(
-    data: xr.Dataset, timeseries_vars: set[str], timeseries_data: pd.DataFrame
+    model_data: xr.Dataset,
+    init_config: dict,
+    timeseries_dfs: Optional[dict[str, pd.DataFrame]],
 ):
     """
     Once all constraints and costs have been loaded into the model dataset, any
@@ -28,7 +32,7 @@ def add_time_dimension(
 
     Parameters:
     -----------
-    data : xarray Dataset
+    model_data : xarray Dataset
         A data structure which has already gone through `constraints_to_dataset`,
         `costs_to_dataset`, and `add_attributes`
     model_run : AttrDict
@@ -41,69 +45,70 @@ def add_time_dimension(
         with all relevant `file=` and `df= `entries replaced with the correct data.
 
     """
-    key_errors = []
+    timeseries_loader = TimeseriesLoader(init_config, timeseries_dfs)
     # Search through every constraint/cost for use of '='
-    for variable in timeseries_vars:
-        # 2) convert to a Pandas Series to do 'string contains' search
-        data_series = data[variable].to_series().dropna()
-
-        # 3) get Series of all uses of 'file=' or 'df=' for this variable (timeseries keys)
-        try:
-            tskeys = data_series[
-                data_series.str.contains("file=") | data_series.str.contains("df=")
-            ]
-        except AttributeError:
+    for var_name, var_data in model_data.data_vars.items():
+        # 1) get Series of all uses of 'file=' or 'df=' for this variable (timeseries keys)
+        if var_data.astype(str).str.contains("^file=|df=").any():
+            var_series = var_data.to_series()
+            tskeys = var_series[var_series.str.contains("^file=|df=").notnull()]
+        else:
             continue
 
-        # 4) If no use of 'file=' or 'df=' then we can be on our way
+        # 2) If no use of 'file=' or 'df=' then we can be on our way
         if tskeys.empty:
             continue
 
-        # 5) remove all before '=' and split filename and node column
+        # 3) split data source ("df/file"), filename, and node column
         tskeys = (
-            tskeys.str.split("=")
-            .str[1]
-            .str.rsplit(":", n=1, expand=True)
-            .reset_index()
-            .rename(columns={0: "source", 1: "column"})
-            .set_index(["source", "column"])
+            tskeys.dropna()
+            .str.split("=|:", expand=True)
+            .rename(columns={0: "source_type", 1: "source", 2: "column"})
         )
-
-        # 6) Get all timeseries data from dataframes stored in model_run
-        try:
-            var_timeseries_data = timeseries_data.loc[:, tskeys.index]
-        except KeyError:
-            key_errors.append(
-                f"file:column combinations `{tskeys.index.values}` not found, but are"
-                f" requested by parameter `{variable}`."
+        if "column" not in tskeys.columns:
+            tskeys = tskeys.assign(column=np.nan)
+        if "nodes" in var_data.dims:
+            node_info = (
+                tskeys.index.get_level_values("nodes").unique()
+                if isinstance(tskeys.index, pd.MultiIndex)
+                else tskeys.index
             )
-            continue
+            tskeys["column"] = tskeys["column"].fillna(
+                node_info.to_series().align(tskeys)[0]
+            )
 
-        var_timeseries_data.columns = pd.MultiIndex.from_frame(tskeys)
+        # 4) Get all timeseries data from dataframes stored in model_run
+        ts_df = tskeys.apply(
+            timeseries_loader.load_timeseries, var_name=var_name, axis=1
+        ).rename_axis(columns="timesteps")
 
-        # 7) Add time dimension to the relevent DataArray and update the '='
+        # 5) Add time dimension to the relevent DataArray and update the '='
         # dimensions with the time varying data (static data is just duplicated
         # at each timestep)
 
-        data[variable] = (
-            xr.DataArray.from_series(var_timeseries_data.unstack())
-            .reindex(data[variable].coords)
-            .fillna(data[variable])
+        model_data[var_name] = (
+            ts_df.stack()
+            .to_xarray()
+            .reindex(var_data.coords)
+            .fillna(var_data)
+            .assign_attrs(var_data.attrs)
         )
-    if key_errors:
-        exceptions.print_warnings_and_raise_errors(errors=key_errors)
 
+    return model_data
+
+
+def add_inferred_time_params(model_data: xr.Dataset):
     # Add timestep_resolution by looking at the time difference between timestep n
     # and timestep n + 1 for all timesteps
     # Last timestep has no n + 1, so will be NaT (not a time), we ffill this.
     # Time resolution is saved in hours (i.e. nanoseconds / 3600e6)
     timestep_resolution = (
-        data.timesteps.diff("timesteps", label="lower")
-        .reindex({"timesteps": data.timesteps})
+        model_data.timesteps.diff("timesteps", label="lower")
+        .reindex({"timesteps": model_data.timesteps})
         .rename("timestep_resolution")
     )
 
-    if len(data.timesteps) == 1:
+    if len(model_data.timesteps) == 1:
         exceptions.warn(
             "Only one timestep defined. Inferring timestep resolution to be 1 hour"
         )
@@ -111,13 +116,99 @@ def add_time_dimension(
     else:
         timestep_resolution = timestep_resolution.ffill("timesteps")
 
-    data["timestep_resolution"] = timestep_resolution / pd.Timedelta("1 hour")
+    model_data["timestep_resolution"] = timestep_resolution / pd.Timedelta("1 hour")
 
-    data["timestep_weights"] = xr.DataArray(
-        np.ones(len(data.timesteps)), dims=["timesteps"]
+    model_data["timestep_weights"] = xr.DataArray(
+        np.ones(len(model_data.timesteps)), dims=["timesteps"]
     )
 
-    return data
+    return model_data
+
+
+class TimeseriesLoader:
+    def __init__(
+        self, init_config: dict, timeseries_dfs: Optional[dict[str, pd.DataFrame]]
+    ):
+        self.ts_cache: dict = {}
+        self._timeseries_dfs = timeseries_dfs
+        self._time_data_path: Path = init_config["time_data_path"]
+        self._time_subset: Optional[list[str]] = init_config["time_subset"]
+        self._time_format: str = init_config["time_format"]
+
+    def load_timeseries(self, df: pd.DataFrame, var_name: str) -> pd.Series:
+        source = df.loc["source"]
+        source_type = df.loc["source_type"]
+        column = df.loc["column"]
+
+        if source_type == "df" and self._timeseries_dfs is not None:
+            df = self._timeseries_dfs[source]
+        if source_type == "file" and source in self.ts_cache:
+            df = self.ts_cache[source]
+        else:
+            df = self._load_timeseries_from_file(source)
+            self.ts_cache[source] = df
+
+        clean_df = self._reformat_timeseries_df(df)
+
+        if pd.isnull(column) and len(clean_df.columns) > 1:
+            raise exceptions.ModelError(
+                f"Timeseries data contains multiple columns but no column specified in reference from input parameter `{var_name}`"
+            )
+        elif pd.isnull(column) and len(clean_df.columns) == 1:
+            series = clean_df.squeeze()
+        else:
+            series = clean_df[column]
+
+        return series
+
+    def _load_timeseries_from_file(self, ts_file_path: str):
+        file_path = self._time_data_path / ts_file_path
+        df = pd.read_csv(file_path, index_col=0)
+        return df
+
+    def _reformat_timeseries_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        try:
+            df.apply(pd.to_numeric)
+        except ValueError as e:
+            raise exceptions.ModelError(
+                f"Error in loading data from {df.name}. Ensure all entries are numeric. Full error: {e}"
+            )
+        try:
+            df.index = pd.to_datetime(df.index, format=self._time_format)
+        except ValueError as e:
+            raise exceptions.ModelError(
+                f"Error in parsing dates in timeseries data from {df.name} using datetime format `{self._time_format}`. Full error: {e}"
+            )
+        subset_df = self._subset_index(df)
+        return subset_df
+
+    def _subset_index(self, df: pd.DataFrame) -> pd.DataFrame:
+        if self._time_subset is None:
+            return df
+
+        try:
+            time_subset_dt = pd.to_datetime(self._time_subset, format="ISO8601")
+        except ValueError as e:
+            raise exceptions.ModelError(
+                "Timeseries subset must be in ISO format (anything up to the  "
+                "detail of `%Y-%m-%d %H:%M:%S`.\n User time subset: {}\n "
+                "Error caused: {}".format(self._time_subset, e)
+            )
+
+        df_start_time = df.index[0]
+        df_end_time = df.index[-1]
+        if time_subset_dt[0] < df_start_time or time_subset_dt[1] > df_end_time:
+            raise exceptions.ModelError(
+                f"subset time range {self._time_subset} is outside the input data time range "
+                f"[{df_start_time}, {df_end_time}]"
+            )
+
+        subset_df = df.loc[slice(*time_subset_dt), :]
+        if subset_df.empty:
+            raise exceptions.ModelError(
+                f"The time slice {time_subset_dt} creates an empty timeseries array."
+            )
+        return subset_df
 
 
 def update_dtypes(model_data):

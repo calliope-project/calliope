@@ -7,9 +7,9 @@ import calliope
 import importlib_resources
 import jsonschema
 import pytest
-from calliope.core.util.generate_runs import generate_runs
-from calliope.core.util.logging import log_time
-from calliope.core.util.tools import validate_dict
+from calliope.util.generate_runs import generate_runs
+from calliope.util.logging import log_time
+from calliope.util.tools import validate_dict
 
 from .common.util import check_error_or_warning, python36_or_higher
 

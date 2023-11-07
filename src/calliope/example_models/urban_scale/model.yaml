@@ -22,6 +22,10 @@ config:
 parameters:
   objective_cost_weights:
     data: 1
-    index: [monetary]
+    index: monetary
     dims: costs
   bigM: 1e6 # setting the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
+  foobar:
+    data: 1
+    index: [["chp", "X2"], ["chp", "X1"]]
+    dims: [techs, nodes]

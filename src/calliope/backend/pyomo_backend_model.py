@@ -29,9 +29,9 @@ from pyomo.common.tempfiles import TempfileManager  # type: ignore
 from pyomo.opt import SolverFactory  # type: ignore
 
 from calliope.backend import backend_model, parsing
-from calliope.core.util.logging import LogWriter
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
+from calliope.util.logging import LogWriter
 
 T = TypeVar("T")
 _COMPONENTS_T = Literal[

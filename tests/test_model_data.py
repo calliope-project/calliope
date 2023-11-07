@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 from calliope._version import __version__
-from calliope.core.attrdict import AttrDict
+from calliope.attrdict import AttrDict
 from calliope.preprocess import model_run_from_yaml
 from calliope.preprocess.model_data import ModelDataFactory
 
