@@ -22,7 +22,7 @@ config:
     zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
 
 parameters:
-  objective_cost_class:
+  objective_cost_weights:
     data: 1
     index: [monetary]
     dims: costs

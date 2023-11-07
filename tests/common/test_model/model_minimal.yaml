@@ -11,7 +11,7 @@ config:
     solver: cbc
 
 parameters:
-  objective_cost_class:
+  objective_cost_weights:
     data: 1
     index: [monetary]
     dims: costs

@@ -634,7 +634,7 @@ class TestFuelDist(CustomMathExamples):
                     "cost",  # Need to build these up so that `cost` is available in the objective
                     "cost_fuel_distribution",
                 ],
-                "objectives": ["minmax_cost_optimisation"],
+                "objectives": ["min_cost_optimisation"],
             },
         )
 

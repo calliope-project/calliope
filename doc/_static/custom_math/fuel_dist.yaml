@@ -81,13 +81,13 @@ global_expressions:
 objectives:
   # Update objective to include fuel distribution costs
   # NOTE: these additional costs will have no impact on the objective function value _unless_ the cost of fuel distribution is different per node OR a systemwide imbalance in fuel distribution (inequality in `restrict_total_imports_and_exports`) is enabled.
-  minmax_cost_optimisation:
+  min_cost_optimisation:
     equations:
       - expression: $cost_sum + $unmet_demand + $cost_fuel_distribution_sum
     sub_expressions:
       cost_sum:
         - where: "any(cost, over=[nodes, techs, costs])"
-          expression: sum(sum(cost, over=[nodes, techs]) * objective_cost_class, over=costs)
+          expression: sum(sum(cost, over=[nodes, techs]) * objective_cost_weights, over=costs)
         - where: "NOT any(cost, over=[nodes, techs, costs])"
           expression: "0"
       unmet_demand:
@@ -97,6 +97,6 @@ objectives:
           expression: "0"
       cost_fuel_distribution_sum:
         - where: "cost_fuel_distribution"
-          expression: sum(sum(cost_fuel_distribution, over=[nodes, carriers, timesteps]) * objective_cost_class, over=costs)
+          expression: sum(sum(cost_fuel_distribution, over=[nodes, carriers, timesteps]) * objective_cost_weights, over=costs)
         - where: "NOT any(cost_fuel_distribution, over=[nodes, carriers, costs, timesteps])"
           expression: "0"

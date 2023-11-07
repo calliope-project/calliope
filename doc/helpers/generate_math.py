@@ -81,7 +81,9 @@ def generate_custom_math_model(
     model_config_updates = calliope.AttrDict(model_config_updates)
     model_config.union(model_config_updates)
     model = calliope.Model(
-        model_definition=model_config, timeseries_dataframes=_ts_dfs()
+        model_definition=model_config,
+        timeseries_dataframes=_ts_dfs(),
+        time_subset=["2005-01-02", "2005-01-03"],
     )
     _keep_only_changes(base_model, model)
 
@@ -203,8 +205,8 @@ def _add_to_description(component_dict: dict, update_string: str) -> None:
 def _ts_dfs() -> dict[str, pd.DataFrame]:
     "Generate dummy timeseries dataframes"
     ts = pd.DataFrame(
-        [1, 1, 1],
-        index=pd.date_range("2005-01-01 00:00", "2005-01-01 02:00", freq="H"),
+        1,
+        index=pd.date_range("2005-01-02", "2005-01-03", freq="H"),
         columns=["A"],
     )
     return {"ts": ts}
@@ -221,15 +223,19 @@ if __name__ == "__main__":
             "config": {
                 "init": {
                     "custom_math": ["storage_inter_cluster"],
-                    "time": {
-                        "function": "apply_clustering",
-                        "function_options": {
-                            "clustering_func": "kmeans",
-                            "how": "mean",
-                            "k": 1,
-                        },
-                    },
-                }
+                    "time_cluster": (
+                        BASEPATH
+                        / ".."
+                        / ".."
+                        / "tests"
+                        / "common"
+                        / "test_model"
+                        / "timeseries_data"
+                        / "cluster_days.csv"
+                    )
+                    .absolute()
+                    .as_posix(),
+                },
             },
         },
         "storage_inter_cluster",
