@@ -25,7 +25,7 @@ techs:
     constraints:
       flow_cap_max: 10
       source_max: .inf
-      flow_eff: 0.9
+      flow_out_eff: 0.9
   test_demand_elec:
     essentials:
       name: Demand elec tech

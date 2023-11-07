@@ -446,12 +446,12 @@ class TestTopLevelParams:
     def test_protected_parameter_names(self):
         with pytest.raises(KeyError) as excinfo:
             build_model(
-                {"parameters.flow_eff.data": 1},
+                {"parameters.flow_out_eff.data": 1},
                 "simple_supply,two_hours",
             )
         assert check_error_or_warning(
             excinfo,
-            "Trying to add top-level parameter with same name as a node/tech level parameter: flow_eff",
+            "Trying to add top-level parameter with same name as a node/tech level parameter: flow_out_eff",
         )
 
     @pytest.mark.parametrize("val", [1, 1.0, np.inf, "foo"])

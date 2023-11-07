@@ -369,6 +369,7 @@ class BackendModelGenerator(ABC):
             self.add_parameter(
                 param_name, xr.DataArray(default_val), use_inf_as_na=False
             )
+            self.parameters[param_name].attrs["is_result"] = 0
         LOGGER.info("Optimisation Model: Generated optimisation problem parameters")
 
     @staticmethod
@@ -398,8 +399,8 @@ class BackendModelGenerator(ABC):
                 Dictionary describing the object being added, from which descriptor attributes will be extracted and added to the array attributes.
             references (set):
                 All other backend objects which are references in this backend object's linear expression(s).
-                E.g. the constraint "flow_out / flow_eff <= flow_cap" references the variables ["flow_out", "flow_cap"]
-                and the parameter ["flow_eff"].
+                E.g. the constraint "flow_out / flow_out_eff <= flow_cap" references the variables ["flow_out", "flow_cap"]
+                and the parameter ["flow_out_eff"].
                 All referenced objects will have their "references" attribute updated with this object's name.
                 Defaults to None.
         """

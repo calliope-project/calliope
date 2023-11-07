@@ -20,7 +20,7 @@ tech_groups:
     carrier_in: electricity
     carrier_out: electricity
     flow_cap_max: 2000
-    flow_eff: 0.98
+    flow_out_eff: 0.98
     lifetime: 25
     cost_flow_cap_per_distance:
       data: 0.01
@@ -35,7 +35,7 @@ tech_groups:
     carrier_in: heat
     carrier_out: heat
     flow_cap_max: 2000
-    flow_eff_per_distance: 0.975
+    flow_out_eff_per_distance: 0.975
     lifetime: 25
     cost_flow_cap_per_distance:
       data: 0.3
@@ -102,7 +102,7 @@ techs:
     # Reference: https://doi.org/10.1016/j.energy.2016.08.060
     source_equals: file=pv_resource.csv:per_area
 
-    parasitic_eff: 0.85 # inverter losses
+    flow_out_parasitic_eff: 0.85 # inverter losses
     flow_cap_max: 250
     area_use_max: 1500
     lifetime: 25
@@ -123,7 +123,7 @@ techs:
     carrier_in: gas
     carrier_out: heat
     flow_cap_max: 600
-    flow_eff: 0.85
+    flow_out_eff: 0.85
     lifetime: 25
     cost_om_con:
       data: 0.004 # .4p/kWh
@@ -145,7 +145,7 @@ techs:
       data: 1500
       index: electricity
       dims: carriers
-    flow_eff:
+    flow_out_eff:
       data: 0.405
       index: electricity
       dims: carriers

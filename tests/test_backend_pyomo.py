@@ -44,7 +44,9 @@ class TestChecks:
             assert not check_warn
         assert m._model_data.attrs["config"].build.cyclic_storage is False
 
-    @pytest.mark.parametrize("param", [("flow_eff"), ("source_eff"), ("parasitic_eff")])
+    @pytest.mark.parametrize(
+        "param", [("flow_eff"), ("source_eff"), ("flow_out_parasitic_eff")]
+    )
     def test_loading_timeseries_operate_efficiencies(self, param):
         m = build_model(
             {
@@ -515,13 +517,13 @@ class TestCostConstraints:
     @pytest.mark.parametrize(
         "tech,scenario,cost",
         (
-            ("test_supply_elec", "simple_supply", "om_prod"),
-            ("test_supply_elec", "simple_supply", "om_con"),
-            ("test_supply_plus", "simple_supply_and_supply_plus", "om_con"),
-            ("test_demand_elec", "simple_supply", "om_con"),
-            ("test_transmission_elec", "simple_supply", "om_prod"),
-            ("test_conversion", "simple_conversion", "om_con"),
-            ("test_conversion_plus", "simple_conversion_plus", "om_prod"),
+            ("test_supply_elec", "simple_supply", "flow_out"),
+            ("test_supply_elec", "simple_supply", "flow_in"),
+            ("test_supply_plus", "simple_supply_and_supply_plus", "flow_in"),
+            ("test_demand_elec", "simple_supply", "flow_in"),
+            ("test_transmission_elec", "simple_supply", "flow_out"),
+            ("test_conversion", "simple_conversion", "flow_in"),
+            ("test_conversion_plus", "simple_conversion_plus", "flow_out"),
         ),
     )
     def test_loc_techs_cost_var_constraint(self, tech, scenario, cost):
@@ -538,11 +540,11 @@ class TestCostConstraints:
 
     def test_one_way_om_cost(self):
         """
-        With one_way transmission, it should still be possible to set an om_prod cost.
+        With one_way transmission, it should still be possible to set an flow_out cost.
         """
         m = build_model(
             {
-                "techs.test_transmission_elec.costs.monetary.om_prod": 1,
+                "techs.test_transmission_elec.costs.monetary.flow_out": 1,
                 "links.a,b.techs.test_transmission_elec.switches.one_way": True,
             },
             "simple_supply,two_hours",
@@ -607,7 +609,7 @@ class TestExportConstraints:
         assert "cost_var" in supply_export.backend.expressions
 
         m = build_model(
-            {"techs.test_supply_elec.costs.monetary.om_prod": 0.1},
+            {"techs.test_supply_elec.costs.monetary.flow_out": 0.1},
             "supply_export,two_hours,investment_costs",
         )
         m.build()
@@ -1807,13 +1809,8 @@ class TestNewBackend:
         )
 
     def test_new_build_get_parameter(self, simple_supply):
-        param = simple_supply.backend.get_parameter("flow_eff")
-        assert (
-            param.to_series()
-            .dropna()
-            .apply(lambda x: isinstance(x, pmo.parameter))
-            .all()
-        )
+        param = simple_supply.backend.get_parameter("flow_in_eff")
+        assert isinstance(param.item(), pmo.parameter)
         assert param.attrs == {
             "obj_type": "parameters",
             "is_result": 0,
@@ -1823,7 +1820,9 @@ class TestNewBackend:
         }
 
     def test_new_build_get_parameter_as_vals(self, simple_supply):
-        param = simple_supply.backend.get_parameter("flow_eff", as_backend_objs=False)
+        param = simple_supply.backend.get_parameter(
+            "flow_in_eff", as_backend_objs=False
+        )
         assert param.dtype == np.dtype("float64")
 
     def test_new_build_get_global_expression(self, simple_supply):
@@ -1954,11 +1953,11 @@ class TestNewBackend:
 
     def test_raise_error_on_preexistence_same_type(self, simple_supply):
         with pytest.raises(exceptions.BackendError) as excinfo:
-            simple_supply.backend.add_parameter("flow_eff", xr.DataArray(1))
+            simple_supply.backend.add_parameter("flow_out_eff", xr.DataArray(1))
 
         assert check_error_or_warning(
             excinfo,
-            "Trying to add already existing `flow_eff` to backend model parameters.",
+            "Trying to add already existing `flow_out_eff` to backend model parameters.",
         )
 
     def test_raise_error_on_preexistence_diff_type(self, simple_supply):
@@ -2222,7 +2221,7 @@ class TestNewBackend:
                 },
                 "variables",
             ),
-            ("flow_eff", {"nodes": "a", "techs": "test_supply_elec"}, "parameters"),
+            ("flow_out_eff", {"nodes": "a", "techs": "test_supply_elec"}, "parameters"),
             (
                 "system_balance",
                 {
@@ -2253,12 +2252,9 @@ class TestNewBackend:
         obj = simple_supply_longnames.backend.get_constraint(
             "balance_demand", as_backend_objs=False
         )
-        flow_eff_dims = ", ".join(
-            dims[i] for i in simple_supply_longnames.backend.parameters.flow_eff.dims
-        )
         assert (
             obj.sel(dims).body.item()
-            == f"parameters[flow_eff][{flow_eff_dims}]*variables[flow_in][{', '.join(dims[i] for i in obj.dims)}]"
+            == f"parameters[flow_in_eff]*variables[flow_in][{', '.join(dims[i] for i in obj.dims)}]"
         )
         assert obj.coords_in_name
 
@@ -2285,11 +2281,11 @@ class TestNewBackend:
         assert obj.coords_in_name
 
     def test_update_parameter(self, simple_supply):
-        updated_param = simple_supply.inputs.flow_eff * 1000
-        simple_supply.backend.update_parameter("flow_eff", updated_param)
+        updated_param = simple_supply.inputs.flow_out_eff * 1000
+        simple_supply.backend.update_parameter("flow_out_eff", updated_param)
 
         expected = simple_supply.backend.get_parameter(
-            "flow_eff", as_backend_objs=False
+            "flow_out_eff", as_backend_objs=False
         )
         assert expected.where(updated_param.notnull()).equals(updated_param)
 
@@ -2298,37 +2294,37 @@ class TestNewBackend:
         new_dims = {"nodes", "techs"}
         caplog.set_level(logging.DEBUG)
 
-        simple_supply.backend.update_parameter("flow_eff", updated_param)
+        simple_supply.backend.update_parameter("flow_out_eff", updated_param)
 
         assert (
             f"New values will be broadcast along the {new_dims} dimension(s)"
             in caplog.text
         )
         expected = simple_supply.backend.get_parameter(
-            "flow_eff", as_backend_objs=False
+            "flow_out_eff", as_backend_objs=False
         )
         assert (expected == updated_param).all()
 
     def test_update_parameter_replace_defaults(self, simple_supply):
-        updated_param = simple_supply.inputs.flow_eff.fillna(0.1)
+        updated_param = simple_supply.inputs.flow_out_eff.fillna(0.1)
 
-        simple_supply.backend.update_parameter("flow_eff", updated_param)
+        simple_supply.backend.update_parameter("flow_out_eff", updated_param)
 
         expected = simple_supply.backend.get_parameter(
-            "flow_eff", as_backend_objs=False
+            "flow_out_eff", as_backend_objs=False
         )
         assert expected.equals(updated_param)
 
     def test_update_parameter_add_dim(self, caplog, simple_supply):
-        """flow_eff doesn't have the time dimension in the simple model, we add it here."""
-        updated_param = simple_supply.inputs.flow_eff.where(
+        """flow_out_eff doesn't have the time dimension in the simple model, we add it here."""
+        updated_param = simple_supply.inputs.flow_out_eff.where(
             simple_supply.inputs.timesteps.notnull()
         )
 
-        refs_to_update = {"balance_demand", "balance_transmission"}
+        refs_to_update = {"balance_transmission"}
         caplog.set_level(logging.DEBUG)
 
-        simple_supply.backend.update_parameter("flow_eff", updated_param)
+        simple_supply.backend.update_parameter("flow_out_eff", updated_param)
 
         assert (
             "Defining values for a previously fully/partially undefined parameter. "
@@ -2337,18 +2333,18 @@ class TestNewBackend:
         )
 
         expected = simple_supply.backend.get_parameter(
-            "flow_eff", as_backend_objs=False
+            "flow_out_eff", as_backend_objs=False
         )
         assert "timesteps" in expected.dims
 
     def test_update_parameter_replace_undefined(self, caplog, simple_supply):
-        """parasitic_eff isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value"""
-        updated_param = simple_supply.inputs.flow_eff
+        """flow_in_eff isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value"""
+        updated_param = simple_supply.inputs.flow_out_eff
 
-        refs_to_update = {"flow_out_max"}
+        refs_to_update = {"balance_demand", "balance_transmission"}
         caplog.set_level(logging.DEBUG)
 
-        simple_supply.backend.update_parameter("parasitic_eff", updated_param)
+        simple_supply.backend.update_parameter("flow_in_eff", updated_param)
 
         assert (
             "Defining values for a previously fully/partially undefined parameter. "
@@ -2357,9 +2353,9 @@ class TestNewBackend:
         )
 
         expected = simple_supply.backend.get_parameter(
-            "parasitic_eff", as_backend_objs=False
+            "flow_in_eff", as_backend_objs=False
         )
-        default_val = simple_supply._model_data.defaults["parasitic_eff"]
+        default_val = simple_supply._model_data.defaults["flow_in_eff"]
         assert expected.equals(updated_param.fillna(default_val))
 
     def test_update_parameter_no_refs_to_update(self, simple_supply):

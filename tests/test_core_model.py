@@ -232,8 +232,8 @@ class TestValidateMathDict:
         [
             ("1 == 1", "True"),
             (
-                "flow_out * flow_eff + sum(cost, over=costs) <= .inf",
-                "inheritance(supply) and flow_eff>0",
+                "flow_out * flow_out_eff + sum(cost, over=costs) <= .inf",
+                "inheritance(supply) and flow_out_eff>0",
             ),
         ],
     )

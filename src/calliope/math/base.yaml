@@ -1,20 +1,20 @@
 constraints:
   flow_capacity_per_storage_capacity_min:
-    description: "Set the lower bound of a `storage`/`supply_plus` technology's flow capacity relative to its storage capacity."
+    description: "Set the lower bound of storage flow capacity relative to its storage capacity."
     foreach: [nodes, techs, carriers]
     where: "storage_cap AND flow_cap_per_storage_cap_min"
     equations:
       - expression: flow_cap >= storage_cap * flow_cap_per_storage_cap_min
 
   flow_capacity_per_storage_capacity_max:
-    description: "Set the upper bound of a `storage`/`supply_plus` technology's flow capacity relative to its storage capacity."
+    description: "Set the upper bound of storage flow capacity relative to its storage capacity."
     foreach: [nodes, techs, carriers]
     where: "storage_cap AND flow_cap_per_storage_cap_max"
     equations:
       - expression: flow_cap <= storage_cap * flow_cap_per_storage_cap_max
 
   source_capacity_equals_flow_capacity:
-    description: "Set a `supply_plus` technology's flow capacity to equal its source capacity."
+    description: "Set a `supply` technology's flow capacity to equal its source capacity."
     foreach: [nodes, techs, carriers]
     where: source_cap AND source_cap_equals_flow_cap=True
     equations:
@@ -60,45 +60,45 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: "parent=conversion"
     equations:
-      - expression: sum(flow_out, over=carriers) == sum(flow_in * flow_eff, over=carriers)
+      - expression: sum(flow_out / (flow_out_eff * flow_out_parasitic_eff), over=carriers) == sum(flow_in * flow_in_eff, over=carriers)
 
   flow_out_max:
-    description: "Set the upper bound of a non-`conversion_plus` technology's outflow."
+    description: "Set the upper bound of a technology's outflow."
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier_out AND NOT operating_units"
     equations:
-      - expression: flow_out <= flow_cap * timestep_resolution * parasitic_eff
+      - expression: flow_out <= flow_cap * timestep_resolution * flow_out_parasitic_eff
 
   flow_out_min:
-    description: "Set the lower bound of a non-`conversion_plus` technology's outflow."
+    description: "Set the lower bound of a technology's outflow."
     foreach: [nodes, techs, carriers, timesteps]
     where: "flow_out_min_relative AND NOT operating_units"
     equations:
       - expression: flow_out >= flow_cap * timestep_resolution * flow_out_min_relative
 
   flow_in_max:
-    description: "Set the upper bound of a non-`conversion_plus` technology's inflow."
+    description: "Set the upper bound of a technology's inflow."
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier_in AND (NOT operating_units OR parent=demand)"
     equations:
       - expression: flow_in <= flow_cap * timestep_resolution
 
   source_use_max:
-    description: "Set the upper bound of a `supply_plus` technology's source consumption."
+    description: "Set the upper bound of a `supply` technology's source consumption."
     foreach: [nodes, techs, timesteps]
     where: source_cap
     equations:
       - expression: source_use <= timestep_resolution * source_cap
 
   storage_max:
-    description: "Set the upper bound of the amount of carrier a `storage`/`supply_plus` technology can store."
+    description: "Set the upper bound of the amount of carrier a technology can store."
     foreach: [nodes, techs, timesteps]
     where: "storage"
     equations:
       - expression: storage <= storage_cap
 
   storage_discharge_depth_limit:
-    description: "Set the lower bound of the stored carrier a `storage`/`supply_plus` technology must keep in reserve at all times."
+    description: "Set the lower bound of the stored carrier a technology must keep in reserve at all times."
     foreach: [nodes, techs, timesteps]
     where: "storage AND storage_discharge_depth"
     equations:
@@ -126,12 +126,10 @@ constraints:
     where: "parent=demand"
     equations:
       - where: "sink_equals"
-        expression: "$flow_in == sink_equals * $sink_scaler"
+        expression: "flow_in * flow_in_eff == sink_equals * $sink_scaler"
       - where: "NOT sink_equals AND sink_max"
-        expression: "$flow_in <= sink_max * $sink_scaler"
+        expression: "flow_in * flow_in_eff <= sink_max * $sink_scaler"
     sub_expressions:
-      flow_in:
-        - expression: flow_in * flow_eff
       sink_scaler: &sink_scaler
         - where: "sink_unit=per_area"
           expression: "area_use"
@@ -143,9 +141,9 @@ constraints:
   balance_demand_min_use:
     description: "Set the lower bound on the quantity of flow a `demand` technology must dump to its sink in each timestep."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "sink_min AND NOT source_equals AND parent=supply AND flow_eff>0"
+    where: "sink_min AND NOT source_equals AND parent=supply"
     equations:
-      - expression: "sink_min * $sink_scaler <= flow_in * flow_eff"
+      - expression: "flow_in * flow_in_eff >= sink_min * $sink_scaler"
     sub_expressions:
       sink_scaler: *sink_scaler
 
@@ -154,22 +152,15 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "parent=supply AND NOT include_storage=True"
     equations:
-      - expression: source_use * source_eff == $flow_out
-    sub_expressions:
-      flow_out: &flow_out_with_parasitic
-        - where: flow_eff=0 OR parasitic_eff=0
-          expression: "0"
-        - where: NOT (flow_eff=0 OR parasitic_eff=0)
-          expression: flow_out / (flow_eff * parasitic_eff)
+      - expression: flow_out == source_use * source_eff * flow_out_eff * flow_out_parasitic_eff
 
   balance_supply_with_storage:
     description: "Set the upper bound on, or a fixed total of, a `supply` (with storage) technology's ability to produce flow based on the quantity of consumed resource and available stored carrier."
     foreach: [nodes, techs, carriers, timesteps]
     where: "storage AND parent=supply"
     equations:
-      - expression: storage == $storage_previous_step + source_use * source_eff - $flow_out
+      - expression: storage == $storage_previous_step + source_use * source_eff - flow_out / (flow_out_eff * flow_out_parasitic_eff)
     sub_expressions:
-      flow_out: *flow_out_with_parasitic
       storage_previous_step: &storage_previous_step
         - where: timesteps=get_val_at_index(timesteps=0) AND NOT config.cyclic_storage=True
           expression: storage_initial * storage_cap
@@ -210,13 +201,8 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: "parent=storage"
     equations:
-      - expression: storage == $storage_previous_step - $flow_out + sum(flow_in * flow_eff, over=carriers)
+      - expression: storage == $storage_previous_step - sum(flow_out / (flow_out_eff * flow_out_parasitic_eff), over=carriers) + sum(flow_in * flow_eff, over=carriers)
     sub_expressions:
-      flow_out:
-        - where: flow_eff > 0
-          expression: sum(flow_out / flow_eff, over=carriers)
-        - where: flow_eff = 0
-          expression: "0"
       storage_previous_step: *storage_previous_step
 
   set_storage_initial:
@@ -234,7 +220,25 @@ constraints:
     foreach: [techs, carriers, timesteps]
     where: "parent=transmission"
     equations:
-      - expression: "sum(flow_out, over=nodes) == sum(flow_in * flow_eff, over=nodes)"
+      - expression: "sum(flow_out / (flow_out_eff * flow_out_parasitic_eff * $distance_flow_out_eff), over=nodes) == sum(flow_in * flow_in_eff * $distance_flow_in_eff, over=nodes)"
+    sub_expressions:
+      distance_flow_out_eff:
+        - where: flow_out_eff_per_distance AND distance
+          expression: flow_out_eff_per_distance ** distance
+        - where: NOT (flow_out_eff_per_distance AND distance)
+          expression: "1"
+      distance_flow_in_eff:
+        - where: flow_in_eff_per_distance AND distance
+          expression: flow_in_eff_per_distance ** distance
+        - where: NOT (flow_in_eff_per_distance AND distance)
+          expression: "1"
+
+  symmetric_transmission:
+    description: "Fix the flow capacity of two `transmission` technologies representing the same link in the system."
+    foreach: [nodes, techs]
+    where: "parent=transmission"
+    equations:
+      - expression: flow_cap == select_from_lookup_arrays(flow_cap, techs=link_remote_techs, nodes=link_remote_nodes)
 
   export_balance:
     description: "Set the lower bound of a technology's outflow to a technology's carrier export, for any technologies that can export carriers out of the system."
@@ -261,21 +265,21 @@ constraints:
       - expression: operating_units <= units
 
   flow_out_max_milp:
-    description: "Set the upper bound of a non-`conversion_plus` technology's ability to produce carriers, for any technology using integer units to define its capacity."
+    description: "Set the upper bound of a technology's ability to produce carriers, for any technology using integer units to define its capacity."
     foreach: [nodes, techs, carriers, timesteps]
     where: "flow_out AND operating_units"
     equations:
-      - expression: flow_out <= operating_units * timestep_resolution * flow_cap_per_unit * parasitic_eff
+      - expression: flow_out <= operating_units * timestep_resolution * flow_cap_per_unit * flow_out_parasitic_eff
 
   flow_in_max_milp:
-    description: "Set the upper bound of a non-`conversion_plus` technology's ability to consume carriers, for any technology using integer units to define its capacity."
+    description: "Set the upper bound of a technology's ability to consume carriers, for any technology using integer units to define its capacity."
     foreach: [nodes, techs, carriers, timesteps]
     where: "flow_in AND operating_units"
     equations:
       - expression: flow_in <= operating_units * timestep_resolution * flow_cap_per_unit
 
   flow_out_min_milp:
-    description: "Set the lower bound of a non-`conversion_plus` technology's ability to produce carriers, for any technology using integer units to define its capacity."
+    description: "Set the lower bound of a technology's ability to produce carriers, for any technology using integer units to define its capacity."
     foreach: [nodes, techs, carriers, timesteps]
     where: "flow_out AND operating_units AND flow_out_min_relative"
     equations:
@@ -428,7 +432,7 @@ variables:
       max: area_use_max
 
   source_use:
-    description: "The carrier flow consumed from outside the system boundaries by a `supply_plus` technology."
+    description: "The carrier flow consumed from outside the system boundaries by a `supply` technology."
     unit: energy
     foreach: [nodes, techs]
     where: "parent=supply"
@@ -437,7 +441,7 @@ variables:
       max: .inf
 
   source_cap:
-    description: "The upper limit on a flow that can be consumed from outside the system boundaries by a `supply_plus` technology in each timestep."
+    description: "The upper limit on a flow that can be consumed from outside the system boundaries by a `supply` technology in each timestep."
     unit: power
     foreach: [nodes, techs]
     where: "parent=supply AND (source_cap_max OR source_cap_equals OR source_cap_min)"
@@ -446,7 +450,7 @@ variables:
       max: source_cap_max
 
   storage_cap:
-    description: "The upper limit on a carrier that can be stored by a `supply_plus` or `storage` technology in any timestep."
+    description: "The upper limit on a carrier that can be stored by a technology in any timestep."
     unit: energy
     foreach: [nodes, techs]
     where: "include_storage=True OR parent=storage"
@@ -494,7 +498,9 @@ variables:
       max: .inf
 
   async_flow_switch:
-    description: "Binary switch to force asynchronous outflow/consumption of a `storage`/`supply_plus`/`transmission` technology. This ensures that a technology with carrier flow efficiencies < 100% cannot produce and consume a flow simultaneously to remove unwanted carrier from the system."
+    description: >-
+      Binary switch to force asynchronous outflow/consumption of technologies with both `flow_in` and `flow_out` defined.
+      This ensures that a technology with carrier flow efficiencies < 100% cannot produce and consume a flow simultaneously to remove unwanted carrier from the system.
     unit: integer
     foreach: [nodes, techs, timesteps]
     where: "force_async_flow=True"
@@ -542,39 +548,41 @@ global_expressions:
     description: "The operating costs per timestep of a technology"
     unit: cost_per_time
     foreach: [nodes, techs, costs, timesteps]
-    where: "cost_export OR cost_om_con OR cost_om_prod"
+    where: "cost_export OR cost_flow_in OR cost_flow_out"
     equations:
-      - expression: timestep_weights * ($cost_export + $cost_om_prod + $cost_om_con)
+      - expression: timestep_weights * ($cost_export + $cost_flow_out + $cost_flow_in)
     sub_expressions:
       cost_export:
         - where: "export_carrier AND cost_export"
           expression: cost_export * sum(flow_export, over=carriers)
         - where: "NOT cost_export"
           expression: "0"
-      cost_om_con:
-        - where: "cost_om_con AND parent=supply"
-          expression: cost_om_con * source_use
-        - where: "carrier_in AND cost_om_con"
-          expression: sum(flow_in * cost_om_con, over=carriers)
-        - where: "NOT cost_om_con"
+      cost_flow_in:
+        - where: "cost_flow_in AND parent=supply"
+          expression: cost_flow_in * source_use
+        - where: "cost_flow_in AND NOT parent=supply AND carrier_in"
+          expression: sum(cost_flow_in * flow_in, over=carriers)
+        - where: "NOT cost_flow_in"
           expression: "0"
-      cost_om_prod:
-        - where: "carrier_out AND cost_om_prod"
-          expression: sum(flow_out * cost_om_prod, over=carriers)
-        - where: "NOT cost_om_prod"
+      cost_flow_out:
+        - where: "cost_flow_out AND carrier_out"
+          expression: sum(cost_flow_out * flow_out, over=carriers)
+        - where: "NOT cost_flow_out"
           expression: "0"
 
   cost_investment:
     description: "The installation costs of a technology, including annualised investment costs and annual maintenance costs."
     unit: cost
     foreach: [nodes, techs, costs]
-    where: "(cost_flow_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_area_use OR cost_source_cap OR cost_storage_cap)"
+    where: "(cost_flow_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_area_use OR cost_source_cap OR cost_storage_cap OR cost_flow_cap_per_distance OR cost_purchase_per_distance)"
     equations:
       - expression: >
           $annualisation_weight * (
             $depreciation_rate * (
-                $cost_flow_cap + $cost_storage_cap + $cost_source_cap
-                + $cost_area_use + $cost_of_purchase
+                $cost_flow_cap + $distance_cost_flow_cap
+                + $cost_storage_cap + $cost_source_cap
+                + $cost_area_use
+                + $cost_of_purchase + $distance_cost_of_purchase
               ) * ($multiplier + cost_om_annual_investment_fraction)
               + sum(cost_om_annual * flow_cap, over=carriers)
           )
@@ -600,6 +608,11 @@ global_expressions:
           expression: sum(cost_flow_cap * flow_cap, over=carriers)
         - where: "NOT cost_flow_cap"
           expression: "0"
+      distance_cost_flow_cap:
+        - where: "cost_flow_cap_per_distance AND distance"
+          expression: cost_flow_cap_per_distance * flow_cap * distance
+        - where: "NOT (cost_flow_cap_per_distance AND distance)"
+          expression: "0"
       cost_storage_cap:
         - where: "cost_storage_cap AND storage_cap"
           expression: cost_storage_cap * storage_cap
@@ -621,6 +634,13 @@ global_expressions:
         - where: "cost_purchase AND units"
           expression: "cost_purchase * units"
         - where: "NOT (cost_purchase AND (purchased OR units))"
+          expression: "0"
+      distance_cost_of_purchase:
+        - where: "cost_purchase_per_distance AND distance AND purchased"
+          expression: cost_purchase_per_distance * purchased * distance
+        - where: "cost_purchase_per_distance AND distance AND units"
+          expression: cost_purchase_per_distance * units * distance
+        - where: "NOT (cost_purchase_per_distance AND distance AND (purchased OR units))"
           expression: "0"
 
   cost:
