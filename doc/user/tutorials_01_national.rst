@@ -74,7 +74,7 @@ The second location allows a limited amount of battery storage to be deployed to
    :start-after: # battery-start
    :end-before: # battery-end
 
-The contraints give a maximum installed generation capacity for battery storage together with a maximum ratio of flow capacity to storage capacity (``flow_cap_per_storage_cap_max``) of 4, which in turn limits the storage capacity. The ratio is the charge/discharge rate / storage capacity (a.k.a the battery `reservoir`). In the case of a storage technology, ``flow_out_eff`` applies twice: on charging and discharging. In addition, storage technologies can lose stored carrier over time -- in this case, we set this loss to zero.
+The contraints give a maximum installed generation capacity for battery storage together with a maximum ratio of flow capacity to storage capacity (``flow_cap_per_storage_cap_max``) of 4, which in turn limits the storage capacity. The ratio is the charge/discharge rate / storage capacity (a.k.a the battery `reservoir`). In the case of a storage technology, ``flow_in_eff`` applies on charging and ``flow_out_eff`` on discharging. In addition, storage technologies can lose stored carrier over time -- in this case, we set this loss to zero.
 
 Other technologies
 ==================
