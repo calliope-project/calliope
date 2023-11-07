@@ -1377,10 +1377,10 @@ class TestChecks:
     @pytest.mark.parametrize(
         "override",
         [
-            ({"parameters.objective_cost_class.data": None}),
+            ({"parameters.objective_cost_weights.data": None}),
             (
                 {
-                    "parameters.objective_cost_class": {
+                    "parameters.objective_cost_weights": {
                         "data": [None, 1],
                         "index": ["monetary", "emissions"],
                     }

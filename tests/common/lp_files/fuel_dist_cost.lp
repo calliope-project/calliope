@@ -1,7 +1,7 @@
 \* Source Pyomo model name=None *\
 
 min
-objectives(minmax_cost_optimisation)(0):
+objectives(min_cost_optimisation)(0):
 +0.0002515252789726502 variables(flow_cap)(a__test_conversion_plus)
 +0.0002515252789726502 variables(flow_cap)(a__test_supply_coal)
 +0.0002515252789726502 variables(flow_cap)(a__test_supply_gas)

@@ -167,7 +167,7 @@ def apply_overrides(model_dict, scenario=None, override_dict=None):
     config_model = default_model_dict.copy()
 
     config_model.config.init.time_data_path = relative_path(
-        model_dict._model_def_path, model_dict.config.init.time_data_path
+        config_model._model_def_path, config_model.config.init.time_data_path
     )
 
     # First pass of applying override dict before applying scenarios,

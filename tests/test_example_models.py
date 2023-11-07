@@ -176,10 +176,11 @@ class TestNationalScaleExampleModelSpores:
 
         # The initial state of the objective cost class scores should be monetary: 1, spores_score: 0
         assert (
-            model.backend.parameters.objective_cost_class["monetary"].item().value == 1
+            model.backend.parameters.objective_cost_weights["monetary"].item().value
+            == 1
         )
         assert (
-            model.backend.parameters.objective_cost_class["spores_score"].item().value
+            model.backend.parameters.objective_cost_weights["spores_score"].item().value
             == 0
         )
 
@@ -204,10 +205,11 @@ class TestNationalScaleExampleModelSpores:
 
         # The final state of the objective cost class scores should be monetary: 0, spores_score: 1
         assert (
-            model.backend.parameters.objective_cost_class["monetary"].item().value == 0
+            model.backend.parameters.objective_cost_weights["monetary"].item().value
+            == 0
         )
         assert (
-            model.backend.parameters.objective_cost_class["spores_score"].item().value
+            model.backend.parameters.objective_cost_weights["spores_score"].item().value
             == 1
         )
         return model._model_data

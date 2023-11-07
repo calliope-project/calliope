@@ -23,7 +23,7 @@ config:
     cyclic_storage: true  # whether or not to link storage levels in the last model timestep with the first model timestep. `inter_cluster_storage` custom math must be included if using time clustering and setting this to True.
     ensure_feasibility: false  # whether to include decision variables in the model which will meet unmet demand or consume unused supply in the model so that the optimisation solves successfully. This should only be used as a debugging option (as any unmet demand/unused supply is a sign of improper model formulation).
     mode: plan  # Mode in which to run the optimisation. Options: [plan, operate, spores]
-    objective: minmax_cost_optimisation # Name of internal objective function to use, currently only min/max cost-based optimisation is available
+    objective: min_cost_optimisation # Name of internal objective function to use, currently only min/max cost-based optimisation is available
   solve:
     operate_window: null  # Operate mode rolling `window`
     operate_horizon: null  # Operate mode rolling `horizon` (≥ `window`)
@@ -47,7 +47,7 @@ parameters:
   # but should not be **too** large (i.e., do not set it greater than 3 orders of magnitude above the numeric range of the model).
   # if too large, numerical problems may arise in the optimisation.
   bigM: 1e9
-  objective_cost_class: # Weightings for cost classes to apply in the objective function.
+  objective_cost_weights: # Weightings for cost classes to apply in the objective function.
     data: 1
     index: [monetary]
     dims: costs

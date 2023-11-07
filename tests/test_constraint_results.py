@@ -170,14 +170,14 @@ class TestModelSettings:
         self, model_no_unmet, model_unmet_demand, model_unused_supply
     ):
         assert (
-            model_unused_supply.backend.objectives.minmax_cost_optimisation.item()()
-            - model_no_unmet.backend.objectives.minmax_cost_optimisation.item()()
+            model_unused_supply.backend.objectives.min_cost_optimisation.item()()
+            - model_no_unmet.backend.objectives.min_cost_optimisation.item()()
             == approx(1e3 * 15)
         )
 
         assert (
-            model_unmet_demand.backend.objectives.minmax_cost_optimisation.item()()
-            - model_no_unmet.backend.objectives.minmax_cost_optimisation.item()()
+            model_unmet_demand.backend.objectives.min_cost_optimisation.item()()
+            - model_no_unmet.backend.objectives.min_cost_optimisation.item()()
             == approx(1e3 * 15)
         )
 

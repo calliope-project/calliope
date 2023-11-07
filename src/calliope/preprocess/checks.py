@@ -299,7 +299,7 @@ def check_initial(config_model: AttrDict):
         )
 
     # We no longer allow cost_class in objective_options to be a string
-    _cost_class = config_model.parameters.objective_cost_class
+    _cost_class = config_model.parameters.objective_cost_weights
 
     if not isinstance(_cost_class.data, list):
         _data = [_cost_class.data]

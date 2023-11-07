@@ -67,7 +67,7 @@ class TestCostMinimisationObjective:
         assert sum(
             model.results.cost.loc[{"costs": cost_class[i]}].sum().item() * weight[i]
             for i in range(len(cost_class))
-        ) == approx(po.value(model.objectives.minmax_cost_optimisation.item()))
+        ) == approx(po.value(model.objectives.min_cost_optimisation.item()))
 
     @pytest.mark.filterwarnings(
         "ignore:(?s).*The results of rerunning the backend model:calliope.exceptions.ModelWarning"
@@ -80,13 +80,13 @@ class TestCostMinimisationObjective:
 
         model.build()
         model.solve()
-        obj_value = model.objectives.minmax_cost_optimisation.item()
+        obj_value = model.objectives.min_cost_optimisation.item()
         total_cost = model.results.cost.sum()
-        model.backend.update_param("objective_cost_class", {"monetary": 1.8})
-        model.backend.update_param("objective_cost_class", {"emissions": 0.2})
+        model.backend.update_param("objective_cost_weights", {"monetary": 1.8})
+        model.backend.update_param("objective_cost_weights", {"emissions": 0.2})
 
         new_model = model.backend.rerun()
-        updated_obj_value = model.objectives.minmax_cost_optimisation.item()
+        updated_obj_value = model.objectives.min_cost_optimisation.item()
         updated_total_cost = new_model.results.cost.sum()
 
         assert updated_obj_value == 2 * obj_value

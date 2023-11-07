@@ -283,7 +283,7 @@ You can use this interface to:
 2. Update a parameter value.
     If you are interested in updating a few values in the model, you can run :python:`model.backend.update_param()`. For example, to update the energy efficiency of your `ccgt` technology in location `region1` from 0.5 to 0.1, you can run :python:`model.backend.update_param('flow_out_eff', {'region1::ccgt`: 0.1})`. This will not affect results at this stage, you'll need to rerun the backend (point 4) to optimise with these new values.
 
-.. note:: If you are interested in updating the objective function cost class weights, you will need to set 'objective_cost_class' as the parameter, e.g. :python:`model.backend.update_param('objective_cost_class', {'monetary': 0.5})`.
+.. note:: If you are interested in updating the objective function cost class weights, you will need to set 'objective_cost_weights' as the parameter, e.g. :python:`model.backend.update_param('objective_cost_weights', {'monetary': 0.5})`.
 
 3. Activate / Deactivate a constraint or objective.
     Constraints can be activated and deactivate such that they will or will not have an impact on the optimisation. All constraints are active by default, but you might like to remove, for example, a capacity constraint if you don't want there to be a capacity limit for any technologies. Similarly, if you had multiple objectives, you could deactivate one and activate another. The result would be to have a different objective when rerunning the backend.
