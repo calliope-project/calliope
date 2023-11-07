@@ -44,7 +44,9 @@ class TestChecks:
             assert not check_warn
         assert m._model_data.attrs["config"].build.cyclic_storage is False
 
-    @pytest.mark.parametrize("param", [("flow_eff"), ("source_eff"), ("parasitic_eff")])
+    @pytest.mark.parametrize(
+        "param", [("flow_eff"), ("source_eff"), ("flow_out_parasitic_eff")]
+    )
     def test_loading_timeseries_operate_efficiencies(self, param):
         m = build_model(
             {

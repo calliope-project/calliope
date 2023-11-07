@@ -69,11 +69,11 @@ tech_groups:
         "flow_cap_per_unit",
         "flow_in_eff",
         "flow_out_eff",
+        "flow_out_parasitic_eff",
         "flow_ramping",
         "export_max",
         "export_carrier",
         "lifetime",
-        "parasitic_eff",
         "units_min_systemwide",
         "units_max",
         "units_max_systemwide",
@@ -167,12 +167,12 @@ tech_groups:
         "flow_cap_per_unit",
         "flow_in_eff",
         "flow_out_eff",
+        "flow_out_parasitic_eff",
         "flow_ramping",
         "export_max",
         "export_carrier",
         "force_async_flow",
         "lifetime",
-        "parasitic_eff",
         "storage_cap_max",
         "storage_cap_min",
         "storage_cap_per_unit",
@@ -219,11 +219,11 @@ tech_groups:
         "flow_cap_per_unit",
         "flow_in_eff",
         "flow_out_eff",
+        "flow_out_parasitic_eff",
         "flow_ramping",
         "export_max",
         "export_carrier",
         "lifetime",
-        "parasitic_eff",
         "area_use_max",
         "area_use_min",
         "area_use_per_flow_cap",
@@ -273,11 +273,11 @@ tech_groups:
         "flow_cap_per_unit",
         "flow_in_eff",
         "flow_out_eff",
+        "flow_out_parasitic_eff",
         "flow_ramping",
         "export_max",
         "export_carrier",
         "lifetime",
-        "parasitic_eff",
         "area_use_max",
         "area_use_min",
         "area_use_per_flow_cap",
@@ -343,12 +343,12 @@ tech_groups:
         "flow_cap_per_unit",
         "flow_in_eff",
         "flow_out_eff",
+        "flow_out_parasitic_eff",
         "flow_in_eff_per_distance",
         "flow_out_eff_per_distance",
         "force_async_flow",
         "lifetime",
         "one_way",
-        "parasitic_eff",
       ]
     allowed_costs:
       [
@@ -418,7 +418,7 @@ techs:
       export_max: .inf # name: Maximum allowed export ¦ unit: kW ¦ Maximum allowed export of produced carrier for a technology.
       export_carrier: null # name: Export carrier ¦ unit: N/A ¦ Name of carrier to be exported. Must be an output carrier of the technology
       lifetime: null # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
-      parasitic_eff: 1.0 # name: Plant parasitic efficiency ¦ unit: fraction ¦ Additional losses as flow gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption
+      flow_out_parasitic_eff: 1.0 # name: Plant parasitic efficiency ¦ unit: fraction ¦ Additional losses as flow gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption
       sink_min: 0 # name: Minimum bound on sink to remove a carrier from the system (e.g., electricity demand, transport distance) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Minimum sink use (static, or from file as timeseries). Unit dictated by ``source_unit``.
       sink_max: .inf # name: Maximum bound on sink to remove a carrier from the system (e.g., electricity demand, transport distance) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Maximum sink use (static, or from file as timeseries). Unit dictated by ``source_unit``.
       sink_equals: null # name: Required amount removal of a carrier from the system through a sink (e.g., electricity demand, transport distance) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Required sink (static, or from file as timeseries). Unit dictated by ``source_unit``.

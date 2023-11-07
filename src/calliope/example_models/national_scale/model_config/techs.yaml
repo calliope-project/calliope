@@ -46,7 +46,7 @@ techs:
       storage_loss: 0.002
       source_max: file=csp_resource.csv
       flow_out_eff: 0.4
-      parasitic_eff: 0.9
+      flow_out_parasitic_eff: 0.9
       area_use_max: inf
       flow_cap_max: 10000
       lifetime: 25

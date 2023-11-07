@@ -116,14 +116,14 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(conversion)"
     equations:
-      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) == reduce_carrier_dim(flow_in, carrier_tier=in) * flow_in_eff * (flow_out_eff * parasitic_eff)
+      - expression: reduce_carrier_dim(flow_out, carrier_tier=out) == reduce_carrier_dim(flow_in, carrier_tier=in) * flow_in_eff * (flow_out_eff * flow_out_parasitic_eff)
 
   flow_out_max:
     description: "Set the upper bound of a non-`conversion_plus` technology's outflow."
     foreach: [nodes, techs, carriers, timesteps]
     where: "NOT inheritance(conversion_plus) AND NOT operating_units AND allowed_flow_out=True AND [out] in carrier_tiers"
     equations:
-      - expression: flow_out <= flow_cap * timestep_resolution * parasitic_eff
+      - expression: flow_out <= flow_cap * timestep_resolution * flow_out_parasitic_eff
 
   flow_out_min:
     description: "Set the lower bound of a non-`conversion_plus` technology's outflow."
@@ -183,9 +183,9 @@ constraints:
     where: "(source_equals OR source_max) AND inheritance(supply)"
     equations:
       - where: "source_equals"
-        expression: "flow_out == source_equals * $source_scaler * flow_out_eff  * parasitic_eff"
+        expression: "flow_out == source_equals * $source_scaler * flow_out_eff  * flow_out_parasitic_eff"
       - where: "(NOT source_equals) AND sink_max"
-        expression: "flow_out <= source_max * $source_scaler * flow_out_eff  * parasitic_eff"
+        expression: "flow_out <= source_max * $source_scaler * flow_out_eff  * flow_out_parasitic_eff"
     sub_expressions:
       source_scaler: &source_scaler
         - where: "source_unit=per_area"
@@ -200,7 +200,7 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "source_min AND NOT source_equals AND inheritance(supply)"
     equations:
-      - expression: "flow_out / (flow_out_eff * parasitic_eff) >= source_min * $source_scaler"
+      - expression: "flow_out / (flow_out_eff * flow_out_parasitic_eff) >= source_min * $source_scaler"
     sub_expressions:
       source_scaler: *source_scaler
 
@@ -235,14 +235,14 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(supply_plus) AND NOT include_storage=True"
     equations:
-      - expression: flow_out == source_use * source_eff * flow_out_eff * parasitic_eff
+      - expression: flow_out == source_use * source_eff * flow_out_eff * flow_out_parasitic_eff
 
   balance_supply_plus_with_storage:
     description: "Set the upper bound on, or a fixed total of, a `supply_plus` (with storage) technology's ability to produce flow based on the quantity of consumed resource and available stored carrier."
     foreach: [nodes, techs, carriers, timesteps]
     where: "storage AND inheritance(supply_plus)"
     equations:
-      - expression: storage == $storage_previous_step + source_use * source_eff - flow_out / (flow_out_eff * parasitic_eff)
+      - expression: storage == $storage_previous_step + source_use * source_eff - flow_out / (flow_out_eff * flow_out_parasitic_eff)
     sub_expressions:
       storage_previous_step: &storage_previous_step
         - where: timesteps=get_val_at_index(timesteps=0) AND NOT config.cyclic_storage=True
@@ -269,7 +269,7 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: "inheritance(storage)"
     equations:
-      - expression: storage == $storage_previous_step - reduce_carrier_dim(flow_out, carrier_tier=out) / (flow_out_eff * parasitic_eff) + reduce_carrier_dim(flow_in, carrier_tier=in) * flow_in_eff
+      - expression: storage == $storage_previous_step - reduce_carrier_dim(flow_out, carrier_tier=out) / (flow_out_eff * flow_out_parasitic_eff) + reduce_carrier_dim(flow_in, carrier_tier=in) * flow_in_eff
     sub_expressions:
       storage_previous_step: *storage_previous_step
 
@@ -288,7 +288,7 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "inheritance(transmission) AND allowed_flow_out=True"
     equations:
-      - expression: "flow_out == select_from_lookup_arrays(flow_in * flow_in_eff * $distance_flow_in_eff, techs=link_remote_techs, nodes=link_remote_nodes) * (flow_out_eff * parasitic_eff * $distance_flow_out_eff)"
+      - expression: "flow_out == select_from_lookup_arrays(flow_in * flow_in_eff * $distance_flow_in_eff, techs=link_remote_techs, nodes=link_remote_nodes) * (flow_out_eff * flow_out_parasitic_eff * $distance_flow_out_eff)"
     sub_expressions:
       distance_flow_out_eff:
         - where: flow_out_eff_per_distance AND distance
@@ -337,7 +337,7 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "operating_units AND NOT inheritance(conversion_plus) AND allowed_flow_out=True"
     equations:
-      - expression: flow_out <= operating_units * timestep_resolution * flow_cap_per_unit * parasitic_eff
+      - expression: flow_out <= operating_units * timestep_resolution * flow_cap_per_unit * flow_out_parasitic_eff
 
   flow_out_max_conversion_plus_milp:
     description: "Set the upper bound of a `conversion_plus` technology's ability to outflow across all of its `out` carriers, if it uses integer units to define its capacity."
