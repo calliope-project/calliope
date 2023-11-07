@@ -67,7 +67,9 @@ tech_groups:
         "flow_cap_min_systemwide",
         "flow_out_min_relative",
         "flow_cap_per_unit",
-        "flow_eff",
+        "flow_in_eff",
+        "flow_out_eff",
+        "flow_out_parasitic_eff",
         "flow_ramping",
         "export_max",
         "export_carrier",
@@ -85,8 +87,8 @@ tech_groups:
         "interest_rate",
         "om_annual",
         "om_annual_investment_fraction",
-        "om_con",
-        "om_prod",
+        "flow_in",
+        "flow_out",
         "purchase",
       ]
     allowed_switches: [cap_method, export, allowed_flow_in, allowed_flow_out]
@@ -109,7 +111,8 @@ tech_groups:
         "flow_cap_min",
         "flow_out_min_relative",
         "flow_cap_per_unit",
-        "flow_eff",
+        "flow_in_eff",
+        "flow_out_eff",
         "flow_ramping",
         "export_max",
         "export_carrier",
@@ -127,8 +130,8 @@ tech_groups:
         "interest_rate",
         "om_annual",
         "om_annual_investment_fraction",
-        "om_con",
-        "om_prod",
+        "flow_in",
+        "flow_out",
         "purchase",
       ]
     allowed_switches: [cap_method, export, allowed_flow_in, allowed_flow_out]
@@ -142,7 +145,7 @@ tech_groups:
   demand:
     required_constraints: []
     allowed_constraints: ["sink_min", "sink_max", "sink_equals", "sink_unit"]
-    allowed_costs: [om_con]
+    allowed_costs: [flow_in]
     allowed_switches: [sink_unit, allowed_flow_in, allowed_flow_out]
     essentials:
       parent: null
@@ -162,7 +165,9 @@ tech_groups:
         "flow_cap_min",
         "flow_out_min_relative",
         "flow_cap_per_unit",
-        "flow_eff",
+        "flow_in_eff",
+        "flow_out_eff",
+        "flow_out_parasitic_eff",
         "flow_ramping",
         "export_max",
         "export_carrier",
@@ -188,7 +193,7 @@ tech_groups:
         "interest_rate",
         "om_annual",
         "om_annual_investment_fraction",
-        "om_prod",
+        "flow_out",
         "purchase",
         "storage_cap",
       ]
@@ -212,7 +217,9 @@ tech_groups:
         "flow_cap_min",
         "flow_out_min_relative",
         "flow_cap_per_unit",
-        "flow_eff",
+        "flow_in_eff",
+        "flow_out_eff",
+        "flow_out_parasitic_eff",
         "flow_ramping",
         "export_max",
         "export_carrier",
@@ -236,8 +243,8 @@ tech_groups:
         "interest_rate",
         "om_annual",
         "om_annual_investment_fraction",
-        "om_con",
-        "om_prod",
+        "flow_in",
+        "flow_out",
         "purchase",
         "area_use",
       ]
@@ -264,12 +271,13 @@ tech_groups:
         "flow_cap_min",
         "flow_out_min_relative",
         "flow_cap_per_unit",
-        "flow_eff",
+        "flow_in_eff",
+        "flow_out_eff",
+        "flow_out_parasitic_eff",
         "flow_ramping",
         "export_max",
         "export_carrier",
         "lifetime",
-        "parasitic_eff",
         "area_use_max",
         "area_use_min",
         "area_use_per_flow_cap",
@@ -297,8 +305,8 @@ tech_groups:
         "interest_rate",
         "om_annual",
         "om_annual_investment_fraction",
-        "om_con",
-        "om_prod",
+        "flow_in",
+        "flow_out",
         "purchase",
         "area_use",
         "source_cap",
@@ -333,8 +341,11 @@ tech_groups:
         "flow_cap_min",
         "flow_cap_max",
         "flow_cap_per_unit",
-        "flow_eff",
-        "flow_eff_per_distance",
+        "flow_in_eff",
+        "flow_out_eff",
+        "flow_out_parasitic_eff",
+        "flow_in_eff_per_distance",
+        "flow_out_eff_per_distance",
         "force_async_flow",
         "lifetime",
         "one_way",
@@ -347,7 +358,7 @@ tech_groups:
         "interest_rate",
         "om_annual",
         "om_annual_investment_fraction",
-        "om_prod",
+        "flow_out",
         "purchase",
         "purchase_per_distance",
       ]
@@ -399,13 +410,15 @@ techs:
       flow_cap_min_systemwide: 0 # name: System-wide specific installed flow capacity ¦ unit: kW ¦ sets the lower bound of the sum across all nodes of the decision variable `flow_cap` for a particular technology.
       flow_out_min_relative: 0 # name: Minimum outflow ¦ unit: fraction ¦ Set to a value between 0 and 1 to force minimum outflow as a fraction of the technology maximum flow capacity. If non-zero and technology is not defined by ``units``, this will force the technology to operate above its minimum value at every timestep.
       flow_cap_per_unit: null # name: Flow capacity per purchased unit ¦ unit: kW/unit ¦ Set the capacity of each integer unit of a technology purchased
-      flow_eff: 1.0 # name: Flow efficiency ¦ unit: fraction ¦ conversion efficiency (static, or from file as timeseries), from ``source``/``flow_in`` (tech dependent) to ``flow_out``/``sink``.
-      flow_eff_per_distance: 1.0 # name: Flow efficiency per distance ¦ unit: fraction/distance ¦ Set as value between 1 (no loss) and 0 (all lost).
+      flow_in_eff: 1.0 # name: Inflow efficiency ¦ unit: fraction ¦ conversion efficiency (static, or from file as timeseries), from ``source``/``flow_in`` (tech dependent) into the technology.
+      flow_out_eff: 1.0 # name: Outflow efficiency ¦ unit: fraction ¦ conversion efficiency (static, or from file as timeseries), from ``source``/``flow_in`` (tech dependent) into the technology.
+      flow_in_eff_per_distance: 1.0 # name: Inflow (i.e., export from node) efficiency per distance for transmission links ¦ unit: fraction/distance ¦ Set as value between 1 (no loss) and 0 (all lost).
+      flow_out_eff_per_distance: 1.0 # name: outflow (i.e., import from node) efficiency per distance for transmission links ¦ unit: fraction/distance ¦ Set as value between 1 (no loss) and 0 (all lost).
       flow_ramping: 1 # name: Ramping rate ¦ unit: fraction / hour ¦ Set to ``false`` to disable ramping constraints, otherwise limit maximum outflow to a fraction of maximum capacity, which increases by that fraction at each timestep.
       export_max: .inf # name: Maximum allowed export ¦ unit: kW ¦ Maximum allowed export of produced carrier for a technology.
       export_carrier: null # name: Export carrier ¦ unit: N/A ¦ Name of carrier to be exported. Must be an output carrier of the technology
       lifetime: null # name: Technology lifetime ¦ unit: years ¦ Must be defined if fixed capital costs are defined. A reasonable value for many technologies is around 20-25 years.
-      parasitic_eff: 1.0 # name: Plant parasitic efficiency ¦ unit: fraction ¦ Additional losses as flow gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption
+      flow_out_parasitic_eff: 1.0 # name: Plant parasitic efficiency ¦ unit: fraction ¦ Additional losses as flow gets transferred from the plant to the carrier (static, or from file as timeseries), e.g. due to plant parasitic consumption
       sink_min: 0 # name: Minimum bound on sink to remove a carrier from the system (e.g., electricity demand, transport distance) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Minimum sink use (static, or from file as timeseries). Unit dictated by ``source_unit``.
       sink_max: .inf # name: Maximum bound on sink to remove a carrier from the system (e.g., electricity demand, transport distance) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Maximum sink use (static, or from file as timeseries). Unit dictated by ``source_unit``.
       sink_equals: null # name: Required amount removal of a carrier from the system through a sink (e.g., electricity demand, transport distance) ¦ unit: kWh | kWh/m\ :sup:`2` | kWh/kW ¦ Required sink (static, or from file as timeseries). Unit dictated by ``source_unit``.
@@ -436,9 +449,10 @@ techs:
         interest_rate: 0 # name: Interest rate ¦ unit: fraction ¦ Used when computing levelized costs
         om_annual: 0 # name: Yearly O&M costs ¦ unit: kW :sub:`flow_cap` :sup:`-1` ¦
         om_annual_investment_fraction: 0 # name: Fractional yearly O&M costs ¦ unit: fraction / total investment ¦
-        om_con: 0 # name: Carrier consumption cost ¦ unit: kWh :sup:`-1` ¦ Applied to carrier consumption of a technology
-        om_prod: 0 # name: outflow cost ¦ unit: kWh :sup:`-1` ¦ Applied to outflow of a technology
-        purchase: 0 # name: Purchase cost ¦ unit: unit :sup:`-1` ¦ Triggers a binary variable for that technology to say that it has been purchased or is applied to integer variable ``units``
+        flow_in: 0 # name: Carrier consumption cost ¦ unit: kWh :sup:`-1` ¦ Applied to carrier consumption of a technology
+        flow_out: 0 # name: outflow cost ¦ unit: kWh :sup:`-1` ¦ Applied to outflow of a technology
+        purchase: 0 # name: Purchase cost ¦ unit: unit :sup:`-1` ¦ Will be applied to either the binary variable `purchased` or the integer variable ``units``
+        purchase_per_distance: 0 # name: Purchase cost per unit distance for transmission techs ¦ unit: unit :sup:`-1` / distance ¦  Will be applied to either the binary variable `purchased` or the integer variable ``units``
         area_use: 0 # name: Cost of area use ¦ unit: m\ :sup:`-2` ¦
         source_cap: 0 # name: Cost of source flow capacity ¦ unit: kW :sup:`-1` ¦
         storage_cap: 0 # name: Cost of storage capacity ¦ unit: kWh :sup:`-1` ¦

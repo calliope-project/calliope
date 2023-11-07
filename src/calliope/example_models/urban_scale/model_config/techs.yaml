@@ -29,7 +29,7 @@ techs:
       monetary:
         interest_rate: 0.10
         flow_cap: 15
-        om_con: 0.1 # 10p/kWh electricity price #ppt
+        flow_in: 0.1 # 10p/kWh electricity price #ppt
 
   supply_gas:
     essentials:
@@ -45,7 +45,7 @@ techs:
       monetary:
         interest_rate: 0.10
         flow_cap: 1
-        om_con: 0.025 # 2.5p/kWh gas price #ppt
+        flow_in: 0.025 # 2.5p/kWh gas price #ppt
   # supply-end
 
   ##-Renewables-##
@@ -62,7 +62,7 @@ techs:
       area_use_per_flow_cap: 7 # 7m2 of panels needed to fit 1kWp of panels
       export_carrier: electricity
       source_equals: file=pv_resource.csv:per_area # Already accounts for panel efficiency - kWh/m2. Source: Renewables.ninja Solar PV Power - Version: 1.1 - License: https://creativecommons.org/licenses/by-nc/4.0/ - Reference: https://doi.org/10.1016/j.energy.2016.08.060
-      parasitic_eff: 0.85 # inverter losses
+      flow_out_parasitic_eff: 0.85 # inverter losses
       flow_cap_max: 250
       area_use_max: 1500
       lifetime: 25
@@ -83,12 +83,12 @@ techs:
       carrier_in: gas
     constraints:
       flow_cap_max: 600
-      flow_eff: 0.85
+      flow_out_eff: 0.85
       lifetime: 25
     costs:
       monetary:
         interest_rate: 0.10
-        om_con: 0.004 # .4p/kWh
+        flow_in: 0.004 # .4p/kWh
   # boiler-end
 
   # Conversion_plus
@@ -107,14 +107,14 @@ techs:
     constraints:
       export_carrier: electricity
       flow_cap_max: 1500
-      flow_eff: 0.405
+      flow_out_eff: 0.405
       carrier_ratios.carrier_out_2.heat: 0.8
       lifetime: 25
     costs:
       monetary:
         interest_rate: 0.10
         flow_cap: 750
-        om_prod: 0.004 # .4p/kWh for 4500 operating hours/year
+        flow_out: 0.004 # .4p/kWh for 4500 operating hours/year
         export: file=export_power.csv
   # chp-end
 
@@ -145,7 +145,7 @@ techs:
       carrier: electricity
     constraints:
       flow_cap_max: 2000
-      flow_eff: 0.98
+      flow_out_eff: 0.98
       lifetime: 25
     costs:
       monetary:
@@ -160,7 +160,7 @@ techs:
       carrier: heat
     constraints:
       flow_cap_max: 2000
-      flow_eff_per_distance: 0.975
+      flow_out_eff_per_distance: 0.975
       lifetime: 25
     costs:
       monetary:

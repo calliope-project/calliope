@@ -143,7 +143,7 @@ class DataVarParser(EvalWhere):
     def __repr__(self):
         return f"DATA_VAR:{self.data_var}"
 
-    def _preprocess(self) -> tuple[xr.DataArray, str]:
+    def _preprocess(self) -> tuple[xr.Dataset, str]:
         """Get data variable from the optimisation problem dataset.
 
         Raises:
@@ -170,36 +170,39 @@ class DataVarParser(EvalWhere):
             )
 
         if data_var_type == "parameters":
-            source_array = self.eval_attrs["input_data"]
+            source_dataset = self.eval_attrs["input_data"]
         else:
-            source_array = backend_interface._dataset
+            source_dataset = backend_interface._dataset
 
-        return source_array, data_var_type
+        return source_dataset, data_var_type
 
     def _data_var_exists(
-        self, source_array: xr.DataArray, data_var_type: str
+        self, source_dataset: xr.Dataset, data_var_type: str
     ) -> xr.DataArray:
         "mask by setting all (NaN | INF/-INF) to False, otherwise True"
-        var = source_array.get(self.data_var, xr.DataArray(np.nan))
+        var = source_dataset.get(self.data_var, xr.DataArray(np.nan))
         if data_var_type == "parameters":
-            return var.notnull() & (var != np.inf) & (var != -np.inf)
+            if self.data_var not in self.eval_attrs["input_data"]:
+                return xr.DataArray(np.False_)
+            else:
+                return var.notnull() & (var != np.inf) & (var != -np.inf)
         else:
             return var.notnull()
 
-    def _data_var_with_default(self, source_array: xr.Dataset) -> xr.DataArray:
+    def _data_var_with_default(self, source_dataset: xr.Dataset) -> xr.DataArray:
         "Access data var and fill with default values. Return default value as an array if var does not exist"
-        default = source_array.attrs["defaults"].get(self.data_var)
-        return source_array.get(self.data_var, xr.DataArray(default)).fillna(default)
+        default = source_dataset.attrs["defaults"].get(self.data_var)
+        return source_dataset.get(self.data_var, xr.DataArray(default)).fillna(default)
 
     def as_math_string(self) -> str:
         # TODO: add dims from a YAML schema of params that includes default dims
-        source_array, data_var_type = self._preprocess()
+        source_dataset, data_var_type = self._preprocess()
         if data_var_type == "parameters":
             data_var_string = rf"\textit{{{self.data_var}}}"
         else:
             data_var_string = rf"\textbf{{{self.data_var}}}"
 
-        var = source_array.get(self.data_var, None)
+        var = source_dataset.get(self.data_var, None)
         if var is not None and var.shape:
             data_var_string += (
                 rf"_\text{{{','.join(str(i).removesuffix('s') for i in var.dims)}}}"
@@ -209,18 +212,12 @@ class DataVarParser(EvalWhere):
         return data_var_string
 
     def as_array(self) -> xr.DataArray:
-        source_array, data_var_type = self._preprocess()
-
-        if (
-            data_var_type == "parameters"
-            and self.data_var not in self.eval_attrs["input_data"]
-        ):
-            return xr.DataArray(np.False_)
+        source_dataset, data_var_type = self._preprocess()
 
         if self.eval_attrs.get("apply_where", True):
-            return self._data_var_exists(source_array, data_var_type)
+            return self._data_var_exists(source_dataset, data_var_type)
         else:
-            return self._data_var_with_default(source_array)
+            return self._data_var_with_default(source_dataset)
 
 
 class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):

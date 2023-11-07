@@ -24,6 +24,6 @@ variables:
 global_expressions:
   cost_investment.active: false
   cost:
-    where: "cost_export OR cost_om_con OR cost_om_prod"
+    where: "cost_export OR cost_flow_in OR cost_flow_out"
     equations:
       - expression: $cost_var_sum

@@ -21,7 +21,7 @@ nodes:
         costs.monetary.flow_cap: 43.1 # different boiler costs
       pv:
         costs.monetary:
-          om_prod: -0.0203 # revenue for just producing electricity
+          flow_out: -0.0203 # revenue for just producing electricity
           export: -0.0491 # FIT return for PV export
       supply_gas:
       demand_electricity:
