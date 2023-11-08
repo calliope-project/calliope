@@ -7,7 +7,6 @@ import importlib
 import logging
 import typing
 from abc import ABC, abstractmethod
-from copy import deepcopy
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -26,7 +25,7 @@ import xarray as xr
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.backend import parsing
+from calliope.backend import helper_functions, parsing, where_parser
 from calliope.util.tools import validate_dict
 
 if TYPE_CHECKING:
@@ -46,7 +45,7 @@ class BackendModelGenerator(ABC):
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
     _COMPONENT_ATTR_METADATA = ["description", "unit"]
 
-    def __init__(self, inputs: xr.Dataset, **config_overrides):
+    def __init__(self, inputs: xr.Dataset, build_config: dict):
         """Abstract base class to build a representation of the optimisation problem.
 
         Args:
@@ -55,10 +54,9 @@ class BackendModelGenerator(ABC):
 
         self._dataset = xr.Dataset()
         self.inputs = inputs.copy()
-        self.inputs.attrs = deepcopy(inputs.attrs)
-        self.inputs.attrs["config"].build.union(
-            AttrDict(config_overrides), allow_override=True
-        )
+        self._check_inputs()
+
+        self.inputs.attrs["config"]["build"] = build_config
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
     @abstractmethod
@@ -184,6 +182,34 @@ class BackendModelGenerator(ABC):
         getattr(LOGGER, level)(
             f"Optimisation model | {component_type}:{component_name} | {message}"
         )
+
+    def _check_inputs(self):
+        data_checks = AttrDict.from_yaml(
+            importlib.resources.files("calliope") / "config" / "model_data_checks.yaml"
+        )
+        errors = []
+        warnings = []
+        parser_ = where_parser.generate_where_string_parser()
+        eval_kwargs = {
+            "equation_name": "",
+            "backend_interface": self,
+            "input_data": self.inputs,
+            "helper_functions": helper_functions._registry["where"],
+            "apply_where": True,
+        }
+        for failure_check in data_checks["fail"]:
+            parsed_ = parser_.parse_string(failure_check["where"], parse_all=True)
+            failed = parsed_[0].eval("array", **eval_kwargs)
+            if failed.any():
+                errors.append(failure_check["message"])
+
+        for warning_check in data_checks["warn"]:
+            parsed_ = parser_.parse_string(warning_check["where"], parse_all=True)
+            warned = parsed_[0].eval("array", **eval_kwargs)
+            if warned.any():
+                warnings.append(warning_check["message"])
+
+        exceptions.print_warnings_and_raise_errors(warnings, errors)
 
     def _build(self) -> None:
         self._add_run_mode_custom_math()
@@ -423,7 +449,10 @@ class BackendModelGenerator(ABC):
 
         if references is not None:
             for reference in references:
-                self._dataset[reference].attrs["references"].add(name)
+                try:
+                    self._dataset[reference].attrs["references"].add(name)
+                except KeyError:
+                    continue
 
     def _apply_func(
         self, func: Callable, *args, output_core_dims: tuple = ((),), **kwargs
@@ -528,14 +557,14 @@ class BackendModelGenerator(ABC):
 
 
 class BackendModel(BackendModelGenerator, Generic[T]):
-    def __init__(self, inputs: xr.Dataset, instance: T, **config_overrides) -> None:
+    def __init__(self, inputs: xr.Dataset, instance: T, build_config: dict) -> None:
         """Abstract base class to build backend models that interface with solvers.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
             instance (T): Interface model instance.
         """
-        super().__init__(inputs, **config_overrides)
+        super().__init__(inputs, build_config)
         self._instance = instance
 
     @abstractmethod

@@ -506,6 +506,15 @@ properties:
               Set as value between 1 (no loss) and 0 (all lost).
               Unit: fraction.
 
+          flow_out_parasitic_eff:
+            $ref: "#/$defs/TechParamNullNumberVariable"
+            default: 1.0
+            title: Plant parasitic efficiency
+            description: >-
+              Additional losses as flow gets transferred from the plant to the carrier, e.g. due to plant parasitic consumption.
+              Set as value between 1 (no loss) and 0 (all lost).
+              Unit: fraction.
+
           flow_ramping:
             $ref: "#/$defs/TechParamNullNumberFixed"
             default: 1.0
@@ -530,15 +539,6 @@ properties:
               Must be defined if fixed capital costs are defined.
               A reasonable value for many technologies is around 20-25 years.
               Unit: years.
-
-          parasitic_eff:
-            $ref: "#/$defs/TechParamNullNumberVariable"
-            default: 1.0
-            title: Plant parasitic efficiency
-            description: >-
-              Additional losses as flow gets transferred from the plant to the carrier, e.g. due to plant parasitic consumption.
-              Set as value between 1 (no loss) and 0 (all lost).
-              Unit: fraction.
 
           area_use_max:
             $ref: "#/$defs/TechParamNullNumberFixed"

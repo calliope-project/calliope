@@ -3,12 +3,14 @@
 
 
 import re
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, TypeVar
 
 import jsonschema
 from typing_extensions import ParamSpec
 
+from calliope.attrdict import AttrDict
 from calliope.exceptions import print_warnings_and_raise_errors
 
 P = ParamSpec("P")
@@ -32,6 +34,15 @@ def relative_path(base_path_file, path) -> Path:
     return path
 
 
+def update_then_validate_config(
+    config_key: str, config_dict: AttrDict, schema: dict, **update_kwargs
+) -> AttrDict:
+    to_validate = deepcopy(config_dict[config_key])
+    to_validate.union(AttrDict(update_kwargs), allow_override=True)
+    validate_dict({config_key: to_validate}, schema, f"`{config_key}` configuration")
+    return to_validate
+
+
 def validate_dict(to_validate: dict, schema: dict, dict_descriptor: str) -> None:
     """
     Validate a dictionary under a given schema.
@@ -46,7 +57,6 @@ def validate_dict(to_validate: dict, schema: dict, dict_descriptor: str) -> None
         calliope.exceptions.ModelError: If the dictionary is not valid according to the schema, a list of the issues found will be collated and raised.
     """
     errors = []
-    _errors = []
     validator = jsonschema.Draft202012Validator
     try:
         validator.check_schema(schema)

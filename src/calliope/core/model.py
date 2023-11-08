@@ -32,7 +32,12 @@ from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess import load
 from calliope.preprocess.model_data import ModelDataFactory
 from calliope.util.logging import log_time
-from calliope.util.tools import extract_from_schema, relative_path, validate_dict
+from calliope.util.tools import (
+    extract_from_schema,
+    relative_path,
+    update_then_validate_config,
+    validate_dict,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -104,6 +109,8 @@ class Model(object):
         self._math_schema: AttrDict
         self._config_schema: AttrDict
         self._model_def_schema: AttrDict
+        self._is_built: bool = False
+        self._is_solved: bool = False
 
         self._load_schemas()
 
@@ -127,10 +134,28 @@ class Model(object):
             self._init_from_model_def_dict(
                 model_def, applied_overrides, scenario, debug, timeseries_dataframes
             )
+        self.math_documentation.inputs = self._model_data
+        self.math_documentation.schema = self._config_schema
 
     @property
     def name(self):
         return self._model_data.attrs["name"]
+
+    @property
+    def inputs(self):
+        return self._model_data.filter_by_attrs(is_result=0)
+
+    @property
+    def results(self):
+        return self._model_data.filter_by_attrs(is_result=1)
+
+    @property
+    def is_built(self):
+        return self._is_built
+
+    @property
+    def is_solved(self):
+        return self._is_solved
 
     def _init_from_model_def_dict(
         self,
@@ -192,6 +217,7 @@ class Model(object):
         model_data_factory.add_top_level_params()
         model_data_factory.clean_data_from_undefined_members()
         model_data_factory.add_colors()
+        model_data_factory.add_link_distances()
 
         if debug:
             self._model_data_pre_time = deepcopy(model_data_factory.model_data)
@@ -212,9 +238,6 @@ class Model(object):
 
         math = self._add_math(init_config.custom_math)
         self._add_observed_dict("math", math)
-
-        self.inputs = self._model_data.filter_by_attrs(is_result=0)
-        self.math_documentation.inputs = self._model_data
 
         self._model_data.attrs["name"] = init_config["name"]
         log_time(
@@ -264,28 +287,15 @@ class Model(object):
             extract_from_schema(getattr(self, f"_{schema_name}_schema"), "default")
         )
 
-    def _load_types(self, schema_name: str) -> AttrDict:
-        return AttrDict(
-            extract_from_schema(getattr(self, f"_{schema_name}_schema"), "type")
-        )
-
     def _add_model_data_methods(self):
         """
         1. Filter model dataset to produce views on the input/results data
         2. Add top-level configuration dictionaries simultaneously to the model data attributes and as attributes of this class.
 
         """
-        self.inputs = self._model_data.filter_by_attrs(is_result=0)
-        self.results = self._model_data.filter_by_attrs(is_result=1)
         self._add_observed_dict("config")
         self._add_observed_dict("math")
 
-        self.inputs = self._model_data.filter_by_attrs(is_result=0)
-        results = self._model_data.filter_by_attrs(is_result=1)
-        self.math_documentation.inputs = self._model_data
-
-        if len(results.data_vars) > 0:
-            self.results = results
         log_time(
             LOGGER,
             self._timings,
@@ -374,16 +384,23 @@ class Model(object):
                 Backend interface in which to build the problem. Defaults to "pyomo".
         """
 
-        if hasattr(self, "backend") and not force:
+        if self._is_built and not force:
             raise exceptions.ModelError(
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
-        backend_name = kwargs.get("backend", self.config.build.backend)
+        build_config = update_then_validate_config(
+            "build",
+            self.config,
+            self._config_schema,
+            **kwargs,
+        )
+        backend_name = kwargs.get("backend", build_config["backend"])
 
-        backend = self._BACKENDS[backend_name](self._model_data, **kwargs)
+        backend = self._BACKENDS[backend_name](self._model_data, build_config)
         backend._build()
         self.backend = backend
+        self._is_built = True
 
     def solve(self, force: bool = False, warmstart: bool = False, **kwargs) -> None:
         """
@@ -407,9 +424,10 @@ class Model(object):
             exceptions.ModelError: Cannot run the model if there are already results loaded, unless `force` is True.
             exceptions.ModelError: Some preprocessing steps will stop a run mode of "operate" from being possible.
         """
-        run_mode = self.config.build.mode
-        solver_config = deepcopy(self.config.solve)
-        solver_config.union(AttrDict(kwargs), allow_override=True)
+        run_mode = self.backend.inputs.attrs["config"]["build"]["mode"]
+        solver_config = update_then_validate_config(
+            "solve", self.config, self._config_schema, **kwargs
+        )
 
         # Check that results exist and are non-empty
         if not hasattr(self, "backend"):
@@ -476,6 +494,8 @@ class Model(object):
             [results, self._model_data], compat="override", combine_attrs="no_conflicts"
         )
         self._add_model_data_methods()
+
+        self._is_solved = True
 
     def run(self, force_rerun=False, **kwargs):
         """

@@ -219,14 +219,15 @@ class ModelDataFactory:
             geod = geodesic.Geodesic.WGS84
             distances = {}
             for tech in self.model_data.techs:
-                latitudes = self.model_data.latitude.sel(techs=tech).dropna("nodes")
-                longitudes = self.model_data.longitude.sel(techs=tech).dropna("nodes")
-                node1, node2 = latitudes.nodes.values
-                distances[tech] = geod.Inverse(
-                    latitudes.sel(nodes=node1),
-                    longitudes.sel(nodes=node1),
-                    latitudes.sel(nodes=node2),
-                    longitudes.sel(nodes=node2),
+                if self.model_data.parent.sel(techs=tech).item() != "transmission":
+                    continue
+                tech_def = self.model_data.definition_matrix.sel(techs=tech)
+                node1, node2 = tech_def.where(tech_def).dropna("nodes").nodes.values
+                distances[tech.item()] = geod.Inverse(
+                    self.model_data.latitude.sel(nodes=node1).item(),
+                    self.model_data.longitude.sel(nodes=node1).item(),
+                    self.model_data.latitude.sel(nodes=node2).item(),
+                    self.model_data.longitude.sel(nodes=node2).item(),
                 )["s12"]
             distance_array = pd.Series(distances).rename_axis(index="techs").to_xarray()
         else:

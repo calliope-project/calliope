@@ -94,12 +94,10 @@ properties:
     additionalProperties: false
     properties:
       operate_window:
-        type: ["null", integer]
-        default: null
+        type: integer
         description: Operate mode rolling `window`, given as a number of model timesteps.
       operate_horizon:
-        type: ["null", integer]
-        default: null
+        type: integer
         description: Operate mode rolling `horizon`, given as a number of model timesteps. (≥ `operate_window`)
       operate_use_cap_results:
         type: boolean
@@ -115,7 +113,6 @@ properties:
         description: SPORES mode cost class to vary between iterations after the initial base run.
       spores_slack_cost_group:
         type: string
-        default: null
         description: SPORES mode cost class to keep below the given `slack` (usually "monetary").
       spores_save_per_spore:
         type: boolean
@@ -123,7 +120,6 @@ properties:
         description: Whether or not to save the result of each SPORES mode run between iterations. If False, will consolidate all iterations into one dataset after completion of N iterations (defined by `spores_number`) and save that one dataset.
       spores_save_per_spore_path:
         type: string
-        default: null
         description: If saving per spore, the path to save to.
       spores_skip_cost_op:
         type: boolean

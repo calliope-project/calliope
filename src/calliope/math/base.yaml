@@ -22,7 +22,7 @@ constraints:
 
   force_zero_area_use:
     description: "Set a technology's area use to zero if its flow capacity upper bound is zero."
-    foreach: [nodes, techs, carriers]
+    foreach: [nodes, techs]
     where: "area_use AND flow_cap_max=0"
     equations:
       - expression: area_use == 0
@@ -58,9 +58,9 @@ constraints:
   balance_conversion:
     description: "Fix the relationship between a `conversion` technology's outflow and consumption."
     foreach: [nodes, techs, timesteps]
-    where: "parent=conversion"
+    where: parent=conversion AND NOT include_storage=true
     equations:
-      - expression: sum(flow_out / (flow_out_eff * flow_out_parasitic_eff), over=carriers) == sum(flow_in * flow_in_eff, over=carriers)
+      - expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
 
   flow_out_max:
     description: "Set the upper bound of a technology's outflow."
@@ -79,7 +79,7 @@ constraints:
   flow_in_max:
     description: "Set the upper bound of a technology's inflow."
     foreach: [nodes, techs, carriers, timesteps]
-    where: "carrier_in AND (NOT operating_units OR parent=demand)"
+    where: "carrier_in AND NOT operating_units AND (parent=storage OR parent=demand OR parent=conversion)"
     equations:
       - expression: flow_in <= flow_cap * timestep_resolution
 
@@ -126,9 +126,9 @@ constraints:
     where: "parent=demand"
     equations:
       - where: "sink_equals"
-        expression: "flow_in * flow_in_eff == sink_equals * $sink_scaler"
+        expression: "flow_in_inc_eff == sink_equals * $sink_scaler"
       - where: "NOT sink_equals AND sink_max"
-        expression: "flow_in * flow_in_eff <= sink_max * $sink_scaler"
+        expression: "flow_in_inc_eff <= sink_max * $sink_scaler"
     sub_expressions:
       sink_scaler: &sink_scaler
         - where: "sink_unit=per_area"
@@ -143,7 +143,7 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "sink_min AND NOT source_equals AND parent=supply"
     equations:
-      - expression: "flow_in * flow_in_eff >= sink_min * $sink_scaler"
+      - expression: "flow_in_inc_eff >= sink_min * $sink_scaler"
     sub_expressions:
       sink_scaler: *sink_scaler
 
@@ -159,7 +159,7 @@ constraints:
     foreach: [nodes, techs, carriers, timesteps]
     where: "storage AND parent=supply"
     equations:
-      - expression: storage == $storage_previous_step + source_use * source_eff - flow_out / (flow_out_eff * flow_out_parasitic_eff)
+      - expression: storage == $storage_previous_step + source_use * source_eff - flow_out_inc_eff
     sub_expressions:
       storage_previous_step: &storage_previous_step
         - where: timesteps=get_val_at_index(timesteps=0) AND NOT config.cyclic_storage=True
@@ -199,9 +199,9 @@ constraints:
   balance_storage:
     description: "Fix the quantity of carrier stored in a `storage` technology at the end of each timestep based on the net flow of carrier charged and discharged and the quantity of carrier stored at the start of the timestep."
     foreach: [nodes, techs, timesteps]
-    where: "parent=storage"
+    where: include_storage=true AND NOT (parent=supply OR parent=demand)
     equations:
-      - expression: storage == $storage_previous_step - sum(flow_out / (flow_out_eff * flow_out_parasitic_eff), over=carriers) + sum(flow_in * flow_eff, over=carriers)
+      - expression: storage == $storage_previous_step - sum(flow_out_inc_eff, over=carriers) + sum(flow_in_inc_eff, over=carriers)
     sub_expressions:
       storage_previous_step: *storage_previous_step
 
@@ -217,28 +217,17 @@ constraints:
 
   balance_transmission:
     description: "Fix the relationship between between carrier flowing into and out of a `transmission` link in each timestep."
-    foreach: [techs, carriers, timesteps]
+    foreach: [techs, timesteps]
     where: "parent=transmission"
     equations:
-      - expression: "sum(flow_out / (flow_out_eff * flow_out_parasitic_eff * $distance_flow_out_eff), over=nodes) == sum(flow_in * flow_in_eff * $distance_flow_in_eff, over=nodes)"
-    sub_expressions:
-      distance_flow_out_eff:
-        - where: flow_out_eff_per_distance AND distance
-          expression: flow_out_eff_per_distance ** distance
-        - where: NOT (flow_out_eff_per_distance AND distance)
-          expression: "1"
-      distance_flow_in_eff:
-        - where: flow_in_eff_per_distance AND distance
-          expression: flow_in_eff_per_distance ** distance
-        - where: NOT (flow_in_eff_per_distance AND distance)
-          expression: "1"
+      - expression: "sum(flow_out_inc_eff, over=[nodes, carriers]) == sum(flow_in_inc_eff, over=[nodes, carriers])"
 
   symmetric_transmission:
     description: "Fix the flow capacity of two `transmission` technologies representing the same link in the system."
     foreach: [nodes, techs]
     where: "parent=transmission"
     equations:
-      - expression: flow_cap == select_from_lookup_arrays(flow_cap, techs=link_remote_techs, nodes=link_remote_nodes)
+      - expression: sum(flow_cap, over=carriers) == link_flow_cap
 
   export_balance:
     description: "Set the lower bound of a technology's outflow to a technology's carrier export, for any technologies that can export carriers out of the system."
@@ -395,6 +384,15 @@ variables:
       min: flow_cap_min
       max: flow_cap_max
 
+  link_flow_cap:
+    description: "A transmission technology's flow capacity, also known as its nominal or nameplate capacity."
+    unit: power
+    foreach: [techs]
+    where: parent=transmission
+    bounds:
+      min: 0
+      max: .inf
+
   flow_out:
     description: "The outflow of a technology per timestep, also known as the flow discharged (from `storage` technologies) or the flow received (by `transmission` technologies) on a link."
     unit: energy
@@ -434,7 +432,7 @@ variables:
   source_use:
     description: "The carrier flow consumed from outside the system boundaries by a `supply` technology."
     unit: energy
-    foreach: [nodes, techs]
+    foreach: [nodes, techs, timesteps]
     where: "parent=supply"
     bounds:
       min: 0
@@ -544,6 +542,24 @@ objectives:
     sense: minimise
 
 global_expressions:
+  flow_out_inc_eff:
+    foreach: [nodes, techs, carriers, timesteps]
+    where: flow_out
+    equations:
+      - where: parent=transmission
+        expression: flow_out / (flow_out_eff * flow_out_parasitic_eff * flow_out_eff_per_distance ** default_if_empty(distance, 1))
+      - where: NOT parent=transmission
+        expression: flow_out / (flow_out_eff * flow_out_parasitic_eff)
+
+  flow_in_inc_eff:
+    foreach: [nodes, techs, carriers, timesteps]
+    where: flow_in
+    equations:
+      - where: parent=transmission
+        expression: flow_in * flow_in_eff * flow_in_eff_per_distance ** default_if_empty(distance, 1)
+      - where: NOT parent=transmission
+        expression: flow_in * flow_in_eff
+
   cost_var:
     description: "The operating costs per timestep of a technology"
     unit: cost_per_time
@@ -553,45 +569,75 @@ global_expressions:
       - expression: timestep_weights * ($cost_export + $cost_flow_out + $cost_flow_in)
     sub_expressions:
       cost_export:
-        - where: "export_carrier AND cost_export"
-          expression: cost_export * sum(flow_export, over=carriers)
-        - where: "NOT cost_export"
+        - where: flow_export
+          expression: sum(cost_export * default_if_empty(flow_export, 0), over=carriers)
+        - where: NOT flow_export
           expression: "0"
       cost_flow_in:
-        - where: "cost_flow_in AND parent=supply"
+        - where: "parent=supply"
           expression: cost_flow_in * source_use
-        - where: "cost_flow_in AND NOT parent=supply AND carrier_in"
-          expression: sum(cost_flow_in * flow_in, over=carriers)
-        - where: "NOT cost_flow_in"
-          expression: "0"
+        - where: "NOT parent=supply"
+          expression: sum(cost_flow_in * default_if_empty(flow_in, 0), over=carriers)
       cost_flow_out:
-        - where: "cost_flow_out AND carrier_out"
-          expression: sum(cost_flow_out * flow_out, over=carriers)
-        - where: "NOT cost_flow_out"
-          expression: "0"
+        - expression: sum(cost_flow_out * default_if_empty(flow_out, 0), over=carriers)
+
+  cost_investment_flow_cap:
+    foreach: [nodes, techs, carriers, costs]
+    where: any(flow_cap, over=carriers)
+    equations:
+      - expression: $cost_sum * flow_cap
+    sub_expressions:
+      cost_sum:
+        - where: parent=transmission
+          expression: (cost_flow_cap + cost_flow_cap_per_distance * default_if_empty(distance, 0)) * 0.5
+        - where: NOT parent=transmission
+          expression: cost_flow_cap
+
+  cost_investment_storage_cap:
+    foreach: [nodes, techs, costs]
+    where: cost_storage_cap AND storage_cap
+    equations:
+      - expression: cost_storage_cap * storage_cap
+
+  cost_investment_source_use:
+    foreach: [nodes, techs, costs]
+    where: cost_source_use AND source_use
+    equations:
+      - expression: cost_source_use * source_use
+
+  cost_investment_area_use:
+    foreach: [nodes, techs, costs]
+    where: cost_area_use AND area_use
+    equations:
+      - expression: cost_area_use * area_use
+
+  cost_investment_purchase:
+    foreach: [nodes, techs, costs]
+    where: cost_purchase AND (purchased OR units)
+    equations:
+      - where: parent=transmission
+        expression: (cost_purchase + cost_purchase_per_distance * default_if_empty(distance, 0)) * (purchased + units) * 0.5
+      - where: "NOT parent=transmission"
+        expression: cost_purchase * (purchased + units)
 
   cost_investment:
     description: "The installation costs of a technology, including annualised investment costs and annual maintenance costs."
     unit: cost
     foreach: [nodes, techs, costs]
-    where: "(cost_flow_cap OR cost_om_annual OR cost_om_annual_investment_fraction OR cost_purchase OR cost_area_use OR cost_source_cap OR cost_storage_cap OR cost_flow_cap_per_distance OR cost_purchase_per_distance)"
+    where: "(cost_investment_flow_cap OR cost_investment_storage_cap OR cost_investment_source_use OR cost_investment_area_use OR cost_investment_purchase)"
     equations:
       - expression: >
           $annualisation_weight * (
             $depreciation_rate * (
-                $cost_flow_cap + $distance_cost_flow_cap
-                + $cost_storage_cap + $cost_source_cap
-                + $cost_area_use
-                + $cost_of_purchase + $distance_cost_of_purchase
-              ) * ($multiplier + cost_om_annual_investment_fraction)
-              + sum(cost_om_annual * flow_cap, over=carriers)
+              sum(default_if_empty(cost_investment_flow_cap, 0), over=carriers) +
+              default_if_empty(cost_investment_storage_cap, 0) +
+              default_if_empty(cost_investment_source_use, 0) +
+              default_if_empty(cost_investment_area_use, 0) +
+              default_if_empty(cost_investment_purchase, 0)
+            ) * (1 + cost_om_annual_investment_fraction)
+            + sum(cost_om_annual * default_if_empty(flow_cap, 0), over=carriers)
           )
     sub_expressions:
-      multiplier:
-        - where: "parent=transmission"
-          expression: "0.5"
-        - where: "NOT parent=transmission"
-          expression: "1"
       annualisation_weight:
         - expression: sum(timestep_resolution * timestep_weights, over=timesteps) / 8760
       depreciation_rate:
@@ -603,45 +649,7 @@ global_expressions:
           expression: >-
             (cost_interest_rate * ((1 + cost_interest_rate) ** lifetime)) /
             (((1 + cost_interest_rate) ** lifetime) - 1)
-      cost_flow_cap:
-        - where: "cost_flow_cap"
-          expression: sum(cost_flow_cap * flow_cap, over=carriers)
-        - where: "NOT cost_flow_cap"
-          expression: "0"
-      distance_cost_flow_cap:
-        - where: "cost_flow_cap_per_distance AND distance"
-          expression: cost_flow_cap_per_distance * flow_cap * distance
-        - where: "NOT (cost_flow_cap_per_distance AND distance)"
-          expression: "0"
-      cost_storage_cap:
-        - where: "cost_storage_cap AND storage_cap"
-          expression: cost_storage_cap * storage_cap
-        - where: "NOT (cost_storage_cap AND storage_cap)"
-          expression: "0"
-      cost_source_cap:
-        - where: "cost_source_cap AND source_cap"
-          expression: cost_source_cap * source_cap
-        - where: "NOT (cost_source_cap AND source_cap)"
-          expression: "0"
-      cost_area_use:
-        - where: "cost_area_use AND area_use"
-          expression: "cost_area_use * area_use"
-        - where: "NOT (cost_area_use AND area_use)"
-          expression: "0"
-      cost_of_purchase:
-        - where: "cost_purchase AND purchased"
-          expression: "cost_purchase * purchased"
-        - where: "cost_purchase AND units"
-          expression: "cost_purchase * units"
-        - where: "NOT (cost_purchase AND (purchased OR units))"
-          expression: "0"
-      distance_cost_of_purchase:
-        - where: "cost_purchase_per_distance AND distance AND purchased"
-          expression: cost_purchase_per_distance * purchased * distance
-        - where: "cost_purchase_per_distance AND distance AND units"
-          expression: cost_purchase_per_distance * units * distance
-        - where: "NOT (cost_purchase_per_distance AND distance AND (purchased OR units))"
-          expression: "0"
+
 
   cost:
     description: "The total annualised costs of a technology, including installation and operation costs."

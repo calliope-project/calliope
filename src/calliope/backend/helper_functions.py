@@ -53,6 +53,11 @@ class ParsingHelperFunction(ABC):
     def NAME(self) -> str:
         "Helper function name that is used in the math expression/where string."
 
+    @property
+    def ignore_where(self) -> bool:
+        "If True, `where` arrays will not be applied to the incoming data variables (valid for expression helpers)"
+        return False
+
     @abstractmethod
     def as_math_string(self, *args, **kwargs) -> str:
         """Method to update LaTeX math strings to include the action applied by the helper function.
@@ -422,14 +427,14 @@ class ReduceCarrierDim(ParsingHelperFunction):
     def as_math_string(
         self,
         array: str,
-        carrier_tier: Literal["in", "out", "in_2", "out_2", "in_3", "out_3"],
+        flow_direction: Literal["in", "out"],
     ) -> str:
-        return rf"\sum\limits_{{\text{{carrier}} \in \text{{carrier_tier({carrier_tier})}}}} ({array})"
+        return rf"\sum\limits_{{\text{{carrier}} \in \text{{carrier_{flow_direction}}}}} ({array})"
 
     def as_array(
         self,
         array: xr.DataArray,
-        carrier_tier: Literal["in", "out", "in_2", "out_2", "in_3", "out_3"],
+        flow_direction: Literal["in", "out"],
     ) -> xr.DataArray:
         """Reduce expression array data by selecting the carrier that corresponds to the given carrier tier and then dropping the `carriers` dimension.
 
@@ -445,10 +450,9 @@ class ReduceCarrierDim(ParsingHelperFunction):
             equation_name=self._equation_name,
             input_data=self._input_data,
         )
+
         return sum_helper(
-            array.where(
-                self._input_data.definition_matrix.sel(carrier_tiers=carrier_tier)
-            ),
+            array.where(self._input_data[f"carrier_{flow_direction}"]),
             over="carriers",
         )
 
@@ -656,6 +660,10 @@ class Roll(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
+    @property
+    def ignore_where(self) -> bool:
+        return True
+
     def as_math_string(self, array: str, **roll_kwargs: str) -> str:
         new_strings = {
             k.removesuffix("s"): f"{-1 * int(v):+d}" for k, v in roll_kwargs.items()
@@ -690,48 +698,40 @@ class Roll(ParsingHelperFunction):
         return array.roll(roll_kwargs_int)
 
 
-class GetTransmissionTechs(ParsingHelperFunction):
+class DefaultIfEmpty(ParsingHelperFunction):
     #:
-    NAME = "get_transmission_techs"
+    NAME = "default_if_empty"
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_math_string(self, vals: Union[str, list[str]]) -> str:
-        expanded_vals = self._listify(vals, expand_link_techs=True)
-        return f"techs=[{','.join(expanded_vals)}]"
+    def as_math_string(self, var: str, default: float | int) -> str:
+        return rf"({var}\vee{default})"
 
-    def as_array(self, vals: Union[str, list[str]]) -> xr.DataArray:
-        """Get an array of model techs marking which are linked to a base transmission tech(s).
+    def as_array(self, var: xr.DataArray, default: float | int) -> xr.DataArray:
+        """Get an array with filled NaNs if present in the model, or a single default value if not.
 
-        This function is useful for slicing an array's `techs` dimension for all transmission techs linked to the same base tech(s).
+        This function is useful for avoiding excessive sub expressions where it is a choice between an expression or a single numeric value.
 
         Args:
-            base_tech_name: Transmission tech base name or list of names, i.e., without remote node attached to the tech (`ac_transmission` instead of `ac_transmission:region1`).
+            var (xr.DataArray): array of backend expression objects or an un-indexed "string" object array with the var name (if not present in the model).
+            default (float | int): Numeric value with which to fill / replace `var`.
 
         Returns:
-            xr.DataArray: Coordinate `techs` array containing only members linked to the provided base transmission tech(s).
+            xr.DataArray:
+                If var is an array of backend expression objects, NaNs will be filled with `default`.
+                If var is an unindexed array with a single string value, an unindexed array with the default value.
 
         Examples:
-            ```yaml
-            links:
-                node1,node2:
-                    techs:
-                        ac_transmission:
-                node1,node3:
-                    techs:
-                        free_transmission:
             ```
-            Then:
-            ```
-            >>> get_transmission_techs(ac_transmission)
+            >>> default_if_empty(flow_cap, 0)
             [out] <xarray.DataArray (techs: 2)>
                   array(['ac_transmission:node1', 'ac_transmission:node2'], dtype=object)
-            >>> get_transmission_techs(free_transmission)
-            [out] <xarray.DataArray (techs: 2)>
-                  array(['free_transmission:node1', 'free_transmission:node3'], dtype=object)
-            >>> get_transmission_techs([free_transmission, ac_transmission])
-            [out] <xarray.DataArray (techs: 2)>
-                  array(['free_transmission:node1', 'free_transmission:node3', 'ac_transmission:node1', 'ac_transmission:node2'], dtype=object)
+            >>> default_if_empty(flow_export, 0)
+            [out] <xarray.DataArray ()>
+                  array(0, dtype=np.int)
             ```
         """
-        return xr.DataArray(self._listify(vals, expand_link_techs=True), dims=["techs"])
+        if var.attrs.get("obj_type", "") == "string":
+            return xr.DataArray(default)
+        else:
+            return var.fillna(default)
