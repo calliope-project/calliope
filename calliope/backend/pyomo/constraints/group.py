@@ -276,7 +276,8 @@ def load_constraints(backend_model):
                     [sense],
                     rule=target_reserve_abs_operating_constraint_rule,
                 ),
-            ) 
+            )
+            
     if "group_demand_share_per_timestep_decision" in model_data_dict:
         relaxation = backend_model.__calliope_run_config["relax_constraint"][
             "demand_share_per_timestep_decision_main_constraint"
@@ -675,14 +676,14 @@ def carrier_prod_constraint_rule(backend_model, group_name, what):
 
 def target_reserve_share_constraint_rule(backend_model, group_name, timestep, what): # UPDATED the math
     """
-    Enforces carrier_prod for groups of technologies and locations,
-    as a sum over the entire model period.
+    Add planning reserve margin constraint. On the contribution side, the energy_cap is derated by the capacity value.
+    On the target side, the reserve target represents a share of the load.
 
     .. container:: scrolling-wrapper
 
         .. math::
 
-            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq carrier_prod_max
+            \\sum_{loc::tech \\in given\\_group, timestep \\in timesteps} cap\\_value(loc::tech, timestep) energy_{cap}(loc::tech) timestep\\_resolution(timestep)  \\leq \\geq \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers_{in}, timestep \\in timesteps} (1 + target\\_share) carrier_{con}(loc::tech::carrier, timestep)
 
     """
 
@@ -717,14 +718,14 @@ def target_reserve_share_constraint_rule(backend_model, group_name, timestep, wh
 
 def target_reserve_adder_constraint_rule(backend_model, group_name, timestep, what): # UPDATED the math
     """
-    Enforces carrier_prod for groups of technologies and locations,
-    as a sum over the entire model period.
+    Add planning reserve margin constraint. On the contribution side, the energy_cap is derated by the capacity value.
+    On the target side, the reserve target represents an absolute adder in addition to the load.
 
     .. container:: scrolling-wrapper
 
         .. math::
 
-            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq carrier_prod_max
+            \\sum_{loc::tech \\in given\\_group, timestep \\in timesteps} cap\\_value(loc::tech, timestep) energy_{cap}(loc::tech) timestep\\_resolution(timestep)  \\leq \\geq target\\_adder + \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers_{con}, timestep \\in timesteps} carrier_{con}(loc::tech::carrier, timestep)
 
     """
 
@@ -759,14 +760,14 @@ def target_reserve_adder_constraint_rule(backend_model, group_name, timestep, wh
         
 def target_reserve_abs_constraint_rule(backend_model, group_name, timestep, what): # UPDATED the math
     """
-    Enforces carrier_prod for groups of technologies and locations,
-    as a sum over the entire model period.
+    Add planning reserve margin constraint. On the contribution side, the energy_cap is derated by the capacity value.
+    On the target side, the reserve target represents an absolute value independent of the load.
 
     .. container:: scrolling-wrapper
 
         .. math::
 
-            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq carrier_prod_max
+            \\sum_{loc::tech \\in given\\_group, timestep \\in timesteps} cap\\_value(loc::tech, timestep) energy_{cap}(loc::tech) timestep\\_resolution(timestep)  \\leq \\geq target\\_abs
 
     """
 
@@ -791,14 +792,14 @@ def target_reserve_abs_constraint_rule(backend_model, group_name, timestep, what
     
 def target_reserve_share_operating_constraint_rule(backend_model, group_name, timestep, what): # UPDATED the math
     """
-    Enforces carrier_prod for groups of technologies and locations,
-    as a sum over the entire model period.
+    Add operating reserve margin constraint. On the contribution side, the energy_cap is derated by the capacity value.
+    On the target side, the reserve target represents a share of the load plus the operating reserve of generating units.
 
     .. container:: scrolling-wrapper
 
         .. math::
 
-            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq carrier_prod_max
+            \\sum_{loc::tech \\in given\\_group, timestep \\in timesteps} cap\\_value(loc::tech, timestep) energy_{cap}(loc::tech) timestep\\_resolution(timestep)  \\leq \\geq \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers_{out}, timestep \\in timesteps} operating\\_reserve(loc::tech,timestep) carrier_{prod}(loc::tech::carrier,timestep) + \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers_{in}, timestep \\in timesteps} (1 + target\\_share(timestep)) carrier_{con}(loc::tech::carrier, timestep)
 
     """
 
@@ -840,14 +841,14 @@ def target_reserve_share_operating_constraint_rule(backend_model, group_name, ti
 
 def target_reserve_abs_operating_constraint_rule(backend_model, group_name, timestep, what): # UPDATED the math
     """
-    Enforces carrier_prod for groups of technologies and locations,
-    as a sum over the entire model period.
+    Add operating reserve margin constraint. On the contribution side, the energy_cap is derated by the capacity value.
+    On the target side, the reserve target represents an absolute value independent of the load.
 
     .. container:: scrolling-wrapper
 
         .. math::
 
-            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq carrier_prod_max
+            \\sum_{loc::tech \\in given\\_group, timestep \\in timesteps} cap\\_value(loc::tech, timestep) energy_{cap}(loc::tech) timestep\\_resolution(timestep)  \\leq \\geq target\\_abs(timestep)
 
     """
 
