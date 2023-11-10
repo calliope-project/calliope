@@ -392,7 +392,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                     "parameters",
                     name,
                     "Defining values for a previously fully/partially undefined parameter. "
-                    f"The optimisation problem components {refs_to_update} will be re-built.",
+                    f"The optimisation problem components {sorted(refs_to_update)} will be re-built.",
                     "info",
                 )
             self.delete_component(name, "parameters")

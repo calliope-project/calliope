@@ -2342,16 +2342,17 @@ class TestNewBackend:
         assert expected.equals(updated_param)
 
     def test_update_parameter_add_dim(self, caplog, simple_supply):
-        """flow_out_eff doesn't have the time dimension in the simple model, we add it here."""
+        """
+        flow_out_eff doesn't have the time dimension in the simple model, we add it here.
+        """
         updated_param = simple_supply.inputs.flow_out_eff.where(
             simple_supply.inputs.timesteps.notnull()
         )
-
-        refs_to_update = {
-            "balance_transmission",
+        refs_to_update = [  # should be sorted alphabetically
             "balance_supply_no_storage",
+            "balance_transmission",
             "flow_out_inc_eff",
-        }
+        ]
         caplog.set_level(logging.DEBUG)
 
         simple_supply.backend.update_parameter("flow_out_eff", updated_param)
@@ -2368,12 +2369,10 @@ class TestNewBackend:
         assert "timesteps" in expected.dims
 
     def test_update_parameter_replace_undefined(self, caplog, simple_supply):
-        """source_eff isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
-        NOTE: For the test, there should be at most 2 items in `refs to update`, otherwise their order in the logging message is unknown and can lead the test to fail erroneously.
-        """
+        """source_eff isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value."""
         updated_param = simple_supply.inputs.flow_out_eff
 
-        refs_to_update = {"balance_supply_no_storage"}
+        refs_to_update = ["balance_supply_no_storage"]
         caplog.set_level(logging.DEBUG)
 
         simple_supply.backend.update_parameter("source_eff", updated_param)

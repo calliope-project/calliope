@@ -37,6 +37,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class ModelDataFactory:
+    # TODO: move into yaml syntax and have it be updatable
     LOOKUP_PARAMS = {
         "carrier_in": "carriers",
         "carrier_out": "carriers",
@@ -64,28 +65,18 @@ class ModelDataFactory:
         attributes: dict,
         param_attributes: dict[str, dict],
     ):
+        """Take a Calliope model definition dictionary and convert it into an xarray Dataset, ready for
+        constraint generation.
+
+        This includes extracting timeseries data from file and resampling/clustering as necessary.
+
+        Args:
+            model_config (dict): Model initialisation configuration (i.e., `config.init`).
+            model_definition (ModelDefinition): Definition of model nodes and technologies as a dictionary.
+            attributes (dict): Attributes to attach to the model Dataset.
+            param_attributes (dict[str, dict]): Attributes to attach to the generated model DataArrays.
         """
-        Take a Calliope model_run and convert it into an xarray Dataset, ready for
-        constraint generation. Timeseries data is also extracted from file at this
-        point, and the time dimension added to the data
 
-        Parameters
-        ----------
-        model_run_dict : AttrDict
-            preprocessed model_run dictionary, as produced by
-            Calliope.preprocess.preprocess_model
-
-        Returns
-        -------
-        data : xarray Dataset
-            Dataset with optimisation param_dict as variables, optimisation sets as
-            coordinates, and other information in attributes.
-        data_pre_time : xarray Dataset, only returned if debug = True
-            Dataset, prior to time dimension addition, with optimisation param_dict
-            as variables, optimisation sets as coordinates, and other information
-            in attributes.
-
-        """
         self.config: dict = model_config
         self.model_definition: ModelDefinition = model_definition.copy()
         self.model_data = xr.Dataset(attrs=AttrDict(attributes))
@@ -97,7 +88,15 @@ class ModelDataFactory:
                 flipped_attributes[subkey][key] = subval
         self.param_attrs = flipped_attributes
 
-    def build(self, timeseries_dfs: Optional[dict[str, pd.DataFrame]]):
+    def build(self, timeseries_dfs: Optional[dict[str, pd.DataFrame]]) -> xr.Dataset:
+        """Main function used by the calliope Model object to invoke the factory and get it churning out a model dataset.
+
+        Args:
+            timeseries_dfs (Optional[dict[str, pd.DataFrame]]): If loading data from pre-loaded dataframes, they need to be provided here.
+
+        Returns:
+            xr.Dataset: Built model dataset, including the timeseries dimension.
+        """
         self.add_node_tech_data()
         self.add_time_dimension(timeseries_dfs)
         self.add_top_level_params()
@@ -106,8 +105,16 @@ class ModelDataFactory:
         self.add_link_distances()
         self.resample_time_dimension()
         self.assign_input_attr()
+        return self.model_data
 
     def add_node_tech_data(self):
+        """For each node, extract technology definitions and node-level parameters and convert them to arrays.
+
+        The node definition will first be updated according to any defined inheritance (via `inherit`),
+        before processing each defined tech (which will also be updated according to its inheritance tree).
+
+        Node and tech definitions will be validated against the model definition schema here.
+        """
         active_node_dict = self._inherit_defs("nodes")
         links_at_nodes = self._links_to_node_format(active_node_dict)
 
@@ -157,6 +164,12 @@ class ModelDataFactory:
         self.model_data = xr.merge([self.model_data, node_tech_ds, node_ds])
 
     def add_top_level_params(self):
+        """Process any parameters defined in the top-level `parameters` key.
+
+        Raises:
+            KeyError: Cannot provide the same name for a top-level parameter as those defined already at the tech/node level.
+
+        """
         if "parameters" not in self.model_definition:
             return None
         for param_name, param_data in self.model_definition["parameters"].items():
@@ -176,6 +189,15 @@ class ModelDataFactory:
             self.model_data = self.model_data.merge(param_ds)
 
     def add_time_dimension(self, timeseries_dfs: Optional[dict[str, pd.DataFrame]]):
+        """Process file/dataframe references in the model data and use it to expand the model to include a time dimension.
+
+        Args:
+            timeseries_dfs (Optional[dict[str, pd.DataFrame]]):
+                Reference to pre-loaded pandas.DataFrame objects, if any reference to them in the model definition (`via df=`).
+
+        Raises:
+            exceptions.ModelError: The model has to have a time dimension, so at least one reference must exist.
+        """
         self.model_data = time.add_time_dimension(
             self.model_data, self.config, timeseries_dfs
         )
@@ -186,6 +208,7 @@ class ModelDataFactory:
         self.model_data = time.add_inferred_time_params(self.model_data)
 
     def resample_time_dimension(self):
+        """If resampling/clustering is requested in the initialisation config, apply it here."""
         if self.config["time_resample"] is not None:
             self.model_data = time.resample(
                 self.model_data, self.config["time_resample"]
@@ -196,6 +219,7 @@ class ModelDataFactory:
             )
 
     def clean_data_from_undefined_members(self):
+        """Generate the `definition_matrix` array and use it to strip out any dimension items that are NaN in all arrays and any arrays that are NaN in all index positions."""
         def_matrix = self.model_data.active.notnull() & (
             self.model_data.carrier_in.notnull() | self.model_data.carrier_out.notnull()
         )
@@ -232,6 +256,11 @@ class ModelDataFactory:
         self.model_data = self.model_data.drop_vars(vars_to_delete)
 
     def add_link_distances(self):
+        """If latitude/longitude are provided but distances between nodes have not been computed, compute them now.
+
+        The schema will have already handled the fact that if one of lat/lon is provided, the other must also be provided.
+
+        """
         # If no distance was given, we calculate it from coordinates
         if (
             "latitude" in self.model_data.data_vars
@@ -273,6 +302,11 @@ class ModelDataFactory:
             )
 
     def add_colors(self):
+        """If technology colours have not been provided / only partially provided, generate a sequence of colors to fill the gap.
+
+        This is a convenience function for downstream plotting.
+        Since we have removed core plotting components from Calliope, it is not a strictly necessary preprocessing step.
+        """
         techs = self.model_data.techs
         color_array = self.model_data.get("color")
         default_palette_cycler = itertools.cycle(range(len(self._DEFAULT_PALETTE)))
@@ -290,10 +324,25 @@ class ModelDataFactory:
             self.model_data["color"] = self.model_data["color"].fillna(new_color_array)
 
     def assign_input_attr(self):
+        """All input parameters need to be assigned the `is_result=False` attribute to be able to filter the arrays in the calliope.Model object."""
         for var_name, var_data in self.model_data.data_vars.items():
             self.model_data[var_name] = var_data.assign_attrs(is_result=False)
 
     def _get_relevant_node_refs(self, techs_dict: AttrDict, node: str) -> list[str]:
+        """Get all references to parameters made in technologies at nodes.
+
+        This defines those arrays in the dataset that *must* be indexed over `nodes` as well as `techs`.
+
+        If timeseries files/dataframes are referenced in a tech at a node, the node name is added as the column name in-place.
+        Techs *must* define these timeseries references explicitly at nodes to access different data columns at different nodes.
+
+        Args:
+            techs_dict (AttrDict): Dictionary of technologies defined at a node.
+            node (str): Name of the node.
+
+        Returns:
+            list[str]: List of parameters at this node that must be indexed over the node dimension.
+        """
         refs = set()
         for key, val in techs_dict.as_dict_flat().items():
             if (
@@ -311,6 +360,15 @@ class ModelDataFactory:
         return list(refs)
 
     def _param_dict_to_array(self, param_name: str, param_data: Param) -> xr.DataArray:
+        """Take a blessed parameter dictionary and convert it to an xarray DataArray.
+
+        Args:
+            param_name (str): Name of the parameter being converted.
+            param_data (Param): Blessed dictionary. I.e., keys/values follow an expected structure.
+
+        Returns:
+            xr.DataArray: Array representation of the parameter.
+        """
         if param_data["dims"]:
             param_series = pd.Series(
                 data=param_data["data"],
@@ -330,8 +388,22 @@ class ModelDataFactory:
     def _definition_dict_to_ds(
         self,
         def_dict: dict[str, dict[str, dict | list[str] | DATA_T]],
-        dim_name: str,
+        dim_name: Literal["nodes", "techs"],
     ) -> xr.Dataset:
+        """Convert a dictionary of nodes/techs with their parameter definitions into an xarray dataset.
+
+        Node/tech name will be injected into each parameter's `index` and `dims` lists so that the resulting arrays include those dimensions.
+
+        Args:
+            def_dict (dict[str, dict[str, dict | list[str] | DATA_T]]):
+                `node`/`tech` definitions.
+                The first set of keys are dimension index items, the second set of keys are parameter names.
+                Parameters need not be blessed.
+            dim_name (Literal[nodes, techs]): Dimension name of the dictionary items.
+
+        Returns:
+            xr.Dataset: Dataset with arrays indexed over (at least) the input `dim_name`.
+        """
         param_ds = xr.Dataset()
         for idx_name, idx_params in def_dict.items():
             param_das: list[xr.DataArray] = []
@@ -347,6 +419,24 @@ class ModelDataFactory:
     def _prepare_param_dict(
         self, param_name: str, param_data: dict | list[str] | DATA_T
     ) -> Param:
+        """Convert a range of parameter definitions into the blessed `Param` format, i.e.:
+
+        ```
+        data: numeric/boolean/string data or list of them.
+        index: list of lists containing dimension index items (number of items in the sub-lists == length of `dims`).
+        dims: list of dimension names.
+        ```
+
+        Args:
+            param_name (str): Parameter name (used only in error messages).
+            param_data (dict | list[str] | DATA_T): Input unformatted parameter data.
+
+        Raises:
+            ValueError: If the parameter is unindexed (i.e., no `dims`/`index`) and is not a lookup array (see LOOKUP_PARAMS), it cannot define a list of data.
+
+        Returns:
+            Param: Blessed parameter dictionary.
+        """
         if isinstance(param_data, dict):
             data = param_data["data"]
             index_items = [listify(idx) for idx in listify(param_data["index"])]
@@ -376,6 +466,29 @@ class ModelDataFactory:
         dim_dict: Optional[AttrDict] = None,
         err_message_prefix: str = "",
     ) -> AttrDict:
+        """For a set of node/tech definitions, climb the inheritance tree to build a final definition dictionary.
+
+        For `techs` at `nodes`, the first step is to inherit the technology definition from `techs`, _then_ to climb `inherit` references.
+
+        Base definitions will take precedence over inherited ones and more recent inherited definitions will take precedence over older ones.
+
+        If a `tech`/`node` has the `active` parameter set to `False` (including if it inherits this parameter), it will not make it into the output dictionary.
+
+        Args:
+            dim_name (Literal[nodes, techs]): Name of dimension we're working with.
+            dim_dict (Optional[AttrDict], optional):
+                Base dictionary to work from.
+                If not defined, `dim_name` will be used to access the dictionary from the base model definition.
+                Defaults to None.
+            err_message_prefix (str, optional):
+                If working with techs at nodes, it is prudent to provide the node name to prefix error messages. Defaults to "".
+
+        Raises:
+            KeyError: Cannot define a `tech` at a `node` if it isn't already defined under the `techs` top-level key.
+
+        Returns:
+            AttrDict: Dictionary containing all active tech/node definitions with inherited parameters.
+        """
         updated_defs = AttrDict()
         if dim_dict is None:
             dim_dict = self.model_definition[dim_name]
@@ -414,10 +527,34 @@ class ModelDataFactory:
     def _climb_inheritance_tree(
         self,
         dim_item_dict: AttrDict,
-        dim_name: str,
+        dim_name: Literal["nodes", "techs"],
         item_name: str,
         inheritance: Optional[list] = None,
     ) -> tuple[AttrDict, Optional[list]]:
+        """Follow the `inherit` references from `nodes` to `node_groups` / from `techs` to `tech_groups`.
+
+        Abstract group definitions (those in `node_groups`/`tech_groups`) can inherit each other, but `nodes`/`techs` cannot.
+
+        This function will be called recursively until a definition dictionary without `inherit` is reached.
+
+        Args:
+            dim_item_dict (AttrDict):
+                Dictionary (possibly) containing `inherit`. If it doesn't contain `inherit`, the climbing stops here.
+            dim_name (Literal[nodes, techs]):
+                The name of the dimension we're working with, so that we can access the correct `_groups` definitions.
+            item_name (str):
+                The current position in the inheritance tree.
+            inheritance (Optional[list], optional):
+                A list of items that have been inherited (starting with the oldest).
+                If the first `dim_item_dict` does not contain `inherit`, this will remain as None.
+                Defaults to None.
+
+        Raises:
+            KeyError: Must inherit from a named group item in `node_groups` (for `nodes`) and `tech_groups` (for `techs`)
+
+        Returns:
+            tuple[AttrDict, Optional[list]]: Definition dictionary with inherited data and a list of the inheritance tree climbed to get there.
+        """
         dim_name_singular = dim_name.removesuffix("s")
         dim_group_def = self.model_definition.get(f"{dim_name_singular}_groups", None)
         to_inherit = dim_item_dict.get("inherit", None)
@@ -440,6 +577,16 @@ class ModelDataFactory:
         return updated_dim_item_dict, inheritance
 
     def _links_to_node_format(self, active_node_dict: AttrDict) -> AttrDict:
+        """Process `transmission` techs into links by assigned them to the nodes defined by their `from` and `to` keys.
+
+        Args:
+            active_node_dict (AttrDict):
+                Dictionary of nodes that are active in this model.
+                If a transmission tech references a non-active / undefined node, a link will not be generated.
+
+        Returns:
+            AttrDict: Dictionary of transmission techs distributed to nodes (of the form {node_name: {tech_name: {...}, tech_name: {}}}).
+        """
         active_link_techs = AttrDict(
             {
                 tech: tech_def
@@ -473,7 +620,7 @@ class ModelDataFactory:
 
         return link_tech_dict
 
-    def _update_param_coords(self, param_name: str, param_da: xr.DataArray) -> None:
+    def _update_param_coords(self, param_name: str, param_da: xr.DataArray):
         """
         Check array coordinates to see if any should be in datetime format,
         if the base model coordinate is in datetime format.
@@ -499,7 +646,7 @@ class ModelDataFactory:
                 f"(parameters, {param_name}) | Updating {coord_name} dimension index values to datetime format"
             )
 
-    def _log_param_updates(self, param_name: str, param_da: xr.DataArray) -> None:
+    def _log_param_updates(self, param_name: str, param_da: xr.DataArray):
         """
         Check array coordinates to see if:
             1. any are new compared to the base model dimensions.
@@ -526,6 +673,14 @@ class ModelDataFactory:
 
     @staticmethod
     def _add_active_node_tech(ds: xr.Dataset) -> xr.Dataset:
+        """For each node, create a boolean array where each `tech` that is defined at that `node` is set to True.
+
+        Args:
+            ds (xr.Dataset): Dataset of technology parameters at a given node.
+
+        Returns:
+            xr.Dataset: Input with the addition of a boolean `active` array.
+        """
         if not ds.nodes.shape:
             ds["nodes"] = ds["nodes"].expand_dims("nodes")
         if not ("techs" in ds.coords and "nodes" in ds.coords):

@@ -213,9 +213,7 @@ class Model(object):
             attributes,
             param_metadata,
         )
-        model_data_factory.build(timeseries_dataframes)
-
-        self._model_data = model_data_factory.model_data
+        self._model_data = model_data_factory.build(timeseries_dataframes)
 
         log_time(
             LOGGER,
