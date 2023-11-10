@@ -173,10 +173,7 @@ def constraints_to_dataset(model_run):
     group_constraints = [
         "energy_cap_min",
         "energy_cap_max",
-        "energy_cap_equals",
-        "target_reserve_share",
-        "target_reserve_adder",
-        "target_reserve_abs",
+        "energy_cap_equals"
     ]
     group_constraints_carrier = [
         "carrier_prod_min",
