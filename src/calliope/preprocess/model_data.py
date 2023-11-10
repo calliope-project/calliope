@@ -133,6 +133,9 @@ class ModelDataFactory:
                 MODEL_SCHEMA,
                 f"tech definition at node `{node_name}`",
             )
+            self._raise_error_on_transmission_tech_def(
+                techs_this_node_incl_inheritance, node_name
+            )
             techs_this_node_incl_inheritance.union(
                 links_at_nodes.get(node_name, AttrDict())
             )
@@ -140,10 +143,16 @@ class ModelDataFactory:
             tech_ds = self._definition_dict_to_ds(
                 techs_this_node_incl_inheritance, "techs"
             )
+
             tech_ds.coords["nodes"] = node_name
             for ref_var in node_ref_vars:
                 tech_ds[ref_var] = tech_ds[ref_var].expand_dims("nodes")
-            tech_ds = self._add_active_node_tech(tech_ds)
+            for ref_var in ["carrier_in", "carrier_out"]:
+                if ref_var in tech_ds.data_vars:
+                    tech_ds[ref_var] = tech_ds[ref_var].expand_dims("nodes")
+            if not tech_ds.nodes.shape:
+                tech_ds["nodes"] = tech_ds["nodes"].expand_dims("nodes")
+
             node_tech_data.append(tech_ds)
 
         node_tech_ds = xr.combine_nested(
@@ -182,7 +191,13 @@ class ModelDataFactory:
             param_ds = param_da.to_dataset()
 
             if "techs" in param_da.dims and "nodes" in param_da.dims:
-                param_ds = self._add_active_node_tech(param_ds)
+                valid_node_techs = (
+                    param_da.to_series().dropna().groupby(["nodes", "techs"]).first()
+                )
+                exceptions.warn(
+                    f"(parameters, {param_name}) | This parameter will only take effect if you have already defined"
+                    f" the following combinations of techs at nodes in your model definition: {valid_node_techs.index.values}"
+                )
 
             self.model_data = self.model_data.merge(param_ds)
 
@@ -218,7 +233,7 @@ class ModelDataFactory:
 
     def clean_data_from_undefined_members(self):
         """Generate the `definition_matrix` array and use it to strip out any dimension items that are NaN in all arrays and any arrays that are NaN in all index positions."""
-        def_matrix = self.model_data.active.notnull() & (
+        def_matrix = (
             self.model_data.carrier_in.notnull() | self.model_data.carrier_out.notnull()
         )
         # NaNing values where they are irrelevant requires definition_matrix to be boolean
@@ -603,10 +618,18 @@ class ModelDataFactory:
                     f"(links, {link_name}) | Deactivated due to missing/deactivated `from` or to `node`."
                 )
                 continue
+            node_from_data = link_data.copy()
+            node_to_data = link_data.copy()
+
+            if link_data.get("one_way", False):
+                self._update_one_way_links(node_from_data, node_to_data)
 
             link_tech_dict.union(
                 AttrDict(
-                    {node: {link_name: link_data} for node in [node_from, node_to]}
+                    {
+                        node_from: {link_name: node_from_data},
+                        node_to: {link_name: node_to_data},
+                    }
                 )
             )
 
@@ -664,22 +687,34 @@ class ModelDataFactory:
                     )
 
     @staticmethod
-    def _add_active_node_tech(ds: xr.Dataset) -> xr.Dataset:
-        """For each node, create a boolean array where each `tech` that is defined at that `node` is set to True.
+    def _update_one_way_links(node_from_data: dict, node_to_data: dict):
+        """For one-way transmission links, delete option to have carrier outflow (imports) at the `from` node and carrier inflow (exports) at the `to` node.
+
+        Deletions happen on the tech definition dictionaries in-place.
 
         Args:
-            ds (xr.Dataset): Dataset of technology parameters at a given node.
-
-        Returns:
-            xr.Dataset: Input with the addition of a boolean `active` array.
+            node_from_data (dict): Link technology data dictionary at the `from` node.
+            node_to_data (dict): Link technology data dictionary at the `to` node.
         """
-        if not ds.nodes.shape:
-            ds["nodes"] = ds["nodes"].expand_dims("nodes")
-        if not ("techs" in ds.coords and "nodes" in ds.coords):
-            return ds
-        ds["active"] = xr.DataArray(
-            data=True,
-            dims=("nodes", "techs"),
-            coords={"nodes": ds.nodes, "techs": ds.techs},
-        )
-        return ds
+        node_from_data.pop("carrier_out")  # cannot import carriers at the `from` node
+        node_to_data.pop("carrier_in")  # cannot export carrier at the `to` node
+
+    @staticmethod
+    def _raise_error_on_transmission_tech_def(tech_def_dict: AttrDict, node_name: str):
+        """Do not allow any transmission techs are defined in the node-level tech dict.
+
+        Args:
+            tech_def_dict (dict): Tech definition dict (after full inheritance) at a node.
+            node_name (str): Node name.
+
+        Raises:
+            exceptions.ModelError: Raise if any defined techs have the `transmission` parent.
+        """
+        transmission_techs = [
+            k for k, v in tech_def_dict.items() if v["parent"] == "transmission"
+        ]
+        if transmission_techs:
+            raise exceptions.ModelError(
+                f"(nodes, {node_name}) | Transmission techs cannot be directly defined at nodes; "
+                f"they will be automatically assigned to nodes based on `to` and `from` parameters: {transmission_techs}"
+            )

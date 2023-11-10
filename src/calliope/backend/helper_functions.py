@@ -699,7 +699,7 @@ class DefaultIfEmpty(ParsingHelperFunction):
     ALLOWED_IN = ["expression"]
 
     def as_math_string(self, var: str, default: float | int) -> str:
-        return rf"({var}\vee{default})"
+        return rf"({var}\vee{{}}{default})"
 
     def as_array(self, var: xr.DataArray, default: float | int) -> xr.DataArray:
         """Get an array with filled NaNs if present in the model, or a single default value if not.

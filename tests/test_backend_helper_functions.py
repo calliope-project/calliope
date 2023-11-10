@@ -57,6 +57,11 @@ def expression_roll(expression, parsing_kwargs):
     return expression["roll"](**parsing_kwargs)
 
 
+@pytest.fixture(scope="class")
+def expression_default_if_empty(expression, parsing_kwargs):
+    return expression["default_if_empty"](**parsing_kwargs)
+
+
 class TestAsArray:
     @pytest.fixture(scope="class")
     def parsing_kwargs(self, dummy_model_data):
@@ -300,6 +305,27 @@ class TestAsArray:
         rolled = expression_roll(dummy_model_data.with_inf, techs=to_roll)
         assert rolled.sel(nodes="foo", techs="foobar") == expected
 
+    def test_default_if_empty_non_existent_var(self, expression_default_if_empty):
+        # The expression parser will always pass a dataarray of this type instead of a plain string
+        result = expression_default_if_empty(
+            xr.DataArray("im_not_here", attrs={"obj_type": "string"}), default=1
+        )
+        assert result == 1
+
+    def test_default_if_empty_all_nan_var(
+        self, expression_default_if_empty, dummy_model_data
+    ):
+        result = expression_default_if_empty(dummy_model_data.all_nan, default=1)
+        assert (result == 1).all()
+
+    def test_default_if_empty_some_nan_var(
+        self, expression_default_if_empty, dummy_model_data
+    ):
+        result = expression_default_if_empty(dummy_model_data.with_inf, default=1)
+        np.testing.assert_array_equal(
+            result, [[1.0, 1, 1.0, 3], [np.inf, 2.0, True, 1]]
+        )
+
 
 class TestAsMathString:
     @pytest.fixture(scope="class")
@@ -427,3 +453,13 @@ class TestAsMathString:
     def test_roll(self, expression_roll, instring, expected_substring):
         rolled_string = expression_roll(instring, foo="-1")
         assert rolled_string == rf"\textit{{foo}}_\text{{{expected_substring}}}"
+
+    def test_default_if_empty_non_existent_int(self, expression_default_if_empty):
+        default_if_empty_string = expression_default_if_empty(r"\text{foo}", default=1)
+        assert default_if_empty_string == r"(\text{foo}\vee{}1)"
+
+    def test_default_if_empty_non_existent_float(self, expression_default_if_empty):
+        default_if_empty_string = expression_default_if_empty(
+            r"\text{foo}", default=1.0
+        )
+        assert default_if_empty_string == r"(\text{foo}\vee{}1.0)"

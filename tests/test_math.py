@@ -122,6 +122,19 @@ class TestBaseMath:
         }
         compare_lps(model, custom_math, "source_max")
 
+    def test_balance_transmission(self, compare_lps):
+        "Test with the electricity transmission tech being one way only, while the heat transmission tech is the default two-way."
+        self.TEST_REGISTER.add("constraints.balance_transmission")
+        model = build_test_model(
+            {"techs.test_link_a_b_elec.one_way": True}, "simple_conversion,two_hours"
+        )
+        custom_math = {
+            "constraints": {
+                "my_constraint": model.math.constraints.balance_transmission
+            }
+        }
+        compare_lps(model, custom_math, "balance_transmission")
+
     @pytest.mark.xfail(reason="not all base math is in the test config dict yet")
     def test_all_math_registered(self, base_math):
         "After running all the previous tests in the class, the base_math dict should be empty, i.e. all math has been tested"

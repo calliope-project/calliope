@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.preprocess import load
 from calliope.preprocess.model_data import ModelDataFactory
@@ -92,7 +93,6 @@ class TestModelData:
             "name",
             "carrier_out",
             "carrier_in",
-            "active",
             "parent",
             "flow_cap_max",
             "source_max",
@@ -115,26 +115,26 @@ class TestModelData:
     def test_clean_data_from_undefined_members(
         self, my_caplog, model_data_factory: ModelDataFactory
     ):
-        model_data_factory.model_data["active"] = (
+        model_data_factory.model_data["carrier_in"] = (
             pd.Series(
                 {
-                    ("foo", "A"): True,
-                    ("bar", "A"): np.nan,
-                    ("bar", "B"): np.nan,
-                    ("foo", "C"): True,
+                    ("A", "foo", "c1"): True,
+                    ("B", "bar", "c2"): np.nan,
+                    ("C", "foo", "c1"): True,
                 }
             )
-            .rename_axis(index=["techs", "nodes"])
-            .to_xarray()
-        )
-        model_data_factory.model_data["carrier_in"] = (
-            pd.Series({("foo", "c1"): True, ("bar", "c2"): True})
-            .rename_axis(index=["techs", "carriers"])
+            .rename_axis(index=["nodes", "techs", "carriers"])
             .to_xarray()
         )
         model_data_factory.model_data["carrier_out"] = (
-            pd.Series({("foo", "c2"): True, ("bar", "c1"): True})
-            .rename_axis(index=["techs", "carriers"])
+            pd.Series(
+                {
+                    ("A", "foo", "c2"): True,
+                    ("B", "bar", "c1"): np.nan,
+                    ("C", "foo", "c2"): True,
+                }
+            )
+            .rename_axis(index=["nodes", "techs", "carriers"])
             .to_xarray()
         )
         model_data_factory.model_data["will_remain"] = (
@@ -618,6 +618,27 @@ class TestModelData:
         )
         assert not link_dict
 
+    def test_links_to_node_format_one_way(self, model_data_factory: ModelDataFactory):
+        model_data_factory.model_definition["techs"]["test_link_a_b_elec"][
+            "one_way"
+        ] = True
+        node_dict = {
+            "a": {"foo": {"parent": "supply"}},
+            "b": {"bar": {"parent": "demand"}},
+        }
+        link_dict = model_data_factory._links_to_node_format(node_dict)
+        assert "carrier_out" not in link_dict["a"]["test_link_a_b_elec"]
+        assert "carrier_in" not in link_dict["b"]["test_link_a_b_elec"]
+
+        assert "carrier_in" in link_dict["a"]["test_link_a_b_elec"]
+        assert "carrier_out" in link_dict["b"]["test_link_a_b_elec"]
+
+        assert (
+            f"carrier_{j}" in link_dict[node]["test_link_a_b_heat"]
+            for node in ["a", "b"]
+            for j in ["in", "out"]
+        )
+
     @pytest.mark.parametrize("coord_name", ["foobar", "new_coord"])
     def test_update_param_coords_timeseries(
         self,
@@ -722,14 +743,24 @@ class TestModelData:
 
         assert "(parameters, foo) | Adding" not in my_caplog.text
 
-    # unshaped node coord should be forced to an array, if needed
-    @pytest.mark.parametrize("node", ["foo", ["foo"]])
-    def test_add_active_node_tech(self, model_data_factory: ModelDataFactory, node):
-        ds = xr.Dataset(coords={"nodes": node, "techs": ["A", "B"]})
-        with_active = model_data_factory._add_active_node_tech(ds)
-        assert with_active["active"].dims == ("nodes", "techs")
-        assert with_active["active"].all()
-        assert ds.nodes.values == ["foo"]
+    def test_raise_error_on_transmission_tech_in_node(
+        self, model_data_factory: ModelDataFactory
+    ):
+        tech_def = {
+            "tech1": {"parent": "supply"},
+            **{
+                f"tech{num}": {"parent": "transmission", "other_param": 1}
+                for num in [2, 3]
+            },
+        }
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            model_data_factory._raise_error_on_transmission_tech_def(
+                AttrDict(tech_def), "foo"
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "(nodes, foo) | Transmission techs cannot be directly defined at nodes; they will be automatically assigned to nodes based on `to` and `from` parameters: ['tech2', 'tech3']",
+        )
 
 
 class TestTopLevelParams:
@@ -796,22 +827,33 @@ class TestTopLevelParams:
         run_and_test(
             {
                 "data": 10,
-                "index": [["a", "test_supply_elec"], ["b", "test_demand_elec"]],
-                "dims": ["nodes", "techs"],
+                "index": [
+                    ["electricity", "test_supply_elec"],
+                    ["electricity", "test_demand_elec"],
+                ],
+                "dims": ["carriers", "techs"],
             },
-            {("a", "test_supply_elec"): 10, ("b", "test_demand_elec"): 10},
-            ["nodes", "techs"],
+            {
+                ("electricity", "test_supply_elec"): 10,
+                ("electricity", "test_demand_elec"): 10,
+            },
+            ["carriers", "techs"],
         )
 
     def test_top_level_param_multi_data_multi_known_dim(self, run_and_test):
-        run_and_test(
-            {
-                "data": [10, 20],
-                "index": [["a", "test_supply_elec"], ["b", "test_demand_elec"]],
-                "dims": ["nodes", "techs"],
-            },
-            {("a", "test_supply_elec"): 10, ("b", "test_demand_elec"): 20},
-            ["nodes", "techs"],
+        with pytest.warns(exceptions.ModelWarning) as warninfo:
+            run_and_test(
+                {
+                    "data": [10, 20],
+                    "index": [["a", "test_supply_elec"], ["b", "test_demand_elec"]],
+                    "dims": ["nodes", "techs"],
+                },
+                {("a", "test_supply_elec"): 10, ("b", "test_demand_elec"): 20},
+                ["nodes", "techs"],
+            )
+        assert check_error_or_warning(
+            warninfo,
+            "This parameter will only take effect if you have already defined the following combinations of techs at nodes in your model definition: [('a', 'test_supply_elec') ('b', 'test_demand_elec')]",
         )
 
     def test_top_level_param_unknown_dim_only(self, my_caplog, run_and_test):

@@ -17,7 +17,7 @@ fail:
   - where: (any(latitude, over=nodes) or any(longitude, over=nodes)) and not (latitude or longitude)
     message: "Must define node latitude and longitude for _all_ nodes or _no_ nodes."
 
-  - where: carrier_export and not carrier_out
+  - where: carrier_export and not any(carrier_out, over=nodes)
     message: "Export carriers must be one of the technology outflow carriers."
 
   - where: storage_initial>1
