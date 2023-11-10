@@ -588,10 +588,18 @@ def process_timeseries_data(config_model, model_run, timeseries_dataframes):
     # Load each timeseries into timeseries data. tskey is either a filename
     # (called by file=...) or a key in timeseries_dataframes (called by df=...)
     for tskey in (
-        constraint_filenames | cluster_filenames | group_constraint_filenames | constraint_dfnames | cluster_dfnames | group_constraint_dfnames
+        constraint_filenames
+        | cluster_filenames
+        | group_constraint_filenames
+        | constraint_dfnames
+        | cluster_dfnames
+        | group_constraint_dfnames
     ):  # Filenames or dict keys
         # If tskey is a CSV path, load the CSV, else load the dataframe
-        if tskey in constraint_filenames | cluster_filenames | group_constraint_filenames:
+        if (
+            tskey
+            in constraint_filenames | cluster_filenames | group_constraint_filenames
+        ):
             df = load_timeseries_from_file(config_model, tskey)
         elif tskey in constraint_dfnames | cluster_dfnames | group_constraint_dfnames:
             df = load_timeseries_from_dataframe(timeseries_dataframes, tskey)

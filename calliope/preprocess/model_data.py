@@ -170,7 +170,14 @@ def constraints_to_dataset(model_run):
         # once we've looped through all technology & location combinations, add the array to the dataset
 
     group_share_data = {}
-    group_constraints = ["energy_cap_min", "energy_cap_max", "energy_cap_equals", "target_reserve_share", "target_reserve_adder", "target_reserve_abs"]
+    group_constraints = [
+        "energy_cap_min",
+        "energy_cap_max",
+        "energy_cap_equals",
+        "target_reserve_share",
+        "target_reserve_adder",
+        "target_reserve_abs",
+    ]
     group_constraints_carrier = [
         "carrier_prod_min",
         "carrier_prod_max",

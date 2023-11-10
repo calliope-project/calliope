@@ -15,7 +15,7 @@ import ruamel.yaml as yaml
 
 
 def get_section(commented_map):
-    """ Returns list of (setting, default, comment) tuples processed
+    """Returns list of (setting, default, comment) tuples processed
     from a YAML section."""
     result = []
     for k, v in commented_map.items():

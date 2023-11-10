@@ -214,13 +214,14 @@ def load_constraints(backend_model):
                 "group_target_reserve_share_{}_constraint".format(sense),
                 po.Constraint(
                     getattr(
-                        backend_model, "group_names_target_reserve_share_{}".format(sense)
+                        backend_model,
+                        "group_names_target_reserve_share_{}".format(sense),
                     ),
                     backend_model.timesteps,
                     [sense],
                     rule=target_reserve_share_constraint_rule,
                 ),
-            )         
+            )
 
         if "group_target_reserve_adder_{}".format(sense) in model_data_dict:
             setattr(
@@ -228,13 +229,14 @@ def load_constraints(backend_model):
                 "group_target_reserve_adder_{}_constraint".format(sense),
                 po.Constraint(
                     getattr(
-                        backend_model, "group_names_target_reserve_adder_{}".format(sense)
+                        backend_model,
+                        "group_names_target_reserve_adder_{}".format(sense),
                     ),
                     backend_model.timesteps,
                     [sense],
                     rule=target_reserve_adder_constraint_rule,
                 ),
-            )  
+            )
 
         if "group_target_reserve_abs_{}".format(sense) in model_data_dict:
             setattr(
@@ -248,7 +250,7 @@ def load_constraints(backend_model):
                     [sense],
                     rule=target_reserve_abs_constraint_rule,
                 ),
-            ) 
+            )
 
         if "group_target_reserve_share_operating_{}".format(sense) in model_data_dict:
             setattr(
@@ -256,13 +258,14 @@ def load_constraints(backend_model):
                 "group_target_reserve_share_operating_{}_constraint".format(sense),
                 po.Constraint(
                     getattr(
-                        backend_model, "group_names_target_reserve_share_operating_{}".format(sense)
+                        backend_model,
+                        "group_names_target_reserve_share_operating_{}".format(sense),
                     ),
                     backend_model.timesteps,
                     [sense],
                     rule=target_reserve_share_operating_constraint_rule,
                 ),
-            ) 
+            )
 
         if "group_target_reserve_abs_operating_{}".format(sense) in model_data_dict:
             setattr(
@@ -270,14 +273,15 @@ def load_constraints(backend_model):
                 "group_target_reserve_abs_operating_{}_constraint".format(sense),
                 po.Constraint(
                     getattr(
-                        backend_model, "group_names_target_reserve_abs_operating_{}".format(sense)
+                        backend_model,
+                        "group_names_target_reserve_abs_operating_{}".format(sense),
                     ),
                     backend_model.timesteps,
                     [sense],
                     rule=target_reserve_abs_operating_constraint_rule,
                 ),
             )
-            
+
     if "group_demand_share_per_timestep_decision" in model_data_dict:
         relaxation = backend_model.__calliope_run_config["relax_constraint"][
             "demand_share_per_timestep_decision_main_constraint"
@@ -333,6 +337,7 @@ def get_group_lhs_and_rhs_loc_tech_carriers(backend_model, group_name):
         backend_model, "group_constraint_loc_tech_carriers_{}_rhs".format(group_name)
     )
     return lhs_loc_tech_carriers, rhs_loc_tech_carriers
+
 
 def get_group_lhs_locs(backend_model, group_name):
     lhs_loc_tech_carriers = getattr(
@@ -674,7 +679,10 @@ def carrier_prod_constraint_rule(backend_model, group_name, what):
         )
         return equalizer(lhs, limit, what)
 
-def target_reserve_share_constraint_rule(backend_model, group_name, timestep, what): # UPDATED the math
+
+def target_reserve_share_constraint_rule(
+    backend_model, group_name, timestep, what
+):  # UPDATED the math
     """
     Add planning reserve margin constraint. On the contribution side, the energy_cap is derated by the capacity value.
     On the target side, the reserve target represents a share of the load.
@@ -687,7 +695,9 @@ def target_reserve_share_constraint_rule(backend_model, group_name, timestep, wh
 
     """
 
-    target_share = get_param(backend_model, f"group_target_reserve_share_{what}", (group_name))
+    target_share = get_param(
+        backend_model, f"group_target_reserve_share_{what}", (group_name)
+    )
 
     if invalid(target_share):
         return return_noconstraint("target_reserve_share", group_name)
@@ -697,26 +707,52 @@ def target_reserve_share_constraint_rule(backend_model, group_name, timestep, wh
         )[0]
 
         carrier = lhs_loc_tech_carriers[-1].split("::")[-1]
-        locs = [loc_tech_carrier.split("::")[0] for loc_tech_carrier in lhs_loc_tech_carriers]
-        timestep_resolution = backend_model.timestep_resolution[timestep] 
+        locs = [
+            loc_tech_carrier.split("::")[0]
+            for loc_tech_carrier in lhs_loc_tech_carriers
+        ]
+        timestep_resolution = backend_model.timestep_resolution[timestep]
 
         lhs = sum(
-            (get_param(backend_model, "cap_value", ((loc_tech_carrier.rsplit("::", 1)[0]), timestep))) * backend_model.energy_cap[loc_tech_carrier.rsplit("::", 1)[0]] * timestep_resolution
+            (
+                get_param(
+                    backend_model,
+                    "cap_value",
+                    ((loc_tech_carrier.rsplit("::", 1)[0]), timestep),
+                )
+            )
+            * backend_model.energy_cap[loc_tech_carrier.rsplit("::", 1)[0]]
+            * timestep_resolution
             for loc_tech_carrier in lhs_loc_tech_carriers
         )
 
-        loc_tech_carriers_transmission = [loc_tech_transmission + "::" + carrier for loc_tech_transmission in backend_model.loc_techs_transmission]
-        loc_tech_carriers_con_all = [loc_tech_carrier for loc_tech_carrier in backend_model.loc_tech_carriers_con if loc_tech_carrier not in loc_tech_carriers_transmission]
+        loc_tech_carriers_transmission = [
+            loc_tech_transmission + "::" + carrier
+            for loc_tech_transmission in backend_model.loc_techs_transmission
+        ]
+        loc_tech_carriers_con_all = [
+            loc_tech_carrier
+            for loc_tech_carrier in backend_model.loc_tech_carriers_con
+            if loc_tech_carrier not in loc_tech_carriers_transmission
+        ]
 
-        rhs = -1 * (1 + target_share) * sum(
-            backend_model.carrier_con[loc_tech_carrier, timestep]
-            for loc_tech_carrier in loc_tech_carriers_con_all
-            if (loc_tech_carrier.split("::")[-1] == carrier) and (loc_tech_carrier.split("::")[0] in locs)
+        rhs = (
+            -1
+            * (1 + target_share)
+            * sum(
+                backend_model.carrier_con[loc_tech_carrier, timestep]
+                for loc_tech_carrier in loc_tech_carriers_con_all
+                if (loc_tech_carrier.split("::")[-1] == carrier)
+                and (loc_tech_carrier.split("::")[0] in locs)
+            )
         )
 
         return equalizer(lhs, rhs, what)
 
-def target_reserve_adder_constraint_rule(backend_model, group_name, timestep, what): # UPDATED the math
+
+def target_reserve_adder_constraint_rule(
+    backend_model, group_name, timestep, what
+):  # UPDATED the math
     """
     Add planning reserve margin constraint. On the contribution side, the energy_cap is derated by the capacity value.
     On the target side, the reserve target represents an absolute adder in addition to the load.
@@ -729,7 +765,9 @@ def target_reserve_adder_constraint_rule(backend_model, group_name, timestep, wh
 
     """
 
-    target_adder = get_param(backend_model, f"group_target_reserve_adder_{what}", (group_name))
+    target_adder = get_param(
+        backend_model, f"group_target_reserve_adder_{what}", (group_name)
+    )
 
     if invalid(target_adder):
         return return_noconstraint("target_reserve_adder", group_name)
@@ -739,26 +777,48 @@ def target_reserve_adder_constraint_rule(backend_model, group_name, timestep, wh
         )[0]
 
         carrier = lhs_loc_tech_carriers[-1].split("::")[-1]
-        locs = [loc_tech_carrier.split("::")[0] for loc_tech_carrier in lhs_loc_tech_carriers]
-        timestep_resolution = backend_model.timestep_resolution[timestep] 
+        locs = [
+            loc_tech_carrier.split("::")[0]
+            for loc_tech_carrier in lhs_loc_tech_carriers
+        ]
+        timestep_resolution = backend_model.timestep_resolution[timestep]
 
         lhs = sum(
-            (get_param(backend_model, "cap_value", ((loc_tech_carrier.rsplit("::", 1)[0]), timestep))) * backend_model.energy_cap[loc_tech_carrier.rsplit("::", 1)[0]] * timestep_resolution
+            (
+                get_param(
+                    backend_model,
+                    "cap_value",
+                    ((loc_tech_carrier.rsplit("::", 1)[0]), timestep),
+                )
+            )
+            * backend_model.energy_cap[loc_tech_carrier.rsplit("::", 1)[0]]
+            * timestep_resolution
             for loc_tech_carrier in lhs_loc_tech_carriers
         )
 
-        loc_tech_carriers_transmission = [loc_tech_transmission + "::" + carrier for loc_tech_transmission in backend_model.loc_techs_transmission]
-        loc_tech_carriers_con_all = [loc_tech_carrier for loc_tech_carrier in backend_model.loc_tech_carriers_con if loc_tech_carrier not in loc_tech_carriers_transmission]
+        loc_tech_carriers_transmission = [
+            loc_tech_transmission + "::" + carrier
+            for loc_tech_transmission in backend_model.loc_techs_transmission
+        ]
+        loc_tech_carriers_con_all = [
+            loc_tech_carrier
+            for loc_tech_carrier in backend_model.loc_tech_carriers_con
+            if loc_tech_carrier not in loc_tech_carriers_transmission
+        ]
 
         rhs = target_adder + (-1) * sum(
             backend_model.carrier_con[loc_tech_carrier, timestep]
             for loc_tech_carrier in loc_tech_carriers_con_all
-            if (loc_tech_carrier.split("::")[-1] == carrier) and (loc_tech_carrier.split("::")[0] in locs)
+            if (loc_tech_carrier.split("::")[-1] == carrier)
+            and (loc_tech_carrier.split("::")[0] in locs)
         )
 
         return equalizer(lhs, rhs, what)
-        
-def target_reserve_abs_constraint_rule(backend_model, group_name, timestep, what): # UPDATED the math
+
+
+def target_reserve_abs_constraint_rule(
+    backend_model, group_name, timestep, what
+):  # UPDATED the math
     """
     Add planning reserve margin constraint. On the contribution side, the energy_cap is derated by the capacity value.
     On the target side, the reserve target represents an absolute value independent of the load.
@@ -771,7 +831,9 @@ def target_reserve_abs_constraint_rule(backend_model, group_name, timestep, what
 
     """
 
-    target_abs = get_param(backend_model, f"group_target_reserve_abs_{what}", (group_name))
+    target_abs = get_param(
+        backend_model, f"group_target_reserve_abs_{what}", (group_name)
+    )
 
     if invalid(target_abs):
         return return_noconstraint("target_reserve_abs", group_name)
@@ -781,16 +843,27 @@ def target_reserve_abs_constraint_rule(backend_model, group_name, timestep, what
             rhs_loc_tech_carriers,
         ) = get_group_lhs_and_rhs_loc_tech_carriers(backend_model, group_name)
 
-        timestep_resolution = backend_model.timestep_resolution[timestep] 
+        timestep_resolution = backend_model.timestep_resolution[timestep]
 
         lhs = sum(
-            (get_param(backend_model, "cap_value", ((loc_tech_carrier.rsplit("::", 1)[0]), timestep))) * backend_model.energy_cap[loc_tech_carrier.rsplit("::", 1)[0]] * timestep_resolution
+            (
+                get_param(
+                    backend_model,
+                    "cap_value",
+                    ((loc_tech_carrier.rsplit("::", 1)[0]), timestep),
+                )
+            )
+            * backend_model.energy_cap[loc_tech_carrier.rsplit("::", 1)[0]]
+            * timestep_resolution
             for loc_tech_carrier in lhs_loc_tech_carriers
         )
 
         return equalizer(lhs, target_abs, what)
-    
-def target_reserve_share_operating_constraint_rule(backend_model, group_name, timestep, what): # UPDATED the math
+
+
+def target_reserve_share_operating_constraint_rule(
+    backend_model, group_name, timestep, what
+):  # UPDATED the math
     """
     Add operating reserve margin constraint. On the contribution side, the energy_cap is derated by the capacity value.
     On the target side, the reserve target represents a share of the load plus the operating reserve of generating units.
@@ -803,8 +876,12 @@ def target_reserve_share_operating_constraint_rule(backend_model, group_name, ti
 
     """
 
-    target_share = get_param(backend_model, f"group_target_reserve_share_operating_{what}", (group_name, timestep))
-    print("__"+str(target_share))
+    target_share = get_param(
+        backend_model,
+        f"group_target_reserve_share_operating_{what}",
+        (group_name, timestep),
+    )
+    print("__" + str(target_share))
 
     if invalid(target_share):
         return return_noconstraint("target_reserve_share", group_name)
@@ -814,32 +891,56 @@ def target_reserve_share_operating_constraint_rule(backend_model, group_name, ti
         )[0]
 
         carrier = lhs_loc_tech_carriers[-1].split("::")[-1]
-        locs = [loc_tech_carrier.split("::")[0] for loc_tech_carrier in lhs_loc_tech_carriers]
-        timestep_resolution = backend_model.timestep_resolution[timestep] 
+        locs = [
+            loc_tech_carrier.split("::")[0]
+            for loc_tech_carrier in lhs_loc_tech_carriers
+        ]
+        timestep_resolution = backend_model.timestep_resolution[timestep]
 
         lhs = sum(
-            (get_param(backend_model, "cap_value", ((loc_tech_carrier.rsplit("::", 1)[0]), timestep))) * backend_model.energy_cap[loc_tech_carrier.rsplit("::", 1)[0]] * timestep_resolution
+            (
+                get_param(
+                    backend_model,
+                    "cap_value",
+                    ((loc_tech_carrier.rsplit("::", 1)[0]), timestep),
+                )
+            )
+            * backend_model.energy_cap[loc_tech_carrier.rsplit("::", 1)[0]]
+            * timestep_resolution
             for loc_tech_carrier in lhs_loc_tech_carriers
         )
 
         # loc_tech_carriers_transmission = [loc_tech_transmission + "::" + carrier for loc_tech_transmission in backend_model.loc_techs_transmission]
         # loc_tech_carriers_con_all = [loc_tech_carrier for loc_tech_carrier in backend_model.loc_tech_carriers_con if loc_tech_carrier not in loc_tech_carriers_transmission]
-        loc_tech_carriers_con_all = [loc_tech_carrier for loc_tech_carrier in backend_model.loc_tech_carriers_con]
+        loc_tech_carriers_con_all = [
+            loc_tech_carrier for loc_tech_carrier in backend_model.loc_tech_carriers_con
+        ]
 
         rhs = -1 * (1 + target_share) * sum(
             backend_model.carrier_con[loc_tech_carrier, timestep]
             for loc_tech_carrier in loc_tech_carriers_con_all
-            if (loc_tech_carrier.split("::")[-1] == carrier) and (loc_tech_carrier.split("::")[0] in locs)
-        ) + sum( (get_param(backend_model, "operating_reserve", ((loc_tech_carrier.rsplit("::", 1)[0]), timestep))) *
-            backend_model.carrier_prod[loc_tech_carrier, timestep]
+            if (loc_tech_carrier.split("::")[-1] == carrier)
+            and (loc_tech_carrier.split("::")[0] in locs)
+        ) + sum(
+            (
+                get_param(
+                    backend_model,
+                    "operating_reserve",
+                    ((loc_tech_carrier.rsplit("::", 1)[0]), timestep),
+                )
+            )
+            * backend_model.carrier_prod[loc_tech_carrier, timestep]
             for loc_tech_carrier in backend_model.loc_tech_carriers_prod
-            if (loc_tech_carrier.split("::")[-1] == carrier) and (loc_tech_carrier.split("::")[0] in locs)
+            if (loc_tech_carrier.split("::")[-1] == carrier)
+            and (loc_tech_carrier.split("::")[0] in locs)
         )
 
         return equalizer(lhs, target_share, what)
 
 
-def target_reserve_abs_operating_constraint_rule(backend_model, group_name, timestep, what): # UPDATED the math
+def target_reserve_abs_operating_constraint_rule(
+    backend_model, group_name, timestep, what
+):  # UPDATED the math
     """
     Add operating reserve margin constraint. On the contribution side, the energy_cap is derated by the capacity value.
     On the target side, the reserve target represents an absolute value independent of the load.
@@ -852,7 +953,11 @@ def target_reserve_abs_operating_constraint_rule(backend_model, group_name, time
 
     """
 
-    target_abs = get_param(backend_model, f"group_target_reserve_abs_operating_{what}", (group_name, timestep))
+    target_abs = get_param(
+        backend_model,
+        f"group_target_reserve_abs_operating_{what}",
+        (group_name, timestep),
+    )
 
     if invalid(target_abs):
         return return_noconstraint("target_reserve_share", group_name)
@@ -861,14 +966,23 @@ def target_reserve_abs_operating_constraint_rule(backend_model, group_name, time
             backend_model, group_name
         )[0]
 
-        timestep_resolution = backend_model.timestep_resolution[timestep] 
+        timestep_resolution = backend_model.timestep_resolution[timestep]
 
         lhs = sum(
-            (get_param(backend_model, "cap_value", ((loc_tech_carrier.rsplit("::", 1)[0]), timestep))) * backend_model.energy_cap[loc_tech_carrier.rsplit("::", 1)[0]] * timestep_resolution
+            (
+                get_param(
+                    backend_model,
+                    "cap_value",
+                    ((loc_tech_carrier.rsplit("::", 1)[0]), timestep),
+                )
+            )
+            * backend_model.energy_cap[loc_tech_carrier.rsplit("::", 1)[0]]
+            * timestep_resolution
             for loc_tech_carrier in lhs_loc_tech_carriers
         )
 
-        return equalizer(lhs, target_abs, what)        
+        return equalizer(lhs, target_abs, what)
+
 
 def carrier_con_constraint_rule(backend_model, constraint_group, what):
     """
@@ -901,6 +1015,7 @@ def carrier_con_constraint_rule(backend_model, constraint_group, what):
         )
 
         return equalizer(limit, lhs, what)
+
 
 def energy_cap_share_constraint_rule(backend_model, constraint_group, what):
     """
