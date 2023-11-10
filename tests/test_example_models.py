@@ -107,9 +107,9 @@ class TestNationalScaleExampleModelSenseChecks:
 
     def test_fails_gracefully_without_timeseries(self):
         override = {
-            "nodes.region1.techs.demand_power.constraints.sink_equals": 200,
-            "nodes.region2.techs.demand_power.constraints.sink_equals": 400,
-            "techs.csp.constraints.source_max": 100,
+            "nodes.region1.techs.demand_power.sink_equals": 200,
+            "nodes.region2.techs.demand_power.sink_equals": 400,
+            "node_groups.csp_regions.techs.csp.source_max": 100,
         }
         with pytest.raises(calliope.exceptions.ModelError):
             calliope.examples.national_scale(override_dict=override)
@@ -307,7 +307,7 @@ class TestNationalScaleExampleModelSpores:
         # the national scale model always maxes out CCGT in the first 3 SPORES.
         # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
         # This enables us to test our functionality that only *additional* capacity is scored.
-        override_dict = {f"locations.region1.techs.ccgt.constraints.{override}": 30000}
+        override_dict = {f"locations.region1.techs.ccgt.{override}": 30000}
         result_with_override, _ = spores_with_override(override_dict)
         assert (
             result_with_override.cost.sel(
@@ -320,7 +320,7 @@ class TestNationalScaleExampleModelSpores:
         # the national scale model always maxes out CCGT in the first 3 SPORES.
         # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
         # This enables us to test our functionality that only *additional* capacity is scored.
-        override_dict = {"locations.region1.techs.ccgt.constraints.flow_cap_min": 15000}
+        override_dict = {"locations.region1.techs.ccgt.flow_cap_min": 15000}
         result_with_override, _ = spores_with_override(override_dict)
         assert (
             result_with_override.cost.sel(
@@ -335,7 +335,7 @@ class TestNationalScaleExampleModelSpores:
         # the national scale model always maxes out CCGT in the first 3 SPORES.
         # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
         # This enables us to test our functionality that only *additional* capacity is scored.
-        override_dict = {"locations.region1.techs.ccgt.constraints.flow_cap_min": 15000}
+        override_dict = {"locations.region1.techs.ccgt.flow_cap_min": 15000}
         result_with_override, _ = spores_with_override(override_dict)
         assert (
             result_with_override.cost.sel(
@@ -400,10 +400,8 @@ class TestNationalScaleResampledExampleModelSenseChecks:
 class TestUrbanScaleExampleModelSenseChecks:
     def example_tester(self, source_unit, solver="cbc", solver_io=None):
         unit_override = {
-            "techs.pv.constraints.source_equals": "file=pv_resource.csv:{}".format(
-                source_unit
-            ),
-            "techs.pv.switches.source_unit": source_unit,
+            "techs.pv.source_equals": "file=pv_resource.csv:{}".format(source_unit),
+            "techs.pv.source_unit": source_unit,
         }
 
         model = calliope.examples.urban_scale(
@@ -417,7 +415,9 @@ class TestUrbanScaleExampleModelSenseChecks:
         model.build()
         model.solve(**solve_kwargs)
 
-        assert model.results.flow_cap.sel(nodes="X1", techs="chp") == approx(250.090112)
+        assert model.results.flow_cap.sel(
+            nodes="X1", techs="chp", carriers="electricity"
+        ) == approx(250.090112)
 
         # GLPK isn't able to get the same answer both times, so we have to account for that here
         if source_unit == "per_cap" and solver == "glpk":
@@ -425,9 +425,9 @@ class TestUrbanScaleExampleModelSenseChecks:
         else:
             heat_pipe_approx = 182.19260
 
-        assert model.results.flow_cap.sel(nodes="X2", techs="heat_pipes:N1") == approx(
-            heat_pipe_approx
-        )
+        assert model.results.flow_cap.sel(
+            nodes="X2", techs="N1_to_X2", carriers="heat"
+        ) == approx(heat_pipe_approx)
 
         assert model.results.flow_out.sum("timesteps").sel(
             carriers="heat", nodes="X3", techs="boiler"
@@ -437,7 +437,7 @@ class TestUrbanScaleExampleModelSenseChecks:
         assert float(model.results.flow_export.sum()) == approx(122.7156)
 
         # GLPK doesn't agree with commercial solvers, so we have to account for that here
-        cost_sum = 430.097399 if solver == "glpk" else 430.089188
+        cost_sum = 430.097399 if solver == "glpk" else 430.082290
         assert float(model.results.cost.sum()) == approx(cost_sum)
 
     def test_urban_example_results_area(self):
@@ -454,7 +454,6 @@ class TestUrbanScaleExampleModelSenseChecks:
         pytest.importorskip("gurobipy")
         self.example_tester("per_cap", solver="gurobi", solver_io="python")
 
-    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_milp_example_results(self):
         model = calliope.examples.milp(
             override_dict={
@@ -465,10 +464,13 @@ class TestUrbanScaleExampleModelSenseChecks:
         model.build()
         model.solve()
 
-        assert model.results.flow_cap.sel(nodes="X1", techs="chp") == 300
-        assert model.results.flow_cap.sel(nodes="X2", techs="heat_pipes:N1") == approx(
-            188.363137
+        assert (
+            model.results.flow_cap.sel(nodes="X1", techs="chp", carriers="electricity")
+            == 300
         )
+        assert model.results.flow_cap.sel(
+            nodes="X2", techs="N1_to_X2", carriers="heat"
+        ) == approx(188.363137)
 
         assert model.results.flow_out.sum("timesteps").sel(
             carriers="gas", nodes="X1", techs="supply_gas"

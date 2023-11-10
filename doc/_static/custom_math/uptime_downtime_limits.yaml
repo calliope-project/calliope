@@ -14,16 +14,15 @@
 
 # helper functions used:
 # sum (expression)
-# reduce_carrier_dim (expression)
 
 constraints:
   annual_capacity_factor_min:
     description: Limit the lower bound of annual technology operation as a fraction of annual operation at maximum capacity.
-    foreach: [nodes, techs]
+    foreach: [nodes, techs, carriers]
     where: capacity_factor_min
     equations:
       - expression: >
-          sum(reduce_carrier_dim(flow_out, carrier_tier=out) * timestep_weights, over=timesteps) >=
+          sum(flow_out * timestep_weights, over=timesteps) >=
           flow_cap * capacity_factor_min * $total_time
     sub_expressions:
       total_time: &total_time
@@ -31,11 +30,11 @@ constraints:
 
   annual_capacity_factor_max:
     description: Limit the upper bound of annual technology operation as a fraction of annual operation at maximum capacity.
-    foreach: [nodes, techs]
+    foreach: [nodes, techs, carriers]
     where: capacity_factor_max
     equations:
       - expression: >
-          sum(reduce_carrier_dim(flow_out, carrier_tier=out) * timestep_weights, over=[timesteps]) <=
+          sum(flow_out * timestep_weights, over=timesteps) <=
           flow_cap * capacity_factor_max * $total_time
     sub_expressions:
       total_time: *total_time

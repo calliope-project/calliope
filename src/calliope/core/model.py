@@ -10,10 +10,8 @@ Implements the core Model class.
 """
 from __future__ import annotations
 
-import importlib
 import logging
 import warnings
-from copy import deepcopy
 from pathlib import Path
 from typing import Callable, Optional, TypeVar, Union
 
@@ -32,12 +30,15 @@ from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess import load
 from calliope.preprocess.model_data import ModelDataFactory
 from calliope.util.logging import log_time
-from calliope.util.tools import (
+from calliope.util.schema import (
+    CONFIG_SCHEMA,
+    MATH_SCHEMA,
+    MODEL_SCHEMA,
     extract_from_schema,
-    relative_path,
     update_then_validate_config,
     validate_dict,
 )
+from calliope.util.tools import relative_path
 
 LOGGER = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ def read_netcdf(path):
     Return a Model object reconstructed from model data in a NetCDF file.
     """
     model_data = io.read_netcdf(path)
-    return Model(config=None, model_data=model_data)
+    return Model(model_definition=model_data)
 
 
 class Model(object):
@@ -61,7 +62,6 @@ class Model(object):
     """
 
     _BACKENDS: dict[str, Callable] = {"pyomo": PyomoBackendModel}
-    _AVAILABLE_SCHEMA = ["config_schema", "math_schema", "model_def_schema"]
 
     def __init__(
         self,
@@ -106,13 +106,8 @@ class Model(object):
         self.math: AttrDict
         self._model_def_path: Optional[Path]
         self.math_documentation = MathDocumentation()
-        self._math_schema: AttrDict
-        self._config_schema: AttrDict
-        self._model_def_schema: AttrDict
         self._is_built: bool = False
         self._is_solved: bool = False
-
-        self._load_schemas()
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
@@ -134,8 +129,16 @@ class Model(object):
             self._init_from_model_def_dict(
                 model_def, applied_overrides, scenario, debug, timeseries_dataframes
             )
+
+        version_def = self._model_data.attrs["calliope_version_defined"]
+        version_init = self._model_data.attrs["calliope_version_initialised"]
+        if version_def is not None and not version_init.startswith(version_def):
+            exceptions.warn(
+                f"Model configuration specifies calliope version {version_def}, "
+                f"but you are running {version_init}. Proceed with caution!"
+            )
+
         self.math_documentation.inputs = self._model_data
-        self.math_documentation.schema = self._config_schema
 
     @property
     def name(self):
@@ -172,6 +175,9 @@ class Model(object):
             debug_data (calliope.AttrDict): Additional data from processing the input configuration.
             debug (bool): If True, `debug_data` will be attached to the Model object as the attribute `calliope.Model._debug_data`.
         """
+        # First pass to check top-level keys are all good
+        validate_dict(model_definition, CONFIG_SCHEMA, "Model definition")
+
         self._model_def_dict = model_definition
         log_time(
             LOGGER,
@@ -179,52 +185,36 @@ class Model(object):
             "model_run_creation",
             comment="Model: preprocessing stage 1 (model_run)",
         )
-        model_config = self._load_defaults("config")
+        model_config = AttrDict(extract_from_schema(CONFIG_SCHEMA, "default"))
         model_config.union(model_definition.pop("config"), allow_override=True)
 
-        init_config = model_config.pop("init")
-
-        validate_dict({"init": init_config}, self._config_schema, "Model definition")
-
-        version_def = init_config["calliope_version"]
-        version_init = __version__
-        if version_def is not None and not version_init.startswith(version_def):
-            LOGGER.warning(
-                f"Model configuration specifies calliope_version={version_def}, "
-                f"but you are running {version_init}. Proceed with caution!"
-            )
-        attributes = {
-            "calliope_version_defined": version_def,
-            "calliope_version_initialised": version_init,
-            "applied_overrides": applied_overrides,
-            "scenario": scenario,
-        }
+        init_config = update_then_validate_config("init", model_config)
+        # We won't store `init` in `self.config`, so we pop it out now.
+        model_config.pop("init")
 
         init_config["time_data_path"] = relative_path(
             self._model_def_path, init_config["time_data_path"]
         )
-        param_metadata = {
-            key: extract_from_schema(self._model_def_schema, key) for key in ["default"]
+        if init_config["time_cluster"] is not None:
+            init_config["time_cluster"] = relative_path(
+                init_config["time_data_path"], init_config["time_cluster"]
+            )
+        param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
+        attributes = {
+            "calliope_version_defined": init_config["calliope_version"],
+            "calliope_version_initialised": __version__,
+            "applied_overrides": applied_overrides,
+            "scenario": scenario,
+            "defaults": param_metadata["default"],
         }
         model_data_factory = ModelDataFactory(
             init_config,
             model_definition,
             attributes,
             param_metadata,
-            self._model_def_schema,
         )
-        model_data_factory.add_node_tech_data()
-        model_data_factory.add_top_level_params()
-        model_data_factory.clean_data_from_undefined_members()
-        model_data_factory.add_colors()
-        model_data_factory.add_link_distances()
+        model_data_factory.build(timeseries_dataframes)
 
-        if debug:
-            self._model_data_pre_time = deepcopy(model_data_factory.model_data)
-
-        model_data_factory.add_time_dimension(timeseries_dataframes)
-
-        model_data_factory.assign_input_attr()
         self._model_data = model_data_factory.model_data
 
         log_time(
@@ -236,7 +226,7 @@ class Model(object):
 
         self._add_observed_dict("config", model_config)
 
-        math = self._add_math(init_config.custom_math)
+        math = self._add_math(init_config["custom_math"])
         self._add_observed_dict("math", math)
 
         self._model_data.attrs["name"] = init_config["name"]
@@ -256,9 +246,11 @@ class Model(object):
             model_data (xarray.Dataset):
                 Model dataset with input parameters as arrays and configuration stored in the dataset attributes dictionary.
         """
-        if "_model_run" in model_data.attrs:
-            self._model_run = AttrDict.from_yaml_string(model_data.attrs["_model_run"])
-            del model_data.attrs["_model_run"]
+        if "_model_def_dict" in model_data.attrs:
+            self._model_def_dict = AttrDict.from_yaml_string(
+                model_data.attrs["_model_def_dict"]
+            )
+            del model_data.attrs["_model_def_dict"]
 
         if "_debug_data" in model_data.attrs:
             self._debug_data = AttrDict.from_yaml_string(
@@ -274,17 +266,6 @@ class Model(object):
             self._timings,
             "model_data_loaded",
             comment="Model: loaded model_data",
-        )
-
-    def _load_schemas(self):
-        config_dir = importlib.resources.files("calliope") / "config"
-        for schema in self._AVAILABLE_SCHEMA:
-            schema_dict = AttrDict.from_yaml(config_dir / f"{schema}.yaml")
-            setattr(self, f"_{schema}", schema_dict)
-
-    def _load_defaults(self, schema_name: str) -> AttrDict:
-        return AttrDict(
-            extract_from_schema(getattr(self, f"_{schema_name}_schema"), "default")
         )
 
     def _add_model_data_methods(self):
@@ -389,15 +370,10 @@ class Model(object):
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
-        build_config = update_then_validate_config(
-            "build",
-            self.config,
-            self._config_schema,
-            **kwargs,
-        )
-        backend_name = kwargs.get("backend", build_config["backend"])
 
-        backend = self._BACKENDS[backend_name](self._model_data, build_config)
+        backend_name = kwargs.get("backend", self.config["build"]["backend"])
+
+        backend = self._BACKENDS[backend_name](self._model_data, **kwargs)
         backend._build()
         self.backend = backend
         self._is_built = True
@@ -424,13 +400,9 @@ class Model(object):
             exceptions.ModelError: Cannot run the model if there are already results loaded, unless `force` is True.
             exceptions.ModelError: Some preprocessing steps will stop a run mode of "operate" from being possible.
         """
-        run_mode = self.backend.inputs.attrs["config"]["build"]["mode"]
-        solver_config = update_then_validate_config(
-            "solve", self.config, self._config_schema, **kwargs
-        )
 
         # Check that results exist and are non-empty
-        if not hasattr(self, "backend"):
+        if not self._is_built:
             raise exceptions.ModelError(
                 "You must build the optimisation problem (`.build()`) "
                 "before you can run it."
@@ -448,12 +420,15 @@ class Model(object):
         else:
             to_drop = []
 
+        run_mode = self.backend.inputs.attrs["config"]["build"]["mode"]
+
         if run_mode == "operate" and not self._model_data.attrs["allow_operate_mode"]:
             raise exceptions.ModelError(
                 "Unable to run this model in operational mode, probably because "
                 "there exist non-uniform timesteps (e.g. from time masking)"
             )
 
+        solver_config = update_then_validate_config("solve", self.config, **kwargs)
         log_time(
             LOGGER,
             self._timings,
@@ -565,7 +540,7 @@ class Model(object):
                     "my_constraint_name":
                         {
                             "foreach": ["nodes"],
-                            "where": "inheritance(supply)",
+                            "where": "parent=supply",
                             "equations": [{"expression": "sum(flow_cap, over=techs) >= 10"}]
                         }
                 }
@@ -575,14 +550,14 @@ class Model(object):
             If all components of the dictionary are parsed successfully, this function will log a success message to the INFO logging level and return None.
             Otherwise, a calliope.ModelError will be raised with parsing issues listed.
         """
-        validate_dict(math_dict, self._math_schema, "math")
+        validate_dict(math_dict, MATH_SCHEMA, "math")
         valid_component_names = [
             *self.math["variables"].keys(),
             *self.math["global_expressions"].keys(),
             *math_dict.get("variables", {}).keys(),
             *math_dict.get("global_expressions", {}).keys(),
             *self.inputs.data_vars.keys(),
-            *self.defaults.keys(),
+            *self.inputs.attrs["defaults"].keys(),
         ]
         collected_errors: dict = dict()
         for component_group, component_dicts in math_dict.items():

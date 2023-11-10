@@ -4,7 +4,7 @@ import xarray as xr
 from calliope import exceptions
 from calliope.backend import helper_functions
 
-from .common.util import build_test_model, check_error_or_warning
+from .common.util import check_error_or_warning
 
 
 @pytest.fixture(scope="module")
@@ -43,11 +43,6 @@ def expression_reduce_carrier_dim(expression, parsing_kwargs):
 
 
 @pytest.fixture(scope="class")
-def expression_reduce_primary_carrier_dim(expression, parsing_kwargs):
-    return expression["reduce_primary_carrier_dim"](**parsing_kwargs)
-
-
-@pytest.fixture(scope="class")
 def expression_select_from_lookup_arrays(expression, parsing_kwargs):
     return expression["select_from_lookup_arrays"](**parsing_kwargs)
 
@@ -60,11 +55,6 @@ def expression_get_val_at_index(expression, parsing_kwargs):
 @pytest.fixture(scope="class")
 def expression_roll(expression, parsing_kwargs):
     return expression["roll"](**parsing_kwargs)
-
-
-@pytest.fixture(scope="class")
-def expression_get_transmission_techs(expression, parsing_kwargs):
-    return expression["get_transmission_techs"](**parsing_kwargs)
 
 
 class TestAsArray:
@@ -130,9 +120,17 @@ class TestAsArray:
 
         assert all(func_name in helper_functions._registry[i] for i in string_types)
 
-    def test_inheritance(self, where_inheritance, dummy_model_data):
-        boo_bool = where_inheritance("boo")
-        assert boo_bool.equals(dummy_model_data.boo_inheritance_bool)
+    def test_nodes_inheritance(self, where_inheritance, dummy_model_data):
+        boo_bool = where_inheritance(nodes="boo")
+        assert boo_bool.equals(dummy_model_data.nodes_inheritance_boo_bool)
+
+    def test_techs_inheritance(self, where_inheritance, dummy_model_data):
+        boo_bool = where_inheritance(techs="boo")
+        assert boo_bool.equals(dummy_model_data.techs_inheritance_boo_bool)
+
+    def test_techs_and_nodes_inheritance(self, where_inheritance, dummy_model_data):
+        boo_bool = where_inheritance(techs="boo", nodes="boo")
+        assert boo_bool.equals(dummy_model_data.multi_inheritance_boo_bool)
 
     def test_any_not_exists(self, where_any):
         summed = where_any("foo", over="techs")
@@ -150,19 +148,19 @@ class TestAsArray:
         dims = {"techs": "foobar"}
         dims_check = {"techs": ["foobar"]}
         defined = where_defined(within="nodes", how="any", **dims)
-        assert defined.equals(is_defined_any(["carriers", "carrier_tiers"], dims_check))
+        assert defined.equals(is_defined_any(["carriers"], dims_check))
         assert defined.dtype.kind == "b"
 
     def test_defined_any_two_dim_one_val(self, is_defined_any, where_defined):
         dims = {"techs": "foobar", "carriers": "foo"}
         dims_check = {"techs": ["foobar"], "carriers": ["foo"]}
         defined = where_defined(within="nodes", how="any", **dims)
-        assert defined.equals(is_defined_any(["carrier_tiers"], dims_check))
+        assert defined.equals(is_defined_any([], dims_check))
 
     def test_defined_any_one_dim_multi_val(self, is_defined_any, where_defined):
         dims = {"techs": ["foobar", "foobaz"]}
         defined = where_defined(within="nodes", how="any", **dims)
-        assert defined.equals(is_defined_any(["carriers", "carrier_tiers"], dims))
+        assert defined.equals(is_defined_any(["carriers"], dims))
         assert defined.dtype.kind == "b"
 
     def test_defined_any_one_dim_multi_val_techs_within(
@@ -170,24 +168,24 @@ class TestAsArray:
     ):
         dims = {"carriers": ["foo", "bar"]}
         defined = where_defined(within="techs", how="any", **dims)
-        assert defined.equals(is_defined_any(["nodes", "carrier_tiers"], dims))
+        assert defined.equals(is_defined_any(["nodes"], dims))
 
     def test_defined_any_two_dim_multi_val(self, is_defined_any, where_defined):
         dims = {"techs": ["foobar", "foobaz"], "carriers": ["foo", "bar"]}
         defined = where_defined(within="nodes", how="any", **dims)
-        assert defined.equals(is_defined_any(["carrier_tiers"], dims))
+        assert defined.equals(is_defined_any([], dims))
         assert defined.dtype.kind == "b"
 
     def test_defined_all_one_dim_one_val(self, is_defined_all, where_defined):
         dims = {"techs": ["foobar"]}
         defined = where_defined(within="nodes", how="all", **dims)
-        assert defined.equals(is_defined_all(["carriers", "carrier_tiers"], dims))
+        assert defined.equals(is_defined_all(["carriers"], dims))
         assert defined.dtype.kind == "b"
 
     def test_defined_all_two_dim_one_val(self, is_defined_all, where_defined):
         dims = {"techs": ["foobar"], "carriers": ["foo"]}
         defined = where_defined(within="nodes", how="all", **dims)
-        assert defined.equals(is_defined_all(["carrier_tiers"], dims))
+        assert defined.equals(is_defined_all([], dims))
 
     @pytest.mark.parametrize("over", ["techs", ["techs"]])
     def test_sum_one_dim(self, expression_sum, dummy_model_data, over):
@@ -210,33 +208,11 @@ class TestAsArray:
 
     def test_reduce_carrier_dim(self, expression_reduce_carrier_dim, dummy_model_data):
         reduced = expression_reduce_carrier_dim(
-            dummy_model_data.all_true_carriers, "foo"
-        )
-
-        assert (
-            dummy_model_data.definition_matrix.sel(carrier_tiers="foo").sum()
-            == reduced.sum()
-        )
-        assert not set(reduced.dims).symmetric_difference(["nodes", "techs"])
-
-    def test_reduce_primary_carrier_dim(
-        self, expression_reduce_primary_carrier_dim, dummy_model_data
-    ):
-        reduced = expression_reduce_primary_carrier_dim(
             dummy_model_data.all_true_carriers, "out"
         )
 
-        assert reduced.sum() == 3
-        assert reduced.max() == 1
-        assert not set(reduced.dims).symmetric_difference(["techs"])
-
-    def test_reduce_primary_carrier_dim_not_in_model(
-        self, expression_reduce_primary_carrier_dim, dummy_model_data
-    ):
-        with pytest.raises(AttributeError):
-            expression_reduce_primary_carrier_dim(
-                dummy_model_data.all_true_carriers, "foo"
-            )
+        assert dummy_model_data.carrier_out.sum() == reduced.sum()
+        assert not set(reduced.dims).symmetric_difference(["nodes", "techs"])
 
     @pytest.mark.parametrize(
         ["lookup", "expected"],
@@ -246,7 +222,7 @@ class TestAsArray:
                 [[1.0, np.nan, np.nan, np.nan], [np.inf, np.nan, 2.0, np.nan]],
             ),
             (
-                {"nodes": "link_remote_nodes", "techs": "link_remote_techs"},
+                {"nodes": "lookup_multi_dim_nodes", "techs": "lookup_multi_dim_techs"},
                 [[np.inf, np.nan, 2, np.nan], [3, np.nan, np.nan, np.nan]],
             ),
         ],
@@ -287,7 +263,7 @@ class TestAsArray:
             expression_select_from_lookup_arrays(
                 dummy_model_data.with_inf,
                 techs=dummy_model_data.lookup_techs,
-                nodes=dummy_model_data.link_remote_nodes,
+                nodes=dummy_model_data.lookup_multi_dim_nodes,
             )
         assert check_error_or_warning(
             excinfo,
@@ -326,40 +302,6 @@ class TestAsArray:
         assert rolled.sel(nodes="foo", techs="foobar") == expected
 
 
-class TestAsArrayGetTransmission:
-    @pytest.fixture(scope="class")
-    def parsing_kwargs(self):
-        model = build_test_model(scenario="simple_supply,two_hours")
-        return {
-            "input_data": model._model_data,
-            "equation_name": "foo",
-            "return_type": "array",
-        }
-
-    def test_expression_get_transmission_one_tech(
-        self, expression_get_transmission_techs
-    ):
-        transmission_techs = expression_get_transmission_techs("test_transmission_elec")
-        assert not set(transmission_techs.data).symmetric_difference(
-            ["test_transmission_elec:a", "test_transmission_elec:b"]
-        )
-
-    def test_expression_get_transmission_multi_tech(
-        self, expression_get_transmission_techs
-    ):
-        transmission_techs = expression_get_transmission_techs(
-            ["test_transmission_elec", "test_transmission_heat"]
-        )
-        assert not set(transmission_techs.data).symmetric_difference(
-            [
-                "test_transmission_elec:a",
-                "test_transmission_elec:b",
-                "test_transmission_heat:a",
-                "test_transmission_heat:b",
-            ]
-        )
-
-
 class TestAsMathString:
     @pytest.fixture(scope="class")
     def parsing_kwargs(self, dummy_model_data):
@@ -369,8 +311,17 @@ class TestAsMathString:
             "equation_name": "foo",
         }
 
-    def test_inheritance(self, where_inheritance):
-        assert where_inheritance("boo") == r"\text{tech_group=boo}"
+    def test_techs_inheritance(self, where_inheritance):
+        assert where_inheritance(techs="boo") == r"\text{inherits(techs=boo)}"
+
+    def test_nodes_inheritance(self, where_inheritance):
+        assert where_inheritance(nodes="boo") == r"\text{inherits(nodes=boo)}"
+
+    def test_techs_and_nodes_inheritance(self, where_inheritance):
+        assert (
+            where_inheritance(nodes="boo", techs="bar")
+            == r"\text{inherits(nodes=boo,techs=bar)}"
+        )
 
     def test_any_not_exists(self, where_any):
         summed_string = where_any("foo", over="techs")
@@ -444,13 +395,7 @@ class TestAsMathString:
         reduced_string = expression_reduce_carrier_dim("foo", "out")
         assert (
             reduced_string
-            == r"\sum\limits_{\text{carrier} \in \text{carrier_tier(out)}} (foo)"
-        )
-
-    def test_squeeze_primary_carriers(self, expression_reduce_primary_carrier_dim):
-        reduced_string = expression_reduce_primary_carrier_dim("foo", "out")
-        assert (
-            reduced_string == r"\sum\limits_{\text{carrier=primary_carrier_out}} (foo)"
+            == r"\sum\limits_{\text{carrier} \in \text{carrier_out}} (foo)"
         )
 
     def test_select_from_lookup_arrays(self, expression_select_from_lookup_arrays):
@@ -483,36 +428,3 @@ class TestAsMathString:
     def test_roll(self, expression_roll, instring, expected_substring):
         rolled_string = expression_roll(instring, foo="-1")
         assert rolled_string == rf"\textit{{foo}}_\text{{{expected_substring}}}"
-
-
-class TestAsMathStringGetTransmission:
-    @pytest.fixture(scope="class")
-    def parsing_kwargs(self):
-        model = build_test_model(scenario="simple_supply,two_hours")
-        return {
-            "input_data": model._model_data,
-            "return_type": "math_string",
-            "equation_name": "foo",
-        }
-
-    def test_expression_get_transmission_one_tech(
-        self, expression_get_transmission_techs
-    ):
-        transmission_tech_string = expression_get_transmission_techs(
-            "test_transmission_elec"
-        )
-        assert (
-            transmission_tech_string
-            == "techs=[test_transmission_elec:a,test_transmission_elec:b]"
-        )
-
-    def test_expression_get_transmission_multi_tech(
-        self, expression_get_transmission_techs
-    ):
-        transmission_tech_string = expression_get_transmission_techs(
-            ["test_transmission_elec", "test_transmission_heat"]
-        )
-        assert (
-            transmission_tech_string
-            == "techs=[test_transmission_elec:a,test_transmission_elec:b,test_transmission_heat:a,test_transmission_heat:b]"
-        )

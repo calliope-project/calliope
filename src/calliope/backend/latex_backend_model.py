@@ -12,7 +12,6 @@ import xarray as xr
 
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import ModelError
-from calliope.util.tools import update_then_validate_config
 
 if TYPE_CHECKING:
     pass
@@ -32,7 +31,6 @@ class MathDocumentation:
                 Method to generate all optimisation problem components on a calliope.backend_model.BackendModel object.
         """
         self._inputs: xr.Dataset
-        self._schema: dict
 
     def build(self, include: Literal["all", "valid"] = "all", **kwargs) -> None:
         """Build string representations of the mathematical formulation using LaTeX math notation, ready to be written with `write`.
@@ -42,14 +40,7 @@ class MathDocumentation:
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
         """
 
-        build_config = update_then_validate_config(
-            "build",
-            self._inputs.attrs["config"],
-            self._schema,
-            **kwargs,
-        )
-
-        backend = LatexBackendModel(self._inputs, build_config, include=include)
+        backend = LatexBackendModel(self._inputs, include=include, **kwargs)
         backend._build()
 
         self._instance = backend
@@ -61,14 +52,6 @@ class MathDocumentation:
     @inputs.setter
     def inputs(self, val: xr.Dataset):
         self._inputs = val
-
-    @property
-    def schema(self):
-        return self._schema
-
-    @schema.setter
-    def schema(self, val: dict):
-        self._schema = val
 
     @overload  # noqa: F811
     def write(  # noqa: F811
@@ -280,10 +263,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     FORMAT_STRINGS = {"rst": RST_DOC, "tex": TEX_DOC, "md": MD_DOC}
 
     def __init__(
-        self,
-        inputs: xr.Dataset,
-        build_config: dict,
-        include: Literal["all", "valid"] = "all",
+        self, inputs: xr.Dataset, include: Literal["all", "valid"] = "all", **kwargs
     ) -> None:
         """Interface to build a string representation of the mathematical formulation using LaTeX math notation.
 
@@ -291,7 +271,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             include (Literal["all", "valid"], optional):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
         """
-        super().__init__(inputs, build_config)
+        super().__init__(inputs, **kwargs)
         self.include = include
 
         self._add_all_inputs_as_parameters()
@@ -484,7 +464,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         if parsed_component is not None:
             where = parsed_component.evaluate_where(self, return_type="math_string")
             sets = parsed_component.sets
-
         if self.include == "all" or (
             self.include == "valid" and where_array.fillna(0).any()
         ):

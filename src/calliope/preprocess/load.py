@@ -67,25 +67,25 @@ def load_model_definition(
     )
 
 
-def _combine_overrides(config_model, overrides):
-    override_dict = AttrDict()
-    for override in overrides:
+def _combine_overrides(overrides: AttrDict, scenario_overrides: list):
+    combined_override_dict = AttrDict()
+    for override in scenario_overrides:
         try:
-            yaml_string = config_model.overrides[override].to_yaml()
+            yaml_string = overrides[override].to_yaml()
             override_with_imports = AttrDict.from_yaml_string(yaml_string)
         except KeyError:
             raise exceptions.ModelError(
                 "Override `{}` is not defined.".format(override)
             )
         try:
-            override_dict.union(override_with_imports, allow_override=False)
+            combined_override_dict.union(override_with_imports, allow_override=False)
         except KeyError as e:
             raise exceptions.ModelError(
                 str(e)[1:-1] + ". Already specified but defined again in "
                 "override `{}`.".format(override)
             )
 
-    return override_dict
+    return combined_override_dict
 
 
 def _apply_overrides(
@@ -108,8 +108,6 @@ def _apply_overrides(
 
     # The input files are allowed to override other model defaults
     model_def_copy = model_def.copy()
-    overrides = model_def_copy.pop("overrides", {})
-    scenarios = model_def_copy.pop("scenarios", {})
 
     # First pass of applying override dict before applying scenarios,
     # so that can override scenario definitions by override_dict
@@ -120,6 +118,9 @@ def _apply_overrides(
         override_dict = AttrDict(override_dict)
         model_def_copy.union(override_dict, allow_override=True, allow_replacement=True)
 
+    overrides = model_def_copy.pop("overrides", {})
+    scenarios = model_def_copy.pop("scenarios", {})
+
     if scenario is not None:
         scenario_overrides = _load_overrides_from_scenario(
             model_def_copy, scenario, overrides, scenarios
@@ -127,7 +128,7 @@ def _apply_overrides(
         LOGGER.info(
             f"(scenarios, {scenario} ) | Applying the following overrides: {scenario_overrides}."
         )
-        overrides_from_scenario = _combine_overrides(model_def_copy, scenario_overrides)
+        overrides_from_scenario = _combine_overrides(overrides, scenario_overrides)
 
         model_def_copy.union(
             overrides_from_scenario, allow_override=True, allow_replacement=True
@@ -139,6 +140,15 @@ def _apply_overrides(
     # so that scenario-based overrides are overridden by override_dict!
     if override_dict is not None:
         model_def_copy.union(override_dict, allow_override=True, allow_replacement=True)
+    if "locations" in model_def_copy.keys():
+        # TODO: remove in v0.7.1
+        exceptions.warn(
+            "`locations` has been renamed to `nodes` and will stop working "
+            "in v0.7.1. Please update your model configuration accordingly.",
+            DeprecationWarning,
+        )
+        model_def_copy["nodes"] = model_def_copy["locations"]
+        del model_def_copy["locations"]
 
     _log_overrides(model_def, model_def_copy)
 

@@ -11,7 +11,7 @@ from calliope.backend import backend_model, expression_parser, parsing, where_pa
 
 from .common.util import check_error_or_warning
 
-BASE_DIMS = {"carriers", "carrier_tiers", "nodes", "techs"}
+BASE_DIMS = {"carriers", "nodes", "techs"}
 
 
 def string_to_dict(yaml_string):
@@ -977,13 +977,13 @@ class TestParsedBackendEquation:
         equation_obj.sets = ["nodes", "techs"]
 
         equation_obj.where = [
-            where_string_parser.parse_string("[foo] in carrier_tiers", parse_all=True)
+            where_string_parser.parse_string("[foo] in carriers", parse_all=True)
         ]
         where = equation_obj.evaluate_where(
             dummy_pyomo_backend_model, initial_where=exists_array
         )
-        assert where.sel(carrier_tiers="foo").any()
-        assert not where.sel(carrier_tiers="bar").any()
+        assert where.sel(carriers="foo").any()
+        assert not where.sel(carriers="bar").any()
 
     def test_create_subset_align_dims_with_sets(
         self, dummy_pyomo_backend_model, where_string_parser, equation_obj, exists_array

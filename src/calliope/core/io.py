@@ -20,7 +20,6 @@ import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
-from calliope._version import __version__
 from calliope.attrdict import AttrDict
 
 
@@ -29,15 +28,6 @@ def read_netcdf(path):
     with xr.open_dataset(path) as model_data:
         model_data.load()
 
-    calliope_version = model_data.attrs.get("calliope_version", False)
-    if calliope_version:
-        if str(calliope_version) not in __version__:
-            exceptions.warn(
-                "This model data was created with Calliope version {}, "
-                "but you are running {}. Proceed with caution!".format(
-                    calliope_version, __version__
-                )
-            )
     _deserialise(model_data.attrs)
     for var in model_data.data_vars.values():
         _deserialise(var.attrs)
@@ -133,12 +123,9 @@ def save_netcdf(model_data, path, model=None):
     original_model_data_attrs = model_data.attrs
     model_data_attrs = original_model_data_attrs.copy()
 
-    if model is not None and hasattr(model, "_model_run"):
-        # Attach _model_run and _debug_data to _model_data
-        model_run_to_save = model._model_run.copy()
-        for k in ["timeseries_data", "timesteps"]:
-            model_run_to_save.pop(k, None)
-        model_data_attrs["_model_run"] = model_run_to_save.to_yaml()
+    if model is not None and hasattr(model, "_model_def_dict"):
+        # Attach initial model definition to _model_data
+        model_data_attrs["_model_def_dict"] = model._model_def_dict.to_yaml()
         if hasattr(model, "_debug_data"):
             model_data_attrs["_debug_data"] = model._debug_data.to_yaml()
 

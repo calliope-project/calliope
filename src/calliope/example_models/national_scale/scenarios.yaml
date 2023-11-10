@@ -124,7 +124,7 @@ overrides:
     config.init.time_subset: ["2005-02-01", "2005-02-31"]
   run3:
     config.init.time_subset: ["2005-01-01", "2005-01-31"]
-    nodes.region1.techs.ccgt.constraints.flow_cap_max: 0 # Disallow CCGT
+    nodes.region1.techs.ccgt.flow_cap_max: 0 # Disallow CCGT
   run4:
     time_subset: ["2005-02-01", "2005-02-31"]
     nodes.region1.techs.ccgt.flow_cap_max: 0 # Disallow CCGT
@@ -136,7 +136,6 @@ overrides:
   cold_fusion: # Defines a hypothetical cold fusion tech to use in group constraints
     techs:
       cold_fusion:
-        essentials:
         name: "Cold fusion"
         color: "#233B39"
         parent: supply

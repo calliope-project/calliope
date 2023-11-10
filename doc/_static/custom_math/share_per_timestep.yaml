@@ -9,7 +9,6 @@
 
 # helper functions used:
 # sum (expression)
-# reduce_carrier_dim (expression)
 
 constraints:
   demand_share_per_timestep_equals_per_tech:
@@ -18,14 +17,14 @@ constraints:
     where: demand_share_per_timestep_equals
     equations:
       - expression: >
-          reduce_carrier_dim(flow_out, carrier_tier=out) ==
+          sum(flow_out, over=carriers) ==
           sum(flow_in[techs=$demand_tech], over=carriers) * demand_share_per_timestep_equals
     slices:
       demand_tech:
         - expression: demand_share_tech  # assigned as a top-level parameter
 
   supply_share_per_timestep_equals_per_tech:
-    description: Set the per-timestep outflow of certain technologies which produce the `power` carrier to a share of all `power` outflow in each node.
+    description: Set the per-timestep outflow of certain technologies which produce a particular carrier to a share of per-timestep outflow of that carrier in each node.
     foreach: [nodes, techs, timesteps]
     where: supply_share_per_timestep_equals
     equations:

@@ -66,9 +66,23 @@
 # boiler_eff
 
 # helper functions used:
-# reduce_carrier_dim (expression)
+# sum (expression)
 
 constraints:
+
+# Update conversion balance constraint to not interfere with these constraints
+
+  balance_conversion:
+    where: >-
+      parent=conversion AND NOT include_storage=true AND NOT (
+        turbine_type=extraction OR (turbine_type=backpressure AND boiler_eff)
+      )
+    equations:
+      - where: NOT turbine_type=backpressure
+        expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
+      - where: turbine_type=backpressure
+        expression: flow_out_inc_eff[carriers=electricity] == sum(flow_in_inc_eff, over=carriers)
+
 # Extraction turbine constraints
 # ~~
   chp_extraction_line:
@@ -79,9 +93,8 @@ constraints:
     where: turbine_type=extraction
     equations:
       - expression: >
-          flow_out[carriers=electricity]
-          <= (reduce_carrier_dim(flow_in, carrier_tier=in) * energy_eff)
-             - (flow_out[carriers=heat] * power_loss_factor)
+          flow_out_inc_eff[carriers=electricity]
+          <= sum(flow_in_inc_eff, over=carriers) - (flow_out_inc_eff[carriers=heat] * power_loss_factor)
 
   chp_backpressure_line_min:
     description: >
@@ -91,6 +104,7 @@ constraints:
     where: turbine_type=extraction
     equations:
       - expression: flow_out[carriers=electricity] >= flow_out[carriers=heat] * power_to_heat_ratio
+
 # ~~
 
 # Backpressure with direct boiler option
@@ -114,11 +128,8 @@ constraints:
     equations:
       - expression: >
           flow_out[carriers=heat]
-          <= (reduce_carrier_dim(flow_in, carrier_tier=in) * boiler_eff)
-             - (flow_out[carriers=electricity] * (
-                  (boiler_eff / energy_eff) - (1 / power_to_heat_ratio)
-               )
-          )
+          <= boiler_eff * (sum(flow_in_inc_eff, over=carriers) - flow_out_inc_eff[carriers=electricity])
+            + (flow_out[carriers=electricity] / power_to_heat_ratio)
 # ~~
 
 # Backpressure only

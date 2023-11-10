@@ -1,30 +1,9 @@
-import ast
 import os
-import sys
 from pathlib import Path
 from typing import Literal, Optional, Union
 
 import calliope
-import pytest
 import xarray as xr
-from calliope import AttrDict
-
-constraint_sets = {
-    k: [ast.literal_eval(i) for i in v]
-    for k, v in AttrDict.from_yaml(
-        os.path.join(os.path.dirname(__file__), "constraint_sets.yaml")
-    )
-    .as_dict_flat()
-    .items()
-}
-
-defaults = AttrDict.from_yaml(
-    os.path.join(os.path.dirname(calliope.__file__), "config", "defaults.yaml")
-)
-
-python36_or_higher = pytest.mark.skipif(
-    sys.version_info < (3, 6), reason="Requires ordered dicts from Python >= 3.6"
-)
 
 
 def build_test_model(
@@ -107,6 +86,8 @@ def build_lp(
     backend_instance = model._BACKENDS[backend](model._model_data)
     for name, dict_ in model.math["variables"].items():
         backend_instance.add_variable(name, dict_)
+    for name, dict_ in model.math["global_expressions"].items():
+        backend_instance.add_global_expression(name, dict_)
 
     if isinstance(math, dict):
         for component_group, component_math in math.items():

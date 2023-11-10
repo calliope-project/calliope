@@ -7,6 +7,7 @@ import importlib
 import logging
 import typing
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -25,8 +26,8 @@ import xarray as xr
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.backend import helper_functions, parsing, where_parser
-from calliope.util.tools import validate_dict
+from calliope.backend import helper_functions, parsing
+from calliope.util.schema import MATH_SCHEMA, update_then_validate_config, validate_dict
 
 if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
@@ -45,7 +46,7 @@ class BackendModelGenerator(ABC):
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
     _COMPONENT_ATTR_METADATA = ["description", "unit"]
 
-    def __init__(self, inputs: xr.Dataset, build_config: dict):
+    def __init__(self, inputs: xr.Dataset, **kwargs):
         """Abstract base class to build a representation of the optimisation problem.
 
         Args:
@@ -54,9 +55,12 @@ class BackendModelGenerator(ABC):
 
         self._dataset = xr.Dataset()
         self.inputs = inputs.copy()
+        self.inputs.attrs = deepcopy(inputs.attrs)
+        self.inputs.attrs["config"]["build"] = update_then_validate_config(
+            "build", self.inputs.attrs["config"], **kwargs
+        )
         self._check_inputs()
 
-        self.inputs.attrs["config"]["build"] = build_config
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
     @abstractmethod
@@ -189,7 +193,7 @@ class BackendModelGenerator(ABC):
         )
         errors = []
         warnings = []
-        parser_ = where_parser.generate_where_string_parser()
+        parser_ = parsing.where_parser.generate_where_string_parser()
         eval_kwargs = {
             "equation_name": "",
             "backend_interface": self,
@@ -246,10 +250,8 @@ class BackendModelGenerator(ABC):
             LOGGER.debug(f"Updating math formulation with {mode} mode custom math.")
             filepath = importlib.resources.files("calliope") / "math" / f"{mode}.yaml"
             self.inputs.math.union(AttrDict.from_yaml(filepath), allow_override=True)
-        math_schema = AttrDict.from_yaml(
-            importlib.resources.files("calliope") / "config" / "math_schema.yaml"
-        )
-        validate_dict(self.inputs.math, math_schema, "math")
+
+        validate_dict(self.inputs.math, MATH_SCHEMA, "math")
 
     def _add_component(
         self,
@@ -386,7 +388,7 @@ class BackendModelGenerator(ABC):
         ).data_vars.items():
             default_val = param_data.attrs.get("default", np.nan)
             self.add_parameter(param_name, param_data, default_val)
-        for param_name, default_val in self.inputs.attrs["default"].items():
+        for param_name, default_val in self.inputs.attrs["defaults"].items():
             if param_name in self.parameters.keys():
                 continue
             self.log(
@@ -557,14 +559,14 @@ class BackendModelGenerator(ABC):
 
 
 class BackendModel(BackendModelGenerator, Generic[T]):
-    def __init__(self, inputs: xr.Dataset, instance: T, build_config: dict) -> None:
+    def __init__(self, inputs: xr.Dataset, instance: T, **kwargs) -> None:
         """Abstract base class to build backend models that interface with solvers.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
             instance (T): Interface model instance.
         """
-        super().__init__(inputs, build_config)
+        super().__init__(inputs, **kwargs)
         self._instance = instance
 
     @abstractmethod

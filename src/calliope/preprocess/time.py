@@ -93,7 +93,13 @@ def add_time_dimension(
             .fillna(var_data)
             .assign_attrs(var_data.attrs)
         )
-
+    if any(
+        var_data.astype(str).str.contains("^file=|df=").any()
+        for var_data in model_data.data_vars.values()
+    ):
+        raise exceptions.ModelError(
+            "Some lengths of input timeseries data are too short relative to your chosen time subset."
+        )
     return model_data
 
 
@@ -125,6 +131,16 @@ def add_inferred_time_params(model_data: xr.Dataset):
     return model_data
 
 
+def _datetime_index(index: pd.Index, format: str, source_name: str) -> pd.Index:
+    try:
+        return pd.to_datetime(index, format=format)
+    except ValueError as e:
+        raise exceptions.ModelError(
+            f"Error in parsing dates in timeseries data from {source_name} using datetime format `{format}`. "
+            f"Full error: {e}"
+        )
+
+
 class TimeseriesLoader:
     def __init__(
         self, init_config: dict, timeseries_dfs: Optional[dict[str, pd.DataFrame]]
@@ -135,20 +151,38 @@ class TimeseriesLoader:
         self._time_subset: Optional[list[str]] = init_config["time_subset"]
         self._time_format: str = init_config["time_format"]
 
+        if self._timeseries_dfs is not None:
+            if not isinstance(self._timeseries_dfs, dict) or not all(
+                isinstance(v, (pd.Series, pd.DataFrame))
+                for v in self._timeseries_dfs.values()
+            ):
+                raise exceptions.ModelError(
+                    "`timeseries_dataframes` must be dict of pandas DataFrames."
+                )
+
     def load_timeseries(self, df: pd.DataFrame, var_name: str) -> pd.Series:
         source = df.loc["source"]
         source_type = df.loc["source_type"]
         column = df.loc["column"]
 
         if source_type == "df" and self._timeseries_dfs is not None:
-            df = self._timeseries_dfs[source]
-        if source_type == "file" and source in self.ts_cache:
+            try:
+                df = self._timeseries_dfs[source]
+            except KeyError:
+                raise KeyError(
+                    f"Attempted to load dataframe with undefined key: {source}"
+                )
+        elif source_type == "df" and self._timeseries_dfs is None:
+            raise exceptions.ModelError(
+                "Missing timeseries dataframes passed as an argument in calliope.Model(...)."
+            )
+        elif source_type == "file" and source in self.ts_cache:
             df = self.ts_cache[source]
         else:
             df = self._load_timeseries_from_file(source)
             self.ts_cache[source] = df
 
-        clean_df = self._reformat_timeseries_df(df)
+        clean_df = self._reformat_timeseries_df(df, source)
 
         if pd.isnull(column) and len(clean_df.columns) > 1:
             raise exceptions.ModelError(
@@ -166,19 +200,14 @@ class TimeseriesLoader:
         df = pd.read_csv(file_path, index_col=0)
         return df
 
-    def _reformat_timeseries_df(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _reformat_timeseries_df(self, df: pd.DataFrame, source: str) -> pd.DataFrame:
         try:
             df.apply(pd.to_numeric)
         except ValueError as e:
             raise exceptions.ModelError(
-                f"Error in loading data from {df.name}. Ensure all entries are numeric. Full error: {e}"
+                f"Error in loading data from {source}. Ensure all entries are numeric. Full error: {e}"
             )
-        try:
-            df.index = pd.to_datetime(df.index, format=self._time_format)
-        except ValueError as e:
-            raise exceptions.ModelError(
-                f"Error in parsing dates in timeseries data from {df.name} using datetime format `{self._time_format}`. Full error: {e}"
-            )
+        df.index = _datetime_index(df.index, self._time_format, source)
         subset_df = self._subset_index(df)
         return subset_df
 
@@ -197,42 +226,23 @@ class TimeseriesLoader:
 
         df_start_time = df.index[0]
         df_end_time = df.index[-1]
-        if time_subset_dt[0] < df_start_time or time_subset_dt[1] > df_end_time:
+        if (
+            time_subset_dt[0].date() < df_start_time.date()
+            or time_subset_dt[1].date() > df_end_time.date()
+        ):
             raise exceptions.ModelError(
                 f"subset time range {self._time_subset} is outside the input data time range "
                 f"[{df_start_time}, {df_end_time}]"
             )
 
-        subset_df = df.loc[slice(*time_subset_dt), :]
+        # We eventually subset using the input strings to capture entire days
+        # E.g., ["2005-01-01", "2005-01-02"] will go to the last timestep on "2005-01-02"
+        subset_df = df.loc[slice(*self._time_subset), :]
         if subset_df.empty:
             raise exceptions.ModelError(
                 f"The time slice {time_subset_dt} creates an empty timeseries array."
             )
         return subset_df
-
-
-def update_dtypes(model_data):
-    """
-    Update dtypes to not be 'Object', if possible.
-    Order of preference is: bool, int, float
-    """
-    # TODO: this should be redundant once typedconfig is in (params will have predefined dtypes)
-    for var_name, var in model_data.data_vars.items():
-        if var.dtype.kind == "O":
-            no_nans = var.where(var != "nan", drop=True)
-            model_data[var_name] = var.where(var != "nan")
-            if no_nans.isin(["True", 0, 1, "False", "0", "1"]).all():
-                # Turn to bool
-                model_data[var_name] = var.isin(["True", 1, "1"])
-            else:
-                try:
-                    model_data[var_name] = var.astype(np.int_, copy=False)
-                except (ValueError, OverflowError):
-                    try:
-                        model_data[var_name] = var.astype(np.float_, copy=False)
-                    except ValueError:
-                        None
-    return model_data
 
 
 def resample(data: xr.Dataset, resolution: str):
@@ -253,7 +263,7 @@ def resample(data: xr.Dataset, resolution: str):
     """
     resample_kwargs = {"indexer": {"timesteps": resolution}, "skipna": True}
     data_non_ts = data.drop_dims("timesteps")
-    data_ts = data.drop(data_non_ts.data_vars)
+    data_ts = data.drop_vars(data_non_ts.data_vars)
     data_ts_resampled = data_ts.resample(**resample_kwargs).first(keep_attrs=True)
 
     for var_name, var_data in data_ts.data_vars.items():
@@ -285,23 +295,24 @@ def resample(data: xr.Dataset, resolution: str):
     return data_new
 
 
-def cluster(
-    data: xr.Dataset,
-    clustering_timeseries: pd.Series,
-):
+def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
     """
     Apply the given clustering time series to the given data.
 
     Parameters
     ----------
     data : xarray.Dataset
-    clustering_timeseries
+    clustering_file
 
     Returns
     -------
     data_new_scaled : xarray.Dataset
 
     """
+    clustering_timeseries = pd.read_csv(clustering_file, index_col=0).squeeze()
+    clustering_timeseries.index = _datetime_index(
+        clustering_timeseries.index, time_format, Path(clustering_file).name
+    )
     representative_days = pd.to_datetime(clustering_timeseries.dropna()).dt.date
     grouper = representative_days.to_frame("clusters").groupby("clusters")
     data_new = data.sel(

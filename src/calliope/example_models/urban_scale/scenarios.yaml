@@ -12,8 +12,14 @@ overrides:
       chp:
         cap_method: integer
         units_max: 4
-        flow_cap_per_unit: 300
-        flow_out_min_relative: 0.2
+        flow_cap_per_unit:
+          data: 300
+          index: electricity
+          dims: carriers
+        flow_out_min_relative:
+          data: 0.2
+          index: electricity
+          dims: carriers
         cost_flow_cap.data: 700
         cost_purchase:
           data: 40000

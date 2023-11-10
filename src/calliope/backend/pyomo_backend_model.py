@@ -50,8 +50,8 @@ COMPONENT_TRANSLATOR = {
 
 
 class PyomoBackendModel(backend_model.BackendModel):
-    def __init__(self, inputs: xr.Dataset, build_config: dict):
-        super().__init__(inputs, pmo.block(), build_config)
+    def __init__(self, inputs: xr.Dataset, **kwargs):
+        super().__init__(inputs, pmo.block(), **kwargs)
 
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()

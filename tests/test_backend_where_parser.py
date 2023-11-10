@@ -10,7 +10,7 @@ from .common.util import check_error_or_warning
 
 SUB_EXPRESSION_CLASSIFIER = expression_parser.SUB_EXPRESSION_CLASSIFIER
 
-BASE_DIMS = ["nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"]
+BASE_DIMS = ["nodes", "techs", "carriers", "costs", "timesteps"]
 
 
 def parse_yaml(yaml_string):
@@ -404,7 +404,7 @@ class TestParserElements:
             "[bar] in",  # missing set name
             "foo in [bar]",  # Wrong order of subset and set name
             "[foo=bar] in foo",  # comparison string in subset
-            "[inheritance(a)] in foo"  # helper function in subset
+            "[inheritance(techs=a)] in foo"  # helper function in subset
             "(bar) in foo",  # wrong brackets
         ],
     )
@@ -435,7 +435,7 @@ class TestParserMasking:
         [
             ("all_inf", "all_false"),
             ("config.foo=True", True),
-            ("inheritance(boo)", "boo_inheritance_bool"),
+            ("inheritance(nodes=boo)", "nodes_inheritance_boo_bool"),
         ],
     )
     def test_no_aggregation(

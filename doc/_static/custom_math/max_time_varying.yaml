@@ -8,19 +8,12 @@
 # storage_max_relative_per_ts
 
 # helper functions used:
-# reduce_carrier_dim (expression)
+# sum (expression)
 
 constraints:
   max_time_varying_flow_cap:
     description: Limit flow out in each hour according to a time varying fractional limit that is multiplied by the technology flow cap. This represents, for instance, the impact of outdoor temperature on the maximum output of a technology relative to its rated max output.
-    foreach: [nodes, techs, timesteps]
+    foreach: [nodes, techs, carriers, timesteps]
     where: "flow_cap_max_relative_per_ts"
     equations:
-      - expression: "reduce_carrier_dim(flow_out, carrier_tier=out) <= flow_cap_max_relative_per_ts * flow_cap"
-
-  max_time_varying_storage:
-    description: Limit flow out of a storage device in each hour according to a time varying fractional limit that is multiplied by the technology stored carrier. This represents, for instance, the inability to use all stored energy in a storage device as it is reserved for potential use in a context outside the system boundaries.
-    foreach: [nodes, techs, timesteps]
-    where: "storage_max_relative_per_ts"
-    equations:
-      - expression: "reduce_carrier_dim(flow_out, carrier_tier=out) <= storage_max_relative_per_ts * storage"
+      - expression: "flow_out <= flow_cap_max_relative_per_ts * flow_cap * flow_out_parasitic_eff"

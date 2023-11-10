@@ -8,19 +8,10 @@ additionalProperties: false
 $defs:
   StringFilePattern:
     type: string
-    pattern: "^(file|df)=.+\\.csv[:]*[\\w]*$"
+    pattern: "^(file|df)=.+[:]*[\\w]*$"
   unIndexedParamVal:
     type: [string, boolean, number, "null"]
     description: zero-dimensional (i.e., un-indexed) parameter.
-
-  unIndexedParamData:
-    type: object
-    description: zero-dimensional (i.e., un-indexed) parameter.
-    additionalProperties: false
-    properties:
-      data:
-        type: [string, boolean, number, "null"]
-        description: parameter value
 
   IndexedParamIndex:
     description: >-
@@ -50,6 +41,7 @@ $defs:
         minItems: 1
         items:
           type: [string, boolean, integer, number, "null"]
+
   IndexedParam:
     type: object
     description: Indexed parameter.
@@ -253,43 +245,13 @@ properties:
               data:
                 type: number
       objective_cost_weights:
-        type: object
+        $ref: "#/$defs/TechCostNullNumberFixed"
+        default: 1
         description: Weightings for cost classes to apply in the objective function.
-        additionalProperties: false
-        properties:
-          data:
-            oneOf:
-              - type: number
-              - type: array
-                minItems: 1
-                items:
-                  type: number
-            default: 1
-          index:
-            oneOf:
-              - type: [string, number]
-              - type: array
-                uniqueItems: true
-                minItems: 1
-                items:
-                  type: [string, number]
-            default: monetary
-          dims:
-            oneOf:
-              - type: string
-              - type: array
-                uniqueItems: true
-                minItems: 1
-                items:
-                  type: string
-                contains:
-                  const: costs
-            default: costs
     patternProperties:
-      '^[^_\W][\w]+$':
+      '^[^_^\d][\w]*$':
         oneOf:
           - $ref: "#/$defs/unIndexedParamVal"
-          - $ref: "#/$defs/unIndexedParamData"
           - $ref: "#/$defs/IndexedParam"
 
   techs:
@@ -297,41 +259,43 @@ properties:
     description: Calliope model technology definitions.
     additionalProperties: false
     patternProperties:
-      '^[^_\W][\w]+$': &tech_def
+      '^[^_^\d][\w]*$':
         type: object
         description: A named technology.
-        oneOf:
-          - required: ["parent", "carrier_in", "carrier_out"]
-            properties:
-              parent: {const: conversion}
-          - required: ["parent", "carrier_in"]
-            not:
-                required: ["carrier_out"]
-            properties:
-              parent: {const: demand}
+        allOf:
+          - required: ["parent"]
+          - oneOf:
+            - required: ["parent", "carrier_in", "carrier_out"]
+              properties:
+                parent: {const: conversion}
+            - required: ["parent", "carrier_in"]
+              not:
+                  required: ["carrier_out"]
+              properties:
+                parent: {const: demand}
 
-          - required: ["parent", "carrier_in", "carrier_out"]
-            properties:
-              parent: {const: storage}
+            - required: ["parent", "carrier_in", "carrier_out"]
+              properties:
+                parent: {const: storage}
 
-          - required: ["parent", "carrier_out"]
-            not:
-                required: ["carrier_in"]
-            properties:
-              parent: {const: supply}
+            - required: ["parent", "carrier_out"]
+              not:
+                  required: ["carrier_in"]
+              properties:
+                parent: {const: supply}
 
-          - required: ["parent", "from", "to", "carrier_in", "carrier_out"]
-            properties:
-              parent: {const: transmission}
-              from:
-                title: Starting node.
-                description: The resulting link technology will have `flow_out` == `import` and `flow_in` == `export` at this node.
-                type: string
+            - required: ["parent", "from", "to", "carrier_in", "carrier_out"]
+              properties:
+                parent: {const: transmission}
+                from:
+                  title: Starting node.
+                  description: The resulting link technology will have `flow_out` == `import` and `flow_in` == `export` at this node.
+                  type: string
 
-              to:
-                title: Ending node.
-                description: The resulting link technology will have `flow_out` == `import` and `flow_in` == `export` at this node.
-                type: string
+                to:
+                  title: Ending node.
+                  description: The resulting link technology will have `flow_out` == `import` and `flow_in` == `export` at this node.
+                  type: string
 
         patternProperties: &pattern_def
           '^(cost_[\w]+)$':
@@ -339,7 +303,6 @@ properties:
         unevaluatedProperties: &uneval_def
           oneOf:
             - $ref: "#/$defs/unIndexedParamVal"
-            - $ref: "#/$defs/unIndexedParamData"
             - type: object
               description: Indexed tech-level parameter with any dtype.
               additionalProperties: false
@@ -399,6 +362,7 @@ properties:
 
           parent:
             type: string
+            enum: [demand, supply, conversion, storage, transmission]
             title: Abstract base technology name.
             description: Should be the name of one of the abstract base classes, from which some initial parameter defaults will be derived and with which certain base math will be triggered.
 
@@ -907,7 +871,7 @@ properties:
     description: Calliope model node definitions.
     additionalProperties: false
     patternProperties:
-      '^[^_\W][\w]+$':
+      '^[^_^\d][\w]*$':
         type: object
         title: A named node.
         dependentRequired": {

@@ -52,9 +52,9 @@ class TestBaseMath:
         self.TEST_REGISTER.add("variables.flow_cap")
         model = build_test_model(
             {
-                "nodes.b.techs.test_supply_elec.constraints.flow_cap_max": 100,
-                "nodes.a.techs.test_supply_elec.constraints.flow_cap_min": 1,
-                "nodes.a.techs.test_supply_elec.constraints.flow_cap_max": np.nan,
+                "nodes.b.techs.test_supply_elec.flow_cap_max": 100,
+                "nodes.a.techs.test_supply_elec.flow_cap_min": 1,
+                "nodes.a.techs.test_supply_elec.flow_cap_max": np.nan,
             },
             "simple_supply,two_hours,investment_costs",
         )
@@ -64,7 +64,7 @@ class TestBaseMath:
                 "foo": {
                     "equations": [
                         {
-                            "expression": "sum(flow_cap[techs=test_supply_elec], over=nodes)"
+                            "expression": "sum(flow_cap[techs=test_supply_elec], over=[nodes, carriers])"
                         }
                     ],
                     "sense": "minimise",
@@ -89,8 +89,8 @@ class TestBaseMath:
         self.TEST_REGISTER.add("constraints.flow_out_max")
         model = build_test_model(
             {
-                "nodes.a.techs.test_supply_elec.constraints.flow_cap_min": 100,
-                "nodes.a.techs.test_supply_elec.constraints.flow_cap_max": 100,
+                "nodes.a.techs.test_supply_elec.flow_cap_min": 100,
+                "nodes.a.techs.test_supply_elec.flow_cap_max": 100,
             },
             "simple_supply,two_hours,investment_costs",
         )
@@ -146,7 +146,7 @@ class CustomMathExamples(ABC):
 
     @pytest.fixture(scope="class")
     def abs_filepath(self):
-        return (self.CUSTOM_MATH_DIR / self.YAML_FILEPATH).absolute()
+        return (self.CUSTOM_MATH_DIR / self.YAML_FILEPATH).absolute().as_posix()
 
     @pytest.fixture(scope="class")
     def custom_math(self):
@@ -165,7 +165,11 @@ class CustomMathExamples(ABC):
                     for component in component_list:
                         self.TEST_REGISTER.add(f"{component_group}.{component}")
 
-                custom_math = {k: v for k, v in components.items() if k != "variables"}
+                custom_math = {
+                    k: v
+                    for k, v in components.items()
+                    if k not in ["variables", "global_expressions"]
+                }
             else:
                 self.TEST_REGISTER.add(f"constraints.{filename}")
                 custom_math = {"constraints": [filename]}
@@ -199,8 +203,8 @@ class TestAnnualEnergyBalance(CustomMathExamples):
 
     def test_annual_energy_balance_per_tech_and_node(self, build_and_compare):
         overrides = {
-            "nodes.a.techs.test_supply_elec.constraints.annual_flow_max": 10,
-            "nodes.b.techs.test_supply_elec.constraints.annual_flow_max": 20,
+            "nodes.a.techs.test_supply_elec.annual_flow_max": 10,
+            "nodes.b.techs.test_supply_elec.annual_flow_max": 20,
         }
         build_and_compare(
             "annual_energy_balance_per_tech_and_node",
@@ -227,7 +231,7 @@ class TestAnnualEnergyBalance(CustomMathExamples):
     def test_annual_energy_balance_global_multi_tech(self, build_and_compare):
         overrides = {
             "parameters": {
-                "annual_flow_max": {"data": 10},
+                "annual_flow_max": 10,
                 "flow_max_group": {
                     "data": True,
                     "index": ["test_supply_elec", "test_supply_plus"],
@@ -243,13 +247,9 @@ class TestAnnualEnergyBalance(CustomMathExamples):
 
     def test_annual_energy_balance_total_source_availability(self, build_and_compare):
         overrides = {
-            "parameters": {
-                "annual_source_max": {
-                    "data": 10,
-                    "index": ["test_supply_plus"],
-                    "dims": "techs",
-                },
-            }
+            "techs": {
+                "test_supply_plus": {"annual_source_max": 10},
+            },
         }
         build_and_compare(
             "annual_energy_balance_total_source_availability",
@@ -259,12 +259,8 @@ class TestAnnualEnergyBalance(CustomMathExamples):
 
     def test_annual_energy_balance_total_sink_availability(self, build_and_compare):
         overrides = {
-            "parameters": {
-                "annual_sink_max": {
-                    "data": 10,
-                    "index": ["test_demand_elec"],
-                    "dims": "techs",
-                },
+            "techs": {
+                "test_demand_elec": {"annual_sink_max": 10},
             },
         }
         build_and_compare(
@@ -296,25 +292,6 @@ class TestMaxTimeVarying(CustomMathExamples):
             overrides,
         )
 
-    def test_max_time_varying_storage(self, build_and_compare):
-        overrides = {
-            "parameters": {
-                "storage_max_relative_per_ts": {
-                    "data": [0.8, 0.5],
-                    "index": [
-                        ["test_storage", "2005-01-01 00:00"],
-                        ["test_storage", "2005-01-01 01:00"],
-                    ],
-                    "dims": ["techs", "timesteps"],
-                },
-            },
-        }
-        build_and_compare(
-            "max_time_varying_storage",
-            "simple_storage,two_hours",
-            overrides,
-        )
-
 
 @pytest.mark.filterwarnings(
     "ignore:(?s).*defines unrecognised constraint `turbine_type`:calliope.exceptions.ModelWarning"
@@ -324,26 +301,28 @@ class TestCHPHTP(CustomMathExamples):
 
     def test_chp_extraction(self, build_and_compare):
         overrides = {
-            "techs.test_chp.constraints.power_loss_factor": 0.1,
-            "techs.test_chp.constraints.power_to_heat_ratio": 2,
-            "techs.test_chp.constraints.energy_eff": 0.6,
-            "techs.test_chp.constraints.turbine_type": "extraction",
+            "techs.test_chp.power_loss_factor": 0.1,
+            "techs.test_chp.power_to_heat_ratio": 2,
+            "techs.test_chp.turbine_type": "extraction",
         }
         build_and_compare(
             "chp_extraction",
             "simple_chp,two_hours",
             overrides,
             components={
-                "constraints": ["chp_extraction_line", "chp_backpressure_line_min"]
+                "constraints": [
+                    "chp_extraction_line",
+                    "chp_backpressure_line_min",
+                    "balance_conversion",
+                ],
             },
         )
 
     def test_chp_backpressure_and_boiler(self, build_and_compare):
         overrides = {
-            "techs.test_chp.constraints.power_to_heat_ratio": 1.5,
-            "techs.test_chp.constraints.boiler_eff": 0.8,
-            "techs.test_chp.constraints.energy_eff": 0.6,
-            "techs.test_chp.constraints.turbine_type": "backpressure",
+            "techs.test_chp.power_to_heat_ratio": 1.5,
+            "techs.test_chp.boiler_eff": 0.8,
+            "techs.test_chp.turbine_type": "backpressure",
         }
         build_and_compare(
             "chp_backpressure_and_boiler",
@@ -353,19 +332,23 @@ class TestCHPHTP(CustomMathExamples):
                 "constraints": [
                     "chp_divert_fuel_to_boiler",
                     "chp_backpressure_line_max",
+                    "balance_conversion",
                 ]
             },
         )
 
     def test_chp_backpressure_no_boiler(self, build_and_compare):
         overrides = {
-            "techs.test_chp.constraints.power_to_heat_ratio": 1.25,
-            "techs.test_chp.constraints.turbine_type": "backpressure",
+            "techs.test_chp.power_to_heat_ratio": 1.25,
+            "techs.test_chp.turbine_type": "backpressure",
         }
         build_and_compare(
             "chp_backpressure_line_equals",
             "simple_chp,two_hours",
             overrides,
+            components={
+                "constraints": ["chp_backpressure_line_equals", "balance_conversion"]
+            },
         )
 
 
@@ -377,9 +360,9 @@ class TestShareAllTimesteps(CustomMathExamples):
     )
     def test_demand_share_equals_per_tech(self, build_and_compare):
         overrides = {
-            "nodes.a.techs.test_supply_elec.constraints.demand_share_equals": 0.5,
-            "nodes.b.techs.test_supply_elec.constraints.demand_share_equals": 0.8,
-            "parameters": {"demand_share_tech.data": "test_demand_elec"},
+            "nodes.a.techs.test_supply_elec.demand_share_equals": 0.5,
+            "nodes.b.techs.test_supply_elec.demand_share_equals": 0.8,
+            "parameters": {"demand_share_tech": "test_demand_elec"},
         }
         build_and_compare(
             "demand_share_equals_per_tech",
@@ -392,9 +375,9 @@ class TestShareAllTimesteps(CustomMathExamples):
     )
     def test_supply_share_equals_per_tech(self, build_and_compare):
         overrides = {
-            "nodes.a.techs.test_supply_elec.constraints.supply_share_equals": 0.5,
-            "nodes.b.techs.test_supply_elec.constraints.supply_share_equals": 0.8,
-            "parameters": {"supply_share_carrier.data": "electricity"},
+            "nodes.a.techs.test_supply_elec.supply_share_equals": 0.5,
+            "nodes.b.techs.test_supply_elec.supply_share_equals": 0.8,
+            "parameters": {"supply_share_carrier": "electricity"},
         }
         build_and_compare(
             "supply_share_equals_per_tech",
@@ -411,9 +394,9 @@ class TestSharePerTimestep(CustomMathExamples):
     )
     def test_demand_share_per_timestep_equals_per_tech(self, build_and_compare):
         overrides = {
-            "nodes.a.techs.test_supply_elec.constraints.demand_share_per_timestep_equals": 0.5,
-            "nodes.b.techs.test_supply_elec.constraints.demand_share_per_timestep_equals": 0.8,
-            "parameters": {"demand_share_tech.data": "test_demand_elec"},
+            "nodes.a.techs.test_supply_elec.demand_share_per_timestep_equals": 0.5,
+            "nodes.b.techs.test_supply_elec.demand_share_per_timestep_equals": 0.8,
+            "parameters": {"demand_share_tech": "test_demand_elec"},
         }
         build_and_compare(
             "demand_share_per_timestep_equals_per_tech",
@@ -426,9 +409,9 @@ class TestSharePerTimestep(CustomMathExamples):
     )
     def test_supply_share_per_timestep_equals_per_tech(self, build_and_compare):
         overrides = {
-            "nodes.a.techs.test_supply_elec.constraints.supply_share_per_timestep_equals": 0.5,
-            "nodes.b.techs.test_supply_elec.constraints.supply_share_per_timestep_equals": 0.8,
-            "parameters": {"supply_share_carrier.data": "electricity"},
+            "nodes.a.techs.test_supply_elec.supply_share_per_timestep_equals": 0.5,
+            "nodes.b.techs.test_supply_elec.supply_share_per_timestep_equals": 0.8,
+            "parameters": {"supply_share_carrier": "electricity"},
         }
         build_and_compare(
             "supply_share_per_timestep_equals_per_tech",
@@ -442,15 +425,14 @@ class TestDemandSharePerTimestepDecision(CustomMathExamples):
 
     def test_demand_share_per_timestep_decision_main(self, build_and_compare):
         overrides = {
+            "techs": {
+                "test_supply_elec": {"decide_demand_share": "test_demand_elec"},
+                "test_conversion_plus": {"decide_demand_share": "test_demand_elec"},
+            },
             "parameters": {
-                "decide_demand_share": {
-                    "data": "test_demand_elec",
-                    "index": ["test_supply_elec", "test_conversion_plus"],
-                    "dims": "techs",
-                },
-                "demand_share_carrier.data": "electricity",
-                "demand_share_relaxation.data": 0.01,
-            }
+                "demand_share_carrier": "electricity",
+                "demand_share_relaxation": 0.01,
+            },
         }
         build_and_compare(
             "demand_share_per_timestep_decision_main",
@@ -467,14 +449,13 @@ class TestDemandSharePerTimestepDecision(CustomMathExamples):
 
     def test_demand_share_per_timestep_decision_sum(self, build_and_compare):
         overrides = {
+            "techs": {
+                "test_supply_elec": {"decide_demand_share": "test_demand_elec"},
+                "test_conversion_plus": {"decide_demand_share": "test_demand_elec"},
+            },
             "parameters": {
-                "decide_demand_share": {
-                    "data": "test_demand_elec",
-                    "index": ["test_supply_elec", "test_conversion_plus"],
-                    "dims": "techs",
-                },
-                "demand_share_carrier.data": "electricity",
-                "demand_share_limit.data": 0.5,
+                "demand_share_carrier": "electricity",
+                "demand_share_limit": 0.5,
             },
         }
         build_and_compare(
@@ -489,8 +470,12 @@ class TestPiecewiseCosts(CustomMathExamples):
 
     def test_piecewise(self, build_and_compare):
         overrides = {
-            "techs.test_supply_elec.constraints.lifetime": 10,
-            "techs.test_supply_elec.costs.monetary.interest_rate": 0.1,
+            "techs.test_supply_elec.lifetime": 10,
+            "techs.test_supply_elec.cost_interest_rate": {
+                "data": 0.1,
+                "index": "monetary",
+                "dims": "costs",
+            },
             "parameters": {
                 "cost_flow_cap_piecewise_slopes": {
                     "data": [5, 7, 14],
@@ -511,7 +496,7 @@ class TestPiecewiseCosts(CustomMathExamples):
             components={
                 "constraints": ["piecewise_costs"],
                 "variables": ["piecewise_cost_investment"],
-                "global_expressions": ["cost_investment", "cost_var", "cost"],
+                "global_expressions": ["cost_investment"],
             },
         )
 
@@ -616,7 +601,7 @@ class TestFuelDist(CustomMathExamples):
                     "index": ["coal"],
                     "dims": "carriers",
                 },
-                "fuel_distributor_costs": {
+                "cost_fuel_distribution": {
                     "data": 5,
                     "index": [["coal", "monetary"]],
                     "dims": ["carriers", "costs"],
@@ -625,16 +610,11 @@ class TestFuelDist(CustomMathExamples):
         }
         build_and_compare(
             "fuel_dist_cost",
-            "fuel_distribution,two_hours,investment_costs",
+            "fuel_distribution,two_hours",
             overrides,
             components={
-                "global_expressions": [
-                    "cost_investment",  # Need to build these up so that `cost` is available in the objective
-                    "cost_var",  # Need to build these up so that `cost` is available in the objective
-                    "cost",  # Need to build these up so that `cost` is available in the objective
-                    "cost_fuel_distribution",
-                ],
                 "objectives": ["min_cost_optimisation"],
+                "global_expressions": ["cost_var_fuel_distribution"],
             },
         )
 
@@ -647,8 +627,8 @@ class TestUptimeDowntime(CustomMathExamples):
     )
     def test_annual_capacity_factor(self, build_and_compare):
         overrides = {
-            "techs.test_supply_elec.constraints.capacity_factor_min": 0.8,
-            "techs.test_supply_elec.constraints.capacity_factor_max": 0.9,
+            "techs.test_supply_elec.capacity_factor_min": 0.8,
+            "techs.test_supply_elec.capacity_factor_max": 0.9,
         }
         build_and_compare(
             "annual_capacity_factor",
@@ -684,7 +664,7 @@ class TestUptimeDowntime(CustomMathExamples):
     )
     def test_downtime_decision(self, build_and_compare):
         overrides = {
-            "techs.test_supply_elec.constraints.uptime_limit": 1,
+            "techs.test_supply_elec.uptime_limit": 1,
         }
         build_and_compare(
             "downtime_period_decision", "supply_milp,two_hours", overrides
@@ -696,17 +676,31 @@ class TestNetImportShare(CustomMathExamples):
     shared_overrides = {
         "parameters.net_import_share": 1.5,
         "nodes.c.techs": {
-            "test_demand_heat": {"constraints.sink_equals": "file=demand_heat.csv:a"}
+            "test_demand_heat": {"sink_equals": "file=demand_heat.csv:a"}
         },
-        "links.a,c.techs": {
-            "test_transmission_heat": None,
-            "test_transmission_elec": None,
+        "techs": {
+            "links_a_c_heat": {
+                "from": "a",
+                "to": "c",
+                "inherit": "test_transmission_heat",
+            },
+            "links_a_c_elec": {
+                "from": "a",
+                "to": "c",
+                "inherit": "test_transmission_elec",
+            },
         },
     }
 
     def test_net_import_share_max(self, build_and_compare):
         build_and_compare(
-            "net_import_share_max", "simple_supply,two_hours", self.shared_overrides
+            "net_import_share_max",
+            "simple_supply,two_hours",
+            self.shared_overrides,
+            components={
+                "constraints": ["net_import_share_max"],
+                "global_expressions": ["flow_out_transmission_techs"],
+            },
         )
 
     def test_net_annual_import_share_max(self, build_and_compare):

@@ -734,15 +734,15 @@ class ParsedBackendComponent(ParsedBackendEquation):
         """Generate a multi-dimensional boolean array based on the sets over which the constraint is to be built (defined by "foreach") and the model `exists` array.
 
         The `exists` array is a boolean array defining the structure of the model and is True for valid combinations of technologies consuming/producing specific carriers at specific nodes.
-        It is indexed over ["nodes", "techs", "carriers", "carrier_tiers"].
+        It is indexed over ["nodes", "techs", "carriers"].
 
         Args:
             input_data (xr.Dataset): Calliope model dataset.
 
         Returns:
-            xr.DataArray: boolean array indexed over ["nodes", "techs", "carriers", "carrier_tiers"] + any additional dimensions provided by `foreach`.
+            xr.DataArray: boolean array indexed over ["nodes", "techs", "carriers"] + any additional dimensions provided by `foreach`.
         """
-        # Start with (carriers, carrier_tiers, nodes, techs) and go from there
+        # Start with (carriers, nodes, techs) and go from there
         exists = input_data.definition_matrix
         # Add other dimensions (costs, timesteps, etc.)
         add_dims = set(self.sets).difference(exists.dims)
@@ -768,7 +768,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         Args:
             backend_interface (calliope.backend.backend_model.BackendModel): Interface to a optimisation backend.
             align_to_foreach_sets (bool, optional):
-                By default, all foreach arrays have the dimensions ("nodes", "techs", "carriers", "carrier_tiers") as well as any additional dimensions provided by the component's "foreach" key.
+                By default, all foreach arrays have the dimensions ("nodes", "techs", "carriers") as well as any additional dimensions provided by the component's "foreach" key.
                 If this argument is True, the dimensions not included in "foreach" are removed from the array.
                 Defaults to True.
             break_early (bool, optional):

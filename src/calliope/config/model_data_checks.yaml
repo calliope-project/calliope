@@ -14,7 +14,13 @@ fail:
   - where: source_equals=inf or sink_equals=inf
     message: "Cannot include infinite values in `source_equals`/`sink_equals`"
 
-  - where: (any(latitude, over=nodes) or any(longitude, over=nodes)) and not latitude or not longitude
+  - where: (any(latitude, over=nodes) or any(longitude, over=nodes)) and not (latitude or longitude)
     message: "Must define node latitude and longitude for _all_ nodes or _no_ nodes."
+
+  - where: carrier_export and not carrier_out
+    message: "Export carriers must be one of the technology outflow carriers."
+
+  - where: storage_initial>1
+    message: "storage_initial is a fraction; values larger than 1 are not allowed."
 
 warn: []
