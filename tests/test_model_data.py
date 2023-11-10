@@ -336,6 +336,20 @@ class TestModelData:
         refs = model_data_factory._get_relevant_node_refs(techs_dict, "A")
         assert set(refs) == set(["key1", "key2", "key3"])
 
+    def test_get_relevant_node_refs_parent_at_node_not_supported(
+        self, model_data_factory: ModelDataFactory
+    ):
+        techs_dict = AttrDict(
+            {"bar": {"key1": 1}, "foo": {"parent": "foobar"}, "baz": None}
+        )
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            model_data_factory._get_relevant_node_refs(techs_dict, "A")
+
+        assert check_error_or_warning(
+            excinfo,
+            "(nodes, A), (techs, foo) | Defining a technology `parent` at a node is not supported",
+        )
+
     def test_param_dict_to_array_with_defaults(
         self, model_data_factory: ModelDataFactory
     ):

@@ -365,11 +365,17 @@ class ModelDataFactory:
             ):
                 techs_dict.set_key(key, val + ":" + node)
 
-        for tech_dict in techs_dict.values():
+        for tech_name, tech_dict in techs_dict.items():
             if tech_dict is None or not tech_dict.get("active", True):
                 continue
             else:
+                if "parent" in tech_dict.keys():
+                    raise exceptions.ModelError(
+                        f"(nodes, {node}), (techs, {tech_name}) | Defining a technology `parent` at a node is not supported; "
+                        "limit yourself to defining this parameter within `techs` or `tech_groups`"
+                    )
                 refs.update(tech_dict.keys())
+
         return list(refs)
 
     def _param_dict_to_array(self, param_name: str, param_data: Param) -> xr.DataArray:
