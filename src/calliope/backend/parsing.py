@@ -577,9 +577,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         return equations_with_sub_expressions_and_slices
 
     def _parse_string(
-        self,
-        parser: pp.ParserElement,
-        parse_string: str,
+        self, parser: pp.ParserElement, parse_string: str
     ) -> pp.ParseResults:
         """
         Parse equation string according to predefined string parsing grammar

@@ -185,9 +185,7 @@ def _add_to_description(component_dict: dict, update_string: str) -> None:
 def _ts_dfs() -> dict[str, pd.DataFrame]:
     "Generate dummy timeseries dataframes"
     ts = pd.DataFrame(
-        1,
-        index=pd.date_range("2005-01-02", "2005-01-03", freq="H"),
-        columns=["A"],
+        1, index=pd.date_range("2005-01-02", "2005-01-03", freq="H"), columns=["A"]
     )
     return {"ts": ts}
 
@@ -215,8 +213,8 @@ if __name__ == "__main__":
                     )
                     .absolute()
                     .as_posix(),
-                },
-            },
+                }
+            }
         },
         "storage_inter_cluster",
     )

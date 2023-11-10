@@ -102,10 +102,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             expr = element.evaluate_expression(self, where=where, references=references)
 
             to_fill = self._apply_func(
-                self._to_pyomo_constraint,
-                where,
-                expr,
-                name=name,
+                self._to_pyomo_constraint, where, expr, name=name
             )
             return to_fill
 
@@ -123,10 +120,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             expr = expr.squeeze(drop=True)
 
             to_fill = self._apply_func(
-                self._to_pyomo_expression,
-                where,
-                expr,
-                name=name,
+                self._to_pyomo_expression, where, expr, name=name
             )
             self._clean_arrays(expr)
             return to_fill
@@ -136,9 +130,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         )
 
     def add_variable(
-        self,
-        name: str,
-        variable_dict: Optional[parsing.UnparsedVariableDict] = None,
+        self, name: str, variable_dict: Optional[parsing.UnparsedVariableDict] = None
     ) -> None:
         domain_dict = {"real": pmo.RealSet, "integer": pmo.IntegerSet}
 
@@ -160,9 +152,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._add_component(name, variable_dict, _variable_setter, "variables")
 
     def add_objective(
-        self,
-        name: str,
-        objective_dict: Optional[parsing.UnparsedObjectiveDict] = None,
+        self, name: str, objective_dict: Optional[parsing.UnparsedObjectiveDict] = None
     ) -> None:
         sense_dict = {"minimize": 1, "minimise": 1, "maximize": -1, "maximise": -1}
 
@@ -188,11 +178,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         self._add_component(name, objective_dict, _objective_setter, "objectives")
 
-    def get_parameter(
-        self,
-        name: str,
-        as_backend_objs: bool = True,
-    ) -> xr.DataArray:
+    def get_parameter(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
         parameter = self.parameters.get(name, None)
         if parameter is None:
             raise KeyError(f"Unknown parameter: {name}")
@@ -213,10 +199,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             return param_as_vals.astype(parameter.original_dtype)
 
     def get_constraint(
-        self,
-        name: str,
-        as_backend_objs: bool = True,
-        eval_body: bool = False,
+        self, name: str, as_backend_objs: bool = True, eval_body: bool = False
     ) -> Union[xr.DataArray, xr.Dataset]:
         constraint = self.constraints.get(name, None)
         if constraint is None:
@@ -232,11 +215,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             constraint = constraint_attrs.to_dataset("attributes")
         return constraint
 
-    def get_variable(
-        self,
-        name: str,
-        as_backend_objs: bool = True,
-    ) -> xr.DataArray:
+    def get_variable(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
         variable = self.variables.get(name, None)
         if variable is None:
             raise KeyError(f"Unknown variable: {name}")
@@ -256,10 +235,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         return variable_attrs.to_dataset("attributes")
 
     def get_global_expression(
-        self,
-        name: str,
-        as_backend_objs: bool = True,
-        eval_body: bool = False,
+        self, name: str, as_backend_objs: bool = True, eval_body: bool = False
     ) -> xr.DataArray:
         global_expression = self.global_expressions.get(name, None)
         if global_expression is None:
@@ -587,11 +563,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             orig.unfix()
 
     def _to_pyomo_constraint(
-        self,
-        mask: Union[bool, np.bool_],
-        expr: Any,
-        *,
-        name: str,
+        self, mask: Union[bool, np.bool_], expr: Any, *, name: str
     ) -> Union[type[ObjConstraint], float]:
         """
         Utility function to generate a pyomo constraint for every element of an

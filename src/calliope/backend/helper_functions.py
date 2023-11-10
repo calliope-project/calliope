@@ -464,17 +464,11 @@ class ReduceCarrierDim(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_math_string(
-        self,
-        array: str,
-        flow_direction: Literal["in", "out"],
-    ) -> str:
+    def as_math_string(self, array: str, flow_direction: Literal["in", "out"]) -> str:
         return rf"\sum\limits_{{\text{{carrier}} \in \text{{carrier_{flow_direction}}}}} ({array})"
 
     def as_array(
-        self,
-        array: xr.DataArray,
-        flow_direction: Literal["in", "out"],
+        self, array: xr.DataArray, flow_direction: Literal["in", "out"]
     ) -> xr.DataArray:
         """Reduce expression array data by selecting the carrier that corresponds to the given carrier tier and then dropping the `carriers` dimension.
 
@@ -492,8 +486,7 @@ class ReduceCarrierDim(ParsingHelperFunction):
         )
 
         return sum_helper(
-            array.where(self._input_data[f"carrier_{flow_direction}"]),
-            over="carriers",
+            array.where(self._input_data[f"carrier_{flow_direction}"]), over="carriers"
         )
 
 
@@ -580,8 +573,7 @@ class SelectFromLookupArrays(ParsingHelperFunction):
                     f"Trying to select items on the dimension {index_dim} from the {index.name} lookup array, but no matches found. Received: {received_lookup}"
                 )
             ixs[index_dim] = xr.DataArray(
-                np.fmax(0, ix),
-                coords={dim: stacked_lookup[dim]},
+                np.fmax(0, ix), coords={dim: stacked_lookup[dim]}
             )
             masks.append(ix >= 0)
 

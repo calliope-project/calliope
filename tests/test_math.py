@@ -77,9 +77,7 @@ class TestBaseMath:
 
     def test_storage_max(self, compare_lps):
         self.TEST_REGISTER.add("constraints.storage_max")
-        model = build_test_model(
-            scenario="simple_storage,two_hours,investment_costs",
-        )
+        model = build_test_model(scenario="simple_storage,two_hours,investment_costs")
         custom_math = {
             "constraints": {"storage_max": model.math.constraints.storage_max}
         }
@@ -104,7 +102,7 @@ class TestBaseMath:
         self.TEST_REGISTER.add("constraints.balance_conversion")
 
         model = build_test_model(
-            scenario="simple_conversion,two_hours,investment_costs",
+            scenario="simple_conversion,two_hours,investment_costs"
         )
         custom_math = {
             "constraints": {
@@ -117,8 +115,7 @@ class TestBaseMath:
     def test_source_max(self, compare_lps):
         self.TEST_REGISTER.add("constraints.source_max")
         model = build_test_model(
-            {},
-            "simple_supply_plus,resample_two_days,investment_costs",
+            {}, "simple_supply_plus,resample_two_days,investment_costs"
         )
         custom_math = {
             "constraints": {"my_constraint": model.math.constraints.source_use_max}
@@ -178,8 +175,7 @@ class CustomMathExamples(ABC):
                 overrides = {}
 
             model = build_test_model(
-                {"config.init.custom_math": [abs_filepath], **overrides},
-                scenario,
+                {"config.init.custom_math": [abs_filepath], **overrides}, scenario
             )
 
             compare_lps(model, custom_math, filename)
@@ -219,7 +215,7 @@ class TestAnnualEnergyBalance(CustomMathExamples):
                     "data": 10,
                     "index": ["test_supply_elec"],
                     "dims": "techs",
-                },
+                }
             }
         }
         build_and_compare(
@@ -246,11 +242,7 @@ class TestAnnualEnergyBalance(CustomMathExamples):
         )
 
     def test_annual_energy_balance_total_source_availability(self, build_and_compare):
-        overrides = {
-            "techs": {
-                "test_supply_plus": {"annual_source_max": 10},
-            },
-        }
+        overrides = {"techs": {"test_supply_plus": {"annual_source_max": 10}}}
         build_and_compare(
             "annual_energy_balance_total_source_availability",
             "simple_supply_and_supply_plus,two_hours",
@@ -258,11 +250,7 @@ class TestAnnualEnergyBalance(CustomMathExamples):
         )
 
     def test_annual_energy_balance_total_sink_availability(self, build_and_compare):
-        overrides = {
-            "techs": {
-                "test_demand_elec": {"annual_sink_max": 10},
-            },
-        }
+        overrides = {"techs": {"test_demand_elec": {"annual_sink_max": 10}}}
         build_and_compare(
             "annual_energy_balance_total_sink_availability",
             "simple_supply,two_hours,demand_elec_max",
@@ -283,13 +271,11 @@ class TestMaxTimeVarying(CustomMathExamples):
                         ["test_supply_elec", "2005-01-01 01:00"],
                     ],
                     "dims": ["techs", "timesteps"],
-                },
-            },
+                }
+            }
         }
         build_and_compare(
-            "max_time_varying_flow_cap",
-            "simple_supply,two_hours",
-            overrides,
+            "max_time_varying_flow_cap", "simple_supply,two_hours", overrides
         )
 
 
@@ -314,7 +300,7 @@ class TestCHPHTP(CustomMathExamples):
                     "chp_extraction_line",
                     "chp_backpressure_line_min",
                     "balance_conversion",
-                ],
+                ]
             },
         )
 
@@ -365,9 +351,7 @@ class TestShareAllTimesteps(CustomMathExamples):
             "parameters": {"demand_share_tech": "test_demand_elec"},
         }
         build_and_compare(
-            "demand_share_equals_per_tech",
-            "simple_supply,two_hours",
-            overrides,
+            "demand_share_equals_per_tech", "simple_supply,two_hours", overrides
         )
 
     @pytest.mark.filterwarnings(
@@ -517,7 +501,7 @@ class TestPiecewiseEfficiency(CustomMathExamples):
                     "index": [0, 1, 2],
                     "dims": "pieces",
                 },
-            },
+            }
         }
         build_and_compare(
             "piecewise_efficiency",
@@ -548,18 +532,15 @@ class TestFuelDist(CustomMathExamples):
                     "data": True,
                     "index": ["coal"],
                     "dims": "carriers",
-                },
-            },
+                }
+            }
         }
         build_and_compare(
             "fuel_dist_base",
             "fuel_distribution,two_hours",
             overrides,
             components={
-                "constraints": [
-                    "system_balance",
-                    "restrict_total_imports_and_exports",
-                ],
+                "constraints": ["system_balance", "restrict_total_imports_and_exports"],
                 "variables": ["fuel_distributor"],
             },
         )
@@ -582,14 +563,14 @@ class TestFuelDist(CustomMathExamples):
                     "index": [["coal", "a"]],
                     "dims": ["carriers", "nodes"],
                 },
-            },
+            }
         }
         build_and_compare(
             "fuel_dist_nodal",
             "fuel_distribution,two_hours",
             overrides,
             components={
-                "constraints": ["restrict_nodal_imports", "restrict_nodal_exports"],
+                "constraints": ["restrict_nodal_imports", "restrict_nodal_exports"]
             },
         )
 
@@ -606,7 +587,7 @@ class TestFuelDist(CustomMathExamples):
                     "index": [["coal", "monetary"]],
                     "dims": ["carriers", "costs"],
                 },
-            },
+            }
         }
         build_and_compare(
             "fuel_dist_cost",
@@ -649,8 +630,8 @@ class TestUptimeDowntime(CustomMathExamples):
                     "data": True,
                     "index": [["test_supply_elec", "a", "2005-01-01 00:00"]],
                     "dims": ["techs", "nodes", "timesteps"],
-                },
-            },
+                }
+            }
         }
         build_and_compare(
             "downtime_period",
@@ -663,9 +644,7 @@ class TestUptimeDowntime(CustomMathExamples):
         "ignore:(?s).*defines unrecognised constraint `uptime_limit`:calliope.exceptions.ModelWarning"
     )
     def test_downtime_decision(self, build_and_compare):
-        overrides = {
-            "techs.test_supply_elec.uptime_limit": 1,
-        }
+        overrides = {"techs.test_supply_elec.uptime_limit": 1}
         build_and_compare(
             "downtime_period_decision", "supply_milp,two_hours", overrides
         )

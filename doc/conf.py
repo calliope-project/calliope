@@ -103,15 +103,7 @@ extlinks = {"nbviewer_docs": (nbviewer_url + docs_base_url + "%s", None)}
 
 # Mock modules for Read The Docs autodoc generation
 
-MOCK_MODULES = [
-    "xarray",
-    "pandas",
-    "numpy",
-    "pyomo",
-    "sklearn",
-    "pyparsing",
-    "netCDF4",
-]
+MOCK_MODULES = ["xarray", "pandas", "numpy", "pyomo", "pyparsing", "netCDF4"]
 autodoc_mock_imports = MOCK_MODULES
 autodoc_typehints = "both"
 autodoc_member_order = "bysource"
@@ -121,7 +113,6 @@ intersphinx_mapping = {
     "python": ("http://docs.python.org/3", None),
     "xarray": ("https://docs.xarray.dev/en/v2022.03.0", None),
     "pandas": ("https://pandas.pydata.org/docs/", None),
-    "sklearn": ("https://scikit-learn.org/stable/", None),
 }
 
 # -- Options for HTML output -------------------------------------------------
@@ -172,7 +163,7 @@ latex_documents = [
         "Calliope Documentation",
         "Calliope contributors",
         "manual",
-    ),
+    )
 ]
 imgmath_latex_preamble = r"\usepackage{breqn}"
 
@@ -200,7 +191,7 @@ texinfo_documents = [
         "Calliope",
         "One line description of project.",
         "Miscellaneous",
-    ),
+    )
 ]
 
 # Edit linkcheck config

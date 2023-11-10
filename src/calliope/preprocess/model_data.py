@@ -126,9 +126,7 @@ class ModelDataFactory:
             node_ref_vars = self._get_relevant_node_refs(techs_this_node, node_name)
 
             techs_this_node_incl_inheritance = self._inherit_defs(
-                "techs",
-                techs_this_node,
-                err_message_prefix=f"(nodes, {node_name}), ",
+                "techs", techs_this_node, err_message_prefix=f"(nodes, {node_name}), "
             )
             validate_dict(
                 {"techs": techs_this_node_incl_inheritance},
@@ -453,11 +451,7 @@ class ModelDataFactory:
             data = param_data
             index_items = [[]]
             dims = []
-        data_dict: Param = {
-            "data": data,
-            "index": index_items,
-            "dims": dims,
-        }
+        data_dict: Param = {"data": data, "index": index_items, "dims": dims}
         return data_dict
 
     def _inherit_defs(
@@ -595,9 +589,7 @@ class ModelDataFactory:
             }
         )
         validate_dict(
-            {"techs": active_link_techs},
-            MODEL_SCHEMA,
-            "link tech definition",
+            {"techs": active_link_techs}, MODEL_SCHEMA, "link tech definition"
         )
         link_tech_dict = AttrDict()
         if not active_link_techs:

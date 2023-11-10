@@ -247,8 +247,7 @@ class TestAsArray:
     ):
         with pytest.raises(exceptions.BackendError) as excinfo:
             expression_select_from_lookup_arrays(
-                dummy_model_data.nodes_true,
-                techs=dummy_model_data.lookup_techs,
+                dummy_model_data.nodes_true, techs=dummy_model_data.lookup_techs
             )
         assert check_error_or_warning(
             excinfo,

@@ -109,11 +109,7 @@ def parse_where_string(eval_kwargs, where):
 class TestParserElements:
     @pytest.mark.parametrize(
         ["data_var_string", "expected"],
-        [
-            ("with_inf", "with_inf"),
-            ("all_inf", "all_inf"),
-            ("all_nan", "all_nan"),
-        ],
+        [("with_inf", "with_inf"), ("all_inf", "all_inf"), ("all_nan", "all_nan")],
     )
     def test_data_var(
         self, data_var, dummy_model_data, data_var_string, expected, eval_kwargs
@@ -146,10 +142,7 @@ class TestParserElements:
 
     @pytest.mark.parametrize(
         ["data_var_string", "expected_similar"],
-        [
-            ("multi_dim_var", "with_inf_as_bool"),
-            ("multi_dim_expr", "all_true"),
-        ],
+        [("multi_dim_var", "with_inf_as_bool"), ("multi_dim_expr", "all_true")],
     )
     def test_data_var_with_where_decision_variable_or_expr(
         self, data_var, dummy_model_data, data_var_string, expected_similar, eval_kwargs
@@ -190,10 +183,7 @@ class TestParserElements:
             parsed_[0].eval(apply_where=False, **eval_kwargs)
         assert check_error_or_warning(
             excinfo,
-            [
-                "Can only check for existence of values",
-                f"Received `{data_var_string}`",
-            ],
+            ["Can only check for existence of values", f"Received `{data_var_string}`"],
         )
 
     def test_data_var_fail_cannot_handle_constraint(self, data_var, eval_kwargs):
@@ -258,8 +248,7 @@ class TestParserElements:
         with pytest.raises(BackendError) as excinfo:
             parsed_[0].eval(**eval_kwargs)
         assert check_error_or_warning(
-            excinfo,
-            f"Configuration option resolves to invalid type `{type_}`",
+            excinfo, f"Configuration option resolves to invalid type `{type_}`"
         )
 
     @pytest.mark.parametrize(
@@ -329,13 +318,7 @@ class TestParserElements:
 
     @pytest.mark.parametrize(
         ["operator", "comparison_val", "n_true"],
-        [
-            ("=", ".inf", 1),
-            ("<", 3, 4),
-            ("<=", 3, 5),
-            (">", 1, 5),
-            (">=", 1, 8),
-        ],
+        [("=", ".inf", 1), ("<", 3, 4), ("<=", 3, 5), (">", 1, 5), (">=", 1, 8)],
     )
     def test_comparison_parser_data_var_different_ops(
         self, comparison, eval_kwargs, operator, comparison_val, n_true

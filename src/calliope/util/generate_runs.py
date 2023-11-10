@@ -210,10 +210,7 @@ def generate_windows_script(
 
     # \r\n are Windows line endings
     base_string = 'echo "Run {i}"\r\n{cmd}\r\n'
-    lines_start = [
-        "@echo off",
-        "",
-    ]
+    lines_start = ["@echo off", ""]
 
     lines_all = lines_start + [
         base_string.format(i=i + 1, cmd=cmd) for i, cmd in enumerate(commands)

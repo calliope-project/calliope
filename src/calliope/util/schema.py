@@ -100,15 +100,7 @@ def _extend_with_keyword(
                     new_key = re.match(model_def_key_regex, prop)
                 instance.setdefault(".".join(new_key.groups()), val)
 
-        for error in validate_properties(
-            validator,
-            properties,
-            instance,
-            schema,
-        ):
+        for error in validate_properties(validator, properties, instance, schema):
             yield error
 
-    return jsonschema.validators.extend(
-        validator_class,
-        {"properties": set_defaults},
-    )
+    return jsonschema.validators.extend(validator_class, {"properties": set_defaults})

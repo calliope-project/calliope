@@ -212,15 +212,9 @@ def dummy_model_data(config_defaults, model_defaults):
             ),
             "parent": (["techs"], ["supply", "transmission", "demand", "conversion"]),
             "nodes_inheritance": (["nodes"], ["foo,bar", "boo"]),
-            "nodes_inheritance_boo_bool": (
-                ["nodes"],
-                [False, True],
-            ),
+            "nodes_inheritance_boo_bool": (["nodes"], [False, True]),
             "techs_inheritance": (["techs"], ["foo,bar", np.nan, "baz", "boo"]),
-            "techs_inheritance_boo_bool": (
-                ["techs"],
-                [False, False, False, True],
-            ),
+            "techs_inheritance_boo_bool": (["techs"], [False, False, False, True]),
             "multi_inheritance_boo_bool": (
                 ["nodes", "techs"],
                 [[False, False, False, False], [False, False, False, True]],
@@ -275,7 +269,7 @@ def dummy_model_data(config_defaults, model_defaults):
             "with_inf": 100,
             "only_techs": 5,
             **model_defaults,
-        },
+        }
     )
     model_data.attrs["math"] = AttrDict(
         {"constraints": {}, "variables": {}, "global_expressions": {}, "objectives": {}}

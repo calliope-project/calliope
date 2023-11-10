@@ -85,10 +85,7 @@ class TestGenerateRuns:
         )
 
     def test_generate_runs_scenarios_none_with_overrides(self):
-        runs = generate_runs(
-            _MODEL_URBAN,
-            scenarios=None,
-        )
+        runs = generate_runs(_MODEL_URBAN, scenarios=None)
         assert len(runs) == 2
         assert runs[0].endswith("--scenario milp --save_netcdf out_1_milp.nc")
 

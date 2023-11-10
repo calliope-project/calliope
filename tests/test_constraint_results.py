@@ -91,9 +91,7 @@ class TestUrbanScaleMILP:
         assert any(((_in < 0) & (_out > 0)).any()) is True
 
         m_bin = calliope.examples.urban_scale(
-            override_dict={
-                "techs.heat_pipes.constraints.force_asynchronous_flow": True,
-            }
+            override_dict={"techs.heat_pipes.constraints.force_asynchronous_flow": True}
         )
         m_bin.build(solver_options={"mipgap": 0.05})
         m_bin.solve(zero_threshold=1e-6)
@@ -266,9 +264,7 @@ class TestEnergyCapacityPerStorageCapacity:
     @pytest.mark.skip(reason="operate mode not yet expected to run")
     def test_operate_mode_horizon_window(self, model_file, horizon_window):
         horizon, window = horizon_window
-        override_dict = {
-            "config.init.time_subset": ["2005-01-01", "2005-01-05"],
-        }
+        override_dict = {"config.init.time_subset": ["2005-01-01", "2005-01-05"]}
         model = build_model(
             model_file=model_file,
             scenario="operate_mode_min",

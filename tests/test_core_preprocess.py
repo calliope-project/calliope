@@ -30,10 +30,7 @@ class TestModelRun:
         )
         model_dict.union(node_dict)
         model_dict.config.init["time_data_path"] = os.path.join(
-            this_path,
-            "common",
-            "test_model",
-            model_dict.config.init["time_data_path"],
+            this_path, "common", "test_model", model_dict.config.init["time_data_path"]
         )
         # test as AttrDict
         calliope.Model(model_dict)
@@ -120,8 +117,7 @@ class TestModelRun:
             build_model(override_dict=override, scenario="scenario_1")
 
         assert check_error_or_warning(
-            excinfo,
-            "(scenarios, scenario_1) | Unrecognised override name: techs.",
+            excinfo, "(scenarios, scenario_1) | Unrecognised override name: techs."
         )
 
     def test_invalid_scenarios_str(self):
@@ -138,8 +134,7 @@ class TestModelRun:
             build_model(override_dict=override, scenario="scenario_1")
 
         assert check_error_or_warning(
-            excinfo,
-            "(scenarios, scenario_1) | Unrecognised override name: foo.",
+            excinfo, "(scenarios, scenario_1) | Unrecognised override name: foo."
         )
 
     def test_scenario_name_overlaps_overrides(self):
@@ -153,10 +148,7 @@ class TestModelRun:
             """
         )
         with pytest.warns(exceptions.ModelWarning) as warn_info:
-            build_model(
-                override_dict=override,
-                scenario="simple_supply,one_day",
-            )
+            build_model(override_dict=override, scenario="simple_supply,one_day")
 
         assert check_error_or_warning(
             warn_info,
@@ -259,7 +251,7 @@ class TestModelRun:
 
         # should fail: wrong dateformat input for one file
         override2 = {
-            "node_groups.init_nodes.techs.test_demand_elec.sink_equals": "file=demand_heat_diff_dateformat.csv",
+            "node_groups.init_nodes.techs.test_demand_elec.sink_equals": "file=demand_heat_diff_dateformat.csv"
         }
 
         with pytest.raises(exceptions.ModelError):

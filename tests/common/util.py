@@ -102,8 +102,7 @@ def build_lp(
     # MUST have an objective for a valid LP file
     if math is None or "objectives" not in math.keys():
         backend_instance.add_objective(
-            "dummy_obj",
-            {"equations": [{"expression": "1 + 1"}], "sense": "minimize"},
+            "dummy_obj", {"equations": [{"expression": "1 + 1"}], "sense": "minimize"}
         )
         backend_instance._instance.objectives["dummy_obj"][0].activate()
     elif "objectives" in math.keys():

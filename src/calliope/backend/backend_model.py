@@ -91,9 +91,7 @@ class BackendModelGenerator(ABC):
 
     @abstractmethod
     def add_constraint(
-        self,
-        name: str,
-        constraint_dict: parsing.UnparsedConstraintDict,
+        self, name: str, constraint_dict: parsing.UnparsedConstraintDict
     ) -> None:
         """
         Add constraint equation to backend model in-place.
@@ -111,9 +109,7 @@ class BackendModelGenerator(ABC):
 
     @abstractmethod
     def add_global_expression(
-        self,
-        name: str,
-        expression_dict: parsing.UnparsedExpressionDict,
+        self, name: str, expression_dict: parsing.UnparsedExpressionDict
     ) -> None:
         """
         Add global expression (arithmetic combination of parameters and/or decision variables)
@@ -132,9 +128,7 @@ class BackendModelGenerator(ABC):
 
     @abstractmethod
     def add_variable(
-        self,
-        name: str,
-        variable_dict: parsing.UnparsedVariableDict,
+        self, name: str, variable_dict: parsing.UnparsedVariableDict
     ) -> None:
         """
         Add decision variable to backend model in-place.
@@ -152,9 +146,7 @@ class BackendModelGenerator(ABC):
 
     @abstractmethod
     def add_objective(
-        self,
-        name: str,
-        objective_dict: parsing.UnparsedObjectiveDict,
+        self, name: str, objective_dict: parsing.UnparsedObjectiveDict
     ) -> None:
         """
         Add objective arithmetic to backend model in-place.
@@ -298,9 +290,7 @@ class BackendModelGenerator(ABC):
         )
 
         top_level_where = parsed_component.generate_top_level_where_array(
-            self,
-            align_to_foreach_sets=False,
-            break_early=break_early,
+            self, align_to_foreach_sets=False, break_early=break_early
         )
         if break_early and not top_level_where.any():
             return parsed_component

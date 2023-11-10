@@ -72,9 +72,7 @@ class TestModel:
 
 class TestCustomMath:
     @pytest.fixture
-    def storage_inter_cluster(
-        self,
-    ):
+    def storage_inter_cluster(self):
         return build_model(
             {"config.init.custom_math": ["storage_inter_cluster"]},
             "simple_supply,two_hours,investment_costs",
@@ -109,8 +107,7 @@ class TestCustomMath:
                 "simple_supply,two_hours,investment_costs",
             )
         assert check_error_or_warning(
-            excinfo,
-            f"Attempted to load custom math that does not exist: {expected}",
+            excinfo, f"Attempted to load custom math that does not exist: {expected}"
         )
 
     def test_internal_override_from_yaml(self, temp_path):
@@ -196,12 +193,7 @@ class TestCustomMath:
         file_path = temp_path.join("custom-math.yaml")
         new_constraint.to_yaml(file_path)
         m = build_model(
-            {
-                "config.init.custom_math": [
-                    "storage_inter_cluster",
-                    str(file_path),
-                ]
-            },
+            {"config.init.custom_math": ["storage_inter_cluster", str(file_path)]},
             "simple_supply,two_hours,investment_costs",
         )
         base = simple_supply.math["variables"]["storage"]

@@ -91,9 +91,7 @@ class TestResampling:
     def test_15min_resampling_to_6h(self):
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
-        override = {
-            "techs.test_demand_elec.sink_equals": "file=demand_elec_15mins.csv",
-        }
+        override = {"techs.test_demand_elec.sink_equals": "file=demand_elec_15mins.csv"}
 
         model = build_test_model(
             override,

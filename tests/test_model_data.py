@@ -241,12 +241,7 @@ class TestModelData:
         assert "Building technology color" in my_caplog.text
         np.testing.assert_array_equal(
             model_data_factory_w_params.model_data["color"].values,
-            [
-                "#19122b",
-                "#17344c",
-                "#185b48",
-                "#3c7632",
-            ],
+            ["#19122b", "#17344c", "#185b48", "#3c7632"],
         )
 
     def test_add_colors_full_init_da(
@@ -762,10 +757,7 @@ class TestTopLevelParams:
 
     def test_protected_parameter_names(self):
         with pytest.raises(KeyError) as excinfo:
-            build_model(
-                {"parameters.flow_out_eff": 1},
-                "simple_supply,two_hours",
-            )
+            build_model({"parameters.flow_out_eff": 1}, "simple_supply,two_hours")
         assert check_error_or_warning(
             excinfo,
             "Trying to add top-level parameter with same name as a node/tech level parameter: flow_out_eff",
@@ -773,28 +765,18 @@ class TestTopLevelParams:
 
     @pytest.mark.parametrize("val", [1, 1.0, np.inf, "foo"])
     def test_top_level_param_single_val(self, val):
-        model = build_model(
-            {"parameters.my_val": val},
-            "simple_supply,two_hours",
-        )
+        model = build_model({"parameters.my_val": val}, "simple_supply,two_hours")
         assert model.inputs.my_val == xr.DataArray(val)
 
     @pytest.mark.parametrize("val", [None, np.nan])
     def test_top_level_param_single_val_cleaned_out_in_preprocessing(self, val):
-        model = build_model(
-            {"parameters.my_val": val},
-            "simple_supply,two_hours",
-        )
+        model = build_model({"parameters.my_val": val}, "simple_supply,two_hours")
         assert "my_val" not in model.inputs
 
     @pytest.mark.parametrize("val", [1, 1.0, np.inf, "foo"])
     def test_top_level_param_single_data_single_known_dim(self, val, run_and_test):
         run_and_test(
-            {
-                "data": val,
-                "index": ["test_supply_elec"],
-                "dims": "techs",
-            },
+            {"data": val, "index": ["test_supply_elec"], "dims": "techs"},
             {"test_supply_elec": val},
             "techs",
         )
@@ -833,11 +815,7 @@ class TestTopLevelParams:
         )
 
     def test_top_level_param_unknown_dim_only(self, my_caplog, run_and_test):
-        run_and_test(
-            {"data": 10, "index": ["foo"], "dims": "bar"},
-            {"foo": 10},
-            "bar",
-        )
+        run_and_test({"data": 10, "index": ["foo"], "dims": "bar"}, {"foo": 10}, "bar")
         assert (
             "(parameters, my_val) | Adding a new dimension to the model: bar"
             in my_caplog.text
@@ -845,11 +823,7 @@ class TestTopLevelParams:
 
     def test_top_level_param_multi_unknown_dim(self, my_caplog, run_and_test):
         run_and_test(
-            {
-                "data": 10,
-                "index": [["foo", "foobar"]],
-                "dims": ["bar", "baz"],
-            },
+            {"data": 10, "index": [["foo", "foobar"]], "dims": ["bar", "baz"]},
             {("foo", "foobar"): 10},
             ["bar", "baz"],
         )
@@ -879,11 +853,7 @@ class TestTopLevelParams:
 
     def test_top_level_param_timeseries(self, my_caplog, run_and_test):
         run_and_test(
-            {
-                "data": 10,
-                "index": ["2005-01-01"],
-                "dims": ["timesteps"],
-            },
+            {"data": 10, "index": ["2005-01-01"], "dims": ["timesteps"]},
             {pd.to_datetime("2005-01-01"): 10},
             "timesteps",
         )
@@ -898,11 +868,7 @@ class TestTopLevelParams:
     def test_top_level_param_extend_dim_vals(self, my_caplog, run_and_test):
         # We do this test with timesteps as all other dimension elements are filtered out if there is no matching True element in `definition_matrix`
         run_and_test(
-            {
-                "data": 10,
-                "index": ["2006-01-01"],
-                "dims": ["timesteps"],
-            },
+            {"data": 10, "index": ["2006-01-01"], "dims": ["timesteps"]},
             {pd.to_datetime("2006-01-01"): 10},
             "timesteps",
         )

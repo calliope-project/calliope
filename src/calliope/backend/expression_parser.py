@@ -146,9 +146,7 @@ class EvalToCallable(EvalString):
         """"""
 
     def eval(
-        self,
-        return_type: RETURN_T,
-        **eval_kwargs: Unpack[EvalAttrs],  # type: ignore
+        self, return_type: RETURN_T, **eval_kwargs: Unpack[EvalAttrs]  # type: ignore
     ) -> Callable:
         """Evaluate math string expression.
         Args and kwargs are passed on directly to helper function.
@@ -1028,10 +1026,7 @@ def setup_base_parser_elements() -> tuple[pp.ParserElement, pp.ParserElement]:
     return number, generic_identifier
 
 
-def arithmetic_parser(
-    *args,
-    arithmetic: Optional[pp.Forward] = None,
-) -> pp.Forward:
+def arithmetic_parser(*args, arithmetic: Optional[pp.Forward] = None) -> pp.Forward:
     """
     Parsing grammar to combine equation elements using basic arithmetic (+, -, *, /, **).
     Can handle the difference between a sign (e.g., -1,+1) and a addition/subtraction (0 - 1, 0 + 1).
@@ -1176,17 +1171,10 @@ def generate_sub_expression_parser(valid_component_names: Iterable) -> pp.Forwar
 
     arithmetic = pp.Forward()
     helper_function = helper_function_parser(
-        arithmetic,
-        id_list,
-        evaluatable_identifier,
-        generic_identifier=identifier,
+        arithmetic, id_list, evaluatable_identifier, generic_identifier=identifier
     )
     arithmetic = arithmetic_parser(
-        helper_function,
-        sliced_param,
-        number,
-        unsliced_param,
-        arithmetic=arithmetic,
+        helper_function, sliced_param, number, unsliced_param, arithmetic=arithmetic
     )
     return arithmetic
 

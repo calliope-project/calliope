@@ -70,7 +70,7 @@ class TestChecks:
                         "flow_out_min_relative": 0.1,
                         f"source_{constr}": "file=supply_plus_resource.csv:1",
                         "flow_cap_max": np.inf,
-                    },
+                    }
                 }
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
@@ -162,10 +162,7 @@ class TestChecks:
                         "source_max": "file=supply_plus_resource.csv:1",
                         "flow_cap_max": 15,
                     },
-                    "switches": {
-                        "force_source": True,
-                        "source_unit": source_unit,
-                    },
+                    "switches": {"force_source": True, "source_unit": source_unit},
                 }
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
@@ -557,17 +554,13 @@ class TestCostConstraints:
             "timesteps": m.backend._dataset.timesteps[1],
         }
         assert check_variable_exists(
-            m.backend.get_expression("cost_var", as_backend_objs=False),
-            "flow_out",
-            idx,
+            m.backend.get_expression("cost_var", as_backend_objs=False), "flow_out", idx
         )
 
         idx["nodes"] = "a"
         idx["techs"] = "test_transmission_elec:b"
         assert not check_variable_exists(
-            m.backend.get_expression("cost_var", as_backend_objs=False),
-            "flow_out",
-            idx,
+            m.backend.get_expression("cost_var", as_backend_objs=False), "flow_out", idx
         )
 
 
@@ -616,8 +609,7 @@ class TestExportConstraints:
         assert "cost_var" in m.backend.expressions
 
         assert check_variable_exists(
-            m.backend.get_expression("cost_var", as_backend_objs=False),
-            "flow_export",
+            m.backend.get_expression("cost_var", as_backend_objs=False), "flow_export"
         )
 
     def test_loc_tech_carriers_export_max_constraint(self):
@@ -1700,9 +1692,7 @@ class TestLogging:
 
 class TestModelDataChecks:
     def test_source_equals_cannot_be_inf(self):
-        override = {
-            "techs.test_supply_elec.source_equals": np.inf,
-        }
+        override = {"techs.test_supply_elec.source_equals": np.inf}
         m = build_model(override_dict=override, scenario="simple_supply,one_day")
 
         with pytest.raises(exceptions.ModelError) as excinfo:
@@ -2011,10 +2001,7 @@ class TestNewBackend:
         }
         constraint_name = "constraint-without-nan"
 
-        simple_supply.backend.add_constraint(
-            constraint_name,
-            constraint_dict,
-        )
+        simple_supply.backend.add_constraint(constraint_name, constraint_dict)
 
         assert (
             simple_supply.backend.get_constraint(constraint_name).name
@@ -2032,10 +2019,7 @@ class TestNewBackend:
         constraint_name = "constraint-with-nan"
 
         with pytest.raises(exceptions.BackendError) as error:
-            simple_supply.backend.add_constraint(
-                constraint_name,
-                constraint_dict,
-            )
+            simple_supply.backend.add_constraint(constraint_name, constraint_dict)
 
         assert check_error_or_warning(
             error,
@@ -2057,10 +2041,7 @@ class TestNewBackend:
         expression_name = "expression-without-nan"
 
         # add expression with nan
-        simple_supply.backend.add_global_expression(
-            expression_name,
-            expression_dict,
-        )
+        simple_supply.backend.add_global_expression(expression_name, expression_dict)
 
         assert (
             simple_supply.backend.get_global_expression(expression_name).name
@@ -2076,8 +2057,7 @@ class TestNewBackend:
 
         with pytest.raises(exceptions.BackendError) as error:
             simple_supply.backend.add_global_expression(
-                expression_name,
-                expression_dict,
+                expression_name, expression_dict
             )
 
         assert check_error_or_warning(
@@ -2099,10 +2079,7 @@ class TestNewBackend:
         }
         constraint_name = "constraint-without-excess-dimensions"
 
-        simple_supply.backend.add_constraint(
-            constraint_name,
-            constraint_dict,
-        )
+        simple_supply.backend.add_constraint(constraint_name, constraint_dict)
 
         assert (
             simple_supply.backend.get_constraint(constraint_name).name
@@ -2118,10 +2095,7 @@ class TestNewBackend:
         constraint_name = "constraint-with-excess-dimensions"
 
         with pytest.raises(exceptions.BackendError) as error:
-            simple_supply.backend.add_constraint(
-                constraint_name,
-                constraint_dict,
-            )
+            simple_supply.backend.add_constraint(constraint_name, constraint_dict)
 
         assert check_error_or_warning(
             error,
@@ -2184,8 +2158,7 @@ class TestNewBackend:
 
     def test_add_allnull_var(self, simple_supply):
         simple_supply.backend.add_variable(
-            "foo",
-            {"foreach": ["nodes"], "where": "False"},
+            "foo", {"foreach": ["nodes"], "where": "False"}
         )
         assert "foo" not in simple_supply.backend._instance.variables.keys()
         assert "foo" not in simple_supply.backend._dataset.data_vars.keys()
@@ -2282,11 +2255,7 @@ class TestNewBackend:
         assert obj.coords_in_name
 
     def test_verbose_strings_expression(self, simple_supply_longnames):
-        dims = {
-            "nodes": "a",
-            "techs": "test_supply_elec",
-            "costs": "monetary",
-        }
+        dims = {"nodes": "a", "techs": "test_supply_elec", "costs": "monetary"}
 
         obj = simple_supply_longnames.backend.get_global_expression(
             "cost_investment", as_backend_objs=False

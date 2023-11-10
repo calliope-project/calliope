@@ -42,10 +42,7 @@ from calliope.util.tools import relative_path
 
 LOGGER = logging.getLogger(__name__)
 
-T = TypeVar(
-    "T",
-    bound=Union[PyomoBackendModel, LatexBackendModel],
-)
+T = TypeVar("T", bound=Union[PyomoBackendModel, LatexBackendModel])
 
 
 def read_netcdf(path):
@@ -121,10 +118,7 @@ class Model(object):
                 scenario,
                 applied_overrides,
             ) = load.load_model_definition(
-                model_definition,
-                scenario,
-                override_dict,
-                **kwargs,
+                model_definition, scenario, override_dict, **kwargs
             )
             self._init_from_model_def_dict(
                 model_def, applied_overrides, scenario, debug, timeseries_dataframes
@@ -208,10 +202,7 @@ class Model(object):
             "defaults": param_metadata["default"],
         }
         model_data_factory = ModelDataFactory(
-            init_config,
-            model_definition,
-            attributes,
-            param_metadata,
+            init_config, model_definition, attributes, param_metadata
         )
         self._model_data = model_data_factory.build(timeseries_dataframes)
 
