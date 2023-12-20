@@ -15,10 +15,7 @@ sys.path.insert(0, os.path.abspath("../src"))
 sys.path.insert(0, os.path.abspath("."))
 sys.path.append(os.path.abspath("_themes"))
 
-from helpers import generate_readable_schema, generate_tables  # noqa: E402
-
-# Generates the tables and source code files
-generate_tables.process()
+from helpers import generate_readable_schema  # noqa: E402
 
 # Generates readable markdown files from YAML schema
 generate_readable_schema.process()
@@ -103,7 +100,15 @@ extlinks = {"nbviewer_docs": (nbviewer_url + docs_base_url + "%s", None)}
 
 # Mock modules for Read The Docs autodoc generation
 
-MOCK_MODULES = ["xarray", "pandas", "numpy", "pyomo", "pyparsing", "netCDF4"]
+MOCK_MODULES = [
+    "xarray",
+    "pandas",
+    "numpy",
+    "pyomo",
+    "pyparsing",
+    "netCDF4",
+    "geographiclib",
+]
 autodoc_mock_imports = MOCK_MODULES
 autodoc_typehints = "both"
 autodoc_member_order = "bysource"

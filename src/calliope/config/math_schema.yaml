@@ -1,5 +1,5 @@
 $schema: http://json-schema.org/draft-07/schema#
-description: Below you can find all options available to formulate math to use in solving an optimisation problem with Calliope.
+title: All options available to formulate math to use in solving an optimisation problem with Calliope.
 additionalProperties: false
 properties:
   constraints:

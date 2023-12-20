@@ -2,7 +2,7 @@
 # yaml-language-server: $schema=https://json-schema.org/draft/2020-12/schema#
 
 $schema: https://json-schema.org/draft/2020-12/schema#
-description: Below you can find all options available to configure a Calliope model.
+title: All options available to configure a Calliope model.
 type: object
 additionalProperties: false
 $defs:
