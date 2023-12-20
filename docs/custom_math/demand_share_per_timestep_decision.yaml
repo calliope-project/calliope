@@ -1,0 +1,78 @@
+# title: Demand share per timestep as decision variable
+
+# description: |
+#   Allows the model to decide on how a fraction of demand for a carrier is met by the given group of technologies, which will each have the same share in each timestep.
+#   Variables and constraints defined here could be extended to iterate over nodes  and over carriers if desired.
+#   If summing over nodes, remove the summation over nodes in the constraints and add it into the list in `demand_share_per_timestep_decision_sum` (if using).
+#   If summing over carriers, the slicing of `sink_equals` will need to change per carrier by using a where statement in `slices: ...`.
+#
+#   The share is relative to the flow `sink` from a specified `demand` technology (or group thereof) only.
+#
+#   Specifying `relaxation` inside the constraint to a non-zero value allows the constraint some flexibility around a given value, making a model easier to solve.
+#
+#   New top-level parameters:
+#
+#   * ``relaxation`` (defined here directly)
+#   * ``demand_share_limit`` (defined here directly)
+#
+#   Helper functions used:
+#
+#   * sum (expression)
+#   * select_from_lookup_arrays (expression)
+#
+# ---
+
+variables:
+  demand_share_per_timestep_decision:
+    description: Relative share of demand that a given technology must meet per node.
+    unit: fraction
+    foreach: [nodes, techs]
+    where: NOT config.mode=operate AND decide_demand_share
+    bounds:
+      min: 0
+      max: .inf
+
+# The two main constraints enforce that the shares are the same in each timestep,
+# with an optional relaxation.
+
+constraints:
+  demand_share_per_timestep_decision_main_min:
+    description: Limit the lower bound of a technology's outflow to the share of demand that the model has decided it will meet.
+    foreach: [nodes, techs, timesteps]
+    where: demand_share_per_timestep_decision
+    equations:
+      - expression: >
+          flow_out[carriers=$carrier] >=
+          (1 - $relaxation) * select_from_lookup_arrays(sink_equals, techs=decide_demand_share) * demand_share_per_timestep_decision
+    sub_expressions:
+      # 0 == no relaxation, 0.01 == 1% relaxation (lhs == rhs -> lhs >= 0.99 * rhs & lhs <= 1.01 * rhs)
+      relaxation: &relaxation_component
+        - where: demand_share_relaxation
+          expression: demand_share_relaxation
+        - where: NOT demand_share_relaxation
+          expression: "0"
+    slices: &slice
+      carrier:
+        - expression: demand_share_carrier  # assigned as a top-level parameter
+
+  demand_share_per_timestep_decision_main_max:
+    description: Limit the upper bound of a technology's outflow to the share of demand that the model has decided it will meet.
+    foreach: [nodes, techs, timesteps]
+    where: demand_share_per_timestep_decision
+    equations:
+      - expression: >
+          flow_out[carriers=$carrier] <=
+          (1 + $relaxation) * select_from_lookup_arrays(sink_equals, techs=decide_demand_share) * demand_share_per_timestep_decision
+    sub_expressions:
+      relaxation: *relaxation_component
+    slices: *slice
+
+# The optional additional sum constraint ensures that all decision shares add up
+# to a specified share of carrier demand (here, 50% = 0.5 of electricity demand).
+
+  demand_share_per_timestep_decision_sum:
+    description: Limit the total share of demand that can be met by technologies controlled by the `demand_share_per_timestep_decision` variable.
+    foreach: [nodes, timesteps]
+    where: demand_share_per_timestep_decision AND demand_share_limit
+    equations:
+      - expression: sum(demand_share_per_timestep_decision, over=[techs]) == demand_share_limit
