@@ -5,14 +5,17 @@ channels:
   - nodefaults
 
 dependencies:
-  - python = 3.10
-  - sphinx = 6.1
-  - sphinx-autodoc-typehints = 1
-  - sphinx-tabs = 3
+  - python = 3.12
+  - pip
+  - typing-extensions
   - jsonschema2md = 1
-  - ruamel.yaml = 0.17
-  - myst-parser = 1
-  - nbconvert = 7.9 # To generate HTML files from example notebooks
-  - pip = 23
+  - mkdocs
+  - mkdocs-material
+  - mkdocs-include-markdown-plugin
+  - mkdocs-gen-files
+  - mkdocs-jupyter
+  - mkdocs-click
+  - mkdocstrings
+  - mkdocstrings-python
   - pip:
-      - readthedocs-sphinx-search < 0.4
+      - "-e .."  # Calliope from source to build CLI docs

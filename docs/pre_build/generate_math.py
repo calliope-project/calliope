@@ -192,7 +192,7 @@ def _ts_dfs() -> dict[str, pd.DataFrame]:
 def generate_math_docs():
     base_model_config = generate_model_config()
     base_model = generate_base_math_model(base_model_config)
-    base_model.math_documentation.write("_generated/math.md")
+    base_model.math_documentation.write(BASEPATH / ".." / "_generated" / "math.md")
 
     custom_model = generate_custom_math_model(
         base_model,
@@ -218,7 +218,9 @@ def generate_math_docs():
         },
     )
 
-    custom_model.math_documentation.write("_generated/math_storage_inter_cluster.md")
+    custom_model.math_documentation.write(
+        BASEPATH / ".." / "_generated" / "math_storage_inter_cluster.md"
+    )
 
     # FIXME: Operate mode replaces variables with parameters, so we cannot show that the
     # variable has been deleted in the doc because we cannot build a variable with the same
