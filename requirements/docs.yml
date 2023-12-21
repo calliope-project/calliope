@@ -27,6 +27,7 @@ dependencies:
   - bottleneck
   - mkdocs
   - mkdocs-material
+  - mkdocs-material-extensions
   - mkdocs-include-markdown-plugin
   - mkdocs-gen-files
   - mkdocs-jupyter
