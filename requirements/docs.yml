@@ -24,6 +24,7 @@ dependencies:
   - pip
   - typing-extensions
   - jsonschema2md = 1
+  - bottleneck
   - mkdocs
   - mkdocs-material
   - mkdocs-include-markdown-plugin
