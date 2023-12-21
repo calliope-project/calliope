@@ -7,17 +7,15 @@ channels:
 dependencies:
   - python = 3.12
   - pip
+  - typing-extensions
+  - jsonschema2md = 1
+  - mkdocs
+  - mkdocs-material
+  - mkdocs-include-markdown-plugin
+  - mkdocs-gen-files
+  - mkdocs-jupyter
+  - mkdocs-click
+  - mkdocstrings
+  - mkdocstrings-python
   - pip:
-      - typing-extensions
-      - mkdocs
-      - mkdocs-include-markdown-plugin
-      - mkdocs-material
-      - mkdocstrings[python]
-      - mkdocs-gen-files
-      - mkdocs-jupyter
-      - mkdocs-click
-      - jsonschema2md == 1
-      - ruamel.yaml >= 0.17, < 0.18
-      - myst-parser == 1
-      - nbconvert >= 7.9, <8.0  # To generate HTML files from example notebooks
-      - "-e .."  # Install Calliope from source to build CLI docs
+      - "-e .."  # Calliope from source to build CLI docs
