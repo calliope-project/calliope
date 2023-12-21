@@ -11,12 +11,10 @@ Generate LaTeX math to include in the documentation.
 from pathlib import Path
 
 import calliope
-
-# import mkdocs_gen_files
 import pandas as pd
 
 BASEPATH = Path(__file__).resolve().parent
-
+STATICPATH = BASEPATH / ".." / "_static"
 NONDEMAND_TECHGROUPS = [
     "supply",
     "storage",
@@ -28,7 +26,7 @@ NONDEMAND_TECHGROUPS = [
 
 
 def generate_base_math_model(model_config: dict) -> calliope.Model:
-    """Generate model with documentation for the base math
+    """Generate RST file for the base math
 
     Args:
         model_config (dict): Calliope model config.
@@ -40,6 +38,7 @@ def generate_base_math_model(model_config: dict) -> calliope.Model:
         model_definition=model_config, timeseries_dataframes=_ts_dfs()
     )
     model.math_documentation.build()
+    model.math_documentation.write(STATICPATH / "math.rst")
     return model
 
 
@@ -47,14 +46,16 @@ def generate_custom_math_model(
     base_model: calliope.Model,
     model_config: dict,
     model_config_updates: dict,
-) -> calliope.Model:
-    """Generate model with documentation for a built-in custom math file, showing only the changes made
+    name: str,
+) -> None:
+    """Generate RST file for a built-in custom math file, showing only the changes made
     relative to the base math.
 
     Args:
         base_model (calliope.Model): Calliope model with only the base math applied.
         model_config (dict): Model config suitable for generating the base math.
         model_config_updates (dict): Changes to make to the model config to load the custom math.
+        name (str): Name of the custom math to add to the file name.
     """
     model_config = calliope.AttrDict(model_config)
     model_config_updates = calliope.AttrDict(model_config_updates)
@@ -66,7 +67,7 @@ def generate_custom_math_model(
     )
     _keep_only_changes(base_model, model)
 
-    return model
+    model.math_documentation.write(STATICPATH / f"math_{name}.rst")
 
 
 def generate_model_config() -> dict[str, dict]:
@@ -161,14 +162,14 @@ def _keep_only_changes(base_model: calliope.Model, model: calliope.Model) -> Non
             if name in base_model.math[component_group]:
                 if not component_dict.get("active", True):
                     expr_del.append(name)
-                    component_dict["description"] = "|REMOVED|"
+                    component_dict["description"] = ":red:`REMOVED`"
                     component_dict["active"] = True
                 elif base_model.math[component_group].get(name, {}) != component_dict:
-                    _add_to_description(component_dict, "|UPDATED|")
+                    _add_to_description(component_dict, ":yellow:`UPDATED`")
                 else:
                     full_del.append(name)
             else:
-                _add_to_description(component_dict, "|NEW|")
+                _add_to_description(component_dict, ":green:`NEW`")
     model.math_documentation.build()
     for key in expr_del:
         model.math_documentation._instance._dataset[key].attrs["math_string"] = ""
@@ -191,12 +192,11 @@ def _ts_dfs() -> dict[str, pd.DataFrame]:
     return {"ts": ts}
 
 
-def generate_math_docs():
+if __name__ == "__main__":
     base_model_config = generate_model_config()
     base_model = generate_base_math_model(base_model_config)
-    base_model.math_documentation.write("_generated/math.md")
 
-    custom_model = generate_custom_math_model(
+    generate_custom_math_model(
         base_model,
         base_model_config,
         {
@@ -218,10 +218,8 @@ def generate_math_docs():
                 },
             },
         },
+        "storage_inter_cluster",
     )
-
-    custom_model.math_documentation.write("_generated/math_storage_inter_cluster.md")
-
     # FIXME: Operate mode replaces variables with parameters, so we cannot show that the
     # variable has been deleted in the doc because we cannot build a variable with the same
     # name as another model component.
@@ -247,7 +245,3 @@ def generate_math_docs():
     # generate_custom_math_model(
     #    base_model, base_model_config.copy(), {"model.custom_math": ["spores"]}, "spores"
     # )
-
-
-if __name__ == "__main__":
-    generate_math_docs()
