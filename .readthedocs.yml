@@ -1,4 +1,6 @@
 version: 2
+conda:
+  environment: requirements/base.txt
 build:
   os: ubuntu-22.04
   tools:
@@ -6,11 +8,10 @@ build:
   jobs:
     pre_build:
       - python ./docs/pre_build/generate_math.py
-    pre_create_environment:
-      - mamba create -n calliope-docs -c conda-forge --file requirements/docs.txt --file requirements/base.txt
-      - mamba activate calliope-docs
     post_create_environment:
+      - mamba install --file requirements/docs.txt
       - pip install --no-deps .
+
 
 mkdocs:
   configuration: mkdocs.yml
