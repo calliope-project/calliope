@@ -21,18 +21,18 @@ dependencies:
   - ruamel.yaml >= 0.17, < 0.18
   - xarray >= 2023.10, < 2024.3
   # dependencies for docs
-  - pip
-  - typing-extensions
-  - jsonschema2md = 1
   - bottleneck
+  - jsonschema2md = 1
   - mkdocs
-  - mkdocs-material
-  - mkdocs-material-extensions
-  - mkdocs-include-markdown-plugin
-  - mkdocs-gen-files
-  - mkdocs-jupyter
   - mkdocs-click
+  - mkdocs-gen-files
+  - mkdocs-include-markdown-plugin
+  - mkdocs-jupyter
+  - mkdocs-macros-plugin
   - mkdocstrings
   - mkdocstrings-python
+  - pip
+  - typing-extensions
   - pip:
+      - mkdocs-material  # Installation from conda-forge is broken: material.extensions missing
       - "-e .."  # Calliope from source to build CLI docs
