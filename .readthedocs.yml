@@ -8,5 +8,8 @@ build:
   jobs:
     pre_build:
       - python ./docs/pre_build/generate_math.py
+    post_create_environment:
+      - pip install --no-deps .
+
 mkdocs:
   configuration: mkdocs.yml

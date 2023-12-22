@@ -29,10 +29,7 @@ dependencies:
   - mkdocs-include-markdown-plugin
   - mkdocs-jupyter
   - mkdocs-macros-plugin
-  - mkdocstrings
   - mkdocstrings-python
+  - mkdocs-material >= 9, < 10
   - pip
   - typing-extensions
-  - pip:
-      - mkdocs-material  # Installation from conda-forge is broken: material.extensions missing
-      - "-e .."  # Calliope from source to build CLI docs
