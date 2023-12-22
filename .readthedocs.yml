@@ -1,6 +1,4 @@
 version: 2
-conda:
-  environment: requirements/docs.yml
 build:
   os: ubuntu-22.04
   tools:
@@ -8,6 +6,8 @@ build:
   jobs:
     pre_build:
       - python ./docs/pre_build/generate_math.py
+    pre_create_environment:
+      - mamba create -n base -c conda-forge -c nodefaults python=3.12 -f requirements/docs.txt -f requirements/base.txt
     post_create_environment:
       - pip install --no-deps .
 
