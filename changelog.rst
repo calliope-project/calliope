@@ -16,6 +16,30 @@ User-facing changes
 
 |new| Files containing user-defined mathematical formulations can be referenced in the model configuration. User-defined mathematical formulations must follow the new Calliope YAML math syntax (see "Internal changes" below).
 
+|new| Nodes can inherit from a newly added `node_groups` top-level key by referencing a node group with `inherit: ...` in the node configuration.
+
+|new| Ad-hoc parameters can be defined under the top-level key `parameters`.
+This enables un-indexed parameters to be defined, as well as those indexed over dimensions that are not `nodes`+`techs`.
+
+|new| parameter dimensions at the `tech` or `node` level can be enhanced using the new `parameter` definition syntax.
+For instance, `flow_cap` can be defined per `carrier`.
+
+|changed| |backwards-incompatible| Costs must be defined using the new `parameter` definition syntax.
+
+|changed| `flow_cap` (formerly `energy_cap`) is indexed over `carriers` as well as `nodes` and `techs`.
+This allows capacities to be defined separately for input and output flows for `conversion` technologies.
+
+|changed| |backwards-incompatible| `_plus` technology groups have been removed.
+Now, `supply_plus` can be effectively represented by using `supply` as the technology parent and setting `include_storage: true` in the model definition.
+`conversion_plus` can be represented by using `conversion` as the technology parent and using lists of carriers in `carrier_in` and/or `carrier_out`.
+To represent `in_2`, `out_2` etc. carrier "tiers", you will need to define your own custom math.
+
+|changed| |backwards-incompatible| Technology inheritance has moved to the `inherit` key, leaving `parent` as a protected parameters that can only accept one of the abstract base technologies.
+
+|changed| |backwards-incompatible| Links are defined within `techs` and not in their own `links` section.
+Any technology with a `transmission` parent will require `to` and `from` nodes to be defined.
+Then, all transmission links will be given their name as defined in `techs` rather than having the name be automatically derived by Calliope.
+
 |changed| |backwards-incompatible| Flow efficiencies are now split into inflow (`flow_in_eff`) and outflow (`flow_out_eff`) efficiencies. This enables different storage charge/discharge efficiencies to be applied.
 
 |changed| |backwards-incompatible| Mass parameter and decision variable renaming for increased clarity:
@@ -41,6 +65,9 @@ User-facing changes
 Internal changes
 ~~~~~~~~~~~~~~~~
 
+|new| YAML schema to catch the worst offences perpetrated in the model definition / configuration.
+This schema is also rendered as a reference page in the documentation, replacing `defaults`/`config` tables.
+
 |new| Logic to convert the model definition (YAML or direct dictionary) to an xarray dataset is stored in a YAML configuration file: `model_data_lookup.yaml`. This reduces the need to update scripts when incorporating additional parameters in the future.
 
 |new| The model mathematical formulation (constraints, decision variables, objectives) is stored in a YAML configuration file: `math/base.yaml`. Equation expressions and the logic to decide on when to apply a constraint/create a variable etc. are given in string format. These strings are parsed according to a set of documented rules.
@@ -48,6 +75,9 @@ Internal changes
 |changed| Costs are now Pyomo expressions rather than decision variables.
 
 |changed| When a model is loaded into an active session, configuration dictionaries are stored as dictionaries instead of seralised YAML strings in the model data attributes dictionary. Serialisation and de-serialisation only occur on saving and loading from NetCDF, respectively.
+
+|changed| Pre-processed model data checks are conducted according to a YAML configuration, instead of a hard-coded set of python functions.
+An API will be created in due course to allow the user to add their own checks to the configuration.
 
 -------------------
 0.6.10 (2023-01-18)
