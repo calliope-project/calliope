@@ -2,7 +2,7 @@
 
 !!! note
 
-    This is the documentation for version {{ version }} ([Version history](version_history.md)).
+    This is the documentation for version {{ calliope_version }} ([Version history](version_history.md)).
     See the [main project website at www.callio.pe](https://www.callio.pe/) for more general information, including a gallery of models built with Calliope, and other useful information.
 
 Calliope focuses on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data).
