@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Union
 
 import jsonschema2md
-import yaml
+import ruamel.yaml
 
 
 def schema_to_md(
@@ -28,8 +28,8 @@ def schema_to_md(
     parser = jsonschema2md.Parser()
     parser.tab_size = 2
 
-    with Path(path_to_schema).open("r") as f_schema:
-        schema = yaml.safe_load(f_schema)
+    yaml = ruamel.yaml.YAML(typ="safe")
+    schema = yaml.load(Path(path_to_schema).read_text())
 
     lines = parser.parse_schema(schema)
     lines = customise_markdown(lines)

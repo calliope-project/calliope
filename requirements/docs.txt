@@ -8,5 +8,4 @@ mkdocs-jupyter
 mkdocs-macros-plugin
 mkdocstrings-python
 mkdocs-material >= 9.5
-pip
 typing-extensions
