@@ -9,7 +9,7 @@ build:
     pre_build:
       - python ./docs/pre_build/generate_math.py
     post_create_environment:
-      - mamba install --file requirements/docs.txt
+      - mamba install python=3.11 --file requirements/docs.txt
       - pip install --no-deps .
 
 
