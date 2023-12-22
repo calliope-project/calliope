@@ -1,12 +1,12 @@
-- bottleneck
-- jsonschema2md >= 1, < 2
-- mkdocs
-- mkdocs-click
-- mkdocs-gen-files
-- mkdocs-include-markdown-plugin
-- mkdocs-jupyter
-- mkdocs-macros-plugin
-- mkdocstrings-python
-- mkdocs-material >= 9, < 10
-- pip
-- typing-extensions
+bottleneck
+jsonschema2md >= 1, < 2
+mkdocs
+mkdocs-click
+mkdocs-gen-files
+mkdocs-include-markdown-plugin
+mkdocs-jupyter
+mkdocs-macros-plugin
+mkdocstrings-python
+mkdocs-material >= 9.5
+pip
+typing-extensions
