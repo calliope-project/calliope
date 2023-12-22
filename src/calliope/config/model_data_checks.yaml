@@ -1,0 +1,26 @@
+fail:
+  - where: cost_flow_cap<0 AND not flow_cap_max
+    message: Cannot have a negative `cost_flow_cap` as there is an unset corresponding `flow_cap_max` constraint
+
+  - where: cost_storage_cap<0 AND not storage_cap_max
+    message: Cannot have a negative `cost_storage_cap` as there is an unset corresponding `storage_cap_max` constraint
+
+  - where: cost_area_use<0 AND not area_use_max
+    message: Cannot have a negative `cost_area_use` as there is an unset corresponding `area_use_max` constraint
+
+  - where: cost_source_cap<0 AND not source_use_max
+    message: Cannot have a negative `cost_source_cap` as there is an unset corresponding `source_use_max` constraint
+
+  - where: source_equals=inf or sink_equals=inf
+    message: "Cannot include infinite values in `source_equals`/`sink_equals`"
+
+  - where: (any(latitude, over=nodes) or any(longitude, over=nodes)) and not (latitude or longitude)
+    message: "Must define node latitude and longitude for _all_ nodes or _no_ nodes."
+
+  - where: carrier_export and not any(carrier_out, over=nodes)
+    message: "Export carriers must be one of the technology outflow carriers."
+
+  - where: storage_initial>1
+    message: "storage_initial is a fraction; values larger than 1 are not allowed."
+
+warn: []

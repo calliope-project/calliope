@@ -2,12 +2,10 @@
 
 min
 objectives(min_cost_optimisation)(0):
-+0.0002515252789726502 variables(flow_cap)(a__test_conversion_plus)
-+0.0002515252789726502 variables(flow_cap)(a__test_supply_coal)
-+0.0002515252789726502 variables(flow_cap)(a__test_supply_gas)
-+0.0002515252789726502 variables(flow_cap)(b__test_conversion_plus)
-+0.0002515252789726502 variables(flow_cap)(b__test_supply_coal)
-+0.0002515252789726502 variables(flow_cap)(b__test_supply_gas)
++1.0 variables(flow_in)(a__test_conversion__coal__2005_01_01_00_00)
++2.0 variables(flow_in)(a__test_conversion__gas__2005_01_01_00_00)
++1.0 variables(flow_in)(a__test_conversion__coal__2005_01_01_01_00)
++2.0 variables(flow_in)(a__test_conversion__gas__2005_01_01_01_00)
 +5.0 variables(fuel_distributor)(a__coal__2005_01_01_00_00)
 +5.0 variables(fuel_distributor)(a__coal__2005_01_01_01_00)
 +5.0 variables(fuel_distributor)(b__coal__2005_01_01_00_00)
@@ -21,12 +19,10 @@ c_e_ONE_VAR_CONSTANT:
 
 bounds
    1 <= ONE_VAR_CONSTANT <= 1
-   0 <= variables(flow_cap)(a__test_conversion_plus) <= 20.0
-   0 <= variables(flow_cap)(a__test_supply_coal) <= 10.0
-   0 <= variables(flow_cap)(a__test_supply_gas) <= 15.0
-   0 <= variables(flow_cap)(b__test_conversion_plus) <= 20.0
-   0 <= variables(flow_cap)(b__test_supply_coal) <= 10.0
-   0 <= variables(flow_cap)(b__test_supply_gas) <= 15.0
+   0 <= variables(flow_in)(a__test_conversion__coal__2005_01_01_00_00) <= +inf
+   0 <= variables(flow_in)(a__test_conversion__gas__2005_01_01_00_00) <= +inf
+   0 <= variables(flow_in)(a__test_conversion__coal__2005_01_01_01_00) <= +inf
+   0 <= variables(flow_in)(a__test_conversion__gas__2005_01_01_01_00) <= +inf
    -inf <= variables(fuel_distributor)(a__coal__2005_01_01_00_00) <= +inf
    -inf <= variables(fuel_distributor)(a__coal__2005_01_01_01_00) <= +inf
    -inf <= variables(fuel_distributor)(b__coal__2005_01_01_00_00) <= +inf

@@ -23,9 +23,9 @@ import click
 
 from calliope import AttrDict, Model, examples, read_netcdf
 from calliope._version import __version__
-from calliope.core.util.generate_runs import generate
-from calliope.core.util.logging import set_log_verbosity
 from calliope.exceptions import BackendError
+from calliope.util.generate_runs import generate
+from calliope.util.logging import set_log_verbosity
 
 _time_format = "%Y-%m-%d %H:%M:%S"
 

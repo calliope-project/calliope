@@ -62,10 +62,7 @@ class MathDocumentation:
         "Expecting string if not giving filename"
 
     @overload  # noqa: F811
-    def write(  # noqa: F811
-        self,
-        filename: Union[str, Path],
-    ) -> None:
+    def write(self, filename: Union[str, Path]) -> None:  # noqa: F811
         "Expecting None (and format arg is not needed) if giving filename"
 
     def write(  # noqa: F811
@@ -263,10 +260,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     FORMAT_STRINGS = {"rst": RST_DOC, "tex": TEX_DOC, "md": MD_DOC}
 
     def __init__(
-        self,
-        inputs: xr.Dataset,
-        include: Literal["all", "valid"] = "all",
-        **config_overrides,
+        self, inputs: xr.Dataset, include: Literal["all", "valid"] = "all", **kwargs
     ) -> None:
         """Interface to build a string representation of the mathematical formulation using LaTeX math notation.
 
@@ -274,7 +268,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             include (Literal["all", "valid"], optional):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
         """
-        super().__init__(inputs, **config_overrides)
+        super().__init__(inputs, **kwargs)
         self.include = include
 
         self._add_all_inputs_as_parameters()
@@ -302,17 +296,11 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             return where.where(where)
 
         parsed_component = self._add_component(
-            name,
-            constraint_dict,
-            _constraint_setter,
-            "constraints",
-            break_early=False,
+            name, constraint_dict, _constraint_setter, "constraints", break_early=False
         )
 
         self._generate_math_string(
-            parsed_component,
-            self.constraints[name],
-            equations=equation_strings,
+            parsed_component, self.constraints[name], equations=equation_strings
         )
 
     def add_global_expression(
@@ -337,15 +325,11 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
         self._generate_math_string(
-            parsed_component,
-            self.global_expressions[name],
-            equations=equation_strings,
+            parsed_component, self.global_expressions[name], equations=equation_strings
         )
 
     def add_variable(
-        self,
-        name: str,
-        variable_dict: Optional[parsing.UnparsedVariableDict] = None,
+        self, name: str, variable_dict: Optional[parsing.UnparsedVariableDict] = None
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
 
@@ -356,11 +340,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             variable_dict = self.inputs.attrs["math"]["variables"][name]
 
         parsed_component = self._add_component(
-            name,
-            variable_dict,
-            _variable_setter,
-            "variables",
-            break_early=False,
+            name, variable_dict, _variable_setter, "variables", break_early=False
         )
         where_array = self.variables[name]
 
@@ -368,16 +348,11 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         lb, ub = self._get_capacity_bounds(name, variable_dict["bounds"])
 
         self._generate_math_string(
-            parsed_component,
-            where_array,
-            equations=[lb, ub],
-            sense=r"\forall" + domain,
+            parsed_component, where_array, equations=[lb, ub], sense=r"\forall" + domain
         )
 
     def add_objective(
-        self,
-        name: str,
-        objective_dict: Optional[parsing.UnparsedObjectiveDict] = None,
+        self, name: str, objective_dict: Optional[parsing.UnparsedObjectiveDict] = None
     ) -> None:
         sense_dict = {
             "minimize": r"\min{}",
@@ -467,7 +442,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         if parsed_component is not None:
             where = parsed_component.evaluate_where(self, return_type="math_string")
             sets = parsed_component.sets
-
         if self.include == "all" or (
             self.include == "valid" and where_array.fillna(0).any()
         ):
@@ -488,15 +462,13 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         return jinja_env.from_string(template).render(**kwargs)
 
     def _get_capacity_bounds(
-        self,
-        name: str,
-        bounds: parsing.UnparsedVariableBoundDict,
+        self, name: str, bounds: parsing.UnparsedVariableBoundDict
     ) -> tuple[dict[str, str], ...]:
         bound_dict: parsing.UnparsedConstraintDict = {
             "equations": [
                 {"expression": f"{bounds['min']} <= {name}"},
                 {"expression": f"{name} <= {bounds['max']}"},
-            ],
+            ]
         }
         parsed_bounds = parsing.ParsedBackendComponent("constraints", name, bound_dict)
         equations = parsed_bounds.parse_equations(self.valid_component_names)

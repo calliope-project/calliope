@@ -11,7 +11,7 @@ from calliope.backend import backend_model, expression_parser, parsing, where_pa
 
 from .common.util import check_error_or_warning
 
-BASE_DIMS = {"carriers", "carrier_tiers", "nodes", "techs"}
+BASE_DIMS = {"carriers", "nodes", "techs"}
 
 
 def string_to_dict(yaml_string):
@@ -334,11 +334,7 @@ class TestParsedComponent:
     )
     @pytest.mark.parametrize(
         ["where_string", "expected_where_eval"],
-        [
-            (None, True),
-            ("False", False),
-            ("True or False", True),
-        ],
+        [(None, True), ("False", False), ("True or False", True)],
     )
     def test_generate_expression_list(
         self,
@@ -361,10 +357,7 @@ class TestParsedComponent:
 
     @pytest.mark.parametrize("n_dicts", [1, 2, 3])
     def test_generate_expression_list_id_prefix(
-        self,
-        generate_expression_list,
-        expression_generator,
-        n_dicts,
+        self, generate_expression_list, expression_generator, n_dicts
     ):
         expression_dict = expression_generator("foo == 1", "bar")
         parsed_list = generate_expression_list(
@@ -376,10 +369,7 @@ class TestParsedComponent:
 
     @pytest.mark.parametrize("n_dicts", [1, 2, 3])
     def test_generate_expression_list_no_id_prefix(
-        self,
-        generate_expression_list,
-        expression_generator,
-        n_dicts,
+        self, generate_expression_list, expression_generator, n_dicts
     ):
         expression_dict = expression_generator("foo == 1", "bar")
         parsed_list = generate_expression_list([expression_dict] * n_dicts)
@@ -415,8 +405,7 @@ class TestParsedComponent:
 
         assert len(component_obj._errors) == 1
         assert check_error_or_warning(
-            component_obj._errors,
-            f"equations[{error_position}].expression",
+            component_obj._errors, f"equations[{error_position}].expression"
         )
 
     def test_generate_expression_list_two_error(
@@ -550,8 +539,7 @@ class TestParsedComponent:
                 equation_[0], parsed_slice_dict(1, 2), "slices"
             )
         assert check_error_or_warning(
-            excinfo,
-            "constraints:foo: Undefined slices found in equation: {'node1'}",
+            excinfo, "constraints:foo: Undefined slices found in equation: {'node1'}"
         )
 
     @pytest.mark.parametrize(
@@ -901,10 +889,7 @@ class TestParsedBackendEquation:
         )
 
         assert new_expression.sub_expressions == equation_obj.sub_expressions
-        assert new_expression.slices == {
-            "baz": obj1.expression,
-            "bam": obj2.expression,
-        }
+        assert new_expression.slices == {"baz": obj1.expression, "bam": obj2.expression}
 
     @pytest.mark.parametrize("false_location", [0, -1])
     def test_create_subset_from_where_definitely_empty(
@@ -977,13 +962,13 @@ class TestParsedBackendEquation:
         equation_obj.sets = ["nodes", "techs"]
 
         equation_obj.where = [
-            where_string_parser.parse_string("[foo] in carrier_tiers", parse_all=True)
+            where_string_parser.parse_string("[foo] in carriers", parse_all=True)
         ]
         where = equation_obj.evaluate_where(
             dummy_pyomo_backend_model, initial_where=exists_array
         )
-        assert where.sel(carrier_tiers="foo").any()
-        assert not where.sel(carrier_tiers="bar").any()
+        assert where.sel(carriers="foo").any()
+        assert not where.sel(carriers="bar").any()
 
     def test_create_subset_align_dims_with_sets(
         self, dummy_pyomo_backend_model, where_string_parser, equation_obj, exists_array
@@ -1052,9 +1037,7 @@ class TestParsedConstraint:
         aligned_where = constraint_obj.drop_dims_not_in_foreach(valid_where)
         references = set()
         comparison_expr = constraint_obj.equations[1].evaluate_expression(
-            dummy_backend_interface,
-            where=aligned_where,
-            references=references,
+            dummy_backend_interface, where=aligned_where, references=references
         )
         assert comparison_expr.sum() == 1
         assert references == {"only_techs"}
@@ -1089,7 +1072,7 @@ class TestParsedObjective:
             "equations": [
                 {"expression": "bar + 2", "where": "False"},
                 {"expression": "sum(only_techs, over=[techs]) + 1", "where": "True"},
-            ],
+            ]
         }
 
         parsed_ = parsing.ParsedBackendComponent("objectives", "foo", dict_)

@@ -10,70 +10,81 @@ config:
 
 techs:
   cheap_polluting_supply:
-    essentials:
-      name: "Cheap but polluting supply"
-      parent: supply
-      carrier: electricity
-    constraints:
-      lifetime: 25
-      flow_cap_max: .inf
-    costs:
-      monetary:
-        interest_rate: 0.1
-        flow_cap: 1000
-        flow_out: 1
-      emissions:
-        flow_out: 2
+    name: "Cheap but polluting supply"
+    parent: supply
+    carrier_out: electricity
+    lifetime: 25
+    flow_cap_max: .inf
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    cost_flow_cap:
+      data: 1000
+      index: monetary
+      dims: costs
+    cost_flow_out:
+      data: [1, 2]
+      index: [monetary, emissions]
+      dims: costs
 
   expensive_clean_supply:
-    essentials:
-      name: "Expensive but clean supply"
-      parent: supply
-      carrier: electricity
-    constraints:
-      lifetime: 25
-      flow_cap_max: .inf
-    costs:
-      monetary:
-        interest_rate: 0.1
-        flow_cap: 2000
-        flow_out: 2
-      emissions:
-        flow_out: 1
+    name: "Expensive but clean supply"
+    parent: supply
+    carrier_out: electricity
+    lifetime: 25
+    flow_cap_max: .inf
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    cost_flow_cap:
+      data: 2000
+      index: monetary
+      dims: costs
+    cost_flow_out:
+      data: [2, 1]
+      index: [monetary, emissions]
+      dims: costs
 
   mean_supply:
-    essentials:
-      name: "Mean supply"
-      parent: supply
-      carrier: electricity
-    constraints:
-      lifetime: 25
-      flow_cap_max: .inf
-    costs:
-      monetary:
-        interest_rate: 0.1
-        flow_cap: 1500
-        flow_out: 1.5
-      emissions:
-        flow_out: 1.5
+    name: "Mean supply"
+    parent: supply
+    carrier_out: electricity
+    lifetime: 25
+    flow_cap_max: .inf
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
+    cost_flow_cap:
+      data: 1500
+      index: monetary
+      dims: costs
+    cost_flow_out:
+      data: [1.5, 1.5]
+      index: [monetary, emissions]
+      dims: costs
 
   electricity_demand:
-    essentials:
-      name: Electricity demand
-      carrier: electricity
-      parent: demand
-    constraints:
-      sink_equals: file=demand_elec.csv
+    name: Electricity demand
+    carrier_in: electricity
+    parent: demand
+    sink_equals: file=demand_elec.csv
+
+node_groups:
+  node_techs:
+    techs:
+      cheap_polluting_supply:
+      expensive_clean_supply:
+      mean_supply:
+      electricity_demand:
 
 nodes:
-  a,b:
-    techs:
-      {
-        cheap_polluting_supply,
-        expensive_clean_supply,
-        mean_supply,
-        electricity_demand,
-      }
+  a:
+    inherit: node_techs
+  b:
+    inherit: node_techs
 
 overrides:
   illegal_string_cost_class:

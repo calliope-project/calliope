@@ -30,7 +30,7 @@ class TestMathDocumentation:
         filepath = tmpdir_factory.mktemp("custom_math").join("foo.tex")
         with pytest.raises(exceptions.ModelError) as excinfo:
             no_build.math_documentation.write(filepath)
-        check_error_or_warning(
+        assert check_error_or_warning(
             excinfo, "Build the documentation (`build`) before trying to write it"
         )
 
@@ -62,7 +62,9 @@ class TestMathDocumentation:
             filepath = tmpdir_factory.mktemp("custom_math").join(filepath)
         with pytest.raises(ValueError) as excinfo:
             build_all.math_documentation.write(filename="foo", format=format)
-        check_error_or_warning(excinfo, "Math documentation style must be one of")
+        assert check_error_or_warning(
+            excinfo, "Math documentation format must be one of"
+        )
 
 
 class TestLatexBackendModel:

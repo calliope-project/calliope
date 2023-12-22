@@ -142,13 +142,11 @@ class EvalToArrayStr(EvalString):
 
 class EvalToCallable(EvalString):
     @abstractmethod
-    def as_callable(self) -> Callable:
+    def as_callable(self, return_type: RETURN_T) -> Callable:
         """"""
 
     def eval(
-        self,
-        return_type: RETURN_T,
-        **eval_kwargs: Unpack[EvalAttrs],  # type: ignore
+        self, return_type: RETURN_T, **eval_kwargs: Unpack[EvalAttrs]  # type: ignore
     ) -> Callable:
         """Evaluate math string expression.
         Args and kwargs are passed on directly to helper function.
@@ -434,7 +432,10 @@ class EvalFunction(EvalToArrayStr):
 
     def _eval(self, return_type: RETURN_T) -> Union[str, xr.DataArray]:
         "Pass evaluated arguments to evaluated helper function"
-        self.eval_attrs["where_array"] = xr.DataArray(True)
+
+        helper_function = self.func_name.eval(return_type, **self.eval_attrs)
+        if helper_function.ignore_where:
+            self.eval_attrs["where_array"] = xr.DataArray(True)
 
         args_ = []
         for arg in self.args:
@@ -443,8 +444,6 @@ class EvalFunction(EvalToArrayStr):
         kwargs_ = {}
         for kwarg_name, kwarg_val in self.kwargs.items():
             kwargs_[kwarg_name] = self._arg_eval(return_type, kwarg_val)
-
-        helper_function = self.func_name.eval(return_type, **self.eval_attrs)
 
         evaluated = helper_function(*args_, **kwargs_)
         return evaluated
@@ -750,7 +749,10 @@ class EvalUnslicedComponent(EvalToArrayStr):
                 self.name, as_backend_objs=False
             )
         else:
-            evaluated = backend_interface._dataset[self.name]
+            try:
+                evaluated = backend_interface._dataset[self.name]
+            except KeyError:
+                evaluated = xr.DataArray(self.name, attrs={"obj_type": "string"})
 
         self.eval_attrs["references"].add(self.name)
         return evaluated
@@ -1024,10 +1026,7 @@ def setup_base_parser_elements() -> tuple[pp.ParserElement, pp.ParserElement]:
     return number, generic_identifier
 
 
-def arithmetic_parser(
-    *args,
-    arithmetic: Optional[pp.Forward] = None,
-) -> pp.Forward:
+def arithmetic_parser(*args, arithmetic: Optional[pp.Forward] = None) -> pp.Forward:
     """
     Parsing grammar to combine equation elements using basic arithmetic (+, -, *, /, **).
     Can handle the difference between a sign (e.g., -1,+1) and a addition/subtraction (0 - 1, 0 + 1).
@@ -1172,17 +1171,10 @@ def generate_sub_expression_parser(valid_component_names: Iterable) -> pp.Forwar
 
     arithmetic = pp.Forward()
     helper_function = helper_function_parser(
-        arithmetic,
-        id_list,
-        evaluatable_identifier,
-        generic_identifier=identifier,
+        arithmetic, id_list, evaluatable_identifier, generic_identifier=identifier
     )
     arithmetic = arithmetic_parser(
-        helper_function,
-        sliced_param,
-        number,
-        unsliced_param,
-        arithmetic=arithmetic,
+        helper_function, sliced_param, number, unsliced_param, arithmetic=arithmetic
     )
     return arithmetic
 

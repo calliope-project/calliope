@@ -25,18 +25,22 @@ constraints:
     equations:
       - expression: >
           piecewise_cost_investment >=
-          cost_flow_cap_piecewise_slopes * flow_cap + cost_flow_cap_piecewise_intercept * purchased
+          sum(cost_flow_cap_piecewise_slopes * flow_cap, over=carriers) + cost_flow_cap_piecewise_intercept * purchased
 
 # We inject this new source of into the `cost` global expression
 global_expressions:
-  cost:
-    foreach: [nodes, techs, costs]
-    where: "cost_investment OR cost_var OR piecewise_cost_investment"
+  cost_investment:
+    where: (cost_investment_flow_cap OR cost_investment_storage_cap OR cost_investment_source_cap OR cost_investment_area_use OR cost_investment_purchase OR piecewise_cost_investment)
     equations:
-      - expression: $cost_investment + $cost_var_sum + $piecewise_cost_investment
-    sub_expressions:
-      piecewise_cost_investment:
-        - where: "piecewise_cost_investment"
-          expression: annualisation_weight * cost_depreciation_rate * piecewise_cost_investment
-        - where: "NOT piecewise_cost_investment"
-          expression: "0"
+      - expression: >
+          $annualisation_weight * (
+            $depreciation_rate * (
+              sum(default_if_empty(cost_investment_flow_cap, 0), over=carriers) +
+              default_if_empty(cost_investment_storage_cap, 0) +
+              default_if_empty(cost_investment_source_cap, 0) +
+              default_if_empty(cost_investment_area_use, 0) +
+              default_if_empty(cost_investment_purchase, 0) +
+              default_if_empty(piecewise_cost_investment, 0)
+            ) * (1 + cost_om_annual_investment_fraction)
+            + sum(cost_om_annual * default_if_empty(flow_cap, 0), over=carriers)
+          )

@@ -37,14 +37,7 @@ class DummyFunc2(helper_functions.ParsingHelperFunction):
 
 @pytest.fixture
 def valid_component_names():
-    return [
-        "foo",
-        "with_inf",
-        "only_techs",
-        "no_dims",
-        "multi_dim_var",
-        "no_dim_var",
-    ]
+    return ["foo", "with_inf", "only_techs", "no_dims", "multi_dim_var", "no_dim_var"]
 
 
 @pytest.fixture
@@ -203,9 +196,7 @@ def helper_function_allow_arithmetic(
 ):
     arithmetic = pp.Forward()
     helper_func = expression_parser.helper_function_parser(
-        arithmetic,
-        id_list,
-        generic_identifier=identifier,
+        arithmetic, id_list, generic_identifier=identifier
     )
     return expression_parser.arithmetic_parser(
         helper_func,
@@ -283,14 +274,7 @@ class TestEquationParserElements:
             number.parse_string(string_val, parse_all=True)
 
     @pytest.mark.parametrize(
-        "string_val",
-        [
-            "foo",
-            "foo_bar",
-            "Foo1",
-            "FOO_1_BAR",
-            "FOO__",
-        ],
+        "string_val", ["foo", "foo_bar", "Foo1", "FOO_1_BAR", "FOO__"]
     )
     def test_identifiers(self, string_val, identifier):
         parsed_ = identifier.parse_string(string_val, parse_all=True)
@@ -669,13 +653,7 @@ class TestEquationParserArithmetic:
         func_string,
         request,
     ):
-        items = [
-            number_,
-            sub_expr_,
-            unsliced_param_,
-            sliced_param_,
-            helper_function_,
-        ]
+        items = [number_, sub_expr_, unsliced_param_, sliced_param_, helper_function_]
         parser_func = request.getfixturevalue(func_string)
         random.shuffle(items)
         equation_string = f"({items[0]} / {items[1]}) + {items[1]} - {items[2]} * {items[3]}**-{items[4]}"
@@ -692,8 +670,7 @@ class TestEquationParserArithmetic:
             helper_function.parse_string(helper_func_string, parse_all=True)
 
     @pytest.mark.parametrize(
-        ["string_", "expected"],
-        [("1 + 2", 30), ("1 * 2", 20), ("x=1/2", 5)],
+        ["string_", "expected"], [("1 + 2", 30), ("1 * 2", 20), ("x=1/2", 5)]
     )
     def test_helper_function_allow_arithmetic(
         self, helper_function_allow_arithmetic, eval_kwargs, string_, expected

@@ -25,9 +25,9 @@ import numpy as np
 import xarray as xr
 
 from calliope import exceptions
-from calliope.backend import parsing
-from calliope.core.attrdict import AttrDict
-from calliope.core.util.tools import validate_dict
+from calliope.attrdict import AttrDict
+from calliope.backend import helper_functions, parsing
+from calliope.util.schema import MATH_SCHEMA, update_then_validate_config, validate_dict
 
 if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
@@ -46,7 +46,7 @@ class BackendModelGenerator(ABC):
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
     _COMPONENT_ATTR_METADATA = ["description", "unit"]
 
-    def __init__(self, inputs: xr.Dataset, **config_overrides):
+    def __init__(self, inputs: xr.Dataset, **kwargs):
         """Abstract base class to build a representation of the optimisation problem.
 
         Args:
@@ -56,9 +56,11 @@ class BackendModelGenerator(ABC):
         self._dataset = xr.Dataset()
         self.inputs = inputs.copy()
         self.inputs.attrs = deepcopy(inputs.attrs)
-        self.inputs.attrs["config"].build.union(
-            AttrDict(config_overrides), allow_override=True
+        self.inputs.attrs["config"]["build"] = update_then_validate_config(
+            "build", self.inputs.attrs["config"], **kwargs
         )
+        self._check_inputs()
+
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
     @abstractmethod
@@ -89,9 +91,7 @@ class BackendModelGenerator(ABC):
 
     @abstractmethod
     def add_constraint(
-        self,
-        name: str,
-        constraint_dict: parsing.UnparsedConstraintDict,
+        self, name: str, constraint_dict: parsing.UnparsedConstraintDict
     ) -> None:
         """
         Add constraint equation to backend model in-place.
@@ -109,9 +109,7 @@ class BackendModelGenerator(ABC):
 
     @abstractmethod
     def add_global_expression(
-        self,
-        name: str,
-        expression_dict: parsing.UnparsedExpressionDict,
+        self, name: str, expression_dict: parsing.UnparsedExpressionDict
     ) -> None:
         """
         Add global expression (arithmetic combination of parameters and/or decision variables)
@@ -130,9 +128,7 @@ class BackendModelGenerator(ABC):
 
     @abstractmethod
     def add_variable(
-        self,
-        name: str,
-        variable_dict: parsing.UnparsedVariableDict,
+        self, name: str, variable_dict: parsing.UnparsedVariableDict
     ) -> None:
         """
         Add decision variable to backend model in-place.
@@ -150,9 +146,7 @@ class BackendModelGenerator(ABC):
 
     @abstractmethod
     def add_objective(
-        self,
-        name: str,
-        objective_dict: parsing.UnparsedObjectiveDict,
+        self, name: str, objective_dict: parsing.UnparsedObjectiveDict
     ) -> None:
         """
         Add objective arithmetic to backend model in-place.
@@ -184,6 +178,34 @@ class BackendModelGenerator(ABC):
         getattr(LOGGER, level)(
             f"Optimisation model | {component_type}:{component_name} | {message}"
         )
+
+    def _check_inputs(self):
+        data_checks = AttrDict.from_yaml(
+            importlib.resources.files("calliope") / "config" / "model_data_checks.yaml"
+        )
+        errors = []
+        warnings = []
+        parser_ = parsing.where_parser.generate_where_string_parser()
+        eval_kwargs = {
+            "equation_name": "",
+            "backend_interface": self,
+            "input_data": self.inputs,
+            "helper_functions": helper_functions._registry["where"],
+            "apply_where": True,
+        }
+        for failure_check in data_checks["fail"]:
+            parsed_ = parser_.parse_string(failure_check["where"], parse_all=True)
+            failed = parsed_[0].eval("array", **eval_kwargs)
+            if failed.any():
+                errors.append(failure_check["message"])
+
+        for warning_check in data_checks["warn"]:
+            parsed_ = parser_.parse_string(warning_check["where"], parse_all=True)
+            warned = parsed_[0].eval("array", **eval_kwargs)
+            if warned.any():
+                warnings.append(warning_check["message"])
+
+        exceptions.print_warnings_and_raise_errors(warnings, errors)
 
     def _build(self) -> None:
         self._add_run_mode_custom_math()
@@ -220,10 +242,8 @@ class BackendModelGenerator(ABC):
             LOGGER.debug(f"Updating math formulation with {mode} mode custom math.")
             filepath = importlib.resources.files("calliope") / "math" / f"{mode}.yaml"
             self.inputs.math.union(AttrDict.from_yaml(filepath), allow_override=True)
-        math_schema = AttrDict.from_yaml(
-            importlib.resources.files("calliope") / "config" / "math_schema.yaml"
-        )
-        validate_dict(self.inputs.math, math_schema, "math")
+
+        validate_dict(self.inputs.math, MATH_SCHEMA, "math")
 
     def _add_component(
         self,
@@ -270,9 +290,7 @@ class BackendModelGenerator(ABC):
         )
 
         top_level_where = parsed_component.generate_top_level_where_array(
-            self,
-            align_to_foreach_sets=False,
-            break_early=break_early,
+            self, align_to_foreach_sets=False, break_early=break_early
         )
         if break_early and not top_level_where.any():
             return parsed_component
@@ -358,7 +376,7 @@ class BackendModelGenerator(ABC):
         for param_name, param_data in self.inputs.filter_by_attrs(
             is_result=0
         ).data_vars.items():
-            default_val = self.inputs.attrs["defaults"].get(param_name, np.nan)
+            default_val = param_data.attrs.get("default", np.nan)
             self.add_parameter(param_name, param_data, default_val)
         for param_name, default_val in self.inputs.attrs["defaults"].items():
             if param_name in self.parameters.keys():
@@ -423,7 +441,10 @@ class BackendModelGenerator(ABC):
 
         if references is not None:
             for reference in references:
-                self._dataset[reference].attrs["references"].add(name)
+                try:
+                    self._dataset[reference].attrs["references"].add(name)
+                except KeyError:
+                    continue
 
     def _apply_func(
         self, func: Callable, *args, output_core_dims: tuple = ((),), **kwargs
@@ -528,14 +549,14 @@ class BackendModelGenerator(ABC):
 
 
 class BackendModel(BackendModelGenerator, Generic[T]):
-    def __init__(self, inputs: xr.Dataset, instance: T, **config_overrides) -> None:
+    def __init__(self, inputs: xr.Dataset, instance: T, **kwargs) -> None:
         """Abstract base class to build backend models that interface with solvers.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
             instance (T): Interface model instance.
         """
-        super().__init__(inputs, **config_overrides)
+        super().__init__(inputs, **kwargs)
         self._instance = instance
 
     @abstractmethod

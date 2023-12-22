@@ -192,7 +192,10 @@ class DataVarParser(EvalWhere):
     def _data_var_with_default(self, source_dataset: xr.Dataset) -> xr.DataArray:
         "Access data var and fill with default values. Return default value as an array if var does not exist"
         default = source_dataset.attrs["defaults"].get(self.data_var)
-        return source_dataset.get(self.data_var, xr.DataArray(default)).fillna(default)
+        var = source_dataset.get(self.data_var, xr.DataArray(default))
+        if default is not None:
+            var = var.fillna(default)
+        return var
 
     def as_math_string(self) -> str:
         # TODO: add dims from a YAML schema of params that includes default dims
