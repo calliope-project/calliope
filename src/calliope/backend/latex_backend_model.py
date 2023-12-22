@@ -234,28 +234,28 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         r"""
     {% for component_type, equations in components.items() %}
     {% if component_type == "objectives" %}
-    # Objective
+    ## Objective
     {% elif component_type == "constraints" %}
 
-    # Subject to
+    ## Subject to
     {% elif component_type == "global_expressions" %}
 
-    # Where
+    ## Where
     {% elif component_type == "variables" %}
 
-    # Decision Variables
+    ## Decision Variables
     {% endif %}
     {% for equation in equations %}
 
-    ## {{ equation.name }}
+    ### {{ equation.name }}
     {% if equation.description is not none %}
     {{ equation.description }}
     {% endif %}
     {% if equation.expression != "" %}
 
-        $$
-        {{ equation.expression | indent(4) }}
-        $$
+    $$
+    {{ equation.expression | trim }}
+    $$
     {% endif %}
     {% endfor %}
     {% endfor %}

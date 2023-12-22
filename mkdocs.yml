@@ -52,18 +52,9 @@ markdown_extensions:
       pygments_lang_class: true
   - pymdownx.arithmatex:
       generic: true
-      block_tag: 'pre'
-  - pymdownx.inlinehilite:
-      custom_inline:
-        - name: math
-          class: arithmatex
-          format: !!python/object/apply:pymdownx.arithmatex.arithmatex_inline_format {kwds: {mode: generic}}
+  - pymdownx.inlinehilite
   - pymdownx.superfences:
       preserve_tabs: true
-      custom_fences:
-        - name: math
-          class: arithmatex
-          format: !!python/object/apply:pymdownx.arithmatex.arithmatex_fenced_format {kwds: {mode: generic, tag: pre}}
 
 extra_javascript:
   - https://polyfill.io/v3/polyfill.min.js?features=es6

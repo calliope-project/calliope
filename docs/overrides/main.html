@@ -27,17 +27,17 @@
                     inlineMath: [["\\(", "\\)"]],
                     displayMath: [["\\[", "\\]"]],
                     processEscapes: true,
-                    processEnvironments: true,
-                    tagSide: "right",
-                    tagIndent: ".8em",
-                    multlineWidth: "85%",
-                    tags: "ams"
+                    processEnvironments: true
                 },
                 options: {
-                    ignoreHtmlClass: ".*",
+                    ignoreHtmlClass: ".*|",
                     processHtmlClass: "arithmatex"
                 }
-            }
+            };
+
+            document$.subscribe(() => {
+                MathJax.typesetPromise()
+            })
         }
     </script>
 {% endblock %}
