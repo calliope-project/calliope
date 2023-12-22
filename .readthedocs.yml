@@ -7,7 +7,7 @@ build:
     pre_build:
       - python ./docs/pre_build/generate_math.py
     pre_create_environment:
-      - mamba create -n base -c conda-forge -c nodefaults python=3.12 -f requirements/docs.txt -f requirements/base.txt
+      - mamba create -n base -c conda-forge -c nodefaults python=3.12 --file requirements/docs.txt --file requirements/base.txt
     post_create_environment:
       - pip install --no-deps .
 
