@@ -1,5 +1,3 @@
 # Version history
 
-{%
-   include-markdown "../CHANGELOG.md"
-%}
+--8<-- "CHANGELOG.md"

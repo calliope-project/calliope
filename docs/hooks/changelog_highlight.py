@@ -11,7 +11,7 @@ REPLACEMENTS = {
 }
 
 
-def on_page_markdown(markdown, **kwargs):
+def on_page_content(html, **kwargs):
     for old, new in REPLACEMENTS.items():
-        markdown = markdown.replace(old, new)
-    return markdown
+        html = html.replace(old, new)
+    return html

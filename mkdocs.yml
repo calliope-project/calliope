@@ -33,7 +33,6 @@ plugins:
             show_root_heading: false
             show_root_toc_entry: false
           paths: [src]
-  - include-markdown
   - gen-files:
       scripts:
         - docs/scripts/generate_custom_math_examples.py
@@ -55,6 +54,7 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.superfences:
       preserve_tabs: true
+  - pymdownx.snippets
 
 extra_javascript:
   - https://polyfill.io/v3/polyfill.min.js?features=es6

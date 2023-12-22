@@ -1,11 +1,8 @@
-bottleneck
 jsonschema2md >= 1, < 2
-mkdocs
-mkdocs-click
-mkdocs-gen-files
-mkdocs-include-markdown-plugin
-mkdocs-jupyter
-mkdocs-macros-plugin
-mkdocstrings-python
-mkdocs-material >= 9.5
-typing-extensions
+mkdocs >= 1.5, < 2
+mkdocs-click >= 0.6, < 0.7
+mkdocs-gen-files >= 0.4, < 0.5
+mkdocs-jupyter >= 0.24, < 0.25
+mkdocs-macros-plugin >= 1.0, < 2
+mkdocstrings-python >= 1.7, < 2
+mkdocs-material >= 9.5, < 10
