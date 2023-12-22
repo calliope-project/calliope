@@ -30,3 +30,4 @@ doc/_build/
 doc/_static/notebooks/*.html
 .ipynb_checkpoints
 outputs/
+site/
