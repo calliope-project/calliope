@@ -253,8 +253,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {% endif %}
     {% if equation.expression != "" %}
 
-        ```math{{ equation.expression | indent(4) }}
-        ```
+        $$
+        {{ equation.expression | indent(4) }}
+        $$
     {% endif %}
     {% endfor %}
     {% endfor %}
