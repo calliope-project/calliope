@@ -49,7 +49,7 @@
 #   |   --/        operating      \-
 #   | -/            region          \-  Heat
 #   ---------------------------------------->
-#   ````
+#   ```
 #
 #   3. CHPs without extraction turbines and without an auxiliary boiler.
 #   Here, there is no operating region; the output must follow the backpressure line.

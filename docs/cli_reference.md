@@ -7,3 +7,6 @@ This page provides documentation for the `calliope` command line tool.
     :command: cli
     :prog_name: calliope
     :depth: 1
+
+<newline>
+<newline>
