@@ -12,17 +12,11 @@ from pathlib import Path
 
 import calliope
 import pandas as pd
+from calliope.util import schema
 
 BASEPATH = Path(__file__).resolve().parent
 
-NONDEMAND_TECHGROUPS = [
-    "supply",
-    "storage",
-    "conversion",
-    "transmission",
-    "conversion_plus",
-    "supply_plus",
-]
+NONDEMAND_TECHGROUPS = ["supply", "storage", "conversion", "transmission"]
 
 
 def generate_base_math_model(model_config: dict) -> calliope.Model:
@@ -42,9 +36,7 @@ def generate_base_math_model(model_config: dict) -> calliope.Model:
 
 
 def generate_custom_math_model(
-    base_model: calliope.Model,
-    model_config: dict,
-    model_config_updates: dict,
+    base_model: calliope.Model, model_config: dict, model_config_updates: dict
 ) -> calliope.Model:
     """Generate model with documentation for a built-in custom math file, showing only the changes made
     relative to the base math.
@@ -75,58 +67,43 @@ def generate_model_config() -> dict[str, dict]:
     Parameters that can be defined over a timeseries are forced to be defined over a timeseries.
     Accordingly, the parameters will have "timesteps" in their dimensions in the formulation.
     """
-    defaults = calliope.AttrDict.from_yaml(
-        BASEPATH / ".." / ".." / "src" / "calliope" / "config" / "defaults.yaml"
+    defaults = schema.extract_from_schema(
+        schema.MODEL_SCHEMA, "default", subset_top_level="techs"
     )
-
-    allowed_: dict[str, dict] = {i: {"all": set()} for i in ["costs", "constraints"]}
-
     dummy_techs = {
         "demand_tech": {
-            "essentials": {"parent": "demand", "carrier": "electricity"},
-            "constraints": {"sink_equals": "df=ts"},
-        }
+            "parent": "demand",
+            "carrier_in": "electricity",
+            "sink_equals": "df=ts",
+        },
+        "conversion_tech": {
+            "parent": "conversion",
+            "carrier_in": "gas",
+            "carrier_out": ["electricity", "heat"],
+        },
+        "supply_tech": {"parent": "supply", "carrier_out": "gas"},
+        "storage_tech": {
+            "parent": "storage",
+            "carrier_in": "electricity",
+            "carrier_out": "electricity",
+        },
+        "transmission_tech": {
+            "parent": "transmission",
+            "carrier_in": "electricity",
+            "carrier_out": "electricity",
+            "from": "A",
+            "to": "B",
+        },
     }
 
     for tech_group in NONDEMAND_TECHGROUPS:
-        for config_ in ["costs", "constraints"]:
-            tech_allowed_ = defaults.tech_groups[tech_group][f"allowed_{config_}"]
-            # We keep parameter definitions to a bare minimum, so any that have been
-            # defined for a previous tech group in the loop will not be defined for
-            # later tech groups.
-            allowed_[config_][tech_group] = set(tech_allowed_).difference(
-                allowed_[config_]["all"]
-            )
-            # We keep lifetime and interest rate since all techs that define costs will
-            # need them.
-            allowed_[config_][tech_group].update(["lifetime", "interest_rate"])
-
-            allowed_[config_]["all"].update(tech_allowed_)
-
-        if "conversion" in tech_group:
-            carriers = {"carrier_in": "electricity", "carrier_out": "heat"}
-        else:
-            carriers = {"carrier": "electricity"}
-
-        dummy_techs[f"{tech_group}_tech"] = {
-            "essentials": {"parent": tech_group, **carriers},
-            "constraints": {
-                k: _add_data(k, v)
-                for k, v in defaults.techs.default_tech.constraints.items()
-                if k in allowed_["constraints"][tech_group]
-            },
-            "costs": {
-                "monetary": {
-                    k: _add_data(k, v)
-                    for k, v in defaults.techs.default_tech.costs.default_cost.items()
-                    if k in allowed_["costs"][tech_group]
-                }
-            },
-        }
-
+        for k, v in defaults.items():
+            dummy_techs[f"{tech_group}_tech"][k] = _add_data(k, v)
+    techs_at_nodes = {k: None for k in dummy_techs.keys() if k != "transmission_tech"}
     return {
         "nodes": {
-            "A": {"techs": {k: None for k in dummy_techs.keys()}, "available_area": 1}
+            "A": {"techs": techs_at_nodes, "available_area": 1},
+            "B": {"techs": techs_at_nodes},
         },
         "techs": dummy_techs,
     }
@@ -134,11 +111,11 @@ def generate_model_config() -> dict[str, dict]:
 
 def _add_data(name, default_val):
     "Some parameters need hardcoded values to be returned"
-    if name == "carrier_ratios":
-        return {"carrier_in.electricity": 1}
-    elif name == "export_carrier":
-        return "electricity"
-    elif default_val is None or name == "interest_rate":
+    if name.startswith("cost_"):
+        return {"data": 1, "index": "monetary", "dims": "costs"}
+    elif name in ["export_carrier", "name", "color"]:
+        return "foo"
+    elif pd.isnull(default_val):
         return 1
     else:
         return default_val

@@ -6,17 +6,17 @@
 
 ::: calliope.backend.backend_model.BackendModel
 
-## `calliope.core.attrdict.AttrDict`
+## `calliope.attrdict.AttrDict`
 
-::: calliope.core.attrdict.AttrDict
+::: calliope.attrdict.AttrDict
 
 ## `calliope.exceptions`
 
 ::: calliope.exceptions
 
-## `calliope.core.util.logging`
+## `calliope.util.logging`
 
-::: calliope.core.util.logging
+::: calliope.util.logging
 
 ## `calliope.backend.helper_functions` (math formulation helper functions)
 

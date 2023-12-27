@@ -1,9 +1,10 @@
+bottleneck >= 1, < 2
 click >= 8, < 9
 geographiclib >= 2, < 3
 ipykernel < 7
 ipdb >= 0.13, < 0.14
 jinja2 >= 3, < 4
-jsonschema >= 4.17, < 4.19
+jsonschema >= 4, < 5
 natsort >= 8, < 9
 netcdf4 >= 1.2, < 1.7
 numpy >= 1, < 2
