@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import textwrap
 import typing
 from pathlib import Path
@@ -254,7 +255,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {% if equation.expression != "" %}
 
     $$
-    {{ equation.expression | trim }}
+    {{ equation.expression | trim | escape_underscores | escape_text_in_text }}
     $$
     {% endif %}
     {% endfor %}
@@ -484,8 +485,31 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     @staticmethod
     def _render(template: str, **kwargs) -> str:
+        text_starter = r"\\text(?:bf|it)?"  # match one of `\text`, `\textit`, `\textbf`
+
+        def __escape_underscore(instring):
+            "KaTeX requires underscores in `\text{...}` blocks to be escaped."
+            return re.sub(
+                rf"{text_starter}{{.*?}}",
+                lambda x: x.group(0).replace("_", r"\_"),
+                instring,
+            )
+
+        def __escape_text_in_text(instring):
+            """KaTeX requires `\text{...}` blocks within `\text{...}` blocks to be placed within math blocks.
+
+            We use `\\(` as the math block descriptor.
+            """
+            return re.sub(
+                rf"{text_starter}{{(?:[^{{}}]*({text_starter}{{.*?}})[^{{}}]*?)?}}",
+                lambda x: x.group(0).replace(x.group(1), rf"\({x.group(1)}\)"),
+                instring,
+            )
+
         jinja_env = jinja2.Environment(trim_blocks=True, autoescape=False)
         jinja_env.filters["removesuffix"] = lambda val, remove: val.removesuffix(remove)
+        jinja_env.filters["escape_underscores"] = __escape_underscore
+        jinja_env.filters["escape_text_in_text"] = __escape_text_in_text
         return jinja_env.from_string(template).render(**kwargs)
 
     def _get_capacity_bounds(
