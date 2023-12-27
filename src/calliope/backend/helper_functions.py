@@ -53,6 +53,11 @@ class ParsingHelperFunction(ABC):
     def NAME(self) -> str:
         "Helper function name that is used in the math expression/where string."
 
+    @property
+    def ignore_where(self) -> bool:
+        "If True, `where` arrays will not be applied to the incoming data variables (valid for expression helpers)"
+        return False
+
     @abstractmethod
     def as_math_string(self, *args, **kwargs) -> str:
         """Method to update LaTeX math strings to include the action applied by the helper function.
@@ -136,50 +141,17 @@ class ParsingHelperFunction(ABC):
         dim_singular = dim.removesuffix("s")
         return rf"\text{{{dim_singular}}} \in \text{{{dim}}}"
 
-    def _listify(
-        self, vals: Union[list[str], str], expand_link_techs: bool = False
-    ) -> list[str]:
+    def _listify(self, vals: Union[list[str], str]) -> list[str]:
         """Force a string to a list of length one if not already provided as a list.
 
         Args:
             vals (Union[list[str], str]): Values (or single value) to force to a list.
-            expand_link_techs (bool, optional):
-                If True, search resulting list for any transmission tech names and expand them to their link names.
-                Defaults to False.
 
         Returns:
             list[str]: Input forced to a list.
         """
         if not isinstance(vals, list):
             vals = [vals]
-        if expand_link_techs:
-            vals = self._expand_link_techs(vals)
-        return vals
-
-    def _expand_link_techs(self, vals: list[str]) -> list[str]:
-        """Expand list of technology names to link tech names.
-
-        This searches the names provided and tries to match them up with auto-generated link names, which are the transmission tech name + remote node name
-        (e.g., `ac_transmission` -> [`ac_transmission:A`, `ac_transmission:B`]).
-
-        It will match any provided name with any name in the techs that starts with that name followed by a colon (`:`).
-
-        Args:
-            vals (list[str]): List of techs which could include general transmission tech names.
-
-        Returns:
-            list[str]: Expanded list, including all non-transmission tech names and transmission tech names replaced with link names.
-        """
-        to_remove = []
-        to_add = []
-        for val in vals:
-            link_techs = self._input_data.techs.str.startswith(val + ":")
-            if link_techs.any():
-                to_add.extend(list(link_techs[link_techs].techs.data))
-                to_remove.append(val)
-        for i in to_remove:
-            vals.remove(i)
-        vals.extend(to_add)
         return vals
 
 
@@ -189,19 +161,95 @@ class Inheritance(ParsingHelperFunction):
     #:
     NAME = "inheritance"
 
-    def as_math_string(self, tech_group: str) -> str:
-        return rf"\text{{tech_group={tech_group}}}"
+    def as_math_string(
+        self, nodes: Optional[str] = None, techs: Optional[str] = None
+    ) -> str:
+        strings = []
+        if nodes is not None:
+            strings.append(f"nodes={nodes}")
+        if techs is not None:
+            strings.append(f"techs={techs}")
+        return rf"\text{{inherits({','.join(strings)})}}"
 
-    def as_array(self, tech_group: str) -> xr.DataArray:
-        """Find all technologies which inherit from a particular technology group.
+    def as_array(
+        self, *, nodes: Optional[str] = None, techs: Optional[str] = None
+    ) -> xr.DataArray:
+        """Find all technologies and/or nodes which inherit from a particular technology or node group.
 
-        The technology group can be an abstract base group (e.g., `supply`, `storage`) or a user-defined technology group which itself inherits from one of the abstract base groups.
+        The group items being referenced must be defined by the user in `node_groups`/`tech_groups`.
 
         Args:
-            model_data (xr.Dataset): Calliope model data
+            nodes (Optional[str], optional): group name to search for inheritance of on the `nodes` dimension. Default is None.
+            techs (Optional[str], optional): group name to search for inheritance of on the `techs` dimension. Default is None.
+
+        Returns:
+            xr.Dataset: Boolean array where values are True where the group is inherited, False otherwise. Array dimensions will equal the number of non-None inputs.
+
+        Examples:
+            With:
+            ```yaml
+            node_groups:
+                foo:
+                    available_area: 1
+            tech_groups:
+                bar:
+                    flow_cap_max: 1
+                baz:
+                    inherits: bar
+                    flow_out_eff: 0.5
+            nodes:
+                node_1:
+                    inherits: foo
+                    techs: {tech_1, tech_2}
+                node_2:
+                    techs: {tech_1, tech_2}
+            techs:
+                tech_1:
+                    ...
+                    inherits: bar
+                tech_2:
+                    ...
+                    inherits: baz
+            ```
+
+            >>> inheritance(nodes=foo)
+            <xarray.DataArray (nodes: 2)>
+            array([True, False])
+            Coordinates:
+            * nodes      (nodes) <U1 'node_1' 'node_2'
+
+            >>> inheritance(techs=bar)  # tech_2 inherits `bar` via `baz`.
+            <xarray.DataArray (techs: 2)>
+            array([True, True])
+            Coordinates:
+            * techs      (techs) <U1 'tech_1' 'tech_2'
+
+            >>> inheritance(techs=baz)
+            <xarray.DataArray (techs: 2)>
+            array([False, True])
+            Coordinates:
+            * techs      (techs) <U1 'tech_1' 'tech_2'
+
+            >>> inheritance(nodes=foo, techs=baz)
+            <xarray.DataArray (nodes: 2, techs: 2)>
+            array([[False, False],
+                   [True, False]])
+            Coordinates:
+            * nodes      (nodes) <U1 'node_1' 'node_2'
+            * techs      (techs) <U1 'tech_1' 'tech_2'
+
         """
-        inheritance_lists = self._input_data.inheritance.to_series().str.split(".")
-        return inheritance_lists.apply(lambda x: tech_group in x).to_xarray()
+        inherits_nodes = xr.DataArray(True)
+        inherits_techs = xr.DataArray(True)
+        if nodes is not None:
+            inherits_nodes = self._input_data.get(
+                "nodes_inheritance", xr.DataArray("")
+            ).str.contains(f"{nodes}(?:,|$)")
+        if techs is not None:
+            inherits_techs = self._input_data.get(
+                "techs_inheritance", xr.DataArray("")
+            ).str.contains(f"{techs}(?:,|$)")
+        return inherits_nodes & inherits_techs
 
 
 class WhereAny(ParsingHelperFunction):
@@ -282,7 +330,7 @@ class Defined(ParsingHelperFunction):
         Kwargs:
             dims (dict[str, str]):
                 **key**: dimension whose members will be searched for as being defined under the primary dimension (`within`).
-                Must be one of the core model dimensions: [nodes, techs, carriers, carrier_tiers]
+                Must be one of the core model dimensions: [nodes, techs, carriers]
                 **value**: subset of the dimension members to find.
                 Transmission techs can be called using the base tech name (e.g., `ac_transmission`) and all link techs will be collected (e.g., [`ac_transmission:region1`, `ac_transmission:region2`]).
 
@@ -323,9 +371,7 @@ class Defined(ParsingHelperFunction):
         """
         dim_names = list(dims.keys())
         dims_with_list_vals = {
-            dim: self._listify(vals, expand_link_techs=True)
-            if dim == "techs"
-            else self._listify(vals, expand_link_techs=False)
+            dim: self._listify(vals) if dim == "techs" else self._listify(vals)
             for dim, vals in dims.items()
         }
         definition_matrix = self._input_data.definition_matrix
@@ -372,8 +418,7 @@ class Defined(ParsingHelperFunction):
         elif how == "any":
             # Using vee for "collective-or"
             tex_how = "vee"
-        expand_link_techs = True if dim == "techs" else False
-        vals = self._listify(vals, expand_link_techs=expand_link_techs)
+        vals = self._listify(vals)
         within_singular = within.removesuffix("s")
         dim_singular = dim.removesuffix("s")
         selection = rf"\text{{{dim_singular}}} \in \text{{[{','.join(vals)}]}}"
@@ -419,17 +464,11 @@ class ReduceCarrierDim(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_math_string(
-        self,
-        array: str,
-        carrier_tier: Literal["in", "out", "in_2", "out_2", "in_3", "out_3"],
-    ) -> str:
-        return rf"\sum\limits_{{\text{{carrier}} \in \text{{carrier_tier({carrier_tier})}}}} ({array})"
+    def as_math_string(self, array: str, flow_direction: Literal["in", "out"]) -> str:
+        return rf"\sum\limits_{{\text{{carrier}} \in \text{{carrier_{flow_direction}}}}} ({array})"
 
     def as_array(
-        self,
-        array: xr.DataArray,
-        carrier_tier: Literal["in", "out", "in_2", "out_2", "in_3", "out_3"],
+        self, array: xr.DataArray, flow_direction: Literal["in", "out"]
     ) -> xr.DataArray:
         """Reduce expression array data by selecting the carrier that corresponds to the given carrier tier and then dropping the `carriers` dimension.
 
@@ -445,49 +484,9 @@ class ReduceCarrierDim(ParsingHelperFunction):
             equation_name=self._equation_name,
             input_data=self._input_data,
         )
+
         return sum_helper(
-            array.where(
-                self._input_data.definition_matrix.sel(carrier_tiers=carrier_tier)
-            ),
-            over="carriers",
-        )
-
-
-class ReducePrimaryCarrierDim(ParsingHelperFunction):
-    #:
-    NAME = "reduce_primary_carrier_dim"
-    #:
-    ALLOWED_IN = ["expression"]
-
-    def as_math_string(self, array: str, carrier_tier: Literal["in", "out"]) -> str:
-        return rf"\sum\limits_{{\text{{carrier=primary_carrier_{carrier_tier}}}}} ({array})"
-
-    def as_array(
-        self, array: xr.DataArray, carrier_tier: Literal["in", "out"]
-    ) -> xr.DataArray:
-        """Reduce expression array data by selecting the carrier that corresponds to the primary carrier and then dropping the `carriers` dimension.
-
-        This function is only valid for `conversion_plus` technologies,
-        so should only be included in a math component if the `where` string includes `inheritance(conversion_plus)` or an equivalent expression.
-
-        Args:
-            array (xr.DataArray): Expression array.
-            carrier_tier (Literal["in", "out"]): Carrier tier to select one of the `primary_carrier_in`/`primary_carrier_out` arrays, in which the primary carrier for the technology is defined.
-
-
-        Returns:
-            xr.DataArray: `array` reduced by the `carriers` dimension.
-        """
-        sum_helper = Sum(
-            return_type=self._return_type,
-            equation_name=self._equation_name,
-            input_data=self._input_data,
-        )
-        return sum_helper(
-            array.where(
-                getattr(self._input_data, f"primary_carrier_{carrier_tier}").notnull()
-            ),
-            over="carriers",
+            array.where(self._input_data[f"carrier_{flow_direction}"]), over="carriers"
         )
 
 
@@ -574,8 +573,7 @@ class SelectFromLookupArrays(ParsingHelperFunction):
                     f"Trying to select items on the dimension {index_dim} from the {index.name} lookup array, but no matches found. Received: {received_lookup}"
                 )
             ixs[index_dim] = xr.DataArray(
-                np.fmax(0, ix),
-                coords={dim: stacked_lookup[dim]},
+                np.fmax(0, ix), coords={dim: stacked_lookup[dim]}
             )
             masks.append(ix >= 0)
 
@@ -656,6 +654,10 @@ class Roll(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
+    @property
+    def ignore_where(self) -> bool:
+        return True
+
     def as_math_string(self, array: str, **roll_kwargs: str) -> str:
         new_strings = {
             k.removesuffix("s"): f"{-1 * int(v):+d}" for k, v in roll_kwargs.items()
@@ -690,48 +692,40 @@ class Roll(ParsingHelperFunction):
         return array.roll(roll_kwargs_int)
 
 
-class GetTransmissionTechs(ParsingHelperFunction):
+class DefaultIfEmpty(ParsingHelperFunction):
     #:
-    NAME = "get_transmission_techs"
+    NAME = "default_if_empty"
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_math_string(self, vals: Union[str, list[str]]) -> str:
-        expanded_vals = self._listify(vals, expand_link_techs=True)
-        return f"techs=[{','.join(expanded_vals)}]"
+    def as_math_string(self, var: str, default: float | int) -> str:
+        return rf"({var}\vee{{}}{default})"
 
-    def as_array(self, vals: Union[str, list[str]]) -> xr.DataArray:
-        """Get an array of model techs marking which are linked to a base transmission tech(s).
+    def as_array(self, var: xr.DataArray, default: float | int) -> xr.DataArray:
+        """Get an array with filled NaNs if present in the model, or a single default value if not.
 
-        This function is useful for slicing an array's `techs` dimension for all transmission techs linked to the same base tech(s).
+        This function is useful for avoiding excessive sub expressions where it is a choice between an expression or a single numeric value.
 
         Args:
-            base_tech_name: Transmission tech base name or list of names, i.e., without remote node attached to the tech (`ac_transmission` instead of `ac_transmission:region1`).
+            var (xr.DataArray): array of backend expression objects or an un-indexed "string" object array with the var name (if not present in the model).
+            default (float | int): Numeric value with which to fill / replace `var`.
 
         Returns:
-            xr.DataArray: Coordinate `techs` array containing only members linked to the provided base transmission tech(s).
+            xr.DataArray:
+                If var is an array of backend expression objects, NaNs will be filled with `default`.
+                If var is an unindexed array with a single string value, an unindexed array with the default value.
 
         Examples:
-            ```yaml
-            links:
-                node1,node2:
-                    techs:
-                        ac_transmission:
-                node1,node3:
-                    techs:
-                        free_transmission:
             ```
-            Then:
-            ```
-            >>> get_transmission_techs(ac_transmission)
+            >>> default_if_empty(flow_cap, 0)
             [out] <xarray.DataArray (techs: 2)>
                   array(['ac_transmission:node1', 'ac_transmission:node2'], dtype=object)
-            >>> get_transmission_techs(free_transmission)
-            [out] <xarray.DataArray (techs: 2)>
-                  array(['free_transmission:node1', 'free_transmission:node3'], dtype=object)
-            >>> get_transmission_techs([free_transmission, ac_transmission])
-            [out] <xarray.DataArray (techs: 2)>
-                  array(['free_transmission:node1', 'free_transmission:node3', 'ac_transmission:node1', 'ac_transmission:node2'], dtype=object)
+            >>> default_if_empty(flow_export, 0)
+            [out] <xarray.DataArray ()>
+                  array(0, dtype=np.int)
             ```
         """
-        return xr.DataArray(self._listify(vals, expand_link_techs=True), dims=["techs"])
+        if var.attrs.get("obj_type", "") == "string":
+            return xr.DataArray(default)
+        else:
+            return var.fillna(default)

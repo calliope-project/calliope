@@ -1,8 +1,7 @@
 import pandas as pd
 import pytest  # noqa: F401
-from calliope import exceptions
 
-from .common.util import build_test_model, check_error_or_warning
+from .common.util import build_test_model
 
 
 class TestClustering:
@@ -42,7 +41,7 @@ class TestClustering:
 
     def test_cluster_datesteps(self, clustered_model):
         expected = pd.DatetimeIndex(
-            ["2005-01-01", "2005-01-02", "2005-01-03", "2005-01-04"],
+            ["2005-01-01", "2005-01-02", "2005-01-03", "2005-01-04", "2005-01-05"],
             name="datesteps",
         )
         pd.testing.assert_index_equal(
@@ -92,11 +91,14 @@ class TestResampling:
     def test_15min_resampling_to_6h(self):
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
-        override = {
-            "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15mins.csv",
-        }
+        override = {"techs.test_demand_elec.sink_equals": "file=demand_elec_15mins.csv"}
 
-        model = build_test_model(override, scenario="simple_supply", time_resample="6H")
+        model = build_test_model(
+            override,
+            scenario="simple_supply",
+            time_resample="6H",
+            time_subset=["2005-01-01", "2005-01-03"],
+        )
         data = model._model_data
 
         dtindex = pd.DatetimeIndex(
@@ -124,7 +126,7 @@ class TestResampling:
         CSV has daily timeseries varying from 15min to 2h resolution, resample all to 2h
         """
         override = {
-            "techs.test_demand_elec.constraints.sink_equals": "file=demand_elec_15T_to_2h.csv"
+            "techs.test_demand_elec.sink_equals": "file=demand_elec_15T_to_2h.csv"
         }
 
         model = build_test_model(
@@ -150,26 +152,3 @@ class TestResampling:
         )
 
         assert dtindex.equals(data.timesteps.to_index())
-
-
-class TestLoadTimeseries:
-    def test_invalid_csv_columns(self):
-        override = {
-            "nodes": {
-                "c.techs": {"test_supply_elec": None, "test_demand_elec": None},
-                "d.techs": {"test_supply_elec": None, "test_demand_elec": None},
-            },
-            "links": {
-                "a,b": {"active": False},
-                "c,d.techs": {"test_transmission_elec": None},
-            },
-        }
-        with pytest.raises(exceptions.ModelError) as excinfo:
-            build_test_model(override_dict=override, scenario="one_day")
-
-        assert check_error_or_warning(
-            excinfo,
-            [
-                "file:column combinations `[('demand_elec.csv', 'c') ('demand_elec.csv', 'd')]` not found, but are requested by parameter `sink_equals`."
-            ],
-        )

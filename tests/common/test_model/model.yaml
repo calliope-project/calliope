@@ -15,6 +15,7 @@ config:
   init:
     name: Test model
     time_data_path: "timeseries_data"
+    time_subset: ["2005-01-01", "2005-01-02"]
   build:
     mode: plan
   solve:
@@ -22,140 +23,156 @@ config:
 
 techs:
   test_supply_gas:
-    essentials:
-      name: Supply tech
-      carrier: gas
-      parent: supply
-    constraints:
-      flow_cap_max: 15
-      source_max: .inf
-      flow_out_eff: 0.9
+    inherit: test_controller
+    name: Supply tech
+    carrier_out: gas
+    parent: supply
+    flow_cap_max: 15
+    source_max: .inf
+    flow_out_eff: 0.9
 
   test_supply_elec:
-    essentials:
-      name: Supply tech
-      carrier: electricity
-      parent: supply
-    constraints:
-      flow_cap_max: 10
-      source_max: .inf
-      flow_out_eff: 0.9
+    inherit: test_controller
+    name: Supply tech
+    carrier_out: electricity
+    parent: supply
+    flow_cap_max: 10
+    source_max: .inf
+    flow_out_eff: 0.9
 
   test_supply_coal:
-    essentials:
-      name: Supply tech
-      carrier: coal
-      parent: supply
-    constraints:
-      flow_cap_max: 10
-      source_max: .inf
-      flow_out_eff: 0.9
+    inherit: test_controller
+    name: Supply tech
+    carrier_out: coal
+    parent: supply
+    flow_cap_max: 10
+    source_max: .inf
+    flow_out_eff: 0.9
 
   test_supply_plus:
-    essentials:
-      name: Supply plus tech
-      carrier: electricity
-      parent: supply_plus
-    constraints:
-      flow_cap_max: 15
-      source_max: file=supply_plus_resource.csv
-      source_eff: 0.9
-      flow_out_eff: 0.9
-      storage_cap_max: 35
-      flow_cap_per_storage_cap_max: 0.5
-      storage_loss: 0.01
-    switches:
-      include_storage: true
+    inherit: test_controller
+    name: Supply tech with storage
+    carrier_out: electricity
+    parent: supply
+    flow_cap_max: 15
+    source_max: file=supply_plus_resource.csv
+    source_eff: 0.9
+    flow_out_eff: 0.9
+    storage_cap_max: 35
+    flow_cap_per_storage_cap_max: 0.5
+    storage_loss: 0.01
+    include_storage: true
 
   test_storage:
-    essentials:
-      name: Storage tech
-      carrier: electricity
-      parent: storage
-    constraints:
-      flow_cap_max: 10
-      storage_cap_max: 15
-      flow_cap_per_storage_cap_max: 0.5
-      flow_out_eff: 0.9
-      storage_loss: 0.01
+    inherit: test_controller
+    name: Storage tech
+    carrier_out: electricity
+    carrier_in: electricity
+    parent: storage
+    flow_cap_max: 10
+    storage_cap_max: 15
+    flow_cap_per_storage_cap_max: 0.5
+    flow_out_eff: 0.9
+    storage_loss: 0.01
 
   test_conversion:
-    essentials:
-      name: Conversion tech
-      carrier_in: gas
-      carrier_out: heat
-      parent: conversion
-    constraints:
-      flow_cap_max: 15
-      flow_out_eff: 0.9
+    inherit: test_controller
+    name: Conversion tech
+    carrier_in: gas
+    carrier_out: heat
+    parent: conversion
+    flow_cap_max:
+      data: 15
+      index: heat
+      dims: carriers
+    flow_out_eff: 0.9
 
   test_conversion_plus:
-    essentials:
-      name: Conversion plus tech
-      primary_carrier_out: electricity
-      carrier_in: gas
-      carrier_out: electricity
-      carrier_out_2: heat
-      parent: conversion_plus
-    constraints:
-      flow_cap_max: 20
-      carrier_ratios:
-        carrier_out_2: { heat: 0.8 }
+    inherit: test_controller
+    name: Conversion tech with linked carriers out
+    carrier_in: gas
+    carrier_out: [electricity, heat]
+    parent: conversion
+    flow_cap_max:
+      data: 20
+      index: electricity
+      dims: carriers
+    heat_to_power_ratio: 0.8
 
   test_chp:
-    essentials:
-      name: Conversion plus tech
-      primary_carrier_out: electricity
-      carrier_in: gas
-      carrier_out: [electricity, heat]
-      parent: conversion_plus
-    constraints:
-      flow_cap_max: 20
+    inherit: test_controller
+    name: Conversion tech with unlinked carriers out
+    carrier_in: gas
+    carrier_out: [electricity, heat]
+    parent: conversion
+    flow_out_eff:
+      data: 0.6
+      index: electricity
+      dims: carriers
+    flow_cap_max:
+      data: 20
+      index: electricity
+      dims: carriers
 
   test_demand_elec:
-    essentials:
-      name: Demand elec tech
-      carrier: electricity
-      parent: demand
-    constraints:
-      sink_equals: file=demand_elec.csv
+    inherit: test_controller
+    name: Demand elec tech
+    carrier_in: electricity
+    parent: demand
 
   test_demand_heat:
-    essentials:
-      name: Demand heat tech
-      carrier: heat
-      parent: demand
-    constraints:
-      sink_equals: file=demand_heat.csv
+    inherit: test_controller
+    name: Demand heat tech
+    carrier_in: heat
+    parent: demand
 
   test_demand_coal:
-    essentials:
-      name: Demand coal tech
-      carrier: coal
-      parent: demand
-    constraints:
-      sink_max: 10
+    inherit: test_controller
+    name: Demand coal tech
+    carrier_in: coal
+    parent: demand
+    sink_max: 10
+
+  test_link_a_b_elec:
+    inherit: test_transmission_elec
+    distance: 1
+
+  test_link_a_b_heat:
+    inherit: test_transmission_heat
+    distance: 2
+
+tech_groups:
+  test_controller: {}
+
+  test_transmission:
+    from: a
+    to: b
+    inherit: test_controller
 
   test_transmission_elec:
-    essentials:
-      name: Transmission elec tech
-      carrier: electricity
-      parent: transmission
-    constraints:
-      flow_cap_max: 10
+    inherit: test_transmission
+    name: Transmission elec tech
+    carrier_in: electricity
+    carrier_out: electricity
+    parent: transmission
+    flow_cap_max: 10
 
   test_transmission_heat:
-    essentials:
-      name: Transmission heat tech
-      carrier: heat
-      parent: transmission
-    constraints:
-      flow_cap_max: 5
+    inherit: test_transmission
+    name: Transmission heat tech
+    carrier_in: heat
+    carrier_out: heat
+    parent: transmission
+    flow_cap_max: 5
 
-links:
-  a,b:
+node_groups:
+  init_nodes:
     techs:
-      test_transmission_elec:
-        distance: 1
-      test_transmission_heat:
-        distance: 2
+      test_demand_elec:
+        sink_equals: file=demand_elec.csv
+
+nodes:
+  a:
+    inherit: init_nodes
+  b:
+    inherit: init_nodes

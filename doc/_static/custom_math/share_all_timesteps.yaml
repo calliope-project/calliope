@@ -9,7 +9,6 @@
 
 # helper functions used:
 # sum (expression)
-# reduce_carrier_dim (expression)
 
 constraints:
   demand_share_equals_per_tech:
@@ -18,7 +17,7 @@ constraints:
     where: demand_share_equals
     equations:
       - expression: >
-          sum(reduce_carrier_dim(flow_out, carrier_tier=out), over=[timesteps]) ==
+          sum(flow_out, over=[timesteps, carriers]) ==
           sum(flow_in[techs=$demand_tech], over=[timesteps, carriers])
           * demand_share_equals
     slices:
@@ -27,7 +26,7 @@ constraints:
 
 
   supply_share_equals_per_tech:
-    description: Set the total outflow of certain technologies which produce the `power` carrier to a share of total `power` outflow in each node.
+    description: Set the total outflow of certain technologies which produce a particular carrier to a share of total outflow of that carrier in each node.
     foreach: [nodes, techs]
     where: supply_share_equals
     equations:

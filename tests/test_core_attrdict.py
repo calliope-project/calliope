@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import ruamel.yaml as ruamel_yaml
-from calliope.core.attrdict import _MISSING, AttrDict
+from calliope.attrdict import _MISSING, AttrDict
 
 from .common.util import check_error_or_warning
 

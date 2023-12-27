@@ -7,7 +7,7 @@
 # fuel_import_max
 # fuel_export_max
 # fuel_distribution_max
-# fuel_distributor_costs
+# cost_fuel_distribution
 # allow_fuel_distribution <- lookup array with a value of `True` for each carrier where you want to track its distribution
 
 # helper functions used:
@@ -71,12 +71,12 @@ global_expressions:
   # To apply a different cost for imports vs exports, you will need to separate out the fuel_distributor decision variable into two positive decision variables representing imports and exports.
   # You will then need to propagate that change throughout all constraints/global expressions/objective function given in this file.
   # This change will increase model complexity and if different costs do exist you risk having "unrealistic" simultaneous imports/exports at a node to accrue revenue.
-  cost_fuel_distribution:
+  cost_var_fuel_distribution:
     description: Cost of importing / exporting fuel. Exporting fuel will provide a node with revenue, while importing it will incur a cost.
     foreach: [nodes, carriers, costs, timesteps]
-    where: fuel_distributor AND fuel_distributor_costs
+    where: fuel_distributor AND cost_fuel_distribution
     equations:
-      - expression: timestep_weights * fuel_distributor * fuel_distributor_costs
+      - expression: timestep_weights * fuel_distributor * cost_fuel_distribution
 
 objectives:
   # Update objective to include fuel distribution costs
@@ -96,7 +96,7 @@ objectives:
         - where: "NOT config.ensure_feasibility=True"
           expression: "0"
       cost_fuel_distribution_sum:
-        - where: "cost_fuel_distribution"
-          expression: sum(sum(cost_fuel_distribution, over=[nodes, carriers, timesteps]) * objective_cost_weights, over=costs)
-        - where: "NOT any(cost_fuel_distribution, over=[nodes, carriers, costs, timesteps])"
+        - where: "cost_var_fuel_distribution"
+          expression: sum(sum(cost_var_fuel_distribution, over=[nodes, carriers, timesteps]) * objective_cost_weights, over=costs)
+        - where: "NOT any(cost_var_fuel_distribution, over=[nodes, carriers, costs, timesteps])"
           expression: "0"

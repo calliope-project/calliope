@@ -72,9 +72,7 @@ class TestModel:
 
 class TestCustomMath:
     @pytest.fixture
-    def storage_inter_cluster(
-        self,
-    ):
+    def storage_inter_cluster(self):
         return build_model(
             {"config.init.custom_math": ["storage_inter_cluster"]},
             "simple_supply,two_hours,investment_costs",
@@ -109,8 +107,7 @@ class TestCustomMath:
                 "simple_supply,two_hours,investment_costs",
             )
         assert check_error_or_warning(
-            excinfo,
-            f"Attempted to load custom math that does not exist: {expected}",
+            excinfo, f"Attempted to load custom math that does not exist: {expected}"
         )
 
     def test_internal_override_from_yaml(self, temp_path):
@@ -127,7 +124,7 @@ class TestCustomMath:
         )
         new_constraint.to_yaml(temp_path.join("custom-math.yaml"))
         m = build_model(
-            {"config.init.custom_math": [temp_path.join("custom-math.yaml")]},
+            {"config.init.custom_math": [str(temp_path.join("custom-math.yaml"))]},
             "simple_supply,two_hours,investment_costs",
         )
         assert "constraint_name" in m.math["constraints"].keys()
@@ -143,7 +140,7 @@ class TestCustomMath:
         )
         new_constraint.to_yaml(file_path)
         m = build_model(
-            {"config.init.custom_math": [file_path]},
+            {"config.init.custom_math": [str(file_path)]},
             "simple_supply,two_hours,investment_costs",
         )
         base = simple_supply.math["constraints"][
@@ -169,7 +166,7 @@ class TestCustomMath:
             )
             filepath = temp_path.join(f"custom-math-{path_suffix}.yaml")
             constr.to_yaml(filepath)
-            to_add.append(filepath)
+            to_add.append(str(filepath))
 
         m = build_model(
             {"config.init.custom_math": to_add},
@@ -196,12 +193,7 @@ class TestCustomMath:
         file_path = temp_path.join("custom-math.yaml")
         new_constraint.to_yaml(file_path)
         m = build_model(
-            {
-                "config.init.custom_math": [
-                    "storage_inter_cluster",
-                    file_path,
-                ]
-            },
+            {"config.init.custom_math": ["storage_inter_cluster", str(file_path)]},
             "simple_supply,two_hours,investment_costs",
         )
         base = simple_supply.math["variables"]["storage"]
@@ -233,7 +225,7 @@ class TestValidateMathDict:
             ("1 == 1", "True"),
             (
                 "flow_out * flow_out_eff + sum(cost, over=costs) <= .inf",
-                "inheritance(supply) and flow_out_eff>0",
+                "parent=supply and flow_out_eff>0",
             ),
         ],
     )

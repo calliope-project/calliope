@@ -98,13 +98,7 @@ class TestIO:
             ("serialised_nones", ["foo_none", "scenario"]),
             (
                 "serialised_dicts",
-                [
-                    "foo_dict",
-                    "foo_attrdict",
-                    "defaults",
-                    "config",
-                    "math",
-                ],
+                ["foo_dict", "foo_attrdict", "defaults", "config", "math"],
             ),
             ("serialised_sets", ["foo_set"]),
         ],
@@ -195,12 +189,11 @@ class TestIO:
         model.to_netcdf(out_path)
         model_from_disk = calliope.read_netcdf(out_path)
 
-        # Ensure _model_run doesn't exist to simulate a re-run
-        # via the backend
-        delattr(model_from_disk, "_model_run")
+        # Ensure _model_def_dict doesn't exist to simulate a re-run via the backend
+        delattr(model_from_disk, "_model_def_dict")
         model_from_disk.build()
         model_from_disk.solve(force=True)
-        assert not hasattr(model_from_disk, "_model_run")
+        assert not hasattr(model_from_disk, "_model_def_dict")
 
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = os.path.join(tempdir, "model.nc")

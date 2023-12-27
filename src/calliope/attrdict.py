@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import ruamel.yaml as ruamel_yaml
 
-from calliope.core.util.tools import relative_path
+from calliope.util.tools import relative_path
 
 logger = logging.getLogger(__name__)
 

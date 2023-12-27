@@ -13,36 +13,34 @@ overrides:
       a:
         techs:
           test_supply_elec:
-          test_demand_elec:
 
       b:
         techs:
           test_supply_elec:
-          test_demand_elec:
 
   simple_supply_locations:
     locations:
       a:
+        inherit: init_nodes
         techs:
           test_supply_elec:
-          test_demand_elec:
 
       b:
+        inherit: init_nodes
         techs:
           test_supply_elec:
-          test_demand_elec:
 
   simple_supply_plus: # does not have a solution
     nodes:
       a:
         techs:
           test_supply_plus:
-          test_demand_elec:
+            source_max: file=supply_plus_resource.csv
 
       b:
         techs:
           test_supply_plus:
-          test_demand_elec:
+            source_max: file=supply_plus_resource.csv
 
   simple_supply_and_supply_plus:
     nodes:
@@ -50,13 +48,13 @@ overrides:
         techs:
           test_supply_elec:
           test_supply_plus:
-          test_demand_elec:
+            source_max: file=supply_plus_resource.csv
 
       b:
         techs:
           test_supply_elec:
           test_supply_plus:
-          test_demand_elec:
+            source_max: file=supply_plus_resource.csv
 
   supply_and_supply_plus_milp:
     nodes:
@@ -64,59 +62,68 @@ overrides:
         techs:
           test_supply_elec:
           test_supply_plus:
-            switches.cap_method: integer
-            constraints:
-              units_max: 1
-              flow_cap_per_unit: 15
-              storage_cap_per_unit: 15
-            costs.monetary: { purchase: 1, flow_cap: 0 }
-          test_demand_elec:
+            source_max: file=supply_plus_resource.csv
+            cap_method: integer
+            units_max: 1
+            flow_cap_per_unit: 15
+            storage_cap_per_unit: 15
+            cost_purchase:
+              data: 1
+              index: monetary
+              dims: costs
+            cost_flow_cap:
+              data: 0
+              index: monetary
+              dims: costs
 
-    links.a,b.active: false
+    tech_groups.test_transmission.active: false
 
   supply_purchase:
     nodes:
       a:
         techs:
           test_supply_elec:
-            switches.cap_method: binary
-            costs.monetary.purchase: 1
-            costs.monetary.flow_cap: 0
-          test_demand_elec:
+            cap_method: binary
+            cost_purchase:
+              data: 1
+              index: monetary
+              dims: costs
+            cost_flow_cap:
+              data: 0
+              index: monetary
+              dims: costs
 
-    links.a,b.active: false
+    tech_groups.test_transmission.active: false
 
   supply_milp:
     techs:
       test_supply_elec:
-        switches.cap_method: integer
-        constraints:
-          units_max: 1
-          flow_cap_per_unit: 15
+        cap_method: integer
+        units_max: 1
+        flow_cap_per_unit: 15
     nodes:
       a:
         techs:
           test_supply_elec:
-          test_demand_elec:
       b.active: false
-    links.a,b.active: false
+    tech_groups.test_transmission.active: false
 
   supply_export:
     techs:
       test_supply_elec:
-        switches.export: true
-        constraints.export_carrier: electricity
-        costs.monetary.export: 0.01
+        carrier_carrier: electricity
+        cost_export:
+          data: 0.01
+          index: monetary
+          dims: costs
     nodes:
       a:
         techs:
           test_supply_elec:
-          test_demand_elec:
 
       b:
         techs:
           test_supply_elec:
-          test_demand_elec:
 
   simple_conversion:
     nodes:
@@ -125,16 +132,16 @@ overrides:
           test_supply_elec:
           test_supply_gas:
           test_conversion:
-          test_demand_elec:
           test_demand_heat:
+            sink_equals: file=demand_heat.csv
 
       b:
         techs:
           test_supply_elec:
           test_supply_gas:
           test_conversion:
-          test_demand_elec:
           test_demand_heat:
+            sink_equals: file=demand_heat.csv
 
   conversion_and_conversion_plus:
     nodes:
@@ -145,46 +152,44 @@ overrides:
           test_supply_coal:
           test_conversion:
           test_conversion_plus:
-          test_demand_elec:
           test_demand_heat:
+            sink_equals: file=demand_heat.csv
 
-    links.a,b.active: false
+    tech_groups.test_transmission.active: false
 
   conversion_plus_milp:
     techs:
       test_conversion_plus:
-        switches.cap_method: integer
-        constraints:
-          units_max: 2
-          flow_cap_per_unit: 15
+        cap_method: integer
+        units_max: 2
+        flow_cap_per_unit: 15
     nodes:
       a:
         techs:
           test_supply_elec:
           test_supply_gas:
           test_conversion_plus:
-          test_demand_elec:
           test_demand_heat:
+            sink_equals: file=demand_heat.csv
 
-    links.a,b.active: false
+    tech_groups.test_transmission.active: false
 
   conversion_milp:
     techs:
       test_conversion:
-        switches.cap_method: integer
-        constraints:
-          units_max: 1
-          flow_cap_per_unit: null
+        cap_method: integer
+        units_max: 1
+        flow_cap_per_unit: null
     nodes:
       a:
         techs:
           test_supply_elec:
           test_supply_gas:
           test_conversion:
-          test_demand_elec:
           test_demand_heat:
+            sink_equals: file=demand_heat.csv
 
-    links.a,b.active: false
+    tech_groups.test_transmission.active: false
 
   conversion_plus_purchase:
     nodes:
@@ -193,14 +198,15 @@ overrides:
           test_supply_elec:
           test_supply_gas:
           test_conversion_plus:
-            switches.cap_method: binary
-            costs:
-              monetary:
-                purchase: 1
-          test_demand_elec:
+            cap_method: binary
+            cost_purchase:
+              data: 1
+              index: monetary
+              dims: costs
           test_demand_heat:
+            sink_equals: file=demand_heat.csv
 
-    links.a,b.active: false
+    tech_groups.test_transmission.active: false
 
   simple_conversion_plus:
     nodes:
@@ -210,10 +216,10 @@ overrides:
           test_supply_gas:
           test_supply_coal:
           test_conversion_plus:
-          test_demand_elec:
           test_demand_heat:
+            sink_equals: file=demand_heat.csv
 
-    links.a,b.active: false
+    tech_groups.test_transmission.active: false
 
   simple_chp:
     nodes:
@@ -222,29 +228,36 @@ overrides:
           test_supply_elec:
           test_supply_gas:
           test_chp:
-          test_demand_elec:
           test_demand_heat:
+            sink_equals: file=demand_heat.csv
 
-    links.a,b.active: false
+    tech_groups.test_transmission.active: false
 
   fuel_distribution:
     techs:
-      test_conversion_plus:
-        essentials:
-          carrier_in: [gas, coal]
-          carrier_out_2: null
-          primary_carrier_in: gas
-
+      test_conversion:
+        carrier_in: [gas, coal]
+        carrier_out: electricity
     nodes:
-      a,b:
+      a:
         techs:
+          test_conversion:
+            cost_flow_in:
+              data: [1, 2]
+              index: [[monetary, coal], [monetary, gas]]
+              dims: [costs, carriers]
+
+    node_groups:
+      init_nodes:
+        techs:
+          test_demand_elec:
+            sink_equals: file=demand_elec.csv
           test_supply_gas:
           test_supply_coal:
-          test_conversion_plus:
-          test_demand_elec:
+          test_conversion:
           test_demand_coal:
 
-    links.a,b.active: false
+    tech_groups.test_transmission.active: false
 
   simple_storage:
     nodes:
@@ -252,19 +265,16 @@ overrides:
         techs:
           test_supply_elec:
           test_storage:
-          test_demand_elec:
 
       b:
         techs:
           test_supply_elec:
           test_storage:
-          test_demand_elec:
 
   storage_discharge_depth:
     techs:
       test_storage:
-        constraints:
-          storage_discharge_depth: 0.8
+        storage_discharge_depth: 0.8
 
   storage_milp:
     nodes:
@@ -272,14 +282,12 @@ overrides:
         techs:
           test_supply_elec:
           test_storage:
-            switches.cap_method: integer
-            constraints:
-              units_max: 2
-              flow_cap_per_unit: 10
-              storage_cap_per_unit: 15
-          test_demand_elec:
+            cap_method: integer
+            units_max: 2
+            flow_cap_per_unit: 10
+            storage_cap_per_unit: 15
 
-    links.a,b.active: false
+    tech_groups.test_transmission.active: false
 
   storage_purchase:
     nodes:
@@ -287,11 +295,13 @@ overrides:
         techs:
           test_supply_elec:
           test_storage:
-            switches.cap_method: binary
-            costs.monetary: { purchase: 1 }
-          test_demand_elec:
+            cap_method: binary
+            cost_purchase:
+              data: 1
+              index: monetary
+              dims: costs
 
-    links.a,b.active: false
+    tech_groups.test_transmission.active: false
 
   spores:
     config:
@@ -300,13 +310,24 @@ overrides:
         spores_score_cost_class: "spores_score"
         spores_number: 3
       parameters:
-        spores_slack.data: 0.1
-        objective_cost_weights.data: { "monetary": 1, "spores_score": 0 }
+        spores_slack: 0.1
+        objective_cost_weights:
+          data: [1, 0]
+          index: ["monetary", "spores_score"]
 
-    techs.test_supply_elec.costs.spores_score.flow_cap: 0
-    techs.test_supply_elec.costs.spores_score.interest_rate: 0
-    techs.test_supply_elec.constraints.lifetime: 1
+    techs.test_supply_elec:
+      cost_flow_cap:
+        data: [10, 0]
+        index: [monetary, spores_score]
+        dims: costs
+      cost_interest_rate:
+        data: [0.1, 0]
+        index: [monetary, spores_score]
+        dims: costs
+      lifetime: 1
 
+  empty_tech_node:
+    nodes.c.techs:
   one_day:
     config.init.time_subset: ["2005-01-01", "2005-01-01"]
 
@@ -327,43 +348,19 @@ overrides:
 
   investment_costs:
     tech_groups:
-      supply:
-        constraints:
-          lifetime: 25
-        costs:
-          monetary:
-            interest_rate: 0.1
-            flow_cap: 10
-      supply_plus:
-        constraints:
-          lifetime: 25
-        costs:
-          monetary:
-            interest_rate: 0.1
-            flow_cap: 10
-      storage:
-        constraints:
-          lifetime: 25
-        costs:
-          monetary:
-            interest_rate: 0.1
-            flow_cap: 10
-      conversion:
-        constraints:
-          lifetime: 25
-        costs:
-          monetary:
-            interest_rate: 0.1
-            flow_cap: 10
-      conversion_plus:
-        constraints:
-          lifetime: 25
-        costs:
-          monetary:
-            interest_rate: 0.1
-            flow_cap: 10
+      test_controller:
+        lifetime: 25
+        cost_interest_rate:
+          data: 0.1
+          index: monetary
+          dims: costs
+        cost_flow_cap:
+          data: 10
+          index: monetary
+          dims: costs
 
   demand_elec_max:
-    techs.test_demand_elec.constraints:
-      sink_equals: null
-      sink_max: file=demand_elec.csv
+    node_groups.init_nodes.techs:
+      test_demand_elec:
+        sink_equals: null
+        sink_max: file=demand_elec.csv

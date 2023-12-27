@@ -241,7 +241,7 @@ To use a single alternative cost class, disabling the consideration of the defau
 
 .. seealso::
 
-    :ref:`config_reference_constraints`, :ref:`config_reference_costs`, :doc:`tutorials <tutorials>`, :doc:`built-in examples <ref_example_models>`
+    :ref:`config_reference_defaults`, :doc:`tutorials <tutorials>`, :doc:`built-in examples <ref_example_models>`
 
 Allowing for unmet demand
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -397,7 +397,7 @@ The modeller can also specify a distance for each link, and use per-distance con
 
 .. seealso::
 
-    :ref:`config_reference_constraints`, :ref:`config_reference_costs`.
+    :ref:`config_reference_defaults`.
 
 .. _building_overrides:
 

@@ -1,0 +1,191 @@
+
+# yaml-language-server: $schema=https://json-schema.org/draft/2020-12/schema#
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: All configuration options when calling Calliope models.
+type: object
+properties:
+  config:
+    type: object
+    description: All configuration options used for a Calliope model
+    additionalProperties: false
+    properties:
+      init:
+        type: object
+        description: All configuration options used when initialising a Calliope model
+        additionalProperties: false
+        properties:
+          name:
+            type: ["null", string]
+            default: null
+            description: Model name
+          calliope_version:
+            type: ["null", string]
+            default: null
+            description: Calliope framework version this model is intended for
+          time_subset:
+            oneOf:
+              - type: "null"
+              - type: array
+                minItems: 2
+                maxItems: 2
+                items:
+                  type: string
+                  description: ISO8601 format datetime strings of the form `YYYY-mm-dd HH:MM:SS` (e.g, '2005-01', '2005-01-01', '2005-01-01 00:00', ...)
+            default: null
+            description: Subset of timesteps as a two-element list giving the inclusive range
+          time_resample:
+            type: ["null", string]
+            default: null
+            description: setting to adjust time resolution, e.g. "2H" for 2-hourly
+            pattern: "^[0-9]+[a-zA-Z]"
+          time_cluster:
+            type: ["null", string]
+            default: null
+            description: setting to cluster the timeseries, must be a path to a file where each date is linked to a representative date that also exists in the timeseries.
+          time_data_path:
+            type: string
+            default: "."
+            description: Path to time series data. If relative, it will be relative to the base model definition file.
+          time_format:
+            type: string
+            default: "ISO8601"
+            description: Timestamp format of all time series data when read from file. "ISO8601" means "%Y-%m-%d %H:%M:%S".
+          custom_math:
+            type: array
+            default: []
+            description: List of references to files which contain custom mathematical formulations.
+            uniqueItems: true
+            items:
+              type: string
+              description: >
+                If referring to an in-built Calliope custom math file (see documentation for available files), do not append the reference with ".yaml".
+                If referring to your own custom math file, ensure the file type is given as a suffix (".yaml" or ".yml").
+                Relative paths will be assumed to be relative to the model definition file given when creating a calliope Model (`calliope.Model(model_definition=...)`)
+
+      build:
+        type: object
+        description: >
+          All configuration options used when building a Calliope optimisation problem (`calliope.Model.build`).
+          Additional configuration items will be passed onto math string parsing and can therefore be accessed in the `where` strings by `config.[item-name]`, where "[item-name]" is the name of your own configuration item.
+        additionalProperties: true
+        properties:
+          backend:
+            type: string
+            default: pyomo
+            description: Module with which to build the optimisation problem
+          cyclic_storage:
+            type: boolean
+            default: true
+            description: >
+              If true, link storage levels in the last model timestep with the first model timestep.
+              `inter_cluster_storage` custom math must be included if using time clustering and setting this to `true`.
+          ensure_feasibility:
+            type: boolean
+            default: false
+            description: >
+              whether to include decision variables in the model which will meet unmet demand or consume unused supply in the model so that the optimisation solves successfully. This should only be used as a debugging option (as any unmet demand/unused supply is a sign of improper model formulation).
+          mode:
+            type: string
+            default: plan
+            description: Mode in which to run the optimisation.
+            enum: [plan, spores, operate]
+          objective:
+            type: string
+            default: min_cost_optimisation
+            description: Name of internal objective function to use, from those defined in the base math and custom math (if applied).
+
+      solve:
+        type: object
+        description: All configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`).
+        additionalProperties: false
+        properties:
+          operate_window:
+            type: integer
+            description: Operate mode rolling `window`, given as a number of model timesteps.
+          operate_horizon:
+            type: integer
+            description: Operate mode rolling `horizon`, given as a number of model timesteps. (≥ `operate_window`)
+          operate_use_cap_results:
+            type: boolean
+            default: false
+            description: If the model already contains `plan` mode results, use those optimal capacities as input parameters to the `operate` mode run.
+          spores_number:
+            type: integer
+            default: 3
+            description: SPORES mode number of iterations after the initial base run.
+          spores_score_cost_class:
+            type: string
+            default: spores_score
+            description: SPORES mode cost class to vary between iterations after the initial base run.
+          spores_slack_cost_group:
+            type: string
+            description: SPORES mode cost class to keep below the given `slack` (usually "monetary").
+          spores_save_per_spore:
+            type: boolean
+            default: false
+            description: Whether or not to save the result of each SPORES mode run between iterations. If False, will consolidate all iterations into one dataset after completion of N iterations (defined by `spores_number`) and save that one dataset.
+          spores_save_per_spore_path:
+            type: string
+            description: If saving per spore, the path to save to.
+          spores_skip_cost_op:
+            type: boolean
+            default: false
+            description: If the model already contains `plan` mode results, use those as the initial base run results and start with SPORES iterations immediately.
+          save_logs:
+            type: ["null", string]
+            default: null
+            description: If given, should be a path to a directory in which to save optimisation logs.
+          solver_io:
+            type: ["null", string]
+            default: null
+            description: >
+              Some solvers have different interfaces that perform differently.
+              For instance, setting `solver_io="python"` when using the solver `gurobi` tends to reduce the time to send the optimisation problem to the solver.
+          solver_options:
+            type: ["null", object]
+            default: null
+            description: Any solver options, as key-value pairs, to pass to the chosen solver
+          solver:
+            type: string
+            default: cbc
+            description: Solver to use. Any solvers that have Pyomo interfaces can be used. Refer to the Pyomo documentation for the latest list.
+          zero_threshold:
+            type: number
+            default: 1e-10
+            description: On postprocessing the optimisation results, values smaller than this threshold will be considered as optimisation artefacts and will be set to zero.
+
+  parameters:
+    type: object
+    description: Calliope model arbitrary parameter definitions.
+    additionalProperties: false
+    patternProperties:
+      '^[^_^\d][\w]*$': {}
+
+  techs:
+    type: object
+    description: Calliope model technology definitions.
+    additionalProperties: false
+    patternProperties: &nested_pattern
+      '^[^_^\d][\w]*$':
+        type: object
+        patternProperties:
+          '^[^_^\d][\w]*$': {}
+
+  nodes:
+    type: object
+    description: Calliope model node definitions.
+    additionalProperties: false
+    patternProperties: *nested_pattern
+
+  tech_groups:
+    type: object
+    description: Abstract technology definitions to which techs can reference using `inherit`.
+    additionalProperties: false
+    patternProperties: *nested_pattern
+
+  node_groups:
+    type: object
+    description: Abstract node definitions to which nodes can reference using `inherit`.
+    additionalProperties: false
+    patternProperties: *nested_pattern
