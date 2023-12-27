@@ -252,7 +252,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {% if equation.expression != "" %}
 
     $$
-    {{ equation.expression | trim | escape_underscores | escape_text_in_text }}
+    {{ equation.expression | trim | escape_underscores | mathify_text_in_text }}
     $$
     {% endif %}
     {% endfor %}
@@ -469,7 +469,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 instring,
             )
 
-        def __escape_text_in_text(instring):
+        def __mathify_text_in_text(instring):
             """KaTeX requires `\text{...}` blocks within `\text{...}` blocks to be placed within math blocks.
 
             We use `\\(` as the math block descriptor.
@@ -483,7 +483,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         jinja_env = jinja2.Environment(trim_blocks=True, autoescape=False)
         jinja_env.filters["removesuffix"] = lambda val, remove: val.removesuffix(remove)
         jinja_env.filters["escape_underscores"] = __escape_underscore
-        jinja_env.filters["escape_text_in_text"] = __escape_text_in_text
+        jinja_env.filters["mathify_text_in_text"] = __mathify_text_in_text
         return jinja_env.from_string(template).render(**kwargs)
 
     def _get_capacity_bounds(

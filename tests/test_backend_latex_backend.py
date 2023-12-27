@@ -39,7 +39,7 @@ class TestMathDocumentation:
         [
             ("tex", "\n\\documentclass{article}"),
             ("rst", "\nObjective"),
-            ("md", "\n# Objective"),
+            ("md", "\n## Objective"),
         ],
     )
     @pytest.mark.parametrize("include", ["build_all", "build_valid"])
@@ -321,19 +321,19 @@ class TestLatexBackendModel:
                 textwrap.dedent(
                     r"""
 
-                    # Where
+                    ## Where
 
-                    ## expr
+                    ### expr
                     foobar
 
-                        ```math
-                        \begin{array}{r}
-                        \end{array}
-                        \begin{cases}
-                            1 + 2&\quad
-                            \\
-                        \end{cases}
-                        ```
+                    $$
+                    \begin{array}{r}
+                    \end{array}
+                    \begin{cases}
+                        1 + 2&\quad
+                        \\
+                    \end{cases}
+                    $$
                     """
                 ),
             ),
