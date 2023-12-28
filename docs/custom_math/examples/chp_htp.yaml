@@ -3,33 +3,34 @@
 # description: |
 #   Set Combined heat and power (CHP) plant heat to power operational zones.
 #   There are three types of CHP that can be described by the following constraints:
+#
 #   1. CHPs with extraction (condensing) turbines, where some electrical efficiency can be sacrificed by diverting high-temperature steam to provide more heat (following the extraction (cv) line).
 #   At maximum electrical efficiency, some heat can still be generated from the low-temperature steam output (following the backpressure (cb) line).
 #   The following figure shows the 2D plane of electricity and heat generation; there is a third dimension not shown here: fuel consumption.
 #
-#   ```text
-#   Along the cv line, fuel consumption remains constant.
-#   ^
-#   |Electricity
-#   |
-#   |----
-#   |    \-------   Cv
-#   |            \-------
-#   |                    \-------
-#   |                            \------
-#   |                              --/
-#   |    operating region       --/
-#   |                        --/
-#   |                     --/
-#   |                  --/
-#   |               --/
-#   |            --/   Cb
-#   |         --/
-#   |      --/
-#   |   --/
-#   | -/                              Heat
-#   -------------------------------------->
-#   ```
+#       ```text
+#       Along the cv line, fuel consumption remains constant.
+#       ^
+#       |Electricity
+#       |
+#       |----
+#       |    \-------   Cv
+#       |            \-------
+#       |                    \-------
+#       |                            \------
+#       |                              --/
+#       |    operating region       --/
+#       |                        --/
+#       |                     --/
+#       |                  --/
+#       |               --/
+#       |            --/   Cb
+#       |         --/
+#       |      --/
+#       |   --/
+#       | -/                              Heat
+#       -------------------------------------->
+#       ```
 #
 #   2. CHPs without extraction turbines, but with auxiliary boilers that can be used to divert fuel use for direct heat generation.
 #   At maximum electrical efficiency, some heat can be generated from the low-temperature steam output (following the backpressure (cb) line).
@@ -37,50 +38,50 @@
 #   This leads to two sources of heat output (E = electricity output): H1 = E / cb; H2 / boiler_eff + E / turbine_eff = fuel_consumption. Total heat output H is then H1 + H2.
 #   The following figure shows the 2D plane of electricity and heat generation; there is a third dimension not shown here: fuel consumption.
 #
-#   ```text
-#   ^
-#   |Electricity
-#   |
-#   |                  --/
-#   |         Cb    --/   \-
-#   |            --/        \-
-#   |         --/             \-
-#   |      --/                  \-
-#   |   --/        operating      \-
-#   | -/            region          \-  Heat
-#   ---------------------------------------->
-#   ```
+#       ```text
+#       ^
+#       |Electricity
+#       |
+#       |                  --/
+#       |         Cb    --/   \-
+#       |            --/        \-
+#       |         --/             \-
+#       |      --/                  \-
+#       |   --/        operating      \-
+#       | -/            region          \-  Heat
+#       ---------------------------------------->
+#       ```
 #
 #   3. CHPs without extraction turbines and without an auxiliary boiler.
 #   Here, there is no operating region; the output must follow the backpressure line.
 #
-#   ```text
-#   ^
-#   |Electricity
-#   |
-#   |                          /--
-#   |                       /--
-#   |               Cb   /--
-#   |                 /--
-#   |               /-
-#   |            /--
-#   |         /--
-#   |      /--
-#   |    /-
-#   | /--                             Heat
-#   -------------------------------------->
-#   ```
+#       ```text
+#       ^
+#       |Electricity
+#       |
+#       |                          /--
+#       |                       /--
+#       |               Cb   /--
+#       |                 /--
+#       |               /-
+#       |            /--
+#       |         /--
+#       |      /--
+#       |    /-
+#       | /--                             Heat
+#       -------------------------------------->
+#       ```
 #
 #   New technology-level parameters:
 #
-#   * `turbine_type` (used to group constraints together)
-#   * `power_loss_factor`
-#   * `power_to_heat_ratio`
-#   * `boiler_eff`
+#   - `turbine_type` (used to group constraints together)
+#   - `power_loss_factor`
+#   - `power_to_heat_ratio`
+#   - `boiler_eff`
 #
 #   Helper functions used:
 #
-#   * `reduce_carrier_dim` (expression)
+#   - `reduce_carrier_dim` (expression)
 #
 # ---
 

@@ -5,18 +5,18 @@
 #
 #   New technology-level parameters:
 #
-#   * `annual_flow_max`
-#   * `annual_source_max`
+#   - `annual_flow_max`
+#   - `annual_source_max`
 #
 #   New top-level parameters:
 #
-#   * `annual_flow_max` (if summing over technologies and/or nodes)
-#   * `flow_max_group` (if summing over technologies and/or nodes)
+#   - `annual_flow_max` (if summing over technologies and/or nodes)
+#   - `flow_max_group` (if summing over technologies and/or nodes)
 #
 #   Helper functions used:
 #
-#   * `inheritance` (where)
-#   * `sum` (expression)
+#   - `inheritance` (where)
+#   - `sum` (expression)
 #
 # ---
 

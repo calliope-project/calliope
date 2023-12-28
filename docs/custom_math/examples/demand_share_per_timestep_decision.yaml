@@ -12,13 +12,13 @@
 #
 #   New top-level parameters:
 #
-#   * ``relaxation`` (defined here directly)
-#   * ``demand_share_limit`` (defined here directly)
+#   - ``relaxation`` (defined here directly)
+#   - ``demand_share_limit`` (defined here directly)
 #
 #   Helper functions used:
 #
-#   * sum (expression)
-#   * select_from_lookup_arrays (expression)
+#   - sum (expression)
+#   - select_from_lookup_arrays (expression)
 #
 # ---
 
