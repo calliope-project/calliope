@@ -20,12 +20,6 @@ repos:
       - id: nbqa-ruff
         args: [--fix, --exit-non-zero-on-fix]
 
-  - repo: https://github.com/tcort/markdown-link-check
-    rev: v3.11.2
-    hooks:
-      - id: markdown-link-check
-        args: [-q]
-
 ci:  # https://pre-commit.ci/
   autofix_prs: false
   autoupdate_schedule: monthly
