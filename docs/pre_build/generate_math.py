@@ -12,21 +12,15 @@ from pathlib import Path
 
 import calliope
 import pandas as pd
+from calliope.util import schema
 
 BASEPATH = Path(__file__).resolve().parent
-STATICPATH = BASEPATH / ".." / "_static"
-NONDEMAND_TECHGROUPS = [
-    "supply",
-    "storage",
-    "conversion",
-    "transmission",
-    "conversion_plus",
-    "supply_plus",
-]
+
+NONDEMAND_TECHGROUPS = ["supply", "storage", "conversion", "transmission"]
 
 
 def generate_base_math_model(model_config: dict) -> calliope.Model:
-    """Generate RST file for the base math
+    """Generate model with documentation for the base math
 
     Args:
         model_config (dict): Calliope model config.
@@ -38,24 +32,19 @@ def generate_base_math_model(model_config: dict) -> calliope.Model:
         model_definition=model_config, timeseries_dataframes=_ts_dfs()
     )
     model.math_documentation.build()
-    model.math_documentation.write(STATICPATH / "math.rst")
     return model
 
 
 def generate_custom_math_model(
-    base_model: calliope.Model,
-    model_config: dict,
-    model_config_updates: dict,
-    name: str,
-) -> None:
-    """Generate RST file for a built-in custom math file, showing only the changes made
+    base_model: calliope.Model, model_config: dict, model_config_updates: dict
+) -> calliope.Model:
+    """Generate model with documentation for a built-in custom math file, showing only the changes made
     relative to the base math.
 
     Args:
         base_model (calliope.Model): Calliope model with only the base math applied.
         model_config (dict): Model config suitable for generating the base math.
         model_config_updates (dict): Changes to make to the model config to load the custom math.
-        name (str): Name of the custom math to add to the file name.
     """
     model_config = calliope.AttrDict(model_config)
     model_config_updates = calliope.AttrDict(model_config_updates)
@@ -67,7 +56,7 @@ def generate_custom_math_model(
     )
     _keep_only_changes(base_model, model)
 
-    model.math_documentation.write(STATICPATH / f"math_{name}.rst")
+    return model
 
 
 def generate_model_config() -> dict[str, dict]:
@@ -78,58 +67,43 @@ def generate_model_config() -> dict[str, dict]:
     Parameters that can be defined over a timeseries are forced to be defined over a timeseries.
     Accordingly, the parameters will have "timesteps" in their dimensions in the formulation.
     """
-    defaults = calliope.AttrDict.from_yaml(
-        BASEPATH / ".." / ".." / "src" / "calliope" / "config" / "defaults.yaml"
+    defaults = schema.extract_from_schema(
+        schema.MODEL_SCHEMA, "default", subset_top_level="techs"
     )
-
-    allowed_: dict[str, dict] = {i: {"all": set()} for i in ["costs", "constraints"]}
-
     dummy_techs = {
         "demand_tech": {
-            "essentials": {"parent": "demand", "carrier": "electricity"},
-            "constraints": {"sink_equals": "df=ts"},
-        }
+            "parent": "demand",
+            "carrier_in": "electricity",
+            "sink_equals": "df=ts",
+        },
+        "conversion_tech": {
+            "parent": "conversion",
+            "carrier_in": "gas",
+            "carrier_out": ["electricity", "heat"],
+        },
+        "supply_tech": {"parent": "supply", "carrier_out": "gas"},
+        "storage_tech": {
+            "parent": "storage",
+            "carrier_in": "electricity",
+            "carrier_out": "electricity",
+        },
+        "transmission_tech": {
+            "parent": "transmission",
+            "carrier_in": "electricity",
+            "carrier_out": "electricity",
+            "from": "A",
+            "to": "B",
+        },
     }
 
     for tech_group in NONDEMAND_TECHGROUPS:
-        for config_ in ["costs", "constraints"]:
-            tech_allowed_ = defaults.tech_groups[tech_group][f"allowed_{config_}"]
-            # We keep parameter definitions to a bare minimum, so any that have been
-            # defined for a previous tech group in the loop will not be defined for
-            # later tech groups.
-            allowed_[config_][tech_group] = set(tech_allowed_).difference(
-                allowed_[config_]["all"]
-            )
-            # We keep lifetime and interest rate since all techs that define costs will
-            # need them.
-            allowed_[config_][tech_group].update(["lifetime", "interest_rate"])
-
-            allowed_[config_]["all"].update(tech_allowed_)
-
-        if "conversion" in tech_group:
-            carriers = {"carrier_in": "electricity", "carrier_out": "heat"}
-        else:
-            carriers = {"carrier": "electricity"}
-
-        dummy_techs[f"{tech_group}_tech"] = {
-            "essentials": {"parent": tech_group, **carriers},
-            "constraints": {
-                k: _add_data(k, v)
-                for k, v in defaults.techs.default_tech.constraints.items()
-                if k in allowed_["constraints"][tech_group]
-            },
-            "costs": {
-                "monetary": {
-                    k: _add_data(k, v)
-                    for k, v in defaults.techs.default_tech.costs.default_cost.items()
-                    if k in allowed_["costs"][tech_group]
-                }
-            },
-        }
-
+        for k, v in defaults.items():
+            dummy_techs[f"{tech_group}_tech"][k] = _add_data(k, v)
+    techs_at_nodes = {k: None for k in dummy_techs.keys() if k != "transmission_tech"}
     return {
         "nodes": {
-            "A": {"techs": {k: None for k in dummy_techs.keys()}, "available_area": 1}
+            "A": {"techs": techs_at_nodes, "available_area": 1},
+            "B": {"techs": techs_at_nodes},
         },
         "techs": dummy_techs,
     }
@@ -137,11 +111,11 @@ def generate_model_config() -> dict[str, dict]:
 
 def _add_data(name, default_val):
     "Some parameters need hardcoded values to be returned"
-    if name == "carrier_ratios":
-        return {"carrier_in.electricity": 1}
-    elif name == "export_carrier":
-        return "electricity"
-    elif default_val is None or name == "interest_rate":
+    if name.startswith("cost_"):
+        return {"data": 1, "index": "monetary", "dims": "costs"}
+    elif name in ["export_carrier", "name", "color"]:
+        return "foo"
+    elif pd.isnull(default_val):
         return 1
     else:
         return default_val
@@ -162,14 +136,14 @@ def _keep_only_changes(base_model: calliope.Model, model: calliope.Model) -> Non
             if name in base_model.math[component_group]:
                 if not component_dict.get("active", True):
                     expr_del.append(name)
-                    component_dict["description"] = ":red:`REMOVED`"
+                    component_dict["description"] = "|REMOVED|"
                     component_dict["active"] = True
                 elif base_model.math[component_group].get(name, {}) != component_dict:
-                    _add_to_description(component_dict, ":yellow:`UPDATED`")
+                    _add_to_description(component_dict, "|UPDATED|")
                 else:
                     full_del.append(name)
             else:
-                _add_to_description(component_dict, ":green:`NEW`")
+                _add_to_description(component_dict, "|NEW|")
     model.math_documentation.build()
     for key in expr_del:
         model.math_documentation._instance._dataset[key].attrs["math_string"] = ""
@@ -190,11 +164,12 @@ def _ts_dfs() -> dict[str, pd.DataFrame]:
     return {"ts": ts}
 
 
-if __name__ == "__main__":
+def generate_math_docs():
     base_model_config = generate_model_config()
     base_model = generate_base_math_model(base_model_config)
+    base_model.math_documentation.write(BASEPATH / ".." / "_generated" / "math.md")
 
-    generate_custom_math_model(
+    custom_model = generate_custom_math_model(
         base_model,
         base_model_config,
         {
@@ -216,8 +191,12 @@ if __name__ == "__main__":
                 }
             }
         },
-        "storage_inter_cluster",
     )
+
+    custom_model.math_documentation.write(
+        BASEPATH / ".." / "_generated" / "math_storage_inter_cluster.md"
+    )
+
     # FIXME: Operate mode replaces variables with parameters, so we cannot show that the
     # variable has been deleted in the doc because we cannot build a variable with the same
     # name as another model component.
@@ -243,3 +222,7 @@ if __name__ == "__main__":
     # generate_custom_math_model(
     #    base_model, base_model_config.copy(), {"model.custom_math": ["spores"]}, "spores"
     # )
+
+
+if __name__ == "__main__":
+    generate_math_docs()

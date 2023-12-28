@@ -39,7 +39,7 @@ class TestMathDocumentation:
         [
             ("tex", "\n\\documentclass{article}"),
             ("rst", "\nObjective"),
-            ("md", "\n# Objective"),
+            ("md", "\n## Objective"),
         ],
     )
     @pytest.mark.parametrize("include", ["build_all", "build_valid"])
@@ -321,19 +321,19 @@ class TestLatexBackendModel:
                 textwrap.dedent(
                     r"""
 
-                    # Where
+                    ## Where
 
-                    ## expr
+                    ### expr
                     foobar
 
-                        ```math
-                        \begin{array}{r}
-                        \end{array}
-                        \begin{cases}
-                            1 + 2&\quad
-                            \\
-                        \end{cases}
-                        ```
+                    $$
+                    \begin{array}{r}
+                    \end{array}
+                    \begin{cases}
+                        1 + 2&\quad
+                        \\
+                    \end{cases}
+                    $$
                     """
                 ),
             ),
@@ -429,6 +429,26 @@ class TestLatexBackendModel:
             ("{{ foo }}", {"foo": 1}, "1"),
             ("{{ foo|removesuffix('s') }}", {"foo": "bars"}, "bar"),
             ("{{ foo }} + {{ bar }}", {"foo": "1", "bar": "2"}, "1 + 2"),
+            (
+                "{{ foo|escape_underscores }}",
+                {"foo": r"\text{foo_bar}_foo_{bar}"},
+                r"\text{foo\_bar}_foo_{bar}",
+            ),
+            (
+                "{{ foo|escape_underscores }}",
+                {"foo": r"\textit{foo_bar}"},
+                r"\textit{foo\_bar}",
+            ),
+            (
+                "{{ foo|escape_underscores }}",
+                {"foo": r"\textbf{foo_bar}"},
+                r"\textbf{foo\_bar}",
+            ),
+            (
+                "{{ foo|mathify_text_in_text }}",
+                {"foo": r"\text{foo_bar} + \text{foo,\text{foo}_\textit{bar},bar}"},
+                r"\text{foo_bar} + \text{foo,\(\text{foo}_\textit{bar}\),bar}",
+            ),
         ],
     )
     def test_render(self, dummy_latex_backend_model, instring, kwargs, expected):

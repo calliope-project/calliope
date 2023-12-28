@@ -1,6 +1,7 @@
 import importlib
 import re
 from copy import deepcopy
+from typing import Literal, Optional
 
 import jsonschema
 
@@ -76,17 +77,39 @@ def validate_dict(to_validate: dict, schema: dict, dict_descriptor: str) -> None
         )
 
 
-def extract_from_schema(schema: dict, keyword: str) -> dict:
+def extract_from_schema(
+    schema: dict,
+    keyword: str,
+    subset_top_level: Optional[Literal["nodes", "techs", "parameters"]] = None,
+) -> dict:
+    """Extract a keyword for each leaf property in the schema.
+
+    This currently only reliably works for "default".
+    Other keywords exist at branch properties, which confuses the extraction process.
+
+    Args:
+        schema (dict): Schema to extract keyword from
+        keyword (str): property key to extract
+        subset_top_level (Literal["nodes", "techs", "parameters"], optional):
+            Include only those properties that are leaves along a specific top-level property branch.
+            Defaults to None, i.e., all property branches are included.
+
+    Returns:
+        dict: Flat dictionary of property name : keyword value.
+        Property trees are discarded since property names must be unique.
+    """
     extracted_keywords: dict = {}
     KeywordValidatingValidator = _extend_with_keyword(
-        jsonschema.Draft202012Validator, keyword
+        jsonschema.Draft202012Validator,
+        keyword,
+        subset_top_level if subset_top_level is not None else "",
     )
     KeywordValidatingValidator(schema).validate(extracted_keywords)
     return extracted_keywords
 
 
 def _extend_with_keyword(
-    validator_class: jsonschema.Validator, keyword: str
+    validator_class: jsonschema.Validator, keyword: str, subset_top_level: str
 ) -> jsonschema.Validator:
     validate_properties = validator_class.VALIDATORS["properties"]
 
@@ -94,10 +117,14 @@ def _extend_with_keyword(
         for prop, val in properties.as_dict_flat().items():
             if prop.endswith(keyword):
                 config_key_regex = rf"config\.properties\.(init|build|solve)\.properties\.(\w+)\.{keyword}"
-                model_def_key_regex = rf".*\.properties\.(\w+)\.{keyword}"
+                model_def_key_regex = (
+                    rf"{subset_top_level}.*\.properties\.(\w+)\.{keyword}"
+                )
                 new_key = re.match(config_key_regex, prop)
                 if new_key is None:
                     new_key = re.match(model_def_key_regex, prop)
+                if new_key is None:
+                    continue
                 instance.setdefault(".".join(new_key.groups()), val)
 
         for error in validate_properties(validator, properties, instance, schema):

@@ -1,4 +1,4 @@
-name: calliope-docs
+name: calliope-legacy-docs
 
 channels:
   - conda-forge

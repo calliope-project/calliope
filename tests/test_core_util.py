@@ -6,10 +6,12 @@ from pathlib import Path
 import calliope
 import importlib_resources
 import jsonschema
+import numpy as np
+import pandas as pd
 import pytest
 from calliope.util.generate_runs import generate_runs
 from calliope.util.logging import log_time
-from calliope.util.schema import validate_dict
+from calliope.util.schema import extract_from_schema, validate_dict
 
 from .common.util import check_error_or_warning
 
@@ -180,3 +182,200 @@ class TestValidateDict:
             calliope.AttrDict.from_yaml(dict_path), allow_override=True
         )
         validate_dict(to_validate, math_schema, "")
+
+
+class TestExtractFromSchema:
+    @pytest.fixture(scope="class")
+    def sample_config_schema(self):
+        schema_string = r"""
+        $schema: https://json-schema.org/draft/2020-12/schema#
+        title: All options available to configure a Calliope model.
+        type: object
+        additionalProperties: false
+        properties:
+          config:
+            type: object
+            description: All configuration options used for a Calliope model
+            additionalProperties: false
+            properties:
+              init:
+                type: object
+                description: init config.
+                additionalProperties: false
+                properties:
+                  name:
+                    type: ["null", string]
+                    default: null
+                    description: Model name
+              build:
+                type: object
+                description: build config.
+                additionalProperties: true
+                properties:
+                  backend:
+                    type: string
+                    default: pyomo
+                    description: backend.
+              solve:
+                type: object
+                description: solve config.
+                additionalProperties: false
+                properties:
+                  operate_window:
+                    type: integer
+                    description: operate window.
+                  operate_use_cap_results:
+                    type: boolean
+                    default: false
+                    description: operate use cap results.
+        """
+        return calliope.AttrDict.from_yaml_string(schema_string)
+
+    @pytest.fixture(scope="class")
+    def sample_model_def_schema(self):
+        schema_string = r"""
+        $schema: https://json-schema.org/draft/2020-12/schema#
+        title: All options available to configure a Calliope model.
+        type: object
+        additionalProperties: false
+        properties:
+          parameters:
+            type: object
+            description: Calliope model arbitrary parameter definitions.
+            additionalProperties: false
+            properties:
+              objective_cost_weights:
+                type: string
+                default: 1
+                description: foo.
+          nodes:
+            type: object
+            description: Calliope model node definitions.
+            additionalProperties: false
+            patternProperties:
+              '^[^_^\d][\w]*$':
+                type: object
+                title: A named node.
+                properties:
+                  latitude:
+                    type: number
+                    title: Latitude (WGS84 / EPSG4326).
+                  available_area:
+                    type: number
+                    default: .inf
+                    minimum: 0
+          techs:
+            type: object
+            description: Calliope model technology definitions.
+            additionalProperties: false
+            properties:
+              color:
+                type: ["null", string]
+                default: .nan
+
+              carrier_export:
+                oneOf:
+                  - type: string
+                  - type: array
+                    uniqueItems: true
+                    minItems: 2
+
+              parent:
+                type: string
+                enum: [demand, supply, conversion, storage, transmission]
+
+              cap_method:
+                type: string
+                default: continuous
+                title: Foo.
+                description: foo.
+                enum: [continuous, binary, integer]
+
+              include_storage:
+                type: boolean
+                default: false
+                title: Bar.
+                description: bar.
+
+              flow_cap_per_storage_cap_min:
+                $ref: "#/$defs/TechParamNullNumberFixed"
+                default: 0
+                title: Foobar.
+                description: foobar.
+        """
+        return calliope.AttrDict.from_yaml_string(schema_string)
+
+    @pytest.fixture
+    def expected_config_defaults(self):
+        return pd.Series(
+            {
+                "init.name": np.nan,
+                "build.backend": "pyomo",
+                "solve.operate_use_cap_results": False,
+            }
+        ).sort_index()
+
+    @pytest.fixture
+    def expected_model_def_defaults(self):
+        return pd.Series(
+            {
+                "objective_cost_weights": 1,
+                "available_area": np.inf,
+                "color": np.nan,
+                "cap_method": "continuous",
+                "include_storage": False,
+                "flow_cap_per_storage_cap_min": 0,
+            }
+        ).sort_index()
+
+    def test_extract_config_defaults(
+        self, sample_config_schema, expected_config_defaults
+    ):
+        extracted_defaults = pd.Series(
+            extract_from_schema(sample_config_schema, "default")
+        )
+        pd.testing.assert_series_equal(
+            extracted_defaults.sort_index(), expected_config_defaults
+        )
+
+    def test_extract_model_def_defaults(
+        self, sample_model_def_schema, expected_model_def_defaults
+    ):
+        extracted_defaults = pd.Series(
+            extract_from_schema(sample_model_def_schema, "default")
+        )
+        pd.testing.assert_series_equal(
+            extracted_defaults.sort_index(), expected_model_def_defaults
+        )
+
+    @pytest.mark.parametrize(
+        ["schema_key", "prop_keys"],
+        [
+            ("parameters", ["objective_cost_weights"]),
+            ("nodes", ["available_area"]),
+            (
+                "techs",
+                [
+                    "color",
+                    "cap_method",
+                    "include_storage",
+                    "flow_cap_per_storage_cap_min",
+                ],
+            ),
+        ],
+    )
+    def test_extract_defaults_subset(
+        self,
+        sample_model_def_schema,
+        expected_model_def_defaults,
+        schema_key,
+        prop_keys,
+    ):
+        extracted_defaults = pd.Series(
+            extract_from_schema(sample_model_def_schema, "default", schema_key)
+        )
+        pd.testing.assert_series_equal(
+            expected_model_def_defaults.loc[prop_keys].sort_index(),
+            extracted_defaults.sort_index(),
+            check_dtype=False,
+        )
