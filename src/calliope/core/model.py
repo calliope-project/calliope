@@ -309,7 +309,7 @@ class Model(object):
 
         Args:
             custom_math (list):
-                List of references to files containting custom mathematical formulations that will be merged with the base formulation.
+                List of references to files containing custom mathematical formulations that will be merged with the base formulation.
 
         Raises:
             exceptions.ModelError:

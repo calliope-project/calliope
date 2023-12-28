@@ -277,7 +277,7 @@ Create release
         * Range of python versions supported
         * Requirement version pinning, to match any changes in ``requirements.txt`` and ``requirements.yml``
 
-    ^ Any necessary updates can be made direclty on the PR by pushing directly to the bot's branch or by using the GitHub interactive editing interface.
+    ^ Any necessary updates can be made directly on the PR by pushing directly to the bot's branch or by using the GitHub interactive editing interface.
 
 Post-release
 ------------

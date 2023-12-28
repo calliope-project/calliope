@@ -31,7 +31,7 @@ The definition of these technologies in the example model's configuration looks 
    :start-after: # supply-start
    :end-before: # supply-end
 
-The final supply technology is ``pv`` (solar photovoltaic power), which serves as an inflexible supply technology. It has a time-dependant source availablity, loaded from file, a maximum area over which it can capture its source (``area_use_max``) and a requirement that all available source must be used (``source_equals`` rather than ``source_max``). This emulates the reality of solar technologies: once installed, their production matches the availability of solar energy.
+The final supply technology is ``pv`` (solar photovoltaic power), which serves as an inflexible supply technology. It has a time-dependant source availability, loaded from file, a maximum area over which it can capture its source (``area_use_max``) and a requirement that all available source must be used (``source_equals`` rather than ``source_max``). This emulates the reality of solar technologies: once installed, their production matches the availability of solar energy.
 
 The efficiency of the DC to AC inverter (which occurs after conversion from source to carrier) is considered in ``parasitic_eff`` and the ``area_use_per_flow_cap`` gives a link between the installed area of solar panels to the installed capacity of those panels (i.e. kWp).
 
@@ -96,7 +96,7 @@ This definition in the example model's configuration is more verbose:
 
 Again, ``chp`` has the definitions for name, color, parent, and carrier_in/out. It now has an additional carrier (``carrier_out_2``) defined in its essential information, allowing a second carrier to be produced *at the same time* as the first carrier (``carrier_out``). The carrier ratio constraint tells us the ratio of carrier_out_2 to carrier_out that we can achieve, in this case 0.8 units of heat are produced every time a unit of electricity is produced. to produce these units of energy, gas is consumed at a rate of  ``flow_out(carrier_out) / flow_out_eff``, so gas consumption is only a function of power output.
 
-As with the ``pv``, the ``chp`` an export eletricity. The revenue gained from this export is given in the file ``export_power.csv``, in which negative values are given per time step.
+As with the ``pv``, the ``chp`` an export electricity. The revenue gained from this export is given in the file ``export_power.csv``, in which negative values are given per time step.
 
 Demand technologies
 ===================
