@@ -14,6 +14,8 @@ This enables un-indexed parameters to be defined, as well as those indexed over 
 |new| parameter dimensions at the `tech` or `node` level can be enhanced using the new `parameter` definition syntax.
 For instance, `flow_cap` can be defined per `carrier`.
 
+|changed| Automatically derived transmission link distances default to kilometres, with the configuration option (`config.init.distance_unit`) to switch to the old default of distances in metres.
+
 |changed| |backwards-incompatible| Costs must be defined using the new `parameter` definition syntax.
 
 |changed| `flow_cap` (formerly `energy_cap`) is indexed over `carriers` as well as `nodes` and `techs`.
