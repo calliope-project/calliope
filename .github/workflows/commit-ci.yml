@@ -11,6 +11,7 @@ on:
       - CITATION
       - AUTHORS
       - doc/**
+      - .readthedocs.yml
 
 defaults:
   run:
@@ -25,7 +26,7 @@ jobs:
     - uses: mamba-org/setup-micromamba@v1
       with:
         micromamba-version: latest
-        environment-name: ${{ github.event.repository.name }}-ubuntu-latest-311
+        environment-name: ${{ github.event.repository.name }}-ubuntu-latest-312-${{ hashFiles('requirements/dev.txt') }}
         environment-file: requirements/base.txt
         create-args: >-
           -f requirements/dev.txt

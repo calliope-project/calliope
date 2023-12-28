@@ -4,6 +4,46 @@
 
 # Note: '-start' and '-end' is used in tutorial documentation only
 
+# cost_dim_setter-start
+tech_groups:
+  cost_dim_setter:
+    cost_flow_cap:
+      data: null
+      index: monetary
+      dims: costs
+    cost_flow_in:
+      data: null
+      index: monetary
+      dims: costs
+    cost_flow_out:
+      data: null
+      index: monetary
+      dims: costs
+    cost_storage_cap:
+      data: null
+      index: monetary
+      dims: costs
+    cost_area_use:
+      data: null
+      index: monetary
+      dims: costs
+    cost_source_cap:
+      data: null
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.10
+      index: monetary
+      dims: costs
+
+  free_transmission:
+    name: "Local power transmission"
+    color: "#6783E3"
+    carrier_in: power
+    carrier_out: power
+    parent: transmission
+# cost_dim_setter-end
+
 techs:
   ##
   # Supply
@@ -11,53 +51,45 @@ techs:
 
   # ccgt-start
   ccgt:
-    essentials:
-      name: "Combined cycle gas turbine"
-      color: "#E37A72"
-      parent: supply
-      carrier_out: power
-    constraints:
-      source_max: inf
-      flow_eff: 0.5
-      flow_cap_max: 40000 # kW
-      flow_cap_max_systemwide: 100000 # kW
-      flow_ramping: 0.8
-      lifetime: 25
-    costs:
-      monetary:
-        interest_rate: 0.10
-        flow_cap: 750 # USD per kW
-        om_con: 0.02 # USD per kWh
+    name: "Combined cycle gas turbine"
+    color: "#E37A72"
+    parent: supply
+    inherit: cost_dim_setter
+    carrier_out: power
+    source_max: .inf
+    flow_out_eff: 0.5
+    flow_cap_max: 40000 # kW
+    flow_cap_max_systemwide: 100000 # kW
+    flow_ramping: 0.8
+    lifetime: 25
+
+    cost_flow_cap.data: 750 # USD per kW
+    cost_flow_in.data: 0.02 # USD per kWh
   # ccgt-end
 
   # csp-start
   csp:
-    essentials:
-      name: "Concentrating solar power"
-      color: "#F9CF22"
-      parent: supply_plus
-      carrier_out: power
-    switches:
-      source_unit: per_area
-      include_storage: True
-    constraints:
-      storage_cap_max: 614033
-      flow_cap_per_storage_cap_max: 1
-      storage_loss: 0.002
-      source_max: file=csp_resource.csv
-      flow_eff: 0.4
-      parasitic_eff: 0.9
-      area_use_max: inf
-      flow_cap_max: 10000
-      lifetime: 25
-    costs:
-      monetary:
-        interest_rate: 0.10
-        storage_cap: 50
-        area_use: 200
-        source_cap: 200
-        flow_cap: 1000
-        om_prod: 0.002
+    name: "Concentrating solar power"
+    color: "#F9CF22"
+    parent: supply
+    inherit: cost_dim_setter
+    carrier_out: power
+    source_unit: per_area
+    include_storage: True
+    storage_cap_max: 614033
+    flow_cap_per_storage_cap_max: 1
+    storage_loss: 0.002
+    flow_out_eff: 0.4
+    flow_out_parasitic_eff: 0.9
+    area_use_max: .inf
+    flow_cap_max: 10000
+    lifetime: 25
+
+    cost_storage_cap.data: 50
+    cost_area_use.data: 200
+    cost_source_cap.data: 200
+    cost_flow_cap.data: 1000
+    cost_flow_out.data: 0.002
   # csp-end
 
   ##
@@ -65,22 +97,22 @@ techs:
   ##
   # battery-start
   battery:
-    essentials:
-      name: "Battery storage"
-      color: "#3B61E3"
-      parent: storage
-      carrier: power
-    constraints:
-      flow_cap_max: 1000 # kW
-      storage_cap_max: inf
-      flow_cap_per_storage_cap_max: 4
-      flow_eff: 0.95 # 0.95 * 0.95 = 0.9025 round trip efficiency
-      storage_loss: 0 # No loss over time assumed
-      lifetime: 25
-    costs:
-      monetary:
-        interest_rate: 0.10
-        storage_cap: 200 # USD per kWh storage capacity
+    name: "Battery storage"
+    color: "#3B61E3"
+    parent: storage
+    inherit: cost_dim_setter
+    carrier_in: power
+    carrier_out: power
+    flow_cap_max: 1000 # kW
+    storage_cap_max: .inf
+    flow_cap_per_storage_cap_max: 4
+    # 0.95 * 0.95 = 0.9025 round trip efficiency
+    flow_out_eff: 0.95
+    flow_in_eff: 0.95
+    storage_loss: 0 # No loss over time assumed
+    lifetime: 25
+
+    cost_storage_cap.data: 200 # USD per kWh storage capacity
   # battery-end
 
   ##
@@ -88,11 +120,10 @@ techs:
   ##
   # demand-start
   demand_power:
-    essentials:
-      name: "Power demand"
-      color: "#072486"
-      parent: demand
-      carrier: power
+    name: "Power demand"
+    color: "#072486"
+    parent: demand
+    carrier_in: power
   # demand-end
 
   ##
@@ -100,31 +131,33 @@ techs:
   ##
 
   # transmission-start
-  ac_transmission:
-    essentials:
-      name: "AC power transmission"
-      color: "#8465A9"
-      parent: transmission
-      carrier: power
-    constraints:
-      flow_eff: 0.85
-      lifetime: 25
-    costs:
-      monetary:
-        interest_rate: 0.10
-        flow_cap: 200
-        om_prod: 0.002
 
-  free_transmission:
-    essentials:
-      name: "Local power transmission"
-      color: "#6783E3"
-      parent: transmission
-      carrier: power
-    constraints:
-      flow_cap_max: inf
-      flow_eff: 1.0
-    costs:
-      monetary:
-        om_prod: 0
+  region1_to_region2:
+    from: region1
+    to: region2
+    name: "AC power transmission"
+    color: "#8465A9"
+    parent: transmission
+    inherit: cost_dim_setter
+    carrier_in: power
+    carrier_out: power
+    flow_out_eff: 0.85
+    lifetime: 25
+    cost_flow_cap.data: 200
+    cost_flow_out.data: 0.002
+    flow_cap_max: 10000
+
+  region1_to_region1_1:
+    from: region1
+    to: region1_1
+    inherit: free_transmission
+  region1_to_region1_2:
+    from: region1
+    to: region1_2
+    inherit: free_transmission
+  region1_to_region1_3:
+    from: region1
+    to: region1_3
+    inherit: free_transmission
+
   # transmission-end

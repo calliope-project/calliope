@@ -1,10 +1,17 @@
-version: 2 # required
-formats: [pdf]
+version: 2
 conda:
-  environment: requirements/docs.yml
+  environment: requirements/base.txt
 build:
-  os: ubuntu-22.04 # required
+  os: ubuntu-22.04
   tools:
     python: mambaforge-4.10
-sphinx:
-  configuration: doc/conf.py
+  jobs:
+    pre_build:
+      - python ./docs/pre_build/generate_math.py
+    post_create_environment:
+      - mamba install python=3.11 --file requirements/docs.txt
+      - pip install --no-deps .
+
+
+mkdocs:
+  configuration: mkdocs.yml

@@ -1,0 +1,52 @@
+.rst-badge {
+    font-size: 0.7rem;
+}
+
+:root {
+    --md-primary-fg-color:        #98252D;
+    --md-primary-fg-color--light: #ECB7B7;
+    --md-primary-fg-color--dark:  #90030C;
+}
+
+.md-grid {
+    /* max-width: 1340px; */
+}
+
+.md-typeset, .md-nav, .md-tabs__link, .md-typeset .admonition, .md-typeset details, .md-typeset table:not([class]) {
+    font-size: 0.8rem;
+}
+
+.md-typeset h1, .md-typeset h2 {
+    font-weight: normal;
+    color: var(--md-typeset-color);
+}
+
+.doc-function h3 {
+    /* font-size: 1.0rem; */
+    margin-top: 3.0rem;
+}
+
+.bubble {
+    border-radius: 2px;
+    padding: 1px 4px 1px 4px;
+}
+
+.green {
+    background-color: rgba(0, 151, 142, 0.25);
+    color: #00978e;
+}
+
+.blue {
+    background-color: rgba(0, 83, 159, 0.25);
+    color: #00539f;
+}
+
+.red {
+    background-color: rgba(217, 57, 54, 0.25);
+    color: #D93936;
+}
+
+.yellow {
+    background-color: rgba(254, 247, 80, 0.5);
+    color: #757719;
+}

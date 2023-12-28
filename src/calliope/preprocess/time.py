@@ -8,97 +8,23 @@ time.py
 Functionality to add and process time varying parameters
 
 """
+import logging
+from pathlib import Path
+from typing import Optional
+
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
-from calliope.core.attrdict import AttrDict
-from calliope.core.util.tools import plugin_load
 
-
-def apply_time_clustering(
-    model_data: xr.Dataset, time_config: AttrDict, input_timeseries_dfs: pd.DataFrame
-):
-    """
-    Take a Calliope model_data post time dimension addition, prior to any time
-    clustering, and apply relevant time clustering/masking techniques.
-    See doi: 10.1016/j.apenergy.2017.03.051 for applications.
-
-    Techniques include:
-    - Clustering timeseries into a selected number of 'representative' days.
-        Days with similar profiles and daily magnitude are grouped together and
-        represented by one 'representative' day with a greater weight per time
-        step.
-    - Masking timeseries, leading to variable timestep length
-        Only certain parts of the input are shown at full resolution, with other
-        periods being clustered together into a single timestep.
-        E.g. Keep high resolution in the week with greatest wind power variability,
-        smooth all other timesteps to 12H
-    - Timestep resampling
-        Used to reduce problem size by reducing resolution of all timeseries data.
-        E.g. resample from 1H to 6H timesteps
-
-
-    Parameters
-    ----------
-    model_data : xarray Dataset
-        Preprocessed Calliope model_data, as produced using
-        `calliope.preprocess.build_model_data`
-        and found in model._model_data_original
-    model_run : bool
-        preprocessed model_run dictionary, as produced by
-        Calliope.preprocess_model
-
-    Returns
-    -------
-    data : xarray Dataset
-        Dataset with optimisation parameters as variables, optimisation sets as
-        coordinates, and other information in attributes. Time dimension has
-        been updated as per user-defined clustering techniques (from model_run)
-
-    """
-
-    data = model_data.copy(deep=True)
-
-    ##
-    # Process masking and get list of timesteps to keep at high res
-    ##
-    if "masks" in time_config:
-        masks = {}
-        # time.masks is a list of {'function': .., 'options': ..} dicts
-        for entry in time_config.masks:
-            entry = AttrDict(entry)
-            mask_func = plugin_load(
-                entry.function, builtin_module="calliope.time.masks"
-            )
-            mask_kwargs = entry.get_key("options", default=AttrDict()).as_dict()
-            masks[entry.to_yaml()] = mask_func(data, **mask_kwargs)
-        data.attrs["masks"] = masks
-        # Concatenate the DatetimeIndexes by using dummy Series
-        chosen_timesteps = pd.concat(
-            [pd.Series(0, index=m) for m in masks.values()]
-        ).index
-        # timesteps: a list of timesteps NOT picked by masks
-        timesteps = pd.Index(data.timesteps.values).difference(chosen_timesteps)
-    else:
-        timesteps = None
-
-    ##
-    # Process function, apply resolution adjustments
-    ##
-    if "function" in time_config:
-        func = plugin_load(time_config.function, builtin_module="calliope.time.funcs")
-        func_kwargs = time_config.get("function_options", AttrDict()).as_dict()
-        if "file=" in func_kwargs.get("clustering_func", ""):
-            func_kwargs.update({"clustering_timeseries": input_timeseries_dfs})
-        data = func(data=data, timesteps=timesteps, **func_kwargs)
-
-    return data
+LOGGER = logging.getLogger(__name__)
 
 
 def add_time_dimension(
-    data: xr.Dataset, timeseries_vars: set[str], timeseries_data: pd.DataFrame
+    model_data: xr.Dataset,
+    init_config: dict,
+    timeseries_dfs: Optional[dict[str, pd.DataFrame]],
 ):
     """
     Once all constraints and costs have been loaded into the model dataset, any
@@ -106,7 +32,7 @@ def add_time_dimension(
 
     Parameters:
     -----------
-    data : xarray Dataset
+    model_data : xarray Dataset
         A data structure which has already gone through `constraints_to_dataset`,
         `costs_to_dataset`, and `add_attributes`
     model_run : AttrDict
@@ -119,69 +45,76 @@ def add_time_dimension(
         with all relevant `file=` and `df= `entries replaced with the correct data.
 
     """
-    key_errors = []
+    timeseries_loader = TimeseriesLoader(init_config, timeseries_dfs)
     # Search through every constraint/cost for use of '='
-    for variable in timeseries_vars:
-        # 2) convert to a Pandas Series to do 'string contains' search
-        data_series = data[variable].to_series().dropna()
-
-        # 3) get Series of all uses of 'file=' or 'df=' for this variable (timeseries keys)
-        try:
-            tskeys = data_series[
-                data_series.str.contains("file=") | data_series.str.contains("df=")
-            ]
-        except AttributeError:
+    for var_name, var_data in model_data.data_vars.items():
+        # 1) get Series of all uses of 'file=' or 'df=' for this variable (timeseries keys)
+        if var_data.astype(str).str.contains("^file=|df=").any():
+            var_series = var_data.to_series()
+            tskeys = var_series[var_series.str.contains("^file=|df=").notnull()]
+        else:
             continue
 
-        # 4) If no use of 'file=' or 'df=' then we can be on our way
+        # 2) If no use of 'file=' or 'df=' then we can be on our way
         if tskeys.empty:
             continue
 
-        # 5) remove all before '=' and split filename and node column
+        # 3) split data source ("df/file"), filename, and node column
         tskeys = (
-            tskeys.str.split("=")
-            .str[1]
-            .str.rsplit(":", n=1, expand=True)
-            .reset_index()
-            .rename(columns={0: "source", 1: "column"})
-            .set_index(["source", "column"])
+            tskeys.dropna()
+            .str.split("=|:", expand=True)
+            .rename(columns={0: "source_type", 1: "source", 2: "column"})
         )
-
-        # 6) Get all timeseries data from dataframes stored in model_run
-        try:
-            var_timeseries_data = timeseries_data.loc[:, tskeys.index]
-        except KeyError:
-            key_errors.append(
-                f"file:column combinations `{tskeys.index.values}` not found, but are"
-                f" requested by parameter `{variable}`."
+        if "column" not in tskeys.columns:
+            tskeys = tskeys.assign(column=np.nan)
+        if "nodes" in var_data.dims:
+            node_info = (
+                tskeys.index.get_level_values("nodes").unique()
+                if isinstance(tskeys.index, pd.MultiIndex)
+                else tskeys.index
             )
-            continue
+            tskeys["column"] = tskeys["column"].fillna(
+                node_info.to_series().align(tskeys)[0]
+            )
 
-        var_timeseries_data.columns = pd.MultiIndex.from_frame(tskeys)
+        # 4) Get all timeseries data from dataframes stored in model_run
+        ts_df = tskeys.apply(
+            timeseries_loader.load_timeseries, var_name=var_name, axis=1
+        ).rename_axis(columns="timesteps")
 
-        # 7) Add time dimension to the relevent DataArray and update the '='
+        # 5) Add time dimension to the relevent DataArray and update the '='
         # dimensions with the time varying data (static data is just duplicated
         # at each timestep)
 
-        data[variable] = (
-            xr.DataArray.from_series(var_timeseries_data.unstack())
-            .reindex(data[variable].coords)
-            .fillna(data[variable])
+        model_data[var_name] = (
+            ts_df.stack()
+            .to_xarray()
+            .reindex(var_data.coords)
+            .fillna(var_data)
+            .assign_attrs(var_data.attrs)
         )
-    if key_errors:
-        exceptions.print_warnings_and_raise_errors(errors=key_errors)
+    if any(
+        var_data.astype(str).str.contains("^file=|df=").any()
+        for var_data in model_data.data_vars.values()
+    ):
+        raise exceptions.ModelError(
+            "Some lengths of input timeseries data are too short relative to your chosen time subset."
+        )
+    return model_data
 
+
+def add_inferred_time_params(model_data: xr.Dataset):
     # Add timestep_resolution by looking at the time difference between timestep n
     # and timestep n + 1 for all timesteps
     # Last timestep has no n + 1, so will be NaT (not a time), we ffill this.
     # Time resolution is saved in hours (i.e. nanoseconds / 3600e6)
     timestep_resolution = (
-        data.timesteps.diff("timesteps", label="lower")
-        .reindex({"timesteps": data.timesteps})
+        model_data.timesteps.diff("timesteps", label="lower")
+        .reindex({"timesteps": model_data.timesteps})
         .rename("timestep_resolution")
     )
 
-    if len(data.timesteps) == 1:
+    if len(model_data.timesteps) == 1:
         exceptions.warn(
             "Only one timestep defined. Inferring timestep resolution to be 1 hour"
         )
@@ -189,34 +122,246 @@ def add_time_dimension(
     else:
         timestep_resolution = timestep_resolution.ffill("timesteps")
 
-    data["timestep_resolution"] = timestep_resolution / pd.Timedelta("1 hour")
+    model_data["timestep_resolution"] = timestep_resolution / pd.Timedelta("1 hour")
 
-    data["timestep_weights"] = xr.DataArray(
-        np.ones(len(data.timesteps)), dims=["timesteps"]
+    model_data["timestep_weights"] = xr.DataArray(
+        np.ones(len(model_data.timesteps)), dims=["timesteps"]
     )
 
-    return data
-
-
-def update_dtypes(model_data):
-    """
-    Update dtypes to not be 'Object', if possible.
-    Order of preference is: bool, int, float
-    """
-    # TODO: this should be redundant once typedconfig is in (params will have predefined dtypes)
-    for var_name, var in model_data.data_vars.items():
-        if var.dtype.kind == "O":
-            no_nans = var.where(var != "nan", drop=True)
-            model_data[var_name] = var.where(var != "nan")
-            if no_nans.isin(["True", 0, 1, "False", "0", "1"]).all():
-                # Turn to bool
-                model_data[var_name] = var.isin(["True", 1, "1"])
-            else:
-                try:
-                    model_data[var_name] = var.astype(np.int_, copy=False)
-                except (ValueError, OverflowError):
-                    try:
-                        model_data[var_name] = var.astype(np.float_, copy=False)
-                    except ValueError:
-                        None
     return model_data
+
+
+def _datetime_index(index: pd.Index, format: str, source_name: str) -> pd.Index:
+    try:
+        return pd.to_datetime(index, format=format)
+    except ValueError as e:
+        raise exceptions.ModelError(
+            f"Error in parsing dates in timeseries data from {source_name} using datetime format `{format}`. "
+            f"Full error: {e}"
+        )
+
+
+class TimeseriesLoader:
+    def __init__(
+        self, init_config: dict, timeseries_dfs: Optional[dict[str, pd.DataFrame]]
+    ):
+        self.ts_cache: dict = {}
+        self._timeseries_dfs = timeseries_dfs
+        self._time_data_path: Path = init_config["time_data_path"]
+        self._time_subset: Optional[list[str]] = init_config["time_subset"]
+        self._time_format: str = init_config["time_format"]
+
+        if self._timeseries_dfs is not None:
+            if not isinstance(self._timeseries_dfs, dict) or not all(
+                isinstance(v, (pd.Series, pd.DataFrame))
+                for v in self._timeseries_dfs.values()
+            ):
+                raise exceptions.ModelError(
+                    "`timeseries_dataframes` must be dict of pandas DataFrames."
+                )
+
+    def load_timeseries(self, df: pd.DataFrame, var_name: str) -> pd.Series:
+        source = df.loc["source"]
+        source_type = df.loc["source_type"]
+        column = df.loc["column"]
+
+        if source_type == "df" and self._timeseries_dfs is not None:
+            try:
+                df = self._timeseries_dfs[source]
+            except KeyError:
+                raise KeyError(
+                    f"Attempted to load dataframe with undefined key: {source}"
+                )
+        elif source_type == "df" and self._timeseries_dfs is None:
+            raise exceptions.ModelError(
+                "Missing timeseries dataframes passed as an argument in calliope.Model(...)."
+            )
+        elif source_type == "file" and source in self.ts_cache:
+            df = self.ts_cache[source]
+        else:
+            df = self._load_timeseries_from_file(source)
+            self.ts_cache[source] = df
+
+        clean_df = self._reformat_timeseries_df(df, source)
+
+        if pd.isnull(column) and len(clean_df.columns) > 1:
+            raise exceptions.ModelError(
+                f"Timeseries data contains multiple columns but no column specified in reference from input parameter `{var_name}`"
+            )
+        elif pd.isnull(column) and len(clean_df.columns) == 1:
+            series = clean_df.squeeze()
+        else:
+            series = clean_df[column]
+
+        return series
+
+    def _load_timeseries_from_file(self, ts_file_path: str):
+        file_path = self._time_data_path / ts_file_path
+        df = pd.read_csv(file_path, index_col=0)
+        return df
+
+    def _reformat_timeseries_df(self, df: pd.DataFrame, source: str) -> pd.DataFrame:
+        try:
+            df.apply(pd.to_numeric)
+        except ValueError as e:
+            raise exceptions.ModelError(
+                f"Error in loading data from {source}. Ensure all entries are numeric. Full error: {e}"
+            )
+        df.index = _datetime_index(df.index, self._time_format, source)
+        subset_df = self._subset_index(df)
+        return subset_df
+
+    def _subset_index(self, df: pd.DataFrame) -> pd.DataFrame:
+        if self._time_subset is None:
+            return df
+
+        try:
+            time_subset_dt = pd.to_datetime(self._time_subset, format="ISO8601")
+        except ValueError as e:
+            raise exceptions.ModelError(
+                "Timeseries subset must be in ISO format (anything up to the  "
+                "detail of `%Y-%m-%d %H:%M:%S`.\n User time subset: {}\n "
+                "Error caused: {}".format(self._time_subset, e)
+            )
+
+        df_start_time = df.index[0]
+        df_end_time = df.index[-1]
+        if (
+            time_subset_dt[0].date() < df_start_time.date()
+            or time_subset_dt[1].date() > df_end_time.date()
+        ):
+            raise exceptions.ModelError(
+                f"subset time range {self._time_subset} is outside the input data time range "
+                f"[{df_start_time}, {df_end_time}]"
+            )
+
+        # We eventually subset using the input strings to capture entire days
+        # E.g., ["2005-01-01", "2005-01-02"] will go to the last timestep on "2005-01-02"
+        subset_df = df.loc[slice(*self._time_subset), :]
+        if subset_df.empty:
+            raise exceptions.ModelError(
+                f"The time slice {time_subset_dt} creates an empty timeseries array."
+            )
+        return subset_df
+
+
+def resample(data: xr.Dataset, resolution: str):
+    """
+    Function to resample timeseries data from the input resolution (e.g. 1H), to
+    the given resolution (e.g. 2H)
+
+    Parameters
+    ----------
+    data : xarray.Dataset
+        calliope model data, containing only timeseries data variables
+    timesteps : str or list; optional
+        If given, apply resampling to a subset of the timeseries data
+    resolution : str
+        time resolution of the output data, given in Pandas time frequency format.
+        E.g. 1H = 1 hour, 1W = 1 week, 1M = 1 month, 1T = 1 minute. Multiples allowed.
+
+    """
+    resample_kwargs = {"indexer": {"timesteps": resolution}, "skipna": True}
+    data_non_ts = data.drop_dims("timesteps")
+    data_ts = data.drop_vars(data_non_ts.data_vars)
+    data_ts_resampled = data_ts.resample(**resample_kwargs).first(keep_attrs=True)
+
+    for var_name, var_data in data_ts.data_vars.items():
+        resampler = var_data.resample(**resample_kwargs)
+        if var_name in [
+            "timestep_resolution",
+            "source_min",
+            "sink_min",
+            "source_max",
+            "sink_max",
+            "source_equals",
+            "sink_equals",
+        ]:
+            method = "sum"
+        elif var_data.dtype.kind in ["f", "i"]:
+            method = "mean"
+        else:
+            method = "first"
+        data_ts_resampled[var_name] = getattr(resampler, method)(keep_attrs=True)
+        LOGGER.debug(
+            f"Time Resampling | {var_name} | resampling function used: {method}"
+        )
+
+    data_new = xr.merge([data_non_ts, data_ts_resampled])
+
+    # Resampling still permits operational mode
+    data_new.attrs["allow_operate_mode"] = 1
+
+    return data_new
+
+
+def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
+    """
+    Apply the given clustering time series to the given data.
+
+    Parameters
+    ----------
+    data : xarray.Dataset
+    clustering_file
+
+    Returns
+    -------
+    data_new_scaled : xarray.Dataset
+
+    """
+    clustering_timeseries = pd.read_csv(clustering_file, index_col=0).squeeze()
+    clustering_timeseries.index = _datetime_index(
+        clustering_timeseries.index, time_format, Path(clustering_file).name
+    )
+    representative_days = pd.to_datetime(clustering_timeseries.dropna()).dt.date
+    grouper = representative_days.to_frame("clusters").groupby("clusters")
+    data_new = data.sel(
+        timesteps=data.timesteps.dt.date.isin(representative_days.values)
+    )
+    date_series = data_new.timesteps.dt.date.to_series()
+    data_new["timestep_cluster"] = xr.DataArray(
+        grouper.ngroup().reindex(date_series).values, dims="timesteps"
+    )
+    data_new["timestep_weights"] = xr.DataArray(
+        grouper.value_counts().reindex(date_series).values, dims="timesteps"
+    )
+    data_new.coords["datesteps"] = representative_days.index.rename("datesteps")
+    data_new.coords["clusters"] = np.unique(data_new["timestep_cluster"].values)
+    # Clustering no longer permits operational mode
+    data_new.attrs["allow_operate_mode"] = 0
+    _lookup_clusters(data_new, grouper)
+
+    return data_new
+
+
+def _lookup_clusters(dataset: xr.Dataset, grouper: pd.Series) -> xr.Dataset:
+    """
+    For any given timestep in a time clustered model, get:
+    1. the first and last timestep of the cluster,
+    2. the last timestep of the cluster corresponding to a date in the original timeseries
+    """
+
+    dataset["lookup_cluster_first_timestep"] = dataset.timesteps.isin(
+        dataset.timesteps.groupby("timesteps.date").first()
+    )
+    dataset["lookup_cluster_last_timestep"] = dataset.timesteps.isin(
+        dataset.timesteps.groupby("timesteps.date").last()
+    )
+
+    dataset["lookup_datestep_cluster"] = xr.DataArray(
+        grouper.ngroup(), dims="datesteps"
+    )
+
+    last_timesteps = (
+        dataset.timestep_cluster.to_series()
+        .reset_index()
+        .groupby("timestep_cluster")
+        .last()
+    )
+    dataset["lookup_datestep_last_cluster_timestep"] = (
+        dataset.lookup_datestep_cluster.to_series()
+        .map(last_timesteps.timesteps)
+        .to_xarray()
+    )
+
+    return dataset

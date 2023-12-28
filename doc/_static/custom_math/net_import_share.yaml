@@ -1,0 +1,52 @@
+# Force upper limit on carrier imports within nodes or across all nodes as a share of all carrier flows at a node/across nodes.
+# Imports of transmission technologies are defined by `flow_out` (outflow from a transmission technology that originated in a remote node).
+# We assume that transmission technologies `test_transmission_elec` and `test_transmission_heat` have been defined.
+
+# New top-level parameters:
+# net_import_share
+
+# helper functions used:
+# defined (where)
+# sum (expression)
+# get_transmission_techs (expression)
+
+constraints:
+  net_import_share_max:
+    description: Limit upper bound on electricity imports within nodes as a share of all electricity flows at each node.
+    foreach: [nodes, timesteps]
+    where: any(flow_out_transmission_techs, over=techs)
+    equations:
+      - expression: net_import_share * sum(flow_out_transmission_techs[carriers=electricity], over=techs) <= $total_energy_balance
+    sub_expressions:
+      total_energy_balance:
+        - expression: sum(flow_out[carriers=electricity], over=techs) - sum(flow_in[carriers=electricity], over=techs)
+
+  net_annual_import_share_max:
+    description: Limit upper bound on annual electricity imports within nodes as a share of all electricity flows at each node.
+    foreach: [nodes]
+    where: any(flow_out_transmission_techs, over=techs)
+    equations:
+      - expression: net_import_share * sum(flow_out_transmission_techs[carriers=electricity], over=[techs, timesteps]) <= $total_energy_balance
+    sub_expressions:
+      total_energy_balance:
+        - expression: sum(flow_out[carriers=electricity], over=[techs, timesteps]) - sum(flow_in[carriers=electricity], over=[techs, timesteps])
+
+  net_annual_import_share_max_node_group:
+    description: Limit upper bound on annual heat imports across a subset of nodes in the model as a share of combined heat flows in those nodes.
+    equations:
+      - expression: net_import_share * sum(flow_out_transmission_techs[nodes=$node_group, carriers=$carrier], over=[nodes, techs, timesteps]) <= $total_energy_balance
+    sub_expressions:
+      total_energy_balance:
+        - expression: sum(flow_out[nodes=$node_group, carriers=$carrier], over=[nodes, techs, timesteps]) - sum(flow_in[nodes=$node_group, carriers=$carrier], over=[nodes, techs, timesteps])
+    slices:
+      node_group:  # The subset of nodes in which to limit heat imports
+        - expression: "[a, c]"
+      carrier:  # The carrier for which to limit imports
+        - expression: heat
+
+global_expressions:
+  flow_out_transmission_techs:
+    foreach: [nodes, techs, carriers, timesteps]
+    where: parent=transmission
+    equations:
+      - expression: flow_out

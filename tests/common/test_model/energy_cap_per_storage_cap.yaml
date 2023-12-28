@@ -1,8 +1,8 @@
 config:
   init:
     name: Test model for energy capacity per storage capacity
-    timeseries_data_path: "timeseries_data"
-    subset_time: ["2005-01-01 00:00", "2005-01-01 01:00"]
+    time_data_path: "timeseries_data"
+    time_subset: ["2005-01-01 00:00", "2005-01-01 01:00"]
 
   build:
     mode: plan
@@ -13,38 +13,42 @@ config:
 
 techs:
   electricity_demand:
-    essentials:
-      name: Electricity demand
-      carrier: electricity
-      parent: demand
-    constraints:
-      sink_equals: file=demand_elec.csv
+    name: Electricity demand
+    carrier_in: electricity
+    parent: demand
   my_storage:
-    essentials:
-      name: Storage
-      carrier: electricity
-      parent: storage
-    constraints:
-      storage_initial: 1.0
-      lifetime: 60
-    costs:
-      monetary:
-        flow_cap: 1500000
-        storage_cap: 300000
-        interest_rate: 0.1
+    name: Storage
+    carrier_in: electricity
+    carrier_out: electricity
+    parent: storage
+    storage_initial: 1.0
+    lifetime: 60
+    cost_flow_cap:
+      data: 1500000
+      index: monetary
+      dims: costs
+    cost_storage_cap:
+      data: 300000
+      index: monetary
+      dims: costs
+    cost_interest_rate:
+      data: 0.1
+      index: monetary
+      dims: costs
 
 nodes:
   a.techs:
     my_storage:
     electricity_demand:
+      sink_equals: file=demand_elec.csv
 
 overrides:
   max:
-    techs.my_storage.constraints.flow_cap_per_storage_cap_max: 0.01
+    techs.my_storage.flow_cap_per_storage_cap_max: 0.01
   min:
-    techs.my_storage.constraints.flow_cap_per_storage_cap_min: 1
+    techs.my_storage.flow_cap_per_storage_cap_min: 1
   operate_mode_min:
-    techs.my_storage.constraints.flow_cap_per_storage_cap_min: 1
+    techs.my_storage.flow_cap_per_storage_cap_min: 1
     config:
       build.mode: operate
       solve.operate_window: 24

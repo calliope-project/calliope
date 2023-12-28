@@ -9,8 +9,8 @@ import pandas as pd
 import pyomo.kernel as pmo
 import pytest  # noqa: F401
 import xarray as xr
+from calliope.attrdict import AttrDict
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
-from calliope.core.attrdict import AttrDict
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, check_variable_exists
@@ -44,7 +44,9 @@ class TestChecks:
             assert not check_warn
         assert m._model_data.attrs["config"].build.cyclic_storage is False
 
-    @pytest.mark.parametrize("param", [("flow_eff"), ("source_eff"), ("parasitic_eff")])
+    @pytest.mark.parametrize(
+        "param", [("flow_eff"), ("source_eff"), ("flow_out_parasitic_eff")]
+    )
     def test_loading_timeseries_operate_efficiencies(self, param):
         m = build_model(
             {
@@ -68,7 +70,7 @@ class TestChecks:
                         "flow_out_min_relative": 0.1,
                         f"source_{constr}": "file=supply_plus_resource.csv:1",
                         "flow_cap_max": np.inf,
-                    },
+                    }
                 }
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
@@ -160,10 +162,7 @@ class TestChecks:
                         "source_max": "file=supply_plus_resource.csv:1",
                         "flow_cap_max": 15,
                     },
-                    "switches": {
-                        "force_source": True,
-                        "source_unit": source_unit,
-                    },
+                    "switches": {"force_source": True, "source_unit": source_unit},
                 }
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
@@ -515,13 +514,13 @@ class TestCostConstraints:
     @pytest.mark.parametrize(
         "tech,scenario,cost",
         (
-            ("test_supply_elec", "simple_supply", "om_prod"),
-            ("test_supply_elec", "simple_supply", "om_con"),
-            ("test_supply_plus", "simple_supply_and_supply_plus", "om_con"),
-            ("test_demand_elec", "simple_supply", "om_con"),
-            ("test_transmission_elec", "simple_supply", "om_prod"),
-            ("test_conversion", "simple_conversion", "om_con"),
-            ("test_conversion_plus", "simple_conversion_plus", "om_prod"),
+            ("test_supply_elec", "simple_supply", "flow_out"),
+            ("test_supply_elec", "simple_supply", "flow_in"),
+            ("test_supply_plus", "simple_supply_and_supply_plus", "flow_in"),
+            ("test_demand_elec", "simple_supply", "flow_in"),
+            ("test_transmission_elec", "simple_supply", "flow_out"),
+            ("test_conversion", "simple_conversion", "flow_in"),
+            ("test_conversion_plus", "simple_conversion_plus", "flow_out"),
         ),
     )
     def test_loc_techs_cost_var_constraint(self, tech, scenario, cost):
@@ -538,11 +537,11 @@ class TestCostConstraints:
 
     def test_one_way_om_cost(self):
         """
-        With one_way transmission, it should still be possible to set an om_prod cost.
+        With one_way transmission, it should still be possible to set an flow_out cost.
         """
         m = build_model(
             {
-                "techs.test_transmission_elec.costs.monetary.om_prod": 1,
+                "techs.test_transmission_elec.costs.monetary.flow_out": 1,
                 "links.a,b.techs.test_transmission_elec.switches.one_way": True,
             },
             "simple_supply,two_hours",
@@ -555,17 +554,13 @@ class TestCostConstraints:
             "timesteps": m.backend._dataset.timesteps[1],
         }
         assert check_variable_exists(
-            m.backend.get_expression("cost_var", as_backend_objs=False),
-            "flow_out",
-            idx,
+            m.backend.get_expression("cost_var", as_backend_objs=False), "flow_out", idx
         )
 
         idx["nodes"] = "a"
         idx["techs"] = "test_transmission_elec:b"
         assert not check_variable_exists(
-            m.backend.get_expression("cost_var", as_backend_objs=False),
-            "flow_out",
-            idx,
+            m.backend.get_expression("cost_var", as_backend_objs=False), "flow_out", idx
         )
 
 
@@ -607,15 +602,14 @@ class TestExportConstraints:
         assert "cost_var" in supply_export.backend.expressions
 
         m = build_model(
-            {"techs.test_supply_elec.costs.monetary.om_prod": 0.1},
+            {"techs.test_supply_elec.costs.monetary.flow_out": 0.1},
             "supply_export,two_hours,investment_costs",
         )
         m.build()
         assert "cost_var" in m.backend.expressions
 
         assert check_variable_exists(
-            m.backend.get_expression("cost_var", as_backend_objs=False),
-            "flow_export",
+            m.backend.get_expression("cost_var", as_backend_objs=False), "flow_export"
         )
 
     def test_loc_tech_carriers_export_max_constraint(self):
@@ -1626,14 +1620,8 @@ class TestClusteringConstraints:
         storage_initial=False,
     ):
         override = {
-            "config.init.subset_time": ["2005-01-01", "2005-01-04"],
-            "config.init.time": {
-                "function": "apply_clustering",
-                "function_options": {
-                    "clustering_func": "file=cluster_days.csv:a",
-                    "how": how,
-                },
-            },
+            "config.init.time_subset": ["2005-01-01", "2005-01-04"],
+            "config.init.time_cluster": "cluster_days.csv",
             "config.init.custom_math": ["storage_inter_cluster"]
             if storage_inter_cluster
             else [],
@@ -1702,6 +1690,29 @@ class TestLogging:
         assert sum([i.find("Gurobi Optimizer") > -1 for i in all_log_messages]) == 1
 
 
+class TestModelDataChecks:
+    def test_source_equals_cannot_be_inf(self):
+        override = {"techs.test_supply_elec.source_equals": np.inf}
+        m = build_model(override_dict=override, scenario="simple_supply,one_day")
+
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            m.build()
+        assert check_error_or_warning(excinfo, "Cannot include infinite values")
+
+    def test_storage_initial_fractional_value(self):
+        """
+        Check that the storage_initial value is a fraction
+        """
+        m = build_model(
+            {"techs.test_storage.storage_initial": 5},
+            "simple_storage,two_hours,investment_costs",
+        )
+
+        with pytest.raises(exceptions.ModelError) as error:
+            m.build()
+        assert check_error_or_warning(error, "values larger than 1 are not allowed")
+
+
 class TestNewBackend:
     LOGGER = logging.getLogger("calliope.backend.backend_model")
 
@@ -1738,6 +1749,7 @@ class TestNewBackend:
         backend._add_run_mode_custom_math()
 
         assert f"Updating math formulation with {mode} mode custom math." in caplog.text
+
         assert m.math != base_math
         assert backend.inputs.attrs["math"].as_dict() == base_math.as_dict()
 
@@ -1749,7 +1761,7 @@ class TestNewBackend:
         custom_math.to_yaml(file_path)
 
         m = build_model(
-            {"config.init.custom_math": ["operate", file_path]},
+            {"config.init.custom_math": ["operate", str(file_path)]},
             "simple_supply,two_hours,investment_costs",
         )
         m.build(mode="operate")
@@ -1770,7 +1782,7 @@ class TestNewBackend:
             {"config.init.custom_math": ["operate"]},
             "simple_supply,two_hours,investment_costs",
         )
-        backend = PyomoBackendModel(m.inputs, mode="plan")
+        backend = PyomoBackendModel(m.inputs)
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             backend._add_run_mode_custom_math()
 
@@ -1796,6 +1808,7 @@ class TestNewBackend:
                 "flow_in_max",
                 "flow_out_max",
                 "cost_investment",
+                "cost_investment_flow_cap",
                 "symmetric_transmission",
             },
             "description": "A technology's flow capacity, also known as its nominal or nameplate capacity.",
@@ -1813,23 +1826,20 @@ class TestNewBackend:
         )
 
     def test_new_build_get_parameter(self, simple_supply):
-        param = simple_supply.backend.get_parameter("flow_eff")
-        assert (
-            param.to_series()
-            .dropna()
-            .apply(lambda x: isinstance(x, pmo.parameter))
-            .all()
-        )
+        param = simple_supply.backend.get_parameter("flow_in_eff")
+        assert isinstance(param.item(), pmo.parameter)
         assert param.attrs == {
             "obj_type": "parameters",
             "is_result": 0,
             "original_dtype": np.dtype("float64"),
-            "references": {"balance_demand", "balance_transmission"},
+            "references": {"flow_in_inc_eff"},
             "coords_in_name": False,
         }
 
     def test_new_build_get_parameter_as_vals(self, simple_supply):
-        param = simple_supply.backend.get_parameter("flow_eff", as_backend_objs=False)
+        param = simple_supply.backend.get_parameter(
+            "flow_in_eff", as_backend_objs=False
+        )
         assert param.dtype == np.dtype("float64")
 
     def test_new_build_get_global_expression(self, simple_supply):
@@ -1922,7 +1932,7 @@ class TestNewBackend:
         assert check_error_or_warning(excinfo, "This model object already has results.")
 
     def test_solve_operate_not_allowed(self, simple_supply):
-        simple_supply.config.build.mode = "operate"
+        simple_supply.backend.inputs.attrs["config"]["build"]["mode"] = "operate"
         simple_supply._model_data.attrs["allow_operate_mode"] = False
 
         try:
@@ -1930,11 +1940,11 @@ class TestNewBackend:
                 simple_supply.solve(force=True)
             assert check_error_or_warning(excinfo, "Unable to run this model in op")
         except AssertionError as e:
-            simple_supply.config.build.mode = "plan"
+            simple_supply.backend.inputs.attrs["config"]["build"]["mode"] = "plan"
             simple_supply._model_data.attrs["allow_operate_mode"] = True
             raise e
         else:
-            simple_supply.config.build.mode = "plan"
+            simple_supply.backend.inputs.attrs["config"]["build"]["mode"] = "plan"
             simple_supply._model_data.attrs["allow_operate_mode"] = True
 
     def test_solve_warmstart_not_possible(self, simple_supply):
@@ -1948,23 +1958,22 @@ class TestNewBackend:
             simple_supply.inputs.sink_equals.where(
                 simple_supply.inputs.techs == "test_demand_elec"
             )
-            * 1000,
+            * 100,
         )
         with pytest.warns(exceptions.BackendWarning) as excinfo:
             simple_supply.solve(force=True)
 
         assert check_error_or_warning(excinfo, "Model solution was non-optimal")
         assert simple_supply._model_data.attrs["termination_condition"] == "infeasible"
-        assert not simple_supply.results
-        assert "flow_cap" not in simple_supply._model_data.data_vars
+        assert not simple_supply.results.data_vars
 
     def test_raise_error_on_preexistence_same_type(self, simple_supply):
         with pytest.raises(exceptions.BackendError) as excinfo:
-            simple_supply.backend.add_parameter("flow_eff", xr.DataArray(1))
+            simple_supply.backend.add_parameter("flow_out_eff", xr.DataArray(1))
 
         assert check_error_or_warning(
             excinfo,
-            "Trying to add already existing `flow_eff` to backend model parameters.",
+            "Trying to add already existing `flow_out_eff` to backend model parameters.",
         )
 
     def test_raise_error_on_preexistence_diff_type(self, simple_supply):
@@ -1988,14 +1997,11 @@ class TestNewBackend:
             "equations": [
                 {"expression": "sum(flow_out, over=[nodes, timesteps]) >= 100"}
             ],
-            "where": "allowed_flow_out=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
+            "where": "carrier_out",  # <- no error is raised because of this
         }
         constraint_name = "constraint-without-nan"
 
-        simple_supply.backend.add_constraint(
-            constraint_name,
-            constraint_dict,
-        )
+        simple_supply.backend.add_constraint(constraint_name, constraint_dict)
 
         assert (
             simple_supply.backend.get_constraint(constraint_name).name
@@ -2008,19 +2014,16 @@ class TestNewBackend:
             "equations": [
                 {"expression": "sum(flow_out, over=[nodes, timesteps]) >= 100"}
             ],
-            # "where": "allowed_flow_out=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
+            # "where": "carrier_out",  # <- no error would be raised with this uncommented
         }
         constraint_name = "constraint-with-nan"
 
         with pytest.raises(exceptions.BackendError) as error:
-            simple_supply.backend.add_constraint(
-                constraint_name,
-                constraint_dict,
-            )
+            simple_supply.backend.add_constraint(constraint_name, constraint_dict)
 
         assert check_error_or_warning(
             error,
-            f"(constraints, {constraint_name}): Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
+            f"constraints:{constraint_name}:0 | Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
         )
 
     def test_raise_error_on_expression_with_nan(self, simple_supply):
@@ -2033,15 +2036,12 @@ class TestNewBackend:
         expression_dict = {
             "foreach": ["techs", "carriers"],
             "equations": [{"expression": "sum(flow_out, over=[nodes, timesteps])"}],
-            "where": "allowed_flow_out=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error is raised because of this
+            "where": "carrier_out",  # <- no error is raised because of this
         }
         expression_name = "expression-without-nan"
 
         # add expression with nan
-        simple_supply.backend.add_global_expression(
-            expression_name,
-            expression_dict,
-        )
+        simple_supply.backend.add_global_expression(expression_name, expression_dict)
 
         assert (
             simple_supply.backend.get_global_expression(expression_name).name
@@ -2051,19 +2051,18 @@ class TestNewBackend:
         expression_dict = {
             "foreach": ["techs", "carriers"],
             "equations": [{"expression": "sum(flow_out, over=[nodes, timesteps])"}],
-            # "where": "allowed_flow_out=True AND [out, out_2, out_3] in carrier_tiers",  # <- no error would be raised with this uncommented
+            # "where": "carrier_out",  # <- no error would be raised with this uncommented
         }
         expression_name = "expression-with-nan"
 
         with pytest.raises(exceptions.BackendError) as error:
             simple_supply.backend.add_global_expression(
-                expression_name,
-                expression_dict,
+                expression_name, expression_dict
             )
 
         assert check_error_or_warning(
             error,
-            f"(expressions, {expression_name}): Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
+            f"global_expressions:{expression_name}:0 | Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
         )
 
     def test_raise_error_on_excess_dimensions(self, simple_supply):
@@ -2074,18 +2073,13 @@ class TestNewBackend:
         """
         # add constraint without excess dimensions
         constraint_dict = {
-            "foreach": [
-                "techs",
-                "nodes",
-            ],  # as 'nodes' is listed here, the constraint will have no excess dimensions
+            # as 'nodes' is listed here, the constraint will have no excess dimensions
+            "foreach": ["techs", "nodes", "carriers"],
             "equations": [{"expression": "flow_cap >= 100"}],
         }
         constraint_name = "constraint-without-excess-dimensions"
 
-        simple_supply.backend.add_constraint(
-            constraint_name,
-            constraint_dict,
-        )
+        simple_supply.backend.add_constraint(constraint_name, constraint_dict)
 
         assert (
             simple_supply.backend.get_constraint(constraint_name).name
@@ -2094,22 +2088,18 @@ class TestNewBackend:
 
         # add constraint with excess dimensions
         constraint_dict = {
-            "foreach": [
-                "techs"
-            ],  # as 'nodes' is not listed here, the constraint will have excess dimensions
+            # as 'nodes' is not listed here, the constraint will have excess dimensions
+            "foreach": ["techs", "carriers"],
             "equations": [{"expression": "flow_cap >= 100"}],
         }
         constraint_name = "constraint-with-excess-dimensions"
 
         with pytest.raises(exceptions.BackendError) as error:
-            simple_supply.backend.add_constraint(
-                constraint_name,
-                constraint_dict,
-            )
+            simple_supply.backend.add_constraint(constraint_name, constraint_dict)
 
         assert check_error_or_warning(
             error,
-            f"(constraints, {constraint_name}): The linear expression array is indexed over dimensions not present in `foreach`: {{'nodes'}}",
+            f"constraints:{constraint_name}:0 | The linear expression array is indexed over dimensions not present in `foreach`: {{'nodes'}}",
         )
 
     @pytest.mark.parametrize(
@@ -2168,8 +2158,7 @@ class TestNewBackend:
 
     def test_add_allnull_var(self, simple_supply):
         simple_supply.backend.add_variable(
-            "foo",
-            {"foreach": ["nodes"], "where": "False"},
+            "foo", {"foreach": ["nodes"], "where": "False"}
         )
         assert "foo" not in simple_supply.backend._instance.variables.keys()
         assert "foo" not in simple_supply.backend._dataset.data_vars.keys()
@@ -2211,7 +2200,7 @@ class TestNewBackend:
             )
             .item()
             .name
-            == "variables[flow_out][0]"
+            == "variables[flow_out][4]"
         )
         assert not simple_supply.backend.variables.flow_out.coords_in_name
 
@@ -2228,7 +2217,7 @@ class TestNewBackend:
                 },
                 "variables",
             ),
-            ("flow_eff", {"nodes": "a", "techs": "test_supply_elec"}, "parameters"),
+            ("flow_out_eff", {"techs": "test_supply_elec"}, "parameters"),
             (
                 "system_balance",
                 {
@@ -2246,7 +2235,7 @@ class TestNewBackend:
             obj.sel(dims).item().name
             == f"{objtype}[{objname}][{', '.join(dims[i] for i in obj.dims)}]"
         )
-        assert obj.coords_in_name
+        assert obj.attrs["coords_in_name"]
 
     def test_verbose_strings_constraint(self, simple_supply_longnames):
         dims = {
@@ -2259,82 +2248,83 @@ class TestNewBackend:
         obj = simple_supply_longnames.backend.get_constraint(
             "balance_demand", as_backend_objs=False
         )
-        flow_eff_dims = ", ".join(
-            dims[i] for i in simple_supply_longnames.backend.parameters.flow_eff.dims
-        )
         assert (
             obj.sel(dims).body.item()
-            == f"parameters[flow_eff][{flow_eff_dims}]*variables[flow_in][{', '.join(dims[i] for i in obj.dims)}]"
+            == f"(parameters[flow_in_eff]*variables[flow_in][{', '.join(dims[i] for i in obj.dims)}])"
         )
         assert obj.coords_in_name
 
     def test_verbose_strings_expression(self, simple_supply_longnames):
-        dims = {
-            "nodes": "a",
-            "techs": "test_supply_elec",
-            "costs": "monetary",
-        }
+        dims = {"nodes": "a", "techs": "test_supply_elec", "costs": "monetary"}
 
         obj = simple_supply_longnames.backend.get_global_expression(
             "cost_investment", as_backend_objs=False
         )
 
-        assert "variables[flow_cap][a, test_supply_elec]" in obj.sel(dims).item()
-        assert "parameters[annualisation_weight]" in obj.sel(dims).item()
+        assert (
+            "variables[flow_cap][a, test_supply_elec, electricity]"
+            in obj.sel(dims).item()
+        )
+        assert "parameters[cost_interest_rate]" in obj.sel(dims).item()
 
         assert not obj.coords_in_name
 
     def test_verbose_strings_no_len(self, simple_supply_longnames):
-        obj = simple_supply_longnames.backend.parameters.annualisation_weight
+        obj = simple_supply_longnames.backend.parameters.bigM
 
-        assert obj.item().name == "parameters[annualisation_weight]"
+        assert obj.item().name == "parameters[bigM]"
         assert obj.coords_in_name
 
     def test_update_parameter(self, simple_supply):
-        updated_param = simple_supply.inputs.flow_eff * 1000
-        simple_supply.backend.update_parameter("flow_eff", updated_param)
+        updated_param = simple_supply.inputs.flow_out_eff * 1000
+        simple_supply.backend.update_parameter("flow_out_eff", updated_param)
 
         expected = simple_supply.backend.get_parameter(
-            "flow_eff", as_backend_objs=False
+            "flow_out_eff", as_backend_objs=False
         )
         assert expected.where(updated_param.notnull()).equals(updated_param)
 
     def test_update_parameter_one_val(self, caplog, simple_supply):
         updated_param = 1000
-        new_dims = {"nodes", "techs"}
+        new_dims = {"techs"}
         caplog.set_level(logging.DEBUG)
 
-        simple_supply.backend.update_parameter("flow_eff", updated_param)
+        simple_supply.backend.update_parameter("flow_out_eff", updated_param)
 
         assert (
             f"New values will be broadcast along the {new_dims} dimension(s)"
             in caplog.text
         )
         expected = simple_supply.backend.get_parameter(
-            "flow_eff", as_backend_objs=False
+            "flow_out_eff", as_backend_objs=False
         )
         assert (expected == updated_param).all()
 
     def test_update_parameter_replace_defaults(self, simple_supply):
-        updated_param = simple_supply.inputs.flow_eff.fillna(0.1)
+        updated_param = simple_supply.inputs.flow_out_eff.fillna(0.1)
 
-        simple_supply.backend.update_parameter("flow_eff", updated_param)
+        simple_supply.backend.update_parameter("flow_out_eff", updated_param)
 
         expected = simple_supply.backend.get_parameter(
-            "flow_eff", as_backend_objs=False
+            "flow_out_eff", as_backend_objs=False
         )
         assert expected.equals(updated_param)
 
     def test_update_parameter_add_dim(self, caplog, simple_supply):
-        """flow_eff doesn't have the time dimension in the simple model, we add it here."""
-        updated_param = simple_supply.inputs.flow_eff.where(
+        """
+        flow_out_eff doesn't have the time dimension in the simple model, we add it here.
+        """
+        updated_param = simple_supply.inputs.flow_out_eff.where(
             simple_supply.inputs.timesteps.notnull()
         )
-
-        refs_to_update = {"balance_demand", "balance_transmission"}
+        refs_to_update = [  # should be sorted alphabetically
+            "balance_supply_no_storage",
+            "balance_transmission",
+            "flow_out_inc_eff",
+        ]
         caplog.set_level(logging.DEBUG)
 
-        simple_supply.backend.update_parameter("flow_eff", updated_param)
+        simple_supply.backend.update_parameter("flow_out_eff", updated_param)
 
         assert (
             "Defining values for a previously fully/partially undefined parameter. "
@@ -2343,18 +2333,18 @@ class TestNewBackend:
         )
 
         expected = simple_supply.backend.get_parameter(
-            "flow_eff", as_backend_objs=False
+            "flow_out_eff", as_backend_objs=False
         )
         assert "timesteps" in expected.dims
 
     def test_update_parameter_replace_undefined(self, caplog, simple_supply):
-        """parasitic_eff isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value"""
-        updated_param = simple_supply.inputs.flow_eff
+        """source_eff isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value."""
+        updated_param = simple_supply.inputs.flow_out_eff
 
-        refs_to_update = {"flow_out_max"}
+        refs_to_update = ["balance_supply_no_storage"]
         caplog.set_level(logging.DEBUG)
 
-        simple_supply.backend.update_parameter("parasitic_eff", updated_param)
+        simple_supply.backend.update_parameter("source_eff", updated_param)
 
         assert (
             "Defining values for a previously fully/partially undefined parameter. "
@@ -2363,13 +2353,13 @@ class TestNewBackend:
         )
 
         expected = simple_supply.backend.get_parameter(
-            "parasitic_eff", as_backend_objs=False
+            "source_eff", as_backend_objs=False
         )
-        default_val = simple_supply._model_data.defaults["parasitic_eff"]
+        default_val = simple_supply._model_data.attrs["defaults"]["source_eff"]
         assert expected.equals(updated_param.fillna(default_val))
 
     def test_update_parameter_no_refs_to_update(self, simple_supply):
-        """flow_cap_per_storage_cap_equals isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
+        """flow_cap_per_storage_cap_max isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
 
         Updating it doesn't change the model in any way, because none of the existing constraints/expressions depend on it.
         Therefore, no warning is raised.
@@ -2377,11 +2367,11 @@ class TestNewBackend:
         updated_param = 1
 
         simple_supply.backend.update_parameter(
-            "flow_cap_per_storage_cap_equals", updated_param
+            "flow_cap_per_storage_cap_max", updated_param
         )
 
         expected = simple_supply.backend.get_parameter(
-            "flow_cap_per_storage_cap_equals", as_backend_objs=False
+            "flow_cap_per_storage_cap_max", as_backend_objs=False
         )
         assert expected == 1
 
@@ -2425,6 +2415,8 @@ class TestNewBackend:
     def _is_fixed(val):
         if pd.notnull(val):
             return val.fixed
+        else:
+            return np.nan
 
     def test_fix_variable(self, simple_supply):
         simple_supply.backend.fix_variable("flow_cap")
@@ -2435,14 +2427,17 @@ class TestNewBackend:
         assert fixed.where(fixed.notnull()).all()
 
     def test_fix_variable_where(self, simple_supply):
-        where = simple_supply.inputs.flow_cap_max.notnull()
+        where = (
+            simple_supply.inputs.flow_cap_max.notnull()
+            & simple_supply.backend.variables.flow_cap.notnull()
+        )
         simple_supply.backend.fix_variable("flow_cap", where=where)
         fixed = simple_supply.backend._apply_func(
             self._is_fixed, simple_supply.backend.variables.flow_cap
         )
         simple_supply.backend.unfix_variable("flow_cap")  # reset
-        assert not fixed.sel(techs="test_demand_elec").any()
-        assert fixed.where(where).all()
+        assert not fixed.sel(techs="test_demand_elec", carriers="electricity").any()
+        assert fixed.where(where, other=True).all()
 
     def test_fix_variable_before_solve(self, simple_supply_longnames):
         with pytest.raises(exceptions.BackendError) as excinfo:
@@ -2462,7 +2457,10 @@ class TestNewBackend:
         assert not fixed.where(fixed.notnull()).all()
 
     def test_unfix_variable_where(self, simple_supply):
-        where = simple_supply.inputs.flow_cap_max.notnull()
+        where = (
+            simple_supply.inputs.flow_cap_max.notnull()
+            & simple_supply.backend.variables.flow_cap.notnull()
+        )
         simple_supply.backend.fix_variable("flow_cap")
         simple_supply.backend.unfix_variable("flow_cap", where=where)
         fixed = simple_supply.backend._apply_func(

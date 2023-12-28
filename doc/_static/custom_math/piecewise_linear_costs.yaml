@@ -1,0 +1,46 @@
+# Add a piecewise cost function that steadily increases investment costs with increasing technology rated capacity.
+# This requires the user to switch on the binary purchase decision variable for any relevant technology.
+# Without the purchase decision variable, the technology will have non-zero costs irrespective even if the technology capacity is zero.
+
+# New top-level parameters:
+# cost_flow_cap_piecewise_slopes (defining the new parameter `pieces`)
+# cost_flow_cap_piecewise_intercept (defining the new parameter `pieces`)
+
+variables:
+  piecewise_cost_investment:
+    description: Investment cost that increases monotonically
+    foreach: [nodes, techs, costs]
+    where: cost_flow_cap_piecewise_slopes AND cost_flow_cap_piecewise_intercept AND purchased
+    bounds:
+      min: 0
+      max: .inf
+
+constraints:
+  piecewise_costs:
+    description: >
+      Limit the lower bound of piecewise investment costs to monotonically increasing values.
+      Since the model is cost minimising, this is equivalent to forcing the investment cost to a specific point along the curve that is traced by the superposition of all pieces.
+    foreach: [nodes, techs, costs, pieces]
+    where: piecewise_cost_investment
+    equations:
+      - expression: >
+          piecewise_cost_investment >=
+          sum(cost_flow_cap_piecewise_slopes * flow_cap, over=carriers) + cost_flow_cap_piecewise_intercept * purchased
+
+# We inject this new source of into the `cost` global expression
+global_expressions:
+  cost_investment:
+    where: (cost_investment_flow_cap OR cost_investment_storage_cap OR cost_investment_source_cap OR cost_investment_area_use OR cost_investment_purchase OR piecewise_cost_investment)
+    equations:
+      - expression: >
+          $annualisation_weight * (
+            $depreciation_rate * (
+              sum(default_if_empty(cost_investment_flow_cap, 0), over=carriers) +
+              default_if_empty(cost_investment_storage_cap, 0) +
+              default_if_empty(cost_investment_source_cap, 0) +
+              default_if_empty(cost_investment_area_use, 0) +
+              default_if_empty(cost_investment_purchase, 0) +
+              default_if_empty(piecewise_cost_investment, 0)
+            ) * (1 + cost_om_annual_investment_fraction)
+            + sum(cost_om_annual * default_if_empty(flow_cap, 0), over=carriers)
+          )

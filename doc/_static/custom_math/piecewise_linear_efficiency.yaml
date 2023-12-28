@@ -1,0 +1,51 @@
+# Add a piecewise technology efficiency function that steadily increases technology efficiency as outflow increases.
+# This requires the user to switch on the integer operating_units decision variable for any relevant technology.
+# Without the operating_units decision variable, the technology will have non-zero inflow requirements even if the technology capacity is zero and it has no outflow.
+
+# New top-level parameters:
+# flow_eff_piecewise_slopes (defining the new parameter `pieces`)
+# flow_eff_piecewise_intercept (defining the new parameter `pieces`)
+
+variables:
+  available_flow_cap:
+    description: Flow capacity that will be set to zero if the technology is not operating in a given timestep and will be set to the value of the decision variable `flow_cap` otherwise.
+    unit: power
+    foreach: [nodes, techs, carriers, timesteps]
+    where: flow_cap AND carrier_out AND operating_units AND NOT flow_cap_per_unit
+    bounds:
+      min: 0
+      max: flow_cap_max
+
+constraints:
+  piecewise_efficiency:
+    description: >
+      Limit the lower bound of inflow requirements to monotonically increasing values as the quantity of technology outflow increases.
+      Since the model is cost minimising and higher inflows translate to higher costs (because more carrier flow is needed in the system), this is equivalent to forcing the inflow to a specific point along the curve that is traced by the superposition of all pieces.
+    foreach: [nodes, techs, timesteps, pieces]
+    where: flow_eff_piecewise_slopes AND flow_eff_piecewise_intercept AND available_flow_cap
+    equations:
+      - expression: >
+          sum(flow_in, over=carriers) >=
+          flow_eff_piecewise_slopes * sum(flow_out, over=carriers)
+          + flow_eff_piecewise_intercept * sum(available_flow_cap, over=carriers)
+
+  available_flow_cap_binary:
+    description: Limit flow capacity to zero if the technology is not operating in a given timestep.
+    foreach: [nodes, techs, carriers, timesteps]
+    where: available_flow_cap
+    equations:
+      - expression: available_flow_cap <= flow_cap_max * operating_units
+
+  available_flow_cap_continuous:
+    description: Limit flow capacity to the value of the `flow_cap` decision variable when the technology is operating in a given timestep.
+    foreach: [nodes, techs, carriers, timesteps]
+    where: available_flow_cap
+    equations:
+      - expression: available_flow_cap <= flow_cap
+
+  available_flow_cap_binary_continuous_switch:
+    description: Force flow capacity to equal the value of the `flow_cap` decision variable if the technology is operating in a given timestep, zero otherwise.
+    foreach: [nodes, techs, carriers, timesteps]
+    where: available_flow_cap
+    equations:
+      - expression: available_flow_cap >= flow_cap + ((operating_units - 1) * flow_cap_max)

@@ -52,8 +52,3 @@ def milp(*args, **kwargs):
 def operate(*args, **kwargs):
     """Returns the built-in urban-scale example model in operate mode."""
     return urban_scale(scenario="operate", *args, **kwargs)
-
-
-def time_masking(*args, **kwargs):
-    """Returns the built-in urban-scale example model with time masking."""
-    return urban_scale(scenario="time_masking", *args, **kwargs)

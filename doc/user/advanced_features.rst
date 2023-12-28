@@ -4,7 +4,7 @@ Advanced features
 
 Once you're comfortable with :doc:`building <building>`, :doc:`running <running>`, and :doc:`analysing <analysing>` one of the built-in example models, you may want to explore Calliope's advanced functionality. With these features, you will be able to build and run complex models in no time.
 
-.. _time_clustering:
+.. _time_resolution_adjust:
 
 Time resolution adjustment
 --------------------------
@@ -15,66 +15,45 @@ Models have a default timestep length (defined implicitly by the timesteps of th
 
     config:
         init:
-            time:
-                function: resample
-                function_options: {'resolution': '6H'}
+            time_resample: 6H
 
 In the above example, this would resample all time series data to 6-hourly timesteps.
+Any `pandas-compatible rule describing the target resolution <https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.resample.html>`_ can be used.
 
-Calliope's time resolution adjustment functionality allows running a function that can perform arbitrary adjustments to the time series data in the model.
+.. _time_clustering:
 
-The available options include:
+Timeseries clustering
+---------------------
 
-1. Uniform time resolution reduction through the ``resample`` function, which takes a `pandas-compatible rule describing the target resolution <https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.resample.html>`_ (see above example).
-
-2. Deriving representative days from the input time series, by applying the clustering method implemented in :mod:`calliope.time.clustering`, for example:
+By supplying a file linking dates in your model timeseries with representative days, it is possible to cluster your timeseries:
 
 .. code-block:: yaml
 
     config:
         init:
-            time:
-                function: apply_clustering
-                function_options:
-                    clustering_func: kmeans
-                    how: mean
-                    k: 20
+            time_cluster: cluster_days.csv
 
-When using representative days, a number of additional constraints are added, based on the study undertaken by `Kotzur et al <https://doi.org/10.1016/j.apenergy.2018.01.023>`_. These constraints require a new decision variable ``storage_inter_cluster``, which tracks storage between all the dates of the original timeseries. This particular functionality can be disabled by including :yaml:`storage_inter_cluster: false` in the `function_options` given above.
+When using representative days, a number of additional constraints are added, based on the study undertaken by `Kotzur et al <https://doi.org/10.1016/j.apenergy.2018.01.023>`_.
+These constraints require a new decision variable ``storage_inter_cluster``, which tracks storage between all the dates of the original timeseries.
+This particular functionality can be enabled by including :yaml:`storage_inter_cluster` in your list of custom math.
+
+We no longer provide the functionality to infer representative days from your timeseries.
+Instead, we recommend you use other timeseries processing tools applied to your input CSV data or your build model dataset (`model.inputs`).
 
 .. note::
 
-    It is also possible to load user-defined representative days, by pointing to a file in `clustering_func` in the same format as pointing to timeseries files in constraints, e.g. :yaml:`clustering_func: file=clusters.csv:column_name`. Clusters are unique per datestep, so the clustering file is most readable if the index is at datestep resolution. But, the clustering file index can be in timesteps (e.g. if sharing the same file as a constraint timeseries), with the cluster number repeated per timestep in a day. Cluster values should be integer, starting at zero.
+    Resampling and clustering can be applied together.
+    Resampling of your timeseries will take place _before_ clustering.
 
-3. Heuristic selection of time steps, that is, the application of one or more of the masks defined in :mod:`calliope.time.masks`, which will mark areas of the time series to retain at maximum resolution (unmasked) and areas where resolution can be lowered (masked). Options can be passed to the masking functions by specifying ``options``. A ``time.function`` can still be specified and will be applied to the masked areas (i.e. those areas of the time series not selected to remain at the maximum resolution), as in this example, which looks for the week of minimum and maximum potential wind generation (assuming a ``wind`` technology was specified), then reduces the rest of the input time series to 6-hourly resolution:
+.. warning::
 
-.. code-block:: yaml
-
-    config:
-        init:
-            time:
-                masks:
-                    - {function: extreme, options: {padding: 'calendar_week', tech: 'wind', how: 'max'}}
-                    - {function: extreme, options: {padding: 'calendar_week', tech: 'wind', how: 'min'}}
-                function: resample
-                function_options: {'resolution': '6H'}
-
-.. Warning::
-
-  When using time clustering or time masking, the resulting timesteps will be assigned different weights depending on how long a period of time they represent. Weights are used for example to give appropriate weight to the operational costs of aggregated typical days in comparison to individual extreme days, if both exist in the same processed time series. The weighting is accessible in the model data, e.g. through :python:`model.inputs.timestep_weights`. The interpretation of results when weights are not 1 for all timesteps requires caution. Production values are not scaled according to weights, but costs are multiplied by weight, in order to weight different timesteps appropriately in the objective function. This means that costs and production values are not consistent without manually post-processing them by either multipyling production by weight (production would then be inconsistent with capacity) or dividing costs by weight. The computation of levelised costs and of capacity factors takes weighting into account, so these values are consisten and can be used as usual.
-
-.. seealso::
-
-  See the implementation of constraints in :mod:`calliope.backend.pyomo.constraints` for more detail on timestep weights and how they affect model constraints.
-
-Setting a random seed
----------------------
-
-By specifying :yaml:`model.random_seed` in the model configuration, any alphanumeric string can be used to initialise the random number generator at the very start of model processing.
-
-This is useful for full reproducibility of model results where time series clustering is used, as clustering methods such as k-means depend on randomly generated initial conditions.
-
-Note that this affects only the random number generator used in Calliope's model preprocessing and not in any way the solver used to solve the model (any solver-specific options need to be set specifically for that solver; see :ref:`solver_options`).
+   When using time clustering, the resulting timesteps will be assigned different weights depending on how long a period of time they represent.
+   Weights are used for example to give appropriate weight to the operational costs of aggregated typical days in comparison to individual extreme days, if both exist in the same processed time series.
+   The weighting is accessible in the model data, e.g. through :python:`model.inputs.timestep_weights`.
+   The interpretation of results when weights are not 1 for all timesteps requires caution.
+   Production values are not scaled according to weights, but costs are multiplied by weight, in order to weight different timesteps appropriately in the objective function.
+   This means that costs and production values are not consistent without manually post-processing them by either multiplying production by weight (production would then be inconsistent with capacity) or dividing costs by weight.
+   The computation of levelised costs and of capacity factors takes weighting into account, so these values are consistent and can be used as usual.
 
 .. _tech_groups:
 
@@ -277,7 +256,7 @@ When using overrides (see :ref:`building_overrides`), it is possible to have ``i
 .. code-block:: yaml
 
     techs:
-        some_other_tech.constraints.flow_eff: 0.1
+        some_other_tech.constraints.flow_out_eff: 0.1
 
 This is equivalent to the following override:
 
@@ -287,7 +266,7 @@ This is equivalent to the following override:
         some_override:
             techs:
                 some_tech.constraints.flow_cap_max: 10
-                some_other_tech.constraints.flow_eff: 0.1
+                some_other_tech.constraints.flow_out_eff: 0.1
 
 .. _backend_interface:
 
@@ -302,9 +281,9 @@ You can use this interface to:
     By running :python:`model.backend.get_input_params()` a user get an xarray Dataset which will look very similar to :python:`model.inputs`, except that assumed default values will be included. You may also spot a bug, where a value in :python:`model.inputs` is different to the value returned by this function.
 
 2. Update a parameter value.
-    If you are interested in updating a few values in the model, you can run :python:`model.backend.update_param()`. For example, to update the energy efficiency of your `ccgt` technology in location `region1` from 0.5 to 0.1, you can run :python:`model.backend.update_param('flow_eff', {'region1::ccgt`: 0.1})`. This will not affect results at this stage, you'll need to rerun the backend (point 4) to optimise with these new values.
+    If you are interested in updating a few values in the model, you can run :python:`model.backend.update_param()`. For example, to update the energy efficiency of your `ccgt` technology in location `region1` from 0.5 to 0.1, you can run :python:`model.backend.update_param('flow_out_eff', {'region1::ccgt`: 0.1})`. This will not affect results at this stage, you'll need to rerun the backend (point 4) to optimise with these new values.
 
-.. note:: If you are interested in updating the objective function cost class weights, you will need to set 'objective_cost_class' as the parameter, e.g. :python:`model.backend.update_param('objective_cost_class', {'monetary': 0.5})`.
+.. note:: If you are interested in updating the objective function cost class weights, you will need to set 'objective_cost_weights' as the parameter, e.g. :python:`model.backend.update_param('objective_cost_weights', {'monetary': 0.5})`.
 
 3. Activate / Deactivate a constraint or objective.
     Constraints can be activated and deactivate such that they will or will not have an impact on the optimisation. All constraints are active by default, but you might like to remove, for example, a capacity constraint if you don't want there to be a capacity limit for any technologies. Similarly, if you had multiple objectives, you could deactivate one and activate another. The result would be to have a different objective when rerunning the backend.

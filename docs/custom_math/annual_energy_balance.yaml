@@ -1,0 +1,63 @@
+# title: Annual energy balance
+
+# description: |
+#   Limit or set the total (e.g. annual) outflow of a technology to a specified absolute value.
+#
+#   New technology-level parameters:
+#
+#   * `annual_flow_max`
+#   * `annual_source_max`
+#
+#   New top-level parameters:
+#
+#   * `annual_flow_max` (if summing over technologies and/or nodes)
+#   * `flow_max_group` (if summing over technologies and/or nodes)
+#
+#   Helper functions used:
+#
+#   * `inheritance` (where)
+#   * `sum` (expression)
+#
+# ---
+
+constraints:
+  annual_energy_balance_per_tech_and_node:
+    description: Limit total technology annual energy production at each possible deployment site.
+    foreach: [nodes, techs]
+    where: annual_flow_max
+    equations:
+      - expression: "sum(flow_out, over=[carriers, timesteps]) <= annual_flow_max"
+
+  annual_energy_balance_global_per_tech:
+    description: Limit total technology annual energy production across all possible deployment sites.
+    foreach: [techs]
+    where: annual_flow_max
+    equations:
+      - expression: "sum(flow_out, over=[nodes, carriers, timesteps]) <= annual_flow_max"
+
+  annual_energy_balance_global_multi_tech:
+    description: Limit total combined technology annual energy production across all possible deployment sites.
+    # To slice a model component with a list of values, we need to use referenced `slices`.
+    where: annual_flow_max AND flow_max_group
+    equations:
+      - expression: "sum(flow_out[techs=$techs], over=[nodes, techs, carriers, timesteps]) <= annual_flow_max"
+    slices:
+      techs:
+        - expression: flow_max_group
+
+  annual_energy_balance_total_source_availability:
+    description: >
+      Limit total flow into the system from a particular source.
+      NOTE: this only works for supply_plus technologies.
+        For `supply` technologies you will need to convert `flow_out` to `flow_in` using `energy_eff` and limit that.
+    foreach: [techs]
+    where: source_use AND annual_source_max
+    equations:
+      - expression: "sum(source_use, over=[nodes, techs, timesteps]) <= annual_source_max"
+
+  annual_energy_balance_total_sink_availability:
+    description: Limit total flow out of the system into a sink that is not pinned by `sink_equals`.
+    foreach: [techs]
+    where: inheritance(demand) AND annual_sink_max
+    equations:
+      - expression: "sum(flow_in, over=[nodes, carriers, timesteps]) <= annual_sink_max"

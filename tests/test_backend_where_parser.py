@@ -2,15 +2,15 @@ import numpy as np
 import pyparsing
 import pytest
 import xarray as xr
+from calliope.attrdict import AttrDict
 from calliope.backend import expression_parser, helper_functions, where_parser
-from calliope.core.attrdict import AttrDict
 from calliope.exceptions import BackendError
 
 from .common.util import check_error_or_warning
 
 SUB_EXPRESSION_CLASSIFIER = expression_parser.SUB_EXPRESSION_CLASSIFIER
 
-BASE_DIMS = ["nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"]
+BASE_DIMS = ["nodes", "techs", "carriers", "costs", "timesteps"]
 
 
 def parse_yaml(yaml_string):
@@ -87,14 +87,13 @@ def where(bool_operand, helper_function, data_var, comparison, subset):
 
 
 @pytest.fixture(scope="function")
-def eval_kwargs(dummy_model_data, dummy_pyomo_backend_model):
+def eval_kwargs(dummy_pyomo_backend_model):
     return {
-        "model_data": dummy_model_data,
-        "backend_dataset": dummy_pyomo_backend_model._dataset,
+        "input_data": dummy_pyomo_backend_model.inputs,
+        "backend_interface": dummy_pyomo_backend_model,
         "helper_functions": helper_functions._registry["where"],
-        "test": True,
-        "errors": set(),
-        "warnings": set(),
+        "equation_name": "foo",
+        "return_type": "array",
     }
 
 
@@ -110,11 +109,7 @@ def parse_where_string(eval_kwargs, where):
 class TestParserElements:
     @pytest.mark.parametrize(
         ["data_var_string", "expected"],
-        [
-            ("with_inf", "with_inf"),
-            ("all_inf", "all_inf"),
-            ("all_nan", "all_nan"),
-        ],
+        [("with_inf", "with_inf"), ("all_inf", "all_inf"), ("all_nan", "all_nan")],
     )
     def test_data_var(
         self, data_var, dummy_model_data, data_var_string, expected, eval_kwargs
@@ -147,10 +142,7 @@ class TestParserElements:
 
     @pytest.mark.parametrize(
         ["data_var_string", "expected_similar"],
-        [
-            ("multi_dim_var", "with_inf_as_bool"),
-            ("multi_dim_expr", "all_true"),
-        ],
+        [("multi_dim_var", "with_inf_as_bool"), ("multi_dim_expr", "all_true")],
     )
     def test_data_var_with_where_decision_variable_or_expr(
         self, data_var, dummy_model_data, data_var_string, expected_similar, eval_kwargs
@@ -191,10 +183,7 @@ class TestParserElements:
             parsed_[0].eval(apply_where=False, **eval_kwargs)
         assert check_error_or_warning(
             excinfo,
-            [
-                "Can only check for existence of values",
-                f"Received `{data_var_string}`",
-            ],
+            ["Can only check for existence of values", f"Received `{data_var_string}`"],
         )
 
     def test_data_var_fail_cannot_handle_constraint(self, data_var, eval_kwargs):
@@ -259,8 +248,7 @@ class TestParserElements:
         with pytest.raises(BackendError) as excinfo:
             parsed_[0].eval(**eval_kwargs)
         assert check_error_or_warning(
-            excinfo,
-            f"Configuration option resolves to invalid type `{type_}`",
+            excinfo, f"Configuration option resolves to invalid type `{type_}`"
         )
 
     @pytest.mark.parametrize(
@@ -276,7 +264,8 @@ class TestParserElements:
     )
     def test_boolean_parser(self, bool_operand, bool_string, expected_true):
         parsed_ = bool_operand.parse_string(bool_string, parse_all=True)
-        assert parsed_[0].eval() if expected_true else not parsed_[0].eval()
+        evaluated = parsed_[0].eval(return_type="array")
+        assert evaluated if expected_true else not evaluated
 
     @pytest.mark.parametrize(
         "bool_string", ["tru e", "_TRUE", "True_", "false1", "1false", "1", "foo"]
@@ -289,7 +278,7 @@ class TestParserElements:
     @pytest.mark.parametrize("instring", ["foo", "foo_bar", "FOO", "foo10", "foo_10"])
     def test_evaluatable_string_parser(self, evaluatable_string, instring):
         parsed_ = evaluatable_string.parse_string(instring, parse_all=True)
-        parsed_[0].eval() == instring
+        parsed_[0].eval(return_type="array") == instring
 
     @pytest.mark.parametrize(
         "instring", ["_foo", "1foo", ".foo", "$foo", "__foo__", "foo bar", "foo-bar"]
@@ -329,13 +318,7 @@ class TestParserElements:
 
     @pytest.mark.parametrize(
         ["operator", "comparison_val", "n_true"],
-        [
-            ("=", ".inf", 1),
-            ("<", 3, 4),
-            ("<=", 3, 5),
-            (">", 1, 5),
-            (">=", 1, 8),
-        ],
+        [("=", ".inf", 1), ("<", 3, 4), ("<=", 3, 5), (">", 1, 5), (">=", 1, 8)],
     )
     def test_comparison_parser_data_var_different_ops(
         self, comparison, eval_kwargs, operator, comparison_val, n_true
@@ -395,7 +378,7 @@ class TestParserElements:
     def test_subsetting_parser(self, subset, subset_string, expected_subset):
         parsed_ = subset.parse_string(f"{subset_string} in foo", parse_all=True)
         assert parsed_[0].set_name == "foo"
-        assert [i.eval() for i in parsed_[0].subset] == expected_subset
+        assert [i.eval(return_type="array") for i in parsed_[0].val] == expected_subset
 
     @pytest.mark.parametrize(
         "subset_string",
@@ -404,7 +387,7 @@ class TestParserElements:
             "[bar] in",  # missing set name
             "foo in [bar]",  # Wrong order of subset and set name
             "[foo=bar] in foo",  # comparison string in subset
-            "[inheritance(a)] in foo"  # helper function in subset
+            "[inheritance(techs=a)] in foo"  # helper function in subset
             "(bar) in foo",  # wrong brackets
         ],
     )
@@ -435,7 +418,7 @@ class TestParserMasking:
         [
             ("all_inf", "all_false"),
             ("config.foo=True", True),
-            ("inheritance(boo)", "boo_inheritance_bool"),
+            ("inheritance(nodes=boo)", "nodes_inheritance_boo_bool"),
         ],
     )
     def test_no_aggregation(
@@ -579,10 +562,10 @@ class TestParserMasking:
         assert check_error_or_warning(excinfo, "Expected")
 
 
-class TestAsLatex:
+class TestAsMathString:
     @pytest.fixture
     def latex_eval_kwargs(self, eval_kwargs):
-        eval_kwargs["as_latex"] = True
+        eval_kwargs["return_type"] = "math_string"
         return eval_kwargs
 
     @pytest.mark.parametrize(

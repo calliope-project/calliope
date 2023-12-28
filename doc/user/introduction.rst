@@ -51,7 +51,7 @@ Development has been partially funded by several grants throughout throughout th
 * The `Grantham Institute <https://www.imperial.ac.uk/grantham>`_ at Imperial College London.
 * the European Institute of Innovation & Technology's `Climate-KIC program <https://www.climate-kic.org>`_.
 * `Engineering and Physical Sciences Research Council <https://gow.epsrc.ukri.org/NGBOViewGrant.aspx?GrantRef=EP/L016095/1>`_, reference number: EP/L016095/1.
-* `The Swiss Competence Center for Energy Research − Supply of Electricity (SCCER SoE) <http://sccer-soe.ch/en/home/>`_, contract number 1155002546.
+* `The Swiss Competence Center for Energy Research - Supply of Electricity (SCCER SoE) <http://sccer-soe.ch/en/home/>`_, contract number 1155002546.
 * `Swiss Federal Office for Energy (SFOE) <https://www.bfe.admin.ch/bfe/en/home.html>`_, grant number SI/501768-01.
 * `European Research Council <https://erc.europa.eu>`_ TRIPOD grant, grant agreement number 715132.
 * `The SENTINEL project <https://sentinel.energy/>`_ of the European Union's Horizon 2020 research and innovation programme under grant agreement No 837089.

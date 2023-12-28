@@ -1,0 +1,143 @@
+# Set Combined heat and power (CHP) plant heat to power operational zones.
+# There are three types of CHP that can be described by the following constraints:
+# 1. CHPs with extraction (condensing) turbines, where some electrical efficiency can be sacrificed by diverting high-temperature steam to provide more heat (following the extraction (cv) line).
+# At maximum electrical efficiency, some heat can still be generated from the low-temperature steam output (following the backpressure (cb) line).
+# The following figure shows the 2D plane of electricity and heat generation; there is a third dimension not shown here: fuel consumption.
+# Along the cv line, fuel consumption remains constant.
+# ^
+# |Electricity
+# |
+# |----
+# |    \-------   Cv
+# |            \-------
+# |                    \-------
+# |                            \------
+# |                              --/
+# |    operating region       --/
+# |                        --/
+# |                     --/
+# |                  --/
+# |               --/
+# |            --/   Cb
+# |         --/
+# |      --/
+# |   --/
+# | -/                              Heat
+# -------------------------------------->
+
+# 2. CHPs without extraction turbines, but with auxiliary boilers that can be used to divert fuel use for direct heat generation.
+# At maximum electrical efficiency, some heat can be generated from the low-temperature steam output (following the backpressure (cb) line).
+# For the same fuel input, electricity output can be sacrificed by diverting some fuel to direct use in a boiler, with its own efficiency.
+# This leads to two sources of heat output (E = electricity output): H1 = E / cb; H2 / boiler_eff + E / turbine_eff = fuel_consumption. Total heat output H is then H1 + H2.
+# The following figure shows the 2D plane of electricity and heat generation; there is a third dimension not shown here: fuel consumption.
+# ^
+# |Electricity
+# |
+# |                  --/
+# |         Cb    --/   \-
+# |            --/        \-
+# |         --/             \-
+# |      --/                  \-
+# |   --/        operating      \-
+# | -/            region          \-  Heat
+# ---------------------------------------->
+
+# 3. CHPs without extraction turbines and without an auxiliary boiler.
+# Here, there is no operating region; the output must follow the backpressure line.
+# ^
+# |Electricity
+# |
+# |                          /--
+# |                       /--
+# |               Cb   /--
+# |                 /--
+# |               /-
+# |            /--
+# |         /--
+# |      /--
+# |    /-
+# | /--                             Heat
+# -------------------------------------->
+
+# New technology-level parameters:
+# turbine_type (used to group constraints together)
+# power_loss_factor
+# power_to_heat_ratio
+# boiler_eff
+
+# helper functions used:
+# sum (expression)
+
+constraints:
+
+# Update conversion balance constraint to not interfere with these constraints
+
+  balance_conversion:
+    where: >-
+      parent=conversion AND NOT include_storage=true AND NOT (
+        turbine_type=extraction OR (turbine_type=backpressure AND boiler_eff)
+      )
+    equations:
+      - where: NOT turbine_type=backpressure
+        expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
+      - where: turbine_type=backpressure
+        expression: flow_out_inc_eff[carriers=electricity] == sum(flow_in_inc_eff, over=carriers)
+
+# Extraction turbine constraints
+# ~~
+  chp_extraction_line:
+    description: >
+      Set the extraction line for combined heat and power plants with extraction turbines.
+      `power_loss_factor` is also referred to as simply `cv`.
+    foreach: [nodes, techs, timesteps]
+    where: turbine_type=extraction
+    equations:
+      - expression: >
+          flow_out_inc_eff[carriers=electricity]
+          <= sum(flow_in_inc_eff, over=carriers) - (flow_out_inc_eff[carriers=heat] * power_loss_factor)
+
+  chp_backpressure_line_min:
+    description: >
+      Set the backpressure line as a lower bound for electricity generation in combined heat and power plants with extraction turbines.
+      `power_to_heat_ratio` is also referred to as the `backpressure ratio` or simply `cb`.
+    foreach: [nodes, techs, timesteps]
+    where: turbine_type=extraction
+    equations:
+      - expression: flow_out[carriers=electricity] >= flow_out[carriers=heat] * power_to_heat_ratio
+
+# ~~
+
+# Backpressure with direct boiler option
+# ~~
+  chp_backpressure_line_max:
+    description: >
+      Set the backpressure line as a lower bound for heat generation in combined heat and power plants without extraction turbines, but with the option to divert fuel to use in direct heat generation (e.g., via a boiler).
+      `power_to_heat_ratio` is also referred to as the `backpressure ratio` or simply `cb`.
+    foreach: [nodes, techs, timesteps]
+    where: turbine_type=backpressure AND boiler_eff
+    equations:
+      - expression: flow_out[carriers=electricity] <= flow_out[carriers=heat] * power_to_heat_ratio
+
+  chp_divert_fuel_to_boiler:
+    description: >
+      Divert fuel input from use in combined heat and power generation to be used in direct heat generation (e.g., via a boiler).
+      `heat_eff` is the boiler efficiency.
+      `power_to_heat_ratio` is also referred to as the `backpressure ratio` or simply `cb`.
+    foreach: [nodes, techs, timesteps]
+    where: turbine_type=backpressure AND boiler_eff
+    equations:
+      - expression: >
+          flow_out[carriers=heat]
+          <= boiler_eff * (sum(flow_in_inc_eff, over=carriers) - flow_out_inc_eff[carriers=electricity])
+            + (flow_out[carriers=electricity] / power_to_heat_ratio)
+# ~~
+
+# Backpressure only
+  chp_backpressure_line_equals:
+    description: >
+      Fix the backpressure line for combined heat and power plants without extraction turbines.
+      `power_to_heat_ratio` is also referred to as the `backpressure ratio` or simply `cb`.
+    foreach: [nodes, techs, timesteps]
+    where: turbine_type=backpressure AND NOT boiler_eff
+    equations:
+      - expression: flow_out[carriers=electricity] == flow_out[carriers=heat] * power_to_heat_ratio

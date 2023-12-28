@@ -1,0 +1,19 @@
+# Set per-timestep variations in limits to out/inflows, which would otherwise be limited by a static value.
+# For example, `flow_cap` can be made to fluctuate per timestep above/below its rated value.
+# User-defined timeseries parameters need to be in the model inputs for these constraints.
+# This can be achieved by defining them for each relevant technology in your YAML and linking it to a CSV file (e.g., `techs.my_tech.constraints.flow_cap_max_relative_per_ts: file=my_file.csv`).
+
+# New top-level parameters:
+# flow_cap_max_relative_per_ts
+# storage_max_relative_per_ts
+
+# helper functions used:
+# sum (expression)
+
+constraints:
+  max_time_varying_flow_cap:
+    description: Limit flow out in each hour according to a time varying fractional limit that is multiplied by the technology flow cap. This represents, for instance, the impact of outdoor temperature on the maximum output of a technology relative to its rated max output.
+    foreach: [nodes, techs, carriers, timesteps]
+    where: "flow_cap_max_relative_per_ts"
+    equations:
+      - expression: "flow_out <= flow_cap_max_relative_per_ts * flow_cap * flow_out_parasitic_eff"

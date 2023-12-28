@@ -11,6 +11,7 @@ on:
       - CITATION
       - AUTHORS
       - doc/**
+      - .readthedocs.yml
 
 defaults:
   run:
@@ -29,12 +30,12 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        py3version: ["9", "10", "11"]
+        py3version: ["10", "11", "12"]
         include:
           - os: windows-latest
-            py3version: "11"
+            py3version: "12"
           - os: macos-latest
-            py3version: "11"
+            py3version: "12"
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -43,7 +44,7 @@ jobs:
     - uses: mamba-org/setup-micromamba@v1
       with:
         micromamba-version: latest
-        environment-name: ${{ github.event.repository.name }}-${{ matrix.os }}-3${{ matrix.py3version }}
+        environment-name: ${{ github.event.repository.name }}-${{ matrix.os }}-3${{ matrix.py3version }}-${{ hashFiles('requirements/dev.txt') }}
         environment-file: requirements/base.txt
         create-args: >-
           -f requirements/dev.txt
@@ -70,16 +71,16 @@ jobs:
       run: python -m ipykernel install --user --name calliope
 
     - name: run tests with coverage
-      if: matrix.os == 'ubuntu-latest' && matrix.py3version == '11'
+      if: matrix.os == 'ubuntu-latest' && matrix.py3version == '12'
       run: pytest --cov
 
     - name: run tests without coverage
-      if: matrix.os != 'ubuntu-latest' || matrix.py3version != '11'
+      if: matrix.os != 'ubuntu-latest' || matrix.py3version != '12'
       run: pytest
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
-      if: matrix.os == 'ubuntu-latest' && matrix.py3version == '11'
+      if: matrix.os == 'ubuntu-latest' && matrix.py3version == '12'
       with:
         fail_ci_if_error: true
         directory: "./reports/coverage/"

@@ -4,166 +4,212 @@
 
 # Note: '-start' and '-end' is used in tutorial documentation only
 
-# supply_power_plus-start
+# interest_rate_setter-start
 tech_groups:
-  supply_power_plus:
-    essentials:
-      parent: supply_plus
-      carrier: electricity
-# supply_power_plus-end
+  interest_rate_setter:
+    cost_interest_rate:
+      data: 0.10
+      index: monetary
+      dims: costs
+
+  power_lines:
+    name: "Electrical power distribution"
+    color: "#6783E3"
+    parent: transmission
+    inherit: interest_rate_setter
+    carrier_in: electricity
+    carrier_out: electricity
+    flow_cap_max: 2000
+    flow_out_eff: 0.98
+    lifetime: 25
+    cost_flow_cap_per_distance:
+      data: 0.01
+      index: monetary
+      dims: costs
+
+  heat_pipes:
+    name: "District heat distribution"
+    color: "#823739"
+    parent: transmission
+    inherit: interest_rate_setter
+    carrier_in: heat
+    carrier_out: heat
+    flow_cap_max: 2000
+    flow_out_eff_per_distance: 0.975
+    lifetime: 25
+    cost_flow_cap_per_distance:
+      data: 0.3
+      index: monetary
+      dims: costs
+# interest_rate_setter-end
 
 techs:
   ##-GRID SUPPLY-##
   # supply-start
   supply_grid_power:
-    essentials:
-      name: "National grid import"
-      color: "#C5ABE3"
-      parent: supply
-      carrier: electricity
-    constraints:
-      source_max: inf
-      flow_cap_max: 2000
-      lifetime: 25
-    costs:
-      monetary:
-        interest_rate: 0.10
-        flow_cap: 15
-        om_con: 0.1 # 10p/kWh electricity price #ppt
+    name: "National grid import"
+    color: "#C5ABE3"
+    parent: supply
+    inherit: interest_rate_setter
+    carrier_out: electricity
+    source_max: .inf
+    flow_cap_max: 2000
+    lifetime: 25
+    cost_flow_cap:
+      data: 15
+      index: monetary
+      dims: costs
+    cost_flow_in:
+      data: 0.1 # 10p/kWh electricity price #ppt
+      index: monetary
+      dims: costs
 
   supply_gas:
-    essentials:
-      name: "Natural gas import"
-      color: "#C98AAD"
-      parent: supply
-      carrier: gas
-    constraints:
-      source_max: inf
-      flow_cap_max: 2000
-      lifetime: 25
-    costs:
-      monetary:
-        interest_rate: 0.10
-        flow_cap: 1
-        om_con: 0.025 # 2.5p/kWh gas price #ppt
+    name: "Natural gas import"
+    color: "#C98AAD"
+    parent: supply
+    inherit: interest_rate_setter
+    carrier_out: gas
+    source_max: .inf
+    flow_cap_max: 2000
+    lifetime: 25
+    cost_flow_cap:
+      data: 1
+      index: monetary
+      dims: costs
+    cost_flow_in:
+      data: 0.025 # 2.5p/kWh gas price #ppt
+      index: monetary
+      dims: costs
   # supply-end
 
   ##-Renewables-##
   # pv-start
   pv:
-    essentials:
-      name: "Solar photovoltaic power"
-      color: "#F9D956"
-      parent: supply_power_plus
-    switches:
-      source_unit: per_area
-      export: true
-    constraints:
-      area_use_per_flow_cap: 7 # 7m2 of panels needed to fit 1kWp of panels
-      export_carrier: electricity
-      source_equals: file=pv_resource.csv:per_area # Already accounts for panel efficiency - kWh/m2. Source: Renewables.ninja Solar PV Power - Version: 1.1 - License: https://creativecommons.org/licenses/by-nc/4.0/ - Reference: https://doi.org/10.1016/j.energy.2016.08.060
-      parasitic_eff: 0.85 # inverter losses
-      flow_cap_max: 250
-      area_use_max: 1500
-      lifetime: 25
-    costs:
-      monetary:
-        interest_rate: 0.10
-        flow_cap: 1350
+    name: "Solar photovoltaic power"
+    color: "#F9D956"
+    parent: supply
+    carrier_out: electricity
+    inherit: interest_rate_setter
+    carrier_export: electricity
+    source_unit: per_area
+    area_use_per_flow_cap: 7 # 7m2 of panels needed to fit 1kWp of panels
+
+    # Already accounts for panel efficiency - kWh/m2.
+    # Source: Renewables.ninja Solar PV Power
+    # Version: 1.1
+    # License: https://creativecommons.org/licenses/by-nc/4.0/
+    # Reference: https://doi.org/10.1016/j.energy.2016.08.060
+    source_equals: file=pv_resource.csv:per_area
+
+    flow_out_parasitic_eff: 0.85 # inverter losses
+    flow_cap_max: 250
+    area_use_max: 1500
+    lifetime: 25
+    cost_flow_cap:
+      data: 1350
+      index: monetary
+      dims: costs
+
   # pv-end
 
   # Conversion
   # boiler-start
   boiler:
-    essentials:
-      name: "Natural gas boiler"
-      color: "#8E2999"
-      parent: conversion
-      carrier_out: heat
-      carrier_in: gas
-    constraints:
-      flow_cap_max: 600
-      flow_eff: 0.85
-      lifetime: 25
-    costs:
-      monetary:
-        interest_rate: 0.10
-        om_con: 0.004 # .4p/kWh
+    name: "Natural gas boiler"
+    color: "#8E2999"
+    parent: conversion
+    inherit: interest_rate_setter
+    carrier_in: gas
+    carrier_out: heat
+    flow_cap_max:
+      data: 600
+      index: heat
+      dims: carriers
+    flow_out_eff: 0.85
+    lifetime: 25
+    cost_flow_in:
+      data: 0.004 # .4p/kWh
+      index: monetary
+      dims: costs
   # boiler-end
 
   # Conversion_plus
   # chp-start
   chp:
-    essentials:
-      name: "Combined heat and power"
-      color: "#E4AB97"
-      parent: conversion_plus
-      primary_carrier_out: electricity
-      carrier_in: gas
-      carrier_out: electricity
-      carrier_out_2: heat
-    switches:
-      export: true
-    constraints:
-      export_carrier: electricity
-      flow_cap_max: 1500
-      flow_eff: 0.405
-      carrier_ratios.carrier_out_2.heat: 0.8
-      lifetime: 25
-    costs:
-      monetary:
-        interest_rate: 0.10
-        flow_cap: 750
-        om_prod: 0.004 # .4p/kWh for 4500 operating hours/year
-        export: file=export_power.csv
+    name: "Combined heat and power"
+    color: "#E4AB97"
+    parent: conversion
+    inherit: interest_rate_setter
+    carrier_in: gas
+    carrier_out: [electricity, heat]
+    carrier_export: electricity
+    flow_cap_max:
+      data: 1500
+      index: electricity
+      dims: carriers
+    flow_out_eff:
+      data: 0.405
+      index: electricity
+      dims: carriers
+    heat_to_power_ratio: 0.8
+    lifetime: 25
+    cost_flow_cap:
+      data: 750
+      index: [[monetary, electricity]]
+      dims: [costs, carriers]
+    cost_flow_out:
+      data: 0.004 # .4p/kWh for 4500 operating hours/year
+      index: [[monetary, electricity]]
+      dims: [costs, carriers]
+    cost_export:
+      data: file=export_power.csv
+      index: [[monetary, electricity]]
+      dims: [costs, carriers]
   # chp-end
 
   ##-DEMAND-##
   # demand-start
   demand_electricity:
-    essentials:
-      name: "Electrical demand"
-      color: "#072486"
-      parent: demand
-      carrier: electricity
+    name: "Electrical demand"
+    color: "#072486"
+    parent: demand
+    carrier_in: electricity
 
   demand_heat:
-    essentials:
-      name: "Heat demand"
-      color: "#660507"
-      parent: demand
-      carrier: heat
+    name: "Heat demand"
+    color: "#660507"
+    parent: demand
+    carrier_in: heat
   # demand-end
 
   ##-DISTRIBUTION-##
   # transmission-start
-  power_lines:
-    essentials:
-      name: "Electrical power distribution"
-      color: "#6783E3"
-      parent: transmission
-      carrier: electricity
-    constraints:
-      flow_cap_max: 2000
-      flow_eff: 0.98
-      lifetime: 25
-    costs:
-      monetary:
-        interest_rate: 0.10
-        flow_cap_per_distance: 0.01
 
-  heat_pipes:
-    essentials:
-      name: "District heat distribution"
-      color: "#823739"
-      parent: transmission
-      carrier: heat
-    constraints:
-      flow_cap_max: 2000
-      flow_eff_per_distance: 0.975
-      lifetime: 25
-    costs:
-      monetary:
-        interest_rate: 0.10
-        flow_cap_per_distance: 0.3
-  # transmission-end
+  X1_to_X2:
+    from: X1
+    to: X2
+    inherit: power_lines
+    distance: 10
+  X1_to_X3:
+    from: X1
+    to: X3
+    inherit: power_lines
+    distance: 5
+  X1_to_N1:
+    from: X1
+    to: N1
+    inherit: heat_pipes
+    distance: 3
+  N1_to_X2:
+    from: N1
+    to: X2
+    inherit: heat_pipes
+    distance: 3
+  N1_to_X3:
+    from: N1
+    to: X3
+    inherit: heat_pipes
+    distance: 4
+
+# transmission-end

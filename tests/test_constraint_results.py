@@ -91,9 +91,7 @@ class TestUrbanScaleMILP:
         assert any(((_in < 0) & (_out > 0)).any()) is True
 
         m_bin = calliope.examples.urban_scale(
-            override_dict={
-                "techs.heat_pipes.constraints.force_asynchronous_flow": True,
-            }
+            override_dict={"techs.heat_pipes.constraints.force_asynchronous_flow": True}
         )
         m_bin.build(solver_options={"mipgap": 0.05})
         m_bin.solve(zero_threshold=1e-6)
@@ -111,7 +109,7 @@ class TestModelSettings:
                 "nodes.a.techs": {"test_supply_elec": {}, "test_demand_elec": {}},
                 "links.a,b.active": False,
                 # pick a time subset where demand is uniformally -10 throughout
-                "config.init.subset_time": [
+                "config.init.time_subset": [
                     "2005-01-01 06:00:00",
                     "2005-01-01 08:00:00",
                 ],
@@ -119,7 +117,7 @@ class TestModelSettings:
                 # Allow setting resource and flow_cap_max/equals to force infeasibility
                 "techs.test_supply_elec.constraints": {
                     "source_equals": cap_val,
-                    "flow_eff": 1,
+                    "flow_out_eff": 1,
                     "flow_cap_equals": 15,
                 },
             }
@@ -170,14 +168,14 @@ class TestModelSettings:
         self, model_no_unmet, model_unmet_demand, model_unused_supply
     ):
         assert (
-            model_unused_supply.backend.objectives.minmax_cost_optimisation.item()()
-            - model_no_unmet.backend.objectives.minmax_cost_optimisation.item()()
+            model_unused_supply.backend.objectives.min_cost_optimisation.item()()
+            - model_no_unmet.backend.objectives.min_cost_optimisation.item()()
             == approx(1e3 * 15)
         )
 
         assert (
-            model_unmet_demand.backend.objectives.minmax_cost_optimisation.item()()
-            - model_no_unmet.backend.objectives.minmax_cost_optimisation.item()()
+            model_unmet_demand.backend.objectives.min_cost_optimisation.item()()
+            - model_no_unmet.backend.objectives.min_cost_optimisation.item()()
             == approx(1e3 * 15)
         )
 
@@ -266,9 +264,7 @@ class TestEnergyCapacityPerStorageCapacity:
     @pytest.mark.skip(reason="operate mode not yet expected to run")
     def test_operate_mode_horizon_window(self, model_file, horizon_window):
         horizon, window = horizon_window
-        override_dict = {
-            "config.init.subset_time": ["2005-01-01", "2005-01-05"],
-        }
+        override_dict = {"config.init.time_subset": ["2005-01-01", "2005-01-05"]}
         model = build_model(
             model_file=model_file,
             scenario="operate_mode_min",

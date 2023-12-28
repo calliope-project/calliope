@@ -1,14 +1,17 @@
+import importlib
 from itertools import chain, combinations
 
 import numpy as np
 import pytest
 import xarray as xr
-from calliope import AttrDict
+from calliope.attrdict import AttrDict
 from calliope.backend import latex_backend_model, pyomo_backend_model
+from calliope.util.schema import CONFIG_SCHEMA, MODEL_SCHEMA, extract_from_schema
 
 from .common.util import build_test_model as build_model
 
-ALL_DIMS = {"nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"}
+ALL_DIMS = {"nodes", "techs", "carriers", "costs", "timesteps"}
+CONFIG_DIR = importlib.resources.files("calliope") / "config"
 
 
 @pytest.fixture(
@@ -19,6 +22,16 @@ ALL_DIMS = {"nodes", "techs", "carriers", "costs", "timesteps", "carrier_tiers"}
 )
 def foreach(request):
     return request.param
+
+
+@pytest.fixture(scope="session")
+def config_defaults():
+    return AttrDict(extract_from_schema(CONFIG_SCHEMA, "default"))
+
+
+@pytest.fixture(scope="session")
+def model_defaults():
+    return AttrDict(extract_from_schema(MODEL_SCHEMA, "default"))
 
 
 @pytest.fixture(scope="session")
@@ -126,19 +139,43 @@ def simple_conversion_plus():
 
 
 @pytest.fixture(scope="module")
-def dummy_model_data():
+def dummy_model_data(config_defaults, model_defaults):
+    coords = {
+        dim: ["foo", "bar"]
+        if dim != "techs"
+        else ["foobar", "foobaz", "barfoo", "bazfoo"]
+        for dim in ALL_DIMS
+    }
+    carrier_dims = ("nodes", "techs", "carriers")
+    node_tech_dims = ("nodes", "techs")
+    carrier_in = xr.DataArray(
+        [
+            [[True, True], [True, True], [True, True], [True, True]],
+            [[True, True], [False, False], [True, False], [True, False]],
+        ],
+        dims=carrier_dims,
+        coords={k: v for k, v in coords.items() if k in carrier_dims},
+    )
+    carrier_out = xr.DataArray(
+        [
+            [[True, True], [True, True], [False, True], [True, True]],
+            [[True, True], [True, True], [True, True], [True, True]],
+        ],
+        dims=carrier_dims,
+        coords={k: v for k, v in coords.items() if k in carrier_dims},
+    )
+    node_tech = xr.DataArray(
+        [[False, True, True, True], [True, True, False, False]],
+        dims=node_tech_dims,
+        coords={k: v for k, v in coords.items() if k in node_tech_dims},
+    )
+
     model_data = xr.Dataset(
-        coords={
-            dim: ["foo", "bar"]
-            if dim != "techs"
-            else ["foobar", "foobaz", "barfoo", "bazfoo"]
-            for dim in ALL_DIMS
-        },
+        coords=coords,
         data_vars={
-            "definition_matrix": (
-                ["nodes", "techs", "carrier_tiers", "carriers"],
-                np.random.choice(a=[False, True], p=[0.05, 0.95], size=(2, 4, 2, 2)),
-            ),
+            "definition_matrix": node_tech & (carrier_in | carrier_out),
+            "carrier_in": carrier_in,
+            "carrier_out": carrier_out,
             "with_inf": (
                 ["nodes", "techs"],
                 [[1.0, np.nan, 1.0, 3], [np.inf, 2.0, True, np.nan]],
@@ -173,30 +210,26 @@ def dummy_model_data():
                 ["nodes", "techs"],
                 [[True, True, True, True], [False, True, True, True]],
             ),
-            "inheritance": (
+            "parent": (["techs"], ["supply", "transmission", "demand", "conversion"]),
+            "nodes_inheritance": (["nodes"], ["foo,bar", "boo"]),
+            "nodes_inheritance_boo_bool": (["nodes"], [False, True]),
+            "techs_inheritance": (["techs"], ["foo,bar", np.nan, "baz", "boo"]),
+            "techs_inheritance_boo_bool": (["techs"], [False, False, False, True]),
+            "multi_inheritance_boo_bool": (
                 ["nodes", "techs"],
-                [
-                    ["foo.bar", "boo", "baz", "boo"],
-                    ["bar", "ar", "baz.boo", "foo.boo"],
-                ],
-            ),
-            "boo_inheritance_bool": (
-                ["nodes", "techs"],
-                [[False, True, False, True], [False, False, True, True]],
+                [[False, False, False, False], [False, False, False, True]],
             ),
             "primary_carrier_out": (
                 ["carriers", "techs"],
                 [[1.0, np.nan, 1.0, np.nan], [np.nan, 1.0, np.nan, np.nan]],
             ),
-            "lookup_techs": (
-                ["techs"],
-                ["foobar", np.nan, "foobaz", np.nan],
-            ),
-            "link_remote_nodes": (
+            "lookup_techs": (["techs"], ["foobar", np.nan, "foobaz", np.nan]),
+            "lookup_techs_no_match": (["techs"], ["foo", np.nan, "bar", np.nan]),
+            "lookup_multi_dim_nodes": (
                 ["nodes", "techs"],
                 [["bar", np.nan, "bar", np.nan], ["foo", np.nan, np.nan, np.nan]],
             ),
-            "link_remote_techs": (
+            "lookup_multi_dim_techs": (
                 ["nodes", "techs"],
                 [
                     ["foobar", np.nan, "foobaz", np.nan],
@@ -207,27 +240,39 @@ def dummy_model_data():
         attrs={"scenarios": ["foo"]},
     )
     # xarray forces np.nan to strings if all other values are strings.
-    for k in ["link_remote_nodes", "link_remote_techs", "lookup_techs"]:
+    for k in ["lookup_multi_dim_nodes", "lookup_multi_dim_techs", "lookup_techs"]:
         model_data[k] = model_data[k].where(model_data[k] != "nan")
 
     for param in model_data.data_vars.values():
         param.attrs["is_result"] = 0
 
-    model_data.attrs["config"] = AttrDict(
-        {
-            "build": {
-                "foo": True,
-                "FOO": "baz",
-                "foo1": np.inf,
-                "bar": {"foobar": "baz"},
-                "a_b": 0,
-                "b_a": [1, 2],
+    config_defaults.update(
+        AttrDict(
+            {
+                "build": {
+                    "foo": True,
+                    "FOO": "baz",
+                    "foo1": np.inf,
+                    "bar": {"foobar": "baz"},
+                    "a_b": 0,
+                    "b_a": [1, 2],
+                }
             }
-        }
+        )
     )
+    model_data.attrs["config"] = config_defaults
 
     model_data.attrs["defaults"] = AttrDict(
-        {"all_inf": np.inf, "all_nan": np.nan, "with_inf": 100, "only_techs": 5}
+        {
+            "all_inf": np.inf,
+            "all_nan": np.nan,
+            "with_inf": 100,
+            "only_techs": 5,
+            **model_defaults,
+        }
+    )
+    model_data.attrs["math"] = AttrDict(
+        {"constraints": {}, "variables": {}, "global_expressions": {}, "objectives": {}}
     )
     return model_data
 

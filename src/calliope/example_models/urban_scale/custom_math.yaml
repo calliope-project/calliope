@@ -1,0 +1,15 @@
+constraints:
+  link_chp_outputs:
+    description: Fix the relationship between heat and electricity output
+    foreach: [nodes, techs, timesteps]
+    where: "[chp] in techs"
+    equations:
+      - expression: flow_out[carriers=electricity] * heat_to_power_ratio == flow_out[carriers=heat]
+
+  balance_conversion:
+    # Remove the link between CHP inflow and heat outflow (now dealt with in `link_chp_outputs`)
+    equations:
+      - where: "NOT [chp] in techs"
+        expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
+      - where: "[chp] in techs"
+        expression: flow_out_inc_eff[carriers=electricity] == sum(flow_in_inc_eff, over=carriers)

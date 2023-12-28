@@ -1,0 +1,39 @@
+# Set the share of a technology's (or group thereof) total out/inflow met by other technologies to specific values.
+# If a single technology, it needs to be explicitly defined (e.g., `flow_in[techs=demand_power]`).
+# If a group of technologies, they can be explicitly defined as a list or can be consolidated by a shared attribute (e.g., they produce a specific carrier: `flow_out[carriers=power]`)
+# The parameters (`demand_share_equals`, `supply_share_equals`) can be defined per technology (and optionally per node) (e.g., `techs.my_tech.constraints.demand_share_equals: 0.5`)
+
+# New technology-level parameters:
+# demand_share_equals
+# supply_share_equals
+
+# helper functions used:
+# sum (expression)
+
+constraints:
+  demand_share_equals_per_tech:
+    description: Set the total outflow of certain technologies which produce the `power` carrier to a share of total demand inflow.
+    foreach: [nodes, techs]
+    where: demand_share_equals
+    equations:
+      - expression: >
+          sum(flow_out, over=[timesteps, carriers]) ==
+          sum(flow_in[techs=$demand_tech], over=[timesteps, carriers])
+          * demand_share_equals
+    slices:
+      demand_tech:
+        - expression: demand_share_tech  # assigned as a top-level parameter
+
+
+  supply_share_equals_per_tech:
+    description: Set the total outflow of certain technologies which produce a particular carrier to a share of total outflow of that carrier in each node.
+    foreach: [nodes, techs]
+    where: supply_share_equals
+    equations:
+      - expression: >
+          sum(flow_out[carriers=$carrier], over=[timesteps]) ==
+          sum(flow_out[carriers=$carrier], over=[techs, timesteps])
+          * supply_share_equals
+    slices:
+      carrier:
+        - expression: supply_share_carrier  # assigned as a top-level parameter

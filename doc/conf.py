@@ -15,10 +15,7 @@ sys.path.insert(0, os.path.abspath("../src"))
 sys.path.insert(0, os.path.abspath("."))
 sys.path.append(os.path.abspath("_themes"))
 
-from helpers import generate_readable_schema, generate_tables  # noqa: E402
-
-# Generates the tables and source code files
-generate_tables.process()
+from helpers import generate_readable_schema  # noqa: E402
 
 # Generates readable markdown files from YAML schema
 generate_readable_schema.process()
@@ -62,10 +59,7 @@ extensions = [
 ]
 
 # The suffix of source filenames.
-source_suffix = {
-    ".rst": "restructuredtext",
-    ".md": "markdown",
-}
+source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 
 
 # A string of reStructuredText that will be included at the beginning of every
@@ -112,9 +106,9 @@ MOCK_MODULES = [
     "pandas",
     "numpy",
     "pyomo",
-    "sklearn",
     "pyparsing",
     "netCDF4",
+    "geographiclib",
 ]
 autodoc_mock_imports = MOCK_MODULES
 autodoc_typehints = "both"
@@ -125,7 +119,6 @@ intersphinx_mapping = {
     "python": ("http://docs.python.org/3", None),
     "xarray": ("https://docs.xarray.dev/en/v2022.03.0", None),
     "pandas": ("https://pandas.pydata.org/docs/", None),
-    "sklearn": ("https://scikit-learn.org/stable/", None),
 }
 
 # -- Options for HTML output -------------------------------------------------
@@ -176,7 +169,7 @@ latex_documents = [
         "Calliope Documentation",
         "Calliope contributors",
         "manual",
-    ),
+    )
 ]
 imgmath_latex_preamble = r"\usepackage{breqn}"
 
@@ -204,7 +197,7 @@ texinfo_documents = [
         "Calliope",
         "One line description of project.",
         "Miscellaneous",
-    ),
+    )
 ]
 
 # Edit linkcheck config

@@ -1,30 +1,9 @@
-import ast
 import os
-import sys
 from pathlib import Path
 from typing import Literal, Optional, Union
 
 import calliope
-import pytest
 import xarray as xr
-from calliope import AttrDict
-
-constraint_sets = {
-    k: [ast.literal_eval(i) for i in v]
-    for k, v in AttrDict.from_yaml(
-        os.path.join(os.path.dirname(__file__), "constraint_sets.yaml")
-    )
-    .as_dict_flat()
-    .items()
-}
-
-defaults = AttrDict.from_yaml(
-    os.path.join(os.path.dirname(calliope.__file__), "config", "defaults.yaml")
-)
-
-python36_or_higher = pytest.mark.skipif(
-    sys.version_info < (3, 6), reason="Requires ordered dicts from Python >= 3.6"
-)
 
 
 def build_test_model(
@@ -32,12 +11,14 @@ def build_test_model(
     scenario=None,
     model_file="model.yaml",
     timeseries_dataframes=None,
+    **init_kwargs,
 ):
     return calliope.Model(
         os.path.join(os.path.dirname(__file__), "test_model", model_file),
         override_dict=override_dict,
         scenario=scenario,
         timeseries_dataframes=timeseries_dataframes,
+        **init_kwargs,
     )
 
 
@@ -88,7 +69,7 @@ def check_variable_exists(
 def build_lp(
     model: calliope.Model,
     outfile: Union[str, Path],
-    math: Optional[dict] = None,
+    math: Optional[dict[Union[dict, list]]] = None,
     backend: Literal["pyomo"] = "pyomo",
 ) -> None:
     """
@@ -105,24 +86,32 @@ def build_lp(
     backend_instance = model._BACKENDS[backend](model._model_data)
     for name, dict_ in model.math["variables"].items():
         backend_instance.add_variable(name, dict_)
+    for name, dict_ in model.math["global_expressions"].items():
+        backend_instance.add_global_expression(name, dict_)
 
-    if math is not None:
+    if isinstance(math, dict):
         for component_group, component_math in math.items():
-            for name, dict_ in component_math.items():
-                getattr(backend_instance, f"add_{component_group.removesuffix('s')}")(
-                    name, dict_
-                )
+            component = component_group.removesuffix("s")
+            if isinstance(component_math, dict):
+                for name, dict_ in component_math.items():
+                    getattr(backend_instance, f"add_{component}")(name, dict_)
+            elif isinstance(component_math, list):
+                for name in component_math:
+                    getattr(backend_instance, f"add_{component}")(name)
 
     # MUST have an objective for a valid LP file
     if math is None or "objectives" not in math.keys():
         backend_instance.add_objective(
-            "dummy_obj",
-            {"equations": [{"expression": "1 + 1"}], "sense": "minimize"},
+            "dummy_obj", {"equations": [{"expression": "1 + 1"}], "sense": "minimize"}
         )
         backend_instance._instance.objectives["dummy_obj"][0].activate()
     elif "objectives" in math.keys():
-        objective = list(math["objectives"].keys())[0]
-        backend_instance._instance.objectives[objective][0].activate()
+        if isinstance(math["objectives"], dict):
+            objectives = list(math["objectives"].keys())
+        else:
+            objectives = math["objectives"]
+        assert len(objectives) == 1, "Can only test with one objective"
+        backend_instance._instance.objectives[objectives[0]][0].activate()
 
     backend_instance.verbose_strings()
 
@@ -137,3 +126,4 @@ def build_lp(
 
     # reintroduce the trailing newline since both Pyomo and file formatters love them.
     Path(outfile).write_text("\n".join(stripped_lines) + "\n")
+    return backend_instance

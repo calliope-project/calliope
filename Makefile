@@ -1,9 +1,7 @@
-.PHONY : doc-plots, doc-math
-doc-plots :
-	python doc/helpers/generate_plots.py
+.PHONY : doc-math
 
 doc-math :
-	python doc/helpers/generate_math.py
+	python docs/pre_build/generate_math.py
 
 ###
 # Build package and upload to PyPI

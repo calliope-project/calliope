@@ -36,7 +36,8 @@ output = "reports/coverage/coverage.xml"
 
 [tool.black]
 line-length = 88
-target-version = ['py37', 'py38']
+skip_magic_trailing_comma = true
+target-version = ['py310', 'py311', 'py312']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -52,8 +53,6 @@ exclude = '''
   | .*\.egg-info
 
   # directories without python source files
-  | paper
-  | doc
   | requirements
 )/
 '''
@@ -129,6 +128,7 @@ calliope = "calliope.cli:cli"
 
 [tool.setuptools.dynamic.optional-dependencies]
 dev = { file = ["requirements/dev.txt"] }
+docs = { file = ["requirements/docs.txt"] }
 
 [project.urls]
 website = "https://www.callio.pe/"

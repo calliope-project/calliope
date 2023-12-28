@@ -1,0 +1,54 @@
+# Here we define various different constraints to represent the same intent: to stop a technology from operating too little or too much in a year.
+# This can be used to represent technology downtime when e.g. undergoing maintenance.
+# It can also be used to represent a simplistic inability to ramp technologies up/down too often, e.g. for nuclear power plants.
+# The exact constraint you activate depends on how resolved your technologies are.
+# For instance, the two annual capacity factor constraints can work to represent a fleet of nuclear power plants which tend to operate within an annual capacity factor range of e.g., 75-85%.
+# The `downtime_period` constraint can be used if you know a specific period in time where your technology will need to be down for maintenance and can be defined by setting a value in those timesteps, leaving all other timesteps empty (i.e., NaN).
+# The `downtime_period_decision` constraint will allow a technology with integer decision variables activated to decide on a certain number of timesteps in the year to not be operating, although it is not possible to enforce that these downtime periods are consecutive.
+
+# New technology-level parameters
+# capacity_factor_min
+# capacity_factor_max
+# downtime_periods (from CSV as a timeseries)
+# uptime_limit
+
+# helper functions used:
+# sum (expression)
+
+constraints:
+  annual_capacity_factor_min:
+    description: Limit the lower bound of annual technology operation as a fraction of annual operation at maximum capacity.
+    foreach: [nodes, techs, carriers]
+    where: capacity_factor_min
+    equations:
+      - expression: >
+          sum(flow_out * timestep_weights, over=timesteps) >=
+          flow_cap * capacity_factor_min * $total_time
+    sub_expressions:
+      total_time: &total_time
+        - expression: sum(timestep_resolution * timestep_weights, over=timesteps)
+
+  annual_capacity_factor_max:
+    description: Limit the upper bound of annual technology operation as a fraction of annual operation at maximum capacity.
+    foreach: [nodes, techs, carriers]
+    where: capacity_factor_max
+    equations:
+      - expression: >
+          sum(flow_out * timestep_weights, over=timesteps) <=
+          flow_cap * capacity_factor_max * $total_time
+    sub_expressions:
+      total_time: *total_time
+
+  downtime_period:
+    description: Force outflow to zero in pre-defined timesteps of technology downtime.
+    foreach: [nodes, techs, timesteps]
+    where: downtime_periods
+    equations:
+      - expression: sum(flow_out, over=carriers) == 0
+
+  downtime_period_decision:
+    description: Force operation to zero in an integer number of timesteps, for technologies with integer decision variables activated.
+    foreach: [nodes, techs]
+    where: operating_units AND uptime_limit
+    equations:
+      - expression: sum(operating_units * timestep_weights, over=timesteps) <= uptime_limit

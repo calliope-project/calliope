@@ -29,9 +29,9 @@ from pyomo.common.tempfiles import TempfileManager  # type: ignore
 from pyomo.opt import SolverFactory  # type: ignore
 
 from calliope.backend import backend_model, parsing
-from calliope.core.util.logging import LogWriter
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
+from calliope.util.logging import LogWriter
 
 T = TypeVar("T")
 _COMPONENTS_T = Literal[
@@ -50,8 +50,8 @@ COMPONENT_TRANSLATOR = {
 
 
 class PyomoBackendModel(backend_model.BackendModel):
-    def __init__(self, inputs: xr.Dataset, **config_overrides):
-        super().__init__(inputs, instance=pmo.block(), **config_overrides)
+    def __init__(self, inputs: xr.Dataset, **kwargs):
+        super().__init__(inputs, pmo.block(), **kwargs)
 
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()
@@ -90,7 +90,6 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         parameter_da.attrs["original_dtype"] = parameter_values.dtype
         self._add_to_dataset(parameter_name, parameter_da, "parameters", {})
-        self.valid_math_element_names.add(parameter_name)
 
     def add_constraint(
         self,
@@ -100,22 +99,10 @@ class PyomoBackendModel(backend_model.BackendModel):
         def _constraint_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
-            lhs, op, rhs = element.evaluate_expression(
-                self.inputs, self, where=where, references=references
-            )
-            lhs = lhs.squeeze(drop=True)
-            rhs = rhs.squeeze(drop=True)
-
-            self._check_expr_where_consistency(lhs, where, f"(constraints, {name})")
-            self._check_expr_where_consistency(rhs, where, f"(constraints, {name})")
+            expr = element.evaluate_expression(self, where=where, references=references)
 
             to_fill = self._apply_func(
-                self._to_pyomo_constraint,
-                where,
-                lhs,
-                rhs,
-                op=op,
-                name=name,
+                self._to_pyomo_constraint, where, expr, name=name
             )
             return to_fill
 
@@ -129,38 +116,26 @@ class PyomoBackendModel(backend_model.BackendModel):
         def _expression_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
-            expr = element.evaluate_expression(
-                self.inputs, self, where=where, references=references
-            )
+            expr = element.evaluate_expression(self, where=where, references=references)
             expr = expr.squeeze(drop=True)
 
-            self._check_expr_where_consistency(expr, where, f"(expressions, {name})")
-
             to_fill = self._apply_func(
-                self._to_pyomo_expression,
-                where,
-                expr,
-                name=name,
+                self._to_pyomo_expression, where, expr, name=name
             )
             self._clean_arrays(expr)
             return to_fill
-
-        self.valid_math_element_names.add(name)
 
         self._add_component(
             name, expression_dict, _expression_setter, "global_expressions"
         )
 
     def add_variable(
-        self,
-        name: str,
-        variable_dict: Optional[parsing.UnparsedVariableDict] = None,
+        self, name: str, variable_dict: Optional[parsing.UnparsedVariableDict] = None
     ) -> None:
         domain_dict = {"real": pmo.RealSet, "integer": pmo.IntegerSet}
 
         if variable_dict is None:
             variable_dict = self.inputs.attrs["math"]["variables"][name]
-        self.valid_math_element_names.add(name)
 
         def _variable_setter(where):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
@@ -174,14 +149,10 @@ class PyomoBackendModel(backend_model.BackendModel):
                 domain_type=domain_type,
             )
 
-        self.valid_math_element_names.add(name)
-
         self._add_component(name, variable_dict, _variable_setter, "variables")
 
     def add_objective(
-        self,
-        name: str,
-        objective_dict: Optional[parsing.UnparsedObjectiveDict] = None,
+        self, name: str, objective_dict: Optional[parsing.UnparsedObjectiveDict] = None
     ) -> None:
         sense_dict = {"minimize": 1, "minimise": 1, "maximize": -1, "maximise": -1}
 
@@ -192,8 +163,8 @@ class PyomoBackendModel(backend_model.BackendModel):
         def _objective_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
-            expr = element.evaluate_expression(self.inputs, self, references=references)
-            objective = pmo.objective(xr.DataArray(expr).item(), sense=sense)
+            expr = element.evaluate_expression(self, references=references)
+            objective = pmo.objective(expr.item(), sense=sense)
             if name == self.inputs.attrs["config"].build.objective:
                 text = "activated"
                 objective.activate()
@@ -207,11 +178,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         self._add_component(name, objective_dict, _objective_setter, "objectives")
 
-    def get_parameter(
-        self,
-        name: str,
-        as_backend_objs: bool = True,
-    ) -> xr.DataArray:
+    def get_parameter(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
         parameter = self.parameters.get(name, None)
         if parameter is None:
             raise KeyError(f"Unknown parameter: {name}")
@@ -232,10 +199,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             return param_as_vals.astype(parameter.original_dtype)
 
     def get_constraint(
-        self,
-        name: str,
-        as_backend_objs: bool = True,
-        eval_body: bool = False,
+        self, name: str, as_backend_objs: bool = True, eval_body: bool = False
     ) -> Union[xr.DataArray, xr.Dataset]:
         constraint = self.constraints.get(name, None)
         if constraint is None:
@@ -251,11 +215,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             constraint = constraint_attrs.to_dataset("attributes")
         return constraint
 
-    def get_variable(
-        self,
-        name: str,
-        as_backend_objs: bool = True,
-    ) -> xr.DataArray:
+    def get_variable(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
         variable = self.variables.get(name, None)
         if variable is None:
             raise KeyError(f"Unknown variable: {name}")
@@ -275,10 +235,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         return variable_attrs.to_dataset("attributes")
 
     def get_global_expression(
-        self,
-        name: str,
-        as_backend_objs: bool = True,
-        eval_body: bool = False,
+        self, name: str, as_backend_objs: bool = True, eval_body: bool = False
     ) -> xr.DataArray:
         global_expression = self.global_expressions.get(name, None)
         if global_expression is None:
@@ -411,7 +368,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                     "parameters",
                     name,
                     "Defining values for a previously fully/partially undefined parameter. "
-                    f"The optimisation problem components {refs_to_update} will be re-built.",
+                    f"The optimisation problem components {sorted(refs_to_update)} will be re-built.",
                     "info",
                 )
             self.delete_component(name, "parameters")
@@ -489,37 +446,6 @@ class PyomoBackendModel(backend_model.BackendModel):
         if where is not None:
             variable_da = variable_da.where(where.fillna(0))
         self._apply_func(self._unfix_pyomo_variable, variable_da)
-
-    @staticmethod
-    def _check_expr_where_consistency(
-        expression: xr.DataArray, where: xr.DataArray, description: str
-    ) -> None:
-        """
-        Checks if a given constraint or global expression is consistent with the where.
-
-        Parameters:
-            expression (xr.DataArray): array of linear expressions from a global expression or one side of a constraint equation.
-            where (xr.DataArray): where array.
-            description (str): Description to prefix the error message.
-
-        Raises:
-            BackendError:
-                Raised if there is a dimension in the expression that is not in the where.
-            BackendError:
-                Raised if the expression has any NaN where the where applies.
-        """
-        # Check whether expression has a dim that does not exist in where.
-        broadcast_dims_where = set(expression.dims).difference(set(where.dims))
-        if broadcast_dims_where:
-            raise BackendError(
-                f"{description}: The linear expression array is indexed over dimensions not present in `foreach`: {broadcast_dims_where}"
-            )
-
-        incomplete_constraints = expression.isnull() & where
-        if incomplete_constraints.any():
-            raise BackendError(
-                f"{description}: Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help."
-            )
 
     def _get_capacity_bound(self, bound: Any, name: str) -> xr.DataArray:
         """
@@ -637,13 +563,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             orig.unfix()
 
     def _to_pyomo_constraint(
-        self,
-        mask: Union[bool, np.bool_],
-        lhs: Any,
-        rhs: Any,
-        *,
-        op: Literal["==", ">=", "<="],
-        name: str,
+        self, mask: Union[bool, np.bool_], expr: Any, *, name: str
     ) -> Union[type[ObjConstraint], float]:
         """
         Utility function to generate a pyomo constraint for every element of an
@@ -653,11 +573,9 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         Args:
             mask (Union[bool, np.bool_]): If True, add constraint, otherwise return np.nan
-            lhs (Any): Equation left-hand-side linear expression
-            rhs (Any): Equation right-hand-side linear expression
+            expr (Any): Equation expression.
 
         Kwargs:
-            op (Literal[, optional): Operator to compare `lhs` and `rhs`. Defaults to =", ">=", "<="].
             name (str): Name of constraint
 
         Returns:
@@ -666,16 +584,12 @@ class PyomoBackendModel(backend_model.BackendModel):
                 Otherwise return pmo_constraint(expr=lhs op rhs).
         """
 
-        if not mask:
+        if mask:
+            constraint = ObjConstraint(expr=expr)
+            self._instance.constraints[name].append(constraint)
+            return constraint
+        else:
             return np.nan
-        elif op == "==":
-            constraint = ObjConstraint(expr=lhs == rhs)
-        elif op == "<=":
-            constraint = ObjConstraint(expr=lhs <= rhs)
-        elif op == ">=":
-            constraint = ObjConstraint(expr=lhs >= rhs)
-        self._instance.constraints[name].append(constraint)
-        return constraint
 
     def _to_pyomo_expression(
         self, mask: Union[bool, np.bool_], expr: Any, *, name: str

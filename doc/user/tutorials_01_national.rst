@@ -74,7 +74,7 @@ The second location allows a limited amount of battery storage to be deployed to
    :start-after: # battery-start
    :end-before: # battery-end
 
-The contraints give a maximum installed generation capacity for battery storage together with a maximum ratio of flow capacity to storage capacity (``flow_cap_per_storage_cap_max``) of 4, which in turn limits the storage capacity. The ratio is the charge/discharge rate / storage capacity (a.k.a the battery `reservoir`). In the case of a storage technology, ``flow_eff`` applies twice: on charging and discharging. In addition, storage technologies can lose stored carrier over time -- in this case, we set this loss to zero.
+The contraints give a maximum installed generation capacity for battery storage together with a maximum ratio of flow capacity to storage capacity (``flow_cap_per_storage_cap_max``) of 4, which in turn limits the storage capacity. The ratio is the charge/discharge rate / storage capacity (a.k.a the battery `reservoir`). In the case of a storage technology, ``flow_in_eff`` applies on charging and ``flow_out_eff`` on discharging. In addition, storage technologies can lose stored carrier over time -- in this case, we set this loss to zero.
 
 Other technologies
 ==================
@@ -114,7 +114,7 @@ What remains to set up is a simple transmission technology. Transmission technol
 Locations
 =========
 
-In order to translate the model requirements shown in this section's introduction into a model definition, five locations are used: ``region-1``, ``region-2``, ``region1-1``, ``region1-2``, and ``region1-3``.
+In order to translate the model requirements shown in this section's introduction into a model definition, five locations are used: ``region1``, ``region2``, ``region1_1``, ``region1_2``, and ``region1_3``.
 
 The technologies are set up in these locations as follows:
 
@@ -134,7 +134,7 @@ Let's now look at the first location definition:
 There are several things to note here:
 
 * The location specifies a dictionary of technologies that it allows (``techs``), with each key of the dictionary referring to the name of technologies defined in our ``techs.yaml`` file. Note that technologies listed here must have been defined elsewhere in the model configuration.
-* It also overrides some options for both ``demand_power`` and ``ccgt``. For the latter, it simply sets a location-specific maximum capacity constraint. For ``demand_power``, the options set here are related to reading the demand time series from a CSV file. CSV is a simple text-based format that stores tables by comma-separated rows. Note that we did not define any ``sink`` option in the definition of the ``demand_power`` technology. Instead, this is done directly via a location-specific override. For this location, the file ``demand-1.csv`` is loaded and the column ``demand`` is taken (the text after the colon). If no column is specified, Calliope will assume that the column name matches the location name ``region1-1``. Note that in Calliope, a supply is positive and a demand is negative, so the stored CSV data will be negative.
+* It also overrides some options for both ``demand_power`` and ``ccgt``. For the latter, it simply sets a location-specific maximum capacity constraint. For ``demand_power``, the options set here are related to reading the demand time series from a CSV file. CSV is a simple text-based format that stores tables by comma-separated rows. Note that we did not define any ``sink`` option in the definition of the ``demand_power`` technology. Instead, this is done directly via a location-specific override. For this location, the file ``demand-1.csv`` is loaded and the column ``demand`` is taken (the text after the colon). If no column is specified, Calliope will assume that the column name matches the location name ``region1_1``. Note that in Calliope, a supply is positive and a demand is negative, so the stored CSV data will be negative.
 * Coordinates are defined by latitude (``lat``) and longitude (``lon``), which will be used to calculate distance of transmission lines (unless we specify otherwise later on) and for location-based visualisation.
 
 The remaining location definitions look like this:
