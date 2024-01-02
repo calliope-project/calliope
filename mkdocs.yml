@@ -86,8 +86,8 @@ nav:
     - Example custom math gallery:
       - custom_math/examples/index.md
   - Reference:
-    - CLI reference: reference/cli.md
-    - API reference:
+    - Command line interface: reference/cli.md
+    - Python API:
       - reference/api/model.md
       - reference/api/backend_model.md
       - reference/api/helper_functions.md
