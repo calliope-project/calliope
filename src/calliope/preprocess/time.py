@@ -245,20 +245,21 @@ class TimeseriesLoader:
         return subset_df
 
 
-def resample(data: xr.Dataset, resolution: str):
+def resample(data: xr.Dataset, resolution: str) -> xr.Dataset:
     """
     Function to resample timeseries data from the input resolution (e.g. 1H), to
     the given resolution (e.g. 2H)
 
-    Parameters
-    ----------
-    data : xarray.Dataset
-        calliope model data, containing only timeseries data variables
-    timesteps : str or list; optional
-        If given, apply resampling to a subset of the timeseries data
-    resolution : str
-        time resolution of the output data, given in Pandas time frequency format.
-        E.g. 1H = 1 hour, 1W = 1 week, 1M = 1 month, 1T = 1 minute. Multiples allowed.
+    Args:
+        data (xarray.Dataset): Calliope model data, containing only timeseries data variables.
+        resolution (str):
+            time resolution of the output data, given in Pandas time frequency format.
+            E.g. 1H = 1 hour, 1W = 1 week, 1M = 1 month, 1T = 1 minute.
+            Multiples allowed.
+
+    Returns:
+        xarray.Dataset:
+            `data` resampled according to `resolution`.
 
     """
     resample_kwargs = {"indexer": {"timesteps": resolution}, "skipna": True}
@@ -299,14 +300,14 @@ def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
     """
     Apply the given clustering time series to the given data.
 
-    Parameters
-    ----------
-    data : xarray.Dataset
-    clustering_file
+    Args:
+        data (xarray.Dataset): Calliope model data, containing only timeseries data variables.
+        clustering_file (str | Path): Path to file containing rows of dates and the corresponding datestamp to which they are to be clustered.
+        time_format (str): The format that dates in `clustering_file` have been defined (e.g., "%Y-%m-%d").
 
-    Returns
-    -------
-    data_new_scaled : xarray.Dataset
+    Returns:
+        xarray.Dataset:
+            `data` clustered according to contents of `clustering_file`.
 
     """
     clustering_timeseries = pd.read_csv(clustering_file, index_col=0).squeeze()

@@ -25,25 +25,29 @@ def load_model_definition(
     scenario: Optional[str] = None,
     override_dict: Optional[dict] = None,
     **kwargs,
-) -> tuple[AttrDict, Optional[Path], Optional[str], str]:
+) -> tuple[AttrDict, Optional[Path], str]:
     """
-    Generate processed ModelRun configuration from a
-    YAML model configuration file.
+    Load model definition from file / dictionary and apply user-defined overrides.
 
-    Parameters
-    ----------
-    model_file : str
-        Path to YAML file with model configuration.
-    timeseries_dataframes : dict, optional
-        Dictionary of timeseries dataframes. The keys are strings
-        corresponding to the dataframe names given in the yaml files and
-        the values are dataframes with time series data.
-    scenario : str, optional
-        Name of scenario to apply. Can either be a named scenario, or a
-        comma-separated list of individual overrides to be combined
-        ad-hoc, e.g. 'my_scenario_name' or 'override1,override2'.
-    override_dict : dict or AttrDict, optional
+    Args:
+        model_definition (str | Path | dict):
+            If string or pathlib.Path, path to YAML file with model configuration.
+            If dictionary, equivalent to loading the model configuration YAML from file.
+        scenario (Optional[str], optional):
+            If not None, name of scenario to apply.
+            Can either be a named scenario, or a comma-separated list of individual overrides to be combined ad-hoc,
+            e.g. 'my_scenario_name' or 'override1,override2'.
+            Defaults to None.
+        override_dict (Optional[dict], optional):
+            If not None, dictionary of overrides to apply.
+            These will be applied _after_ `scenario` overrides.
+            Defaults to None.
 
+    Returns:
+        tuple[AttrDict, Optional[Path], str]:
+            1. Model definition with overrides applied.
+            1. Path to model definition YAML if input `model_definiton` was pathlike, otherwise None.
+            1. Expansion of scenarios (which are references to model overrides) into a list of named override(s) that have been applied.
     """
     if not isinstance(model_definition, dict):
         model_def_path = Path(model_definition)
@@ -52,19 +56,14 @@ def load_model_definition(
         model_def_dict = AttrDict(model_definition)
         model_def_path = None
 
-    model_def_with_overrides, applied_overrides, scenario = _apply_overrides(
+    model_def_with_overrides, applied_overrides = _apply_overrides(
         model_def_dict, scenario=scenario, override_dict=override_dict
     )
     model_def_with_overrides.union(
         AttrDict({"config.init": kwargs}), allow_override=True
     )
 
-    return (
-        model_def_with_overrides,
-        model_def_path,
-        scenario,
-        ";".join(applied_overrides),
-    )
+    return (model_def_with_overrides, model_def_path, ";".join(applied_overrides))
 
 
 def _combine_overrides(overrides: AttrDict, scenario_overrides: list):
@@ -92,18 +91,26 @@ def _apply_overrides(
     model_def: AttrDict,
     scenario: Optional[str] = None,
     override_dict: Optional[str | dict] = None,
-) -> tuple[AttrDict, list[str], Optional[str]]:
+) -> tuple[AttrDict, list[str]]:
     """
-    Generate processed Model configuration, applying any scenarios overrides.
+    Generate processed Model configuration, applying any scenario overrides.
 
-    Parameters
-    ----------
-    model_dict : AttrDict
-        a model configuration AttrDict
-    scenario : str, optional
-    override_dict : str or dict or AttrDict, optional
-        If a YAML string, converted to AttrDict
+    Args:
+        model_def (calliope.Attrdict): Loaded model definition as an attribute dictionary.
+        scenario (Optional[str], optional):
+            If not None, name of scenario to apply.
+            Can either be a named scenario, or a comma-separated list of individual overrides to be combined ad-hoc,
+            e.g. 'my_scenario_name' or 'override1,override2'.
+            Defaults to None.
+        override_dict (Optional[dict], optional):
+            If not None, dictionary of overrides to apply.
+            These will be applied _after_ `scenario` overrides.
+            Defaults to None.
 
+    Returns:
+        tuple[AttrDict, list[str]]:
+            1. Model definition dictionary with overrides applied from `scenario` and `override_dict`.
+            1. Expansion of scenarios (which are references to model overrides) into a list of named override(s) that have been applied.
     """
 
     # The input files are allowed to override other model defaults
@@ -152,7 +159,7 @@ def _apply_overrides(
 
     _log_overrides(model_def, model_def_copy)
 
-    return model_def_copy, scenario_overrides, scenario
+    return model_def_copy, scenario_overrides
 
 
 def _load_overrides_from_scenario(

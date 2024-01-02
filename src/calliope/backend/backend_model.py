@@ -1,6 +1,10 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
+"""
+Methods to interface with the optimisation problem
+"""
+
 from __future__ import annotations
 
 import importlib
@@ -98,9 +102,6 @@ class BackendModelGenerator(ABC):
         Resulting backend dataset entries will be constraint objects.
 
         Args:
-            model_data (xr.Dataset):
-                Calliope model data with which to create an array mask - only those
-                dataset entries in the mask will be generated.
             name (str):
                 Name of the constraint
             constraint_dict (parsing.UnparsedConstraintDict):
@@ -117,9 +118,6 @@ class BackendModelGenerator(ABC):
         Resulting backend dataset entries will be linear expression objects.
 
         Args:
-            model_data (xr.Dataset):
-                Calliope model data with which to create an array mask - only those
-                dataset entries in the mask will be generated.
             name (str):
                 Name of the global expression
             expression_dict (parsing.UnparsedExpressionDict):
@@ -135,9 +133,6 @@ class BackendModelGenerator(ABC):
         Resulting backend dataset entries will be decision variable objects.
 
         Args:
-            model_data (xr.Dataset):
-                Calliope model data with which to create an array mask - only those
-                dataset entries in the mask will be generated.
             name (str):
                 Name of the variable.
             variable_dict (parsing.UnparsedVariableDict):
@@ -153,9 +148,6 @@ class BackendModelGenerator(ABC):
         Resulting backend dataset entry will be a single, unindexed objective object.
 
         Args:
-            model_data (xr.Dataset):
-                Calliope model data with which to create a constraint mask - only those
-                dataset entries in the mask will be generated.
             name (str):
                 Name of the objective.
             objective_dict (parsing.UnparsedObjectiveDict):
@@ -560,17 +552,13 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         self._instance = instance
 
     @abstractmethod
-    def get_parameter(
-        self, parameter_name: str, as_backend_objs: bool = True
-    ) -> xr.DataArray:
+    def get_parameter(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
         """
         Extract parameter from backend dataset.
 
         Args:
-            parameter_name (str): Name of parameter.
-            TODO: hide this and create a method to edit parameter values
-                  (to handle interfaces with non-mutable params)
-            as_backend_objs (bool, optional):
+            name (str): Name of parameter.
+            as_backend_objs (bool, optional): TODO: hide this and create a method to edit parameter values (to handle interfaces with non-mutable params)
                 If True, will keep the array entries as backend interface objects,
                 which can be updated to update the underlying model.
                 Otherwise, parameter values are given directly, with default values in place of NaNs.
@@ -582,19 +570,15 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
     @abstractmethod
     def get_constraint(
-        self,
-        constraint_name: str,
-        as_backend_objs: bool = True,
-        eval_body: bool = False,
+        self, name: str, as_backend_objs: bool = True, eval_body: bool = False
     ) -> Union[xr.DataArray, xr.Dataset]:
         """
         Get constraint data as either a table of details or as an array of backend interface objects.
         Can be used to inspect and debug built constraints.
 
         Args:
-            constraint_name (str): Name of constraint, as given in YAML constraint key.
-            TODO: hide this and create a method to edit constraints that handles differences in interface APIs.
-            as_backend_objs (bool, optional):
+            name (str): Name of constraint, as given in YAML constraint key.
+            as_backend_objs (bool, optional): TODO: hide this and create a method to edit constraints that handles differences in interface APIs
                 If True, will keep the array entries as backend interface objects,
                 which can be updated to change the underlying model.
                 Otherwise, constraint body, and lower and upper bounds are given in a table.
@@ -613,15 +597,12 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
 
     @abstractmethod
-    def get_variable(
-        self, variable_name: str, as_backend_objs: bool = True
-    ) -> xr.DataArray:
+    def get_variable(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
         """Extract decision variable array from backend dataset
 
         Args:
-            variable_name (str): Name of variable.
-            TODO: hide this and create a method to edit variables that handles differences in interface APIs.
-            as_backend_objs (bool, optional):
+            name (str): Name of variable.
+            as_backend_objs (bool, optional): TODO: hide this and create a method to edit variables that handles differences in interface APIs.
                 If True, will keep the array entries as backend interface objects,
                 which can be updated to update the underlying model.
                 Otherwise, variable values are given directly.
@@ -637,7 +618,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """Extract decision variable upper and lower bound array from backend dataset
 
         Args:
-            variable_name (str): Name of variable.
+            name (str): Name of variable.
 
         Returns:
             xr.Dataset: Contains the arrays for upper ("ub", a.k.a. "max") and lower ("lb", a.k.a. "min") variable bounds.
@@ -645,14 +626,13 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
     @abstractmethod
     def get_global_expression(
-        self, expression_name: str, as_backend_objs: bool = True, eval_body: bool = True
+        self, name: str, as_backend_objs: bool = True, eval_body: bool = True
     ) -> xr.DataArray:
         """Extract global expression array from backend dataset
 
         Args:
-            global_expression_name (str): Name of global expression
-            TODO: hide this and create a method to edit expressions that handles differences in interface APIs.
-            as_backend_objs (bool, optional):
+            name (str): Name of global expression
+            as_backend_objs (bool, optional): TODO: hide this and create a method to edit expressions that handles differences in interface APIs.
                 If True, will keep the array entries as backend interface objects,
                 which can be updated to update the underlying model.
                 Otherwise, global expression values are given directly.

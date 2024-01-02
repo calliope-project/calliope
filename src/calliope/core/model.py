@@ -74,13 +74,10 @@ class Model(object):
         configuration file or a dict fully specifying the model.
 
         Args:
-            config (Optional[Union[str, Path, dict]]):
-                If str, must be the path to a model configuration file.
+            model_definition (str | Path | dict | xarray.Dataset):
+                If str or Path, must be the path to a model configuration file.
                 If dict or AttrDict, must fully specify the model.
-            model_data (Optional[xarray.Dataset], optional):
-                Create a Model instance from a fully built model_data Dataset.
-                This is only used if `config` is explicitly set to None and is primarily used to re-create a Model instance from a model previously saved to a NetCDF file.
-                Defaults to None.
+                If an xarray dataset, must be a valid calliope model.
             debug (bool, optional):
                 If True, additional debug data will be included in the built model.
                 Defaults to False.
@@ -91,11 +88,8 @@ class Model(object):
                 These will be applied *after* applying any defined `scenario` overrides.
             timeseries_dataframes (dict[str, pd.DataFrame], optional):
                 If supplying `config` as a dictionary, in-memory timeseries data can be referred to using `df=...`.
-                The referenced data must be supplied here as a dicitionary of dataframes.
+                The referenced data must be supplied here as a dictionary of dataframes.
                 Defaults to None.
-
-        Raises:
-            ValueError: `config` must be provided (as one of `str`, `int`, `None`).
         """
         self._timings: dict = {}
         self.config: AttrDict
@@ -115,7 +109,6 @@ class Model(object):
             (
                 model_def,
                 self._model_def_path,
-                scenario,
                 applied_overrides,
             ) = load.load_model_definition(
                 model_definition, scenario, override_dict, **kwargs
@@ -350,8 +343,6 @@ class Model(object):
             force (bool, optional):
                 If ``force`` is True, any existing results will be overwritten.
                 Defaults to False.
-            backend_interface (Literal["pyomo"], optional):
-                Backend interface in which to build the problem. Defaults to "pyomo".
         """
 
         if self._is_built and not force:
@@ -485,16 +476,16 @@ class Model(object):
         """
         io.save_netcdf(self._model_data, path, model=self)
 
-    def to_csv(self, path, dropna=True):
+    def to_csv(self, path: str | Path, dropna: bool = True):
         """
         Save complete model data (inputs and, if available, results)
         as a set of CSV files to the given ``path``.
 
-        Parameters
-        ----------
-        dropna : bool, optional
-            If True (default), NaN values are dropped when saving,
-            resulting in significantly smaller CSV files.
+        Args:
+            path (str | Path):
+            dropna (bool, optional):
+                If True, NaN values are dropped when saving, resulting in significantly smaller CSV files.
+                Defaults to True
 
         """
         io.save_csv(self._model_data, path, dropna)
@@ -524,19 +515,22 @@ class Model(object):
 
         Args:
             math_dict (dict): Math formulation dictionary to validate. Top level keys must be one or more of ["variables", "global_expressions", "constraints", "objectives"], e.g.:
-            {
-                "constraints": {
-                    "my_constraint_name":
-                        {
-                            "foreach": ["nodes"],
-                            "where": "parent=supply",
-                            "equations": [{"expression": "sum(flow_cap, over=techs) >= 10"}]
-                        }
+                ```python
+                {
+                    "constraints": {
+                        "my_constraint_name":
+                            {
+                                "foreach": ["nodes"],
+                                "where": "parent=supply",
+                                "equations": [{"expression": "sum(flow_cap, over=techs) >= 10"}]
+                            }
 
-                    }
-                Returns:
-                    If all components of the dictionary are parsed successfully, this function will log a success message to the INFO logging level and return None.
-                    Otherwise, a calliope.ModelError will be raised with parsing issues listed.
+                        }
+                }
+                ```
+        Returns:
+            If all components of the dictionary are parsed successfully, this function will log a success message to the INFO logging level and return None.
+            Otherwise, a calliope.ModelError will be raised with parsing issues listed.
         """
         validate_dict(math_dict, MATH_SCHEMA, "math")
         valid_component_names = [

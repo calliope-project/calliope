@@ -2,18 +2,14 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
-attrdict.py
-~~~~~~~~~~~
-
-Implements the AttrDict class (a subclass of regular dict)
-used for managing model configuration.
-
+Implements the AttrDict class (a subclass of regular dict) used for managing model configuration.
 """
 
 import copy
 import io
 import logging
 from pathlib import Path
+from typing import Optional, Self
 
 import numpy as np
 import ruamel.yaml as ruamel_yaml
@@ -116,7 +112,12 @@ class AttrDict(dict):
                 self.set_key(k, v)
 
     @classmethod
-    def _resolve_imports(cls, loaded, resolve_imports, base_path=None):
+    def _resolve_imports(
+        cls,
+        loaded: Self,
+        resolve_imports: bool | str,
+        base_path: Optional[str | Path] = None,
+    ) -> Self:
         if (
             isinstance(resolve_imports, bool)
             and resolve_imports is True
@@ -153,26 +154,27 @@ class AttrDict(dict):
         return loaded
 
     @classmethod
-    def from_yaml(cls, filename, resolve_imports=True):
+    def from_yaml(
+        cls, filename: str | Path, resolve_imports: bool | str = True
+    ) -> Self:
         """
         Returns an AttrDict initialized from the given path or
         file object ``f``, which must point to a YAML file. The path can
         be a string or a pathlib.Path.
 
-        Parameters
-        ----------
-
-        filename : str or pathlib.Path
-        resolve_imports : bool or str, optional
-            If ``resolve_imports`` is True, top-level ``import:`` statements
-            are resolved recursively.
-            If ``resolve_imports is False, top-level ``import:`` statements
-            are treated like any other key and not further processed.
-            If ``resolve_imports`` is a string, such as ``foobar``, import
-            statements underneath that key are resolved, i.e. ``foobar.import:``.
-            When resolving import statements, anything defined locally
-            overrides definitions in the imported file.
-
+        Args:
+            filename (str | pathlib.Path):
+            resolve_imports (bool | str, optional):
+                If ``resolve_imports`` is True, top-level ``import:`` statements
+                are resolved recursively.
+                If ``resolve_imports is False, top-level ``import:`` statements
+                are treated like any other key and not further processed.
+                If ``resolve_imports`` is a string, such as ``foobar``, import
+                statements underneath that key are resolved, i.e. ``foobar.import:``.
+                When resolving import statements, anything defined locally
+                overrides definitions in the imported file.
+        Returns:
+            calliope.AttrDict:
         """
         filename = Path(filename)
         loaded = cls(_yaml_load(filename.read_text(encoding="utf-8")))
@@ -180,10 +182,25 @@ class AttrDict(dict):
         return loaded
 
     @classmethod
-    def from_yaml_string(cls, string, resolve_imports=True):
+    def from_yaml_string(cls, string: str, resolve_imports: bool | str = True) -> Self:
         """
-        Returns an AttrDict initialized from the given string, which
-        must be valid YAML.
+        Returns an AttrDict initialized from the given string.
+
+        Input string must be valid YAML.
+
+        Args:
+            string (str): Valid YAML string.
+            resolve_imports (bool | str, optional):
+                If ``resolve_imports`` is True, top-level ``import:`` statements
+                are resolved recursively.
+                If ``resolve_imports is False, top-level ``import:`` statements
+                are treated like any other key and not further processed.
+                If ``resolve_imports`` is a string, such as ``foobar``, import
+                statements underneath that key are resolved, i.e. ``foobar.import:``.
+                When resolving import statements, anything defined locally
+                overrides definitions in the imported file.
+        Returns:
+            calliope.AttrDict:
 
         """
         loaded = cls(_yaml_load(string))
