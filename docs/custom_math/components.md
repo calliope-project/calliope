@@ -2,7 +2,7 @@
 # Math components
 
 Here, we will briefly introduce each of the math components you will need to build an optimisation problem.
-A more detailed description of the math YAML syntax is provided in the rendered [][math-schema].
+A more detailed description of the math YAML syntax is provided in the [math formulation schema][math-formulation-schema].
 
 ## Decision variables
 
@@ -86,8 +86,8 @@ These are not required, but are useful metadata for later reference.
 1. It can have a top-level `foreach` list and `where` string.
 Without a `foreach`, this becomes an un-indexed variable.
 Without a `where` string, all valid members (according to the `definition_matrix`) based on `foreach` will be included in this decision variable.
-1. It has [][equations] (and, optionally, [][sub-expressions] and [][slices]) with corresponding lists of `where`+`expression` dictionaries.
-The equation expressions do _not_ have comparison operators; those are reserved for [][constraints]
+1. It has [equations][] (and, optionally, [sub-expressions][] and [slices][]) with corresponding lists of `where`+`expression` dictionaries.
+The equation expressions do _not_ have comparison operators; those are reserved for [constraints][]
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
 
 ## Constraints
@@ -115,7 +115,7 @@ These are not required, but are useful metadata for later reference.
 1. It can have a top-level `foreach` list and `where` string.
 Without a `foreach`, this becomes an un-indexed variable.
 Without a `where` string, all valid members (according to the `definition_matrix`) based on `foreach` will be included in this decision variable.
-1. It has [][equations] (and, optionally, [][sub-expressions] and [][slices]) with corresponding lists of `where`+`expression` dictionaries.
+1. It has [equations][] (and, optionally, [sub-expressions][] and [slices][]) with corresponding lists of `where`+`expression` dictionaries.
 The equation expressions _must_ have comparison operators.
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
 
@@ -150,7 +150,7 @@ objectives:
 These are not required, but are useful metadata for later reference.
 1. It can have a top-level `where` string, but no `foreach` (it is a single value you need to minimise/maximise).
 Without a `where` string, the objective will be activated.
-1. It has [][equations] (and, optionally, [][sub-expressions] and [][slices]) with corresponding lists of `where`+`expression` dictionaries.
+1. It has [equations][] (and, optionally, [sub-expressions][] and [slices][]) with corresponding lists of `where`+`expression` dictionaries.
 These expressions do _not_ have comparison operators.
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
 

@@ -63,7 +63,7 @@ def _customise_markdown(lines: list[str]) -> list[str]:
     """
     We don't want to represent the schema as a schema, so we remove parts of the generated markdown that refers to it as such.
     """
-    # 1. Remove main description and subheadline
-    assert lines[1] == "## Properties\n\n"
-    del lines[1]
+    # 1. Remove subheadline
+    assert lines[2] == "## Properties\n\n"
+    del lines[2]
     return lines

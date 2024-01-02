@@ -5,7 +5,7 @@ The in-built math is a re-implementation of the former math formulation in this 
 
 The base math is _always_ applied to your model when you `build` the optimisation problem.
 In addition, there are other math formulation files built in which you can load into your model.
-For instance, the `storage_inter_cluster` math allows you to track storage levels in technologies more accurately when you are using timeseries clustering in your model.
+For instance, the [inter-cluster storage][inter-cluster-storage-math] math allows you to track storage levels in technologies more accurately when you are using timeseries clustering in your model.
 
 To load one of the built-in math files, you can reference it by name (_without_ the file extension) in your model configuration:
 
@@ -24,7 +24,7 @@ When solving the model in a run mode other than `plan`, some built-in custom mat
     If you want to apply your own custom math *after* the run mode custom math, you should add it explicitly to the `#!yaml config.init.custom_math` list, e.g., `#!yaml config.init.custom_math: [operate, my_custom_math.yaml]`.
 
 If you want to introduce new constraints, decision variables, or objectives, you can do so as part of the collection of YAML files describing your model.
-See the [][custom-math] section for an in-depth guide to applying custom math.
+See the [custom math][custom-math-formulation] section for an in-depth guide to applying custom math.
 
 The in-built math documentation can be explored in this section by selecting one of the options in the left-hand side table of contents.
 
@@ -35,5 +35,5 @@ For each objective, constraint and global expression, a number of sub-conditions
 
 In the expressions, terms in **bold** font are decision variables and terms in *italic* font are parameters.
 A list of the decision variables is given at the end of this page.
-A detailed listing of parameters along with their units and default values is given in the [model definition reference sheet][TODO: add link].
+A detailed listing of parameters along with their units and default values is given in the [model definition reference sheet][model-definition-schema].
 Those parameters which are defined over time (`timesteps`) in the expressions can be defined by a user as a single, time invariant value, or as a timeseries that is [loaded from file or dataframe][TODO: add link].

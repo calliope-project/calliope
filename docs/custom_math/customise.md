@@ -2,9 +2,9 @@
 
 Once you understand the [math components][math-components] and the [formulation syntax][math-syntax], you'll be ready to introduce custom math to your model.
 
-You can find examples of custom math that we have put together in the [][custom-math-example-gallery].
+You can find examples of custom math that we have put together in the [custom math example gallery][custom-math-example-gallery].
 
-Whenever you introduce your own math, it will be applied on top of the [base math][base-model].
+Whenever you introduce your own math, it will be applied on top of the [base math][base-math].
 Therefore, you can include base math overrides as well as add new math.
 For example, if you want to introduce a timeseries parameter to limiting maximum storage capacity:
 
@@ -24,11 +24,11 @@ config:
     custom_math: [my_new_math_1.md, my_new_math_2.md]
 ```
 
-You can also define a mixture of your custom math and the [][in-built-math]:
+You can also define a mixture of your custom math and the [in-built math][in-built-math]:
 
 ## Writing your own math documentation
 
-You can write your model's mathematical formulation to view it in a rich-text format (as we do for our [][in-built-math] in this documentation).
+You can write your model's mathematical formulation to view it in a rich-text format (as we do for our [in-built math][in-built-math] in this documentation).
 To write a LaTeX, reStructuredText, or Markdown file that includes only the math valid for your model:
 
 ```python

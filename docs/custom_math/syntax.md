@@ -103,7 +103,7 @@ Some of these helper functions require a good understanding of their functionali
 
 ## equations
 
-Equations are combinations of [][expression-strings] and [][where-strings].
+Equations are combinations of [expression-strings][] and [where-strings][].
 You define one or more equations for your model components.
 A different `where` string associated with each equation expression allows you to slightly alter the expression for different component members.
 You define equations as lists of dictionaries:
@@ -188,12 +188,12 @@ sub_expressions:
 
 !!! note
 
-    As with [][equations], `where` strings are mixed in together.
+    As with [equations][], `where` strings are mixed in together.
     If you have two equation expressions and three sub-expressions, each with two expressions, you will end up with 2*3*2 = 12 unique `where` strings with linked `expression` strings.
 
 ## slices
 
-Similarly to [][sub-expressions], you can use references when [slicing your data][slicing-data], again using the `$` identifier.
+Similarly to [sub-expressions][], you can use references when [slicing your data][slicing-data], again using the `$` identifier.
 Standard slicing only allows for dimensions to reference plain strings or lists of plain strings.
 If you want to slice using a "lookup" parameter, you will need to provide it within the `slices` sub-key, e.g.:
 
