@@ -76,7 +76,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Download and installation: installation.md
-  - In-built math:
+  - Inbuilt math:
     - index: math/index.md
   - Custom math:
     - custom_math/index.md

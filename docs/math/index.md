@@ -1,7 +1,7 @@
-# In-built math
+# Inbuilt math
 
 Since Calliope version 0.7, The math used to build optimisation problems is stored in YAML files.
-The in-built math is a re-implementation of the former math formulation in this YAML format.
+The inbuilt math is a re-implementation of the former math formulation in this YAML format.
 
 The base math is _always_ applied to your model when you `build` the optimisation problem.
 In addition, there are other math formulation files built in which you can load into your model.
@@ -26,7 +26,7 @@ When solving the model in a run mode other than `plan`, some built-in custom mat
 If you want to introduce new constraints, decision variables, or objectives, you can do so as part of the collection of YAML files describing your model.
 See the [custom math][custom-math-formulation] section for an in-depth guide to applying custom math.
 
-The in-built math documentation can be explored in this section by selecting one of the options in the left-hand side table of contents.
+The inbuilt math documentation can be explored in this section by selecting one of the options in the left-hand side table of contents.
 
 ## A guide to math documentation
 

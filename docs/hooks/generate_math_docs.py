@@ -73,7 +73,7 @@ def on_files(files: list, config: dict, **kwargs):
         "inter-cluster storage math",
         textwrap.dedent(
             """
-        In-built custom math to apply inter-cluster storage on top of the [base mathematical formulation][base-math].
+        Inbuilt custom math to apply inter-cluster storage on top of the [base mathematical formulation][base-math].
         This math is _only_ applied if referenced in the `config.init.custom_math` list as `storage_inter_cluster`.
         """
         ),
@@ -142,10 +142,10 @@ def write_file(
         )
     )
     nav_reference = [
-        idx for idx in config["nav"] if set(idx.keys()) == {"In-built math"}
+        idx for idx in config["nav"] if set(idx.keys()) == {"Inbuilt math"}
     ][0]
 
-    nav_reference["In-built math"].append(output_file.as_posix())
+    nav_reference["Inbuilt math"].append(output_file.as_posix())
 
     math_doc = model.math_documentation.write(format="md")
     file_to_download = Path(config["site_dir"]) / "math" / filename
