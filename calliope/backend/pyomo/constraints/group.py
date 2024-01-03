@@ -726,7 +726,7 @@ def target_reserve_share_constraint_rule(
             for loc_tech_carrier in lhs_loc_tech_carriers
         )
 
-        if hasattr(backend_model, 'loc_techs_transmission'):
+        if hasattr(backend_model, "loc_techs_transmission"):
             loc_tech_carriers_transmission = [
                 loc_tech_transmission + "::" + carrier
                 for loc_tech_transmission in backend_model.loc_techs_transmission
@@ -800,7 +800,7 @@ def target_reserve_adder_constraint_rule(
             for loc_tech_carrier in lhs_loc_tech_carriers
         )
 
-        if hasattr(backend_model, 'loc_techs_transmission'):
+        if hasattr(backend_model, "loc_techs_transmission"):
             loc_tech_carriers_transmission = [
                 loc_tech_transmission + "::" + carrier
                 for loc_tech_transmission in backend_model.loc_techs_transmission
