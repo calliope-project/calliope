@@ -691,7 +691,7 @@ def target_reserve_share_constraint_rule(
 
         .. math::
 
-            \\sum_{loc::tech \\in given\\_group, timestep \\in timesteps} cap\\_value(loc::tech, timestep) energy_{cap}(loc::tech) timestep\\_resolution(timestep)  \\leq \\geq \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers_{in}, timestep \\in timesteps} (1 + target\\_share) carrier_{con}(loc::tech::carrier, timestep)
+            \\sum_{loc::tech \\in given\\_group, timestep \\in timesteps} cap\\_value(loc::tech, timestep) energy_{cap}(loc::tech) timestep\\_resolution(timestep) \\leq \\geq \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers_{in}, timestep \\in timesteps} (1 + target\\_share) carrier_{con}(loc::tech::carrier, timestep)
 
     """
 
@@ -726,10 +726,14 @@ def target_reserve_share_constraint_rule(
             for loc_tech_carrier in lhs_loc_tech_carriers
         )
 
-        loc_tech_carriers_transmission = [
-            loc_tech_transmission + "::" + carrier
-            for loc_tech_transmission in backend_model.loc_techs_transmission
-        ]
+        if hasattr(backend_model, 'loc_techs_transmission'):
+            loc_tech_carriers_transmission = [
+                loc_tech_transmission + "::" + carrier
+                for loc_tech_transmission in backend_model.loc_techs_transmission
+            ]
+        else:
+            loc_tech_carriers_transmission = []
+
         loc_tech_carriers_con_all = [
             loc_tech_carrier
             for loc_tech_carrier in backend_model.loc_tech_carriers_con
@@ -796,10 +800,14 @@ def target_reserve_adder_constraint_rule(
             for loc_tech_carrier in lhs_loc_tech_carriers
         )
 
-        loc_tech_carriers_transmission = [
-            loc_tech_transmission + "::" + carrier
-            for loc_tech_transmission in backend_model.loc_techs_transmission
-        ]
+        if hasattr(backend_model, 'loc_techs_transmission'):
+            loc_tech_carriers_transmission = [
+                loc_tech_transmission + "::" + carrier
+                for loc_tech_transmission in backend_model.loc_techs_transmission
+            ]
+        else:
+            loc_tech_carriers_transmission = []
+
         loc_tech_carriers_con_all = [
             loc_tech_carrier
             for loc_tech_carrier in backend_model.loc_tech_carriers_con
@@ -881,7 +889,6 @@ def target_reserve_share_operating_constraint_rule(
         f"group_target_reserve_share_operating_{what}",
         (group_name, timestep),
     )
-    print("__" + str(target_share))
 
     if invalid(target_share):
         return return_noconstraint("target_reserve_share", group_name)
@@ -935,7 +942,7 @@ def target_reserve_share_operating_constraint_rule(
             and (loc_tech_carrier.split("::")[0] in locs)
         )
 
-        return equalizer(lhs, target_share, what)
+        return equalizer(lhs, rhs, what)
 
 
 def target_reserve_abs_operating_constraint_rule(
