@@ -36,10 +36,12 @@ nodes:
     inherit: csp_regions
     latitude: 39
     longitude: -2
+# other-locs-end
 
+# node-groups-start
 node_groups:
   csp_regions:
     techs:
       csp:
         source_max: file=csp_resource.csv
-  # other-locs-end
+# node-groups-end

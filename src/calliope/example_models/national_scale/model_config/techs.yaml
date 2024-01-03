@@ -4,7 +4,7 @@
 
 # Note: '-start' and '-end' is used in tutorial documentation only
 
-# cost_dim_setter-start
+# cost-dim-setter-start
 tech_groups:
   cost_dim_setter:
     cost_flow_cap:
@@ -35,14 +35,16 @@ tech_groups:
       data: 0.10
       index: monetary
       dims: costs
+# cost-dim-setter-end
 
+# free-transmission-start
   free_transmission:
     name: "Local power transmission"
     color: "#6783E3"
     carrier_in: power
     carrier_out: power
     parent: transmission
-# cost_dim_setter-end
+# free-transmission-end
 
 techs:
   ##

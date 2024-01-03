@@ -4,14 +4,15 @@
 
 # Note: '-start' and '-end' is used in tutorial documentation only
 
-# interest_rate_setter-start
+# interest-rate-setter-start
 tech_groups:
   interest_rate_setter:
     cost_interest_rate:
       data: 0.10
       index: monetary
       dims: costs
-
+# interest-rate-setter-end
+# transmission-tech-groups-start
   power_lines:
     name: "Electrical power distribution"
     color: "#6783E3"
@@ -41,8 +42,7 @@ tech_groups:
       data: 0.3
       index: monetary
       dims: costs
-# interest_rate_setter-end
-
+# transmission-tech-groups-end
 techs:
   ##-GRID SUPPLY-##
   # supply-start

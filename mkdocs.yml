@@ -29,6 +29,12 @@ plugins:
   - search
   - autorefs
   - macros
+  - mkdocs-jupyter:
+      include: ["examples/*.py"]
+      allow_errors: false
+      kernel_name: calliope
+      include_source: True
+      execute: true
   - mkdocstrings:
       default_handler: python
       handlers:
@@ -85,6 +91,13 @@ nav:
     - custom_math/customise.md
     - Example custom math gallery:
       - custom_math/examples/index.md
+  - Examples and tutorials:
+    - examples/index.md
+    - examples/1_national_scale.py
+    - examples/2_urban_scale.py
+    - examples/3_milp.py
+    - examples/4_calliope_model_object.py
+    - examples/5_logging.py
   - Reference:
     - Command line interface: reference/cli.md
     - Python API:

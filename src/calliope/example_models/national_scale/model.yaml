@@ -1,9 +1,12 @@
+# import-start
 import: # Import other files from paths relative to this file, or absolute paths
   - "model_config/techs.yaml" # This file specifies the model's technologies
   - "model_config/locations.yaml" # This file specifies the model's nodes
   - "scenarios.yaml" # Scenario and override group definitions
+# import-end
 
 # Model configuration: all settings that affect the built model
+# config-start
 config:
   init:
     name: National-scale example model
@@ -20,11 +23,13 @@ config:
   solve:
     solver: cbc
     zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
+# config-end
 
+# parameters-start
 parameters:
   objective_cost_weights:
     data: 1
     index: [monetary]
     dims: costs
-
   bigM: 1e6 # Sets the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
+# parameters-end

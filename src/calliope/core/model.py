@@ -476,7 +476,9 @@ class Model(object):
         """
         io.save_netcdf(self._model_data, path, model=self)
 
-    def to_csv(self, path: str | Path, dropna: bool = True):
+    def to_csv(
+        self, path: str | Path, dropna: bool = True, allow_overwrite: bool = False
+    ):
         """
         Save complete model data (inputs and, if available, results)
         as a set of CSV files to the given ``path``.
@@ -486,9 +488,13 @@ class Model(object):
             dropna (bool, optional):
                 If True, NaN values are dropped when saving, resulting in significantly smaller CSV files.
                 Defaults to True
+            allow_overwrite (bool, optional):
+                If True, allow the option to overwrite the directory contents if it already exists.
+                This will overwrite CSV files one at a time, so if the dataset has different arrays to the previous saved models, you will get a mix of old and new files.
+                Defaults to False.
 
         """
-        io.save_csv(self._model_data, path, dropna)
+        io.save_csv(self._model_data, path, dropna, allow_overwrite)
 
     def info(self) -> str:
         """Generate basic description of the model, combining its name and a rough indication of the model size.

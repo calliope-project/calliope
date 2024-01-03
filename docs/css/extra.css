@@ -50,3 +50,67 @@
     background-color: rgba(254, 247, 80, 0.5);
     color: #757719;
 }
+
+/* reduce font size of code cells in rendered jupyter notebooks */
+.jp-Cell {
+    font-size: 0.9em;
+}
+
+/* Allow tables to be horizontally scrollable. */
+.md-typeset__scrollwrap {
+  overflow-x: auto;
+}
+
+/* Fix xarray dataset HTML representation in jupyter notebook renderings. */
+/* See https://github.com/danielfrg/mkdocs-jupyter/issues/164 for conversation */
+
+/* Reinstate the display off-switch for xarray dataset views. */
+/* See https://github.com/damianavila/RISE/issues/594 for inspiration. */
+.md-typeset pre.xr-text-repr-fallback {
+    display: none;
+}
+
+.md-typeset ul.xr-sections, .jupyter-wrapper .jp-OutputArea-output dl.xr-attrs {
+    display: grid;
+}
+
+.md-typeset li.xr-var-item, .md-typeset ul.xr-var-list {
+    display: contents;
+}
+
+.md-typeset .xr-section-details {
+    display: none;
+}
+
+.md-typeset ul.xr-dim-list li {
+    margin-bottom: 0;
+    margin-left: 0;
+}
+
+.md-typeset ul.xr-dim-list {
+    margin-bottom: 0;
+    margin-top: 0;
+}
+
+.jupyter-wrapper .jp-OutputArea-output .xr-attrs dt {
+    padding: 0;
+    margin: 0;
+    float: left;
+    padding-right: 10px;
+    width: auto;
+    font-weight: normal;
+    grid-column: 1;
+}
+
+.jupyter-wrapper .jp-OutputArea-output .xr-attrs dd {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 10px;
+}
+
+.jupyter-wrapper .jp-OutputArea-output .xr-attrs dd:hover {
+    overflow: auto;
+    width: auto;
+    z-index: 1;
+}
