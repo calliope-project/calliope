@@ -906,7 +906,7 @@ def target_reserve_share_operating_constraint_rule(
     )
 
     if invalid(target_share):
-        return return_noconstraint("target_reserve_share", group_name)
+        return return_noconstraint("target_reserve_share_operating", group_name)
     else:
         lhs_loc_tech_carriers = get_group_lhs_and_rhs_loc_tech_carriers(
             backend_model, group_name
@@ -977,12 +977,12 @@ def target_reserve_adder_operating_constraint_rule(
 
     target_adder = get_param(
         backend_model,
-        f"group_target_reserve_share_operating_{what}",
+        f"group_target_reserve_adder_operating_{what}",
         (group_name, timestep),
     )
 
     if invalid(target_adder):
-        return return_noconstraint("target_reserve_share", group_name)
+        return return_noconstraint("target_adder_share_operating", group_name)
     else:
         lhs_loc_tech_carriers = get_group_lhs_and_rhs_loc_tech_carriers(
             backend_model, group_name
@@ -1061,7 +1061,7 @@ def target_reserve_abs_operating_constraint_rule(
     )
 
     if invalid(target_abs):
-        return return_noconstraint("target_reserve_share", group_name)
+        return return_noconstraint("target_reserve_abs_operating", group_name)
     else:
         lhs_loc_tech_carriers = get_group_lhs_and_rhs_loc_tech_carriers(
             backend_model, group_name
