@@ -9,10 +9,11 @@ import copy
 import io
 import logging
 from pathlib import Path
-from typing import Optional, Self
+from typing import Optional
 
 import numpy as np
 import ruamel.yaml as ruamel_yaml
+from typing_extensions import Self
 
 from calliope.util.tools import relative_path
 
