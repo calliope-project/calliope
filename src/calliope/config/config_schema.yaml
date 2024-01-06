@@ -47,6 +47,12 @@ properties:
             type: string
             default: "."
             description: Path to time series data. If relative, it will be relative to the base model definition file.
+          data_sources_path:
+            type: string
+            default: "."
+            description: >-
+              Path to data stored in tabular format (and referenced in `data_sources`).
+              If relative, it will be relative to the base model definition file.
           time_format:
             type: string
             default: "ISO8601"
@@ -156,15 +162,25 @@ properties:
             description: On postprocessing the optimisation results, values smaller than this threshold will be considered as optimisation artefacts and will be set to zero.
 
   parameters:
-    type: object
-    description: Calliope model arbitrary parameter definitions.
+    type: [object, "null"]
+    description: >-
+      Calliope model arbitrary parameter definitions.
+      See the model definition schema for more guidance on content.
     additionalProperties: false
     patternProperties:
       '^[^_^\d][\w]*$': {}
 
+  data_sources:
+    type: array
+    description: >-
+      List of data sources in which model definitions are stored in tabular format.
+      See the model definition schema for more guidance on content.
+
   techs:
-    type: object
-    description: Calliope model technology definitions.
+    type: [object, "null"]
+    description: >-
+      Calliope model technology definitions.
+      See the model definition schema for more guidance on content.
     additionalProperties: false
     patternProperties: &nested_pattern
       '^[^_^\d][\w]*$':
@@ -173,19 +189,25 @@ properties:
           '^[^_^\d][\w]*$': {}
 
   nodes:
-    type: object
-    description: Calliope model node definitions.
+    type: [object, "null"]
+    description: >-
+      Calliope model node definitions.
+      See the model definition schema for more guidance on content.
     additionalProperties: false
     patternProperties: *nested_pattern
 
   tech_groups:
-    type: object
-    description: Abstract technology definitions to which techs can reference using `inherit`.
+    type: [object, "null"]
+    description: >-
+      Abstract technology definitions to which techs can reference using `inherit`.
+      See the model definition schema for more guidance on content.
     additionalProperties: false
     patternProperties: *nested_pattern
 
   node_groups:
-    type: object
-    description: Abstract node definitions to which nodes can reference using `inherit`.
+    type: [object, "null"]
+    description: >-
+      Abstract node definitions to which nodes can reference using `inherit`.
+      See the model definition schema for more guidance on content.
     additionalProperties: false
     patternProperties: *nested_pattern

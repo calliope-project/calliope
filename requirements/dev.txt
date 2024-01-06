@@ -4,6 +4,7 @@ codecov < 3
 glpk == 5.0
 hdf5 < 2
 libnetcdf < 5
+pandas-stubs
 pre-commit < 4
 pytest-cov < 5
 pytest-order < 2

@@ -36,7 +36,7 @@ class TestModelPreproccessing:
 class TestNationalScaleExampleModelSenseChecks:
     def example_tester(self, solver="cbc", solver_io=None):
         model = calliope.examples.national_scale(
-            override_dict={"config.init.time_subset": ["2005-01-01", "2005-01-01"]}
+            time_subset=["2005-01-01", "2005-01-01"]
         )
         solve_kwargs = {"solver": solver}
         if solver_io:
@@ -140,8 +140,7 @@ class TestNationalScaleExampleModelOperate:
     def example_tester(self):
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
             model = calliope.examples.national_scale(
-                override_dict={"config.init.time_subset": ["2005-01-01", "2005-01-03"]},
-                scenario="operate",
+                time_subset=["2005-01-01", "2005-01-03"], scenario="operate"
             )
             model.build()
 
@@ -165,8 +164,7 @@ class TestNationalScaleExampleModelOperate:
 class TestNationalScaleExampleModelSpores:
     def example_tester(self, solver="cbc", solver_io=None):
         model = calliope.examples.national_scale(
-            override_dict={"config.init.time_subset": ["2005-01-01", "2005-01-03"]},
-            scenario="spores",
+            time_subset=["2005-01-01", "2005-01-03"], scenario="spores"
         )
         solve_kwargs = {"solver": solver}
         if solver_io:
@@ -235,8 +233,7 @@ class TestNationalScaleExampleModelSpores:
     @pytest.fixture
     def base_model_data(self):
         model = calliope.examples.national_scale(
-            override_dict={"config.init.time_subset": ["2005-01-01", "2005-01-03"]},
-            scenario="spores",
+            time_subset=["2005-01-01", "2005-01-03"], scenario="spores"
         )
 
         model.build()
@@ -455,14 +452,9 @@ class TestUrbanScaleExampleModelSenseChecks:
         self.example_tester("per_cap", solver="gurobi", solver_io="python")
 
     def test_milp_example_results(self):
-        model = calliope.examples.milp(
-            override_dict={
-                "config.init.time_subset": ["2005-01-01", "2005-01-01"],
-                "config.solve.solver_options": {"mipgap": 0.001},
-            }
-        )
+        model = calliope.examples.milp(time_subset=["2005-01-01", "2005-01-01"])
         model.build()
-        model.solve()
+        model.solve(solver_options={"mipgap": 0.001})
 
         assert (
             model.results.flow_cap.sel(nodes="X1", techs="chp", carriers="electricity")
@@ -486,9 +478,7 @@ class TestUrbanScaleExampleModelSenseChecks:
 
     @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
     def test_operate_example_results(self):
-        model = calliope.examples.operate(
-            override_dict={"config.init.time_subset": ["2005-07-01", "2005-07-04"]}
-        )
+        model = calliope.examples.operate(time_subset=["2005-07-01", "2005-07-04"])
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
             model.build()
 

@@ -207,3 +207,52 @@ overrides:
   capacity_factor:
     techs.ccgt.capacity_factor_min: 0.8
     techs.ccgt.capacity_factor_max: 0.9
+
+  load_data_sources:
+    techs:
+      _REPLACE_: {}
+    nodes:
+      _REPLACE_: {}
+    parameters:
+      _REPLACE_: {}
+    config.init.data_sources_path: data_sources
+    data_sources:
+      - file: dimensionless_params.csv
+        rows: parameters
+
+      - file: costs_params.csv
+        rows: costs
+        columns: parameters
+
+      - file: nodes_base_info.csv
+        rows: nodes
+        columns: parameters
+
+      - file: techs_carriers_at_nodes.csv
+        rows: [nodes, techs]
+        columns: parameters
+        add_dimensions:
+          carriers: power
+
+      - file: techs_costs.csv
+        rows: techs
+        columns: parameters
+        add_dimensions:
+          costs: monetary
+
+      - file: time_varying_params.csv
+        rows: timesteps
+        columns: [comment, nodes, techs, parameters]
+        ignore: comment
+
+      - file: techs_base_info.csv
+        rows: techs
+        columns: parameters
+
+      - file: techs_constraints.csv
+        rows: techs
+        columns: parameters
+
+      - file: techs_node_constraints.csv
+        rows: [nodes, techs]
+        columns: parameters

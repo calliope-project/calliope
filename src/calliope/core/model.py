@@ -189,6 +189,9 @@ class Model(object):
         init_config["time_data_path"] = relative_path(
             self._model_def_path, init_config["time_data_path"]
         )
+        init_config["data_sources_path"] = relative_path(
+            self._model_def_path, init_config["data_sources_path"]
+        )
         if init_config["time_cluster"] is not None:
             init_config["time_cluster"] = relative_path(
                 init_config["time_data_path"], init_config["time_cluster"]

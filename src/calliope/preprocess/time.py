@@ -48,9 +48,13 @@ def add_time_dimension(
     timeseries_loader = TimeseriesLoader(init_config, timeseries_dfs)
     # Search through every constraint/cost for use of '='
     for var_name, var_data in model_data.data_vars.items():
+        if "timesteps" in var_data.dims:
+            slim_var_data = var_data.isel(timesteps=0)
+        else:
+            slim_var_data = var_data
         # 1) get Series of all uses of 'file=' or 'df=' for this variable (timeseries keys)
-        if var_data.astype(str).str.contains("^file=|df=").any():
-            var_series = var_data.to_series()
+        if slim_var_data.astype(str).str.contains("^file=|df=").any():
+            var_series = slim_var_data.to_series()
             tskeys = var_series[var_series.str.contains("^file=|df=").notnull()]
         else:
             continue
@@ -76,7 +80,6 @@ def add_time_dimension(
             tskeys["column"] = tskeys["column"].fillna(
                 node_info.to_series().align(tskeys)[0]
             )
-
         # 4) Get all timeseries data from dataframes stored in model_run
         ts_df = tskeys.apply(
             timeseries_loader.load_timeseries, var_name=var_name, axis=1
@@ -138,6 +141,28 @@ def _datetime_index(index: pd.Index, format: str, source_name: str) -> pd.Index:
         raise exceptions.ModelError(
             f"Error in parsing dates in timeseries data from {source_name} using datetime format `{format}`. "
             f"Full error: {e}"
+        )
+
+
+def _check_time_subset(ts_index: pd.Index, time_subset: Optional[list[str]]):
+    try:
+        time_subset_dt = pd.to_datetime(time_subset, format="ISO8601")
+    except ValueError as e:
+        raise exceptions.ModelError(
+            "Timeseries subset must be in ISO format (anything up to the  "
+            "detail of `%Y-%m-%d %H:%M:%S`.\n User time subset: {}\n "
+            "Error caused: {}".format(time_subset, e)
+        )
+
+    df_start_time = ts_index[0]
+    df_end_time = ts_index[-1]
+    if (
+        time_subset_dt[0].date() < df_start_time.date()
+        or time_subset_dt[1].date() > df_end_time.date()
+    ):
+        raise exceptions.ModelError(
+            f"subset time range {time_subset} is outside the input data time range "
+            f"[{df_start_time}, {df_end_time}]"
         )
 
 
@@ -215,34 +240,32 @@ class TimeseriesLoader:
         if self._time_subset is None:
             return df
 
-        try:
-            time_subset_dt = pd.to_datetime(self._time_subset, format="ISO8601")
-        except ValueError as e:
-            raise exceptions.ModelError(
-                "Timeseries subset must be in ISO format (anything up to the  "
-                "detail of `%Y-%m-%d %H:%M:%S`.\n User time subset: {}\n "
-                "Error caused: {}".format(self._time_subset, e)
-            )
-
-        df_start_time = df.index[0]
-        df_end_time = df.index[-1]
-        if (
-            time_subset_dt[0].date() < df_start_time.date()
-            or time_subset_dt[1].date() > df_end_time.date()
-        ):
-            raise exceptions.ModelError(
-                f"subset time range {self._time_subset} is outside the input data time range "
-                f"[{df_start_time}, {df_end_time}]"
-            )
-
+        _check_time_subset(df.index, self._time_subset)
         # We eventually subset using the input strings to capture entire days
         # E.g., ["2005-01-01", "2005-01-02"] will go to the last timestep on "2005-01-02"
         subset_df = df.loc[slice(*self._time_subset), :]
         if subset_df.empty:
             raise exceptions.ModelError(
-                f"The time slice {time_subset_dt} creates an empty timeseries array."
+                f"The time slice {self._time_subset} creates an empty timeseries array."
             )
         return subset_df
+
+
+def clean_data_source_timeseries(
+    ds: xr.Dataset, init_config: dict, source_file: str
+) -> xr.Dataset:
+    time_subset: Optional[list[str]] = init_config["time_subset"]
+    time_format: str = init_config["time_format"]
+
+    datetime_indices = [i for i in ds.dims if i.endswith("steps")]
+    for index_name in datetime_indices:
+        ds.coords[index_name] = _datetime_index(
+            ds.coords[index_name], time_format, source_file
+        )
+        _check_time_subset(ds.coords[index_name].to_index(), time_subset)
+        ds = ds.sel(**{index_name: slice(*time_subset)})
+
+    return ds
 
 
 def resample(data: xr.Dataset, resolution: str):

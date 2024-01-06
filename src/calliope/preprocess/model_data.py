@@ -6,6 +6,7 @@ import logging
 from copy import deepcopy
 from typing import Literal, Optional
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 from geographiclib import geodesic
@@ -15,11 +16,26 @@ from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.preprocess import time
 from calliope.util.schema import MODEL_SCHEMA, validate_dict
-from calliope.util.tools import listify
+from calliope.util.tools import listify, relative_path
 
 LOGGER = logging.getLogger(__name__)
 
 DATA_T = Optional[float | int | bool | str] | list[Optional[float | int | bool | str]]
+
+PROTECTED_PARAMS = {
+    "to": "`to`/`from` is only valid in YAML definition. Set the `carrier_in` and `carrier_out` parameters of transmission technologies at the nodes they link together to emulate their function when loading from file.",
+    "from": "`to`/`from` is only valid in YAML definition. Set the `carrier_in` and `carrier_out` parameters of transmission technologies at the nodes they link together to emulate their function when loading from file.",
+    "definition_matrix": "`definition_matrix` is a protected array, it will be generated internally based on the values you assign to the `carrier_in` and `carrier_out` parameters.",
+    "inherit": "Cannot use technology/node inheritance (`inherit`) when loading data from file.",
+}
+
+
+class DataSource(TypedDict):
+    rows: NotRequired[str | list[str]]
+    columns: NotRequired[str | list[str]]
+    file: str
+    add_dimensions: NotRequired[dict[str, str | list[str]]]
+    ignore: dict[Literal["rows", "columns"], str | list[str]]
 
 
 class Param(TypedDict):
@@ -34,6 +50,7 @@ class ModelDefinition(TypedDict):
     tech_groups: NotRequired[AttrDict]
     node_groups: NotRequired[AttrDict]
     parameters: NotRequired[AttrDict]
+    data_sources: NotRequired[list[DataSource]]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -83,6 +100,7 @@ class ModelDataFactory:
         self.config: dict = model_config
         self.model_definition: ModelDefinition = model_definition.copy()
         self.model_data = xr.Dataset(attrs=AttrDict(attributes))
+        self._tech_data_source_dict = AttrDict()
 
         flipped_attributes: dict[str, dict] = dict()
         for key, val in param_attributes.items():
@@ -100,6 +118,8 @@ class ModelDataFactory:
         Returns:
             xr.Dataset: Built model dataset, including the timeseries dimension.
         """
+        self.load_data_sources()
+        self.update_base_def_from_data_sources()
         self.add_node_tech_data()
         self.add_time_dimension(timeseries_dfs)
         self.add_top_level_params()
@@ -109,6 +129,134 @@ class ModelDataFactory:
         self.resample_time_dimension()
         self.assign_input_attr()
         return self.model_data
+
+    def load_data_sources(self) -> None:
+        """Load data from the `data_sources` list into the model dataset.
+
+        Each subsequent data source in the list will override prior data.
+
+        Raises:
+            KeyError: All data sources must have a `parameters` dimension.
+            exceptions.print_warnings_and_raise_errors: Certain parameters are only valid if defined in YAML; they cannot be defined in data sources.
+        """
+        datasets: list[xr.Dataset] = []
+        for data_source in self.model_definition.get("data_sources", []):
+            filename = data_source["file"]
+            columns = self._listify_if_defined(data_source, "columns")
+            index = self._listify_if_defined(data_source, "rows")
+
+            csv_reader_kwargs = {"header": columns, "index_col": index}
+            for axis, names in csv_reader_kwargs.items():
+                if names is not None:
+                    csv_reader_kwargs[axis] = [i for i, _ in enumerate(names)]
+
+            filepath = relative_path(self.config["data_sources_path"], filename)
+            df = pd.read_csv(filepath, encoding="latin1", **csv_reader_kwargs)
+
+            for axis, names in {"columns": columns, "index": index}.items():
+                if names is None:
+                    df = df.squeeze(axis=axis)
+                else:
+                    self._compare_axis_names(
+                        getattr(df, axis).names, names, axis, filename
+                    )
+                    df.rename_axis(inplace=True, **{axis: names})
+
+            tdf: pd.Series
+            if isinstance(df, pd.DataFrame):
+                tdf = df.stack(df.columns.names)
+            else:
+                tdf = df
+
+            if "ignore" in data_source.keys():
+                tdf = tdf.droplevel(data_source["ignore"])
+
+            if "add_dimensions" in data_source.keys():
+                for dim_name, index_items in data_source["add_dimensions"].items():
+                    index_items = listify(index_items)
+                    tdf = pd.concat(
+                        [tdf for _ in index_items], keys=index_items, names=[dim_name]
+                    )
+
+            if "parameters" not in tdf.index.names:
+                raise KeyError(
+                    f"(data_sources, {filename}) | The `parameters` dimension must exist in on of `rows`, `columns`, or `add_dimensions`."
+                )
+
+            invalid_params = tdf.index.get_level_values("parameters").intersection(
+                list(PROTECTED_PARAMS.keys())
+            )
+            if not invalid_params.empty:
+                extra_info = set(PROTECTED_PARAMS[k] for k in invalid_params)
+                exceptions.print_warnings_and_raise_errors(
+                    errors=list(extra_info), during=f"data source loading ({filename})"
+                )
+
+            if tdf.index.names == ["parameters"]:  # unindexed parameters
+                ds = xr.Dataset(tdf.to_dict())
+            else:
+                ds = tdf.unstack("parameters").to_xarray()
+
+            ds = time.clean_data_source_timeseries(ds, self.config, filename)
+            for da_name, da in ds.data_vars.items():
+                da.attrs.update(self.param_attrs.get(da_name, {}))
+            datasets.append(ds)
+
+        if datasets:
+            self.model_data = xr.merge([self.model_data, *datasets])
+
+    def update_base_def_from_data_sources(self) -> None:
+        """Create a dummy model definition dictionary from the dimensions defined across all data sources.
+
+        This definition dictionary will ensure that the minimal YAML content is still possible.
+        """
+        techs = self.model_data.techs
+        nodes = self.model_data.nodes
+        base_tech_data = AttrDict({k: {} for k in techs.values})
+        parent_info = self.model_data.get("parent", xr.DataArray())
+        if parent_info.any():
+            base_tech_data.union(AttrDict(parent_info.to_dataframe().T.to_dict()))
+        carrier_info_dict = self._carrier_info_dict_from_model_data_var()
+        base_tech_data.union(carrier_info_dict)
+        self._tech_data_source_dict.union(base_tech_data)
+
+        tech_dict = AttrDict({k: {} for k in techs.values})
+        tech_dict.union(self.model_definition["techs"], allow_override=True)
+        self.model_definition["techs"] = tech_dict
+
+        techs_incl_inheritance = self._inherit_defs("techs")
+
+        node_tech_vars = self.model_data[
+            [
+                k
+                for k, v in self.model_data.data_vars.items()
+                if "nodes" in v.dims and "techs" in v.dims
+            ]
+        ]
+        other_dims = [i for i in node_tech_vars.dims if i not in ["nodes", "techs"]]
+        # TODO: fix is_defined to work when a variable has been broadcast across nodes from data_sources
+        # such that it is defined at all nodes even when it should only be defined at a subset.
+        # e.g. CSP in national-scale example.
+        is_defined = (
+            node_tech_vars.fillna(False).any(other_dims).to_dataframe().any(axis=1)
+        )
+        node_tech_dict = AttrDict({i: {"techs": {}} for i in nodes.values})
+        for node, tech_dict in node_tech_dict.items():
+            try:
+                techs_this_node = is_defined[is_defined].xs(node, level="nodes").index
+            except KeyError:
+                continue
+            for tech in techs_this_node:
+                if techs_incl_inheritance[tech].get("parent", None) == "transmission":
+                    if "from" in self._tech_data_source_dict[tech]:
+                        self._tech_data_source_dict[tech]["to"] = node
+                    else:
+                        self._tech_data_source_dict[tech]["from"] = node
+                else:
+                    tech_dict["techs"][tech] = None
+
+        node_tech_dict.union(self.model_definition["nodes"], allow_override=True)
+        self.model_definition["nodes"] = node_tech_dict
 
     def add_node_tech_data(self):
         """For each node, extract technology definitions and node-level parameters and convert them to arrays.
@@ -169,9 +317,13 @@ class ModelDataFactory:
         validate_dict(
             {"nodes": active_node_dict}, MODEL_SCHEMA, "node (non-tech) definition"
         )
-
+        self.model_data, node_tech_ds
         node_ds = self._definition_dict_to_ds(active_node_dict, "nodes")
-        self.model_data = xr.merge([self.model_data, node_tech_ds, node_ds])
+        ds = xr.merge([node_tech_ds, node_ds])
+
+        self.model_data = xr.merge(
+            [ds, self.model_data], compat="override", combine_attrs="no_conflicts"
+        ).fillna(self.model_data)
 
     def add_top_level_params(self):
         """Process any parameters defined in the top-level `parameters` key.
@@ -180,7 +332,7 @@ class ModelDataFactory:
             KeyError: Cannot provide the same name for a top-level parameter as those defined already at the tech/node level.
 
         """
-        if "parameters" not in self.model_definition:
+        if self.model_definition.get("parameters", None) is None:
             return None
         for param_name, param_data in self.model_definition["parameters"].items():
             if param_name in self.model_data.data_vars:
@@ -344,6 +496,57 @@ class ModelDataFactory:
         for var_name, var_data in self.model_data.data_vars.items():
             self.model_data[var_name] = var_data.assign_attrs(is_result=False)
 
+    def _carrier_info_dict_from_model_data_var(self):
+        """Convert `carrier_in`/`carrier_out` loaded from a data source into YAML-esque format.
+
+        Only used when either variable is defined in a data source.
+        Conversion from e.g.,
+
+        ```
+        nodes | techs | carriers | carrier_in
+        foo   | bar   | baz      | 1
+        ```
+
+        to
+        ```yaml
+        techs:
+          bar:
+            carrier_in: baz
+        ```
+
+        !!! note
+            This will drop the `nodes` dimension entirely as we expect these parameters to be defined at the tech level in YAML.
+        """
+
+        def __extract_carriers(grouped_series):
+            carriers = set(
+                grouped_series.dropna(subset=[f"carrier_{direction}"]).carriers.values
+            )
+            if len(carriers) == 1:
+                carriers = carriers.pop()
+            if carriers:
+                return {f"carrier_{direction}": carriers}
+            else:
+                return np.nan
+
+        carrier_info_dict = AttrDict()
+        for direction in ["in", "out"]:
+            if f"carrier_{direction}" not in self.model_data:
+                continue
+            carrier_info_dict.union(
+                AttrDict(
+                    self.model_data[f"carrier_{direction}"]
+                    .to_series()
+                    .reset_index("carriers")
+                    .groupby("techs")
+                    .apply(__extract_carriers)
+                    .dropna()
+                    .to_dict()
+                )
+            )
+
+        return carrier_info_dict
+
     def _get_relevant_node_refs(self, techs_dict: AttrDict, node: str) -> list[str]:
         """Get all references to parameters made in technologies at nodes.
 
@@ -370,6 +573,8 @@ class ModelDataFactory:
 
         for tech_name, tech_dict in techs_dict.items():
             if tech_dict is None or not tech_dict.get("active", True):
+                if isinstance(tech_dict, dict) and not tech_dict.get("active", True):
+                    self._deactivate_item(techs=tech_name, nodes=node)
                 continue
             else:
                 if "parent" in tech_dict.keys():
@@ -528,10 +733,16 @@ class ModelDataFactory:
             updated_item_def, inheritance = self._climb_inheritance_tree(
                 item_base_def, dim_name, item_name
             )
+            if dim_name == "techs" and item_name in self._tech_data_source_dict:
+                _data_source_dict = self._tech_data_source_dict[item_name]
+                _data_source_dict.union(updated_item_def, allow_override=True)
+                updated_item_def = _data_source_dict
+
             if not updated_item_def.get("active", True):
                 LOGGER.debug(
                     f"{err_message_prefix}({dim_name}, {item_name}) | Deactivated."
                 )
+                self._deactivate_item(**{dim_name: item_name})
                 continue
 
             if inheritance is not None:
@@ -584,7 +795,7 @@ class ModelDataFactory:
             )
         else:
             base_def_dict, inheritance = self._climb_inheritance_tree(
-                dim_group_def[to_inherit], dim_name_singular, to_inherit, inheritance
+                dim_group_def[to_inherit], dim_name, to_inherit, inheritance
             )
             updated_dim_item_dict = deepcopy(base_def_dict)
             updated_dim_item_dict.union(dim_item_dict, allow_override=True)
@@ -593,6 +804,18 @@ class ModelDataFactory:
             else:
                 inheritance = [to_inherit]
         return updated_dim_item_dict, inheritance
+
+    def _deactivate_item(self, **item_ref):
+        for dim_name, item_name in item_ref.items():
+            if item_name not in self.model_data.coords.get(dim_name, xr.DataArray()):
+                return None
+        if len(item_ref) == 1:
+            self.model_data = self.model_data.drop_sel(**item_ref)
+        else:
+            if "carrier_in" in self.model_data:
+                self.model_data["carrier_in"].loc[item_ref] = np.nan
+            if "carrier_out" in self.model_data:
+                self.model_data["carrier_out"].loc[item_ref] = np.nan
 
     def _links_to_node_format(self, active_node_dict: AttrDict) -> AttrDict:
         """Process `transmission` techs into links by assigned them to the nodes defined by their `from` and `to` keys.
@@ -620,12 +843,19 @@ class ModelDataFactory:
             LOGGER.debug("links | No links between nodes defined.")
 
         for link_name, link_data in active_link_techs.items():
+            # TODO: fix issue of links defined in data sources not ending up in this loop
+            # and therefore not having the chance to be deactivated when one / both connecting nodes are deactivated.
             node_from, node_to = link_data.pop("from"), link_data.pop("to")
-
-            if any(node not in active_node_dict for node in [node_from, node_to]):
+            nodes_exists = all(
+                node in active_node_dict
+                or node_from in self.model_data.coords.get("nodes", xr.DataArray)
+                for node in [node_from, node_to]
+            )
+            if not nodes_exists:
                 LOGGER.debug(
                     f"(links, {link_name}) | Deactivated due to missing/deactivated `from` or to `node`."
                 )
+                self._deactivate_item(techs=link_name)
                 continue
             node_from_data = link_data.copy()
             node_to_data = link_data.copy()
@@ -696,6 +926,27 @@ class ModelDataFactory:
                     )
 
     @staticmethod
+    def _listify_if_defined(source: DataSource, key: str) -> Optional[list]:
+        vals = source.get(key, None)
+        if vals is not None:
+            vals = listify(vals)
+        return vals
+
+    @staticmethod
+    def _compare_axis_names(
+        loaded_names: list, defined_names: list, axis: str, filename: str
+    ):
+        if any(
+            name is not None
+            and not isinstance(name, int)
+            and name != defined_names[idx]
+            for name, idx in enumerate(loaded_names)
+        ):
+            raise ValueError(
+                f"(data_sources, {filename}) | Trying to set names for {axis} but names in the file do no match names provided | in file: {loaded_names} | defined: {defined_names}"
+            )
+
+    @staticmethod
     def _update_one_way_links(node_from_data: dict, node_to_data: dict):
         """For one-way transmission links, delete option to have carrier outflow (imports) at the `from` node and carrier inflow (exports) at the `to` node.
 
@@ -708,8 +959,9 @@ class ModelDataFactory:
         node_from_data.pop("carrier_out")  # cannot import carriers at the `from` node
         node_to_data.pop("carrier_in")  # cannot export carrier at the `to` node
 
-    @staticmethod
-    def _raise_error_on_transmission_tech_def(tech_def_dict: AttrDict, node_name: str):
+    def _raise_error_on_transmission_tech_def(
+        self, tech_def_dict: AttrDict, node_name: str
+    ):
         """Do not allow any transmission techs are defined in the node-level tech dict.
 
         Args:
@@ -720,8 +972,9 @@ class ModelDataFactory:
             exceptions.ModelError: Raise if any defined techs have the `transmission` parent.
         """
         transmission_techs = [
-            k for k, v in tech_def_dict.items() if v["parent"] == "transmission"
+            k for k, v in tech_def_dict.items() if v.get("parent", "") == "transmission"
         ]
+
         if transmission_techs:
             raise exceptions.ModelError(
                 f"(nodes, {node_name}) | Transmission techs cannot be directly defined at nodes; "

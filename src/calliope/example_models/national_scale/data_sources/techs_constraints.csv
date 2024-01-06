@@ -1,0 +1,5 @@
+techs,flow_cap_max,flow_cap_max_systemwide,flow_out_eff,flow_ramping,lifetime,area_use_max,flow_cap_per_storage_cap_max,flow_out_parasitic_eff,include_storage,source_unit,storage_cap_max,storage_loss,flow_in_eff
+battery,1000,,0.95,,25,,4,,,,inf,0,0.95
+ccgt,,100000,0.5,0.8,25,,,,,,,,
+csp,10000,,0.4,,25,inf,1,0.9,1,per_area,614033,0.002,
+region1_to_region2,10000,,0.85,,25,,,,,,,,
