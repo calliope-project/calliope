@@ -2,21 +2,6 @@ fail:
   - where: not parent
     message: A parent abstract technology group must be defined for every technology at every node.
 
-  - where: parent=demand and (carrier_out or not carrier_in)
-    message: Demand technologies must only define `carrier_in` of [`carrier_in`, `carrier_out`].
-
-  - where: parent=conversion and not (carrier_out or carrier_in)
-    message: Conversion technologies must define both `carrier_in` and `carrier_out`.
-
-  - where: parent=supply and (carrier_in or not carrier_out)
-    message: Supply technologies must only define `carrier_out` of [`carrier_in`, `carrier_out`].
-
-  - where: parent=storage and not (carrier_out or carrier_in)
-    message: Storage technologies must define both `carrier_in` and `carrier_out`.
-
-  - where: parent=transmission and not (carrier_out or carrier_in)
-    message: Transmission technologies must define both `carrier_in` and `carrier_out`.
-
   - where: not parent=transmission and (distance or flow_in_eff_per_distance or flow_out_eff_per_distance or cost_flow_cap_per_distance or cost_purchase_per_distance)
     message: Only transmission technologies can define `distance` or `..._per_distance` parameters.
 

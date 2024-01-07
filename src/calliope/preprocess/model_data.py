@@ -292,6 +292,8 @@ class ModelDataFactory:
             KeyError: Cannot provide the same name for a top-level parameter as those defined already at the tech/node level.
 
         """
+        if "parameters" not in self.model_definition:
+            return None
         for param_name, param_data in self.model_definition["parameters"].items():
             if param_name in self.model_data.data_vars:
                 raise KeyError(
@@ -825,7 +827,7 @@ class ModelDataFactory:
             node_from, node_to = link_data.pop("from"), link_data.pop("to")
             nodes_exists = all(
                 node in active_node_dict
-                or node_from in self.model_data.coords.get("nodes", xr.DataArray)
+                or node_from in self.model_data.coords.get("nodes", xr.DataArray())
                 for node in [node_from, node_to]
             )
             if not nodes_exists:
