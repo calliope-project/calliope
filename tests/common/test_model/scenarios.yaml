@@ -35,12 +35,12 @@ overrides:
       a:
         techs:
           test_supply_plus:
-            source_max: file=supply_plus_resource.csv
+            source_use_max: file=supply_plus_resource.csv
 
       b:
         techs:
           test_supply_plus:
-            source_max: file=supply_plus_resource.csv
+            source_use_max: file=supply_plus_resource.csv
 
   simple_supply_and_supply_plus:
     nodes:
@@ -48,13 +48,13 @@ overrides:
         techs:
           test_supply_elec:
           test_supply_plus:
-            source_max: file=supply_plus_resource.csv
+            source_use_max: file=supply_plus_resource.csv
 
       b:
         techs:
           test_supply_elec:
           test_supply_plus:
-            source_max: file=supply_plus_resource.csv
+            source_use_max: file=supply_plus_resource.csv
 
   supply_and_supply_plus_milp:
     nodes:
@@ -62,11 +62,10 @@ overrides:
         techs:
           test_supply_elec:
           test_supply_plus:
-            source_max: file=supply_plus_resource.csv
+            source_use_max: file=supply_plus_resource.csv
             cap_method: integer
-            units_max: 1
-            flow_cap_per_unit: 15
-            storage_cap_per_unit: 15
+            integer_dispatch: true
+            purchased_units_max: 1
             cost_purchase:
               data: 1
               index: monetary
@@ -83,7 +82,8 @@ overrides:
       a:
         techs:
           test_supply_elec:
-            cap_method: binary
+            cap_method: integer
+            purchased_units_max: 1
             cost_purchase:
               data: 1
               index: monetary
@@ -99,8 +99,10 @@ overrides:
     techs:
       test_supply_elec:
         cap_method: integer
-        units_max: 1
+        integer_dispatch: true
+        purchased_units_max: 1
         flow_cap_per_unit: 15
+        flow_cap_max: null
     nodes:
       a:
         techs:
@@ -133,7 +135,7 @@ overrides:
           test_supply_gas:
           test_conversion:
           test_demand_heat:
-            sink_equals: file=demand_heat.csv
+            sink_use_equals: file=demand_heat.csv
 
       b:
         techs:
@@ -141,7 +143,7 @@ overrides:
           test_supply_gas:
           test_conversion:
           test_demand_heat:
-            sink_equals: file=demand_heat.csv
+            sink_use_equals: file=demand_heat.csv
 
   conversion_and_conversion_plus:
     nodes:
@@ -153,7 +155,7 @@ overrides:
           test_conversion:
           test_conversion_plus:
           test_demand_heat:
-            sink_equals: file=demand_heat.csv
+            sink_use_equals: file=demand_heat.csv
 
     tech_groups.test_transmission.active: false
 
@@ -161,8 +163,11 @@ overrides:
     techs:
       test_conversion_plus:
         cap_method: integer
-        units_max: 2
+        integer_dispatch: true
+        purchased_units_max: 2
         flow_cap_per_unit: 15
+        flow_cap_max:
+          _REPLACE_: null
     nodes:
       a:
         techs:
@@ -170,7 +175,7 @@ overrides:
           test_supply_gas:
           test_conversion_plus:
           test_demand_heat:
-            sink_equals: file=demand_heat.csv
+            sink_use_equals: file=demand_heat.csv
 
     tech_groups.test_transmission.active: false
 
@@ -178,8 +183,8 @@ overrides:
     techs:
       test_conversion:
         cap_method: integer
-        units_max: 1
-        flow_cap_per_unit: null
+        integer_dispatch: true
+        purchased_units_max: 1
     nodes:
       a:
         techs:
@@ -187,7 +192,7 @@ overrides:
           test_supply_gas:
           test_conversion:
           test_demand_heat:
-            sink_equals: file=demand_heat.csv
+            sink_use_equals: file=demand_heat.csv
 
     tech_groups.test_transmission.active: false
 
@@ -198,13 +203,14 @@ overrides:
           test_supply_elec:
           test_supply_gas:
           test_conversion_plus:
-            cap_method: binary
+            cap_method: integer
+            purchased_units_max: 1
             cost_purchase:
               data: 1
               index: monetary
               dims: costs
           test_demand_heat:
-            sink_equals: file=demand_heat.csv
+            sink_use_equals: file=demand_heat.csv
 
     tech_groups.test_transmission.active: false
 
@@ -217,7 +223,7 @@ overrides:
           test_supply_coal:
           test_conversion_plus:
           test_demand_heat:
-            sink_equals: file=demand_heat.csv
+            sink_use_equals: file=demand_heat.csv
 
     tech_groups.test_transmission.active: false
 
@@ -229,7 +235,7 @@ overrides:
           test_supply_gas:
           test_chp:
           test_demand_heat:
-            sink_equals: file=demand_heat.csv
+            sink_use_equals: file=demand_heat.csv
 
     tech_groups.test_transmission.active: false
 
@@ -251,7 +257,7 @@ overrides:
       init_nodes:
         techs:
           test_demand_elec:
-            sink_equals: file=demand_elec.csv
+            sink_use_equals: file=demand_elec.csv
           test_supply_gas:
           test_supply_coal:
           test_conversion:
@@ -283,7 +289,9 @@ overrides:
           test_supply_elec:
           test_storage:
             cap_method: integer
-            units_max: 2
+            integer_dispatch: true
+            purchased_units_max: 2
+            flow_cap_max: null
             flow_cap_per_unit: 10
             storage_cap_per_unit: 15
 
@@ -295,7 +303,8 @@ overrides:
         techs:
           test_supply_elec:
           test_storage:
-            cap_method: binary
+            cap_method: integer
+            purchased_units_max: 1
             cost_purchase:
               data: 1
               index: monetary
@@ -362,5 +371,5 @@ overrides:
   demand_elec_max:
     node_groups.init_nodes.techs:
       test_demand_elec:
-        sink_equals: null
-        sink_max: file=demand_elec.csv
+        sink_use_equals: null
+        sink_use_max: file=demand_elec.csv

@@ -70,7 +70,7 @@ techs:
     name: Electricity demand
     carrier_in: electricity
     parent: demand
-    sink_equals: file=demand_elec.csv
+    sink_use_equals: file=demand_elec.csv
 
 node_groups:
   node_techs:

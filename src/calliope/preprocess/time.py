@@ -270,12 +270,12 @@ def resample(data: xr.Dataset, resolution: str):
         resampler = var_data.resample(**resample_kwargs)
         if var_name in [
             "timestep_resolution",
-            "source_min",
-            "sink_min",
-            "source_max",
-            "sink_max",
-            "source_equals",
-            "sink_equals",
+            "source_use_min",
+            "sink_use_min",
+            "source_use_max",
+            "sink_use_max",
+            "source_use_equals",
+            "sink_use_equals",
         ]:
             method = "sum"
         elif var_data.dtype.kind in ["f", "i"]:

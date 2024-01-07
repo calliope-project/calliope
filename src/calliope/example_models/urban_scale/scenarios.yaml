@@ -11,7 +11,10 @@ overrides:
       # chp-start
       chp:
         cap_method: integer
-        units_max: 4
+        integer_dispatch: true
+        purchased_units_max: 4
+        flow_cap_max:
+          _REPLACE_: null
         flow_cap_per_unit:
           data: 300
           index: electricity
@@ -28,7 +31,8 @@ overrides:
       # chp-end
       # boiler-start
       boiler:
-        cap_method: binary
+        cap_method: integer
+        purchased_units_max: 1  # i.e., binary variable.
         cost_flow_cap.data: 35
         cost_purchase:
           data: 2000

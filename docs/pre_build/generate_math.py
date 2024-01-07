@@ -74,7 +74,7 @@ def generate_model_config() -> dict[str, dict]:
         "demand_tech": {
             "parent": "demand",
             "carrier_in": "electricity",
-            "sink_equals": "df=ts",
+            "sink_use_equals": "df=ts",
         },
         "conversion_tech": {
             "parent": "conversion",

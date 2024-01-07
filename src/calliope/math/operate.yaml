@@ -18,8 +18,7 @@ variables:
   area_use.active: false
   source_cap.active: false
   storage_cap.active: false
-  purchased.active: false
-  units.active: false
+  purchased_units.active: false
 
 global_expressions:
   cost_investment.active: false
