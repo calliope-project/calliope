@@ -51,8 +51,10 @@ def setup_root_logger(
 
     if capture_warnings:
         logging.captureWarnings(True)
-        pywarning_logger = logging.getLogger("py.warnings")
-        pywarning_logger.setLevel(verbosity)
+        logging.getLogger("py.warnings").setLevel(verbosity)
+    else:
+        logging.captureWarnings(False)
+        logging.getLogger("py.warnings").setLevel("WARNING")
 
     return root_logger
 
