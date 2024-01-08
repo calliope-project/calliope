@@ -420,9 +420,9 @@ class TestEquationParserElements:
             "foo$",  # classifier not at start
             "f$oo",  # classifier not at start
             "$",  # missing sub-expression name
-            "$foo(1)",  # adding classifer to function
-            "$foo[bars=bar1]",  # adding classifer to indexed param
-            "$1",  # adding classifer to invalid python variable name
+            "$foo(1)",  # adding classifier to function
+            "$foo[bars=bar1]",  # adding classifier to indexed param
+            "$1",  # adding classifier to invalid python variable name
         ],
     )
     def test_fail_sub_expression(self, sub_expression, string_val):

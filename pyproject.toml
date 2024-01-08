@@ -82,6 +82,11 @@ convention = "google"
 max-doc-length = 200
 ignore-overlong-task-comments = true
 
+[tool.codespell]
+skip = 'tests/**/*,**/*.ipynb,doc/**/*'
+count = ''
+quiet-level = 3
+
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["calliope*"]

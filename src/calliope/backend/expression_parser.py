@@ -939,7 +939,7 @@ def sub_expression_parser(generic_identifier: pp.ParserElement) -> pp.ParserElem
 def unsliced_object_parser(valid_component_names: Iterable[str]) -> pp.ParserElement:
     """
     Create a copy of the generic identifier and set a parse action to find the string in
-    the list of input paramaters or optimisation decision variables.
+    the list of input parameters or optimisation decision variables.
 
     Args:
         valid_component_names (Iterable[str]): A
@@ -1099,7 +1099,7 @@ def generate_slice_parser(valid_component_names: Iterable) -> pp.ParserElement:
     """
     Create parser for index slice reference expressions. These expressions are linked
     to the equation expression by e.g. `$bar` in `foo[bars=$bar]`.
-    Unlike sub-expressions and equation expressions, these strings cannot contain arithemtic
+    Unlike sub-expressions and equation expressions, these strings cannot contain arithmetic
     nor references to sub expressions.
 
     Args:

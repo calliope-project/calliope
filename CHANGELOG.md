@@ -80,7 +80,7 @@ An API will be created in due course to allow the user to add their own checks t
 
 |changed| |backwards-incompatible| Removed support for Python version 3.7 since some updated dependencies are not available in this version.
 
-|changed| Installation instructions for developers have changed since we no longer duplicate pinned packages between the developement/testing requirements file (`requirements.yml`) and the package requirements file (`requirements.txt`). See `the documentation <https://calliope.readthedocs.io/en/v0.6.10/user/installation.html>`_ for updated instructions.
+|changed| Installation instructions for developers have changed since we no longer duplicate pinned packages between the development/testing requirements file (`requirements.yml`) and the package requirements file (`requirements.txt`). See `the documentation <https://calliope.readthedocs.io/en/v0.6.10/user/installation.html>`_ for updated instructions.
 
 |fixed| Set ordering in the model dataset is consistent before and after optimising a model with clustered timeseries. Previously, the link between clusters and timesteps would become mixed following optimisation, so running `model.run(force_rerun=True)` would yield a different result.
 
