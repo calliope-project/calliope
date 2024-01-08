@@ -410,6 +410,8 @@ class ModelDataFactory:
                     self.model_data.longitude.sel(nodes=node2).item(),
                 )["s12"]
             distance_array = pd.Series(distances).rename_axis(index="techs").to_xarray()
+            if self.config["distance_unit"] == "km":
+                distance_array /= 1000
         else:
             LOGGER.debug(
                 "Link distances will not be computed automatically since lat/lon coordinates are not defined."

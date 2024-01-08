@@ -68,6 +68,13 @@ properties:
                 If referring to an in-built Calliope custom math file (see documentation for available files), do not append the reference with ".yaml".
                 If referring to your own custom math file, ensure the file type is given as a suffix (".yaml" or ".yml").
                 Relative paths will be assumed to be relative to the model definition file given when creating a calliope Model (`calliope.Model(model_definition=...)`)
+          distance_unit:
+            type: string
+            default: km
+            description: >-
+              Unit of transmission link `distance` (m - metres, km - kilometres).
+              Automatically derived distances from lat/lon coordinates will be given in this unit.
+            enum: [m, km]
 
       build:
         type: object

@@ -172,7 +172,7 @@ class TestModelData:
         assert model_data_factory.model_data["definition_matrix"].dtype.kind == "b"
 
     @pytest.mark.parametrize(
-        ["existing_distance", "expected_distance"], [(np.nan, 343834), (1, 1)]
+        ["existing_distance", "expected_distance"], [(np.nan, 343.834), (1, 1)]
     )
     def test_add_link_distances_missing_distance(
         self,
@@ -204,9 +204,12 @@ class TestModelData:
             techs="test_link_a_b_elec"
         ).item() == pytest.approx(expected_distance)
 
+    @pytest.mark.parametrize(["unit", "expected"], [("m", 343834), ("km", 343.834)])
     def test_add_link_distances_no_da(
-        self, my_caplog, model_data_factory_w_params: ModelDataFactory
+        self, my_caplog, model_data_factory_w_params: ModelDataFactory, unit, expected
     ):
+        _default_distance_unit = model_data_factory_w_params.config["distance_unit"]
+        model_data_factory_w_params.config["distance_unit"] = unit
         model_data_factory_w_params.clean_data_from_undefined_members()
         model_data_factory_w_params.model_data["latitude"] = (
             pd.Series({"A": 51.507222, "B": 48.8567})
@@ -221,10 +224,11 @@ class TestModelData:
         del model_data_factory_w_params.model_data["distance"]
 
         model_data_factory_w_params.add_link_distances()
+        model_data_factory_w_params.config["distance_unit"] = _default_distance_unit
         assert "Link distance matrix automatically computed" in my_caplog.text
         assert (
             model_data_factory_w_params.model_data["distance"].dropna("techs")
-            == pytest.approx(343834)
+            == pytest.approx(expected)
         ).all()
 
     def test_add_link_distances_no_latlon(

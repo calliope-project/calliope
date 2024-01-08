@@ -85,7 +85,7 @@ def add_time_dimension(
             timeseries_loader.load_timeseries, var_name=var_name, axis=1
         ).rename_axis(columns="timesteps")
 
-        # 5) Add time dimension to the relevent DataArray and update the '='
+        # 5) Add time dimension to the relevant DataArray and update the '='
         # dimensions with the time varying data (static data is just duplicated
         # at each timestep)
 

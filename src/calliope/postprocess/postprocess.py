@@ -127,9 +127,9 @@ def systemwide_levelised_cost(results, model_data, total=False):
     * costs are already multiplied by weight in the constraints, and not
       further adjusted here.
 
-    * production is not multiplied by weight in the contraints, so scaled
+    * production is not multiplied by weight in the constraints, so scaled
       by weight here to be consistent with costs. CAUTION: this scaling
-      is temporary duriing levelised cost computation - the actual
+      is temporary during levelised cost computation - the actual
       costs in the results remain untouched.
 
     Parameters

@@ -1291,7 +1291,7 @@ div.output_area svg.unconfined {
     max-width: none;
 }
 
-/* This is needed to protect the pre formating from global settings such
+/* This is needed to protect the pre formatting from global settings such
 as that of bootstrap */
 
 .output {

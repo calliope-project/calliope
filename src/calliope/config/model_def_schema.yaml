@@ -787,7 +787,8 @@ properties:
             default: .nan
             title: Distance spanned by link.
             description: >-
-              Used for per_distance constraints. If not defined, it will be automatically inferred from latitude/longitude of nodes in a link if not given here.
+              Used for `..._per_distance` constraints.
+              If not defined, it will be automatically derived from latitude/longitude of nodes in a link.
 
           flow_in_eff_per_distance:
             $ref: "#/$defs/TechParamNullNumberVariable"
