@@ -699,18 +699,18 @@ def target_reserve_share_constraint_rule(
     backend_model, group_name, timestep, what
 ):  # UPDATED the math
     """
-    Enforces carrier_prod for groups of technologies and locations,
-    as a sum over the entire model period.
+        Enforces carrier_prod for groups of technologies and locations,
+        as a sum over the entire model period.
 
-    .. container:: scrolling-wrapper
+        .. container:: scrolling-wrapper
 
-        .. math::
+            .. math::
 
-<<<<<<< HEAD
-            \\sum_{loc::tech \\in given\\_group, timestep \\in timesteps} cap\\_value(loc::tech, timestep) energy_{cap}(loc::tech) timestep\\_resolution(timestep) \\leq \\geq \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers_{in}, timestep \\in timesteps} (1 + target\\_share) carrier_{con}(loc::tech::carrier, timestep)
-=======
-            \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq carrier_prod_max
->>>>>>> parent of d7bd4705 (Update math for reserve margin constraints)
+    <<<<<<< HEAD
+                \\sum_{loc::tech \\in given\\_group, timestep \\in timesteps} cap\\_value(loc::tech, timestep) energy_{cap}(loc::tech) timestep\\_resolution(timestep) \\leq \\geq \\sum_{loc::tech::carrier \\in loc\\_tech\\_carriers_{in}, timestep \\in timesteps} (1 + target\\_share) carrier_{con}(loc::tech::carrier, timestep)
+    =======
+                \\sum_{loc::tech::carrier \\in given\\_group, timestep \\in timesteps} carrier_{prod}(loc::tech::carrier, timestep) \\leq carrier_prod_max
+    >>>>>>> parent of d7bd4705 (Update math for reserve margin constraints)
 
     """
 
