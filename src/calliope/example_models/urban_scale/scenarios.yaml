@@ -1,14 +1,14 @@
 ##
 # Overrides for different example model configuratiions
 ##
-# milp-start
+# --8<-- [start:milp]
 overrides:
   milp:
     config:
       init.name: "Urban-scale example model with MILP"
       solve.solver_options: { mipgap: 0.05 }
     techs:
-      # chp-start
+      # --8<-- [start:chp]
       chp:
         cap_method: integer
         units_max: 4
@@ -25,8 +25,8 @@ overrides:
           data: 40000
           index: monetary
           dims: costs
-      # chp-end
-      # boiler-start
+      # --8<-- [end:chp]
+      # --8<-- [start:boiler]
       boiler:
         cap_method: binary
         cost_flow_cap.data: 35
@@ -34,13 +34,13 @@ overrides:
           data: 2000
           index: monetary
           dims: costs
-      # boiler-end
-      # heat_pipes-start
+      # --8<-- [end:boiler]
+      # --8<-- [start:heat_pipes]
     link_groups:
       heat_pipes:
         force_async_flow: true
-      # heat_pipes-end
-# milp-end
+      # --8<-- [end:heat_pipes]
+# --8<-- [end:milp]
 
   operate:
     config:

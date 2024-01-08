@@ -2,17 +2,17 @@
 # TECHNOLOGY DEFINITIONS
 ##
 
-# Note: '-start' and '-end' is used in tutorial documentation only
+# --8<-- [start:--8<-- [end:Note: ']' and ']' is used in tutorial documentation only
 
-# interest-rate-setter-start
+# --8<-- [start:interest-rate-setter]
 tech_groups:
   interest_rate_setter:
     cost_interest_rate:
       data: 0.10
       index: monetary
       dims: costs
-# interest-rate-setter-end
-# transmission-tech-groups-start
+# --8<-- [end:interest-rate-setter]
+# --8<-- [start:transmission-tech-groups]
   power_lines:
     name: "Electrical power distribution"
     color: "#6783E3"
@@ -42,10 +42,10 @@ tech_groups:
       data: 0.3
       index: monetary
       dims: costs
-# transmission-tech-groups-end
+# --8<-- [end:transmission-tech-groups]
 techs:
   ##-GRID SUPPLY-##
-  # supply-start
+  # --8<-- [start:supply]
   supply_grid_power:
     name: "National grid import"
     color: "#C5ABE3"
@@ -81,10 +81,10 @@ techs:
       data: 0.025 # 2.5p/kWh gas price #ppt
       index: monetary
       dims: costs
-  # supply-end
+  # --8<-- [end:supply]
 
   ##-Renewables-##
-  # pv-start
+  # --8<-- [start:pv]
   pv:
     name: "Solar photovoltaic power"
     color: "#F9D956"
@@ -111,10 +111,10 @@ techs:
       index: monetary
       dims: costs
 
-  # pv-end
+  # --8<-- [end:pv]
 
   # Conversion
-  # boiler-start
+  # --8<-- [start:boiler]
   boiler:
     name: "Natural gas boiler"
     color: "#8E2999"
@@ -132,10 +132,10 @@ techs:
       data: 0.004 # .4p/kWh
       index: monetary
       dims: costs
-  # boiler-end
+  # --8<-- [end:boiler]
 
   # Conversion_plus
-  # chp-start
+  # --8<-- [start:chp]
   chp:
     name: "Combined heat and power"
     color: "#E4AB97"
@@ -166,10 +166,10 @@ techs:
       data: file=export_power.csv
       index: [[monetary, electricity]]
       dims: [costs, carriers]
-  # chp-end
+  # --8<-- [end:chp]
 
   ##-DEMAND-##
-  # demand-start
+  # --8<-- [start:demand]
   demand_electricity:
     name: "Electrical demand"
     color: "#072486"
@@ -181,10 +181,10 @@ techs:
     color: "#660507"
     parent: demand
     carrier_in: heat
-  # demand-end
+  # --8<-- [end:demand]
 
   ##-DISTRIBUTION-##
-  # transmission-start
+  # --8<-- [start:transmission]
 
   X1_to_X2:
     from: X1
@@ -212,4 +212,4 @@ techs:
     inherit: heat_pipes
     distance: 4
 
-# transmission-end
+# --8<-- [end:transmission]

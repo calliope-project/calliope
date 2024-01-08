@@ -2,9 +2,9 @@
 # TECHNOLOGY DEFINITIONS
 ##
 
-# Note: '-start' and '-end' is used in tutorial documentation only
+# Note: --8<--start:'' and --8<--end:'' is used in tutorial documentation only
 
-# cost-dim-setter-start
+# --8<-- [start:cost-dim-setter]
 tech_groups:
   cost_dim_setter:
     cost_flow_cap:
@@ -35,23 +35,23 @@ tech_groups:
       data: 0.10
       index: monetary
       dims: costs
-# cost-dim-setter-end
+# --8<-- [end:cost-dim-setter]
 
-# free-transmission-start
+# --8<-- [start:free-transmission]
   free_transmission:
     name: "Local power transmission"
     color: "#6783E3"
     carrier_in: power
     carrier_out: power
     parent: transmission
-# free-transmission-end
+# --8<-- [end:free-transmission]
 
 techs:
   ##
   # Supply
   ##
 
-  # ccgt-start
+  # --8<-- [start:ccgt]
   ccgt:
     name: "Combined cycle gas turbine"
     color: "#E37A72"
@@ -67,9 +67,9 @@ techs:
 
     cost_flow_cap.data: 750 # USD per kW
     cost_flow_in.data: 0.02 # USD per kWh
-  # ccgt-end
+  # --8<-- [end:ccgt]
 
-  # csp-start
+  # --8<-- [start:csp]
   csp:
     name: "Concentrating solar power"
     color: "#F9CF22"
@@ -92,12 +92,12 @@ techs:
     cost_source_cap.data: 200
     cost_flow_cap.data: 1000
     cost_flow_out.data: 0.002
-  # csp-end
+  # --8<-- [end:csp]
 
   ##
   # Storage
   ##
-  # battery-start
+  # --8<-- [start:battery]
   battery:
     name: "Battery storage"
     color: "#3B61E3"
@@ -115,24 +115,24 @@ techs:
     lifetime: 25
 
     cost_storage_cap.data: 200 # USD per kWh storage capacity
-  # battery-end
+  # --8<-- [end:battery]
 
   ##
   # Demand
   ##
-  # demand-start
+  # --8<-- [start:demand]
   demand_power:
     name: "Power demand"
     color: "#072486"
     parent: demand
     carrier_in: power
-  # demand-end
+  # --8<-- [end:demand]
 
   ##
   # Transmission
   ##
 
-  # transmission-start
+  # --8<-- [start:transmission]
 
   region1_to_region2:
     from: region1
@@ -162,4 +162,4 @@ techs:
     to: region1_3
     inherit: free_transmission
 
-  # transmission-end
+  # --8<-- [end:transmission]

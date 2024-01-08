@@ -1,11 +1,11 @@
-# import-start
+# --8<-- [start:import]
 import: # Import other files from paths relative to this file, or absolute paths
   - "model_config/techs.yaml"
   - "model_config/locations.yaml"
   - "scenarios.yaml"
-# import-end
+# --8<-- [end:import]
 
-# config-start
+# --8<-- [start:config]
 config:
   init:
     name: Urban-scale example model
@@ -22,13 +22,13 @@ config:
 
   solve:
     solver: cbc
-# config-end
+# --8<-- [end:config]
 
-# parameters-start
+# --8<-- [start:parameters]
 parameters:
   objective_cost_weights:
     data: 1
     index: monetary
     dims: costs
   bigM: 1e6 # setting the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
-# parameters-end
+# --8<-- [end:parameters]

@@ -1,5 +1,5 @@
 nodes:
-  # X1-start
+  # --8<-- [start:X1]
   X1:
     techs:
       chp:
@@ -14,8 +14,8 @@ nodes:
     available_area: 500
     latitude: 51.4596158
     longitude: -0.1613446
-  # X1-end
-  # other-locs-start
+  # --8<-- [end:X1]
+  # --8<-- [start:other-locs]
   X2:
     techs:
       boiler:
@@ -63,10 +63,10 @@ nodes:
     latitude: 51.4287016
     longitude: -0.1310635
 
-  # other-locs-end
-  # N1-start
+  # --8<-- [end:other-locs]
+  # --8<-- [start:N1]
   N1: # node for branching heat transmission network
     techs:
     latitude: 51.4450766
     longitude: -0.1247183
-  # N1-end
+  # --8<-- [end:N1]

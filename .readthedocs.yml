@@ -11,6 +11,5 @@ build:
       - pip install --no-deps .
       - python -m ipykernel install --user --name calliope_docs_build
 
-
 mkdocs:
   configuration: mkdocs.yml

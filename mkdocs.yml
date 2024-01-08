@@ -7,6 +7,7 @@ hooks:
   - docs/hooks/generate_custom_math_examples.py
   - docs/hooks/generate_readable_schema.py
   - docs/hooks/generate_math_docs.py
+  - docs/hooks/add_notebooks.py
 extra:
   min_python_version: "3.10"
   max_python_version: "3.12"
@@ -30,7 +31,8 @@ plugins:
   - autorefs
   - macros
   - mkdocs-jupyter:
-      include: ["examples/*.py"]
+      include: ["examples/**/*.py", "examples/*.py"]
+      ignore: ["examples/.*/*.py"]
       allow_errors: false
       kernel_name: calliope_docs_build
       include_source: True
@@ -93,9 +95,15 @@ nav:
       - custom_math/examples/index.md
   - Examples and tutorials:
     - examples/index.md
-    - examples/1_national_scale.py
-    - examples/2_urban_scale.py
-    - examples/3_milp.py
+    - National scale example model:
+      - examples/1_national_scale/index.md
+      - examples/1_national_scale/notebook.py
+    - Urban scale example model:
+      - examples/2_urban_scale/index.md
+      - examples/2_urban_scale/notebook.py
+    - MILP example model:
+      - examples/3_milp/index.md
+      - examples/3_milp/notebook.py
     - examples/4_calliope_model_object.py
     - examples/5_logging.py
   - Reference:
