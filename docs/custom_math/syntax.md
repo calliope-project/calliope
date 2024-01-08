@@ -1,6 +1,6 @@
 # Math syntax
 
-This page provides an overview of the syntax available to formulate math components. reference for the allowed key-value pairs in your custom math YAML file is available in the [reference section of the documentation][math_schema].
+This page provides an overview of the syntax available to formulate math components. reference for the allowed key-value pairs in your custom math YAML file is available in the [reference section of the documentation][math-formulation-schema].
 
 ## foreach lists
 
@@ -27,7 +27,7 @@ When checking the existence of an input parameter it is possible to first sum it
         - If you want to apply a constraint across all `nodes` and `techs`, but only for node+tech combinations where the `flow_out_eff` parameter has been defined, you would include `flow_out_eff`.
         - If you want to apply a constraint over `techs` and `timesteps`, but only for combinations where the `source_max` parameter has at least one `node` with a value defined, you would include `any(resource, over=nodes)`.  (1)
 
-    1.  I'm a [helper function][helper-functions]; read more below!
+    1.  `any` is a [helper function][helper-functions]; read more below!
 
 1. Checking the value of a configuration option or an input parameter.
 Checks can use any of the operators: `>`, `<`, `=`, `<=`, `>=`.
@@ -38,7 +38,7 @@ Configuration options are any that are defined in `config.build`, where you can 
         - If you want to apply a constraint only if the configuration option `config.build.cyclic_storage` is _True_, you would include `config.cyclic_storage=True` (`True`/`False` is case insensitive).
         - If you want to apply a constraint across all `nodes` and `techs`, but only where the `flow_eff` parameter is less than 0.5, you would include `flow_eff<0.5`.
         - If you want to apply a constraint only for the first timestep in your timeseries, you would include `timesteps=get_val_at_index(dim=timesteps, idx=0)`. (1)
-        - If you want to apply a constraint only for the last timestep in your timeseries, you would include `timesteps=get_val_at_index(dim=timesteps, idx=-1)`. (1)
+        - If you want to apply a constraint only for the last timestep in your timeseries, you would include `timesteps=get_val_at_index(dim=timesteps, idx=-1)`.
 
     1.  `get_val_at_index` is a [helper function][helper-functions]; read more below!
 

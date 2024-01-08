@@ -102,7 +102,8 @@ constraints:
 
   chp_backpressure_line_min:
     description: >
-      Set the backpressure line as a lower bound for electricity generation in combined heat and power plants with extraction turbines.
+      Set the backpressure line as a lower bound for electricity generation in
+      combined heat and power plants with extraction turbines.
       `power_to_heat_ratio` is also referred to as the `backpressure ratio` or simply `cb`.
     foreach: [nodes, techs, timesteps]
     where: turbine_type=extraction
@@ -114,7 +115,9 @@ constraints:
 # ~~
   chp_backpressure_line_max:
     description: >
-      Set the backpressure line as a lower bound for heat generation in combined heat and power plants without extraction turbines, but with the option to divert fuel to use in direct heat generation (e.g., via a boiler).
+      Set the backpressure line as a lower bound for heat generation in
+      combined heat and power plants without extraction turbines,
+      but with the option to divert fuel to use in direct heat generation (e.g., via a boiler).
       `power_to_heat_ratio` is also referred to as the `backpressure ratio` or simply `cb`.
     foreach: [nodes, techs, timesteps]
     where: turbine_type=backpressure AND boiler_eff
@@ -123,7 +126,8 @@ constraints:
 
   chp_divert_fuel_to_boiler:
     description: >
-      Divert fuel input from use in combined heat and power generation to be used in direct heat generation (e.g., via a boiler).
+      Divert fuel input from use in combined heat and power generation to be used in
+      direct heat generation (e.g., via a boiler).
       `heat_eff` is the boiler efficiency.
       `power_to_heat_ratio` is also referred to as the `backpressure ratio` or simply `cb`.
     foreach: [nodes, techs, timesteps]

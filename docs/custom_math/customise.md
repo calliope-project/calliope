@@ -21,10 +21,16 @@ When defining your model, you can reference any number of YAML files containing 
 ```yaml
 config:
   init:
-    custom_math: [my_new_math_1.md, my_new_math_2.md]
+    custom_math: [my_new_math_1.yaml, my_new_math_2.yaml]
 ```
 
 You can also define a mixture of your custom math and the [inbuilt math][inbuilt-math]:
+
+```yaml
+config:
+  init:
+    custom_math: [my_new_math_1.yaml, storage_inter_cluster, my_new_math_2.md]
+```
 
 ## Writing your own math documentation
 

@@ -49,7 +49,7 @@ constraints:
     description: >
       Limit total flow into the system from a particular source.
       NOTE: this only works for supply_plus technologies.
-        For `supply` technologies you will need to convert `flow_out` to `flow_in` using `energy_eff` and limit that.
+      For `supply` technologies you will need to convert `flow_out` to `flow_in` using `energy_eff` and limit that.
     foreach: [techs]
     where: source_use AND annual_source_max
     equations:

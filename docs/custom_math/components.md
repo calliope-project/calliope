@@ -12,16 +12,7 @@ A decision variable in Calliope math looks like this:
 
 ```yaml
 variables:
-  storage_cap:
-    description: "The upper limit on carriers that can be stored by a `supply_plus` or `storage` technology in any timestep."
-    unit: carrier_unit
-    foreach: [nodes, techs]
-    where: "include_storage=True"
-    domain: real  # optional; defaults to real.
-    bounds:
-      min: storage_cap_min
-      max: storage_cap_max
-    active: true
+--8<-- "src/calliope/math/base.yaml:variable"
 ```
 
 1. It needs a unique name (`storage_cap` in the example above).
@@ -54,25 +45,8 @@ For instance, total costs are global expressions as the cost associated with a t
 To not clutter the objective function with all combinations of variables and parameters, we define a separate global expression:
 
 ```yaml
-cost:
-  description: "The total annualised costs of a technology, including installation and operation costs."
-  unit: cost
-  foreach: [nodes, techs, costs]
-  where: "cost_investment OR cost_var"
-  equations:
-    - expression: $cost_investment + $cost_var_sum
-  sub_expressions:
-    cost_investment:
-      - where: "cost_investment"
-        expression: cost_investment
-      - where: "NOT cost_investment"
-        expression: "0"
-    cost_var_sum:
-      - where: "cost_var"
-        expression: sum(cost_var, over=timesteps)
-      - where: "NOT cost_var"
-        expression: "0"
-  active: true
+global_expressions:
+--8<-- "src/calliope/math/base.yaml:expression"
 ```
 
 Global expressions are by no means necessary to include, but can make more complex linear expressions easier to keep track of and can reduce post-processing requirements.
@@ -95,16 +69,8 @@ This includes limits on things like the maximum area use of tech (there's only s
 Here is an example:
 
 ```yaml
-set_storage_initial:
-  description: "Fix the relationship between carrier stored in a `storage` technology at the start and end of the whole model period."
-  foreach: [nodes, techs]
-  where: "storage AND storage_initial AND config.cyclic_storage=True"
-  equations:
-    - expression: storage[timesteps=$final_step] * ((1 - storage_loss) ** timestep_resolution[timesteps=$final_step]) == storage_initial * storage_cap
-  slices:
-    final_step:
-      - expression: get_val_at_index(timesteps=-1)
-  active: true
+constraints:
+--8<-- "src/calliope/math/base.yaml:constraint"
 ```
 
 1. It needs a unique name (`set_storage_initial` in the above example).
@@ -123,24 +89,7 @@ With your constrained decision variables and a global expression that binds thes
 
 ```yaml
 objectives:
-  minmax_cost_optimisation:
-    description: >
-        Minimise the total cost of installing and operation all technologies in the system.
-        If multiple cost classes are present (e.g., monetary and co2 emissions), the weighted sum of total costs is minimised.
-        Cost class weights can be defined in the top-level parameter `objective_cost_class`.
-    equations:
-      - where: "any(cost, over=[nodes, techs, costs])"
-        expression: sum(sum(cost, over=[nodes, techs]) * objective_cost_class, over=costs) + $unmet_demand
-      - where: "NOT any(cost, over=[nodes, techs, costs])"
-        expression: $unmet_demand
-    sub_expressions:
-      unmet_demand:
-        - where: "config.ensure_feasibility=True"
-          expression: sum(sum(unmet_demand - unused_supply, over=[carriers, nodes])  * timestep_weights, over=timesteps) * bigM
-        - where: "NOT config.ensure_feasibility=True"
-          expression: "0"
-    sense: minimise
-    active: true
+--8<-- "src/calliope/math/base.yaml:objective"
 ```
 
 1. It needs a unique name.
