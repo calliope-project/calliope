@@ -94,14 +94,6 @@ techs:
     carrier_export: electricity
     source_unit: per_area
     area_use_per_flow_cap: 7 # 7m2 of panels needed to fit 1kWp of panels
-
-    # Already accounts for panel efficiency - kWh/m2.
-    # Source: Renewables.ninja Solar PV Power
-    # Version: 1.1
-    # License: https://creativecommons.org/licenses/by-nc/4.0/
-    # Reference: https://doi.org/10.1016/j.energy.2016.08.060
-    source_equals: file=pv_resource.csv:per_area
-
     flow_out_parasitic_eff: 0.85 # inverter losses
     flow_cap_max: 250
     area_use_max: 1500
@@ -160,10 +152,6 @@ techs:
       dims: [costs, carriers]
     cost_flow_out:
       data: 0.004 # .4p/kWh for 4500 operating hours/year
-      index: [[monetary, electricity]]
-      dims: [costs, carriers]
-    cost_export:
-      data: file=export_power.csv
       index: [[monetary, electricity]]
       dims: [costs, carriers]
   # chp-end

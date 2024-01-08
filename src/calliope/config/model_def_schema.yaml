@@ -307,11 +307,19 @@ properties:
             '^[^_^\d][\w]*$':
               description: Keys are dimension names (must not be in `rows` or `columns`), values are index items of that dimension to add.
               $ref: "#/$defs/DataSourceVals"
-        ignore:
+        drop:
           $ref: "#/$defs/DataSourceVals"
           description: >-
             Dimensions in the rows and/or columns that contain metadata and should therefore not be passed on to the loaded model dataset.
             These could include comments on the source of the data, the data license, or the parameter units.
+        sel_drop:
+          type: object
+          description: >-
+            Drop rows and/or columns by selecting an index item.
+            After selecting the index item, the named dimension will be removed from the loaded dataset.
+          properties:
+            '^[^_^\d][\w]*$':
+              type: [string, boolean, number]
 
   techs:
     type: object

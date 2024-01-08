@@ -243,7 +243,7 @@ overrides:
       - file: time_varying_params.csv
         rows: timesteps
         columns: [comment, nodes, techs, parameters]
-        ignore: comment
+        drop: comment
 
       - file: techs_base_info.csv
         rows: techs

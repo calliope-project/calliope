@@ -396,9 +396,33 @@ class TestNationalScaleResampledExampleModelSenseChecks:
 
 class TestUrbanScaleExampleModelSenseChecks:
     def example_tester(self, source_unit, solver="cbc", solver_io=None):
+        data_sources = f"""
+            data_sources:
+            - file: demand.csv
+                rows: timesteps
+                columns: [techs, nodes]
+                add_dimensions:
+                parameters: sink_equals
+            - file: pv_resource.csv
+                rows: timesteps
+                columns: [comment, scaler]
+                add_dimensions:
+                parameters: source_equals
+                drop: comment
+                sel_drop:
+                scaler: {source_unit}
+            - file: export_power.csv
+                rows: timesteps
+                columns: nodes
+                add_dimensions:
+                parameters: cost_export
+                techs: chp
+                costs: monetary
+                carriers: electricity
+        """
         unit_override = {
-            "techs.pv.source_equals": "file=pv_resource.csv:{}".format(source_unit),
             "techs.pv.source_unit": source_unit,
+            **calliope.AttrDict.from_yaml_string(data_sources),
         }
 
         model = calliope.examples.urban_scale(

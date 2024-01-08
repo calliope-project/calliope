@@ -35,7 +35,8 @@ class DataSource(TypedDict):
     columns: NotRequired[str | list[str]]
     file: str
     add_dimensions: NotRequired[dict[str, str | list[str]]]
-    ignore: Hashable | list[Hashable]
+    drop: Hashable | list[Hashable]
+    sel_drop: dict[str, str | bool | int]
 
 
 class Param(TypedDict):
@@ -167,8 +168,15 @@ class ModelDataFactory:
             else:
                 tdf = df
 
-            if "ignore" in data_source.keys():
-                tdf = tdf.droplevel(data_source["ignore"])
+            if "drop" in data_source.keys():
+                tdf = tdf.droplevel(data_source["drop"])
+
+            if "sel_drop" in data_source.keys():
+                tdf = tdf.xs(
+                    tuple(data_source["sel_drop"].values()),
+                    level=tuple(data_source["sel_drop"].keys()),
+                    drop_level=True,
+                )
 
             if "add_dimensions" in data_source.keys():
                 for dim_name, index_items in data_source["add_dimensions"].items():
@@ -504,9 +512,7 @@ class ModelDataFactory:
             ]
         ]
         other_dims = [i for i in node_tech_vars.dims if i not in ["nodes", "techs"]]
-        # TODO: fix is_defined to work when a variable has been broadcast across nodes from data_sources
-        # such that it is defined at all nodes even when it should only be defined at a subset.
-        # e.g. CSP in national-scale example.
+
         is_defined = (
             node_tech_vars.fillna(False).any(other_dims).to_dataframe().any(axis=1)
         )
