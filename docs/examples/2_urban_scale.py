@@ -30,7 +30,7 @@ calliope.set_log_verbosity("INFO", include_solver_output=False)
 # The diagram below gives an overview:
 #
 # <figure>
-# <img src="/img/example_overview_urban.svg", width="100%", style="background-color:white;", alt="Urban scale example model overview">
+# <img src="../../img/example_overview_urban.svg", width="100%", style="background-color:white;", alt="Urban scale example model overview">
 # <figcaption>Urban scale example model overview</figcaption>
 # </figure>
 #
@@ -46,7 +46,7 @@ calliope.set_log_verbosity("INFO", include_solver_output=False)
 # You can find out more about this custom math [here](#custom-math)
 
 # %%
-yaml_snippet("model.yaml", "config")
+yaml_snippet("example_models/urban_scale/model.yaml", "config")
 
 # %% [markdown]
 # ### Bringing the YAML files together
@@ -59,7 +59,7 @@ yaml_snippet("model.yaml", "config")
 # The import section in our file looks like this:
 
 # %%
-yaml_snippet("model.yaml", "import")
+yaml_snippet("example_models/urban_scale/model.yaml", "import")
 
 # %% [markdown]
 # ## Model definition
@@ -72,7 +72,7 @@ yaml_snippet("model.yaml", "import")
 
 # %%
 
-yaml_snippet("model.yaml", "parameters")
+yaml_snippet("example_models/urban_scale/model.yaml", "parameters")
 
 
 # %% [markdown]
@@ -96,7 +96,7 @@ yaml_snippet("model.yaml", "parameters")
 #
 #
 # <figure>
-# <img src="/img/supply.svg", width="100%", style="background-color:white;", alt="The layout of a supply technology">
+# <img src="../../img/supply.svg", width="100%", style="background-color:white;", alt="The layout of a supply technology">
 # <figcaption>The layout of a supply technology which has an infinite source, a carrier conversion efficiency ($flow_{eff}^{out}$),
 # and a constraint on its maximum built $flow_{cap}$ (which puts an upper limit on $flow_{out}$).</figcaption>
 # </figure>
@@ -105,7 +105,7 @@ yaml_snippet("model.yaml", "parameters")
 # The definition of this technology in the example model's configuration looks as follows
 
 # %%
-yaml_snippet("model_config/techs.yaml", "supply")
+yaml_snippet("example_models/urban_scale/model_config/techs.yaml", "supply")
 
 # %% [markdown]
 # The final supply technology is `pv` (solar photovoltaic power), which serves as an inflexible supply technology.
@@ -122,7 +122,7 @@ yaml_snippet("model_config/techs.yaml", "supply")
 # The definition of this technology in the example model's configuration looks as follows:
 
 # %%
-yaml_snippet("model_config/techs.yaml", "pv")
+yaml_snippet("example_models/urban_scale/model_config/techs.yaml", "pv")
 
 # %% [markdown]
 # ### Interlude: inheriting from technology groups
@@ -137,7 +137,9 @@ yaml_snippet("model_config/techs.yaml", "pv")
 # `interest_rate_setter` looks like this:
 
 # %%
-yaml_snippet("model_config/techs.yaml", "interest-rate-setter")
+yaml_snippet(
+    "example_models/urban_scale/model_config/techs.yaml", "interest-rate-setter"
+)
 
 # %% [markdown]
 # ### Conversion technologies
@@ -150,7 +152,7 @@ yaml_snippet("model_config/techs.yaml", "interest-rate-setter")
 # and a carrier conversion efficiency (`flow_out_eff`).
 #
 # <figure>
-# <img src="/img/conversion.svg", width="100%", style="background-color:white;", alt="The layout of a conversion technology which has one carrier input and output">
+# <img src="../../img/conversion.svg", width="100%", style="background-color:white;", alt="The layout of a conversion technology which has one carrier input and output">
 # <figcaption>The layout of a simple conversion technology, in this case `boiler`, which has one carrier input and output, a carrier conversion efficiency ($flow_{eff}^{out}$),
 # and a constraint on its maximum built $flow_{cap}$ (which puts an upper limit on $flow_{out}$).</figcaption>
 # </figure>
@@ -158,7 +160,7 @@ yaml_snippet("model_config/techs.yaml", "interest-rate-setter")
 # The definition of this technology in the example model's configuration looks as follows:
 
 # %%
-yaml_snippet("model_config/techs.yaml", "boiler")
+yaml_snippet("example_models/urban_scale/model_config/techs.yaml", "boiler")
 
 # %% [markdown]
 # There are a few things to note.
@@ -172,14 +174,14 @@ yaml_snippet("model_config/techs.yaml", "boiler")
 # The second technology is `chp` (combined heat and power), and serves as an example of a possible conversion_plus technology making use of two output carriers.
 #
 # <figure>
-# <img src="/img/conversion_plus_chp.svg", width="100%", style="background-color:white;", alt="The layout of a more complex node which makes use of multiple output carriers.">
+# <img src="../../img/conversion_plus_chp.svg", width="100%", style="background-color:white;", alt="The layout of a more complex node which makes use of multiple output carriers.">
 # <figcaption>The layout of a more complex node which makes use of multiple output carriers.</figcaption>
 # </figure>
 #
 # This definition in the example model's configuration is more verbose:
 
 # %%
-yaml_snippet("model_config/techs.yaml", "chp")
+yaml_snippet("example_models/urban_scale/model_config/techs.yaml", "chp")
 
 # %% [markdown]
 # Again, `chp` has the definitions for name, color, parent, and carrier_in/out.
@@ -196,7 +198,7 @@ yaml_snippet("model_config/techs.yaml", "chp")
 # To ensure our `chp` will be constrained as we expect, we add custom math:
 
 # %%
-yaml_snippet("custom_math.yaml")
+yaml_snippet("example_models/urban_scale/custom_math.yaml")
 
 # %% [markdown]
 # There are two things we have to do:
@@ -219,7 +221,7 @@ yaml_snippet("custom_math.yaml")
 # First, a definition of electricity and heat demand:
 
 # %%
-yaml_snippet("model_config/techs.yaml", "demand")
+yaml_snippet("example_models/urban_scale/model_config/techs.yaml", "demand")
 
 # %% [markdown]
 # ### Transmission technologies
@@ -228,19 +230,21 @@ yaml_snippet("model_config/techs.yaml", "demand")
 # Gas is made available in each node without consideration of transmission.
 #
 # <figure>
-# <img src="/img/transmission.svg", width="100%", style="background-color:white", alt="A transmission technology with the options for flow efficiency and flow capacity">
+# <img src="../../img/transmission.svg", width="100%", style="background-color:white", alt="A transmission technology with the options for flow efficiency and flow capacity">
 # <figcaption>A transmission technology with the options for flow efficiency ($flow_{eff}^{out}$ and $flow_{eff}^{in}$) and flow capacity ($flow_{cap}$).</figcaption>
 # </figure>
 
 
 # %%
-yaml_snippet("model_config/techs.yaml", "transmission")
+yaml_snippet("example_models/urban_scale/model_config/techs.yaml", "transmission")
 
 # %% [markdown]
 # To avoid excessive duplication in model definition, our transmission technologies inherit most of the their parameters from technology _groups_:
 
 # %%
-yaml_snippet("model_config/techs.yaml", "transmission-tech-groups")
+yaml_snippet(
+    "example_models/urban_scale/model_config/techs.yaml", "transmission-tech-groups"
+)
 
 # %% [markdown]
 # `power_lines` has an efficiency of 0.95, so a loss during transmission of 0.05.
@@ -255,14 +259,14 @@ yaml_snippet("model_config/techs.yaml", "transmission-tech-groups")
 # The technologies are set up at these nodes as follows:
 #
 # <figure>
-# <img src="/img/example_locations_urban.svg", width="100%", style="background-color:white;", alt="Nodes and their technologies in the example model">
+# <img src="../../img/example_locations_urban.svg", width="100%", style="background-color:white;", alt="Nodes and their technologies in the example model">
 # <figcaption>Nodes and their technologies in the example model.</figcaption>
 # </figure>
 #
 # Let's now look at the first location definition:
 
 # %%
-yaml_snippet("model_config/locations.yaml", "X1")
+yaml_snippet("example_models/urban_scale/model_config/locations.yaml", "X1")
 
 # %% [markdown]
 # There are several things to note here:
@@ -285,7 +289,7 @@ yaml_snippet("model_config/locations.yaml", "X1")
 # The remaining nodes look similar:
 
 # %%
-yaml_snippet("model_config/locations.yaml", "other-locs")
+yaml_snippet("example_models/urban_scale/model_config/locations.yaml", "other-locs")
 
 # %% [markdown]
 # `X2` and `X3` are very similar to `X1`, except that they do not connect to the national electricity grid, nor do they contain the `chp` technology.
@@ -295,7 +299,7 @@ yaml_snippet("model_config/locations.yaml", "other-locs")
 # It acts as a branching station for the heat network, allowing connections to one or both of `X2` and `X3` without double counting the pipeline from `X1` to `N1`:
 
 # %%
-yaml_snippet("model_config/locations.yaml", "N1")
+yaml_snippet("example_models/urban_scale/model_config/locations.yaml", "N1")
 
 # %% [markdown]
 # ### Revenue by export

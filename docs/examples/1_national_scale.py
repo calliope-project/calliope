@@ -42,7 +42,7 @@ calliope.set_log_verbosity("INFO", include_solver_output=False)
 # It does not contain much data, but the scaffolding with which to construct and run your model.
 
 # %%
-yaml_snippet("model.yaml", "config")
+yaml_snippet("example_models/national_scale/model.yaml", "config")
 
 # %% [markdown]
 # ## Model definition
@@ -55,7 +55,7 @@ yaml_snippet("model.yaml", "config")
 
 # %%
 
-yaml_snippet("model.yaml", "parameters")
+yaml_snippet("example_models/national_scale/model.yaml", "parameters")
 
 
 # %% [markdown]
@@ -86,7 +86,7 @@ yaml_snippet("model.yaml", "parameters")
 # The definition of this technology in the example model's configuration looks as follows
 
 # %%
-yaml_snippet("model_config/techs.yaml", "ccgt")
+yaml_snippet("example_models/national_scale/model_config/techs.yaml", "ccgt")
 
 # %% [markdown]
 #
@@ -120,7 +120,7 @@ yaml_snippet("model_config/techs.yaml", "ccgt")
 #
 
 # %%
-yaml_snippet("model_config/techs.yaml", "csp")
+yaml_snippet("example_models/national_scale/model_config/techs.yaml", "csp")
 
 # %% [markdown]
 # Again, `csp` has the definitions for name, color, parent, and carrier_out.
@@ -154,7 +154,7 @@ yaml_snippet("model_config/techs.yaml", "csp")
 # `cost_dim_setter` looks like this:
 
 # %%
-yaml_snippet("model_config/techs.yaml", "cost-dim-setter")
+yaml_snippet("example_models/national_scale/model_config/techs.yaml", "cost-dim-setter")
 
 # %% [markdown]
 # ### Storage technologies
@@ -169,7 +169,7 @@ yaml_snippet("model_config/techs.yaml", "cost-dim-setter")
 # </figure>
 
 # %%
-yaml_snippet("model_config/techs.yaml", "battery")
+yaml_snippet("example_models/national_scale/model_config/techs.yaml", "battery")
 
 # %% [markdown]
 # The constraints give a maximum installed generation capacity for battery storage.
@@ -194,7 +194,7 @@ yaml_snippet("model_config/techs.yaml", "battery")
 # We will associate an actual demand time series with the demand technology at each [node](#nodes) separately.
 
 # %%
-yaml_snippet("model_config/techs.yaml", "demand")
+yaml_snippet("example_models/national_scale/model_config/techs.yaml", "demand")
 
 # %% [markdown]
 # What remains to set up is a simple transmission technology.
@@ -207,7 +207,7 @@ yaml_snippet("model_config/techs.yaml", "demand")
 # </figure>
 
 # %%
-yaml_snippet("model_config/techs.yaml", "transmission")
+yaml_snippet("example_models/national_scale/model_config/techs.yaml", "transmission")
 
 # %% [markdown]
 # `ac_transmission` has an efficiency of 0.85, so a loss during transmission of 0.15, as well as some cost definitions.
@@ -219,7 +219,9 @@ yaml_snippet("model_config/techs.yaml", "transmission")
 # `free_transmission` is defined in `tech_groups`, which makes it inheritable.
 
 # %%
-yaml_snippet("model_config/techs.yaml", "free-transmission")
+yaml_snippet(
+    "example_models/national_scale/model_config/techs.yaml", "free-transmission"
+)
 
 # %% [markdown]
 # ### Nodes
@@ -238,7 +240,7 @@ yaml_snippet("model_config/techs.yaml", "free-transmission")
 # Let's now look at the first location definition:
 
 # %%
-yaml_snippet("model_config/locations.yaml", "region-1")
+yaml_snippet("example_models/national_scale/model_config/locations.yaml", "region-1")
 
 # %% [markdown]
 #
@@ -259,7 +261,7 @@ yaml_snippet("model_config/locations.yaml", "region-1")
 # The remaining nodes look similar:
 
 # %%
-yaml_snippet("model_config/locations.yaml", "other-locs")
+yaml_snippet("example_models/national_scale/model_config/locations.yaml", "other-locs")
 
 # %% [markdown]
 # `region2` is very similar to `region1`, except that it does not include the `ccgt` technology.
@@ -267,7 +269,7 @@ yaml_snippet("model_config/locations.yaml", "other-locs")
 # They allow only the `csp` technology, this allows us to model three possible sites for CSP plants.
 
 # %%
-yaml_snippet("model_config/locations.yaml", "node-groups")
+yaml_snippet("example_models/national_scale/model_config/locations.yaml", "node-groups")
 
 # %% [markdown]
 # ## Load model and examine inputs

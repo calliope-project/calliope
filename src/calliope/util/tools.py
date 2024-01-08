@@ -82,12 +82,7 @@ def yaml_snippet(filepath_relative: str | Path, fence_id: Optional[str] = None) 
         bar: 1
         `
     """
-    file = (
-        importlib.resources.files("calliope")
-        / "example_models"
-        / "national_scale"
-        / filepath_relative
-    )
+    file = importlib.resources.files("calliope") / filepath_relative
     snippet = file.read_text()
     if fence_id is not None:
         snippet = textwrap.dedent(

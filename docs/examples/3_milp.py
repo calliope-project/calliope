@@ -28,7 +28,7 @@ calliope.set_log_verbosity("INFO", include_solver_output=False)
 # This override is applied from the `scenarios.yaml` file:
 
 # %%
-yaml_snippet("scenarios.yaml", "milp")
+yaml_snippet("example_models/urban_scale/scenarios.yaml", "milp")
 
 # %% [markdown]
 # <div class="admonition note">
@@ -52,7 +52,7 @@ yaml_snippet("scenarios.yaml", "milp")
 # In this model, we introduce a unit limit on the CHP instead:
 
 # %%
-yaml_snippet("scenarios.yaml", "chp")
+yaml_snippet("example_models/urban_scale/scenarios.yaml", "chp")
 
 # %% [markdown]
 # A unit maximum allows a discrete, integer number of CHP to be purchased, each having a capacity of `flow_cap_per_unit`.
@@ -68,7 +68,7 @@ yaml_snippet("scenarios.yaml", "chp")
 # The boiler does not have a unit limit, it still utilises the continuous variable for its capacity. However, we have introduced a `purchase` cost:
 
 # %%
-yaml_snippet("scenarios.yaml", "boiler")
+yaml_snippet("example_models/urban_scale/scenarios.yaml", "boiler")
 
 # %% [markdown]
 # By introducing this, the boiler is now associated with a binary decision variable.
@@ -89,7 +89,7 @@ yaml_snippet("scenarios.yaml", "boiler")
 # The `async_flow_switch` binary variable (triggered by the `force_async_flow` parameter) ensures this phenomenon is avoided:
 
 # %%
-yaml_snippet("scenarios.yaml", "heat_pipes")
+yaml_snippet("example_models/urban_scale/scenarios.yaml", "heat_pipes")
 
 # %% [markdown]
 # Now, only one of `flow_out` and `flow_in` can be non-zero in a given timestep.
