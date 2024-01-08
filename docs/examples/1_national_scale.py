@@ -17,64 +17,11 @@
 # # National Scale Example Model
 
 # %%
-import importlib.resources
-import textwrap
-from pathlib import Path
-from typing import Optional
-
 import calliope
-from IPython.display import Code
+from calliope.util.tools import yaml_snippet
 
 # We increase logging verbosity
 calliope.set_log_verbosity("INFO", include_solver_output=False)
-
-
-# %%
-def yaml_snippet(filepath_relative: str | Path, fence_id: Optional[str] = None) -> Code:
-    """View YAML file contents with the option to display only a snippet of the file contents.
-
-    Snippets are created based on the commented fences in the YAML file.
-
-
-    Args:
-        filepath_relative (str | Path): _description_
-        fence_id (Optional[str], optional): _description_. Defaults to None.
-
-    Returns:
-        Code: _description_
-
-    Examples:
-        model_directory/input_file.yaml:
-        `yaml
-        foo:
-        # my-fence-start
-        bar: 1
-        # my-fence-end
-        `
-
-        Calling:
-        `python
-        yaml_snippet("input_file.yaml", "my-fence")
-        `
-
-        Will output:
-        `yaml
-        bar: 1
-        `
-    """
-    file = (
-        importlib.resources.files("calliope")
-        / "example_models"
-        / "national_scale"
-        / filepath_relative
-    )
-    snippet = file.read_text()
-    if fence_id is not None:
-        snippet = textwrap.dedent(
-            snippet.split(f"# {fence_id}-start")[1].split(f"# {fence_id}-end")[0]
-        )
-    return Code(snippet, language="yaml")
-
 
 # %% [markdown]
 # This example consists of two possible power supply technologies, a power demand at two nodes, the possibility for battery storage at one of the nodes, and a transmission technology linking the two.
@@ -82,7 +29,7 @@ def yaml_snippet(filepath_relative: str | Path, fence_id: Optional[str] = None) 
 # The diagram below gives an overview:
 #
 # <figure>
-# <img src="/img/example_overview_national.svg", width="100%", style="background-color:white;", alt="National scale example model overview">
+# <img src="../../img/example_overview_national.svg", width="100%", style="background-color:white;", alt="National scale example model overview">
 # <figcaption>National scale example model overview</figcaption>
 # </figure>
 #
@@ -131,7 +78,7 @@ yaml_snippet("model.yaml", "parameters")
 # Its only constraints are the cost of built capacity (`flow_cap`) and a constraint on its maximum built capacity.
 #
 # <figure>
-# <img src="/img/supply.svg", width="100%", style="background-color:white;", alt="The layout of a supply technology">
+# <img src="../../img/supply.svg", width="100%", style="background-color:white;", alt="The layout of a supply technology">
 # <figcaption>The layout of a supply technology which has an infinite source, a carrier conversion efficiency ($flow_{eff}^{out}$),
 # and a constraint on its maximum built $flow_{cap}$ (which puts an upper limit on $flow_{out}$).</figcaption>
 # </figure>
@@ -165,7 +112,7 @@ yaml_snippet("model_config/techs.yaml", "ccgt")
 # - plant-internal losses (`parasitic_eff`)
 #
 # <figure>
-# <img src="/img/supply_plus.svg", width="100%", style="background-color:white;", alt="The layout of a supply technology which makes use of a storage buffer and parasitic efficiency">
+# <img src="../../img/supply_plus.svg", width="100%", style="background-color:white;", alt="The layout of a supply technology which makes use of a storage buffer and parasitic efficiency">
 # <figcaption>The layout of a supply technology which makes use of a storage buffer and parasitic efficiency.</figcaption>
 # </figure>
 #
@@ -217,7 +164,7 @@ yaml_snippet("model_config/techs.yaml", "cost-dim-setter")
 # This technology is defined as follows:
 #
 # <figure>
-# <img src="/img/storage.svg", width="100%", style="background-color:white;", alt="A storage node with inflow and outflow efficiencies and losses from the stored carrier">
+# <img src="../../img/storage.svg", width="100%", style="background-color:white;", alt="A storage node with inflow and outflow efficiencies and losses from the stored carrier">
 # <figcaption>A storage node with $flow_{eff}^{in}$, $flow_{eff}^{out}$, and $storage_{loss}$.</figcaption>
 # </figure>
 
@@ -239,7 +186,7 @@ yaml_snippet("model_config/techs.yaml", "battery")
 # First, a definition of power demand:
 #
 # <figure>
-# <img src="/img/demand.svg", width="100%", style="background-color:white;", alt="A demand technology, directing an inflow to a sink outside the system boundary">
+# <img src="../../img/demand.svg", width="100%", style="background-color:white;", alt="A demand technology, directing an inflow to a sink outside the system boundary">
 # <figcaption>A demand technology, directing a $flow_{in}$ to a sink outside the system boundary.</figcaption>
 # </figure>
 #
@@ -255,7 +202,7 @@ yaml_snippet("model_config/techs.yaml", "demand")
 #
 #
 # <figure>
-# <img src="/img/transmission.svg", width="100%", style="background-color:white", alt="A transmission technology with the options for flow efficiency and flow capacity">
+# <img src="../../img/transmission.svg", width="100%", style="background-color:white", alt="A transmission technology with the options for flow efficiency and flow capacity">
 # <figcaption>A transmission technology with the options for flow efficiency ($flow_{eff}^{out}$ and $flow_{eff}^{in}$) and flow capacity ($flow_{cap}$).</figcaption>
 # </figure>
 
@@ -282,7 +229,7 @@ yaml_snippet("model_config/techs.yaml", "free-transmission")
 # The technologies are set up at these nodes as follows:
 #
 # <figure>
-# <img src="/img/example_locations_national.svg", width="100%", style="background-color:white;", alt="Nodes and their technologies in the example model">
+# <img src="../../img/example_locations_national.svg", width="100%", style="background-color:white;", alt="Nodes and their technologies in the example model">
 # <figcaption>Nodes and their technologies in the example model.</figcaption>
 # </figure>
 #

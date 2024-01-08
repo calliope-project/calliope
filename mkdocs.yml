@@ -32,7 +32,7 @@ plugins:
   - mkdocs-jupyter:
       include: ["examples/*.py"]
       allow_errors: false
-      kernel_name: calliope
+      kernel_name: calliope_docs_build
       include_source: True
       execute: true
   - mkdocstrings:

@@ -2,9 +2,12 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
 
+import importlib.resources
+import textwrap
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, Optional, TypeVar
 
+from IPython.display import Code
 from typing_extensions import ParamSpec
 
 P = ParamSpec("P")
@@ -45,3 +48,49 @@ def listify(var: Any) -> list:
     else:
         var = [var]
     return var
+
+
+def yaml_snippet(filepath_relative: str | Path, fence_id: Optional[str] = None) -> Code:
+    """View YAML file contents with the option to display only a snippet of the file contents.
+
+    Snippets are created based on the commented fences in the YAML file.
+
+
+    Args:
+        filepath_relative (str | Path): _description_
+        fence_id (Optional[str], optional): _description_. Defaults to None.
+
+    Returns:
+        Code: _description_
+
+    Examples:
+        model_directory/input_file.yaml:
+        `yaml
+        foo:
+        # my-fence-start
+        bar: 1
+        # my-fence-end
+        `
+
+        Calling:
+        `python
+        yaml_snippet("input_file.yaml", "my-fence")
+        `
+
+        Will output:
+        `yaml
+        bar: 1
+        `
+    """
+    file = (
+        importlib.resources.files("calliope")
+        / "example_models"
+        / "national_scale"
+        / filepath_relative
+    )
+    snippet = file.read_text()
+    if fence_id is not None:
+        snippet = textwrap.dedent(
+            snippet.split(f"# {fence_id}-start")[1].split(f"# {fence_id}-end")[0]
+        )
+    return Code(snippet, language="yaml")

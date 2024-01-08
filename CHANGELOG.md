@@ -33,12 +33,13 @@ Then, all transmission links will be given their name as defined in `techs` rath
 |changed| |backwards-incompatible| Flow efficiencies are now split into inflow (`flow_in_eff`) and outflow (`flow_out_eff`) efficiencies. This enables different storage charge/discharge efficiencies to be applied.
 
 |changed| |backwards-incompatible| Mass parameter and decision variable renaming for increased clarity:
-    * `energy`/`carrier` → `flow`, e.g. `energy_cap` is now `flow_cap`.
-    * `prod`/`con` → `out`/`in`, e.g., `carrier_prod` is now `flow_out`.
-    * `resource` has been split into `source` (for things entering the model) and `sink` (for things leaving the model).
-    * `resource_area` is now `area_use`.
-    * `energy_cap_min_use` is now `flow_out_min_relative` (i.e., the value is relative to `flow_cap`).
-    * `parasitic_eff` is now `flow_out_parasitic_eff`.
+
+* `energy`/`carrier` → `flow`, e.g. `energy_cap` is now `flow_cap`.
+* `prod`/`con` → `out`/`in`, e.g., `carrier_prod` is now `flow_out`.
+* `resource` has been split into `source` (for things entering the model) and `sink` (for things leaving the model).
+* `resource_area` is now `area_use`.
+* `energy_cap_min_use` is now `flow_out_min_relative` (i.e., the value is relative to `flow_cap`).
+* `parasitic_eff` is now `flow_out_parasitic_eff`.
 
 |changed| |backwards-incompatible| Time masking and clustering capabilities have been severely reduced. Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.time_resample: 2H`, `config.init.time_cluster: cluster_file.csv`. Clustering is simplified to only matching model dates to representative days, with those representative days being in the clustered timeseries. Masking/clustering data should now be undertaken by the user prior to initialising a Calliope model.
 
