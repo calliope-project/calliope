@@ -107,9 +107,9 @@ class TestNationalScaleExampleModelSenseChecks:
 
     def test_fails_gracefully_without_timeseries(self):
         override = {
-            "nodes.region1.techs.demand_power.sink_equals": 200,
-            "nodes.region2.techs.demand_power.sink_equals": 400,
-            "node_groups.csp_regions.techs.csp.source_max": 100,
+            "nodes.region1.techs.demand_power.sink_use_equals": 200,
+            "nodes.region2.techs.demand_power.sink_use_equals": 400,
+            "node_groups.csp_regions.techs.csp.source_use_max": 100,
         }
         with pytest.raises(calliope.exceptions.ModelError):
             calliope.examples.national_scale(override_dict=override)
@@ -400,7 +400,7 @@ class TestNationalScaleResampledExampleModelSenseChecks:
 class TestUrbanScaleExampleModelSenseChecks:
     def example_tester(self, source_unit, solver="cbc", solver_io=None):
         unit_override = {
-            "techs.pv.source_equals": "file=pv_resource.csv:{}".format(source_unit),
+            "techs.pv.source_use_equals": "file=pv_resource.csv:{}".format(source_unit),
             "techs.pv.source_unit": source_unit,
         }
 
@@ -477,8 +477,8 @@ class TestUrbanScaleExampleModelSenseChecks:
         ) == approx(12363.173036)
         assert float(model.results.flow_export.sum()) == approx(0)
 
-        assert model.results.purchased.sel(nodes="X2", techs="boiler") == 1
-        assert model.results.units.sel(nodes="X1", techs="chp") == 1
+        assert model.results.purchased_units.sel(nodes="X2", techs="boiler") == 1
+        assert model.results.purchased_units.sel(nodes="X1", techs="chp") == 1
 
         assert float(model.results.operating_units.sum()) == 24
 
