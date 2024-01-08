@@ -159,7 +159,7 @@ class TestChecks:
             {
                 "techs.test_supply_elec": {
                     "constraints": {
-                        "source_max": "file=supply_plus_resource.csv:1",
+                        "source_use_max": "file=supply_plus_resource.csv:1",
                         "flow_cap_max": 15,
                     },
                     "switches": {"force_source": True, "source_unit": source_unit},
@@ -661,7 +661,7 @@ class TestCapacityConstraints:
         m = build_model(
             {
                 "techs.test_storage.constraints": {
-                    "units_max": 1,
+                    "purchased_units_max": 1,
                     "flow_cap_per_unit": 20,
                     "storage_cap_per_unit": 20,
                 }
@@ -1486,7 +1486,7 @@ class TestMILPConstraints:
             "links.a,b.exists": True,
             "techs.test_conversion_plus.constraints.units_max_systemwide": 2,
             "nodes.b.techs.test_conversion_plus.constraints": {
-                "units_max": 2,
+                "purchased_units_max": 2,
                 "flow_cap_per_unit": 5,
             },
         }
@@ -1692,7 +1692,7 @@ class TestLogging:
 
 class TestModelDataChecks:
     def test_source_equals_cannot_be_inf(self):
-        override = {"techs.test_supply_elec.source_equals": np.inf}
+        override = {"techs.test_supply_elec.source_use_equals": np.inf}
         m = build_model(override_dict=override, scenario="simple_supply,one_day")
 
         with pytest.raises(exceptions.ModelError) as excinfo:
@@ -1954,8 +1954,8 @@ class TestNewBackend:
 
     def test_solve_non_optimal(self, simple_supply):
         simple_supply.backend.update_parameter(
-            "sink_equals",
-            simple_supply.inputs.sink_equals.where(
+            "sink_use_equals",
+            simple_supply.inputs.sink_use_equals.where(
                 simple_supply.inputs.techs == "test_demand_elec"
             )
             * 100,
@@ -2394,7 +2394,7 @@ class TestNewBackend:
 
     def test_update_variable_single_bound_multi_val(self, caplog, simple_supply):
         caplog.set_level(logging.INFO)
-        bound_array = simple_supply.inputs.sink_equals.sel(techs="test_demand_elec")
+        bound_array = simple_supply.inputs.sink_use_equals.sel(techs="test_demand_elec")
         simple_supply.backend.update_variable_bounds("flow_in", min=bound_array)
         bound_vals = simple_supply.backend.get_variable_bounds("flow_in").lb
         assert "New `min` bounds will be broadcast" in caplog.text

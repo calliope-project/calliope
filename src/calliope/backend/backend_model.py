@@ -183,8 +183,7 @@ class BackendModelGenerator(ABC):
         data_checks = AttrDict.from_yaml(
             importlib.resources.files("calliope") / "config" / "model_data_checks.yaml"
         )
-        errors = []
-        warnings = []
+        check_results = {"fail": [], "warn": []}
         parser_ = parsing.where_parser.generate_where_string_parser()
         eval_kwargs = {
             "equation_name": "",
@@ -193,19 +192,19 @@ class BackendModelGenerator(ABC):
             "helper_functions": helper_functions._registry["where"],
             "apply_where": True,
         }
-        for failure_check in data_checks["fail"]:
-            parsed_ = parser_.parse_string(failure_check["where"], parse_all=True)
-            failed = parsed_[0].eval("array", **eval_kwargs)
-            if failed.any():
-                errors.append(failure_check["message"])
+        for check_type, check_list in check_results.items():
+            for check in data_checks[check_type]:
+                parsed_ = parser_.parse_string(check["where"], parse_all=True)
+                failed = (
+                    parsed_[0].eval("array", **eval_kwargs)
+                    & self.inputs.definition_matrix
+                )
+                if failed.any():
+                    check_list.append(check["message"])
 
-        for warning_check in data_checks["warn"]:
-            parsed_ = parser_.parse_string(warning_check["where"], parse_all=True)
-            warned = parsed_[0].eval("array", **eval_kwargs)
-            if warned.any():
-                warnings.append(warning_check["message"])
-
-        exceptions.print_warnings_and_raise_errors(warnings, errors)
+        exceptions.print_warnings_and_raise_errors(
+            check_results["warn"], check_results["fail"]
+        )
 
     def _build(self) -> None:
         self._add_run_mode_custom_math()

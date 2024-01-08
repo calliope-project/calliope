@@ -10,7 +10,7 @@ variables:
   piecewise_cost_investment:
     description: Investment cost that increases monotonically
     foreach: [nodes, techs, costs]
-    where: cost_flow_cap_piecewise_slopes AND cost_flow_cap_piecewise_intercept AND purchased
+    where: cost_flow_cap_piecewise_slopes AND cost_flow_cap_piecewise_intercept AND purchased_units
     bounds:
       min: 0
       max: .inf
@@ -25,7 +25,7 @@ constraints:
     equations:
       - expression: >
           piecewise_cost_investment >=
-          sum(cost_flow_cap_piecewise_slopes * flow_cap, over=carriers) + cost_flow_cap_piecewise_intercept * purchased
+          sum(cost_flow_cap_piecewise_slopes * flow_cap, over=carriers) + cost_flow_cap_piecewise_intercept * purchased_units
 
 # We inject this new source of into the `cost` global expression
 global_expressions:

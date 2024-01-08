@@ -118,7 +118,7 @@ class TestBaseMath:
             {}, "simple_supply_plus,resample_two_days,investment_costs"
         )
         custom_math = {
-            "constraints": {"my_constraint": model.math.constraints.source_use_max}
+            "constraints": {"my_constraint": model.math.constraints.source_max}
         }
         compare_lps(model, custom_math, "source_max")
 
@@ -517,18 +517,7 @@ class TestPiecewiseEfficiency(CustomMathExamples):
             }
         }
         build_and_compare(
-            "piecewise_efficiency",
-            "conversion_milp,two_hours",
-            overrides,
-            components={
-                "constraints": [
-                    "piecewise_efficiency",
-                    "available_flow_cap_binary",
-                    "available_flow_cap_continuous",
-                    "available_flow_cap_binary_continuous_switch",
-                ],
-                "variables": ["available_flow_cap"],
-            },
+            "piecewise_efficiency", "conversion_milp,two_hours", overrides
         )
 
 
@@ -668,7 +657,7 @@ class TestNetImportShare(CustomMathExamples):
     shared_overrides = {
         "parameters.net_import_share": 1.5,
         "nodes.c.techs": {
-            "test_demand_heat": {"sink_equals": "file=demand_heat.csv:a"}
+            "test_demand_heat": {"sink_use_equals": "file=demand_heat.csv:a"}
         },
         "techs": {
             "links_a_c_heat": {
