@@ -41,11 +41,11 @@ Calliope can run on Windows, macOS and Linux. Installing it is quickest with the
 
 See the documentation for more [information on installing](https://calliope.readthedocs.io/en/stable/user/installation.html).
 
-Several easy to understand example models are [included with Calliope](calliope/example_models) and accessible through the `calliope.examples` submodule.
+Several easy to understand example models are [included with Calliope](https://github.com/calliope-project/calliope/tree/main/src/calliope/example_models) and accessible through the `calliope.examples` submodule.
 
 The [tutorials in the documentation run through these examples](https://calliope.readthedocs.io/en/stable/user/tutorials.html). A good place to start is to look at these tutorials to get a feel for how Calliope works, and then to read the "Introduction", "Building a model", "Running a model", and "Analysing a model" sections in the online documentation.
 
-More fully-featured examples that have been used in peer-reviewed scientific publications are available in our [model gallery](https://www.callio.pe/model-gallery/).
+More fully-featured examples that have been used in peer-reviewed scientific publications are available in our [model gallery](https://www.callio.pe/research/#models).
 
 ## Documentation
 
@@ -66,7 +66,7 @@ See our [contribution guidelines](https://github.com/calliope-project/calliope/b
 
 ## What's new
 
-See changes made in recent versions in the [changelog](https://github.com/calliope-project/calliope/blob/main/changelog.rst).
+See changes made in recent versions in the [changelog](https://github.com/calliope-project/calliope/blob/main/CHANGELOG.md).
 
 ## Citing Calliope
 

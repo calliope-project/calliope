@@ -11,7 +11,9 @@ on:
       - CITATION
       - AUTHORS
       - doc/**
+      - docs/**
       - .readthedocs.yml
+      - .pre-commit-config.yaml
 
 defaults:
   run:

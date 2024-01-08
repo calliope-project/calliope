@@ -273,7 +273,7 @@ class TestModelRun:
 
     def test_inconsistent_time_indeces(self):
         """
-        Test that, including after any time subsetting, the indeces of all time
+        Test that, including after any time subsetting, the indices of all time
         varying input data are consistent with each other
         """
         # should fail: wrong length of demand_heat csv vs demand_elec
