@@ -9,6 +9,7 @@ build:
     post_create_environment:
       - mamba install python=3.11 --file requirements/docs.txt
       - pip install --no-deps .
+      - python -m ipykernel install --user --name calliope
 
 
 mkdocs:
