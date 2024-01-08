@@ -6,17 +6,17 @@ You can find examples of custom math that we have put together in the [custom ma
 
 Whenever you introduce your own math, it will be applied on top of the [base math][base-math].
 Therefore, you can include base math overrides as well as add new math.
-For example, if you want to introduce a timeseries parameter to limiting maximum storage capacity:
+For example, you may want to introduce a timeseries parameter to the built-in `storage_max` constraint to limit maximum storage capacity on a per-timestep basis:
 
 ```yaml
 storage_max:
   equations:
-    - expression: storage <= storage_cap<span style="color: green;"> * time_varying_parameter<span style="color: green;">
+    - expression: storage <= storage_cap * time_varying_parameter
 ```
 
 The other elements of the `storage_max` constraints have not changed (`foreach`, `where`, ...), so we do not need to define them again when overriding the custom math.
 
-When defining your model, you can reference the custom math you want to add in `config.init`:
+When defining your model, you can reference any number of YAML files containing the custom math you want to add in `config.init`. The paths are relative to your main model configuration file:
 
 ```yaml
 config:
