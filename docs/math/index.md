@@ -15,7 +15,7 @@ config:
     custom_math: [storage_inter_cluster]
 ```
 
-When solving the model in a run mode other than `plan`, some built-in custom math will be applied automatically from a file of the same name (e.g., `spores` mode custom math is stored in [math/spores.yaml](https://github.com/calliope-project/calliope/blob/main/calliope/math/spores.yaml)).
+When solving the model in a run mode other than `plan`, some built-in custom math will be applied automatically from a file of the same name (e.g., `spores` mode custom math is stored in [math/spores.yaml](https://github.com/calliope-project/calliope/blob/main/src/calliope/math/spores.yaml)).
 
 !!! note
 
