@@ -2,7 +2,7 @@
 
 As of Calliope version 0.7, all of the internal math used to build optimisation problems is stored in YAML files.
 
-The same syntax used for the [inbuilt math](https://github.com/calliope-project/calliope/tree/main/calliope/math) can be used to define custom math.
+The same syntax used for the [inbuilt math](https://github.com/calliope-project/calliope/tree/main/src/calliope/math) can be used to define custom math.
 So, if you want to introduce new constraints, decision variables, or objectives, you can do so as part of the collection of YAML files describing your model.
 
 In brief, components of the math formulation are stored under named keys and contain information on:
