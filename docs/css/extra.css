@@ -2,14 +2,15 @@
     font-size: 0.7rem;
 }
 
+/* reduce font size of rendered math */
+.katex-html {
+    font-size: 0.8rem;
+}
+
 :root {
     --md-primary-fg-color:        #98252D;
     --md-primary-fg-color--light: #ECB7B7;
     --md-primary-fg-color--dark:  #90030C;
-}
-
-.md-grid {
-    /* max-width: 1340px; */
 }
 
 .md-typeset, .md-nav, .md-tabs__link, .md-typeset .admonition, .md-typeset details, .md-typeset table:not([class]) {
@@ -51,9 +52,9 @@
     color: #757719;
 }
 
-/* reduce font size of code cells in rendered jupyter notebooks */
-.jp-Cell {
-    font-size: 0.9em;
+/* reduce font size of code and xarray output cells in rendered jupyter notebooks */
+.jupyter-wrapper .jp-OutputArea-output pre, .xr-wrap {
+    font-size: 0.8em;
 }
 
 /* Allow tables to be horizontally scrollable. */
