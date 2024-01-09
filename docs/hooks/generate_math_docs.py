@@ -1,13 +1,9 @@
+# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
+# Licensed under the Apache 2.0 License (see LICENSE file).
 """
-Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
-Licensed under the Apache 2.0 License (see LICENSE file).
-
-generate_math.py
-~~~~~~~~~~~~~~~~~
-
 Generate LaTeX math to include in the documentation.
-
 """
+
 import importlib.resources
 import tempfile
 import textwrap
@@ -24,7 +20,7 @@ PREPEND_SNIPPET = """
 # {title}
 {description}
 
-[:fontawesome-solid-download: Download the {math_type} formulation as a YAML file]({filepath}){{:download}}
+[:fontawesome-solid-download: Download the {math_type} formulation as a YAML file]({filepath})
 """
 
 
@@ -101,7 +97,7 @@ def write_file(
     nav_reference["Inbuilt math"].append(output_file.as_posix())
 
     math_doc = model.math_documentation.write(format="md")
-    file_to_download = Path(config["site_dir"]) / "math" / filename
+    file_to_download = Path("..") / filename
     output_full_filepath.write_text(
         PREPEND_SNIPPET.format(
             title=title.capitalize(),

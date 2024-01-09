@@ -3,7 +3,7 @@
 ##
 
 nodes:
-  # region-1-start
+  # --8<-- [start:region-1]
   region1:
     latitude: 40
     longitude: -2
@@ -12,8 +12,8 @@ nodes:
         sink_use_equals: file=demand-1.csv:demand
       ccgt:
         flow_cap_max: 30000 # increased to ensure no unmet_demand in first timestep
-  # region-1-end
-  # other-locs-start
+  # --8<-- [end:region-1]
+  # --8<-- [start:other-locs]
   region2:
     latitude: 40
     longitude: -8
@@ -36,10 +36,12 @@ nodes:
     inherit: csp_regions
     latitude: 39
     longitude: -2
+# --8<-- [end:other-locs]
 
+# --8<-- [start:node-groups]
 node_groups:
   csp_regions:
     techs:
       csp:
         source_use_max: file=csp_resource.csv
-  # other-locs-end
+# --8<-- [end:node-groups]

@@ -1,8 +1,11 @@
+# --8<-- [start:import]
 import: # Import other files from paths relative to this file, or absolute paths
   - "model_config/techs.yaml"
   - "model_config/locations.yaml"
   - "scenarios.yaml"
+# --8<-- [end:import]
 
+# --8<-- [start:config]
 config:
   init:
     name: Urban-scale example model
@@ -18,14 +21,19 @@ config:
 
   solve:
     solver: cbc
+# --8<-- [end:config]
 
+# --8<-- [start:parameters]
 parameters:
   objective_cost_weights:
     data: 1
     index: monetary
     dims: costs
-  bigM: 1e6 # setting the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
+  # `bigM` sets the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
+  bigM: 1e6
+# --8<-- [end:parameters]
 
+# --8<-- [start:data-sources]
 data_sources:
   - file: data_sources/demand.csv
     rows: timesteps
@@ -49,3 +57,4 @@ data_sources:
       techs: chp
       costs: monetary
       carriers: electricity
+# --8<-- [end:data-sources]

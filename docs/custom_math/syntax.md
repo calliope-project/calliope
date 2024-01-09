@@ -25,7 +25,7 @@ When checking the existence of an input parameter it is possible to first sum it
     ??? examples annotate
 
         - If you want to apply a constraint across all `nodes` and `techs`, but only for node+tech combinations where the `flow_out_eff` parameter has been defined, you would include `flow_out_eff`.
-        - If you want to apply a constraint over `techs` and `timesteps`, but only for combinations where the `source_max` parameter has at least one `node` with a value defined, you would include `any(resource, over=nodes)`.  (1)
+        - If you want to apply a constraint over `techs` and `timesteps`, but only for combinations where the `source_use_max` parameter has at least one `node` with a value defined, you would include `any(resource, over=nodes)`.  (1)
 
     1.  `any` is a [helper function][helper-functions]; read more below!
 
