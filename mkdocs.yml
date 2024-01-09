@@ -37,6 +37,7 @@ plugins:
       kernel_name: calliope_docs_build
       include_source: True
       execute: true
+      include_requirejs: true
   - mkdocstrings:
       default_handler: python
       handlers:
