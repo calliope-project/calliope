@@ -35,7 +35,7 @@ constraints:
     description: >-
       Set the upper bound of a `storage` technology's stored carrier within a clustered day
     foreach: [nodes, techs, timesteps]
-    where: "include_storage=True"
+    where: "include_storage=True OR parent=storage"
     equations:
       - expression: storage <= storage_intra_cluster_max[clusters=$cluster]
     slices: &timestep_cluster_slice
@@ -46,7 +46,7 @@ constraints:
     description: >-
       Set the lower bound of a `storage` technology's stored carrier within a clustered day
     foreach: [nodes, techs, timesteps]
-    where: "include_storage=True"
+    where: "include_storage=True OR parent=storage"
     equations:
       - expression: storage >= storage_intra_cluster_min[clusters=$cluster]
     slices: *timestep_cluster_slice
@@ -55,7 +55,7 @@ constraints:
     description: >-
       Set the upper bound of a `storage` technology's stored carrier across all days in the timeseries.
     foreach: [nodes, techs, datesteps]
-    where: "include_storage=True"
+    where: "include_storage=True OR parent=storage"
     equations:
       - expression: storage_inter_cluster + storage_intra_cluster_max[clusters=$cluster] <= storage_cap
     slices: &datestep_cluster_slice
@@ -66,7 +66,7 @@ constraints:
     description: >-
       Set the lower bound of a `storage` technology's stored carrier across all days in the timeseries.
     foreach: [nodes, techs, datesteps]
-    where: "include_storage=True"
+    where: "include_storage=True OR parent=storage"
     equations:
       - expression: storage_inter_cluster * ((1 - storage_loss) ** 24) + storage_intra_cluster_min[clusters=$cluster] >= 0
     slices: *datestep_cluster_slice
@@ -78,7 +78,7 @@ constraints:
       according to the previous day's representative storage fluctuations
       and the excess stored carrier available from all days up to this day.
     foreach: [nodes, techs, datesteps]
-    where: "include_storage=True"
+    where: "include_storage=True OR parent=storage"
     equations:
       - expression: storage_inter_cluster == $storage_previous_step + $storage_intra
     sub_expressions:
@@ -111,7 +111,7 @@ variables:
       The virtual carrier stored by a `supply_plus` or `storage` technology between days of the entire timeseries.
       Only together with `storage` does this variable's values gain physical significance.
     foreach: [nodes, techs, datesteps]
-    where: "include_storage=True"
+    where: "include_storage=True OR parent=storage"
     bounds:
       min: 0
       max: .inf
@@ -121,7 +121,7 @@ variables:
       Virtual variable to limit the maximum value of `storage` in a given representative day.
     unit: energy
     foreach: [nodes, techs, clusters]
-    where: "include_storage=True"
+    where: "include_storage=True OR parent=storage"
     bounds:
       min: -.inf
       max: .inf
@@ -131,7 +131,7 @@ variables:
       Virtual variable to limit the minimum value of `storage` in a given representative day.
     unit: energy
     foreach: [nodes, techs, clusters]
-    where: "include_storage=True"
+    where: "include_storage=True OR parent=storage"
     bounds:
       min: -.inf
       max: .inf

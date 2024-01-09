@@ -144,7 +144,7 @@ def _datetime_index(index: pd.Index, format: str, source_name: str) -> pd.Index:
         )
 
 
-def _check_time_subset(ts_index: pd.Index, time_subset: Optional[list[str]]):
+def _check_time_subset(ts_index: pd.Index, time_subset: list[str]):
     try:
         time_subset_dt = pd.to_datetime(time_subset, format="ISO8601")
     except ValueError as e:
@@ -262,8 +262,9 @@ def clean_data_source_timeseries(
         ds.coords[index_name] = _datetime_index(
             ds.coords[index_name].to_index(), time_format, source_file
         )
-        _check_time_subset(ds.coords[index_name].to_index(), time_subset)
-        ds = ds.sel(**{index_name: slice(*time_subset)})
+        if time_subset is not None:
+            _check_time_subset(ds.coords[index_name].to_index(), time_subset)
+            ds = ds.sel(**{index_name: slice(*time_subset)})
 
     return ds
 

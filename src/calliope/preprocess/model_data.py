@@ -154,7 +154,7 @@ class ModelDataFactory:
                     csv_reader_kwargs[axis] = [i for i, _ in enumerate(names)]
 
             filepath = relative_path(self.model_def_path, filename)
-            df = pd.read_csv(filepath, encoding="latin1", **csv_reader_kwargs)
+            df = pd.read_csv(filepath, encoding="utf-8", **csv_reader_kwargs)
 
             for axis, names in {"columns": columns, "index": index}.items():
                 if names is None:
@@ -533,7 +533,9 @@ class ModelDataFactory:
                 else:
                     tech_dict["techs"][tech] = None
 
-        node_tech_dict.union(self.model_definition["nodes"], allow_override=True)
+        node_tech_dict.union(
+            self.model_definition.get("nodes", AttrDict()), allow_override=True
+        )
         self.model_definition["nodes"] = node_tech_dict
 
     def _get_relevant_node_refs(self, techs_dict: AttrDict, node: str) -> list[str]:
@@ -953,11 +955,15 @@ class ModelDataFactory:
         """
 
         def __extract_carriers(grouped_series):
-            carriers = set(
-                grouped_series.dropna(subset=[f"carrier_{direction}"]).carriers.values
+            carriers = list(
+                set(
+                    grouped_series.dropna(
+                        subset=[f"carrier_{direction}"]
+                    ).carriers.values
+                )
             )
             if len(carriers) == 1:
-                carriers = carriers.pop()
+                carriers = carriers[0]
             if carriers:
                 return {f"carrier_{direction}": carriers}
             else:

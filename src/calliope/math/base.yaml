@@ -165,7 +165,7 @@ constraints:
       Set the lower bound on the quantity of flow a
       `demand` technology must dump to its sink in each timestep.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "sink_use_min AND NOT source_use_equals AND parent=supply"
+    where: "sink_use_min AND NOT sink_use_equals AND parent=demand"
     equations:
       - expression: "flow_in_inc_eff >= sink_use_min * $sink_scaler"
     sub_expressions:
