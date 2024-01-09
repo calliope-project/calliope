@@ -41,7 +41,7 @@ However, we have included them in here as examples.
 
 `objective_cost_weights` can be used to weight different cost classes in the objective function
 (e.g., if we had `co2_emissions` as well as `monetary` costs).
-`bigM` (https://en.wikipedia.org/wiki/Big_M_method) is used to formulate certain types of constraints and should be a large number,
+`bigM` (see ["Big M method" on Wikipedia](https://en.wikipedia.org/wiki/Big_M_method)) is used to formulate certain types of constraints and should be a large number,
 but not so large that it causes numerical trouble.
 
 `bigM` is dimensionless, while `objective_cost_weights` is indexed over the `costs` dimension.
