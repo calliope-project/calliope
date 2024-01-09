@@ -47,7 +47,7 @@ def on_files(files: list, config: dict, **kwargs):
             f"{override}.yaml",
             textwrap.dedent(
                 f"""
-            Inbuilt custom math to apply {custom_model.inputs.attrs['name']} on top of the [base mathematical formulation][base-math].
+            Inbuilt custom math to apply {custom_model.inputs.attrs['name']} math on top of the [base mathematical formulation][base-math].
             This math is _only_ applied if referenced in the `config.init.custom_math` list as `{override}`.
             """
             ),
@@ -66,7 +66,7 @@ def write_file(
     files: list[File],
     config: dict,
 ) -> None:
-    title = model.inputs.attrs["name"]
+    title = model.inputs.attrs["name"] + " math"
 
     output_file = (Path("math") / filename).with_suffix(".md")
     output_full_filepath = Path(TEMPDIR.name) / output_file
