@@ -13,13 +13,6 @@ repos:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
 
-  - repo: https://github.com/nbQA-dev/nbQA
-    rev: 1.7.0
-    hooks:
-      - id: nbqa-black
-      - id: nbqa-ruff
-        args: [--fix, --exit-non-zero-on-fix]
-
 ci:  # https://pre-commit.ci/
   autofix_prs: false
   autoupdate_schedule: monthly

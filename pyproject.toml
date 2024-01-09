@@ -4,9 +4,8 @@ minversion = "6.0"
 # `--dist=loadscope ` - run tests within classes in series
 # `--strict-markers` - Raise error on unexpected pytest markers being used (add new markers to `markers` config)
 # `-nauto` - parallelise over as many threads as possible (uses pytest-xdist). If debugging (`--pdb`), this will default to one thread.
-# `--nbmake --nbmake-kernel=calliope` - test example notebooks using the "calliope" notebook kernel (uses nbmake)
 # `--cov-report=xml --cov-config=pyproject.toml` - coverage report config for when running in tests (uses pytest-cov; call `--cov` in CLI to switch coverage on; `--cov-config` include to avoid bug)
-addopts = "-rav --dist=loadscope --strict-markers -nauto --nbmake --nbmake-kernel=calliope --cov-report=xml --cov-config=pyproject.toml"
+addopts = "-rav --dist=loadscope --strict-markers -nauto --cov-report=xml --cov-config=pyproject.toml"
 # TODO: add testpath once notebooks are fixed: "doc/_static/notebooks"
 testpaths = ["tests"]
 

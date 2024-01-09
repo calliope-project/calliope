@@ -3,5 +3,6 @@ mkdocs >= 1.5, < 2
 mkdocs-click >= 0.6, < 0.7
 mkdocs-jupyter >= 0.24, < 0.25
 mkdocs-macros-plugin >= 1.0, < 2
-mkdocstrings-python >= 1.7, < 2
 mkdocs-material >= 9.5, < 10
+mkdocstrings-python >= 1.7, < 2
+plotly >= 5, < 6
