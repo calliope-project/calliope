@@ -1,13 +1,9 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
 """
-generate_custom_math_examples.py
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 Generates a markdown file listing all custom math examples.
-
 """
+
 import tempfile
 from io import StringIO
 from pathlib import Path
@@ -28,7 +24,7 @@ MD_EXAMPLE_STRING = """
 
 ## YAML definition
 
-[:fontawesome-solid-download: Download the YAML example]({yaml_file_path}){{:download}}
+[:fontawesome-solid-download: Download the YAML example]({yaml_file_path})
 
 ```yaml
 {example_yaml}
@@ -79,7 +75,7 @@ def _process_file(path: Path, config: dict, nav_reference: list) -> File:
     formatted_string = MD_EXAMPLE_STRING.format(
         title=title,
         description=description,
-        yaml_file_path=Path(config["site_dir"]) / path.relative_to("docs"),
+        yaml_file_path=Path("..") / path.relative_to(CUSTOM_MATH_PATH),
         example_yaml=example_yaml,
     )
     output_full_filepath.write_text(formatted_string)

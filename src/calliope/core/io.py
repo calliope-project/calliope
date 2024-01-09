@@ -9,7 +9,7 @@ Functions to read and save model results.
 
 """
 
-import os
+from pathlib import Path
 from typing import Union
 
 # We import netCDF4 before xarray to mitigate a numpy warning:
@@ -150,13 +150,32 @@ def save_netcdf(model_data, path, model=None):
             _deserialise(var.attrs)
 
 
-def save_csv(model_data, path, dropna=True):
+def save_csv(
+    model_data: xr.Dataset,
+    path: str | Path,
+    dropna: bool = True,
+    allow_overwrite: bool = False,
+):
     """
-    If termination condition was not optimal, filters inputs only, and
-    warns that results will not be saved.
+    Save results to CSV.
 
+    One file per dataset array will be generated, with the filename matching the array name.
+
+    If termination condition was not optimal, filters inputs only, and warns that results will not be saved.
+
+    Args:
+        model_data (xr.Dataset): Calliope model data.
+        path (str | Path): Directory to which the CSV files will be saved
+        dropna (bool, optional):
+            If True, drop all NaN values in the data series before saving to file.
+            Defaults to True.
+        allow_overwrite (bool, optional):
+            If True, allow the option to overwrite the directory contents if it already exists.
+            This will overwrite CSV files one at a time, so if the dataset has different arrays to the previous saved models, you will get a mix of old and new files.
+            Defaults to False.
     """
-    os.makedirs(path, exist_ok=False)
+    path = Path(path)
+    path.mkdir(parents=True, exist_ok=allow_overwrite)
 
     # a MILP model which optimises to within the MIP gap, but does not fully
     # converge on the LP relaxation, may return as 'feasible', not 'optimal'
@@ -172,7 +191,7 @@ def save_csv(model_data, path, dropna=True):
 
     for var_name, var in data_vars.items():
         in_out = "results" if var.attrs["is_result"] else "inputs"
-        out_path = os.path.join(path, "{}_{}.csv".format(in_out, var_name))
+        out_path = path / f"{in_out}_{var_name}.csv"
         if not var.shape:
             series = pd.Series(var.item())
             keep_index = False

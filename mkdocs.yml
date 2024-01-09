@@ -7,6 +7,7 @@ hooks:
   - docs/hooks/generate_custom_math_examples.py
   - docs/hooks/generate_readable_schema.py
   - docs/hooks/generate_math_docs.py
+  - docs/hooks/add_notebooks.py
 extra:
   min_python_version: "3.10"
   max_python_version: "3.12"
@@ -21,6 +22,7 @@ theme:
     - navigation.indexes
     - navigation.top
     - content.code.copy
+    - content.code.annotate
   logo: img/logo-bw.png
   favicon: img/favicon.ico
 extra_css:
@@ -29,6 +31,14 @@ plugins:
   - search
   - autorefs
   - macros
+  - mkdocs-jupyter:
+      include: ["examples/**/*.py", "examples/*.py"]
+      ignore: ["examples/.*/*.py"]
+      allow_errors: false
+      kernel_name: calliope_docs_build
+      include_source: True
+      execute: true
+      include_requirejs: true
   - mkdocstrings:
       default_handler: python
       handlers:
@@ -85,6 +95,19 @@ nav:
     - custom_math/customise.md
     - Example custom math gallery:
       - custom_math/examples/index.md
+  - Examples and tutorials:
+    - examples/index.md
+    - National scale example model:
+      - examples/national_scale/index.md
+      - examples/national_scale/notebook.py
+    - Urban scale example model:
+      - examples/urban_scale/index.md
+      - examples/urban_scale/notebook.py
+    - MILP example model:
+      - examples/milp/index.md
+      - examples/milp/notebook.py
+    - examples/calliope_model_object.py
+    - examples/logging.py
   - Reference:
     - Command line interface: reference/cli.md
     - Python API:

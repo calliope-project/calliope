@@ -128,6 +128,9 @@ class TestIO:
             with pytest.raises(FileExistsError):
                 model.to_csv(out_path)
 
+    def test_save_csv_dir_can_exist_if_overwrite_true(self, model, model_csv_dir):
+        model.to_csv(model_csv_dir, allow_overwrite=True)
+
     @pytest.mark.parametrize(
         "file_name",
         sorted(
