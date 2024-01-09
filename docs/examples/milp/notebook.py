@@ -46,7 +46,9 @@ model.inputs.flow_cap_max.to_series().dropna()
 # You can apply node/tech/carrier/timesteps only operations, like summing information over timesteps
 
 # %%
-model.inputs.sink_equals.sum("timesteps", min_count=1, skipna=True).to_series().dropna()
+model.inputs.sink_use_equals.sum(
+    "timesteps", min_count=1, skipna=True
+).to_series().dropna()
 
 # %% [markdown]
 # ## Build and solve the optimisation problem.
@@ -70,13 +72,10 @@ model.solve()
 model.results
 
 # %% [markdown]
-# Integer/binary variables `units`, `purchased`, etc. are available in the results
+# Integer variables `purchased_units` and `operating_units` are available in the results
 
 # %%
-model.results.units.to_series().dropna()
-
-# %%
-model.results.purchased.to_series().dropna()
+model.results.purchased_units.to_series().dropna()
 
 # %%
 model.results.operating_units.to_series().dropna().unstack("techs").head()

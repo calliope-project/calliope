@@ -7,6 +7,8 @@ This override is applied from the `scenarios.yaml` file:
 --8<-- "src/calliope/example_models/urban_scale/scenarios.yaml:milp"
 ```
 
+1.  The `_REPLACE_` syntax can be used with Calliope YAML files when you want the override to completely replace the sub-dictionary rather than update parts of it.
+
 !!! note
     MILP functionality can be easily applied, but convergence is slower as a result of integer/binary variables.
     It is recommended to use a commercial solver (e.g. Gurobi, CPLEX) if you wish to utilise these variables outside this example model.
@@ -16,17 +18,19 @@ This override is applied from the `scenarios.yaml` file:
 We will only discuss the components of the model definition that differ from the urban scale example model.
 Refer to that tutorial page for more information on this model.
 
-### Units
+### Purchased units
 
 The capacity of a technology is usually a continuous decision variable, which can be within the range of 0 and `flow_cap_max` (the maximum capacity of a technology).
 In this model, we introduce a unit limit on the CHP instead:
 
 ```yaml
+techs:
 --8<-- "src/calliope/example_models/urban_scale/scenarios.yaml:chp"
 ```
 
 A unit maximum allows a discrete, integer number of CHP to be purchased, each having a capacity of `flow_cap_per_unit`.
-`flow_cap_max` and `flow_cap_min` are now ignored, in favour of `units_max` or `units_min`.
+`flow_cap_max` and `flow_cap_min` cannot be defined alongside `flow_cap_per_unit`.
+Instead, `purchased_units_max` and `purchased_units_min` are available.
 
 A useful feature unlocked by introducing this is the ability to set a minimum operating capacity which is *only* enforced when the technology is operating.
 In the LP model, `flow_out_min_relative` would force the technology to operate at least at that proportion of its maximum capacity at each time step.
@@ -34,9 +38,10 @@ In this model, the newly introduced `flow_out_min_relative` of 0.2 will ensure t
 
 ### Purchase cost
 
-The boiler does not have a unit limit, it still utilises the continuous variable for its capacity. However, we have introduced a `purchase` cost:
+The boiler also has a unit limit. However, we limit it to `purchased_units_max` to 1 and use it alongside a continuous `flow_cap`:
 
 ```yaml
+techs:
 --8<-- "src/calliope/example_models/urban_scale/scenarios.yaml:boiler"
 ```
 
@@ -57,6 +62,7 @@ This allows e.g. a CHP facility to overproduce heat to produce more cheap electr
 The `async_flow_switch` binary variable (triggered by the `force_async_flow` parameter) ensures this phenomenon is avoided:
 
 ```yaml
+techs:
 --8<-- "src/calliope/example_models/urban_scale/scenarios.yaml:heat_pipes"
 ```
 

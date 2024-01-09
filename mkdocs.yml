@@ -22,6 +22,7 @@ theme:
     - navigation.indexes
     - navigation.top
     - content.code.copy
+    - content.code.annotate
   logo: img/logo-bw.png
   favicon: img/favicon.ico
 extra_css:
@@ -97,16 +98,16 @@ nav:
   - Examples and tutorials:
     - examples/index.md
     - National scale example model:
-      - examples/1_national_scale/index.md
-      - examples/1_national_scale/notebook.py
+      - examples/national_scale/index.md
+      - examples/national_scale/notebook.py
     - Urban scale example model:
-      - examples/2_urban_scale/index.md
-      - examples/2_urban_scale/notebook.py
+      - examples/urban_scale/index.md
+      - examples/urban_scale/notebook.py
     - MILP example model:
-      - examples/3_milp/index.md
-      - examples/3_milp/notebook.py
-    - examples/4_calliope_model_object.py
-    - examples/5_logging.py
+      - examples/milp/index.md
+      - examples/milp/notebook.py
+    - examples/calliope_model_object.py
+    - examples/logging.py
   - Reference:
     - Command line interface: reference/cli.md
     - Python API:

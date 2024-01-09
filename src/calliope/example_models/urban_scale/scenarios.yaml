@@ -14,7 +14,7 @@ overrides:
         integer_dispatch: true
         purchased_units_max: 4
         flow_cap_max:
-          _REPLACE_: null
+          _REPLACE_: null  # (1)!
         flow_cap_per_unit:
           data: 300
           index: electricity

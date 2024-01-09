@@ -86,7 +86,7 @@ The definition of this technology in the example model's configuration looks as 
 ```
 
 The final supply technology is `pv` (solar photovoltaic power), which serves as an inflexible supply technology.
-It has a time-varying source availability loaded from CSV, a maximum area over which it can capture its source (`area_use_max`) and a requirement that all available source is used (`source_equals`).
+It has a time-varying source availability loaded from CSV, a maximum area over which it can capture its source (`area_use_max`) and a requirement that all available source is used (`source_use_equals`).
 This emulates the reality of solar technologies: once installed, their production matches the availability of solar energy.
 
 The efficiency of the DC to AC inverter (which occurs after conversion from source to carrier) is considered in `parasitic_eff`.
