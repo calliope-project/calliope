@@ -52,7 +52,7 @@ techs:
     parent: supply
     inherit: interest_rate_setter
     carrier_out: electricity
-    source_max: .inf
+    source_use_max: .inf
     flow_cap_max: 2000
     lifetime: 25
     cost_flow_cap:
@@ -70,7 +70,7 @@ techs:
     parent: supply
     inherit: interest_rate_setter
     carrier_out: gas
-    source_max: .inf
+    source_use_max: .inf
     flow_cap_max: 2000
     lifetime: 25
     cost_flow_cap:
@@ -100,7 +100,7 @@ techs:
     # Version: 1.1
     # License: https://creativecommons.org/licenses/by-nc/4.0/
     # Reference: https://doi.org/10.1016/j.energy.2016.08.060
-    source_equals: file=pv_resource.csv:per_area
+    source_use_equals: file=pv_resource.csv:per_area
 
     flow_out_parasitic_eff: 0.85 # inverter losses
     flow_cap_max: 250

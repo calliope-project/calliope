@@ -116,7 +116,7 @@ class TestModelSettings:
                 "parameters.bigM": 1e3,
                 # Allow setting resource and flow_cap_max/equals to force infeasibility
                 "techs.test_supply_elec.constraints": {
-                    "source_equals": cap_val,
+                    "source_use_equals": cap_val,
                     "flow_out_eff": 1,
                     "flow_cap_equals": 15,
                 },

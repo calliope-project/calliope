@@ -82,7 +82,7 @@ IBM offer academic licenses for CPLEX. Refer to the IBM website for details.
 
 ## Python module requirements
 
-Refer to [requirements.txt](https://github.com/calliope-project/calliope/blob/main/requirements.txt) in the Calliope repository for a full and up-to-date listing of required third-party packages.
+Refer to the [requirements file](https://github.com/calliope-project/calliope/blob/main/requirements/base.txt) in the Calliope repository for a full and up-to-date listing of required third-party packages.
 
 Some of the key packages Calliope relies on are:
 

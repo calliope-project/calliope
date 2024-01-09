@@ -89,8 +89,8 @@ nav:
     - index: math/index.md
   - Custom math:
     - custom_math/index.md
-    - custom_math/syntax.md
     - custom_math/components.md
+    - custom_math/syntax.md
     - custom_math/customise.md
     - Example custom math gallery:
       - custom_math/examples/index.md

@@ -165,7 +165,7 @@ class TestModelRun:
                 test_undefined_carrier:
                     parent: supply
                     name: test
-                    source_max: .inf
+                    source_use_max: .inf
                     flow_cap_max: .inf
             nodes.1.techs.test_undefined_carrier:
             """
@@ -239,9 +239,9 @@ class TestModelRun:
         # should pass: changing datetime format from default
         override1 = {
             "config.init.time_format": "%d/%m/%Y %H:%M:%S",
-            "node_groups.init_nodes.techs.test_demand_elec.sink_equals": "file=demand_heat_diff_dateformat.csv",
-            "nodes.a.techs.test_demand_heat.sink_equals": "file=demand_heat_diff_dateformat.csv",
-            "nodes.b.techs.test_demand_heat.sink_equals": "file=demand_heat_diff_dateformat.csv",
+            "node_groups.init_nodes.techs.test_demand_elec.sink_use_equals": "file=demand_heat_diff_dateformat.csv",
+            "nodes.a.techs.test_demand_heat.sink_use_equals": "file=demand_heat_diff_dateformat.csv",
+            "nodes.b.techs.test_demand_heat.sink_use_equals": "file=demand_heat_diff_dateformat.csv",
         }
         model = build_model(override_dict=override1, scenario="simple_conversion")
         assert all(
@@ -251,7 +251,7 @@ class TestModelRun:
 
         # should fail: wrong dateformat input for one file
         override2 = {
-            "node_groups.init_nodes.techs.test_demand_elec.sink_equals": "file=demand_heat_diff_dateformat.csv"
+            "node_groups.init_nodes.techs.test_demand_elec.sink_use_equals": "file=demand_heat_diff_dateformat.csv"
         }
 
         with pytest.raises(exceptions.ModelError):
@@ -265,7 +265,7 @@ class TestModelRun:
 
         # should fail: one value wrong in file
         override4 = {
-            "node_groups.init_nodes.techs.test_demand_elec.sink_equals": "file=demand_heat_wrong_dateformat.csv"
+            "node_groups.init_nodes.techs.test_demand_elec.sink_use_equals": "file=demand_heat_wrong_dateformat.csv"
         }
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
@@ -273,12 +273,12 @@ class TestModelRun:
 
     def test_inconsistent_time_indeces(self):
         """
-        Test that, including after any time subsetting, the indeces of all time
+        Test that, including after any time subsetting, the indices of all time
         varying input data are consistent with each other
         """
         # should fail: wrong length of demand_heat csv vs demand_elec
         override1 = {
-            "node_groups.init_nodes.techs.test_demand_elec.sink_equals": "file=demand_heat_wrong_length.csv"
+            "node_groups.init_nodes.techs.test_demand_elec.sink_use_equals": "file=demand_heat_wrong_length.csv"
         }
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
@@ -310,7 +310,7 @@ class TestModelRun:
         If model config specifies dataframes to be loaded in (via df=...),
         these time series must be passed as arguments in calliope.Model(...).
         """
-        override = {"nodes.a.techs.test_demand_elec.sink_equals": "df=demand_elec"}
+        override = {"nodes.a.techs.test_demand_elec.sink_use_equals": "df=demand_elec"}
         with pytest.raises(exceptions.ModelError) as error:
             build_model(
                 model_file="model_minimal.yaml",
@@ -327,7 +327,7 @@ class TestModelRun:
         Any timeseries specified via df=... must correspond to a key in
         timeseries_dataframes. An error should be thrown.
         """
-        override = {"nodes.a.techs.test_demand_elec.sink_equals": "df=key_1"}
+        override = {"nodes.a.techs.test_demand_elec.sink_use_equals": "df=key_1"}
         ts_df = {"key_2": pd.DataFrame(np.arange(10))}
 
         with pytest.raises(KeyError) as error:
@@ -347,7 +347,7 @@ class TestModelRun:
         """
         `timeseries_dataframes` should be dict of pandas DataFrames.
         """
-        override = {"nodes.a.techs.test_demand_elec.sink_equals": "df=demand_elec"}
+        override = {"nodes.a.techs.test_demand_elec.sink_use_equals": "df=demand_elec"}
 
         with pytest.raises(exceptions.ModelError) as error:
             build_model(
@@ -401,7 +401,7 @@ class TestChecks:
                     name: Supply tech
                     carrier_out: gas
                     flow_cap_max: 10
-                    source_max: .inf
+                    source_use_max: .inf
             nodes.b.techs.test_supply_no_parent:
             """
         )
@@ -421,7 +421,7 @@ class TestChecks:
                 carrier_out: gas
                 parent: test_supply_elec
                 flow_cap_max: 10
-                source_max: .inf
+                source_use_max: .inf
             nodes.b.techs.test_supply_tech_parent:
             """
         )
@@ -531,9 +531,9 @@ class TestTime:
             )
             # Create override dict telling calliope to load timeseries from df
             override_dict = {
-                "techs.csp.source_max": "df=csp_resource",
-                "nodes.region1.techs.demand_power.sink_equals": "df=demand_1:demand",
-                "nodes.region2.techs.demand_power.sink_equals": "df=demand_2:demand",
+                "techs.csp.source_use_max": "df=csp_resource",
+                "nodes.region1.techs.demand_power.sink_use_equals": "df=demand_1:demand",
+                "nodes.region2.techs.demand_power.sink_use_equals": "df=demand_2:demand",
             }
             return calliope.examples.national_scale(
                 timeseries_dataframes=timeseries_dataframes, override_dict=override_dict
@@ -557,18 +557,18 @@ class TestTime:
         """
 
         model = model_national
-        assert model.inputs.sink_equals.sel(
+        assert model.inputs.sink_use_equals.sel(
             nodes="region1", techs="demand_power"
         ).values[0] == approx(25284.48)
-        assert model.inputs.sink_equals.sel(
+        assert model.inputs.sink_use_equals.sel(
             nodes="region2", techs="demand_power"
         ).values[0] == approx(2254.098)
-        assert model.inputs.source_max.sel(nodes="region1_1", techs="csp").values[
+        assert model.inputs.source_use_max.sel(nodes="region1_1", techs="csp").values[
             8
         ] == approx(0.263805)
-        assert model.inputs.source_max.sel(nodes="region1_2", techs="csp").values[
+        assert model.inputs.source_use_max.sel(nodes="region1_2", techs="csp").values[
             8
         ] == approx(0.096755)
-        assert model.inputs.source_max.sel(nodes="region1_3", techs="csp").values[
+        assert model.inputs.source_use_max.sel(nodes="region1_3", techs="csp").values[
             8
         ] == approx(0.0)

@@ -156,7 +156,7 @@ properties:
           active: *active
           equations:
             type: array
-            description: Math equation expressions with conditions to determinee which expression will be applied for this objectives. Conditions must be set up such that only one equation expression can be applied for this objective.
+            description: Math equation expressions with conditions to determine which expression will be applied for this objectives. Conditions must be set up such that only one equation expression can be applied for this objective.
             items: *equation_items
           sub_expressions: *sub_expressions
           slices: *slices

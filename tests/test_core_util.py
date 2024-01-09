@@ -27,6 +27,7 @@ class TestLogging:
             ("CRITICAL", True, 50, 10),
             ("CRITICAL", False, 50, 50),
             ("info", True, 20, 10),
+            (20, True, 20, 10),
         ],
     )
     def test_set_log_verbosity(
@@ -67,6 +68,12 @@ class TestLogging:
             level="info",
             time_since_solve_start=True,
         )
+
+    @pytest.mark.parametrize(["capture", "expected_level"], [(True, 20), (False, 30)])
+    def test_capture_warnings(self, capture, expected_level):
+        calliope.set_log_verbosity("info", capture_warnings=capture)
+
+        assert logging.getLogger("py.warnings").getEffectiveLevel() == expected_level
 
 
 class TestGenerateRuns:

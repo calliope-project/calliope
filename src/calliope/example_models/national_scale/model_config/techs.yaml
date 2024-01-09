@@ -58,7 +58,7 @@ techs:
     parent: supply
     inherit: cost_dim_setter
     carrier_out: power
-    source_max: .inf
+    source_use_max: .inf
     flow_out_eff: 0.5
     flow_cap_max: 40000 # kW
     flow_cap_max_systemwide: 100000 # kW

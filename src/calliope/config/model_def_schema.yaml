@@ -371,8 +371,16 @@ properties:
             type: string
             default: continuous
             title: Capacity method switch.
-            description: One of 'continuous' (LP model), 'binary' (uses purchase decision variable), or 'integer' (uses units and operating _units decision variables)
-            enum: [continuous, binary, integer]
+            description: One of 'continuous' (LP model) or 'integer' (integer/binary unit capacity).
+            enum: [continuous, integer]
+
+          integer_dispatch:
+            type: boolean
+            default: False
+            title: Integer dispatch switch.
+            description: |
+              When true, will limit per-timestep out/inflows relative to the number of units of a technology that are in operation.
+              Requires `cap_method=integer`.
 
           include_storage:
             type: boolean
@@ -416,7 +424,8 @@ properties:
             title: System-wide maximum rated flow capacity.
             description: >-
               Limits the sum of ``flow_cap`` over all nodes in the model to a maximum.
-              Unit: power
+              If `cap_method=integer`, this will be scaled by the number of integer units of a technology purchased.
+              Unit: power or $\frac{\text{power}}{\text{unit}}$.
 
           flow_cap_min:
             $ref: "#/$defs/TechParamNullNumberFixed"
@@ -424,8 +433,9 @@ properties:
             title: Minimum rated flow capacity.
             description: >-
               Limits ``flow_cap`` to a minimum.
-              NOTE: this will _force_ `flow_cap` to a minimum value unless `cap_method` is set to `binary`.
-              Unit: power
+              NOTE: this will _force_ `flow_cap` to a minimum value unless `cap_method` is set to `integer`.
+              If `cap_method=integer`, this will be scaled by the number of integer units of a technology purchased.
+              Unit: power or $\frac{\text{power}}{\text{unit}}$.
 
           flow_cap_min_systemwide:
             $ref: "#/$defs/TechParamNullNumberFixed"
@@ -433,7 +443,7 @@ properties:
             title: System-wide minimum rated flow capacity.
             description: >-
               Limits the sum of ``flow_cap`` over all nodes in the model to a minimum.
-              NOTE: this will _force_ the sum of `flow_cap` to a minimum value unless `cap_method` is set to `binary`.
+              NOTE: this will _force_ the sum of `flow_cap` to a minimum value unless `cap_method` is set to `integer`.
               Unit: power.
 
           flow_out_min_relative:
@@ -577,23 +587,23 @@ properties:
                Rate of storage loss per hour, used to calculate lost stored flow as ``(1 - storage_loss)^hours_per_timestep``.
                Unit: Unit: $\frac{\text{fraction}}{\text{hour}}$.
 
-          units_min_systemwide:
+          purchased_units_min_systemwide:
             $ref: "#/$defs/TechParamNullNumberFixed"
             default: 0
-            title: System-wide minimum installed flow capacity
+            title: System-wide minimum installed integer units of a technology.
             description: >-
                sets the lower bound of the sum across all nodes of the decision variable `units` for a particular technology.
                Unit: integer.
 
-          units_max_systemwide:
+          purchased_units_max_systemwide:
             $ref: "#/$defs/TechParamNullNumberFixed"
             default: .inf
-            title: System-wide maximum installed flow capacity
+            title: System-wide maximum installed integer units of a technology.
             description: >-
                sets the upper bound of the sum across all nodes of the decision variable `units` for a particular technology.
                Unit: integer.
 
-          units_min:
+          purchased_units_min:
             $ref: "#/$defs/TechParamNullNumberFixed"
             default: 0
             title:  Minimum number of purchased units
@@ -601,12 +611,13 @@ properties:
               Limits the lower bound of units purchased if `cap_method` is `integer`.
               Unit: integer.
 
-          units_max:
+          purchased_units_max:
             $ref: "#/$defs/TechParamNullNumberFixed"
             default: .inf
-            title: Maximum number of purchased units
+            title: Maximum number of purchased units.
             description: >-
               Limits the upper bound of units purchased if `cap_method` is `integer`.
+              If set to `1`, will effectively set the `purchased_units` to a binary decision variable.
               Unit: integer.
 
           sink_unit:
@@ -618,7 +629,7 @@ properties:
               `per_area` uses the `area_use` decision variable to scale the sink while `per_cap` uses the `flow_cap` decision variable.
             enum: [absolute, per_area, per_cap]
 
-          sink_min:
+          sink_use_min:
             oneOf:
               - type: ["null", number]
               - $ref: "#/$defs/StringFilePattern"
@@ -628,7 +639,7 @@ properties:
               Minimum sink use to remove a carrier from the system (e.g., electricity demand, transport distance).
               Unit dictated by ``source_unit``.
 
-          sink_max:
+          sink_use_max:
             oneOf:
               - type: ["null", number]
               - $ref: "#/$defs/StringFilePattern"
@@ -638,7 +649,7 @@ properties:
               Maximum sink use to remove a carrier from the system (e.g., electricity demand, transport distance).
               Unit dictated by ``source_unit``.
 
-          sink_equals:
+          sink_use_equals:
             oneOf:
               - type: ["null", number]
               - $ref: "#/$defs/StringFilePattern"
@@ -672,7 +683,7 @@ properties:
               Set as value between 1 (no loss) and 0 (all lost).
               Unit: fraction.
 
-          source_min:
+          source_use_min:
             oneOf:
               - type: ["null", number]
               - $ref: "#/$defs/StringFilePattern"
@@ -682,7 +693,7 @@ properties:
               Minimum source use to add a carrier from the system (e.g., biofuel, coal, rainfall, wind flow).
               Unit dictated by ``source_unit``.
 
-          source_max:
+          source_use_max:
             oneOf:
               - type: ["null", number]
               - $ref: "#/$defs/StringFilePattern"
@@ -692,7 +703,7 @@ properties:
               Maximum sink use to remove a carrier from the system (e.g., biofuel, coal, rainfall, wind flow).
               Unit dictated by ``source_unit``.
 
-          source_equals:
+          source_use_equals:
             oneOf:
               - type: ["null", number]
               - $ref: "#/$defs/StringFilePattern"
@@ -729,7 +740,8 @@ properties:
             default: .nan
             title: Distance spanned by link.
             description: >-
-              Used for per_distance constraints. If not defined, it will be automatically inferred from latitude/longitude of nodes in a link if not given here.
+              Used for `..._per_distance` constraints.
+              If not defined, it will be automatically derived from latitude/longitude of nodes in a link.
 
           flow_in_eff_per_distance:
             $ref: "#/$defs/TechParamNullNumberVariable"
@@ -764,7 +776,7 @@ properties:
             title: Purchase cost per unit distance for transmission techs.
             description: >-
               Cost applied if the binary variable `purchased` is 1 or per unit of the integer variable `units`.
-              Requires the parameter `cap_method` to be `binary` or `integer`.
+              Requires the parameter `cap_method` to be `integer`.
               Unit: $(\text{purchased_unit}\mul\text{distance})^{-1}$
 
           cost_flow_cap:
@@ -830,8 +842,8 @@ properties:
             default: 0
             title: Purchase cost.
             description: >-
-              Cost applied if the binary variable `purchased` is 1 or per unit of the integer variable `units`.
-              Requires the parameter `cap_method` to be `binary` or `integer`.
+              Cost applied to the variable `purchased_units`.
+              Requires the parameter `cap_method` to be `integer`.
               Unit: $\text{purchased_unit}^{-1}$
 
           cost_area_use:

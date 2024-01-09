@@ -49,14 +49,14 @@ constraints:
     description: >
       Limit total flow into the system from a particular source.
       NOTE: this only works for supply_plus technologies.
-        For `supply` technologies you will need to convert `flow_out` to `flow_in` using `energy_eff` and limit that.
+      For `supply` technologies you will need to convert `flow_out` to `flow_in` using `energy_eff` and limit that.
     foreach: [techs]
     where: source_use AND annual_source_max
     equations:
       - expression: "sum(source_use, over=[nodes, techs, timesteps]) <= annual_source_max"
 
   annual_energy_balance_total_sink_availability:
-    description: Limit total flow out of the system into a sink that is not pinned by `sink_equals`.
+    description: Limit total flow out of the system into a sink that is not pinned by `sink_use_equals`.
     foreach: [techs]
     where: inheritance(demand) AND annual_sink_max
     equations:

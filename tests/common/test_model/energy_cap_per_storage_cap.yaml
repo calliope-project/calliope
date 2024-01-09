@@ -40,7 +40,7 @@ nodes:
   a.techs:
     my_storage:
     electricity_demand:
-      sink_equals: file=demand_elec.csv
+      sink_use_equals: file=demand_elec.csv
 
 overrides:
   max:

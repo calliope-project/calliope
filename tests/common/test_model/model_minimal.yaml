@@ -22,7 +22,7 @@ techs:
     carrier_out: electricity
     parent: supply
     flow_cap_max: 10
-    source_max: .inf
+    source_use_max: .inf
     flow_out_eff: 0.9
   test_demand_elec:
     name: Demand elec tech
@@ -34,4 +34,4 @@ nodes:
     techs:
       test_supply_elec:
       test_demand_elec:
-        sink_equals: file=demand_elec.csv
+        sink_use_equals: file=demand_elec.csv

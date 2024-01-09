@@ -1,5 +1,7 @@
 # Math syntax
 
+This page provides an overview of the syntax available to formulate math components. reference for the allowed key-value pairs in your custom math YAML file is available in the [reference section of the documentation][math-formulation-schema].
+
 ## foreach lists
 
 If the math component is indexed over sets (e.g., `techs`, `nodes`, `timesteps`), then you need to define a `foreach` list of those sets.
@@ -9,7 +11,7 @@ For example, `#!yaml foreach: [nodes, techs]` will build the component over all 
 
 The available sets in Calliope are: `nodes`, `techs`, `carriers`, `carrier_tiers`, `costs`, `timesteps`.
 If using [time clustering and inter-cluster storage][time_clustering], there is also a `datesteps` set available.
-If you want to build over your own custom set, you will need to add it to the calliope model dataset before building the optimisation problem, e.g. as a new top-level parameter.
+If you want to build over your own custom set, you will need to add it to the Calliope model dataset before building the optimisation problem, e.g. as a new top-level parameter.
 
 ## where strings
 
@@ -25,7 +27,7 @@ When checking the existence of an input parameter it is possible to first sum it
         - If you want to apply a constraint across all `nodes` and `techs`, but only for node+tech combinations where the `flow_out_eff` parameter has been defined, you would include `flow_out_eff`.
         - If you want to apply a constraint over `techs` and `timesteps`, but only for combinations where the `source_max` parameter has at least one `node` with a value defined, you would include `any(resource, over=nodes)`.  (1)
 
-    1.  I'm a [helper function][helper-functions]; read more below!
+    1.  `any` is a [helper function][helper-functions]; read more below!
 
 1. Checking the value of a configuration option or an input parameter.
 Checks can use any of the operators: `>`, `<`, `=`, `<=`, `>=`.
@@ -36,9 +38,9 @@ Configuration options are any that are defined in `config.build`, where you can 
         - If you want to apply a constraint only if the configuration option `config.build.cyclic_storage` is _True_, you would include `config.cyclic_storage=True` (`True`/`False` is case insensitive).
         - If you want to apply a constraint across all `nodes` and `techs`, but only where the `flow_eff` parameter is less than 0.5, you would include `flow_eff<0.5`.
         - If you want to apply a constraint only for the first timestep in your timeseries, you would include `timesteps=get_val_at_index(dim=timesteps, idx=0)`. (1)
-        - If you want to apply a constraint only for the last timestep in your timeseries, you would include `timesteps=get_val_at_index(dim=timesteps, idx=-1)`. (1)
+        - If you want to apply a constraint only for the last timestep in your timeseries, you would include `timesteps=get_val_at_index(dim=timesteps, idx=-1)`.
 
-    1.  I'm a [helper function][helper-functions]; read more below!
+    1.  `get_val_at_index` is a [helper function][helper-functions]; read more below!
 
 1. Checking the `parent` of a technology (`storage`, `supply`, etc.) or its inheritance chain (if using `tech_groups` and the `inherit` parameter).
 
@@ -46,15 +48,16 @@ Configuration options are any that are defined in `config.build`, where you can 
 
         - If you want to create a decision variable across only `storage` technologies, you would include `parent=storage`.
         - If you want to apply a constraint across only your own `rooftop_supply` technologies (e.g., you have defined `rooftop_supply` in `tech_groups` and your technologies `pv` and `solar_thermal` define `#!yaml inherit: rooftop_supply`), you would include `inheritance(rooftop_supply)`.
+        Note that `parent=...` is a simple check for the given value of `parent`, while `inheritance()` is a helper function ([see below][helper-functions]) which can deal with the fact that intermediate groups may be present, e.g. `pv` might inherit from `rooftop_supply` which in turn might inherit from `electricity_supply`.
 
 1. Subsetting a set.
 The sets available to subset are always [`nodes`, `techs`, `carriers`] + any additional sets defined by you in [`foreach`][foreach-lists].
 
     ??? examples annotate
 
-        - If you want to filter `nodes` where any of a set of `tech`s are defined: `defined(techs=[tech1, tech2], within=nodes, how=any)` (1).
+        - If you want to filter `nodes` where any of a set of `techs` are defined: `defined(techs=[tech1, tech2], within=nodes, how=any)` (1).
 
-    1. I'm a [helper function][helper-functions]; read more below!
+    1. `defined` is a [helper function][helper-functions]; read more below!
 
 To combine statements you can use the operators `and`/`or`.
 You can also use the `not` operator to negate any of the statements.
@@ -96,9 +99,9 @@ Behind the scenes, we will make sure that every relevant element of the defined 
 Slicing math components involves appending the component with square brackets that contain the slices, e.g. `flow_out[carriers=electricity, nodes=[A, B]]` will slice the `flow_out` decision variable to focus on `electricity` in its `carriers` dimension and only has two nodes (`A` and `B`) on its `nodes` dimension.
 To find out what dimensions you can slice a component on, see your input data (`model.inputs`) for parameters and the definition for decision variables in your loaded math dictionary (`model.math.variables`).
 
-### Helper functions
+## Helper functions
 
-As with [`where` strings][where-strings], there are many [helper function](https://calliope.readthedocs.io/en/latest/api_reference/#calliopebackendhelper_functions-math-formulation-helper-functions) available to use in expressions, to allow for more complex operations to be undertaken.
+For [`where` strings][where-strings] and [`expression` strings][expression-strings], there are many [helper functions](../reference/api/helper_functions.md) available to use, to allow for more complex operations to be undertaken.
 Some of these helper functions require a good understanding of their functionality to apply, so make sure you are comfortable with them before using them.
 
 ## equations
@@ -189,7 +192,7 @@ sub_expressions:
 !!! note
 
     As with [equations][], `where` strings are mixed in together.
-    If you have two equation expressions and three sub-expressions, each with two expressions, you will end up with 2*3*2 = 12 unique `where` strings with linked `expression` strings.
+    If you have two equation expressions and three sub-expressions, each with two expressions, you will end up with 2 * 3 * 2 = 12 unique `where` strings with linked `expression` strings.
 
 ## slices
 
