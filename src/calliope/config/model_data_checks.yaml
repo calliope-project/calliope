@@ -17,8 +17,8 @@ fail:
   - where: cost_source_cap<0 AND not source_use_max
     message: Cannot have a negative `cost_source_cap` as there is an unset corresponding `source_use_max` constraint
 
-  - where: source_equals=inf or sink_equals=inf
-    message: "Cannot include infinite values in `source_equals`/`sink_equals`"
+  - where: source_use_equals=inf or sink_use_equals=inf
+    message: "Cannot include infinite values in `source_use_equals`/`sink_use_equals`"
 
   - where: (any(latitude, over=nodes) or any(longitude, over=nodes)) and not (latitude or longitude)
     message: "Must define node latitude and longitude for _all_ nodes or _no_ nodes."
@@ -28,5 +28,14 @@ fail:
 
   - where: storage_initial>1
     message: "storage_initial is a fraction; values larger than 1 are not allowed."
+
+  - where: integer_dispatch=True AND NOT cap_method=integer
+    message: Cannot use the integer `integer_dispatch` unless the technology is using an integer unit capacities (`cap_method=integer`).
+
+  - where: (flow_cap_max OR flow_cap_min) AND flow_cap_per_unit
+    message: Cannot define both `flow_cap_per_unit` and `flow_cap_max`/`flow_cap_min`
+
+  - where: (storage_cap_max OR storage_cap_min) AND storage_cap_per_unit
+    message: Cannot define both `storage_cap_per_unit` and `storage_cap_max`/`storage_cap_min`
 
 warn: []

@@ -70,16 +70,27 @@ def generate_model_config() -> dict[str, dict]:
     defaults = schema.extract_from_schema(
         schema.MODEL_SCHEMA, "default", subset_top_level="techs"
     )
+    milp_params = {
+        "flow_cap_per_unit": 1,
+        "storage_cap_per_unit": 1,
+        "cap_method": "integer",
+        "integer_dispatch": True,
+        "purchased_units_max": 2,
+        "purchased_units_min": 1,
+        "purchased_units_systemwide_max": 2,
+        "purchased_units_systemwide_min": 1,
+    }
     dummy_techs = {
         "demand_tech": {
             "parent": "demand",
             "carrier_in": "electricity",
-            "sink_equals": "df=ts",
+            "sink_use_equals": "df=ts",
         },
         "conversion_tech": {
             "parent": "conversion",
             "carrier_in": "gas",
             "carrier_out": ["electricity", "heat"],
+            **milp_params,
         },
         "supply_tech": {"parent": "supply", "carrier_out": "gas"},
         "storage_tech": {
@@ -98,7 +109,18 @@ def generate_model_config() -> dict[str, dict]:
 
     for tech_group in NONDEMAND_TECHGROUPS:
         for k, v in defaults.items():
+            if k in milp_params:
+                continue
+            if "flow_cap_per_unit" in dummy_techs[f"{tech_group}_tech"] and k in [
+                "flow_cap_max",
+                "storage_cap_max",
+                "flow_cap_min",
+                "storage_cap_min",
+            ]:
+                continue
+
             dummy_techs[f"{tech_group}_tech"][k] = _add_data(k, v)
+
     techs_at_nodes = {k: None for k in dummy_techs.keys() if k != "transmission_tech"}
     return {
         "nodes": {

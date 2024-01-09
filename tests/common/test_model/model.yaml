@@ -28,7 +28,7 @@ techs:
     carrier_out: gas
     parent: supply
     flow_cap_max: 15
-    source_max: .inf
+    source_use_max: .inf
     flow_out_eff: 0.9
 
   test_supply_elec:
@@ -37,7 +37,7 @@ techs:
     carrier_out: electricity
     parent: supply
     flow_cap_max: 10
-    source_max: .inf
+    source_use_max: .inf
     flow_out_eff: 0.9
 
   test_supply_coal:
@@ -46,7 +46,7 @@ techs:
     carrier_out: coal
     parent: supply
     flow_cap_max: 10
-    source_max: .inf
+    source_use_max: .inf
     flow_out_eff: 0.9
 
   test_supply_plus:
@@ -55,7 +55,7 @@ techs:
     carrier_out: electricity
     parent: supply
     flow_cap_max: 15
-    source_max: file=supply_plus_resource.csv
+    source_use_max: file=supply_plus_resource.csv
     source_eff: 0.9
     flow_out_eff: 0.9
     storage_cap_max: 35
@@ -131,7 +131,7 @@ techs:
     name: Demand coal tech
     carrier_in: coal
     parent: demand
-    sink_max: 10
+    sink_use_max: 10
 
   test_link_a_b_elec:
     inherit: test_transmission_elec
@@ -169,7 +169,7 @@ node_groups:
   init_nodes:
     techs:
       test_demand_elec:
-        sink_equals: file=demand_elec.csv
+        sink_use_equals: file=demand_elec.csv
 
 nodes:
   a:

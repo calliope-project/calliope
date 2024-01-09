@@ -31,12 +31,12 @@ data_sources:
     rows: timesteps
     columns: [techs, nodes]
     add_dimensions:
-      parameters: sink_equals
+      parameters: sink_use_equals
   - file: data_sources/pv_resource.csv
     rows: timesteps
     columns: [comment, scaler]
     add_dimensions:
-      parameters: source_equals]
+      parameters: source_use_equals
       techs: pv
     drop: comment
     sel_drop:

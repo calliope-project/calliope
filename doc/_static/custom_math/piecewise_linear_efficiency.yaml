@@ -6,16 +6,6 @@
 # flow_eff_piecewise_slopes (defining the new parameter `pieces`)
 # flow_eff_piecewise_intercept (defining the new parameter `pieces`)
 
-variables:
-  available_flow_cap:
-    description: Flow capacity that will be set to zero if the technology is not operating in a given timestep and will be set to the value of the decision variable `flow_cap` otherwise.
-    unit: power
-    foreach: [nodes, techs, carriers, timesteps]
-    where: flow_cap AND carrier_out AND operating_units AND NOT flow_cap_per_unit
-    bounds:
-      min: 0
-      max: flow_cap_max
-
 constraints:
   piecewise_efficiency:
     description: >
@@ -28,24 +18,3 @@ constraints:
           sum(flow_in, over=carriers) >=
           flow_eff_piecewise_slopes * sum(flow_out, over=carriers)
           + flow_eff_piecewise_intercept * sum(available_flow_cap, over=carriers)
-
-  available_flow_cap_binary:
-    description: Limit flow capacity to zero if the technology is not operating in a given timestep.
-    foreach: [nodes, techs, carriers, timesteps]
-    where: available_flow_cap
-    equations:
-      - expression: available_flow_cap <= flow_cap_max * operating_units
-
-  available_flow_cap_continuous:
-    description: Limit flow capacity to the value of the `flow_cap` decision variable when the technology is operating in a given timestep.
-    foreach: [nodes, techs, carriers, timesteps]
-    where: available_flow_cap
-    equations:
-      - expression: available_flow_cap <= flow_cap
-
-  available_flow_cap_binary_continuous_switch:
-    description: Force flow capacity to equal the value of the `flow_cap` decision variable if the technology is operating in a given timestep, zero otherwise.
-    foreach: [nodes, techs, carriers, timesteps]
-    where: available_flow_cap
-    equations:
-      - expression: available_flow_cap >= flow_cap + ((operating_units - 1) * flow_cap_max)

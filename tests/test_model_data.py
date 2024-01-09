@@ -95,17 +95,22 @@ class TestModelData:
             "carrier_in",
             "parent",
             "flow_cap_max",
-            "source_max",
+            "source_use_max",
             "flow_out_eff",
-            "sink_equals",
+            "sink_use_equals",
         }
 
     def test_add_time_dimension(self, model_data_factory_w_params: ModelDataFactory):
         assert "timesteps" not in model_data_factory_w_params.model_data.dims
         model_data_factory_w_params.add_time_dimension(None)
 
-        assert "timesteps" not in model_data_factory_w_params.model_data.source_max.dims
-        assert "timesteps" in model_data_factory_w_params.model_data.sink_equals.dims
+        assert (
+            "timesteps"
+            not in model_data_factory_w_params.model_data.source_use_max.dims
+        )
+        assert (
+            "timesteps" in model_data_factory_w_params.model_data.sink_use_equals.dims
+        )
         assert "timestep_resolution" in model_data_factory_w_params.model_data.data_vars
         assert "timestep_weights" in model_data_factory_w_params.model_data.data_vars
         for var in model_data_factory_w_params.model_data.data_vars.values():
@@ -471,7 +476,9 @@ class TestModelData:
             "A": {
                 "nodes_inheritance": "init_nodes",
                 "my_param": 1,
-                "techs": {"test_demand_elec": {"sink_equals": "file=demand_elec.csv"}},
+                "techs": {
+                    "test_demand_elec": {"sink_use_equals": "file=demand_elec.csv"}
+                },
             },
             "B": {"my_param": 2},
         }

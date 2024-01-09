@@ -52,7 +52,7 @@ techs:
     parent: supply
     inherit: interest_rate_setter
     carrier_out: electricity
-    source_max: .inf
+    source_use_max: .inf
     flow_cap_max: 2000
     lifetime: 25
     cost_flow_cap:
@@ -70,7 +70,7 @@ techs:
     parent: supply
     inherit: interest_rate_setter
     carrier_out: gas
-    source_max: .inf
+    source_use_max: .inf
     flow_cap_max: 2000
     lifetime: 25
     cost_flow_cap:
