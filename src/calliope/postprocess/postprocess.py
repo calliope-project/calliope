@@ -19,25 +19,24 @@ from calliope.util.logging import log_time
 logger = logging.getLogger(__name__)
 
 
-def postprocess_model_results(results, model_data, timings):
+def postprocess_model_results(
+    results: xr.Dataset, model_data: xr.Dataset, timings: dict
+) -> xr.Dataset:
     """
     Adds additional post-processed result variables to
     the given model results in-place. Model must have solved successfully.
 
-    Parameters
-    ----------
-    results : xarray Dataset
-        Output from the solver backend
-    model_data : xarray Dataset
-        Calliope model data, stored as calliope.Model()._model_data
-    timings : dict
-        Calliope timing dictionary, stored as calliope.Model()._timings
+    Args:
+        results (xarray.Dataset):
+            Output from the solver backend.
+        model_data (xarray.Dataset):
+            Calliope model data, stored as [calliope.Model._model_data][].
+        timings (dict):
+            Calliope timing dictionary, stored as [calliope.Model._timings][].
 
-    Returns
-    -------
-    results : xarray Dataset
-        Input results Dataset, with additional DataArray variables and removed
-        all instances of unreasonably low numbers (set by zero_threshold)
+    Returns:
+        xarray.Dataset:
+            Input results Dataset, with additional DataArray variables and all instances of unreasonably low numbers (set by zero_threshold) removed.
 
     """
     log_time(logger, timings, "post_process_start", comment="Postprocessing: started")
@@ -116,7 +115,9 @@ def capacity_factor(results, model_data, systemwide=False):
     return capacity_factors
 
 
-def systemwide_levelised_cost(results, model_data, total=False):
+def systemwide_levelised_cost(
+    results: xr.Dataset, model_data: xr.Dataset, total: bool = False
+) -> xr.DataArray:
     """
     Returns a DataArray with systemwide levelised costs for the given
     results, indexed by techs, carriers and costs if total is False,
@@ -132,16 +133,14 @@ def systemwide_levelised_cost(results, model_data, total=False):
       is temporary during levelised cost computation - the actual
       costs in the results remain untouched.
 
-    Parameters
-    ----------
-    results : xarray.Dataset
-        Model results
-    model_data : xarray.Dataset
-        Model input data
-    total : bool, optional
-        If False (default) returns per-technology levelised cost, if True,
-        returns overall system-wide levelised cost.
-
+    Args:
+        results (xarray.Dataset): Model results.
+        model_data (xarray.Dataset): Model input data.
+        total (bool, optional):
+            If False (default) returns per-technology levelised cost, if True,
+            returns overall system-wide levelised cost.
+    Returns:
+        xr.DataArray: Array of levelised costs.
     """
     # Here we scale production by timestep weight
     flow_out = results["flow_out"] * model_data.timestep_weights

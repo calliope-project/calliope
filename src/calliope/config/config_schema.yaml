@@ -2,7 +2,8 @@
 # yaml-language-server: $schema=https://json-schema.org/draft/2020-12/schema#
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
-title: All configuration options when calling Calliope models.
+title: Model configuration schema
+description: All configuration options when calling Calliope models.
 type: object
 properties:
   config:
@@ -59,7 +60,7 @@ properties:
             items:
               type: string
               description: >
-                If referring to an in-built Calliope custom math file (see documentation for available files), do not append the reference with ".yaml".
+                If referring to an inbuilt Calliope custom math file (see documentation for available files), do not append the reference with ".yaml".
                 If referring to your own custom math file, ensure the file type is given as a suffix (".yaml" or ".yml").
                 Relative paths will be assumed to be relative to the model definition file given when creating a calliope Model (`calliope.Model(model_definition=...)`)
           distance_unit:
