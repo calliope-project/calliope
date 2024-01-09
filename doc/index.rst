@@ -48,6 +48,7 @@ User guide
    user/building
    user/running
    user/analysing
+   user/math_def
    user/tutorials
    user/advanced_constraints
    user/advanced_features

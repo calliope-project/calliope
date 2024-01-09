@@ -2,11 +2,11 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
-helper_functions.py
-~~~~~~~~~~~~~~~~~~~
-
 Functions that can be used to process data in math `where` and `expression` strings.
+
+`NAME` is the function name to use in the math strings.
 """
+
 import functools
 import re
 from abc import ABC, abstractmethod
@@ -474,7 +474,7 @@ class ReduceCarrierDim(ParsingHelperFunction):
 
         Args:
             array (xr.DataArray): Expression array.
-            carrier_tier (Literal["in", "out", "in_2", "out_2", "in_3", "out_3"]): Carrier tier on which to slice the model `exists` array to find the carrier that exists for the elements of `array`.
+            flow_direction (Literal["in", "out"]): Flow direction in which to check for the existence of carrier(s) for technologies defined in `array`.
 
         Returns:
             xr.DataArray: `array` reduced by the `carriers` dimension.
