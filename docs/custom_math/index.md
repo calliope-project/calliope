@@ -19,9 +19,9 @@ Whenever we refer to a "math component" it could be a:
 * constraint (a way to limit the upper/lower bound of a decision variable using other decision variables/parameters/global expressions).
 * objective (the expression whose value you want to minimise/maximise in the optimisation).
 
-We recommend you first get an overview of the available [math components][math-components],
-then review the math formulation [syntax][math-syntax],
-before looking at how to add your own [custom math][introducing-custom-math-to-your-model] and browsing the [gallery of custom math examples][examples].
+We recommend you first review the math formulation [syntax][math-syntax],
+then get an overview of the available [math components][math-components],
+before looking at how to add your own [custom math][introducing-custom-math-to-your-model] and browsing the [gallery of custom math examples](examples.md).
 A full reference for the allowed key-value pairs in your custom math YAML file is available in the [reference section of the documentation][math-formulation-schema].
 
 !!! note
