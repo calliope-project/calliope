@@ -21,7 +21,7 @@ Whenever we refer to a "math component" it could be a:
 
 We recommend you first review the math formulation [syntax][math-syntax],
 then get an overview of the available [math components][math-components],
-before looking at how to add your own [custom math][introducing-custom-math-to-your-model] and browsing the [gallery of custom math examples](examples.md).
+before looking at how to add your own [custom math][introducing-custom-math-to-your-model] and browsing the [gallery of custom math examples](examples/).
 A full reference for the allowed key-value pairs in your custom math YAML file is available in the [reference section of the documentation][math-formulation-schema].
 
 !!! note
