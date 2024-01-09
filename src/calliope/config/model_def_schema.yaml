@@ -292,7 +292,7 @@ properties:
         file:
           description: >-
             Relative or absolute filepath.
-            If relative, will be relative to `config.init.data_sources_path`
+            If relative, will be relative to the model config file used to initialise the model.
           type: string
         add_dimensions:
           description: >-

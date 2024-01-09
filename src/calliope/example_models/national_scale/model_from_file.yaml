@@ -1,0 +1,61 @@
+import: # Import other files from paths relative to this file, or absolute paths
+  - "scenarios.yaml" # Scenario and override group definitions
+
+# Model configuration: all settings that affect the built model
+config:
+  init:
+    name: National-scale example model
+    # What version of Calliope this model is intended for
+    calliope_version: 0.7.0
+    # Time series data path - can either be a path relative to this file, or an absolute path
+    time_data_path: "timeseries_data"
+    time_subset: ["2005-01-01", "2005-01-05"] # Subset of timesteps
+
+  build:
+    ensure_feasibility: true # Switches on the "unmet demand" constraint
+    mode: plan # Choices: plan, operate
+
+  solve:
+    solver: cbc
+    zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
+
+data_sources:
+  - file: data_sources/dimensionless_params.csv
+    rows: parameters
+
+  - file: data_sources/costs_params.csv
+    rows: costs
+    columns: parameters
+
+  - file: data_sources/nodes_base_info.csv
+    rows: nodes
+    columns: parameters
+
+  - file: data_sources/techs_carriers_at_nodes.csv
+    rows: [nodes, techs]
+    columns: parameters
+    add_dimensions:
+      carriers: power
+
+  - file: data_sources/techs_costs_monetary.csv
+    rows: techs
+    columns: parameters
+    add_dimensions:
+      costs: monetary
+
+  - file: data_sources/time_varying_params.csv
+    rows: timesteps
+    columns: [comment, nodes, techs, parameters]
+    drop: comment
+
+  - file: data_sources/techs_base_info.csv
+    rows: techs
+    columns: parameters
+
+  - file: data_sources/techs_constraints.csv
+    rows: techs
+    columns: parameters
+
+  - file: data_sources/techs_node_constraints.csv
+    rows: [nodes, techs]
+    columns: parameters

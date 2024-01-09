@@ -9,7 +9,6 @@ config:
     # What version of Calliope this model is intended for
     calliope_version: 0.7.0
     # Time series data path - can either be a path relative to this file, or an absolute path
-    data_sources_path: "data_sources"
     time_subset: ["2005-07-01", "2005-07-02"] # Subset of timesteps
     custom_math: ["custom_math.yaml"]
 
@@ -28,20 +27,21 @@ parameters:
   bigM: 1e6 # setting the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
 
 data_sources:
-  - file: demand.csv
+  - file: data_sources/demand.csv
     rows: timesteps
     columns: [techs, nodes]
     add_dimensions:
       parameters: sink_equals
-  - file: pv_resource.csv
+  - file: data_sources/pv_resource.csv
     rows: timesteps
     columns: [comment, scaler]
     add_dimensions:
-      parameters: source_equals
+      parameters: source_equals]
+      techs: pv
     drop: comment
     sel_drop:
       scaler: per_area
-  - file: export_power.csv
+  - file: data_sources/export_power.csv
     rows: timesteps
     columns: nodes
     add_dimensions:

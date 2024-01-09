@@ -4,6 +4,7 @@
 import itertools
 import logging
 from copy import deepcopy
+from pathlib import Path
 from typing import Hashable, Literal, Optional
 
 import numpy as np
@@ -85,6 +86,7 @@ class ModelDataFactory:
         model_definition: ModelDefinition,
         attributes: dict,
         param_attributes: dict[str, dict],
+        model_definition_path: Optional[Path] = None,
     ):
         """Take a Calliope model definition dictionary and convert it into an xarray Dataset, ready for
         constraint generation.
@@ -100,6 +102,7 @@ class ModelDataFactory:
 
         self.config: dict = model_config
         self.model_definition: ModelDefinition = model_definition.copy()
+        self.model_def_path = model_definition_path
         self.model_data = xr.Dataset(attrs=AttrDict(attributes))
         self._tech_data_source_dict = AttrDict()
 
@@ -150,7 +153,7 @@ class ModelDataFactory:
                 if names is not None:
                     csv_reader_kwargs[axis] = [i for i, _ in enumerate(names)]
 
-            filepath = relative_path(self.config["data_sources_path"], filename)
+            filepath = relative_path(self.model_def_path, filename)
             df = pd.read_csv(filepath, encoding="latin1", **csv_reader_kwargs)
 
             for axis, names in {"columns": columns, "index": index}.items():
@@ -288,7 +291,6 @@ class ModelDataFactory:
         self.model_data, node_tech_ds
         node_ds = self._definition_dict_to_ds(active_node_dict, "nodes")
         ds = xr.merge([node_tech_ds, node_ds])
-
         self.model_data = xr.merge(
             [ds, self.model_data], compat="override", combine_attrs="no_conflicts"
         ).fillna(self.model_data)
@@ -721,7 +723,7 @@ class ModelDataFactory:
                 item_base_def, dim_name, item_name
             )
             if dim_name == "techs" and item_name in self._tech_data_source_dict:
-                _data_source_dict = self._tech_data_source_dict[item_name]
+                _data_source_dict = deepcopy(self._tech_data_source_dict[item_name])
                 _data_source_dict.union(updated_item_def, allow_override=True)
                 updated_item_def = _data_source_dict
 

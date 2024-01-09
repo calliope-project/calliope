@@ -260,15 +260,18 @@ class TestAttrDict:
         with pytest.raises(KeyError):
             d.union(d_new)
 
-    def test_union_replacement(self, attr_dict):
+    @pytest.mark.parametrize("to_replace", ["foo", [], {}, 1])
+    def test_union_replacement(self, attr_dict, to_replace):
         d = attr_dict
-        d_new = AttrDict.from_yaml_string(
-            """
-            c: {_REPLACE_: foo}
-        """
-        )
+        d_new = AttrDict.from_yaml_string(f"c._REPLACE_: {to_replace}")
         d.union(d_new, allow_override=True, allow_replacement=True)
-        assert d.c == "foo"
+        assert d.c == to_replace
+
+    def test_union_replacement_null(self, attr_dict):
+        d = attr_dict
+        d_new = AttrDict.from_yaml_string("c._REPLACE_: null")
+        d.union(d_new, allow_override=True, allow_replacement=True)
+        assert d.c is None
 
     def test_union_empty_dicts(self, attr_dict):
         d = attr_dict

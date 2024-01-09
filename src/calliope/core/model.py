@@ -189,9 +189,6 @@ class Model(object):
         init_config["time_data_path"] = relative_path(
             self._model_def_path, init_config["time_data_path"]
         )
-        init_config["data_sources_path"] = relative_path(
-            self._model_def_path, init_config["data_sources_path"]
-        )
         if init_config["time_cluster"] is not None:
             init_config["time_cluster"] = relative_path(
                 init_config["time_data_path"], init_config["time_cluster"]
@@ -205,7 +202,11 @@ class Model(object):
             "defaults": param_metadata["default"],
         }
         model_data_factory = ModelDataFactory(
-            init_config, model_definition, attributes, param_metadata
+            init_config,
+            model_definition,
+            attributes,
+            param_metadata,
+            self._model_def_path,
         )
         self._model_data = model_data_factory.build(timeseries_dataframes)
 

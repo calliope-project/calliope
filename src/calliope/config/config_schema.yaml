@@ -47,12 +47,6 @@ properties:
             type: string
             default: "."
             description: Path to time series data. If relative, it will be relative to the base model definition file.
-          data_sources_path:
-            type: string
-            default: "."
-            description: >-
-              Path to data stored in tabular format (and referenced in `data_sources`).
-              If relative, it will be relative to the base model definition file.
           time_format:
             type: string
             default: "ISO8601"
@@ -206,7 +200,7 @@ properties:
   tech_groups:
     type: [object, "null"]
     description: >-
-      Abstract technology definitions to which techs can reference using `inherit`.
+      Abstract technology definitions from which techs can `inherit`.
       See the model definition schema for more guidance on content.
     additionalProperties: false
     patternProperties: *nested_pattern
@@ -214,7 +208,7 @@ properties:
   node_groups:
     type: [object, "null"]
     description: >-
-      Abstract node definitions to which nodes can reference using `inherit`.
+      Abstract technology definitions from which nodes can `inherit`.
       See the model definition schema for more guidance on content.
     additionalProperties: false
     patternProperties: *nested_pattern

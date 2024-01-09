@@ -397,28 +397,29 @@ class TestNationalScaleResampledExampleModelSenseChecks:
 class TestUrbanScaleExampleModelSenseChecks:
     def example_tester(self, source_unit, solver="cbc", solver_io=None):
         data_sources = f"""
-            data_sources:
-            - file: demand.csv
-                rows: timesteps
-                columns: [techs, nodes]
-                add_dimensions:
-                parameters: sink_equals
-            - file: pv_resource.csv
-                rows: timesteps
-                columns: [comment, scaler]
-                add_dimensions:
-                parameters: source_equals
-                drop: comment
-                sel_drop:
-                scaler: {source_unit}
-            - file: export_power.csv
-                rows: timesteps
-                columns: nodes
-                add_dimensions:
-                parameters: cost_export
-                techs: chp
-                costs: monetary
-                carriers: electricity
+        data_sources:
+          - file: data_sources/demand.csv
+            rows: timesteps
+            columns: [techs, nodes]
+            add_dimensions:
+              parameters: sink_equals
+          - file: data_sources/pv_resource.csv
+            rows: timesteps
+            columns: [comment, scaler]
+            add_dimensions:
+              parameters: source_equals
+              techs: pv
+            drop: comment
+            sel_drop:
+              scaler: {source_unit}
+          - file: data_sources/export_power.csv
+            rows: timesteps
+            columns: nodes
+            add_dimensions:
+              parameters: cost_export
+              techs: chp
+              costs: monetary
+              carriers: electricity
         """
         unit_override = {
             "techs.pv.source_unit": source_unit,
