@@ -1,13 +1,9 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
 """
-generate_custom_math_examples.py
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 Generates a markdown file listing all custom math examples.
-
 """
+
 import tempfile
 from io import StringIO
 from pathlib import Path

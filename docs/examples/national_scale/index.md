@@ -244,5 +244,5 @@ They allow only the `csp` technology, this allows us to model three possible sit
 ```
 
 ---
-
-To try loading and solving the model yourself, see the accompanying notebook [here][running-the-national-scale-example-model]
+!!! info "Where to go next"
+    To try loading and solving the model yourself, move on to the accompanying notebook [here][running-the-national-scale-example-model].

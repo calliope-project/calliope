@@ -71,4 +71,5 @@ This constraint can also be applied to storage technologies, to similarly contro
 
 ---
 
-To try loading and solving the model yourself, see the accompanying notebook [here][running-the-milp-example-model]
+!!! info "Where to go next"
+    To try loading and solving the model yourself, move on to the accompanying notebook [here][running-the-milp-example-model].

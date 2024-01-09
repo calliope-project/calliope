@@ -1,13 +1,9 @@
+# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
+# Licensed under the Apache 2.0 License (see LICENSE file).
 """
-Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
-Licensed under the Apache 2.0 License (see LICENSE file).
-
-generate_math.py
-~~~~~~~~~~~~~~~~~
-
 Generate LaTeX math to include in the documentation.
-
 """
+
 import importlib.resources
 import tempfile
 import textwrap

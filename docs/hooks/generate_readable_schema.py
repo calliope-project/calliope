@@ -2,11 +2,7 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
-generate_readable_schema.py
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 Converts YAML schema to a readable markdown file with nested lists representing the schema properties.
-
 """
 
 import tempfile

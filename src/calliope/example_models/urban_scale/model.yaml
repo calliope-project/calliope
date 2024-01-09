@@ -30,5 +30,6 @@ parameters:
     data: 1
     index: monetary
     dims: costs
-  bigM: 1e6 # setting the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
+  # `bigM` sets the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
+  bigM: 1e6
 # --8<-- [end:parameters]

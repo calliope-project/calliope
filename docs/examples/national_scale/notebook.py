@@ -103,7 +103,7 @@ lcoes
 # These are just some examples of how to visualise Calliope data.
 
 # %%
-# We set the color mapping to use in all our plots
+# We set the color mapping to use in all our plots by extracting the colors defined in the technology definitions of our model.
 colors = model.inputs.color.to_series().to_dict()
 
 # %% [markdown]

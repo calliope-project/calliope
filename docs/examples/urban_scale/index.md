@@ -22,7 +22,7 @@ The model configuration file `model.yaml` is the place to tell Calliope about ho
 It does not contain much data, but the scaffolding with which to construct and run your model.
 
 You will notice that we load a custom math file in `config.init`.
-You can find out more about this custom math [here](#custom-math)
+You can find out more about this custom math [below][interlude-custom-math]
 
 ```yaml
 --8<-- "src/calliope/example_models/urban_scale/model.yaml:config"
@@ -42,8 +42,6 @@ The import section in our file looks like this:
 ```
 
 ## Model definition
-
-
 
 ### Top-level parameters
 
@@ -160,18 +158,22 @@ This definition in the example model's configuration is more verbose:
 
 Again, `chp` has the definitions for name, color, parent, and carrier_in/out.
 It has two carriers defined for its outflow.
-The _custom_ parameter `heat_to_power_ratio` is used to create a link between the two output carriers.
-In this case, 0.8 units of heat are produced every time a unit of electricity is produced.
-to produce these units of energy, gas consumption is only a function of electricity output.
+Note the parameter `heat_to_power_ratio`, which we set to 0.8.
+We will use this to create a link between the two output carriers.
+More importantly, it is a _custom parameter_ - Calliope itself does not define `heat_to_power_ratio`
+Therefore, for now, it will not have any effect - we need to introduce our own custom math.
+In this case, we want to ensure that 0.8 units of heat are produced every time a unit of electricity is produced.
+Furthermore, while producing these units of energy - both electricity and heat -
+we want to ensure that gas consumption is only a function of electricity output.
 
 ### :sparkles: Interlude: custom math
 
-The base Calliope math does not have the capacity to handle the `chp` technology definition.
+The base Calliope math does not have the capacity to handle our `chp` technology definition from above.
 By default, setting two output carriers would mean that the choice is _between_ those technologies (e.g., a heat pump that can produce heat _or_ cooling).
 To ensure our `chp` will be constrained as we expect, we add custom math:
 
 ```yaml
---8<-- "example_models/urban_scale/custom_math.yaml"
+--8<-- "src/calliope/example_models/urban_scale/custom_math.yaml"
 ```
 
 There are two things we have to do:
@@ -285,5 +287,5 @@ Therefore, the export "cost" for CHP is loaded from a CSV file of time-varying v
 These revenue possibilities are reflected in the technologies' and locations' definitions.
 
 ---
-
-To try loading and solving the model yourself, see the accompanying notebook [here][running-the-urban-scale-example-model]
+!!! info "Where to go next"
+    To try loading and solving the model yourself, move on to the accompanying notebook [here][running-the-urban-scale-example-model].

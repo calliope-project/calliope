@@ -19,5 +19,3 @@ The ["urban scale" example][urban-scale-example-model] builds a model for part o
 * Inheriting from technology groups
 
 The ["MILP" example][mixed-integer-linear-programming-milp-example-model] extends the urban scale example, exhibiting binary and integer decision variable functionality (extended an LP model to a MILP model).
-
-![image]("../img/transmission.svg")

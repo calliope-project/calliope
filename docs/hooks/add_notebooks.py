@@ -1,12 +1,8 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
 """
-add_notebooks.py
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Converts YAML schema to a readable markdown file with nested lists representing the schema properties.
-
+Convert plaintext example notebooks to .ipynb format and store them as `notebook.ipynb`
+in every example notebook directory in the docs.
 """
 
 import subprocess
