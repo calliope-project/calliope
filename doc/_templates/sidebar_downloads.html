@@ -1,9 +1,0 @@
-<!-- Only show downloads if they are defined, i.e. on ReadTheDocs -->
-{% if downloads is defined %}
-<h3>Downloads</h3>
-{% for type, url in downloads %}
-<a href="{{ url }}">{{ type }}</a>&nbsp;
-{% endfor %}
-{% endif %}
-
-<h3>Content</h3>
