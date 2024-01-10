@@ -23,7 +23,6 @@ def model_plots(
     filename_prefix=None,
     out_path=None,
 ):
-
     basepath = os.path.dirname(__file__)
 
     for k in plots:
