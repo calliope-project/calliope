@@ -86,6 +86,10 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Download and installation: installation.md
+  - Building a model: building.md
+  - Running a model: running.md
+  - Analysing a model: analysing.md
+  - Troubleshooting: troubleshooting.md
   - Inbuilt math:
     - index: math/index.md
   - Custom math:
@@ -108,6 +112,7 @@ nav:
       - examples/milp/notebook.py
     - examples/calliope_model_object.py
     - examples/logging.py
+  - Advanced features: advanced.md
   - Reference:
     - Command line interface: reference/cli.md
     - Python API:
