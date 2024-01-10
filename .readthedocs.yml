@@ -1,2 +1,9 @@
+version: 2
 conda:
-    file: requirements_docs.yml
+    environment: requirements_docs.yml
+build:
+  os: ubuntu-22.04
+  tools:
+    python: mambaforge-4.10
+sphinx:
+  configuration: doc/conf.py
