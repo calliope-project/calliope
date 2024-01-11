@@ -1,7 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
-import importlib.resources
 import logging
 from pathlib import Path
 from typing import Hashable, Optional
@@ -14,7 +13,7 @@ from typing_extensions import NotRequired, TypedDict
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.preprocess import model_data, time
-from calliope.util.tools import listify, relative_path
+from calliope.util.tools import listify, load_config, relative_path
 
 LOGGER = logging.getLogger(__name__)
 
@@ -55,12 +54,7 @@ class DataSourceFactory(model_data.ModelDataFactory):
         self.model_data = xr.Dataset()
         self.model_definition: ModelDefinition
         self.model_definition_path = model_definition_path
-        with importlib.resources.as_file(
-            importlib.resources.files("calliope")
-            / "config"
-            / "protected_parameters.yaml"
-        ) as f:
-            self.protected_params = AttrDict.from_yaml(f)
+        self.protected_params = load_config("protected_parameters.yaml")
 
     def load_data_sources(self) -> None:
         """Load data from the `data_sources` list into the model dataset.

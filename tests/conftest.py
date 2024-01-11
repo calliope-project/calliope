@@ -1,4 +1,3 @@
-import importlib
 from itertools import chain, combinations
 
 import numpy as np
@@ -11,7 +10,6 @@ from calliope.util.schema import CONFIG_SCHEMA, MODEL_SCHEMA, extract_from_schem
 from .common.util import build_test_model as build_model
 
 ALL_DIMS = {"nodes", "techs", "carriers", "costs", "timesteps"}
-CONFIG_DIR = importlib.resources.files("calliope") / "config"
 
 
 @pytest.fixture(
