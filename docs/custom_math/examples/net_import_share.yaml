@@ -1,14 +1,21 @@
-# Force upper limit on carrier imports within nodes or across all nodes as a share of all carrier flows at a node/across nodes.
-# Imports of transmission technologies are defined by `flow_out` (outflow from a transmission technology that originated in a remote node).
-# We assume that transmission technologies `test_transmission_elec` and `test_transmission_heat` have been defined.
-
-# New top-level parameters:
-# net_import_share
-
-# helper functions used:
-# defined (where)
-# sum (expression)
-# get_transmission_techs (expression)
+# title: Net import share
+#
+# description: |
+#     Force upper limit on carrier imports within nodes or across all nodes as a share of all carrier flows at a node/across nodes.
+#     Imports of transmission technologies are defined by `flow_out` (outflow from a transmission technology that originated in a remote node).
+#     We assume that transmission technologies `test_transmission_elec` and `test_transmission_heat` have been defined.
+#
+#     New top-level parameters:
+#
+#     - `net_import_share`
+#
+#     Helper functions used:
+#
+#     - `defined` (where)
+#     - `sum` (expression)
+#     - `get_transmission_techs` (expression)
+#
+# ---
 
 constraints:
   net_import_share_max:
