@@ -22,7 +22,7 @@ These statements can be one of the following:
 1. Checking the existence of set items in an input parameter.
 When checking the existence of an input parameter it is possible to first sum it over one or more of its dimensions; if at least one value on the summed dimension(s) is defined, then it will be considered defined in the remaining dimensions.
 
-    ??? examples annotate
+    ??? example annotate "Examples"
 
         - If you want to apply a constraint across all `nodes` and `techs`, but only for node+tech combinations where the `flow_out_eff` parameter has been defined, you would include `flow_out_eff`.
         - If you want to apply a constraint over `techs` and `timesteps`, but only for combinations where the `source_use_max` parameter has at least one `node` with a value defined, you would include `any(resource, over=nodes)`.  (1)
@@ -33,7 +33,7 @@ When checking the existence of an input parameter it is possible to first sum it
 Checks can use any of the operators: `>`, `<`, `=`, `<=`, `>=`.
 Configuration options are any that are defined in `config.build`, where you can define your own options to access in the `where` string.
 
-    ??? examples annotate
+    ??? example annotate "Examples"
 
         - If you want to apply a constraint only if the configuration option `config.build.cyclic_storage` is _True_, you would include `config.cyclic_storage=True` (`True`/`False` is case insensitive).
         - If you want to apply a constraint across all `nodes` and `techs`, but only where the `flow_eff` parameter is less than 0.5, you would include `flow_eff<0.5`.
@@ -44,7 +44,7 @@ Configuration options are any that are defined in `config.build`, where you can 
 
 1. Checking the `parent` of a technology (`storage`, `supply`, etc.) or its inheritance chain (if using `tech_groups` and the `inherit` parameter).
 
-    ??? examples
+    ??? example "Examples"
 
         - If you want to create a decision variable across only `storage` technologies, you would include `parent=storage`.
         - If you want to apply a constraint across only your own `rooftop_supply` technologies (e.g., you have defined `rooftop_supply` in `tech_groups` and your technologies `pv` and `solar_thermal` define `#!yaml inherit: rooftop_supply`), you would include `inheritance(rooftop_supply)`.
@@ -53,7 +53,7 @@ Configuration options are any that are defined in `config.build`, where you can 
 1. Subsetting a set.
 The sets available to subset are always [`nodes`, `techs`, `carriers`] + any additional sets defined by you in [`foreach`][foreach-lists].
 
-    ??? examples annotate
+    ??? example annotate "Examples"
 
         - If you want to filter `nodes` where any of a set of `techs` are defined: `defined(techs=[tech1, tech2], within=nodes, how=any)` (1).
 
@@ -65,7 +65,7 @@ These operators are case insensitive, so "and", "And", "AND" are equivalent.
 You can group statements together using the `()` brackets.
 These statements will be combined first.
 
-??? examples
+??? example "Examples"
 
     - If you want to apply a constraint for `storage` technologies if the configuration option `cyclic_storage` is activated and it is the last timestep of the series: `parent=storage and config.cyclic_storage=True and timesteps=get_val_at_index(dim=timesteps, idx=-1)`.
     - If you want to create a decision variable for the input carriers of conversion technologies: `carrier_in and parent=conversion`
@@ -85,7 +85,7 @@ These expressions are applied using standard operator precedence (BODMAS/PEMDAS,
 
 If you are defining a `constraint`, then you also need to define a comparison operator: `<=`, `>=`, or `==`.
 
-??? examples
+??? example "Examples"
 
     - If you want to limit all technology outflow to be less than 200 units: `flow_out <= 200`.
     - If you want to create a global expression which is the storage level minus a parameter defining a minimum allowed storage level: `storage - storage_cap * min_storage_level`.
@@ -139,7 +139,7 @@ equations:
       expression: ...
     ```
 
-??? examples
+??? example "Examples"
 
     - Divide by efficiency if efficiency is larger than zero, otherwise set the variable to zero:
 
