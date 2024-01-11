@@ -1,0 +1,12 @@
+# Parameters that are protected from being loaded from file within the `data_sources` tab
+to: >-
+  `to`/`from` is only valid in YAML definition.
+  Set the `carrier_in` and `carrier_out` parameters of transmission technologies at the nodes they link together to emulate their function when loading from file.
+from: >-
+  `to`/`from` is only valid in YAML definition.
+  Set the `carrier_in` and `carrier_out` parameters of transmission technologies at the nodes they link together to emulate their function when loading from file.
+definition_matrix: >-
+  `definition_matrix` is a protected array,
+  it will be generated internally based on the values you assign to the `carrier_in` and `carrier_out` parameters.
+inherit: Cannot use technology/node inheritance (`inherit`) when loading data from file.
+

@@ -28,7 +28,8 @@ from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.core import io
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess import load
-from calliope.preprocess.model_data import ModelDataFactory
+from calliope.preprocess.data_sources import DataSourceFactory
+from calliope.preprocess.model_data import ModelDefinitionToDataFactory
 from calliope.util.logging import log_time
 from calliope.util.schema import (
     CONFIG_SCHEMA,
@@ -194,12 +195,18 @@ class Model(object):
             "scenario": scenario,
             "defaults": param_metadata["default"],
         }
-        model_data_factory = ModelDataFactory(
+        data_source_factory = DataSourceFactory(
+            init_config, model_definition, self._model_def_path
+        )
+        data_source_factory.load_data_sources()
+
+        model_data_factory = ModelDefinitionToDataFactory(
             init_config,
-            model_definition,
+            data_source_factory.model_definition,
+            data_source_factory.model_data,
+            data_source_factory.tech_data_from_sources,
             attributes,
             param_metadata,
-            self._model_def_path,
         )
         self._model_data = model_data_factory.build(timeseries_dataframes)
 
