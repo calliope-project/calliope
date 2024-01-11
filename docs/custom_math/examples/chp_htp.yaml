@@ -71,6 +71,10 @@
 #       | /--                             Heat
 #       -------------------------------------->
 #       ```
+#   !!! note
+#       These constraints clash with the base math `balance_conversion` constraint.
+#       To mitigate this, we also need to update that constraint's "where" string so it doesn't build for cases (1) and (2) above.
+#       For case (3), we _change_ the `balance_conversion` constraint to link gas input with _only_ electricity output.
 #
 #   New technology-level parameters:
 #
@@ -86,6 +90,17 @@
 # ---
 
 constraints:
+
+# Update the base math `balance_conversion` constraint (see note above).
+# ~~
+  balance_conversion:
+    equations:
+      - where: NOT turbine_type
+        expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
+      - where: turbine_type=backpressure AND NOT boiler_eff
+        expression: flow_out_inc_eff[carriers=electricity] == sum(flow_in_inc_eff, over=carriers)
+# ~~
+
 # Extraction turbine constraints
 # ~~
   chp_extraction_line:
@@ -97,7 +112,7 @@ constraints:
     equations:
       - expression: >
           flow_out[carriers=electricity]
-          <= (reduce_carrier_dim(flow_in, carrier_tier=in) * energy_eff)
+          <= (sum(flow_in_inc_eff, over=carriers) * flow_out_eff[carriers=electricity])
              - (flow_out[carriers=heat] * power_loss_factor)
 
   chp_backpressure_line_min:
@@ -139,13 +154,14 @@ constraints:
     foreach: [nodes, techs, timesteps]
     where: turbine_type=backpressure AND boiler_eff
     equations:
-      - expression: >
+      - expression: >-
           flow_out[carriers=heat]
-          <= (reduce_carrier_dim(flow_in, carrier_tier=in) * boiler_eff)
-             - (flow_out[carriers=electricity] * (
-                  (boiler_eff / energy_eff) - (1 / power_to_heat_ratio)
-               )
-          )
+          <= (sum(flow_in_inc_eff, over=carriers) * boiler_eff) - (
+                flow_out[carriers=electricity] * (
+                  (boiler_eff / flow_out_eff[carriers=electricity])
+                  - (1 / power_to_heat_ratio)
+                )
+              )
 # ~~
 
 # Backpressure only

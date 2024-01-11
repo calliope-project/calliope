@@ -28,5 +28,5 @@ constraints:
     where: "flow_cap_max_relative_per_ts"
     equations:
       - expression: >
-          "flow_out <=
-          flow_cap_max_relative_per_ts * flow_cap * flow_out_parasitic_eff"
+          flow_out <=
+          flow_cap_max_relative_per_ts * flow_cap * flow_out_parasitic_eff
