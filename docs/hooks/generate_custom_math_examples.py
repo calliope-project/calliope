@@ -46,7 +46,7 @@ def on_files(files: list, config: dict, **kwargs):
     ][0]
 
     # Generate and attach the markdown files
-    for file in CUSTOM_MATH_PATH.glob("*.yaml"):
+    for file in sorted(CUSTOM_MATH_PATH.glob("*.yaml")):
         files.append(
             _process_file(file, config, nav_reference["Example custom math gallery"])
         )
