@@ -63,7 +63,6 @@ techs:
     carrier_out: electricity
     parent: supply
     flow_cap_max: 15
-    source_use_max: file=supply_plus_resource.csv
     source_eff: 0.9
     flow_out_eff: 0.9
     storage_cap_max: 35
