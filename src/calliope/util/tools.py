@@ -2,18 +2,13 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
 
-import importlib.resources
 from pathlib import Path
 from typing import Any, TypeVar
 
 from typing_extensions import ParamSpec
 
-from calliope import AttrDict
-
 P = ParamSpec("P")
 T = TypeVar("T")
-
-CONFIG_DIR = importlib.resources.files("calliope") / "config"
 
 
 def relative_path(base_path_file, path) -> Path:
@@ -50,9 +45,3 @@ def listify(var: Any) -> list:
     else:
         var = [var]
     return var
-
-
-def load_config(filename: str):
-    with importlib.resources.as_file(CONFIG_DIR / filename) as f:
-        loaded = AttrDict.from_yaml(f)
-    return loaded

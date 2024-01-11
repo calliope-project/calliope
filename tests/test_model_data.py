@@ -113,9 +113,6 @@ class TestModelData:
         )
         assert "timestep_resolution" in model_data_factory_w_params.model_data.data_vars
         assert "timestep_weights" in model_data_factory_w_params.model_data.data_vars
-        for var in model_data_factory_w_params.model_data.data_vars.values():
-            var_ = var.astype(str)
-            assert not var_.str.match(r"df=|file=").any()
 
     def test_clean_data_from_undefined_members(
         self, my_caplog, model_data_factory: ModelDataFactory
@@ -301,9 +298,7 @@ class TestModelData:
         techs_dict = AttrDict(
             {
                 "foo": {
-                    "key1": "file=foo.csv",
-                    "key2": {"data": "file=foo.csv:B"},
-                    "key3": {"data": "df=bar", "index": [["foo"]], "dims": ["foobar"]},
+                    "key3": {"data": None, "index": [["foo"]], "dims": ["foobar"]},
                     "key4": 1,
                     "key5": "foobar",
                 },
@@ -313,13 +308,7 @@ class TestModelData:
         expected_tech_dict = AttrDict(
             {
                 "foo": {
-                    "key1": "file=foo.csv:A",
-                    "key2": {"data": "file=foo.csv:B"},
-                    "key3": {
-                        "data": "df=bar:A",
-                        "index": [["foo"]],
-                        "dims": ["foobar"],
-                    },
+                    "key3": {"data": None, "index": [["foo"]], "dims": ["foobar"]},
                     "key4": 1,
                     "key5": "foobar",
                 },

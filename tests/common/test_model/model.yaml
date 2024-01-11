@@ -21,6 +21,14 @@ config:
   solve:
     solver: cbc
 
+data_sources:
+  - source: data_sources/demand_elec.csv
+    rows: timesteps
+    columns: nodes
+    add_dimensions:
+      parameters: sink_use_equals
+      techs: demand_elec
+
 techs:
   test_supply_gas:
     inherit: test_controller
@@ -164,15 +172,3 @@ tech_groups:
     carrier_out: heat
     parent: transmission
     flow_cap_max: 5
-
-node_groups:
-  init_nodes:
-    techs:
-      test_demand_elec:
-        sink_use_equals: file=demand_elec.csv
-
-nodes:
-  a:
-    inherit: init_nodes
-  b:
-    inherit: init_nodes

@@ -27,7 +27,7 @@ overrides:
       init:
         name: "National-scale example model with time clustering"
         time_subset: null # No time subsetting
-        time_cluster: cluster_days.csv
+        time_cluster: data_sources/cluster_days.csv
 
   spores:
     config:

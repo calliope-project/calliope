@@ -13,28 +13,28 @@ techs:
     to: B
 
 data_sources:
-  - file: techs_strings.csv
+  - source: techs_strings.csv
     rows: [techs, parameters]
 
-  - file: nodes.csv
+  - source: nodes.csv
     rows: parameters
     add_dimensions:
       nodes: [A, B]
 
-  - file: tech_carrier.csv
+  - source: tech_carrier.csv
     rows: [techs, carriers, parameters]
     add_dimensions:
       nodes: [A, B]
 
-  - file: techs_numeric.csv
+  - source: techs_numeric.csv
     rows: [techs, parameters]
 
-  - file: costs.csv
+  - source: costs.csv
     rows: [techs, parameters]
     add_dimensions:
       costs: monetary
 
-  - file: time_varying.csv
+  - source: time_varying.csv
     rows: timesteps
     add_dimensions:
       parameters: sink_use_max

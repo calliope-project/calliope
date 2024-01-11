@@ -28,8 +28,8 @@ from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.core import io
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess import load
-from calliope.preprocess.data_sources import DataSourceFactory
-from calliope.preprocess.model_data import ModelDefinitionToDataFactory
+from calliope.preprocess.data_sources import DataSource
+from calliope.preprocess.model_data import ModelDataFactory
 from calliope.util.logging import log_time
 from calliope.util.schema import (
     CONFIG_SCHEMA,
@@ -67,7 +67,7 @@ class Model(object):
         debug: bool = False,
         scenario: Optional[str] = None,
         override_dict: Optional[dict] = None,
-        timeseries_dataframes: Optional[dict[str, pd.DataFrame]] = None,
+        data_source_dfs: Optional[dict[str, pd.DataFrame]] = None,
         **kwargs,
     ):
         """
@@ -87,9 +87,9 @@ class Model(object):
             override_dict (dict):
                 Additional overrides to apply to `config`.
                 These will be applied *after* applying any defined `scenario` overrides.
-            timeseries_dataframes (dict[str, pd.DataFrame], optional):
-                If supplying `config` as a dictionary, in-memory timeseries data can be referred to using `df=...`.
-                The referenced data must be supplied here as a dictionary of dataframes.
+            data_source_dfs (dict[str, pd.DataFrame], optional):
+                Model definition `data_source` entries can reference in-memory pandas DataFrames.
+                The referenced data must be supplied here as a dictionary of those DataFrames.
                 Defaults to None.
         """
         self._timings: dict = {}
@@ -115,7 +115,7 @@ class Model(object):
                 model_definition, scenario, override_dict, **kwargs
             )
             self._init_from_model_def_dict(
-                model_def, applied_overrides, scenario, debug, timeseries_dataframes
+                model_def, applied_overrides, scenario, debug, data_source_dfs
             )
 
         version_def = self._model_data.attrs["calliope_version_defined"]
@@ -154,7 +154,7 @@ class Model(object):
         applied_overrides: str,
         scenario: Optional[str],
         debug: bool,
-        timeseries_dataframes: Optional[dict[str, pd.DataFrame]],
+        data_source_dfs: Optional[dict[str, pd.DataFrame]],
     ) -> None:
         """Initialise the model using a `model_run` dictionary, which may have been loaded from YAML.
 
@@ -180,13 +180,11 @@ class Model(object):
         # We won't store `init` in `self.config`, so we pop it out now.
         model_config.pop("init")
 
-        init_config["time_data_path"] = relative_path(
-            self._model_def_path, init_config["time_data_path"]
-        )
         if init_config["time_cluster"] is not None:
             init_config["time_cluster"] = relative_path(
-                init_config["time_data_path"], init_config["time_cluster"]
+                self._model_def_path, init_config["time_cluster"]
             )
+
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
         attributes = {
             "calliope_version_defined": init_config["calliope_version"],
@@ -195,20 +193,17 @@ class Model(object):
             "scenario": scenario,
             "defaults": param_metadata["default"],
         }
-        data_source_factory = DataSourceFactory(
-            init_config, model_definition, self._model_def_path
-        )
-        data_source_factory.load_data_sources()
 
-        model_data_factory = ModelDefinitionToDataFactory(
-            init_config,
-            data_source_factory.model_definition,
-            data_source_factory.model_data,
-            data_source_factory.tech_data_from_sources,
-            attributes,
-            param_metadata,
+        data_sources = [
+            DataSource(init_config, data_source, data_source_dfs, self._model_def_path)
+            for data_source in model_definition.pop("data_sources", [])
+        ]
+
+        model_data_factory = ModelDataFactory(
+            init_config, model_definition, data_sources, attributes, param_metadata
         )
-        self._model_data = model_data_factory.build(timeseries_dataframes)
+
+        self._model_data = model_data_factory.dataset
 
         log_time(
             LOGGER,

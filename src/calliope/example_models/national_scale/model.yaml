@@ -34,3 +34,9 @@ parameters:
   # `bigM` sets the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
   bigM: 1e6
 # --8<-- [end:parameters]
+
+data_sources:
+  - source: data_sources/time_varying_params.csv
+    rows: timesteps
+    columns: [comment, nodes, techs, parameters]
+    drop: comment

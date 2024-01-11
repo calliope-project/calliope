@@ -14,7 +14,7 @@ from typing_extensions import NotRequired, TypedDict
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.preprocess import time
+from calliope.preprocess import data_sources, time
 from calliope.util.schema import MODEL_SCHEMA, validate_dict
 from calliope.util.tools import listify
 
@@ -41,88 +41,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class ModelDataFactory:
-    def __init__(
-        self,
-        model_config: dict,
-        model_definition: ModelDefinition,
-        tech_data_from_sources: dict,
-    ):
-        """Take a Calliope model definition dictionary and convert it into an xarray Dataset, ready for
-        constraint generation.
-
-        This includes extracting timeseries data from file and resampling/clustering as necessary.
-
-        Args:
-            model_config (dict): Model initialisation configuration (i.e., `config.init`).
-            model_definition (ModelDefinition): Definition of model nodes and technologies as a dictionary.
-            attributes (dict): Attributes to attach to the model Dataset.
-            param_attributes (dict[str, dict]): Attributes to attach to the generated model DataArrays.
-        """
-
-        self.config: dict = model_config
-        self.model_definition: ModelDefinition = model_definition.copy()
-        self.tech_data_from_sources: AttrDict = AttrDict(tech_data_from_sources)
-
-    def climb_inheritance_tree(
-        self,
-        dim_item_dict: AttrDict,
-        dim_name: Literal["nodes", "techs"],
-        item_name: str,
-        inheritance: Optional[list] = None,
-    ) -> tuple[AttrDict, Optional[list]]:
-        """Follow the `inherit` references from `nodes` to `node_groups` / from `techs` to `tech_groups`.
-
-        Abstract group definitions (those in `node_groups`/`tech_groups`) can inherit each other, but `nodes`/`techs` cannot.
-
-        This function will be called recursively until a definition dictionary without `inherit` is reached.
-
-        Args:
-            dim_item_dict (AttrDict):
-                Dictionary (possibly) containing `inherit`. If it doesn't contain `inherit`, the climbing stops here.
-            dim_name (Literal[nodes, techs]):
-                The name of the dimension we're working with, so that we can access the correct `_groups` definitions.
-            item_name (str):
-                The current position in the inheritance tree.
-            inheritance (Optional[list], optional):
-                A list of items that have been inherited (starting with the oldest).
-                If the first `dim_item_dict` does not contain `inherit`, this will remain as None.
-                Defaults to None.
-
-        Raises:
-            KeyError: Must inherit from a named group item in `node_groups` (for `nodes`) and `tech_groups` (for `techs`)
-
-        Returns:
-            tuple[AttrDict, Optional[list]]: Definition dictionary with inherited data and a list of the inheritance tree climbed to get there.
-        """
-
-        to_inherit = dim_item_dict.get("inherit", None)
-        dim_groups = AttrDict(
-            self.model_definition.get(f"{dim_name.removesuffix('s')}_groups", {})
-        )
-        if to_inherit is None:
-            if dim_name == "techs" and item_name in self.tech_data_from_sources:
-                _data_source_dict = deepcopy(self.tech_data_from_sources[item_name])
-                _data_source_dict.union(dim_item_dict, allow_override=True)
-                dim_item_dict = _data_source_dict
-            updated_dim_item_dict = dim_item_dict
-        elif to_inherit not in dim_groups:
-            raise KeyError(
-                f"({dim_name}, {item_name}) | Cannot find `{to_inherit}` in inheritance tree."
-            )
-        else:
-            base_def_dict, inheritance = self.climb_inheritance_tree(
-                dim_groups[to_inherit], dim_name, to_inherit, inheritance
-            )
-            updated_dim_item_dict = deepcopy(base_def_dict)
-            updated_dim_item_dict.union(dim_item_dict, allow_override=True)
-            if inheritance is not None:
-                inheritance.append(to_inherit)
-            else:
-                inheritance = [to_inherit]
-        return updated_dim_item_dict, inheritance
-
-
-class ModelDefinitionToDataFactory(ModelDataFactory):
     # TODO: move into yaml syntax and have it be updatable
     LOOKUP_PARAMS = {
         "carrier_in": "carriers",
@@ -148,24 +66,28 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
         self,
         model_config: dict,
         model_definition: ModelDefinition,
-        initial_model_data: xr.Dataset,
-        tech_data_from_sources: dict,
+        data_sources: list[data_sources.DataSource],
         attributes: dict,
         param_attributes: dict[str, dict],
     ):
         """Take a Calliope model definition dictionary and convert it into an xarray Dataset, ready for
         constraint generation.
 
-        This includes extracting timeseries data from file and resampling/clustering as necessary.
+        This includes resampling/clustering timeseries data as necessary.
 
         Args:
             model_config (dict): Model initialisation configuration (i.e., `config.init`).
-            model_definition (ModelDefinition): Definition of model nodes and technologies as a dictionary.
+            model_definition (ModelDefinition): Definition of model nodes and technologies, and their potential inheritance `groups`.
+            data_sources (list[data_sources.DataSource]): Pre-loaded data sources that will be used to initialise the dataset before handling definitions given in `model_definition`.
             attributes (dict): Attributes to attach to the model Dataset.
             param_attributes (dict[str, dict]): Attributes to attach to the generated model DataArrays.
         """
-        super().__init__(model_config, model_definition, tech_data_from_sources)
-        self.model_data = initial_model_data.assign_attrs(AttrDict(attributes))
+
+        self.config: dict = model_config
+        self.model_definition: ModelDefinition = model_definition.copy()
+        self.dataset = xr.Dataset(attrs=AttrDict(attributes))
+        self.tech_data_from_sources = AttrDict()
+        self.init_from_data_sources(data_sources)
 
         flipped_attributes: dict[str, dict] = dict()
         for key, val in param_attributes.items():
@@ -174,24 +96,46 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
                 flipped_attributes[subkey][key] = subval
         self.param_attrs = flipped_attributes
 
-    def build(self, timeseries_dfs: Optional[dict[str, pd.DataFrame]]) -> xr.Dataset:
-        """Main function used by the calliope Model object to invoke the factory and get it churning out a model dataset.
-
-        Args:
-            timeseries_dfs (Optional[dict[str, pd.DataFrame]]): If loading data from pre-loaded dataframes, they need to be provided here.
-
-        Returns:
-            xr.Dataset: Built model dataset, including the timeseries dimension.
-        """
         self.add_node_tech_data()
-        self.add_time_dimension(timeseries_dfs)
+        self.add_time_dimension()
         self.add_top_level_params()
         self.clean_data_from_undefined_members()
         self.add_colors()
         self.add_link_distances()
         self.resample_time_dimension()
         self.assign_input_attr()
-        return self.model_data
+
+    def init_from_data_sources(self, data_sources: list[data_sources.DataSource]):
+        """Initialise the model definition and dataset using data loaded from file / in-memory objects.
+
+        A basic skeleton of the dictionary format model definition is created from the data sources,
+        namely technology and technology-at-node lists (without parameter definitions).
+
+        Args:
+            data_sources (list[data_sources.DataSource]): Pre-loaded data sources.
+        """
+        for data_source in data_sources:
+            tech_dict, base_tech_data = data_source.tech_dict()
+            tech_dict.union(
+                self.model_definition.get("techs", AttrDict()), allow_override=True
+            )
+            self.model_definition["techs"] = tech_dict
+            self.tech_data_from_sources.union(base_tech_data)
+
+        techs_incl_inheritance = self._inherit_defs("techs")
+        for data_source in data_sources:
+            node_dict = data_source.node_dict(
+                techs_incl_inheritance, self.tech_data_from_sources
+            )
+            node_dict.union(
+                self.model_definition.get("nodes", AttrDict()), allow_override=True
+            )
+            self.model_definition["nodes"] = node_dict
+
+        self.dataset = xr.merge(
+            [self.dataset, *[data_source.dataset for data_source in data_sources]],
+            combine_attrs="no_conflicts",
+        )
 
     def add_node_tech_data(self):
         """For each node, extract technology definitions and node-level parameters and convert them to arrays.
@@ -252,12 +196,12 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
         validate_dict(
             {"nodes": active_node_dict}, MODEL_SCHEMA, "node (non-tech) definition"
         )
-        self.model_data, node_tech_ds
+        self.dataset, node_tech_ds
         node_ds = self._definition_dict_to_ds(active_node_dict, "nodes")
         ds = xr.merge([node_tech_ds, node_ds])
-        self.model_data = xr.merge(
-            [ds, self.model_data], compat="override", combine_attrs="no_conflicts"
-        ).fillna(self.model_data)
+        self.dataset = xr.merge(
+            [ds, self.dataset], compat="override", combine_attrs="no_conflicts"
+        ).fillna(self.dataset)
 
     def add_top_level_params(self):
         """Process any parameters defined in the top-level `parameters` key.
@@ -269,7 +213,7 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
         if "parameters" not in self.model_definition:
             return None
         for param_name, param_data in self.model_definition["parameters"].items():
-            if param_name in self.model_data.data_vars:
+            if param_name in self.dataset.data_vars:
                 raise KeyError(
                     f"Trying to add top-level parameter with same name as a node/tech level parameter: {param_name}"
                 )
@@ -288,57 +232,48 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
                     f" the following combinations of techs at nodes in your model definition: {valid_node_techs.index.values}"
                 )
 
-            self.model_data = self.model_data.merge(param_ds)
+            self.dataset = self.dataset.merge(param_ds)
 
-    def add_time_dimension(self, timeseries_dfs: Optional[dict[str, pd.DataFrame]]):
+    def add_time_dimension(self):
         """Process file/dataframe references in the model data and use it to expand the model to include a time dimension.
-
-        Args:
-            timeseries_dfs (Optional[dict[str, pd.DataFrame]]):
-                Reference to pre-loaded pandas.DataFrame objects, if any reference to them in the model definition (`via df=`).
 
         Raises:
             exceptions.ModelError: The model has to have a time dimension, so at least one reference must exist.
         """
-        self.model_data = time.add_time_dimension(
-            self.model_data, self.config, timeseries_dfs
-        )
-        if "timesteps" not in self.model_data:
+        if "timesteps" not in self.dataset:
             raise exceptions.ModelError(
                 "Must define at least one timeseries parameter in a Calliope model."
             )
-        self.model_data = time.add_inferred_time_params(self.model_data)
+        self.dataset = time.add_inferred_time_params(self.dataset)
 
     def resample_time_dimension(self):
         """If resampling/clustering is requested in the initialisation config, apply it here."""
         if self.config["time_resample"] is not None:
-            self.model_data = time.resample(
-                self.model_data, self.config["time_resample"]
-            )
+            self.dataset = time.resample(self.dataset, self.config["time_resample"])
         if self.config["time_cluster"] is not None:
-            self.model_data = time.cluster(
-                self.model_data, self.config["time_cluster"], self.config["time_format"]
+            self.dataset = time.cluster(
+                self.dataset, self.config["time_cluster"], self.config["time_format"]
             )
 
     def clean_data_from_undefined_members(self):
         """Generate the `definition_matrix` array and use it to strip out any dimension items that are NaN in all arrays and any arrays that are NaN in all index positions."""
         def_matrix = (
-            self.model_data.carrier_in.notnull() | self.model_data.carrier_out.notnull()
+            self.dataset.carrier_in.notnull() | self.dataset.carrier_out.notnull()
         )
         # NaNing values where they are irrelevant requires definition_matrix to be boolean
-        for var_name, var_data in self.model_data.data_vars.items():
+        for var_name, var_data in self.dataset.data_vars.items():
             non_dims = set(def_matrix.dims).difference(var_data.dims)
-            self.model_data[var_name] = var_data.where(def_matrix.any(non_dims))
+            self.dataset[var_name] = var_data.where(def_matrix.any(non_dims))
 
         # dropping index values where they are irrelevant requires definition_matrix to be NaN where False
-        self.model_data["definition_matrix"] = def_matrix.where(def_matrix)
+        self.dataset["definition_matrix"] = def_matrix.where(def_matrix)
         for dim in def_matrix.dims:
-            orig_dim_vals = set(self.model_data.coords[dim].data)
-            self.model_data = self.model_data.dropna(
+            orig_dim_vals = set(self.dataset.coords[dim].data)
+            self.dataset = self.dataset.dropna(
                 dim, how="all", subset=["definition_matrix"]
             )
             deleted_dim_vals = orig_dim_vals.difference(
-                set(self.model_data.coords[dim].data)
+                set(self.dataset.coords[dim].data)
             )
             if deleted_dim_vals:
                 LOGGER.debug(
@@ -346,16 +281,16 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
                 )
 
         # The boolean version of definition_matrix is what we keep
-        self.model_data["definition_matrix"] = def_matrix
+        self.dataset["definition_matrix"] = def_matrix
 
         vars_to_delete = [
             var_name
-            for var_name, var in self.model_data.data_vars.items()
+            for var_name, var in self.dataset.data_vars.items()
             if var.isnull().all()
         ]
         if vars_to_delete:
             LOGGER.debug(f"Deleting empty parameters: {vars_to_delete}")
-        self.model_data = self.model_data.drop_vars(vars_to_delete)
+        self.dataset = self.dataset.drop_vars(vars_to_delete)
 
     def add_link_distances(self):
         """If latitude/longitude are provided but distances between nodes have not been computed, compute them now.
@@ -365,23 +300,23 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
         """
         # If no distance was given, we calculate it from coordinates
         if (
-            "latitude" in self.model_data.data_vars
-            and "longitude" in self.model_data.data_vars
+            "latitude" in self.dataset.data_vars
+            and "longitude" in self.dataset.data_vars
         ):
             geod = geodesic.Geodesic.WGS84
             distances = {}
-            for tech in self.model_data.techs:
-                if self.model_data.parent.sel(techs=tech).item() != "transmission":
+            for tech in self.dataset.techs:
+                if self.dataset.parent.sel(techs=tech).item() != "transmission":
                     continue
-                tech_def = self.model_data.definition_matrix.sel(techs=tech).any(
+                tech_def = self.dataset.definition_matrix.sel(techs=tech).any(
                     "carriers"
                 )
                 node1, node2 = tech_def.where(tech_def).dropna("nodes").nodes.values
                 distances[tech.item()] = geod.Inverse(
-                    self.model_data.latitude.sel(nodes=node1).item(),
-                    self.model_data.longitude.sel(nodes=node1).item(),
-                    self.model_data.latitude.sel(nodes=node2).item(),
-                    self.model_data.longitude.sel(nodes=node2).item(),
+                    self.dataset.latitude.sel(nodes=node1).item(),
+                    self.dataset.longitude.sel(nodes=node1).item(),
+                    self.dataset.latitude.sel(nodes=node2).item(),
+                    self.dataset.longitude.sel(nodes=node2).item(),
                 )["s12"]
             distance_array = pd.Series(distances).rename_axis(index="techs").to_xarray()
             if self.config["distance_unit"] == "km":
@@ -392,15 +327,13 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
             )
             return None
 
-        if "distance" not in self.model_data.data_vars:
-            self.model_data["distance"] = distance_array
+        if "distance" not in self.dataset.data_vars:
+            self.dataset["distance"] = distance_array
             LOGGER.debug(
                 "Link distance matrix automatically computed from lat/lon coordinates."
             )
         else:
-            self.model_data["distance"] = self.model_data["distance"].fillna(
-                distance_array
-            )
+            self.dataset["distance"] = self.dataset["distance"].fillna(distance_array)
             LOGGER.debug(
                 "Any missing link distances automatically computed from lat/lon coordinates."
             )
@@ -411,8 +344,8 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
         This is a convenience function for downstream plotting.
         Since we have removed core plotting components from Calliope, it is not a strictly necessary preprocessing step.
         """
-        techs = self.model_data.techs
-        color_array = self.model_data.get("color")
+        techs = self.dataset.techs
+        color_array = self.dataset.get("color")
         default_palette_cycler = itertools.cycle(range(len(self._DEFAULT_PALETTE)))
         new_color_array = xr.DataArray(
             [self._DEFAULT_PALETTE[next(default_palette_cycler)] for tech in techs],
@@ -420,17 +353,17 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
         )
         if color_array is None:
             LOGGER.debug("Building technology color array from default palette.")
-            self.model_data["color"] = new_color_array
+            self.dataset["color"] = new_color_array
         elif color_array.isnull().any():
             LOGGER.debug(
                 "Filling missing technology color array values from default palette."
             )
-            self.model_data["color"] = self.model_data["color"].fillna(new_color_array)
+            self.dataset["color"] = self.dataset["color"].fillna(new_color_array)
 
     def assign_input_attr(self):
         """All input parameters need to be assigned the `is_result=False` attribute to be able to filter the arrays in the calliope.Model object."""
-        for var_name, var_data in self.model_data.data_vars.items():
-            self.model_data[var_name] = var_data.assign_attrs(
+        for var_name, var_data in self.dataset.data_vars.items():
+            self.dataset[var_name] = var_data.assign_attrs(
                 is_result=False, **self.param_attrs.get(var_name, {})
             )
 
@@ -450,13 +383,6 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
             list[str]: List of parameters at this node that must be indexed over the node dimension.
         """
         refs = set()
-        for key, val in techs_dict.as_dict_flat().items():
-            if (
-                isinstance(val, str)
-                and val.startswith(("file=", "df="))
-                and ":" not in val
-            ):
-                techs_dict.set_key(key, val + ":" + node)
 
         for tech_name, tech_dict in techs_dict.items():
             if tech_dict is None or not tech_dict.get("active", True):
@@ -615,7 +541,7 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
                 item_base_def.union(item_def, allow_override=True)
             else:
                 item_base_def = item_def
-            updated_item_def, inheritance = self.climb_inheritance_tree(
+            updated_item_def, inheritance = self._climb_inheritance_tree(
                 item_base_def, dim_name, item_name
             )
 
@@ -634,17 +560,75 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
 
         return updated_defs
 
+    def _climb_inheritance_tree(
+        self,
+        dim_item_dict: AttrDict,
+        dim_name: Literal["nodes", "techs"],
+        item_name: str,
+        inheritance: Optional[list] = None,
+    ) -> tuple[AttrDict, Optional[list]]:
+        """Follow the `inherit` references from `nodes` to `node_groups` / from `techs` to `tech_groups`.
+
+        Abstract group definitions (those in `node_groups`/`tech_groups`) can inherit each other, but `nodes`/`techs` cannot.
+
+        This function will be called recursively until a definition dictionary without `inherit` is reached.
+
+        Args:
+            dim_item_dict (AttrDict):
+                Dictionary (possibly) containing `inherit`. If it doesn't contain `inherit`, the climbing stops here.
+            dim_name (Literal[nodes, techs]):
+                The name of the dimension we're working with, so that we can access the correct `_groups` definitions.
+            item_name (str):
+                The current position in the inheritance tree.
+            inheritance (Optional[list], optional):
+                A list of items that have been inherited (starting with the oldest).
+                If the first `dim_item_dict` does not contain `inherit`, this will remain as None.
+                Defaults to None.
+
+        Raises:
+            KeyError: Must inherit from a named group item in `node_groups` (for `nodes`) and `tech_groups` (for `techs`)
+
+        Returns:
+            tuple[AttrDict, Optional[list]]: Definition dictionary with inherited data and a list of the inheritance tree climbed to get there.
+        """
+
+        to_inherit = dim_item_dict.get("inherit", None)
+        dim_groups = AttrDict(
+            self.model_definition.get(f"{dim_name.removesuffix('s')}_groups", {})
+        )
+        if to_inherit is None:
+            if dim_name == "techs" and item_name in self.tech_data_from_sources:
+                _data_source_dict = deepcopy(self.tech_data_from_sources[item_name])
+                _data_source_dict.union(dim_item_dict, allow_override=True)
+                dim_item_dict = _data_source_dict
+            updated_dim_item_dict = dim_item_dict
+        elif to_inherit not in dim_groups:
+            raise KeyError(
+                f"({dim_name}, {item_name}) | Cannot find `{to_inherit}` in inheritance tree."
+            )
+        else:
+            base_def_dict, inheritance = self._climb_inheritance_tree(
+                dim_groups[to_inherit], dim_name, to_inherit, inheritance
+            )
+            updated_dim_item_dict = deepcopy(base_def_dict)
+            updated_dim_item_dict.union(dim_item_dict, allow_override=True)
+            if inheritance is not None:
+                inheritance.append(to_inherit)
+            else:
+                inheritance = [to_inherit]
+        return updated_dim_item_dict, inheritance
+
     def _deactivate_item(self, **item_ref):
         for dim_name, item_name in item_ref.items():
-            if item_name not in self.model_data.coords.get(dim_name, xr.DataArray()):
+            if item_name not in self.dataset.coords.get(dim_name, xr.DataArray()):
                 return None
         if len(item_ref) == 1:
-            self.model_data = self.model_data.drop_sel(**item_ref)
+            self.dataset = self.dataset.drop_sel(**item_ref)
         else:
-            if "carrier_in" in self.model_data:
-                self.model_data["carrier_in"].loc[item_ref] = np.nan
-            if "carrier_out" in self.model_data:
-                self.model_data["carrier_out"].loc[item_ref] = np.nan
+            if "carrier_in" in self.dataset:
+                self.dataset["carrier_in"].loc[item_ref] = np.nan
+            if "carrier_out" in self.dataset:
+                self.dataset["carrier_out"].loc[item_ref] = np.nan
 
     def _links_to_node_format(self, active_node_dict: AttrDict) -> AttrDict:
         """Process `transmission` techs into links by assigned them to the nodes defined by their `from` and `to` keys.
@@ -677,7 +661,7 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
             node_from, node_to = link_data.pop("from"), link_data.pop("to")
             nodes_exists = all(
                 node in active_node_dict
-                or node_from in self.model_data.coords.get("nodes", xr.DataArray())
+                or node_from in self.dataset.coords.get("nodes", xr.DataArray())
                 for node in [node_from, node_to]
             )
             if not nodes_exists:
@@ -715,8 +699,8 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
 
         to_update = {}
         for coord_name, coord_data in param_da.coords.items():
-            coord_in_model = coord_name in self.model_data.coords
-            if coord_in_model and self.model_data[coord_name].dtype.kind == "M":
+            coord_in_model = coord_name in self.dataset.coords
+            if coord_in_model and self.dataset[coord_name].dtype.kind == "M":
                 to_update[coord_name] = pd.to_datetime(coord_data, format="ISO8601")
             elif not coord_in_model:
                 try:
@@ -740,13 +724,13 @@ class ModelDefinitionToDataFactory(ModelDataFactory):
             param_da (xr.DataArray): array of parameter data.
         """
         for coord_name, coord_data in param_da.coords.items():
-            if coord_name not in self.model_data.coords:
+            if coord_name not in self.dataset.coords:
                 LOGGER.debug(
                     f"(parameters, {param_name}) | Adding a new dimension to the model: {coord_name}"
                 )
             else:
                 new_coord_data = coord_data[
-                    ~coord_data.isin(self.model_data.coords[coord_name])
+                    ~coord_data.isin(self.dataset.coords[coord_name])
                 ]
                 if new_coord_data.size > 0:
                     LOGGER.debug(

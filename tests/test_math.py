@@ -656,9 +656,28 @@ class TestNetImportShare(CustomMathExamples):
     YAML_FILEPATH = "net_import_share.yaml"
     shared_overrides = {
         "parameters.net_import_share": 1.5,
-        "nodes.c.techs": {
-            "test_demand_heat": {"sink_use_equals": "file=demand_heat.csv:a"}
-        },
+        "data_sources": [
+            {
+                "source": "data_sources/demand_elec.csv",
+                "rows": "timesteps",
+                "columns": "nodes",
+                "add_dimensions": {
+                    "parameters": "sink_use_equals",
+                    "techs": "demand_elec",
+                },
+            },
+            {
+                "source": "data_sources/demand_heat.csv",
+                "rows": "timesteps",
+                "columns": "nodes",
+                "sel_drop": {"nodes": "a"},
+                "add_dimensions": {
+                    "parameters": "sink_use_equals",
+                    "techs": "demand_elec",
+                    "nodes": "c",
+                },
+            },
+        ],
         "techs": {
             "links_a_c_heat": {
                 "from": "a",

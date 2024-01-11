@@ -1,0 +1,69 @@
+
+# yaml-language-server: $schema=https://json-schema.org/draft/2020-12/schema#
+
+$schema: https://json-schema.org/draft/2020-12/schema#
+$id: data_source_schema.yaml
+title: Data source schema
+description: All options available to load a model definition data from file.
+type: object
+additionalProperties: false
+$defs:
+  DataSourceVals:
+    oneOf:
+      - type: string
+        pattern: '^[^_^\d][\w]*$'
+      - type: array
+        uniqueItems: true
+        items:
+          type: string
+          pattern: '^[^_^\d][\w]*$'
+
+properties:
+  type: object
+  description: Reference to a file from which to load parts (or all) of the model definition.
+  additionalProperties: false
+  required: ["source"]
+  properties:
+    rows:
+      description: >-
+        Names of dimensions defined row-wise.
+        Each name should correspond to a column in your data that contains index items.
+        These columns must be to the left of the columns containing your data.
+      $ref: "#/$defs/DataSourceVals"
+    columns:
+      description:  >-
+        Names of dimensions defined column-wise.
+        Each name should correspond to a row in your data that contains index items.
+        These rows must be above the rows containing your data.
+      $ref: "#/$defs/DataSourceVals"
+    source:
+      description: >-
+        Relative or absolute filepath.
+        If relative, will be relative to the model config file used to initialise the model.
+      type: string
+    add_dimensions:
+      description: >-
+        Data dimensions to add after loading in the array.
+        These allow you to use the same file to assign values to different parameters/dimension index items
+        (e.g., setting `flow_cap_min` and `flow_cap_max` to the same value),
+        or to add a dimension which would otherwise be a column containing the same information in each row
+        (e.g., assigning the cost class to monetary for a file containing cost data).
+      type: object
+      additionalProperties: false
+      patternProperties:
+        '^[^_^\d][\w]*$':
+          description: Keys are dimension names (must not be in `rows` or `columns`), values are index items of that dimension to add.
+          $ref: "#/$defs/DataSourceVals"
+    drop:
+      $ref: "#/$defs/DataSourceVals"
+      description: >-
+        Dimensions in the rows and/or columns that contain metadata and should therefore not be passed on to the loaded model dataset.
+        These could include comments on the source of the data, the data license, or the parameter units.
+    sel_drop:
+      type: object
+      description: >-
+        Drop rows and/or columns by selecting an index item.
+        After selecting the index item, the named dimension will be removed from the loaded dataset.
+      properties:
+        '^[^_^\d][\w]*$':
+          type: [string, boolean, number]

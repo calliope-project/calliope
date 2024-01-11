@@ -92,15 +92,20 @@ class TestResampling:
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
         override = {
-            "techs.test_demand_elec.sink_use_equals": "file=demand_elec_15mins.csv"
+            "data_sources": [
+                {
+                    "source": "data_sources/demand_elec_15mins.csv",
+                    "rows": "timesteps",
+                    "columns": "nodes",
+                    "add_dimensions": {
+                        "parameters": "sink_use_equals",
+                        "techs": "demand_elec",
+                    },
+                }
+            ]
         }
 
-        model = build_test_model(
-            override,
-            scenario="simple_supply",
-            time_resample="6H",
-            time_subset=["2005-01-01", "2005-01-03"],
-        )
+        model = build_test_model(override, scenario="simple_supply", time_resample="6H")
         data = model._model_data
 
         dtindex = pd.DatetimeIndex(
@@ -113,10 +118,6 @@ class TestResampling:
                 "2005-01-02 06:00:00",
                 "2005-01-02 12:00:00",
                 "2005-01-02 18:00:00",
-                "2005-01-03 00:00:00",
-                "2005-01-03 06:00:00",
-                "2005-01-03 12:00:00",
-                "2005-01-03 18:00:00",
             ]
         )
 
@@ -128,7 +129,17 @@ class TestResampling:
         CSV has daily timeseries varying from 15min to 2h resolution, resample all to 2h
         """
         override = {
-            "techs.test_demand_elec.sink_use_equals": "file=demand_elec_15T_to_2h.csv"
+            "data_sources": [
+                {
+                    "source": "data_sources/demand_elec_15T_to_2h.csv",
+                    "rows": "timesteps",
+                    "columns": "nodes",
+                    "add_dimensions": {
+                        "parameters": "sink_use_equals",
+                        "techs": "demand_elec",
+                    },
+                }
+            ]
         }
 
         model = build_test_model(

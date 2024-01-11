@@ -1,4 +1,5 @@
 from itertools import chain, combinations
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -30,6 +31,11 @@ def config_defaults():
 @pytest.fixture(scope="session")
 def model_defaults():
     return AttrDict(extract_from_schema(MODEL_SCHEMA, "default"))
+
+
+@pytest.fixture(scope="session")
+def data_source_dir():
+    return Path(__file__).parent / "common" / "test_model" / "data_sources"
 
 
 @pytest.fixture(scope="session")

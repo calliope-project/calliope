@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import pytest
 from calliope.attrdict import AttrDict
-from pytest import approx
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
@@ -230,62 +229,137 @@ class TestModelRun:
                 scenario="simple_supply",
             )
 
-    def test_incorrect_date_format(self):
+    def test_change_date_format(self):
         """
         Test the date parser catches a different date format from file than
         user input/default (inc. if it is just one line of a file that is incorrect)
         """
 
         # should pass: changing datetime format from default
-        override1 = {
-            "config.init.time_format": "%d/%m/%Y %H:%M:%S",
-            "node_groups.init_nodes.techs.test_demand_elec.sink_use_equals": "file=demand_heat_diff_dateformat.csv",
-            "nodes.a.techs.test_demand_heat.sink_use_equals": "file=demand_heat_diff_dateformat.csv",
-            "nodes.b.techs.test_demand_heat.sink_use_equals": "file=demand_heat_diff_dateformat.csv",
-        }
-        model = build_model(override_dict=override1, scenario="simple_conversion")
+        override = AttrDict.from_yaml_string(
+            """
+            config.init.time_format: "%d/%m/%Y %H:%M:%S"
+            data_sources:
+                - source: data_sources/demand_heat_diff_dateformat.csv
+                  rows: timesteps
+                  columns: nodes
+                  add_dimensions:
+                  parameters: sink_use_equals
+                  techs: test_demand_elec
+                - source: data_sources/demand_heat_diff_dateformat.csv
+                  rows: timesteps
+                  columns: nodes
+                  add_dimensions:
+                  parameters: sink_use_equals
+                  techs: test_demand_heat
+        """
+        )
+        model = build_model(override_dict=override, scenario="simple_conversion")
         assert all(
             model.inputs.timesteps.to_index()
             == pd.date_range("2005-01", "2005-01-02 23:00:00", freq="H")
         )
 
+    def test_incorrect_date_format_one(self):
         # should fail: wrong dateformat input for one file
-        override2 = {
-            "node_groups.init_nodes.techs.test_demand_elec.sink_use_equals": "file=demand_heat_diff_dateformat.csv"
-        }
+        override = AttrDict.from_yaml_string(
+            """
+        data_sources:
+            - source: data_sources/demand_heat_diff_dateformat.csv
+              rows: timesteps
+              columns: nodes
+              add_dimensions:
+              parameters: sink_use_equals
+              techs: demand_elec
+            - source: data_sources/demand_heat.csv
+              rows: timesteps
+              columns: nodes
+              add_dimensions:
+              parameters: sink_use_equals
+              techs: test_demand_heat
+        """
+        )
 
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override2, scenario="simple_conversion")
+            build_model(override_dict=override, scenario="simple_conversion")
 
+    def test_incorrect_date_format_multi(self):
         # should fail: wrong dateformat input for all files
         override3 = {"config.init.time_format": "%d/%m/%Y %H:%M:%S"}
 
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override3, scenario="simple_supply")
 
+    def test_incorrect_date_format_one_value_only(self):
         # should fail: one value wrong in file
-        override4 = {
-            "node_groups.init_nodes.techs.test_demand_elec.sink_use_equals": "file=demand_heat_wrong_dateformat.csv"
-        }
+        override = AttrDict.from_yaml_string(
+            """
+        data_sources:
+            - source: data_sources/demand_heat_wrong_dateformat.csv
+              rows: timesteps
+              columns: nodes
+              add_dimensions:
+              parameters: sink_use_equals
+              techs: demand_elec
+            - source: data_sources/demand_heat.csv
+              rows: timesteps
+              columns: nodes
+              add_dimensions:
+              parameters: sink_use_equals
+              techs: test_demand_heat
+        """
+        )
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override4, scenario="simple_conversion")
+            build_model(override_dict=override, scenario="simple_conversion")
 
-    def test_inconsistent_time_indeces(self):
+    def test_inconsistent_time_indices_fails(self):
         """
         Test that, including after any time subsetting, the indices of all time
         varying input data are consistent with each other
         """
         # should fail: wrong length of demand_heat csv vs demand_elec
-        override1 = {
-            "node_groups.init_nodes.techs.test_demand_elec.sink_use_equals": "file=demand_heat_wrong_length.csv"
-        }
+        override = AttrDict.from_yaml_string(
+            """
+        data_sources:
+            - source: data_sources/demand_heat_wrong_length.csv
+              rows: timesteps
+              columns: nodes
+              add_dimensions:
+              parameters: sink_use_equals
+              techs: demand_elec
+            - source: data_sources/demand_heat.csv
+              rows: timesteps
+              columns: nodes
+              add_dimensions:
+              parameters: sink_use_equals
+              techs: test_demand_heat
+        """
+        )
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override1, scenario="simple_conversion")
+            build_model(override_dict=override, scenario="simple_conversion")
 
+    def test_inconsistent_time_indices_passes_thanks_to_time_subsetting(self):
+        override = AttrDict.from_yaml_string(
+            """
+        data_sources:
+            - source: data_sources/demand_heat_wrong_length.csv
+              rows: timesteps
+              columns: nodes
+              add_dimensions:
+              parameters: sink_use_equals
+              techs: demand_elec
+            - source: data_sources/demand_heat.csv
+              rows: timesteps
+              columns: nodes
+              add_dimensions:
+              parameters: sink_use_equals
+              techs: test_demand_heat
+        """
+        )
         # should pass: wrong length of demand_heat csv, but time subsetting removes the difference
-        build_model(override_dict=override1, scenario="simple_conversion,one_day")
+        build_model(override_dict=override, scenario="simple_conversion,one_day")
 
     def test_single_timestep(self):
         """
@@ -503,72 +577,33 @@ class TestChecks:
             "storage_discharge_depth is currently not allowed when time clustering is active.",
         )
 
-
-class TestTime:
-    @pytest.fixture
-    def model_national(self, load_timeseries_from_dataframes):
-        """
-        Return national scale example model. If load_timeseries_from_dataframes
-        is True, timeseries are read into dataframes and model is called using them.
-        If not, the timeseries are read in from CSV.
-        """
-        if load_timeseries_from_dataframes:
-            # Create dictionary with dataframes
-            time_data_path = (
-                calliope.examples.EXAMPLE_MODEL_DIR
-                / "national_scale"
-                / "timeseries_data"
-            )
-            timeseries_dataframes = {}
-            timeseries_dataframes["csp_resource"] = pd.read_csv(
-                time_data_path / "csp_resource.csv", index_col=0
-            )
-            timeseries_dataframes["demand_1"] = pd.read_csv(
-                time_data_path / "demand-1.csv", index_col=0
-            )
-            timeseries_dataframes["demand_2"] = pd.read_csv(
-                time_data_path / "demand-2.csv", index_col=0
-            )
-            # Create override dict telling calliope to load timeseries from df
-            override_dict = {
-                "techs.csp.source_use_max": "df=csp_resource",
-                "nodes.region1.techs.demand_power.sink_use_equals": "df=demand_1:demand",
-                "nodes.region2.techs.demand_power.sink_use_equals": "df=demand_2:demand",
-            }
-            return calliope.examples.national_scale(
-                timeseries_dataframes=timeseries_dataframes, override_dict=override_dict
-            )
-        else:
-            return calliope.examples.national_scale()
-
-    @pytest.fixture
-    def model_urban(self):
-        return calliope.examples.urban_scale(
-            override_dict={"config.init.time_subset": ["2005-01-01", "2005-01-10"]}
+    def test_loading_from_df(self, data_source_dir, simple_supply):
+        demand_elec = pd.read_csv(
+            data_source_dir / "demand_elec.csv", index_col=0, header=0
         )
-
-    @pytest.mark.parametrize("load_timeseries_from_dataframes", [False, True])
-    def test_timeseries_from_csv(self, model_national):
+        override = AttrDict.from_yaml_string(
+            """
+        data_sources:
+            - source: demand_elec
+              rows: timesteps
+              columns: nodes
+              add_dimensions:
+              parameters: sink_use_equals
+              techs: demand_elec
         """
-        Timeseries data should be successfully loaded into national_scale example
-        model. This test checks whether this happens with timeseries loaded both
-        from CSV (`load_timeseries_from_dataframes`=False, called via file=...) and
-        from dataframes (`load_timeseries_from_dataframes`=True, called via df=...).
-        """
+        )
+        simple_supply_from_df = build_model(
+            override,
+            "simple_supply,two_hours,investment_costs",
+            data_source_dfs={"demand_elec": demand_elec},
+        )
+        simple_supply_from_df.build()
+        simple_supply_from_df.solve()
 
-        model = model_national
-        assert model.inputs.sink_use_equals.sel(
-            nodes="region1", techs="demand_power"
-        ).values[0] == approx(25284.48)
-        assert model.inputs.sink_use_equals.sel(
-            nodes="region2", techs="demand_power"
-        ).values[0] == approx(2254.098)
-        assert model.inputs.source_use_max.sel(nodes="region1_1", techs="csp").values[
-            8
-        ] == approx(0.263805)
-        assert model.inputs.source_use_max.sel(nodes="region1_2", techs="csp").values[
-            8
-        ] == approx(0.096755)
-        assert model.inputs.source_use_max.sel(nodes="region1_3", techs="csp").values[
-            8
-        ] == approx(0.0)
+        assert simple_supply_from_df.inputs.sink_use_equals.equals(
+            simple_supply.inputs.sink_use_equals
+        )
+        assert (
+            simple_supply_from_df.results.cost.sum().item()
+            == simple_supply.results.cost.sum().item()
+        )

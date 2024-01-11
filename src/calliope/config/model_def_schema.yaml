@@ -7,9 +7,6 @@ description: All options available to configure a Calliope model.
 type: object
 additionalProperties: false
 $defs:
-  StringFilePattern:
-    type: string
-    pattern: "^(file|df)=.+[:]*[\\w]*$"
   unIndexedParamVal:
     type: [string, boolean, number, "null"]
     description: zero-dimensional (i.e., un-indexed) parameter.
@@ -102,7 +99,6 @@ $defs:
   TechParamNullNumberVariable:
     oneOf:
       - type: ["null", number]
-      - $ref: "#/$defs/StringFilePattern"
       - type: object
         description: Indexed tech-level parameter with null/numeric dtype that allows loading a timeseries from file.
         additionalProperties: false
@@ -117,7 +113,6 @@ $defs:
               - type: "null"
               - type: number
                 minimum: 0
-              - $ref: "#/$defs/StringFilePattern"
               - type: array
                 minItems: 1
                 items:
@@ -125,7 +120,6 @@ $defs:
                     - type: "null"
                     - type: number
                       minimum: 0
-                    - $ref: "#/$defs/StringFilePattern"
           index:
             $ref: "#/$defs/IndexedParamIndex"
           dims:
@@ -189,7 +183,6 @@ $defs:
   TechCostNullNumberVariable:
     oneOf:
       - type: ["null", number]
-      - $ref: "#/$defs/StringFilePattern"
       - type: object
         description: Indexed tech-level cost that allows loading a timeseries from file.
         additionalProperties: false
@@ -203,14 +196,12 @@ $defs:
             oneOf:
               - type: "null"
               - type: number
-              - $ref: "#/$defs/StringFilePattern"
               - type: array
                 minItems: 1
                 items:
                   oneOf:
                     - type: "null"
                     - type: number
-                    - $ref: "#/$defs/StringFilePattern"
           index:
             $ref: "#/$defs/IndexedParamIndex"
           dims:
@@ -223,16 +214,6 @@ $defs:
       If false, the model component (tech/node/link) will not make its way through to preprocessing.
       If a node, links between this node and others, via transmission technologies, will also be deactivated.
     default: true
-
-  DataSourceVals:
-    oneOf:
-      - type: string
-        pattern: '^[^_^\d][\w]*$'
-      - type: array
-        uniqueItems: true
-        items:
-          type: string
-          pattern: '^[^_^\d][\w]*$'
 
 properties:
   parameters:
@@ -264,63 +245,6 @@ properties:
         oneOf:
           - $ref: "#/$defs/unIndexedParamVal"
           - $ref: "#/$defs/IndexedParam"
-
-  data_sources:
-    type: array
-    description: >-
-      Reference to files from which to load parts (or all) of the model definition.
-      Loaded data will be _overridden_ by any data provided in the YAML definitions.
-      Conflicting data between loaded files will be resolved by overriding in the order the data is provided.
-      That is, data in list item `N` takes precedence over data in list item `N-1`.
-    items:
-      type: object
-      description: Reference to a file from which to load parts (or all) of the model definition.
-      additionalProperties: false
-      required: ["file"]
-      properties:
-        rows: &rows
-          description: >-
-            Names of dimensions defined row-wise.
-            Each name should correspond to a column in your data that contains index items.
-            These columns must be to the left of the columns containing your data.
-          $ref: "#/$defs/DataSourceVals"
-        columns: &columns
-          description:  >-
-            Names of dimensions defined column-wise.
-            Each name should correspond to a row in your data that contains index items.
-            These rows must be above the rows containing your data.
-          $ref: "#/$defs/DataSourceVals"
-        file:
-          description: >-
-            Relative or absolute filepath.
-            If relative, will be relative to the model config file used to initialise the model.
-          type: string
-        add_dimensions:
-          description: >-
-            Data dimensions to add after loading in the array.
-            These allow you to use the same file to assign values to different parameters/dimension index items
-            (e.g., setting `flow_cap_min` and `flow_cap_max` to the same value),
-            or to add a dimension which would otherwise be a column containing the same information in each row
-            (e.g., assigning the cost class to monetary for a file containing cost data).
-          type: object
-          additionalProperties: false
-          patternProperties:
-            '^[^_^\d][\w]*$':
-              description: Keys are dimension names (must not be in `rows` or `columns`), values are index items of that dimension to add.
-              $ref: "#/$defs/DataSourceVals"
-        drop:
-          $ref: "#/$defs/DataSourceVals"
-          description: >-
-            Dimensions in the rows and/or columns that contain metadata and should therefore not be passed on to the loaded model dataset.
-            These could include comments on the source of the data, the data license, or the parameter units.
-        sel_drop:
-          type: object
-          description: >-
-            Drop rows and/or columns by selecting an index item.
-            After selecting the index item, the named dimension will be removed from the loaded dataset.
-          properties:
-            '^[^_^\d][\w]*$':
-              type: [string, boolean, number]
 
   techs:
     type: object
@@ -697,9 +621,7 @@ properties:
             enum: [absolute, per_area, per_cap]
 
           sink_use_min:
-            oneOf:
-              - type: ["null", number]
-              - $ref: "#/$defs/StringFilePattern"
+            type: ["null", number]
             default: 0
             title: Minimum bound on sink.
             description: >-
@@ -707,9 +629,7 @@ properties:
               Unit dictated by ``source_unit``.
 
           sink_use_max:
-            oneOf:
-              - type: ["null", number]
-              - $ref: "#/$defs/StringFilePattern"
+            type: ["null", number]
             default: .inf
             title: Maximum bound on sink.
             description: >-
@@ -717,9 +637,7 @@ properties:
               Unit dictated by ``source_unit``.
 
           sink_use_equals:
-            oneOf:
-              - type: ["null", number]
-              - $ref: "#/$defs/StringFilePattern"
+            type: ["null", number]
             default: .nan
             title: Required sink use.
             description: >-
@@ -751,9 +669,7 @@ properties:
               Unit: fraction.
 
           source_use_min:
-            oneOf:
-              - type: ["null", number]
-              - $ref: "#/$defs/StringFilePattern"
+            type: ["null", number]
             default: 0
             title: Minimum bound on source.
             description: >-
@@ -761,9 +677,7 @@ properties:
               Unit dictated by ``source_unit``.
 
           source_use_max:
-            oneOf:
-              - type: ["null", number]
-              - $ref: "#/$defs/StringFilePattern"
+            type: ["null", number]
             default: 0
             title: Maximum bound on sink.
             description: >-
@@ -771,9 +685,7 @@ properties:
               Unit dictated by ``source_unit``.
 
           source_use_equals:
-            oneOf:
-              - type: ["null", number]
-              - $ref: "#/$defs/StringFilePattern"
+            type: ["null", number]
             default: .nan
             title: Required sink use.
             description: >-

@@ -12,174 +12,89 @@ from typing_extensions import NotRequired, TypedDict
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.preprocess import model_data, time
-from calliope.util.tools import listify, load_config, relative_path
+from calliope.core.io import load_config
+from calliope.preprocess import time
+from calliope.util.tools import listify, relative_path
 
 LOGGER = logging.getLogger(__name__)
 
 
-class DataSource(TypedDict):
+class DataSourceDict(TypedDict):
     rows: NotRequired[str | list[str]]
     columns: NotRequired[str | list[str]]
-    file: str
+    source: str
+    df: NotRequired[str]
     add_dimensions: NotRequired[dict[str, str | list[str]]]
     drop: Hashable | list[Hashable]
     sel_drop: dict[str, str | bool | int]
 
 
-class ModelDefinition(model_data.ModelDefinition):
-    data_sources: NotRequired[list[DataSource]]
-
-
-class DataSourceFactory(model_data.ModelDataFactory):
+class DataSource:
     def __init__(
         self,
         model_config: dict,
-        model_definition: ModelDefinition,
+        data_source: DataSourceDict,
+        data_source_dfs: Optional[dict[str, pd.DataFrame]],
         model_definition_path: Optional[Path] = None,
     ):
-        """Take a Calliope model definition dictionary and convert it into an xarray Dataset, ready for
-        constraint generation.
-
-        This includes extracting timeseries data from file and resampling/clustering as necessary.
+        """Load and format a data source from file / in-memory object.
 
         Args:
-            model_config (dict): Model initialisation configuration (i.e., `config.init`).
-            model_definition (ModelDefinition): Definition of model nodes and technologies as a dictionary.
-            attributes (dict): Attributes to attach to the model Dataset.
-            param_attributes (dict[str, dict]): Attributes to attach to the generated model DataArrays.
+            model_config (dict): Model initialisation configuration dictionary.
+            data_source (DataSourceDict): Data source definition dictionary.
+            data_source_dfs (Optional[dict[str, pd.DataFrame]]):
+                If given, a dictionary mapping source names in `data_source` to in-memory pandas DataFrames.
+            model_definition_path (Optional[Path], optional):
+                If given, the path to the model definition YAML file, relative to which data source filepaths will be set.
+                If None, relative data source filepaths will be considered relative to the current working directory.
+                Defaults to None.
         """
-        super().__init__(model_config, model_definition, {})
-
-        self.model_data = xr.Dataset()
-        self.model_definition: ModelDefinition
+        self.input = data_source
+        self.dfs = data_source_dfs if data_source_dfs is not None else dict()
         self.model_definition_path = model_definition_path
+        self.config = model_config
+
+        self.columns = self._listify_if_defined("columns")
+        self.index = self._listify_if_defined("rows")
+        self._name = self.input["source"]
         self.protected_params = load_config("protected_parameters.yaml")
 
-    def load_data_sources(self) -> None:
-        """Load data from the `data_sources` list into the model dataset.
-
-        Each subsequent data source in the list will override prior data.
-
-        Raises:
-            exceptions.ModelError: All data sources must have a `parameters` dimension.
-            exceptions.ModelError: Certain parameters are only valid if defined in YAML; they cannot be defined in data sources.
-        """
-        datasets: list[xr.Dataset] = []
-        for data_source in self.model_definition.pop("data_sources", []):
-            datasets.append(self._load_data_source(data_source))
-
-        self._update_model_definition_from_data_sources(datasets)
-
-        self.model_data = xr.merge(
-            datasets, compat="override", combine_attrs="no_conflicts"
-        )
-
-    def _load_data_source(self, data_source: DataSource):
-        filename = data_source["file"]
-        columns = self._listify_if_defined(data_source, "columns")
-        index = self._listify_if_defined(data_source, "rows")
-
-        csv_reader_kwargs = {"header": columns, "index_col": index}
-        for axis, names in csv_reader_kwargs.items():
-            if names is not None:
-                csv_reader_kwargs[axis] = [i for i, _ in enumerate(names)]
-
-        filepath = relative_path(self.model_definition_path, filename)
-        df = pd.read_csv(filepath, encoding="utf-8", **csv_reader_kwargs)
-
-        for axis, names in {"columns": columns, "index": index}.items():
-            if names is None:
-                df = df.squeeze(axis=axis)
-            else:
-                self._compare_axis_names(getattr(df, axis).names, names, axis, filename)
-                df.rename_axis(inplace=True, **{axis: names})
-
-        tdf: pd.Series
-        if isinstance(df, pd.DataFrame):
-            tdf = df.stack(df.columns.names)  # type: ignore
+        if ".csv" in Path(self.name).suffixes:
+            df = self._read_csv()
         else:
-            tdf = df
+            df = self.dfs[self.name]
 
-        if "drop" in data_source.keys():
-            tdf = tdf.droplevel(data_source["drop"])
+        self.dataset = self._df_to_ds(df)
 
-        if "sel_drop" in data_source.keys():
-            tdf = tdf.xs(
-                tuple(data_source["sel_drop"].values()),
-                level=tuple(data_source["sel_drop"].keys()),
-                drop_level=True,
-            )
+    @property
+    def name(self):
+        "Data source name"
+        return self.input["source"]
 
-        if "add_dimensions" in data_source.keys():
-            for dim_name, index_items in data_source["add_dimensions"].items():
-                index_items = listify(index_items)
-                tdf = pd.concat(
-                    [tdf for _ in index_items], keys=index_items, names=[dim_name]
-                )
-
-        if "parameters" not in tdf.index.names:
-            raise exceptions.ModelError(
-                f"(data_sources, {filename}) | The `parameters` dimension must exist in on of `rows`, `columns`, or `add_dimensions`."
-            )
-        self._check_for_protected_params(tdf, filename)
-
-        if tdf.index.names == ["parameters"]:  # unindexed parameters
-            ds = xr.Dataset(tdf.to_dict())
-        else:
-            ds = tdf.unstack("parameters").to_xarray()
-        ds = time.clean_data_source_timeseries(ds, self.config, filename)
-
-        LOGGER.debug(f"(data_sources, {filename}) | Loaded arrays:\n{ds.data_vars}")
-        return ds
-
-    def _check_for_protected_params(self, tdf: pd.Series, filename: str):
-        invalid_params = tdf.index.get_level_values("parameters").intersection(
-            list(self.protected_params.keys())
-        )
-        if not invalid_params.empty:
-            extra_info = set(self.protected_params[k] for k in invalid_params)
-            exceptions.print_warnings_and_raise_errors(
-                errors=list(extra_info), during=f"data source loading ({filename})"
-            )
-
-    def _update_model_definition_from_data_sources(self, datasets: list[xr.Dataset]):
-        # We apply these 1. for each dataset separately and 2. for tech defs entirely before node defs.
-        # 1. because we want to avoid the affect of dimension broadcasting that will occur when merging the datasets.
-        # 2. because we want to ensure any possible `parent` info is available for techs when we update the node definitions.
-        for ds in datasets:
-            if "techs" in ds.dims:
-                self._update_tech_def_from_data_source(ds)
-        for ds in datasets:
-            if "techs" in ds.dims and "nodes" in ds.dims:
-                self._update_node_def_from_data_source(ds)
-
-    def _update_tech_def_from_data_source(self, data_source: xr.Dataset) -> None:
-        """Create a dummy technology definition dictionary from the dimensions defined across all data sources.
+    def tech_dict(self) -> tuple[AttrDict, AttrDict]:
+        """Create a dummy technology definition dictionary from the dataset's "techs" dimension.
 
         This definition dictionary will ensure that the minimal YAML content is still possible.
 
-        This function should be run _before_ `self._update_node_def_from_data_source`.
+        This function should be accessed _before_ `self.node_dict`.
 
-        Args:
-            data_source (xr.Dataset): Data loaded from one file.
         """
-        techs = data_source.techs
-        base_tech_data = AttrDict({k: {} for k in techs.values})
-        if "parent" in data_source:
-            parent_dict = AttrDict(data_source["parent"].to_dataframe().T.to_dict())
-            base_tech_data.union(parent_dict)
-        carrier_info_dict = self._carrier_info_dict_from_model_data_var(data_source)
-        base_tech_data.union(carrier_info_dict)
-        self.tech_data_from_sources.union(base_tech_data, allow_override=True)
 
-        tech_dict = AttrDict({k: {} for k in techs.values})
-        tech_dict.union(
-            self.model_definition.get("techs", AttrDict()), allow_override=True
+        tech_dict = AttrDict(
+            {k: {} for k in self.dataset.get("techs", xr.DataArray([])).values}
         )
-        self.model_definition["techs"] = tech_dict
+        base_tech_data = AttrDict()
+        if "parent" in self.dataset:
+            parent_dict = AttrDict(self.dataset["parent"].to_dataframe().T.to_dict())
+            base_tech_data.union(parent_dict)
+        carrier_info_dict = self._carrier_info_dict_from_model_data_var(self.dataset)
+        base_tech_data.union(carrier_info_dict)
 
-    def _update_node_def_from_data_source(self, data_source: xr.Dataset) -> None:
+        return tech_dict, base_tech_data
+
+    def node_dict(
+        self, techs_incl_inheritance: AttrDict, base_tech_data: AttrDict
+    ) -> AttrDict:
         """Create a dummy node definition dictionary from the dimensions defined across all data sources.
 
         In addition, if transmission technologies are defined then update `to`/`from` params in the technology definition dictionary.
@@ -189,68 +104,181 @@ class DataSourceFactory(model_data.ModelDataFactory):
         This function should be run _after_ `self._update_tech_def_from_data_source`.
 
         Args:
-            data_source (xr.Dataset): Data loaded from one file.
+            techs_incl_inheritance (AttrDict):
+                Technology definition dictionary which is a union of any YAML definition and the result of calling `self.tech_dict` across all data sources.
+                Technologies should have their entire definition inheritance chain resolved.
+            base_tech_data (AttrDict):
+                Technology definition dictionary containing only a subset of parameters _if_ they have been defined in data sources.
+                These parameters include `parent`, `carrier_in`, `carrier_out`.
+                After calling this function, and if any transmission technologies are defined in this data source,
+                this dictionary will also contain `to` and `from` parameters.
 
         """
-        nodes = data_source.nodes
 
-        node_tech_vars = data_source[
+        node_tech_vars = self.dataset[
             [
                 k
-                for k, v in data_source.data_vars.items()
+                for k, v in self.dataset.data_vars.items()
                 if "nodes" in v.dims and "techs" in v.dims
             ]
         ]
+        if not node_tech_vars:
+            return AttrDict()
+
         other_dims = [i for i in node_tech_vars.dims if i not in ["nodes", "techs"]]
 
         is_defined = (
             node_tech_vars.fillna(False).any(other_dims).to_dataframe().any(axis=1)
         )
-        node_tech_dict = AttrDict({i: {"techs": {}} for i in nodes.values})
+        node_tech_dict = AttrDict({i: {"techs": {}} for i in self.dataset.nodes.values})
         for node, tech_dict in node_tech_dict.items():
             try:
                 techs_this_node = is_defined[is_defined].xs(node, level="nodes").index
             except KeyError:
                 continue
             for tech in techs_this_node:
-                (
-                    tech_incl_inheritance,
-                    _,
-                ) = model_data.ModelDataFactory.climb_inheritance_tree(
-                    self, self.model_definition["techs"][tech], "techs", tech
-                )
-                if tech_incl_inheritance.get("parent", None) == "transmission":
-                    if "from" in self.tech_data_from_sources[tech]:
-                        self.tech_data_from_sources.set_key(f"{tech}.to", node)
+                if techs_incl_inheritance[tech].get("parent", None) == "transmission":
+                    if "from" in base_tech_data[tech]:
+                        base_tech_data.set_key(f"{tech}.to", node)
                     else:
-                        self.tech_data_from_sources.set_key(f"{tech}.from", node)
+                        base_tech_data.set_key(f"{tech}.from", node)
                 else:
                     tech_dict["techs"][tech] = None
 
-        node_tech_dict.union(
-            self.model_definition.get("nodes", AttrDict()), allow_override=True
-        )
-        self.model_definition["nodes"] = node_tech_dict
+        return node_tech_dict
 
-    @staticmethod
-    def _listify_if_defined(source: DataSource, key: str) -> Optional[list]:
-        vals = source.get(key, None)
+    def _read_csv(self) -> pd.DataFrame:
+        """Load data from CSV.
+
+        Returns:
+            pd.DataFrame: Loaded data without any processing.
+        """
+        filename = self.input["source"]
+        csv_reader_kwargs = {"header": self.columns, "index_col": self.index}
+        for axis, names in csv_reader_kwargs.items():
+            if names is not None:
+                csv_reader_kwargs[axis] = [i for i, _ in enumerate(names)]
+
+        filepath = relative_path(self.model_definition_path, filename)
+        df = pd.read_csv(filepath, encoding="utf-8", **csv_reader_kwargs)
+        return df
+
+    def _df_to_ds(self, df: pd.DataFrame) -> xr.Dataset:
+        """Process loaded pandas dataframes into tidy dataframes and then into xarray datasets.
+
+        Args:
+            df (pd.DataFrame): Result of `self._read_csv` or an in-memory object.
+
+        Returns:
+            xr.Dataset:
+                `parameters` dimension in `df` are data variables and all other dimensions are data coordinates.
+        """
+        for axis, names in {"columns": self.columns, "index": self.index}.items():
+            if names is None:
+                df = df.squeeze(axis=axis)
+            else:
+                self._compare_axis_names(getattr(df, axis).names, names, axis)
+                df.rename_axis(inplace=True, **{axis: names})
+
+        tdf: pd.Series
+        if isinstance(df, pd.DataFrame):
+            tdf = df.stack(df.columns.names)  # type: ignore
+        else:
+            tdf = df
+
+        if "drop" in self.input.keys():
+            tdf = tdf.droplevel(self.input["drop"])
+
+        if "sel_drop" in self.input.keys():
+            tdf = tdf.xs(
+                tuple(self.input["sel_drop"].values()),
+                level=tuple(self.input["sel_drop"].keys()),
+                drop_level=True,
+            )
+
+        if "add_dimensions" in self.input.keys():
+            for dim_name, index_items in self.input["add_dimensions"].items():
+                index_items = listify(index_items)
+                tdf = pd.concat(
+                    [tdf for _ in index_items], keys=index_items, names=[dim_name]
+                )
+
+        if "parameters" not in tdf.index.names:
+            self._raise_error(
+                "The `parameters` dimension must exist in on of `rows`, `columns`, or `add_dimensions`."
+            )
+        self._check_for_protected_params(tdf)
+
+        if tdf.index.names == ["parameters"]:  # unindexed parameters
+            ds = xr.Dataset(tdf.to_dict())
+        else:
+            ds = tdf.unstack("parameters").to_xarray()
+        ds = time.clean_data_source_timeseries(ds, self.config, self.name)
+
+        self._log("Loaded arrays:\n{ds.data_vars}")
+        return ds
+
+    def _check_for_protected_params(self, tdf: pd.Series):
+        """Raise an error if any defined parameters are in a pre-configured set of _protected_ parameters.
+
+        See keys of `self.protected_params` for list of protected parameters.
+
+        Args:
+            tdf (pd.Series): Tidy dataframe in which to search for parameters (within the `parameters` index level).
+        """
+        invalid_params = tdf.index.get_level_values("parameters").intersection(
+            list(self.protected_params.keys())
+        )
+        if not invalid_params.empty:
+            extra_info = set(self.protected_params[k] for k in invalid_params)
+            exceptions.print_warnings_and_raise_errors(
+                errors=list(extra_info), during=f"data source loading ({self.name})"
+            )
+
+    def _raise_error(self, message):
+        "Format error message and then raise Calliope ModelError."
+        raise exceptions.ModelError(f"(data_sources, {self.name}) | {message}.")
+
+    def _log(self, message, level="debug"):
+        "Format log message and then log to `level`."
+        getattr(LOGGER, level)(f"(data_sources, {self.name}) | {message}")
+
+    def _listify_if_defined(self, key: str) -> Optional[list]:
+        """If `key` is in data source definition dictionary, return values as a list.
+
+        If values are not yet an iterable, they will be coerced to an iterable of length 1.
+        If they are an iterable, they will be coerced to a list.
+
+        Args:
+            key (str): Definition dictionary key whose value are to be returned as a list.
+
+        Returns:
+            Optional[list]: If `key` not defined in data source, return None, else return values as a list.
+        """
+        vals = self.input.get(key, None)
         if vals is not None:
             vals = listify(vals)
         return vals
 
-    @staticmethod
-    def _compare_axis_names(
-        loaded_names: list, defined_names: list, axis: str, filename: str
-    ):
+    def _compare_axis_names(self, loaded_names: list, defined_names: list, axis: str):
+        """Check loaded axis level names compared to those given by `rows` and `columns` in data source definition dictionary.
+
+        The data file / in-memory object does not need to have any level names defined,
+        but if they _are_ defined then they must match those given in the data source definition dictionary.
+
+        Args:
+            loaded_names (list): Names as defined in the loaded data file / in-memory object.
+            defined_names (list): Names as defined in the data source dictionary.
+            axis (str): Axis on which the names are levels.
+        """
         if any(
             name is not None
             and not isinstance(name, int)
             and name != defined_names[idx]
             for name, idx in enumerate(loaded_names)
         ):
-            raise ValueError(
-                f"(data_sources, {filename}) | Trying to set names for {axis} but names in the file do no match names provided | in file: {loaded_names} | defined: {defined_names}"
+            self._raise_error(
+                f"Trying to set names for {axis} but names in the file do no match names provided | in file: {loaded_names} | defined: {defined_names}"
             )
 
     @staticmethod

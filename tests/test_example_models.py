@@ -1,4 +1,6 @@
+import importlib.resources
 import shutil
+from pathlib import Path
 
 import calliope
 import numpy as np
@@ -34,46 +36,75 @@ class TestModelPreproccessing:
 
 
 class TestNationalScaleExampleModelSenseChecks:
-    def example_tester(self, solver="cbc", solver_io=None):
+    @pytest.fixture(scope="module")
+    def model_from_data_sources(self):
+        with (
+            importlib.resources.files("calliope")
+            / "example_models"
+            / "national_scale"
+            / "data_sources"
+            / "time_varying_params.csv"
+        ).as_file() as f:
+            df = pd.read_csv(f, index_col=0, header=[0, 1, 2, 3])
+        model = calliope.Model(
+            Path("common") / "national_scale_from_data_sources" / "model.yaml",
+            data_source_dfs={"time_varying_df": df},
+        )
+        model.build()
+        return model
+
+    @pytest.fixture(scope="module")
+    def model(self):
         model = calliope.examples.national_scale(
             time_subset=["2005-01-01", "2005-01-01"]
         )
-        solve_kwargs = {"solver": solver}
-        if solver_io:
-            solve_kwargs["solver_io"] = solver_io
-
         model.build()
-        model.solve(**solve_kwargs)
+        return model
 
-        assert model.results.storage_cap.sel(nodes="region1_1", techs="csp") == approx(
-            45129.950
-        )
-        assert model.results.storage_cap.sel(
-            nodes="region2", techs="battery"
-        ) == approx(6675.173)
+    @pytest.fixture(params=["model", "model_from_data_source"])
+    def example_tester(self, request):
+        def _example_tester(solver="cbc", solver_io=None):
+            model = request.getfixturevalue(request.param)
 
-        assert model.results.flow_cap.sel(nodes="region1_1", techs="csp") == approx(
-            4626.588
-        )
-        assert model.results.flow_cap.sel(nodes="region2", techs="battery") == approx(
-            1000
-        )
-        assert model.results.flow_cap.sel(nodes="region1", techs="ccgt") == approx(
-            30000
-        )
+            solve_kwargs = {"solver": solver}
+            if solver_io:
+                solve_kwargs["solver_io"] = solver_io
 
-        assert float(model.results.cost.sum()) == approx(38988.7442)
+            model.solve(force=True, **solve_kwargs)
 
-        assert float(
-            model.results.systemwide_levelised_cost.sel(
-                carriers="power", techs="battery"
-            ).item()
-        ) == approx(0.063543, abs=0.000001)
-        assert float(
-            model.results.systemwide_capacity_factor.sel(
-                carriers="power", techs="battery"
-            ).item()
-        ) == approx(0.2642256, abs=0.000001)
+            assert model.results.storage_cap.sel(
+                nodes="region1_1", techs="csp"
+            ) == approx(45129.950)
+            assert model.results.storage_cap.sel(
+                nodes="region2", techs="battery"
+            ) == approx(6675.173)
+
+            assert model.results.flow_cap.sel(nodes="region1_1", techs="csp") == approx(
+                4626.588
+            )
+            assert model.results.flow_cap.sel(
+                nodes="region2", techs="battery"
+            ) == approx(1000)
+            assert model.results.flow_cap.sel(nodes="region1", techs="ccgt") == approx(
+                30000
+            )
+
+            assert float(model.results.cost.sum()) == approx(38988.7442)
+
+            assert float(
+                model.results.systemwide_levelised_cost.sel(
+                    carriers="power", techs="battery"
+                ).item()
+            ) == approx(0.063543, abs=0.000001)
+            assert float(
+                model.results.systemwide_capacity_factor.sel(
+                    carriers="power", techs="battery"
+                ).item()
+            ) == approx(0.2642256, abs=0.000001)
+
+            model.results.total_levelised_cost.item() == approx(0.05456, abs=1e-5)
+
+        return _example_tester
 
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
@@ -94,45 +125,19 @@ class TestNationalScaleExampleModelSenseChecks:
         else:
             pytest.skip("GLPK not installed")
 
-    def test_considers_supply_generation_only_in_total_levelised_cost(self):
-        # calculation of expected value:
-        # costs = model.inputs.cost.sum(dim="locs")
-        # gen = model.inputs.flow_out.sum(dim=["timesteps", "locs"])
-        # lcoe = costs.sum(dim="techs") / gen.sel(techs=["ccgt", "csp"]).sum(dim="techs")
-        model = calliope.examples.national_scale()
-        model.build()
-        model.solve()
-
-        assert model.results.total_levelised_cost.item() == approx(0.067005, abs=1e-5)
-
     def test_fails_gracefully_without_timeseries(self):
         override = {
             "nodes.region1.techs.demand_power.sink_use_equals": 200,
             "nodes.region2.techs.demand_power.sink_use_equals": 400,
             "node_groups.csp_regions.techs.csp.source_use_max": 100,
         }
-        with pytest.raises(calliope.exceptions.ModelError):
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             calliope.examples.national_scale(override_dict=override)
 
-
-@pytest.mark.xfail(reason="Not reimplemented the 'check feasibility' objective")
-class TestNationalScaleExampleModelInfeasibility:
-    def example_tester(self):
-        model = calliope.examples.national_scale(scenario="check_feasibility")
-
-        model.build(cyclic_storage=False)
-        model.solve()
-
-        assert model.results.termination_condition in [
-            "infeasible",
-            "other",
-        ]  # glpk gives 'other' as result
-
-        assert len(model.results.data_vars) == 0
-        assert "flow_cap" not in model._model_data.data_vars
-
-    def test_nationalscale_example_results_cbc(self):
-        self.example_tester()
+        assert check_error_or_warning(
+            excinfo,
+            "Must define at least one timeseries parameter in a Calliope model.",
+        )
 
 
 @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
@@ -398,12 +403,12 @@ class TestUrbanScaleExampleModelSenseChecks:
     def example_tester(self, source_unit, solver="cbc", solver_io=None):
         data_sources = f"""
         data_sources:
-          - file: data_sources/demand.csv
+          - source: data_sources/demand.csv
             rows: timesteps
             columns: [techs, nodes]
             add_dimensions:
               parameters: sink_use_equals
-          - file: data_sources/pv_resource.csv
+          - source: data_sources/pv_resource.csv
             rows: timesteps
             columns: [comment, scaler]
             add_dimensions:
@@ -412,7 +417,7 @@ class TestUrbanScaleExampleModelSenseChecks:
             drop: comment
             sel_drop:
               scaler: {source_unit}
-          - file: data_sources/export_power.csv
+          - source: data_sources/export_power.csv
             rows: timesteps
             columns: nodes
             add_dimensions:

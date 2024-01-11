@@ -31,8 +31,8 @@ import xarray as xr
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
+from calliope.core.io import load_config
 from calliope.util.schema import MATH_SCHEMA, update_then_validate_config, validate_dict
-from calliope.util.tools import load_config
 
 if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp

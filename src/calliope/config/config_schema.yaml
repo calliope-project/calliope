@@ -175,8 +175,10 @@ properties:
   data_sources:
     type: array
     description: >-
-      List of data sources in which model definitions are stored in tabular format.
-      See the model definition schema for more guidance on content.
+      Reference to files from which to load parts (or all) of the model definition.
+      Loaded data will be _overridden_ by any data provided in the YAML definitions.
+      Conflicting data between loaded files will be resolved by overriding in the order the data is provided.
+      That is, data in list item `N` takes precedence over data in list item `N-1`.
 
   techs:
     type: [object, "null"]
