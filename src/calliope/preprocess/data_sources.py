@@ -14,9 +14,12 @@ from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.core.io import load_config
 from calliope.preprocess import time
+from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 from calliope.util.tools import listify, relative_path
 
 LOGGER = logging.getLogger(__name__)
+
+DTYPE_OPTIONS = {"str": str, "float": float}
 
 
 class DataSourceDict(TypedDict):
@@ -221,10 +224,12 @@ class DataSource:
         self._check_processed_tdf(tdf)
         self._check_for_protected_params(tdf)
 
+        tdf = tdf.groupby("parameters", group_keys=False).apply(self._update_dtypes)
+
         if tdf.index.names == ["parameters"]:  # unindexed parameters
             ds = xr.Dataset(tdf.to_dict())
         else:
-            ds = tdf.unstack("parameters").to_xarray()
+            ds = tdf.unstack("parameters").infer_objects().to_xarray()
         ds = time.clean_data_source_timeseries(ds, self.config, self.name)
 
         self._log(f"Loaded arrays:\n{ds}")
@@ -384,3 +389,13 @@ class DataSource:
                 )
 
         return carrier_info_dict
+
+    def _update_dtypes(self, tdf_group):
+        dtypes = extract_from_schema(MODEL_SCHEMA, "x-type")
+        if tdf_group.name in dtypes and dtypes[tdf_group.name] in DTYPE_OPTIONS:
+            dtype = dtypes[tdf_group.name]
+            self._log(
+                f"Updating non-NaN values of parameter `{tdf_group.name}` to {dtype} type"
+            )
+            tdf_group = tdf_group.astype(dtype)
+        return tdf_group

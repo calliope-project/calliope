@@ -17,6 +17,7 @@ import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
+from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 LOGGER = logging.getLogger(__name__)
 
@@ -88,24 +89,27 @@ def resample(data: xr.Dataset, resolution: str) -> xr.Dataset:
     data_non_ts = data.drop_dims("timesteps")
     data_ts = data.drop_vars(data_non_ts.data_vars)
     data_ts_resampled = data_ts.resample(**resample_kwargs).first(keep_attrs=True)
+    resampling_methods = extract_from_schema(MODEL_SCHEMA, "x-resample_method")
 
     for var_name, var_data in data_ts.data_vars.items():
         resampler = var_data.resample(**resample_kwargs)
-        if var_name in [
-            "timestep_resolution",
-            "source_use_min",
-            "sink_use_min",
-            "source_use_max",
-            "sink_use_max",
-            "source_use_equals",
-            "sink_use_equals",
-        ]:
+        if var_name == "timestep_resolution":
             method = "sum"
+        elif var_name in resampling_methods:
+            method = resampling_methods.get(var_name, None)
         elif var_data.dtype.kind in ["f", "i"]:
             method = "mean"
         else:
             method = "first"
-        data_ts_resampled[var_name] = getattr(resampler, method)(keep_attrs=True)
+
+        if method == "sum":
+            method_kwargs = {"min_count": 1}
+        else:
+            method_kwargs = {}
+
+        data_ts_resampled[var_name] = getattr(resampler, method)(
+            keep_attrs=True, **method_kwargs
+        )
         LOGGER.debug(
             f"Time Resampling | {var_name} | resampling function used: {method}"
         )

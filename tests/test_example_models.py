@@ -1,4 +1,3 @@
-import importlib.resources
 import shutil
 from pathlib import Path
 
@@ -38,14 +37,14 @@ class TestModelPreproccessing:
 class TestNationalScaleExampleModelSenseChecks:
     @pytest.fixture(scope="class")
     def nat_model_from_data_sources(self):
-        with importlib.resources.as_file(
-            importlib.resources.files("calliope")
-            / "example_models"
+        df = pd.read_csv(
+            calliope.examples.EXAMPLE_MODEL_DIR
             / "national_scale"
             / "data_sources"
-            / "time_varying_params.csv"
-        ) as f:
-            df = pd.read_csv(f, index_col=0, header=[0, 1, 2, 3])
+            / "time_varying_params.csv",
+            index_col=0,
+            header=[0, 1, 2, 3],
+        )
         model = calliope.Model(
             Path(__file__).parent
             / "common"

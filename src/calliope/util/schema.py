@@ -108,8 +108,8 @@ def extract_from_schema(
 
 
 def _extend_with_keyword(
-    validator_class: jsonschema.Validator, keyword: str, subset_top_level: str
-) -> jsonschema.Validator:
+    validator_class: jsonschema.protocols.Validator, keyword: str, subset_top_level: str
+) -> jsonschema.protocols.Validator:
     validate_properties = validator_class.VALIDATORS["properties"]
 
     def set_defaults(validator, properties, instance, schema):

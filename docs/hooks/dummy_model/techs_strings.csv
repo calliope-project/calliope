@@ -1,9 +1,0 @@
-demand_tech,parent,demand
-demand_tech,sink_unit,per_cap
-conversion_tech,parent,conversion
-conversion_tech,cap_method,integer
-supply_tech,parent,supply
-supply_tech,cap_method,integer
-supply_tech,source_unit,per_area
-storage_tech,parent,storage
-transmission_tech,parent,transmission
