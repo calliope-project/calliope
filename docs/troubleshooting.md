@@ -154,7 +154,7 @@ If you have a bit more Python experience, you can also consider accessing and wo
 - For input YAML and CSV file processing: `logging.getLogger("calliope.preprocess")`.
 - For processing of math syntax: `logging.getLogger("calliope.backend")`.
 
-For more examples of using loggers, see the [logging notebook example](examples/logging).
+For more examples of using loggers, see the [logging notebook example](examples/logging/).
 
 ### Validating your math syntax
 
