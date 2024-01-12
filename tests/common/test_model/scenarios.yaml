@@ -21,12 +21,10 @@ overrides:
   simple_supply_locations:
     locations:
       a:
-        inherit: init_nodes
         techs:
           test_supply_elec:
 
       b:
-        inherit: init_nodes
         techs:
           test_supply_elec:
 
@@ -37,7 +35,7 @@ overrides:
         columns: nodes
         add_dimensions:
           parameters: sink_use_equals
-          techs: demand_elec
+          techs: test_demand_elec
       - source: data_sources/supply_plus_resource.csv
         rows: timesteps
         columns: nodes
@@ -52,7 +50,7 @@ overrides:
         columns: nodes
         add_dimensions:
           parameters: sink_use_equals
-          techs: demand_elec
+          techs: test_demand_elec
       - source: data_sources/supply_plus_resource.csv
         rows: timesteps
         columns: nodes
@@ -71,16 +69,15 @@ overrides:
         columns: nodes
         add_dimensions:
           parameters: sink_use_equals
-          techs: demand_elec
+          techs: test_demand_elec
       - source: data_sources/supply_plus_resource.csv
         rows: timesteps
         columns: nodes
-        sel_drop:
+        select:
           nodes: a
         add_dimensions:
           parameters: source_use_max
           techs: test_supply_plus
-          nodes: a
 
     nodes:
       a:
@@ -158,7 +155,7 @@ overrides:
         columns: nodes
         add_dimensions:
           parameters: sink_use_equals
-          techs: demand_elec
+          techs: test_demand_elec
       - source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
@@ -186,16 +183,15 @@ overrides:
         columns: nodes
         add_dimensions:
           parameters: sink_use_equals
-          techs: demand_elec
+          techs: test_demand_elec
       - source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
-        sel_drop:
+        select:
           nodes: a
         add_dimensions:
           parameters: sink_use_equals
           techs: test_demand_heat
-          nodes: a
 
     nodes:
       a:
@@ -215,16 +211,15 @@ overrides:
         columns: nodes
         add_dimensions:
           parameters: sink_use_equals
-          techs: demand_elec
+          techs: test_demand_elec
       - source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
-        sel_drop:
+        select:
           nodes: a
         add_dimensions:
           parameters: sink_use_equals
           techs: test_demand_heat
-          nodes: a
 
     techs:
       test_conversion_plus:
@@ -250,16 +245,15 @@ overrides:
         columns: nodes
         add_dimensions:
           parameters: sink_use_equals
-          techs: demand_elec
+          techs: test_demand_elec
       - source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
-        sel_drop:
+        select:
           nodes: a
         add_dimensions:
           parameters: sink_use_equals
           techs: test_demand_heat
-          nodes: a
     techs:
       test_conversion:
         cap_method: integer
@@ -281,16 +275,15 @@ overrides:
         columns: nodes
         add_dimensions:
           parameters: sink_use_equals
-          techs: demand_elec
+          techs: test_demand_elec
       - source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
-        sel_drop:
+        select:
           nodes: a
         add_dimensions:
           parameters: sink_use_equals
           techs: test_demand_heat
-          nodes: a
     nodes:
       a:
         techs:
@@ -313,16 +306,15 @@ overrides:
         columns: nodes
         add_dimensions:
           parameters: sink_use_equals
-          techs: demand_elec
+          techs: test_demand_elec
       - source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
-        sel_drop:
+        select:
           nodes: a
         add_dimensions:
           parameters: sink_use_equals
           techs: test_demand_heat
-          nodes: a
     nodes:
       a:
         techs:
@@ -340,16 +332,15 @@ overrides:
         columns: nodes
         add_dimensions:
           parameters: sink_use_equals
-          techs: demand_elec
+          techs: test_demand_elec
       - source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
-        sel_drop:
+        select:
           nodes: a
         add_dimensions:
           parameters: sink_use_equals
           techs: test_demand_heat
-          nodes: a
     nodes:
       a:
         techs:
@@ -377,6 +368,14 @@ overrides:
         inherit: init_nodes
 
     tech_groups.test_transmission.active: false
+    node_groups:
+      init_nodes:
+        techs:
+          test_demand_elec:
+          test_supply_gas:
+          test_supply_coal:
+          test_conversion:
+          test_demand_coal:
 
   simple_storage:
     nodes:
@@ -488,4 +487,4 @@ overrides:
         columns: nodes
         add_dimensions:
           parameters: sink_use_max
-          techs: demand_elec
+          techs: test_demand_elec

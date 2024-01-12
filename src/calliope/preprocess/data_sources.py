@@ -25,16 +25,18 @@ class DataSourceDict(TypedDict):
     source: str
     df: NotRequired[str]
     add_dimensions: NotRequired[dict[str, str | list[str]]]
+    select: dict[str, str | bool | int]
     drop: Hashable | list[Hashable]
-    sel_drop: dict[str, str | bool | int]
 
 
 class DataSource:
+    MESSAGE_TEMPLATE = "(data_sources, {name}) | {message}."
+
     def __init__(
         self,
         model_config: dict,
         data_source: DataSourceDict,
-        data_source_dfs: Optional[dict[str, pd.DataFrame]],
+        data_source_dfs: Optional[dict[str, pd.DataFrame]] = None,
         model_definition_path: Optional[Path] = None,
     ):
         """Load and format a data source from file / in-memory object.
@@ -85,9 +87,10 @@ class DataSource:
         )
         base_tech_data = AttrDict()
         if "parent" in self.dataset:
-            parent_dict = AttrDict(self.dataset["parent"].to_dataframe().T.to_dict())
-            base_tech_data.union(parent_dict)
-        carrier_info_dict = self._carrier_info_dict_from_model_data_var(self.dataset)
+            parent_dict = self.dataset["parent"].to_dataframe().dropna().T.to_dict()
+            base_tech_data.union(AttrDict(parent_dict))
+
+        carrier_info_dict = self._carrier_info_dict_from_model_data_var()
         base_tech_data.union(carrier_info_dict)
 
         return tech_dict, base_tech_data
@@ -127,9 +130,8 @@ class DataSource:
 
         other_dims = [i for i in node_tech_vars.dims if i not in ["nodes", "techs"]]
 
-        is_defined = (
-            node_tech_vars.fillna(False).any(other_dims).to_dataframe().any(axis=1)
-        )
+        is_defined = node_tech_vars.notnull().any(other_dims).to_dataframe().any(axis=1)
+
         node_tech_dict = AttrDict({i: {"techs": {}} for i in self.dataset.nodes.values})
         for node, tech_dict in node_tech_dict.items():
             try:
@@ -138,7 +140,7 @@ class DataSource:
                 continue
             for tech in techs_this_node:
                 if techs_incl_inheritance[tech].get("parent", None) == "transmission":
-                    if "from" in base_tech_data[tech]:
+                    if base_tech_data.get_key(f"{tech}.from", False):
                         base_tech_data.set_key(f"{tech}.to", node)
                     else:
                         base_tech_data.set_key(f"{tech}.from", node)
@@ -173,10 +175,21 @@ class DataSource:
             xr.Dataset:
                 `parameters` dimension in `df` are data variables and all other dimensions are data coordinates.
         """
+        if not isinstance(df, pd.DataFrame):
+            self._raise_error(
+                "Data source must be a pandas DataFrame. "
+                "If you are providing an in-memory object, ensure it is not a pandas Series by calling the method `to_frame()`"
+            )
         for axis, names in {"columns": self.columns, "index": self.index}.items():
             if names is None:
+                if len(getattr(df, axis).names) != 1:
+                    self._raise_error(f"Expected a single {axis} level in loaded data.")
                 df = df.squeeze(axis=axis)
             else:
+                if len(getattr(df, axis).names) != len(names):
+                    self._raise_error(
+                        f"Expected {len(names)} {axis} levels in loaded data."
+                    )
                 self._compare_axis_names(getattr(df, axis).names, names, axis)
                 df.rename_axis(inplace=True, **{axis: names})
 
@@ -186,15 +199,17 @@ class DataSource:
         else:
             tdf = df
 
+        if "select" in self.input.keys():
+            selector = [
+                listify(self.input["select"][name])
+                if name in self.input["select"]
+                else slice(None)
+                for name in tdf.index.names
+            ]
+            tdf = tdf.loc[pd.IndexSlice[*selector]]
+
         if "drop" in self.input.keys():
             tdf = tdf.droplevel(self.input["drop"])
-
-        if "sel_drop" in self.input.keys():
-            tdf = tdf.xs(
-                tuple(self.input["sel_drop"].values()),
-                level=tuple(self.input["sel_drop"].keys()),
-                drop_level=True,
-            )
 
         if "add_dimensions" in self.input.keys():
             for dim_name, index_items in self.input["add_dimensions"].items():
@@ -203,10 +218,7 @@ class DataSource:
                     [tdf for _ in index_items], keys=index_items, names=[dim_name]
                 )
 
-        if "parameters" not in tdf.index.names:
-            self._raise_error(
-                "The `parameters` dimension must exist in on of `rows`, `columns`, or `add_dimensions`."
-            )
+        self._check_processed_tdf(tdf)
         self._check_for_protected_params(tdf)
 
         if tdf.index.names == ["parameters"]:  # unindexed parameters
@@ -215,7 +227,7 @@ class DataSource:
             ds = tdf.unstack("parameters").to_xarray()
         ds = time.clean_data_source_timeseries(ds, self.config, self.name)
 
-        self._log("Loaded arrays:\n{ds.data_vars}")
+        self._log(f"Loaded arrays:\n{ds}")
         return ds
 
     def _check_for_protected_params(self, tdf: pd.Series):
@@ -235,13 +247,33 @@ class DataSource:
                 errors=list(extra_info), during=f"data source loading ({self.name})"
             )
 
+    def _check_processed_tdf(self, tdf: pd.Series):
+        if "parameters" not in tdf.index.names:
+            self._raise_error(
+                "The `parameters` dimension must exist in on of `rows`, `columns`, or `add_dimensions`."
+            )
+
+        duplicated_index = tdf.index.duplicated()
+        if any(duplicated_index):
+            self._raise_error(
+                f"Duplicate index items found: {tdf.index[duplicated_index]}"
+            )
+
+        unique_index_names = set(tdf.index.names)
+        if len(unique_index_names) != len(tdf.index.names):
+            self._raise_error(f"Duplicate dimension names found: {tdf.index.names}")
+
     def _raise_error(self, message):
         "Format error message and then raise Calliope ModelError."
-        raise exceptions.ModelError(f"(data_sources, {self.name}) | {message}.")
+        raise exceptions.ModelError(
+            self.MESSAGE_TEMPLATE.format(name=self.name, message=message)
+        )
 
     def _log(self, message, level="debug"):
         "Format log message and then log to `level`."
-        getattr(LOGGER, level)(f"(data_sources, {self.name}) | {message}")
+        getattr(LOGGER, level)(
+            self.MESSAGE_TEMPLATE.format(name=self.name, message=message)
+        )
 
     def _listify_if_defined(self, key: str) -> Optional[list]:
         """If `key` is in data source definition dictionary, return values as a list.
@@ -275,14 +307,13 @@ class DataSource:
             name is not None
             and not isinstance(name, int)
             and name != defined_names[idx]
-            for name, idx in enumerate(loaded_names)
+            for idx, name in enumerate(loaded_names)
         ):
             self._raise_error(
                 f"Trying to set names for {axis} but names in the file do no match names provided | in file: {loaded_names} | defined: {defined_names}"
             )
 
-    @staticmethod
-    def _carrier_info_dict_from_model_data_var(data_source: xr.Dataset) -> AttrDict:
+    def _carrier_info_dict_from_model_data_var(self) -> AttrDict:
         """Convert `carrier_in`/`carrier_out` loaded from a data source into YAML-esque format.
 
         Only used when either variable is defined in a data source.
@@ -303,9 +334,6 @@ class DataSource:
         !!! note
             This will drop the `nodes` dimension entirely as we expect these parameters to be defined at the tech level in YAML.
 
-        Args:
-            data_source (xr.Dataset): data loaded from file that may contain `carrier_in`/`carrier_out`.
-
         Returns:
             AttrDict:
                 If present in `data_source`, a valid Calliope YAML format for `carrier_in`/`carrier_out`.
@@ -313,11 +341,13 @@ class DataSource:
         """
 
         def __extract_carriers(grouped_series):
-            carriers = list(
-                set(
-                    grouped_series.dropna(
-                        subset=[f"carrier_{direction}"]
-                    ).carriers.values
+            carriers = sorted(
+                list(
+                    set(
+                        grouped_series.dropna(
+                            subset=[f"carrier_{direction}"]
+                        ).carriers.values
+                    )
                 )
             )
             if len(carriers) == 1:
@@ -329,18 +359,28 @@ class DataSource:
 
         carrier_info_dict = AttrDict()
         for direction in ["in", "out"]:
-            if f"carrier_{direction}" not in data_source:
+            param = f"carrier_{direction}"
+            if param not in self.dataset:
                 continue
-            carrier_info_dict.union(
-                AttrDict(
-                    data_source[f"carrier_{direction}"]
-                    .to_series()
-                    .reset_index("carriers")
-                    .groupby("techs")
-                    .apply(__extract_carriers)
-                    .dropna()
-                    .to_dict()
+            elif (
+                "techs" not in self.dataset[param].dims
+                or "carriers" not in self.dataset[param].dims
+            ):
+                self._raise_error(
+                    f"Loading {param} with missing dimension(s). "
+                    "Must contain `techs` and `carriers`, received: {self.dataset[param].dims}"
                 )
-            )
+            else:
+                carrier_info_dict.union(
+                    AttrDict(
+                        self.dataset[f"carrier_{direction}"]
+                        .to_series()
+                        .reset_index("carriers")
+                        .groupby("techs")
+                        .apply(__extract_carriers)
+                        .dropna()
+                        .to_dict()
+                    )
+                )
 
         return carrier_info_dict

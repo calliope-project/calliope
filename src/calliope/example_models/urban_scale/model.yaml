@@ -46,9 +46,9 @@ data_sources:
     add_dimensions:
       parameters: source_use_equals
       techs: pv
-    drop: comment
-    sel_drop:
+    select:
       scaler: per_area
+    drop: [comment, scaler]
   - source: data_sources/export_power.csv
     rows: timesteps
     columns: nodes

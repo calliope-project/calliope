@@ -1,6 +1,3 @@
-import: # Import other files from paths relative to this file, or absolute paths
-  - "scenarios.yaml" # Scenario and override group definitions
-
 # Model configuration: all settings that affect the built model
 config:
   init:

@@ -36,32 +36,36 @@ class TestModelPreproccessing:
 
 
 class TestNationalScaleExampleModelSenseChecks:
-    @pytest.fixture(scope="module")
-    def model_from_data_sources(self):
-        with (
+    @pytest.fixture(scope="class")
+    def nat_model_from_data_sources(self):
+        with importlib.resources.as_file(
             importlib.resources.files("calliope")
             / "example_models"
             / "national_scale"
             / "data_sources"
             / "time_varying_params.csv"
-        ).as_file() as f:
+        ) as f:
             df = pd.read_csv(f, index_col=0, header=[0, 1, 2, 3])
         model = calliope.Model(
-            Path("common") / "national_scale_from_data_sources" / "model.yaml",
+            Path(__file__).parent
+            / "common"
+            / "national_scale_from_data_sources"
+            / "model.yaml",
             data_source_dfs={"time_varying_df": df},
+            time_subset=["2005-01-01", "2005-01-01"],
         )
         model.build()
         return model
 
-    @pytest.fixture(scope="module")
-    def model(self):
+    @pytest.fixture(scope="class")
+    def nat_model(self):
         model = calliope.examples.national_scale(
             time_subset=["2005-01-01", "2005-01-01"]
         )
         model.build()
         return model
 
-    @pytest.fixture(params=["model", "model_from_data_source"])
+    @pytest.fixture(params=["nat_model", "nat_model_from_data_sources"])
     def example_tester(self, request):
         def _example_tester(solver="cbc", solver_io=None):
             model = request.getfixturevalue(request.param)
@@ -106,31 +110,27 @@ class TestNationalScaleExampleModelSenseChecks:
 
         return _example_tester
 
-    def test_nationalscale_example_results_cbc(self):
-        self.example_tester()
+    def test_nationalscale_example_results_cbc(self, example_tester):
+        example_tester()
 
-    def test_nationalscale_example_results_gurobi(self):
+    def test_nationalscale_example_results_gurobi(self, example_tester):
         pytest.importorskip("gurobipy")
-        self.example_tester(solver="gurobi", solver_io="python")
+        example_tester(solver="gurobi", solver_io="python")
 
-    def test_nationalscale_example_results_cplex(self):
+    def test_nationalscale_example_results_cplex(self, example_tester):
         if shutil.which("cplex"):
-            self.example_tester(solver="cplex")
+            example_tester(solver="cplex")
         else:
             pytest.skip("CPLEX not installed")
 
-    def test_nationalscale_example_results_glpk(self):
+    def test_nationalscale_example_results_glpk(self, example_tester):
         if shutil.which("glpsol"):
-            self.example_tester(solver="glpk")
+            example_tester(solver="glpk")
         else:
             pytest.skip("GLPK not installed")
 
     def test_fails_gracefully_without_timeseries(self):
-        override = {
-            "nodes.region1.techs.demand_power.sink_use_equals": 200,
-            "nodes.region2.techs.demand_power.sink_use_equals": 400,
-            "node_groups.csp_regions.techs.csp.source_use_max": 100,
-        }
+        override = {"data_sources": []}
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             calliope.examples.national_scale(override_dict=override)
 
@@ -414,9 +414,9 @@ class TestUrbanScaleExampleModelSenseChecks:
             add_dimensions:
               parameters: source_use_equals
               techs: pv
-            drop: comment
-            sel_drop:
+            select:
               scaler: {source_unit}
+            drop: [scaler, comment]
           - source: data_sources/export_power.csv
             rows: timesteps
             columns: nodes

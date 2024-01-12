@@ -1,8 +1,5 @@
-import os
-
 import calliope
 import calliope.exceptions as exceptions
-import numpy as np
 import pandas as pd
 import pytest
 from calliope.attrdict import AttrDict
@@ -12,12 +9,12 @@ from .common.util import check_error_or_warning
 
 
 class TestModelRun:
-    def test_model_from_dict(self):
+    def test_model_from_dict(self, data_source_dir):
         """
         Test creating a model from dict/AttrDict instead of from YAML
         """
-        this_path = os.path.dirname(__file__)
-        model_location = os.path.join(this_path, "common", "test_model", "model.yaml")
+        model_dir = data_source_dir.parent
+        model_location = model_dir / "model.yaml"
         model_dict = AttrDict.from_yaml(model_location)
         node_dict = AttrDict(
             {
@@ -28,9 +25,8 @@ class TestModelRun:
             }
         )
         model_dict.union(node_dict)
-        model_dict.config.init["time_data_path"] = os.path.join(
-            this_path, "common", "test_model", model_dict.config.init["time_data_path"]
-        )
+        for src in model_dict["data_sources"]:
+            src["source"] = (model_dir / src["source"]).as_posix()
         # test as AttrDict
         calliope.Model(model_dict)
 
@@ -244,14 +240,14 @@ class TestModelRun:
                   rows: timesteps
                   columns: nodes
                   add_dimensions:
-                  parameters: sink_use_equals
-                  techs: test_demand_elec
+                    parameters: sink_use_equals
+                    techs: test_demand_elec
                 - source: data_sources/demand_heat_diff_dateformat.csv
                   rows: timesteps
                   columns: nodes
                   add_dimensions:
-                  parameters: sink_use_equals
-                  techs: test_demand_heat
+                    parameters: sink_use_equals
+                    techs: test_demand_heat
         """
         )
         model = build_model(override_dict=override, scenario="simple_conversion")
@@ -269,14 +265,14 @@ class TestModelRun:
               rows: timesteps
               columns: nodes
               add_dimensions:
-              parameters: sink_use_equals
-              techs: demand_elec
+                parameters: sink_use_equals
+                techs: test_demand_elec
             - source: data_sources/demand_heat.csv
               rows: timesteps
               columns: nodes
               add_dimensions:
-              parameters: sink_use_equals
-              techs: test_demand_heat
+                parameters: sink_use_equals
+                techs: test_demand_heat
         """
         )
 
@@ -299,14 +295,14 @@ class TestModelRun:
               rows: timesteps
               columns: nodes
               add_dimensions:
-              parameters: sink_use_equals
-              techs: demand_elec
+                parameters: sink_use_equals
+                techs: test_demand_elec
             - source: data_sources/demand_heat.csv
               rows: timesteps
               columns: nodes
               add_dimensions:
-              parameters: sink_use_equals
-              techs: test_demand_heat
+                parameters: sink_use_equals
+                techs: test_demand_heat
         """
         )
         # check in output error that it points to: 07/01/2005 10:00:00
@@ -326,14 +322,14 @@ class TestModelRun:
               rows: timesteps
               columns: nodes
               add_dimensions:
-              parameters: sink_use_equals
-              techs: demand_elec
+                parameters: sink_use_equals
+                techs: test_demand_elec
             - source: data_sources/demand_heat.csv
               rows: timesteps
               columns: nodes
               add_dimensions:
-              parameters: sink_use_equals
-              techs: test_demand_heat
+                parameters: sink_use_equals
+                techs: test_demand_heat
         """
         )
         # check in output error that it points to: 07/01/2005 10:00:00
@@ -348,14 +344,14 @@ class TestModelRun:
               rows: timesteps
               columns: nodes
               add_dimensions:
-              parameters: sink_use_equals
-              techs: demand_elec
+                parameters: sink_use_equals
+                techs: test_demand_elec
             - source: data_sources/demand_heat.csv
               rows: timesteps
               columns: nodes
               add_dimensions:
-              parameters: sink_use_equals
-              techs: test_demand_heat
+                parameters: sink_use_equals
+                techs: test_demand_heat
         """
         )
         # should pass: wrong length of demand_heat csv, but time subsetting removes the difference
@@ -378,60 +374,6 @@ class TestModelRun:
             "Only one timestep defined. Inferring timestep resolution to be 1 hour",
         )
         assert model.inputs.timestep_resolution == [1]
-
-    def test_dataframes_passed(self):
-        """
-        If model config specifies dataframes to be loaded in (via df=...),
-        these time series must be passed as arguments in calliope.Model(...).
-        """
-        override = {"nodes.a.techs.test_demand_elec.sink_use_equals": "df=demand_elec"}
-        with pytest.raises(exceptions.ModelError) as error:
-            build_model(
-                model_file="model_minimal.yaml",
-                override_dict=override,
-                timeseries_dataframes=None,
-            )
-        assert check_error_or_warning(
-            error,
-            "Missing timeseries dataframes passed as an argument in calliope.Model(...).",
-        )
-
-    def test_dataframe_keys(self):
-        """
-        Any timeseries specified via df=... must correspond to a key in
-        timeseries_dataframes. An error should be thrown.
-        """
-        override = {"nodes.a.techs.test_demand_elec.sink_use_equals": "df=key_1"}
-        ts_df = {"key_2": pd.DataFrame(np.arange(10))}
-
-        with pytest.raises(KeyError) as error:
-            build_model(
-                model_file="model_minimal.yaml",
-                override_dict=override,
-                timeseries_dataframes=ts_df,
-            )
-        assert check_error_or_warning(
-            error, "Attempted to load dataframe with undefined key"
-        )
-
-    @pytest.mark.parametrize(
-        "input", [pd.DataFrame(np.arange(10)), {"demand_elec": np.arange(10)}]
-    )
-    def test_invalid_dataframes_passed(self, input):
-        """
-        `timeseries_dataframes` should be dict of pandas DataFrames.
-        """
-        override = {"nodes.a.techs.test_demand_elec.sink_use_equals": "df=demand_elec"}
-
-        with pytest.raises(exceptions.ModelError) as error:
-            build_model(
-                model_file="model_minimal.yaml",
-                override_dict=override,
-                timeseries_dataframes=input,
-            )
-        assert check_error_or_warning(
-            error, "`timeseries_dataframes` must be dict of pandas DataFrames."
-        )
 
 
 class TestChecks:
@@ -552,7 +494,7 @@ class TestChecks:
 
         override = {
             "config.init.time_subset": ["2005-01-01", "2005-01-04"],
-            "config.init.time_cluster": "cluster_days.csv",
+            "config.init.time_cluster": "data_sources/cluster_days.csv",
             "config.build.cyclic_storage": True,
         }
 
@@ -588,8 +530,8 @@ class TestChecks:
               rows: timesteps
               columns: nodes
               add_dimensions:
-              parameters: sink_use_equals
-              techs: demand_elec
+                parameters: sink_use_equals
+                techs: test_demand_elec
         """
         )
         simple_supply_from_df = build_model(

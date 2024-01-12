@@ -7,7 +7,7 @@ import pytest
 import xarray as xr
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.preprocess import load
+from calliope.preprocess import data_sources, load
 from calliope.preprocess.model_data import ModelDataFactory
 
 from .common.util import build_test_model as build_model
@@ -17,21 +17,33 @@ from .common.util import check_error_or_warning
 @pytest.fixture(scope="function")
 def model_def():
     filepath = Path(__file__).parent / "common" / "test_model" / "model.yaml"
-    return load.load_model_definition(
+    model_def_dict, model_def_path, _ = load.load_model_definition(
         filepath.as_posix(), scenario="simple_supply,empty_tech_node"
-    )[0]
+    )
+    return model_def_dict, model_def_path
 
 
 @pytest.fixture(scope="function")
-def model_data_factory(model_def, config_defaults, model_defaults):
-    config_defaults.union(model_def.pop("config"), allow_override=True)
-    init_config = config_defaults["init"]
-    init_config["time_data_path"] = (
-        Path(__file__).parent / "common" / "test_model" / init_config["time_data_path"]
-    )
+def data_source_list(model_def, init_config):
+    model_def_dict, model_def_path = model_def
+    return [
+        data_sources.DataSource(init_config, data_source, {}, model_def_path)
+        for data_source in model_def_dict.pop("data_sources", [])
+    ]
 
+
+@pytest.fixture(scope="function")
+def init_config(config_defaults, model_def):
+    model_def_dict, _ = model_def
+    config_defaults.union(model_def_dict.pop("config"), allow_override=True)
+    return config_defaults["init"]
+
+
+@pytest.fixture(scope="function")
+def model_data_factory(model_def, init_config, model_defaults):
+    model_def_dict, _ = model_def
     return ModelDataFactory(
-        init_config, model_def, {"foo": "bar"}, {"default": model_defaults}
+        init_config, model_def_dict, [], {"foo": "bar"}, {"default": model_defaults}
     )
 
 
@@ -61,32 +73,28 @@ class TestModelData:
             ("2000-01-01 00:00", "bar"): [True, 10],
             ("2000-01-01 01:00", "bar"): [False, 20],
         }
-        da = pd.Series(data).rename_axis(index=["foobar", "foobaz"]).to_xarray()
-        da.coords["foobar"] = da.coords["foobar"].astype("M")
+        da = pd.Series(data).rename_axis(index=["timesteps", "foobaz"]).to_xarray()
+        da.coords["timesteps"] = da.coords["timesteps"].astype("M")
         return da
 
     def test_model_data_init(self, model_data_factory: ModelDataFactory):
         assert model_data_factory.param_attrs["flow_in_eff"] == {"default": 1.0}
 
-        assert model_data_factory.model_data.attrs == {"foo": "bar"}
+        assert model_data_factory.dataset.attrs == {"foo": "bar"}
 
     def test_add_node_tech_data(self, model_data_factory_w_params: ModelDataFactory):
-        assert set(model_data_factory_w_params.model_data.nodes.values) == {
-            "a",
-            "b",
-            "c",
-        }
-        assert set(model_data_factory_w_params.model_data.techs.values) == {
+        assert set(model_data_factory_w_params.dataset.nodes.values) == {"a", "b", "c"}
+        assert set(model_data_factory_w_params.dataset.techs.values) == {
             "test_supply_elec",
             "test_demand_elec",
             "test_link_a_b_elec",
             "test_link_a_b_heat",
         }
-        assert set(model_data_factory_w_params.model_data.carriers.values) == {
+        assert set(model_data_factory_w_params.dataset.carriers.values) == {
             "electricity",
             "heat",
         }
-        assert set(model_data_factory_w_params.model_data.data_vars.keys()) == {
+        assert set(model_data_factory_w_params.dataset.data_vars.keys()) == {
             "nodes_inheritance",
             "distance",
             "techs_inheritance",
@@ -97,27 +105,20 @@ class TestModelData:
             "flow_cap_max",
             "source_use_max",
             "flow_out_eff",
-            "sink_use_equals",
         }
 
-    def test_add_time_dimension(self, model_data_factory_w_params: ModelDataFactory):
-        assert "timesteps" not in model_data_factory_w_params.model_data.dims
-        model_data_factory_w_params.add_time_dimension(None)
-
-        assert (
-            "timesteps"
-            not in model_data_factory_w_params.model_data.source_use_max.dims
-        )
-        assert (
-            "timesteps" in model_data_factory_w_params.model_data.sink_use_equals.dims
-        )
-        assert "timestep_resolution" in model_data_factory_w_params.model_data.data_vars
-        assert "timestep_weights" in model_data_factory_w_params.model_data.data_vars
+    def test_update_time_dimension_and_params(
+        self, model_data_factory_w_params: ModelDataFactory, timeseries_da
+    ):
+        model_data_factory_w_params.dataset["timeseries_da"] = timeseries_da
+        model_data_factory_w_params.update_time_dimension_and_params()
+        assert "timestep_resolution" in model_data_factory_w_params.dataset.data_vars
+        assert "timestep_weights" in model_data_factory_w_params.dataset.data_vars
 
     def test_clean_data_from_undefined_members(
         self, my_caplog, model_data_factory: ModelDataFactory
     ):
-        model_data_factory.model_data["carrier_in"] = (
+        model_data_factory.dataset["carrier_in"] = (
             pd.Series(
                 {
                     ("A", "foo", "c1"): True,
@@ -128,7 +129,7 @@ class TestModelData:
             .rename_axis(index=["nodes", "techs", "carriers"])
             .to_xarray()
         )
-        model_data_factory.model_data["carrier_out"] = (
+        model_data_factory.dataset["carrier_out"] = (
             pd.Series(
                 {
                     ("A", "foo", "c2"): True,
@@ -139,13 +140,14 @@ class TestModelData:
             .rename_axis(index=["nodes", "techs", "carriers"])
             .to_xarray()
         )
-        model_data_factory.model_data["will_remain"] = (
+
+        model_data_factory.dataset["will_remain"] = (
             pd.Series({"foo": 1, "bar": 2}).rename_axis(index="techs").to_xarray()
         )
-        model_data_factory.model_data["will_delete"] = (
+        model_data_factory.dataset["will_delete"] = (
             pd.Series({"foo": np.nan, "bar": 2}).rename_axis(index="techs").to_xarray()
         )
-        model_data_factory.model_data["will_delete_2"] = (
+        model_data_factory.dataset["will_delete_2"] = (
             pd.Series({("foo", "B"): 2})
             .rename_axis(index=["techs", "nodes"])
             .to_xarray()
@@ -166,12 +168,12 @@ class TestModelData:
             in my_caplog.text
         )
 
-        assert "will_delete" not in model_data_factory.model_data
-        assert "will_delete_2" not in model_data_factory.model_data
-        assert model_data_factory.model_data["will_remain"].item() == 1
-        assert set(model_data_factory.model_data.techs.values) == {"foo"}
-        assert set(model_data_factory.model_data.nodes.values) == {"A", "C"}
-        assert model_data_factory.model_data["definition_matrix"].dtype.kind == "b"
+        assert "will_delete" not in model_data_factory.dataset
+        assert "will_delete_2" not in model_data_factory.dataset
+        assert model_data_factory.dataset["will_remain"].item() == 1
+        assert set(model_data_factory.dataset.techs.values) == {"foo"}
+        assert set(model_data_factory.dataset.nodes.values) == {"A", "C"}
+        assert model_data_factory.dataset["definition_matrix"].dtype.kind == "b"
 
     @pytest.mark.parametrize(
         ["existing_distance", "expected_distance"], [(np.nan, 343.834), (1, 1)]
@@ -184,17 +186,17 @@ class TestModelData:
         expected_distance,
     ):
         model_data_factory_w_params.clean_data_from_undefined_members()
-        model_data_factory_w_params.model_data["latitude"] = (
+        model_data_factory_w_params.dataset["latitude"] = (
             pd.Series({"a": 51.507222, "b": 48.8567})
             .rename_axis(index="nodes")
             .to_xarray()
         )
-        model_data_factory_w_params.model_data["longitude"] = (
+        model_data_factory_w_params.dataset["longitude"] = (
             pd.Series({"a": -0.1275, "b": 2.3508})
             .rename_axis(index="nodes")
             .to_xarray()
         )
-        model_data_factory_w_params.model_data["distance"] = (
+        model_data_factory_w_params.dataset["distance"] = (
             pd.Series({"test_link_a_b_elec": existing_distance})
             .rename_axis(index="techs")
             .to_xarray()
@@ -202,7 +204,7 @@ class TestModelData:
 
         model_data_factory_w_params.add_link_distances()
         assert "Any missing link distances automatically computed" in my_caplog.text
-        assert model_data_factory_w_params.model_data["distance"].sel(
+        assert model_data_factory_w_params.dataset["distance"].sel(
             techs="test_link_a_b_elec"
         ).item() == pytest.approx(expected_distance)
 
@@ -213,23 +215,23 @@ class TestModelData:
         _default_distance_unit = model_data_factory_w_params.config["distance_unit"]
         model_data_factory_w_params.config["distance_unit"] = unit
         model_data_factory_w_params.clean_data_from_undefined_members()
-        model_data_factory_w_params.model_data["latitude"] = (
+        model_data_factory_w_params.dataset["latitude"] = (
             pd.Series({"A": 51.507222, "B": 48.8567})
             .rename_axis(index="nodes")
             .to_xarray()
         )
-        model_data_factory_w_params.model_data["longitude"] = (
+        model_data_factory_w_params.dataset["longitude"] = (
             pd.Series({"A": -0.1275, "B": 2.3508})
             .rename_axis(index="nodes")
             .to_xarray()
         )
-        del model_data_factory_w_params.model_data["distance"]
+        del model_data_factory_w_params.dataset["distance"]
 
         model_data_factory_w_params.add_link_distances()
         model_data_factory_w_params.config["distance_unit"] = _default_distance_unit
         assert "Link distance matrix automatically computed" in my_caplog.text
         assert (
-            model_data_factory_w_params.model_data["distance"].dropna("techs")
+            model_data_factory_w_params.dataset["distance"].dropna("techs")
             == pytest.approx(expected)
         ).all()
 
@@ -246,53 +248,55 @@ class TestModelData:
         model_data_factory_w_params.add_colors()
         assert "Building technology color" in my_caplog.text
         np.testing.assert_array_equal(
-            model_data_factory_w_params.model_data["color"].values,
+            model_data_factory_w_params.dataset["color"].values,
             ["#19122b", "#17344c", "#185b48", "#3c7632"],
         )
 
     def test_add_colors_full_init_da(
         self, my_caplog, model_data_factory_w_params: ModelDataFactory
     ):
-        model_data_factory_w_params.model_data["color"] = xr.DataArray(
+        model_data_factory_w_params.dataset["color"] = xr.DataArray(
             ["#123", "#654", "#321", "#456"], dims=("techs",)
         )
-        color_da_copy = model_data_factory_w_params.model_data["color"].copy()
+        color_da_copy = model_data_factory_w_params.dataset["color"].copy()
         model_data_factory_w_params.add_colors()
         assert "technology color" not in my_caplog.text
-        assert model_data_factory_w_params.model_data["color"].equals(color_da_copy)
+        assert model_data_factory_w_params.dataset["color"].equals(color_da_copy)
 
     def test_add_colors_partial_init_da(
         self, my_caplog, model_data_factory_w_params: ModelDataFactory
     ):
-        model_data_factory_w_params.model_data["color"] = pd.Series(
+        model_data_factory_w_params.dataset["color"] = pd.Series(
             ["#123", np.nan, "#321", "#456"],
-            index=model_data_factory_w_params.model_data.techs.to_index(),
+            index=model_data_factory_w_params.dataset.techs.to_index(),
         ).to_xarray()
 
         model_data_factory_w_params.add_colors()
         assert "Filling missing technology color" in my_caplog.text
         np.testing.assert_array_equal(
-            model_data_factory_w_params.model_data["color"].values,
+            model_data_factory_w_params.dataset["color"].values,
             ["#123", "#17344c", "#321", "#456"],
         )
 
     def test_assign_input_attr(
         self, model_data_factory: ModelDataFactory, simple_da, timeseries_da
     ):
-        model_data_factory.model_data["foo"] = simple_da
-        model_data_factory.model_data["bar"] = timeseries_da
-        assert model_data_factory.model_data.data_vars
+        model_data_factory.dataset["storage_cap_max"] = simple_da
+        model_data_factory.dataset["bar"] = timeseries_da
+        assert model_data_factory.dataset.data_vars
         assert not any(
             "is_result" in var.attrs
-            for var in model_data_factory.model_data.data_vars.values()
+            for var in model_data_factory.dataset.data_vars.values()
         )
 
         model_data_factory.assign_input_attr()
 
         assert all(
             var.attrs["is_result"] is False
-            for var in model_data_factory.model_data.data_vars.values()
+            for var in model_data_factory.dataset.data_vars.values()
         )
+        assert model_data_factory.dataset["storage_cap_max"].attrs["default"] == np.inf
+        assert "default" not in model_data_factory.dataset["bar"].attrs
 
     def test_get_relevant_node_refs_ts_data(self, model_data_factory: ModelDataFactory):
         techs_dict = AttrDict(
@@ -348,15 +352,6 @@ class TestModelData:
             "(nodes, A), (techs, foo) | Defining a technology `parent` at a node is not supported",
         )
 
-    def test_param_dict_to_array_with_defaults(
-        self, model_data_factory: ModelDataFactory
-    ):
-        da = model_data_factory._param_dict_to_array(
-            "storage_cap_max", {"data": 1, "index": [[]], "dims": []}
-        )
-        # See model def schema for assigning of param defaults
-        assert da.attrs == {"default": np.inf}
-
     @pytest.mark.parametrize(
         ["param_data", "expected_da"],
         [
@@ -372,7 +367,6 @@ class TestModelData:
     ):
         da = model_data_factory._param_dict_to_array("foo", param_data)
         assert da.equals(expected_da)
-        assert da.attrs == {}
 
     def test_definition_dict_to_ds(self, model_data_factory: ModelDataFactory):
         def_dict = {
@@ -433,7 +427,7 @@ class TestModelData:
         self, model_data_factory: ModelDataFactory, simple_da: xr.DataArray
     ):
         model_data_factory.LOOKUP_PARAMS["lookup_arr"] = "foobar"
-        model_data_factory.model_data["orig"] = simple_da
+        model_data_factory.dataset["orig"] = simple_da
         output = model_data_factory._prepare_param_dict("lookup_arr", ["foo", "bar"])
         assert output == {"data": True, "index": [["foo"], ["bar"]], "dims": ["foobar"]}
 
@@ -465,9 +459,7 @@ class TestModelData:
             "A": {
                 "nodes_inheritance": "init_nodes",
                 "my_param": 1,
-                "techs": {
-                    "test_demand_elec": {"sink_use_equals": "file=demand_elec.csv"}
-                },
+                "techs": {"test_demand_elec": None},
             },
             "B": {"my_param": 2},
         }
@@ -661,7 +653,7 @@ class TestModelData:
         timeseries_da: xr.DataArray,
         coord_name,
     ):
-        model_data_factory.model_data["orig"] = timeseries_da
+        model_data_factory.dataset["orig"] = timeseries_da
         new_idx = pd.Index(["2005-01-01 00:00", "2005-01-01 01:00"], name=coord_name)
         new_param = pd.Series([True, False], index=new_idx).to_xarray()
         model_data_factory._update_param_coords("foo", new_param)
@@ -675,7 +667,7 @@ class TestModelData:
     def test_update_param_coords_timeseries_in_new_but_not_in_orig(
         self, my_caplog, model_data_factory: ModelDataFactory, simple_da: xr.DataArray
     ):
-        model_data_factory.model_data["orig"] = simple_da
+        model_data_factory.dataset["orig"] = simple_da
         new_idx = pd.Index(["2005-01-01 00:00", "2005-01-01 01:00"], name="foobar")
         new_param = pd.Series([True, False], index=new_idx).to_xarray()
         model_data_factory._update_param_coords("foo", new_param)
@@ -688,7 +680,7 @@ class TestModelData:
     def test_update_param_coords_no_timeseries(
         self, my_caplog, model_data_factory: ModelDataFactory, simple_da: xr.DataArray
     ):
-        model_data_factory.model_data["orig"] = simple_da
+        model_data_factory.dataset["orig"] = simple_da
         new_param = simple_da.copy()
         model_data_factory._update_param_coords("foo", new_param)
 
@@ -709,7 +701,7 @@ class TestModelData:
         coords,
         new_coords,
     ):
-        model_data_factory.model_data["orig"] = simple_da
+        model_data_factory.dataset["orig"] = simple_da
         new_param = simple_da.to_series().rename_axis(index=coords).to_xarray()
         model_data_factory._log_param_updates("foo", new_param)
         for coord in new_coords:
@@ -733,7 +725,7 @@ class TestModelData:
         index,
         new_items,
     ):
-        model_data_factory.model_data["orig"] = simple_da
+        model_data_factory.dataset["orig"] = simple_da
         new_param = (
             pd.concat([simple_da.to_series(), pd.Series({index: [False, 1]})])
             .rename_axis(index=simple_da.dims)
@@ -751,7 +743,7 @@ class TestModelData:
     def test_log_param_no_logging_message(
         self, my_caplog, model_data_factory: ModelDataFactory, simple_da: xr.DataArray
     ):
-        model_data_factory.model_data["orig"] = simple_da
+        model_data_factory.dataset["orig"] = simple_da
         new_param = simple_da.copy()
         model_data_factory._log_param_updates("foo", new_param)
 
@@ -784,12 +776,11 @@ class TestTopLevelParams:
             model_data_factory_w_params.model_definition["parameters"] = {
                 "my_val": in_dict
             }
-            model_data_factory_w_params.add_time_dimension(None)
             model_data_factory_w_params.add_top_level_params()
 
             _data = pd.Series(out_dict).rename_axis(index=dims)
             pd.testing.assert_series_equal(
-                model_data_factory_w_params.model_data.my_val.to_series()
+                model_data_factory_w_params.dataset.my_val.to_series()
                 .dropna()
                 .reindex(_data.index),
                 _data,
@@ -800,12 +791,12 @@ class TestTopLevelParams:
 
         return _run_and_test
 
-    def test_protected_parameter_names(self):
-        with pytest.raises(KeyError) as excinfo:
+    def test_parameter_already_exists(self):
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
             build_model({"parameters.flow_out_eff": 1}, "simple_supply,two_hours")
         assert check_error_or_warning(
             excinfo,
-            "Trying to add top-level parameter with same name as a node/tech level parameter: flow_out_eff",
+            "A parameter with this name has already been defined in a data source or at a node/tech level.",
         )
 
     @pytest.mark.parametrize("val", [1, 1.0, np.inf, "foo"])
@@ -921,15 +912,15 @@ class TestTopLevelParams:
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Operational mode requires the same timestep resolution:calliope.exceptions.ModelWarning"
     )
-    def test_top_level_param_extend_dim_vals(self, my_caplog, run_and_test):
+    def test_top_level_param_extend_dim_vals(
+        self, my_caplog, run_and_test, model_data_factory_w_params
+    ):
         # We do this test with timesteps as all other dimension elements are filtered out if there is no matching True element in `definition_matrix`
         run_and_test(
-            {"data": 10, "index": ["2006-01-01"], "dims": ["timesteps"]},
-            {pd.to_datetime("2006-01-01"): 10},
-            "timesteps",
+            {"data": 10, "index": ["d"], "dims": ["nodes"]}, {"d": 10}, "nodes"
         )
         assert (
-            "(parameters, my_val) | Adding a new value to the `timesteps` model coordinate: ['2006-01-01T00:00:00.000000000']"
+            "(parameters, my_val) | Adding a new value to the `nodes` model coordinate: ['d']"
             in my_caplog.text
         )
 

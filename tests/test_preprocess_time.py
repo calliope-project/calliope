@@ -9,7 +9,7 @@ class TestClustering:
     def clustered_model(self):
         cluster_init = {
             "time_subset": ["2005-01-01", "2005-01-04"],
-            "time_cluster": "cluster_days.csv",
+            "time_cluster": "data_sources/cluster_days.csv",
         }
         return build_test_model(scenario="simple_supply", **cluster_init)
 
@@ -67,7 +67,7 @@ class TestResamplingAndCluster:
             scenario="simple_supply",
             time_subset=["2005-01-01", "2005-01-04"],
             time_resample="6H",
-            time_cluster="cluster_days.csv",
+            time_cluster="data_sources/cluster_days.csv",
         )
 
         dtindex = pd.DatetimeIndex(
@@ -99,7 +99,7 @@ class TestResampling:
                     "columns": "nodes",
                     "add_dimensions": {
                         "parameters": "sink_use_equals",
-                        "techs": "demand_elec",
+                        "techs": "test_demand_elec",
                     },
                 }
             ]
@@ -136,7 +136,7 @@ class TestResampling:
                     "columns": "nodes",
                     "add_dimensions": {
                         "parameters": "sink_use_equals",
-                        "techs": "demand_elec",
+                        "techs": "test_demand_elec",
                     },
                 }
             ]

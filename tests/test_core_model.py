@@ -1,5 +1,4 @@
 import logging
-import os
 
 import calliope
 import numpy as np
@@ -15,7 +14,7 @@ class TestModel:
     @pytest.fixture(scope="module")
     def national_scale_example(self):
         model = calliope.examples.national_scale(
-            override_dict={"config.init.time_subset": ["2005-01-01", "2005-01-01"]}
+            time_subset=["2005-01-01", "2005-01-01"]
         )
         return model
 
@@ -26,14 +25,8 @@ class TestModel:
     def test_info(self, national_scale_example):
         national_scale_example.info()
 
-    def test_info_minimal_model(self):
-        this_path = os.path.dirname(__file__)
-        model_location = os.path.join(
-            this_path, "common", "test_model", "model_minimal.yaml"
-        )
-        model = calliope.Model(model_location)
-
-        model.info()
+    def test_info_simple_model(self, simple_supply):
+        simple_supply.info()
 
     def test_update_observed_dict(self, national_scale_example):
         national_scale_example.config.build["backend"] = "foo"

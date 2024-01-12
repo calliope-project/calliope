@@ -202,6 +202,7 @@ class Model(object):
         model_data_factory = ModelDataFactory(
             init_config, model_definition, data_sources, attributes, param_metadata
         )
+        model_data_factory.build()
 
         self._model_data = model_data_factory.dataset
 

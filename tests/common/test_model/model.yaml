@@ -27,7 +27,15 @@ data_sources:
     columns: nodes
     add_dimensions:
       parameters: sink_use_equals
-      techs: demand_elec
+      techs: test_demand_elec
+
+node_groups:
+  init_nodes:
+    techs.test_demand_elec:
+
+nodes:
+  a.inherit: init_nodes
+  b.inherit: init_nodes
 
 techs:
   test_supply_gas:

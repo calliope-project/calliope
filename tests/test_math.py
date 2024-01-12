@@ -663,17 +663,18 @@ class TestNetImportShare(CustomMathExamples):
                 "columns": "nodes",
                 "add_dimensions": {
                     "parameters": "sink_use_equals",
-                    "techs": "demand_elec",
+                    "techs": "test_demand_elec",
                 },
             },
             {
                 "source": "data_sources/demand_heat.csv",
                 "rows": "timesteps",
                 "columns": "nodes",
-                "sel_drop": {"nodes": "a"},
+                "select": {"nodes": "a"},
+                "drop": "nodes",
                 "add_dimensions": {
                     "parameters": "sink_use_equals",
-                    "techs": "demand_elec",
+                    "techs": "test_demand_heat",
                     "nodes": "c",
                 },
             },

@@ -3,7 +3,7 @@ overrides:
     config.init:
       name: inter-cluster storage
       custom_math: ["storage_inter_cluster"]
-      time_cluster: cluster_days.csv
+      time_cluster: data_sources/cluster_days.csv
 
 config.init.name: base
 

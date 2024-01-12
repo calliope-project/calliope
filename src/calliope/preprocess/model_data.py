@@ -96,13 +96,14 @@ class ModelDataFactory:
                 flipped_attributes[subkey][key] = subval
         self.param_attrs = flipped_attributes
 
+    def build(self):
+        "Build dataset from model definition."
         self.add_node_tech_data()
-        self.add_time_dimension()
         self.add_top_level_params()
         self.clean_data_from_undefined_members()
         self.add_colors()
         self.add_link_distances()
-        self.resample_time_dimension()
+        self.update_time_dimension_and_params()
         self.assign_input_attr()
 
     def init_from_data_sources(self, data_sources: list[data_sources.DataSource]):
@@ -196,7 +197,7 @@ class ModelDataFactory:
         validate_dict(
             {"nodes": active_node_dict}, MODEL_SCHEMA, "node (non-tech) definition"
         )
-        self.dataset, node_tech_ds
+
         node_ds = self._definition_dict_to_ds(active_node_dict, "nodes")
         ds = xr.merge([node_tech_ds, node_ds])
         self.dataset = xr.merge(
@@ -210,17 +211,17 @@ class ModelDataFactory:
             KeyError: Cannot provide the same name for a top-level parameter as those defined already at the tech/node level.
 
         """
-        if "parameters" not in self.model_definition:
-            return None
-        for param_name, param_data in self.model_definition["parameters"].items():
-            if param_name in self.dataset.data_vars:
-                raise KeyError(
-                    f"Trying to add top-level parameter with same name as a node/tech level parameter: {param_name}"
+        for name, data in self.model_definition.get("parameters", {}).items():
+            if name in self.dataset.data_vars:
+                exceptions.warn(
+                    f"(parameters, {name}) | "
+                    "A parameter with this name has already been defined in a data source or at a node/tech level. "
+                    f"Non-NaN data defined here will override existing data for this parameter."
                 )
-            param_dict = self._prepare_param_dict(param_name, param_data)
-            param_da = self._param_dict_to_array(param_name, param_dict)
-            self._update_param_coords(param_name, param_da)
-            self._log_param_updates(param_name, param_da)
+            param_dict = self._prepare_param_dict(name, data)
+            param_da = self._param_dict_to_array(name, param_dict)
+            self._update_param_coords(name, param_da)
+            self._log_param_updates(name, param_da)
             param_ds = param_da.to_dataset()
 
             if "techs" in param_da.dims and "nodes" in param_da.dims:
@@ -228,26 +229,24 @@ class ModelDataFactory:
                     param_da.to_series().dropna().groupby(["nodes", "techs"]).first()
                 )
                 exceptions.warn(
-                    f"(parameters, {param_name}) | This parameter will only take effect if you have already defined"
+                    f"(parameters, {name}) | This parameter will only take effect if you have already defined"
                     f" the following combinations of techs at nodes in your model definition: {valid_node_techs.index.values}"
                 )
 
-            self.dataset = self.dataset.merge(param_ds)
+            self.dataset = xr.merge(
+                [param_ds, self.dataset],
+                compat="override",
+                combine_attrs="no_conflicts",
+            ).fillna(self.dataset)
 
-    def add_time_dimension(self):
-        """Process file/dataframe references in the model data and use it to expand the model to include a time dimension.
-
-        Raises:
-            exceptions.ModelError: The model has to have a time dimension, so at least one reference must exist.
-        """
+    def update_time_dimension_and_params(self):
+        """If resampling/clustering is requested in the initialisation config, apply it here."""
         if "timesteps" not in self.dataset:
             raise exceptions.ModelError(
                 "Must define at least one timeseries parameter in a Calliope model."
             )
         self.dataset = time.add_inferred_time_params(self.dataset)
 
-    def resample_time_dimension(self):
-        """If resampling/clustering is requested in the initialisation config, apply it here."""
         if self.config["time_resample"] is not None:
             self.dataset = time.resample(self.dataset, self.config["time_resample"])
         if self.config["time_cluster"] is not None:
@@ -267,6 +266,7 @@ class ModelDataFactory:
 
         # dropping index values where they are irrelevant requires definition_matrix to be NaN where False
         self.dataset["definition_matrix"] = def_matrix.where(def_matrix)
+
         for dim in def_matrix.dims:
             orig_dim_vals = set(self.dataset.coords[dim].data)
             self.dataset = self.dataset.dropna(
@@ -661,9 +661,10 @@ class ModelDataFactory:
             node_from, node_to = link_data.pop("from"), link_data.pop("to")
             nodes_exists = all(
                 node in active_node_dict
-                or node_from in self.dataset.coords.get("nodes", xr.DataArray())
+                or node in self.dataset.coords.get("nodes", xr.DataArray())
                 for node in [node_from, node_to]
             )
+
             if not nodes_exists:
                 LOGGER.debug(
                     f"(links, {link_name}) | Deactivated due to missing/deactivated `from` or to `node`."
