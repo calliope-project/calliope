@@ -7,8 +7,8 @@
 #
 #     New top-level parameters:
 #
-#     - `flow_eff_piecewise_slopes` (defining the new parameter `pieces`)
-#     - `flow_eff_piecewise_intercept` (defining the new parameter `pieces`)
+#     - `flow_eff_piecewise_slopes` (defining the new set `pieces`)
+#     - `flow_eff_piecewise_intercept` (defining the new set `pieces`)
 #
 # ---
 

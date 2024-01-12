@@ -7,8 +7,8 @@
 #
 #     New top-level parameters:
 #
-#     - `cost_flow_cap_piecewise_slopes` (defining the new parameter `pieces`)
-#     - `cost_flow_cap_piecewise_intercept` (defining the new parameter `pieces`)
+#     - `cost_flow_cap_piecewise_slopes` (defining the new set `pieces`)
+#     - `cost_flow_cap_piecewise_intercept` (defining the new set `pieces`)
 #
 # ---
 
