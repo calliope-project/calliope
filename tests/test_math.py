@@ -147,7 +147,7 @@ class CustomMathExamples(ABC):
     TEST_REGISTER: set = set()
 
     #: source of all custom math files
-    CUSTOM_MATH_DIR = CALLIOPE_DIR.parent.parent / "doc" / "_static" / "custom_math"
+    CUSTOM_MATH_DIR = CALLIOPE_DIR.parent.parent / "docs" / "custom_math" / "examples"
 
     @property
     @abstractmethod
