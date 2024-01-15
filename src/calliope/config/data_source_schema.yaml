@@ -2,9 +2,8 @@
 # yaml-language-server: $schema=https://json-schema.org/draft/2020-12/schema#
 
 $schema: https://json-schema.org/draft/2020-12/schema#
-$id: data_source_schema.yaml
 title: Data source schema
-description: All options available to load a model definition data from file.
+description: All options available to load model definition data from file.
 type: object
 additionalProperties: false
 required: ["source"]

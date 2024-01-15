@@ -1,0 +1,9 @@
+techs,carrier_out,carrier_in
+ccgt,1,
+demand_power,,1
+csp,1,
+battery,1,1
+region1_to_region1_1,1,1
+region1_to_region1_2,1,1
+region1_to_region1_3,1,1
+region1_to_region2,1,1

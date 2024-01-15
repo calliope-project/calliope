@@ -125,13 +125,16 @@ class ModelDataFactory:
 
         techs_incl_inheritance = self._inherit_defs("techs")
         for data_source in data_sources:
-            node_dict = data_source.node_dict(
-                techs_incl_inheritance, self.tech_data_from_sources
-            )
+            node_dict = data_source.node_dict(techs_incl_inheritance)
             node_dict.union(
                 self.model_definition.get("nodes", AttrDict()), allow_override=True
             )
             self.model_definition["nodes"] = node_dict
+            for param, lookup_dim in self.LOOKUP_PARAMS.items():
+                lookup_dict = data_source.lookup_dict_from_param(param, lookup_dim)
+                self.tech_data_from_sources.union(lookup_dict)
+                if lookup_dict:
+                    data_source.drop(param)
 
         self.dataset = xr.merge(
             [self.dataset, *[data_source.dataset for data_source in data_sources]],
@@ -656,8 +659,6 @@ class ModelDataFactory:
             LOGGER.debug("links | No links between nodes defined.")
 
         for link_name, link_data in active_link_techs.items():
-            # TODO: fix issue of links defined in data sources not ending up in this loop
-            # and therefore not having the chance to be deactivated when one / both connecting nodes are deactivated.
             node_from, node_to = link_data.pop("from"), link_data.pop("to")
             nodes_exists = all(
                 node in active_node_dict
@@ -667,7 +668,7 @@ class ModelDataFactory:
 
             if not nodes_exists:
                 LOGGER.debug(
-                    f"(links, {link_name}) | Deactivated due to missing/deactivated `from` or to `node`."
+                    f"(links, {link_name}) | Deactivated due to missing/deactivated `from` or `to` node."
                 )
                 self._deactivate_item(techs=link_name)
                 continue

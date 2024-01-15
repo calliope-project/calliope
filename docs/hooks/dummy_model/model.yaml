@@ -7,6 +7,10 @@ overrides:
 
 config.init.name: base
 
+nodes:
+  A.techs: {demand_tech, conversion_tech, supply_tech, storage_tech}
+  B.techs: {demand_tech, conversion_tech, supply_tech, storage_tech}
+
 techs:
   tech_transmission:
     from: A
@@ -26,8 +30,6 @@ data_sources:
   tech_carrier:
     source: tech_carrier.csv
     rows: [techs, carriers, parameters]
-    add_dimensions:
-      nodes: [A, B]
 
   costs:
     source: costs.csv

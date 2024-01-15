@@ -118,6 +118,7 @@ nav:
       - reference/api/exceptions.md
       - reference/api/logging.md
     - reference/config_schema.md
+    - reference/data_source_schema.md
     - reference/model_schema.md
     - reference/math_schema.md
   - Version history: version_history.md

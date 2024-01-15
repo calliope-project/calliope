@@ -16,6 +16,13 @@ config:
     solver: cbc
     zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
 
+nodes:
+  region1.techs: {demand_power, ccgt}
+  region2.techs: {demand_power, battery}
+  region1_1.techs: {csp}
+  region1_2.techs: {csp}
+  region1_3.techs: {csp}
+
 data_sources:
   dimensionless_params:
     source: data_sources/dimensionless_params.csv
@@ -32,11 +39,16 @@ data_sources:
     columns: parameters
 
   techs_carriers_at_nodes:
-    source: data_sources/techs_carriers_at_nodes.csv
-    rows: [nodes, techs]
+    source: data_sources/techs_carriers.csv
+    rows: techs
     columns: parameters
     add_dimensions:
       carriers: power
+
+  links:
+    source: data_sources/links.csv
+    rows: techs
+    columns: parameters
 
   techs_costs_monetary:
     source: data_sources/techs_costs_monetary.csv

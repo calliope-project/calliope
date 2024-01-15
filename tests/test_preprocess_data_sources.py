@@ -402,13 +402,13 @@ class TestDataSourceMalformed:
         )
 
 
-class TestDataSourceCarrierInfoDict:
+class TestDataSourceLookupDictFromParam:
     @pytest.fixture(scope="class")
     def source_obj(self, init_config):
         df = pd.DataFrame(
             {
-                "carrier_in": {("foo1", "bar1"): 1, ("foo1", "bar2"): 1},
-                "carrier_out": {("foo1", "bar1"): 1, ("foo2", "bar2"): 1},
+                "FOO": {("foo1", "bar1"): 1, ("foo1", "bar2"): 1},
+                "BAR": {("foo1", "bar1"): 1, ("foo2", "bar2"): 1},
             }
         )
         source_dict = {
@@ -421,12 +421,24 @@ class TestDataSourceCarrierInfoDict:
         )
         return ds
 
-    def test_carrier_info_dict_from_model_data_var(self, source_obj):
-        carrier_info = source_obj._carrier_info_dict_from_model_data_var()
-        assert carrier_info == {
-            "foo1": {"carrier_in": ["bar1", "bar2"], "carrier_out": "bar1"},
-            "foo2": {"carrier_out": "bar2"},
-        }
+    @pytest.mark.parametrize(
+        ["param", "expected"],
+        [
+            ("FOO", {"foo1": {"FOO": ["bar1", "bar2"]}}),
+            ("BAR", {"foo1": {"BAR": "bar1"}, "foo2": {"BAR": "bar2"}}),
+        ],
+    )
+    def test_carrier_info_dict_from_model_data_var(self, source_obj, param, expected):
+        carrier_info = source_obj.lookup_dict_from_param(param, "carriers")
+        assert carrier_info == expected
+
+    def test_carrier_info_dict_from_model_data_var_missing_dim(self, source_obj):
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            source_obj.lookup_dict_from_param("FOO", "foobar")
+        check_error_or_warning(
+            excinfo,
+            "Loading FOO with missing dimension(s). Must contain `techs` and `foobar`, received: ('techs', 'carriers')",
+        )
 
 
 class TestDataSourceTechDict:
@@ -473,19 +485,18 @@ class TestDataSourceTechDict:
         assert tech_dict == {"foo1": {}, "bar1": {}}
         assert base_dict == {"foo1": {"base_tech": "transmission"}}
 
-    def test_tech_dict_from_carrier_in_out(self, source_obj):
+    def test_tech_dict_from_to_from(self, source_obj):
         df_dict = {
-            "carrier_in": {("foo1", "bar1"): 1, ("foo1", "bar2"): 1},
-            "carrier_out": {("foo1", "bar1"): 1, ("foo2", "bar2"): 1},
+            "from": {"foo1": "bar1", "foo2": "bar2"},
+            "to": {"foo1": "bar2", "foo3": "bar1"},
         }
-        tech_dict, base_dict = source_obj(
-            df_dict, rows=["techs", "carriers"]
-        ).tech_dict()
+        tech_dict, base_dict = source_obj(df_dict).tech_dict()
 
-        assert tech_dict == {"foo1": {}, "foo2": {}}
+        assert tech_dict == {"foo1": {}, "foo2": {}, "foo3": {}}
         assert base_dict == {
-            "foo1": {"carrier_in": ["bar1", "bar2"], "carrier_out": "bar1"},
-            "foo2": {"carrier_out": "bar2"},
+            "foo1": {"from": "bar1", "to": "bar2"},
+            "foo2": {"from": "bar2"},
+            "foo3": {"to": "bar1"},
         }
 
     def test_tech_dict_empty(self, source_obj):
@@ -512,14 +523,12 @@ class TestDataSourceNodeDict:
     def test_node_dict_from_one_param(self, source_obj):
         df_dict = {"available_area": {("foo1", "bar1"): 1, ("foo2", "bar2"): 2}}
         tech_dict = calliope.AttrDict({"bar1": {}, "bar2": {}})
-        base_tech_data = calliope.AttrDict({})
-        node_dict = source_obj(df_dict).node_dict(tech_dict, base_tech_data)
+        node_dict = source_obj(df_dict).node_dict(tech_dict)
 
         assert node_dict == {
             "foo1": {"techs": {"bar1": None}},
             "foo2": {"techs": {"bar2": None}},
         }
-        assert not base_tech_data
 
     def test_node_dict_from_two_param(self, source_obj):
         df_dict = {
@@ -527,66 +536,46 @@ class TestDataSourceNodeDict:
             "other_param": {("foo2", "bar2"): 1},
         }
         tech_dict = calliope.AttrDict({"bar1": {}, "bar2": {}})
-        base_tech_data = calliope.AttrDict({})
-        node_dict = source_obj(df_dict).node_dict(tech_dict, base_tech_data)
+        node_dict = source_obj(df_dict).node_dict(tech_dict)
 
         assert node_dict == {
             "foo1": {"techs": {"bar1": None, "bar2": None}},
             "foo2": {"techs": {"bar2": None}},
         }
-        assert not base_tech_data
-
-    def test_node_dict_update_base_tech_data_one_link_ref(self, source_obj):
-        df_dict = {"param": {("foo1", "bar1"): 1, ("foo2", "bar2"): 2}}
-        tech_dict = calliope.AttrDict(
-            {"bar1": {"base_tech": "transmission"}, "bar2": {}}
-        )
-        base_tech_data = calliope.AttrDict({})
-        node_dict = source_obj(df_dict).node_dict(tech_dict, base_tech_data)
-
-        assert node_dict == {"foo1": {"techs": {}}, "foo2": {"techs": {"bar2": None}}}
-
-        assert base_tech_data == {"bar1": {"from": "foo1"}}
-
-    def test_node_dict_update_base_tech_data_two_link_ref(self, source_obj):
-        df_dict = {
-            "param": {("foo1", "bar1"): 1, ("foo2", "bar2"): 2, ("foo2", "bar1"): 2}
-        }
-        tech_dict = calliope.AttrDict(
-            {"bar1": {"base_tech": "transmission"}, "bar2": {}}
-        )
-        base_tech_data = calliope.AttrDict({})
-        node_dict = source_obj(df_dict).node_dict(tech_dict, base_tech_data)
-
-        assert node_dict == {"foo1": {"techs": {}}, "foo2": {"techs": {"bar2": None}}}
-
-        assert base_tech_data == {"bar1": {"from": "foo1", "to": "foo2"}}
 
     def test_node_dict_extra_dim_in_param(self, source_obj):
         df_dict = {
             "available_area": {("foo1", "bar1", "baz1"): 1, ("foo2", "bar2", "baz2"): 2}
         }
         tech_dict = calliope.AttrDict({"bar1": {}, "bar2": {}})
-        base_tech_data = calliope.AttrDict({})
         node_dict = source_obj(df_dict, rows=["nodes", "techs", "carriers"]).node_dict(
-            tech_dict, base_tech_data
+            tech_dict
         )
 
         assert node_dict == {
             "foo1": {"techs": {"bar1": None}},
             "foo2": {"techs": {"bar2": None}},
         }
-        assert not base_tech_data
 
     def test_node_dict_no_info(self, source_obj):
         df_dict = {"param": {"foo1": 1, "foo2": 2}}
         tech_dict = calliope.AttrDict(
             {"bar1": {"base_tech": "transmission"}, "bar2": {}}
         )
-        base_tech_data = calliope.AttrDict({})
-        node_dict = source_obj(df_dict, rows="techs").node_dict(
-            tech_dict, base_tech_data
-        )
+        node_dict = source_obj(df_dict, rows="techs").node_dict(tech_dict)
 
         assert node_dict == {}
-        assert base_tech_data == {}
+
+    def test_transmission_tech_with_nodes(self, source_obj):
+        df_dict = {"param": {("foo1", "bar1"): 1, ("foo2", "bar2"): 2}}
+        tech_dict = calliope.AttrDict(
+            {"bar1": {"base_tech": "transmission"}, "bar2": {}}
+        )
+
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            source_obj(df_dict).node_dict(tech_dict)
+
+        check_error_or_warning(
+            excinfo,
+            "Cannot define transmission technology data over the `nodes` dimension",
+        )

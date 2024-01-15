@@ -39,6 +39,7 @@ class DataSourceDict(TypedDict):
 
 class DataSource:
     MESSAGE_TEMPLATE = "(data_sources, {name}) | {message}."
+    PARAMS_TO_INITIALISE_YAML = ["base_tech", "to", "from"]
 
     def __init__(
         self,
@@ -83,6 +84,14 @@ class DataSource:
         "Data source name"
         return self._name
 
+    def drop(self, name: str):
+        """Drop a data in-place from the data source.
+
+        Args:
+            name (str): Name of data array to drop.
+        """
+        self.dataset = self.dataset.drop_vars(name, errors="ignore")
+
     def tech_dict(self) -> tuple[AttrDict, AttrDict]:
         """Create a dummy technology definition dictionary from the dataset's "techs" dimension.
 
@@ -96,21 +105,15 @@ class DataSource:
             {k: {} for k in self.dataset.get("techs", xr.DataArray([])).values}
         )
         base_tech_data = AttrDict()
-        if "base_tech" in self.dataset:
-            parent_dict = self.dataset["base_tech"].to_dataframe().dropna().T.to_dict()
-            base_tech_data.union(AttrDict(parent_dict))
-
-        carrier_info_dict = self._carrier_info_dict_from_model_data_var()
-        base_tech_data.union(carrier_info_dict)
+        for param in self.PARAMS_TO_INITIALISE_YAML:
+            if param in self.dataset:
+                base_tech_dict = self.dataset[param].to_dataframe().dropna().T.to_dict()
+                base_tech_data.union(AttrDict(base_tech_dict))
 
         return tech_dict, base_tech_data
 
-    def node_dict(
-        self, techs_incl_inheritance: AttrDict, base_tech_data: AttrDict
-    ) -> AttrDict:
+    def node_dict(self, techs_incl_inheritance: AttrDict) -> AttrDict:
         """Create a dummy node definition dictionary from the dimensions defined across all data sources.
-
-        In addition, if transmission technologies are defined then update `to`/`from` params in the technology definition dictionary.
 
         This definition dictionary will ensure that the minimal YAML content is still possible.
 
@@ -120,12 +123,6 @@ class DataSource:
             techs_incl_inheritance (AttrDict):
                 Technology definition dictionary which is a union of any YAML definition and the result of calling `self.tech_dict` across all data sources.
                 Technologies should have their entire definition inheritance chain resolved.
-            base_tech_data (AttrDict):
-                Technology definition dictionary containing only a subset of parameters _if_ they have been defined in data sources.
-                These parameters include `base_tech`, `carrier_in`, `carrier_out`.
-                After calling this function, and if any transmission technologies are defined in this data source,
-                this dictionary will also contain `to` and `from` parameters.
-
         """
 
         node_tech_vars = self.dataset[
@@ -153,14 +150,89 @@ class DataSource:
                     techs_incl_inheritance[tech].get("base_tech", None)
                     == "transmission"
                 ):
-                    if base_tech_data.get_key(f"{tech}.from", False):
-                        base_tech_data.set_key(f"{tech}.to", node)
-                    else:
-                        base_tech_data.set_key(f"{tech}.from", node)
+                    self._raise_error(
+                        "Cannot define transmission technology data over the `nodes` dimension"
+                    )
                 else:
                     tech_dict["techs"][tech] = None
 
         return node_tech_dict
+
+    def lookup_dict_from_param(self, param: str, lookup_dim: str) -> AttrDict:
+        """Convert "lookup" data loaded from file into YAML-esque format.
+
+        Lookup parameters are those where in YAML the dimension index is the parameter value.
+
+        For example,
+
+        ```yaml
+        techs:
+          bar:
+            carrier_in: baz
+        ```
+
+        is translated to the internal data model as:
+
+        ```
+        techs | carriers | carrier_in
+        bar   | baz      | 1
+        ```
+
+        This method converts the tabular data back to the dictionary format.
+
+        !!! note
+            Only `techs` and `lookup_dim` will be retained in the resulting dictionary.
+            Other dimensions will be dropped.
+
+        Args:
+            param (str):
+                Parameter in `self.dataset` to search for.
+                If found, create a dictionary representation.
+            lookup_dim (str):
+                The dimension to pivot the data table on.
+                The values in this dimension will become the values in the dictionary.
+        Returns:
+            AttrDict:
+                If present in `self.dataset`, a valid Calliope YAML format for the parameter.
+                If not, an empty dictionary.
+        """
+
+        def __extract_data(grouped_series):
+            index_items = sorted(
+                list(set(grouped_series.dropna(subset=[param])[lookup_dim].values))
+            )
+            if len(index_items) == 1:
+                index_items = index_items[0]
+            if index_items:
+                return {param: index_items}
+            else:
+                return np.nan
+
+        lookup_dict = AttrDict()
+        if param not in self.dataset:
+            return lookup_dict
+        elif (
+            "techs" not in self.dataset[param].dims
+            or lookup_dim not in self.dataset[param].dims
+        ):
+            self._raise_error(
+                f"Loading {param} with missing dimension(s). "
+                f"Must contain `techs` and `{lookup_dim}`, received: {self.dataset[param].dims}"
+            )
+        else:
+            lookup_dict.union(
+                AttrDict(
+                    self.dataset[param]
+                    .to_series()
+                    .reset_index(lookup_dim)
+                    .groupby("techs")
+                    .apply(__extract_data)
+                    .dropna()
+                    .to_dict()
+                )
+            )
+
+        return lookup_dict
 
     def _read_csv(self) -> pd.DataFrame:
         """Load data from CSV.
@@ -325,80 +397,9 @@ class DataSource:
             for idx, name in enumerate(loaded_names)
         ):
             self._raise_error(
-                f"Trying to set names for {axis} but names in the file do no match names provided | in file: {loaded_names} | defined: {defined_names}"
+                f"Trying to set names for {axis} but names in the file do no match names provided |"
+                f" in file: {loaded_names} | defined: {defined_names}"
             )
-
-    def _carrier_info_dict_from_model_data_var(self) -> AttrDict:
-        """Convert `carrier_in`/`carrier_out` loaded from a data source into YAML-esque format.
-
-        Only used when either variable is defined in a data source.
-        Conversion from e.g.,
-
-        ```
-        nodes | techs | carriers | carrier_in
-        foo   | bar   | baz      | 1
-        ```
-
-        to
-        ```yaml
-        techs:
-          bar:
-            carrier_in: baz
-        ```
-
-        !!! note
-            This will drop the `nodes` dimension entirely as we expect these parameters to be defined at the tech level in YAML.
-
-        Returns:
-            AttrDict:
-                If present in `data_source`, a valid Calliope YAML format for `carrier_in`/`carrier_out`.
-                If not, an empty dictionary.
-        """
-
-        def __extract_carriers(grouped_series):
-            carriers = sorted(
-                list(
-                    set(
-                        grouped_series.dropna(
-                            subset=[f"carrier_{direction}"]
-                        ).carriers.values
-                    )
-                )
-            )
-            if len(carriers) == 1:
-                carriers = carriers[0]
-            if carriers:
-                return {f"carrier_{direction}": carriers}
-            else:
-                return np.nan
-
-        carrier_info_dict = AttrDict()
-        for direction in ["in", "out"]:
-            param = f"carrier_{direction}"
-            if param not in self.dataset:
-                continue
-            elif (
-                "techs" not in self.dataset[param].dims
-                or "carriers" not in self.dataset[param].dims
-            ):
-                self._raise_error(
-                    f"Loading {param} with missing dimension(s). "
-                    "Must contain `techs` and `carriers`, received: {self.dataset[param].dims}"
-                )
-            else:
-                carrier_info_dict.union(
-                    AttrDict(
-                        self.dataset[f"carrier_{direction}"]
-                        .to_series()
-                        .reset_index("carriers")
-                        .groupby("techs")
-                        .apply(__extract_carriers)
-                        .dropna()
-                        .to_dict()
-                    )
-                )
-
-        return carrier_info_dict
 
     def _update_dtypes(self, tdf_group):
         dtypes = extract_from_schema(MODEL_SCHEMA, "x-type")
