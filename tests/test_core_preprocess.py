@@ -523,6 +523,7 @@ class TestChecks:
         demand_elec = pd.read_csv(
             data_source_dir / "demand_elec.csv", index_col=0, header=0
         )
+        calliope.set_log_verbosity("info")
         override = AttrDict.from_yaml_string(
             """
         data_sources:
@@ -545,7 +546,6 @@ class TestChecks:
         assert simple_supply_from_df.inputs.sink_use_equals.equals(
             simple_supply.inputs.sink_use_equals
         )
-        assert (
-            simple_supply_from_df.results.cost.sum().item()
-            == simple_supply.results.cost.sum().item()
-        )
+        simple_supply_cost = simple_supply.results.cost.sum().item()
+        simple_supply_from_df_cost = simple_supply_from_df.results.cost.sum().item()
+        assert simple_supply_cost == simple_supply_from_df_cost
