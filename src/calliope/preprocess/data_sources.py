@@ -14,7 +14,12 @@ from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.core.io import load_config
 from calliope.preprocess import time
-from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
+from calliope.util.schema import (
+    DATA_SOURCE_SCHEMA,
+    MODEL_SCHEMA,
+    extract_from_schema,
+    validate_dict,
+)
 from calliope.util.tools import listify, relative_path
 
 LOGGER = logging.getLogger(__name__)
@@ -54,6 +59,7 @@ class DataSource:
                 If None, relative data source filepaths will be considered relative to the current working directory.
                 Defaults to None.
         """
+        validate_dict(data_source, DATA_SOURCE_SCHEMA, "data source")
         self.input = data_source
         self.dfs = data_source_dfs if data_source_dfs is not None else dict()
         self.model_definition_path = model_definition_path
