@@ -459,21 +459,21 @@ class TestDataSourceTechDict:
         assert base_dict == {}
 
     def test_tech_dict_from_parent(self, source_obj):
-        df_dict = {"parent": {"foo1": "transmission", "foo2": "supply"}}
+        df_dict = {"base_tech": {"foo1": "transmission", "foo2": "supply"}}
         tech_dict, base_dict = source_obj(df_dict).tech_dict()
 
         assert tech_dict == {"foo1": {}, "foo2": {}}
         assert base_dict == {
-            "foo1": {"parent": "transmission"},
-            "foo2": {"parent": "supply"},
+            "foo1": {"base_tech": "transmission"},
+            "foo2": {"base_tech": "supply"},
         }
 
     def test_tech_dict_from_parent_and_param(self, source_obj):
-        df_dict = {"parent": {"foo1": "transmission"}, "other_param": {"bar1": 1}}
+        df_dict = {"base_tech": {"foo1": "transmission"}, "other_param": {"bar1": 1}}
         tech_dict, base_dict = source_obj(df_dict).tech_dict()
 
         assert tech_dict == {"foo1": {}, "bar1": {}}
-        assert base_dict == {"foo1": {"parent": "transmission"}}
+        assert base_dict == {"foo1": {"base_tech": "transmission"}}
 
     def test_tech_dict_from_carrier_in_out(self, source_obj):
         df_dict = {
@@ -540,7 +540,9 @@ class TestDataSourceNodeDict:
 
     def test_node_dict_update_base_tech_data_one_link_ref(self, source_obj):
         df_dict = {"param": {("foo1", "bar1"): 1, ("foo2", "bar2"): 2}}
-        tech_dict = calliope.AttrDict({"bar1": {"parent": "transmission"}, "bar2": {}})
+        tech_dict = calliope.AttrDict(
+            {"bar1": {"base_tech": "transmission"}, "bar2": {}}
+        )
         base_tech_data = calliope.AttrDict({})
         node_dict = source_obj(df_dict).node_dict(tech_dict, base_tech_data)
 
@@ -552,7 +554,9 @@ class TestDataSourceNodeDict:
         df_dict = {
             "param": {("foo1", "bar1"): 1, ("foo2", "bar2"): 2, ("foo2", "bar1"): 2}
         }
-        tech_dict = calliope.AttrDict({"bar1": {"parent": "transmission"}, "bar2": {}})
+        tech_dict = calliope.AttrDict(
+            {"bar1": {"base_tech": "transmission"}, "bar2": {}}
+        )
         base_tech_data = calliope.AttrDict({})
         node_dict = source_obj(df_dict).node_dict(tech_dict, base_tech_data)
 
@@ -578,7 +582,9 @@ class TestDataSourceNodeDict:
 
     def test_node_dict_no_info(self, source_obj):
         df_dict = {"param": {"foo1": 1, "foo2": 2}}
-        tech_dict = calliope.AttrDict({"bar1": {"parent": "transmission"}, "bar2": {}})
+        tech_dict = calliope.AttrDict(
+            {"bar1": {"base_tech": "transmission"}, "bar2": {}}
+        )
         base_tech_data = calliope.AttrDict({})
         node_dict = source_obj(df_dict, rows="techs").node_dict(
             tech_dict, base_tech_data

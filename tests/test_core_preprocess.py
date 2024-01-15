@@ -158,7 +158,7 @@ class TestModelRun:
             """
             techs:
                 test_undefined_carrier:
-                    parent: supply
+                    base_tech: supply
                     name: test
                     source_use_max: .inf
                     flow_cap_max: .inf
@@ -408,7 +408,7 @@ class TestChecks:
 
     def test_unspecified_parent(self):
         """
-        All technologies and technology groups must specify a parent
+        All technologies and technology groups must specify a base_tech
         """
 
         override = AttrDict.from_yaml_string(
@@ -427,7 +427,7 @@ class TestChecks:
 
     def test_tech_as_parent(self):
         """
-        All technologies and technology groups must specify a parent
+        All technologies and technology groups must specify a base_tech
         """
 
         override1 = AttrDict.from_yaml_string(
@@ -435,7 +435,7 @@ class TestChecks:
             techs.test_supply_tech_parent:
                 name: Supply tech
                 carrier_out: gas
-                parent: test_supply_elec
+                base_tech: test_supply_elec
                 flow_cap_max: 10
                 source_use_max: .inf
             nodes.b.techs.test_supply_tech_parent:

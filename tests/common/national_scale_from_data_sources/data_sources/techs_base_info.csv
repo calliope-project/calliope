@@ -1,4 +1,4 @@
-﻿techs,color,name,parent
+﻿techs,color,name,base_tech
 battery,#3B61E3,Battery storage,storage
 ccgt,#E37A72,Combined cycle gas turbine,supply
 csp,#F9CF22,Concentrating solar power,supply

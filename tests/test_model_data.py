@@ -101,7 +101,7 @@ class TestModelData:
             "name",
             "carrier_out",
             "carrier_in",
-            "parent",
+            "base_tech",
             "flow_cap_max",
             "source_use_max",
             "flow_out_eff",
@@ -342,14 +342,14 @@ class TestModelData:
         self, model_data_factory: ModelDataFactory
     ):
         techs_dict = AttrDict(
-            {"bar": {"key1": 1}, "foo": {"parent": "foobar"}, "baz": None}
+            {"bar": {"key1": 1}, "foo": {"base_tech": "foobar"}, "baz": None}
         )
         with pytest.raises(exceptions.ModelError) as excinfo:
             model_data_factory._get_relevant_node_refs(techs_dict, "A")
 
         assert check_error_or_warning(
             excinfo,
-            "(nodes, A), (techs, foo) | Defining a technology `parent` at a node is not supported",
+            "(nodes, A), (techs, foo) | Defining a technology `base_tech` at a node is not supported",
         )
 
     @pytest.mark.parametrize(
@@ -469,20 +469,20 @@ class TestModelData:
         assert set(new_def_dict.keys()) == {"a", "b", "c"}
 
     def test_inherit_defs_techs(self, model_data_factory: ModelDataFactory):
-        model_data_factory.model_definition.set_key("techs.foo.parent", "supply")
+        model_data_factory.model_definition.set_key("techs.foo.base_tech", "supply")
         model_data_factory.model_definition.set_key("techs.foo.my_param", 2)
 
         def_dict = {"foo": {"my_param": 1}}
         new_def_dict = model_data_factory._inherit_defs(
             dim_name="techs", dim_dict=AttrDict(def_dict)
         )
-        assert new_def_dict == {"foo": {"my_param": 1, "parent": "supply"}}
+        assert new_def_dict == {"foo": {"my_param": 1, "base_tech": "supply"}}
 
     def test_inherit_defs_techs_inherit(self, model_data_factory: ModelDataFactory):
         model_data_factory.model_definition.set_key(
             "techs.foo.inherit", "test_controller"
         )
-        model_data_factory.model_definition.set_key("techs.foo.parent", "supply")
+        model_data_factory.model_definition.set_key("techs.foo.base_tech", "supply")
         model_data_factory.model_definition.set_key("techs.foo.my_param", 2)
 
         def_dict = {"foo": {"my_param": 1}}
@@ -492,25 +492,25 @@ class TestModelData:
         assert new_def_dict == {
             "foo": {
                 "my_param": 1,
-                "parent": "supply",
+                "base_tech": "supply",
                 "techs_inheritance": "test_controller",
             }
         }
 
     def test_inherit_defs_techs_empty_def(self, model_data_factory: ModelDataFactory):
-        model_data_factory.model_definition.set_key("techs.foo.parent", "supply")
+        model_data_factory.model_definition.set_key("techs.foo.base_tech", "supply")
         model_data_factory.model_definition.set_key("techs.foo.my_param", 2)
 
         def_dict = {"foo": None}
         new_def_dict = model_data_factory._inherit_defs(
             dim_name="techs", dim_dict=AttrDict(def_dict)
         )
-        assert new_def_dict == {"foo": {"my_param": 2, "parent": "supply"}}
+        assert new_def_dict == {"foo": {"my_param": 2, "base_tech": "supply"}}
 
     def test_inherit_defs_techs_missing_base_def(
         self, model_data_factory: ModelDataFactory
     ):
-        def_dict = {"foo": {"parent": "supply"}}
+        def_dict = {"foo": {"base_tech": "supply"}}
         with pytest.raises(KeyError) as excinfo:
             model_data_factory._inherit_defs(
                 dim_name="techs",
@@ -584,8 +584,8 @@ class TestModelData:
         self, my_caplog, model_data_factory: ModelDataFactory
     ):
         node_dict = {
-            "a": {"foo": {"parent": "supply"}},
-            "b": {"bar": {"parent": "demand"}},
+            "a": {"foo": {"base_tech": "supply"}},
+            "b": {"bar": {"base_tech": "demand"}},
         }
         link_dict = model_data_factory._links_to_node_format(node_dict)
         assert "Deactivated" not in my_caplog.text
@@ -604,7 +604,7 @@ class TestModelData:
     def test_links_to_node_format_none_active(
         self, my_caplog, model_data_factory: ModelDataFactory
     ):
-        node_dict = {"c": {"foo": {"parent": "supply"}}}
+        node_dict = {"c": {"foo": {"base_tech": "supply"}}}
         link_dict = model_data_factory._links_to_node_format(node_dict)
         assert (
             "(links, test_link_a_b_elec) | Deactivated due to missing" in my_caplog.text
@@ -615,8 +615,8 @@ class TestModelData:
         self, my_caplog, model_data_factory: ModelDataFactory
     ):
         node_dict = {
-            "a": {"foo": {"parent": "supply"}},
-            "c": {"bar": {"parent": "demand"}},
+            "a": {"foo": {"base_tech": "supply"}},
+            "c": {"bar": {"base_tech": "demand"}},
         }
         link_dict = model_data_factory._links_to_node_format(node_dict)
         assert (
@@ -629,8 +629,8 @@ class TestModelData:
             "one_way"
         ] = True
         node_dict = {
-            "a": {"foo": {"parent": "supply"}},
-            "b": {"bar": {"parent": "demand"}},
+            "a": {"foo": {"base_tech": "supply"}},
+            "b": {"bar": {"base_tech": "demand"}},
         }
         link_dict = model_data_factory._links_to_node_format(node_dict)
         assert "carrier_out" not in link_dict["a"]["test_link_a_b_elec"]
@@ -753,9 +753,9 @@ class TestModelData:
         self, model_data_factory: ModelDataFactory
     ):
         tech_def = {
-            "tech1": {"parent": "supply"},
+            "tech1": {"base_tech": "supply"},
             **{
-                f"tech{num}": {"parent": "transmission", "other_param": 1}
+                f"tech{num}": {"base_tech": "transmission", "other_param": 1}
                 for num in [2, 3]
             },
         }
@@ -975,5 +975,5 @@ class TestActiveFalse:
         model = build_model(overrides, "simple_storage,two_hours,investment_costs")
 
         # Ensure what should be gone is gone
-        assert not (model._model_data.parent == "transmission").any()
+        assert not (model._model_data.base_tech == "transmission").any()
         assert "(techs, test_link_a_b_elec) | Deactivated." in my_caplog.text

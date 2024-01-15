@@ -248,7 +248,7 @@ fig.show()
 # %%
 df_coords = model.inputs[["latitude", "longitude"]].to_dataframe().reset_index()
 df_capacity = (
-    model.results.flow_cap.where(model.inputs.parent == "transmission")
+    model.results.flow_cap.where(model.inputs.base_tech == "transmission")
     .sel(carriers="power")
     .to_series()
     .where(lambda x: x != 0)

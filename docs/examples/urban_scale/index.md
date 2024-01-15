@@ -139,7 +139,7 @@ The definition of this technology in the example model's configuration looks as 
 There are a few things to note.
 First, `boiler` defines a name and a color (given as an HTML color code).
 These can be used when visualising your results.
-Second, it specifies its parent, `conversion`, its inflow carrier `gas`, and its outflow carrier `heat`, thus setting itself up as a gas to heat conversion technology.
+Second, it specifies its base_tech, `conversion`, its inflow carrier `gas`, and its outflow carrier `heat`, thus setting itself up as a gas to heat conversion technology.
 This is followed by the definition of constraining parameters and costs;
 the only cost class used is monetary but this is where other "costs", such as emissions, could be defined.
 
@@ -156,7 +156,7 @@ This definition in the example model's configuration is more verbose:
 --8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:chp"
 ```
 
-Again, `chp` has the definitions for name, color, parent, and carrier_in/out.
+Again, `chp` has the definitions for name, color, base_tech, and carrier_in/out.
 It has two carriers defined for its outflow.
 Note the parameter `heat_to_power_ratio`, which we set to 0.8.
 We will use this to create a link between the two output carriers.

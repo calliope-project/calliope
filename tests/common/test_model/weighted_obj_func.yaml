@@ -11,7 +11,7 @@ config:
 techs:
   cheap_polluting_supply:
     name: "Cheap but polluting supply"
-    parent: supply
+    base_tech: supply
     carrier_out: electricity
     lifetime: 25
     flow_cap_max: .inf
@@ -30,7 +30,7 @@ techs:
 
   expensive_clean_supply:
     name: "Expensive but clean supply"
-    parent: supply
+    base_tech: supply
     carrier_out: electricity
     lifetime: 25
     flow_cap_max: .inf
@@ -49,7 +49,7 @@ techs:
 
   mean_supply:
     name: "Mean supply"
-    parent: supply
+    base_tech: supply
     carrier_out: electricity
     lifetime: 25
     flow_cap_max: .inf
@@ -69,7 +69,7 @@ techs:
   electricity_demand:
     name: Electricity demand
     carrier_in: electricity
-    parent: demand
+    base_tech: demand
     sink_use_equals: file=demand_elec.csv
 
 node_groups:

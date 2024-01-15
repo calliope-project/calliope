@@ -89,8 +89,8 @@ class DataSource:
             {k: {} for k in self.dataset.get("techs", xr.DataArray([])).values}
         )
         base_tech_data = AttrDict()
-        if "parent" in self.dataset:
-            parent_dict = self.dataset["parent"].to_dataframe().dropna().T.to_dict()
+        if "base_tech" in self.dataset:
+            parent_dict = self.dataset["base_tech"].to_dataframe().dropna().T.to_dict()
             base_tech_data.union(AttrDict(parent_dict))
 
         carrier_info_dict = self._carrier_info_dict_from_model_data_var()
@@ -115,7 +115,7 @@ class DataSource:
                 Technologies should have their entire definition inheritance chain resolved.
             base_tech_data (AttrDict):
                 Technology definition dictionary containing only a subset of parameters _if_ they have been defined in data sources.
-                These parameters include `parent`, `carrier_in`, `carrier_out`.
+                These parameters include `base_tech`, `carrier_in`, `carrier_out`.
                 After calling this function, and if any transmission technologies are defined in this data source,
                 this dictionary will also contain `to` and `from` parameters.
 
@@ -142,7 +142,10 @@ class DataSource:
             except KeyError:
                 continue
             for tech in techs_this_node:
-                if techs_incl_inheritance[tech].get("parent", None) == "transmission":
+                if (
+                    techs_incl_inheritance[tech].get("base_tech", None)
+                    == "transmission"
+                ):
                     if base_tech_data.get_key(f"{tech}.from", False):
                         base_tech_data.set_key(f"{tech}.to", node)
                     else:
@@ -203,13 +206,13 @@ class DataSource:
             tdf = df
 
         if "select" in self.input.keys():
-            selector = [
+            selector = tuple(
                 listify(self.input["select"][name])
                 if name in self.input["select"]
                 else slice(None)
                 for name in tdf.index.names
-            ]
-            tdf = tdf.loc[pd.IndexSlice[*selector]]
+            )
+            tdf = tdf.loc[*selector]
 
         if "drop" in self.input.keys():
             tdf = tdf.droplevel(self.input["drop"])

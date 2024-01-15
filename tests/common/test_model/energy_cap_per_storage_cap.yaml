@@ -15,12 +15,12 @@ techs:
   electricity_demand:
     name: Electricity demand
     carrier_in: electricity
-    parent: demand
+    base_tech: demand
   my_storage:
     name: Storage
     carrier_in: electricity
     carrier_out: electricity
-    parent: storage
+    base_tech: storage
     storage_initial: 1.0
     lifetime: 60
     cost_flow_cap:

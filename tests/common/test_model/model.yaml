@@ -42,7 +42,7 @@ techs:
     inherit: test_controller
     name: Supply tech
     carrier_out: gas
-    parent: supply
+    base_tech: supply
     flow_cap_max: 15
     source_use_max: .inf
     flow_out_eff: 0.9
@@ -51,7 +51,7 @@ techs:
     inherit: test_controller
     name: Supply tech
     carrier_out: electricity
-    parent: supply
+    base_tech: supply
     flow_cap_max: 10
     source_use_max: .inf
     flow_out_eff: 0.9
@@ -60,7 +60,7 @@ techs:
     inherit: test_controller
     name: Supply tech
     carrier_out: coal
-    parent: supply
+    base_tech: supply
     flow_cap_max: 10
     source_use_max: .inf
     flow_out_eff: 0.9
@@ -69,7 +69,7 @@ techs:
     inherit: test_controller
     name: Supply tech with storage
     carrier_out: electricity
-    parent: supply
+    base_tech: supply
     flow_cap_max: 15
     source_eff: 0.9
     flow_out_eff: 0.9
@@ -83,7 +83,7 @@ techs:
     name: Storage tech
     carrier_out: electricity
     carrier_in: electricity
-    parent: storage
+    base_tech: storage
     flow_cap_max: 10
     storage_cap_max: 15
     flow_cap_per_storage_cap_max: 0.5
@@ -95,7 +95,7 @@ techs:
     name: Conversion tech
     carrier_in: gas
     carrier_out: heat
-    parent: conversion
+    base_tech: conversion
     flow_cap_max:
       data: 15
       index: heat
@@ -107,7 +107,7 @@ techs:
     name: Conversion tech with linked carriers out
     carrier_in: gas
     carrier_out: [electricity, heat]
-    parent: conversion
+    base_tech: conversion
     flow_cap_max:
       data: 20
       index: electricity
@@ -119,7 +119,7 @@ techs:
     name: Conversion tech with unlinked carriers out
     carrier_in: gas
     carrier_out: [electricity, heat]
-    parent: conversion
+    base_tech: conversion
     flow_out_eff:
       data: 0.6
       index: electricity
@@ -133,19 +133,19 @@ techs:
     inherit: test_controller
     name: Demand elec tech
     carrier_in: electricity
-    parent: demand
+    base_tech: demand
 
   test_demand_heat:
     inherit: test_controller
     name: Demand heat tech
     carrier_in: heat
-    parent: demand
+    base_tech: demand
 
   test_demand_coal:
     inherit: test_controller
     name: Demand coal tech
     carrier_in: coal
-    parent: demand
+    base_tech: demand
     sink_use_max: 10
 
   test_link_a_b_elec:
@@ -169,7 +169,7 @@ tech_groups:
     name: Transmission elec tech
     carrier_in: electricity
     carrier_out: electricity
-    parent: transmission
+    base_tech: transmission
     flow_cap_max: 10
 
   test_transmission_heat:
@@ -177,5 +177,5 @@ tech_groups:
     name: Transmission heat tech
     carrier_in: heat
     carrier_out: heat
-    parent: transmission
+    base_tech: transmission
     flow_cap_max: 5

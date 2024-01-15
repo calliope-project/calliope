@@ -534,7 +534,7 @@ class Model(object):
                         "my_constraint_name":
                             {
                                 "foreach": ["nodes"],
-                                "where": "parent=supply",
+                                "where": "base_tech=supply",
                                 "equations": [{"expression": "sum(flow_cap, over=techs) >= 10"}]
                             }
 

@@ -214,7 +214,10 @@ def dummy_model_data(config_defaults, model_defaults):
                 ["nodes", "techs"],
                 [[True, True, True, True], [False, True, True, True]],
             ),
-            "parent": (["techs"], ["supply", "transmission", "demand", "conversion"]),
+            "base_tech": (
+                ["techs"],
+                ["supply", "transmission", "demand", "conversion"],
+            ),
             "nodes_inheritance": (["nodes"], ["foo,bar", "boo"]),
             "nodes_inheritance_boo_bool": (["nodes"], [False, True]),
             "techs_inheritance": (["techs"], ["foo,bar", np.nan, "baz", "boo"]),

@@ -138,7 +138,7 @@ overrides:
       cold_fusion:
         name: "Cold fusion"
         color: "#233B39"
-        parent: supply
+        base_tech: supply
         inherit: cost_dim_setter
         carrier_out: power
         flow_cap_max: 10000

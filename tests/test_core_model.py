@@ -218,7 +218,7 @@ class TestValidateMathDict:
             ("1 == 1", "True"),
             (
                 "flow_out * flow_out_eff + sum(cost, over=costs) <= .inf",
-                "parent=supply and flow_out_eff>0",
+                "base_tech=supply and flow_out_eff>0",
             ),
         ],
     )

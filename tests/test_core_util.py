@@ -287,7 +287,7 @@ class TestExtractFromSchema:
                     uniqueItems: true
                     minItems: 2
 
-              parent:
+              base_tech:
                 type: string
                 enum: [demand, supply, conversion, storage, transmission]
 

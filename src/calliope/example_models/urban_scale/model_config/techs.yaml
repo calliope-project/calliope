@@ -16,7 +16,7 @@ tech_groups:
   power_lines:
     name: "Electrical power distribution"
     color: "#6783E3"
-    parent: transmission
+    base_tech: transmission
     inherit: interest_rate_setter
     carrier_in: electricity
     carrier_out: electricity
@@ -31,7 +31,7 @@ tech_groups:
   heat_pipes:
     name: "District heat distribution"
     color: "#823739"
-    parent: transmission
+    base_tech: transmission
     inherit: interest_rate_setter
     carrier_in: heat
     carrier_out: heat
@@ -49,7 +49,7 @@ techs:
   supply_grid_power:
     name: "National grid import"
     color: "#C5ABE3"
-    parent: supply
+    base_tech: supply
     inherit: interest_rate_setter
     carrier_out: electricity
     source_use_max: .inf
@@ -67,7 +67,7 @@ techs:
   supply_gas:
     name: "Natural gas import"
     color: "#C98AAD"
-    parent: supply
+    base_tech: supply
     inherit: interest_rate_setter
     carrier_out: gas
     source_use_max: .inf
@@ -88,7 +88,7 @@ techs:
   pv:
     name: "Solar photovoltaic power"
     color: "#F9D956"
-    parent: supply
+    base_tech: supply
     carrier_out: electricity
     inherit: interest_rate_setter
     carrier_export: electricity
@@ -110,7 +110,7 @@ techs:
   boiler:
     name: "Natural gas boiler"
     color: "#8E2999"
-    parent: conversion
+    base_tech: conversion
     inherit: interest_rate_setter
     carrier_in: gas
     carrier_out: heat
@@ -131,7 +131,7 @@ techs:
   chp:
     name: "Combined heat and power"
     color: "#E4AB97"
-    parent: conversion
+    base_tech: conversion
     inherit: interest_rate_setter
     carrier_in: gas
     carrier_out: [electricity, heat]
@@ -161,13 +161,13 @@ techs:
   demand_electricity:
     name: "Electrical demand"
     color: "#072486"
-    parent: demand
+    base_tech: demand
     carrier_in: electricity
 
   demand_heat:
     name: "Heat demand"
     color: "#660507"
-    parent: demand
+    base_tech: demand
     carrier_in: heat
   # --8<-- [end:demand]
 

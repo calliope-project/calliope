@@ -67,7 +67,7 @@ constraints:
     description: >-
       Fix the relationship between a `conversion` technology's outflow and consumption.
     foreach: [nodes, techs, timesteps]
-    where: parent=conversion AND NOT include_storage=true
+    where: base_tech=conversion AND NOT include_storage=true
     equations:
       - expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
 
@@ -145,7 +145,7 @@ constraints:
       Set the upper bound on, or a fixed total of,
       that a demand technology must dump to its sink in each timestep.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "parent=demand"
+    where: "base_tech=demand"
     equations:
       - where: "sink_use_equals"
         expression: "flow_in_inc_eff == sink_use_equals * $sink_scaler"
@@ -165,7 +165,7 @@ constraints:
       Set the lower bound on the quantity of flow a
       `demand` technology must dump to its sink in each timestep.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "sink_use_min AND NOT sink_use_equals AND parent=demand"
+    where: "sink_use_min AND NOT sink_use_equals AND base_tech=demand"
     equations:
       - expression: "flow_in_inc_eff >= sink_use_min * $sink_scaler"
     sub_expressions:
@@ -175,7 +175,7 @@ constraints:
     description: >-
       Fix the outflow of a `supply` technology to its consumption of the available source.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "parent=supply AND NOT include_storage=True"
+    where: "base_tech=supply AND NOT include_storage=True"
     equations:
       - expression: flow_out_inc_eff == source_use * source_eff
 
@@ -184,7 +184,7 @@ constraints:
       Fix the outflow of a `supply` technology to its consumption of the available source,
       with a storage buffer to temporally offset the outflow from source consumption.
     foreach: [nodes, techs, carriers, timesteps]
-    where: "storage AND parent=supply"
+    where: "storage AND base_tech=supply"
     equations:
       - expression: storage == $storage_previous_step + source_use * source_eff - flow_out_inc_eff
     sub_expressions:
@@ -229,7 +229,7 @@ constraints:
     description: >-
       Set the lower bound on the quantity of its source a `supply` technology must use in each timestep.
     foreach: [nodes, techs, timesteps]
-    where: "source_use_min AND NOT source_use_equals AND parent=supply"
+    where: "source_use_min AND NOT source_use_equals AND base_tech=supply"
     equations:
       - expression: "source_use >= source_use_min * $source_scaler"
     sub_expressions:
@@ -241,7 +241,7 @@ constraints:
       based on the net flow of carrier charged and discharged
       and the quantity of carrier stored at the start of the timestep.
     foreach: [nodes, techs, timesteps]
-    where: (include_storage=true or parent=storage) AND NOT (parent=supply OR parent=demand)
+    where: (include_storage=true or base_tech=storage) AND NOT (base_tech=supply OR base_tech=demand)
     equations:
       - expression: >-
           storage == $storage_previous_step -
@@ -272,7 +272,7 @@ constraints:
       Fix the relationship between between carrier flowing into and out of a
       `transmission` link in each timestep.
     foreach: [techs, timesteps]
-    where: "parent=transmission"
+    where: "base_tech=transmission"
     equations:
       - expression: sum(flow_out_inc_eff, over=[nodes, carriers]) == sum(flow_in_inc_eff, over=[nodes, carriers])
 
@@ -280,7 +280,7 @@ constraints:
     description: >-
        Fix the flow capacity of two `transmission` technologies representing the same link in the system.
     foreach: [nodes, techs]
-    where: "parent=transmission"
+    where: "base_tech=transmission"
     equations:
       - expression: sum(flow_cap, over=carriers) == link_flow_cap
 
@@ -501,7 +501,7 @@ variables:
       A transmission technology's flow capacity, also known as its nominal or nameplate capacity.
     unit: power
     foreach: [techs]
-    where: parent=transmission
+    where: base_tech=transmission
     bounds:
       min: 0
       max: .inf
@@ -556,7 +556,7 @@ variables:
       The carrier flow consumed from outside the system boundaries by a `supply` technology.
     unit: energy
     foreach: [nodes, techs, timesteps]
-    where: "parent=supply"
+    where: "base_tech=supply"
     bounds:
       min: 0
       max: .inf
@@ -567,7 +567,7 @@ variables:
       by a `supply` technology in each timestep.
     unit: power
     foreach: [nodes, techs]
-    where: "parent=supply"
+    where: "base_tech=supply"
     bounds:
       min: source_cap_min
       max: source_cap_max
@@ -579,7 +579,7 @@ variables:
       be stored by a technology in any timestep.
     unit: energy
     foreach: [nodes, techs]
-    where: "include_storage=True OR parent=storage"
+    where: "include_storage=True OR base_tech=storage"
     domain: real  # optional; defaults to real.
     bounds:
       min: storage_cap_min
@@ -592,7 +592,7 @@ variables:
       The carrier stored by a `storage` technology in each timestep.
     unit: energy
     foreach: [nodes, techs, timesteps]
-    where: "include_storage=True OR parent=storage"
+    where: "include_storage=True OR base_tech=storage"
     bounds:
       min: 0
       max: .inf
@@ -731,13 +731,13 @@ global_expressions:
     foreach: [nodes, techs, carriers, timesteps]
     where: flow_out
     equations:
-      - where: parent=transmission
+      - where: base_tech=transmission
         expression: >-
           flow_out / (
             flow_out_eff * flow_out_parasitic_eff *
             flow_out_eff_per_distance ** default_if_empty(distance, 1)
           )
-      - where: NOT parent=transmission
+      - where: NOT base_tech=transmission
         expression: flow_out / (flow_out_eff * flow_out_parasitic_eff)
 
   flow_in_inc_eff:
@@ -746,9 +746,9 @@ global_expressions:
     foreach: [nodes, techs, carriers, timesteps]
     where: flow_in
     equations:
-      - where: parent=transmission
+      - where: base_tech=transmission
         expression: flow_in * flow_in_eff * flow_in_eff_per_distance ** default_if_empty(distance, 1)
-      - where: NOT parent=transmission
+      - where: NOT base_tech=transmission
         expression: flow_in * flow_in_eff
 
   cost_var:
@@ -766,9 +766,9 @@ global_expressions:
         - where: NOT flow_export
           expression: "0"
       cost_flow_in:
-        - where: "parent=supply"
+        - where: "base_tech=supply"
           expression: cost_flow_in * source_use
-        - where: "NOT parent=supply"
+        - where: "NOT base_tech=supply"
           expression: sum(cost_flow_in * default_if_empty(flow_in, 0), over=carriers)
       cost_flow_out:
         - expression: sum(cost_flow_out * default_if_empty(flow_out, 0), over=carriers)
@@ -782,9 +782,9 @@ global_expressions:
       - expression: $cost_sum * flow_cap
     sub_expressions:
       cost_sum:
-        - where: parent=transmission
+        - where: base_tech=transmission
           expression: (cost_flow_cap + cost_flow_cap_per_distance * default_if_empty(distance, 0)) * 0.5
-        - where: NOT parent=transmission
+        - where: NOT base_tech=transmission
           expression: cost_flow_cap
 
   cost_investment_storage_cap:
@@ -817,9 +817,9 @@ global_expressions:
     foreach: [nodes, techs, costs]
     where: cost_purchase AND purchased_units
     equations:
-      - where: parent=transmission
+      - where: base_tech=transmission
         expression: (cost_purchase + cost_purchase_per_distance * default_if_empty(distance, 0)) * purchased_units * 0.5
-      - where: "NOT parent=transmission"
+      - where: "NOT base_tech=transmission"
         expression: cost_purchase * purchased_units
 
   cost_investment:

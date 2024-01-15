@@ -203,30 +203,30 @@ properties:
         type: object
         description: A named technology.
         allOf:
-          - required: ["parent"]
+          - required: ["base_tech"]
           - oneOf:
-            - required: ["parent", "carrier_in", "carrier_out"]
+            - required: ["base_tech", "carrier_in", "carrier_out"]
               properties:
-                parent: {const: conversion}
-            - required: ["parent", "carrier_in"]
+                base_tech: {const: conversion}
+            - required: ["base_tech", "carrier_in"]
               not:
                   required: ["carrier_out"]
               properties:
-                parent: {const: demand}
+                base_tech: {const: demand}
 
-            - required: ["parent", "carrier_in", "carrier_out"]
+            - required: ["base_tech", "carrier_in", "carrier_out"]
               properties:
-                parent: {const: storage}
+                base_tech: {const: storage}
 
-            - required: ["parent", "carrier_out"]
+            - required: ["base_tech", "carrier_out"]
               not:
                   required: ["carrier_in"]
               properties:
-                parent: {const: supply}
+                base_tech: {const: supply}
 
-            - required: ["parent", "from", "to", "carrier_in", "carrier_out"]
+            - required: ["base_tech", "from", "to", "carrier_in", "carrier_out"]
               properties:
-                parent: {const: transmission}
+                base_tech: {const: transmission}
                 from:
                   title: Starting node.
                   description: The resulting link technology will have `flow_out` == `import` and `flow_in` == `export` at this node.
@@ -307,7 +307,7 @@ properties:
             description: Long name of technology, which can be used in post-processing (e.g., plotting).
             default: .nan
 
-          parent:
+          base_tech:
             type: string
             x-type: str
             enum: [demand, supply, conversion, storage, transmission]

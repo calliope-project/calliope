@@ -306,7 +306,7 @@ class ModelDataFactory:
             geod = geodesic.Geodesic.WGS84
             distances = {}
             for tech in self.dataset.techs:
-                if self.dataset.parent.sel(techs=tech).item() != "transmission":
+                if self.dataset.base_tech.sel(techs=tech).item() != "transmission":
                     continue
                 tech_def = self.dataset.definition_matrix.sel(techs=tech).any(
                     "carriers"
@@ -390,9 +390,9 @@ class ModelDataFactory:
                     self._deactivate_item(techs=tech_name, nodes=node)
                 continue
             else:
-                if "parent" in tech_dict.keys():
+                if "base_tech" in tech_dict.keys():
                     raise exceptions.ModelError(
-                        f"(nodes, {node}), (techs, {tech_name}) | Defining a technology `parent` at a node is not supported; "
+                        f"(nodes, {node}), (techs, {tech_name}) | Defining a technology `base_tech` at a node is not supported; "
                         "limit yourself to defining this parameter within `techs` or `tech_groups`"
                     )
                 refs.update(tech_dict.keys())
@@ -645,7 +645,7 @@ class ModelDataFactory:
             {
                 tech: tech_def
                 for tech, tech_def in self._inherit_defs("techs").items()
-                if tech_def.get("parent") == "transmission"
+                if tech_def.get("base_tech") == "transmission"
             }
         )
         validate_dict(
@@ -762,10 +762,12 @@ class ModelDataFactory:
             node_name (str): Node name.
 
         Raises:
-            exceptions.ModelError: Raise if any defined techs have the `transmission` parent.
+            exceptions.ModelError: Raise if any defined techs have the `transmission` base_tech.
         """
         transmission_techs = [
-            k for k, v in tech_def_dict.items() if v.get("parent", "") == "transmission"
+            k
+            for k, v in tech_def_dict.items()
+            if v.get("base_tech", "") == "transmission"
         ]
 
         if transmission_techs:
