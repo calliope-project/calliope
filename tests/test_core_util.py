@@ -316,7 +316,7 @@ class TestExtractFromSchema:
     def expected_config_defaults(self):
         return pd.Series(
             {
-                "init.name": np.nan,
+                "init.name": None,
                 "build.backend": "pyomo",
                 "solve.operate_use_cap_results": False,
             }
@@ -328,7 +328,7 @@ class TestExtractFromSchema:
             {
                 "objective_cost_weights": 1,
                 "available_area": np.inf,
-                "color": np.nan,
+                "color": None,
                 "cap_method": "continuous",
                 "include_storage": False,
                 "flow_cap_per_storage_cap_min": 0,

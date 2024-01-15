@@ -212,7 +212,7 @@ class DataSource:
                 else slice(None)
                 for name in tdf.index.names
             )
-            tdf = tdf.loc[*selector]
+            tdf = tdf.loc[selector]
 
         if "drop" in self.input.keys():
             tdf = tdf.droplevel(self.input["drop"])
