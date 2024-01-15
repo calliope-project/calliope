@@ -27,8 +27,10 @@ def model_def():
 def data_source_list(model_def, init_config):
     model_def_dict, model_def_path = model_def
     return [
-        data_sources.DataSource(init_config, data_source, {}, model_def_path)
-        for data_source in model_def_dict.pop("data_sources", [])
+        data_sources.DataSource(
+            init_config, source_name, source_dict, {}, model_def_path
+        )
+        for source_name, source_dict in model_def_dict.pop("data_sources", {}).items()
     ]
 
 

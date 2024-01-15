@@ -659,17 +659,8 @@ class TestNetImportShare(CustomMathExamples):
     YAML_FILEPATH = "net_import_share.yaml"
     shared_overrides = {
         "parameters.net_import_share": 1.5,
-        "data_sources": [
-            {
-                "source": "data_sources/demand_elec.csv",
-                "rows": "timesteps",
-                "columns": "nodes",
-                "add_dimensions": {
-                    "parameters": "sink_use_equals",
-                    "techs": "test_demand_elec",
-                },
-            },
-            {
+        "data_sources": {
+            "demand_heat": {
                 "source": "data_sources/demand_heat.csv",
                 "rows": "timesteps",
                 "columns": "nodes",
@@ -680,8 +671,8 @@ class TestNetImportShare(CustomMathExamples):
                     "techs": "test_demand_heat",
                     "nodes": "c",
                 },
-            },
-        ],
+            }
+        },
         "techs": {
             "links_a_c_heat": {
                 "from": "a",

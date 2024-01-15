@@ -30,13 +30,8 @@ overrides:
 
   simple_supply_plus: # does not have a solution
     data_sources:
-      - source: data_sources/demand_elec.csv
-        rows: timesteps
-        columns: nodes
-        add_dimensions:
-          parameters: sink_use_equals
-          techs: test_demand_elec
-      - source: data_sources/supply_plus_resource.csv
+      supply_plus_resource:
+        source: data_sources/supply_plus_resource.csv
         rows: timesteps
         columns: nodes
         add_dimensions:
@@ -45,13 +40,8 @@ overrides:
 
   simple_supply_and_supply_plus:
     data_sources:
-      - source: data_sources/demand_elec.csv
-        rows: timesteps
-        columns: nodes
-        add_dimensions:
-          parameters: sink_use_equals
-          techs: test_demand_elec
-      - source: data_sources/supply_plus_resource.csv
+      supply_plus_resource:
+        source: data_sources/supply_plus_resource.csv
         rows: timesteps
         columns: nodes
         add_dimensions:
@@ -64,13 +54,8 @@ overrides:
 
   supply_and_supply_plus_milp:
     data_sources:
-      - source: data_sources/demand_elec.csv
-        rows: timesteps
-        columns: nodes
-        add_dimensions:
-          parameters: sink_use_equals
-          techs: test_demand_elec
-      - source: data_sources/supply_plus_resource.csv
+      supply_plus_resource:
+        source: data_sources/supply_plus_resource.csv
         rows: timesteps
         columns: nodes
         select:
@@ -150,13 +135,8 @@ overrides:
 
   simple_conversion:
     data_sources:
-      - source: data_sources/demand_elec.csv
-        rows: timesteps
-        columns: nodes
-        add_dimensions:
-          parameters: sink_use_equals
-          techs: test_demand_elec
-      - source: data_sources/demand_heat.csv
+      demand_heat:
+        source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
         add_dimensions:
@@ -178,13 +158,8 @@ overrides:
 
   conversion_and_conversion_plus:
     data_sources:
-      - source: data_sources/demand_elec.csv
-        rows: timesteps
-        columns: nodes
-        add_dimensions:
-          parameters: sink_use_equals
-          techs: test_demand_elec
-      - source: data_sources/demand_heat.csv
+      demand_heat:
+        source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
         select:
@@ -206,13 +181,8 @@ overrides:
 
   conversion_plus_milp:
     data_sources:
-      - source: data_sources/demand_elec.csv
-        rows: timesteps
-        columns: nodes
-        add_dimensions:
-          parameters: sink_use_equals
-          techs: test_demand_elec
-      - source: data_sources/demand_heat.csv
+      demand_heat:
+        source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
         select:
@@ -240,13 +210,8 @@ overrides:
 
   conversion_milp:
     data_sources:
-      - source: data_sources/demand_elec.csv
-        rows: timesteps
-        columns: nodes
-        add_dimensions:
-          parameters: sink_use_equals
-          techs: test_demand_elec
-      - source: data_sources/demand_heat.csv
+      demand_heat:
+        source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
         select:
@@ -270,13 +235,8 @@ overrides:
 
   conversion_plus_purchase:
     data_sources:
-      - source: data_sources/demand_elec.csv
-        rows: timesteps
-        columns: nodes
-        add_dimensions:
-          parameters: sink_use_equals
-          techs: test_demand_elec
-      - source: data_sources/demand_heat.csv
+      demand_heat:
+        source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
         select:
@@ -301,13 +261,8 @@ overrides:
 
   simple_conversion_plus:
     data_sources:
-      - source: data_sources/demand_elec.csv
-        rows: timesteps
-        columns: nodes
-        add_dimensions:
-          parameters: sink_use_equals
-          techs: test_demand_elec
-      - source: data_sources/demand_heat.csv
+      demand_heat:
+        source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
         select:
@@ -327,13 +282,8 @@ overrides:
 
   simple_chp:
     data_sources:
-      - source: data_sources/demand_elec.csv
-        rows: timesteps
-        columns: nodes
-        add_dimensions:
-          parameters: sink_use_equals
-          techs: test_demand_elec
-      - source: data_sources/demand_heat.csv
+      demand_heat:
+        source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
         select:
@@ -482,9 +432,6 @@ overrides:
 
   demand_elec_max:
     data_sources:
-      - source: data_sources/demand_elec.csv
-        rows: timesteps
-        columns: nodes
+      demand_elec:
         add_dimensions:
           parameters: sink_use_max
-          techs: test_demand_elec

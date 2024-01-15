@@ -22,7 +22,8 @@ config:
     solver: cbc
 
 data_sources:
-  - source: data_sources/demand_elec.csv
+  demand_elec:
+    source: data_sources/demand_elec.csv
     rows: timesteps
     columns: nodes
     add_dimensions:

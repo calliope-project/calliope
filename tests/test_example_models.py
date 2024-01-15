@@ -129,7 +129,7 @@ class TestNationalScaleExampleModelSenseChecks:
             pytest.skip("GLPK not installed")
 
     def test_fails_gracefully_without_timeseries(self):
-        override = {"data_sources": []}
+        override = {"data_sources": {"_REPLACE_": {}}}
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             calliope.examples.national_scale(override_dict=override)
 
@@ -400,31 +400,7 @@ class TestNationalScaleResampledExampleModelSenseChecks:
 
 class TestUrbanScaleExampleModelSenseChecks:
     def example_tester(self, source_unit, solver="cbc", solver_io=None):
-        data_sources = f"""
-        data_sources:
-          - source: data_sources/demand.csv
-            rows: timesteps
-            columns: [techs, nodes]
-            add_dimensions:
-              parameters: sink_use_equals
-          - source: data_sources/pv_resource.csv
-            rows: timesteps
-            columns: [comment, scaler]
-            add_dimensions:
-              parameters: source_use_equals
-              techs: pv
-            select:
-              scaler: {source_unit}
-            drop: [scaler, comment]
-          - source: data_sources/export_power.csv
-            rows: timesteps
-            columns: nodes
-            add_dimensions:
-              parameters: cost_export
-              techs: chp
-              costs: monetary
-              carriers: electricity
-        """
+        data_sources = f"data_sources.pv_resource.select.scaler: {source_unit}"
         unit_override = {
             "techs.pv.source_unit": source_unit,
             **calliope.AttrDict.from_yaml_string(data_sources),

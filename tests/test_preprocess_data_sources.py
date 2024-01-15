@@ -42,24 +42,22 @@ class TestDataSourceUtils:
         source_dict = generate_data_source_dict(
             "foo.csv", df, rows="test_row", columns=None, header=None
         )
-        ds = data_sources.DataSource(init_config, source_dict)
+        ds = data_sources.DataSource(init_config, "ds_name", source_dict)
         ds.input["foo"] = ["foobar"]
         return ds
 
-    def test_name(self, data_dir, source_obj):
-        assert source_obj.name == f"{data_dir.as_posix()}/foo.csv"
+    def test_name(self, source_obj):
+        assert source_obj.name == "ds_name"
 
     def test_raise_error(self, data_dir, source_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             source_obj._raise_error("bar")
-        assert check_error_or_warning(
-            excinfo, f"(data_sources, {data_dir.as_posix()}/foo.csv) | bar."
-        )
+        assert check_error_or_warning(excinfo, "(data_sources, ds_name) | bar.")
 
     def test_log_message(self, caplog, data_dir, source_obj):
         caplog.set_level(logging.INFO)
         source_obj._log("bar", "info")
-        assert f"(data_sources, {data_dir.as_posix()}/foo.csv) | bar." in caplog.text
+        assert "(data_sources, ds_name) | bar." in caplog.text
 
     @pytest.mark.parametrize(
         ["key", "expected"],
@@ -132,7 +130,7 @@ class TestDataSourceInitOneLevel:
 
     def test_multi_row_no_col(self, init_config, multi_row_no_col_data):
         expected_df, source_dict = multi_row_no_col_data
-        ds = data_sources.DataSource(init_config, source_dict)
+        ds = data_sources.DataSource(init_config, "ds_name", source_dict)
         test_param = ds.dataset["test_param"]
         assert not set(["test_row"]).symmetric_difference(test_param.dims)
         pd.testing.assert_series_equal(
@@ -149,7 +147,7 @@ class TestDataSourceInitOneLevel:
     )
     def test_multi_row_one_col(self, init_config, request, data_source_ref):
         expected_df, source_dict = request.getfixturevalue(data_source_ref)
-        ds = data_sources.DataSource(init_config, source_dict)
+        ds = data_sources.DataSource(init_config, "ds_name", source_dict)
         test_param = ds.dataset["test_param"]
         assert not set(["test_row", "test_col"]).symmetric_difference(test_param.dims)
         pd.testing.assert_series_equal(
@@ -166,7 +164,7 @@ class TestDataSourceInitOneLevel:
     )
     def test(self, init_config, request, data_source_ref):
         expected_df, source_dict = request.getfixturevalue(data_source_ref)
-        ds = data_sources.DataSource(init_config, source_dict)
+        ds = data_sources.DataSource(init_config, "ds_name", source_dict)
         test_param = ds.dataset["test_param"]
         assert not set(["test_row", "test_col"]).symmetric_difference(test_param.dims)
         pd.testing.assert_series_equal(
@@ -225,7 +223,7 @@ class TestDataSourceInitMultiLevel:
 
     def test_multi_row_no_col(self, init_config, multi_row_no_col_data):
         expected_df, source_dict = multi_row_no_col_data
-        ds = data_sources.DataSource(init_config, source_dict)
+        ds = data_sources.DataSource(init_config, "ds_name", source_dict)
         test_param = ds.dataset["test_param"]
         assert not set(["test_row1", "test_row2"]).symmetric_difference(test_param.dims)
         pd.testing.assert_series_equal(
@@ -245,7 +243,7 @@ class TestDataSourceInitMultiLevel:
     )
     def test_multi_row_one_col(self, init_config, request, data_source_ref):
         expected_df, source_dict = request.getfixturevalue(data_source_ref)
-        ds = data_sources.DataSource(init_config, source_dict)
+        ds = data_sources.DataSource(init_config, "ds_name", source_dict)
         test_param = ds.dataset["test_param"]
         all_dims = source_dict["rows"] + source_dict["columns"]
         assert not set(all_dims).symmetric_difference(test_param.dims)
@@ -278,7 +276,7 @@ class TestDataSourceSelectDropAdd:
                 **source_dict_kwargs,
             }
             ds = data_sources.DataSource(
-                init_config, source_dict, data_source_dfs={"df": df}
+                init_config, "ds_name", source_dict, data_source_dfs={"df": df}
             )
             return ds
 
@@ -361,7 +359,7 @@ class TestDataSourceMalformed:
                 **source_dict_kwargs,
             }
             ds = data_sources.DataSource(
-                init_config, source_dict, data_source_dfs={"df": df}
+                init_config, "ds_name", source_dict, data_source_dfs={"df": df}
             )
             return ds
 
@@ -419,7 +417,7 @@ class TestDataSourceCarrierInfoDict:
             "columns": "parameters",
         }
         ds = data_sources.DataSource(
-            init_config, source_dict, data_source_dfs={"df": df}
+            init_config, "ds_name", source_dict, data_source_dfs={"df": df}
         )
         return ds
 
@@ -438,7 +436,7 @@ class TestDataSourceTechDict:
             df = pd.DataFrame(df_dict)
             source_dict = {"source": "df", "rows": rows, "columns": "parameters"}
             ds = data_sources.DataSource(
-                init_config, source_dict, data_source_dfs={"df": df}
+                init_config, "ds_name", source_dict, data_source_dfs={"df": df}
             )
             return ds
 
@@ -505,7 +503,7 @@ class TestDataSourceNodeDict:
             df = pd.DataFrame(df_dict)
             source_dict = {"source": "df", "rows": rows, "columns": "parameters"}
             ds = data_sources.DataSource(
-                init_config, source_dict, data_source_dfs={"df": df}
+                init_config, "ds_name", source_dict, data_source_dfs={"df": df}
             )
             return ds
 

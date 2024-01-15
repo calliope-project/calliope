@@ -195,8 +195,16 @@ class Model(object):
         }
 
         data_sources = [
-            DataSource(init_config, data_source, data_source_dfs, self._model_def_path)
-            for data_source in model_definition.pop("data_sources", [])
+            DataSource(
+                init_config,
+                source_name,
+                source_dict,
+                data_source_dfs,
+                self._model_def_path,
+            )
+            for source_name, source_dict in model_definition.pop(
+                "data_sources", {}
+            ).items()
         ]
 
         model_data_factory = ModelDataFactory(

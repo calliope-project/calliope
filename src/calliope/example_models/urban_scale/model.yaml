@@ -35,12 +35,14 @@ parameters:
 
 # --8<-- [start:data-sources]
 data_sources:
-  - source: data_sources/demand.csv
+  demand:
+    source: data_sources/demand.csv
     rows: timesteps
     columns: [techs, nodes]
     add_dimensions:
       parameters: sink_use_equals
-  - source: data_sources/pv_resource.csv
+  pv_resource:
+    source: data_sources/pv_resource.csv
     rows: timesteps
     columns: [comment, scaler]
     add_dimensions:
@@ -49,7 +51,8 @@ data_sources:
     select:
       scaler: per_area
     drop: [comment, scaler]
-  - source: data_sources/export_power.csv
+  export_power:
+    source: data_sources/export_power.csv
     rows: timesteps
     columns: nodes
     add_dimensions:

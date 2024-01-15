@@ -17,43 +17,52 @@ config:
     zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
 
 data_sources:
-  - source: data_sources/dimensionless_params.csv
+  dimensionless_params:
+    source: data_sources/dimensionless_params.csv
     rows: parameters
 
-  - source: data_sources/costs_params.csv
+  costs_params:
+    source: data_sources/costs_params.csv
     rows: costs
     columns: parameters
 
-  - source: data_sources/nodes_base_info.csv
+  nodes_base_info:
+    source: data_sources/nodes_base_info.csv
     rows: nodes
     columns: parameters
 
-  - source: data_sources/techs_carriers_at_nodes.csv
+  techs_carriers_at_nodes:
+    source: data_sources/techs_carriers_at_nodes.csv
     rows: [nodes, techs]
     columns: parameters
     add_dimensions:
       carriers: power
 
-  - source: data_sources/techs_costs_monetary.csv
+  techs_costs_monetary:
+    source: data_sources/techs_costs_monetary.csv
     rows: techs
     columns: parameters
     add_dimensions:
       costs: monetary
 
   # will be loaded from the example model directory in calliope source code.
-  - source: time_varying_df
+  time_varying_data_from_df:
+    source: time_varying_df
     rows: timesteps
     columns: [comment, nodes, techs, parameters]
     drop: comment
 
-  - source: data_sources/techs_base_info.csv
+  techs_base_info:
+    source: data_sources/techs_base_info.csv
     rows: techs
     columns: parameters
 
-  - source: data_sources/techs_constraints.csv
+  techs_constraints:
+    source: data_sources/techs_constraints.csv
     rows: techs
     columns: parameters
 
-  - source: data_sources/techs_node_constraints.csv
+  techs_node_constraints:
+    source: data_sources/techs_node_constraints.csv
     rows: [nodes, techs]
     columns: parameters

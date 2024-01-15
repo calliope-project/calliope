@@ -43,6 +43,7 @@ class DataSource:
     def __init__(
         self,
         model_config: dict,
+        source_name: str,
         data_source: DataSourceDict,
         data_source_dfs: Optional[dict[str, pd.DataFrame]] = None,
         model_definition_path: Optional[Path] = None,
@@ -67,20 +68,20 @@ class DataSource:
 
         self.columns = self._listify_if_defined("columns")
         self.index = self._listify_if_defined("rows")
-        self._name = self.input["source"]
+        self._name = source_name
         self.protected_params = load_config("protected_parameters.yaml")
 
-        if ".csv" in Path(self.name).suffixes:
+        if ".csv" in Path(self.input["source"]).suffixes:
             df = self._read_csv()
         else:
-            df = self.dfs[self.name]
+            df = self.dfs[self.input["source"]]
 
         self.dataset = self._df_to_ds(df)
 
     @property
     def name(self):
         "Data source name"
-        return self.input["source"]
+        return self._name
 
     def tech_dict(self) -> tuple[AttrDict, AttrDict]:
         """Create a dummy technology definition dictionary from the dataset's "techs" dimension.

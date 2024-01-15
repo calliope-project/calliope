@@ -36,7 +36,8 @@ parameters:
 # --8<-- [end:parameters]
 
 data_sources:
-  - source: data_sources/time_varying_params.csv
+  time_varying_parameters:
+    source: data_sources/time_varying_params.csv
     rows: timesteps
     columns: [comment, nodes, techs, parameters]
     drop: comment

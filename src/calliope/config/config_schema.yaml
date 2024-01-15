@@ -173,12 +173,18 @@ properties:
       '^[^_^\d][\w]*$': {}
 
   data_sources:
-    type: array
+    type: [object, "null"]
     description: >-
       Reference to files from which to load parts (or all) of the model definition.
       Loaded data will be _overridden_ by any data provided in the YAML definitions.
       Conflicting data between loaded files will be resolved by overriding in the order the data is provided.
       That is, data in list item `N` takes precedence over data in list item `N-1`.
+    additionalProperties: false
+    patternProperties: &nested_pattern
+      '^[^_^\d][\w]*$':
+        type: object
+        patternProperties:
+          '^[^_^\d][\w]*$': {}
 
   techs:
     type: [object, "null"]
@@ -186,7 +192,7 @@ properties:
       Calliope model technology definitions.
       See the model definition schema for more guidance on content.
     additionalProperties: false
-    patternProperties: &nested_pattern
+    patternProperties:
       '^[^_^\d][\w]*$':
         type: object
         patternProperties:

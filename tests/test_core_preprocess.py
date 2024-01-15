@@ -25,7 +25,7 @@ class TestModelRun:
             }
         )
         model_dict.union(node_dict)
-        for src in model_dict["data_sources"]:
+        for src in model_dict["data_sources"].values():
             src["source"] = (model_dir / src["source"]).as_posix()
         # test as AttrDict
         calliope.Model(model_dict)
@@ -236,18 +236,8 @@ class TestModelRun:
             """
             config.init.time_format: "%d/%m/%Y %H:%M:%S"
             data_sources:
-                - source: data_sources/demand_heat_diff_dateformat.csv
-                  rows: timesteps
-                  columns: nodes
-                  add_dimensions:
-                    parameters: sink_use_equals
-                    techs: test_demand_elec
-                - source: data_sources/demand_heat_diff_dateformat.csv
-                  rows: timesteps
-                  columns: nodes
-                  add_dimensions:
-                    parameters: sink_use_equals
-                    techs: test_demand_heat
+                demand_elec.source: data_sources/demand_heat_diff_dateformat.csv
+                demand_heat.source: data_sources/demand_heat_diff_dateformat.csv
         """
         )
         model = build_model(override_dict=override, scenario="simple_conversion")
@@ -259,21 +249,7 @@ class TestModelRun:
     def test_incorrect_date_format_one(self):
         # should fail: wrong dateformat input for one file
         override = AttrDict.from_yaml_string(
-            """
-        data_sources:
-            - source: data_sources/demand_heat_diff_dateformat.csv
-              rows: timesteps
-              columns: nodes
-              add_dimensions:
-                parameters: sink_use_equals
-                techs: test_demand_elec
-            - source: data_sources/demand_heat.csv
-              rows: timesteps
-              columns: nodes
-              add_dimensions:
-                parameters: sink_use_equals
-                techs: test_demand_heat
-        """
+            "data_sources.demand_elec.source: data_sources/demand_heat_diff_dateformat.csv"
         )
 
         with pytest.raises(exceptions.ModelError):
@@ -289,21 +265,7 @@ class TestModelRun:
     def test_incorrect_date_format_one_value_only(self):
         # should fail: one value wrong in file
         override = AttrDict.from_yaml_string(
-            """
-        data_sources:
-            - source: data_sources/demand_heat_wrong_dateformat.csv
-              rows: timesteps
-              columns: nodes
-              add_dimensions:
-                parameters: sink_use_equals
-                techs: test_demand_elec
-            - source: data_sources/demand_heat.csv
-              rows: timesteps
-              columns: nodes
-              add_dimensions:
-                parameters: sink_use_equals
-                techs: test_demand_heat
-        """
+            "data_sources.test_demand_elec.source: data_sources/demand_heat_wrong_dateformat.csv"
         )
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
@@ -316,21 +278,7 @@ class TestModelRun:
         """
         # should fail: wrong length of demand_heat csv vs demand_elec
         override = AttrDict.from_yaml_string(
-            """
-        data_sources:
-            - source: data_sources/demand_heat_wrong_length.csv
-              rows: timesteps
-              columns: nodes
-              add_dimensions:
-                parameters: sink_use_equals
-                techs: test_demand_elec
-            - source: data_sources/demand_heat.csv
-              rows: timesteps
-              columns: nodes
-              add_dimensions:
-                parameters: sink_use_equals
-                techs: test_demand_heat
-        """
+            "data_sources.demand_elec.source: data_sources/demand_heat_wrong_length.csv"
         )
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
@@ -338,21 +286,7 @@ class TestModelRun:
 
     def test_inconsistent_time_indices_passes_thanks_to_time_subsetting(self):
         override = AttrDict.from_yaml_string(
-            """
-        data_sources:
-            - source: data_sources/demand_heat_wrong_length.csv
-              rows: timesteps
-              columns: nodes
-              add_dimensions:
-                parameters: sink_use_equals
-                techs: test_demand_elec
-            - source: data_sources/demand_heat.csv
-              rows: timesteps
-              columns: nodes
-              add_dimensions:
-                parameters: sink_use_equals
-                techs: test_demand_heat
-        """
+            "data_sources.demand_elec.source: data_sources/demand_heat_wrong_length.csv"
         )
         # should pass: wrong length of demand_heat csv, but time subsetting removes the difference
         build_model(override_dict=override, scenario="simple_conversion,one_day")
@@ -524,20 +458,12 @@ class TestChecks:
             data_source_dir / "demand_elec.csv", index_col=0, header=0
         )
         override = AttrDict.from_yaml_string(
-            """
-        data_sources:
-            - source: demand_elec
-              rows: timesteps
-              columns: nodes
-              add_dimensions:
-                parameters: sink_use_equals
-                techs: test_demand_elec
-        """
+            "data_sources.demand_elec.source: demand_elec_df"
         )
         simple_supply_from_df = build_model(
             override,
             "simple_supply,two_hours,investment_costs",
-            data_source_dfs={"demand_elec": demand_elec},
+            data_source_dfs={"demand_elec_df": demand_elec},
         )
 
         assert simple_supply_from_df.inputs.sink_use_equals.equals(

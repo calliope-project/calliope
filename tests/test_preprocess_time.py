@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest  # noqa: F401
+from calliope import AttrDict
 
 from .common.util import build_test_model
 
@@ -91,19 +92,9 @@ class TestResampling:
     def test_15min_resampling_to_6h(self):
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
-        override = {
-            "data_sources": [
-                {
-                    "source": "data_sources/demand_elec_15mins.csv",
-                    "rows": "timesteps",
-                    "columns": "nodes",
-                    "add_dimensions": {
-                        "parameters": "sink_use_equals",
-                        "techs": "test_demand_elec",
-                    },
-                }
-            ]
-        }
+        override = AttrDict.from_yaml_string(
+            "data_sources.demand_elec.source: data_sources/demand_elec_15mins.csv"
+        )
 
         model = build_test_model(override, scenario="simple_supply", time_resample="6H")
         data = model._model_data
@@ -128,19 +119,9 @@ class TestResampling:
         """
         CSV has daily timeseries varying from 15min to 2h resolution, resample all to 2h
         """
-        override = {
-            "data_sources": [
-                {
-                    "source": "data_sources/demand_elec_15T_to_2h.csv",
-                    "rows": "timesteps",
-                    "columns": "nodes",
-                    "add_dimensions": {
-                        "parameters": "sink_use_equals",
-                        "techs": "test_demand_elec",
-                    },
-                }
-            ]
-        }
+        override = AttrDict.from_yaml_string(
+            "data_sources.demand_elec.source: data_sources/demand_elec_15T_to_2h.csv"
+        )
 
         model = build_test_model(
             override, scenario="simple_supply,one_day", time_resample="2H"
