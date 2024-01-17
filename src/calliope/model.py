@@ -2,12 +2,11 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
-model.py
-~~~~~~~~
+# model.py
 
 Implements the core Model class.
-
 """
+
 from __future__ import annotations
 
 import logging
@@ -16,16 +15,15 @@ from pathlib import Path
 from typing import Callable, Optional, TypeVar, Union
 
 import pandas as pd
-import xarray
+import xarray as xr
 
 import calliope
-from calliope import exceptions
+from calliope import exceptions, io
 from calliope._version import __version__
 from calliope.attrdict import AttrDict
 from calliope.backend import parsing
 from calliope.backend.latex_backend_model import LatexBackendModel, MathDocumentation
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
-from calliope.core import io
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess import load
 from calliope.preprocess.data_sources import DataSource
@@ -63,7 +61,7 @@ class Model(object):
 
     def __init__(
         self,
-        model_definition: str | Path | dict | xarray.Dataset,
+        model_definition: str | Path | dict | xr.Dataset,
         debug: bool = False,
         scenario: Optional[str] = None,
         override_dict: Optional[dict] = None,
@@ -75,7 +73,7 @@ class Model(object):
         configuration file or a dict fully specifying the model.
 
         Args:
-            model_definition (str | Path | dict | xarray.Dataset):
+            model_definition (str | Path | dict | xr.Dataset):
                 If str or Path, must be the path to a model configuration file.
                 If dict or AttrDict, must fully specify the model.
                 If an xarray dataset, must be a valid calliope model.
@@ -104,7 +102,7 @@ class Model(object):
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
         log_time(LOGGER, self._timings, "model_creation", comment="Model: initialising")
-        if isinstance(model_definition, xarray.Dataset):
+        if isinstance(model_definition, xr.Dataset):
             self._init_from_model_data(model_definition)
         else:
             (
@@ -234,13 +232,13 @@ class Model(object):
             comment="Model: preprocessing complete",
         )
 
-    def _init_from_model_data(self, model_data: xarray.Dataset) -> None:
+    def _init_from_model_data(self, model_data: xr.Dataset) -> None:
         """
         Initialise the model using a pre-built xarray dataset.
         This must be a Calliope-compatible dataset, usually a dataset from another Calliope model.
 
         Args:
-            model_data (xarray.Dataset):
+            model_data (xr.Dataset):
                 Model dataset with input parameters as arrays and configuration stored in the dataset attributes dictionary.
         """
         if "_model_def_dict" in model_data.attrs:
@@ -415,23 +413,15 @@ class Model(object):
         else:
             to_drop = []
 
-        run_mode = self.backend.inputs.attrs["config"]["build"]["mode"]
-
-        if run_mode == "operate" and not self._model_data.attrs["allow_operate_mode"]:
-            raise exceptions.ModelError(
-                "Unable to run this model in operational mode, probably because "
-                "there exist non-uniform timesteps (e.g. from time masking)"
-            )
-
         solver_config = update_then_validate_config("solve", self.config, **kwargs)
         log_time(
             LOGGER,
             self._timings,
             "solve_start",
-            comment=f"Backend: starting model solve in {run_mode} mode",
+            comment="Backend: starting model solve.",
         )
 
-        termination_condition = self.backend.solve(
+        results = self.backend.solve(
             solver=solver_config["solver"],
             solver_io=solver_config["solver_io"],
             solver_options=solver_config["solver_options"],
@@ -448,19 +438,15 @@ class Model(object):
         )
 
         # Add additional post-processed result variables to results
-        if termination_condition in ["optimal", "feasible"]:
-            results = self.backend.load_results()
+        if results.attrs["termination_condition"] in ["optimal", "feasible"]:
             results = postprocess_results.postprocess_model_results(
                 results, self._model_data, self._timings
             )
-        else:
-            results = xarray.Dataset()
 
         self._model_data = self._model_data.drop_vars(to_drop)
 
         self._model_data.attrs.update(results.attrs)
-        self._model_data.attrs["termination_condition"] = termination_condition
-        self._model_data = xarray.merge(
+        self._model_data = xr.merge(
             [results, self._model_data], compat="override", combine_attrs="no_conflicts"
         )
         self._add_model_data_methods()

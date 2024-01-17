@@ -42,10 +42,6 @@ def read_netcdf(path):
         if var_array.dtype.kind in ["U", "O"]:
             model_data[var_name] = var_array.where(lambda x: x != "")
 
-    # FIXME some checks for consistency
-    # use check_dataset from the checks module
-    # also check the old checking from 0.5.x
-
     return model_data
 
 

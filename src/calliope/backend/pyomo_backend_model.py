@@ -50,7 +50,15 @@ COMPONENT_TRANSLATOR = {
 
 
 class PyomoBackendModel(backend_model.BackendModel):
-    def __init__(self, inputs: xr.Dataset, **kwargs):
+    def __init__(self, inputs: xr.Dataset, **kwargs) -> None:
+        """Pyomo solver interface class.
+
+        Args:
+            inputs (xr.Dataset): Calliope model data.
+        """
+        self.reset(inputs, **kwargs)
+
+    def reset(self, inputs: xr.Dataset, **kwargs):
         super().__init__(inputs, pmo.block(), **kwargs)
 
         self._instance.parameters = pmo.parameter_dict()
@@ -247,7 +255,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         else:
             return global_expression
 
-    def solve(
+    def _solve(
         self,
         solver: str,
         solver_io: Optional[str] = None,
@@ -255,7 +263,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         save_logs: Optional[str] = None,
         warmstart: bool = False,
         **solve_kwargs,
-    ):
+    ) -> xr.Dataset:
         opt = SolverFactory(solver, solver_io=solver_io)
 
         if solver_options:
@@ -282,9 +290,9 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         termination = results.solver[0].termination_condition
 
-        if termination == pe.TerminationCondition.optimal:
+        if pe.TerminationCondition.to_solver_status(termination) == pe.SolverStatus.ok:
             self._instance.load_solution(results.solution[0])
-
+            results = self.load_results()
         else:
             self._solve_logger.critical("Problem status:")
             for line in str(results.problem[0]).split("\n"):
@@ -294,8 +302,10 @@ class PyomoBackendModel(backend_model.BackendModel):
                 self._solve_logger.critical(line)
 
             model_warn("Model solution was non-optimal.", _class=BackendWarning)
+            results = xr.Dataset()
+        results.attrs["termination_condition"] = str(termination)
 
-        return str(termination)
+        return results
 
     def verbose_strings(self) -> None:
         def __renamer(val, *idx):

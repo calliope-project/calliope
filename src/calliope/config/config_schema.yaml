@@ -102,22 +102,27 @@ properties:
             type: string
             default: min_cost_optimisation
             description: Name of internal objective function to use, from those defined in the base math and custom math (if applied).
+          operate_window:
+            type: string
+            description: >-
+              Operate mode rolling `window`, given as a pandas frequency string.
+              See [here](https://pandas.pydata.org/docs/user_guide/timeseries.html#offset-aliases) for a list of frequency aliases.
+          operate_horizon:
+            type: string
+            description: >-
+              Operate mode rolling `horizon`, given as a pandas frequency string.
+              See [here](https://pandas.pydata.org/docs/user_guide/timeseries.html#offset-aliases) for a list of frequency aliases.
+              Must be ≥ `operate_window`
+          operate_use_cap_results:
+            type: boolean
+            default: false
+            description: If the model already contains `plan` mode results, use those optimal capacities as input parameters to the `operate` mode run.
 
       solve:
         type: object
         description: All configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`).
         additionalProperties: false
         properties:
-          operate_window:
-            type: integer
-            description: Operate mode rolling `window`, given as a number of model timesteps.
-          operate_horizon:
-            type: integer
-            description: Operate mode rolling `horizon`, given as a number of model timesteps. (≥ `operate_window`)
-          operate_use_cap_results:
-            type: boolean
-            default: false
-            description: If the model already contains `plan` mode results, use those optimal capacities as input parameters to the `operate` mode run.
           spores_number:
             type: integer
             default: 3

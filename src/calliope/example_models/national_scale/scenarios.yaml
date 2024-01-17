@@ -68,32 +68,32 @@ overrides:
   operate:
     config:
       init.time_subset: ["2005-01-01", "2005-01-10"]
-      build.mode: operate
-      solve:
-        operate_window: 12
-        operate_horizon: 24
+      build:
+        mode: operate
+        operate_window: 12H
+        operate_horizon: 24H
+        cyclic_storage: false
     nodes:
-      region1.techs.ccgt.flow_cap_max: 30000
+      region1.techs.ccgt.flow_cap: 30000
 
-      region2.techs.battery.flow_cap_max: 1000
-      region2.techs.battery.storage_cap_max: 5240
+      region2.techs.battery.flow_cap: 1000
+      region2.techs.battery.storage_cap: 5240
 
-      region1_1.techs.csp.flow_cap_max: 10000
-      region1_1.techs.csp.storage_cap_max: 244301
-      region1_1.techs.csp.area_use_max: 130385
+      region1_1.techs.csp.flow_cap: 10000
+      region1_1.techs.csp.storage_cap: 244301
+      region1_1.techs.csp.area_use: 130385
 
-      region1_2.techs.csp.flow_cap_max: 0
-      region1_2.techs.csp.storage_cap_max: 0
-      region1_2.techs.csp.area_use_max: 0
+      region1_2.techs.csp.active: false
 
-      region1_3.techs.csp.flow_cap_max: 2534
-      region1_3.techs.csp.storage_cap_max: 25301
-      region1_3.techs.csp.area_use_max: 8487
+      region1_3.techs.csp.flow_cap: 2534
+      region1_3.techs.csp.storage_cap: 25301
+      region1_3.techs.csp.area_use: 8487
 
-      region1_to_region2.techs.ac_transmission.flow_cap_max: 3231
-      region1_to_region1_1.techs.free_transmission.flow_cap_max: 9000
-      region1_to_region1_2.techs.free_transmission.flow_cap_max: 0
-      region1_to_region1_3.techs.free_transmission.flow_cap_max: 2281
+    techs:
+      ac_transmission.flow_cap: 3231
+      region1_to_region1_1.flow_cap: 9000
+      region1_to_region1_2.active: false
+      region1_to_region1_3.flow_cap: 2281
 
   check_feasibility:
     config:

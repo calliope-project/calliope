@@ -26,12 +26,13 @@ from typing import (
 )
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
-from calliope.core.io import load_config
+from calliope.io import load_config
 from calliope.util.schema import MATH_SCHEMA, update_then_validate_config, validate_dict
 
 if TYPE_CHECKING:
@@ -211,7 +212,7 @@ class BackendModelGenerator(ABC):
             for name in self.inputs.math[components]:
                 getattr(self, f"add_{component}")(name)
             LOGGER.info(
-                f"Optimisation Model: Generated optimisation problem {components}"
+                f"Optimisation Model | Generated optimisation problem {components}"
             )
 
     def _add_run_mode_custom_math(self) -> None:
@@ -378,7 +379,7 @@ class BackendModelGenerator(ABC):
                 param_name, xr.DataArray(default_val), use_inf_as_na=False
             )
             self.parameters[param_name].attrs["is_result"] = 0
-        LOGGER.info("Optimisation Model: Generated optimisation problem parameters")
+        LOGGER.info("Optimisation Model | Generated optimisation problem parameters")
 
     @staticmethod
     def _clean_arrays(*args) -> None:
@@ -539,6 +540,8 @@ class BackendModelGenerator(ABC):
 
 
 class BackendModel(BackendModelGenerator, Generic[T]):
+    _TS_OFFSET = pd.Timedelta(nanoseconds=1)
+
     def __init__(self, inputs: xr.Dataset, instance: T, **kwargs) -> None:
         """Abstract base class to build backend models that interface with solvers.
 
@@ -548,6 +551,17 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
         super().__init__(inputs, **kwargs)
         self._instance = instance
+        start_window_idx: int = kwargs.pop("start_window_idx", 0)
+
+        mode = self.inputs.attrs["config"].build.mode
+        if mode == "operate":
+            self.inputs_full = self._prepare_operate_model_inputs(start_window_idx)
+        else:
+            self.inputs_full = self.inputs
+
+    @abstractmethod
+    def reset(self, inputs: xr.Dataset, **kwargs):
+        """Method to safely reinitialise class attributes"""
 
     @abstractmethod
     def get_parameter(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
@@ -710,7 +724,6 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 Defaults to None
         """
 
-    @abstractmethod
     def solve(
         self,
         solver: str,
@@ -719,7 +732,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         save_logs: Optional[str] = None,
         warmstart: bool = False,
         **solve_kwargs,
-    ):
+    ) -> xr.Dataset:
         """
         Optimise built model. If solution is optimal, interface objects
         (decision variables, global expressions, constraints, objective) can be successfully
@@ -741,7 +754,106 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 If True, and the chosen solver is capable of implementing it, an existing
                 optimal solution will be used to warmstart the next solve run.
                 Defaults to False.
+
+        Returns:
+            xr.Dataset:
+                Dataset of decision variable values if the solution was optimal/feasible,
+                otherwise an empty dataset.
         """
+        run_mode = self.inputs.attrs["config"]["build"]["mode"]
+        LOGGER.info(f"Optimisation Model | running in {run_mode} mode.")
+
+        if run_mode == "plan":
+            results = self._solve(
+                solver, solver_io, solver_options, save_logs, warmstart, **solve_kwargs
+            )
+        elif run_mode == "operate":
+            if not self.inputs.attrs["allow_operate_mode"]:
+                raise exceptions.ModelError(
+                    "Unable to run this model in operational mode, probably because "
+                    "there exist non-uniform timesteps (e.g. from time masking)"
+                )
+            results = self._solve_operate(
+                solver, solver_io, solver_options, save_logs, **solve_kwargs
+            )
+        return results
+
+    def _solve_operate(
+        self,
+        solver: str,
+        solver_io: Optional[str] = None,
+        solver_options: Optional[dict] = None,
+        save_logs: Optional[str] = None,
+        **solve_kwargs,
+    ):
+        if self.inputs.timesteps[0] != self.inputs_full.timesteps[0]:
+            LOGGER.info("Optimisation model | Resetting model to first time window.")
+            self.reset(self.inputs_full, start_window_idx=0)
+            self._build()
+        LOGGER.info("Optimisation model | Running first time window.")
+
+        step_results = self._solve(
+            solver,
+            solver_io,
+            solver_options,
+            save_logs,
+            warmstart=False,
+            **solve_kwargs,
+        )
+        init_timesteps = step_results.timesteps.copy()
+        windowsteps = self.inputs_full.windowsteps.copy()
+        horizonsteps = self.inputs_full.horizonsteps.copy()
+        results_list = []
+        for idx, windowstep in enumerate(windowsteps[1:]):
+            windowstep_as_string = windowstep.dt.strftime("%Y-%m-%d %H:%M:%S").item()
+            LOGGER.info(
+                f"Optimisation model | Running time window starting at {windowstep_as_string}."
+            )
+            results_list.append(
+                step_results.sel(timesteps=slice(None, windowstep - self._TS_OFFSET))
+            )
+            previous_step_results = results_list[-1]
+            horizonstep = horizonsteps.sel(windowsteps=windowstep)
+            new_param_data = self.inputs_full.sel(
+                timesteps=slice(windowstep, horizonstep)
+            ).drop_vars(["horizonsteps", "windowsteps"], errors="ignore")
+
+            if len(new_param_data.timesteps) != len(step_results.timesteps):
+                LOGGER.info(
+                    "Optimisation model | Reaching the end of the timeseries, re-building model with shorter time horizon."
+                )
+                self.reset(self.inputs_full, start_window_idx=idx + 1)
+                self._build()
+            else:
+                for param_name, param_data in new_param_data.data_vars.items():
+                    if "timesteps" in param_data.dims:
+                        param_data.coords["timesteps"] = init_timesteps
+                        self.update_parameter(param_name, param_data)
+            if "storage" in step_results:
+                end_storage = previous_step_results.storage.isel(
+                    timesteps=-1
+                ).drop_vars("timesteps")
+
+                new_initial_storage = end_storage / self.inputs.storage_cap
+                self.update_parameter("storage_initial", new_initial_storage)
+
+            step_results = self._solve(
+                solver,
+                solver_io,
+                solver_options,
+                save_logs,
+                warmstart=True,
+                **solve_kwargs,
+            )
+            step_results.coords["timesteps"] = new_param_data.coords["timesteps"]
+
+        results_list.append(step_results.sel(timesteps=slice(windowstep, None)))
+        results = xr.concat(results_list, dim="timesteps", combine_attrs="no_conflicts")
+        results.attrs["termination_condition"] = ",".join(
+            set(result.attrs["termination_condition"] for result in results_list)
+        )
+
+        return results
 
     def load_results(self) -> xr.Dataset:
         """
@@ -796,6 +908,29 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             path (Union[str, Path]): Path to which the LP file will be written.
         """
 
+    @abstractmethod
+    def _solve(
+        self,
+        solver: str,
+        solver_io: Optional[str] = None,
+        solver_options: Optional[dict] = None,
+        save_logs: Optional[str] = None,
+        warmstart: bool = False,
+        **solve_kwargs,
+    ) -> xr.Dataset:
+        """Solve model in `plan` mode.
+
+        Args:
+            solver (str): _description_
+            solver_io (Optional[str], optional): _description_. Defaults to None.
+            solver_options (Optional[dict], optional): _description_. Defaults to None.
+            save_logs (Optional[str], optional): _description_. Defaults to None.
+            warmstart (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            xr.Dataset: _description_
+        """
+
     def _find_all_references(self, initial_references: set) -> set:
         """
         Find all nested references to optimisation problem components from an initial set of references.
@@ -822,3 +957,42 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         obj_type = self._dataset[reference].attrs["obj_type"]
         self.delete_component(reference, obj_type)
         getattr(self, "add_" + obj_type.removesuffix("s"))(name=reference)
+
+    def _prepare_operate_model_inputs(self, start_window_idx: int) -> xr.Dataset:
+        inputs_full = self.inputs.copy()
+        window = self.inputs.attrs["config"]["build"]["operate_window"]
+        horizon = self.inputs.attrs["config"]["build"]["operate_horizon"]
+        inputs_full.coords["windowsteps"] = pd.date_range(
+            self.inputs.timesteps[0].item(),
+            self.inputs.timesteps[-1].item(),
+            freq=window,
+        )
+        horizonsteps = inputs_full.coords["windowsteps"] + pd.Timedelta(horizon)
+        clipped_horizonsteps = horizonsteps.clip(
+            max=inputs_full.timesteps[-1] + self._TS_OFFSET
+        ).drop_vars("timesteps")
+        inputs_full.coords["horizonsteps"] = clipped_horizonsteps - self._TS_OFFSET
+        # We require an offset because pandas / xarray slicing is _inclusive_ of both endpoints
+        # where we only want it to be inclusive of the left endpoint.
+        self.inputs = inputs_full.sel(
+            timesteps=slice(
+                inputs_full.windowsteps[start_window_idx],
+                inputs_full.horizonsteps[start_window_idx],
+            )
+        )
+
+        storage_in_model = self.inputs.definition_matrix & (
+            self.inputs.get("include_storage", xr.DataArray(np.nan)).notnull()
+            | (self.inputs.base_tech == "storage")
+        )
+        if storage_in_model.any():
+            initial_storage = xr.DataArray(0).where(storage_in_model.any("carriers"))
+            if "storage_initial" not in self.inputs:
+                self.inputs["storage_initial"] = initial_storage.assign_attrs(
+                    is_result=0
+                )
+            else:
+                self.inputs["storage_initial"] = self.inputs["storage_initial"].fillna(
+                    initial_storage
+                )
+        return inputs_full

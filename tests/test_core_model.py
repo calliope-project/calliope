@@ -7,7 +7,7 @@ import pytest
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
 
-LOGGER = "calliope.core.model"
+LOGGER = "calliope.model"
 
 
 class TestModel:

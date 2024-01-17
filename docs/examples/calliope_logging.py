@@ -62,7 +62,7 @@ m.solve()
 # If the `calliope.set_log_verbosity` method isn't providing you with enough flexibility then you can add your own logging `handlers`
 
 # %%
-# Grab the calliope logger, which will also automatically all the child loggers (e.g., `calliope.core.model`).
+# Grab the calliope logger, which will also automatically all the child loggers (e.g., `calliope.model`).
 logger = logging.getLogger("calliope")
 
 # Remove existing handlers (i.e., those introduced by `calliope.set_log_verbosity` above)
@@ -101,7 +101,7 @@ log_filepath = Path(".") / "outputs" / "5_logging"
 log_filepath.mkdir(parents=True, exist_ok=True)
 
 # %%
-# Grab the calliope logger, which will also automatically all the child loggers (e.g., `calliope.core.model`).
+# Grab the calliope logger, which will also automatically all the child loggers (e.g., `calliope.model`).
 logger = logging.getLogger("calliope")
 
 # Remove existing handlers (i.e., those introduced earlier in this notebook)
@@ -133,7 +133,7 @@ m.solve()
 # We can also log both to the console at one level and to file at another:
 
 # %%
-# Grab the calliope logger, which will also automatically all the child loggers (e.g., `calliope.core.model`).
+# Grab the calliope logger, which will also automatically all the child loggers (e.g., `calliope.model`).
 logger = logging.getLogger("calliope")
 
 # Remove existing handlers (i.e., those introduced earlier in this notebook)
@@ -174,7 +174,7 @@ m.solve()
 # We can store each of these child loggers to a different file if we like:
 
 # %%
-# Grab the calliope logger, which will also automatically all the child loggers (e.g., `calliope.core.model`).
+# Grab the calliope logger, which will also automatically all the child loggers (e.g., `calliope.model`).
 logger = logging.getLogger("calliope")
 
 # Remove existing handlers (i.e., those introduced earlier in this notebook)
