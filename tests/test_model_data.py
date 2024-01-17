@@ -582,6 +582,41 @@ class TestModelData:
 
         assert check_error_or_warning(excinfo, "(nodes, A) | Cannot find `not_there`")
 
+    def test_deactivate_single_dim(self, model_data_factory_w_params: ModelDataFactory):
+        assert "a" in model_data_factory_w_params.dataset.nodes
+        model_data_factory_w_params._deactivate_item(nodes="a")
+        assert "a" not in model_data_factory_w_params.dataset.nodes
+
+    def test_deactivate_two_dims(self, model_data_factory_w_params: ModelDataFactory):
+        to_drop = {"nodes": "a", "techs": "test_supply_elec"}
+        model_data_factory_w_params._deactivate_item(**to_drop)
+        assert "a" in model_data_factory_w_params.dataset.nodes
+        assert "test_supply_elec" in model_data_factory_w_params.dataset.techs
+        assert (
+            model_data_factory_w_params.dataset.carrier_in.sel(**to_drop).isnull().all()
+        )
+        assert (
+            model_data_factory_w_params.dataset.carrier_out.sel(**to_drop)
+            .isnull()
+            .all()
+        )
+
+    @pytest.mark.parametrize(
+        "to_drop",
+        [
+            {"nodes": "d"},
+            {"techs": "new_tech"},
+            {"nodes": "d", "techs": "test_supply_elec"},
+            {"nodes": "a", "techs": "new_tech"},
+        ],
+    )
+    def test_deactivate_no_action(
+        self, model_data_factory_w_params: ModelDataFactory, to_drop: dict
+    ):
+        orig_dataset = model_data_factory_w_params.dataset.copy(deep=True)
+        model_data_factory_w_params._deactivate_item(**to_drop)
+        assert model_data_factory_w_params.dataset.equals(orig_dataset)
+
     def test_links_to_node_format_all_active(
         self, my_caplog, model_data_factory: ModelDataFactory
     ):

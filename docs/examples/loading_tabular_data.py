@@ -184,12 +184,19 @@ model_from_yaml.inputs.cost_flow_cap.to_dataframe()
 # We do not create one big table for all the data, but instead group data with similar dimensions together.
 # Therefore, timeseries data goes in one file, cost data in another, and data linking technologies to nodes or carriers into their own files.
 
+# We also create tables with different shapes.
+# Some are long and thin with all the dimensions grouped in each row (or the `index`), while others have dimensions grouped in the columns.
+# This is to show what is possible.
+# You might choose to always have long and thin data, or to always have certain dimensions in the rows and others in the columns.
+# So long as you then define your data source correctly, it doesn't matter in what shape it is stored.
+
 # %%
 data_source_path = Path(".") / "outputs" / "loading_tabular_data"
 data_source_path.mkdir(parents=True, exist_ok=True)
 
+# %% [markdown]
+# **Grouping together technology data, where no extra dimensions are attached.**
 # %%
-# Grouping together technology data, where no extra dimensions are attached.
 tech_data = pd.DataFrame(
     {
         "supply_tech": {"base_tech": "supply"},
@@ -210,8 +217,9 @@ tech_data = pd.DataFrame(
 tech_data.to_csv(data_source_path / "tech_data.csv")
 tech_data
 
+# %% [markdown]
+# **Grouping together technology data with the `timesteps` dimension.**
 # %%
-# Grouping together technology data with the `timesteps` dimension.
 tech_timestep_data = pd.DataFrame(
     {
         ("supply_tech", "source_use_max"): {
@@ -227,11 +235,13 @@ tech_timestep_data = pd.DataFrame(
 tech_timestep_data.to_csv(data_source_path / "tech_timestep_data.csv")
 tech_timestep_data
 
-# %%
-# Grouping together technology data with the `carriers` dimension.
+# %% [markdown]
+# **Grouping together technology data with the `carriers` dimension.**
+#
 # Note that there are no carriers mentioned in this file.
 # Instead, we will add the dimension when we load the file
 # (since it is the same value - `electricity` - for all rows).
+# %%
 tech_carrier_data = pd.Series(
     {
         ("supply_tech", "carrier_out"): 1,
@@ -244,20 +254,21 @@ tech_carrier_data = pd.Series(
 )
 tech_carrier_data.to_csv(data_source_path / "tech_carrier_data.csv")
 tech_carrier_data
-
+# %% [markdown]
+# **Grouping together technology data with the `nodes` dimension.**
 # %%
-# Grouping together technology data with the `nodes` dimension.
 tech_node_data = pd.Series(
     {("supply_tech", "B", "flow_cap_max"): 8, ("supply_tech", "A", "flow_cap_max"): 10}
 )
 tech_node_data.to_csv(data_source_path / "tech_node_data.csv")
 tech_node_data
-
-# %%
-# Grouping together technology data with the `costs` dimension.
+# %% [markdown]
+# **Grouping together technology data with the `costs` dimension.**
+#
 # As with the `carriers` dimension data above, we do not explicitly define the costs dimension as,
 # once again, it is a single value: `monetary`.
 # Instead of repeating it multiple times, we just add it on when we load in the file.
+# %%
 tech_cost_data = pd.DataFrame(
     {
         "storage_tech": {"cost_storage_cap": 5, "cost_flow_out": 0.1},
