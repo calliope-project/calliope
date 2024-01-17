@@ -206,21 +206,25 @@ properties:
           - required: ["base_tech"]
           - oneOf:
             - required: ["base_tech", "carrier_in", "carrier_out"]
+              not:
+                required: ["to", "from"]
               properties:
                 base_tech: {const: conversion}
             - required: ["base_tech", "carrier_in"]
               not:
-                  required: ["carrier_out"]
+                  required: ["carrier_out", "to", "from"]
               properties:
                 base_tech: {const: demand}
 
             - required: ["base_tech", "carrier_in", "carrier_out"]
+              not:
+                required: ["to", "from"]
               properties:
                 base_tech: {const: storage}
 
             - required: ["base_tech", "carrier_out"]
               not:
-                  required: ["carrier_in"]
+                  required: ["carrier_in", "to", "from"]
               properties:
                 base_tech: {const: supply}
 
@@ -231,7 +235,6 @@ properties:
                   title: Starting node.
                   description: The resulting link technology will have `flow_out` == `import` and `flow_in` == `export` at this node.
                   type: string
-
                 to:
                   title: Ending node.
                   description: The resulting link technology will have `flow_out` == `import` and `flow_in` == `export` at this node.
@@ -258,6 +261,14 @@ properties:
         properties:
           active:
             $ref: "#/$defs/ActiveDef"
+
+          base_tech:
+            type: string
+            x-type: str
+            enum: [demand, supply, conversion, storage, transmission]
+            title: Abstract base technology name.
+            description: Should be the name of one of the abstract base classes, from which some initial parameter defaults will be derived and with which certain base math will be triggered.
+
           color:
             type: ["null", string]
             default: .nan
@@ -306,13 +317,6 @@ properties:
             title: Technology longname.
             description: Long name of technology, which can be used in post-processing (e.g., plotting).
             default: .nan
-
-          base_tech:
-            type: string
-            x-type: str
-            enum: [demand, supply, conversion, storage, transmission]
-            title: Abstract base technology name.
-            description: Should be the name of one of the abstract base classes, from which some initial parameter defaults will be derived and with which certain base math will be triggered.
 
           cap_method:
             type: string
