@@ -459,20 +459,3 @@ class TestChecks:
             error,
             "storage_discharge_depth is currently not allowed when time clustering is active.",
         )
-
-    def test_loading_from_df(self, data_source_dir, simple_supply):
-        demand_elec = pd.read_csv(
-            data_source_dir / "demand_elec.csv", index_col=0, header=0
-        )
-        override = AttrDict.from_yaml_string(
-            "data_sources.demand_elec.source: demand_elec_df"
-        )
-        simple_supply_from_df = build_model(
-            override,
-            "simple_supply,two_hours,investment_costs",
-            data_source_dfs={"demand_elec_df": demand_elec},
-        )
-
-        assert simple_supply_from_df.inputs.sink_use_equals.equals(
-            simple_supply.inputs.sink_use_equals
-        )

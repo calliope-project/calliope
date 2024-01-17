@@ -162,13 +162,33 @@ class TestDataSourceInitOneLevel:
             "multi_row_multi_col_data",
         ],
     )
-    def test(self, init_config, request, data_source_ref):
+    def test_load_from_df(self, init_config, request, data_source_ref):
         expected_df, source_dict = request.getfixturevalue(data_source_ref)
-        ds = data_sources.DataSource(init_config, "ds_name", source_dict)
+        source_dict["source"] = data_source_ref
+        ds = data_sources.DataSource(
+            init_config,
+            "ds_name",
+            source_dict,
+            data_source_dfs={data_source_ref: expected_df},
+        )
         test_param = ds.dataset["test_param"]
         assert not set(["test_row", "test_col"]).symmetric_difference(test_param.dims)
         pd.testing.assert_series_equal(
             test_param.to_series(), expected_df.stack(), check_names=False
+        )
+
+    def test_load_from_df_must_be_df(self, init_config, multi_row_no_col_data):
+        expected_df, source_dict = multi_row_no_col_data
+        source_dict["source"] = "foo"
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            data_sources.DataSource(
+                init_config,
+                "ds_name",
+                source_dict,
+                data_source_dfs={"foo": expected_df},
+            )
+        assert check_error_or_warning(
+            excinfo, "Data source must be a pandas DataFrame."
         )
 
 
@@ -555,6 +575,20 @@ class TestDataSourceNodeDict:
         assert node_dict == {
             "foo1": {"techs": {"bar1": None}},
             "foo2": {"techs": {"bar2": None}},
+        }
+
+    def test_node_dict_node_not_in_ds(self, source_obj):
+        node_tech_df_dict = {"my_param": {("foo1", "bar1"): 1, ("foo1", "bar2"): 2}}
+        node_df_dict = {"available_area": {"foo2": 1}}
+        tech_dict = calliope.AttrDict({"bar1": {}, "bar2": {}})
+        node_tech_ds = source_obj(node_tech_df_dict)
+        node_ds = source_obj(node_df_dict, rows="nodes")
+        node_tech_ds.dataset = node_tech_ds.dataset.merge(node_ds.dataset)
+
+        node_dict = node_tech_ds.node_dict(tech_dict)
+        assert node_dict == {
+            "foo1": {"techs": {"bar1": None, "bar2": None}},
+            "foo2": {"techs": {}},
         }
 
     def test_node_dict_no_info(self, source_obj):
