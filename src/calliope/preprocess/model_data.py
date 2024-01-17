@@ -136,10 +136,10 @@ class ModelDataFactory:
                 if lookup_dict:
                     data_source.drop(param)
 
-        self.dataset = xr.merge(
-            [self.dataset, *[data_source.dataset for data_source in data_sources]],
-            combine_attrs="no_conflicts",
-        )
+        for data_source in data_sources:
+            self._add_to_dataset(
+                data_source.dataset, f"(data_sources, {data_source.name})"
+            )
 
     def add_node_tech_data(self):
         """For each node, extract technology definitions and node-level parameters and convert them to arrays.
@@ -203,9 +203,7 @@ class ModelDataFactory:
 
         node_ds = self._definition_dict_to_ds(active_node_dict, "nodes")
         ds = xr.merge([node_tech_ds, node_ds])
-        self.dataset = xr.merge(
-            [ds, self.dataset], compat="override", combine_attrs="no_conflicts"
-        ).fillna(self.dataset)
+        self._add_to_dataset(ds, "YAML definition")
 
     def add_top_level_params(self):
         """Process any parameters defined in the top-level `parameters` key.
@@ -223,7 +221,6 @@ class ModelDataFactory:
                 )
             param_dict = self._prepare_param_dict(name, data)
             param_da = self._param_dict_to_array(name, param_dict)
-            self._update_param_coords(name, param_da)
             self._log_param_updates(name, param_da)
             param_ds = param_da.to_dataset()
 
@@ -236,11 +233,7 @@ class ModelDataFactory:
                     f" the following combinations of techs at nodes in your model definition: {valid_node_techs.index.values}"
                 )
 
-            self.dataset = xr.merge(
-                [param_ds, self.dataset],
-                compat="override",
-                combine_attrs="no_conflicts",
-            ).fillna(self.dataset)
+            self._add_to_dataset(param_ds, f"(parameters, {name})")
 
     def update_time_dimension_and_params(self):
         """If resampling/clustering is requested in the initialisation config, apply it here."""
@@ -248,6 +241,9 @@ class ModelDataFactory:
             raise exceptions.ModelError(
                 "Must define at least one timeseries parameter in a Calliope model."
             )
+        time_subset = self.config.get("time_subset", None)
+        if time_subset is not None:
+            self.dataset = time.subset_timeseries(self.dataset, time_subset)
         self.dataset = time.add_inferred_time_params(self.dataset)
 
         if self.config["time_resample"] is not None:
@@ -689,31 +685,19 @@ class ModelDataFactory:
 
         return link_tech_dict
 
-    def _update_param_coords(self, param_name: str, param_da: xr.DataArray):
-        """
-        Check array coordinates to see if any should be in datetime format,
-        if the base model coordinate is in datetime format.
+    def _add_to_dataset(self, to_add: xr.Dataset, id: str):
+        """Add new data to the central class dataset.
+
+        Before being added, any dimensions with the `steps` suffix will be cast to datetime dtype.
 
         Args:
-            param_name (str): name of parameter being added to the model.
-            param_da (xr.DataArray): array of parameter data.
+            to_add (xr.Dataset): Dataset to merge into the central dataset.
+            id (str): ID of dataset being added, to use in log messages
         """
-
-        to_update = {}
-        for coord_name, coord_data in param_da.coords.items():
-            coord_in_model = coord_name in self.dataset.coords
-            if coord_in_model and self.dataset[coord_name].dtype.kind == "M":
-                to_update[coord_name] = pd.to_datetime(coord_data, format="ISO8601")
-            elif not coord_in_model:
-                try:
-                    to_update[coord_name] = pd.to_datetime(coord_data, format="ISO8601")
-                except ValueError:
-                    continue
-        for coord_name, coord_data in to_update.items():
-            param_da.coords[coord_name] = coord_data
-            LOGGER.debug(
-                f"(parameters, {param_name}) | Updating {coord_name} dimension index values to datetime format"
-            )
+        to_add = time.timeseries_to_datetime(to_add, self.config["time_format"], id)
+        self.dataset = xr.merge(
+            [to_add, self.dataset], combine_attrs="no_conflicts", compat="override"
+        ).fillna(self.dataset)
 
     def _log_param_updates(self, param_name: str, param_da: xr.DataArray):
         """

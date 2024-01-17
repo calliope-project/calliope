@@ -13,7 +13,6 @@ from typing_extensions import NotRequired, TypedDict
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.core.io import load_config
-from calliope.preprocess import time
 from calliope.util.schema import (
     DATA_SOURCE_SCHEMA,
     MODEL_SCHEMA,
@@ -312,7 +311,6 @@ class DataSource:
             ds = xr.Dataset(tdf.to_dict())
         else:
             ds = tdf.unstack("parameters").infer_objects().to_xarray()
-        ds = time.clean_data_source_timeseries(ds, self.config, self.name)
 
         self._log(f"Loaded arrays:\n{ds}")
         return ds

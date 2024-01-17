@@ -621,7 +621,7 @@ properties:
             enum: [absolute, per_area, per_cap]
 
           sink_use_min:
-            type: ["null", number]
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
             x-resample_method: sum
             x-type: float
@@ -631,7 +631,7 @@ properties:
               Unit dictated by ``source_unit``.
 
           sink_use_max:
-            type: ["null", number]
+            $ref: "#/$defs/TechParamNullNumber"
             default: .inf
             x-resample_method: sum
             x-type: float
@@ -641,7 +641,7 @@ properties:
               Unit dictated by ``source_unit``.
 
           sink_use_equals:
-            type: ["null", number]
+            $ref: "#/$defs/TechParamNullNumber"
             default: .nan
             x-resample_method: sum
             x-type: float
@@ -681,7 +681,7 @@ properties:
               Unit: fraction.
 
           source_use_min:
-            type: ["null", number]
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
             x-resample_method: sum
             x-type: float
@@ -691,7 +691,7 @@ properties:
               Unit dictated by ``source_unit``.
 
           source_use_max:
-            type: ["null", number]
+            $ref: "#/$defs/TechParamNullNumber"
             default: .inf
             x-resample_method: sum
             x-type: float
@@ -701,7 +701,7 @@ properties:
               Unit dictated by ``source_unit``.
 
           source_use_equals:
-            type: ["null", number]
+            $ref: "#/$defs/TechParamNullNumber"
             default: .nan
             x-resample_method: sum
             x-type: float

@@ -1,3 +1,5 @@
+import warnings
+
 import calliope
 import calliope.exceptions as exceptions
 import pandas as pd
@@ -281,15 +283,20 @@ class TestModelRun:
             "data_sources.demand_elec.source: data_sources/demand_heat_wrong_length.csv"
         )
         # check in output error that it points to: 07/01/2005 10:00:00
-        with pytest.raises(exceptions.ModelError):
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
             build_model(override_dict=override, scenario="simple_conversion")
+        assert check_error_or_warning(
+            excinfo, "Possibly missing data on the timesteps dimension"
+        )
 
     def test_inconsistent_time_indices_passes_thanks_to_time_subsetting(self):
         override = AttrDict.from_yaml_string(
             "data_sources.demand_elec.source: data_sources/demand_heat_wrong_length.csv"
         )
         # should pass: wrong length of demand_heat csv, but time subsetting removes the difference
-        build_model(override_dict=override, scenario="simple_conversion,one_day")
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            build_model(override_dict=override, scenario="simple_conversion,one_day")
 
     def test_single_timestep(self):
         """

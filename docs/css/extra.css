@@ -57,6 +57,11 @@
     font-size: 0.8em;
 }
 
+/* reduce font size of code blocks in notebook markdown cells */
+.jp-MarkdownOutput div.highlight {
+    font-size: 0.8em;
+}
+
 /* Allow tables to be horizontally scrollable. */
 .md-typeset__scrollwrap {
   overflow-x: auto;

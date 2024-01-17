@@ -1,3 +1,10 @@
+---
+demand:
+    file: "src/calliope/example_models/urban_scale/data_sources/demand.csv"
+    header: [0, 1]
+    index_col: 0
+---
+
 # Urban Scale Example Model
 
 This example consists of two possible sources of electricity,
@@ -41,6 +48,28 @@ The import section in our file looks like this:
 --8<-- "src/calliope/example_models/urban_scale/model.yaml:import"
 ```
 
+### Referencing tabular data
+
+As of Calliope v0.7.0 it is possible to load tabular data completely separately from the YAML model definition that we will move onto next.
+To do this we reference data tables under the `data_sources` key:
+
+```yaml
+--8<-- "src/calliope/example_models/urban_scale/model.yaml:data-sources"
+```
+
+In the Calliope example models, we only load timeseries data from file, including for [energy demand](#demand-technologies), [electricity export price](#revenue-by-export) and [solar PV resource availability](#supply-technologies).
+These are large tables of data that do not work well in YAML files!
+As an example, the data in the energy demand CSV file looks like this:
+
+{{ read_csv(page.meta.demand.file, header=page.meta.demand.header, index_col=page.meta.demand.index_col) }}
+
+You'll notice that in each row there is reference to a timestep, and in each column to a technology and a node.
+Therefore, we reference `timesteps` in our data source `rows` and `nodes` and `techs` in our data source columns.
+Since all the data refers to the one parameter `sink_use_equals`, we don't add that information in the CSV file, but instead add it on as a dimension when loading the file.
+
+!!! info
+    You can read more about loading data from file in [our dedicated tutorial][loading-tabular-data].
+
 ## Model definition
 
 ### Top-level parameters
@@ -50,7 +79,6 @@ Before we dive into the technologies and nodes in the model, we have defined som
 ```yaml
 --8<-- "src/calliope/example_models/urban_scale/model.yaml:parameters"
 ```
-
 
 Neither of these parameters is strictly necessary to define.
 They have defaults assigned to them (see the model definition schema in the `reference` section of the documentation).
@@ -191,9 +219,8 @@ It is important that you understand the contents of the base math before you add
 
 ### Demand technologies
 
-More technologies are needed for a simple model.
-
-First, a definition of electricity and heat demand:
+You always need demand for your carriers in a model.
+These move carriers out of the modelled system and are required for overall energy balance (energy into the system = energy out of the system).
 
 ```yaml
 --8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:demand"
@@ -250,8 +277,7 @@ For demands, the options set here are related to reading the demand time series 
 CSV is a simple text-based format that stores tables by comma-separated rows.
 We did not define any `sink` option in the definition of these demands.
 Instead, this is done directly via a node-specific override.
-For this node, the files `demand_heat.csv` and `demand_power.csv` are loaded.
-As no column is specified, Calliope will assume that the column name matches the node name `X1`.
+
 - Coordinates are defined, but they will not be used for anything in the model as we have already defined the `distance` along links when we defined our transmission technologies.
 Coordinates are therefore only useful for geospatial visualisations.
 - An `available_area` is defined, which will limit the maximum area of all `area_use` technologies to the e.g. roof space available at our node.

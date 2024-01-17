@@ -57,7 +57,7 @@ def model_data_factory_w_params(model_data_factory: ModelDataFactory):
 
 @pytest.fixture(scope="function")
 def my_caplog(caplog):
-    caplog.set_level(logging.DEBUG, logger="calliope.preprocess.model_data")
+    caplog.set_level(logging.DEBUG, logger="calliope.preprocess")
     return caplog
 
 
@@ -72,8 +72,8 @@ class TestModelData:
     @pytest.fixture(scope="class")
     def timeseries_da(self):
         data = {
-            ("2000-01-01 00:00", "bar"): [True, 10],
-            ("2000-01-01 01:00", "bar"): [False, 20],
+            ("2005-01-01 00:00", "bar"): [True, 10],
+            ("2005-01-01 01:00", "bar"): [False, 20],
         }
         da = pd.Series(data).rename_axis(index=["timesteps", "foobaz"]).to_xarray()
         da.coords["timesteps"] = da.coords["timesteps"].astype("M")
@@ -647,49 +647,32 @@ class TestModelData:
             for j in ["in", "out"]
         )
 
-    @pytest.mark.parametrize("coord_name", ["foobar", "new_coord"])
-    def test_update_param_coords_timeseries(
-        self,
-        my_caplog,
-        model_data_factory: ModelDataFactory,
-        timeseries_da: xr.DataArray,
-        coord_name,
+    @pytest.mark.parametrize("coord_name", ["foosteps", "barsteps"])
+    def test_add_to_dataset_timeseries(
+        self, my_caplog, model_data_factory: ModelDataFactory, coord_name
     ):
-        model_data_factory.dataset["orig"] = timeseries_da
         new_idx = pd.Index(["2005-01-01 00:00", "2005-01-01 01:00"], name=coord_name)
-        new_param = pd.Series([True, False], index=new_idx).to_xarray()
-        model_data_factory._update_param_coords("foo", new_param)
+        new_param = pd.DataFrame({"ts_data": [True, False]}, index=new_idx).to_xarray()
+        model_data_factory._add_to_dataset(new_param, "foo")
 
         assert (
-            f"(parameters, foo) | Updating {coord_name} dimension index values to datetime format"
+            f"foo | Updating `{coord_name}` dimension index values to datetime format"
             in my_caplog.text
         )
-        assert new_param.coords[coord_name].dtype.kind == "M"
+        assert model_data_factory.dataset.coords[coord_name].dtype.kind == "M"
+        assert "ts_data" in model_data_factory.dataset
 
-    def test_update_param_coords_timeseries_in_new_but_not_in_orig(
+    def test_add_to_dataset_no_timeseries(
         self, my_caplog, model_data_factory: ModelDataFactory, simple_da: xr.DataArray
     ):
-        model_data_factory.dataset["orig"] = simple_da
-        new_idx = pd.Index(["2005-01-01 00:00", "2005-01-01 01:00"], name="foobar")
-        new_param = pd.Series([True, False], index=new_idx).to_xarray()
-        model_data_factory._update_param_coords("foo", new_param)
+        new_param = simple_da.copy().to_dataset(name="non_ts_data")
+        model_data_factory._add_to_dataset(new_param, "foo")
 
-        assert "(parameters, foo) | Updating" not in my_caplog.text
+        assert "foo | Updating" not in my_caplog.text
         assert "datetime format" not in my_caplog.text
         # make sure nothing has changed in the array
-        assert new_param.coords["foobar"].dtype.kind != "M"
-
-    def test_update_param_coords_no_timeseries(
-        self, my_caplog, model_data_factory: ModelDataFactory, simple_da: xr.DataArray
-    ):
-        model_data_factory.dataset["orig"] = simple_da
-        new_param = simple_da.copy()
-        model_data_factory._update_param_coords("foo", new_param)
-
-        assert "(parameters, foo) | Updating" not in my_caplog.text
-        assert "datetime format" not in my_caplog.text
-        # make sure nothing has changed in the array
-        assert new_param.equals(simple_da)
+        assert "non_ts_data" in model_data_factory.dataset
+        assert model_data_factory.dataset["non_ts_data"].equals(simple_da)
 
     @pytest.mark.parametrize(
         ["coords", "new_coords"],
@@ -907,7 +890,7 @@ class TestTopLevelParams:
             "timesteps",
         )
         assert (
-            "(parameters, my_val) | Updating timesteps dimension index values to datetime format"
+            "(parameters, my_val) | Updating `timesteps` dimension index values to datetime format"
             in my_caplog.text
         )
 
@@ -955,7 +938,7 @@ class TestActiveFalse:
 
         # Ensure warnings were raised
         assert (
-            "(links, test_link_a_b_elec) | Deactivated due to missing/deactivated `from` or to `node`."
+            "(links, test_link_a_b_elec) | Deactivated due to missing/deactivated `from` or `to` node."
             in my_caplog.text
         )
         assert "(nodes, b) | Deactivated." in my_caplog.text
