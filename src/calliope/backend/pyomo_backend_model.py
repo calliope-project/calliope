@@ -60,6 +60,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._instance.objectives = pmo.objective_dict()
 
         self._instance.dual = pmo.suffix(direction=pmo.suffix.IMPORT)
+        self.shadow_prices = PyomoShadowPrices(self._instance.dual, self)
 
         self._add_all_inputs_as_parameters()
 
@@ -249,14 +250,6 @@ class PyomoBackendModel(backend_model.BackendModel):
         else:
             return global_expression
 
-    def get_shadow_prices(self, name: str) -> xr.DataArray:
-        constraint = self.get_constraint(name, as_backend_objs=True)
-        return self._apply_func(
-            self._duals_from_pyomo_constraint,
-            constraint,
-            dual_getter=self._instance.dual,
-        )
-
     def solve(
         self,
         solver: str,
@@ -266,6 +259,11 @@ class PyomoBackendModel(backend_model.BackendModel):
         warmstart: bool = False,
         **solve_kwargs,
     ):
+        if solver == "cbc" and self.shadow_prices.is_active:
+            model_warn(
+                "Switching off shadow price tracker as constraint duals cannot be accessed from the CBC solver"
+            )
+            self.shadow_prices.deactivate()
         opt = SolverFactory(solver, solver_io=solver_io)
 
         if solver_options:
@@ -276,6 +274,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             solve_kwargs.update({"symbolic_solver_labels": True, "keepfiles": True})
             os.makedirs(save_logs, exist_ok=True)
             TempfileManager.tempdir = save_logs  # Sets log output dir
+
         if warmstart and solver in ["glpk", "cbc"]:
             model_warn(
                 "The chosen solver, {}, does not support warmstart, which may "
@@ -762,15 +761,6 @@ class PyomoBackendModel(backend_model.BackendModel):
             else:
                 return val.to_string()
 
-    @staticmethod
-    def _duals_from_pyomo_constraint(
-        val: pmo.constraint, *, dual_getter: pmo.suffix
-    ) -> float:
-        if pd.isnull(val):
-            return np.nan
-        else:
-            return dual_getter.get(val)
-
     @contextmanager
     def _datetime_as_string(self, data: Union[xr.DataArray, xr.Dataset]) -> Iterator:
         """Context manager to temporarily convert np.dtype("datetime64[ns]") coordinates (e.g. timesteps) to strings with a resolution of minutes.
@@ -873,3 +863,35 @@ class ObjConstraint(pmo.constraint, CoordObj):
 
     def getname(self, *args, **kwargs):
         return self._update_name(pmo.constraint.getname(self, *args, **kwargs))
+
+
+class PyomoShadowPrices(backend_model.ShadowPrices):
+    def __init__(self, dual_obj: pmo.suffix, backend_obj: PyomoBackendModel):
+        self._dual_obj = dual_obj
+        self._backend_obj = backend_obj
+        self.deactivate()
+
+    def get(self, name: str) -> xr.DataArray:
+        constraint = self._backend_obj.get_constraint(name, as_backend_objs=True)
+        return self._backend_obj._apply_func(
+            self._duals_from_pyomo_constraint, constraint, dual_getter=self._dual_obj
+        )
+
+    def activate(self):
+        self._dual_obj.activate()
+
+    def deactivate(self):
+        self._dual_obj.deactivate()
+
+    @property
+    def is_active(self) -> bool:
+        return self._dual_obj.active
+
+    @staticmethod
+    def _duals_from_pyomo_constraint(
+        val: pmo.constraint, *, dual_getter: pmo.suffix
+    ) -> float:
+        if pd.isnull(val):
+            return np.nan
+        else:
+            return dual_getter.get(val)
