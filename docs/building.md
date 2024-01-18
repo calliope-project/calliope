@@ -150,7 +150,7 @@ Inside the `data_sources` directory, tabular data are stored as CSV files.
 
 We distinguish between the model **configuration** (the options provided to Calliope to do its work) and the model **definition** (your representation of a physical system in YAML).
 Model configuration is everything under the top-level YAML key [`config`][model-configuration-config].
-Model definition is everything else, under the top-level YAML keys [`parameters`][top-level-parameters-parameters], [`techs`][technologies-techs], [`nodes`][nodes-nodes], [`tech_groups`][technology-tech-groups-and-node-node-groups-inheritance], [`node_groups`][technology-tech-groups-and-node-node-groups-inheritance], and [`data_sources`][loading-tabular-data-data-sources].
+Model definition is everything else, under the top-level YAML keys [`parameters`][top-level-parameters-parameters], [`techs`][technologies-techs], [`nodes`][nodes-nodes], [`tech_groups`][technology-tech_groups-and-node-node_groups-inheritance], [`node_groups`][technology-tech_groups-and-node-node_groups-inheritance], and [`data_sources`][loading-tabular-data-data_sources].
 
 It is possible to define alternatives to the model configuration/definition that you can refer to when you initialise your model.
 These are defined under the top-level YAML keys [`scenarios` and `overrides`][scenarios-and-overrides].
@@ -180,7 +180,7 @@ The configuration is grouped into three top-level items:
 * The `build` configuration items are used when you build your optimisation problem (`calliope.Model.build(...)`).
 * The `solve` configuration items are used when you solve your optimisation problem (`calliope.Model.solve(...)`).
 
-At each of these stages you can override what you have put in your YAML file (or if not in your YAML file, [the default that Calliope uses][config-schema]).
+At each of these stages you can override what you have put in your YAML file (or if not in your YAML file, [the default that Calliope uses][model-configuration-schema]).
 You do this by providing additional keyword arguments on calling `calliope.Model` or its methods. E.g.,:
 
 ```python
@@ -263,9 +263,9 @@ parameters:
 or (equivalent):
 
 ```yaml
-    parameters:
-        my_param:
-            data: 10
+parameters:
+    my_param:
+        data: 10
 ```
 
 which can then be accessed in the model inputs `model.inputs.my_param` and used in [custom math][custom-math-formulation] as `my_param`.
@@ -440,7 +440,7 @@ If given, node-specific parameters supersede any group constraints a technology 
 
 Nodes can optionally specify coordinates (`latitude` and `longitude`) which are used in visualisation or to compute distances along transmission links.
 Nodes can also have any arbitrary parameter assigned which will be available in the optimisation problem, indexed over the `nodes` dimension.
-They can also have parameters that use the [top-level parameter syntax][] to define node+other dimension data.
+They can also have parameters that use the [top-level parameter syntax][top-level-parameters-parameters] to define node+other dimension data.
 In the above example, `node_flow_out_max` at `region1` could be used to create a [custom math][custom-math-formulation] constraint that limits the total outflow of the carriers electricity and gas at that node.
 
 ### Technology (`tech_groups`) and node (`node_groups`) inheritance
@@ -615,9 +615,9 @@ In brief it is:
 
 In this section we will show some examples of loading data and provide the equivalent YAML definition that it would replace.
 
-Loading a simple photovoltaic (PV) tech using a time series of hour-by-hour electricity generation data might look like this:
+**Loading timeseries data**
 
-=== Tabular
+=== "Tabular"
 
     Data in file:
 
@@ -627,6 +627,8 @@ Loading a simple photovoltaic (PV) tech using a time series of hour-by-hour elec
     2005-01-01 13:00:00,5,11
     ...
     ```
+
+    YAML definition to load data:
 
     ```yaml
     data_sources:
@@ -638,7 +640,8 @@ Loading a simple photovoltaic (PV) tech using a time series of hour-by-hour elec
                 techs: pv
                 parameters: source_use_equals
     ```
-=== YAML
+
+=== "YAML"
 
     ```yaml
     techs:
@@ -662,9 +665,9 @@ Loading a simple photovoltaic (PV) tech using a time series of hour-by-hour elec
     Excel will automatically update the format to match your operating system default, which is usually _not_ the `ISO8601` format.
 
 
-Loading technology data from file:
+**Loading technology data from file**
 
-=== Tabular
+=== "Tabular"
 
     Data in file:
 
@@ -678,8 +681,9 @@ Loading technology data from file:
     tech3,base_tech,storage
     tech3,storage_cap_max,200
     tech3,flow_cap_max,100
-    ...
     ```
+
+    YAML definition to load data:
 
     ```yaml
     data_sources:
@@ -687,7 +691,8 @@ Loading technology data from file:
             source: data_sources/tech_data.csv
             rows: [techs, parameters]
     ```
-=== YAML
+
+=== "YAML"
 
     ```yaml
     techs:
@@ -705,9 +710,9 @@ Loading technology data from file:
             flow_cap_max: 100
     ```
 
-Loading technology cost data from file:
+**Loading technology cost data from file**
 
-=== Tabular
+=== "Tabular"
 
     Data in file:
 
@@ -719,8 +724,9 @@ Loading technology cost data from file:
     tech3,cost_flow_cap,20
     tech3,cost_storage_cap,150
     tech3,cost_interest_rate,0.1
-    ...
     ```
+
+    YAML definition to load data:
 
     ```yaml
     data_sources:
@@ -730,7 +736,8 @@ Loading technology cost data from file:
             add_dimensions:
                 costs: monetary
     ```
-=== YAML
+
+=== "YAML"
 
     ```yaml
     tech_groups:  # (1)!
@@ -767,14 +774,17 @@ Loading technology cost data from file:
             cost_storage_cap.data: 150
     ```
 
-    1. To limit repetition, we have defined [technology groups][technology-tech-groups-and-node-node-groups-inheritance] for our costs.
+    1. To limit repetition, we have defined [technology groups][technology-tech_groups-and-node-node_groups-inheritance] for our costs.
+
+!!! info "See also"
+    Our [data source loading tutorial][TODO] has more examples of loading tabular data into your model.
 
 #### Loading CSV files vs `pandas` dataframes
 
 To load from CSV, set the filepath in `source` to point to your file.
 This filepath can either be relative to your `model.yaml` file (as in the above examples) or an absolute path.
 
-To load from a pandas dataframe, you can specify the `data_source_dfs` dictionary of objects when you initialise your model:
+To load from a [pandas.DataFrame][], you can specify the `data_source_dfs` dictionary of objects when you initialise your model:
 
 ```python
 import calliope
@@ -782,7 +792,10 @@ import pandas as pd
 df1 = pd.DataFrame(...)
 df2 = pd.DataFrame(...)
 
-model = calliope.Model("path/to/model.yaml", data_source_dfs={"data_source_1": df1, "data_source_2": df2})
+model = calliope.Model(
+    "path/to/model.yaml",
+    data_source_dfs={"data_source_1": df1, "data_source_2": df2}
+)
 ```
 
 And then you point to those dictionary keys in your data source `source`:
