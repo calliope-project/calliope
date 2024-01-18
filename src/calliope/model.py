@@ -440,6 +440,11 @@ class Model(object):
         solver_config = update_then_validate_config("solve", self.config, **kwargs)
 
         if run_mode == "operate":
+            if not self._model_data.attrs["allow_operate_mode"]:
+                raise exceptions.ModelError(
+                    "Unable to run this model in operate (i.e. dispatch) mode, probably because "
+                    "there exist non-uniform timesteps (e.g. from time clustering)"
+                )
             results = self._solve_operate(**solver_config)
         else:
             results = self.backend._solve(warmstart=warmstart, **solver_config)
