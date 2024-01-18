@@ -32,7 +32,13 @@ from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
 from calliope.io import load_config
-from calliope.util.schema import MATH_SCHEMA, update_then_validate_config, validate_dict
+from calliope.util.schema import (
+    MATH_SCHEMA,
+    MODEL_SCHEMA,
+    extract_from_schema,
+    update_then_validate_config,
+    validate_dict,
+)
 
 if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
@@ -370,6 +376,12 @@ class BackendModelGenerator(ABC):
             self.add_parameter(param_name, param_data, default_val)
         for param_name, default_val in self.inputs.attrs["defaults"].items():
             if param_name in self.parameters.keys():
+                continue
+            elif (
+                self.inputs.attrs["config"]["build"]["mode"] != "operate"
+                and param_name
+                in extract_from_schema(MODEL_SCHEMA, "x-operate-param").keys()
+            ):
                 continue
             self.log(
                 "parameters", param_name, "Component not defined; using default value."

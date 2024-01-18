@@ -441,7 +441,8 @@ class Model(object):
 
         if run_mode == "operate":
             results = self._solve_operate(**solver_config)
-        results = self.backend._solve(warmstart=warmstart, **solver_config)
+        else:
+            results = self.backend._solve(warmstart=warmstart, **solver_config)
 
         log_time(
             LOGGER,
@@ -617,6 +618,15 @@ class Model(object):
                 self._model_data.horizonsteps[start_window_idx],
             )
         )
+        if config_kwargs.get("operate_use_cap_results", False):
+            to_parameterise = extract_from_schema(MODEL_SCHEMA, "x-operate-param")
+            if not self._is_solved:
+                raise exceptions.ModelError(
+                    "Cannot use plan mode capacity results in operate mode if a solution does not yet exist for the model."
+                )
+            for parameter in to_parameterise.keys():
+                if parameter in self._model_data:
+                    self._model_data[parameter].attrs["is_result"] = 0
 
         return sliced_inputs
 
