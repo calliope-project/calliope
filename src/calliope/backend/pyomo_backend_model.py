@@ -56,9 +56,6 @@ class PyomoBackendModel(backend_model.BackendModel):
         Args:
             inputs (xr.Dataset): Calliope model data.
         """
-        self.reset(inputs, **kwargs)
-
-    def reset(self, inputs: xr.Dataset, **kwargs):
         super().__init__(inputs, pmo.block(), **kwargs)
 
         self._instance.parameters = pmo.parameter_dict()
@@ -262,7 +259,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         solver_options: Optional[dict] = None,
         save_logs: Optional[str] = None,
         warmstart: bool = False,
-        **solve_kwargs,
+        **solve_config,
     ) -> xr.Dataset:
         opt = SolverFactory(solver, solver_io=solver_io)
 
@@ -270,6 +267,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             for k, v in solver_options.items():
                 opt.options[k] = v
 
+        solve_kwargs = {}
         if save_logs is not None:
             solve_kwargs.update({"symbolic_solver_labels": True, "keepfiles": True})
             os.makedirs(save_logs, exist_ok=True)

@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import warnings
 from pathlib import Path
-from typing import Callable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union
 
 import pandas as pd
 import xarray as xr
@@ -42,6 +42,8 @@ from calliope.util.tools import relative_path
 LOGGER = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=Union[PyomoBackendModel, LatexBackendModel])
+if TYPE_CHECKING:
+    from calliope.backend.backend_model import BackendModel
 
 
 def read_netcdf(path):
@@ -58,6 +60,7 @@ class Model(object):
     """
 
     _BACKENDS: dict[str, Callable] = {"pyomo": PyomoBackendModel}
+    _TS_OFFSET = pd.Timedelta(nanoseconds=1)
 
     def __init__(
         self,
@@ -95,6 +98,7 @@ class Model(object):
         self.defaults: AttrDict
         self.math: AttrDict
         self._model_def_path: Optional[Path]
+        self.backend: BackendModel
         self.math_documentation = MathDocumentation()
         self._is_built: bool = False
         self._is_solved: bool = False
@@ -364,9 +368,21 @@ class Model(object):
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
 
-        backend_name = kwargs.get("backend", self.config["build"]["backend"])
-
-        backend = self._BACKENDS[backend_name](self._model_data, **kwargs)
+        updated_build_config = {**self.config["build"], **kwargs}
+        if updated_build_config["mode"] == "operate":
+            if not self._model_data.attrs["allow_operate_mode"]:
+                raise exceptions.ModelError(
+                    "Unable to run this model in operate (i.e. dispatch) mode, probably because "
+                    "there exist non-uniform timesteps (e.g. from time clustering)"
+                )
+            start_window_idx = updated_build_config.pop("start_window_idx", 0)
+            input = self._prepare_operate_mode_inputs(
+                start_window_idx, **updated_build_config
+            )
+        else:
+            input = self._model_data
+        backend_name = updated_build_config["backend"]
+        backend = self._BACKENDS[backend_name](input, **updated_build_config)
         backend._build()
         self.backend = backend
         self._is_built = True
@@ -413,21 +429,19 @@ class Model(object):
         else:
             to_drop = []
 
-        solver_config = update_then_validate_config("solve", self.config, **kwargs)
+        run_mode = self.backend.inputs.attrs["config"]["build"]["mode"]
         log_time(
             LOGGER,
             self._timings,
             "solve_start",
-            comment="Backend: starting model solve.",
+            comment=f"Optimisation model | starting model in {run_mode} mode..",
         )
 
-        results = self.backend.solve(
-            solver=solver_config["solver"],
-            solver_io=solver_config["solver_io"],
-            solver_options=solver_config["solver_options"],
-            save_logs=solver_config["save_logs"],
-            warmstart=warmstart,
-        )
+        solver_config = update_then_validate_config("solve", self.config, **kwargs)
+
+        if run_mode == "operate":
+            results = self._solve_operate(**solver_config)
+        results = self.backend._solve(warmstart=warmstart, **solver_config)
 
         log_time(
             LOGGER,
@@ -566,3 +580,127 @@ class Model(object):
             )
 
         LOGGER.info("Model: validated math strings")
+
+    def _prepare_operate_mode_inputs(
+        self, start_window_idx: int = 0, **config_kwargs
+    ) -> xr.Dataset:
+        """Slice the input data to just the length of operate mode time horizon.
+
+
+        Args:
+            start_window_idx (int, optional):
+                Set the operate `window` to start at, based on integer index.
+                This is used when re-initialising the backend model for shorter time horizons close to the end of the model period.
+                Defaults to 0.
+
+        Returns:
+            xr.Dataset: Slice of input data.
+        """
+        window = config_kwargs["operate_window"]
+        horizon = config_kwargs["operate_horizon"]
+        self._model_data.coords["windowsteps"] = pd.date_range(
+            self.inputs.timesteps[0].item(),
+            self.inputs.timesteps[-1].item(),
+            freq=window,
+        )
+        horizonsteps = self._model_data.coords["windowsteps"] + pd.Timedelta(horizon)
+        # We require an offset because pandas / xarray slicing is _inclusive_ of both endpoints
+        # where we only want it to be inclusive of the left endpoint.
+        # Except in the last time horizon, where we want it to include the right endpoint.
+        clipped_horizonsteps = horizonsteps.clip(
+            max=self._model_data.timesteps[-1] + self._TS_OFFSET
+        ).drop_vars("timesteps")
+        self._model_data.coords["horizonsteps"] = clipped_horizonsteps - self._TS_OFFSET
+        sliced_inputs = self._model_data.sel(
+            timesteps=slice(
+                self._model_data.windowsteps[start_window_idx],
+                self._model_data.horizonsteps[start_window_idx],
+            )
+        )
+
+        return sliced_inputs
+
+    def _solve_operate(self, **solver_config) -> xr.Dataset:
+        """Solve in operate (i.e. dispatch) mode.
+
+        Optimisation is undertaken iteratively for slices of the timeseries, with
+        some data being passed between slices.
+
+        Returns:
+            xr.Dataset: Results dataset.
+        """
+        if self.backend.inputs.timesteps[0] != self._model_data.timesteps[0]:
+            LOGGER.info("Optimisation model | Resetting model to first time window.")
+            self.build(
+                force=True,
+                **{"mode": "operate", **self.backend.inputs.attrs["config"]["build"]},
+            )
+
+        LOGGER.info("Optimisation model | Running first time window.")
+
+        step_results = self.backend._solve(warmstart=False, **solver_config)
+        init_timesteps = step_results.timesteps.copy()
+
+        results_list = []
+
+        for idx, windowstep in enumerate(self._model_data.windowsteps[1:]):
+            windowstep_as_string = windowstep.dt.strftime("%Y-%m-%d %H:%M:%S").item()
+            LOGGER.info(
+                f"Optimisation model | Running time window starting at {windowstep_as_string}."
+            )
+            results_list.append(
+                step_results.sel(timesteps=slice(None, windowstep - self._TS_OFFSET))
+            )
+            previous_step_results = results_list[-1]
+            horizonstep = self._model_data.horizonsteps.sel(windowsteps=windowstep)
+            new_param_data = self.inputs.sel(
+                timesteps=slice(windowstep, horizonstep)
+            ).drop_vars(["horizonsteps", "windowsteps"], errors="ignore")
+
+            if len(new_param_data.timesteps) != len(step_results.timesteps):
+                LOGGER.info(
+                    "Optimisation model | Reaching the end of the timeseries. "
+                    "Re-building model with shorter time horizon."
+                )
+                self.build(
+                    force=True,
+                    start_window_idx=idx + 1,
+                    **self.backend.inputs.attrs["config"]["build"],
+                )
+            else:
+                for param_name, param_data in new_param_data.data_vars.items():
+                    if "timesteps" in param_data.dims:
+                        param_data.coords["timesteps"] = init_timesteps
+                        self.backend.update_parameter(param_name, param_data)
+
+            if "storage" in step_results:
+                self.backend.update_parameter(
+                    "storage_initial",
+                    self._recalculate_storage_initial(previous_step_results),
+                )
+
+            step_results = self.backend._solve(warmstart=False, **solver_config)
+            step_results.coords["timesteps"] = new_param_data.coords["timesteps"]
+
+        results_list.append(step_results.sel(timesteps=slice(windowstep, None)))
+        results = xr.concat(results_list, dim="timesteps", combine_attrs="no_conflicts")
+        results.attrs["termination_condition"] = ",".join(
+            set(result.attrs["termination_condition"] for result in results_list)
+        )
+
+        return results
+
+    def _recalculate_storage_initial(self, results: xr.Dataset) -> xr.DataArray:
+        """Calculate the initial level of storage devices for a new operate mode time slice
+        based on storage levels at the end of the previous time slice.
+
+        Args:
+            results (xr.Dataset): Results from the previous time slice.
+
+        Returns:
+            xr.DataArray: `storage_initial` values for the new time slice.
+        """
+        end_storage = results.storage.isel(timesteps=-1).drop_vars("timesteps")
+
+        new_initial_storage = end_storage / self.inputs.storage_cap
+        return new_initial_storage
