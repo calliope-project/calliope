@@ -59,6 +59,8 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._instance.constraints = pmo.constraint_dict()
         self._instance.objectives = pmo.objective_dict()
 
+        self._instance.dual = pmo.suffix(direction=pmo.suffix.IMPORT)
+
         self._add_all_inputs_as_parameters()
 
     def add_parameter(
@@ -246,6 +248,14 @@ class PyomoBackendModel(backend_model.BackendModel):
             )
         else:
             return global_expression
+
+    def get_shadow_prices(self, name: str) -> xr.DataArray:
+        constraint = self.get_constraint(name, as_backend_objs=True)
+        return self._apply_func(
+            self._duals_from_pyomo_constraint,
+            constraint,
+            dual_getter=self._instance.dual,
+        )
 
     def solve(
         self,
@@ -751,6 +761,15 @@ class PyomoBackendModel(backend_model.BackendModel):
                     return expr
             else:
                 return val.to_string()
+
+    @staticmethod
+    def _duals_from_pyomo_constraint(
+        val: pmo.constraint, *, dual_getter: pmo.suffix
+    ) -> float:
+        if pd.isnull(val):
+            return np.nan
+        else:
+            return dual_getter.get(val)
 
     @contextmanager
     def _datetime_as_string(self, data: Union[xr.DataArray, xr.Dataset]) -> Iterator:

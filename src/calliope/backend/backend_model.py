@@ -648,6 +648,17 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
 
     @abstractmethod
+    def get_shadow_prices(self, name: str) -> xr.DataArray:
+        """Extract shadow prices (a.k.a. duals) from a constraint.
+
+        Args:
+            name (str): Name of constraint for which you're seeking duals.
+
+        Returns:
+            xr.DataArray: duals array.
+        """
+
+    @abstractmethod
     def update_parameter(
         self, name: str, new_values: Union[xr.DataArray, SupportsFloat]
     ) -> None:
