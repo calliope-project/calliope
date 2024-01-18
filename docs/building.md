@@ -2,7 +2,7 @@
 
 In short, a Calliope model works like this: **supply technologies** can take a **source** from outside of the modeled system and turn it into a specific **carrier** in the system. The model specifies one or more **nodes** along with the technologies allowed at those nodes. **Transmission technologies** can move the same carrier from one node to another, while **conversion technologies** can convert one carrier into another at the same node. **Demand technologies** remove carriers from the system through a **sink**, while **storage technologies** can store carriers at a specific node. Putting all of these possibilities together allows a modeller to specify as simple or as complex a model as necessary to answer a given research question.
 
-!!! info "Terminology"
+??? info "Terminology"
     The terminology defined here is used throughout the documentation and the model code and configuration files:
 
     * **Technology**: a technology that produces, consumes, converts or transports carriers
@@ -92,14 +92,11 @@ Inside the `timeseries_data` directory, timeseries are stored as CSV files. The 
 
 ## Model configuration and model definition
 
-We distinguish between model configuration (the options provided to Calliope to do its work) and the model definition (your representation of a physical system in YAML). Let's look at both of them in turn.
+We distinguish between the model **configuration** (the options provided to Calliope to do its work) and the model **definition** (your representation of a physical system in YAML). Let's look at both of them in turn.
 
 ## Model configuration (`config`)
 
-The model configuration specifies all aspects of the model to run.
-It is structured into several top-level headings (keys in the YAML file): `config`, `parameters`, `techs`, `nodes`, `links`.
-We will discuss each of these in turn, starting with `config`:
-
+The model configuration specifies the information Calliope needs to initialise, build, and solve the model. This includes for example the choice of solver with which to actually solve the mathematical opimisation problem. A simple example looks like this:
 
 ```yaml
 config:
@@ -113,9 +110,11 @@ config:
         solver: cbc
 ```
 
-The `init` configuration items are accessed when you initialise your model (`calliope.Model(...)`).
-The `build` configuration items are accessed when you build your optimisation problem (`calliope.Model.build(...)`).
-The `solve` configuration items are accessed when you solve your optimisation problem (`calliope.Model.solve(...)`).
+The configuration is grouped into three top-level items:
+
+* The `init` configuration items are used when you initialise your model (`calliope.Model(...)`).
+* The `build` configuration items are used when you build your optimisation problem (`calliope.Model.build(...)`).
+* The `solve` configuration items are used when you solve your optimisation problem (`calliope.Model.solve(...)`).
 
 At each of these stages you can override what you have put in your YAML file (or if not in your YAML file, the default that Calliope uses), by providing additional keyword arguments on calling `calliope.Model` or its methods. E.g.,:
 
