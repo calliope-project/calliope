@@ -89,7 +89,15 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Download and installation: installation.md
-  - Building a model: building.md
+  - Creating a model:
+    - creating/index.md
+    - creating/config.md
+    - creating/techs.md
+    - creating/nodes.md
+    - creating/groups.md
+    - creating/parameters.md
+    - creating/data_sources.md
+    - creating/scenarios.md
   - Running a model: running.md
   - Analysing a model: analysing.md
   - Troubleshooting: troubleshooting.md
@@ -115,7 +123,10 @@ nav:
       - examples/milp/notebook.py
     - examples/calliope_model_object.py
     - examples/logging.py
-  - Advanced features: advanced.md
+  - Advanced features:
+    - advanced/index.md
+    - advanced/time.md
+    - advanced/scripts.md
   - Reference:
     - Command line interface: reference/cli.md
     - Python API:

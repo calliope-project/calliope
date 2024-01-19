@@ -1,27 +1,11 @@
-# Advanced features
 
-Once you're comfortable with [building][building-a-model], [running][running-a-model] and [analysing][analysing-a-model] one of the built-in example models, you may want to explore Calliope's advanced functionality.
-With these features, you will be able to build and run complex models in no time.
-
-## Time resolution adjustment
-
-Models have a default timestep length (defined implicitly by the timesteps of the model's time series data).
-This default resolution can be adjusted by specifying time resolution adjustment in the model configuration, for example:
-
-```yaml
-config:
-    init:
-        time_resample: 6H
-```
-
-In the above example, this would resample all time series data to 6-hourly timesteps.
-Any [pandas-compatible rule describing the target resolution][pandas.DataFrame.resample] can be used.
-
-## Generating scripts to repeatedly run variations of a model
+# Generating scripts to repeatedly run variations of a model
 
 [scenarios-and-overrides][] can be used to run a given model multiple times with slightly changed settings or constraints.
 
 This functionality can be used together with the [`calliope generate_runs`][calliope-generate_runs] and [`calliope generate_scenarios`][calliope-generate_scenarios] command-line tools to generate scripts that run a model many times over in a fully automated way, for example, to explore the effect of different technology costs on model results.
+
+## Generate runs
 
 [`calliope generate_runs`][calliope-generate_runs], at a minimum, must be given the following arguments:
 
@@ -59,7 +43,9 @@ Running this will create two files:
 In all cases, results are saved into the same directory as the script, with filenames of the form `out_{run_number}_{scenario_name}.nc`, where `{run_number}` is the run number and `{scenario_name}` is the name of the scenario (or the string defining the overrides applied).
 On a cluster, log files are saved to files with names starting with `log_` in the same directory.
 
-Finally, the [`calliope generate_scenarios`][calliope-generate_scenarios] tool can be used to quickly generate a file with scenarios definition for inclusion in a model, if a large enough number of overrides exist to make it tedious to manually combine them into scenarios.
+## Generate scenarios
+
+The [`calliope generate_scenarios`][calliope-generate_scenarios] tool can be used to quickly generate a file with scenarios definition for inclusion in a model, if a large enough number of overrides exist to make it tedious to manually combine them into scenarios.
 Assuming that in `model.yaml` a range of overrides exist that specify a subset of time for the years 2000 through 2010, called "y2000" through "y2010", and a set of cost-related overrides called "cost_low", "cost_medium" and "cost_high", the following command would generate scenarios with combinations of all years and cost overrides, calling them "run_1", "run_2", and so on, and saving them to scenarios.yaml:
 
 ```shell

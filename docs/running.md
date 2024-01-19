@@ -11,7 +11,7 @@ There are essentially three ways to run a Calliope model:
 
 ## Running with the command-line tool
 
-We can easily run a model after creating it (see [building-a-model][]), saving results to a single NetCDF file for further processing.
+We can easily run a model after creating it (see [creating-a-model][]), saving results to a single NetCDF file for further processing.
 
 ```shell
 $ calliope run testmodel/model.yaml --save_netcdf=results.nc
