@@ -19,7 +19,7 @@ Its primary focus is on planning energy systems at scales ranging from urban dis
 In an optional operational mode it can also test a pre-defined system under different operational conditions.
 Calliope's built-in tools allow interactive exploration of results.
 
-[TODO: PLOT HERE]
+<object type="text/html" data="img/plotly_frontpage_timeseries.html" width="100%" height="400px"></object>
 
 A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials.
 Calliope takes these files, constructs an optimisation problem, solves it, and reports results in the form of [xarray Datasets](https://docs.xarray.dev/en/v2022.03.0/user-guide/data-structures.html#dataset) which in turn can easily be converted into [Pandas data structures](https://pandas.pydata.org/pandas-docs/version/1.5/user_guide/dsintro.html#dsintro) for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.

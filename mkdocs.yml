@@ -7,6 +7,7 @@ hooks:
   - docs/hooks/generate_custom_math_examples.py
   - docs/hooks/generate_readable_schema.py
   - docs/hooks/generate_math_docs.py
+  - docs/hooks/generate_plots.py
   - docs/hooks/add_notebooks.py
 extra:
   min_python_version: "3.10"
@@ -91,13 +92,13 @@ nav:
   - Download and installation: installation.md
   - Creating a model:
     - creating/index.md
-    "Model configuration": creating/config.md
-    "Technologies": creating/techs.md
-    "Nodes": creating/nodes.md
-    "Technology and node inheritance": creating/groups.md
-    "Top-level parameters": creating/parameters.md
-    "Loading tabular data": creating/data_sources.md
-    "Scenarios and overrides": creating/scenarios.md
+    - Model configuration: creating/config.md
+    - Technologies: creating/techs.md
+    - Nodes: creating/nodes.md
+    - Technology and node inheritance: creating/groups.md
+    - Top-level parameters: creating/parameters.md
+    - Loading tabular data: creating/data_sources.md
+    - Scenarios and overrides: creating/scenarios.md
   - Running a model: running.md
   - Analysing a model: analysing.md
   - Troubleshooting: troubleshooting.md
