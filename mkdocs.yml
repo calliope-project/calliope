@@ -91,13 +91,13 @@ nav:
   - Download and installation: installation.md
   - Creating a model:
     - creating/index.md
-    - creating/config.md
-    - creating/techs.md
-    - creating/nodes.md
-    - creating/groups.md
-    - creating/parameters.md
-    - creating/data_sources.md
-    - creating/scenarios.md
+    "Model configuration": creating/config.md
+    "Technologies": creating/techs.md
+    "Nodes": creating/nodes.md
+    "Technology and node inheritance": creating/groups.md
+    "Top-level parameters": creating/parameters.md
+    "Loading tabular data": creating/data_sources.md
+    "Scenarios and overrides": creating/scenarios.md
   - Running a model: running.md
   - Analysing a model: analysing.md
   - Troubleshooting: troubleshooting.md
