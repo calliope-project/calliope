@@ -98,13 +98,7 @@ def _generate_front_page_timeseries_plot(config: dict) -> File:
     fig.update_layout(
         barmode="relative",
         yaxis={"title": "Flow in/out (kWh)"},
-        title={
-            "text": buttons[0]["args"][1]["title"],
-            "xanchor": "center",
-            "x": 0.5,
-            "y": 1,
-            "yanchor": "bottom",
-        },
+        title={"text": buttons[0]["args"][1]["title"], "xanchor": "center", "x": 0.5},
         updatemenus=[
             {
                 "active": 0,
