@@ -63,14 +63,14 @@ def _generate_front_page_timeseries_plot(config: dict) -> File:
             _df = df_flows_other[
                 (df_flows_other.carriers == carrier) & (df_flows_other.name == tech)
             ]
-            _color = colors[tech]
+            _color = colors[tech.removesuffix(" (export)")]
             fig.add_trace(
                 go.Bar(
                     x=_df["timesteps"],
                     y=_df["flow"],
                     marker_color=_color,
                     name=tech,
-                    legendgroup=tech,
+                    legendgroup=tech.removesuffix(" (export)"),
                     visible=visible,
                 )
             )
@@ -97,8 +97,14 @@ def _generate_front_page_timeseries_plot(config: dict) -> File:
 
     fig.update_layout(
         barmode="relative",
-        yaxis={"title": "Flow in/out (kWh)"},
-        title={"text": buttons[0]["args"][1]["title"], "xanchor": "center", "x": 0.5},
+        yaxis={"title": "Net flow out (+) / in or export (-) (kWh)"},
+        title={
+            "text": buttons[0]["args"][1]["title"],
+            "xanchor": "center",
+            "x": 0.5,
+            "y": 0.9,
+            "yanchor": "bottom",
+        },
         updatemenus=[
             {
                 "active": 0,
@@ -143,7 +149,7 @@ def _get_net_flows(model: calliope.Model, **sel) -> pd.DataFrame:
         names = model.inputs.name.sel(techs=sel["techs"])
     else:
         names = model.inputs.name
-    return (
+    df = (
         (model.results.flow_out.fillna(0) - model.results.flow_in.fillna(0))
         .sel(**sel)
         .sum("nodes", min_count=1)
@@ -155,3 +161,19 @@ def _get_net_flows(model: calliope.Model, **sel) -> pd.DataFrame:
         .to_frame("flow")
         .reset_index()
     )
+    if "flow_export" in model.results:
+        df_export = (
+            (-1 * model.results.flow_export.fillna(0))
+            .sel(**sel)
+            .sum("nodes", min_count=1)
+            .groupby(names)
+            .sum("techs")
+            .to_series()
+            .where(lambda x: x != 0)
+            .dropna()
+            .to_frame("flow")
+            .reset_index()
+        )
+        df_export["name"] += " (export)"
+        df = pd.concat([df, df_export])
+    return df
