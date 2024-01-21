@@ -10,6 +10,7 @@ from pathlib import Path
 import calliope
 import pandas as pd
 import plotly.graph_objects as go
+import xarray as xr
 from mkdocs.structure.files import File
 
 TEMPDIR = tempfile.TemporaryDirectory()
@@ -97,7 +98,7 @@ def _generate_front_page_timeseries_plot(config: dict) -> File:
 
     fig.update_layout(
         barmode="relative",
-        yaxis={"title": "Net flow out (+) / in or export (-) (kWh)"},
+        yaxis={"title": "Net flow out (+) & in/export (-) (kWh)"},
         title={
             "text": buttons[0]["args"][1]["title"],
             "xanchor": "center",
@@ -149,9 +150,19 @@ def _get_net_flows(model: calliope.Model, **sel) -> pd.DataFrame:
         names = model.inputs.name.sel(techs=sel["techs"])
     else:
         names = model.inputs.name
-    df = (
-        (model.results.flow_out.fillna(0) - model.results.flow_in.fillna(0))
-        .sel(**sel)
+    df = _da_to_df(
+        model.results.flow_out.fillna(0) - model.results.flow_in.fillna(0), names, **sel
+    )
+    if "flow_export" in model.results:
+        df_export = _da_to_df(-1 * model.results.flow_export.fillna(0), names, **sel)
+        df_export["name"] += " (export)"
+        df = pd.concat([df, df_export])
+    return df
+
+
+def _da_to_df(da: xr.DataArray, names: xr.DataArray, **sel) -> pd.DataFrame:
+    return (
+        da.sel(**sel)
         .sum("nodes", min_count=1)
         .groupby(names)
         .sum("techs")
@@ -161,19 +172,3 @@ def _get_net_flows(model: calliope.Model, **sel) -> pd.DataFrame:
         .to_frame("flow")
         .reset_index()
     )
-    if "flow_export" in model.results:
-        df_export = (
-            (-1 * model.results.flow_export.fillna(0))
-            .sel(**sel)
-            .sum("nodes", min_count=1)
-            .groupby(names)
-            .sum("techs")
-            .to_series()
-            .where(lambda x: x != 0)
-            .dropna()
-            .to_frame("flow")
-            .reset_index()
-        )
-        df_export["name"] += " (export)"
-        df = pd.concat([df, df_export])
-    return df
