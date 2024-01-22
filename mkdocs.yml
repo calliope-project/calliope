@@ -128,6 +128,10 @@ nav:
     - advanced/index.md
     - advanced/time.md
     - advanced/scripts.md
+    - advanced/mode.md
+    - advanced/solver.md
+    - advanced/backend.md
+    - advanced/constraints.md
   - Reference:
     - Command line interface: reference/cli.md
     - Python API:

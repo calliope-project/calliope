@@ -96,7 +96,7 @@ Then, run `operate` mode with these capacities to get a higher resolution operat
 If necessary, this process could be iterated.
 
 !!! info "See also"
-    Documentation on `operate` mode (TBA)<!--TODO-->
+    [Documentation on `operate` mode][operate-mode]
 
 ## Influence of solver choice on speed
 
@@ -131,7 +131,8 @@ If introducing binary constraints, although CBC is an improvement on GLPK, acces
 | Gurobi (4 thread)  | 0:02:27  | 0:03:08 |
 | CPLEX (4 thread)   | 0:02:16  | 0:03:26 |
 
-<!--TODO:.. seealso:: :ref:`solver_options`-->
+!!! info "See also"
+    [Specifying custom solver options][specifying-custom-solver-options]
 
 ## Understanding infeasibility and numerical instability
 
@@ -189,8 +190,8 @@ By rerunning the backend specifically, you can optimise your problem with these 
 
 !!! info "See also"
     [Backend model API][calliope.backend.backend_model.BackendModel],
-    [Tutorial on interacting with the Backend][building-and-checking-the-optimisation-problem]
-    <!--TODO: also add a page on backend interface-->
+    [Tutorial on interacting with the Backend][building-and-checking-the-optimisation-problem],
+    [interfacing-with-the-built-optimisation-problem][]
 
 ## Debugging model errors
 

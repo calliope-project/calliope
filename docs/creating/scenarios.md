@@ -36,6 +36,33 @@ Scenarios consist of a name and a list of override names which together form tha
 Scenarios and overrides can be used to generate scripts that run a single Calliope model many times, either sequentially, or in parallel on a high-performance cluster
 (see the section [Generating scripts to repeatedly run variations of a model][generating-scripts-to-repeatedly-run-variations-of-a-model]).
 
-!!! note
-    Overrides can also import other files. This can be useful if many overrides are defined which share large parts of model configuration, such as different levels of interconnection between model zones.
-    See our [advanced features section][importing-other-yaml-files-in-overrides] for details.<!--TODO-->
+## Importing other YAML files in overrides
+
+When using overrides, it is possible to have [`import` statements][relative-file-imports] for more flexibility.
+This can be useful if many overrides are defined which share large parts of model configuration, such as different levels of interconnection between model zones
+The following example illustrates this:
+
+```yaml
+overrides:
+    some_override:
+        techs:
+            some_tech.constraints.flow_cap_max: 10
+        import: [additional_definitions.yaml]
+```
+
+`additional_definitions.yaml`:
+
+```yaml
+techs:
+    some_other_tech.constraints.flow_out_eff: 0.1
+```
+
+This is equivalent to the following override:
+
+```yaml
+overrides:
+    some_override:
+        techs:
+            some_tech.constraints.flow_cap_max: 10
+            some_other_tech.constraints.flow_out_eff: 0.1
+```

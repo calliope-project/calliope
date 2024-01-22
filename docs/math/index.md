@@ -36,4 +36,4 @@ For each objective, constraint and global expression, a number of sub-conditions
 In the expressions, terms in **bold** font are decision variables and terms in *italic* font are parameters.
 A list of the decision variables is given at the end of this page.
 A detailed listing of parameters along with their units and default values is given in the [model definition reference sheet][model-definition-schema].
-Those parameters which are defined over time (`timesteps`) in the expressions can be defined by a user as a single, time invariant value, or as a timeseries that is [loaded from file or dataframe][TODO: add link].
+Those parameters which are defined over time (`timesteps`) in the expressions can be defined by a user as a single, time invariant value, or as a timeseries that is [loaded from file or dataframe][loading-tabular-data-data_sources].

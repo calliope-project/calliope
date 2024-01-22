@@ -167,3 +167,14 @@ We saw this above with `costs`, but you can add _any_ dimension _except_ `nodes`
                 index: ["foo", "bar"]
                 dims: my_new_dimension
     ```
+
+### (De)activing techs
+
+In an [override][scenarios-and-overrides] you may want to remove a technology entirely from the model.
+The easiest way to do this is to set `active: false`.
+The resulting input dataset won't feature that technology in any way.
+You can even do this to deactivate technologies at specific [nodes][nodes-nodes] and to deactivate nodes entirely.
+Conversely, setting `active: true` in an override will lead to the technology(/node) reappearing.
+
+!!! note
+    When deactivating nodes, any transmission technologies that link to that node will also be deactivated.
