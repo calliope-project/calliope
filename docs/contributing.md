@@ -90,7 +90,7 @@ Then, 'checkout' the branch so that the folder contents are specific to that bra
 git checkout new-fix-or-feature
 ```
 
-Finally, push the branch online, so it's existence is also in your remote fork of the Calliope repository (you'll find it in the dropdown list of branches at https://github.com/your_repository/calliope):
+Finally, push the branch online, so its existence is also in your remote fork of the Calliope repository:
 
 ```fishshell
 git push -u origin new-fix-or-feature
