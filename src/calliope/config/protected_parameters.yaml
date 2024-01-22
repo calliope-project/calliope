@@ -1,7 +1,7 @@
 # Parameters for which loading from file via `data_sources` is prohibited
 active: Cannot define technology/node activation (`active`) when loading data from file.
 definition_matrix: >-
-  `definition_matrix` is a protected array,
+  `definition_matrix` is a protected array.
   It will be generated internally based on the values you assign to the `carrier_in` and `carrier_out` parameters.
 inherit: Cannot use technology/node inheritance (`inherit`) when loading data from file.
 
