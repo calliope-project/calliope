@@ -10,97 +10,15 @@ Functionality to add and process time varying parameters
 """
 import logging
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
+from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 LOGGER = logging.getLogger(__name__)
-
-
-def add_time_dimension(
-    model_data: xr.Dataset,
-    init_config: dict,
-    timeseries_dfs: Optional[dict[str, pd.DataFrame]],
-):
-    """
-    Once all constraints and costs have been loaded into the model dataset, any
-    timeseries data is loaded from file and substituted into the model dataset
-
-    Parameters:
-    -----------
-    model_data : xarray Dataset
-        A data structure which has already gone through `constraints_to_dataset`,
-        `costs_to_dataset`, and `add_attributes`
-    model_run : AttrDict
-        Calliope model_run dictionary
-
-    Returns:
-    --------
-    data : xarray Dataset
-        A data structure with an additional time dimension to the input dataset,
-        with all relevant `file=` and `df= `entries replaced with the correct data.
-
-    """
-    timeseries_loader = TimeseriesLoader(init_config, timeseries_dfs)
-    # Search through every constraint/cost for use of '='
-    for var_name, var_data in model_data.data_vars.items():
-        # 1) get Series of all uses of 'file=' or 'df=' for this variable (timeseries keys)
-        if var_data.astype(str).str.contains("^file=|df=").any():
-            var_series = var_data.to_series()
-            tskeys = var_series[var_series.str.contains("^file=|df=").notnull()]
-        else:
-            continue
-
-        # 2) If no use of 'file=' or 'df=' then we can be on our way
-        if tskeys.empty:
-            continue
-
-        # 3) split data source ("df/file"), filename, and node column
-        tskeys = (
-            tskeys.dropna()
-            .str.split("=|:", expand=True)
-            .rename(columns={0: "source_type", 1: "source", 2: "column"})
-        )
-        if "column" not in tskeys.columns:
-            tskeys = tskeys.assign(column=np.nan)
-        if "nodes" in var_data.dims:
-            node_info = (
-                tskeys.index.get_level_values("nodes").unique()
-                if isinstance(tskeys.index, pd.MultiIndex)
-                else tskeys.index
-            )
-            tskeys["column"] = tskeys["column"].fillna(
-                node_info.to_series().align(tskeys)[0]
-            )
-
-        # 4) Get all timeseries data from dataframes stored in model_run
-        ts_df = tskeys.apply(
-            timeseries_loader.load_timeseries, var_name=var_name, axis=1
-        ).rename_axis(columns="timesteps")
-
-        # 5) Add time dimension to the relevant DataArray and update the '='
-        # dimensions with the time varying data (static data is just duplicated
-        # at each timestep)
-
-        model_data[var_name] = (
-            ts_df.stack()
-            .to_xarray()
-            .reindex(var_data.coords)
-            .fillna(var_data)
-            .assign_attrs(var_data.attrs)
-        )
-    if any(
-        var_data.astype(str).str.contains("^file=|df=").any()
-        for var_data in model_data.data_vars.values()
-    ):
-        raise exceptions.ModelError(
-            "Some lengths of input timeseries data are too short relative to your chosen time subset."
-        )
-    return model_data
 
 
 def add_inferred_time_params(model_data: xr.Dataset):
@@ -131,118 +49,45 @@ def add_inferred_time_params(model_data: xr.Dataset):
     return model_data
 
 
-def _datetime_index(index: pd.Index, format: str, source_name: str) -> pd.Index:
-    try:
-        return pd.to_datetime(index, format=format)
-    except ValueError as e:
-        raise exceptions.ModelError(
-            f"Error in parsing dates in timeseries data from {source_name} using datetime format `{format}`. "
-            f"Full error: {e}"
+def timeseries_to_datetime(ds: xr.Dataset, time_format: str, id: str) -> xr.Dataset:
+    """Find all dimensions ending in `steps` and try to cast to datetime type.
+
+    Args:
+        ds (xr.Dataset): Dataset possibly containing dimensions with `steps` suffix.
+        time_format (str): Time format to use on casting timeseries strings to datetime.
+        id (str): Identifier for `ds` to use in logging.
+
+    Returns:
+        xr.Dataset: Input `ds` with datetime timeseries coordinates.
+    """
+    datetime_dims = [i for i in ds.dims if str(i).endswith("steps")]
+    for dim_name in datetime_dims:
+        LOGGER.debug(
+            f"{id} | Updating `{dim_name}` dimension index values to datetime format."
         )
+        ds.coords[dim_name] = _datetime_index(
+            ds.coords[dim_name].to_index(), time_format
+        )
+    return ds
 
 
-class TimeseriesLoader:
-    def __init__(
-        self, init_config: dict, timeseries_dfs: Optional[dict[str, pd.DataFrame]]
-    ):
-        self.ts_cache: dict = {}
-        self._timeseries_dfs = timeseries_dfs
-        self._time_data_path: Path = init_config["time_data_path"]
-        self._time_subset: Optional[list[str]] = init_config["time_subset"]
-        self._time_format: str = init_config["time_format"]
+def subset_timeseries(ds: xr.Dataset, time_subset: list[str]) -> xr.Dataset:
+    """Subset all timeseries dimensions according to an input slice of start and end times.
 
-        if self._timeseries_dfs is not None:
-            if not isinstance(self._timeseries_dfs, dict) or not all(
-                isinstance(v, (pd.Series, pd.DataFrame))
-                for v in self._timeseries_dfs.values()
-            ):
-                raise exceptions.ModelError(
-                    "`timeseries_dataframes` must be dict of pandas DataFrames."
-                )
+    Args:
+        ds (xr.Dataset): Dataset containing timeseries data to subset.
+        time_subset (list[str]): List of length 2, containing start and end times to subset on.
 
-    def load_timeseries(self, df: pd.DataFrame, var_name: str) -> pd.Series:
-        source = df.loc["source"]
-        source_type = df.loc["source_type"]
-        column = df.loc["column"]
+    Returns:
+        xr.Dataset: Input `ds` with subset timeseries coordinates.
+    """
 
-        if source_type == "df" and self._timeseries_dfs is not None:
-            try:
-                df = self._timeseries_dfs[source]
-            except KeyError:
-                raise KeyError(
-                    f"Attempted to load dataframe with undefined key: {source}"
-                )
-        elif source_type == "df" and self._timeseries_dfs is None:
-            raise exceptions.ModelError(
-                "Missing timeseries dataframes passed as an argument in calliope.Model(...)."
-            )
-        elif source_type == "file" and source in self.ts_cache:
-            df = self.ts_cache[source]
-        else:
-            df = self._load_timeseries_from_file(source)
-            self.ts_cache[source] = df
-
-        clean_df = self._reformat_timeseries_df(df, source)
-
-        if pd.isnull(column) and len(clean_df.columns) > 1:
-            raise exceptions.ModelError(
-                f"Timeseries data contains multiple columns but no column specified in reference from input parameter `{var_name}`"
-            )
-        elif pd.isnull(column) and len(clean_df.columns) == 1:
-            series = clean_df.squeeze()
-        else:
-            series = clean_df[column]
-
-        return series
-
-    def _load_timeseries_from_file(self, ts_file_path: str):
-        file_path = self._time_data_path / ts_file_path
-        df = pd.read_csv(file_path, index_col=0)
-        return df
-
-    def _reformat_timeseries_df(self, df: pd.DataFrame, source: str) -> pd.DataFrame:
-        try:
-            df.apply(pd.to_numeric)
-        except ValueError as e:
-            raise exceptions.ModelError(
-                f"Error in loading data from {source}. Ensure all entries are numeric. Full error: {e}"
-            )
-        df.index = _datetime_index(df.index, self._time_format, source)
-        subset_df = self._subset_index(df)
-        return subset_df
-
-    def _subset_index(self, df: pd.DataFrame) -> pd.DataFrame:
-        if self._time_subset is None:
-            return df
-
-        try:
-            time_subset_dt = pd.to_datetime(self._time_subset, format="ISO8601")
-        except ValueError as e:
-            raise exceptions.ModelError(
-                "Timeseries subset must be in ISO format (anything up to the  "
-                "detail of `%Y-%m-%d %H:%M:%S`.\n User time subset: {}\n "
-                "Error caused: {}".format(self._time_subset, e)
-            )
-
-        df_start_time = df.index[0]
-        df_end_time = df.index[-1]
-        if (
-            time_subset_dt[0].date() < df_start_time.date()
-            or time_subset_dt[1].date() > df_end_time.date()
-        ):
-            raise exceptions.ModelError(
-                f"subset time range {self._time_subset} is outside the input data time range "
-                f"[{df_start_time}, {df_end_time}]"
-            )
-
-        # We eventually subset using the input strings to capture entire days
-        # E.g., ["2005-01-01", "2005-01-02"] will go to the last timestep on "2005-01-02"
-        subset_df = df.loc[slice(*self._time_subset), :]
-        if subset_df.empty:
-            raise exceptions.ModelError(
-                f"The time slice {time_subset_dt} creates an empty timeseries array."
-            )
-        return subset_df
+    datetime_dims = [k for k, v in ds.coords.items() if v.dtype.kind == "M"]
+    for dim_name in datetime_dims:
+        _check_time_subset(ds.coords[dim_name].to_index(), time_subset)
+        ds = ds.sel(**{dim_name: slice(*time_subset)})
+        _check_missing_data(ds, dim_name)
+    return ds
 
 
 def resample(data: xr.Dataset, resolution: str) -> xr.Dataset:
@@ -266,24 +111,27 @@ def resample(data: xr.Dataset, resolution: str) -> xr.Dataset:
     data_non_ts = data.drop_dims("timesteps")
     data_ts = data.drop_vars(data_non_ts.data_vars)
     data_ts_resampled = data_ts.resample(**resample_kwargs).first(keep_attrs=True)
+    resampling_methods = extract_from_schema(MODEL_SCHEMA, "x-resample_method")
 
     for var_name, var_data in data_ts.data_vars.items():
         resampler = var_data.resample(**resample_kwargs)
-        if var_name in [
-            "timestep_resolution",
-            "source_use_min",
-            "sink_use_min",
-            "source_use_max",
-            "sink_use_max",
-            "source_use_equals",
-            "sink_use_equals",
-        ]:
+        if var_name == "timestep_resolution":
             method = "sum"
+        elif var_name in resampling_methods:
+            method = resampling_methods.get(var_name, None)
         elif var_data.dtype.kind in ["f", "i"]:
             method = "mean"
         else:
             method = "first"
-        data_ts_resampled[var_name] = getattr(resampler, method)(keep_attrs=True)
+
+        if method == "sum":
+            method_kwargs = {"min_count": 1}
+        else:
+            method_kwargs = {}
+
+        data_ts_resampled[var_name] = getattr(resampler, method)(
+            keep_attrs=True, **method_kwargs
+        )
         LOGGER.debug(
             f"Time Resampling | {var_name} | resampling function used: {method}"
         )
@@ -312,7 +160,7 @@ def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
     """
     clustering_timeseries = pd.read_csv(clustering_file, index_col=0).squeeze()
     clustering_timeseries.index = _datetime_index(
-        clustering_timeseries.index, time_format, Path(clustering_file).name
+        clustering_timeseries.index, time_format
     )
     representative_days = pd.to_datetime(clustering_timeseries.dropna()).dt.date
     grouper = representative_days.to_frame("clusters").groupby("clusters")
@@ -333,6 +181,71 @@ def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
     _lookup_clusters(data_new, grouper)
 
     return data_new
+
+
+def _datetime_index(index: pd.Index, format: str) -> pd.Index:
+    try:
+        return pd.to_datetime(index, format=format)
+    except ValueError as e:
+        raise exceptions.ModelError(
+            f"Error in parsing dates in timeseries data from using datetime format `{format}`. "
+            f"Full error: {e}"
+        )
+
+
+def _check_time_subset(ts_index: pd.Index, time_subset: list[str]):
+    """Check if the user-configured time subset is in the correct format and it matches the range of the input data.
+
+    We do not allow the time subset to have _no_ overlap with a timeseries index.
+    This overlap is checked based on dates, not any higher resolution.
+
+    Args:
+        ts_index (pd.Index): Timeseries index to check for overlap.
+        time_subset (list[str]): Time subset as a slicer of start and end timestamps.
+
+    Raises:
+        exceptions.ModelError: Time subset string format must conform to ISO8601.
+        exceptions.ModelError: Cannot have time subsets that do not overlap the timeseries index.
+    """
+    try:
+        time_subset_dt = pd.to_datetime(time_subset, format="ISO8601")
+    except ValueError as e:
+        raise exceptions.ModelError(
+            "Timeseries subset must be in ISO format (anything up to the  "
+            "detail of `%Y-%m-%d %H:%M:%S`).\n User time subset: {}\n "
+            "Error caused: {}".format(time_subset, e)
+        )
+
+    df_start_time = ts_index[0]
+    df_end_time = ts_index[-1]
+    if (
+        time_subset_dt[1].date() < df_start_time.date()
+        or time_subset_dt[0].date() > df_end_time.date()
+    ):
+        raise exceptions.ModelError(
+            f"subset time range {time_subset} is outside the input data time range "
+            f"[{df_start_time}, {df_end_time}]"
+        )
+
+
+def _check_missing_data(ds: xr.Dataset, dim_name: str):
+    """Check if there are any parameters with timeseries data that doesn't cover the whole time period.
+
+    We assume this is _not_ intended (e.g. loading in one dataset with a shorter time length than expected).
+
+    Args:
+        ds (xr.Dataset): Dataset with timeseries dimension `dim_name` present.
+        dim_name (str): Name of the timeseries dimension.
+    """
+    datetime_ds = ds[[k for k, v in ds.data_vars.items() if dim_name in v.dims]]
+    is_missing = (
+        datetime_ds.notnull().any(dim_name) & ~datetime_ds.notnull().all(dim_name)
+    ).to_dataframe()
+    missing_data = is_missing[is_missing].stack()
+    if not missing_data.empty:
+        exceptions.warn(
+            f"Possibly missing data on the {dim_name} dimension for:\n{missing_data}"
+        )
 
 
 def _lookup_clusters(dataset: xr.Dataset, grouper: pd.Series) -> xr.Dataset:

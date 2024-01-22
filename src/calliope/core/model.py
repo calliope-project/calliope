@@ -28,6 +28,7 @@ from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.core import io
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess import load
+from calliope.preprocess.data_sources import DataSource
 from calliope.preprocess.model_data import ModelDataFactory
 from calliope.util.logging import log_time
 from calliope.util.schema import (
@@ -66,7 +67,7 @@ class Model(object):
         debug: bool = False,
         scenario: Optional[str] = None,
         override_dict: Optional[dict] = None,
-        timeseries_dataframes: Optional[dict[str, pd.DataFrame]] = None,
+        data_source_dfs: Optional[dict[str, pd.DataFrame]] = None,
         **kwargs,
     ):
         """
@@ -86,9 +87,9 @@ class Model(object):
             override_dict (dict):
                 Additional overrides to apply to `config`.
                 These will be applied *after* applying any defined `scenario` overrides.
-            timeseries_dataframes (dict[str, pd.DataFrame], optional):
-                If supplying `config` as a dictionary, in-memory timeseries data can be referred to using `df=...`.
-                The referenced data must be supplied here as a dictionary of dataframes.
+            data_source_dfs (dict[str, pd.DataFrame], optional):
+                Model definition `data_source` entries can reference in-memory pandas DataFrames.
+                The referenced data must be supplied here as a dictionary of those DataFrames.
                 Defaults to None.
         """
         self._timings: dict = {}
@@ -114,7 +115,7 @@ class Model(object):
                 model_definition, scenario, override_dict, **kwargs
             )
             self._init_from_model_def_dict(
-                model_def, applied_overrides, scenario, debug, timeseries_dataframes
+                model_def, applied_overrides, scenario, debug, data_source_dfs
             )
 
         version_def = self._model_data.attrs["calliope_version_defined"]
@@ -153,7 +154,7 @@ class Model(object):
         applied_overrides: str,
         scenario: Optional[str],
         debug: bool,
-        timeseries_dataframes: Optional[dict[str, pd.DataFrame]],
+        data_source_dfs: Optional[dict[str, pd.DataFrame]],
     ) -> None:
         """Initialise the model using a `model_run` dictionary, which may have been loaded from YAML.
 
@@ -179,13 +180,11 @@ class Model(object):
         # We won't store `init` in `self.config`, so we pop it out now.
         model_config.pop("init")
 
-        init_config["time_data_path"] = relative_path(
-            self._model_def_path, init_config["time_data_path"]
-        )
         if init_config["time_cluster"] is not None:
             init_config["time_cluster"] = relative_path(
-                init_config["time_data_path"], init_config["time_cluster"]
+                self._model_def_path, init_config["time_cluster"]
             )
+
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
         attributes = {
             "calliope_version_defined": init_config["calliope_version"],
@@ -194,10 +193,26 @@ class Model(object):
             "scenario": scenario,
             "defaults": param_metadata["default"],
         }
+
+        data_sources = [
+            DataSource(
+                init_config,
+                source_name,
+                source_dict,
+                data_source_dfs,
+                self._model_def_path,
+            )
+            for source_name, source_dict in model_definition.pop(
+                "data_sources", {}
+            ).items()
+        ]
+
         model_data_factory = ModelDataFactory(
-            init_config, model_definition, attributes, param_metadata
+            init_config, model_definition, data_sources, attributes, param_metadata
         )
-        self._model_data = model_data_factory.build(timeseries_dataframes)
+        model_data_factory.build()
+
+        self._model_data = model_data_factory.dataset
 
         log_time(
             LOGGER,
@@ -527,7 +542,7 @@ class Model(object):
                         "my_constraint_name":
                             {
                                 "foreach": ["nodes"],
-                                "where": "parent=supply",
+                                "where": "base_tech=supply",
                                 "equations": [{"expression": "sum(flow_cap, over=techs) >= 10"}]
                             }
 

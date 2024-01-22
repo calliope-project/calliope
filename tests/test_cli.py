@@ -16,7 +16,7 @@ _MODEL_NATIONAL = (
 ).as_posix()
 
 _MINIMAL_TEST_MODEL = (
-    Path(__file__).parent / "common" / "test_model" / "model_minimal.yaml"
+    Path(__file__).parent / "common" / "test_model" / "model.yaml"
 ).as_posix()
 
 
@@ -236,7 +236,7 @@ class TestCLI:
             cli.run,
             [
                 _MINIMAL_TEST_MODEL,
-                "--scenario=investment_costs",  # without these, the model cannot run
+                "--scenario=simple_supply",  # without these, the model cannot run
                 "--override_dict={techs.test_supply_elec.flow_cap_max: 1}",  # elec supply too low
             ],
         )
@@ -252,7 +252,7 @@ class TestCLI:
             [
                 _MINIMAL_TEST_MODEL,
                 "--no_fail_when_infeasible",
-                "--scenario=investment_costs",  # without these, the model cannot run
+                "--scenario=simple_supply",  # without these, the model cannot run
                 "--override_dict={techs.test_supply_elec.flow_cap_max: 1}",  # elec supply too low
             ],
         )

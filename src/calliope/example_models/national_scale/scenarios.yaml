@@ -27,7 +27,7 @@ overrides:
       init:
         name: "National-scale example model with time clustering"
         time_subset: null # No time subsetting
-        time_cluster: cluster_days.csv
+        time_cluster: data_sources/cluster_days.csv
 
   spores:
     config:
@@ -138,7 +138,7 @@ overrides:
       cold_fusion:
         name: "Cold fusion"
         color: "#233B39"
-        parent: supply
+        base_tech: supply
         inherit: cost_dim_setter
         carrier_out: power
         flow_cap_max: 10000

@@ -1,0 +1,16 @@
+﻿supply_tech,cost_area_use,1
+supply_tech,cost_depreciation_rate,1
+supply_tech,cost_export,1
+supply_tech,cost_flow_cap,1
+transmissio_tech,cost_flow_cap_per_distance,1
+conversion_tech,cost_flow_in,1
+supply_tech,cost_flow_out,1
+supply_tech,cost_interest_rate,1
+transmissio_tech,cost_interest_rate,1
+conversion_tech,cost_interest_rate,1
+supply_tech,cost_om_annual,1
+supply_tech,cost_om_annual_investment_fraction,1
+supply_tech,cost_purchase,1
+transmissio_tech,cost_purchase_per_distance,1
+supply_tech,cost_source_cap,1
+storage_tech,cost_storage_cap,1

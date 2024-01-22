@@ -9,7 +9,6 @@ nodes:
     longitude: -2
     techs:
       demand_power:
-        sink_use_equals: file=demand-1.csv:demand
       ccgt:
         flow_cap_max: 30000 # increased to ensure no unmet_demand in first timestep
   # --8<-- [end:region-1]
@@ -19,7 +18,6 @@ nodes:
     longitude: -8
     techs:
       demand_power:
-        sink_use_equals: file=demand-2.csv:demand
       battery:
 
   region1_1:
@@ -43,5 +41,4 @@ node_groups:
   csp_regions:
     techs:
       csp:
-        source_use_max: file=csp_resource.csv
 # --8<-- [end:node-groups]

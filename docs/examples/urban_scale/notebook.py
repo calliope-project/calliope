@@ -215,7 +215,7 @@ fig.show()
 # %%
 df_capacity = (
     model.results.flow_cap.where(
-        ~model.inputs.parent.str.contains("demand|transmission")
+        ~model.inputs.base_tech.str.contains("demand|transmission")
     )
     .to_series()
     .where(lambda x: x != 0)
@@ -246,7 +246,7 @@ fig.show()
 # %%
 df_coords = model.inputs[["latitude", "longitude"]].to_dataframe().reset_index()
 df_capacity = (
-    model.results.flow_cap.where(model.inputs.parent == "transmission")
+    model.results.flow_cap.where(model.inputs.base_tech == "transmission")
     .to_series()
     .where(lambda x: x != 0)
     .dropna()

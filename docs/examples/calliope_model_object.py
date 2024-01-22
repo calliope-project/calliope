@@ -6,11 +6,11 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.2
+#       jupytext_version: 1.16.1
 #   kernelspec:
-#     display_name: calliope_dev
+#     display_name: calliope_docs_build
 #     language: python
-#     name: python3
+#     name: calliope_docs_build
 # ---
 
 # %% [markdown]

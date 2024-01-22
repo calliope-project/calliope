@@ -6,11 +6,11 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.2
+#       jupytext_version: 1.16.0
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: calliope_docs_build
 #     language: python
-#     name: python3
+#     name: calliope_docs_build
 # ---
 
 # %% [markdown]
@@ -35,7 +35,7 @@ import calliope
 
 # %%
 calliope.set_log_verbosity("info")
-m = calliope.examples.national_scale()
+m = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-01"])
 m.build()
 m.solve()
 
@@ -44,7 +44,7 @@ m.solve()
 
 # %%
 calliope.set_log_verbosity("info", include_solver_output=False)
-m = calliope.examples.national_scale()
+m = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-01"])
 m.build()
 m.solve()
 
@@ -53,7 +53,7 @@ m.solve()
 
 # %%
 calliope.set_log_verbosity("debug")
-m = calliope.examples.national_scale()
+m = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-01"])
 m.build()
 m.solve()
 
@@ -82,7 +82,7 @@ logger.addHandler(console_handler)
 
 # You can also use logging in your scripts to add more information
 logger.info("Loading the national-scale example model")
-m = calliope.examples.national_scale()
+m = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-01"])
 
 logger.info("Building the national-scale example model optimisation problem")
 m.build()
@@ -119,7 +119,7 @@ logger.addHandler(file_handler)
 
 # You can also use logging in your scripts to add more information
 logger.info("Loading the national-scale example model")
-m = calliope.examples.national_scale()
+m = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-01"])
 
 logger.info("Building the national-scale example model optimisation problem")
 m.build()
@@ -159,7 +159,7 @@ logger.addHandler(file_handler)
 
 # You can also use logging in your scripts to add more information
 logger.info("Loading the national-scale example model")
-m = calliope.examples.national_scale()
+m = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-01"])
 
 logger.info("Building the national-scale example model optimisation problem")
 m.build()
@@ -197,6 +197,6 @@ for logger_name in logging.root.manager.loggerDict.keys():
     file_handler.setFormatter(formatter)
     logging.getLogger(logger_name).addHandler(file_handler)
 
-m = calliope.examples.national_scale()
+m = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-01"])
 m.build()
 m.solve()

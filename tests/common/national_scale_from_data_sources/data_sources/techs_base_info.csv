@@ -1,0 +1,9 @@
+﻿techs,color,name,base_tech
+battery,#3B61E3,Battery storage,storage
+ccgt,#E37A72,Combined cycle gas turbine,supply
+csp,#F9CF22,Concentrating solar power,supply
+demand_power,#072486,Power demand,demand
+region1_to_region1_1,#6783E3,Local power transmission,transmission
+region1_to_region1_2,#6783E3,Local power transmission,transmission
+region1_to_region1_3,#6783E3,Local power transmission,transmission
+region1_to_region2,#8465A9,AC power transmission,transmission

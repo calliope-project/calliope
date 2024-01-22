@@ -1,0 +1,73 @@
+
+# yaml-language-server: $schema=https://json-schema.org/draft/2020-12/schema#
+
+$schema: https://json-schema.org/draft/2020-12/schema#
+title: Data source schema
+description: All options available to load model definition data from file.
+type: object
+additionalProperties: false
+required: ["source"]
+$defs:
+  DataSourceVals:
+    oneOf:
+      - type: "null"
+      - type: string
+        pattern: '^[^_^\d][\w]*$'
+      - type: array
+        uniqueItems: true
+        items:
+          type: string
+          pattern: '^[^_^\d][\w]*$'
+
+properties:
+  rows:
+    description: >-
+      Names of dimensions defined row-wise.
+      Each name should correspond to a column in your data that contains index items.
+      These columns must be to the left of the columns containing your data.
+    $ref: "#/$defs/DataSourceVals"
+  columns:
+    description:  >-
+      Names of dimensions defined column-wise.
+      Each name should correspond to a row in your data that contains index items.
+      These rows must be above the rows containing your data.
+    $ref: "#/$defs/DataSourceVals"
+  source:
+    description: >-
+      Relative or absolute filepath.
+      If relative, will be relative to the model config file used to initialise the model.
+    type: string
+  select:
+    type: object
+    description: >-
+      Select one or more index item from a dimension.
+      Selection takes place before `drop` and `add_dimensions`,
+      so you can select a single value from a data dimension and then drop the dimension so it doesn't find its way through to the final dataset.
+    properties:
+      '^[^_^\d][\w]*$':
+        OneOf:
+          - type: [string, boolean, number]
+          - type: array
+            items:
+              type: [string, boolean, number]
+  drop:
+    type: [string, array]
+    $ref: "#/$defs/DataSourceVals"
+    description: >-
+      Dimensions in the rows and/or columns that contain metadata and should therefore not be passed on to the loaded model dataset.
+      These could include comments on the source of the data, the data license, or the parameter units.
+      You can also drop a dimension and then reintroduce it in `add_dimensions`, but with different index items.
+  add_dimensions:
+    description: >-
+      Data dimensions to add after loading in the array.
+      These allow you to use the same file to assign values to different parameters/dimension index items
+      (e.g., setting `flow_cap_min` and `flow_cap_max` to the same value),
+      or to add a dimension which would otherwise be a column containing the same information in each row
+      (e.g., assigning the cost class to monetary for a file containing cost data).
+    type: object
+    additionalProperties: false
+    patternProperties:
+      '^[^_^\d][\w]*$':
+        type: [string, array]
+        description: Keys are dimension names (must not be in `rows` or `columns`), values are index items of that dimension to add.
+        $ref: "#/$defs/DataSourceVals"

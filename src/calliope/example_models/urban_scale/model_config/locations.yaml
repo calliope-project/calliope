@@ -8,9 +8,7 @@ nodes:
         cost_flow_cap.data: 100 # cost of transformers
       supply_gas:
       demand_electricity:
-        sink_use_equals: file=demand_power.csv
       demand_heat:
-        sink_use_equals: file=demand_heat.csv
     available_area: 500
     latitude: 51.4596158
     longitude: -0.1613446
@@ -34,9 +32,7 @@ nodes:
           dims: costs
       supply_gas:
       demand_electricity:
-        sink_use_equals: file=demand_power.csv
       demand_heat:
-        sink_use_equals: file=demand_heat.csv
     available_area: 1300
     latitude: 51.4652373
     longitude: -0.1141548
@@ -56,9 +52,7 @@ nodes:
           dims: costs
       supply_gas:
       demand_electricity:
-        sink_use_equals: file=demand_power.csv
       demand_heat:
-        sink_use_equals: file=demand_heat.csv
     available_area: 900
     latitude: 51.4287016
     longitude: -0.1310635

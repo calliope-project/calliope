@@ -31,6 +31,7 @@ import xarray as xr
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
+from calliope.core.io import load_config
 from calliope.util.schema import MATH_SCHEMA, update_then_validate_config, validate_dict
 
 if TYPE_CHECKING:
@@ -172,9 +173,7 @@ class BackendModelGenerator(ABC):
         )
 
     def _check_inputs(self):
-        data_checks = AttrDict.from_yaml(
-            importlib.resources.files("calliope") / "config" / "model_data_checks.yaml"
-        )
+        data_checks = load_config("model_data_checks.yaml")
         check_results = {"fail": [], "warn": []}
         parser_ = parsing.where_parser.generate_where_string_parser()
         eval_kwargs = {

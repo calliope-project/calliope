@@ -153,7 +153,7 @@ def systemwide_levelised_cost(
         # cost is the total cost of the system
         # flow_out is only the flow_out of supply and conversion technologies
         allowed_techs = ("supply", "supply_plus", "conversion", "conversion_plus")
-        valid_techs = model_data.parent.isin(allowed_techs)
+        valid_techs = model_data.base_tech.isin(allowed_techs)
         cost = cost.sum(dim="techs", min_count=1)
         flow_out = flow_out.sel(techs=valid_techs).sum(dim="techs", min_count=1)
 

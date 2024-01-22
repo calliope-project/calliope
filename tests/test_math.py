@@ -625,6 +625,9 @@ class TestUptimeDowntime(CustomMathExamples):
             },
         )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*This parameter will only take effect if you have already defined:calliope.exceptions.ModelWarning"
+    )
     def test_downtime(self, build_and_compare):
         overrides = {
             "parameters": {
@@ -656,8 +659,19 @@ class TestNetImportShare(CustomMathExamples):
     YAML_FILEPATH = "net_import_share.yaml"
     shared_overrides = {
         "parameters.net_import_share": 1.5,
-        "nodes.c.techs": {
-            "test_demand_heat": {"sink_use_equals": "file=demand_heat.csv:a"}
+        "data_sources": {
+            "demand_heat": {
+                "source": "data_sources/demand_heat.csv",
+                "rows": "timesteps",
+                "columns": "nodes",
+                "select": {"nodes": "a"},
+                "drop": "nodes",
+                "add_dimensions": {
+                    "parameters": "sink_use_equals",
+                    "techs": "test_demand_heat",
+                    "nodes": "c",
+                },
+            }
         },
         "techs": {
             "links_a_c_heat": {

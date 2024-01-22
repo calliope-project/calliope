@@ -1,0 +1,5 @@
+techs,cost_area_use,cost_flow_cap,cost_flow_in,cost_flow_out,cost_interest_rate,cost_source_cap,cost_storage_cap
+battery,,,,,0.1,,200
+ccgt,,750,0.02,,0.1,,
+csp,200,1000,,0.002,0.1,200,50
+region1_to_region2,,200,,0.002,0.1,,

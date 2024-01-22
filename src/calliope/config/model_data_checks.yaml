@@ -1,4 +1,10 @@
 fail:
+  - where: not base_tech
+    message: An abstract `base_tech` must be defined for every technology at every node.
+
+  - where: not base_tech=transmission and (distance or flow_in_eff_per_distance or flow_out_eff_per_distance or cost_flow_cap_per_distance or cost_purchase_per_distance)
+    message: Only transmission technologies can define `distance` or `..._per_distance` parameters.
+
   - where: cost_flow_cap<0 AND not flow_cap_max
     message: Cannot have a negative `cost_flow_cap` as there is an unset corresponding `flow_cap_max` constraint
 

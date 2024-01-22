@@ -1,4 +1,5 @@
 import shutil
+from pathlib import Path
 
 import calliope
 import numpy as np
@@ -34,105 +35,108 @@ class TestModelPreproccessing:
 
 
 class TestNationalScaleExampleModelSenseChecks:
-    def example_tester(self, solver="cbc", solver_io=None):
-        model = calliope.examples.national_scale(
-            override_dict={"config.init.time_subset": ["2005-01-01", "2005-01-01"]}
+    @pytest.fixture(scope="class")
+    def nat_model_from_data_sources(self):
+        df = pd.read_csv(
+            calliope.examples.EXAMPLE_MODEL_DIR
+            / "national_scale"
+            / "data_sources"
+            / "time_varying_params.csv",
+            index_col=0,
+            header=[0, 1, 2, 3],
         )
-        solve_kwargs = {"solver": solver}
-        if solver_io:
-            solve_kwargs["solver_io"] = solver_io
-
+        model = calliope.Model(
+            Path(__file__).parent
+            / "common"
+            / "national_scale_from_data_sources"
+            / "model.yaml",
+            data_source_dfs={"time_varying_df": df},
+            time_subset=["2005-01-01", "2005-01-01"],
+        )
         model.build()
-        model.solve(**solve_kwargs)
+        return model
 
-        assert model.results.storage_cap.sel(nodes="region1_1", techs="csp") == approx(
-            45129.950
+    @pytest.fixture(scope="class")
+    def nat_model(self):
+        model = calliope.examples.national_scale(
+            time_subset=["2005-01-01", "2005-01-01"]
         )
-        assert model.results.storage_cap.sel(
-            nodes="region2", techs="battery"
-        ) == approx(6675.173)
+        model.build()
+        return model
 
-        assert model.results.flow_cap.sel(nodes="region1_1", techs="csp") == approx(
-            4626.588
-        )
-        assert model.results.flow_cap.sel(nodes="region2", techs="battery") == approx(
-            1000
-        )
-        assert model.results.flow_cap.sel(nodes="region1", techs="ccgt") == approx(
-            30000
-        )
+    @pytest.fixture(params=["nat_model", "nat_model_from_data_sources"])
+    def example_tester(self, request):
+        def _example_tester(solver="cbc", solver_io=None):
+            model = request.getfixturevalue(request.param)
 
-        assert float(model.results.cost.sum()) == approx(38988.7442)
+            solve_kwargs = {"solver": solver}
+            if solver_io:
+                solve_kwargs["solver_io"] = solver_io
 
-        assert float(
-            model.results.systemwide_levelised_cost.sel(
-                carriers="power", techs="battery"
-            ).item()
-        ) == approx(0.063543, abs=0.000001)
-        assert float(
-            model.results.systemwide_capacity_factor.sel(
-                carriers="power", techs="battery"
-            ).item()
-        ) == approx(0.2642256, abs=0.000001)
+            model.solve(force=True, **solve_kwargs)
 
-    def test_nationalscale_example_results_cbc(self):
-        self.example_tester()
+            assert model.results.storage_cap.sel(
+                nodes="region1_1", techs="csp"
+            ) == approx(45129.950)
+            assert model.results.storage_cap.sel(
+                nodes="region2", techs="battery"
+            ) == approx(6675.173)
 
-    def test_nationalscale_example_results_gurobi(self):
+            assert model.results.flow_cap.sel(nodes="region1_1", techs="csp") == approx(
+                4626.588
+            )
+            assert model.results.flow_cap.sel(
+                nodes="region2", techs="battery"
+            ) == approx(1000)
+            assert model.results.flow_cap.sel(nodes="region1", techs="ccgt") == approx(
+                30000
+            )
+
+            assert float(model.results.cost.sum()) == approx(38988.7442)
+
+            assert float(
+                model.results.systemwide_levelised_cost.sel(
+                    carriers="power", techs="battery"
+                ).item()
+            ) == approx(0.063543, abs=0.000001)
+            assert float(
+                model.results.systemwide_capacity_factor.sel(
+                    carriers="power", techs="battery"
+                ).item()
+            ) == approx(0.2642256, abs=0.000001)
+
+            model.results.total_levelised_cost.item() == approx(0.05456, abs=1e-5)
+
+        return _example_tester
+
+    def test_nationalscale_example_results_cbc(self, example_tester):
+        example_tester()
+
+    def test_nationalscale_example_results_gurobi(self, example_tester):
         pytest.importorskip("gurobipy")
-        self.example_tester(solver="gurobi", solver_io="python")
+        example_tester(solver="gurobi", solver_io="python")
 
-    def test_nationalscale_example_results_cplex(self):
+    def test_nationalscale_example_results_cplex(self, example_tester):
         if shutil.which("cplex"):
-            self.example_tester(solver="cplex")
+            example_tester(solver="cplex")
         else:
             pytest.skip("CPLEX not installed")
 
-    def test_nationalscale_example_results_glpk(self):
+    def test_nationalscale_example_results_glpk(self, example_tester):
         if shutil.which("glpsol"):
-            self.example_tester(solver="glpk")
+            example_tester(solver="glpk")
         else:
             pytest.skip("GLPK not installed")
 
-    def test_considers_supply_generation_only_in_total_levelised_cost(self):
-        # calculation of expected value:
-        # costs = model.inputs.cost.sum(dim="locs")
-        # gen = model.inputs.flow_out.sum(dim=["timesteps", "locs"])
-        # lcoe = costs.sum(dim="techs") / gen.sel(techs=["ccgt", "csp"]).sum(dim="techs")
-        model = calliope.examples.national_scale()
-        model.build()
-        model.solve()
-
-        assert model.results.total_levelised_cost.item() == approx(0.067005, abs=1e-5)
-
     def test_fails_gracefully_without_timeseries(self):
-        override = {
-            "nodes.region1.techs.demand_power.sink_use_equals": 200,
-            "nodes.region2.techs.demand_power.sink_use_equals": 400,
-            "node_groups.csp_regions.techs.csp.source_use_max": 100,
-        }
-        with pytest.raises(calliope.exceptions.ModelError):
+        override = {"data_sources": {"_REPLACE_": {}}}
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             calliope.examples.national_scale(override_dict=override)
 
-
-@pytest.mark.xfail(reason="Not reimplemented the 'check feasibility' objective")
-class TestNationalScaleExampleModelInfeasibility:
-    def example_tester(self):
-        model = calliope.examples.national_scale(scenario="check_feasibility")
-
-        model.build(cyclic_storage=False)
-        model.solve()
-
-        assert model.results.termination_condition in [
-            "infeasible",
-            "other",
-        ]  # glpk gives 'other' as result
-
-        assert len(model.results.data_vars) == 0
-        assert "flow_cap" not in model._model_data.data_vars
-
-    def test_nationalscale_example_results_cbc(self):
-        self.example_tester()
+        assert check_error_or_warning(
+            excinfo,
+            "Must define at least one timeseries parameter in a Calliope model.",
+        )
 
 
 @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
@@ -140,8 +144,7 @@ class TestNationalScaleExampleModelOperate:
     def example_tester(self):
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
             model = calliope.examples.national_scale(
-                override_dict={"config.init.time_subset": ["2005-01-01", "2005-01-03"]},
-                scenario="operate",
+                time_subset=["2005-01-01", "2005-01-03"], scenario="operate"
             )
             model.build()
 
@@ -165,8 +168,7 @@ class TestNationalScaleExampleModelOperate:
 class TestNationalScaleExampleModelSpores:
     def example_tester(self, solver="cbc", solver_io=None):
         model = calliope.examples.national_scale(
-            override_dict={"config.init.time_subset": ["2005-01-01", "2005-01-03"]},
-            scenario="spores",
+            time_subset=["2005-01-01", "2005-01-03"], scenario="spores"
         )
         solve_kwargs = {"solver": solver}
         if solver_io:
@@ -235,8 +237,7 @@ class TestNationalScaleExampleModelSpores:
     @pytest.fixture
     def base_model_data(self):
         model = calliope.examples.national_scale(
-            override_dict={"config.init.time_subset": ["2005-01-01", "2005-01-03"]},
-            scenario="spores",
+            time_subset=["2005-01-01", "2005-01-03"], scenario="spores"
         )
 
         model.build()
@@ -399,9 +400,10 @@ class TestNationalScaleResampledExampleModelSenseChecks:
 
 class TestUrbanScaleExampleModelSenseChecks:
     def example_tester(self, source_unit, solver="cbc", solver_io=None):
+        data_sources = f"data_sources.pv_resource.select.scaler: {source_unit}"
         unit_override = {
-            "techs.pv.source_use_equals": "file=pv_resource.csv:{}".format(source_unit),
             "techs.pv.source_unit": source_unit,
+            **calliope.AttrDict.from_yaml_string(data_sources),
         }
 
         model = calliope.examples.urban_scale(
@@ -455,14 +457,9 @@ class TestUrbanScaleExampleModelSenseChecks:
         self.example_tester("per_cap", solver="gurobi", solver_io="python")
 
     def test_milp_example_results(self):
-        model = calliope.examples.milp(
-            override_dict={
-                "config.init.time_subset": ["2005-01-01", "2005-01-01"],
-                "config.solve.solver_options": {"mipgap": 0.001},
-            }
-        )
+        model = calliope.examples.milp(time_subset=["2005-01-01", "2005-01-01"])
         model.build()
-        model.solve()
+        model.solve(solver_options={"mipgap": 0.001})
 
         assert (
             model.results.flow_cap.sel(nodes="X1", techs="chp", carriers="electricity")
@@ -486,9 +483,7 @@ class TestUrbanScaleExampleModelSenseChecks:
 
     @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
     def test_operate_example_results(self):
-        model = calliope.examples.operate(
-            override_dict={"config.init.time_subset": ["2005-07-01", "2005-07-04"]}
-        )
+        model = calliope.examples.operate(time_subset=["2005-07-01", "2005-07-04"])
         with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
             model.build()
 

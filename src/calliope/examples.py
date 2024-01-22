@@ -10,10 +10,11 @@ Example models.
 """
 
 import importlib
+from pathlib import Path
 
 from calliope.core.model import Model
 
-EXAMPLE_MODEL_DIR = importlib.resources.files("calliope") / "example_models"
+EXAMPLE_MODEL_DIR = Path(importlib.resources.files("calliope") / "example_models")
 
 
 def national_scale(*args, **kwargs):

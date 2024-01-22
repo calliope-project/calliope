@@ -30,7 +30,8 @@ extra_css:
 plugins:
   - search
   - autorefs
-  - macros
+  - macros:
+      module_name: docs/hooks/macros
   - mkdocs-jupyter:
       include: ["examples/**/*.py", "examples/*.py"]
       ignore: ["examples/.*/*.py"]
@@ -106,8 +107,9 @@ nav:
     - MILP example model:
       - examples/milp/index.md
       - examples/milp/notebook.py
+    - examples/loading_tabular_data.py
     - examples/calliope_model_object.py
-    - examples/logging.py
+    - examples/calliope_logging.py
   - Reference:
     - Command line interface: reference/cli.md
     - Python API:
@@ -118,6 +120,7 @@ nav:
       - reference/api/exceptions.md
       - reference/api/logging.md
     - reference/config_schema.md
+    - reference/data_source_schema.md
     - reference/model_schema.md
     - reference/math_schema.md
   - Version history: version_history.md

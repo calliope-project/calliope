@@ -1,5 +1,5 @@
-import importlib
 from itertools import chain, combinations
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -11,7 +11,6 @@ from calliope.util.schema import CONFIG_SCHEMA, MODEL_SCHEMA, extract_from_schem
 from .common.util import build_test_model as build_model
 
 ALL_DIMS = {"nodes", "techs", "carriers", "costs", "timesteps"}
-CONFIG_DIR = importlib.resources.files("calliope") / "config"
 
 
 @pytest.fixture(
@@ -32,6 +31,11 @@ def config_defaults():
 @pytest.fixture(scope="session")
 def model_defaults():
     return AttrDict(extract_from_schema(MODEL_SCHEMA, "default"))
+
+
+@pytest.fixture(scope="session")
+def data_source_dir():
+    return Path(__file__).parent / "common" / "test_model" / "data_sources"
 
 
 @pytest.fixture(scope="session")
@@ -210,7 +214,10 @@ def dummy_model_data(config_defaults, model_defaults):
                 ["nodes", "techs"],
                 [[True, True, True, True], [False, True, True, True]],
             ),
-            "parent": (["techs"], ["supply", "transmission", "demand", "conversion"]),
+            "base_tech": (
+                ["techs"],
+                ["supply", "transmission", "demand", "conversion"],
+            ),
             "nodes_inheritance": (["nodes"], ["foo,bar", "boo"]),
             "nodes_inheritance_boo_bool": (["nodes"], [False, True]),
             "techs_inheritance": (["techs"], ["foo,bar", np.nan, "baz", "boo"]),

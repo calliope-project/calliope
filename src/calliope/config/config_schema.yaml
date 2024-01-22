@@ -164,15 +164,21 @@ properties:
             description: On postprocessing the optimisation results, values smaller than this threshold will be considered as optimisation artefacts and will be set to zero.
 
   parameters:
-    type: object
-    description: Calliope model arbitrary parameter definitions.
+    type: [object, "null"]
+    description: >-
+      Calliope model arbitrary parameter definitions.
+      See the model definition schema for more guidance on content.
     additionalProperties: false
     patternProperties:
       '^[^_^\d][\w]*$': {}
 
-  techs:
-    type: object
-    description: Calliope model technology definitions.
+  data_sources:
+    type: [object, "null"]
+    description: >-
+      Reference to files from which to load parts (or all) of the model definition.
+      Loaded data will be _overridden_ by any data provided in the YAML definitions.
+      Conflicting data between loaded files will be resolved by overriding in the order the data is provided.
+      That is, data in list item `N` takes precedence over data in list item `N-1`.
     additionalProperties: false
     patternProperties: &nested_pattern
       '^[^_^\d][\w]*$':
@@ -180,20 +186,38 @@ properties:
         patternProperties:
           '^[^_^\d][\w]*$': {}
 
+  techs:
+    type: [object, "null"]
+    description: >-
+      Calliope model technology definitions.
+      See the model definition schema for more guidance on content.
+    additionalProperties: false
+    patternProperties:
+      '^[^_^\d][\w]*$':
+        type: object
+        patternProperties:
+          '^[^_^\d][\w]*$': {}
+
   nodes:
-    type: object
-    description: Calliope model node definitions.
+    type: [object, "null"]
+    description: >-
+      Calliope model node definitions.
+      See the model definition schema for more guidance on content.
     additionalProperties: false
     patternProperties: *nested_pattern
 
   tech_groups:
-    type: object
-    description: Abstract technology definitions to which techs can reference using `inherit`.
+    type: [object, "null"]
+    description: >-
+      Abstract technology definitions from which techs can `inherit`.
+      See the model definition schema for more guidance on content.
     additionalProperties: false
     patternProperties: *nested_pattern
 
   node_groups:
-    type: object
-    description: Abstract node definitions to which nodes can reference using `inherit`.
+    type: [object, "null"]
+    description: >-
+      Abstract technology definitions from which nodes can `inherit`.
+      See the model definition schema for more guidance on content.
     additionalProperties: false
     patternProperties: *nested_pattern

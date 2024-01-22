@@ -42,13 +42,13 @@ Configuration options are any that are defined in `config.build`, where you can 
 
     1.  `get_val_at_index` is a [helper function][helper-functions]; read more below!
 
-1. Checking the `parent` of a technology (`storage`, `supply`, etc.) or its inheritance chain (if using `tech_groups` and the `inherit` parameter).
+1. Checking the `base_tech` of a technology (`storage`, `supply`, etc.) or its inheritance chain (if using `tech_groups` and the `inherit` parameter).
 
     ??? examples
 
-        - If you want to create a decision variable across only `storage` technologies, you would include `parent=storage`.
+        - If you want to create a decision variable across only `storage` technologies, you would include `base_tech=storage`.
         - If you want to apply a constraint across only your own `rooftop_supply` technologies (e.g., you have defined `rooftop_supply` in `tech_groups` and your technologies `pv` and `solar_thermal` define `#!yaml inherit: rooftop_supply`), you would include `inheritance(rooftop_supply)`.
-        Note that `parent=...` is a simple check for the given value of `parent`, while `inheritance()` is a helper function ([see below][helper-functions]) which can deal with the fact that intermediate groups may be present, e.g. `pv` might inherit from `rooftop_supply` which in turn might inherit from `electricity_supply`.
+        Note that `base_tech=...` is a simple check for the given value of `base_tech`, while `inheritance()` is a helper function ([see below][helper-functions]) which can deal with the fact that intermediate groups may be present, e.g. `pv` might inherit from `rooftop_supply` which in turn might inherit from `electricity_supply`.
 
 1. Subsetting a set.
 The sets available to subset are always [`nodes`, `techs`, `carriers`] + any additional sets defined by you in [`foreach`][foreach-lists].
@@ -67,8 +67,8 @@ These statements will be combined first.
 
 ??? examples
 
-    - If you want to apply a constraint for `storage` technologies if the configuration option `cyclic_storage` is activated and it is the last timestep of the series: `parent=storage and config.cyclic_storage=True and timesteps=get_val_at_index(dim=timesteps, idx=-1)`.
-    - If you want to create a decision variable for the input carriers of conversion technologies: `carrier_in and parent=conversion`
+    - If you want to apply a constraint for `storage` technologies if the configuration option `cyclic_storage` is activated and it is the last timestep of the series: `base_tech=storage and config.cyclic_storage=True and timesteps=get_val_at_index(dim=timesteps, idx=-1)`.
+    - If you want to create a decision variable for the input carriers of conversion technologies: `carrier_in and base_tech=conversion`
     - If you want to apply a constraint if the parameter `source_unit` is `energy_per_area` or the parameter `area_use_per_flow_cap` is defined: `source_unit=energy_per_area or area_use_per_flow_cap`.
     - If you want to apply a constraint if the parameter `flow_out_eff` is less than or equal to 0.5 and `source_use` has been defined, or `flow_out_eff` is greater than 0.9 and `source_use` has not been defined: `(flow_out_eff<=0.5 and source_use) or (flow_out_eff>0.9 and not source_use)`.
 
