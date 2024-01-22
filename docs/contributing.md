@@ -209,7 +209,23 @@ When adding docstrings, we request you use the [Google docstring style](https://
 
 ## Release checklist
 
-<!--- TODO -->
+### Create release
+
+- [ ] Create a release branch
+- [ ] Bump the version number in `src/calliope/_version.py`
+- [ ] Update the [changelog][changelog] with final version number of the form `vX.Y.Z` and the release date.
+- [ ] Commit your changes and create a release pull request with the title `Release vX.Y.Z` to have all the tests run and to verify that the pip package builds successfully.
+- [ ] Once the PR is approved and merged, tag the commit in main with the version `vX.Y.Z`.
+- [ ] Create a release through the GitHub web interface, using the same tag, titling it `Release vX.Y.Z` and include all the changelog elements that are `User-facing`.
+
+!!! note
+    The pull request _must_ have the title `Release vX.Y.Z` to trigger the pip package build and the test-pypi upload.
+
+### Post-release
+
+- [ ] Update the changelog, adding a new `Unreleased` heading.
+- [ ] Bump the version number in `src/calliope/_version.py` to the next patch release number appended with `.dev`.
+- [ ] Update the `calliope_version` configuration option in all example models to match the new version, but without the `.dev` suffix (so `0.7.0.dev` is `0.7.0` for the example models).
 
 ## Licensing
 

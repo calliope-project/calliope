@@ -1,0 +1,14 @@
+name: Publish
+
+on:
+  release:
+    types: [released]
+
+jobs:
+  pip-upload:
+    uses: arup-group/actions-city-modelling-lab/.github/workflows/pip-upload.yml@main
+    secrets:
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+    with:
+      package_name: calliope
+      build_workflow: pr-ci.yml
