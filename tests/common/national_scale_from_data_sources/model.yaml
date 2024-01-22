@@ -4,8 +4,6 @@ config:
     name: National-scale example model
     # What version of Calliope this model is intended for
     calliope_version: 0.7.0
-    # Time series data path - can either be a path relative to this file, or an absolute path
-    time_data_path: "timeseries_data"
     time_subset: ["2005-01-01", "2005-01-05"] # Subset of timesteps
 
   build:
