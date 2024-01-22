@@ -73,8 +73,6 @@ An API will be created in due course to allow the user to add their own checks t
 
 |changed| When a model is loaded into an active session, configuration dictionaries are stored as dictionaries instead of seralised YAML strings in the model data attributes dictionary. Serialisation and de-serialisation only occur on saving and loading from NetCDF, respectively.
 
-
-
 ## 0.6.10 (2023-01-18)
 
 |changed| |backwards-incompatible| Updated to Numpy v1.23, Pandas v1.5, Pyomo v6.4, Ruamel.yaml v0.17, Scikit-learn v1.2, Xarray v2022.3, GLPK v5. This enables Calliope to be installed on Apple Silicon devices, but changes the result of algorithmic timeseries clustering. `In scikit-learn version 0.24.0, the method of random sampling for K-Means clustering was changed <https://scikit-learn.org/0.24/whats_new/v0.24.html#changed-models>`_. This change will lead to different optimisation results if using `K-Means clustering <https://calliope.readthedocs.io/en/v0.6.10/user/advanced_features.html#time-resolution-adjustment>`_ in your model.

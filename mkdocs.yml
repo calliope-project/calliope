@@ -144,4 +144,5 @@ nav:
     - reference/config_schema.md
     - reference/model_schema.md
     - reference/math_schema.md
+  - Contributing: contributing.md
   - Version history: version_history.md
