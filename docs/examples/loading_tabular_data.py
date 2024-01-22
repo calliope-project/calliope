@@ -198,7 +198,9 @@ data_source_path = Path(".") / "outputs" / "loading_tabular_data"
 data_source_path.mkdir(parents=True, exist_ok=True)
 
 # %% [markdown]
-# Next we group together **technology data where no extra dimensions are needed**. This means the basics like specifying a `base_tech` for each technology. We generate this data as a table and save it to a file called `tech_data.csv`.
+# Next we group together **technology data where no extra dimensions are needed**.
+# This means the basics like specifying a `base_tech` for each technology.
+# We generate this data as a table and save it to a file called `tech_data.csv`.
 # %%
 tech_data = pd.DataFrame(
     {
