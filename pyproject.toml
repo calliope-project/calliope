@@ -6,7 +6,7 @@ minversion = "6.0"
 # `-nauto` - parallelise over as many threads as possible (uses pytest-xdist). If debugging (`--pdb`), this will default to one thread.
 # `--cov-report=xml --cov-config=pyproject.toml` - coverage report config for when running in tests (uses pytest-cov; call `--cov` in CLI to switch coverage on; `--cov-config` include to avoid bug)
 addopts = "-rav --dist=loadscope --strict-markers -nauto --cov-report=xml --cov-config=pyproject.toml"
-# TODO: add testpath once notebooks are fixed: "doc/_static/notebooks"
+
 testpaths = ["tests"]
 
 # to mark a test, decorate it with `@pytest.mark.[marker-name]`

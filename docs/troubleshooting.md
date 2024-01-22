@@ -64,9 +64,8 @@ A reduction of any of these dimensions will reduce the number of resulting decis
 !!! note
     By reducing the number of locations (e.g. merging nearby locations) you also remove the technologies linking those locations to the rest of the system, which is additionally beneficial.
 
-Calliope has the ability to resample the time dimension (e.g. 1hr -> 2hr intervals), or for the user to supply their own clusters on which time steps will be grouped together.
+Calliope has the ability to [resample the time dimension][time-resolution-adjustment-resampling] (e.g. 1hr -> 2hr intervals), or for the user to [supply their own clusters][time-clustering] on which time steps will be grouped together.
 In so doing, significant solution time improvements can be achieved.
-<!--TODO: link to doc on how to specify clustering-->
 
 !!! info "See also"
     Stefan Pfenninger (2017).
@@ -189,7 +188,9 @@ By rerunning the backend specifically, you can optimise your problem with these 
     You may want to save your model before doing this.
 
 !!! info "See also"
-    [Backend model API][calliope.backend.backend_model.BackendModel] <!--TODO: also add a page on backend interface-->
+    [Backend model API][calliope.backend.backend_model.BackendModel],
+    [Tutorial on interacting with the Backend][building-and-checking-the-optimisation-problem]
+    <!--TODO: also add a page on backend interface-->
 
 ## Debugging model errors
 

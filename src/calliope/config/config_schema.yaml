@@ -92,7 +92,8 @@ properties:
             type: boolean
             default: false
             description: >
-              whether to include decision variables in the model which will meet unmet demand or consume unused supply in the model so that the optimisation solves successfully. This should only be used as a debugging option (as any unmet demand/unused supply is a sign of improper model formulation).
+              whether to include decision variables in the model which will meet unmet demand or consume unused supply in the model so that the optimisation solves successfully.
+              This should only be used as a debugging option (as any unmet demand/unused supply is a sign of improper model formulation).
           mode:
             type: string
             default: plan
