@@ -246,3 +246,4 @@ They allow only the `csp` technology, this allows us to model three possible sit
 ---
 !!! info "Where to go next"
     To try loading and solving the model yourself, move on to the accompanying notebook [here][running-the-national-scale-example-model].
+    You can also find a list of all the example models available in Calliope [here][calliope.examples].

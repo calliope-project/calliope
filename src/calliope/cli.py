@@ -182,7 +182,7 @@ def new(path, template, debug):
     with format_exceptions(debug):
         if template is None:
             template = "national_scale"
-        source_path = examples.EXAMPLE_MODEL_DIR / template
+        source_path = examples._EXAMPLE_MODEL_DIR / template
         click.echo("Copying {} template to target directory: {}".format(template, path))
         shutil.copytree(source_path, path)
 

@@ -1,3 +1,5 @@
+<!--- the "--8<--" html comments define what part of this file to add to the index page of the documentation -->
+<!--- --8<-- [start:docs] -->
 [![Chat on Gitter](https://img.shields.io/gitter/room/calliope-project/calliope.svg)](https://app.gitter.im/#/room/#calliope-project_calliope:gitter.im)
 [![Main branch build status](https://github.com/calliope-project/calliope/actions/workflows/commit-ci.yml/badge.svg?branch=main)](https://github.com/calliope-project/calliope/actions/workflows/commit-ci.yml)
 [![Documentation build status](https://img.shields.io/readthedocs/calliope.svg?version=latest)](https://readthedocs.org/projects/calliope/builds/)
@@ -7,7 +9,7 @@
 [![JOSS DOI](https://img.shields.io/badge/JOSS-10.21105/joss.00825-green.svg)](https://doi.org/10.21105/joss.00825)
 
 ---
-
+<!--- --8<-- [end:docs] -->
 <img src="https://raw.githubusercontent.com/calliope-project/calliope/main/doc/_static/logo.png" width="364">
 
 *A multi-scale energy systems modelling framework* | [www.callio.pe](http://www.callio.pe/)

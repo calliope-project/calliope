@@ -515,7 +515,7 @@ class TestTime:
         if load_timeseries_from_dataframes:
             # Create dictionary with dataframes
             time_data_path = (
-                calliope.examples.EXAMPLE_MODEL_DIR
+                calliope.examples._EXAMPLE_MODEL_DIR
                 / "national_scale"
                 / "timeseries_data"
             )

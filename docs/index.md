@@ -1,5 +1,7 @@
 # Calliope: energy system modelling made simple
 
+--8<-- "README.md:docs"
+
 !!! warning
 
     Calliope version 0.7 is released as a beta with the purpose of gathering feedback from users. Some functionality is not yet available in 0.7, notably:
@@ -51,3 +53,8 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+## Citing Calliope
+
+Calliope is [published in the Journal of Open Source Software](https://joss.theoj.org/papers/10.21105/joss.00825).
+We encourage you to use this academic reference.

@@ -289,3 +289,4 @@ These revenue possibilities are reflected in the technologies' and locations' de
 ---
 !!! info "Where to go next"
     To try loading and solving the model yourself, move on to the accompanying notebook [here][running-the-urban-scale-example-model].
+    You can also find a list of all the example models available in Calliope [here][calliope.examples].
