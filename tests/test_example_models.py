@@ -37,7 +37,7 @@ class TestNationalScaleExampleModelSenseChecks:
     @pytest.fixture(scope="class")
     def nat_model_from_data_sources(self):
         df = pd.read_csv(
-            calliope.examples.EXAMPLE_MODEL_DIR
+            calliope.examples._EXAMPLE_MODEL_DIR
             / "national_scale"
             / "data_sources"
             / "time_varying_params.csv",
