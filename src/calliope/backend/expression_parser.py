@@ -237,16 +237,17 @@ class EvalOperatorOperand(EvalToArrayStr):
         val: xr.DataArray, evaluated_operand: xr.DataArray, operator_: str
     ) -> xr.DataArray:
         "Apply evaluated operation on two dataarrays"
-        if operator_ == "**":
-            val = val**evaluated_operand
-        elif operator_ == "*":
-            val = val * evaluated_operand
-        elif operator_ == "/":
-            val = val / evaluated_operand
-        elif operator_ == "+":
-            val = val + evaluated_operand
-        elif operator_ == "-":
-            val = val - evaluated_operand
+        match operator_:
+            case "**":
+                val = val**evaluated_operand
+            case "*":
+                val = val * evaluated_operand
+            case "/":
+                val = val / evaluated_operand
+            case "+":
+                val = val + evaluated_operand
+            case "-":
+                val = val - evaluated_operand
         return val
 
     def as_math_string(self) -> str:
@@ -358,12 +359,13 @@ class EvalComparisonOp(EvalToArrayStr):
         "Comparison function for application to individual elements of the array"
         if not where or pd.isnull(lhs) or pd.isnull(rhs):
             return np.nan
-        elif self.op == "==":
-            constraint = lhs == rhs
-        elif self.op == "<=":
-            constraint = lhs <= rhs
-        elif self.op == ">=":
-            constraint = lhs >= rhs
+        match self.op:
+            case "==":
+                constraint = lhs == rhs
+            case "<=":
+                constraint = lhs <= rhs
+            case ">=":
+                constraint = lhs >= rhs
         return constraint
 
     def as_math_string(self) -> str:

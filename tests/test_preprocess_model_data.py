@@ -515,12 +515,11 @@ class TestModelData:
         def_dict = {"foo": {"base_tech": "supply"}}
         with pytest.raises(KeyError) as excinfo:
             model_data_factory._inherit_defs(
-                dim_name="techs",
-                dim_dict=AttrDict(def_dict),
-                err_message_prefix="foobar",
+                dim_name="techs", dim_dict=AttrDict(def_dict), foobar="bar"
             )
         assert check_error_or_warning(
-            excinfo, "foobar(techs, foo) | Reference to item not defined in base techs"
+            excinfo,
+            "(foobar, bar), (techs, foo) | Reference to item not defined in base techs",
         )
 
     @pytest.mark.parametrize(

@@ -50,7 +50,12 @@ COMPONENT_TRANSLATOR = {
 
 
 class PyomoBackendModel(backend_model.BackendModel):
-    def __init__(self, inputs: xr.Dataset, **kwargs):
+    def __init__(self, inputs: xr.Dataset, **kwargs) -> None:
+        """Pyomo solver interface class.
+
+        Args:
+            inputs (xr.Dataset): Calliope model data.
+        """
         super().__init__(inputs, pmo.block(), **kwargs)
 
         self._instance.parameters = pmo.parameter_dict()
@@ -250,15 +255,15 @@ class PyomoBackendModel(backend_model.BackendModel):
         else:
             return global_expression
 
-    def solve(
+    def _solve(
         self,
         solver: str,
         solver_io: Optional[str] = None,
         solver_options: Optional[dict] = None,
         save_logs: Optional[str] = None,
         warmstart: bool = False,
-        **solve_kwargs,
-    ):
+        **solve_config,
+    ) -> xr.Dataset:
         if solver == "cbc" and self.shadow_prices.is_active:
             model_warn(
                 "Switching off shadow price tracker as constraint duals cannot be accessed from the CBC solver"
@@ -270,6 +275,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             for k, v in solver_options.items():
                 opt.options[k] = v
 
+        solve_kwargs = {}
         if save_logs is not None:
             solve_kwargs.update({"symbolic_solver_labels": True, "keepfiles": True})
             os.makedirs(save_logs, exist_ok=True)
@@ -291,9 +297,9 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         termination = results.solver[0].termination_condition
 
-        if termination == pe.TerminationCondition.optimal:
+        if pe.TerminationCondition.to_solver_status(termination) == pe.SolverStatus.ok:
             self._instance.load_solution(results.solution[0])
-
+            results = self.load_results()
         else:
             self._solve_logger.critical("Problem status:")
             for line in str(results.problem[0]).split("\n"):
@@ -303,8 +309,10 @@ class PyomoBackendModel(backend_model.BackendModel):
                 self._solve_logger.critical(line)
 
             model_warn("Model solution was non-optimal.", _class=BackendWarning)
+            results = xr.Dataset()
+        results.attrs["termination_condition"] = str(termination)
 
-        return str(termination)
+        return results
 
     def verbose_strings(self) -> None:
         def __renamer(val, *idx):

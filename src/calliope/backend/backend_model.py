@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+import time
 import typing
 from abc import ABC, abstractmethod
 from copy import deepcopy
@@ -31,8 +32,14 @@ import xarray as xr
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
-from calliope.core.io import load_config
-from calliope.util.schema import MATH_SCHEMA, update_then_validate_config, validate_dict
+from calliope.io import load_config
+from calliope.util.schema import (
+    MATH_SCHEMA,
+    MODEL_SCHEMA,
+    extract_from_schema,
+    update_then_validate_config,
+    validate_dict,
+)
 
 if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
@@ -209,10 +216,13 @@ class BackendModelGenerator(ABC):
         ]:
             component = components.removesuffix("s")
             for name in self.inputs.math[components]:
+                start = time.time()
                 getattr(self, f"add_{component}")(name)
-            LOGGER.info(
-                f"Optimisation Model: Generated optimisation problem {components}"
-            )
+                end = time.time() - start
+                LOGGER.debug(
+                    f"Optimisation Model | {components}:{name} | Built in {end:.4f}s"
+                )
+            LOGGER.info(f"Optimisation Model | {components} | Generated.")
 
     def _add_run_mode_custom_math(self) -> None:
         """If not given in the custom_math list, override model math with run mode math"""
@@ -371,6 +381,12 @@ class BackendModelGenerator(ABC):
         for param_name, default_val in self.inputs.attrs["defaults"].items():
             if param_name in self.parameters.keys():
                 continue
+            elif (
+                self.inputs.attrs["config"]["build"]["mode"] != "operate"
+                and param_name
+                in extract_from_schema(MODEL_SCHEMA, "x-operate-param").keys()
+            ):
+                continue
             self.log(
                 "parameters", param_name, "Component not defined; using default value."
             )
@@ -378,7 +394,7 @@ class BackendModelGenerator(ABC):
                 param_name, xr.DataArray(default_val), use_inf_as_na=False
             )
             self.parameters[param_name].attrs["is_result"] = 0
-        LOGGER.info("Optimisation Model: Generated optimisation problem parameters")
+        LOGGER.info("Optimisation Model | parameters | Generated.")
 
     @staticmethod
     def _clean_arrays(*args) -> None:
@@ -712,15 +728,36 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
 
     @abstractmethod
-    def solve(
+    def verbose_strings(self) -> None:
+        """
+        Update optimisation model object string representations to include the index coordinates of the object.
+
+        E.g., `variables(flow_out)[0]` will become `variables(flow_out)[power, region1, ccgt, 2005-01-01 00:00]`
+
+        This takes approximately 10% of the peak memory required to initially build the optimisation problem, so should only be invoked if inspecting the model in detail (e.g., debugging)
+
+        Only string representations of model parameters and variables will be updated since global expressions automatically show the string representation of their contents.
+        """
+
+    @abstractmethod
+    def to_lp(self, path: Union[str, Path]) -> None:
+        """Write the optimisation problem to file in the linear programming LP format.
+        The LP file can be used for debugging and to submit to solvers directly.
+
+        Args:
+            path (Union[str, Path]): Path to which the LP file will be written.
+        """
+
+    @abstractmethod
+    def _solve(
         self,
         solver: str,
         solver_io: Optional[str] = None,
         solver_options: Optional[dict] = None,
         save_logs: Optional[str] = None,
         warmstart: bool = False,
-        **solve_kwargs,
-    ):
+        **solve_config,
+    ) -> xr.Dataset:
         """
         Optimise built model. If solution is optimal, interface objects
         (decision variables, global expressions, constraints, objective) can be successfully
@@ -742,6 +779,11 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 If True, and the chosen solver is capable of implementing it, an existing
                 optimal solution will be used to warmstart the next solve run.
                 Defaults to False.
+
+        Returns:
+            xr.Dataset:
+                Dataset of decision variable values if the solution was optimal/feasible,
+                otherwise an empty dataset.
         """
 
     def load_results(self) -> xr.Dataset:
@@ -775,27 +817,6 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         results = xr.Dataset({**all_variables, **all_global_expressions}).astype(float)
 
         return results
-
-    @abstractmethod
-    def verbose_strings(self) -> None:
-        """
-        Update optimisation model object string representations to include the index coordinates of the object.
-
-        E.g., `variables(flow_out)[0]` will become `variables(flow_out)[power, region1, ccgt, 2005-01-01 00:00]`
-
-        This takes approximately 10% of the peak memory required to initially build the optimisation problem, so should only be invoked if inspecting the model in detail (e.g., debugging)
-
-        Only string representations of model parameters and variables will be updated since global expressions automatically show the string representation of their contents.
-        """
-
-    @abstractmethod
-    def to_lp(self, path: Union[str, Path]) -> None:
-        """Write the optimisation problem to file in the linear programming LP format.
-        The LP file can be used for debugging and to submit to solvers directly.
-
-        Args:
-            path (Union[str, Path]): Path to which the LP file will be written.
-        """
 
     def _find_all_references(self, initial_references: set) -> set:
         """

@@ -5,8 +5,8 @@ from typing import Literal, Optional
 import jsonschema
 
 from calliope.attrdict import AttrDict
-from calliope.core.io import load_config
 from calliope.exceptions import print_warnings_and_raise_errors
+from calliope.io import load_config
 
 CONFIG_SCHEMA = load_config("config_schema.yaml")
 MODEL_SCHEMA = load_config("model_def_schema.yaml")

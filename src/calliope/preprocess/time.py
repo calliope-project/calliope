@@ -138,9 +138,6 @@ def resample(data: xr.Dataset, resolution: str) -> xr.Dataset:
 
     data_new = xr.merge([data_non_ts, data_ts_resampled])
 
-    # Resampling still permits operational mode
-    data_new.attrs["allow_operate_mode"] = 1
-
     return data_new
 
 

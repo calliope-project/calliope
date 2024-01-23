@@ -134,24 +134,6 @@ class TestModelRun:
             excinfo, "(scenarios, scenario_1) | Unrecognised override name: foo."
         )
 
-    def test_scenario_name_overlaps_overrides(self):
-        """
-        Test that a scenario name which is a list of possibly overrides is not parsed as overrides.
-        """
-        override = AttrDict.from_yaml_string(
-            """
-            scenarios:
-                'simple_supply,one_day': ['simple_supply', 'one_day']
-            """
-        )
-        with pytest.warns(exceptions.ModelWarning) as warn_info:
-            build_model(override_dict=override, scenario="simple_supply,one_day")
-
-        assert check_error_or_warning(
-            warn_info,
-            "Scenario name `simple_supply,one_day` includes commas that won't be parsed as a list of overrides",
-        )
-
     def test_undefined_carriers(self):
         """
         Test that user has input either carrier or carrier_in/_out for each tech

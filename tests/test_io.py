@@ -2,10 +2,10 @@ import os
 import tempfile
 
 import calliope
+import calliope.io
 import pytest  # noqa: F401
 import xarray as xr
 from calliope import exceptions
-from calliope.core import io
 
 from .common.util import check_error_or_warning
 
@@ -106,7 +106,7 @@ class TestIO:
     def test_serialisation_lists(
         self, model_from_file_no_processing, serialisation_list_name, list_elements
     ):
-        serialisation_list = io._pop_serialised_list(
+        serialisation_list = calliope.io._pop_serialised_list(
             model_from_file_no_processing.attrs, serialisation_list_name
         )
         assert not set(serialisation_list).symmetric_difference(list_elements)
@@ -116,7 +116,7 @@ class TestIO:
     )
     def test_non_strings_in_serialised_lists(self, attrs):
         with pytest.raises(TypeError) as excinfo:
-            io._serialise(attrs)
+            calliope.io._serialise(attrs)
         assert check_error_or_warning(
             excinfo,
             f"Cannot serialise a sequence of values stored in a model attribute unless all values are strings, found: {attrs['foo']}",

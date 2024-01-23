@@ -29,7 +29,6 @@ class TestModelPreproccessing:
     def test_preprocess_milp(self):
         calliope.examples.milp()
 
-    @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
     def test_preprocess_operate(self):
         calliope.examples.operate()
 
@@ -139,20 +138,14 @@ class TestNationalScaleExampleModelSenseChecks:
         )
 
 
-@pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
 class TestNationalScaleExampleModelOperate:
     def example_tester(self):
-        with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
-            model = calliope.examples.national_scale(
-                time_subset=["2005-01-01", "2005-01-03"], scenario="operate"
-            )
-            model.build()
-
-        expected_warning = "Source capacity constraint defined and set to infinity for all supply_plus techs"
-
-        assert check_error_or_warning(excinfo, expected_warning)
-
+        model = calliope.examples.national_scale(
+            time_subset=["2005-01-01", "2005-01-03"], scenario="operate"
+        )
+        model.build()
         model.solve()
+
         assert all(
             model.results.timesteps
             == pd.date_range("2005-01", "2005-01-03 23:00:00", freq="H")
@@ -481,19 +474,18 @@ class TestUrbanScaleExampleModelSenseChecks:
 
         assert float(model.results.cost.sum()) == approx(540.780779)
 
-    @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
     def test_operate_example_results(self):
         model = calliope.examples.operate(time_subset=["2005-07-01", "2005-07-04"])
-        with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
-            model.build()
 
-        expected_warnings = [
+        model.build()
+        model.solve()
+
+        # TODO: introduce some of these warnings ?
+        _ = [
             "Flow capacity constraint removed",
             "Source capacity constraint defined and set to infinity for all supply_plus techs",
             "Storage cannot be cyclic in operate run mode, setting `run.cyclic_storage` to False for this run",
         ]
-
-        assert check_error_or_warning(excinfo, expected_warnings)
 
         assert all(
             model.results.timesteps

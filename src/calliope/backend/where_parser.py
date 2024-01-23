@@ -69,10 +69,11 @@ class EvalAndOr(EvalWhere, expression_parser.EvalOperatorOperand):
         val: xr.DataArray, evaluated_operand: xr.DataArray, operator_: str
     ) -> xr.DataArray:
         "Apply bitwise comparison between boolean xarray dataarrays."
-        if operator_ == "and":
-            val = operator.and_(val, evaluated_operand)
-        elif operator_ == "or":
-            val = operator.or_(val, evaluated_operand)
+        match operator_:
+            case "and":
+                val = operator.and_(val, evaluated_operand)
+            case "or":
+                val = operator.or_(val, evaluated_operand)
         return val
 
     def _apply_where_array(self, evaluated: xr.DataArray) -> xr.DataArray:
@@ -247,16 +248,17 @@ class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):
     def as_array(self) -> xr.DataArray:
         self.eval_attrs["apply_where"] = False
         lhs, rhs = self._eval("array")
-        if self.op == "<=":
-            comparison = lhs <= rhs
-        elif self.op == ">=":
-            comparison = lhs >= rhs
-        if self.op == "<":
-            comparison = lhs < rhs
-        elif self.op == ">":
-            comparison = lhs > rhs
-        elif self.op == "=":
-            comparison = lhs == rhs
+        match self.op:
+            case "<=":
+                comparison = lhs <= rhs
+            case ">=":
+                comparison = lhs >= rhs
+            case "<":
+                comparison = lhs < rhs
+            case ">":
+                comparison = lhs > rhs
+            case "=":
+                comparison = lhs == rhs
         return xr.DataArray(comparison)
 
 

@@ -166,10 +166,6 @@ def _load_overrides_from_scenario(
     model_def: AttrDict, scenario: str, overrides: dict, scenarios: dict
 ) -> list[str]:
     if scenario in scenarios.keys():
-        if "," in scenario:
-            exceptions.warn(
-                f"Scenario name `{scenario}` includes commas that won't be parsed as a list of overrides."
-            )
         LOGGER.info("Loading overrides from scenario: {} ".format(scenario))
         scenario_list = listify(scenarios[scenario])
     else:

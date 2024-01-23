@@ -1764,7 +1764,8 @@ class TestNewBackend:
             {"config.init.custom_math": ["operate", str(file_path)]},
             "simple_supply,two_hours,investment_costs",
         )
-        m.build(mode="operate")
+        backend = PyomoBackendModel(m.inputs, mode="operate")
+        backend._add_run_mode_custom_math()
 
         # We set operate mode explicitly in our custom math so it won't be added again
         assert (

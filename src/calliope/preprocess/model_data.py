@@ -160,7 +160,7 @@ class ModelDataFactory:
             node_ref_vars = self._get_relevant_node_refs(techs_this_node, node_name)
 
             techs_this_node_incl_inheritance = self._inherit_defs(
-                "techs", techs_this_node, err_message_prefix=f"(nodes, {node_name}), "
+                "techs", techs_this_node, nodes=node_name
             )
             validate_dict(
                 {"techs": techs_this_node_incl_inheritance},
@@ -200,7 +200,6 @@ class ModelDataFactory:
         validate_dict(
             {"nodes": active_node_dict}, MODEL_SCHEMA, "node (non-tech) definition"
         )
-
         node_ds = self._definition_dict_to_ds(active_node_dict, "nodes")
         ds = xr.merge([node_tech_ds, node_ds])
         self._add_to_dataset(ds, "YAML definition")
@@ -245,6 +244,9 @@ class ModelDataFactory:
         if time_subset is not None:
             self.dataset = time.subset_timeseries(self.dataset, time_subset)
         self.dataset = time.add_inferred_time_params(self.dataset)
+
+        # By default, the model allows operate mode
+        self.dataset.attrs["allow_operate_mode"] = 1
 
         if self.config["time_resample"] is not None:
             self.dataset = time.resample(self.dataset, self.config["time_resample"])
@@ -497,7 +499,7 @@ class ModelDataFactory:
         self,
         dim_name: Literal["nodes", "techs"],
         dim_dict: Optional[AttrDict] = None,
-        err_message_prefix: str = "",
+        **connected_dims: str,
     ) -> AttrDict:
         """For a set of node/tech definitions, climb the inheritance tree to build a final definition dictionary.
 
@@ -513,15 +515,23 @@ class ModelDataFactory:
                 Base dictionary to work from.
                 If not defined, `dim_name` will be used to access the dictionary from the base model definition.
                 Defaults to None.
-            err_message_prefix (str, optional):
-                If working with techs at nodes, it is prudent to provide the node name to prefix error messages. Defaults to "".
-
+        Keyword Args:
+            connected_dims (str):
+                Any dimension index items connected to the one for which we're tracing inheritance.
+                E.g., if looking at technologies at a node `A`, we would be using `dim_name=techs` and `connected_dims={nodes=A}`
         Raises:
             KeyError: Cannot define a `tech` at a `node` if it isn't already defined under the `techs` top-level key.
 
         Returns:
             AttrDict: Dictionary containing all active tech/node definitions with inherited parameters.
         """
+        if connected_dims:
+            err_message_prefix = (
+                ", ".join([f"({k}, {v})" for k, v in connected_dims.items()]) + ", "
+            )
+        else:
+            err_message_prefix = ""
+
         updated_defs = AttrDict()
         if dim_dict is None:
             dim_dict = self.model_definition[dim_name]
@@ -548,7 +558,7 @@ class ModelDataFactory:
                 LOGGER.debug(
                     f"{err_message_prefix}({dim_name}, {item_name}) | Deactivated."
                 )
-                self._deactivate_item(**{dim_name: item_name})
+                self._deactivate_item(**{dim_name: item_name, **connected_dims})
                 continue
 
             if inheritance is not None:

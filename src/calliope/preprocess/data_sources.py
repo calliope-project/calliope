@@ -12,7 +12,7 @@ from typing_extensions import NotRequired, TypedDict
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.core.io import load_config
+from calliope.io import load_config
 from calliope.util.schema import (
     DATA_SOURCE_SCHEMA,
     MODEL_SCHEMA,
