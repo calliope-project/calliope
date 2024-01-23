@@ -5,6 +5,7 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 title: Model configuration schema
 description: All configuration options when calling Calliope models.
 type: object
+additionalProperties: false
 properties:
   config:
     type: object

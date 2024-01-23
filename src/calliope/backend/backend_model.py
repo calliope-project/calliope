@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+import time
 import typing
 from abc import ABC, abstractmethod
 from copy import deepcopy
@@ -215,10 +216,13 @@ class BackendModelGenerator(ABC):
         ]:
             component = components.removesuffix("s")
             for name in self.inputs.math[components]:
+                start = time.time()
                 getattr(self, f"add_{component}")(name)
-            LOGGER.info(
-                f"Optimisation Model | Generated optimisation problem {components}"
-            )
+                end = time.time() - start
+                LOGGER.debug(
+                    f"Optimisation Model | {components}:{name} | Built in {end:.4f}s"
+                )
+            LOGGER.info(f"Optimisation Model | {components} | Generated.")
 
     def _add_run_mode_custom_math(self) -> None:
         """If not given in the custom_math list, override model math with run mode math"""
@@ -390,7 +394,7 @@ class BackendModelGenerator(ABC):
                 param_name, xr.DataArray(default_val), use_inf_as_na=False
             )
             self.parameters[param_name].attrs["is_result"] = 0
-        LOGGER.info("Optimisation Model | Generated optimisation problem parameters")
+        LOGGER.info("Optimisation Model | parameters | Generated.")
 
     @staticmethod
     def _clean_arrays(*args) -> None:
