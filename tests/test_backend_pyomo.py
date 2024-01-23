@@ -2470,3 +2470,58 @@ class TestNewBackend:
         simple_supply.backend.unfix_variable("flow_cap")  # reset
         assert fixed.sel(techs="test_demand_elec").all()
         assert not fixed.where(where).all()
+
+
+class TestShadowPrices:
+    @pytest.fixture(scope="function")
+    def simple_supply(self):
+        m = build_model({}, "simple_supply,two_hours,investment_costs")
+        m.build()
+        return m
+
+    @pytest.fixture(scope="function")
+    def supply_milp(self):
+        m = build_model({}, "supply_milp,two_hours,investment_costs")
+        m.build()
+        return m
+
+    def test_default_to_deactivated(self, simple_supply):
+        assert not simple_supply.backend.shadow_prices.is_active
+
+    def test_activate(self, simple_supply):
+        simple_supply.backend.shadow_prices.activate()
+        assert simple_supply.backend.shadow_prices.is_active
+
+    def test_deactivate(self, simple_supply):
+        simple_supply.backend.shadow_prices.activate()
+        simple_supply.backend.shadow_prices.deactivate()
+        assert not simple_supply.backend.shadow_prices.is_active
+
+    def test_get_shadow_price(self, simple_supply):
+        simple_supply.backend.shadow_prices.activate()
+        simple_supply.solve(solver="glpk")
+        shadow_prices = simple_supply.backend.shadow_prices.get("system_balance")
+        assert shadow_prices.notnull().all()
+
+    def test_get_shadow_price_some_nan(self, simple_supply):
+        simple_supply.backend.shadow_prices.activate()
+        simple_supply.solve(solver="glpk")
+        shadow_prices = simple_supply.backend.shadow_prices.get("balance_demand")
+        assert shadow_prices.notnull().any()
+        assert shadow_prices.isnull().any()
+
+    def test_get_shadow_price_empty_milp(self, supply_milp):
+        supply_milp.backend.shadow_prices.activate()
+        supply_milp.solve(solver="glpk")
+        shadow_prices = supply_milp.backend.shadow_prices.get("system_balance")
+        assert shadow_prices.isnull().all()
+
+    def test_shadow_prices_deactivated_with_cbc(self, simple_supply):
+        simple_supply.backend.shadow_prices.activate()
+        with pytest.warns(exceptions.ModelWarning) as warning:
+            simple_supply.solve(solver="cbc")
+
+        assert check_error_or_warning(warning, "Switching off shadow price tracker")
+        assert not simple_supply.backend.shadow_prices.is_active
+        shadow_prices = simple_supply.backend.shadow_prices.get("system_balance")
+        assert shadow_prices.isnull().all()

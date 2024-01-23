@@ -564,6 +564,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
         super().__init__(inputs, **kwargs)
         self._instance = instance
+        self.shadow_prices: ShadowPrices
 
     @abstractmethod
     def get_parameter(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
@@ -843,3 +844,34 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         obj_type = self._dataset[reference].attrs["obj_type"]
         self.delete_component(reference, obj_type)
         getattr(self, "add_" + obj_type.removesuffix("s"))(name=reference)
+
+
+class ShadowPrices:
+    """Object containing methods to interact with the backend object "shadow prices" tracker, which can be used to access duals for constraints.
+
+    To keep memory overhead low. Shadow price tracking is deactivated by default.
+    """
+
+    @abstractmethod
+    def get(self, name) -> xr.DataArray:
+        """Extract shadow prices (a.k.a. duals) from a constraint.
+
+        Args:
+            name (str): Name of constraint for which you're seeking duals.
+
+        Returns:
+            xr.DataArray: duals array.
+        """
+
+    @abstractmethod
+    def activate(self):
+        "Activate shadow price tracking."
+
+    @abstractmethod
+    def deactivate(self):
+        "Deactivate shadow price tracking."
+
+    @property
+    @abstractmethod
+    def is_active(self) -> bool:
+        "Check whether shadow price tracking is active or not"
