@@ -2500,7 +2500,14 @@ class TestShadowPrices:
         simple_supply.backend.shadow_prices.activate()
         simple_supply.solve(solver="glpk")
         shadow_prices = simple_supply.backend.shadow_prices.get("system_balance")
+        assert shadow_prices.notnull().all()
+
+    def test_get_shadow_price_some_nan(self, simple_supply):
+        simple_supply.backend.shadow_prices.activate()
+        simple_supply.solve(solver="glpk")
+        shadow_prices = simple_supply.backend.shadow_prices.get("balance_demand")
         assert shadow_prices.notnull().any()
+        assert shadow_prices.isnull().any()
 
     def test_get_shadow_price_empty_milp(self, supply_milp):
         supply_milp.backend.shadow_prices.activate()
