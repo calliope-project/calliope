@@ -9,6 +9,7 @@ Functions to read and save model results.
 
 """
 
+import importlib.resources
 from pathlib import Path
 from typing import Union
 
@@ -21,6 +22,8 @@ import xarray as xr
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
+
+CONFIG_DIR = importlib.resources.files("calliope") / "config"
 
 
 def read_netcdf(path):
@@ -38,10 +41,6 @@ def read_netcdf(path):
     for var_name, var_array in model_data.data_vars.items():
         if var_array.dtype.kind in ["U", "O"]:
             model_data[var_name] = var_array.where(lambda x: x != "")
-
-    # FIXME some checks for consistency
-    # use check_dataset from the checks module
-    # also check the old checking from 0.5.x
 
     return model_data
 
@@ -201,3 +200,9 @@ def save_csv(
         if dropna:
             series = series.dropna()
         series.to_csv(out_path, header=True, index=keep_index)
+
+
+def load_config(filename: str):
+    with importlib.resources.as_file(CONFIG_DIR / filename) as f:
+        loaded = AttrDict.from_yaml(f)
+    return loaded

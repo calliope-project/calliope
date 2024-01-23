@@ -6,10 +6,11 @@ Example models that can be loaded directly into a session.
 """
 
 import importlib
+from pathlib import Path
 
-from calliope.core.model import Model
+from calliope.model import Model
 
-_EXAMPLE_MODEL_DIR = importlib.resources.files("calliope") / "example_models"
+_EXAMPLE_MODEL_DIR = Path(importlib.resources.files("calliope") / "example_models")
 
 
 def national_scale(*args, **kwargs):

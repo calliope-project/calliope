@@ -21,48 +21,54 @@ overrides:
   simple_supply_locations:
     locations:
       a:
-        inherit: init_nodes
         techs:
           test_supply_elec:
 
       b:
-        inherit: init_nodes
         techs:
           test_supply_elec:
 
   simple_supply_plus: # does not have a solution
-    nodes:
-      a:
-        techs:
-          test_supply_plus:
-            source_use_max: file=supply_plus_resource.csv
-
-      b:
-        techs:
-          test_supply_plus:
-            source_use_max: file=supply_plus_resource.csv
+    data_sources:
+      supply_plus_resource:
+        source: data_sources/supply_plus_resource.csv
+        rows: timesteps
+        columns: nodes
+        add_dimensions:
+          parameters: source_use_max
+          techs: test_supply_plus
 
   simple_supply_and_supply_plus:
-    nodes:
-      a:
-        techs:
-          test_supply_elec:
-          test_supply_plus:
-            source_use_max: file=supply_plus_resource.csv
+    data_sources:
+      supply_plus_resource:
+        source: data_sources/supply_plus_resource.csv
+        rows: timesteps
+        columns: nodes
+        add_dimensions:
+          parameters: source_use_max
+          techs: test_supply_plus
 
-      b:
-        techs:
-          test_supply_elec:
-          test_supply_plus:
-            source_use_max: file=supply_plus_resource.csv
+    nodes:
+      a.techs.test_supply_elec:
+      b.techs.test_supply_elec:
 
   supply_and_supply_plus_milp:
+    data_sources:
+      supply_plus_resource:
+        source: data_sources/supply_plus_resource.csv
+        rows: timesteps
+        columns: nodes
+        select:
+          nodes: a
+        add_dimensions:
+          parameters: source_use_max
+          techs: test_supply_plus
+
     nodes:
       a:
         techs:
           test_supply_elec:
           test_supply_plus:
-            source_use_max: file=supply_plus_resource.csv
             cap_method: integer
             integer_dispatch: true
             purchased_units_max: 1
@@ -128,24 +134,40 @@ overrides:
           test_supply_elec:
 
   simple_conversion:
+    data_sources:
+      demand_heat:
+        source: data_sources/demand_heat.csv
+        rows: timesteps
+        columns: nodes
+        add_dimensions:
+          parameters: sink_use_equals
+          techs: test_demand_heat
+
     nodes:
       a:
         techs:
           test_supply_elec:
           test_supply_gas:
           test_conversion:
-          test_demand_heat:
-            sink_use_equals: file=demand_heat.csv
 
       b:
         techs:
           test_supply_elec:
           test_supply_gas:
           test_conversion:
-          test_demand_heat:
-            sink_use_equals: file=demand_heat.csv
 
   conversion_and_conversion_plus:
+    data_sources:
+      demand_heat:
+        source: data_sources/demand_heat.csv
+        rows: timesteps
+        columns: nodes
+        select:
+          nodes: a
+        add_dimensions:
+          parameters: sink_use_equals
+          techs: test_demand_heat
+
     nodes:
       a:
         techs:
@@ -154,12 +176,21 @@ overrides:
           test_supply_coal:
           test_conversion:
           test_conversion_plus:
-          test_demand_heat:
-            sink_use_equals: file=demand_heat.csv
 
     tech_groups.test_transmission.active: false
 
   conversion_plus_milp:
+    data_sources:
+      demand_heat:
+        source: data_sources/demand_heat.csv
+        rows: timesteps
+        columns: nodes
+        select:
+          nodes: a
+        add_dimensions:
+          parameters: sink_use_equals
+          techs: test_demand_heat
+
     techs:
       test_conversion_plus:
         cap_method: integer
@@ -174,12 +205,20 @@ overrides:
           test_supply_elec:
           test_supply_gas:
           test_conversion_plus:
-          test_demand_heat:
-            sink_use_equals: file=demand_heat.csv
 
     tech_groups.test_transmission.active: false
 
   conversion_milp:
+    data_sources:
+      demand_heat:
+        source: data_sources/demand_heat.csv
+        rows: timesteps
+        columns: nodes
+        select:
+          nodes: a
+        add_dimensions:
+          parameters: sink_use_equals
+          techs: test_demand_heat
     techs:
       test_conversion:
         cap_method: integer
@@ -191,12 +230,20 @@ overrides:
           test_supply_elec:
           test_supply_gas:
           test_conversion:
-          test_demand_heat:
-            sink_use_equals: file=demand_heat.csv
 
     tech_groups.test_transmission.active: false
 
   conversion_plus_purchase:
+    data_sources:
+      demand_heat:
+        source: data_sources/demand_heat.csv
+        rows: timesteps
+        columns: nodes
+        select:
+          nodes: a
+        add_dimensions:
+          parameters: sink_use_equals
+          techs: test_demand_heat
     nodes:
       a:
         techs:
@@ -209,12 +256,20 @@ overrides:
               data: 1
               index: monetary
               dims: costs
-          test_demand_heat:
-            sink_use_equals: file=demand_heat.csv
 
     tech_groups.test_transmission.active: false
 
   simple_conversion_plus:
+    data_sources:
+      demand_heat:
+        source: data_sources/demand_heat.csv
+        rows: timesteps
+        columns: nodes
+        select:
+          nodes: a
+        add_dimensions:
+          parameters: sink_use_equals
+          techs: test_demand_heat
     nodes:
       a:
         techs:
@@ -222,20 +277,26 @@ overrides:
           test_supply_gas:
           test_supply_coal:
           test_conversion_plus:
-          test_demand_heat:
-            sink_use_equals: file=demand_heat.csv
 
     tech_groups.test_transmission.active: false
 
   simple_chp:
+    data_sources:
+      demand_heat:
+        source: data_sources/demand_heat.csv
+        rows: timesteps
+        columns: nodes
+        select:
+          nodes: a
+        add_dimensions:
+          parameters: sink_use_equals
+          techs: test_demand_heat
     nodes:
       a:
         techs:
           test_supply_elec:
           test_supply_gas:
           test_chp:
-          test_demand_heat:
-            sink_use_equals: file=demand_heat.csv
 
     tech_groups.test_transmission.active: false
 
@@ -246,24 +307,25 @@ overrides:
         carrier_out: electricity
     nodes:
       a:
+        inherit: init_nodes
         techs:
           test_conversion:
             cost_flow_in:
               data: [1, 2]
               index: [[monetary, coal], [monetary, gas]]
               dims: [costs, carriers]
+      b:
+        inherit: init_nodes
 
+    tech_groups.test_transmission.active: false
     node_groups:
       init_nodes:
         techs:
           test_demand_elec:
-            sink_use_equals: file=demand_elec.csv
           test_supply_gas:
           test_supply_coal:
           test_conversion:
           test_demand_coal:
-
-    tech_groups.test_transmission.active: false
 
   simple_storage:
     nodes:
@@ -351,9 +413,10 @@ overrides:
 
   operate:
     config.build.mode: operate
-    config.init.time_subset: ["2005-01-01", "2005-01-04"]
-    config.solve.operate_window: 12
-    config.solve.operate_horizon: 24
+    config.init.time_subset: ["2005-01-01", "2005-01-02"]
+    config.build.ensure_feasibility: true
+    config.build.operate_window: 6h
+    config.build.operate_horizon: 12h
 
   investment_costs:
     tech_groups:
@@ -368,8 +431,16 @@ overrides:
           index: monetary
           dims: costs
 
+  var_costs:
+    tech_groups:
+      test_controller:
+        cost_flow_out:
+          data: 0.1
+          index: monetary
+          dims: costs
+
   demand_elec_max:
-    node_groups.init_nodes.techs:
-      test_demand_elec:
-        sink_use_equals: null
-        sink_use_max: file=demand_elec.csv
+    data_sources:
+      demand_elec:
+        add_dimensions:
+          parameters: sink_use_max

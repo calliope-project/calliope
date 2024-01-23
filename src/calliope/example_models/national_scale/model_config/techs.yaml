@@ -43,7 +43,7 @@ tech_groups:
     color: "#6783E3"
     carrier_in: power
     carrier_out: power
-    parent: transmission
+    base_tech: transmission
 # --8<-- [end:free-transmission]
 
 techs:
@@ -55,10 +55,9 @@ techs:
   ccgt:
     name: "Combined cycle gas turbine"
     color: "#E37A72"
-    parent: supply
+    base_tech: supply
     inherit: cost_dim_setter
     carrier_out: power
-    source_use_max: .inf
     flow_out_eff: 0.5
     flow_cap_max: 40000 # kW
     flow_cap_max_systemwide: 100000 # kW
@@ -73,7 +72,7 @@ techs:
   csp:
     name: "Concentrating solar power"
     color: "#F9CF22"
-    parent: supply
+    base_tech: supply
     inherit: cost_dim_setter
     carrier_out: power
     source_unit: per_area
@@ -101,7 +100,7 @@ techs:
   battery:
     name: "Battery storage"
     color: "#3B61E3"
-    parent: storage
+    base_tech: storage
     inherit: cost_dim_setter
     carrier_in: power
     carrier_out: power
@@ -124,7 +123,7 @@ techs:
   demand_power:
     name: "Power demand"
     color: "#072486"
-    parent: demand
+    base_tech: demand
     carrier_in: power
   # --8<-- [end:demand]
 
@@ -139,7 +138,7 @@ techs:
     to: region2
     name: "AC power transmission"
     color: "#8465A9"
-    parent: transmission
+    base_tech: transmission
     inherit: cost_dim_setter
     carrier_in: power
     carrier_out: power

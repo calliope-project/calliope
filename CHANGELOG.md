@@ -4,6 +4,8 @@ v0.7 includes a major change to how Calliope internally operates. Most of this a
 
 ### User-facing changes
 
+|new| Any tabular data, not only timeseries data, can be loaded from file / an in-memory pandas DataFrame under the `data_sources` key.
+
 |new| Files containing user-defined mathematical formulations can be referenced in the model configuration. User-defined mathematical formulations must follow the new Calliope YAML math syntax (see "Internal changes" below).
 
 |new| Nodes can inherit from a newly added `node_groups` top-level key by referencing a node group with `inherit: ...` in the node configuration.
@@ -14,6 +16,8 @@ This enables un-indexed parameters to be defined, as well as those indexed over 
 |new| parameter dimensions at the `tech` or `node` level can be enhanced using the new `parameter` definition syntax.
 For instance, `flow_cap` can be defined per `carrier`.
 
+|changed| |backwards-incompatible| `file=/df=` parameter values as references to timeseries data is replaced with loading tabular data at the top-level using the `data_sources` key.
+
 |changed| Automatically derived transmission link distances default to kilometres, with the configuration option (`config.init.distance_unit`) to switch to the old default of distances in metres.
 
 |changed| |backwards-incompatible| Costs must be defined using the new `parameter` definition syntax.
@@ -21,15 +25,15 @@ For instance, `flow_cap` can be defined per `carrier`.
 |changed| `flow_cap` (formerly `energy_cap`) is indexed over `carriers` as well as `nodes` and `techs`.
 This allows capacities to be defined separately for input and output flows for `conversion` technologies.
 
-|changed| |backwards-incompatible| `_plus` technology groups have been removed.
-Now, `supply_plus` can be effectively represented by using `supply` as the technology parent and setting `include_storage: true` in the model definition.
-`conversion_plus` can be represented by using `conversion` as the technology parent and using lists of carriers in `carrier_in` and/or `carrier_out`.
+|changed| |backwards-incompatible| `_plus` base technologies have been removed.
+Now, `supply_plus` can be effectively represented by using `supply` as the technology base tech and setting `include_storage: true` in the model definition.
+`conversion_plus` can be represented by using `conversion` as the technology base tech and using lists of carriers in `carrier_in` and/or `carrier_out`.
 To represent `in_2`, `out_2` etc. carrier "tiers", you will need to define your own custom math.
 
-|changed| |backwards-incompatible| Technology inheritance has moved to the `inherit` key, leaving `parent` as a protected parameters that can only accept one of the abstract base technologies.
+|changed| |backwards-incompatible| Technology inheritance has moved to the `inherit` key, leaving `base_tech` to replace `parent` as a protected parameter that can only accept one of the abstract base technologies.
 
 |changed| |backwards-incompatible| Links are defined within `techs` and not in their own `links` section.
-Any technology with a `transmission` parent will require `to` and `from` nodes to be defined.
+Any technology with a `transmission` base technology will require `to` and `from` nodes to be defined.
 Then, all transmission links will be given their name as defined in `techs` rather than having the name be automatically derived by Calliope.
 
 |changed| |backwards-incompatible| Flow efficiencies are now split into inflow (`flow_in_eff`) and outflow (`flow_out_eff`) efficiencies. This enables different storage charge/discharge efficiencies to be applied.
@@ -51,7 +55,7 @@ Then, all transmission links will be given their name as defined in `techs` rath
 
 |changed| |backwards-incompatible| `get_formatted_array` has been removed in favour of directly accessing the data, since we no longer concatenate sets. E.g., `model.get_formatted_array("storage")` -> `model.results.storage`.
 
-|changed| |backwards-incompatible| The dimensions of the model data no longer include all possible subsets. E.g. a user can no longer access `loc_techs_supply` to view the location/technology pairs which have defined `supply` as their top-level parent. Instead, the same subset can be supplied by calling `model.inputs.inheritance.str.endswith('supply')` to create a boolean array of technologies with `supply` as their top-level parent.
+|changed| |backwards-incompatible| The dimensions of the model data no longer include all possible subsets. E.g. a user can no longer access `loc_techs_supply` to view the location/technology pairs which have defined `supply` as their top-level base tech. Instead, the same subset can be supplied by calling `model.inputs.base_tech == "supply"` to create a boolean array of technologies with `supply` as their top-level base tech.
 
 |changed| |backwards-incompatible| Group constraints have been removed. They will be replaced by `custom constraint` functionality.
 

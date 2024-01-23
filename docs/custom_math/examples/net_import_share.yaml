@@ -54,6 +54,6 @@ constraints:
 global_expressions:
   flow_out_transmission_techs:
     foreach: [nodes, techs, carriers, timesteps]
-    where: parent=transmission
+    where: base_tech=transmission
     equations:
       - expression: flow_out

@@ -50,7 +50,12 @@ COMPONENT_TRANSLATOR = {
 
 
 class PyomoBackendModel(backend_model.BackendModel):
-    def __init__(self, inputs: xr.Dataset, **kwargs):
+    def __init__(self, inputs: xr.Dataset, **kwargs) -> None:
+        """Pyomo solver interface class.
+
+        Args:
+            inputs (xr.Dataset): Calliope model data.
+        """
         super().__init__(inputs, pmo.block(), **kwargs)
 
         self._instance.parameters = pmo.parameter_dict()
@@ -58,6 +63,9 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._instance.global_expressions = pmo.expression_dict()
         self._instance.constraints = pmo.constraint_dict()
         self._instance.objectives = pmo.objective_dict()
+
+        self._instance.dual = pmo.suffix(direction=pmo.suffix.IMPORT)
+        self.shadow_prices = PyomoShadowPrices(self._instance.dual, self)
 
         self._add_all_inputs_as_parameters()
 
@@ -247,25 +255,32 @@ class PyomoBackendModel(backend_model.BackendModel):
         else:
             return global_expression
 
-    def solve(
+    def _solve(
         self,
         solver: str,
         solver_io: Optional[str] = None,
         solver_options: Optional[dict] = None,
         save_logs: Optional[str] = None,
         warmstart: bool = False,
-        **solve_kwargs,
-    ):
+        **solve_config,
+    ) -> xr.Dataset:
+        if solver == "cbc" and self.shadow_prices.is_active:
+            model_warn(
+                "Switching off shadow price tracker as constraint duals cannot be accessed from the CBC solver"
+            )
+            self.shadow_prices.deactivate()
         opt = SolverFactory(solver, solver_io=solver_io)
 
         if solver_options:
             for k, v in solver_options.items():
                 opt.options[k] = v
 
+        solve_kwargs = {}
         if save_logs is not None:
             solve_kwargs.update({"symbolic_solver_labels": True, "keepfiles": True})
             os.makedirs(save_logs, exist_ok=True)
             TempfileManager.tempdir = save_logs  # Sets log output dir
+
         if warmstart and solver in ["glpk", "cbc"]:
             model_warn(
                 "The chosen solver, {}, does not support warmstart, which may "
@@ -282,9 +297,9 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         termination = results.solver[0].termination_condition
 
-        if termination == pe.TerminationCondition.optimal:
+        if pe.TerminationCondition.to_solver_status(termination) == pe.SolverStatus.ok:
             self._instance.load_solution(results.solution[0])
-
+            results = self.load_results()
         else:
             self._solve_logger.critical("Problem status:")
             for line in str(results.problem[0]).split("\n"):
@@ -294,8 +309,10 @@ class PyomoBackendModel(backend_model.BackendModel):
                 self._solve_logger.critical(line)
 
             model_warn("Model solution was non-optimal.", _class=BackendWarning)
+            results = xr.Dataset()
+        results.attrs["termination_condition"] = str(termination)
 
-        return str(termination)
+        return results
 
     def verbose_strings(self) -> None:
         def __renamer(val, *idx):
@@ -854,3 +871,35 @@ class ObjConstraint(pmo.constraint, CoordObj):
 
     def getname(self, *args, **kwargs):
         return self._update_name(pmo.constraint.getname(self, *args, **kwargs))
+
+
+class PyomoShadowPrices(backend_model.ShadowPrices):
+    def __init__(self, dual_obj: pmo.suffix, backend_obj: PyomoBackendModel):
+        self._dual_obj = dual_obj
+        self._backend_obj = backend_obj
+        self.deactivate()
+
+    def get(self, name: str) -> xr.DataArray:
+        constraint = self._backend_obj.get_constraint(name, as_backend_objs=True)
+        return self._backend_obj._apply_func(
+            self._duals_from_pyomo_constraint, constraint, dual_getter=self._dual_obj
+        )
+
+    def activate(self):
+        self._dual_obj.activate()
+
+    def deactivate(self):
+        self._dual_obj.deactivate()
+
+    @property
+    def is_active(self) -> bool:
+        return self._dual_obj.active
+
+    @staticmethod
+    def _duals_from_pyomo_constraint(
+        val: pmo.constraint, *, dual_getter: pmo.suffix
+    ) -> float:
+        if pd.isnull(val):
+            return np.nan
+        else:
+            return dual_getter.get(val)

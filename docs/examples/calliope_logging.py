@@ -6,11 +6,11 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.2
+#       jupytext_version: 1.16.0
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: calliope_docs_build
 #     language: python
-#     name: python3
+#     name: calliope_docs_build
 # ---
 
 # %% [markdown]
@@ -35,7 +35,7 @@ import calliope
 
 # %%
 calliope.set_log_verbosity("info")
-m = calliope.examples.national_scale()
+m = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-01"])
 m.build()
 m.solve()
 
@@ -44,7 +44,7 @@ m.solve()
 
 # %%
 calliope.set_log_verbosity("info", include_solver_output=False)
-m = calliope.examples.national_scale()
+m = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-01"])
 m.build()
 m.solve()
 
@@ -53,7 +53,7 @@ m.solve()
 
 # %%
 calliope.set_log_verbosity("debug")
-m = calliope.examples.national_scale()
+m = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-01"])
 m.build()
 m.solve()
 
@@ -62,7 +62,7 @@ m.solve()
 # If the `calliope.set_log_verbosity` method isn't providing you with enough flexibility then you can add your own logging `handlers`
 
 # %%
-# Grab the calliope logger, which will also automatically all the child loggers (e.g., `calliope.core.model`).
+# Grab the calliope logger, which will also automatically get the child loggers (e.g., `calliope.model`).
 logger = logging.getLogger("calliope")
 
 # Remove existing handlers (i.e., those introduced by `calliope.set_log_verbosity` above)
@@ -82,7 +82,7 @@ logger.addHandler(console_handler)
 
 # You can also use logging in your scripts to add more information
 logger.info("Loading the national-scale example model")
-m = calliope.examples.national_scale()
+m = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-01"])
 
 logger.info("Building the national-scale example model optimisation problem")
 m.build()
@@ -101,7 +101,7 @@ log_filepath = Path(".") / "outputs" / "5_logging"
 log_filepath.mkdir(parents=True, exist_ok=True)
 
 # %%
-# Grab the calliope logger, which will also automatically all the child loggers (e.g., `calliope.core.model`).
+# Grab the calliope logger, which will also automatically get the child loggers (e.g., `calliope.model`).
 logger = logging.getLogger("calliope")
 
 # Remove existing handlers (i.e., those introduced earlier in this notebook)
@@ -119,7 +119,7 @@ logger.addHandler(file_handler)
 
 # You can also use logging in your scripts to add more information
 logger.info("Loading the national-scale example model")
-m = calliope.examples.national_scale()
+m = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-01"])
 
 logger.info("Building the national-scale example model optimisation problem")
 m.build()
@@ -133,7 +133,7 @@ m.solve()
 # We can also log both to the console at one level and to file at another:
 
 # %%
-# Grab the calliope logger, which will also automatically all the child loggers (e.g., `calliope.core.model`).
+# Grab the calliope logger, which will also automatically get the child loggers (e.g., `calliope.model`).
 logger = logging.getLogger("calliope")
 
 # Remove existing handlers (i.e., those introduced earlier in this notebook)
@@ -159,7 +159,7 @@ logger.addHandler(file_handler)
 
 # You can also use logging in your scripts to add more information
 logger.info("Loading the national-scale example model")
-m = calliope.examples.national_scale()
+m = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-01"])
 
 logger.info("Building the national-scale example model optimisation problem")
 m.build()
@@ -174,7 +174,7 @@ m.solve()
 # We can store each of these child loggers to a different file if we like:
 
 # %%
-# Grab the calliope logger, which will also automatically all the child loggers (e.g., `calliope.core.model`).
+# Grab the calliope logger, which will also automatically get the child loggers (e.g., `calliope.model`).
 logger = logging.getLogger("calliope")
 
 # Remove existing handlers (i.e., those introduced earlier in this notebook)
@@ -197,6 +197,6 @@ for logger_name in logging.root.manager.loggerDict.keys():
     file_handler.setFormatter(formatter)
     logging.getLogger(logger_name).addHandler(file_handler)
 
-m = calliope.examples.national_scale()
+m = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-01"])
 m.build()
 m.solve()

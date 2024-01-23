@@ -7,9 +7,6 @@ description: All options available to configure a Calliope model.
 type: object
 additionalProperties: false
 $defs:
-  StringFilePattern:
-    type: string
-    pattern: "^(file|df)=.+[:]*[\\w]*$"
   unIndexedParamVal:
     type: [string, boolean, number, "null"]
     description: zero-dimensional (i.e., un-indexed) parameter.
@@ -99,43 +96,11 @@ $defs:
         contains:
           const: costs
 
-  TechParamNullNumberVariable:
-    oneOf:
-      - type: ["null", number]
-      - $ref: "#/$defs/StringFilePattern"
-      - type: object
-        description: Indexed tech-level parameter with null/numeric dtype that allows loading a timeseries from file.
-        additionalProperties: false
-        required: ["data", "index", "dims"]
-        properties:
-          data:
-            description: >-
-              parameter value(s).
-              If data is one value, will be applied to all dimension members.
-              If a list, must be same length as the index array.
-            oneOf:
-              - type: "null"
-              - type: number
-                minimum: 0
-              - $ref: "#/$defs/StringFilePattern"
-              - type: array
-                minItems: 1
-                items:
-                  oneOf:
-                    - type: "null"
-                    - type: number
-                      minimum: 0
-                    - $ref: "#/$defs/StringFilePattern"
-          index:
-            $ref: "#/$defs/IndexedParamIndex"
-          dims:
-            $ref: "#/$defs/TechDims"
-
-  TechParamNullNumberFixed:
+  TechParamNullNumber:
     oneOf:
       - type: ["null", number]
       - type: object
-        description: Indexed tech-level parameter with null/numeric dtype that does not allow loading a timeseries from file.
+        description: Indexed tech-level parameter with null/numeric dtype.
         additionalProperties: false
         required: ["data", "index", "dims"]
         properties:
@@ -160,38 +125,12 @@ $defs:
           dims:
             $ref: "#/$defs/TechDims"
 
-  TechCostNullNumberFixed:
+  TechCostNullNumber:
     oneOf:
       - type: ["null", number]
+        x-type: float
       - type: object
-        description: Indexed tech-level cost that does not allow loading a timeseries from file.
-        additionalProperties: false
-        properties:
-          data:
-            description: >-
-              parameter value(s).
-              If data is one value, will be applied to all dimension members.
-              If a list, must be same length as the index array.
-            oneOf:
-              - type: "null"
-              - type: number
-              - type: array
-                minItems: 1
-                items:
-                  oneOf:
-                    - type: "null"
-                    - type: number
-          index:
-            $ref: "#/$defs/IndexedParamIndex"
-          dims:
-            $ref: "#/$defs/TechCostDims"
-
-  TechCostNullNumberVariable:
-    oneOf:
-      - type: ["null", number]
-      - $ref: "#/$defs/StringFilePattern"
-      - type: object
-        description: Indexed tech-level cost that allows loading a timeseries from file.
+        description: Indexed tech-level cost.
         additionalProperties: false
         required: ["data", "index", "dims"]
         properties:
@@ -203,14 +142,12 @@ $defs:
             oneOf:
               - type: "null"
               - type: number
-              - $ref: "#/$defs/StringFilePattern"
               - type: array
                 minItems: 1
                 items:
                   oneOf:
                     - type: "null"
                     - type: number
-                    - $ref: "#/$defs/StringFilePattern"
           index:
             $ref: "#/$defs/IndexedParamIndex"
           dims:
@@ -238,6 +175,7 @@ properties:
           (i.e., do not set it greater than 3 orders of magnitude above the numeric range of the model).
           If too large, numerical problems may arise in the optimisation.
         default: 1e9
+        x-type: float
         oneOf:
           - type: number
           - type: object
@@ -246,8 +184,9 @@ properties:
               data:
                 type: number
       objective_cost_weights:
-        $ref: "#/$defs/TechCostNullNumberFixed"
+        $ref: "#/$defs/TechCostNullNumber"
         default: 1
+        x-type: float
         description: Weightings for cost classes to apply in the objective function.
     patternProperties:
       '^[^_^\d][\w]*$':
@@ -264,35 +203,38 @@ properties:
         type: object
         description: A named technology.
         allOf:
-          - required: ["parent"]
+          - required: ["base_tech"]
           - oneOf:
-            - required: ["parent", "carrier_in", "carrier_out"]
-              properties:
-                parent: {const: conversion}
-            - required: ["parent", "carrier_in"]
+            - required: ["base_tech", "carrier_in", "carrier_out"]
               not:
-                  required: ["carrier_out"]
+                required: ["to", "from"]
               properties:
-                parent: {const: demand}
-
-            - required: ["parent", "carrier_in", "carrier_out"]
-              properties:
-                parent: {const: storage}
-
-            - required: ["parent", "carrier_out"]
+                base_tech: {const: conversion}
+            - required: ["base_tech", "carrier_in"]
               not:
-                  required: ["carrier_in"]
+                  required: ["carrier_out", "to", "from"]
               properties:
-                parent: {const: supply}
+                base_tech: {const: demand}
 
-            - required: ["parent", "from", "to", "carrier_in", "carrier_out"]
+            - required: ["base_tech", "carrier_in", "carrier_out"]
+              not:
+                required: ["to", "from"]
               properties:
-                parent: {const: transmission}
+                base_tech: {const: storage}
+
+            - required: ["base_tech", "carrier_out"]
+              not:
+                  required: ["carrier_in", "to", "from"]
+              properties:
+                base_tech: {const: supply}
+
+            - required: ["base_tech", "from", "to", "carrier_in", "carrier_out"]
+              properties:
+                base_tech: {const: transmission}
                 from:
                   title: Starting node.
                   description: The resulting link technology will have `flow_out` == `import` and `flow_in` == `export` at this node.
                   type: string
-
                 to:
                   title: Ending node.
                   description: The resulting link technology will have `flow_out` == `import` and `flow_in` == `export` at this node.
@@ -300,7 +242,7 @@ properties:
 
         patternProperties: &pattern_def
           '^(cost_[\w]+)$':
-            $ref: "#/$defs/TechCostNullNumberVariable"
+            $ref: "#/$defs/TechCostNullNumber"
         unevaluatedProperties: &uneval_def
           oneOf:
             - $ref: "#/$defs/unIndexedParamVal"
@@ -319,14 +261,24 @@ properties:
         properties:
           active:
             $ref: "#/$defs/ActiveDef"
+
+          base_tech:
+            type: string
+            x-type: str
+            enum: [demand, supply, conversion, storage, transmission]
+            title: Abstract base technology name.
+            description: Should be the name of one of the abstract base classes, from which some initial parameter defaults will be derived and with which certain base math will be triggered.
+
           color:
             type: ["null", string]
             default: .nan
             description: Color that can be used when plotting results.
+            x-type: str
           carrier_in:
             description: >-
               Carrier(s) consumed by this technology.
               Only `transmission`, `conversion`, `storage`, and `demand` technologies can define this parameter
+            x-type: float
             oneOf:
               - type: string
               - type: array
@@ -338,6 +290,7 @@ properties:
             description: >-
               Carrier(s) produced by this technology.
               Only `transmission`, `conversion`, `storage`, and `supply` technologies can define this parameter
+            x-type: float
             oneOf:
               - type: string
               - type: array
@@ -350,26 +303,26 @@ properties:
             description: >-
               Carrier(s) produced by this technology that can be exported out of the system boundaries without having to go to a pre-defined `sink` (i.e., via a `demand` technology).
               Must be a subset of `carrier_out`.
+            x-type: float
             oneOf:
               - type: string
               - type: array
                 uniqueItems: true
                 minItems: 2
+
           name:
             type: ["null", string]
+            x-resample_method: first
+            x-type: str
             title: Technology longname.
             description: Long name of technology, which can be used in post-processing (e.g., plotting).
             default: .nan
 
-          parent:
-            type: string
-            enum: [demand, supply, conversion, storage, transmission]
-            title: Abstract base technology name.
-            description: Should be the name of one of the abstract base classes, from which some initial parameter defaults will be derived and with which certain base math will be triggered.
-
           cap_method:
             type: string
             default: continuous
+            x-resample_method: first
+            x-type: str
             title: Capacity method switch.
             description: One of 'continuous' (LP model) or 'integer' (integer/binary unit capacity).
             enum: [continuous, integer]
@@ -377,6 +330,8 @@ properties:
           integer_dispatch:
             type: boolean
             default: False
+            x-resample_method: first
+            x-type: float
             title: Integer dispatch switch.
             description: |
               When true, will limit per-timestep out/inflows relative to the number of units of a technology that are in operation.
@@ -385,70 +340,93 @@ properties:
           include_storage:
             type: boolean
             default: false
+            x-resample_method: first
+            x-type: float
             title: Storage method switch.
             description: When true, math will be triggered to allow discontinuous carrier inflow and outflows across timesteps.
 
           force_async_flow:
             type: boolean
             default: false
+            x-resample_method: first
+            x-type: float
             title: Force asynchronous out/inflow.
             description: If True, non-zero `flow_out` and `flow_in` cannot both occur in the same timestep.
 
           flow_cap_per_storage_cap_min:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
+            x-type: float
             title: Minimum flow capacity per storage capacity
             description: >-
               ratio of minimum charge/discharge (kW) for a given storage capacity (kWh).
               Unit: $\text{hour}^{-1}$
 
           flow_cap_per_storage_cap_max:
-            $ref: "#/$defs/TechParamNullNumberFixed"
-            default: 0
+            $ref: "#/$defs/TechParamNullNumber"
+            default: .inf
+            x-type: float
             title: Maximum flow capacity per storage capacity
             description: >-
               ratio of maximum charge/discharge (kW) for a given storage capacity (kWh).
               Unit: $\text{hour}^{-1}$
 
-          flow_cap_max:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+          flow_cap:
+            $ref: "#/$defs/TechParamNullNumber"
             default: .inf
+            x-type: float
+            x-operate-param: true
+            title: Rated flow capacity.
+            description: >-
+              Sets `flow_cap` to a parameter in operate mode.
+              NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+              Unit: power.
+
+          flow_cap_max:
+            $ref: "#/$defs/TechParamNullNumber"
+            default: .inf
+            x-type: float
             title: Maximum rated flow capacity.
             description: >-
-              Limits ``flow_cap`` to a maximum.
+              Limits `flow_cap` to a maximum.
               Unit: power.
 
           flow_cap_max_systemwide:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: .inf
+            x-type: float
             title: System-wide maximum rated flow capacity.
             description: >-
-              Limits the sum of ``flow_cap`` over all nodes in the model to a maximum.
+              Limits the sum of `flow_cap` over all nodes in the model to a maximum.
               If `cap_method=integer`, this will be scaled by the number of integer units of a technology purchased.
               Unit: power or $\frac{\text{power}}{\text{unit}}$.
 
           flow_cap_min:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
+            x-type: float
             title: Minimum rated flow capacity.
             description: >-
-              Limits ``flow_cap`` to a minimum.
+              Limits `flow_cap` to a minimum.
               NOTE: this will _force_ `flow_cap` to a minimum value unless `cap_method` is set to `integer`.
               If `cap_method=integer`, this will be scaled by the number of integer units of a technology purchased.
               Unit: power or $\frac{\text{power}}{\text{unit}}$.
 
           flow_cap_min_systemwide:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
+            x-type: float
             title: System-wide minimum rated flow capacity.
             description: >-
-              Limits the sum of ``flow_cap`` over all nodes in the model to a minimum.
+              Limits the sum of `flow_cap` over all nodes in the model to a minimum.
               NOTE: this will _force_ the sum of `flow_cap` to a minimum value unless `cap_method` is set to `integer`.
               Unit: power.
 
           flow_out_min_relative:
-            $ref: "#/$defs/TechParamNullNumberVariable"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
+            x-type: float
+            x-resample_method: mean
             title: Minimum outflow
             description: >-
               Set to a value between 0 and 1 to force minimum `flow_out` as a fraction of the technology rated capacity.
@@ -456,34 +434,41 @@ properties:
               Unit: fraction.
 
           flow_cap_per_unit:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: .nan
+            x-type: float
             title: Flow capacity per purchased unit
             description: >-
               Set the capacity of each integer unit of a technology purchased, if `cap_method` is `integer`.
               Unit: $\frac{\text{power}}{\text{unit}}$.
 
           flow_in_eff:
-            $ref: "#/$defs/TechParamNullNumberVariable"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 1.0
+            x-type: float
+            x-resample_method: mean
             title: Inflow efficiency
             description: >-
-              Conversion efficiency from ``source``/``flow_in`` (tech dependent) into the technology.
+              Conversion efficiency from `source`/`flow_in` (tech dependent) into the technology.
               Set as value between 1 (no loss) and 0 (all lost).
               Unit: fraction.
 
           flow_out_eff:
-            $ref: "#/$defs/TechParamNullNumberVariable"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 1.0
+            x-type: float
+            x-resample_method: mean
             title: Outflow efficiency
             description: >-
-              Conversion efficiency from the technology to ``sink``/``flow_out`` (tech dependent).
+              Conversion efficiency from the technology to `sink`/`flow_out` (tech dependent).
               Set as value between 1 (no loss) and 0 (all lost).
               Unit: fraction.
 
           flow_out_parasitic_eff:
-            $ref: "#/$defs/TechParamNullNumberVariable"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 1.0
+            x-type: float
+            x-resample_method: mean
             title: Plant parasitic efficiency
             description: >-
               Additional losses as flow gets transferred from the plant to the carrier, e.g. due to plant parasitic consumption.
@@ -491,16 +476,18 @@ properties:
               Unit: fraction.
 
           flow_ramping:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 1.0
+            x-type: float
             title: Ramping rate
             description: >-
               limit maximum outflow / inflow / outflow - inflow (technology base class dependent) to a fraction of maximum capacity, which increases by that fraction at each timestep.
               Unit: $\frac{\text{fraction}}{\text{hour}}$.
 
           export_max:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: .inf
+            x-type: float
             title: Maximum allowed carrier export
             description: >-
               If `carrier_export` is defined, limit the allowed export of produced carrier for a technology.
@@ -509,111 +496,161 @@ properties:
           lifetime:
             type: ["null", number]
             default: .inf
+            x-resample_method: mean
+            x-type: float
             title: Technology lifetime
             description: >-
               Must be defined if fixed capital costs are defined.
               A reasonable value for many technologies is around 20-25 years.
               Unit: years.
 
-          area_use_max:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+          area_use:
+            $ref: "#/$defs/TechParamNullNumber"
             default: .inf
+            x-type: float
+            x-operate-param: true
+            title: Area used.
+            description: >-
+              Sets `area_use` to a parameter in operate mode.
+              NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+              Unit: $\text{area}^{2}$.
+
+          area_use_max:
+            $ref: "#/$defs/TechParamNullNumber"
+            default: .inf
+            x-type: float
             title: Maximum usable area.
             description: >-
               If set to a finite value, limits the upper bound of the `area_use` decision variable to this value.
               Unit: $\text{area}^{2}$.
 
           area_use_min:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
+            x-type: float
             title: Minimum usable area.
             description: >-
               Limits the lower bound of the `area_use` decision variable to this value.
               Unit: $\text{area}^{2}$.
 
           area_use_per_flow_cap:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: .nan
+            x-type: float
             title: Area use per flow capacity
             description: >-
-              If set, forces ``area_use`` to follow ``flow_cap`` with the given numerical ratio (e.g. setting to 1.5 means that ``area_use == 1.5 * flow_cap``).
+              If set, forces `area_use` to follow `flow_cap` with the given numerical ratio (e.g. setting to 1.5 means that `area_use == 1.5 * flow_cap`).
               Unit: $\frac{\text{area}^{2}}{\text{power}}$.
 
-          storage_cap_max:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+          storage_cap:
+            $ref: "#/$defs/TechParamNullNumber"
             default: .inf
+            x-type: float
+            x-operate-param: true
+            title: Rated storage capacity.
+            description: >-
+              Sets `storage_cap` to a parameter in operate mode.
+              NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+              Unit: $\text{area}^{2}$.
+
+          storage_cap_max:
+            $ref: "#/$defs/TechParamNullNumber"
+            default: .inf
+            x-type: float
             title: Maximum storage capacity.
             description: >-
               Limit upper bound of `storage_cap` decision variable.
               Unit: energy.
 
           storage_cap_min:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
+            x-type: float
             title: Minimum storage capacity.
             description: >-
               Limit lower bound of `storage_cap` decision variable.
               Unit: energy.
 
           storage_cap_per_unit:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: .nan
+            x-type: float
             title: Storage capacity per purchased unit.
             description: >-
               Set the storage capacity of each integer unit of a technology purchased.
               Unit: Unit: $\frac{\text{energy}}{\text{unit}}$.
 
           storage_discharge_depth:
-            $ref: "#/$defs/TechParamNullNumberVariable"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
+            x-resample_method: mean
+            x-type: float
             title: Storage depth of discharge.
             description: >-
               Defines the minimum level of storage state of charge, as a fraction of total storage capacity.
               Unit: fraction.
 
           storage_initial:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
+            x-type: float
             title: Initial storage level.
             description: >-
                Set stored flow in device at the first timestep, as a fraction of total storage capacity.
                Unit: fraction.
 
           storage_loss:
-            $ref: "#/$defs/TechParamNullNumberVariable"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
+            x-resample_method: mean
+            x-type: float
             title: Storage loss rate
             description: >-
-               Rate of storage loss per hour, used to calculate lost stored flow as ``(1 - storage_loss)^hours_per_timestep``.
+               Rate of storage loss per hour, used to calculate lost stored flow as `(1 - storage_loss)^hours_per_timestep`.
                Unit: Unit: $\frac{\text{fraction}}{\text{hour}}$.
 
           purchased_units_min_systemwide:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
+            x-type: float
             title: System-wide minimum installed integer units of a technology.
             description: >-
                sets the lower bound of the sum across all nodes of the decision variable `units` for a particular technology.
                Unit: integer.
 
           purchased_units_max_systemwide:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: .inf
+            x-type: float
             title: System-wide maximum installed integer units of a technology.
             description: >-
                sets the upper bound of the sum across all nodes of the decision variable `units` for a particular technology.
                Unit: integer.
 
+          purchased_units:
+            $ref: "#/$defs/TechParamNullNumber"
+            default: .inf
+            x-type: float
+            x-operate-param: true
+            title: Number of purchased units.
+            description: >-
+              Sets `purchased_units` to a parameter in operate mode.
+              NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+              Unit: integer
+
           purchased_units_min:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
+            x-type: float
             title:  Minimum number of purchased units
             description: >-
               Limits the lower bound of units purchased if `cap_method` is `integer`.
               Unit: integer.
 
           purchased_units_max:
-            $ref: "#/$defs/TechParamNullNumberFixed"
+            $ref: "#/$defs/TechParamNullNumber"
             default: .inf
+            x-type: float
             title: Maximum number of purchased units.
             description: >-
               Limits the upper bound of units purchased if `cap_method` is `integer`.
@@ -623,6 +660,8 @@ properties:
           sink_unit:
             type: string
             default: absolute
+            x-resample_method: first
+            x-type: str
             title: Sink unit
             description: >-
               Sets the unit of `Sink` to either `absolute` (unit: energy), `per_area` (unit: energy/area), or `per_cap` (unit: energy/power).
@@ -630,38 +669,40 @@ properties:
             enum: [absolute, per_area, per_cap]
 
           sink_use_min:
-            oneOf:
-              - type: ["null", number]
-              - $ref: "#/$defs/StringFilePattern"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
+            x-resample_method: sum
+            x-type: float
             title: Minimum bound on sink.
             description: >-
               Minimum sink use to remove a carrier from the system (e.g., electricity demand, transport distance).
-              Unit dictated by ``source_unit``.
+              Unit dictated by `source_unit`.
 
           sink_use_max:
-            oneOf:
-              - type: ["null", number]
-              - $ref: "#/$defs/StringFilePattern"
+            $ref: "#/$defs/TechParamNullNumber"
             default: .inf
+            x-resample_method: sum
+            x-type: float
             title: Maximum bound on sink.
             description: >-
               Maximum sink use to remove a carrier from the system (e.g., electricity demand, transport distance).
-              Unit dictated by ``source_unit``.
+              Unit dictated by `source_unit`.
 
           sink_use_equals:
-            oneOf:
-              - type: ["null", number]
-              - $ref: "#/$defs/StringFilePattern"
+            $ref: "#/$defs/TechParamNullNumber"
             default: .nan
+            x-resample_method: sum
+            x-type: float
             title: Required sink use.
             description: >-
               Required amount of carrier removal from the system (e.g., electricity demand, transport distance).
-              Unit dictated by ``source_unit``.
+              Unit dictated by `source_unit`.
 
           source_unit:
             type: string
             default: absolute
+            x-resample_method: first
+            x-type: str
             title: Source unit
             description: >-
               Sets the unit of `Source` to either `absolute` (e.g. kWh), `per_area` (e.g. kWh/m2), or `per_cap` (e.g. kWh/kW).
@@ -671,52 +712,69 @@ properties:
           source_cap_equals_flow_cap:
             type: boolean
             default: false
+            x-resample_method: first
+            x-type: float
             title: Source capacity equals flow capacity.
-            description: If true, the decision variables ``source_cap`` and ``flow_cap`` are forced to equal one another.
+            description: If true, the decision variables `source_cap` and `flow_cap` are forced to equal one another.
 
           source_eff:
-            $ref: "#/$defs/TechParamNullNumberVariable"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 1.0
+            x-resample_method: mean
+            x-type: float
             title: Source inflow efficiency
             description: >-
-              Conversion efficiency from the technology from ``source``.
+              Conversion efficiency from the technology from `source`.
               Set as value between 1 (no loss) and 0 (all lost).
               Unit: fraction.
 
           source_use_min:
-            oneOf:
-              - type: ["null", number]
-              - $ref: "#/$defs/StringFilePattern"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 0
+            x-resample_method: sum
+            x-type: float
             title: Minimum bound on source.
             description: >-
               Minimum source use to add a carrier from the system (e.g., biofuel, coal, rainfall, wind flow).
-              Unit dictated by ``source_unit``.
+              Unit dictated by `source_unit`.
 
           source_use_max:
-            oneOf:
-              - type: ["null", number]
-              - $ref: "#/$defs/StringFilePattern"
-            default: 0
+            $ref: "#/$defs/TechParamNullNumber"
+            default: .inf
+            x-resample_method: sum
+            x-type: float
             title: Maximum bound on sink.
             description: >-
               Maximum sink use to remove a carrier from the system (e.g., biofuel, coal, rainfall, wind flow).
-              Unit dictated by ``source_unit``.
+              Unit dictated by `source_unit`.
 
           source_use_equals:
-            oneOf:
-              - type: ["null", number]
-              - $ref: "#/$defs/StringFilePattern"
+            $ref: "#/$defs/TechParamNullNumber"
             default: .nan
+            x-resample_method: sum
+            x-type: float
             title: Required sink use.
             description: >-
               Required amount of carrier removal from the system (e.g., biofuel, coal, rainfall, wind flow).
-              Unit dictated by ``source_unit``.
+              Unit dictated by `source_unit`.
+
+          source_cap:
+            $ref: "#/$defs/TechParamNullNumber"
+            default: .inf
+            x-type: float
+            x-operate-param: true
+            title: Installed source consumption capacity.
+            description: >-
+              Sets `source_cap` to a parameter in operate mode.
+              NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+              Unit: power.
 
           source_cap_max:
             type: number
             default: .inf
-            title: Maximum installed source consumption capacity
+            x-resample_method: mean
+            x-type: float
+            title: Maximum installed source consumption capacity.
             description: >-
               Upper limit on `source_cap` decision variable.
               Unit: power.
@@ -724,6 +782,8 @@ properties:
           source_cap_min:
             type: number
             default: 0
+            x-resample_method: mean
+            x-type: float
             title: Minimum installed source consumption capacity
             description: >-
               Lower limit on `source_cap` decision variable.
@@ -731,39 +791,46 @@ properties:
 
           one_way:
             type: boolean
+            default: false
+            x-resample_method: first
+            x-type: float
             title: One way transmission.
             description: Forces a transmission technology to only move flow in one direction on the link, i.e. from `from` to `to`.
-            default: false
 
           distance:
             type: ["null", number]
             default: .nan
+            x-resample_method: mean
+            x-type: float
             title: Distance spanned by link.
             description: >-
               Used for `..._per_distance` constraints.
               If not defined, it will be automatically derived from latitude/longitude of nodes in a link.
 
           flow_in_eff_per_distance:
-            $ref: "#/$defs/TechParamNullNumberVariable"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 1.0
+            x-resample_method: mean
+            x-type: float
             title: Inflow (i.e., export from node) efficiency per distance of transmission links.
             description: >-
               Total link efficiency will be calculated as `\text{flow_in_eff}\mul{}\text{flow_in_eff_per_distance}^\text{distance}$.
               Set as value between 1 (no loss) and 0 (all lost).
 
           flow_out_eff_per_distance:
-            $ref: "#/$defs/TechParamNullNumberVariable"
+            $ref: "#/$defs/TechParamNullNumber"
             default: 1.0
+            x-resample_method: mean
+            x-type: float
             title: Outflow (i.e., import from node) efficiency per distance of transmission links.
             description: >-
               Total link efficiency will be calculated as `\text{flow_out_eff}\mul{}\text{flow_out_eff_per_distance}^\text{distance}$.
               Set as value between 1 (no loss) and 0 (all lost).
 
           cost_flow_cap_per_distance:
-            oneOf:
-              - type: ["null", number]
-              - $ref: "#/$defs/TechCostNullNumberFixed"
+            $ref: "#/$defs/TechCostNullNumber"
             default: 0
+            x-type: float
             title: Cost of flow capacity, per unit distance
             description: >-
               Cost per unit of the decision variable `flow_cap` and per unit distance of a transmission link.
@@ -771,8 +838,9 @@ properties:
               Unit: $(\text{power}\mul\text{distance}^{-1}$
 
           cost_purchase_per_distance:
-            $ref: "#/$defs/TechCostNullNumberFixed"
+            $ref: "#/$defs/TechCostNullNumber"
             default: 0
+            x-type: float
             title: Purchase cost per unit distance for transmission techs.
             description: >-
               Cost applied if the binary variable `purchased` is 1 or per unit of the integer variable `units`.
@@ -780,16 +848,19 @@ properties:
               Unit: $(\text{purchased_unit}\mul\text{distance})^{-1}$
 
           cost_flow_cap:
-            $ref: "#/$defs/TechCostNullNumberFixed"
+            $ref: "#/$defs/TechCostNullNumber"
             default: 0
+            x-type: float
             title: Cost of flow capacity.
             description: >-
               Cost per unit of the decision variable `flow_cap`.
               Unit: $\text{power}^{-1}$.
 
           cost_export:
-            $ref: "#/$defs/TechCostNullNumberVariable"
+            $ref: "#/$defs/TechCostNullNumber"
             default: 0
+            x-resample_method: mean
+            x-type: float
             title: Carrier export cost.
             description: >-
               Cost per unit of `flow_export` in each timestep.
@@ -797,16 +868,18 @@ properties:
               Unit: $\text{energy}^{-1}$.
 
           cost_interest_rate:
-            $ref: "#/$defs/TechCostNullNumberFixed"
+            $ref: "#/$defs/TechCostNullNumber"
             default: 0
+            x-type: float
             title: Interest rate.
             description: >-
               Used when computing levelized costs and technology depreciation_rate (relative to lifetime).
               Unit: fraction
 
           cost_om_annual:
-            $ref: "#/$defs/TechCostNullNumberFixed"
+            $ref: "#/$defs/TechCostNullNumber"
             default: 0
+            x-type: float
             title: Annual O&M costs
             description: >-
               Annual costs applied per unit `flow_cap`.
@@ -814,32 +887,38 @@ properties:
               Unit: $\text{power}^{-1}$.
 
           cost_om_annual_investment_fraction:
-            $ref: "#/$defs/TechCostNullNumberFixed"
+            $ref: "#/$defs/TechCostNullNumber"
             default: 0
+            x-type: float
             title: Fractional annual O&M costs.
             description: >-
               Add an additional cost to total investment costs (except `cost_om_annual`) that is a fraction of that total.
               Unit: fraction / total investment.
 
           cost_flow_in:
-            $ref: "#/$defs/TechCostNullNumberVariable"
+            $ref: "#/$defs/TechCostNullNumber"
             default: 0
+            x-resample_method: mean
+            x-type: float
             title: Carrier inflow cost.
             description: >-
               Cost per unit of `flow_in` in each timestep.
               Unit: $\text{energy}^{-1}$.
 
           cost_flow_out:
-            $ref: "#/$defs/TechCostNullNumberVariable"
+            $ref: "#/$defs/TechCostNullNumber"
             default: 0
+            x-resample_method: mean
+            x-type: float
             title: Carrier outflow cost
             description: >-
               Cost per unit of `flow_in` in each timestep.
               Unit: $\text{energy}^{-1}$.
 
           cost_purchase:
-            $ref: "#/$defs/TechCostNullNumberFixed"
+            $ref: "#/$defs/TechCostNullNumber"
             default: 0
+            x-type: float
             title: Purchase cost.
             description: >-
               Cost applied to the variable `purchased_units`.
@@ -847,32 +926,36 @@ properties:
               Unit: $\text{purchased_unit}^{-1}$
 
           cost_area_use:
-            $ref: "#/$defs/TechCostNullNumberFixed"
+            $ref: "#/$defs/TechCostNullNumber"
             default: 0
+            x-type: float
             title: Cost of area use.
             description: >-
               Cost per unit `area_use`.
               Unit: $\text{area}^{-2}$.
 
           cost_source_cap:
-            $ref: "#/$defs/TechCostNullNumberFixed"
+            $ref: "#/$defs/TechCostNullNumber"
             default: 0
+            x-type: float
             title: Cost of source flow capacity.
             description: >-
               Cost per unit `source_cap`.
               Unit: $\{power}^{-1}$.
 
           cost_storage_cap:
-            $ref: "#/$defs/TechCostNullNumberFixed"
+            $ref: "#/$defs/TechCostNullNumber"
             default: 0
+            x-type: float
             title: Cost of storage capacity.
             description: >-
               Cost per unit `storage_cap`, i.e., the maximum available capacity of the storage technology's "reservoir".
               Unit: $\{energy}^{-1}$.
 
           cost_depreciation_rate:
-            $ref: "#/$defs/TechCostNullNumberFixed"
+            $ref: "#/$defs/TechCostNullNumber"
             default: 1
+            x-type: float
             title: Depreciation rate.
             description: >-
               Applied to "annualise" investment costs so they are comparable to variable costs.
@@ -899,15 +982,19 @@ properties:
             $ref: "#/$defs/ActiveDef"
           latitude:
             type: number
+            x-type: float
             title: Latitude (WGS84 / EPSG4326).
             minimum: -90
             maximum: 90
           longitude:
             type: number
+            x-type: float
             title: Longitude (WGS84 / EPSG4326).
             minimum: -180
             maximum: 180
           available_area:
             type: number
+            x-type: float
             minimum: 0
             default: .inf
+            x-resample_method: mean

@@ -18,6 +18,7 @@ SCHEMAS = {
     "config_schema": schema.CONFIG_SCHEMA,
     "model_schema": schema.MODEL_SCHEMA,
     "math_schema": schema.MATH_SCHEMA,
+    "data_source_schema": schema.DATA_SOURCE_SCHEMA,
 }
 
 

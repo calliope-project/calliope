@@ -14,7 +14,7 @@ import os
 
 import pandas as pd
 
-from calliope.core import AttrDict
+from calliope.attrdict import AttrDict
 
 
 def generate_runs(model_file, scenarios=None, additional_args=None, override_dict=None):

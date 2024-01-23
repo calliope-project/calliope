@@ -1,4 +1,3 @@
-import importlib
 import re
 from copy import deepcopy
 from typing import Literal, Optional
@@ -7,11 +6,12 @@ import jsonschema
 
 from calliope.attrdict import AttrDict
 from calliope.exceptions import print_warnings_and_raise_errors
+from calliope.io import load_config
 
-CONFIG_DIR = importlib.resources.files("calliope") / "config"
-CONFIG_SCHEMA = AttrDict.from_yaml(CONFIG_DIR / "config_schema.yaml")
-MODEL_SCHEMA = AttrDict.from_yaml(CONFIG_DIR / "model_def_schema.yaml")
-MATH_SCHEMA = AttrDict.from_yaml(CONFIG_DIR / "math_schema.yaml")
+CONFIG_SCHEMA = load_config("config_schema.yaml")
+MODEL_SCHEMA = load_config("model_def_schema.yaml")
+DATA_SOURCE_SCHEMA = load_config("data_source_schema.yaml")
+MATH_SCHEMA = load_config("math_schema.yaml")
 
 
 def update_then_validate_config(
@@ -109,8 +109,8 @@ def extract_from_schema(
 
 
 def _extend_with_keyword(
-    validator_class: jsonschema.Validator, keyword: str, subset_top_level: str
-) -> jsonschema.Validator:
+    validator_class: jsonschema.protocols.Validator, keyword: str, subset_top_level: str
+) -> jsonschema.protocols.Validator:
     validate_properties = validator_class.VALIDATORS["properties"]
 
     def set_defaults(validator, properties, instance, schema):

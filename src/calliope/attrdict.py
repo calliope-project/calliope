@@ -424,4 +424,5 @@ class AttrDict(dict):
                 ):
                     self.set_key(k, other_value)
         for k in wipe_keys:
+            self.del_key(k)
             self.set_key(k, other.get_key(k + "." + WIPE_KEY))

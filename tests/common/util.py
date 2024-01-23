@@ -10,14 +10,14 @@ def build_test_model(
     override_dict=None,
     scenario=None,
     model_file="model.yaml",
-    timeseries_dataframes=None,
+    data_source_dfs=None,
     **init_kwargs,
 ):
     return calliope.Model(
         os.path.join(os.path.dirname(__file__), "test_model", model_file),
         override_dict=override_dict,
         scenario=scenario,
-        timeseries_dataframes=timeseries_dataframes,
+        data_source_dfs=data_source_dfs,
         **init_kwargs,
     )
 

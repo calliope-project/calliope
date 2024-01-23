@@ -20,14 +20,14 @@ techs:
   test_supply_elec:
     name: Supply tech
     carrier_out: electricity
-    parent: supply
+    base_tech: supply
     flow_cap_max: 10
     source_use_max: .inf
     flow_out_eff: 0.9
   test_demand_elec:
     name: Demand elec tech
     carrier_in: electricity
-    parent: demand
+    base_tech: demand
 
 nodes:
   a:

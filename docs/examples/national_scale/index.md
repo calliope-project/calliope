@@ -68,7 +68,7 @@ The definition of this technology in the example model's configuration looks as 
 
 There are a few things to note.
 First, `ccgt` defines essential information:
-a name, a color (given as an HTML color code, for later visualisation), its parent, `supply`, and its carrier_out, `power`.
+a name, a color (given as an HTML color code, for later visualisation), its base_tech, `supply`, and its carrier_out, `power`.
 It has set itself up as a power supply technology.
 This is followed by the definition of parameters to use to constrain the technology's contribution to the system and costs.
 
@@ -94,7 +94,7 @@ This definition in the example model's configuration is more verbose:
 --8<-- "src/calliope/example_models/national_scale/model_config/techs.yaml:csp"
 ```
 
-Again, `csp` has the definitions for name, color, parent, and carrier_out.
+Again, `csp` has the definitions for name, color, base_tech, and carrier_out.
 Its constraining parameters are more numerous, it defines:
 
 * a maximum storage capacity (`storage_cap_max`)

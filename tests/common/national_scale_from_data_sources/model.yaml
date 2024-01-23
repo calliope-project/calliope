@@ -1,0 +1,78 @@
+# Model configuration: all settings that affect the built model
+config:
+  init:
+    name: National-scale example model
+    # What version of Calliope this model is intended for
+    calliope_version: 0.7.0
+    time_subset: ["2005-01-01", "2005-01-05"] # Subset of timesteps
+
+  build:
+    ensure_feasibility: true # Switches on the "unmet demand" constraint
+    mode: plan # Choices: plan, operate
+
+  solve:
+    solver: cbc
+    zero_threshold: 1e-10 # Any value coming out of the backend that is smaller than this (due to floating point errors, probably) will be set to zero
+
+nodes:
+  region1.techs: {demand_power, ccgt}
+  region2.techs: {demand_power, battery}
+  region1_1.techs: {csp}
+  region1_2.techs: {csp}
+  region1_3.techs: {csp}
+
+data_sources:
+  dimensionless_params:
+    source: data_sources/dimensionless_params.csv
+    rows: parameters
+
+  costs_params:
+    source: data_sources/costs_params.csv
+    rows: costs
+    columns: parameters
+
+  nodes_base_info:
+    source: data_sources/nodes_base_info.csv
+    rows: nodes
+    columns: parameters
+
+  techs_carriers_at_nodes:
+    source: data_sources/techs_carriers.csv
+    rows: techs
+    columns: parameters
+    add_dimensions:
+      carriers: power
+
+  links:
+    source: data_sources/links.csv
+    rows: techs
+    columns: parameters
+
+  techs_costs_monetary:
+    source: data_sources/techs_costs_monetary.csv
+    rows: techs
+    columns: parameters
+    add_dimensions:
+      costs: monetary
+
+  # will be loaded from the example model directory in calliope source code.
+  time_varying_data_from_df:
+    source: time_varying_df
+    rows: timesteps
+    columns: [comment, nodes, techs, parameters]
+    drop: comment
+
+  techs_base_info:
+    source: data_sources/techs_base_info.csv
+    rows: techs
+    columns: parameters
+
+  techs_constraints:
+    source: data_sources/techs_constraints.csv
+    rows: techs
+    columns: parameters
+
+  techs_node_constraints:
+    source: data_sources/techs_node_constraints.csv
+    rows: [nodes, techs]
+    columns: parameters

@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest  # noqa: F401
+from calliope import AttrDict
 
 from .common.util import build_test_model
 
@@ -9,7 +10,7 @@ class TestClustering:
     def clustered_model(self):
         cluster_init = {
             "time_subset": ["2005-01-01", "2005-01-04"],
-            "time_cluster": "cluster_days.csv",
+            "time_cluster": "data_sources/cluster_days.csv",
         }
         return build_test_model(scenario="simple_supply", **cluster_init)
 
@@ -67,7 +68,7 @@ class TestResamplingAndCluster:
             scenario="simple_supply",
             time_subset=["2005-01-01", "2005-01-04"],
             time_resample="6H",
-            time_cluster="cluster_days.csv",
+            time_cluster="data_sources/cluster_days.csv",
         )
 
         dtindex = pd.DatetimeIndex(
@@ -91,16 +92,11 @@ class TestResampling:
     def test_15min_resampling_to_6h(self):
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
-        override = {
-            "techs.test_demand_elec.sink_use_equals": "file=demand_elec_15mins.csv"
-        }
-
-        model = build_test_model(
-            override,
-            scenario="simple_supply",
-            time_resample="6H",
-            time_subset=["2005-01-01", "2005-01-03"],
+        override = AttrDict.from_yaml_string(
+            "data_sources.demand_elec.source: data_sources/demand_elec_15mins.csv"
         )
+
+        model = build_test_model(override, scenario="simple_supply", time_resample="6H")
         data = model._model_data
 
         dtindex = pd.DatetimeIndex(
@@ -113,10 +109,6 @@ class TestResampling:
                 "2005-01-02 06:00:00",
                 "2005-01-02 12:00:00",
                 "2005-01-02 18:00:00",
-                "2005-01-03 00:00:00",
-                "2005-01-03 06:00:00",
-                "2005-01-03 12:00:00",
-                "2005-01-03 18:00:00",
             ]
         )
 
@@ -127,9 +119,9 @@ class TestResampling:
         """
         CSV has daily timeseries varying from 15min to 2h resolution, resample all to 2h
         """
-        override = {
-            "techs.test_demand_elec.sink_use_equals": "file=demand_elec_15T_to_2h.csv"
-        }
+        override = AttrDict.from_yaml_string(
+            "data_sources.demand_elec.source: data_sources/demand_elec_15T_to_2h.csv"
+        )
 
         model = build_test_model(
             override, scenario="simple_supply,one_day", time_resample="2H"

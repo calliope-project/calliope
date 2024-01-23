@@ -1,0 +1,9 @@
+demand_tech,foo,carrier_in,1.0
+conversion_tech,foo,carrier_out,1.0
+conversion_tech,bar,carrier_in,1.0
+conversion_tech,baz,carrier_in,1.0
+supply_tech,foo,carrier_out,1.0
+storage_tech,foo,carrier_out,1.0
+storage_tech,foo,carrier_in,1.0
+transmission_tech,foo,carrier_out,1.0
+transmission_tech,foo,carrier_in,1.0
