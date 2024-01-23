@@ -437,7 +437,7 @@ class Model(object):
             LOGGER,
             self._timings,
             "solve_start",
-            comment=f"Optimisation model | starting model in {run_mode} mode..",
+            comment=f"Optimisation model | starting model in {run_mode} mode.",
         )
 
         solver_config = update_then_validate_config("solve", self.config, **kwargs)

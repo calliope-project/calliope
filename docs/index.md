@@ -6,7 +6,7 @@
 
     Calliope version 0.7 is released as a beta with the purpose of gathering feedback from users. Some functionality is not yet available in 0.7, notably:
 
-    * `operate` and `spores` modes
+    * `spores` mode
     * Plotting (but see the [example notebooks]() for some example code on how to make plots with Plotly anyway)
 
     [The "Migrating from 0.6 to 0.7" page]() provides an overview of the main changes in 0.7 when migrating from 0.6.

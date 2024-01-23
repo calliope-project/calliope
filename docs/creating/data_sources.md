@@ -8,7 +8,7 @@ Therefore, alongside your YAML model definition, you can load tabular data from 
 As of Calliope v0.7.0, this tabular data can be of _any_ kind.
 Prior to this, loading from file was limited to timeseries data.
 
-The full syntax from loading tabular data can be found in the associated [schema][data_sources_schema].
+The full syntax from loading tabular data can be found in the associated [schema][data-source-schema].
 In brief it is:
 
 * **source**: path to file or reference name for an in-memory object.
@@ -76,7 +76,7 @@ In this section we will show some examples of loading data and provide the equiv
 
     Data in file:
 
-    ```
+    ```shell
     tech1,base_tech,supply  # (1)!
     tech1,flow_cap_max,100
     tech1,flow_out_eff,0.1
@@ -87,6 +87,7 @@ In this section we will show some examples of loading data and provide the equiv
     tech3,storage_cap_max,200
     tech3,flow_cap_max,100
     ```
+
     1. Unlike the previous example, we do not have a "header" row with column names in this file.
     We start directly with defining data.
     Our dimensions are _only_ defined per row, not per column.
@@ -185,7 +186,7 @@ In this section we will show some examples of loading data and provide the equiv
     1. To limit repetition, we have defined [technology groups][technology-tech_groups-and-node-node_groups-inheritance] for our costs.
 
 !!! info "See also"
-    Our [data source loading tutorial][TODO] has more examples of loading tabular data into your model.
+    Our [data source loading tutorial][loading-tabular-data] has more examples of loading tabular data into your model.
 
 ## Selecting dimension values and dropping dimensions
 
@@ -407,11 +408,11 @@ E.g.,
         ...
     ```
 
-### Data you _cannot_ load from tabular data
+### Data you _cannot_ load in tabular format
 
 Some data is specific to the YAML definition or is computed by Calliope internally and therefore cannot be loaded by the user from tabular data.
 These are:
 
 ```yaml
---8<-- "src/calliope/config/protected_parameters.yaml
+--8<-- "src/calliope/config/protected_parameters.yaml"
 ```

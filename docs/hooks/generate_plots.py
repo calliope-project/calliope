@@ -41,8 +41,8 @@ def _generate_front_page_timeseries_plot(config: dict) -> File:
     carriers = model.inputs.carriers.values
 
     colors = model.inputs.color.groupby(model.inputs.name).first("techs").to_series()
-    df_demand = _get_net_flows(model, techs=model.inputs.parent == "demand")
-    df_flows_other = _get_net_flows(model, techs=model.inputs.parent != "demand")
+    df_demand = _get_net_flows(model, techs=model.inputs.base_tech == "demand")
+    df_flows_other = _get_net_flows(model, techs=model.inputs.base_tech != "demand")
 
     fig = go.Figure()
     visible = True
