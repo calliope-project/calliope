@@ -8,7 +8,7 @@ Some of the resources to look at if you're interested in contributing:
 * [Join or start a discussion thread on GitHub](https://github.com/calliope-project/calliope/discussions).
 * Look at our [milestones](https://github.com/calliope-project/calliope/milestones) and [projects](https://github.com/calliope-project/calliope/projects) on GitHub for an idea on where development is headed.
 * Look at [open issues tagged with "help wanted"](https://github.com/calliope-project/calliope/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) and ["good first issue"](https://github.com/calliope-project/calliope/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
-* Look at the [development guide in our documentation](http://calliope.readthedocs.io/en/stable/contributing)
+* Look at the contributing guide in our [documentation](http://calliope.readthedocs.io)
 
 ## Licensing
 
@@ -37,7 +37,7 @@ If reporting an error when running Calliope interactively in a Python session, p
 
 ## Submitting changes
 
-Look at the [development guide in our documentation](http://calliope.readthedocs.io/en/stable/contributing) for information on how to get set up for development.
+Look at the contributing guide in our [documentation](http://calliope.readthedocs.io/en/latest) for information on how to get set up for development.
 
 To contribute changes:
 
