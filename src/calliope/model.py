@@ -260,6 +260,9 @@ class Model(object):
         self._model_data = model_data
         self._add_model_data_methods()
 
+        if self.results:
+            self._is_solved = True
+
         log_time(
             LOGGER,
             self._timings,

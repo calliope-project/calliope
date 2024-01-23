@@ -144,8 +144,8 @@ class TestNationalScaleExampleModelOperate:
             time_subset=["2005-01-01", "2005-01-03"], scenario="operate"
         )
         model.build()
-
         model.solve()
+
         assert all(
             model.results.timesteps
             == pd.date_range("2005-01", "2005-01-03 23:00:00", freq="H")

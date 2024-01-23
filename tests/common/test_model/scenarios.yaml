@@ -413,9 +413,10 @@ overrides:
 
   operate:
     config.build.mode: operate
-    config.init.time_subset: ["2005-01-01", "2005-01-04"]
-    config.solve.operate_window: 12
-    config.solve.operate_horizon: 24
+    config.init.time_subset: ["2005-01-01", "2005-01-02"]
+    config.build.ensure_feasibility: true
+    config.build.operate_window: 6h
+    config.build.operate_horizon: 12h
 
   investment_costs:
     tech_groups:
@@ -427,6 +428,14 @@ overrides:
           dims: costs
         cost_flow_cap:
           data: 10
+          index: monetary
+          dims: costs
+
+  var_costs:
+    tech_groups:
+      test_controller:
+        cost_flow_out:
+          data: 0.1
           index: monetary
           dims: costs
 

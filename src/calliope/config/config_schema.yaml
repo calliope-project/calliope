@@ -198,11 +198,7 @@ properties:
       Calliope model technology definitions.
       See the model definition schema for more guidance on content.
     additionalProperties: false
-    patternProperties:
-      '^[^_^\d][\w]*$':
-        type: object
-        patternProperties:
-          '^[^_^\d][\w]*$': {}
+    patternProperties: *nested_pattern
 
   nodes:
     type: [object, "null"]
@@ -227,3 +223,24 @@ properties:
       See the model definition schema for more guidance on content.
     additionalProperties: false
     patternProperties: *nested_pattern
+
+  overrides:
+    type: [object, "null"]
+    description: >-
+      Overrides to apply to _any_ part of the model YAML configuration / definition.
+    additionalProperties: false
+    patternProperties: *nested_pattern
+
+  scenarios:
+    type: [object, "null"]
+    description: Groups of overrides to define named scenarios.
+    additionalProperties: false
+    patternProperties:
+      '^[^_^\d][\w]*$':
+        OneOf:
+          - type: array
+            items:
+              type: string
+              pattern: '^[^_^\d][\w]*$'
+          - type: string
+            pattern: '^[^_^\d][\w]*$'
