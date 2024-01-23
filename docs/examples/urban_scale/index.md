@@ -51,7 +51,6 @@ The import section in our file looks like this:
 ### Referencing tabular data
 
 As of Calliope v0.7.0 it is possible to load tabular data completely separately from the YAML model definition.
-We will move onto this tabular data sources definition next.
 To do this we reference data tables under the `data_sources` key:
 
 ```yaml

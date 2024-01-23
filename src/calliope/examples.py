@@ -12,7 +12,7 @@ Example models.
 import importlib
 from pathlib import Path
 
-from calliope.core.model import Model
+from calliope.model import Model
 
 EXAMPLE_MODEL_DIR = Path(importlib.resources.files("calliope") / "example_models")
 

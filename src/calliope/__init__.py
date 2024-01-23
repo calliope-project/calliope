@@ -1,7 +1,8 @@
-from calliope import examples, exceptions  # noqa: F401
-from calliope._version import __version__  # noqa: F401
-from calliope.core import AttrDict, Model, read_netcdf  # noqa: F401
-from calliope.util.logging import set_log_verbosity  # noqa: F401
+from calliope import examples, exceptions
+from calliope._version import __version__
+from calliope.attrdict import AttrDict
+from calliope.model import Model, read_netcdf
+from calliope.util.logging import set_log_verbosity
 
 __title__ = "Calliope"
 __author__ = "Calliope contributors listed in AUTHORS"

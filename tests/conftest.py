@@ -252,22 +252,20 @@ def dummy_model_data(config_defaults, model_defaults):
 
     for param in model_data.data_vars.values():
         param.attrs["is_result"] = 0
-
-    config_defaults.update(
-        AttrDict(
-            {
-                "build": {
-                    "foo": True,
-                    "FOO": "baz",
-                    "foo1": np.inf,
-                    "bar": {"foobar": "baz"},
-                    "a_b": 0,
-                    "b_a": [1, 2],
-                }
+    dummy_config = AttrDict(
+        {
+            "build": {
+                "foo": True,
+                "FOO": "baz",
+                "foo1": np.inf,
+                "bar": {"foobar": "baz"},
+                "a_b": 0,
+                "b_a": [1, 2],
             }
-        )
+        }
     )
-    model_data.attrs["config"] = config_defaults
+    dummy_config.union(config_defaults)
+    model_data.attrs["config"] = dummy_config
 
     model_data.attrs["defaults"] = AttrDict(
         {

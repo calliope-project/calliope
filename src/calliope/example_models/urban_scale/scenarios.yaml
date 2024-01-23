@@ -39,44 +39,46 @@ overrides:
           index: monetary
           dims: costs
       # --8<-- [end:boiler]
-      # --8<-- [start:heat_pipes]
-    link_groups:
+    # --8<-- [start:heat_pipes]
+    tech_groups:
       heat_pipes:
         force_async_flow: true
-      # --8<-- [end:heat_pipes]
+    # --8<-- [end:heat_pipes]
 # --8<-- [end:milp]
 
   operate:
     config:
       init.time_subset: ["2005-07-01", "2005-07-10"]
-      build.mode: operate
-      solve:
-        operate_window: 24
-        operate_horizon: 48
+      build:
+        mode: operate
+        operate_window: 24H
+        operate_horizon: 48H
 
     nodes:
       X1:
         techs:
-          chp.flow_cap_max: 300
-          pv.flow_cap_max: 0
-          supply_grid_power.flow_cap_max: 40
-          supply_gas.flow_cap_max: 700
+          chp.flow_cap: 300
+          pv.active: false
+          supply_grid_power.flow_cap: 40
+          supply_gas.flow_cap: 700
 
       X2:
         techs:
-          boiler.flow_cap_max: 200
-          pv.flow_cap_max: 70
-          supply_gas.flow_cap_max: 250
+          boiler.flow_cap: 200
+          pv.flow_cap: 70
+          pv.area_use: 490
+          supply_gas.flow_cap: 250
 
       X3:
         techs:
-          boiler.flow_cap_max: 0
-          pv.flow_cap_max: 50
-          supply_gas.flow_cap_max: 0
+          boiler.active: false
+          pv.flow_cap: 50
+          pv.area_use: 350
+          supply_gas.active: false
 
     techs:
-      X1_to_X2.flow_cap_max: 300
-      X1_to_X3.flow_cap_max: 60
-      X1_to_N1.flow_cap_max: 300
-      N1_to_X2.flow_cap_max: 250
-      N1_to_X3.flow_cap_max: 320
+      X1_to_X2.flow_cap: 300
+      X1_to_X3.flow_cap: 60
+      X1_to_N1.flow_cap: 300
+      N1_to_X2.flow_cap: 250
+      N1_to_X3.flow_cap: 320
