@@ -148,7 +148,12 @@ constraints:
     foreach: [nodes, techs, carriers, investsteps]
     where: flow_cap
     equations:
-      - expression: flow_cap == $flow_cap_previous_step + flow_cap_new - default_if_empty(flow_cap_decommissioned, 0)
+      - expression: >-
+          flow_cap == (
+            $flow_cap_previous_step + flow_cap_new -
+            default_if_empty(flow_cap_decommissioned, 0) -
+            (flow_cap_initial * decommission_initial_cap)
+          )
     sub_expressions:
       flow_cap_previous_step:
         - where: investsteps=get_val_at_index(investsteps=0)
@@ -164,7 +169,12 @@ constraints:
     foreach: [nodes, techs, investsteps]
     where: storage_cap
     equations:
-      - expression: storage_cap == $storage_cap_previous_step + storage_cap_new - default_if_empty(storage_cap_decommissioned, 0)
+      - expression: >-
+          storage_cap == (
+            $storage_cap_previous_step + storage_cap_new -
+            default_if_empty(storage_cap_decommissioned, 0) -
+            (storage_cap_initial * decommission_initial_cap)
+          )
     sub_expressions:
       storage_cap_previous_step:
         - where: investsteps=get_val_at_index(investsteps=0)
@@ -180,7 +190,12 @@ constraints:
     foreach: [nodes, techs, investsteps]
     where: source_cap
     equations:
-      - expression: source_cap == $source_cap_previous_step + source_cap_new - default_if_empty(source_cap_decommissioned, 0)
+      - expression: >-
+          source_cap == (
+            $source_cap_previous_step + source_cap_new -
+            default_if_empty(source_cap_decommissioned, 0) -
+            (source_cap_initial * decommission_initial_cap)
+          )
     sub_expressions:
       source_cap_previous_step:
         - where: investsteps=get_val_at_index(investsteps=0)
@@ -196,7 +211,12 @@ constraints:
     foreach: [nodes, techs, investsteps]
     where: area_use
     equations:
-      - expression: area_use == $area_use_previous_step + area_use_new - default_if_empty(area_use_decommissioned, 0)
+      - expression: >-
+          area_use == (
+            $area_use_previous_step + area_use_new -
+            default_if_empty(area_use_decommissioned, 0) -
+            (area_use_initial * decommission_initial_cap)
+          )
     sub_expressions:
       area_use_previous_step:
         - where: investsteps=get_val_at_index(investsteps=0)
@@ -469,21 +489,21 @@ global_expressions:
 
   storage_cap_decommissioned:
     foreach: [nodes, techs, investsteps]
-    where: new_storage_cap AND lifetime
+    where: storage_cap_new AND lifetime
     equations:
-      - expression: get_decommission_cap(new_storage_cap)
+      - expression: get_decommission_cap(storage_cap_new)
 
   source_cap_decommissioned:
     foreach: [nodes, techs, investsteps]
-    where: new_source_cap AND lifetime
+    where: source_cap_new AND lifetime
     equations:
-      - expression: get_decommission_cap(new_source_cap)
+      - expression: get_decommission_cap(source_cap_new)
 
   area_use_decommissioned:
     foreach: [nodes, techs, investsteps]
-    where: new_area_use AND lifetime
+    where: area_use_new AND lifetime
     equations:
-      - expression: get_decommission_cap(new_area_use)
+      - expression: get_decommission_cap(area_use_new)
 
 
 

@@ -391,6 +391,16 @@ properties:
               Sets `flow_cap` lower bound in first investment period during pathway optimisation.
               Unit: power.
 
+          decommission_initial_cap:
+            $ref: "#/$defs/TechParamNullNumber"
+            default: 0
+            x-type: float
+            title: The per-investment step fraction of initial capacity being decommissioned.
+            description: >-
+              Removes the defined fraction of initial capacity (`flow_cap_initial`, `storage_cap_initial`, etc.) in each investstep.
+              This is usually defined over the `investsteps` dimension to provide different fractions (ultimately adding up to 1) per investment step.
+              Unit: fraction.
+
           flow_cap_max:
             $ref: "#/$defs/TechParamNullNumber"
             default: .inf

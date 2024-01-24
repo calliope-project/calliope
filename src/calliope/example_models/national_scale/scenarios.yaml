@@ -220,6 +220,8 @@ overrides:
       # Update lifetimes to test intra-investstep effects
       battery:
         lifetime: 10
+        initial_flow_cap: 0
+        initial_storage_cap: 0
       ccgt:
         lifetime: 16
         flow_cap_max_systemwide: # A constraint forcing phase-out of CCGT
@@ -228,11 +230,36 @@ overrides:
             data: [50000, 30000, 20000, 0]
             index: [2020, 2030, 2040, 2050]
             dims: investsteps
+        initial_flow_cap: 10000
+        decommission_initial_cap:
+          data: [0, 0.6, 0.4, 0]
+          index: [2020, 2030, 2040, 2050]
+          dims: investsteps
       csp:
         lifetime: 24
+        decommission_initial_cap:
+          data: [0, 0.1, 0.6, 0.3]
+          index: [2020, 2030, 2040, 2050]
+          dims: investsteps
       region1_to_region2:
         lifetime: 25
-
+        initial_flow_cap: 5000
+    nodes:
+      region1_1.techs.csp:
+        initial_flow_cap: 1000
+        initial_storage_cap: 100000
+        initial_source_cap: 10000
+        initial_area_use: 10000
+      region1_2.techs.csp:
+        initial_flow_cap: 2000
+        initial_storage_cap: 200000
+        initial_source_cap: 20000
+        initial_area_use: 200000
+      region1_3.techs.csp:
+        initial_flow_cap: 3000
+        initial_storage_cap: 300000
+        initial_source_cap: 30000
+        initial_area_use: 3000000
     data_sources:
       # We ignore demand from the existing timeseries,
       # but assume renewable capacity factors remain the same in each investment step
