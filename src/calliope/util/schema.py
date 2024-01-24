@@ -77,6 +77,23 @@ def validate_dict(to_validate: dict, schema: dict, dict_descriptor: str) -> None
         )
 
 
+def add_to_model_schema(top_level_key: str, properties: dict[str, dict]):
+    """Add parameters to the model definition schema properties list.
+
+    By being schema properties their attributes will filter through to the internal Calliope processing.
+    For instance, default values, array type coercion,
+    and whether to convert a decision variable to a parameter in operate mode when using `config.build.operate_use_cap_results`.
+
+    Args:
+        top_level_key (str): One of ["techs", "nodes", "parameters"]
+        properties (dict[str, dict]): Properties to add, as valid schema definitions
+    """
+    property_level: AttrDict = MODEL_SCHEMA["properties"][top_level_key][
+        "patternProperties"
+    ]["^[^_^\\d][\\w]*$"]["properties"]
+    property_level.union(AttrDict(properties), allow_override=False)
+
+
 def extract_from_schema(
     schema: dict,
     keyword: str,

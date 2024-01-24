@@ -11,8 +11,9 @@ import pandas as pd
 import pytest
 from calliope.util.generate_runs import generate_runs
 from calliope.util.logging import log_time
-from calliope.util.schema import extract_from_schema, validate_dict
+from calliope.util.schema import add_to_model_schema, extract_from_schema, validate_dict
 
+from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
 
 _EXAMPLES_DIR = importlib_resources.files("calliope") / "example_models"
@@ -386,3 +387,44 @@ class TestExtractFromSchema:
             extracted_defaults.sort_index(),
             check_dtype=False,
         )
+
+
+class TestAddToSchema:
+    @pytest.fixture(scope="class")
+    def add_properties(self):
+        properties = calliope.AttrDict.from_yaml_string(
+            """
+        foo:
+            $ref: "#/$defs/TechParamNullNumber"
+            default: 0
+            x-type: float
+        bar:
+            type: string
+            default: boop
+            enum: [boop, bop]
+            x-type: str
+            title: Foobar.
+            description: Foo bar.
+        """
+        )
+        add_to_model_schema("techs", properties)
+
+    def test_add_tech_property(self, add_properties):
+        model = build_model(
+            {"techs.test_supply_elec.foo": 1, "techs.test_supply_elec.bar": "bop"},
+            "simple_supply",
+        )
+        assert model.inputs["foo"].attrs["default"] == 0
+        assert model.inputs["bar"].attrs["default"] == "boop"
+
+    def test_defy_property_type(self, add_properties):
+        with pytest.raises(calliope.exceptions.ModelError):
+            build_model({"techs.test_supply_elec.bar": 1}, "simple_supply")
+
+    def test_defy_property_enum(self, add_properties):
+        with pytest.raises(calliope.exceptions.ModelError):
+            build_model({"techs.test_supply_elec.bar": "hi"}, "simple_supply")
+
+    def test_defy_top_level(self, add_properties):
+        # We can defy the enum requirements because the nodes subschema does not include the "bar" property.
+        build_model({"nodes.a.bar": "hi"}, "simple_supply")
