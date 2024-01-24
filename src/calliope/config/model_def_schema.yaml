@@ -382,11 +382,11 @@ properties:
               NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
               Unit: power.
 
-          initial_flow_cap:
+          flow_cap_initial:
             $ref: "#/$defs/TechParamNullNumber"
             default: 0
             x-type: float
-            title: Initial flow capacity in pathway optimisation.
+            title: Initial / existing flow capacity in pathway optimisation.
             description: >-
               Sets `flow_cap` lower bound in first investment period during pathway optimisation.
               Unit: power.
@@ -524,6 +524,15 @@ properties:
               NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
               Unit: $\text{area}^{2}$.
 
+          area_use_initial:
+            $ref: "#/$defs/TechParamNullNumber"
+            default: 0
+            x-type: float
+            title: Initial / existing area use in pathway optimisation.
+            description: >-
+              Sets `area_use` lower bound in first investment period during pathway optimisation.
+              Unit: $\text{area}^{2}$.
+
           area_use_max:
             $ref: "#/$defs/TechParamNullNumber"
             default: .inf
@@ -560,7 +569,16 @@ properties:
             description: >-
               Sets `storage_cap` to a parameter in operate mode.
               NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
-              Unit: $\text{area}^{2}$.
+              Unit: energy.
+
+          storage_cap_initial:
+            $ref: "#/$defs/TechParamNullNumber"
+            default: 0
+            x-type: float
+            title: Initial / existing storage capacity in pathway optimisation.
+            description: >-
+              Sets `storage_cap` lower bound in first investment period during pathway optimisation.
+              Unit: energy.
 
           storage_cap_max:
             $ref: "#/$defs/TechParamNullNumber"
@@ -776,6 +794,15 @@ properties:
             description: >-
               Sets `source_cap` to a parameter in operate mode.
               NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+              Unit: power.
+
+          source_cap_initial:
+            $ref: "#/$defs/TechParamNullNumber"
+            default: 0
+            x-type: float
+            title: Initial / existing source capacity in pathway optimisation.
+            description: >-
+              Sets `source_cap` lower bound in first investment period during pathway optimisation.
               Unit: power.
 
           source_cap_max:

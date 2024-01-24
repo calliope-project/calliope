@@ -145,17 +145,64 @@ constraints:
       Flow capacity in a given investment period is the capacity in the previous period
       plus the new capacity installed minus old capacity that has been decommissioned
       between the previous period and this one.
-      TODO: extend to other capacity costs (area use, storage cap, source cap).
     foreach: [nodes, techs, carriers, investsteps]
     where: flow_cap
     equations:
-      - expression: flow_cap == $flow_cap_previous_step + new_flow_cap - default_if_empty(decommissioned, 0)
+      - expression: flow_cap == $flow_cap_previous_step + flow_cap_new - default_if_empty(flow_cap_decommissioned, 0)
     sub_expressions:
       flow_cap_previous_step:
         - where: investsteps=get_val_at_index(investsteps=0)
-          expression: initial_flow_cap
+          expression: flow_cap_initial
         - where: NOT investsteps=get_val_at_index(investsteps=0)
           expression: roll(flow_cap, investsteps=1)
+
+  storage_cap_bounding:
+    description: >-
+      Storage capacity in a given investment period is the capacity in the previous period
+      plus the new capacity installed minus old capacity that has been decommissioned
+      between the previous period and this one.
+    foreach: [nodes, techs, investsteps]
+    where: storage_cap
+    equations:
+      - expression: storage_cap == $storage_cap_previous_step + storage_cap_new - default_if_empty(storage_cap_decommissioned, 0)
+    sub_expressions:
+      storage_cap_previous_step:
+        - where: investsteps=get_val_at_index(investsteps=0)
+          expression: storage_cap_initial
+        - where: NOT investsteps=get_val_at_index(investsteps=0)
+          expression: roll(storage_cap, investsteps=1)
+
+  source_cap_bounding:
+    description: >-
+      Storage capacity in a given investment period is the capacity in the previous period
+      plus the new capacity installed minus old capacity that has been decommissioned
+      between the previous period and this one.
+    foreach: [nodes, techs, investsteps]
+    where: source_cap
+    equations:
+      - expression: source_cap == $source_cap_previous_step + source_cap_new - default_if_empty(source_cap_decommissioned, 0)
+    sub_expressions:
+      source_cap_previous_step:
+        - where: investsteps=get_val_at_index(investsteps=0)
+          expression: source_cap_initial
+        - where: NOT investsteps=get_val_at_index(investsteps=0)
+          expression: roll(source_cap, investsteps=1)
+
+  area_use_bounding:
+    description: >-
+      Area use in a given investment period is the area use in the previous period
+      plus the new area used minus old used area that has been decommissioned
+      between the previous period and this one.
+    foreach: [nodes, techs, investsteps]
+    where: area_use
+    equations:
+      - expression: area_use == $area_use_previous_step + area_use_new - default_if_empty(area_use_decommissioned, 0)
+    sub_expressions:
+      area_use_previous_step:
+        - where: investsteps=get_val_at_index(investsteps=0)
+          expression: area_use_initial
+        - where: NOT investsteps=get_val_at_index(investsteps=0)
+          expression: roll(area_use, investsteps=1)
 
   cost_flow_cap_bounding:
     description: >-
@@ -168,20 +215,97 @@ constraints:
     equations:
       - expression: >-
           cost_investment_flow_cap == $flow_cap_invest_previous_step
-          + $cost_sum * new_flow_cap
-          - get_decommission_cap($cost_sum * new_flow_cap)
+          + $cost_sum * flow_cap_new
+          - get_decommission_cap($cost_sum * flow_cap_new)
     sub_expressions:
       flow_cap_invest_previous_step:
         - where: investsteps=get_val_at_index(investsteps=0)
           expression: "0"
         - where: NOT investsteps=get_val_at_index(investsteps=0)
           expression: roll(cost_investment_flow_cap, investsteps=1)
-
       cost_sum:
         - where: base_tech=transmission
           expression: (cost_flow_cap + cost_flow_cap_per_distance * default_if_empty(distance, 0)) * 0.5
         - where: NOT base_tech=transmission
           expression: cost_flow_cap
+
+  cost_storage_cap_bounding:
+    description: >-
+      Storage cap investment is based on the amount paid in the last investment period
+      plus the cost of new capacity minus the cost of capacity that is now decommissioned.
+      This _should_ mean that capacity is linked to the investment cost when it was _commissioned_.
+      TODO: this should probably be annualised now rather than waiting until later.
+    foreach: [nodes, techs, costs, investsteps]
+    where: cost_investment_storage_cap
+    equations:
+      - expression: >-
+          cost_investment_storage_cap == $storage_cap_invest_previous_step
+          + cost_storage_cap * storage_cap_new
+          - get_decommission_cap(cost_storage_cap * storage_cap_new)
+    sub_expressions:
+      storage_cap_invest_previous_step:
+        - where: investsteps=get_val_at_index(investsteps=0)
+          expression: "0"
+        - where: NOT investsteps=get_val_at_index(investsteps=0)
+          expression: roll(cost_investment_storage_cap, investsteps=1)
+
+  cost_source_cap_bounding:
+    description: >-
+      Source cap investment is based on the amount paid in the last investment period
+      plus the cost of new capacity minus the cost of capacity that is now decommissioned.
+      This _should_ mean that capacity is linked to the investment cost when it was _commissioned_.
+      TODO: this should probably be annualised now rather than waiting until later.
+    foreach: [nodes, techs, costs, investsteps]
+    where: cost_investment_source_cap
+    equations:
+      - expression: >-
+          cost_investment_source_cap == $source_cap_invest_previous_step
+          + cost_source_cap * source_cap_new
+          - get_decommission_cap(cost_source_cap * source_cap_new)
+    sub_expressions:
+      source_cap_invest_previous_step:
+        - where: investsteps=get_val_at_index(investsteps=0)
+          expression: "0"
+        - where: NOT investsteps=get_val_at_index(investsteps=0)
+          expression: roll(cost_investment_source_cap, investsteps=1)
+
+  cost_area_use_bounding:
+    description: >-
+      Area use investment is based on the amount paid in the last investment period
+      plus the cost of new area use minus the cost of area use that is now decommissioned.
+      This _should_ mean that area use is linked to the investment cost when it was _commissioned_.
+      TODO: this should probably be annualised now rather than waiting until later.
+    foreach: [nodes, techs, costs, investsteps]
+    where: cost_investment_area_use
+    equations:
+      - expression: >-
+          cost_investment_area_use == $area_use_invest_previous_step
+          + cost_area_use * area_use_new
+          - get_decommission_cap(cost_area_use * area_use_new)
+    sub_expressions:
+      area_use_invest_previous_step:
+        - where: investsteps=get_val_at_index(investsteps=0)
+          expression: "0"
+        - where: NOT investsteps=get_val_at_index(investsteps=0)
+          expression: roll(cost_investment_area_use, investsteps=1)
+
+  link_storage_level:
+    description: Link the storage level at the end of one investmentstep to the start of the next.
+    foreach: [nodes, techs, costs, investsteps]
+    where: storage AND NOT investsteps=get_val_at_index(investsteps=0)
+    equations:
+      - expression: >-
+          storage[timesteps=$initial_step] == roll(
+            storage[timesteps=$final_step] * (
+              (1 - storage_loss) ** timestep_resolution[timesteps=$final_step]
+            ),
+            investsteps=1
+          )
+    slices:
+      initial_step:
+        - expression: get_val_at_index(timesteps=0)
+      final_step:
+        - expression: get_val_at_index(timesteps=-1)
 
 variables:
   flow_cap:
@@ -232,7 +356,7 @@ variables:
   unused_supply:
     foreach: [nodes, carriers, timesteps, investsteps]
 
-  new_flow_cap:
+  flow_cap_new:
     description: >-
       Additional flow capacity commissioned in an investstep.
     unit: power
@@ -242,10 +366,64 @@ variables:
       min: 0
       max: flow_cap_max
 
+  storage_cap_new:
+    description: >-
+      Additional storage capacity commissioned in an investstep.
+    unit: energy
+    where: storage_cap
+    foreach: [nodes, techs, investsteps]
+    bounds:
+      min: 0
+      max: storage_cap_max
+
+  source_cap_new:
+    description: >-
+      Additional source capacity commissioned in an investstep.
+    unit: power
+    where: source_cap
+    foreach: [nodes, techs, investsteps]
+    bounds:
+      min: 0
+      max: source_cap_max
+
+  area_use_new:
+    description: >-
+      Additional area use commissioned in an investstep.
+    unit: area
+    where: area_use
+    foreach: [nodes, techs, investsteps]
+    bounds:
+      min: 0
+      max: area_use_max
+
   cost_investment_flow_cap:
     foreach: [nodes, techs, carriers, costs, investsteps]
     unit: cost
     where: flow_cap
+    bounds:
+      min: -.inf
+      max: .inf
+
+  cost_investment_storage_cap:
+    foreach: [nodes, techs, costs, investsteps]
+    unit: cost
+    where: storage_cap
+    bounds:
+      min: -.inf
+      max: .inf
+
+  cost_investment_source_cap:
+    foreach: [nodes, techs, costs, investsteps]
+    unit: cost
+    where: source_cap
+    bounds:
+      min: -.inf
+      max: .inf
+
+  cost_investment_area_use:
+    foreach: [nodes, techs, costs, investsteps]
+    unit: cost
+    where: area_use
     bounds:
       min: -.inf
       max: .inf
@@ -260,18 +438,19 @@ global_expressions:
   cost_var:
     foreach: [nodes, techs, costs, timesteps, investsteps]
 
-  # now a decision variable so it can refer to itself recursively in a constraint.
+  # these are now decision variables
+  # so they can refer to themselves recursively in a constraint.
   cost_investment_flow_cap:
     active: false
 
   cost_investment_storage_cap:
-    foreach: [nodes, techs, costs, investsteps]
+    active: false
 
   cost_investment_source_cap:
-    foreach: [nodes, techs, costs, investsteps]
+    active: false
 
   cost_investment_area_use:
-    foreach: [nodes, techs, costs, investsteps]
+    active: false
 
   cost_investment_purchase:
     foreach: [nodes, techs, costs, investsteps]
@@ -282,11 +461,31 @@ global_expressions:
   cost:
     foreach: [nodes, techs, costs, investsteps]
 
-  decommissioned:
+  flow_cap_decommissioned:
     foreach: [nodes, techs, carriers, investsteps]
-    where: new_flow_cap AND lifetime
+    where: flow_cap_new AND lifetime
     equations:
-      - expression: get_decommission_cap(new_flow_cap)
+      - expression: get_decommission_cap(flow_cap_new)
+
+  storage_cap_decommissioned:
+    foreach: [nodes, techs, investsteps]
+    where: new_storage_cap AND lifetime
+    equations:
+      - expression: get_decommission_cap(new_storage_cap)
+
+  source_cap_decommissioned:
+    foreach: [nodes, techs, investsteps]
+    where: new_source_cap AND lifetime
+    equations:
+      - expression: get_decommission_cap(new_source_cap)
+
+  area_use_decommissioned:
+    foreach: [nodes, techs, investsteps]
+    where: new_area_use AND lifetime
+    equations:
+      - expression: get_decommission_cap(new_area_use)
+
+
 
 objectives:
   min_cost_optimisation:
