@@ -294,7 +294,7 @@ class TestModelRun:
 
         assert check_error_or_warning(
             warn_info,
-            "Only one timestep defined. Inferring timestep resolution to be 1 hour",
+            "Only one timesteps defined. Inferring resolution to be 0 days 01:00:00",
         )
         assert model.inputs.timestep_resolution == [1]
 
