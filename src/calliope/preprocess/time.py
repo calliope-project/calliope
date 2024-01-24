@@ -22,31 +22,50 @@ LOGGER = logging.getLogger(__name__)
 
 
 def add_inferred_time_params(model_data: xr.Dataset):
-    # Add timestep_resolution by looking at the time difference between timestep n
-    # and timestep n + 1 for all timesteps
-    # Last timestep has no n + 1, so will be NaT (not a time), we ffill this.
-    # Time resolution is saved in hours (i.e. nanoseconds / 3600e6)
-    timestep_resolution = (
-        model_data.timesteps.diff("timesteps", label="lower")
-        .reindex({"timesteps": model_data.timesteps})
-        .rename("timestep_resolution")
+    model_data["timestep_resolution"] = _get_resolution(
+        model_data.timesteps, pd.Timedelta(hours=1)
     )
-
-    if len(model_data.timesteps) == 1:
-        exceptions.warn(
-            "Only one timestep defined. Inferring timestep resolution to be 1 hour"
-        )
-        timestep_resolution = timestep_resolution.fillna(pd.Timedelta("1 hour"))
-    else:
-        timestep_resolution = timestep_resolution.ffill("timesteps")
-
-    model_data["timestep_resolution"] = timestep_resolution / pd.Timedelta("1 hour")
-
     model_data["timestep_weights"] = xr.DataArray(
         np.ones(len(model_data.timesteps)), dims=["timesteps"]
     )
+    if "investsteps" in model_data.dims:
+        model_data["investstep_resolution"] = _get_resolution(
+            model_data.investsteps, pd.Timedelta(hours=8760)
+        )
 
     return model_data
+
+
+def _get_resolution(
+    time_da: xr.DataArray, base_resolution: dict[str, int]
+) -> xr.DataArray:
+    """Add resolution of a timeseries by taking the gradient between index items in order.
+
+    The final index item will be NaT (not a time), so we forward fill this.
+
+    Time resolution is saved in the base resolution.
+
+    Args:
+        time_da (xr.DataArray): Model timeseries dimension.
+        base_resolution (dict[str, int]): pandas Timedelta or DateOffset object.
+
+    Returns:
+        xr.DataArray: Resolution of the timeseries based on the distance between index items.
+    """
+
+    time_resolution = time_da.diff(time_da.name, label="lower").reindex(
+        {time_da.name: time_da}
+    )
+
+    if len(time_da) == 1:
+        exceptions.warn(
+            f"Only one {time_da.name} defined. Inferring resolution to be {base_resolution}"
+        )
+        nan_filled_time_resolution = time_resolution.fillna(base_resolution)
+    else:
+        nan_filled_time_resolution = time_resolution.ffill(time_da.name)
+
+    return nan_filled_time_resolution / base_resolution
 
 
 def timeseries_to_datetime(ds: xr.Dataset, time_format: str, id: str) -> xr.Dataset:

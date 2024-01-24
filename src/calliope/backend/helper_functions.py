@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Literal, Mapping, Optional, Union, overload
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 from calliope.backend.backend_model import BackendModel
@@ -30,7 +31,7 @@ class ParsingHelperFunction(ABC):
         *,
         equation_name: str,
         input_data: xr.Dataset,
-        backend_interface: Optional[type[BackendModel]] = None,
+        backend_interface: Optional[BackendModel] = None,
         **kwargs,
     ) -> None:
         """Abstract helper function class, which all helper functions must subclass.
@@ -458,6 +459,42 @@ class Sum(ParsingHelperFunction):
         return array.sum(over, min_count=1, skipna=True)
 
 
+class CumSum(ParsingHelperFunction):
+    # TODO: probably remove as no pathway math needs it at the moment.
+    #:
+    NAME = "cumsum"
+    #:
+    ALLOWED_IN = ["expression"]
+
+    def as_math_string(self, array: str, *, over: Union[str, list[str]]) -> str:
+        # TODO: math expression for cumulative sum?
+        if isinstance(over, str):
+            overstring = self._instr(over)
+        else:
+            foreach_string = r" \\ ".join(self._instr(i) for i in over)
+            overstring = rf"\substack{{{foreach_string}}}"
+        return rf"\sum\limits_{{{overstring}}} ({array})"
+
+    def as_array(
+        self, array: xr.DataArray, *, over: Union[str, list[str]]
+    ) -> xr.DataArray:
+        """Cumulative sum of expression array over the given dimension(s).
+
+        Args:
+            array (xr.DataArray): expression array
+            over (Union[str, list[str]]): dimension(s) over which to apply `cumsum`.
+
+        Returns:
+            xr.DataArray:
+                Array with same dimensions as input, but with values cumulatively summed over the dimensions in `over`.
+                NaNs are ignored (xarray.DataArray.cumsum arg: `skipna: True`)
+                and if all values along the dimension(s) are NaN, the summation will lead to a NaN.
+        """
+        cumsum = array.cumsum(over)
+        # same effect as `min_count=1` in `sum`, which cumsum doesn't have:
+        return cumsum.where(array.notnull().any(over))
+
+
 class ReduceCarrierDim(ParsingHelperFunction):
     #:
     NAME = "reduce_carrier_dim"
@@ -729,3 +766,64 @@ class DefaultIfEmpty(ParsingHelperFunction):
             return xr.DataArray(default)
         else:
             return var.fillna(default)
+
+
+class GetDecommissionCap(ParsingHelperFunction):
+    #:
+    NAME = "get_decommission_cap"
+    #:
+    ALLOWED_IN = ["expression"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.decommission_year = self.get_decommission_years()
+
+    def get_decommission_years(self) -> xr.DataArray:
+        """For every technology at every investment step, calculate the closest historical investment step to their full lifetime.
+
+        E.g., at 2040, a technology with a lifetime of 20 years will need to decommission its capacity from 2020.
+
+        Returns:
+            xr.DataArray: Lookup array of timestamps to select decision variables from.
+        """
+        first_investstep = pd.to_datetime(self._input_data.investsteps[0].item())
+        if self._backend_interface is not None:
+            return self._backend_interface._apply_func(
+                self._offset_year,
+                self._input_data.investsteps,
+                self._input_data.lifetime,
+                min_bound=first_investstep,
+            )
+        else:
+            return xr.DataArray(np.nan)
+
+    @staticmethod
+    def _offset_year(
+        unix_time: int, offset: int, *, min_bound: pd.Timestamp
+    ) -> pd.Timestamp:
+        if pd.isnull(offset):
+            return pd.NaT
+        new_date = pd.to_datetime(unix_time) - pd.DateOffset(years=offset)
+        if new_date < min_bound:
+            return pd.NaT
+        else:
+            return new_date
+
+    def as_math_string(self, array: str) -> str:
+        array = self._add_to_iterator(array, {"investep": "commission_year"})
+        return array
+
+    def as_array(self, array: xr.DataArray) -> xr.DataArray:
+        """For each investment step in pathway optimisation, get the historical capacity additions that now must be decommissioned.
+
+        Args:
+            array (xr.DataArray): A capacity decision variable (`flow_cap`, `storage_cap`, etc.)
+
+        Returns:
+            xr.DataArray:
+        """
+        return (
+            array.sel(investsteps=self.decommission_year, method="nearest")
+            .where(self.decommission_year.notnull())
+            .fillna(0)
+        )

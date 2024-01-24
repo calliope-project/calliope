@@ -207,3 +207,58 @@ overrides:
   capacity_factor:
     techs.ccgt.capacity_factor_min: 0.8
     techs.ccgt.capacity_factor_max: 0.9
+
+
+  pathways:
+
+    config.init:
+      custom_math: [pathways]
+      time_subset: null
+      time_resample: "24h"
+
+    techs:
+      # Update lifetimes to test intra-investstep effects
+      battery:
+        lifetime: 10
+      ccgt:
+        lifetime: 16
+        flow_cap_max_systemwide: # A constraint forcing phase-out of CCGT
+          # FIXME: we have to use _REPLACE_ otherwise the rest of the "ccgt" tech def gets deleted for some reason.
+          _REPLACE_:
+            data: [50000, 30000, 20000, 0]
+            index: [2020, 2030, 2040, 2050]
+            dims: investsteps
+      csp:
+        lifetime: 24
+      region1_to_region2:
+        lifetime: 25
+
+    data_sources:
+      # We ignore demand from the existing timeseries,
+      # but assume renewable capacity factors remain the same in each investment step
+      time_varying_parameters:
+        select:
+          parameters: source_use_max
+
+      # We load a different demand timeseries
+      demand:
+        source: pathways_data/demand.csv
+        rows: timesteps
+        columns: [nodes, techs, parameters, investsteps]
+
+      # Changes in investment costs per investment step.
+      pathway_techs_costs_monetary:
+        source: pathways_data/techs_costs_monetary.csv
+        rows: [techs, parameters]
+        columns: investsteps
+        add_dimensions:
+          costs: monetary
+
+      # An idea for better handling of "decommissioning", by splitting the available capacity between investment steps
+      # However, I can't yet work out _how_ to implement it in code.
+      #commissioning_rates:
+      #  source: pathways_data/commissioning_rates.csv
+      #  rows: techs
+      #  columns: [commissionsteps, investsteps]
+      #  add_dimensions:
+      #    parameters: commissioning_rate
