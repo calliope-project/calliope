@@ -1,8 +1,8 @@
 # Introducing custom math to your model
 
-Once you understand the [math components][math-components] and the [formulation syntax][math-syntax], you'll be ready to introduce custom math to your model.
+Once you understand the [math components](components.md) and the [formulation syntax](syntax.md), you'll be ready to introduce custom math to your model.
 
-You can find examples of custom math that we have put together in the [custom math example gallery][custom-math-example-gallery].
+You can find examples of custom math that we have put together in the [custom math example gallery](examples/index.md).
 
 Whenever you introduce your own math, it will be applied on top of the [base math][base-math].
 Therefore, you can include base math overrides as well as add new math.
@@ -24,7 +24,7 @@ config:
     custom_math: [my_new_math_1.yaml, my_new_math_2.yaml]
 ```
 
-You can also define a mixture of your custom math and the [inbuilt math][inbuilt-math]:
+You can also define a mixture of your custom math and the [inbuilt math](../math/index.md):
 
 ```yaml
 config:
@@ -34,7 +34,7 @@ config:
 
 ## Writing your own math documentation
 
-You can write your model's mathematical formulation to view it in a rich-text format (as we do for our [inbuilt math][inbuilt-math] in this documentation).
+You can write your model's mathematical formulation to view it in a rich-text format (as we do for our [inbuilt math](../math/index.md) in this documentation).
 To write a LaTeX, reStructuredText, or Markdown file that includes only the math valid for your model:
 
 ```python

@@ -22,11 +22,11 @@ Putting all of these possibilities together allows a modeller to specify as simp
     * Constraint: an equality or inequality expression that constrains one or several variables.
 
 !!! example
-    Refer to the [examples and tutorials section][examples-and-tutorials] for a more practical look at how to build a Calliope model.
+    Refer to the [examples and tutorials section](../examples/index.md) for a more practical look at how to build a Calliope model.
 
 ## Model configuration and model definition
 
-Calliope models are defined through [YAML][brief-introduction-to-yaml-as-used-in-calliope] files (a format that is both human and computer-readable), and CSV files (a simple tabular format).
+Calliope models are defined through [YAML](yaml.md) files (a format that is both human and computer-readable), and CSV files (a simple tabular format).
 In the pages in this section we will take you through each part of setting up your model.
 
 We distinguish between:
@@ -34,11 +34,11 @@ We distinguish between:
 - the model **configuration** (the options provided to Calliope to do its work) and
 - the model **definition** (your representation of a physical system in YAML).
 
-Model configuration is everything under the top-level YAML key [`config`][model-configuration-config].
-Model definition is everything else, under the top-level YAML keys [`parameters`][indexed-parameters-parameters], [`techs`][technologies-techs], [`nodes`][nodes-nodes], [`tech_groups`][technology-tech_groups-and-node-node_groups-inheritance], [`node_groups`][technology-tech_groups-and-node-node_groups-inheritance], and [`data_sources`][loading-tabular-data-data_sources].
+Model configuration is everything under the top-level YAML key [`config`](config.md).
+Model definition is everything else, under the top-level YAML keys [`parameters`](parameters.md), [`techs`](techs.md), [`nodes`](nodes.md), [`tech_groups`](groups.md), [`node_groups`](groups.md), and [`data_sources`](data_sources.md).
 
 It is possible to define alternatives to the model configuration/definition that you can refer to when you initialise your model.
-These are defined under the top-level YAML keys [`scenarios` and `overrides`][scenarios-and-overrides].
+These are defined under the top-level YAML keys [`scenarios` and `overrides`](scenarios.md).
 
 We dive into each of these top-level keys in the pages you'll find in the left-hand navigation.
 

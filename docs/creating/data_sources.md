@@ -183,7 +183,7 @@ In this section we will show some examples of loading data and provide the equiv
             cost_storage_cap.data: 150
     ```
 
-    1. To limit repetition, we have defined [technology groups][technology-tech_groups-and-node-node_groups-inheritance] for our costs.
+    1. To limit repetition, we have defined [technology groups](groups.md) for our costs.
 
 !!! info "See also"
     Our [data source loading tutorial][loading-tabular-data] has more examples of loading tabular data into your model.
@@ -238,7 +238,7 @@ data_sources:
         drop: scenarios
 ```
 
-You can then also tweak just one line of your data source YAML with an [override][scenarios-and-overrides] to point to your other scenario:
+You can then also tweak just one line of your data source YAML with an [override](scenarios.md) to point to your other scenario:
 
 ```yaml
 override:
@@ -246,7 +246,7 @@ override:
         data_sources.tech_data.select.scenarios: scenario2  # (1)!
 ```
 
-1. We use the dot notation as a shorthand for [abbreviate nested dictionaries][abbreviated-nesting].
+1. We use the dot notation as a shorthand for [abbreviate nested dictionaries](yaml.md#abbreviated-nesting).
 
 ## Adding dimensions
 

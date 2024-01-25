@@ -31,12 +31,12 @@ If given, node-specific parameters supersede any group constraints a technology 
 
 Nodes can optionally specify geographic coordinates (`latitude` and `longitude`) which are used in visualisation or to compute distances along transmission links.
 Nodes can also have any arbitrary parameter assigned which will be available in the optimisation problem, indexed over the `nodes` dimension.
-They can also have parameters that use the [indexed parameter syntax][indexed-parameters-parameters] to define node+other dimension data.
-In the above example, `node_flow_out_max` at `region1` could be used to create a [custom math][custom-math-formulation] constraint that limits the total outflow of the carriers electricity and gas at that node.
+They can also have parameters that use the [indexed parameter syntax](parameters.md) to define node+other dimension data.
+In the above example, `node_flow_out_max` at `region1` could be used to create a [custom math](../custom_math/index.md) constraint that limits the total outflow of the carriers electricity and gas at that node.
 
 ## Understanding node-level parameters
 
 `techs` is the only required parameter in a node.
 This can be an empty dictionary (`techs: {}`), which you may use if your node is just a junction for transmission technologies (which you [**do not define in the `techs` of a node**](techs.md#transmission-technologies) - rather, you define them as separate technologies that connect `from` one node `to` another node).
 
-Everything else about defining parameters can be found on our [`techs` page][understanding-tech-level-parameters].
+Everything else about defining parameters can be found on our [`techs` page](techs.md#understanding-tech-level-parameters).

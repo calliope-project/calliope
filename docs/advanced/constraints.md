@@ -5,8 +5,8 @@ On this page, we look at some of the more advanced features of Calliope's math a
 !!! info "See also"
     [Base math formulation][base-math],
     [Model definition schema][model-definition-schema],
-    [Introducing custom math to your model][introducing-custom-math-to-your-model],
-    ["MILP" example model][mixed-integer-linear-programming-milp-example-model].
+    [Introducing custom math to your model](../custom_math/customise.md),
+    ["MILP" example model](../examples/milp/index.md).
 
 ## Multiple input/output carriers
 
@@ -46,8 +46,8 @@ This is valid for our heat pump and coal-fired power plant examples above, but n
 In these examples, the inflow is linked to a specific outflow (gas / nuclear fuel consumption is a function of electricity production).
 The other carrier outflows are then linked to the "primary" outflow.
 
-To capture this slightly different math, you will need to apply your own [custom math][custom-math-formulation].
-For example, the CHP example is dealt with in our [urban scale example model][interlude-custom-math] and in an [example custom math file][chp-plants].
+To capture this slightly different math, you will need to apply your own [custom math](../custom_math/index.md).
+For example, the CHP example is dealt with in our [urban scale example model](../examples/urban_scale/index.md#sparkles-interlude-custom-math) and in an [example custom math file][chp-plants].
 
 No matter how you formulate your math, you can (and probably will need to) extend your technology parameters to account for these different carriers.
 For instance, to differentiate `flow_cap_max` between carriers or to assign different conversion efficiencies / costs:
@@ -108,7 +108,7 @@ For example, to consider a feed-in tariff for PV generation, it could be given a
 Export is an extension of this, allowing a carrier to be removed from the system without meeting demand.
 This is analogous to e.g. domestic PV technologies being able to export excess electricity to the national grid.
 A cost (or negative cost: revenue) can then be applied to export.
-There is an example of this in our [urban scale example model][revenue-by-export].
+There is an example of this in our [urban scale example model](../examples/urban_scale/index.md#revenue-by-export).
 
 !!! note
     Negative costs can be applied to capacity costs, but the user must an ensure a capacity limit has been set.
@@ -168,7 +168,7 @@ In the latter case, Calliope will compute distances automatically based on the l
 
 ## Cyclic storage
 
-For any technologies with storage (`storage` technologies or those with [storage buffer][activating-storage-buffers-in-non-storage-technologies]), it is possible to link the storage at either end of the timeseries using the `cyclic_storage` parameter.
+For any technologies with storage (`storage` technologies or those with [storage buffer](#activating-storage-buffers-in-non-storage-technologies)), it is possible to link the storage at either end of the timeseries using the `cyclic_storage` parameter.
 This allows the user to better represent multiple years by just modelling one year.
 Cyclic storage is activated by default (to deactivate: `config.build.cyclic_storage: false`).
 As a result, a technology's initial stored energy at a given location will be equal to its stored energy at the end of the model's last timestep.
@@ -182,5 +182,5 @@ This may prove useful in some cases, but makes little sense if you imagine your 
 Any excess stored energy would result in double the excess the following year, and so on.
 
 !!! note
-    Cyclic storage also functions when [time clustering][time-clustering], if allowing storage to be tracked between clusters.
-    However, it cannot be used in [`operate` run mode][operate-mode].
+    Cyclic storage also functions when [time clustering](time.md#time-clustering), if allowing storage to be tracked between clusters.
+    However, it cannot be used in [`operate` run mode](mode.md#operate-mode).

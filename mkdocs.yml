@@ -150,5 +150,6 @@ nav:
     - reference/data_source_schema.md
     - reference/model_schema.md
     - reference/math_schema.md
+  - migrating.md
   - Contributing: contributing.md
   - Version history: version_history.md

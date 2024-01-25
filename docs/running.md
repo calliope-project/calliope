@@ -2,7 +2,7 @@
 
 There are essentially three ways to run a Calliope model:
 
-1. With the `calliope run` command-line tool (see the [CLI reference][cli-reference] for full details, or a basic explanation below).
+1. With the `calliope run` command-line tool (see the [CLI reference](reference/cli.md) for full details, or a basic explanation below).
 2. By programmatically creating and running a model from within other Python code, or in an interactive Python session.
 3. By generating and then executing scripts with the `#!shell calliope generate_runs` command-line tool, which is primarily designed for running many scenarios on a high-performance cluster.
 
@@ -11,7 +11,7 @@ There are essentially three ways to run a Calliope model:
 
 ## Running with the command-line tool
 
-We can easily run a model after creating it (see [creating-a-model][]), saving results to a single NetCDF file for further processing.
+We can easily run a model after [creating it](creating/index.md), saving results to a single NetCDF file for further processing.
 
 ```shell
 $ calliope run testmodel/model.yaml --save_netcdf=results.nc
@@ -38,7 +38,7 @@ $ calliope run testmodel/model.yaml --save_netcdf=results.nc --save_csv=outputs
 ### Applying a scenario or override on the command line
 
 !!! note "See also"
-    See the [scenarios-and-overrides][] section for details on how to define scenarios.
+    See the [Scenarios and overrides](creating/scenarios.md) section for details on how to define scenarios.
 
 The `--scenario` option can be used in three different ways:
 
@@ -76,7 +76,7 @@ model.solve()
 
 !!! note
     If the model definition is not specified (i.e. `model = Model()`), an error is raised.
-    See the example models introduced in the [examples-and-tutorials][] section for information on instantiating a simple model without specifying a custom model configuration.
+    See the example models introduced in the [examples and tutorials](examples/index.md) section for information on instantiating a simple model without specifying a custom model configuration.
 
 Other ways to load a model in Python are:
 
@@ -91,12 +91,12 @@ After the model has been solved, an xarray Dataset containing results (`model.re
 At this point, the model can be saved with either [calliope.Model.to_csv][] or [calliope.Model.to_netcdf][], which saves all inputs and results, and is equivalent to the corresponding `--save` options of the command-line tool.
 
 !!! example
-    An example of running in an interactive Python session, which also demonstrates some of the analysis possibilities after running a model, is given in the [tutorials][examples-and-tutorials].
+    An example of running in an interactive Python session, which also demonstrates some of the analysis possibilities after running a model, is given in the [tutorials](examples/index.md).
     You can download and run the embedded notebooks on your own machine (if both Calliope and the Jupyter Notebook are installed).
 
 ### Applying a scenario or override when running in Python
 
-There are two ways to override a base model when running in Python which are analogous to the use of the command-line tool (see the [applying-a-scenario-or-override-on-the-command-line][] section):
+There are two ways to override a base model when running in Python which are analogous to the [use of the command-line tool](#applying-a-scenario-or-override-on-the-command-line):
 
 1. By setting the `scenario` argument, e.g.:
 
@@ -135,7 +135,7 @@ Possible log levels are (from least to most verbose):
 ## Generating scripts for many model runs
 
 Scripts to simplify the creation and execution of a large number of Calliope model runs are generated with the `calliope generate_runs` command-line tool.
-More detail on this is available in the section [Generating scripts to repeatedly run variations of a model][generating-scripts-to-repeatedly-run-variations-of-a-model].
+More detail on this is available in the [advanced features section](advanced/scripts.md).
 
 ## Improving solution times
 
@@ -143,7 +143,7 @@ Large models will take time to solve.
 The easiest is often to just let a model run on a remote device (another computer, or a high performance computing cluster) and forget about it until it is done.
 However, if you need results *now*, there are ways to improve solution time.
 
-Details on strategies to improve solution times are given in the [troubleshooting][] section.
+Details on strategies to improve solution times are given in the [troubleshooting](troubleshooting.md) section.
 
 ## Debugging failing runs
 
@@ -155,4 +155,4 @@ Calliope will attempt to diagnose some common errors and raise an appropriate er
 Calliope will be able to construct the model and pass it on to the solver, but the solver (after a potentially long time) will abort with a message stating that the model is infeasible.
 * There is a bug in Calliope causing the model to crash either before being passed to the solver, or after the solver has completed and when results are passed back to Calliope.
 
-Calliope provides help in diagnosing all of these model issues. For details, see the [troubleshooting][] section.
+Calliope provides help in diagnosing all of these model issues. For details, see the [troubleshooting](troubleshooting.md) section.

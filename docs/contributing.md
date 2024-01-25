@@ -78,7 +78,7 @@ If you want the local version of your fork to be in the same folder as your loca
 git clone https://github.com/your_username/calliope your_new_directory_name
 ```
 
-Following the instructions for [installing a development environment of Calliope][setting-up-a-development-environment], you can create an environment specific to this installation of Calliope.
+Following the instructions for [installing a development environment of Calliope](#setting-up-a-development-environment), you can create an environment specific to this installation of Calliope.
 
 In making changes to your local version, it's a good idea to create a branch first, to not have your main branch diverge from that of the main Calliope repository:
 
