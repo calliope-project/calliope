@@ -11,7 +11,7 @@ For example, `#!yaml foreach: [nodes, techs]` will build the component over all 
 
 The available sets in Calliope are: `nodes`, `techs`, `carriers`, `costs`, `timesteps`.
 If using [time clustering and inter-cluster storage][time-clustering], there is also a `datesteps` set available.
-If you want to build over your own custom set, you will need to add it to the Calliope model dataset before building the optimisation problem, e.g. as a new top-level parameter.
+If you want to build over your own custom set, you will need to add it to the Calliope model dataset before building the optimisation problem, e.g. as a new indexed parameter.
 
 ## where strings
 

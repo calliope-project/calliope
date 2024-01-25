@@ -93,11 +93,12 @@ nav:
   - Download and installation: installation.md
   - Creating a model:
     - creating/index.md
+    - YAML as used in Calliope: creating/yaml.md
     - Model configuration: creating/config.md
     - Technologies: creating/techs.md
     - Nodes: creating/nodes.md
-    - Technology and node inheritance: creating/groups.md
-    - Top-level parameters: creating/parameters.md
+    - Inheriting from technology and node groups: creating/groups.md
+    - Indexed parameters: creating/parameters.md
     - Loading tabular data: creating/data_sources.md
     - Scenarios and overrides: creating/scenarios.md
   - Running a model: running.md
@@ -127,13 +128,14 @@ nav:
     - examples/calliope_model_object.py
     - examples/calliope_logging.py
   - Advanced features:
+    - advanced/constraints.md
     - advanced/index.md
     - advanced/time.md
     - advanced/scripts.md
     - advanced/mode.md
     - advanced/solver.md
     - advanced/backend.md
-    - advanced/constraints.md
+    - advanced/shadow_prices.md
   - Reference:
     - Command line interface: reference/cli.md
     - Python API:

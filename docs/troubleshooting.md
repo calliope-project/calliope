@@ -44,7 +44,7 @@ To build a model and save it to LP without actually solving it, use:
 calliope run my_model.yaml --save_lp=my_saved_model.lp
 ```
 
-or, interactively:
+or in Python:
 
 ```python
 model.build()
@@ -220,7 +220,7 @@ There are private attributes of the Calliope `Model` object that you can access 
 - For the built backend objects (e.g., Pyomo objects) in an array format, the dataset `model.backend._dataset`.
 
 !!! info
-    If using Calliope interactively in a Python session, we recommend reading up on the [Python debugger](https://docs.python.org/3/library/pdb.html) and making use of the [`%debug` magic](https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-debug).
+    If using Calliope in a Python session, we recommend reading up on the [Python debugger](https://docs.python.org/3/library/pdb.html) and making use of the [`%debug` magic](https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-debug).
 
 !!! info "See also"
     We go into the details of the Calliope model in [one of our tutorial notebooks][the-calliope-model-and-backend-objects].

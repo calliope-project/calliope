@@ -103,5 +103,5 @@ These expressions do _not_ have comparison operators.
 
 !!! warning
 
-    You can only have one objective activated in your math.
-    If you have loaded multiple, you can deactivate unwanted ones using `active: false`, or you can set your top-level `where` string on each that leads to only one being valid for your particular problem.
+    You can only have one objective function activated in your math.
+    If you have defined multiple objective functions, you can deactivate unwanted ones using `active: false`, or you can set your top-level `where` string on each that leads to only one being valid for your particular problem.

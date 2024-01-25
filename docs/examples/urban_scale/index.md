@@ -72,7 +72,7 @@ Since all the data refers to the one parameter `sink_use_equals`, we don't add t
 
 ## Model definition
 
-### Top-level parameters
+### Indexed parameters
 
 Before we dive into the technologies and nodes in the model, we have defined some parameters that are independent of both of these:
 

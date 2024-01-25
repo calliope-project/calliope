@@ -10,7 +10,7 @@
 #
 #   Specifying `relaxation` inside the constraint to a non-zero value allows the constraint some flexibility around a given value, making a model easier to solve.
 #
-#   New top-level parameters:
+#   New indexed parameters:
 #
 #   - ``relaxation`` (defined here directly)
 #   - ``demand_share_limit`` (defined here directly)
@@ -60,7 +60,7 @@ constraints:
           expression: "0"
     slices: &slice
       carrier:
-        - expression: demand_share_carrier  # assigned as a top-level parameter
+        - expression: demand_share_carrier  # assigned as an indexed parameter
 
   demand_share_per_timestep_decision_main_max:
     description: >-

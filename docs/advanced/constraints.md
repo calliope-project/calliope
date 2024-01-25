@@ -1,7 +1,6 @@
-# Math deep-dives
+# Advanced constraints
 
-On this page, we do not go into great detail on all the parameters, constraints, and decision variables we have in Calliope.
-Instead, we look at some of the features of Calliope's math and configuration that can help you understand the breadth of what we offer.
+On this page, we look at some of the more advanced features of Calliope's math and configuration that can help you understand the breadth of what we offer.
 
 !!! info "See also"
     [Base math formulation][base-math],

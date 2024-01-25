@@ -84,7 +84,7 @@ config:
 ```
 
 !!! note
-    The opposite is currently true for CPLEX, which runs faster with the default `solver_io`.
+    While explicitly setting the non-default `solver_io: python` is faster for Gurobi, the opposite is currently true for CPLEX, which runs faster with the default `solver_io`.
 
 We tend to test using `cbc` but it is not available to install into your Calliope mamba environment on Windows.
 Therefore, we recommend you install GLPK when you are first starting out with Calliope (`mamba install glpk`).

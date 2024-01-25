@@ -63,7 +63,7 @@ It is also possible to use the `--override_dict` option to pass a YAML string th
 $ calliope run testmodel/model.yaml --override_dict="{'model.time_subset': ['2005-01-01', '2005-01-31']}" --save_netcdf=results.nc
 ```
 
-## Running interactively with Python
+## Running in Python
 
 The most basic way to run a model programmatically from within a Python interpreter is to create a [calliope.Model][] instance with a given `model.yaml` configuration file, and then call its [calliope.Model.build][] followed by [calliope.Model.solve][] methods:
 
@@ -78,7 +78,7 @@ model.solve()
     If the model definition is not specified (i.e. `model = Model()`), an error is raised.
     See the example models introduced in the [examples-and-tutorials][] section for information on instantiating a simple model without specifying a custom model configuration.
 
-Other ways to load a model interactively are:
+Other ways to load a model in Python are:
 
 * Passing an [calliope.AttrDict][] or standard Python dictionary to the [calliope.Model][] constructor, with the same nested format as the YAML model configuration (top-level keys: `config`, `parameters`, `nodes`, `techs`, etc.).
 * Loading a previously saved model from a NetCDF file with `#!python model = calliope.read_netcdf('path/to/saved_model.nc')`.
@@ -94,9 +94,9 @@ At this point, the model can be saved with either [calliope.Model.to_csv][] or [
     An example of running in an interactive Python session, which also demonstrates some of the analysis possibilities after running a model, is given in the [tutorials][examples-and-tutorials].
     You can download and run the embedded notebooks on your own machine (if both Calliope and the Jupyter Notebook are installed).
 
-### Applying a scenario or override interactively
+### Applying a scenario or override when running in Python
 
-There are two ways to override a base model when running interactively which are analogous to the use of the command-line tool (see the [applying-a-scenario-or-override-on-the-command-line][] section):
+There are two ways to override a base model when running in Python which are analogous to the use of the command-line tool (see the [applying-a-scenario-or-override-on-the-command-line][] section):
 
 1. By setting the `scenario` argument, e.g.:
 

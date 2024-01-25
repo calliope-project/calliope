@@ -4,7 +4,7 @@ Calliope inputs and results are designed for easy handling.
 Whatever software you prefer to use for data processing, either the NetCDF or CSV output options should provide a path to importing your Calliope results.
 
 !!! example
-    Refer to the [examples-and-tutorials][] section for a more practical look at how to analyse model results.
+    Refer to the [examples and tutorials section](examples/index.md) section for a more practical look at how to analyse model results.
 
 ## Accessing model data and results
 

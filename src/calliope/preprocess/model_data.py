@@ -205,10 +205,10 @@ class ModelDataFactory:
         self._add_to_dataset(ds, "YAML definition")
 
     def add_top_level_params(self):
-        """Process any parameters defined in the top-level `parameters` key.
+        """Process any parameters defined in the indexed `parameters` key.
 
         Raises:
-            KeyError: Cannot provide the same name for a top-level parameter as those defined already at the tech/node level.
+            KeyError: Cannot provide the same name for an indexed parameter as those defined already at the tech/node level.
 
         """
         for name, data in self.model_definition.get("parameters", {}).items():

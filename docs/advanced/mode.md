@@ -71,7 +71,7 @@ For this reason, `horizon` must always be equal to or larger than `window`.
 `SPORES` refers to Spatially-explicit Practically Optimal REsultS.
 This run mode allows a user to generate any number of alternative results which are within a certain range of the optimal cost.
 It follows on from previous work in the field of `modelling to generate alternatives` (MGA), with a particular emphasis on alternatives that vary maximally in the spatial dimension.
-This run mode was developed for and implemented in a `study on the future Italian energy system <https://doi.org/10.1016/j.joule.2020.08.002>`_.
+This run mode was developed for and implemented in a [study on the future Italian energy system](https://doi.org/10.1016/j.joule.2020.08.002).
 
 As an example, if you wanted to generate 10 SPORES, all of which are within 10% of the optimal system cost, you would define the following in your model configuration:
 
@@ -126,5 +126,5 @@ techs:
 ```
 
 !!! note
-    We use and recommend using 'spores_score' to define the cost class that you will now optimise against.
-    However, it is user-defined, allowing you to choose terminology that best fits your use-case.
+    We ourselves use and recommend using `spores_score` to define the cost class that you will now optimise against.
+    However, it is user-defined, allowing you to choose any terminology that best fits your use case.

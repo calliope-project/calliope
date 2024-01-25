@@ -360,7 +360,7 @@ model = calliope.Model(
 )
 ```
 
-And then you point to those dictionary keys in your data source `source`:
+And then you point to those dictionary keys in the `source` for your data source:
 
 ```yaml
 data_sources:

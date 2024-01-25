@@ -697,7 +697,7 @@ objectives:
       all technologies in the system.
       If multiple cost classes are present (e.g., monetary and co2 emissions),
       the weighted sum of total costs is minimised.
-      Cost class weights can be defined in the top-level parameter
+      Cost class weights can be defined in the indexed parameter
       `objective_cost_weights`.
     equations:
       - where: "any(cost, over=[nodes, techs, costs])"

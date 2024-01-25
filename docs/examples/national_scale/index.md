@@ -27,7 +27,7 @@ It does not contain much data, but the scaffolding with which to construct and r
 
 ## Model definition
 
-### Top-level parameters
+### Indexed parameters
 
 Before we dive into the technologies and nodes in the model, we have defined some parameters that are independent of both of these:
 

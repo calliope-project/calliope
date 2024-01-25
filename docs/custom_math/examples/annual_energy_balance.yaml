@@ -8,7 +8,7 @@
 #   - `annual_flow_max`
 #   - `annual_source_max`
 #
-#   New top-level parameters:
+#   New indexed parameters:
 #
 #   - `annual_flow_max` (if summing over technologies and/or nodes)
 #   - `flow_max_group` (if summing over technologies and/or nodes)

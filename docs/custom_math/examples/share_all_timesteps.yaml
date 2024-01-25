@@ -31,7 +31,7 @@ constraints:
           * demand_share_equals
     slices:
       demand_tech:
-        - expression: demand_share_tech  # assigned as a top-level parameter
+        - expression: demand_share_tech  # assigned as an indexed parameter
 
 
   supply_share_equals_per_tech:
@@ -47,4 +47,4 @@ constraints:
           * supply_share_equals
     slices:
       carrier:
-        - expression: supply_share_carrier  # assigned as a top-level parameter
+        - expression: supply_share_carrier  # assigned as an indexed parameter

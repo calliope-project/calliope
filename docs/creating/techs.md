@@ -48,7 +48,7 @@ ccgt:
 1. This is an example of when using quotation marks is important.
 Without them, the colour code would be interpreted as a YAML comment!
 2. the period at the start of `.inf` will ensure it is read in as a `float` type.
-3. Costs require us to explicitly define data in the [top-level parameter][top-level-parameters-parameters] format so that we can define the cost class (in this case: `monetary`).
+3. Costs require us to explicitly define data in the [indexed parameter][indexed-parameters-parameters] format so that we can define the cost class (in this case: `monetary`).
 
 Each technology must specify an abstract base technology and its carrier (`carrier_out` in the case of a `supply` technology).
 Specifying a `color` and a `name` is optional but useful when you want to [visualise or otherwise report your results][analysing-a-model].
@@ -64,7 +64,7 @@ Additional cost classes can be created simply by adding them to the definition o
 
 ??? info "Costs in the objective function"
     By default, all defined cost classes are used in the objective function, i.e., the default objective is to minimize total costs.
-    Limiting the considered costs can be achieved by [customising the in-built objective function][introducing-custom-math-to-your-model] to only focus on e.g. monetary costs (`[monetary] in costs`), or updating the `objective_cost_weights` top-level parameter to have a weight of `0` for those cost classes you want to be ignored, e.g.:
+    Limiting the considered costs can be achieved by [customising the in-built objective function][introducing-custom-math-to-your-model] to only focus on e.g. monetary costs (`[monetary] in costs`), or updating the `objective_cost_weights` indexed parameter to have a weight of `0` for those cost classes you want to be ignored, e.g.:
 
     ```yaml
     parameters:
@@ -123,11 +123,11 @@ The only requirements we apply are that it _cannot_ start with an underscore or 
 We also have a check for any parameter starting with `cost_`.
 These _must_ define a cost class.
 
-### Using the top-level parameter format
+### Using the indexed parameter format
 
-The [top-level parameter][top-level-parameters-parameters] format allows you to add dimensions to your data.
+The [indexed parameter][indexed-parameters-parameters] format allows you to add dimensions to your data.
 By defining just a data value, the resulting parameter will only be indexed over the `techs` dimension (+ optionally the `nodes` dimension if you provide a new value for it at a [node][nodes-nodes]).
-By using the top-level parameter format, you can add new dimensions.
+By using the indexed parameter format, you can add new dimensions.
 We saw this above with `costs`, but you can add _any_ dimension _except_ `nodes`.
 
 !!! examples

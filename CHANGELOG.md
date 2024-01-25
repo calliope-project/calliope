@@ -1,6 +1,6 @@
 ## 0.7.0 (dev)
 
-v0.7 includes a major change to how Calliope internally operates. Most of this affects the user only marginally. We group changes into those that are primarily user-facing and relevant for all Calliope users, and those that are primarily internal, and relevant only for Calliope developers.
+v0.7 includes a major change to how Calliope internally operates. Along with this, there are multiple changes to how Calliope models are defined and configured. This requires adapting models to work with 0.7. We group changes into those that are primarily user-facing and relevant for all Calliope users, and those that are primarily internal, and relevant only for Calliope developers.
 
 ### User-facing changes
 
@@ -15,6 +15,8 @@ This enables un-indexed parameters to be defined, as well as those indexed over 
 
 |new| parameter dimensions at the `tech` or `node` level can be enhanced using the new `parameter` definition syntax.
 For instance, `flow_cap` can be defined per `carrier`.
+
+|new| Shadow prices obtained from a dual LP problem can be read by using `model.backend.shadow_prices.get("constraint_name")`
 
 |changed| |backwards-incompatible| `file=/df=` parameter values as references to timeseries data is replaced with loading tabular data at the top-level using the `data_sources` key.
 
@@ -79,11 +81,11 @@ An API will be created in due course to allow the user to add their own checks t
 
 ## 0.6.10 (2023-01-18)
 
-|changed| |backwards-incompatible| Updated to Numpy v1.23, Pandas v1.5, Pyomo v6.4, Ruamel.yaml v0.17, Scikit-learn v1.2, Xarray v2022.3, GLPK v5. This enables Calliope to be installed on Apple Silicon devices, but changes the result of algorithmic timeseries clustering. `In scikit-learn version 0.24.0, the method of random sampling for K-Means clustering was changed <https://scikit-learn.org/0.24/whats_new/v0.24.html#changed-models>`_. This change will lead to different optimisation results if using `K-Means clustering <https://calliope.readthedocs.io/en/v0.6.10/user/advanced_features.html#time-resolution-adjustment>`_ in your model.
+|changed| |backwards-incompatible| Updated to Numpy v1.23, Pandas v1.5, Pyomo v6.4, Ruamel.yaml v0.17, Scikit-learn v1.2, Xarray v2022.3, GLPK v5. This enables Calliope to be installed on Apple Silicon devices, but changes the result of algorithmic timeseries clustering. [In scikit-learn version 0.24.0, the method of random sampling for K-Means clustering was changed](https://scikit-learn.org/0.24/whats_new/v0.24.html#changed-models). This change will lead to different optimisation results if using [K-Means clustering](https://calliope.readthedocs.io/en/v0.6.10/user/advanced_features.html#time-resolution-adjustment) in your model.
 
 |changed| |backwards-incompatible| Removed support for Python version 3.7 since some updated dependencies are not available in this version.
 
-|changed| Installation instructions for developers have changed since we no longer duplicate pinned packages between the development/testing requirements file (`requirements.yml`) and the package requirements file (`requirements.txt`). See `the documentation <https://calliope.readthedocs.io/en/v0.6.10/user/installation.html>`_ for updated instructions.
+|changed| Installation instructions for developers have changed since we no longer duplicate pinned packages between the development/testing requirements file (`requirements.yml`) and the package requirements file (`requirements.txt`). See [the documentation](https://calliope.readthedocs.io/en/v0.6.10/user/installation.html) for updated instructions.
 
 |fixed| Set ordering in the model dataset is consistent before and after optimising a model with clustered timeseries. Previously, the link between clusters and timesteps would become mixed following optimisation, so running `model.run(force_rerun=True)` would yield a different result.
 
@@ -199,7 +201,7 @@ An API will be created in due course to allow the user to add their own checks t
 
 |changed| All model defaults have been moved to `defaults.yaml`, removing the need for `model.yaml`. A default location, link and group constraint have been added to `defaults.yaml` to validate input model keys.
 
-|changed| |backwards-incompatible| Revised internal logging and warning structure. Less critical warnings during model checks are now logged directly to the INFO log level, which is displayed by default in the CLI, and can be enabled interactively by calling `calliope.set_log_verbosity()` without any options. The `calliope.set_log_level` function has been renamed to `calliope.set_log_verbosity` and includes the ability to easily turn on and off the display of solver output.
+|changed| |backwards-incompatible| Revised internal logging and warning structure. Less critical warnings during model checks are now logged directly to the INFO log level, which is displayed by default in the CLI, and can be enabled when running in Python by calling `calliope.set_log_verbosity()` without any options. The `calliope.set_log_level` function has been renamed to `calliope.set_log_verbosity` and includes the ability to easily turn on and off the display of solver output.
 
 |changed| All group constraint values are parameters so they can be updated in the backend model
 
@@ -434,7 +436,7 @@ Version 0.6.0 is an almost complete rewrite of most of Calliope's internals. See
 
 |new| |backwards-incompatible| Better coordinate definitions in metadata. Location coordinates are now specified by a dictionary with either lat/lon (for geographic coordinates) or x/y (for generic Cartesian coordinates), e.g. ``{lat: 40, lon: -2}`` or ``{x: 0, y: 1}``. For geographic coordinates, the ``map_boundary`` definition for plotting was also updated in accordance. See the built-in example models for details.
 
-|new| Unidirectional transmission links are now possible. See the `documentation on transmission links <https://calliope.readthedocs.io/en/v0.5.1/user/configuration.html#transmission-links>`_.
+|new| Unidirectional transmission links are now possible. See the [documentation on transmission links](https://calliope.readthedocs.io/en/v0.5.1/user/configuration.html#transmission-links).
 
 ### Other changes
 
@@ -477,7 +479,7 @@ Version 0.6.0 is an almost complete rewrite of most of Calliope's internals. See
 
 |new| Added new methods to deal with time resolution: clustering, resampling, and heuristic timestep selection
 
-|changed| |backwards-incompatible| Major change to solution data structure. Model solution is now returned as a single `xarray DataSet <https://docs.xarray.dev/en/v0.8.2/data-structures.html#dataset>`_ instead of multiple pandas DataFrames and Panels. Instead of as a generic HDF5 file, complete solutions can be saved as a NetCDF4 file via xarray's NetCDF functionality.
+|changed| |backwards-incompatible| Major change to solution data structure. Model solution is now returned as a single [xarray DataSet](https://docs.xarray.dev/en/v0.8.2/data-structures.html#dataset) instead of multiple pandas DataFrames and Panels. Instead of as a generic HDF5 file, complete solutions can be saved as a NetCDF4 file via xarray's NetCDF functionality.
 
 While the recommended way to save and process model results is by NetCDF4, CSV saving functionality has now been upgraded for more flexibility. Each variable is saved as a separate CSV file with a single value column and as many index columns as required.
 
