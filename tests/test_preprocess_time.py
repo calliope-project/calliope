@@ -146,3 +146,50 @@ class TestResampling:
         )
 
         assert dtindex.equals(data.timesteps.to_index())
+
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Possibly missing data on the timesteps dimension*:calliope.exceptions.ModelWarning"
+    )
+    def test_different_ts_resolutions_resampling_to_6h(self):
+        # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
+        # it is only different for '2005-01-02'
+        override = AttrDict.from_yaml_string(
+            """
+            data_sources:
+                demand_elec:
+                    select:
+                        nodes: a
+                demand_elec_15m:
+                    source: data_sources/demand_elec_15mins.csv
+                    rows: timesteps
+                    columns: nodes
+                    select:
+                        nodes: b
+                    add_dimensions:
+                        parameters: sink_use_equals
+                        techs: test_demand_elec
+            """
+        )
+
+        model = build_test_model(override, scenario="simple_supply", time_resample="6H")
+
+        dtindex = pd.DatetimeIndex(
+            [
+                "2005-01-01 00:00:00",
+                "2005-01-01 06:00:00",
+                "2005-01-01 12:00:00",
+                "2005-01-01 18:00:00",
+                "2005-01-02 00:00:00",
+                "2005-01-02 06:00:00",
+                "2005-01-02 12:00:00",
+                "2005-01-02 18:00:00",
+            ]
+        )
+        assert dtindex.equals(model.inputs.timesteps.to_index())
+
+        # We have the same data in each row for both,
+        # but with resampling, the 15minute data should be 4x larger as it is summed on resampling.
+        assert (
+            model.inputs.sink_use_equals.sel(nodes="a").fillna(0)
+            == model.inputs.sink_use_equals.sel(nodes="b").fillna(0) / 4
+        ).all()
