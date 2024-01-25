@@ -83,12 +83,6 @@ properties:
             type: string
             default: pyomo
             description: Module with which to build the optimisation problem
-          cyclic_storage:
-            type: boolean
-            default: true
-            description: >
-              If true, link storage levels in the last model timestep with the first model timestep.
-              `inter_cluster_storage` custom math must be included if using time clustering and setting this to `true`.
           ensure_feasibility:
             type: boolean
             default: false

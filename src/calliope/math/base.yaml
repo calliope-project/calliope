@@ -189,17 +189,17 @@ constraints:
       - expression: storage == $storage_previous_step + source_use * source_eff - flow_out_inc_eff
     sub_expressions:
       storage_previous_step: &storage_previous_step
-        - where: timesteps=get_val_at_index(timesteps=0) AND NOT config.cyclic_storage=True
+        - where: timesteps=get_val_at_index(timesteps=0) AND NOT cyclic_storage=True
           expression: storage_initial * storage_cap
         - where: >-
             (
-              (timesteps=get_val_at_index(timesteps=0) AND config.cyclic_storage=True)
+              (timesteps=get_val_at_index(timesteps=0) AND cyclic_storage=True)
               OR NOT timesteps=get_val_at_index(timesteps=0)
             ) AND NOT lookup_cluster_first_timestep=True
           expression: (1 - storage_loss) ** roll(timestep_resolution, timesteps=1) * roll(storage, timesteps=1)
         - where: >-
             lookup_cluster_first_timestep=True AND NOT
-            (timesteps=get_val_at_index(timesteps=0) AND NOT config.cyclic_storage=True)
+            (timesteps=get_val_at_index(timesteps=0) AND NOT cyclic_storage=True)
           expression: >-
             (1 - storage_loss) **
             select_from_lookup_arrays(timestep_resolution, timesteps=lookup_cluster_last_timestep) *
@@ -255,7 +255,7 @@ constraints:
       Fix the relationship between carrier stored in a `storage` technology at
       the start and end of the whole model period.
     foreach: [nodes, techs]
-    where: "storage AND storage_initial AND config.cyclic_storage=True"
+    where: "storage AND storage_initial AND cyclic_storage=True"
     equations:
       - expression: >-
           storage[timesteps=$final_step] * (

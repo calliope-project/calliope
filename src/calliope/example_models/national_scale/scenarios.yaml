@@ -72,7 +72,6 @@ overrides:
         mode: operate
         operate_window: 12H
         operate_horizon: 24H
-        cyclic_storage: false
     nodes:
       region1.techs.ccgt.flow_cap: 30000
 
@@ -94,6 +93,8 @@ overrides:
       region1_to_region1_1.flow_cap: 9000
       region1_to_region1_2.active: false
       region1_to_region1_3.flow_cap: 2281
+      csp.cyclic_storage: false
+      battery.cyclic_storage: false
 
   check_feasibility:
     config:

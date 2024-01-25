@@ -515,6 +515,32 @@ Therefore, `24H` is equivalent to `24` in v0.6 if you are using hourly resolutio
 !!! warning
     Although we know that `operate` mode works on our example models, we have not introduced thorough tests for it yet - proceed with caution!
 
+### Per-technology cyclic storage
+
+The configuration option to set cyclic storage globally (`run.cyclic_storage`) has been moved to a parameter at the technology level.
+With this change, you can decide if a specific storage technology (or [technology with a storage buffer](#storage-buffers-in-all-technology-base-classes)) has cyclic storage enforced or not.
+As in v0.6, cyclic storage defaults to being _on_.
+
+=== "v0.6"
+
+    ```yaml
+    run:
+      cyclic_storage: true
+    ```
+
+=== "v0.7"
+
+    ```yaml
+    techs:
+      storage_tech_with_cyclic_storage:
+        base_tech: storage
+        cyclic_storage: true
+      supply_tech_without_cyclic_storage:
+        base_tech: supply
+        include_storage: true
+        cyclic_storage: false
+    ```
+
 ## Removals
 
 ### `_equals` constraints
@@ -668,8 +694,6 @@ Instead, data source filepaths should always be relative to the `model.yaml` fil
 Instead, it is possible to index any parameter over the time dimension.
 It is up to you to ensure the math formulation is set up to handle this change, which may require [tweaking existing math](custom_math/customise.md#introducing-custom-math-to-your-model).
 * With the [removal of time clustering](#clustering), we have removed `model.random_seed` and `model.time` options.
-* We have removed `model.objective`.
-With the introduction of our own math syntax, it is possible to add your own objective using [custom math](custom_math/index.md) and then activate/deactivate your objective of choice in the math.
 
 ### Plotting
 
