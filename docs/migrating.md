@@ -81,7 +81,7 @@ demand_file.csv:
 ...
 ```
 
-1. We're using positive numbers here which reflects our change to [positive values for demand data](#negative---positive-demand-and-carrier-consumption-values).
+1. We're using positive numbers here which reflects our change to [positive values for demand data](#negative-→-positive-demand-and-carrier-consumption-values).
 
 supply_file.csv:
 ```shell
@@ -333,7 +333,7 @@ Here are the main changes to parameter/decision variable names that is not linke
 
 ### Renaming / moving configuration settings
 
-Along with [changing the YAML hierarchy of model configuration](#model-and-run---configinitbuildsolve), we have changed the name of configuration options, mainly to create a flat YAML hierarchy or to group settings alphabetically:
+Along with [changing the YAML hierarchy of model configuration](#model-and-run-→-configinitbuildsolve), we have changed the name of configuration options, mainly to create a flat YAML hierarchy or to group settings alphabetically:
 
 * `model.subset_time` → `config.init.time_subset`
 * `run.operation.window` → `config.build.operate_window`
@@ -356,7 +356,7 @@ Instead of defining the binary trigger `force_resource` to enforce the productio
 
 If you want these resource uses to be upper or lower bounds, use the equivalent `_max`/`_min` parameters.
 
-You can find an example of this change [above](#filedf---data_sources-section).
+You can find an example of this change [above](#filedf-→-data_sources-section).
 
 ### `units` + `purchased` → `purchased_units`
 
@@ -434,7 +434,7 @@ For example:
 
 ### Defining node coordinates
 
-Only geographic coordinates are now allowed (we have [removed x/y coordinates](#removal-of-xy-coordinates)) and they can be defined directly as `latitude`/`longitude`.
+Only geographic coordinates are now allowed (we have [removed x/y coordinates](#xy-coordinates)) and they can be defined directly as `latitude`/`longitude`.
 
 === "v0.6"
 
@@ -494,7 +494,7 @@ With `_equals` constraints, it would trigger a completely different mathematical
 
 !!! note
     The exception to this is `source_use_equals`/`sink_use_equals`.
-    These parameters have been _introduced_, to [replace `force_resource`](#force_resource---source_use_equals--sink_use_equals).
+    These parameters have been _introduced_, to [replace `force_resource`](#force_resource-→-source_use_equals--sink_use_equals).
     They are in the model because these tend to be timeseries parameters, so we want to avoid the memory overhead of repeating the data in `_min` and `_max` parameters.
 
 ### `x`/`y` coordinates
@@ -557,7 +557,7 @@ This is especially important now that you can [define different inflow/outflow c
 
 Carrier tiers were only used in `conversion_plus` technologies, yet led to a whole new model dimension.
 Additionally, `carrier_ratios` could be easily confused due to the complex nature of their application.
-With the [removal of the `conversion_plus` base class](#removal-of-supply_plus-and-conversion_plus-technology-base-classes), we have simplified how multiple carriers in/out are defined.
+With the [removal of the `conversion_plus` base class](#supply_plus-and-conversion_plus-technology-base-classes), we have simplified how multiple carriers in/out are defined.
 To achieve the same functionality as carrier tiers/ratios offered, you will need to apply your own custom math.
 
 One form of carrier flow interactions is still possible without custom math.
@@ -666,7 +666,7 @@ This means you could define different output carriers for a `supply` technology,
 ### `node_groups`
 
 `node_groups` is the equivalent of `tech_groups` for inheritance of attributes in `nodes`.
-This makes up for the [removal of grouping node names in keys by comma separation](#removal-of-comma-separated-node-definitions).
+This makes up for the [removal of grouping node names in keys by comma separation](#comma-separated-node-definitions).
 
 So, to achieve this result:
 
