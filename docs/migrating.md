@@ -336,6 +336,7 @@ Here are the main changes to parameter/decision variable names that is not linke
 Along with [changing the YAML hierarchy of model configuration](#model-and-run-→-configinitbuildsolve), we have changed the name of configuration options, mainly to create a flat YAML hierarchy or to group settings alphabetically:
 
 * `model.subset_time` → `config.init.time_subset`
+* `model.time: {function: resample, function_options: {'resolution': '6H'}}` → `config.init.time_resample`
 * `run.operation.window` → `config.build.operate_window`
 * `run.operation.horizon` → `config.build.operate_horizon`
 * `run.operation.use_cap_results` → `config.build.operate_use_cap_results`
@@ -461,6 +462,58 @@ Distances between nodes along transmission links will be automatically derived a
 This was also the case in v0.6.
 The change in v0.7 is that we default to deriving _kilometres_, not _metres_.
 If you prefer to keep your distance units in _metres_, set the configuration option: `#!yaml config.init.distance_unit: m`
+
+### Operate mode inputs
+
+* To set the capacities in operate mode, you no longer need to set the `_max` constraints for your technologies (`area_use_max`, `flow_cap_max`, etc.); you can specify the decision variables as parameters directly.
+Therefore, you can define e.g. `flow_cap` as one of your technology parameters.
+This is because the operate mode custom math deactivates the decision variables with the same names, paving the way for the parameters to be used in the math formulation instead.
+
+    === "v0.6"
+
+        ```yaml
+        techs:
+          tech1:
+            constraints:
+            energy_cap_max: 1  # will be translated internally to `energy_cap` by Calliope
+            storage_cap_max: 1  # will be translated internally to `storage_cap` by Calliope
+        ```
+
+    === "v0.7"
+
+        ```yaml
+        techs:
+          tech1:
+            flow_cap: 1
+            storage_cap: 1
+        ```
+
+* Operate horizon and window periods are based on Pandas time frequencies, not integer number of timesteps.
+Therefore, `24H` is equivalent to `24` in v0.6 if you are using hourly resolution, but is equivalent to `12` in v0.6 if you are using 2-hourly resolution:
+
+    === "v0.6"
+
+        ```yaml
+        model:
+          time: {function: resample, function_options: {'resolution': '6H'}}
+          operation:
+            window: 2
+            horizon: 4
+        ```
+
+    === "v0.7"
+
+        ```yaml
+        config:
+          init:
+            time_resample: 6H
+          build:
+            operate_window: 12H
+            operate_horizon: 24H
+        ```
+
+!!! warning
+    Although we know that `operate` mode works on our example models, we have not introduced thorough tests for it yet - proceed with caution!
 
 ## Removals
 

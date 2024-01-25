@@ -2,7 +2,7 @@
 
 !!! warning
 
-    Calliope version 0.7 is released as a beta with the purpose of gathering feedback from users.
+    Calliope version 0.7 is released as an alpha with the purpose of gathering feedback from users.
     Some functionality is not yet available in 0.7, notably:
 
     * `spores` mode
