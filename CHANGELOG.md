@@ -18,6 +18,8 @@ For instance, `flow_cap` can be defined per `carrier`.
 
 |new| Shadow prices obtained from a dual LP problem can be read by using `model.backend.shadow_prices.get("constraint_name")`
 
+|changed| |backwards-incompatible| `run.cyclic_storage` configuration option moved to being per-technology (`techs.tech_name.cyclic_storage: ...`).
+
 |changed| |backwards-incompatible| `file=/df=` parameter values as references to timeseries data is replaced with loading tabular data at the top-level using the `data_sources` key.
 
 |changed| Automatically derived transmission link distances default to kilometres, with the configuration option (`config.init.distance_unit`) to switch to the old default of distances in metres.
