@@ -519,7 +519,7 @@ Therefore, `24H` is equivalent to `24` in v0.6 if you are using hourly resolutio
 
 The configuration option to set cyclic storage globally (`run.cyclic_storage`) has been moved to a parameter at the technology level.
 With this change, you can decide if a specific storage technology (or [technology with a storage buffer](#storage-buffers-in-all-technology-base-classes)) has cyclic storage enforced or not.
-As in v0.6, cyclic storage defaults to being _on_.
+As in v0.6, cyclic storage defaults to being _on_ (`cyclic_storage: true`).
 
 === "v0.6"
 
