@@ -689,7 +689,7 @@ We have re-implemented all these constraints as tested custom math, which you ca
 
 ### Configuration options
 
-* With the [change in how timeseries data is defined](#filedf---data_sources-section), we have removed the reference to a `timeseries_data_path`.
+* With the [change in how timeseries data is defined](#filedf-→-data_sources-section), we have removed the reference to a `timeseries_data_path`.
 Instead, data source filepaths should always be relative to the `model.yaml` file or they should be absolute paths.
 * We have removed `run.relax_constraint` alongside [removing group constraints](#group-constraints).
 * We have removed `model.file_allowed`, which many users will not even know existed (it was a largely internal configuration option)!
@@ -729,7 +729,7 @@ We were previously using this in our internal clustering.
 
 ### Storage buffers in all technology base classes
 
-On [removing `supply_plus`](#removal-of-supply_plus-and-conversion_plus-technology-base-classes), we have opened up the option to have a storage "buffer" for any technology base class.
+On [removing `supply_plus`](#supply_plus-and-conversion_plus-technology-base-classes), we have opened up the option to have a storage "buffer" for any technology base class.
 This enables any flow into the technology to be stored across timesteps as it is in a `storage` technology.
 We have not yet enabled this for `demand` technologies, but [custom math](custom_math/index.md) could be readily added to enable it.
 
@@ -738,7 +738,7 @@ We have not yet enabled this for `demand` technologies, but [custom math](custom
 
 ### Multiple carriers and different carriers in/out in all technology base classes
 
-On [removing `conversion_plus`](#removal-of-supply_plus-and-conversion_plus-technology-base-classes), we have opened up the option to have different carriers in/out of `storage`/`transmission` technologies, and to define multiple carriers in/out of any technology.
+On [removing `conversion_plus`](#supply_plus-and-conversion_plus-technology-base-classes), we have opened up the option to have different carriers in/out of `storage`/`transmission` technologies, and to define multiple carriers in/out of any technology.
 This means you could define different output carriers for a `supply` technology, or a different carrier into a storage technology compared to the carrier that comes out.
 
 !!! warning
