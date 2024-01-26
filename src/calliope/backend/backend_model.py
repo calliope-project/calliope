@@ -300,7 +300,7 @@ class BackendModelGenerator(ABC):
         equations = parsed_component.parse_equations(self.valid_component_names)
         if not equations:
             component_da = component_setter(
-                parsed_component.drop_dims_not_in_foreach(top_level_where)
+                parsed_component.drop_dims_not_in_foreach(top_level_where), references
             )
         else:
             component_da = (
@@ -835,15 +835,28 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             references.update(self._find_all_references(new_refs))
         return references
 
-    def _rebuild_reference(self, reference: str) -> None:
-        """Delete and rebuild an optimisation problem component.
+    def _rebuild_references(self, references: set[str]) -> None:
+        """Delete and rebuild optimisation problem components.
 
         Args:
-            references (str): name of optimisation problem component.
+            references (set[str]): names of optimisation problem components.
         """
-        obj_type = self._dataset[reference].attrs["obj_type"]
-        self.delete_component(reference, obj_type)
-        getattr(self, "add_" + obj_type.removesuffix("s"))(name=reference)
+        ordered_components = [
+            "parameters",
+            "variables",
+            "global_expressions",
+            "constraints",
+            "objectives",
+        ]
+        for component in ordered_components:
+            refs = [
+                ref
+                for ref in references
+                if self._dataset[ref].attrs["obj_type"] == component
+            ]
+            for ref in refs:
+                self.delete_component(ref, component)
+                getattr(self, "add_" + component.removesuffix("s"))(name=ref)
 
 
 class ShadowPrices:

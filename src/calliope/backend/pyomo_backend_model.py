@@ -145,14 +145,14 @@ class PyomoBackendModel(backend_model.BackendModel):
         if variable_dict is None:
             variable_dict = self.inputs.attrs["math"]["variables"][name]
 
-        def _variable_setter(where):
+        def _variable_setter(where, references):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
-
+            bounds = variable_dict["bounds"]
             return self._apply_func(
                 self._to_pyomo_variable,
                 where,
-                self._get_capacity_bound(variable_dict["bounds"]["max"], name=name),
-                self._get_capacity_bound(variable_dict["bounds"]["min"], name=name),
+                self._get_capacity_bound(bounds["max"], name, references),
+                self._get_capacity_bound(bounds["min"], name, references),
                 name=name,
                 domain_type=domain_type,
             )
@@ -394,8 +394,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 new_values,
                 default=self.inputs.attrs["defaults"].get(name, np.nan),
             )
-            for ref in refs_to_update:
-                self._rebuild_reference(ref)
+            self._rebuild_references(refs_to_update)
             return None
 
         if missing_dims_in_new_vals:
@@ -464,7 +463,9 @@ class PyomoBackendModel(backend_model.BackendModel):
             variable_da = variable_da.where(where.fillna(0))
         self._apply_func(self._unfix_pyomo_variable, variable_da)
 
-    def _get_capacity_bound(self, bound: Any, name: str) -> xr.DataArray:
+    def _get_capacity_bound(
+        self, bound: Any, name: str, references: set
+    ) -> xr.DataArray:
         """
         Generate array for the upper/lower bound of a decision variable.
         Any NaN values will be replaced by None, which Pyomo will correctly interpret as there being no bound to apply.
@@ -484,6 +485,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 f"Applying bound according to the {bound} parameter values.",
             )
             bound_array = self.get_parameter(bound)
+            references.add(bound)
         else:
             bound_array = xr.DataArray(bound)
 
