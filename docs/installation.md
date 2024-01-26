@@ -6,10 +6,10 @@ Calliope has been tested on Linux, macOS, and Windows.
 
 Running Calliope requires four things:
 
-1.  The Python programming language, version {{ min_python_version }} to {{ max_python_version }}.
-2.  A number of Python add-on modules (see [below for the complete list](#python-module-requirements)).
-3.  A solver: Calliope has been tested with CBC, GLPK, Gurobi, and CPLEX. Any other solver that is compatible with Pyomo should also work.
-4.  The Calliope software itself.
+1. The Python programming language, version {{ min_python_version }} to {{ max_python_version }}.
+2. A number of Python add-on modules (see [below for the complete list](#python-module-requirements)).
+3. A solver: Calliope has been tested with CBC, GLPK, Gurobi, and CPLEX. Any other solver that is compatible with Pyomo should also work.
+4. The Calliope software itself.
 
 ## Recommended installation method
 
@@ -19,16 +19,20 @@ To get `mamba`, [download and install the "Mambaforge" distribution for your ope
 
 With mamba installed, you can create a new environment called `calliope` with all the necessary modules, including the free and open source GLPK solver, by running the following command in a terminal or command-line window
 
-```bash
-$ mamba create -c conda-forge -n calliope calliope
+```shell
+mamba create -n calliope -c conda-forge/label/calliope_dev -c conda-forge calliope
 ```
+
+!!! note
+    The `conda-forge/label/calliope_dev` channel allows you to access the pre-release of Calliope v0.7, with which this version of the documentation aligns.
+    To install the most recent _stable_ version of Calliope, see our [v0.6.10 documentation](https://calliope.readthedocs.io/en/v0.6.10/).
 
 This will install calliope with Python version {{ max_python_version }}.
 
 To use Calliope, you need to activate the `calliope` environment each time
 
 ```bash
-$ mamba activate calliope
+mamba activate calliope
 ```
 
 You are now ready to use Calliope together with the free and open source GLPK solver.
@@ -38,7 +42,8 @@ Read the next section for more information on installing alternative solvers.
 
 !!! warning
 
-    Although possible, we do not recommend installing Calliope directly via `pip` (`pip install calliope`). Non-python binaries are not installed with `pip`, some of which are necessary for stable operation (e.g., `libnetcdf`).
+    Although possible, we do not recommend installing Calliope directly via `pip` (`pip install calliope`).
+    Non-python binaries are not installed with `pip`, some of which are necessary for stable operation (e.g., `libnetcdf`).
 
 
 ## Updating an existing installation
@@ -46,7 +51,7 @@ Read the next section for more information on installing alternative solvers.
 If following the recommended installation method above, the following command, assuming the mamba environment is active, will update Calliope to the newest version
 
 ```bash
-$ mamba update -c conda-forge calliope
+mamba update -c conda-forge calliope
 ```
 
 ## Solvers

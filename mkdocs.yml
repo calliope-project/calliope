@@ -86,6 +86,8 @@ markdown_extensions:
       alternate_style: true
   - pymdownx.snippets
   - pymdownx.details
+  - pymdownx.tasklist:
+      custom_checkbox: true
 
 
 nav:
