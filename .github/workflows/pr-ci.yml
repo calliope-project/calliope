@@ -6,14 +6,14 @@ on:
       - "main"
     paths-ignore:
       - README.md
-      - changelog.rst
+      - CHANGELOG.md
       - LICENSE
       - CITATION
       - AUTHORS
-      - doc/**
       - docs/**
       - .readthedocs.yml
       - .pre-commit-config.yaml
+      - mkdocs.yml
 
 defaults:
   run:
