@@ -132,7 +132,6 @@ calliope = "calliope.cli:cli"
 
 [tool.setuptools.dynamic.optional-dependencies]
 dev = { file = ["requirements/dev.txt"] }
-docs = { file = ["requirements/docs.txt"] }
 
 [project.urls]
 website = "https://www.callio.pe/"

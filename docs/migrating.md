@@ -4,9 +4,9 @@ In Calliope v0.7 we have made many user-facing changes which will mean you canno
 
 On this page we will list the main changes to help you understand these changes and migrate your existing models to work in v0.7.
 
-We believe these changes will make your life easier in the long-run.
+We believe these changes will make your life easier in the long run.
 Some might seem like steps back, as you have to write _more_ YAML for the same definition.
-However, the resulting definition should be easier to understand when you come back to it in future, and it is generally much easier for us to process it internally - leading to (hopefully) fewer bugs!
+However, the resulting definition should be easier to understand when you come back to it in the future, and the changes made to model definition have made the internal code much easier - leading to (hopefully) fewer bugs!
 
 Since v0.7 is in a pre-release phase, if there are changes that you don't agree with or bugs when you try implementing something, please [raise an issue](https://github.com/calliope-project/calliope/issues/new) or [start/join a discussion thread](https://github.com/calliope-project/calliope/discussions) on our GitHub repository.
 
@@ -81,7 +81,7 @@ demand_file.csv:
 ...
 ```
 
-1. We're using positive numbers here which reflects our change to [positive values for demand data](#negative---positive-demand-and-carrier-consumption-values).
+1. We're using positive numbers here which reflects our change to [positive values for demand data](#negative-→-positive-demand-and-carrier-consumption-values).
 
 supply_file.csv:
 ```shell
@@ -135,7 +135,7 @@ Demand data are now strictly _positive_ numbers and so are the values of the `ca
 
 ### `model.run()` → `model.build()` + `model.solve()`
 
-Building and solving your optimisation problem have been split into two steps:
+When running in Python, building and solving your optimisation problem have been split into two steps:
 
 1. `model.build()` creates the in-memory Python objects that define optimisation problem components (decision variables, constraints, the objective function, ...).
 This creates the [calliope.Model.backend][] object, which you can query and use to [tweak the optimisation problem](advanced/backend.md) before sending it to the solver.
@@ -144,7 +144,7 @@ This creates the [calliope.Model.backend][] object, which you can query and use 
 
 ### `model` and `run` → `config.init`/`.build`/`.solve`
 
-Model configuration is now split based on the stages of going from a model definition to solving your Calliope model:
+The model configuration is now split based on the stages of going from a model definition to solving your Calliope model:
 
 * All the options in `config.init` are applied when you create your model (`calliope.Model(...)`).
 * All the options in `config.build` are applied when you build your optimisation problem (`calliope.Model.build(...)`).
@@ -314,9 +314,9 @@ Instead, links are defined as separate transmission technologies in `techs`, inc
 ### Renaming parameters/decision variables without core changes in function
 
 You may have a already noticed new parameter names being referenced in examples of other changes.
-We have renamed parameters to improve clarity in their function and to make it clear that although Calliope is designed to model energy systems, its flow representation is suitable for tracking and optimising any kinds of flows (water, waste, etc.).
+We have renamed parameters to improve clarity in their function and to make it clear that although Calliope is designed to model energy systems, its flow representation is suitable for modelling any kind of flow (water, waste, etc.).
 
-Here are the main changes to parameter/decision variable names that is not linked to changes in functionality (those are detailed elsewhere on this page):
+Here are the main changes to parameter/decision variable names that are not linked to changes in functionality (those are detailed elsewhere on this page):
 
 * `energy`/`carrier` → `flow`, e.g. `energy_cap_max` is now `flow_cap_max` and `energy_cap` is now `flow_cap`.
 * `prod`/`con` → `out`/`in`, e.g., `carrier_prod` is now `flow_out`.
@@ -333,9 +333,10 @@ Here are the main changes to parameter/decision variable names that is not linke
 
 ### Renaming / moving configuration settings
 
-Along with [changing the YAML hierarchy of model configuration](#model-and-run---configinitbuildsolve), we have changed the name of configuration options, mainly to create a flat YAML hierarchy or to group settings alphabetically:
+Along with [changing the YAML hierarchy of model configuration](#model-and-run-→-configinitbuildsolve), we have changed the name of configuration options, mainly to create a flat YAML hierarchy or to group settings alphabetically:
 
 * `model.subset_time` → `config.init.time_subset`
+* `model.time: {function: resample, function_options: {'resolution': '6H'}}` → `config.init.time_resample`
 * `run.operation.window` → `config.build.operate_window`
 * `run.operation.horizon` → `config.build.operate_horizon`
 * `run.operation.use_cap_results` → `config.build.operate_use_cap_results`
@@ -356,7 +357,7 @@ Instead of defining the binary trigger `force_resource` to enforce the productio
 
 If you want these resource uses to be upper or lower bounds, use the equivalent `_max`/`_min` parameters.
 
-You can find an example of this change [above](#filedf---data_sources-section).
+You can find an example of this change [above](#filedf-→-data_sources-section).
 
 ### `units` + `purchased` → `purchased_units`
 
@@ -403,11 +404,11 @@ Now, you need to explicitly set the method using `cap_method`:
         cap_method: integer  # triggers the `purchased_units` integer variable
     ```
 
-To include a storage buffer in non-`storage` technologies, you also need to explicitly trigger it.
-To do so, use `include_storage: true` instead of defining e.g. `storage_cap_max` and expecting storage decision variables to be triggered.
+To include a storage buffer in non-`storage` technologies, you also need to explicitly enable it.
+To do so, use `include_storage: true` - simply defining e.g. `storage_cap_max` and expecting storage decision variables to be triggered is not enough!
 
 !!! note
-    You do not need to trigger storage with `include_storage` in `storage` technologies!
+    You do not need to enable storage with `include_storage` in `storage` technologies!
 
 ### Structure of input and output data within a Calliope model
 
@@ -434,7 +435,7 @@ For example:
 
 ### Defining node coordinates
 
-Only geographic coordinates are now allowed (we have [removed x/y coordinates](#removal-of-xy-coordinates)) and they can be defined directly as `latitude`/`longitude`.
+Only geographic coordinates are now allowed (we have [removed x/y coordinates](#xy-coordinates)) and they can be defined directly as `latitude`/`longitude`.
 
 === "v0.6"
 
@@ -461,6 +462,58 @@ Distances between nodes along transmission links will be automatically derived a
 This was also the case in v0.6.
 The change in v0.7 is that we default to deriving _kilometres_, not _metres_.
 If you prefer to keep your distance units in _metres_, set the configuration option: `#!yaml config.init.distance_unit: m`
+
+### Operate mode inputs
+
+* To set the capacities in operate mode, you no longer need to set the `_max` constraints for your technologies (`area_use_max`, `flow_cap_max`, etc.); you can specify the decision variables as parameters directly.
+Therefore, you can define e.g. `flow_cap` as one of your technology parameters.
+This is because the operate mode custom math deactivates the decision variables with the same names, paving the way for the parameters to be used in the math formulation instead.
+
+    === "v0.6"
+
+        ```yaml
+        techs:
+          tech1:
+            constraints:
+            energy_cap_max: 1  # will be translated internally to `energy_cap` by Calliope
+            storage_cap_max: 1  # will be translated internally to `storage_cap` by Calliope
+        ```
+
+    === "v0.7"
+
+        ```yaml
+        techs:
+          tech1:
+            flow_cap: 1
+            storage_cap: 1
+        ```
+
+* Operate horizon and window periods are based on Pandas time frequencies, not integer number of timesteps.
+Therefore, `24H` is equivalent to `24` in v0.6 if you are using hourly resolution, but is equivalent to `12` in v0.6 if you are using 2-hourly resolution:
+
+    === "v0.6"
+
+        ```yaml
+        model:
+          time: {function: resample, function_options: {'resolution': '6H'}}
+          operation:
+            window: 2
+            horizon: 4
+        ```
+
+    === "v0.7"
+
+        ```yaml
+        config:
+          init:
+            time_resample: 6H
+          build:
+            operate_window: 12H
+            operate_horizon: 24H
+        ```
+
+!!! warning
+    Although we know that `operate` mode works on our example models, we have not introduced thorough tests for it yet - proceed with caution!
 
 ## Removals
 
@@ -494,7 +547,7 @@ With `_equals` constraints, it would trigger a completely different mathematical
 
 !!! note
     The exception to this is `source_use_equals`/`sink_use_equals`.
-    These parameters have been _introduced_, to [replace `force_resource`](#force_resource---source_use_equals--sink_use_equals).
+    These parameters have been _introduced_, to [replace `force_resource`](#force_resource-→-source_use_equals--sink_use_equals).
     They are in the model because these tend to be timeseries parameters, so we want to avoid the memory overhead of repeating the data in `_min` and `_max` parameters.
 
 ### `x`/`y` coordinates
@@ -504,17 +557,19 @@ Instead, you should define your coordinates using [`latitude`/`longitude`](#defi
 
 ### Comma-separated node definitions
 
-Defining duplicate definitions for nodes by chaining their names in the YAML key is no longer possible.
+Defining duplicate definitions for nodes by chaining their names in the YAML key (`node1,node2,node3: ...`) is no longer possible.
 We are trying to minimise the custom elements of our YAML files which allows us to leverage YAML schemas to validate user inputs and to keep our YAML readers more maintainable.
 
 You can now use [`node_groups`](#node_groups) to minimise duplicating key-value pairs in your YAML definitions.
 
 ### `supply_plus` and `conversion_plus` technology base classes
 
-Now, `supply_plus` can be effectively represented by using `supply` as the technology base tech and setting [`include_storage: true`](#explicitly-triggering-milp-and-storage-decision-variablesconstraints) in the model definition.
+We have removed the `supply_plus` and `conversion_plus` base technology classes.
 
-`conversion_plus` can be represented by using `conversion` as the technology base tech and using lists of carriers in `carrier_in` and/or `carrier_out`.
-To reimplement the links between carrier "tiers" (`in_2`, `out_2` etc.), you will need to define your own custom math.
+Instead, `supply_plus` can be effectively represented by using `supply` as the base tech and setting [`include_storage: true`](#explicitly-triggering-milp-and-storage-decision-variablesconstraints) in the model definition.
+
+`conversion_plus` can be represented by using `conversion` as the base tech and using lists of carriers in `carrier_in` and/or `carrier_out`.
+To reimplement arbitrary links between carrier "tiers" (`in_2`, `out_2` etc.), you can define your own custom math, which is a simultaneously more powerful and more human-readable way of defining complex conversion technologies.
 
 !!! info "See also"
     [Example of custom math to link carrier flows](examples/urban_scale/index.md#sparkles-interlude-custom-math).
@@ -523,7 +578,7 @@ To reimplement the links between carrier "tiers" (`in_2`, `out_2` etc.), you wil
 
 We now require `carrier_in` and `carrier_out` to be explicitly defined for all base techs (only `carrier_in` for demand and `carrier_out` for supply technologies).
 This means you cannot use the alias `carrier` to define the same inflow/outflow carrier.
-We do this because it aligns with the internal Calliope data structure (we were always converting `carrier` to `carrier_in`/`_out`) and it makes it clearer to the use that the carrier is the same.
+We do this because it aligns with the internal Calliope data structure (we were always converting `carrier` to `carrier_in`/`_out`) and it makes it clearer to the user that the carrier is the same.
 This is especially important now that you can [define different inflow/outflow carriers for any technology base class](#multiple-carriers-and-different-carriers-inout-in-all-technology-base-classes).
 
 === "v0.6"
@@ -557,7 +612,7 @@ This is especially important now that you can [define different inflow/outflow c
 
 Carrier tiers were only used in `conversion_plus` technologies, yet led to a whole new model dimension.
 Additionally, `carrier_ratios` could be easily confused due to the complex nature of their application.
-With the [removal of the `conversion_plus` base class](#removal-of-supply_plus-and-conversion_plus-technology-base-classes), we have simplified how multiple carriers in/out are defined.
+With the [removal of the `conversion_plus` base class](#supply_plus-and-conversion_plus-technology-base-classes), we have simplified how multiple carriers in/out are defined.
 To achieve the same functionality as carrier tiers/ratios offered, you will need to apply your own custom math.
 
 One form of carrier flow interactions is still possible without custom math.
@@ -597,7 +652,7 @@ For instance, here's how you represent a reversible heat pump without custom mat
     ```
 
 !!! info "See also"
-    [Example of custom math to link carrier flows](examples/urban_scale/index.md#sparkles-interlude-custom-math);
+    [Example of custom math to link carrier flows](examples/urban_scale/index.md#interlude-custom-math);
     [Examples of complex CHP plant operating space custom math][chp-plants].
 
 ### Group constraints
@@ -608,7 +663,7 @@ We have re-implemented all these constraints as tested custom math, which you ca
 
 ### Configuration options
 
-* With the [change in how timeseries data is defined](#filedf---data_sources-section), we have removed the reference to a `timeseries_data_path`.
+* With the [change in how timeseries data is defined](#filedf-→-data_sources-section), we have removed the reference to a `timeseries_data_path`.
 Instead, data source filepaths should always be relative to the `model.yaml` file or they should be absolute paths.
 * We have removed `run.relax_constraint` alongside [removing group constraints](#group-constraints).
 * We have removed `model.file_allowed`, which many users will not even know existed (it was a largely internal configuration option)!
@@ -625,6 +680,8 @@ We made this decision due to the wide variety of visualisations that we saw bein
 It has proven impossible to keep our plotting methods agile given the almost infinite tweaks that libraries like [matplotlib](https://matplotlib.org/) and [plotly](https://plotly.com/) allow.
 
 If you want to achieve some of the same plots that were possible with the Calliope v0.6 plotting module, see our [example notebooks](examples/index.md).
+
+At a later stage, we are planning for a separate visualisation module that will provide similar functionality to the formerly-included plotting.
 
 ### Clustering
 
@@ -648,7 +705,7 @@ We were previously using this in our internal clustering.
 
 ### Storage buffers in all technology base classes
 
-On [removing `supply_plus`](#removal-of-supply_plus-and-conversion_plus-technology-base-classes), we have opened up the option to have a storage "buffer" for any technology base class.
+On [removing `supply_plus`](#supply_plus-and-conversion_plus-technology-base-classes), we have opened up the option to have a storage "buffer" for any technology base class.
 This enables any flow into the technology to be stored across timesteps as it is in a `storage` technology.
 We have not yet enabled this for `demand` technologies, but [custom math](custom_math/index.md) could be readily added to enable it.
 
@@ -657,7 +714,7 @@ We have not yet enabled this for `demand` technologies, but [custom math](custom
 
 ### Multiple carriers and different carriers in/out in all technology base classes
 
-On [removing `conversion_plus`](#removal-of-supply_plus-and-conversion_plus-technology-base-classes), we have opened up the option to have different carriers in/out of `storage`/`transmission` technologies, and to define multiple carriers in/out of any technology.
+On [removing `conversion_plus`](#supply_plus-and-conversion_plus-technology-base-classes), we have opened up the option to have different carriers in/out of `storage`/`transmission` technologies, and to define multiple carriers in/out of any technology.
 This means you could define different output carriers for a `supply` technology, or a different carrier into a storage technology compared to the carrier that comes out.
 
 !!! warning
@@ -666,7 +723,7 @@ This means you could define different output carriers for a `supply` technology,
 ### `node_groups`
 
 `node_groups` is the equivalent of `tech_groups` for inheritance of attributes in `nodes`.
-This makes up for the [removal of grouping node names in keys by comma separation](#removal-of-comma-separated-node-definitions).
+This makes up for the [removal of grouping node names in keys by comma separation](#comma-separated-node-definitions).
 
 So, to achieve this result:
 
