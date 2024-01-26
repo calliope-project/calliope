@@ -8,7 +8,7 @@
 
 ---
 
-<img src="https://raw.githubusercontent.com/calliope-project/calliope/master/doc/_static/logo.png" width="364">
+<img src="https://raw.githubusercontent.com/calliope-project/calliope/0.6/doc/_static/logo.png" width="364">
 
 *A multi-scale energy systems modelling framework* | [www.callio.pe](http://www.callio.pe/)
 
