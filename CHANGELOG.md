@@ -1,4 +1,4 @@
-## 0.7.0.dev1 (dev)
+## 0.7.0.dev2 (dev)
 
 v0.7 includes a major change to how Calliope internally operates.
 Along with this, there are multiple changes to how Calliope models are defined and configured.
@@ -9,7 +9,6 @@ We group changes into those that are primarily user-facing and relevant for all 
 
 This section gives a brief summary of changes.
 For more detail, see our migrating from v0.6 to v0.7 section in our [documentation](https://calliope.readthedocs.io/en/latest/migrating/).
-
 
 |new| Storage buffers available in all technology base classes.
 
