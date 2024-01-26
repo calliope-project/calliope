@@ -111,14 +111,14 @@ class GurobiBackendModel(backend_model.BackendModel):
         if variable_dict is None:
             variable_dict = self.inputs.attrs["math"]["variables"][name]
 
-        def _variable_setter(where):
+        def _variable_setter(where: xr.DataArray, references: set):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
-
+            bounds = variable_dict["bounds"]
             return self._apply_func(
                 self._to_gurobi_variable,
                 where,
-                self._get_capacity_bound(variable_dict["bounds"]["max"], name=name),
-                self._get_capacity_bound(variable_dict["bounds"]["min"], name=name),
+                self._get_capacity_bound(bounds["max"], name, references),
+                self._get_capacity_bound(bounds["min"], name, references),
                 name=name,
                 domain_type=domain_type,
             )
@@ -290,9 +290,10 @@ class GurobiBackendModel(backend_model.BackendModel):
             component_type (str): Object type
         """
         if key in self._dataset and self._dataset[key].obj_type == component_type:
-            if component_type != "parameters":
+            if component_type in ["variables", "constraints"]:
                 self._apply_func(self._del_gurobi_obj, self._dataset[key])
             del self._dataset[key]
+        self._instance.update()
 
     def update_parameter(
         self, name: str, new_values: Union[xr.DataArray, SupportsFloat]
@@ -318,8 +319,8 @@ class GurobiBackendModel(backend_model.BackendModel):
             default=self.inputs.attrs["defaults"].get(name, np.nan),
         )
 
-        refs_to_update: set = set()
         refs_to_update = self._find_all_references(parameter_da.attrs["references"])
+
         if refs_to_update:
             self.log(
                 "parameters",
@@ -327,8 +328,8 @@ class GurobiBackendModel(backend_model.BackendModel):
                 f"The optimisation problem components {sorted(refs_to_update)} will be re-built.",
                 "info",
             )
-        for ref in refs_to_update:
-            self._rebuild_reference(ref)
+        self._rebuild_references(refs_to_update)
+        self._instance.update()
 
     def update_variable_bounds(
         self,
@@ -373,23 +374,32 @@ class GurobiBackendModel(backend_model.BackendModel):
                 xr.DataArray(new_bounds),
                 bound=translator[bound_name],
             )
+        self._instance.update()
 
     def fix_variable(self, name: str, where: Optional[xr.DataArray] = None) -> None:
+        if self._instance.status != gurobipy.GRB.OPTIMAL:
+            raise BackendError(
+                "Cannot fix variable values without already having solved the model successfully."
+            )
+
         variable_da = self.get_variable(name)
         if where is not None:
             variable_da = variable_da.where(where.fillna(0))
         self._apply_func(self._fix_gurobi_variable, variable_da)
+        self._instance.update()
 
     def unfix_variable(self, name: str, where: Optional[xr.DataArray] = None) -> None:
         raise BackendError(
-            "Cannot unfix a variable using the Gurobi backend; you will need to delete and re-create the variable"
+            "Cannot unfix a variable using the Gurobi backend; you will need to rebuild your backend or update variable bounds to match the original bounds."
         )
 
     def _del_gurobi_obj(self, obj: Any) -> None:
         if not pd.isnull(obj):
             self._instance.remove(obj)
 
-    def _get_capacity_bound(self, bound: Any, name: str) -> xr.DataArray:
+    def _get_capacity_bound(
+        self, bound: Any, name: str, references: set
+    ) -> xr.DataArray:
         """
         Generate array for the upper/lower bound of a decision variable.
         Any NaN values will be replaced by None, which we will later interpret as there being no bound to apply.
@@ -409,6 +419,7 @@ class GurobiBackendModel(backend_model.BackendModel):
                 f"Applying bound according to the {bound} parameter values.",
             )
             bound_array = self.get_parameter(bound)
+            references.add(bound)
         else:
             bound_array = xr.DataArray(bound)
 
@@ -636,4 +647,9 @@ class GurobiShadowPrices(backend_model.ShadowPrices):
         if pd.isnull(val):  # type: ignore
             return np.nan
         else:
-            return val.Pi  # type: ignore
+            try:
+                dual = val.Pi  # type: ignore
+            except AttributeError:
+                return np.nan
+            else:
+                return dual
