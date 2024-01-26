@@ -86,7 +86,8 @@ markdown_extensions:
       alternate_style: true
   - pymdownx.snippets
   - pymdownx.details
-
+  - pymdownx.tasklist:
+      clickable_checkbox: true
 
 nav:
   - Home: index.md
