@@ -5,10 +5,22 @@ on:
     types: [released]
 
 jobs:
-  pip-upload:
-    uses: arup-group/actions-city-modelling-lab/.github/workflows/pip-upload.yml@main
-    secrets:
-      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-    with:
-      package_name: calliope
-      build_workflow: pr-ci.yml
+  pip-publish:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      PACKAGENAME: "pip-build-${{ inputs.package_name }}-${{ github.ref_name }}"
+    steps:
+
+    - name: Download built package from another workflow
+      uses: dawidd6/action-download-artifact@v2
+      with:
+        name: ${{ env.PACKAGENAME }}
+        workflow: pr-ci.yml
+        path: dist/
+
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+
