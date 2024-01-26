@@ -116,7 +116,9 @@ jobs:
       - name: Build package
         run: python -m build
       - name: Test package install
-        run: pip install dist/calliope-*.tar.gz
+        run: |
+          pip install dist/calliope-*.tar.gz
+          calliope --help
 
   pre-release:
     needs: [test, pre-release-version, pip-test]

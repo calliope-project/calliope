@@ -1,4 +1,4 @@
-## 0.7.0.dev1 (2024-01-26)
+## 0.7.0.dev2 (dev)
 
 v0.7 includes a major change to how Calliope internally operates.
 Along with this, there are multiple changes to how Calliope models are defined and configured.
