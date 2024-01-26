@@ -103,14 +103,20 @@ jobs:
     if: startsWith(github.event.pull_request.title, 'Release v')
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: mamba-org/setup-micromamba@v1
         with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements/base.txt
+          micromamba-version: latest
+          environment-name: pipbuild
+          create-args: >-
+            python=3.11
+            pip
+            build
+          post-cleanup: all
+          cache-environment: true
+      - name: Build package
+        run: python -m build
+      - name: Test package install
+        run: pip install dist/calliope-*.tar.gz
 
   pre-release:
     needs: [test, pre-release-version, pip-test]
