@@ -98,9 +98,23 @@ jobs:
           fullname="${{github.event.pull_request.title}}"
           echo "version=${fullname#"Release "}" >> $GITHUB_OUTPUT
 
+  pip-test:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.pull_request.title, 'Release v')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/base.txt
+
   pre-release:
-    needs: [test, pre-release-version]
-    if: needs.test.result == 'success' && startsWith(github.event.pull_request.title, 'Release v')
+    needs: [test, pre-release-version, pip-test]
+    if: needs.pip-test.result == 'success' && needs.test.result == 'success' && startsWith(github.event.pull_request.title, 'Release v')
     uses: arup-group/actions-city-modelling-lab/.github/workflows/pip-build.yml@main
     secrets:
       TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
