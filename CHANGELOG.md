@@ -1,85 +1,145 @@
-## 0.7.0 (dev)
+## 0.7.0.dev1 (dev)
 
-v0.7 includes a major change to how Calliope internally operates. Along with this, there are multiple changes to how Calliope models are defined and configured. This requires adapting models to work with 0.7. We group changes into those that are primarily user-facing and relevant for all Calliope users, and those that are primarily internal, and relevant only for Calliope developers.
+v0.7 includes a major change to how Calliope internally operates.
+Along with this, there are multiple changes to how Calliope models are defined and configured.
+This requires adapting models to work with 0.7.
+We group changes into those that are primarily user-facing and relevant for all Calliope users, and those that are primarily internal, and relevant only for Calliope developers.
 
 ### User-facing changes
 
-|new| Any tabular data, not only timeseries data, can be loaded from file / an in-memory pandas DataFrame under the `data_sources` key.
+This section gives a brief summary of changes.
+For more detail, see our migrating from v0.6 to v0.7 section in our [documentation](https://calliope.readthedocs.io/en/latest/migrating/).
 
-|new| Files containing user-defined mathematical formulations can be referenced in the model configuration. User-defined mathematical formulations must follow the new Calliope YAML math syntax (see "Internal changes" below).
 
-|new| Nodes can inherit from a newly added `node_groups` top-level key by referencing a node group with `inherit: ...` in the node configuration.
+|new| Storage buffers available in all technology base classes.
 
-|new| Ad-hoc parameters can be defined under the top-level key `parameters`.
-This enables un-indexed parameters to be defined, as well as those indexed over dimensions that are not `nodes`+`techs`.
+|new| Multiple carriers and different carriers in/out available in all technology base classes.
 
-|new| parameter dimensions at the `tech` or `node` level can be enhanced using the new `parameter` definition syntax.
-For instance, `flow_cap` can be defined per `carrier`.
+|new| `node_groups` added to match `tech_groups`.
 
-|new| Shadow prices obtained from a dual LP problem can be read by using `model.backend.shadow_prices.get("constraint_name")`
+|new| technology efficiencies split into inflow and outflow efficiencies.
 
-|changed| |backwards-incompatible| `run.cyclic_storage` configuration option moved to being per-technology (`techs.tech_name.cyclic_storage: ...`).
+|new| Technology capacities and efficiencies can be differentiated between technology carriers.
 
-|changed| |backwards-incompatible| `file=/df=` parameter values as references to timeseries data is replaced with loading tabular data at the top-level using the `data_sources` key.
+|new| Parameters can be defined outside the scope of `nodes` and `techs` using the top-level `parameters` key in YAML.
 
-|changed| Automatically derived transmission link distances default to kilometres, with the configuration option (`config.init.distance_unit`) to switch to the old default of distances in metres.
+|new| Any parameters can be indexed over arbitrary dimensions, both core Calliope dimensions and new, user-defined dimensions.
 
-|changed| |backwards-incompatible| Costs must be defined using the new `parameter` definition syntax.
+|new| Non-timeseries data can be loaded from CSV files or in-memory Pandas DataFrames using the top-level `data_sources` key in YAML.
 
-|changed| `flow_cap` (formerly `energy_cap`) is indexed over `carriers` as well as `nodes` and `techs`.
-This allows capacities to be defined separately for input and output flows for `conversion` technologies.
+|new| User-defined mathematical formulations using the new Calliope math syntax can be loaded when creating a model.
 
-|changed| |backwards-incompatible| `_plus` base technologies have been removed.
-Now, `supply_plus` can be effectively represented by using `supply` as the technology base tech and setting `include_storage: true` in the model definition.
-`conversion_plus` can be represented by using `conversion` as the technology base tech and using lists of carriers in `carrier_in` and/or `carrier_out`.
-To represent `in_2`, `out_2` etc. carrier "tiers", you will need to define your own custom math.
+|new| Shadow prices obtained from a dual LP problem can be read by using `model.backend.shadow_prices.get("constraint_name")`.
 
-|changed| |backwards-incompatible| Technology inheritance has moved to the `inherit` key, leaving `base_tech` to replace `parent` as a protected parameter that can only accept one of the abstract base technologies.
+|changed| |backwards-incompatible| Updated to support Python versions >= 3.10.
 
-|changed| |backwards-incompatible| Links are defined within `techs` and not in their own `links` section.
-Any technology with a `transmission` base technology will require `to` and `from` nodes to be defined.
-Then, all transmission links will be given their name as defined in `techs` rather than having the name be automatically derived by Calliope.
+|changed| |backwards-incompatible| Updated to Pandas >= v2.1, Pyomo >= v6.4, Xarray >= v2023.10.
 
-|changed| |backwards-incompatible| Flow efficiencies are now split into inflow (`flow_in_eff`) and outflow (`flow_out_eff`) efficiencies. This enables different storage charge/discharge efficiencies to be applied.
+|changed| |backwards-incompatible| Flat technology definitions, removing the distinction between `essentials`, `constraints` and `costs`.
 
-|changed| |backwards-incompatible| Mass parameter and decision variable renaming for increased clarity:
+|changed| |backwards-incompatible| Timeseries data is defined under the `data_sources` top-level key, not with `file=`/`df=` at the technology level.
 
-* `energy`/`carrier` → `flow`, e.g. `energy_cap` is now `flow_cap`.
-* `prod`/`con` → `out`/`in`, e.g., `carrier_prod` is now `flow_out`.
-* `resource` has been split into `source` (for things entering the model) and `sink` (for things leaving the model).
-* `resource_area` is now `area_use`.
-* `energy_cap_min_use` is now `flow_out_min_relative` (i.e., the value is relative to `flow_cap`).
-* `parasitic_eff` is now `flow_out_parasitic_eff`.
+|changed| |backwards-incompatible| Demand and carrier consumption values are strictly positive instead of strictly negative.
 
-|changed| |backwards-incompatible| Time masking and clustering capabilities have been severely reduced. Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.time_resample: 2H`, `config.init.time_cluster: cluster_file.csv`. Clustering is simplified to only matching model dates to representative days, with those representative days being in the clustered timeseries. Masking/clustering data should now be undertaken by the user prior to initialising a Calliope model.
+|changed| |backwards-incompatible| `model.run()` method → two-stage `model.build()` + `model.solve()` methods.
 
-|changed| |backwards-incompatible| `Locations` (abbreviated to `locs`) are now referred to as `nodes` (no abbreviation). For users, this requires updating the top-level YAML key "locations" to "nodes" and accessing data in `model.inputs` and `model.results` on the set "nodes" rather than "locs".
+|changed| |backwards-incompatible| `model` and `run` top-level keys → `config.init`/`.build`/`.solve`.
 
-|changed| |backwards-incompatible| The `loc::tech` and `loc::tech::carrier` sets have been removed. Model components are now indexed separately over `node`, `tech`, and `carrier` (where applicable). Although primarily an internal change, this affects the xarray dataset structure and hence how users access data in `model.inputs` and `model.results`. For example, `model.inputs.energy_cap_max.loc[{"loc_techs": "X:pv"}]` in v0.6 needs to be changed to `model.inputs.energy_cap_max.loc[{"nodes": "X", "techs": "pv"}]` in v0.7. This is functionally equivalent to first calling `model.get_formatted_array("energy_cap_max")` in v0.6, which is no longer necessary in v0.7.
+|changed| |backwards-incompatible| `locations` top-level key and `loc` data dimensions → `nodes`.
 
-|changed| |backwards-incompatible| `get_formatted_array` has been removed in favour of directly accessing the data, since we no longer concatenate sets. E.g., `model.get_formatted_array("storage")` -> `model.results.storage`.
+|changed| |backwards-incompatible| `parent` technology parameter → `base_tech` + `inherit`.
 
-|changed| |backwards-incompatible| The dimensions of the model data no longer include all possible subsets. E.g. a user can no longer access `loc_techs_supply` to view the location/technology pairs which have defined `supply` as their top-level base tech. Instead, the same subset can be supplied by calling `model.inputs.base_tech == "supply"` to create a boolean array of technologies with `supply` as their top-level base tech.
+|changed| |backwards-incompatible| Cost parameters are flattened and use the indexed parameter syntax.
 
-|changed| |backwards-incompatible| Group constraints have been removed. They will be replaced by `custom constraint` functionality.
+|changed| |backwards-incompatible| `links` top-level key → transmission links defined in `techs`.
+
+|changed| |backwards-incompatible| Various parameters/decision variables renamed (namely `energy_` → `flow_`, `carrier_prod`/`_con` → `flow_out`/`_in`, and `resource` → `source_use`/`sink_use`).
+
+|changed| |backwards-incompatible| Various configuration options renamed.
+
+|changed| |backwards-incompatible| `force_resource` technology parameter → `source_use_equals` / `sink_use_equals`.
+
+|changed| |backwards-incompatible| `units` + `purchased` decision variables → `purchased_units`.
+
+|changed| |backwards-incompatible| Parameters added to explicitly trigger MILP and storage decision variables/constraints.
+
+|changed| |backwards-incompatible| Structure of input and output data within a Calliope model updated to remove concatenated `loc::tech::carrier` sets and technology subsets (e.g. `techs_supply`) in favour of sparse arrays indexed over core dimensions only (`nodes`, `techs`, `carriers`, `timesteps`).
+
+|changed| |backwards-incompatible| `coordinates.lat`/`lon` node parameter → `latitude`/`longitude`.
+
+|changed| |backwards-incompatible| Distance units default to kilometres and can be reverted to metres with `config.init.distance_unit`.
+
+|changed| |backwards-incompatible| `operate` mode input parameters now expected to match `plan` mode decision variable names (e.g., `flow_cap`).
+
+|changed| |backwards-incompatible| Cyclic storage is defined per-technology, not as a top-level configuration option.
+
+|changed| Documentation has been overhauled.
+
+|removed| `_equals` constraints.
+Use both `_min` and `_max` constraints to the same value.
+
+|removed| `x`/`y` coordinates.
+Use geographic lat/lon coordinates (in `EPSG:4326` projection) instead.
+
+|removed| Comma-separated node definitions.
+Inheriting duplicate definitions from `node_groups` instead.
+
+|removed| `supply_plus` and `conversion_plus` technology base classes.
+Use `supply` and `conversion` technology base classes instead.
+
+|removed| `carrier` key.
+Use `carrier_in` and `carrier_out` instead.
+
+|removed| `carrier_tiers` and `carrier_ratios`.
+Use indexed parameter definitions for `flow_out_eff` and custom math instead.
+
+|removed| `calliope.Model.get_formatted_array`.
+The Calliope internal representation of data now matches the format achieved by calling this method in v0.6.
+
+|removed| Group constraints.
+Use custom math instead.
+
+|removed| Configuration options for features we no longer support.
+
+|removed| Plotting.
+See our documentation for example of how to visualise your data with Plotly.
+
+|removed| Clustering.
+Cluster your data before creating your Calliope model.
+Mapping of timeseries dates to representative days is still possible.
 
 ### Internal changes
+
+|new| Automatic release uploads to PyPI and new accompanying pre-release pipeline.
+
+|new| Choice of issue templates.
 
 |new| YAML schema to catch the worst offences perpetrated in the model definition / configuration.
 This schema is also rendered as a reference page in the documentation, replacing `defaults`/`config` tables.
 
-|new| Logic to convert the model definition (YAML or direct dictionary) to an xarray dataset is stored in a YAML configuration file: `model_data_lookup.yaml`. This reduces the need to update scripts when incorporating additional parameters in the future.
+|new| The model mathematical formulation (constraints, decision variables, objectives) is stored in a YAML configuration file: `math/base.yaml`.
+Equation expressions and the logic to decide on when to apply a constraint/create a variable etc. are given in string format.
+These strings are parsed according to a set of documented rules.
 
-|new| The model mathematical formulation (constraints, decision variables, objectives) is stored in a YAML configuration file: `math/base.yaml`. Equation expressions and the logic to decide on when to apply a constraint/create a variable etc. are given in string format. These strings are parsed according to a set of documented rules.
+|changed| Development environment installation instructions (they're now simpler!).
 
-|changed| Documentation has been ported to Markdown pages and is built using MKDocs using the Material theme.
+|changed| Documentation has been ported to Markdown pages and is built using MKDocs and the Material theme.
 
 |changed| Pre-processed model data checks are conducted according to a YAML configuration, instead of a hard-coded set of python functions.
 An API will be created in due course to allow the user to add their own checks to the configuration.
 
 |changed| Costs are now Pyomo expressions rather than decision variables.
 
-|changed| When a model is loaded into an active session, configuration dictionaries are stored as dictionaries instead of seralised YAML strings in the model data attributes dictionary. Serialisation and de-serialisation only occur on saving and loading from NetCDF, respectively.
+|changed| When a model is loaded into an active session, configuration dictionaries are stored as dictionaries instead of serialised YAML strings in the model data attributes dictionary.
+Serialisation and de-serialisation only occur on saving and loading from NetCDF, respectively.
+
+|changed| Backend interface has been abstracted to enable non-Pyomo solver interfaces to be implemented in due course.
+
+|changed| Repository structure has been re-configured to use the `src` layout, to rely on the `pyproject.toml` configuration file for most config, and to use only `.txt` requirements files (for pip+conda cross-compatibility)
+
+|changed| CI moved from Azure pipelines (back) to GitHub Actions.
+
+|changed| Stronger reliance on `pre-commit`, including a CI check to run it in Pull Requests.
 
 ## 0.6.10 (2023-01-18)
 

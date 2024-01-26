@@ -8,7 +8,7 @@ We believe these changes will make your life easier in the long run.
 Some might seem like steps back, as you have to write _more_ YAML for the same definition.
 However, the resulting definition should be easier to understand when you come back to it in the future, and the changes made to model definition have made the internal code much easier - leading to (hopefully) fewer bugs!
 
-Since v0.7 is in a pre-release phase, if there are changes that you don't agree with or bugs when you try implementing something, please [raise an issue](https://github.com/calliope-project/calliope/issues/new) or [start/join a discussion thread](https://github.com/calliope-project/calliope/discussions) on our GitHub repository.
+Since v0.7 is in a pre-release phase, if there are changes that you don't agree with or bugs when you try implementing something, please [raise an issue](https://github.com/calliope-project/calliope/issues/new/choose) or [start/join a discussion thread](https://github.com/calliope-project/calliope/discussions) on our GitHub repository.
 
 ## Changes
 
@@ -229,7 +229,7 @@ Technology inheritance has been unlinked from its abstract "base" technology.
         inherit: common_interest_rate
     ```
 
-### `costs.flow_cap.monetary` → `cost_flow_cap`
+### `costs.monetary.flow_cap` → `cost_flow_cap`
 
 We have changed the nesting structure for defining technology costs so they are flatter and can leverage our multi-dimensional parameter definition.
 
@@ -331,7 +331,7 @@ Here are the main changes to parameter/decision variable names that are not link
 !!! info "See also"
     [Our full list of internally defined parameters][model-definition-schema].
 
-### Renaming / moving configuration settings
+### Renaming / moving configuration options
 
 Along with [changing the YAML hierarchy of model configuration](#model-and-run-→-configinitbuildsolve), we have changed the name of configuration options, mainly to create a flat YAML hierarchy or to group settings alphabetically:
 
@@ -960,3 +960,21 @@ nodes:
 
 !!! info "See also"
     [Defining parameters when you create your model](creating/parameters.md).
+
+### Loading non-timeseries tabular data
+
+With the [change in loading timeseries data](#filedf-→-data_sources-section), we have expanded loading of tabular data to allow any data input.
+Technically, you can now define all your data in tables (although we would still recommend a mix of YAML and tabular model definition).
+
+!!! info "See also"
+    `data_sources` [introduction](creating/data_sources.md) and [tutorial][loading-tabular-data].
+
+### YAML-based math syntax
+
+We have overhauled our internal mathematical formulation to remove the strong link to the Pyomo library.
+Now, all components of our internal math are defined in a readable YAML syntax that we have developed.
+
+You can add your own custom math to update the internal base math and to represent the physical system in ways we do not cover in our base math, or to apply new modelling methods and problem types (e.g., pathway or stochastic optimisation)!
+
+!!! info "See also"
+    Our [inbuilt](math/index.md) and [custom](custom_math/index.md) math documentation.
