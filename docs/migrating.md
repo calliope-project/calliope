@@ -4,9 +4,9 @@ In Calliope v0.7 we have made many user-facing changes which will mean you canno
 
 On this page we will list the main changes to help you understand these changes and migrate your existing models to work in v0.7.
 
-We believe these changes will make your life easier in the long-run.
+We believe these changes will make your life easier in the long run.
 Some might seem like steps back, as you have to write _more_ YAML for the same definition.
-However, the resulting definition should be easier to understand when you come back to it in future, and it is generally much easier for us to process it internally - leading to (hopefully) fewer bugs!
+However, the resulting definition should be easier to understand when you come back to it in the future, and the changes made to model definition have made the internal code much easier - leading to (hopefully) fewer bugs!
 
 Since v0.7 is in a pre-release phase, if there are changes that you don't agree with or bugs when you try implementing something, please [raise an issue](https://github.com/calliope-project/calliope/issues/new) or [start/join a discussion thread](https://github.com/calliope-project/calliope/discussions) on our GitHub repository.
 
@@ -135,7 +135,7 @@ Demand data are now strictly _positive_ numbers and so are the values of the `ca
 
 ### `model.run()` → `model.build()` + `model.solve()`
 
-Building and solving your optimisation problem have been split into two steps:
+When running in Python, building and solving your optimisation problem have been split into two steps:
 
 1. `model.build()` creates the in-memory Python objects that define optimisation problem components (decision variables, constraints, the objective function, ...).
 This creates the [calliope.Model.backend][] object, which you can query and use to [tweak the optimisation problem](advanced/backend.md) before sending it to the solver.
@@ -144,7 +144,7 @@ This creates the [calliope.Model.backend][] object, which you can query and use 
 
 ### `model` and `run` → `config.init`/`.build`/`.solve`
 
-Model configuration is now split based on the stages of going from a model definition to solving your Calliope model:
+The model configuration is now split based on the stages of going from a model definition to solving your Calliope model:
 
 * All the options in `config.init` are applied when you create your model (`calliope.Model(...)`).
 * All the options in `config.build` are applied when you build your optimisation problem (`calliope.Model.build(...)`).
@@ -314,9 +314,9 @@ Instead, links are defined as separate transmission technologies in `techs`, inc
 ### Renaming parameters/decision variables without core changes in function
 
 You may have a already noticed new parameter names being referenced in examples of other changes.
-We have renamed parameters to improve clarity in their function and to make it clear that although Calliope is designed to model energy systems, its flow representation is suitable for tracking and optimising any kinds of flows (water, waste, etc.).
+We have renamed parameters to improve clarity in their function and to make it clear that although Calliope is designed to model energy systems, its flow representation is suitable for modelling any kind of flow (water, waste, etc.).
 
-Here are the main changes to parameter/decision variable names that is not linked to changes in functionality (those are detailed elsewhere on this page):
+Here are the main changes to parameter/decision variable names that are not linked to changes in functionality (those are detailed elsewhere on this page):
 
 * `energy`/`carrier` → `flow`, e.g. `energy_cap_max` is now `flow_cap_max` and `energy_cap` is now `flow_cap`.
 * `prod`/`con` → `out`/`in`, e.g., `carrier_prod` is now `flow_out`.
@@ -404,11 +404,11 @@ Now, you need to explicitly set the method using `cap_method`:
         cap_method: integer  # triggers the `purchased_units` integer variable
     ```
 
-To include a storage buffer in non-`storage` technologies, you also need to explicitly trigger it.
-To do so, use `include_storage: true` instead of defining e.g. `storage_cap_max` and expecting storage decision variables to be triggered.
+To include a storage buffer in non-`storage` technologies, you also need to explicitly enable it.
+To do so, use `include_storage: true` - simply defining e.g. `storage_cap_max` and expecting storage decision variables to be triggered is not enough!
 
 !!! note
-    You do not need to trigger storage with `include_storage` in `storage` technologies!
+    You do not need to enable storage with `include_storage` in `storage` technologies!
 
 ### Structure of input and output data within a Calliope model
 
@@ -583,26 +583,28 @@ Instead, you should define your coordinates using [`latitude`/`longitude`](#defi
 
 ### Comma-separated node definitions
 
-Defining duplicate definitions for nodes by chaining their names in the YAML key is no longer possible.
+Defining duplicate definitions for nodes by chaining their names in the YAML key (`node1,node2,node3: ...`) is no longer possible.
 We are trying to minimise the custom elements of our YAML files which allows us to leverage YAML schemas to validate user inputs and to keep our YAML readers more maintainable.
 
 You can now use [`node_groups`](#node_groups) to minimise duplicating key-value pairs in your YAML definitions.
 
 ### `supply_plus` and `conversion_plus` technology base classes
 
-Now, `supply_plus` can be effectively represented by using `supply` as the technology base tech and setting [`include_storage: true`](#explicitly-triggering-milp-and-storage-decision-variablesconstraints) in the model definition.
+We have removed the `supply_plus` and `conversion_plus` base technology classes.
 
-`conversion_plus` can be represented by using `conversion` as the technology base tech and using lists of carriers in `carrier_in` and/or `carrier_out`.
-To reimplement the links between carrier "tiers" (`in_2`, `out_2` etc.), you will need to define your own custom math.
+Instead, `supply_plus` can be effectively represented by using `supply` as the base tech and setting [`include_storage: true`](#explicitly-triggering-milp-and-storage-decision-variablesconstraints) in the model definition.
+
+`conversion_plus` can be represented by using `conversion` as the base tech and using lists of carriers in `carrier_in` and/or `carrier_out`.
+To reimplement arbitrary links between carrier "tiers" (`in_2`, `out_2` etc.), you can define your own custom math, which is a simultaneously more powerful and more human-readable way of defining complex conversion technologies.
 
 !!! info "See also"
-    [Example of custom math to link carrier flows](examples/urban_scale/index.md#sparkles-interlude-custom-math).
+    [Example of custom math to link carrier flows](examples/urban_scale/index.md#interlude-custom-math).
 
 ### `carrier` key
 
 We now require `carrier_in` and `carrier_out` to be explicitly defined for all base techs (only `carrier_in` for demand and `carrier_out` for supply technologies).
 This means you cannot use the alias `carrier` to define the same inflow/outflow carrier.
-We do this because it aligns with the internal Calliope data structure (we were always converting `carrier` to `carrier_in`/`_out`) and it makes it clearer to the use that the carrier is the same.
+We do this because it aligns with the internal Calliope data structure (we were always converting `carrier` to `carrier_in`/`_out`) and it makes it clearer to the user that the carrier is the same.
 This is especially important now that you can [define different inflow/outflow carriers for any technology base class](#multiple-carriers-and-different-carriers-inout-in-all-technology-base-classes).
 
 === "v0.6"
@@ -702,6 +704,8 @@ We made this decision due to the wide variety of visualisations that we saw bein
 It has proven impossible to keep our plotting methods agile given the almost infinite tweaks that libraries like [matplotlib](https://matplotlib.org/) and [plotly](https://plotly.com/) allow.
 
 If you want to achieve some of the same plots that were possible with the Calliope v0.6 plotting module, see our [example notebooks](examples/index.md).
+
+At a later stage, we are planning for a separate visualisation module that will provide similar functionality to the formerly-included plotting.
 
 ### Clustering
 
