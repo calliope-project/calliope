@@ -1,5 +1,5 @@
 
-# Technology (`tech_groups`) and node (`node_groups`) inheritance
+# Inheriting from technology node groups: `tech_groups`, `node_groups`
 
 For larger models, duplicate entries can start to crop up and become cumbersome.
 To streamline data entry, technologies and nodes can inherit common data from a `tech_group` or `node_group`, respectively.

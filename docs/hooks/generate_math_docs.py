@@ -91,7 +91,9 @@ def write_file(
         )
     )
     nav_reference = [
-        idx for idx in config["nav"] if set(idx.keys()) == {"Inbuilt math"}
+        idx
+        for idx in config["nav"]
+        if isinstance(idx, dict) and set(idx.keys()) == {"Inbuilt math"}
     ][0]
 
     nav_reference["Inbuilt math"].append(output_file.as_posix())

@@ -5,7 +5,7 @@
 #     This requires the user to switch on the integer operating_units decision variable for any relevant technology.
 #     Without the operating_units decision variable, the technology will have non-zero inflow requirements even if the technology capacity is zero and it has no outflow.
 #
-#     New top-level parameters:
+#     New indexed parameters:
 #
 #     - `flow_eff_piecewise_slopes` (defining the new set `pieces`)
 #     - `flow_eff_piecewise_intercept` (defining the new set `pieces`)

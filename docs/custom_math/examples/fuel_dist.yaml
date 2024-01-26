@@ -6,7 +6,7 @@
 #     The advantage is a simpler model definition; the disadvantage is not being able to track the source of a commodity that has been imported.
 #     We refer to "fuels" instead of "commodities" in the below math, but this could refer equally to other commodities that have a corresponding carrier (waste, water, ...).
 #
-#     New top-level parameters:
+#     New indexed parameters:
 #
 #     - `fuel_import_max`
 #     - `fuel_export_max`

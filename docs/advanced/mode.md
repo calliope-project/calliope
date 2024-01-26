@@ -3,9 +3,9 @@
 Calliope can leverage different methods to solve your optimisation problem.
 By default, it is designed to find a system configuration with the lowest combined cost to invest in and then operate technologies, with complete knowledge of what the future holds.
 This is a method that is known as "perfect foresight" optimisation.
-We refer to it in our model as [`plan` mode][plan-mode].
+We refer to it in our model as [`plan` mode](../advanced/mode.md#plan-mode).
 
-In addition to perfect foresight optimisation, we have a [receding horizon "operate" optimisation mode][operate-mode] and [our "spores" mode][spores-mode] to generate alternative system configurations that are within a small deviation of the optimal cost that is computed in `plan` mode. Read on to find out more about each of these run modes.
+In addition to perfect foresight optimisation, we have a [receding horizon "operate" optimisation mode](../advanced/mode.md#operate-mode) and [our "spores" mode](../advanced/mode.md#spores-mode) to generate alternative system configurations that are within a small deviation of the optimal cost that is computed in `plan` mode. Read on to find out more about each of these run modes.
 
 ## Plan mode
 
@@ -71,7 +71,7 @@ For this reason, `horizon` must always be equal to or larger than `window`.
 `SPORES` refers to Spatially-explicit Practically Optimal REsultS.
 This run mode allows a user to generate any number of alternative results which are within a certain range of the optimal cost.
 It follows on from previous work in the field of `modelling to generate alternatives` (MGA), with a particular emphasis on alternatives that vary maximally in the spatial dimension.
-This run mode was developed for and implemented in a `study on the future Italian energy system <https://doi.org/10.1016/j.joule.2020.08.002>`_.
+This run mode was developed for and implemented in a [study on the future Italian energy system](https://doi.org/10.1016/j.joule.2020.08.002).
 
 As an example, if you wanted to generate 10 SPORES, all of which are within 10% of the optimal system cost, you would define the following in your model configuration:
 
@@ -95,7 +95,7 @@ You will now also need a `spores_score` cost class in your model.
 The `spores_score` is the cost class against which the model optimises in the generation of SPORES.
 The recommended approach is to initialise it in your model definition for all technologies and locations that you want to limit within the scope of finding alternatives.
 Technologies at locations with higher scores will be penalised in the objective function, so are less likely to be chosen.
-In the [national scale example model][national-scale-example-model], this would look something like:
+In the [national scale example model](../examples/national_scale/index.md), this would look something like:
 
 ```yaml
 tech_groups:
@@ -126,5 +126,5 @@ techs:
 ```
 
 !!! note
-    We use and recommend using 'spores_score' to define the cost class that you will now optimise against.
-    However, it is user-defined, allowing you to choose terminology that best fits your use-case.
+    We ourselves use and recommend using `spores_score` to define the cost class that you will now optimise against.
+    However, it is user-defined, allowing you to choose any terminology that best fits your use case.

@@ -6,7 +6,7 @@
 #     User-defined timeseries parameters need to be in the model inputs for these constraints.
 #     This can be achieved by defining them for each relevant technology in a CSV file and loading that as a [data source][loading-tabular-data-data_sources].
 #
-#     New top-level parameters:
+#     New indexed parameters:
 #
 #     - `flow_cap_max_relative_per_ts`
 #     - `storage_max_relative_per_ts`

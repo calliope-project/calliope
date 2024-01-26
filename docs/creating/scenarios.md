@@ -2,10 +2,11 @@
 # Scenarios and overrides
 
 You may want to define slightly different data for sensitivity analyses, or to compare the effect of resampling your time dimension to varying degrees.
-There's no need to create different models files for each of these, instead you can define overrides in your main model definition.
+There's no need to create different model files for each of these. Instead, you can define overrides and scenarios in your main model definition:
 
-`overrides` are blocks of YAML that specify configurations that expand or override parts of the base model.
-`scenarios` are combinations of any number of such overrides.
+- `overrides` are blocks of YAML that specify configurations that expand or override parts of the base model.
+- `scenarios` are combinations of any number of such overrides.
+
 Both are specified at the top level of the model configuration, as in this example `model.yaml` file:
 
 ```yaml
@@ -29,16 +30,16 @@ Each override is given by a name (e.g. `high_cost`) and any number of model sett
 In the above example, one override defines higher costs for an `onshore_wind` technology.
 The other two other overrides specify different time subsets, so would run an otherwise identical model over two different periods of timeseries data.
 
-One or several overrides can be applied when [running a model][running-a-model].
+One or several overrides can be applied when [running a model](../running.md).
 Overrides can also be combined into scenarios to make applying them at run-time easier.
 Scenarios consist of a name and a list of override names which together form that scenario.
 
 Scenarios and overrides can be used to generate scripts that run a single Calliope model many times, either sequentially, or in parallel on a high-performance cluster
-(see the section [Generating scripts to repeatedly run variations of a model][generating-scripts-to-repeatedly-run-variations-of-a-model]).
+(see the section on [generating scripts to repeatedly run variations of a model](../advanced/scripts.md)).
 
 ## Importing other YAML files in overrides
 
-When using overrides, it is possible to have [`import` statements][relative-file-imports] for more flexibility.
+When using overrides, it is possible to have [`import` statements](yaml.md#relative-file-imports) for more flexibility.
 This can be useful if many overrides are defined which share large parts of model configuration, such as different levels of interconnection between model zones
 The following example illustrates this:
 

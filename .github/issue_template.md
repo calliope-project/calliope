@@ -8,7 +8,7 @@ If reporting an error when running Calliope on the command line, please re-run y
 
 Then post the full output from the debug run.
 
-If reporting an error when running Calliope interactively in a Python session, please include a full traceback.
+If reporting an error when running Calliope in a Python session, please include a full traceback.
 
 ## Steps to reproduce the problem
 

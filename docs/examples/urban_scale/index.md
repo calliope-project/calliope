@@ -29,7 +29,7 @@ The model configuration file `model.yaml` is the place to tell Calliope about ho
 It does not contain much data, but the scaffolding with which to construct and run your model.
 
 You will notice that we load a custom math file in `config.init`.
-You can find out more about this custom math [below][interlude-custom-math]
+You can find out more about this custom math [below](#sparkles-interlude-custom-math)
 
 ```yaml
 --8<-- "src/calliope/example_models/urban_scale/model.yaml:config"
@@ -72,7 +72,7 @@ Since all the data refers to the one parameter `sink_use_equals`, we don't add t
 
 ## Model definition
 
-### Top-level parameters
+### Indexed parameters
 
 Before we dive into the technologies and nodes in the model, we have defined some parameters that are independent of both of these:
 

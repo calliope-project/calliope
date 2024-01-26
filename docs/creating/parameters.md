@@ -1,4 +1,4 @@
-# Top-level parameters (`parameters`)
+# Indexed parameters (`parameters`)
 
 Some data is not indexed over [technologies][technologies-techs] / [nodes][nodes-nodes].
 This data can be defined under the top-level key `parameters`.

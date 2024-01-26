@@ -44,7 +44,7 @@ To build a model and save it to LP without actually solving it, use:
 calliope run my_model.yaml --save_lp=my_saved_model.lp
 ```
 
-or, interactively:
+or in Python:
 
 ```python
 model.build()
@@ -64,7 +64,7 @@ A reduction of any of these dimensions will reduce the number of resulting decis
 !!! note
     By reducing the number of locations (e.g. merging nearby locations) you also remove the technologies linking those locations to the rest of the system, which is additionally beneficial.
 
-Calliope has the ability to [resample the time dimension][time-resolution-adjustment-resampling] (e.g. 1hr -> 2hr intervals), or for the user to [supply their own clusters][time-clustering] on which time steps will be grouped together.
+Calliope has the ability to [resample the time dimension](advanced/time.md#time-resolution-adjustment-resampling) (e.g. 1hr -> 2hr intervals), or for the user to [supply their own clusters](advanced/time.md#time-clustering) on which time steps will be grouped together.
 In so doing, significant solution time improvements can be achieved.
 
 !!! info "See also"
@@ -76,7 +76,7 @@ In so doing, significant solution time improvements can be achieved.
 
 Calliope is primarily an LP framework, but application of certain constraints will trigger binary or integer decision variables.
 When triggered, a MILP model will be created.
-See our ["MILP" example][mixed-integer-linear-programming-milp-example-model] for an example of these variables in action.
+See our ["MILP" example](examples/milp/index.md) for an example of these variables in action.
 
 In both cases, there will be a time penalty, as linear programming solvers are less able to converge on solutions of problems which include binary or integer decision variables.
 But, the additional functionality can be useful.
@@ -96,7 +96,7 @@ Then, run `operate` mode with these capacities to get a higher resolution operat
 If necessary, this process could be iterated.
 
 !!! info "See also"
-    [Documentation on `operate` mode][operate-mode]
+    [Documentation on `operate` mode](advanced/mode.md#operate-mode)
 
 ## Influence of solver choice on speed
 
@@ -191,7 +191,7 @@ By rerunning the backend specifically, you can optimise your problem with these 
 !!! info "See also"
     [Backend model API][calliope.backend.backend_model.BackendModel],
     [Tutorial on interacting with the Backend][building-and-checking-the-optimisation-problem],
-    [interfacing-with-the-built-optimisation-problem][]
+    [Interfacing with the built optimisation problem](advanced/backend.md)
 
 ## Debugging model errors
 
@@ -220,7 +220,7 @@ There are private attributes of the Calliope `Model` object that you can access 
 - For the built backend objects (e.g., Pyomo objects) in an array format, the dataset `model.backend._dataset`.
 
 !!! info
-    If using Calliope interactively in a Python session, we recommend reading up on the [Python debugger](https://docs.python.org/3/library/pdb.html) and making use of the [`%debug` magic](https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-debug).
+    If using Calliope in a Python session, we recommend reading up on the [Python debugger](https://docs.python.org/3/library/pdb.html) and making use of the [`%debug` magic](https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-debug).
 
 !!! info "See also"
     We go into the details of the Calliope model in [one of our tutorial notebooks][the-calliope-model-and-backend-objects].

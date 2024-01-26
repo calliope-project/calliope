@@ -329,7 +329,7 @@ properties:
 
           integer_dispatch:
             type: boolean
-            default: False
+            default: false
             x-resample_method: first
             x-type: float
             title: Integer dispatch switch.
@@ -615,7 +615,7 @@ properties:
             title: Storage capacity per purchased unit.
             description: >-
               Set the storage capacity of each integer unit of a technology purchased.
-              Unit: Unit: $\frac{\text{energy}}{\text{unit}}$.
+              Unit: $\frac{\text{energy}}{\text{unit}}$.
 
           storage_discharge_depth:
             $ref: "#/$defs/TechParamNullNumber"
@@ -644,7 +644,18 @@ properties:
             title: Storage loss rate
             description: >-
                Rate of storage loss per hour, used to calculate lost stored flow as `(1 - storage_loss)^hours_per_timestep`.
-               Unit: Unit: $\frac{\text{fraction}}{\text{hour}}$.
+               Unit: $\frac{\text{fraction}}{\text{hour}}$.
+
+          cyclic_storage:
+            type: boolean
+            default: true
+            x-type: float
+            title: Cyclic storage switch.
+            description: >
+              If true, link storage levels in the last model timestep with the first model timestep.
+              `inter_cluster_storage` custom math must be included if using time clustering and setting this to `true`.
+              This must be set to `false` if using `operate` mode.
+              Unit: boolean.
 
           purchased_units_min_systemwide:
             $ref: "#/$defs/TechParamNullNumber"

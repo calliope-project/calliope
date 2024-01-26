@@ -28,7 +28,7 @@ def setup_root_logger(
             See https://docs.python.org/3/library/logging.html#logging-levels for more information.
         capture_warnings (bool, optional):
             If True, capture Python warnings in the logger (at the `WARNING` level).
-            This results in more consistent output when running interactively.
+            This results in more consistent output when running in Python.
             Defaults to True.
 
     Returns:
@@ -79,7 +79,7 @@ def set_log_verbosity(
             Defaults to True.
         capture_warnings (bool, optional):
             If True, capture Python warnings in the logger (at the `WARNING` level).
-            This results in more consistent output when running interactively.
+            This results in more consistent output when running in Python.
             Defaults to True.
     """
     if isinstance(verbosity, str):

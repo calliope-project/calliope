@@ -39,11 +39,11 @@ Instead, we recommend you use other timeseries processing tools applied to your 
 
 !!! warning
 
-   When using time clustering, the resulting timesteps will be assigned different weights depending on how long a period of time they represent.
-   Weights are used for example to give appropriate weight to the operational costs of aggregated typical days in comparison to individual extreme days, if both exist in the same processed time series.
-   The weighting is accessible in the model data, e.g. through `#!python model.inputs.timestep_weights`.
+    When using time clustering, the resulting timesteps will be assigned different weights depending on how long a period of time they represent.
+    Weights are used for example to give appropriate weight to the operational costs of aggregated typical days in comparison to individual extreme days, if both exist in the same processed time series.
+    The weighting is accessible in the model data, e.g. through `#!python model.inputs.timestep_weights`.
 
-   The interpretation of results when weights are not 1 for all timesteps requires caution.
-   Production values are not scaled according to weights, but costs are multiplied by weight, in order to weight different timesteps appropriately in the objective function.
-   This means that costs and outflow values are not consistent without manually post-processing them by either multiplying outflows by weight (outflows would then be inconsistent with capacities) or dividing costs by weight.
-   The computation of levelised costs and of capacity factors takes weighting into account, so these values are consistent and can be used as usual.
+    The interpretation of results when weights are not 1 for all timesteps requires caution.
+    Production values are not scaled according to weights, but costs are multiplied by weight, in order to weight different timesteps appropriately in the objective function.
+    This means that costs and outflow values are not consistent without manually post-processing them by either multiplying outflows by weight (outflows would then be inconsistent with capacities) or dividing costs by weight.
+    The computation of levelised costs and of capacity factors takes weighting into account, so these values are consistent and can be used as usual.
