@@ -135,6 +135,21 @@ class TestBaseMath:
         }
         compare_lps(model, custom_math, "balance_transmission")
 
+    def test_balance_storage(self, compare_lps):
+        "Test balance storage with one tech having and one tech not having per-tech cyclic storage."
+        self.TEST_REGISTER.add("constraints.balance_storage")
+        model = build_test_model(
+            {
+                "nodes.a.techs.test_storage.cyclic_storage": True,
+                "nodes.b.techs.test_storage.cyclic_storage": False,
+            },
+            "simple_storage,two_hours",
+        )
+        custom_math = {
+            "constraints": {"my_constraint": model.math.constraints.balance_storage}
+        }
+        compare_lps(model, custom_math, "balance_storage")
+
     @pytest.mark.xfail(reason="not all base math is in the test config dict yet")
     def test_all_math_registered(self, base_math):
         "After running all the previous tests in the class, the base_math dict should be empty, i.e. all math has been tested"

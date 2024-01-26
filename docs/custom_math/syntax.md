@@ -35,7 +35,7 @@ Configuration options are any that are defined in `config.build`, where you can 
 
     ??? example annotate "Examples"
 
-        - If you want to apply a constraint only if the configuration option `config.build.cyclic_storage` is _True_, you would include `config.cyclic_storage=True` (`True`/`False` is case insensitive).
+        - If you want to apply a constraint only if the configuration option `config.build.mode` is _operate_, you would include `config.mode=operate`.
         - If you want to apply a constraint across all `nodes` and `techs`, but only where the `flow_eff` parameter is less than 0.5, you would include `flow_eff<0.5`.
         - If you want to apply a constraint only for the first timestep in your timeseries, you would include `timesteps=get_val_at_index(dim=timesteps, idx=0)`. (1)
         - If you want to apply a constraint only for the last timestep in your timeseries, you would include `timesteps=get_val_at_index(dim=timesteps, idx=-1)`.
@@ -67,7 +67,7 @@ These statements will be combined first.
 
 ??? example "Examples"
 
-    - If you want to apply a constraint for `storage` technologies if the configuration option `cyclic_storage` is activated and it is the last timestep of the series: `base_tech=storage and config.cyclic_storage=True and timesteps=get_val_at_index(dim=timesteps, idx=-1)`.
+    - If you want to apply a constraint for `storage` technologies if the configuration option `cyclic_storage` is activated and it is the last timestep of the series: `base_tech=storage and cyclic_storage=True and timesteps=get_val_at_index(dim=timesteps, idx=-1)`.
     - If you want to create a decision variable for the input carriers of conversion technologies: `carrier_in and base_tech=conversion`
     - If you want to apply a constraint if the parameter `source_unit` is `energy_per_area` or the parameter `area_use_per_flow_cap` is defined: `source_unit=energy_per_area or area_use_per_flow_cap`.
     - If you want to apply a constraint if the parameter `flow_out_eff` is less than or equal to 0.5 and `source_use` has been defined, or `flow_out_eff` is greater than 0.9 and `source_use` has not been defined: `(flow_out_eff<=0.5 and source_use) or (flow_out_eff>0.9 and not source_use)`.

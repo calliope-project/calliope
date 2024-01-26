@@ -170,12 +170,12 @@ In the latter case, Calliope will compute distances automatically based on the l
 
 For any technologies with storage (`storage` technologies or those with [storage buffer](#activating-storage-buffers-in-non-storage-technologies)), it is possible to link the storage at either end of the timeseries using the `cyclic_storage` parameter.
 This allows the user to better represent multiple years by just modelling one year.
-Cyclic storage is activated by default (to deactivate: `config.build.cyclic_storage: false`).
+Cyclic storage is activated by default (to deactivate: `cyclic_storage: false` in all storage technologies).
 As a result, a technology's initial stored energy at a given location will be equal to its stored energy at the end of the model's last timestep.
 
 For example, for a model running over a full year at hourly resolution, the initial storage at `Jan 1st 00:00` will be forced equal to the storage at the end of the timestep `Dec 31st 23:00`.
 By setting `storage_initial` for a technology, it is also possible to fix the value in the last timestep.
-For instance, with `config.build.cyclic_storage: true` and a `storage_initial` of zero, the stored energy *must* be zero by the end of the time horizon.
+For instance, with `cyclic_storage: true` and a `storage_initial: 0`, the stored energy *must* be zero by the end of the time horizon.
 
 Without cyclic storage in place, technologies can have any amount of stored energy by the end of the timeseries.
 This may prove useful in some cases, but makes little sense if you imagine your technologies operating in the same manner year-on-year.

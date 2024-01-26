@@ -6,7 +6,6 @@ config:
 
   build:
     mode: plan
-    cyclic_storage: False # necessary so demand can be fed from stored energy
     ensure_feasibility: true
   solve:
     solver: cbc
@@ -23,6 +22,7 @@ techs:
     base_tech: storage
     storage_initial: 1.0
     lifetime: 60
+    cyclic_storage: false # necessary so demand can be fed from stored energy
     cost_flow_cap:
       data: 1500000
       index: monetary

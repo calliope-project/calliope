@@ -38,4 +38,8 @@ fail:
   - where: (storage_cap_max OR storage_cap_min) AND storage_cap_per_unit
     message: Cannot define both `storage_cap_per_unit` and `storage_cap_max`/`storage_cap_min`
 
-warn: []
+warn:
+  - where: cyclic_storage=True AND (base_tech=storage OR include_storage=True) AND config.mode=operate
+    message: >-
+      Cyclic storage should be switched off in operate mode.
+      Since the parameter defaults to True, make sure you explicitly set `cyclic_storage: false` for all your technologies with storage.
