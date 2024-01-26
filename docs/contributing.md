@@ -223,7 +223,7 @@ When adding docstrings, we request you use the [Google docstring style](https://
 
 ### Post-release
 
-- [ ] Update the changelog, adding a new `Unreleased` heading.
+- [ ] Update the `CHANGELOG.md`, adding a new `Unreleased` heading.
 - [ ] Bump the version number in `src/calliope/_version.py` to the next patch release number appended with `.dev`.
 - [ ] Update the `calliope_version` configuration option in all example models to match the new version, but without the `.dev` suffix (so `0.7.0.dev` is `0.7.0` for the example models).
 
