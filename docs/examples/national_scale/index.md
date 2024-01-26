@@ -27,7 +27,7 @@ It does not contain much data, but the scaffolding with which to construct and r
 
 ## Model definition
 
-### Top-level parameters
+### Indexed parameters
 
 Before we dive into the technologies and nodes in the model, we have defined some parameters that are independent of both of these:
 
@@ -246,3 +246,4 @@ They allow only the `csp` technology, this allows us to model three possible sit
 ---
 !!! info "Where to go next"
     To try loading and solving the model yourself, move on to the accompanying notebook [here][running-the-national-scale-example-model].
+    You can also find a list of all the example models available in Calliope [here][calliope.examples].

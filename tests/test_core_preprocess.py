@@ -329,39 +329,39 @@ class TestChecks:
             excinfo, "Model configuration specifies calliope version"
         )
 
-    def test_unspecified_parent(self):
+    def test_unspecified_base_tech(self):
         """
         All technologies and technology groups must specify a base_tech
         """
 
         override = AttrDict.from_yaml_string(
             """
-            techs.test_supply_no_parent:
+            techs.test_supply_no_base_tech:
                     name: Supply tech
                     carrier_out: gas
                     flow_cap_max: 10
                     source_use_max: .inf
-            nodes.b.techs.test_supply_no_parent:
+            nodes.b.techs.test_supply_no_base_tech:
             """
         )
 
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, scenario="simple_supply,one_day")
 
-    def test_tech_as_parent(self):
+    def test_tech_as_base_tech(self):
         """
         All technologies and technology groups must specify a base_tech
         """
 
         override1 = AttrDict.from_yaml_string(
             """
-            techs.test_supply_tech_parent:
+            techs.test_supply_tech_base_tech:
                 name: Supply tech
                 carrier_out: gas
                 base_tech: test_supply_elec
                 flow_cap_max: 10
                 source_use_max: .inf
-            nodes.b.techs.test_supply_tech_parent:
+            nodes.b.techs.test_supply_tech_base_tech:
             """
         )
 

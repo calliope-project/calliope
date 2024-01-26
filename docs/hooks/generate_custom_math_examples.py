@@ -37,7 +37,9 @@ def on_files(files: list, config: dict, **kwargs):
 
     # Find the navigation tree list that we will populate with reference to new markdown files
     top_level_nav_reference = [
-        idx for idx in config["nav"] if set(idx.keys()) == {"Custom math"}
+        idx
+        for idx in config["nav"]
+        if isinstance(idx, dict) and set(idx.keys()) == {"Custom math"}
     ][0]
     nav_reference = [
         idx

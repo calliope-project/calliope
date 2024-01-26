@@ -73,3 +73,4 @@ This constraint can also be applied to storage technologies, to similarly contro
 
 !!! info "Where to go next"
     To try loading and solving the model yourself, move on to the accompanying notebook [here][running-the-milp-example-model].
+    You can also find a list of all the example models available in Calliope [here][calliope.examples].

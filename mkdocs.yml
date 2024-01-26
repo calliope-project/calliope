@@ -7,6 +7,7 @@ hooks:
   - docs/hooks/generate_custom_math_examples.py
   - docs/hooks/generate_readable_schema.py
   - docs/hooks/generate_math_docs.py
+  - docs/hooks/generate_plots.py
   - docs/hooks/add_notebooks.py
 extra:
   min_python_version: "3.10"
@@ -68,6 +69,7 @@ markdown_extensions:
   - mkdocs-click
   - toc:
       permalink: "¶"
+      toc_depth: 3
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
@@ -80,6 +82,8 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.superfences:
       preserve_tabs: true
+  - pymdownx.tabbed:
+      alternate_style: true
   - pymdownx.snippets
   - pymdownx.details
 
@@ -87,6 +91,19 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Download and installation: installation.md
+  - Creating a model:
+    - creating/index.md
+    - YAML as used in Calliope: creating/yaml.md
+    - Model configuration: creating/config.md
+    - Technologies: creating/techs.md
+    - Nodes: creating/nodes.md
+    - Inheriting from technology and node groups: creating/groups.md
+    - Indexed parameters: creating/parameters.md
+    - Loading tabular data: creating/data_sources.md
+    - Scenarios and overrides: creating/scenarios.md
+  - Running a model: running.md
+  - Analysing a model: analysing.md
+  - Troubleshooting: troubleshooting.md
   - Inbuilt math:
     - index: math/index.md
   - Custom math:
@@ -110,12 +127,22 @@ nav:
     - examples/loading_tabular_data.py
     - examples/calliope_model_object.py
     - examples/calliope_logging.py
+  - Advanced features:
+    - advanced/constraints.md
+    - advanced/index.md
+    - advanced/time.md
+    - advanced/scripts.md
+    - advanced/mode.md
+    - advanced/solver.md
+    - advanced/backend.md
+    - advanced/shadow_prices.md
   - Reference:
     - Command line interface: reference/cli.md
     - Python API:
       - reference/api/model.md
       - reference/api/backend_model.md
       - reference/api/helper_functions.md
+      - reference/api/example_models.md
       - reference/api/attrdict.md
       - reference/api/exceptions.md
       - reference/api/logging.md
@@ -123,4 +150,6 @@ nav:
     - reference/data_source_schema.md
     - reference/model_schema.md
     - reference/math_schema.md
+  - migrating.md
+  - Contributing: contributing.md
   - Version history: version_history.md

@@ -2,11 +2,7 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
-examples.py
-~~~~~~~~~~~
-
-Example models.
-
+Example models that can be loaded directly into a session.
 """
 
 import importlib
@@ -14,13 +10,13 @@ from pathlib import Path
 
 from calliope.model import Model
 
-EXAMPLE_MODEL_DIR = Path(importlib.resources.files("calliope") / "example_models")
+_EXAMPLE_MODEL_DIR = Path(importlib.resources.files("calliope") / "example_models")
 
 
 def national_scale(*args, **kwargs):
     """Returns the built-in national-scale example model."""
     return Model(
-        model_definition=EXAMPLE_MODEL_DIR / "national_scale" / "model.yaml",
+        model_definition=_EXAMPLE_MODEL_DIR / "national_scale" / "model.yaml",
         *args,
         **kwargs,
     )
@@ -39,7 +35,7 @@ def time_resampling(*args, **kwargs):
 def urban_scale(*args, **kwargs):
     """Returns the built-in urban-scale example model."""
     return Model(
-        model_definition=EXAMPLE_MODEL_DIR / "urban_scale" / "model.yaml",
+        model_definition=_EXAMPLE_MODEL_DIR / "urban_scale" / "model.yaml",
         *args,
         **kwargs,
     )

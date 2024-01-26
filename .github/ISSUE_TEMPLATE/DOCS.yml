@@ -1,0 +1,53 @@
+name: Report a documentation issue
+description: Missing, incorrect, or confusing information in our docs? Report a documentation issue
+labels:
+  - documentation
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: >-
+        Please describe the inconsistency or issue you have found in
+        [our documentation](https://calliope.readthedocs.io)
+        or indicate where you feel there is a need for improvement. Furthermore,
+        explain the severity of the issue, i.e., its impact on you and potentially
+        other users.
+    validations:
+      required: true
+
+  - type: textarea
+    id: related-links
+    attributes:
+      label: Related links
+      description: >-
+        Please list all links to the sections of [our documentation](https://calliope.readthedocs.io)
+        that are impacted by the issue you described above. If applicable,
+        add screenshots. Additionally, list links to possibly related open
+        and closed [issues](https://github.com/calliope-project/calliope/issues)
+        and [discussions](https://github.com/calliope-project/calliope/discussions)
+        you encountered when searching our issue tracker.
+      value: |
+        -
+        -
+        ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: version
+    attributes:
+      label: Version
+      description: Which version of the documentation are you referring to?
+      placeholder: v0.7.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-change
+    attributes:
+      label: Proposed change
+      description: >-
+        This field is optional. You may provide an improvement proposal for our
+        documentation by describing your suggestion in the text field below or
+        creating a pull request after reporting this issue referencing the issue.

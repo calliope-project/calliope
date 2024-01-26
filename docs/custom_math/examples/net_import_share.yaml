@@ -5,7 +5,7 @@
 #     Imports of transmission technologies are defined by `flow_out` (outflow from a transmission technology that originated in a remote node).
 #     We assume that transmission technologies `test_transmission_elec` and `test_transmission_heat` have been defined.
 #
-#     New top-level parameters:
+#     New indexed parameters:
 #
 #     - `net_import_share`
 #

@@ -1,0 +1,24 @@
+name: Feature Request
+description: Suggest an idea for Calliope.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for letting us know about your idea!
+  - type: textarea
+    id: description
+    attributes:
+      label: What can be improved?
+      placeholder: Tell us what you would like to see!
+      value: "Calliope should be more memory efficient!"
+    validations:
+      required: true
+  - type: textarea
+    id: version
+    attributes:
+      label: Version
+      description: What version of Calliope are you using?
+      placeholder: v0.1.0
+    validations:
+      required: true

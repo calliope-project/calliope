@@ -1,4 +1,4 @@
-[![Chat on Gitter](https://img.shields.io/gitter/room/calliope-project/calliope.svg)](https://app.gitter.im/#/room/#calliope-project_calliope:gitter.im)
+[![GitHub Discussions](https://img.shields.io/github/discussions/calliope-project/calliope)](https://github.com/calliope-project/calliope/discussions)
 [![Main branch build status](https://github.com/calliope-project/calliope/actions/workflows/commit-ci.yml/badge.svg?branch=main)](https://github.com/calliope-project/calliope/actions/workflows/commit-ci.yml)
 [![Documentation build status](https://img.shields.io/readthedocs/calliope.svg?version=latest)](https://readthedocs.org/projects/calliope/builds/)
 [![Test coverage](https://codecov.io/gh/calliope-project/calliope/graph/badge.svg?token=UM542yaYrh)](https://codecov.io/gh/calliope-project/calliope)
@@ -53,16 +53,7 @@ Documentation is available on [Read the Docs](https://calliope.readthedocs.io/en
 
 ## Contributing
 
-To contribute changes:
-
-1. Fork the project on GitHub
-2. Create a feature branch to work on in your fork (`git checkout -b new-feature`)
-3. Add your name to the AUTHORS file
-4. Commit your changes to the feature branch
-5. Push the branch to GitHub (`git push origin my-new-feature`)
-6. On GitHub, create a new pull request from the feature branch
-
-See our [contribution guidelines](https://github.com/calliope-project/calliope/blob/main/CONTRIBUTING.md) for more information -- and [join us on Gitter](https://app.gitter.im/#/room/#calliope-project_calliope:gitter.im) to ask questions or discuss code.
+See our documentation for more on how to [contribute to Calliope](http://calliope.readthedocs.io/en/latest/contributing/).
 
 ## What's new
 
