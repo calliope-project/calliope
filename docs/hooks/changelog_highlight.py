@@ -1,6 +1,7 @@
 REPLACEMENTS = {
     # Changelog
     "|new|": "<span class='bubble green'>new</span>",
+    "|removed|": "<span class='bubble red'>removed</span>",
     "|fixed|": "<span class='bubble blue'>fixed</span>",
     "|changed|": "<span class='bubble yellow'>changed</span>",
     "|backwards-incompatible|": "<span class='bubble red'>backwards-incompatible</span>",
