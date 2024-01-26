@@ -86,3 +86,22 @@ jobs:
       with:
         fail_ci_if_error: true
         directory: "./reports/coverage/"
+
+  pre-release-version:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.pull_request.title, 'Release v')
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+    steps:
+      - id: get-version
+        run: echo "version=${${{github.event.pull_request.title}}#"Release "}" >> $GITHUB_OUTPUT
+
+  pre-release:
+    needs: [test, pre-release-version]
+    if: needs.test.result == 'success' && startsWith(github.event.pull_request.title, 'Release v')
+    uses: arup-group/actions-city-modelling-lab/.github/workflows/pip-build.yml@main
+    secrets:
+      TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+    with:
+      package_name: calliope
+      version: ${{needs.pre-release-version.outputs.version}}
