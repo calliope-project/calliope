@@ -678,7 +678,7 @@ For instance, here's how you represent a reversible heat pump without custom mat
     ```
 
 !!! info "See also"
-    [Example of custom math to link carrier flows](examples/urban_scale/index.md#sparkles-interlude-custom-math);
+    [Example of custom math to link carrier flows](examples/urban_scale/index.md#interlude-custom-math);
     [Examples of complex CHP plant operating space custom math][chp-plants].
 
 ### Group constraints
