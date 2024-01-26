@@ -94,7 +94,9 @@ jobs:
       version: ${{ steps.get-version.outputs.version }}
     steps:
       - id: get-version
-        run: echo "version=${${{github.event.pull_request.title}}#"Release "}" >> $GITHUB_OUTPUT
+        run: |
+          fullname="${{github.event.pull_request.title}}"
+          echo "version=${fullname#"Release "}" >> $GITHUB_OUTPUT
 
   pre-release:
     needs: [test, pre-release-version]
