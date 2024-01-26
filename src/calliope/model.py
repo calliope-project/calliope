@@ -22,6 +22,7 @@ from calliope import exceptions, io
 from calliope._version import __version__
 from calliope.attrdict import AttrDict
 from calliope.backend import parsing
+from calliope.backend.gurobi_backend_model import GurobiBackendModel
 from calliope.backend.latex_backend_model import LatexBackendModel, MathDocumentation
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.postprocess import postprocess as postprocess_results
@@ -41,7 +42,7 @@ from calliope.util.tools import relative_path
 
 LOGGER = logging.getLogger(__name__)
 
-T = TypeVar("T", bound=Union[PyomoBackendModel, LatexBackendModel])
+T = TypeVar("T", bound=Union[PyomoBackendModel, GurobiBackendModel, LatexBackendModel])
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
 
@@ -59,7 +60,10 @@ class Model(object):
     A Calliope Model.
     """
 
-    _BACKENDS: dict[str, Callable] = {"pyomo": PyomoBackendModel}
+    _BACKENDS: dict[str, Callable] = {
+        "pyomo": PyomoBackendModel,
+        "gurobi": GurobiBackendModel,
+    }
     _TS_OFFSET = pd.Timedelta(nanoseconds=1)
 
     def __init__(
