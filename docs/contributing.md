@@ -213,7 +213,7 @@ When adding docstrings, we request you use the [Google docstring style](https://
 
 - [ ] Create a release branch
 - [ ] Bump the version number in `src/calliope/_version.py`
-- [ ] Update the CHANGELOG.md with final version number of the form `vX.Y.Z` and the release date.
+- [ ] Update the `CHANGELOG.md` with final version number of the form `vX.Y.Z` and the release date.
 - [ ] Commit your changes and create a release pull request with the title `Release vX.Y.Z` to have all the tests run and to verify that the pip package builds successfully.
 - [ ] Once the PR is approved and merged, tag the commit in main with the version `vX.Y.Z`.
 - [ ] Create a release through the GitHub web interface, using the same tag, titling it `Release vX.Y.Z` and include all the changelog elements that are `User-facing`.
