@@ -335,7 +335,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
 
-        def _variable_setter(where: xr.DataArray) -> xr.DataArray:
+        def _variable_setter(where: xr.DataArray, references: set) -> xr.DataArray:
             return where.where(where)
 
         if variable_dict is None:
