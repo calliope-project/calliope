@@ -133,9 +133,11 @@ def save_netcdf(model_data, path, model=None):
         _serialise(var.attrs)
 
     encoding = {
-        k: {"zlib": False, "_FillValue": None}
-        if v.dtype.kind in ["U", "O"]
-        else {"zlib": True, "complevel": 4}
+        k: (
+            {"zlib": False, "_FillValue": None}
+            if v.dtype.kind in ["U", "O"]
+            else {"zlib": True, "complevel": 4}
+        )
         for k, v in model_data.data_vars.items()
     }
 
