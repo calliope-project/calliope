@@ -6,15 +6,15 @@ This could be a single value:
 
 ```yaml
 parameters:
-    my_param: 10
+  my_param: 10
 ```
 
 or (equivalent):
 
 ```yaml
 parameters:
-    my_param:
-        data: 10
+  my_param:
+    data: 10
 ```
 
 which can then be accessed in the model inputs `model.inputs.my_param` and used in [custom math][custom-math-formulation] as `my_param`.
@@ -23,14 +23,14 @@ Or, it can be indexed over one or more model dimension(s):
 
 ```yaml
 parameters:
-    my_indexed_param:
-        data: 100
-        index: monetary
-        dims: costs
-    my_multiindexed_param:
-        data: [2, 10]
-        index: [[monetary, electricity], [monetary, heat]]  # (1)!
-        dims: [costs, carriers]
+  my_indexed_param:
+    data: 100
+    index: monetary
+    dims: costs
+  my_multiindexed_param:
+    data: [2, 10]
+    index: [[monetary, electricity], [monetary, heat]]  # (1)!
+    dims: [costs, carriers]
 ```
 
 1. The length of the inner index lists is equal to the length of `dims`.
@@ -42,10 +42,10 @@ You can also index over a new dimension:
 
 ```yaml
 parameters:
-    my_indexed_param:
-        data: 100
-        index: my_index_val
-        dims: my_new_dim
+  my_indexed_param:
+    data: 100
+    index: my_index_val
+    dims: my_new_dim
 ```
 
 Which will add the new dimension `my_new_dim` to your model: `model.inputs.my_new_dim` which you could choose to build a math component over:

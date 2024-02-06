@@ -1,6 +1,19 @@
 # Math syntax
 
-This page provides an overview of the syntax available to formulate math components. reference for the allowed key-value pairs in your custom math YAML file is available in the [reference section of the documentation][math-formulation-schema].
+This page provides an overview of the syntax available to formulate [math components](components.md).
+Using the math syntax, you can populate an N-dimensional matrix with math expressions.
+You use [foreach](#foreach-lists) to define the dimensions of the matrix.
+You use the top-level [where string](#where-strings) to subset the matrix to only elements of interest.
+You then populate the subset with any number of [equation expressions](#equations), each further subsetting the matrix.
+
+<figure>
+<img src="../../img/math_syntax.svg", width="100%", style="background-color:white;", alt="Visual representation of math syntax application">
+<figcaption>Visual representation of math syntax to create a matrix of math expressions.</figcaption>
+</figure>
+
+!!! info "See also"
+
+    Reference for the allowed key-value pairs in your custom math YAML file is available in the [reference section of the documentation][math-formulation-schema].
 
 ## foreach lists
 

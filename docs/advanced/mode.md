@@ -48,8 +48,8 @@ This requires two additional configuration options to be defined:
 
 ```yaml
 config.build:
-    operate_horizon: 48h  # (1)!
-    operate_window: 24h
+  operate_horizon: 48h  # (1)!
+  operate_window: 24h
 ```
 
 1. This is a pandas frequency string.
@@ -99,30 +99,30 @@ In the [national scale example model](../examples/national_scale/index.md), this
 
 ```yaml
 tech_groups:
-    add_spores_score:
-        inherit: cost_dim_setter
-        cost_flow_cap:
-            data: [null, null]
-            index: ["monetary", "spores_score"]
-            dims: costs
-        cost_interest_rate:
-            data: [0.1, 1]
-            index: ["monetary", "spores_score"]
-            dims: costs
+  add_spores_score:
+    inherit: cost_dim_setter
+    cost_flow_cap:
+      data: [null, null]
+      index: ["monetary", "spores_score"]
+      dims: costs
+    cost_interest_rate:
+      data: [0.1, 1]
+      index: ["monetary", "spores_score"]
+      dims: costs
 
 techs:
-    ccgt:
-        inherit: add_spores_score
-        cost_flow_cap.data: [750, 0]
-    csp:
-        inherit: add_spores_score
-        cost_flow_cap.data: [1000, 0]
-    battery:
-        inherit: add_spores_score
-        cost_flow_cap.data: [null, 0]
-    region1_to_region2:
-        inherit: add_spores_score
-        cost_flow_cap.data: [10000, 0]
+  ccgt:
+    inherit: add_spores_score
+    cost_flow_cap.data: [750, 0]
+  csp:
+    inherit: add_spores_score
+    cost_flow_cap.data: [1000, 0]
+  battery:
+    inherit: add_spores_score
+    cost_flow_cap.data: [null, 0]
+  region1_to_region2:
+    inherit: add_spores_score
+    cost_flow_cap.data: [10000, 0]
 ```
 
 !!! note

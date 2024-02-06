@@ -8,8 +8,8 @@ This default resolution can be adjusted by specifying time resolution adjustment
 
 ```yaml
 config:
-    init:
-        time_resample: 6H
+  init:
+    time_resample: 6H
 ```
 
 In the above example, this would resample all time series data to 6-hourly timesteps.
@@ -21,8 +21,8 @@ By supplying a file linking dates in your model timeseries with representative d
 
 ```yaml
 config:
-    init:
-        time_cluster: cluster_days.csv
+  init:
+    time_cluster: cluster_days.csv
 ```
 
 When using representative days, you may want to enable a number of additional constraints to improve how carriers are stored between representative days, based on the study undertaken by [Kotzur et al.](https://doi.org/10.1016/j.apenergy.2018.01.023).

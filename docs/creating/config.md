@@ -6,14 +6,14 @@ This includes for example the choice of solver with which to actually solve the 
 
 ```yaml
 config:
-    init:
-        name: 'My energy model'
-        time_data_path: 'timeseries_data'
-        time_subset: ['2005-01-01', '2005-01-05']
-    build:
-        mode: plan
-    solve:
-        solver: cbc
+  init:
+    name: 'My energy model'
+    time_data_path: 'timeseries_data'
+    time_subset: ['2005-01-01', '2005-01-05']
+  build:
+    mode: plan
+  solve:
+    solver: cbc
 ```
 
 The configuration is grouped into three top-level items:
@@ -78,9 +78,9 @@ In the case of Gurobi, for example, it is usually fastest to use the direct Pyth
 
 ```yaml
 config:
-    solve:
-        solver: gurobi
-        solver_io: python
+  solve:
+    solver: gurobi
+    solver_io: python
 ```
 
 !!! note

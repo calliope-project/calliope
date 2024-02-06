@@ -1,32 +1,32 @@
-# Inbuilt math
+# Pre-defined math
 
 As of Calliope version 0.7, the math used to build optimisation problems is stored in YAML files.
-The inbuilt math is a re-implementation of the formerly hardcoded math formulation in this YAML format.
+The pre-defined math is a re-implementation of the formerly hardcoded math formulation in this YAML format.
 
 The base math is _always_ applied to your model when you `build` the optimisation problem.
-In addition, there are other math formulation files built in which you can load into your model.
+We have also pre-defined some additional math, which you can _optionally_ load into your model.
 For instance, the [inter-cluster storage][inter-cluster-storage-math] math allows you to track storage levels in technologies more accurately when you are using timeseries clustering in your model.
 
-To load one of the built-in math files, you can reference it by name (_without_ the file extension) in your model configuration:
+To load optional, pre-defined math on top of the base math, you can reference it by name (_without_ the file extension) in your model configuration:
 
 ```yaml
 config:
   init:
-    custom_math: [storage_inter_cluster]
+    add_math: [storage_inter_cluster]
 ```
 
-When solving the model in a run mode other than `plan`, some built-in custom math will be applied automatically from a file of the same name (e.g., `spores` mode custom math is stored in [math/spores.yaml](https://github.com/calliope-project/calliope/blob/main/src/calliope/math/spores.yaml)).
+When solving the model in a run mode other than `plan`, some pre-defined additional math will be applied automatically from a file of the same name (e.g., `spores` mode custom math is stored in [math/spores.yaml](https://github.com/calliope-project/calliope/blob/main/src/calliope/math/spores.yaml)).
 
 !!! note
 
-    Custom math is applied in the order it appears in the `#!yaml config.init.custom_math` list.
-    By default, any run mode custom math will be applied as the final step.
-    If you want to apply your own custom math *after* the run mode custom math, you should add the name of the run mode explicitly to the `#!yaml config.init.custom_math` list, e.g., `#!yaml config.init.custom_math: [operate, my_custom_math.yaml]`.
+    Additional math is applied in the order it appears in the `#!yaml config.init.add_math` list.
+    By default, any run mode math will be applied as the final step.
+    If you want to apply your own math *after* the run mode math, you should add the name of the run mode explicitly to the `#!yaml config.init.add_math` list, e.g., `#!yaml config.init.add_math: [operate, user_defined_math.yaml]`.
 
 If you want to introduce new constraints, decision variables, or objectives, you can do so as part of the collection of YAML files describing your model.
-See the [custom math][custom-math-formulation] section for an in-depth guide to applying custom math.
+See the [User-defined math][user-defined-math-formulation] section for an in-depth guide to applying custom math.
 
-The inbuilt math documentation can be explored in this section by selecting one of the options in the left-hand side table of contents.
+The pre-defined math can be explored in this section by selecting one of the options in the left-hand-side table of contents.
 
 ## A guide to math documentation
 

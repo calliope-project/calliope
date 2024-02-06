@@ -24,21 +24,21 @@ E.g.,
 
 ```yaml
 techs:
-    chp:
-        name: Combined heat and power (CHP) plant
-        carrier_in: gas
-        carrier_out: [electricity, heat]
-    ashp:
-        name: Air source heat pump
-        carrier_in: electricity
-        carrier_out: [cooling, heat]
-    slightly_cleaner_coal_plant:
-        name: Dual fuel coal fired power station
-        carrier_in: [coal, biofuel]
-        carrier_out: electricity
-    nuclear:
-        name: Nuclear power station
-        carrier_out: [electricity, nuclear_waste]
+  chp:
+    name: Combined heat and power (CHP) plant
+    carrier_in: gas
+    carrier_out: [electricity, heat]
+  ashp:
+    name: Air source heat pump
+    carrier_in: electricity
+    carrier_out: [cooling, heat]
+  slightly_cleaner_coal_plant:
+    name: Dual fuel coal fired power station
+    carrier_in: [coal, biofuel]
+    carrier_out: electricity
+  nuclear:
+    name: Nuclear power station
+    carrier_out: [electricity, nuclear_waste]
 ```
 
 The default math applied to these multiple carriers is that inflow carrier requirements are based on the sum of the outflow carriers and vice-versa (see [the base math][balance_conversion]).
@@ -54,38 +54,38 @@ For instance, to differentiate `flow_cap_max` between carriers or to assign diff
 
 ```yaml
 techs:
-    chp:
-        name: Combined heat and power (CHP) plant
-        carrier_in: gas
-        carrier_out: [electricity, heat]
-        flow_cap_max:
-            data: 100
-            index: electricity
-            dims: carriers
-        cost_flow_cap:
-            data: 0.1
-            index: [[electricity, monetary]]
-            dims: [carriers, costs]
-    ashp:
-        name: Air source heat pump
-        carrier_in: electricity
-        carrier_out: [cooling, heat]
-        flow_out_eff:
-            data: [3, 4]
-            index: [cooling, heat]
-            dims: carriers
-    slightly_cleaner_coal_plant:
-        name: Dual fuel coal fired power station
-        carrier_in: [coal, biofuel]
-        carrier_out: electricity
-        cost_flow_in:
-            data: [0.1, 0.5]
-            index: [[coal, monetary], [biofuel, monetary]]
-            dims: [carriers, costs]
-    nuclear:
-        name: Nuclear power station
-        carrier_out: [electricity, nuclear_waste]
-        waste_per_flow_out: 0.1  # (1)!
+  chp:
+    name: Combined heat and power (CHP) plant
+    carrier_in: gas
+    carrier_out: [electricity, heat]
+    flow_cap_max:
+      data: 100
+      index: electricity
+      dims: carriers
+    cost_flow_cap:
+      data: 0.1
+      index: [[electricity, monetary]]
+      dims: [carriers, costs]
+  ashp:
+    name: Air source heat pump
+    carrier_in: electricity
+    carrier_out: [cooling, heat]
+    flow_out_eff:
+      data: [3, 4]
+      index: [cooling, heat]
+      dims: carriers
+  slightly_cleaner_coal_plant:
+    name: Dual fuel coal fired power station
+    carrier_in: [coal, biofuel]
+    carrier_out: electricity
+    cost_flow_in:
+      data: [0.1, 0.5]
+      index: [[coal, monetary], [biofuel, monetary]]
+      dims: [carriers, costs]
+  nuclear:
+    name: Nuclear power station
+    carrier_out: [electricity, nuclear_waste]
+    waste_per_flow_out: 0.1  # (1)!
 ```
 
 1. This is a user-defined parameter that you won't find in our [list of internal parameters][model-definition-schema].
@@ -132,11 +132,11 @@ To force unidirectionality for a given technology along a given link, you have t
 
 ```yaml
 techs:
-    region1_to_region2:
-        from: region1
-        to: region2
-        base_tech: transmission
-        one_way: true
+  region1_to_region2:
+    from: region1
+    to: region2
+    base_tech: transmission
+    one_way: true
 ```
 
 This will only allow transmission from `region1` to `region2`.
@@ -148,14 +148,14 @@ Transmission technologies can additionally specify per-distance efficiency (loss
 
 ```yaml
 techs:
-    my_transmission_tech:
-        # "efficiency" (1-loss) per unit of distance
-        flow_out_eff_per_distance: 0.99
-        cost_flow_cap_per_distance:
-            data: 10
-            index: monetary
-            dims: costs
-        distance: 500
+  my_transmission_tech:
+    # "efficiency" (1-loss) per unit of distance
+    flow_out_eff_per_distance: 0.99
+    cost_flow_cap_per_distance:
+      data: 10
+      index: monetary
+      dims: costs
+    distance: 500
 ```
 
 The distance can be specified in transmission links (as above) or, if no distance is given, from node `latitude` and `longitude` coordinates.

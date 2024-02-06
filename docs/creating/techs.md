@@ -23,26 +23,26 @@ The following example shows the definition of a `ccgt` technology, i.e. a combin
 
 ```yaml
 ccgt:
-    name: 'Combined cycle gas turbine'
-    color: '#FDC97D'  # (1)!
-    base_tech: supply
-    carrier_out: power
-    source_use_max: .inf # (2)!
-    flow_out_eff: 0.5
-    flow_cap_max: 40000  # kW
-    lifetime: 25
-    cost_interest_rate:
-        data: 0.10  # (3)!
-        index: monetary
-        dims: costs
-    cost_flow_cap:
-        data: 750  # USD per kW
-        index: monetary
-        dims: costs
-    cost_flow_in:
-        data: 0.02  # USD per kWh
-        index: monetary
-        dims: costs
+  name: 'Combined cycle gas turbine'
+  color: '#FDC97D'  # (1)!
+  base_tech: supply
+  carrier_out: power
+  source_use_max: .inf # (2)!
+  flow_out_eff: 0.5
+  flow_cap_max: 40000  # kW
+  lifetime: 25
+  cost_interest_rate:
+    data: 0.10  # (3)!
+    index: monetary
+    dims: costs
+  cost_flow_cap:
+    data: 750  # USD per kW
+    index: monetary
+    dims: costs
+  cost_flow_in:
+    data: 0.02  # USD per kWh
+    index: monetary
+    dims: costs
 ```
 
 1. This is an example of when using quotation marks is important.
@@ -68,10 +68,10 @@ Additional cost classes can be created simply by adding them to the definition o
 
     ```yaml
     parameters:
-        objective_cost_weights:
-            data: [1, 0]
-            index: [monetary, co2_emissions]
-            dims: costs
+      objective_cost_weights:
+        data: [1, 0]
+        index: [monetary, co2_emissions]
+        dims: costs
     ```
 
 ## Transmission technologies
@@ -82,11 +82,11 @@ Instead, you associate transmission technologies with nodes in `techs`:
 
 ```yaml
 techs:
-    ac_transmission:
-        from: region1  # (1)!
-        to: region2
-        flow_cap_max: 100
-        ...
+  ac_transmission:
+    from: region1  # (1)!
+    to: region2
+    flow_cap_max: 100
+    ...
 ```
 
 1. The region you specify in `from` or `to` is interchangeable unless you set the parameter `one_way: true`.
@@ -121,7 +121,25 @@ You can also add any new parameter you like, which will then be available to use
 The only requirements we apply are that it _cannot_ start with an underscore or a number.
 
 We also have a check for any parameter starting with `cost_`.
-These _must_ define a cost class.
+These _must_ define a cost class, e.g.,:
+
+```yaml
+techs:
+  tech1:
+    cost_custom:
+      data: 1
+      index: monetary
+      dims: costs
+```
+
+If you forget to use the [indexed parameter](parameters.md) format for a parameter starting with `cost_` then our YAML schema will raise an error.
+For example, this is not valid and will create an error:
+
+```yaml
+techs:
+  tech1:
+    cost_custom: 1
+```
 
 ### Using the indexed parameter format
 
@@ -134,47 +152,44 @@ We saw this above with `costs`, but you can add _any_ dimension _except_ `nodes`
 
     ```yaml
     techs:
-        tech1:
-            source_use_equals:
-                data: [15, 5]
-                index: ["2005-01-01 12:00:00", "2005-01-01 13:00:00"]
-                dims: timesteps
+      tech1:
+          source_use_equals:
+            data: [15, 5]
+            index: ["2005-01-01 12:00:00", "2005-01-01 13:00:00"]
+            dims: timesteps
     ```
 
     ```yaml
     techs:
-        tech1:
-            flow_cap_max:
-                data: [10, 100]
-                index: ["electricity", "heat"]
-                dims: carriers
+      tech1:
+        flow_cap_max:
+          data: [10, 100]
+          index: ["electricity", "heat"]
+          dims: carriers
     ```
 
     ```yaml
     techs:
-        tech1:
-            cost_flow_cap:
-                data: [4, 8]
-                index: [["electricity", "monetary"], ["heat", "monetary"]]
-                dims: [carriers, costs]
+      tech1:
+        cost_flow_cap:
+          data: [4, 8]
+          index: [["electricity", "monetary"], ["heat", "monetary"]]
+          dims: [carriers, costs]
     ```
 
     ```yaml
     techs:
-        tech1:
-            source_use_equals:
-                data: [15, 5]
-                index: ["foo", "bar"]
-                dims: my_new_dimension
+      tech1:
+        source_use_equals:
+          data: [15, 5]
+          index: ["foo", "bar"]
+          dims: my_new_dimension
     ```
 
-### (De)activing techs
+### (De)activating techs
 
 In an [override](scenarios.md) you may want to remove a technology entirely from the model.
 The easiest way to do this is to set `active: false`.
 The resulting input dataset won't feature that technology in any way.
 You can even do this to deactivate technologies at specific [nodes](nodes.md) and to deactivate nodes entirely.
-Conversely, setting `active: true` in an override will lead to the technology(/node) reappearing.
-
-!!! note
-    When deactivating nodes, any transmission technologies that link to that node will also be deactivated.
+Conversely, setting `active: true` in an override will lead to the technology reappearing.

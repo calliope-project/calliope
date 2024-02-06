@@ -35,7 +35,9 @@ properties:
                   type: string
                   description: ISO8601 format datetime strings of the form `YYYY-mm-dd HH:MM:SS` (e.g, '2005-01', '2005-01-01', '2005-01-01 00:00', ...)
             default: null
-            description: Subset of timesteps as a two-element list giving the inclusive range
+            description: >-
+              Subset of timesteps as an two-element list giving the **inclusive** range.
+              For example, ['2005-01', '2005-04'] will create a time subset from '2005-01-01 00:00:00' to '2005-04-31 23:59:59'.
           time_resample:
             type: ["null", string]
             default: null
