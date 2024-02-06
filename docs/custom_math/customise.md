@@ -39,8 +39,8 @@ To write a LaTeX, reStructuredText, or Markdown file that includes only the math
 
 ```python
 model = calliope.Model("path/to/model.yaml")
-model.build_math_documentation(include="valid")
-model.write_math_documentation(filename="path/to/output/file.[tex|rst|md]")
+model.math_documentation.build(include="valid")
+model.math_documentation.write(filename="path/to/output/file.[tex|rst|md]")
 ```
 
 You can then convert this to a PDF or HTML page using your renderer of choice.
