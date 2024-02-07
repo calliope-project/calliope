@@ -22,7 +22,6 @@ The diagram below gives an overview:
 We distinguish between model _configuration_ (the options provided to Calliope to do its work)
 and the model _definition_ (your representation of a physical system in YAML).
 
-
 ## Model configuration
 
 The model configuration file `model.yaml` is the place to tell Calliope about how to interpret the model definition and how to build and solve your model.
@@ -128,7 +127,7 @@ The definition of this technology in the example model's configuration looks as 
 --8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:pv"
 ```
 
-### :sparkles: Interlude: inheriting from technology groups
+### Interlude: inheriting from technology groups
 
 You will notice that the above technologies _inherit_ `interest_rate_setter`.
 Inheritance allows us to avoid excessive repetition in our model definition.
@@ -195,7 +194,7 @@ In this case, we want to ensure that 0.8 units of heat are produced every time a
 Furthermore, while producing these units of energy - both electricity and heat -
 we want to ensure that gas consumption is only a function of electricity output.
 
-### :sparkles: Interlude: user-defined math
+### Interlude: user-defined math
 
 The pre-defined Calliope math does not have the capacity to handle our `chp` technology definition from above.
 By default, setting two output carriers would mean that the choice is _between_ those technologies (e.g., a heat pump that can produce heat _or_ cooling).
