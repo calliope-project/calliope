@@ -5,7 +5,7 @@ On this page, we look at some of the more advanced features of Calliope's math a
 !!! info "See also"
     [Base math formulation][base-math],
     [Model definition schema][model-definition-schema],
-    [Introducing custom math to your model](../custom_math/customise.md),
+    [Introducing your own math to your model](../user_defined_math/customise.md),
     ["MILP" example model](../examples/milp/index.md).
 
 ## Multiple input/output carriers
@@ -46,8 +46,8 @@ This is valid for our heat pump and coal-fired power plant examples above, but n
 In these examples, the inflow is linked to a specific outflow (gas / nuclear fuel consumption is a function of electricity production).
 The other carrier outflows are then linked to the "primary" outflow.
 
-To capture this slightly different math, you will need to apply your own [custom math](../custom_math/index.md).
-For example, the CHP example is dealt with in our [urban scale example model](../examples/urban_scale/index.md#sparkles-interlude-custom-math) and in an [example custom math file][chp-plants].
+To capture this slightly different math, you will need to [apply your own math](../user_defined_math/index.md).
+For example, the CHP example is dealt with in our [urban scale example model](../examples/urban_scale/index.md#interlude-user-defined-math) and in an [example additional math file][chp-plants].
 
 No matter how you formulate your math, you can (and probably will need to) extend your technology parameters to account for these different carriers.
 For instance, to differentiate `flow_cap_max` between carriers or to assign different conversion efficiencies / costs:
@@ -89,7 +89,7 @@ techs:
 ```
 
 1. This is a user-defined parameter that you won't find in our [list of internal parameters][model-definition-schema].
-You can use it in your custom math to link nuclear waste outflow with electricity outflow.
+You can use it in your own math to link nuclear waste outflow with electricity outflow.
 
 ## Activating storage buffers in non-storage technologies
 

@@ -64,7 +64,8 @@ Additional cost classes can be created simply by adding them to the definition o
 
 ??? info "Costs in the objective function"
     By default, all defined cost classes are used in the objective function, i.e., the default objective is to minimize total costs.
-    Limiting the considered costs can be achieved by [customising the in-built objective function](../custom_math/customise.md) to only focus on e.g. monetary costs (`[monetary] in costs`), or updating the `objective_cost_weights` indexed parameter to have a weight of `0` for those cost classes you want to be ignored, e.g.:
+    Limiting the considered costs can be achieved by [customising the in-built objective function](../user_defined_math/customise.md) to only focus on e.g. monetary costs (`[monetary] in costs`),
+    or updating the `objective_cost_weights` indexed parameter to have a weight of `0` for those cost classes you want to be ignored, e.g.:
 
     ```yaml
     parameters:
@@ -107,9 +108,9 @@ There are _required_ parameters according to the technology `base_tech`:
 For `storage` and `transmission`, it may seem like unnecessary repetition to define both `carrier_out` and `carrier_in` as they are likely the same value.
 However, doing so makes it much easier to process your model definition in Calliope!
 
-### Inbuilt parameters
+### Pre-defined parameters
 
-There is a long list of inbuilt parameters that we use in our [base math][base-math].
+There is a long list of pre-defined parameters that we use in our [base math][base-math].
 These are listed in full with descriptions and units in our [model definition reference page][math-formulation-schema].
 These parameters come with strict types, default values, and other attributes used in internal Calliope processing.
 Therefore they should always be your first port of call.
@@ -117,7 +118,7 @@ However, if you want to add your own parameters, that is also possible.
 
 ### Adding your own parameter
 
-You can also add any new parameter you like, which will then be available to use in any [custom math](../custom_math/index.md) you want to apply.
+You can also add any new parameter you like, which will then be available to use in any [math you want to additionally apply](../user_defined_math/index.md).
 The only requirements we apply are that it _cannot_ start with an underscore or a number.
 
 We also have a check for any parameter starting with `cost_`.

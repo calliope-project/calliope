@@ -467,7 +467,7 @@ If you prefer to keep your distance units in _metres_, set the configuration opt
 
 * To set the capacities in operate mode, you no longer need to set the `_max` constraints for your technologies (`area_use_max`, `flow_cap_max`, etc.); you can specify the decision variables as parameters directly.
 Therefore, you can define e.g. `flow_cap` as one of your technology parameters.
-This is because the operate mode custom math deactivates the decision variables with the same names, paving the way for the parameters to be used in the math formulation instead.
+This is because the additional math applied in operate mode deactivates the decision variables with the same names, paving the way for the parameters to be used in the math formulation instead.
 
     === "v0.6"
 
@@ -595,10 +595,10 @@ We have removed the `supply_plus` and `conversion_plus` base technology classes.
 Instead, `supply_plus` can be effectively represented by using `supply` as the base tech and setting [`include_storage: true`](#explicitly-triggering-milp-and-storage-decision-variablesconstraints) in the model definition.
 
 `conversion_plus` can be represented by using `conversion` as the base tech and using lists of carriers in `carrier_in` and/or `carrier_out`.
-To reimplement arbitrary links between carrier "tiers" (`in_2`, `out_2` etc.), you can define your own custom math, which is a simultaneously more powerful and more human-readable way of defining complex conversion technologies.
+To reimplement arbitrary links between carrier "tiers" (`in_2`, `out_2` etc.), you can [define your own math](user_defined_math/index.md), which is a simultaneously more powerful and more human-readable way of defining complex conversion technologies.
 
 !!! info "See also"
-    [Example of custom math to link carrier flows](examples/urban_scale/index.md#interlude-custom-math).
+    [Example of additional math to link carrier flows](examples/urban_scale/index.md#interlude-user-defined-math).
 
 ### `carrier` key
 
@@ -639,13 +639,13 @@ This is especially important now that you can [define different inflow/outflow c
 Carrier tiers were only used in `conversion_plus` technologies, yet led to a whole new model dimension.
 Additionally, `carrier_ratios` could be easily confused due to the complex nature of their application.
 With the [removal of the `conversion_plus` base class](#supply_plus-and-conversion_plus-technology-base-classes), we have simplified how multiple carriers in/out are defined.
-To achieve the same functionality as carrier tiers/ratios offered, you will need to apply your own custom math.
+To achieve the same functionality as carrier tiers/ratios offered, you will need to apply your own math.
 
-One form of carrier flow interactions is still possible without custom math.
+One form of carrier flow interactions _is_ still possible using only the pre-defined math.
 This is where there is a choice between inflow/outflow carriers instead of one carrier inflow/outflow _requiring_ the inflow/outflow of another carrier.
 You can do this with flow efficiencies indexed over carriers rather than using `carrier_ratios`.
 
-For instance, here's how you represent a reversible heat pump without custom math:
+For instance, here's how you represent a reversible heat pump without additional math:
 
 === "v0.6"
 
@@ -678,14 +678,14 @@ For instance, here's how you represent a reversible heat pump without custom mat
     ```
 
 !!! info "See also"
-    [Example of custom math to link carrier flows](examples/urban_scale/index.md#interlude-custom-math);
-    [Examples of complex CHP plant operating space custom math][chp-plants].
+    [Example of additional math to link carrier flows](examples/urban_scale/index.md#interlude-user-defined-math);
+    [Examples of complex CHP plant operating space math][chp-plants].
 
 ### Group constraints
 
-One driving reason to implement our [custom math](custom_math/index.md) syntax was to replace our "group constraints".
+One driving reason to implement our [own math syntax](user_defined_math/index.md) was to replace our "group constraints".
 These constraints were becoming more and more complex and it ultimately proved impossible to manage all the different ways users wanted to apply them.
-We have re-implemented all these constraints as tested custom math, which you can explore in our [example gallery](custom_math/examples/index.md).
+We have re-implemented all these constraints as tested additional math snippets, which you can explore in our [example gallery](user_defined_math/examples/index.md).
 
 ### Configuration options
 
@@ -694,7 +694,7 @@ Instead, data source filepaths should always be relative to the `model.yaml` fil
 * We have removed `run.relax_constraint` alongside [removing group constraints](#group-constraints).
 * We have removed `model.file_allowed`, which many users will not even know existed (it was a largely internal configuration option)!
 Instead, it is possible to index any parameter over the time dimension.
-It is up to you to ensure the math formulation is set up to handle this change, which may require [tweaking existing math](custom_math/customise.md#introducing-custom-math-to-your-model).
+It is up to you to ensure the math formulation is set up to handle this change, which may require [tweaking existing math](user_defined_math/customise.md#introducing-additional-math-to-your-model).
 * With the [removal of time clustering](#clustering), we have removed `model.random_seed` and `model.time` options.
 
 ### Plotting
@@ -731,7 +731,7 @@ We were previously using this in our internal clustering.
 
 On [removing `supply_plus`](#supply_plus-and-conversion_plus-technology-base-classes), we have opened up the option to have a storage "buffer" for any technology base class.
 This enables any flow into the technology to be stored across timesteps as it is in a `storage` technology.
-We have not yet enabled this for `demand` technologies, but [custom math](custom_math/index.md) could be readily added to enable it.
+We have not yet enabled this for `demand` technologies, but you could [add your own math](user_defined_math/index.md) to enable it.
 
 !!! warning
     Although our math should be set up to handle a storage buffer for a `conversion` or `transmission` technology, we do not have any direct tests to check possible edge cases.
@@ -954,7 +954,7 @@ nodes:
 
 !!! note
     1. Just defining new parameters is not enough to have an effect on the optimisation problem.
-    You also need [custom math](custom_math/index.md).
+    You also need to [define your own math](user_defined_math/index.md).
     2. Because we process your YAML files to create the `nodes` and `techs` dimensions you will find in your Calliope model, you cannot use `nodes`/`techs` as dimensions of indexed parameters under the `nodes` or `techs` keys.
     It _is_ possible to refer to `nodes` and `techs` as dimensions under the top-level `parameters` key.
 
@@ -974,7 +974,7 @@ Technically, you can now define all your data in tables (although we would still
 We have overhauled our internal mathematical formulation to remove the strong link to the Pyomo library.
 Now, all components of our internal math are defined in a readable YAML syntax that we have developed.
 
-You can add your own custom math to update the internal base math and to represent the physical system in ways we do not cover in our base math, or to apply new modelling methods and problem types (e.g., pathway or stochastic optimisation)!
+You can add your own math to update the pre-defined math and to represent the physical system in ways we do not cover in our base math, or to apply new modelling methods and problem types (e.g., pathway or stochastic optimisation)!
 
 !!! info "See also"
-    Our [inbuilt](math/index.md) and [custom](custom_math/index.md) math documentation.
+    Our [pre-defined](pre_defined_math/index.md) and [user-defined](user_defined_math/index.md) math documentation.

@@ -90,13 +90,13 @@ Use `supply` and `conversion` technology base classes instead.
 Use `carrier_in` and `carrier_out` instead.
 
 |removed| `carrier_tiers` and `carrier_ratios`.
-Use indexed parameter definitions for `flow_out_eff` and custom math instead.
+Use indexed parameter definitions for `flow_out_eff` and your own math instead.
 
 |removed| `calliope.Model.get_formatted_array`.
 The Calliope internal representation of data now matches the format achieved by calling this method in v0.6.
 
 |removed| Group constraints.
-Use custom math instead.
+Use your own math instead.
 
 |removed| Configuration options for features we no longer support.
 

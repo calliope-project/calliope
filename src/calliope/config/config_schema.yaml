@@ -55,16 +55,16 @@ properties:
             type: string
             default: "ISO8601"
             description: Timestamp format of all time series data when read from file. "ISO8601" means "%Y-%m-%d %H:%M:%S".
-          custom_math:
+          add_math:
             type: array
             default: []
-            description: List of references to files which contain custom mathematical formulations.
+            description: List of references to files which contain additional mathematical formulations to be applied on top of the base math.
             uniqueItems: true
             items:
               type: string
               description: >
-                If referring to an inbuilt Calliope custom math file (see documentation for available files), do not append the reference with ".yaml".
-                If referring to your own custom math file, ensure the file type is given as a suffix (".yaml" or ".yml").
+                If referring to an pre-defined Calliope math file (see documentation for available files), do not append the reference with ".yaml".
+                If referring to your own math file, ensure the file type is given as a suffix (".yaml" or ".yml").
                 Relative paths will be assumed to be relative to the model definition file given when creating a calliope Model (`calliope.Model(model_definition=...)`)
           distance_unit:
             type: string
@@ -99,7 +99,7 @@ properties:
           objective:
             type: string
             default: min_cost_optimisation
-            description: Name of internal objective function to use, from those defined in the base math and custom math (if applied).
+            description: Name of internal objective function to use, from those defined in the pre-defined math and any applied additional math.
           operate_window:
             type: string
             description: >-

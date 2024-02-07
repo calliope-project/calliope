@@ -1,6 +1,6 @@
 # Indexed parameters (`parameters`)
 
-Some data is not indexed over [technologies][technologies-techs] / [nodes][nodes-nodes].
+Some data is not indexed over [technologies](techs.md) / [nodes](nodes.md).
 This data can be defined under the top-level key `parameters`.
 This could be a single value:
 
@@ -17,7 +17,7 @@ parameters:
     data: 10
 ```
 
-which can then be accessed in the model inputs `model.inputs.my_param` and used in [custom math][custom-math-formulation] as `my_param`.
+which can then be accessed in the model inputs `model.inputs.my_param` and used in [any math you add](../user_defined_math/index.md) as `my_param`.
 
 Or, it can be indexed over one or more model dimension(s):
 
@@ -36,7 +36,7 @@ parameters:
 1. The length of the inner index lists is equal to the length of `dims`.
 The length of the outer list is equal to the length of `data`.
 
-which can be accessed in the model inputs and [custom math][custom-math-formulation], e.g., `model.inputs.my_multiindexed_param.sel(costs="monetary")` and `my_multiindexed_param`.
+which can be accessed in the model inputs and [any math you add](../user_defined_math/index.md), e.g., `model.inputs.my_multiindexed_param.sel(costs="monetary")` and `my_multiindexed_param`.
 
 You can also index over a new dimension:
 

@@ -31,7 +31,7 @@ If given, node-specific parameters supersede any parameters given at the technol
 Nodes can optionally specify geographic coordinates (`latitude` and `longitude`) which are used in visualisation or to compute distances along transmission links.
 Nodes can also have any arbitrary parameter assigned which will be available in the optimisation problem, indexed over the `nodes` dimension.
 They can also have parameters that use the [indexed parameter syntax](parameters.md) to define node+other dimension data.
-In the above example, `node_flow_out_max` at `region1` could be used to create a [custom math](../custom_math/index.md) constraint that limits the total outflow of the carriers electricity and gas at that node.
+In the above example, `node_flow_out_max` at `region1` could be used to create [your own math](../user_defined_math/index.md) constraint that limits the total outflow of the carriers electricity and gas at that node.
 
 ## Understanding node-level parameters
 

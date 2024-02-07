@@ -1,4 +1,4 @@
-# Custom math formulation
+# Defining your own math
 
 As of Calliope version 0.7, all of the internal math used to build optimisation problems is stored in YAML files.
 

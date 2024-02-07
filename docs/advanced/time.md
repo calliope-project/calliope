@@ -27,7 +27,7 @@ config:
 
 When using representative days, you may want to enable a number of additional constraints to improve how carriers are stored between representative days, based on the study undertaken by [Kotzur et al.](https://doi.org/10.1016/j.apenergy.2018.01.023).
 These constraints require a new decision variable `storage_inter_cluster`, which tracks storage between all the dates of the original timeseries.
-This particular math - detailed [here][inter-cluster-storage-math] - can be enabled by including `storage_inter_cluster` in your list of custom math.
+This particular math - detailed [here][inter-cluster-storage-math] - can be enabled by including `storage_inter_cluster` in your list of additional math.
 
 We no longer provide the functionality to infer representative days from your timeseries.
 Instead, we recommend you use other timeseries processing tools applied to your input CSV data or your built model dataset (`model.inputs`).
