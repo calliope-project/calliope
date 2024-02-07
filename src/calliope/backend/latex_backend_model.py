@@ -140,10 +140,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         {% endif %}
         {% for equation in equations %}
         {% if "where" in equation and equation.where != "" %}
-            \quad\text{if } {{equation["where"]}}:\\
-            \qquad{{equation["expression"]}}\\[2em]
+            \quad \text{if } {{equation["where"]}}:\\
+            \qquad {{equation["expression"]}}\\[2em]
         {% else %}
-            \quad{{equation["expression"]}}\\
+            \quad {{equation["expression"]}}\\
         {% endif %}
         {% endfor %}
         \end{array}
