@@ -109,12 +109,10 @@ class Model(object):
         if isinstance(model_definition, xr.Dataset):
             self._init_from_model_data(model_definition)
         else:
-            (
-                model_def,
-                self._model_def_path,
-                applied_overrides,
-            ) = load.load_model_definition(
-                model_definition, scenario, override_dict, **kwargs
+            (model_def, self._model_def_path, applied_overrides) = (
+                load.load_model_definition(
+                    model_definition, scenario, override_dict, **kwargs
+                )
             )
             self._init_from_model_def_dict(
                 model_def, applied_overrides, scenario, debug, data_source_dfs
