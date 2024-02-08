@@ -1814,6 +1814,7 @@ class TestNewBackend:
             },
             "description": "A technology's flow capacity, also known as its nominal or nameplate capacity.",
             "unit": "power",
+            "default": 0,
             "coords_in_name": False,
         }
 
@@ -1856,6 +1857,7 @@ class TestNewBackend:
             "references": {"cost"},
             "description": "The installation costs of a technology, including annualised investment costs and annual maintenance costs.",
             "unit": "cost",
+            "default": 0,
             "coords_in_name": False,
         }
 
@@ -2024,9 +2026,10 @@ class TestNewBackend:
 
         assert check_error_or_warning(
             error,
-            f"constraints:{constraint_name}:0 | Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
+            "(constraints:constraint-with-nan:0, lhs=0, rhs=100.0): constraint resolves to a simple boolean.",
         )
 
+    @pytest.mark.xfail(reason="error not raised due to default vals")
     def test_raise_error_on_expression_with_nan(self, simple_supply):
         """
         A very simple expression: The annual and regional sum of `flow_out` for each tech.

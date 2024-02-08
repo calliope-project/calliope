@@ -56,7 +56,7 @@ LOGGER = logging.getLogger(__name__)
 
 class BackendModelGenerator(ABC):
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
-    _COMPONENT_ATTR_METADATA = ["description", "unit"]
+    _COMPONENT_ATTR_METADATA = ["description", "unit", "default"]
 
     def __init__(self, inputs: xr.Dataset, **kwargs):
         """Abstract base class to build a representation of the optimisation problem.

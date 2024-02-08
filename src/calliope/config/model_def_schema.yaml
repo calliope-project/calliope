@@ -810,7 +810,7 @@ properties:
 
           distance:
             type: ["null", number]
-            default: .nan
+            default: 1.0
             x-resample_method: mean
             x-type: float
             title: Distance spanned by link.

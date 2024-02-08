@@ -126,8 +126,8 @@ constraints:
     foreach: [nodes, carriers, timesteps]
     equations:
       - expression: >-
-          default_if_empty(sum(flow_out, over=techs), 0) -
-          default_if_empty(sum(flow_in, over=techs), 0) -
+          sum(flow_out, over=techs) -
+          sum(flow_in, over=techs) -
           $flow_export + $unmet_demand_and_unused_supply == 0
     sub_expressions:
       flow_export:
@@ -491,6 +491,7 @@ variables:
   flow_cap:
     description: >-
       A technology's flow capacity, also known as its nominal or nameplate capacity.
+    default: 0
     unit: power
     foreach: [nodes, techs, carriers]
     bounds:
@@ -500,6 +501,7 @@ variables:
   link_flow_cap:
     description: >-
       A transmission technology's flow capacity, also known as its nominal or nameplate capacity.
+    default: 0
     unit: power
     foreach: [techs]
     where: base_tech=transmission
@@ -512,6 +514,7 @@ variables:
       The outflow of a technology per timestep,
       also known as the flow discharged (from `storage` technologies)
       or the flow received (by `transmission` technologies) on a link.
+    default: 0
     unit: energy
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier_out"
@@ -524,6 +527,7 @@ variables:
       The inflow to a technology per timestep,
       also known as the flow consumed (by `storage` technologies)
       or the flow sent (by `transmission` technologies) on a link.
+    default: 0
     unit: energy
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier_in"
@@ -534,6 +538,7 @@ variables:
   flow_export:
     description: >-
       The flow of a carrier exported outside the system boundaries by a technology per timestep.
+    default: 0
     unit: energy
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier_export"
@@ -545,6 +550,7 @@ variables:
     description: >-
       The area in space utilised directly (e.g., solar PV panels)
       or indirectly (e.g., biofuel crops) by a technology.
+    default: 0
     unit: area
     foreach: [nodes, techs]
     where: "(area_use_min OR area_use_max OR area_use_per_flow_cap OR sink_unit=per_area OR source_unit=per_area)"
@@ -555,6 +561,7 @@ variables:
   source_use:
     description: >-
       The carrier flow consumed from outside the system boundaries by a `supply` technology.
+    default: 0
     unit: energy
     foreach: [nodes, techs, timesteps]
     where: "base_tech=supply"
@@ -566,6 +573,7 @@ variables:
     description: >-
       The upper limit on a flow that can be consumed from outside the system boundaries
       by a `supply` technology in each timestep.
+    default: 0
     unit: power
     foreach: [nodes, techs]
     where: "base_tech=supply"
@@ -578,6 +586,7 @@ variables:
     description: >-
       The upper limit on a carrier that can
       be stored by a technology in any timestep.
+    default: 0
     unit: energy
     foreach: [nodes, techs]
     where: "include_storage=True OR base_tech=storage"
@@ -591,6 +600,7 @@ variables:
   storage:
     description: >-
       The carrier stored by a `storage` technology in each timestep.
+    default: 0
     unit: energy
     foreach: [nodes, techs, timesteps]
     where: "include_storage=True OR base_tech=storage"
@@ -613,6 +623,7 @@ variables:
       which will only be enforced in those timesteps that the technology is operating.
       Otherwise, the same lower bound forces the technology to produce/consume
       that minimum amount of carrier in *every* timestep.
+    default: 0
     unit: integer
     foreach: [nodes, techs]
     where: "cap_method=integer"
@@ -625,6 +636,7 @@ variables:
     description: >-
       Integer number of a technology that is operating in each timestep,
       for any technology set to require integer capacity purchasing.
+    default: 0
     unit: integer
     foreach: [nodes, techs, timesteps]
     where: "integer_dispatch=True AND cap_method=integer"
@@ -637,6 +649,7 @@ variables:
     description: >-
       Flow capacity that will be set to zero if the technology is not operating in a given
       timestep and will be set to the value of the decision variable `flow_cap` otherwise.
+    default: 0
     unit: power
     foreach: [nodes, techs, carriers, timesteps]
     where: integer_dispatch=True AND flow_cap_max AND NOT flow_cap_per_unit
@@ -650,6 +663,7 @@ variables:
       both `flow_in` and `flow_out` defined.
       This ensures that a technology with carrier flow efficiencies < 100% cannot
       produce and consume a flow simultaneously to remove unwanted carrier from the system.
+    default: 0
     unit: integer
     foreach: [nodes, techs, timesteps]
     where: "force_async_flow=True"
@@ -665,6 +679,7 @@ variables:
       distort the model in other ways due to the large impact it has on the objective function value.
       When present in a model in which it has been requested, it indicates an inability
       for technologies in the model to reach a sufficient combined supply capacity to meet demand.
+    default: 0
     unit: energy
     foreach: [nodes, carriers, timesteps]
     where: "config.ensure_feasibility=True"
@@ -682,6 +697,7 @@ variables:
       When present in a model in which it has been requested, it indicates an inability
       for technologies in the model to reach a sufficient combined consumption capacity
       to meet required outflow (e.g. from renewables without the possibility of curtailment).
+    default: 0
     unit: energy
     foreach: [nodes, carriers, timesteps]
     where: "config.ensure_feasibility=True"
@@ -704,7 +720,7 @@ objectives:
       - where: "any(cost, over=[nodes, techs, costs])"
         expression: >-
           sum(
-            default_if_empty(sum(cost, over=[nodes, techs]), 0)
+            sum(cost, over=[nodes, techs])
             * objective_cost_weights,
             over=costs
           ) + $unmet_demand
@@ -729,6 +745,7 @@ global_expressions:
   flow_out_inc_eff:
     description: >-
       Outflows after taking efficiency losses into account.
+    default: 0
     foreach: [nodes, techs, carriers, timesteps]
     where: flow_out
     equations:
@@ -736,7 +753,7 @@ global_expressions:
         expression: >-
           flow_out / (
             flow_out_eff * flow_out_parasitic_eff *
-            flow_out_eff_per_distance ** default_if_empty(distance, 1)
+            flow_out_eff_per_distance ** distance
           )
       - where: NOT base_tech=transmission
         expression: flow_out / (flow_out_eff * flow_out_parasitic_eff)
@@ -744,17 +761,19 @@ global_expressions:
   flow_in_inc_eff:
     description: >-
       Inflows after taking efficiency losses into account.
+    default: 0
     foreach: [nodes, techs, carriers, timesteps]
     where: flow_in
     equations:
       - where: base_tech=transmission
-        expression: flow_in * flow_in_eff * flow_in_eff_per_distance ** default_if_empty(distance, 1)
+        expression: flow_in * flow_in_eff * flow_in_eff_per_distance ** distance
       - where: NOT base_tech=transmission
         expression: flow_in * flow_in_eff
 
   cost_var:
     description: >-
       The operating costs per timestep of a technology.
+    default: 0
     unit: cost_per_time
     foreach: [nodes, techs, costs, timesteps]
     where: "cost_export OR cost_flow_in OR cost_flow_out"
@@ -763,20 +782,21 @@ global_expressions:
     sub_expressions:
       cost_export:
         - where: flow_export
-          expression: sum(cost_export * default_if_empty(flow_export, 0), over=carriers)
+          expression: sum(cost_export * flow_export, over=carriers)
         - where: NOT flow_export
           expression: "0"
       cost_flow_in:
         - where: "base_tech=supply"
           expression: cost_flow_in * source_use
         - where: "NOT base_tech=supply"
-          expression: sum(cost_flow_in * default_if_empty(flow_in, 0), over=carriers)
+          expression: sum(cost_flow_in * flow_in, over=carriers)
       cost_flow_out:
-        - expression: sum(cost_flow_out * default_if_empty(flow_out, 0), over=carriers)
+        - expression: sum(cost_flow_out * flow_out, over=carriers)
 
   cost_investment_flow_cap:
     description: >-
       The investment costs associated with the nominal/rated capacity of a technology.
+    default: 0
     foreach: [nodes, techs, carriers, costs]
     where: flow_cap AND (cost_flow_cap OR cost_flow_cap_per_distance)
     equations:
@@ -784,13 +804,14 @@ global_expressions:
     sub_expressions:
       cost_sum:
         - where: base_tech=transmission
-          expression: (cost_flow_cap + cost_flow_cap_per_distance * default_if_empty(distance, 0)) * 0.5
+          expression: (cost_flow_cap + cost_flow_cap_per_distance * distance) * 0.5
         - where: NOT base_tech=transmission
           expression: cost_flow_cap
 
   cost_investment_storage_cap:
     description: >-
       The investment costs associated with the storage capacity of a technology.
+    default: 0
     foreach: [nodes, techs, costs]
     where: cost_storage_cap AND storage_cap
     equations:
@@ -799,6 +820,7 @@ global_expressions:
   cost_investment_source_cap:
     description: >-
       The investment costs associated with the source consumption capacity of a technology.
+    default: 0
     foreach: [nodes, techs, costs]
     where: cost_source_cap AND source_cap
     equations:
@@ -807,6 +829,7 @@ global_expressions:
   cost_investment_area_use:
     description: >-
       The investment costs associated with the area used by a technology.
+    default: 0
     foreach: [nodes, techs, costs]
     where: cost_area_use AND area_use
     equations:
@@ -815,17 +838,19 @@ global_expressions:
   cost_investment_purchase:
     description: >-
       The investment costs associated with the binary purchase of a technology.
+    default: 0
     foreach: [nodes, techs, costs]
     where: cost_purchase AND purchased_units
     equations:
       - where: base_tech=transmission
-        expression: (cost_purchase + cost_purchase_per_distance * default_if_empty(distance, 0)) * purchased_units * 0.5
+        expression: (cost_purchase + cost_purchase_per_distance * distance) * purchased_units * 0.5
       - where: "NOT base_tech=transmission"
         expression: cost_purchase * purchased_units
 
   cost_investment:
     description: >-
       The installation costs of a technology, including annualised investment costs and annual maintenance costs.
+    default: 0
     unit: cost
     foreach: [nodes, techs, costs]
     where: >-
@@ -841,7 +866,7 @@ global_expressions:
               default_if_empty(cost_investment_area_use, 0) +
               default_if_empty(cost_investment_purchase, 0)
             ) * (1 + cost_om_annual_investment_fraction)
-            + sum(cost_om_annual * default_if_empty(flow_cap, 0), over=carriers)
+            + sum(cost_om_annual * flow_cap, over=carriers)
           )
     sub_expressions:
       annualisation_weight:
@@ -861,6 +886,7 @@ global_expressions:
     description: >-
       The total annualised costs of a technology,
       including installation and operation costs.
+    default: 0
     unit: cost
     foreach: [nodes, techs, costs]
     where: "cost_investment OR cost_var"
