@@ -1,6 +1,7 @@
 import logging
 
 import calliope
+import numpy as np
 import pandas as pd
 import pytest
 from calliope.preprocess import data_sources
@@ -22,14 +23,16 @@ def data_dir(tmp_path_factory):
 
 @pytest.fixture(scope="class")
 def generate_data_source_dict(data_dir):
-    def _generate_data_source_dict(filename, df, rows, columns, **to_csv_kwargs):
+    def _generate_data_source_dict(
+        filename, df, rows, columns, param_name="test_param", **to_csv_kwargs
+    ):
         filepath = data_dir / filename
         df.to_csv(filepath, **to_csv_kwargs)
         return {
             "source": filepath.as_posix(),
             "rows": rows,
             "columns": columns,
-            "add_dimensions": {"parameters": "test_param"},
+            "add_dimensions": {"parameters": param_name},
         }
 
     return _generate_data_source_dict
@@ -95,6 +98,40 @@ class TestDataSourceUtils:
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             source_obj._compare_axis_names(loaded, defined, "foobar")
         assert check_error_or_warning(excinfo, "Trying to set names for foobar")
+
+    @pytest.mark.parametrize(
+        ["data_dict", "param_name", "expected_dtype"],
+        [
+            (
+                {"bar": 0.1, "baz": 1, "foobar": "1,000.0", "foobaz": np.nan},
+                "flow_cap_max",
+                float,
+            ),
+            ({"bar": 0, "baz": 1, "foobar": "foo", "foobaz": np.nan}, "name", str),
+        ],
+    )
+    def test_update_dtypes(
+        self, caplog, generate_data_source_dict, data_dict, param_name, expected_dtype
+    ):
+
+        caplog.set_level(logging.DEBUG)
+
+        df = pd.Series(data_dict).where(lambda x: x != "nan")
+        source_dict = generate_data_source_dict(
+            "foo.csv",
+            df,
+            rows="test_row",
+            columns=None,
+            header=None,
+            param_name=param_name,
+        )
+        ds = data_sources.DataSource(init_config, "ds_name", source_dict)
+        assert (
+            f"Updating non-NaN values of parameter `{param_name}` to {expected_dtype.__name__}"
+            in caplog.text
+        )
+        for var in ds.dataset[param_name].to_series().dropna().values:
+            assert isinstance(var, expected_dtype)
 
 
 class TestDataSourceInitOneLevel:

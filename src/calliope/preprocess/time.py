@@ -157,7 +157,7 @@ def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
     """
     clustering_timeseries = pd.read_csv(clustering_file, index_col=0).squeeze()
     clustering_timeseries.index = _datetime_index(
-        clustering_timeseries.index, time_format
+        clustering_timeseries.index + " 00:00:00", time_format
     )
     representative_days = pd.to_datetime(clustering_timeseries.dropna()).dt.date
     grouper = representative_days.to_frame("clusters").groupby("clusters")
@@ -182,12 +182,17 @@ def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
 
 def _datetime_index(index: pd.Index, format: str) -> pd.Index:
     try:
-        return pd.to_datetime(index, format=format)
+        if format == "ISO8601":
+            dt = pd.to_datetime(index, format=format)
+        else:
+            dt = pd.to_datetime(index, format=format, exact=False)
     except ValueError as e:
         raise exceptions.ModelError(
             f"Error in parsing dates in timeseries data from using datetime format `{format}`. "
             f"Full error: {e}"
         )
+    else:
+        return dt
 
 
 def _check_time_subset(ts_index: pd.Index, time_subset: list[str]):

@@ -1,13 +1,17 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
+import builtins
+import locale
 import logging
+from locale import atof
 from pathlib import Path
 from typing import Hashable, Optional
 
 import numpy as np
 import pandas as pd
 import xarray as xr
+from pandas.api.types import is_numeric_dtype
 from typing_extensions import NotRequired, TypedDict
 
 from calliope import exceptions
@@ -23,7 +27,7 @@ from calliope.util.tools import listify, relative_path
 
 LOGGER = logging.getLogger(__name__)
 
-DTYPE_OPTIONS = {"str": str, "float": float}
+locale.setlocale(locale.LC_ALL, "")
 
 
 class DataSourceDict(TypedDict):
@@ -403,10 +407,14 @@ class DataSource:
 
     def _update_dtypes(self, tdf_group):
         dtypes = extract_from_schema(MODEL_SCHEMA, "x-type")
-        if tdf_group.name in dtypes and dtypes[tdf_group.name] in DTYPE_OPTIONS:
+        if tdf_group.name in dtypes:
             dtype = dtypes[tdf_group.name]
             self._log(
                 f"Updating non-NaN values of parameter `{tdf_group.name}` to {dtype} type"
             )
-            tdf_group = tdf_group.astype(dtype)
+            if dtype == "float" and not is_numeric_dtype(tdf_group):
+                tdf_group = tdf_group.apply(
+                    lambda x: atof(x) if not is_numeric_dtype(type(x)) else x
+                )
+            tdf_group = tdf_group.astype(getattr(builtins, dtype))
         return tdf_group
