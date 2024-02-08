@@ -27,7 +27,7 @@ from calliope.util.tools import listify, relative_path
 
 LOGGER = logging.getLogger(__name__)
 
-locale.setlocale(locale.LC_ALL, "en_GB")
+locale.setlocale(locale.LC_ALL, "en_GB.utf-8")
 
 
 class DataSourceDict(TypedDict):
