@@ -126,7 +126,8 @@ constraints:
     foreach: [nodes, carriers, timesteps]
     equations:
       - expression: >-
-          sum(flow_out, over=techs) - sum(flow_in, over=techs) -
+          default_if_empty(sum(flow_out, over=techs), 0) -
+          default_if_empty(sum(flow_in, over=techs), 0) -
           $flow_export + $unmet_demand_and_unused_supply == 0
     sub_expressions:
       flow_export:
@@ -703,7 +704,7 @@ objectives:
       - where: "any(cost, over=[nodes, techs, costs])"
         expression: >-
           sum(
-            sum(cost, over=[nodes, techs])
+            default_if_empty(sum(cost, over=[nodes, techs]), 0)
             * objective_cost_weights,
             over=costs
           ) + $unmet_demand

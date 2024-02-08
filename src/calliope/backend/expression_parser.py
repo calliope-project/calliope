@@ -732,6 +732,7 @@ class EvalUnslicedComponent(EvalToArrayStr):
     def as_math_string(self) -> str:
         self.eval_attrs["as_values"] = False
         evaluated = self.as_array()
+        self.eval_attrs["references"].add(self.name)
 
         if evaluated.shape:
             dims = rf"_\text{{{','.join(str(i).removesuffix('s') for i in evaluated.dims)}}}"

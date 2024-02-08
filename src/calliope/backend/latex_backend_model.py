@@ -249,6 +249,21 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {% if equation.description is not none %}
     {{ equation.description }}
     {% endif %}
+    {% if equation.references %}
+
+    **Used in**:
+    {% for ref in equation.references %}
+    * [{{ ref }}](#{{ ref }})
+    {% endfor %}
+    {% endif %}
+    {% if equation.unit is not none %}
+
+    **Unit**: {{ equation.unit }}
+    {% endif %}
+    {% if equation.default is not none %}
+
+    **Default**: {{ equation.default }}
+    {% endif %}
     {% if equation.expression != "" %}
 
     $$
@@ -294,7 +309,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         def _constraint_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
-            self._add_latex_strings(where, element, equation_strings)
+            self._add_latex_strings(where, element, equation_strings, references)
             return where.where(where)
 
         parsed_component = self._add_component(
@@ -315,7 +330,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         def _expression_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
-            self._add_latex_strings(where, element, equation_strings)
+            self._add_latex_strings(where, element, equation_strings, references)
             return where.where(where)
 
         parsed_component = self._add_component(
@@ -369,7 +384,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         def _objective_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> None:
-            self._add_latex_strings(where, element, equation_strings)
+            self._add_latex_strings(where, element, equation_strings, references)
             return None
 
         parsed_component = self._add_component(
@@ -411,6 +426,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                     "expression": da.attrs["math_string"],
                     "name": name,
                     "description": da.attrs.get("description", None),
+                    "references": list(da.attrs.get("references", set())),
+                    "default": da.attrs.get("default", None),
+                    "unit": da.attrs.get("unit", None),
                 }
                 for name, da in getattr(self, objtype).data_vars.items()
                 if "math_string" in da.attrs
@@ -425,8 +443,17 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         }
         return self._render(doc_template, components=components)
 
-    def _add_latex_strings(self, where, element, equation_strings):
-        expr = element.evaluate_expression(self, return_type="math_string")
+    def _add_latex_strings(
+        self,
+        where: xr.DataArray,
+        element: parsing.ParsedBackendEquation,
+        equation_strings: list,
+        references: set,
+    ):
+        expr = element.evaluate_expression(
+            self, return_type="math_string", references=references
+        )
+
         where_latex = element.evaluate_where(self, return_type="math_string")
 
         if self.include == "all" or (self.include == "valid" and where.any()):
