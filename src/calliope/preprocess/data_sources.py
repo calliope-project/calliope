@@ -412,7 +412,7 @@ class DataSource:
             self._log(
                 f"Updating non-NaN values of parameter `{tdf_group.name}` to {dtype} type"
             )
-            if dtype == "float" and not is_numeric_dtype(tdf_group):
+            if dtype in ["float", int] and not is_numeric_dtype(tdf_group):
                 tdf_group = tdf_group.apply(
                     lambda x: atof(x) if not is_numeric_dtype(type(x)) else x
                 )
