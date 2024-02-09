@@ -101,6 +101,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         attrs = {
             "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
             "unit": self._PARAM_UNITS.get(parameter_name, None),
+            "default": default,
         }
         self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
 
@@ -114,9 +115,17 @@ class PyomoBackendModel(backend_model.BackendModel):
         ) -> xr.DataArray:
             expr = element.evaluate_expression(self, where=where, references=references)
 
-            to_fill = self._apply_func(
-                self._to_pyomo_constraint, where, expr, name=name
-            )
+            try:
+                to_fill = self._apply_func(
+                    self._to_pyomo_constraint, where, expr, name=name
+                )
+            except BackendError as err:
+                types = self._apply_func(lambda x: type(x).__name__, expr.where(where))
+                offending_items = types.str.startswith("bool").to_series()
+                offending_idx = offending_items[offending_items].index.values
+                err.args = (f"{err.args[0]}: {offending_idx}", *err.args[1:])
+                raise err
+
             return to_fill
 
         self._add_component(name, constraint_dict, _constraint_setter, "constraints")
@@ -616,6 +625,11 @@ class PyomoBackendModel(backend_model.BackendModel):
         """
 
         if mask:
+            if isinstance(expr, (np.bool_, bool)):
+                raise BackendError(
+                    f"(constraints, {name}) | constraint array includes item(s) that resolves to a simple boolean. "
+                    "There must be a math component defined on at least one side of the equation"
+                )
             constraint = ObjConstraint(expr=expr)
             self._instance.constraints[name].append(constraint)
             return constraint

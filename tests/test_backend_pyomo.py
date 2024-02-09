@@ -1836,6 +1836,12 @@ class TestNewBackend:
             "original_dtype": np.dtype("float64"),
             "references": {"flow_in_inc_eff"},
             "coords_in_name": False,
+            "default": 1.0,
+            "description": (
+                "Conversion efficiency from `source`/`flow_in` (tech dependent) into the technology. "
+                "Set as value between 1 (no loss) and 0 (all lost)."
+            ),
+            "unit": "fraction.",
         }
 
     def test_new_build_get_parameter_as_vals(self, simple_supply):
@@ -2026,11 +2032,11 @@ class TestNewBackend:
 
         assert check_error_or_warning(
             error,
-            "(constraints:constraint-with-nan:0, lhs=0, rhs=100.0): constraint resolves to a simple boolean.",
+            "(constraints, constraint-with-nan) | constraint array includes item(s) that resolves to a simple boolean. "
+            "There must be a math component defined on at least one side of the equation: [('test_demand_elec', 'electricity')]",
         )
 
-    @pytest.mark.xfail(reason="error not raised due to default vals")
-    def test_raise_error_on_expression_with_nan(self, simple_supply):
+    def test_add_global_expression(self, simple_supply):
         """
         A very simple expression: The annual and regional sum of `flow_out` for each tech.
         However, not every tech has the variable `flow_out`.
@@ -2050,23 +2056,6 @@ class TestNewBackend:
         assert (
             simple_supply.backend.get_global_expression(expression_name).name
             == expression_name
-        )
-
-        expression_dict = {
-            "foreach": ["techs", "carriers"],
-            "equations": [{"expression": "sum(flow_out, over=[nodes, timesteps])"}],
-            # "where": "carrier_out",  # <- no error would be raised with this uncommented
-        }
-        expression_name = "expression-with-nan"
-
-        with pytest.raises(exceptions.BackendError) as error:
-            simple_supply.backend.add_global_expression(
-                expression_name, expression_dict
-            )
-
-        assert check_error_or_warning(
-            error,
-            f"global_expressions:{expression_name}:0 | Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
         )
 
     def test_raise_error_on_excess_dimensions(self, simple_supply):

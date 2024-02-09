@@ -368,11 +368,6 @@ class EvalComparisonOp(EvalToArrayStr):
                 constraint = lhs <= rhs
             case ">=":
                 constraint = lhs >= rhs
-        if isinstance(constraint, (bool, np.bool_)):
-            raise BackendError(
-                f"({self.eval_attrs['equation_name']}, lhs={lhs}, rhs={rhs}): constraint resolves to a simple boolean. "
-                "This means there are no math components on either side of the comparison operator."
-            )
         return constraint
 
     def as_math_string(self) -> str:

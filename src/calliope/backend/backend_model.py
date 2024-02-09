@@ -399,7 +399,7 @@ class BackendModelGenerator(ABC):
                 "parameters", param_name, "Component not defined; using default value."
             )
             self.add_parameter(
-                param_name, xr.DataArray(default_val), use_inf_as_na=False
+                param_name, xr.DataArray(default_val), default_val, use_inf_as_na=False
             )
             self.parameters[param_name].attrs["is_result"] = 0
         LOGGER.info("Optimisation Model | parameters | Generated.")

@@ -331,7 +331,7 @@ class ParsedBackendEquation:
         self,
         backend_interface: backend_model.BackendModel,
         *,
-        return_type: Literal["array"],
+        return_type: Literal["array"] = "array",
         references: Optional[set] = None,
         where: xr.DataArray = TRUE_ARRAY,
     ) -> xr.DataArray:
