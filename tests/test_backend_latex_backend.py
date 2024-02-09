@@ -349,7 +349,7 @@ class TestLatexBackendModel:
                     \forall{}
                     \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
                     \text{ tech }\negthickspace \in \negthickspace\text{ techs }
-                    :\\[2em]
+                    \!\!:\\[2em]
                 \end{array}"""
                 ),
             ),
@@ -358,7 +358,7 @@ class TestLatexBackendModel:
                 textwrap.dedent(
                     r"""
                 \begin{array}{l}
-                    \min{}:\\[2em]
+                    \min{}\!\!:\\[2em]
                 \end{array}"""
                 ),
             ),
@@ -367,7 +367,7 @@ class TestLatexBackendModel:
                 textwrap.dedent(
                     r"""
                 \begin{array}{l}
-                    \text{if } foo \land bar:\\[2em]
+                    \text{if } foo \land bar\!\!:\\[2em]
                 \end{array}"""
                 ),
             ),
@@ -389,7 +389,7 @@ class TestLatexBackendModel:
                 textwrap.dedent(
                     r"""
                 \begin{array}{l}
-                    \quad \text{if } bar:\\
+                    \quad \text{if } bar\!\!:\\
                     \qquad foo\\[2em]
                     \quad foo + 1\\
                 \end{array}"""
