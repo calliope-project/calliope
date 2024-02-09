@@ -33,7 +33,7 @@ def on_files(files: list, config: dict, **kwargs):
         textwrap.dedent(
             """
         Complete base mathematical formulation for a Calliope model.
-        This math is _always_ applied but can be overridden using [custom math][introducing-custom-math-to-your-model].
+        This math is _always_ applied but can be overridden with pre-defined additional math or [your own math][adding-your-own-math-to-a-model].
         """
         ),
         base_model,
@@ -47,8 +47,8 @@ def on_files(files: list, config: dict, **kwargs):
             f"{override}.yaml",
             textwrap.dedent(
                 f"""
-            Inbuilt custom math to apply {custom_model.inputs.attrs['name']} math on top of the [base mathematical formulation][base-math].
-            This math is _only_ applied if referenced in the `config.init.custom_math` list as `{override}`.
+            Pre-defined additional math to apply {custom_model.inputs.attrs['name']} math on top of the [base mathematical formulation][base-math].
+            This math is _only_ applied if referenced in the `config.init.add_math` list as `{override}`.
             """
             ),
             custom_model,
@@ -93,10 +93,10 @@ def write_file(
     nav_reference = [
         idx
         for idx in config["nav"]
-        if isinstance(idx, dict) and set(idx.keys()) == {"Inbuilt math"}
+        if isinstance(idx, dict) and set(idx.keys()) == {"Pre-defined math"}
     ][0]
 
-    nav_reference["Inbuilt math"].append(output_file.as_posix())
+    nav_reference["Pre-defined math"].append(output_file.as_posix())
 
     math_doc = model.math_documentation.write(format="md")
     file_to_download = Path("..") / filename
@@ -118,7 +118,7 @@ def generate_base_math_model() -> calliope.Model:
         model_config (dict): Calliope model config.
 
     Returns:
-        calliope.Model: Base math model to use in generating custom math docs.
+        calliope.Model: Base math model to use in generating math docs.
     """
     model = calliope.Model(model_definition=MODEL_PATH)
     model.math_documentation.build()
@@ -128,7 +128,7 @@ def generate_base_math_model() -> calliope.Model:
 def generate_custom_math_model(
     base_model: calliope.Model, override: str
 ) -> calliope.Model:
-    """Generate model with documentation for a built-in custom math file, showing only the changes made
+    """Generate model with documentation for a pre-defined math file, showing only the changes made
     relative to the base math.
 
     Args:
@@ -143,7 +143,7 @@ def generate_custom_math_model(
 
 def _keep_only_changes(base_model: calliope.Model, model: calliope.Model) -> None:
     """Compare custom math model with base model and keep only the math strings that are
-    different between the two. Changes are made in-place in the custom math model docs
+    different between the two. Changes are made in-place in the custom math model docs.
 
     Args:
         base_model (calliope.Model): Calliope model with base math applied.

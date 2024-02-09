@@ -209,7 +209,7 @@ class BackendModelGenerator(ABC):
         )
 
     def _build(self) -> None:
-        self._add_run_mode_custom_math()
+        self._add_run_mode_math()
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
         for components in [
@@ -228,22 +228,22 @@ class BackendModelGenerator(ABC):
                 )
             LOGGER.info(f"Optimisation Model | {components} | Generated.")
 
-    def _add_run_mode_custom_math(self) -> None:
-        """If not given in the custom_math list, override model math with run mode math"""
+    def _add_run_mode_math(self) -> None:
+        """If not given in the add_math list, override model math with run mode math"""
 
         # FIXME: available modes should not be hardcoded here. They should come from a YAML schema.
         mode = self.inputs.attrs["config"].build.mode
-        custom_math = self.inputs.attrs["applied_custom_math"]
+        add_math = self.inputs.attrs["applied_additional_math"]
         not_run_mode = {"plan", "operate", "spores"}.difference([mode])
-        run_mode_mismatch = not_run_mode.intersection(custom_math)
+        run_mode_mismatch = not_run_mode.intersection(add_math)
         if run_mode_mismatch:
             exceptions.warn(
-                f"Running in {mode} mode, but run mode(s) {run_mode_mismatch} custom "
+                f"Running in {mode} mode, but run mode(s) {run_mode_mismatch} "
                 "math being loaded from file via the model configuration"
             )
 
-        if mode != "plan" and mode not in custom_math:
-            LOGGER.debug(f"Updating math formulation with {mode} mode custom math.")
+        if mode != "plan" and mode not in add_math:
+            LOGGER.debug(f"Updating math formulation with {mode} mode math.")
             filepath = importlib.resources.files("calliope") / "math" / f"{mode}.yaml"
             self.inputs.math.union(AttrDict.from_yaml(filepath), allow_override=True)
 

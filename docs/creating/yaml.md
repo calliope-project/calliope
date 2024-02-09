@@ -10,8 +10,8 @@ Calliope allows an abbreviated form for long, nested settings:
 
 ```yaml
 one:
-    two:
-        three: x
+  two:
+    three: x
 ```
 
 can be written as:
@@ -27,8 +27,8 @@ This can specify one or several YAML files to import, e.g.:
 
 ```yaml
 import:
-    - path/to/file_1.yaml
-    - path/to/file_2.yaml
+  - path/to/file_1.yaml
+  - path/to/file_2.yaml
 ```
 
 Data defined in the current and imported file(s) must be mutually exclusive.
@@ -39,9 +39,9 @@ In this case, our `model.yaml` file tends to have the following `import` stateme
 
 ```yaml
 import:
-    - 'model_definition/techs.yaml'
-    - 'model_definition/nodes.yaml'
-    - 'scenarios.yaml'
+  - 'model_definition/techs.yaml'
+  - 'model_definition/nodes.yaml'
+  - 'scenarios.yaml'
 ```
 
 This means that we have:
@@ -50,44 +50,44 @@ This means that we have:
 
     ```yaml
     import:
-        - 'model_definition/techs.yaml'
-        - 'model_definition/nodes.yaml'
-        - 'scenarios.yaml'
+      - 'model_definition/techs.yaml'
+      - 'model_definition/nodes.yaml'
+      - 'scenarios.yaml'
     config:
-        init:
-            ...
-        build:
-            ...
-        solve:
-            ...
+      init:
+        ...
+      build:
+        ...
+      solve:
+        ...
     ```
 
 === "model_definition/techs.yaml"
 
     ```yaml
     techs:
-        tech1:
-            ...
+      tech1:
         ...
+      ...
     ```
 
 === "model_definition/nodes.yaml"
 
     ```yaml
     nodes:
-        node1:
-            ...
+      node1:
         ...
+      ...
     ```
 
 === "scenarios.yaml"
 
     ```yaml
     overrides:
-        override1:
-        ...
+      override1:
+      ...
     scenarios:
-        scenario1: [override1, ...]
+      scenario1: [override1, ...]
     ...
     ```
 
@@ -95,29 +95,29 @@ Which Calliope will receive as:
 
 ```yaml
 import:
-    - 'model_definition/techs.yaml'
-    - 'model_definition/nodes.yaml'
-    - 'scenarios.yaml'
+  - 'model_definition/techs.yaml'
+  - 'model_definition/nodes.yaml'
+  - 'scenarios.yaml'
 config:
-    init:
-        ...
-    build:
-        ...
-    solve:
-        ...
+  init:
+    ...
+  build:
+    ...
+  solve:
+    ...
 techs:
-    tech1:
-        ...
+  tech1:
     ...
+  ...
 nodes:
-    node1:
-        ...
+  node1:
     ...
+  ...
 overrides:
-    override1:
-    ...
+  override1:
+  ...
 scenarios:
-    scenario1: [override1, ...]
+  scenario1: [override1, ...]
 ...
 ```
 
@@ -147,8 +147,8 @@ The above would lead to:
 
 ```yaml
 one.two:
-    three: x
-    four: y
+  three: x
+  four: y
 four.five.six: y
 ```
 
@@ -157,7 +157,7 @@ Now, using this override:
 
 ```yaml
 one._REPLACE_:
-    four: y
+  four: y
 four.five.six: y
 ```
 
@@ -204,8 +204,8 @@ key: [option1, option2]
 
 ```yaml
 key:
-    - option1
-    - option2
+  - option1
+  - option2
 ```
 
 Dictionaries can be of the form `{...}` or a series of lines _without_ a starting `-`.
@@ -217,8 +217,8 @@ key: {option1: value1, option2: value2}
 
 ```yaml
 key:
-    option1: value1
-    option2: value2
+  option1: value1
+  option2: value2
 ```
 
 To continue dictionary nesting, you can add more `{}` parentheses or you can indent your lines further.
@@ -234,7 +234,7 @@ key:
     option4: value4
 ```
 
-Which is equivalent in Python to `{"key": [{"option1": value1, "option2": value2}, {"option3": value3, "option4": value4}]}`.
+Which is equivalent in Python to `#!python {"key": [{"option1": value1, "option2": value2}, {"option3": value3, "option4": value4}]}`.
 
 !!! info "See also"
     See the [YAML website](https://yaml.org/) for more general information about YAML.

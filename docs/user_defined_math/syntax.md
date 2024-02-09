@@ -1,17 +1,27 @@
 # Math syntax
 
-This page provides an overview of the syntax available to formulate math components. reference for the allowed key-value pairs in your custom math YAML file is available in the [reference section of the documentation][math-formulation-schema].
+This page provides an overview of the syntax available to formulate [math components](components.md).
+Using the math syntax, you can populate an N-dimensional matrix with math expressions.
+You use [foreach](#foreach-lists) to define the dimensions of the matrix.
+You use the top-level [where string](#where-strings) to subset the matrix to only elements of interest.
+You then populate the subset with any number of [equation expressions](#equations), each further subsetting the matrix.
+
+![Visual representation of math syntax application](../img/math_syntax.svg)
+
+!!! info "See also"
+
+    Reference for the allowed key-value pairs in your additional math YAML file is available in the [reference section of the documentation][math-formulation-schema].
 
 ## foreach lists
 
-If the math component is indexed over sets (e.g., `techs`, `nodes`, `timesteps`), then you need to define a `foreach` list of those sets.
+If the math component is indexed over dimensions (a.k.a. "sets" - e.g., `techs`, `nodes`, `timesteps`), then you need to define a `foreach` list of those sets.
 If the component is dimensionless, no `foreach` list needs to be defined.
 
 For example, `#!yaml foreach: [nodes, techs]` will build the component over all `nodes` and `techs` in the model.
 
-The available sets in Calliope are: `nodes`, `techs`, `carriers`, `costs`, `timesteps`.
+The available dimensions in Calliope are: `nodes`, `techs`, `carriers`, `costs`, `timesteps`.
 If using [time clustering](../advanced/time.md#time-clustering) and [inter-cluster storage math][inter-cluster-storage-math], there is also a `datesteps` set available.
-If you want to build over your own custom set, you will need to add it to the Calliope model dataset before building the optimisation problem, e.g. as a new indexed parameter.
+If you want to build over your own custom dimension, you will need to add it to the Calliope model dataset before building the optimisation problem, e.g. as a new indexed parameter.
 
 ## where strings
 

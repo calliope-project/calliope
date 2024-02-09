@@ -6,14 +6,13 @@ This includes for example the choice of solver with which to actually solve the 
 
 ```yaml
 config:
-    init:
-        name: 'My energy model'
-        time_data_path: 'timeseries_data'
-        time_subset: ['2005-01-01', '2005-01-05']
-    build:
-        mode: plan
-    solve:
-        solver: cbc
+  init:
+    name: 'My energy model'
+    time_subset: ['2005-01-01', '2005-01-05']
+  build:
+    mode: plan
+  solve:
+    solver: cbc
 ```
 
 The configuration is grouped into three top-level items:
@@ -34,7 +33,7 @@ model.build(ensure_feasibility=True)
 model.solve(save_logs="path/to/logs/dir")
 ```
 
-None of the configuration options are _required_ as there is a default value for them all, but you will likely want to set `init.name`, `init.calliope_version`, `init.time_data_path`, `build.mode`, and `solve.solver`.
+None of the configuration options are _required_ as there is a default value for them all, but you will likely want to set `init.name`, `init.calliope_version`, `build.mode`, and `solve.solver`.
 
 To test your model pipeline, `config.init.time_subset` is a good way to limit your model size by slicing the time dimension to a smaller range.
 
@@ -78,9 +77,9 @@ In the case of Gurobi, for example, it is usually fastest to use the direct Pyth
 
 ```yaml
 config:
-    solve:
-        solver: gurobi
-        solver_io: python
+  solve:
+    solver: gurobi
+    solver_io: python
 ```
 
 !!! note

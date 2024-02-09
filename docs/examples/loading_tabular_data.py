@@ -36,56 +36,56 @@ calliope.set_log_verbosity("INFO", include_solver_output=False)
 #
 # ```yaml
 # techs:
-#     supply_tech:
-#         base_tech: supply
-#         carrier_out: electricity
-#         flow_cap_max: 10
-#         source_use_max:
-#             data: [10, 2]
-#             index: ["2020-01-01 00:00", "2020-01-01 01:00"]
-#             dims: timesteps
-#         cost_flow_cap:
-#             data: 2
-#             index: monetary
-#             dims: costs
+#   supply_tech:
+#     base_tech: supply
+#     carrier_out: electricity
+#     flow_cap_max: 10
+#     source_use_max:
+#       data: [10, 2]
+#       index: ["2020-01-01 00:00", "2020-01-01 01:00"]
+#       dims: timesteps
+#     cost_flow_cap:
+#       data: 2
+#       index: monetary
+#       dims: costs
 #
-#     storage_tech:
-#         base_tech: storage
-#         carrier_in: electricity
-#         carrier_out: electricity
-#         flow_cap_max: 6
-#         storage_cap_max: 7
-#         cost_storage_cap:
-#             data: 5
-#             index: monetary
-#             dims: costs
-#         cost_flow_out:
-#             data: 0.1
-#             index: monetary
-#             dims: costs
+#   storage_tech:
+#     base_tech: storage
+#     carrier_in: electricity
+#     carrier_out: electricity
+#     flow_cap_max: 6
+#     storage_cap_max: 7
+#     cost_storage_cap:
+#       data: 5
+#       index: monetary
+#       dims: costs
+#     cost_flow_out:
+#       data: 0.1
+#       index: monetary
+#       dims: costs
 #
-#     demand_tech:
-#         base_tech: demand
-#         carrier_in: electricity
-#         sink_use_equals:
-#             data: [4, 5]
-#             index: ["2020-01-01 00:00", "2020-01-01 01:00"]
-#             dims: timesteps
-
-#     transmission_tech:
-#         base_tech: transmission
-#         carrier_in: electricity
-#         carrier_out: electricity
-#         from: A
-#         to: B
-#         flow_cap_max: 8
+#   demand_tech:
+#     base_tech: demand
+#     carrier_in: electricity
+#     sink_use_equals:
+#       data: [4, 5]
+#       index: ["2020-01-01 00:00", "2020-01-01 01:00"]
+#       dims: timesteps
+#
+#   transmission_tech:
+#     base_tech: transmission
+#     carrier_in: electricity
+#     carrier_out: electricity
+#     from: A
+#     to: B
+#     flow_cap_max: 8
 #
 # nodes:
-#     A.techs: {supply_tech, storage_tech, demand_tech}
-#     B.techs:
-#         supply_tech:
-#             flow_cap_max: 8
-#         demand_tech:
+#   A.techs: {supply_tech, storage_tech, demand_tech}
+#   B.techs:
+#     supply_tech:
+#       flow_cap_max: 8
+#     demand_tech:
 # ```
 #
 # When this is used to initialise a Calliope model, it is processed into a set of data tables ([xarray.DataArray](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html)) internally:
@@ -94,56 +94,56 @@ calliope.set_log_verbosity("INFO", include_solver_output=False)
 model_def = calliope.AttrDict.from_yaml_string(
     """
 techs:
-    supply_tech:
-        base_tech: supply
-        carrier_out: electricity
-        flow_cap_max: 10
-        source_use_max:
-            data: [10, 2]
-            index: ["2020-01-01 00:00", "2020-01-01 01:00"]
-            dims: timesteps
-        cost_flow_cap:
-            data: 2
-            index: monetary
-            dims: costs
+  supply_tech:
+    base_tech: supply
+    carrier_out: electricity
+    flow_cap_max: 10
+    source_use_max:
+      data: [10, 2]
+      index: ["2020-01-01 00:00", "2020-01-01 01:00"]
+      dims: timesteps
+    cost_flow_cap:
+      data: 2
+      index: monetary
+      dims: costs
 
-    storage_tech:
-        base_tech: storage
-        carrier_in: electricity
-        carrier_out: electricity
-        flow_cap_max: 6
-        storage_cap_max: 7
-        cost_storage_cap:
-            data: 5
-            index: monetary
-            dims: costs
-        cost_flow_out:
-            data: 0.1
-            index: monetary
-            dims: costs
+  storage_tech:
+    base_tech: storage
+    carrier_in: electricity
+    carrier_out: electricity
+    flow_cap_max: 6
+    storage_cap_max: 7
+    cost_storage_cap:
+      data: 5
+      index: monetary
+      dims: costs
+    cost_flow_out:
+      data: 0.1
+      index: monetary
+      dims: costs
 
-    demand_tech:
-        base_tech: demand
-        carrier_in: electricity
-        sink_use_equals:
-            data: [4, 5]
-            index: ["2020-01-01 00:00", "2020-01-01 01:00"]
-            dims: timesteps
+  demand_tech:
+    base_tech: demand
+    carrier_in: electricity
+    sink_use_equals:
+      data: [4, 5]
+      index: ["2020-01-01 00:00", "2020-01-01 01:00"]
+      dims: timesteps
 
-    transmission_tech:
-        base_tech: transmission
-        carrier_in: electricity
-        carrier_out: electricity
-        from: A
-        to: B
-        flow_cap_max: 8
+  transmission_tech:
+    base_tech: transmission
+    carrier_in: electricity
+    carrier_out: electricity
+    from: A
+    to: B
+    flow_cap_max: 8
 
 nodes:
-    A.techs: {supply_tech, storage_tech, demand_tech}
-    B.techs:
-        supply_tech:
-            flow_cap_max: 8
-        demand_tech:
+  A.techs: {supply_tech, storage_tech, demand_tech}
+  B.techs:
+    supply_tech:
+      flow_cap_max: 8
+    demand_tech:
 """
 )
 model_from_yaml = calliope.Model(model_def)
@@ -288,28 +288,28 @@ tech_cost_data
 #
 # ```yaml
 # data_sources:
-#     tech_data:
-#         source: outputs/loading_tabular_data/tech_data.csv
-#         rows: parameters
-#         columns: techs
-#     tech_node_data:
-#         source: outputs/loading_tabular_data/tech_node_data.csv
-#         rows: [techs, nodes, parameters]
-#     tech_timestep_data:
-#         source: outputs/loading_tabular_data/tech_timestep_data.csv
-#         rows: timesteps
-#         columns: [techs, parameters]
-#     tech_carrier_data:
-#         source: outputs/loading_tabular_data/tech_carrier_data.csv
-#         rows: [techs, parameters]
-#         add_dimensions:
-#             carriers: electricity
-#     tech_cost_data:
-#         source: outputs/loading_tabular_data/tech_cost_data.csv
-#         rows: parameters
-#         columns: techs
-#         add_dimensions:
-#             costs: monetary
+#   tech_data:
+#     source: outputs/loading_tabular_data/tech_data.csv
+#     rows: parameters
+#     columns: techs
+#   tech_node_data:
+#     source: outputs/loading_tabular_data/tech_node_data.csv
+#     rows: [techs, nodes, parameters]
+#   tech_timestep_data:
+#     source: outputs/loading_tabular_data/tech_timestep_data.csv
+#     rows: timesteps
+#     columns: [techs, parameters]
+#   tech_carrier_data:
+#     source: outputs/loading_tabular_data/tech_carrier_data.csv
+#     rows: [techs, parameters]
+#     add_dimensions:
+#       carriers: electricity
+#   tech_cost_data:
+#     source: outputs/loading_tabular_data/tech_cost_data.csv
+#     rows: parameters
+#     columns: techs
+#     add_dimensions:
+#       costs: monetary
 # ```
 #
 # When loading data sources, assigning techs to nodes is done automatically to some extent.
@@ -318,39 +318,39 @@ tech_cost_data
 #
 # ```yaml
 # nodes:
-#     A.techs: {supply_tech, storage_tech, demand_tech}
-#     B.techs: {supply_tech, demand_tech}
+#   A.techs: {supply_tech, storage_tech, demand_tech}
+#   B.techs: {supply_tech, demand_tech}
 # ```
 
 # %%
 model_def = calliope.AttrDict.from_yaml_string(
     """
 data_sources:
-    tech_data:
-        source: outputs/loading_tabular_data/tech_data.csv
-        rows: parameters
-        columns: techs
-    tech_node_data:
-        source: outputs/loading_tabular_data/tech_node_data.csv
-        rows: [techs, nodes, parameters]
-    tech_timestep_data:
-        source: outputs/loading_tabular_data/tech_timestep_data.csv
-        rows: timesteps
-        columns: [techs, parameters]
-    tech_carrier_data:
-        source: outputs/loading_tabular_data/tech_carrier_data.csv
-        rows: [techs, parameters]
-        add_dimensions:
-            carriers: electricity
-    tech_cost_data:
-        source: outputs/loading_tabular_data/tech_cost_data.csv
-        rows: parameters
-        columns: techs
-        add_dimensions:
-            costs: monetary
+  tech_data:
+    source: outputs/loading_tabular_data/tech_data.csv
+    rows: parameters
+    columns: techs
+  tech_node_data:
+    source: outputs/loading_tabular_data/tech_node_data.csv
+    rows: [techs, nodes, parameters]
+  tech_timestep_data:
+    source: outputs/loading_tabular_data/tech_timestep_data.csv
+    rows: timesteps
+    columns: [techs, parameters]
+  tech_carrier_data:
+    source: outputs/loading_tabular_data/tech_carrier_data.csv
+    rows: [techs, parameters]
+    add_dimensions:
+      carriers: electricity
+  tech_cost_data:
+    source: outputs/loading_tabular_data/tech_cost_data.csv
+    rows: parameters
+    columns: techs
+    add_dimensions:
+      costs: monetary
 nodes:
-    A.techs: {supply_tech, storage_tech, demand_tech}
-    B.techs: {supply_tech, demand_tech}
+  A.techs: {supply_tech, storage_tech, demand_tech}
+  B.techs: {supply_tech, demand_tech}
 """
 )
 model_from_data_sources = calliope.Model(model_def)
@@ -364,31 +364,31 @@ model_from_data_sources = calliope.Model(model_def)
 model_def = calliope.AttrDict.from_yaml_string(
     """
 data_sources:
-    tech_data:
-        source: tech_data_df
-        rows: parameters
-        columns: techs
-    tech_node_data:
-        source: tech_node_data_df
-        rows: [techs, nodes, parameters]
-    tech_timestep_data:
-        source: tech_timestep_data_df
-        rows: timesteps
-        columns: [techs, parameters]
-    tech_carrier_data:
-        source: tech_carrier_data_df
-        rows: [techs, parameters]
-        add_dimensions:
-            carriers: electricity
-    tech_cost_data:
-        source: tech_cost_data_df
-        rows: parameters
-        columns: techs
-        add_dimensions:
-            costs: monetary
+  tech_data:
+    source: tech_data_df
+    rows: parameters
+    columns: techs
+  tech_node_data:
+    source: tech_node_data_df
+    rows: [techs, nodes, parameters]
+  tech_timestep_data:
+    source: tech_timestep_data_df
+    rows: timesteps
+    columns: [techs, parameters]
+  tech_carrier_data:
+    source: tech_carrier_data_df
+    rows: [techs, parameters]
+    add_dimensions:
+      carriers: electricity
+  tech_cost_data:
+    source: tech_cost_data_df
+    rows: parameters
+    columns: techs
+    add_dimensions:
+      costs: monetary
 nodes:
-    A.techs: {supply_tech, storage_tech, demand_tech}
-    B.techs: {supply_tech, demand_tech}
+  A.techs: {supply_tech, storage_tech, demand_tech}
+  B.techs: {supply_tech, demand_tech}
 """
 )
 model_from_data_sources = calliope.Model(
@@ -444,53 +444,53 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 #
 # ```yaml
 # data_sources:
-#     tech_timestep_data:
-#         source: outputs/loading_tabular_data/tech_timestep_data.csv
-#         rows: timesteps
-#         columns: [techs, parameters]
+#   tech_timestep_data:
+#     source: outputs/loading_tabular_data/tech_timestep_data.csv
+#     rows: timesteps
+#     columns: [techs, parameters]
 # techs:
-#     supply_tech:
-#         base_tech: supply
-#         carrier_out: electricity
-#         flow_cap_max: 10
-#         cost_flow_cap:
-#             data: 2
-#             index: monetary
-#             dims: costs
+#   supply_tech:
+#     base_tech: supply
+#     carrier_out: electricity
+#     flow_cap_max: 10
+#     cost_flow_cap:
+#       data: 2
+#       index: monetary
+#       dims: costs
 #
-#     storage_tech:
-#         base_tech: storage
-#         carrier_in: electricity
-#         carrier_out: electricity
-#         flow_cap_max: 6
-#         storage_cap_max: 7
-#         cost_storage_cap:
-#             data: 5
-#             index: monetary
-#             dims: costs
-#         cost_flow_out:
-#             data: 0.1
-#             index: monetary
-#             dims: costs
+#   storage_tech:
+#     base_tech: storage
+#     carrier_in: electricity
+#     carrier_out: electricity
+#     flow_cap_max: 6
+#     storage_cap_max: 7
+#     cost_storage_cap:
+#       data: 5
+#       index: monetary
+#       dims: costs
+#     cost_flow_out:
+#       data: 0.1
+#       index: monetary
+#       dims: costs
 #
-#     demand_tech:
-#         base_tech: demand
-#         carrier_in: electricity
+#   demand_tech:
+#     base_tech: demand
+#     carrier_in: electricity
 #
-#     transmission_tech:
-#         base_tech: transmission
-#         carrier_in: electricity
-#         carrier_out: electricity
-#         from: A
-#         to: B
-#         flow_cap_max: 8
+#   transmission_tech:
+#     base_tech: transmission
+#     carrier_in: electricity
+#     carrier_out: electricity
+#     from: A
+#     to: B
+#     flow_cap_max: 8
 #
 # nodes:
-#     A.techs: {supply_tech, storage_tech, demand_tech}
-#     B.techs:
-#         supply_tech:
-#             flow_cap_max: 8
-#         demand_tech:
+#   A.techs: {supply_tech, storage_tech, demand_tech}
+#   B.techs:
+#     supply_tech:
+#       flow_cap_max: 8
+#     demand_tech:
 # ```
 #
 # For larger models, with lots of nodes and / or technologies, it is increasingly easier to store other data such as technology and node definitions in the tabular CSV format too.
@@ -499,47 +499,47 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 #
 # ```yaml
 # data_sources:
-#     tech_timestep_data:
-#         source: outputs/loading_tabular_data/tech_timestep_data.csv
-#         rows: timesteps
-#         columns: [techs, parameters]
-#     tech_cost_data:
-#         source: outputs/loading_tabular_data/tech_cost_data.csv
-#         rows: parameters
-#         columns: techs
-#         add_dimensions:
-#             costs: monetary
+#   tech_timestep_data:
+#     source: outputs/loading_tabular_data/tech_timestep_data.csv
+#     rows: timesteps
+#     columns: [techs, parameters]
+#   tech_cost_data:
+#     source: outputs/loading_tabular_data/tech_cost_data.csv
+#     rows: parameters
+#     columns: techs
+#     add_dimensions:
+#       costs: monetary
 # techs:
-#     supply_tech:
-#         base_tech: supply
-#         carrier_out: electricity
-#         flow_cap_max: 10
+#   supply_tech:
+#     base_tech: supply
+#     carrier_out: electricity
+#     flow_cap_max: 10
 #
-#     storage_tech:
-#         base_tech: storage
-#         carrier_in: electricity
-#         carrier_out: electricity
-#         flow_cap_max: 6
-#         storage_cap_max: 7
+#   storage_tech:
+#     base_tech: storage
+#     carrier_in: electricity
+#     carrier_out: electricity
+#     flow_cap_max: 6
+#     storage_cap_max: 7
 #
-#     demand_tech:
-#         base_tech: demand
-#         carrier_in: electricity
+#   demand_tech:
+#     base_tech: demand
+#     carrier_in: electricity
 #
-#     transmission_tech:
-#         base_tech: transmission
-#         carrier_in: electricity
-#         carrier_out: electricity
-#         from: A
-#         to: B
-#         flow_cap_max: 8
+#   transmission_tech:
+#     base_tech: transmission
+#     carrier_in: electricity
+#     carrier_out: electricity
+#     from: A
+#     to: B
+#     flow_cap_max: 8
 #
 # nodes:
-#     A.techs: {supply_tech, storage_tech, demand_tech}
-#     B.techs:
-#         supply_tech:
-#             flow_cap_max: 8
-#         demand_tech:
+#   A.techs: {supply_tech, storage_tech, demand_tech}
+#   B.techs:
+#     supply_tech:
+#       flow_cap_max: 8
+#     demand_tech:
 # ```
 #
 # You can try these combinations - and others - yourself in this notebook and you will see that the result remains the same!
@@ -554,37 +554,37 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 #
 # ```yaml
 # data_sources:
-#     tech_data:
-#         source: outputs/loading_tabular_data/tech_data.csv
-#         rows: parameters
-#         columns: techs
-#     tech_node_data:
-#         source: outputs/loading_tabular_data/tech_node_data.csv
-#         rows: [techs, nodes, parameters]
-#     tech_timestep_data:
-#         source: outputs/loading_tabular_data/tech_timestep_data.csv
-#         rows: timesteps
-#         columns: [techs, parameters]
-#     tech_carrier_data:
-#         source: outputs/loading_tabular_data/tech_carrier_data.csv
-#         rows: [techs, parameters]
-#         add_dimensions:
-#             carriers: electricity
-#     tech_cost_data:
-#         source: outputs/loading_tabular_data/tech_cost_data.csv
-#         rows: parameters
-#         columns: techs
-#         add_dimensions:
-#             costs: monetary
+#   tech_data:
+#     source: outputs/loading_tabular_data/tech_data.csv
+#     rows: parameters
+#     columns: techs
+#   tech_node_data:
+#     source: outputs/loading_tabular_data/tech_node_data.csv
+#     rows: [techs, nodes, parameters]
+#   tech_timestep_data:
+#     source: outputs/loading_tabular_data/tech_timestep_data.csv
+#     rows: timesteps
+#     columns: [techs, parameters]
+#   tech_carrier_data:
+#     source: outputs/loading_tabular_data/tech_carrier_data.csv
+#     rows: [techs, parameters]
+#     add_dimensions:
+#       carriers: electricity
+#   tech_cost_data:
+#     source: outputs/loading_tabular_data/tech_cost_data.csv
+#     rows: parameters
+#     columns: techs
+#     add_dimensions:
+#       costs: monetary
 # techs:
-#     storage_tech:
-#         flow_cap_max: 5
-#     transmission_tech:
-#         flow_cap_max: 4
+#   storage_tech:
+#     flow_cap_max: 5
+#   transmission_tech:
+#     flow_cap_max: 4
 #
 # nodes:
-#     A.techs: {supply_tech, storage_tech, demand_tech}
-#     B.techs: {supply_tech, demand_tech}
+#   A.techs: {supply_tech, storage_tech, demand_tech}
+#   B.techs: {supply_tech, demand_tech}
 # ```
 #
 
@@ -592,37 +592,37 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 model_def = calliope.AttrDict.from_yaml_string(
     """
 data_sources:
-    tech_data:
-        source: outputs/loading_tabular_data/tech_data.csv
-        rows: parameters
-        columns: techs
-    tech_node_data:
-        source: outputs/loading_tabular_data/tech_node_data.csv
-        rows: [techs, nodes, parameters]
-    tech_timestep_data:
-        source: outputs/loading_tabular_data/tech_timestep_data.csv
-        rows: timesteps
-        columns: [techs, parameters]
-    tech_carrier_data:
-        source: outputs/loading_tabular_data/tech_carrier_data.csv
-        rows: [techs, parameters]
-        add_dimensions:
-            carriers: electricity
-    tech_cost_data:
-        source: outputs/loading_tabular_data/tech_cost_data.csv
-        rows: parameters
-        columns: techs
-        add_dimensions:
-            costs: monetary
+  tech_data:
+    source: outputs/loading_tabular_data/tech_data.csv
+    rows: parameters
+    columns: techs
+  tech_node_data:
+    source: outputs/loading_tabular_data/tech_node_data.csv
+    rows: [techs, nodes, parameters]
+  tech_timestep_data:
+    source: outputs/loading_tabular_data/tech_timestep_data.csv
+    rows: timesteps
+    columns: [techs, parameters]
+  tech_carrier_data:
+    source: outputs/loading_tabular_data/tech_carrier_data.csv
+    rows: [techs, parameters]
+    add_dimensions:
+      carriers: electricity
+  tech_cost_data:
+    source: outputs/loading_tabular_data/tech_cost_data.csv
+    rows: parameters
+    columns: techs
+    add_dimensions:
+      costs: monetary
 techs:
-    storage_tech:
-        flow_cap_max: 5
-    transmission_tech:
-        flow_cap_max: 4
+  storage_tech:
+    flow_cap_max: 5
+  transmission_tech:
+    flow_cap_max: 4
 
 nodes:
-    A.techs: {supply_tech, storage_tech, demand_tech}
-    B.techs: {supply_tech, demand_tech}
+  A.techs: {supply_tech, storage_tech, demand_tech}
+  B.techs: {supply_tech, demand_tech}
 """
 )
 model_from_data_sources_w_override = calliope.Model(model_def)
@@ -640,76 +640,75 @@ pd.concat([flow_cap_old, flow_cap_new], axis=1, keys=["old", "new"])
 #
 # ```yaml
 # data_sources:
-#     tech_data:
-#         source: outputs/loading_tabular_data/tech_data.csv
-#         rows: parameters
-#         columns: techs
-#     tech_node_data:
-#         source: outputs/loading_tabular_data/tech_node_data.csv
-#         rows: [techs, nodes, parameters]
-#     tech_timestep_data:
-#         source: outputs/loading_tabular_data/tech_timestep_data.csv
-#         rows: timesteps
-#         columns: [techs, parameters]
-#     tech_carrier_data:
-#         source: outputs/loading_tabular_data/tech_carrier_data.csv
-#         rows: [techs, parameters]
-#         add_dimensions:
-#             carriers: electricity
-#     tech_cost_data:
-#         source: outputs/loading_tabular_data/tech_cost_data.csv
-#         rows: parameters
-#         columns: techs
-#         add_dimensions:
-#             costs: monetary
+#   tech_data:
+#     source: outputs/loading_tabular_data/tech_data.csv
+#     rows: parameters
+#     columns: techs
+#   tech_node_data:
+#     source: outputs/loading_tabular_data/tech_node_data.csv
+#     rows: [techs, nodes, parameters]
+#   tech_timestep_data:
+#     source: outputs/loading_tabular_data/tech_timestep_data.csv
+#     rows: timesteps
+#     columns: [techs, parameters]
+#   tech_carrier_data:
+#     source: outputs/loading_tabular_data/tech_carrier_data.csv
+#     rows: [techs, parameters]
+#     add_dimensions:
+#       carriers: electricity
+#   tech_cost_data:
+#     source: outputs/loading_tabular_data/tech_cost_data.csv
+#     rows: parameters
+#     columns: techs
+#     add_dimensions:
+#       costs: monetary
 # techs:
-#     storage_tech:
-#         active: false
+#   storage_tech:
+#     active: false
 #
 # nodes:
-#     A.techs: {supply_tech, storage_tech, demand_tech}
-#     B.techs:
-#         supply_tech:
-#         demand_tech:
-#             active: false
+#   A.techs: {supply_tech, storage_tech, demand_tech}
+#   B.techs:
+#     supply_tech:
+#     demand_tech:
+#       active: false
 # ```
 
 # %%
 model_def = calliope.AttrDict.from_yaml_string(
     """
 data_sources:
-    tech_data:
-        source: outputs/loading_tabular_data/tech_data.csv
-        rows: parameters
-        columns: techs
-    tech_node_data:
-        source: outputs/loading_tabular_data/tech_node_data.csv
-        rows: [techs, nodes, parameters]
-    tech_timestep_data:
-        source: outputs/loading_tabular_data/tech_timestep_data.csv
-        rows: timesteps
-        columns: [techs, parameters]
-    tech_carrier_data:
-        source: outputs/loading_tabular_data/tech_carrier_data.csv
-        rows: [techs, parameters]
-        add_dimensions:
-            carriers: electricity
-    tech_cost_data:
-        source: outputs/loading_tabular_data/tech_cost_data.csv
-        rows: parameters
-        columns: techs
-        add_dimensions:
-            costs: monetary
+  tech_data:
+    source: outputs/loading_tabular_data/tech_data.csv
+    rows: parameters
+    columns: techs
+  tech_node_data:
+    source: outputs/loading_tabular_data/tech_node_data.csv
+    rows: [techs, nodes, parameters]
+  tech_timestep_data:
+    source: outputs/loading_tabular_data/tech_timestep_data.csv
+    rows: timesteps
+    columns: [techs, parameters]
+  tech_carrier_data:
+    source: outputs/loading_tabular_data/tech_carrier_data.csv
+    rows: [techs, parameters]
+    add_dimensions:
+      carriers: electricity
+  tech_cost_data:
+    source: outputs/loading_tabular_data/tech_cost_data.csv
+    rows: parameters
+    columns: techs
+    add_dimensions:
+      costs: monetary
 techs:
-    storage_tech:
-        active: false
-
+  storage_tech:
+    active: false
 nodes:
-    A.techs: {supply_tech, storage_tech, demand_tech}
-    B.techs:
-        supply_tech:
-        demand_tech:
-            active: false
+  A.techs: {supply_tech, storage_tech, demand_tech}
+  B.techs:
+    supply_tech:
+    demand_tech:
+      active: false
 """
 )
 model_from_data_sources_w_deactivations = calliope.Model(model_def)

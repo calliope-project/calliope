@@ -22,14 +22,13 @@ The diagram below gives an overview:
 We distinguish between model _configuration_ (the options provided to Calliope to do its work)
 and the model _definition_ (your representation of a physical system in YAML).
 
-
 ## Model configuration
 
 The model configuration file `model.yaml` is the place to tell Calliope about how to interpret the model definition and how to build and solve your model.
 It does not contain much data, but the scaffolding with which to construct and run your model.
 
-You will notice that we load a custom math file in `config.init`.
-You can find out more about this custom math [below](#sparkles-interlude-custom-math)
+You will notice that we load a "math" file in `config.init`.
+You can find out more about this user-defined math [below](#interlude-user-defined-math)
 
 ```yaml
 --8<-- "src/calliope/example_models/urban_scale/model.yaml:config"
@@ -128,7 +127,7 @@ The definition of this technology in the example model's configuration looks as 
 --8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:pv"
 ```
 
-### :sparkles: Interlude: inheriting from technology groups
+### Interlude: inheriting from technology groups
 
 You will notice that the above technologies _inherit_ `interest_rate_setter`.
 Inheritance allows us to avoid excessive repetition in our model definition.
@@ -188,20 +187,21 @@ Again, `chp` has the definitions for name, color, base_tech, and carrier_in/out.
 It has two carriers defined for its outflow.
 Note the parameter `heat_to_power_ratio`, which we set to 0.8.
 We will use this to create a link between the two output carriers.
-More importantly, it is a _custom parameter_ - Calliope itself does not define `heat_to_power_ratio`
-Therefore, for now, it will not have any effect - we need to introduce our own custom math.
+More importantly, it is a _custom parameter_ - Calliope does not come with `heat_to_power_ratio` pre-defined.
+Therefore, for now, it will not have any effect - we need to introduce our own math.
+
 In this case, we want to ensure that 0.8 units of heat are produced every time a unit of electricity is produced.
 Furthermore, while producing these units of energy - both electricity and heat -
 we want to ensure that gas consumption is only a function of electricity output.
 
-### :sparkles: Interlude: custom math
+### Interlude: user-defined math
 
-The base Calliope math does not have the capacity to handle our `chp` technology definition from above.
+The pre-defined Calliope math does not have the capacity to handle our `chp` technology definition from above.
 By default, setting two output carriers would mean that the choice is _between_ those technologies (e.g., a heat pump that can produce heat _or_ cooling).
-To ensure our `chp` will be constrained as we expect, we add custom math:
+To ensure our `chp` will be constrained as we expect, we add our own math:
 
 ```yaml
---8<-- "src/calliope/example_models/urban_scale/custom_math.yaml"
+--8<-- "src/calliope/example_models/urban_scale/additional_math.yaml"
 ```
 
 There are two things we have to do:
@@ -209,13 +209,14 @@ There are two things we have to do:
 1. Create a link between heat and electricity outflow.
 They both are produced simultaneously.
 We may prefer to have the heat output be set to a maximum equal to the `heat_to_power_ratio`, in which case the expression would become:
+
 ```yaml
 flow_out[carriers=electricity] * heat_to_power_ratio >= flow_out[carriers=heat]
 ```
 
 1. Unlink heat output from gas output.
-This requires updating a constraint that already exists in the base math.
-It is important that you understand the contents of the base math before you add custom math, to ensure you can override the math there appropriately.
+This requires updating a constraint that already exists in the pre-defined math.
+It is important that you understand the contents of the pre-defined math before you add your own, to ensure you can override the math there appropriately.
 
 ### Demand technologies
 

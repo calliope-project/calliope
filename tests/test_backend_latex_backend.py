@@ -284,12 +284,9 @@ class TestLatexBackendModel:
 
                     \begin{equation}
                     \resizebox{\ifdim\width>\linewidth0.95\linewidth\else\width\fi}{!}{$
-                    \begin{array}{r}
+                    \begin{array}{l}
+                        \textit{no_dims} + 2\\
                     \end{array}
-                    \begin{cases}
-                        \textit{no_dims} + 2&\quad
-                        \\
-                    \end{cases}
                     $}
                     \end{equation}
                     \section{Parameters}
@@ -321,12 +318,9 @@ class TestLatexBackendModel:
                     .. container:: scrolling-wrapper
 
                         .. math::
-                            \begin{array}{r}
+                            \begin{array}{l}
+                                \quad 1 + 2\\
                             \end{array}
-                            \begin{cases}
-                                \textit{no_dims} + 2&\quad
-                                \\
-                            \end{cases}
 
                     Parameters
                     ----------
@@ -355,11 +349,9 @@ class TestLatexBackendModel:
 
                     $$
                     \begin{array}{r}
-                    \end{array}
-                    \begin{cases}
                         \textit{no\_dims} + 2&\quad
                         \\
-                    \end{cases}
+                    \end{array}
                     $$
 
                     ## Parameters
@@ -410,12 +402,9 @@ class TestLatexBackendModel:
                     **Default**: 0
 
                     $$
-                    \begin{array}{r}
+                    \begin{array}{l}
+                        \quad 1 + 2\\
                     \end{array}
-                    \begin{cases}
-                        1 + 2&\quad
-                        \\
-                    \end{cases}
                     $$
                     """
         )
@@ -427,46 +416,38 @@ class TestLatexBackendModel:
                 {"sets": ["nodes", "techs"]},
                 textwrap.dedent(
                     r"""
-                \begin{array}{r}
+                \begin{array}{l}
                     \forall{}
                     \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
                     \text{ tech }\negthickspace \in \negthickspace\text{ techs }
-                    \\
-                \end{array}
-                \begin{cases}
-                \end{cases}"""
+                    \!\!:\\[2em]
+                \end{array}"""
                 ),
             ),
             (
                 {"sense": r"\min{}"},
                 textwrap.dedent(
                     r"""
-                \begin{array}{r}
-                    \min{}
-                \end{array}
-                \begin{cases}
-                \end{cases}"""
+                \begin{array}{l}
+                    \min{}\!\!:\\[2em]
+                \end{array}"""
                 ),
             ),
             (
                 {"where": r"foo \land bar"},
                 textwrap.dedent(
                     r"""
-                \begin{array}{r}
-                    \text{if } foo \land bar
-                \end{array}
-                \begin{cases}
-                \end{cases}"""
+                \begin{array}{l}
+                    \text{if } foo \land bar\!\!:\\[2em]
+                \end{array}"""
                 ),
             ),
             (
                 {"where": r""},
                 textwrap.dedent(
                     r"""
-                \begin{array}{r}
-                \end{array}
-                \begin{cases}
-                \end{cases}"""
+                \begin{array}{l}
+                \end{array}"""
                 ),
             ),
             (
@@ -478,15 +459,11 @@ class TestLatexBackendModel:
                 },
                 textwrap.dedent(
                     r"""
-                \begin{array}{r}
-                \end{array}
-                \begin{cases}
-                    foo&\quad
-                    \text{if } bar
-                    \\
-                    foo + 1&\quad
-                    \\
-                \end{cases}"""
+                \begin{array}{l}
+                    \quad \text{if } bar\!\!:\\
+                    \qquad foo\\[2em]
+                    \quad foo + 1\\
+                \end{array}"""
                 ),
             ),
         ],

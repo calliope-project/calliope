@@ -13,7 +13,10 @@ from mkdocs.structure.files import File
 
 TEMPDIR = tempfile.TemporaryDirectory()
 
-CUSTOM_MATH_PATH = Path("docs") / "custom_math" / "examples"
+CUSTOM_MATH_PATH = Path("docs") / "user_defined_math" / "examples"
+
+TOP_LEVEL_PAGE_NAME = "Defining your own math"
+EXAMPLES_PAGE_NAME = "Example additional math gallery"
 
 MD_EXAMPLE_STRING = """
 # {title}
@@ -39,19 +42,17 @@ def on_files(files: list, config: dict, **kwargs):
     top_level_nav_reference = [
         idx
         for idx in config["nav"]
-        if isinstance(idx, dict) and set(idx.keys()) == {"Custom math"}
+        if isinstance(idx, dict) and set(idx.keys()) == {TOP_LEVEL_PAGE_NAME}
     ][0]
     nav_reference = [
         idx
-        for idx in top_level_nav_reference["Custom math"]
-        if isinstance(idx, dict) and set(idx.keys()) == {"Example custom math gallery"}
+        for idx in top_level_nav_reference[TOP_LEVEL_PAGE_NAME]
+        if isinstance(idx, dict) and set(idx.keys()) == {EXAMPLES_PAGE_NAME}
     ][0]
 
     # Generate and attach the markdown files
     for file in sorted(CUSTOM_MATH_PATH.glob("*.yaml")):
-        files.append(
-            _process_file(file, config, nav_reference["Example custom math gallery"])
-        )
+        files.append(_process_file(file, config, nav_reference[EXAMPLES_PAGE_NAME]))
     return files
 
 

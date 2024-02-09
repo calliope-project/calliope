@@ -41,7 +41,7 @@ def _schema_to_md(schema: dict, filename: str, config: dict) -> File:
     output_full_filepath.parent.mkdir(exist_ok=True, parents=True)
 
     parser = jsonschema2md.Parser()
-    parser.tab_size = 2
+    parser.tab_size = 4
 
     lines = parser.parse_schema(schema)
     lines = _customise_markdown(lines)

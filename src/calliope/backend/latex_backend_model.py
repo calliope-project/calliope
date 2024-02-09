@@ -117,30 +117,33 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     # in \text. Curly braces need separating otherwise jinja2 gets confused.
     LATEX_EQUATION_ELEMENT = textwrap.dedent(
         r"""
-        \begin{array}{r}
+        \begin{array}{l}
         {% if sets is defined and sets %}
             \forall{}
         {% for set in sets %}
             \text{ {{set|removesuffix("s")}} }\negthickspace \in \negthickspace\text{ {{set + "," if not loop.last else set }} }
         {% endfor %}
-            \\
+        {% if (where is defined and where and where != "") or (sense is defined and sense) %}
+            \!\!,\\
+        {% else %}
+            \!\!:\\[2em]
+        {% endif %}
         {% endif %}
         {% if sense is defined and sense %}
-            {{sense}}
+            {{sense}}\!\!:\\[2em]
         {% endif %}
         {% if where is defined and where and where != "" %}
-            \text{if } {{where}}
+            \text{if } {{where}}\!\!:\\[2em]
         {% endif %}
-        \end{array}
-        \begin{cases}
         {% for equation in equations %}
-            {{equation["expression"]}}&\quad
         {% if "where" in equation and equation.where != "" %}
-            \text{if } {{equation["where"]}}
+            \quad \text{if } {{equation["where"]}}\!\!:\\
+            \qquad {{equation["expression"]}}\\[2em]
+        {% else %}
+            \quad {{equation["expression"]}}\\
         {% endif %}
-            \\
         {% endfor %}
-        \end{cases}
+        \end{array}
         """
     )
     RST_DOC = textwrap.dedent(
