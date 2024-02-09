@@ -389,6 +389,14 @@ class PyomoBackendModel(backend_model.BackendModel):
         missing_dims_in_orig_vals = set(new_values.dims).difference(parameter_da.dims)
         refs_to_update: set = set()
 
+        if missing_dims_in_new_vals:
+            self.log(
+                "parameters",
+                name,
+                f"New values will be broadcast along the {missing_dims_in_new_vals} dimension(s)."
+                "info",
+            )
+
         if (
             (not parameter_da.shape and new_values.shape)
             or missing_dims_in_orig_vals
@@ -408,23 +416,18 @@ class PyomoBackendModel(backend_model.BackendModel):
             if name not in self.inputs:
                 self.inputs[name] = new_values
             else:
-                self.inputs[name] = new_values.fillna(input_da)
+                new_input_da = new_values.broadcast_like(input_da).fillna(input_da)
+                new_input_da.attrs = input_da.attrs
+                self.inputs[name] = new_input_da
+
             self.delete_component(name, "parameters")
             self.add_parameter(
                 name,
-                new_values,
+                self.inputs[name],
                 default=self.inputs.attrs["defaults"].get(name, np.nan),
             )
             self._rebuild_references(refs_to_update)
             return None
-
-        if missing_dims_in_new_vals:
-            self.log(
-                "parameters",
-                name,
-                f"New values will be broadcast along the {missing_dims_in_new_vals} dimension(s)."
-                "info",
-            )
 
         self._apply_func(self._update_pyomo_param, parameter_da, new_values)
 
