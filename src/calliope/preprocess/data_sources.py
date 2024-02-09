@@ -29,6 +29,8 @@ LOGGER = logging.getLogger(__name__)
 
 locale.setlocale(locale.LC_ALL, "")
 
+exceptions.warn(f"Locale: {locale.getlocale()}")
+
 
 class DataSourceDict(TypedDict):
     rows: NotRequired[str | list[str]]

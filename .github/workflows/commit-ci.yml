@@ -20,12 +20,18 @@ defaults:
     shell: bash -l {0}
 
 env:
-  LANG: "en_GB.UTF-8"
+  LANG: "en_GB"
+  LC_ALL: "en_GB.UTF-8"
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+
+    - name: Update locale
+      run: |
+        sudo locale-gen en_GB en_GB.UTF-8
+
     - uses: actions/checkout@v3
 
     - uses: mamba-org/setup-micromamba@v1
