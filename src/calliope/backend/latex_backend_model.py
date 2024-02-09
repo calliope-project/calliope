@@ -164,17 +164,37 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     Decision Variables
     ------------------
+    {% elif component_type == "parameters" %}
+
+    Parameters
+    ----------
     {% endif %}
     {% for equation in equations %}
 
     {{ equation.name }}
     {{ "^" * equation.name|length }}
-
     {% if equation.description is not none %}
+
     {{ equation.description }}
     {% endif %}
+    {% if equation.references %}
 
+    **Used in**:
+    {% for ref in equation.references %}
+
+    * {{ ref }}
+    {% endfor %}
+    {% endif %}
+    {% if equation.unit is not none %}
+
+    **Unit**: {{ equation.unit }}
+    {% endif %}
+    {% if equation.default is not none %}
+
+    **Default**: {{ equation.default }}
+    {% endif %}
     {% if equation.expression != "" %}
+
     .. container:: scrolling-wrapper
 
         .. math::{{ equation.expression | indent(8) }}
@@ -210,14 +230,35 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     \section{Where}
     {% elif component_type == "variables" %}
     \section{Decision Variables}
+    {% elif component_type == "parameters" %}
+    \section{Parameters}
     {% endif %}
     {% for equation in equations %}
 
     \paragraph{ {{ equation.name }} }
     {% if equation.description is not none %}
+
     {{ equation.description }}
     {% endif %}
+    {% if equation.references %}
+
+    \textbf{Used in}:
+    {% for ref in equation.references %}
+    \begin{itemize}
+        \item {{ ref }}
+    \end{itemize}
+    {% endfor %}
+    {% endif %}
+    {% if equation.unit is not none %}
+
+    \textbf{Unit}: {{ equation.unit }}
+    {% endif %}
+    {% if equation.default is not none %}
+
+    \textbf{Default}: {{ equation.default }}
+    {% endif %}
     {% if equation.expression != "" %}
+
     \begin{equation}
     \resizebox{\ifdim\width>\linewidth0.95\linewidth\else\width\fi}{!}{${{ equation.expression }}
     $}
@@ -242,16 +283,21 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {% elif component_type == "variables" %}
 
     ## Decision Variables
+    {% elif component_type == "parameters" %}
+
+    ## Parameters
     {% endif %}
     {% for equation in equations %}
 
     ### {{ equation.name }}
     {% if equation.description is not none %}
+
     {{ equation.description }}
     {% endif %}
     {% if equation.references %}
 
     **Used in**:
+
     {% for ref in equation.references %}
     * [{{ ref }}](#{{ ref }})
     {% endfor %}
@@ -297,7 +343,12 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         default: Any = np.nan,
         use_inf_as_na: bool = False,
     ) -> None:
-        self._add_to_dataset(parameter_name, parameter_values, "parameters", {})
+
+        attrs = {
+            "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
+            "unit": self._PARAM_UNITS.get(parameter_name, None),
+        }
+        self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
 
     def add_constraint(
         self,
@@ -423,7 +474,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         components = {
             objtype: [
                 {
-                    "expression": da.attrs["math_string"],
+                    "expression": da.attrs.get("math_string", ""),
                     "name": name,
                     "description": da.attrs.get("description", None),
                     "references": list(da.attrs.get("references", set())),
@@ -432,15 +483,19 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 }
                 for name, da in getattr(self, objtype).data_vars.items()
                 if "math_string" in da.attrs
+                or (objtype == "parameters" and da.attrs["references"])
             ]
             for objtype in [
                 "objectives",
                 "constraints",
                 "global_expressions",
                 "variables",
+                "parameters",
             ]
             if getattr(self, objtype).data_vars
         }
+        if not components["parameters"]:
+            del components["parameters"]
         return self._render(doc_template, components=components)
 
     def _add_latex_strings(
@@ -454,7 +509,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             self, return_type="math_string", references=references
         )
 
-        where_latex = element.evaluate_where(self, return_type="math_string")
+        where_latex = element.evaluate_where(
+            self, return_type="math_string", references=references
+        )
 
         if self.include == "all" or (self.include == "valid" and where.any()):
             equation_strings.append({"expression": expr, "where": where_latex})

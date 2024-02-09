@@ -50,6 +50,7 @@ COMPONENT_TRANSLATOR = {
 
 
 class PyomoBackendModel(backend_model.BackendModel):
+
     def __init__(self, inputs: xr.Dataset, **kwargs) -> None:
         """Pyomo solver interface class.
 
@@ -97,7 +98,11 @@ class PyomoBackendModel(backend_model.BackendModel):
             parameter_da = parameter_da.astype(float)
 
         parameter_da.attrs["original_dtype"] = parameter_values.dtype
-        self._add_to_dataset(parameter_name, parameter_da, "parameters", {})
+        attrs = {
+            "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
+            "unit": self._PARAM_UNITS.get(parameter_name, None),
+        }
+        self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
 
     def add_constraint(
         self,
@@ -370,6 +375,7 @@ class PyomoBackendModel(backend_model.BackendModel):
     ) -> None:
         new_values = xr.DataArray(new_values)
         parameter_da = self.get_parameter(name)
+        input_da = self.inputs.get(name, xr.DataArray(np.nan))
         missing_dims_in_new_vals = set(parameter_da.dims).difference(new_values.dims)
         missing_dims_in_orig_vals = set(new_values.dims).difference(parameter_da.dims)
         refs_to_update: set = set()
@@ -378,6 +384,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             (not parameter_da.shape and new_values.shape)
             or missing_dims_in_orig_vals
             or (parameter_da.isnull() & new_values.notnull()).any()
+            or (input_da.isnull() & new_values.notnull()).any()
         ):
             refs_to_update = self._find_all_references(parameter_da.attrs["references"])
             if refs_to_update:
@@ -388,6 +395,11 @@ class PyomoBackendModel(backend_model.BackendModel):
                     f"The optimisation problem components {sorted(refs_to_update)} will be re-built.",
                     "info",
                 )
+
+            if name not in self.inputs:
+                self.inputs[name] = new_values
+            else:
+                self.inputs[name] = new_values.fillna(input_da)
             self.delete_component(name, "parameters")
             self.add_parameter(
                 name,

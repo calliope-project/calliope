@@ -246,9 +246,10 @@ class ParsedBackendEquation:
     @overload  # noqa: F811
     def evaluate_where(  # noqa: F811
         self,
-        backend_interface: backend_model.BackendModel,
+        backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: Literal["array"] = "array",
+        references: Optional[set] = None,
         initial_where: xr.DataArray = TRUE_ARRAY,
     ) -> xr.DataArray:
         "Expecting array if not requesting latex string"
@@ -256,17 +257,19 @@ class ParsedBackendEquation:
     @overload  # noqa: F811
     def evaluate_where(  # noqa: F811
         self,
-        backend_interface: backend_model.BackendModel,
+        backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: Literal["math_string"],
+        references: Optional[set] = None,
     ) -> str:
         "Expecting string if requesting latex string"
 
     def evaluate_where(  # noqa: F811
         self,
-        backend_interface: backend_model.BackendModel,
+        backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: str = "array",
+        references: Optional[set] = None,
         initial_where: xr.DataArray = TRUE_ARRAY,
     ) -> Union[xr.DataArray, str]:
         """Evaluate parsed backend object dictionary `where` string.
@@ -294,6 +297,7 @@ class ParsedBackendEquation:
                 helper_functions=helper_functions._registry["where"],
                 input_data=backend_interface.inputs,
                 backend_interface=backend_interface,
+                references=references if references is not None else set(),
                 apply_where=True,
             )
             for where in self.where
@@ -327,9 +331,9 @@ class ParsedBackendEquation:
         self,
         backend_interface: backend_model.BackendModel,
         *,
-        return_type: Literal["array"] = "array",
+        return_type: Literal["array"],
         references: Optional[set] = None,
-        where: Optional[xr.DataArray] = None,
+        where: xr.DataArray = TRUE_ARRAY,
     ) -> xr.DataArray:
         "Expecting anything (most likely an array) if not requesting latex string"
 
@@ -347,7 +351,7 @@ class ParsedBackendEquation:
         self,
         backend_interface: backend_model.BackendModel,
         *,
-        return_type: str = "array",
+        return_type: Literal["array", "math_string"] = "array",
         references: Optional[set] = None,
         where: xr.DataArray = TRUE_ARRAY,
     ) -> Union[xr.DataArray, str]:
@@ -361,7 +365,7 @@ class ParsedBackendEquation:
                 If "array", return xarray.DataArray. If "math_string", return LaTex math string.
                 Defaults to "array".
             references (Optional[set], optional): If given, any references in the math string to other model components will be logged here. Defaults to None.
-            where (Optional[xr.DataArray], optional): If given, should be a boolean array with which to mask any produced arrays. Defaults to xr.DataArray(True).
+            where (xr.DataArray, optional): If given, should be a boolean array with which to mask any produced arrays. Defaults to xr.DataArray(True).
 
         Returns:
             Union[xr.DataArray, str]:
@@ -758,6 +762,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         *,
         align_to_foreach_sets: bool = True,
         break_early: bool = True,
+        references: Optional[set] = None,
     ) -> xr.DataArray:
         """
         Create multi-dimensional array from model inputs and component sets (defined in foreach)
@@ -786,7 +791,11 @@ class ParsedBackendComponent(ParsedBackendEquation):
             return foreach_where
 
         self.parse_top_level_where()
-        where = self.evaluate_where(backend_interface, initial_where=foreach_where)
+        where = self.evaluate_where(
+            backend_interface,
+            initial_where=foreach_where,
+            references=references if references is not None else set(),
+        )
         if break_early and not where.any():
             return where
 

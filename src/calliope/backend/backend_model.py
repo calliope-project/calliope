@@ -58,6 +58,9 @@ class BackendModelGenerator(ABC):
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
     _COMPONENT_ATTR_METADATA = ["description", "unit", "default"]
 
+    _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
+    _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
+
     def __init__(self, inputs: xr.Dataset, **kwargs):
         """Abstract base class to build a representation of the optimisation problem.
 
@@ -189,6 +192,7 @@ class BackendModelGenerator(ABC):
             "input_data": self.inputs,
             "helper_functions": helper_functions._registry["where"],
             "apply_where": True,
+            "references": set(),
         }
         for check_type, check_list in check_results.items():
             for check in data_checks[check_type]:
@@ -290,7 +294,10 @@ class BackendModelGenerator(ABC):
         )
 
         top_level_where = parsed_component.generate_top_level_where_array(
-            self, align_to_foreach_sets=False, break_early=break_early
+            self,
+            align_to_foreach_sets=False,
+            break_early=break_early,
+            references=references,
         )
         if break_early and not top_level_where.any():
             return parsed_component
@@ -309,7 +316,9 @@ class BackendModelGenerator(ABC):
                 .astype(np.dtype("O"))
             )
         for element in equations:
-            where = element.evaluate_where(self, initial_where=top_level_where)
+            where = element.evaluate_where(
+                self, initial_where=top_level_where, references=references
+            )
             if break_early and not where.any():
                 continue
 
@@ -372,7 +381,6 @@ class BackendModelGenerator(ABC):
             model_data (xr.Dataset): Input model data.
             defaults (dict): Parameter defaults.
         """
-
         for param_name, param_data in self.inputs.filter_by_attrs(
             is_result=0
         ).data_vars.items():
