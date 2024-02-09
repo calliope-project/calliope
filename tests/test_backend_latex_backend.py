@@ -387,6 +387,39 @@ class TestLatexBackendModel:
         doc = backend_model.generate_math_doc(format=format)
         assert doc == expected
 
+    def test_generate_math_doc_no_params(self, dummy_model_data):
+        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+        backend_model.add_global_expression(
+            "expr",
+            {
+                "equations": [{"expression": "1 + 2"}],
+                "description": "foobar",
+                "default": 0,
+            },
+        )
+        doc = backend_model.generate_math_doc(format="md")
+        assert doc == textwrap.dedent(
+            r"""
+
+                    ## Where
+
+                    ### expr
+
+                    foobar
+
+                    **Default**: 0
+
+                    $$
+                    \begin{array}{r}
+                    \end{array}
+                    \begin{cases}
+                        1 + 2&\quad
+                        \\
+                    \end{cases}
+                    $$
+                    """
+        )
+
     @pytest.mark.parametrize(
         ["kwargs", "expected"],
         [

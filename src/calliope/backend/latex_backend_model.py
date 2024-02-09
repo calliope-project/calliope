@@ -5,7 +5,7 @@ import re
 import textwrap
 import typing
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
+from typing import Any, Literal, Optional, Union, overload
 
 import jinja2
 import numpy as np
@@ -13,9 +13,6 @@ import xarray as xr
 
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import ModelError
-
-if TYPE_CHECKING:
-    pass
 
 _ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
 
