@@ -21,7 +21,6 @@ defaults:
 
 env:
   LANG: "en_GB"
-  LC_ALL: "en_GB.UTF-8"
 
 jobs:
   test:
@@ -29,8 +28,7 @@ jobs:
     steps:
 
     - name: Update locale
-      run: |
-        sudo locale-gen en_GB en_GB.UTF-8
+      run: sudo locale-gen en_GB en_GB.UTF-8
 
     - uses: actions/checkout@v3
 

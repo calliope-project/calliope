@@ -28,7 +28,6 @@ concurrency:
 
 env:
   LANG: "en_GB.UTF-8"
-  LC_ALL: "en_GB.UTF-8"
 
 jobs:
   test:
@@ -45,6 +44,11 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
+
+    - name: Update locale
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo locale-gen en_GB en_GB.UTF-8
+
     - uses: actions/checkout@v3
 
     - uses: mamba-org/setup-micromamba@v1
