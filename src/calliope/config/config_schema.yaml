@@ -47,10 +47,6 @@ properties:
             type: ["null", string]
             default: null
             description: setting to cluster the timeseries, must be a path to a file where each date is linked to a representative date that also exists in the timeseries.
-          time_data_path:
-            type: string
-            default: "."
-            description: Path to time series data. If relative, it will be relative to the base model definition file.
           time_format:
             type: string
             default: "ISO8601"

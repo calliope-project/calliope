@@ -14,7 +14,6 @@ import:
 config:
   init:
     name: Test model
-    time_data_path: "timeseries_data"
     time_subset: ["2005-01-01", "2005-01-02"]
   build:
     mode: plan
