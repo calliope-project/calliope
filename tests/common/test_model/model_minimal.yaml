@@ -4,7 +4,6 @@ import:
 config:
   init:
     name: Minimal test model
-    time_data_path: "timeseries_data"
   build:
     mode: plan
   solve:

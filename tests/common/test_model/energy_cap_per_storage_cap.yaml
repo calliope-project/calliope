@@ -1,7 +1,6 @@
 config:
   init:
     name: Test model for energy capacity per storage capacity
-    time_data_path: "timeseries_data"
     time_subset: ["2005-01-01 00:00", "2005-01-01 01:00"]
 
   build:
