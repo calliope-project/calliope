@@ -5,7 +5,7 @@ On this page, we look at some of the more advanced features of Calliope's math a
 !!! info "See also"
     [Base math formulation][base-math],
     [Model definition schema][model-definition-schema],
-    [Introducing custom math to your model](../custom_math/customise.md),
+    [Introducing your own math to your model](../user_defined_math/customise.md),
     ["MILP" example model](../examples/milp/index.md).
 
 ## Multiple input/output carriers
@@ -24,21 +24,21 @@ E.g.,
 
 ```yaml
 techs:
-    chp:
-        name: Combined heat and power (CHP) plant
-        carrier_in: gas
-        carrier_out: [electricity, heat]
-    ashp:
-        name: Air source heat pump
-        carrier_in: electricity
-        carrier_out: [cooling, heat]
-    slightly_cleaner_coal_plant:
-        name: Dual fuel coal fired power station
-        carrier_in: [coal, biofuel]
-        carrier_out: electricity
-    nuclear:
-        name: Nuclear power station
-        carrier_out: [electricity, nuclear_waste]
+  chp:
+    name: Combined heat and power (CHP) plant
+    carrier_in: gas
+    carrier_out: [electricity, heat]
+  ashp:
+    name: Air source heat pump
+    carrier_in: electricity
+    carrier_out: [cooling, heat]
+  slightly_cleaner_coal_plant:
+    name: Dual fuel coal fired power station
+    carrier_in: [coal, biofuel]
+    carrier_out: electricity
+  nuclear:
+    name: Nuclear power station
+    carrier_out: [electricity, nuclear_waste]
 ```
 
 The default math applied to these multiple carriers is that inflow carrier requirements are based on the sum of the outflow carriers and vice-versa (see [the base math][balance_conversion]).
@@ -46,50 +46,50 @@ This is valid for our heat pump and coal-fired power plant examples above, but n
 In these examples, the inflow is linked to a specific outflow (gas / nuclear fuel consumption is a function of electricity production).
 The other carrier outflows are then linked to the "primary" outflow.
 
-To capture this slightly different math, you will need to apply your own [custom math](../custom_math/index.md).
-For example, the CHP example is dealt with in our [urban scale example model](../examples/urban_scale/index.md#sparkles-interlude-custom-math) and in an [example custom math file][chp-plants].
+To capture this slightly different math, you will need to [apply your own math](../user_defined_math/index.md).
+For example, the CHP example is dealt with in our [urban scale example model](../examples/urban_scale/index.md#interlude-user-defined-math) and in an [example additional math file][chp-plants].
 
 No matter how you formulate your math, you can (and probably will need to) extend your technology parameters to account for these different carriers.
 For instance, to differentiate `flow_cap_max` between carriers or to assign different conversion efficiencies / costs:
 
 ```yaml
 techs:
-    chp:
-        name: Combined heat and power (CHP) plant
-        carrier_in: gas
-        carrier_out: [electricity, heat]
-        flow_cap_max:
-            data: 100
-            index: electricity
-            dims: carriers
-        cost_flow_cap:
-            data: 0.1
-            index: [[electricity, monetary]]
-            dims: [carriers, costs]
-    ashp:
-        name: Air source heat pump
-        carrier_in: electricity
-        carrier_out: [cooling, heat]
-        flow_out_eff:
-            data: [3, 4]
-            index: [cooling, heat]
-            dims: carriers
-    slightly_cleaner_coal_plant:
-        name: Dual fuel coal fired power station
-        carrier_in: [coal, biofuel]
-        carrier_out: electricity
-        cost_flow_in:
-            data: [0.1, 0.5]
-            index: [[coal, monetary], [biofuel, monetary]]
-            dims: [carriers, costs]
-    nuclear:
-        name: Nuclear power station
-        carrier_out: [electricity, nuclear_waste]
-        waste_per_flow_out: 0.1  # (1)!
+  chp:
+    name: Combined heat and power (CHP) plant
+    carrier_in: gas
+    carrier_out: [electricity, heat]
+    flow_cap_max:
+      data: 100
+      index: electricity
+      dims: carriers
+    cost_flow_cap:
+      data: 0.1
+      index: [[electricity, monetary]]
+      dims: [carriers, costs]
+  ashp:
+    name: Air source heat pump
+    carrier_in: electricity
+    carrier_out: [cooling, heat]
+    flow_out_eff:
+      data: [3, 4]
+      index: [cooling, heat]
+      dims: carriers
+  slightly_cleaner_coal_plant:
+    name: Dual fuel coal fired power station
+    carrier_in: [coal, biofuel]
+    carrier_out: electricity
+    cost_flow_in:
+      data: [0.1, 0.5]
+      index: [[coal, monetary], [biofuel, monetary]]
+      dims: [carriers, costs]
+  nuclear:
+    name: Nuclear power station
+    carrier_out: [electricity, nuclear_waste]
+    waste_per_flow_out: 0.1  # (1)!
 ```
 
 1. This is a user-defined parameter that you won't find in our [list of internal parameters][model-definition-schema].
-You can use it in your custom math to link nuclear waste outflow with electricity outflow.
+You can use it in your own math to link nuclear waste outflow with electricity outflow.
 
 ## Activating storage buffers in non-storage technologies
 
@@ -132,11 +132,11 @@ To force unidirectionality for a given technology along a given link, you have t
 
 ```yaml
 techs:
-    region1_to_region2:
-        from: region1
-        to: region2
-        base_tech: transmission
-        one_way: true
+  region1_to_region2:
+    from: region1
+    to: region2
+    base_tech: transmission
+    one_way: true
 ```
 
 This will only allow transmission from `region1` to `region2`.
@@ -148,14 +148,14 @@ Transmission technologies can additionally specify per-distance efficiency (loss
 
 ```yaml
 techs:
-    my_transmission_tech:
-        # "efficiency" (1-loss) per unit of distance
-        flow_out_eff_per_distance: 0.99
-        cost_flow_cap_per_distance:
-            data: 10
-            index: monetary
-            dims: costs
-        distance: 500
+  my_transmission_tech:
+    # "efficiency" (1-loss) per unit of distance
+    flow_out_eff_per_distance: 0.99
+    cost_flow_cap_per_distance:
+      data: 10
+      index: monetary
+      dims: costs
+    distance: 500
 ```
 
 The distance can be specified in transmission links (as above) or, if no distance is given, from node `latitude` and `longitude` coordinates.

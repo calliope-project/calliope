@@ -11,16 +11,16 @@ Both are specified at the top level of the model configuration, as in this examp
 
 ```yaml
 scenarios:
-    high_cost_2005: ["high_cost", "year2005"]
-    high_cost_2006: ["high_cost", "year2006"]
+  high_cost_2005: ["high_cost", "year2005"]
+  high_cost_2006: ["high_cost", "year2006"]
 
 overrides:
-    high_cost:
-        techs.onshore_wind.cost_flow_cap.data: 2000
-    year2005:
-        model.time_subset: ['2005-01-01', '2005-12-31']
-    year2006:
-        model.time_subset: ['2006-01-01', '2006-12-31']
+  high_cost:
+    techs.onshore_wind.cost_flow_cap.data: 2000
+  year2005:
+    model.time_subset: ['2005-01-01', '2005-12-31']
+  year2006:
+    model.time_subset: ['2006-01-01', '2006-12-31']
 
 config:
     ...
@@ -45,25 +45,25 @@ The following example illustrates this:
 
 ```yaml
 overrides:
-    some_override:
-        techs:
-            some_tech.constraints.flow_cap_max: 10
-        import: [additional_definitions.yaml]
+  some_override:
+    techs:
+      some_tech.constraints.flow_cap_max: 10
+    import: [additional_definitions.yaml]
 ```
 
 `additional_definitions.yaml`:
 
 ```yaml
 techs:
-    some_other_tech.constraints.flow_out_eff: 0.1
+  some_other_tech.constraints.flow_out_eff: 0.1
 ```
 
 This is equivalent to the following override:
 
 ```yaml
 overrides:
-    some_override:
-        techs:
-            some_tech.constraints.flow_cap_max: 10
-            some_other_tech.constraints.flow_out_eff: 0.1
+  some_override:
+    techs:
+      some_tech.constraints.flow_cap_max: 10
+      some_other_tech.constraints.flow_out_eff: 0.1
 ```

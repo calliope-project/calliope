@@ -85,7 +85,7 @@ The equation expressions _must_ have comparison operators.
 
 ## Objectives
 
-With your constrained decision variables and a global expression that binds these variables to costs, you need an objective to minimise/maximise. The default built-in objective is `min_cost_optimisation` and looks as follows:
+With your constrained decision variables and a global expression that binds these variables to costs, you need an objective to minimise/maximise. The default, pre-defined objective is `min_cost_optimisation` and looks as follows:
 
 ```yaml
 objectives:
@@ -102,6 +102,5 @@ These expressions do _not_ have comparison operators.
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
 
 !!! warning
-
     You can only have one objective function activated in your math.
     If you have defined multiple objective functions, you can deactivate unwanted ones using `active: false`, or you can set your top-level `where` string on each that leads to only one being valid for your particular problem.

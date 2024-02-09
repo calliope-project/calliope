@@ -1622,7 +1622,7 @@ class TestClusteringConstraints:
         override = {
             "config.init.time_subset": ["2005-01-01", "2005-01-04"],
             "config.init.time_cluster": "data_sources/cluster_days.csv",
-            "config.init.custom_math": (
+            "config.init.add_math": (
                 ["storage_inter_cluster"] if storage_inter_cluster else []
             ),
             "config.build.cyclic_storage": cyclic,
@@ -1746,46 +1746,43 @@ class TestNewBackend:
         base_math.union(mode_custom_math, allow_override=True)
 
         backend = PyomoBackendModel(m.inputs, mode=mode)
-        backend._add_run_mode_custom_math()
+        backend._add_run_mode_math()
 
-        assert f"Updating math formulation with {mode} mode custom math." in caplog.text
+        assert f"Updating math formulation with {mode} mode math." in caplog.text
 
         assert m.math != base_math
         assert backend.inputs.attrs["math"].as_dict() == base_math.as_dict()
 
     def test_add_run_mode_custom_math_before_build(self, caplog, temp_path):
-        """A user can override the run mode custom math by including it directly in the custom math string"""
+        """A user can override the run mode math by including it directly in the additional math list"""
         caplog.set_level(logging.DEBUG)
         custom_math = AttrDict({"variables": {"flow_cap": {"active": True}}})
         file_path = temp_path.join("custom-math.yaml")
         custom_math.to_yaml(file_path)
 
         m = build_model(
-            {"config.init.custom_math": ["operate", str(file_path)]},
+            {"config.init.add_math": ["operate", str(file_path)]},
             "simple_supply,two_hours,investment_costs",
         )
         backend = PyomoBackendModel(m.inputs, mode="operate")
-        backend._add_run_mode_custom_math()
+        backend._add_run_mode_math()
 
-        # We set operate mode explicitly in our custom math so it won't be added again
-        assert (
-            "Updating math formulation with operate mode custom math."
-            not in caplog.text
-        )
+        # We set operate mode explicitly in our additional math so it won't be added again
+        assert "Updating math formulation with operate mode math." not in caplog.text
 
-        # operate mode set it to false, then our custom math set it back to active
+        # operate mode set it to false, then our math set it back to active
         assert m.math.variables.flow_cap.active
-        # operate mode set it to false and our custom math did not override that
+        # operate mode set it to false and our math did not override that
         assert not m.math.variables.storage_cap.active
 
     def test_run_mode_mismatch(self):
         m = build_model(
-            {"config.init.custom_math": ["operate"]},
+            {"config.init.add_math": ["operate"]},
             "simple_supply,two_hours,investment_costs",
         )
         backend = PyomoBackendModel(m.inputs)
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            backend._add_run_mode_custom_math()
+            backend._add_run_mode_math()
 
         assert check_error_or_warning(
             excinfo, "Running in plan mode, but run mode(s) {'operate'}"
