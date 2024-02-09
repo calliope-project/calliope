@@ -285,7 +285,7 @@ class TestLatexBackendModel:
                     \begin{equation}
                     \resizebox{\ifdim\width>\linewidth0.95\linewidth\else\width\fi}{!}{$
                     \begin{array}{l}
-                        \textit{no_dims} + 2\\
+                        \quad \textit{no_dims} + 2\\
                     \end{array}
                     $}
                     \end{equation}
@@ -319,7 +319,7 @@ class TestLatexBackendModel:
 
                         .. math::
                             \begin{array}{l}
-                                \quad 1 + 2\\
+                                \quad \textit{no_dims} + 2\\
                             \end{array}
 
                     Parameters
@@ -348,9 +348,8 @@ class TestLatexBackendModel:
                     **Default**: 0
 
                     $$
-                    \begin{array}{r}
-                        \textit{no\_dims} + 2&\quad
-                        \\
+                    \begin{array}{l}
+                        \quad \textit{no\_dims} + 2\\
                     \end{array}
                     $$
 

@@ -825,7 +825,7 @@ properties:
             x-type: float
             title: Inflow (i.e., export from node) efficiency per distance of transmission links.
             description: >-
-              Total link efficiency will be calculated as `\text{flow_in_eff}\times{}\text{flow_in_eff_per_distance}^\text{distance}$.
+              Total link efficiency will be calculated as $\text{flow\_in\_eff}\times{}\text{flow\_in\_eff\_per\_distance}^\text{distance}$.
               Set as value between 1 (no loss) and 0 (all lost).
 
           flow_out_eff_per_distance:
@@ -835,7 +835,7 @@ properties:
             x-type: float
             title: Outflow (i.e., import from node) efficiency per distance of transmission links.
             description: >-
-              Total link efficiency will be calculated as $\text{flow_out_eff}\times{}\text{flow_out_eff_per_distance}^\text{distance}$.
+              Total link efficiency will be calculated as $\text{flow\_out\_eff}\times{}\text{flow\_out\_eff\_per\_distance}^\text{distance}$.
               Set as value between 1 (no loss) and 0 (all lost).
 
           cost_flow_cap_per_distance:
