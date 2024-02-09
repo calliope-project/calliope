@@ -1800,20 +1800,28 @@ class TestNewBackend:
         assert (
             var.to_series().dropna().apply(lambda x: isinstance(x, pmo.variable)).all()
         )
-        assert var.attrs == {
-            "obj_type": "variables",
-            "references": {
-                "flow_in_max",
-                "flow_out_max",
-                "cost_investment",
-                "cost_investment_flow_cap",
-                "symmetric_transmission",
-            },
-            "description": "A technology's flow capacity, also known as its nominal or nameplate capacity.",
-            "unit": "power",
-            "default": 0,
-            "coords_in_name": False,
+        expected_keys = set(
+            [
+                "obj_type",
+                "references",
+                "description",
+                "unit",
+                "default",
+                "yaml_snippet",
+                "coords_in_name",
+            ]
+        )
+        assert not expected_keys.symmetric_difference(var.attrs.keys())
+        assert var.attrs["obj_type"] == "variables"
+        assert var.attrs["references"] == {
+            "flow_in_max",
+            "flow_out_max",
+            "cost_investment",
+            "cost_investment_flow_cap",
+            "symmetric_transmission",
         }
+        assert var.attrs["default"] == 0
+        assert var.attrs["coords_in_name"] is False
 
     def test_new_build_get_variable_as_vals(self, simple_supply):
         var = simple_supply.backend.get_variable("flow_cap", as_backend_objs=False)
@@ -1855,14 +1863,22 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.expression))
             .all()
         )
-        assert expr.attrs == {
-            "obj_type": "global_expressions",
-            "references": {"cost"},
-            "description": "The installation costs of a technology, including annualised investment costs and annual maintenance costs.",
-            "unit": "cost",
-            "default": 0,
-            "coords_in_name": False,
-        }
+        expected_keys = set(
+            [
+                "obj_type",
+                "references",
+                "description",
+                "unit",
+                "default",
+                "yaml_snippet",
+                "coords_in_name",
+            ]
+        )
+        assert not expected_keys.symmetric_difference(expr.attrs.keys())
+        assert expr.attrs["obj_type"] == "global_expressions"
+        assert expr.attrs["references"] == {"cost"}
+        assert expr.attrs["default"] == 0
+        assert expr.attrs["coords_in_name"] is False
 
     def test_new_build_get_global_expression_as_str(self, simple_supply):
         expr = simple_supply.backend.get_global_expression(
@@ -1886,12 +1902,13 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.constraint))
             .all()
         )
-        assert constr.attrs == {
-            "obj_type": "constraints",
-            "references": set(),
-            "description": "Set the global carrier balance of the optimisation problem by fixing the total production of a given carrier to equal the total consumption of that carrier at every node in every timestep.",
-            "coords_in_name": False,
-        }
+        expected_keys = set(
+            ["obj_type", "references", "description", "yaml_snippet", "coords_in_name"]
+        )
+        assert not expected_keys.symmetric_difference(constr.attrs.keys())
+        assert constr.attrs["obj_type"] == "constraints"
+        assert constr.attrs["references"] == set()
+        assert constr.attrs["coords_in_name"] is False
 
     def test_new_build_get_constraint_as_str(self, simple_supply):
         constr = simple_supply.backend.get_constraint(

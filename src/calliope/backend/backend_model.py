@@ -438,10 +438,12 @@ class BackendModelGenerator(ABC):
         """
 
         add_attrs = {
-            attr: unparsed_dict.get(attr)
+            attr: unparsed_dict.pop(attr)
             for attr in self._COMPONENT_ATTR_METADATA
             if attr in unparsed_dict.keys()
         }
+        if unparsed_dict:
+            add_attrs["yaml_snippet"] = AttrDict(unparsed_dict).to_yaml()
 
         da.attrs.update(
             {
