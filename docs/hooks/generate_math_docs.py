@@ -5,12 +5,15 @@ Generate LaTeX math to include in the documentation.
 """
 
 import importlib.resources
+import logging
 import tempfile
 import textwrap
 from pathlib import Path
 
 import calliope
 from mkdocs.structure.files import File
+
+logger = logging.getLogger("mkdocs")
 
 TEMPDIR = tempfile.TemporaryDirectory()
 
@@ -74,7 +77,7 @@ def write_file(
 
     files.append(
         File(
-            path=output_file,
+            path=output_file.as_posix(),
             src_dir=TEMPDIR.name,
             dest_dir=config["site_dir"],
             use_directory_urls=config["use_directory_urls"],
@@ -84,8 +87,8 @@ def write_file(
     # Append the source file to make it available for direct download
     files.append(
         File(
-            path=Path("math") / filename,
-            src_dir=importlib.resources.files("calliope"),
+            path=(Path("math") / filename).as_posix(),
+            src_dir=Path(importlib.resources.files("calliope")).as_posix(),
             dest_dir=config["site_dir"],
             use_directory_urls=config["use_directory_urls"],
         )
@@ -164,11 +167,21 @@ def _keep_only_changes(base_model: calliope.Model, model: calliope.Model) -> Non
                     full_del.append(name)
             else:
                 _add_to_description(component_dict, "|NEW|")
+
     model.math_documentation.build()
     for key in expr_del:
         model.math_documentation._instance._dataset[key].attrs["math_string"] = ""
     for key in full_del:
         del model.math_documentation._instance._dataset[key]
+    for var in model.math_documentation._instance._dataset.values():
+        var.attrs["references"] = var.attrs["references"].intersection(
+            model.math_documentation._instance._dataset.keys()
+        )
+        var.attrs["references"] = var.attrs["references"].difference(expr_del)
+
+    logger.info(
+        model.math_documentation._instance._dataset["carrier_in"].attrs["references"]
+    )
 
 
 def _add_to_description(component_dict: dict, update_string: str) -> None:

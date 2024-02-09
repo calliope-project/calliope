@@ -329,7 +329,8 @@ Here are the main changes to parameter/decision variable names that are not link
 * `exists` → `active`.
 
 !!! info "See also"
-    [Our full list of internally defined parameters][model-definition-schema].
+    [Our full list of internally defined parameters][model-definition-schema];
+    the `Parameters` section of our [pre-defined base math documentation][base-math].
 
 ### Renaming / moving configuration options
 

@@ -3,7 +3,7 @@
 On this page, we look at some of the more advanced features of Calliope's math and configuration that can help you understand the breadth of what we offer.
 
 !!! info "See also"
-    [Base math formulation][base-math],
+    [Pre-defined math formulation][base-math] (which includes a description of our pre-defined parameters),
     [Model definition schema][model-definition-schema],
     [Introducing your own math to your model](../user_defined_math/customise.md),
     ["MILP" example model](../examples/milp/index.md).
@@ -88,7 +88,7 @@ techs:
     waste_per_flow_out: 0.1  # (1)!
 ```
 
-1. This is a user-defined parameter that you won't find in our [list of internal parameters][model-definition-schema].
+1. This is a user-defined parameter that you won't find in the `Parameters` section of our [pre-defined base math documentation][base-math].
 You can use it in your own math to link nuclear waste outflow with electricity outflow.
 
 ## Activating storage buffers in non-storage technologies
