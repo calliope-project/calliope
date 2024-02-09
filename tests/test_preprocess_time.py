@@ -1,17 +1,76 @@
 import pandas as pd
 import pytest  # noqa: F401
-from calliope import AttrDict
+from calliope import AttrDict, exceptions
 
 from .common.util import build_test_model
 
 
+class TestTimeFormat:
+
+    def test_change_date_format(self):
+        """
+        Test the date parser catches a different date format from file than
+        user input/default (inc. if it is just one line of a file that is incorrect)
+        """
+
+        # should pass: changing datetime format from default
+        override = AttrDict.from_yaml_string(
+            """
+            config.init.time_format: "%d/%m/%Y %H:%M"
+            data_sources:
+                demand_elec.source: data_sources/demand_heat_diff_dateformat.csv
+                demand_heat.source: data_sources/demand_heat_diff_dateformat.csv
+        """
+        )
+        model = build_test_model(override_dict=override, scenario="simple_conversion")
+        assert all(
+            model.inputs.timesteps.to_index()
+            == pd.date_range("2005-01", "2005-01-02 23:00:00", freq="H")
+        )
+
+    def test_incorrect_date_format_one(self):
+        # should fail: wrong dateformat input for one file
+        override = AttrDict.from_yaml_string(
+            "data_sources.demand_elec.source: data_sources/demand_heat_diff_dateformat.csv"
+        )
+
+        with pytest.raises(exceptions.ModelError):
+            build_test_model(override_dict=override, scenario="simple_conversion")
+
+    def test_incorrect_date_format_multi(self):
+        # should fail: wrong dateformat input for all files
+        override3 = {"config.init.time_format": "%d/%m/%Y %H:%M"}
+
+        with pytest.raises(exceptions.ModelError):
+            build_test_model(override_dict=override3, scenario="simple_supply")
+
+    def test_incorrect_date_format_one_value_only(self):
+        # should fail: one value wrong in file
+        override = AttrDict.from_yaml_string(
+            "data_sources.test_demand_elec.source: data_sources/demand_heat_wrong_dateformat.csv"
+        )
+        # check in output error that it points to: 07/01/2005 10:00:00
+        with pytest.raises(exceptions.ModelError):
+            build_test_model(override_dict=override, scenario="simple_conversion")
+
+
 class TestClustering:
-    @pytest.fixture
-    def clustered_model(self):
+    @pytest.fixture(
+        scope="class", params=["cluster_days", "cluster_days_diff_dateformat"]
+    )
+    def clustered_model(self, request):
         cluster_init = {
             "time_subset": ["2005-01-01", "2005-01-04"],
-            "time_cluster": "data_sources/cluster_days.csv",
+            "time_cluster": f"data_sources/{request.param}.csv",
         }
+        if "diff_dateformat" in request.param:
+            cluster_init["override_dict"] = {
+                "data_sources": {
+                    "demand_elec.source": "data_sources/demand_heat_diff_dateformat.csv"
+                }
+            }
+            cluster_init["time_format"] = "%d/%m/%Y %H:%M"
+
         return build_test_model(scenario="simple_supply", **cluster_init)
 
     def test_no_operate_mode_allowed(self, clustered_model):
