@@ -136,15 +136,16 @@ class PyomoBackendModel(backend_model.BackendModel):
         name: str,
         expression_dict: Optional[parsing.UnparsedExpressionDict] = None,
     ) -> None:
+        func = np.frompyfunc(partial(self._to_pyomo_expression, name=name), 1, 1)
+
         def _expression_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
             expr = element.evaluate_expression(self, where=where, references=references)
             expr = expr.squeeze(drop=True)
 
-            to_fill = self._apply_func(
-                self._to_pyomo_expression, where, expr, name=name
-            )
+            to_fill = func(expr.broadcast_like(where).values, where=where.values)
+
             self._clean_arrays(expr)
             return to_fill
 
@@ -156,21 +157,26 @@ class PyomoBackendModel(backend_model.BackendModel):
         self, name: str, variable_dict: Optional[parsing.UnparsedVariableDict] = None
     ) -> None:
         domain_dict = {"real": pmo.RealSet, "integer": pmo.IntegerSet}
-
         if variable_dict is None:
             variable_dict = self.inputs.attrs["math"]["variables"][name]
 
         def _variable_setter(where, references):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
-            bounds = variable_dict["bounds"]
-            return self._apply_func(
-                self._to_pyomo_variable,
-                where,
-                self._get_capacity_bound(bounds["max"], name, references),
-                self._get_capacity_bound(bounds["min"], name, references),
-                name=name,
-                domain_type=domain_type,
+            func = np.frompyfunc(
+                partial(self._to_pyomo_variable, name=name, domain_type=domain_type),
+                2,
+                1,
             )
+
+            bounds = variable_dict["bounds"]
+            lb = self._get_capacity_bound(bounds["min"], name, references)
+            ub = self._get_capacity_bound(bounds["max"], name, references)
+            var = func(
+                lb.broadcast_like(where).values,
+                ub.broadcast_like(where).values,
+                where=where.values,
+            )
+            return where.copy(data=var)
 
         self._add_component(name, variable_dict, _variable_setter, "variables")
 
@@ -638,7 +644,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         return constraint
 
     def _to_pyomo_expression(
-        self, mask: Union[bool, np.bool_], expr: Any, *, name: str
+        self, expr: Any, *, name: str
     ) -> Union[type[pmo.expression], float]:
         """
         Utility function to generate a pyomo expression for every element of an
@@ -658,18 +664,15 @@ class PyomoBackendModel(backend_model.BackendModel):
                 If mask is True, return np.nan.
                 Otherwise return pmo_expression(expr).
         """
-        if mask:
-            expr_obj = pmo.expression(expr)
-            self._instance.global_expressions[name].append(expr_obj)
-            return expr_obj
-        else:
-            return np.nan
+
+        expr_obj = pmo.expression(expr)
+        self._instance.global_expressions[name].append(expr_obj)
+        return expr_obj
 
     def _to_pyomo_variable(
         self,
-        mask: Union[bool, np.bool_],
-        ub: Any,
         lb: Any,
+        ub: Any,
         *,
         name: str,
         domain_type: Literal["RealSet", "IntegerSet"],
@@ -695,12 +698,9 @@ class PyomoBackendModel(backend_model.BackendModel):
                 If mask is True, return np.nan.
                 Otherwise return pmo_variable(ub=ub, lb=lb, domain_type=domain_type).
         """
-        if mask:
-            var = ObjVariable(ub=ub, lb=lb, domain_type=domain_type)
-            self._instance.variables[name].append(var)
-            return var
-        else:
-            return np.nan
+        var = ObjVariable(ub=ub, lb=lb, domain_type=domain_type)
+        self._instance.variables[name].append(var)
+        return var
 
     @staticmethod
     def _from_pyomo_param(val: Union[ObjParameter, ObjVariable, float]) -> Any:

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import contextmanager
+from functools import partial
 from pathlib import Path
 from typing import Any, Iterator, Literal, Optional, SupportsFloat, TypeVar, Union
 
@@ -106,21 +107,24 @@ class GurobiBackendModel(backend_model.BackendModel):
         self, name: str, variable_dict: Optional[parsing.UnparsedVariableDict] = None
     ) -> None:
         domain_dict = {"real": gurobipy.GRB.CONTINUOUS, "integer": gurobipy.GRB.INTEGER}
-
         if variable_dict is None:
             variable_dict = self.inputs.attrs["math"]["variables"][name]
 
         def _variable_setter(where: xr.DataArray, references: set):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
-            bounds = variable_dict["bounds"]
-            return self._apply_func(
-                self._to_gurobi_variable,
-                where,
-                self._get_capacity_bound(bounds["max"], name, references),
-                self._get_capacity_bound(bounds["min"], name, references),
-                name=name,
-                domain_type=domain_type,
+            func = np.frompyfunc(
+                partial(self._instance.addVar, vtype=domain_type), 2, 1
             )
+
+            bounds = variable_dict["bounds"]
+            lb = self._get_capacity_bound(bounds["min"], name, references)
+            ub = self._get_capacity_bound(bounds["max"], name, references)
+            var = func(
+                lb.broadcast_like(where).values,
+                ub.broadcast_like(where).values,
+                where=where.values,
+            )
+            return where.copy(data=var)
 
         self._add_component(name, variable_dict, _variable_setter, "variables")
 
@@ -459,74 +463,6 @@ class GurobiBackendModel(backend_model.BackendModel):
         else:
             self._update_gurobi_variable(orig, orig.x, bound="lb")  # type: ignore
             self._update_gurobi_variable(orig, orig.x, bound="ub")  # type: ignore
-
-    def _to_gurobi_constraint(
-        self, mask: Union[bool, np.bool_], expr: Any, *, name: str
-    ) -> Union[gurobipy.Constr, float]:
-        """
-        Utility function to generate a gurobi constraint for every element of an
-        xarray DataArray.
-
-        If not np.nan/None, output objects are also added to the backend model object in-place.
-
-        Args:
-            mask (Union[bool, np.bool_]): If True, add constraint, otherwise return np.nan
-            expr (Any): Equation expression.
-
-        Kwargs:
-            name (str): Name of constraint
-
-        Returns:
-            Union[type[ObjConstraint], float]:
-                If mask is True, return np.nan.
-                Otherwise return pmo_constraint(expr=lhs op rhs).
-        """
-
-        if mask:
-            constraint = self._instance.addLConstr(expr)
-            return constraint
-        else:
-            return np.nan
-
-    def _to_gurobi_variable(
-        self,
-        mask: Union[bool, np.bool_],
-        ub: Any,
-        lb: Any,
-        *,
-        name: str,
-        domain_type: Literal["RealSet", "IntegerSet"],
-    ) -> Union[gurobipy.Var, float]:
-        """
-        Utility function to generate a Gurobi decision variable for every element of an
-        xarray DataArray.
-
-        If not np.nan/None, output objects are also added to the backend model object in-place.
-
-        Args:
-            mask (Union[bool, np.bool_]): If True, add variable, otherwise return np.nan.
-            ub (Any): Upper bound to apply to the variable.
-            lb (Any): Lower bound to apply to the variable.
-
-        Kwargs:
-            domain_type (Literal["RealSet", "IntegerSet"]):
-                Domain over which variables are valid (real = continuous, integer = integer/binary)
-            name (str): Name of variable.
-
-        Returns:
-            Union[type[gurobipy.Var], float]:
-                If mask is True, return np.nan.
-                Otherwise return pmo_variable(ub=ub, lb=lb, domain_type=domain_type).
-        """
-        kwargs = {}
-        for bound_name, bound in {"lb": lb, "ub": ub}.items():
-            if not pd.isnull(bound):
-                kwargs[bound_name] = bound
-        if mask:
-            var = self._instance.addVar(vtype=domain_type, **kwargs)
-            return var
-        else:
-            return np.nan
 
     @staticmethod
     def _from_gurobi_variable_bounds(val: Optional[gurobipy.Var]) -> pd.Series:
