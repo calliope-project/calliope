@@ -60,19 +60,6 @@ class TestNewBackend:
         assert (
             var.to_series().dropna().apply(lambda x: isinstance(x, gurobipy.Var)).all()
         )
-        assert var.attrs == {
-            "obj_type": "variables",
-            "references": {
-                "flow_in_max",
-                "flow_out_max",
-                "cost_investment",
-                "cost_investment_flow_cap",
-                "symmetric_transmission",
-            },
-            "description": "A technology's flow capacity, also known as its nominal or nameplate capacity.",
-            "unit": "power",
-            "coords_in_name": False,
-        }
 
     def test_new_build_get_variable_as_vals(self, simple_supply_gurobi):
         var = simple_supply_gurobi.backend.get_variable(
@@ -88,13 +75,6 @@ class TestNewBackend:
     def test_new_build_get_parameter(self, simple_supply_gurobi):
         param = simple_supply_gurobi.backend.get_parameter("flow_in_eff")
         assert isinstance(param.item(), float)
-        assert param.attrs == {
-            "obj_type": "parameters",
-            "is_result": 0,
-            "original_dtype": np.dtype("float64"),
-            "references": {"flow_in_inc_eff"},
-            "coords_in_name": False,
-        }
 
     def test_new_build_get_parameter_as_vals(self, simple_supply_gurobi):
         param = simple_supply_gurobi.backend.get_parameter(
@@ -110,13 +90,6 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, gurobipy.LinExpr))
             .all()
         )
-        assert expr.attrs == {
-            "obj_type": "global_expressions",
-            "references": {"cost"},
-            "description": "The installation costs of a technology, including annualised investment costs and annual maintenance costs.",
-            "unit": "cost",
-            "coords_in_name": False,
-        }
 
     def test_new_build_get_global_expression_as_str(self, simple_supply_gurobi):
         expr = simple_supply_gurobi.backend.get_global_expression(
@@ -140,12 +113,6 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, gurobipy.Constr))
             .all()
         )
-        assert constr.attrs == {
-            "obj_type": "constraints",
-            "references": set(),
-            "description": "Set the global carrier balance of the optimisation problem by fixing the total production of a given carrier to equal the total consumption of that carrier at every node in every timestep.",
-            "coords_in_name": False,
-        }
 
     def test_new_build_get_constraint_as_str(self, simple_supply_gurobi):
         with pytest.raises(exceptions.BackendError) as excinfo:

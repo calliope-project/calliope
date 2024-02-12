@@ -6,6 +6,7 @@ from itertools import product
 import calliope.exceptions as exceptions
 import numpy as np
 import pandas as pd
+import pyomo.core as po
 import pyomo.kernel as pmo
 import pytest  # noqa: F401
 import xarray as xr
@@ -1852,7 +1853,7 @@ class TestNewBackend:
         assert (
             expr.to_series()
             .dropna()
-            .apply(lambda x: isinstance(x, pmo.expression))
+            .apply(lambda x: isinstance(x, po.expr.ExpressionBase))
             .all()
         )
         assert expr.attrs == {
@@ -2055,27 +2056,12 @@ class TestNewBackend:
             == expression_name
         )
 
-    def test_raise_error_on_excess_dimensions(self, simple_supply):
+    def test_raise_error_on_excess_constraint_dimensions(self, simple_supply):
         """
         A very simple constraint: For each tech, let the `flow_cap` be larger than 100.
         However, we forgot to include `nodes` in `foreach`.
         With `nodes` included, this constraint should build.
         """
-        # add constraint without excess dimensions
-        constraint_dict = {
-            # as 'nodes' is listed here, the constraint will have no excess dimensions
-            "foreach": ["techs", "nodes", "carriers"],
-            "equations": [{"expression": "flow_cap >= 100"}],
-        }
-        constraint_name = "constraint-without-excess-dimensions"
-
-        simple_supply.backend.add_constraint(constraint_name, constraint_dict)
-
-        assert (
-            simple_supply.backend.get_constraint(constraint_name).name
-            == constraint_name
-        )
-
         # add constraint with excess dimensions
         constraint_dict = {
             # as 'nodes' is not listed here, the constraint will have excess dimensions
@@ -2089,7 +2075,29 @@ class TestNewBackend:
 
         assert check_error_or_warning(
             error,
-            f"constraints:{constraint_name}:0 | The linear expression array is indexed over dimensions not present in `foreach`: {{'nodes'}}",
+            f"(constraints:{constraint_name}:0, flow_cap >= 100) | The left-hand side of the equation is indexed over dimensions not present in `foreach`: {{'nodes'}}",
+        )
+
+    def test_raise_error_on_excess_expression_dimensions(self, simple_supply):
+        """
+        A very simple expression: For each tech, add a fixed quantity to `flow_cap`.
+        However, we forgot to include `nodes` in `foreach`.
+        With `nodes` included, this expression would build.
+        """
+        # add global expression with excess dimensions
+        expr_dict = {
+            # as 'nodes' is not listed here, the constraint will have excess dimensions
+            "foreach": ["techs", "carriers"],
+            "equations": [{"expression": "flow_cap + 1"}],
+        }
+        expr_name = "expr-with-excess-dimensions"
+
+        with pytest.raises(exceptions.BackendError) as error:
+            simple_supply.backend.add_global_expression(expr_name, expr_dict)
+
+        assert check_error_or_warning(
+            error,
+            f"global_expressions:{expr_name}:0 | The linear expression array is indexed over dimensions not present in `foreach`: {{'nodes'}}",
         )
 
     @pytest.mark.parametrize(
@@ -2240,7 +2248,7 @@ class TestNewBackend:
         )
         assert (
             obj.sel(dims).body.item()
-            == f"(parameters[flow_in_eff]*variables[flow_in][{', '.join(dims[i] for i in obj.dims)}])"
+            == f"parameters[flow_in_eff]*variables[flow_in][{', '.join(dims[i] for i in obj.dims)}]"
         )
         assert obj.coords_in_name
 

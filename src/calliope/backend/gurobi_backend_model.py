@@ -48,11 +48,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._add_all_inputs_as_parameters()
 
     def add_parameter(
-        self,
-        parameter_name: str,
-        parameter_values: xr.DataArray,
-        default: Any = np.nan,
-        use_inf_as_na: bool = False,
+        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
         self._raise_error_on_preexistence(parameter_name, "parameters")
 
@@ -111,6 +107,7 @@ class GurobiBackendModel(backend_model.BackendModel):
             variable_dict = self.inputs.attrs["math"]["variables"][name]
 
         def _variable_setter(where: xr.DataArray, references: set):
+
             domain_type = domain_dict[variable_dict.get("domain", "real")]
             func = np.frompyfunc(
                 partial(self._instance.addVar, vtype=domain_type), 2, 1
@@ -124,7 +121,7 @@ class GurobiBackendModel(backend_model.BackendModel):
                 ub.broadcast_like(where).values,
                 where=where.values,
             )
-            return where.copy(data=var)
+            return where.copy(data=var).fillna(value=np.nan)
 
         self._add_component(name, variable_dict, _variable_setter, "variables")
 

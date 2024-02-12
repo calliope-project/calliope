@@ -72,23 +72,22 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._add_all_inputs_as_parameters()
 
     def add_parameter(
-        self,
-        parameter_name: str,
-        parameter_values: xr.DataArray,
-        default: Any = np.nan,
-        use_inf_as_na: bool = False,
+        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
         self._raise_error_on_preexistence(parameter_name, "parameters")
 
         self._create_obj_list(parameter_name, "parameters")
 
-        parameter_da = self._apply_func(
-            self._to_pyomo_param,
-            parameter_values,
-            name=parameter_name,
-            default=default,
-            use_inf_as_na=use_inf_as_na,
-        )
+        func = np.frompyfunc(partial(self._to_pyomo_param, name=parameter_name), 1, 1)
+
+        parameter_da = func(parameter_values, where=parameter_values.notnull().values)
+        if pd.notnull(default):
+            default_obj = ObjParameter(default)
+            self._instance.parameters[parameter_name].append(default_obj)
+            parameter_da = parameter_da.fillna(default_obj)
+        else:
+            parameter_da = parameter_da.fillna(np.nan)
+
         if parameter_da.isnull().all():
             self.log(
                 "parameters",
@@ -136,7 +135,6 @@ class PyomoBackendModel(backend_model.BackendModel):
         name: str,
         expression_dict: Optional[parsing.UnparsedExpressionDict] = None,
     ) -> None:
-        func = np.frompyfunc(partial(self._to_pyomo_expression, name=name), 1, 1)
 
         def _expression_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -144,9 +142,8 @@ class PyomoBackendModel(backend_model.BackendModel):
             expr = element.evaluate_expression(self, where=where, references=references)
             expr = expr.squeeze(drop=True)
 
-            to_fill = func(expr.broadcast_like(where).values, where=where.values)
+            to_fill = expr.where(where)
 
-            self._clean_arrays(expr)
             return to_fill
 
         self._add_component(
@@ -172,11 +169,10 @@ class PyomoBackendModel(backend_model.BackendModel):
             lb = self._get_capacity_bound(bounds["min"], name, references)
             ub = self._get_capacity_bound(bounds["max"], name, references)
             var = func(
-                lb.broadcast_like(where).values,
-                ub.broadcast_like(where).values,
-                where=where.values,
+                lb.broadcast_like(where), ub.broadcast_like(where), where=where.values
             )
-            return where.copy(data=var)
+            var.attrs = {}
+            return var.fillna(np.nan)
 
         self._add_component(name, variable_dict, _variable_setter, "variables")
 
@@ -523,7 +519,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         return bound_array.fillna(None)
 
     def _to_pyomo_param(
-        self, val: Any, *, name: str, default: Any = np.nan, use_inf_as_na: bool = True
+        self, val: Any, *, name: str
     ) -> Union[type[ObjParameter], float]:
         """
         Utility function to generate a pyomo parameter for every element of an
@@ -538,25 +534,14 @@ class PyomoBackendModel(backend_model.BackendModel):
             val (Any): Value to turn into a mutable pyomo parameter
             name (str): Name of parameter
             default (Any, optional): Default value if `val` is None/np.nan. Defaults to np.nan.
-            use_inf_as_na (bool, optional): If True, see np.inf as np.nan. Defaults to True.
 
         Returns:
             Union[type[ObjParameter], float]:
                 If both `val` and `default` are np.nan/None, return np.nan.
                 Otherwise return ObjParameter(val/default).
         """
-        if use_inf_as_na:
-            val = np.nan if val in [np.inf, -np.inf] else val
-            default = np.nan if default in [np.inf, -np.inf] else default
-        if pd.isnull(val):
-            if pd.isnull(default):
-                param = np.nan
-            else:
-                param = ObjParameter(default)
-                self._instance.parameters[name].append(param)
-        else:
-            param = ObjParameter(val)
-            self._instance.parameters[name].append(param)
+        param = ObjParameter(val)
+        self._instance.parameters[name].append(param)
         return param
 
     def _update_pyomo_param(self, orig: ObjParameter, new: Any) -> None:

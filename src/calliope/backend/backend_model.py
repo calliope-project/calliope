@@ -80,11 +80,7 @@ class BackendModelGenerator(ABC):
 
     @abstractmethod
     def add_parameter(
-        self,
-        parameter_name: str,
-        parameter_values: xr.DataArray,
-        default: Any = np.nan,
-        use_inf_as_na: bool = False,
+        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
         """
         Add input parameter to backend model in-place.
@@ -98,10 +94,6 @@ class BackendModelGenerator(ABC):
             default (Any, optional):
                 Default value to fill NaN entries in parameter values array.
                 Defaults to np.nan.
-            use_inf_as_na (bool, optional):
-                If True, will consider np.inf parameter value entries as np.nan and
-                consequently try to fill those entries with the parameter default value.
-                Defaults to False.
         """
 
     @abstractmethod
@@ -398,9 +390,7 @@ class BackendModelGenerator(ABC):
             self.log(
                 "parameters", param_name, "Component not defined; using default value."
             )
-            self.add_parameter(
-                param_name, xr.DataArray(default_val), default_val, use_inf_as_na=False
-            )
+            self.add_parameter(param_name, xr.DataArray(default_val), default_val)
             self.parameters[param_name].attrs["is_result"] = 0
         LOGGER.info("Optimisation Model | parameters | Generated.")
 

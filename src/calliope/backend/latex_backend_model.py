@@ -337,11 +337,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self._add_all_inputs_as_parameters()
 
     def add_parameter(
-        self,
-        parameter_name: str,
-        parameter_values: xr.DataArray,
-        default: Any = np.nan,
-        use_inf_as_na: bool = False,
+        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
 
         attrs = {

@@ -326,15 +326,21 @@ class EvalSignOp(EvalToArrayStr):
 class EvalComparisonOp(EvalToArrayStr):
     OP_TRANSLATOR = {"<=": r" \leq ", ">=": r" \geq ", "==": " = "}
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """
         Parse action to process successfully parsed equations of the form LHS OPERATOR RHS.
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used, but comes with `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Contains a list with an RHS (pp.ParseResults), operator (str), and LHS (pp.ParseResults).
         """
         self.lhs, self.op, self.rhs = tokens
+        self.instring = instring
+        self.loc = loc
         self.values = tokens
 
     def __repr__(self) -> str:
@@ -377,6 +383,13 @@ class EvalComparisonOp(EvalToArrayStr):
     def as_array(self) -> xr.DataArray:
         lhs, rhs = self._eval("array")
         where = self.eval_attrs["where_array"]
+        for side, arr in {"left": lhs, "right": rhs}.items():
+            extra_dims = set(arr.dims).difference(set(where.dims))
+            if extra_dims:
+                raise BackendError(
+                    f"({self.eval_attrs['equation_name']}, {self.instring}) | "
+                    f"The {side}-hand side of the equation is indexed over dimensions not present in `foreach`: {extra_dims}"
+                )
         lhs_where = lhs.broadcast_like(where)
         rhs_where = rhs.broadcast_like(where)
         match self.op:
@@ -386,10 +399,8 @@ class EvalComparisonOp(EvalToArrayStr):
                 op = np.less_equal
             case ">=":
                 op = np.greater_equal
-        constraint = op(
-            lhs_where.values, rhs_where.values, where=where.values, dtype=np.object_
-        )
-        return constraint
+        constraint = op(lhs_where, rhs_where, where=where.values, dtype=np.object_)
+        return xr.DataArray(constraint)
 
 
 class EvalFunction(EvalToArrayStr):
@@ -498,11 +509,11 @@ class EvalHelperFuncName(EvalToCallable):
         equation_name = self.eval_attrs["equation_name"]
         if self.name not in helper_functions.keys():
             raise BackendError(
-                f"({equation_name}, {self.instring}): Invalid helper function defined: {self.name}"
+                f"({equation_name}, {self.instring}) | Invalid helper function defined: {self.name}"
             )
         elif not isinstance(helper_functions[self.name], type(ParsingHelperFunction)):
             raise TypeError(
-                f"({equation_name}, {self.instring}): Helper function must be "
+                f"({equation_name}, {self.instring}) | Helper function must be "
                 f"subclassed from calliope.backend.helper_functions.ParsingHelperFunction: {self.name}"
             )
         else:
