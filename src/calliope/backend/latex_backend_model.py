@@ -51,19 +51,19 @@ class MathDocumentation:
     def inputs(self, val: xr.Dataset):
         self._inputs = val
 
-    @overload  # noqa: F811
-    def write(  # noqa: F811
+    @overload
+    def write(
         self,
         filename: Literal[None] = None,
         format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
     ) -> str:
         "Expecting string if not giving filename"
 
-    @overload  # noqa: F811
-    def write(self, filename: Union[str, Path]) -> None:  # noqa: F811
+    @overload
+    def write(self, filename: Union[str, Path]) -> None:
         "Expecting None (and format arg is not needed) if giving filename"
 
-    def write(  # noqa: F811
+    def write(
         self,
         filename: Optional[Union[str, Path]] = None,
         format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,

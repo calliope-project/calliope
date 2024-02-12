@@ -23,6 +23,15 @@ PREPEND_SNIPPET = """
 # {title}
 {description}
 
+## A guide to math documentation
+
+If a math component's initial conditions are met (the first `if` statement), it will be applied to a model.
+For each [objective](#objective), [constraint](#subject-to) and [global expression](#where), a number of sub-conditions then apply (the subsequent, indented `if` statements) to decide on the specific expression to apply at a given iteration of the component dimensions.
+
+In the expressions, terms in **bold** font are [decision variables](#decision-variables) and terms in *italic* font are [parameters](#parameters).
+The [decision variables](#decision-variables) and [parameters](#parameters) are listed at the end of the page; they also refer back to the global expressions / constraints in which they are used.
+Those parameters which are defined over time (`timesteps`) in the expressions can be defined by a user as a single, time invariant value, or as a timeseries that is [loaded from file or dataframe](../creating/data_sources.md).
+
 [:fontawesome-solid-download: Download the {math_type} formulation as a YAML file]({filepath})
 """
 

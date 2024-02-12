@@ -243,8 +243,8 @@ class ParsedBackendEquation:
             },
         )
 
-    @overload  # noqa: F811
-    def evaluate_where(  # noqa: F811
+    @overload
+    def evaluate_where(
         self,
         backend_interface: backend_model.BackendModelGenerator,
         *,
@@ -254,8 +254,8 @@ class ParsedBackendEquation:
     ) -> xr.DataArray:
         "Expecting array if not requesting latex string"
 
-    @overload  # noqa: F811
-    def evaluate_where(  # noqa: F811
+    @overload
+    def evaluate_where(
         self,
         backend_interface: backend_model.BackendModelGenerator,
         *,
@@ -264,7 +264,7 @@ class ParsedBackendEquation:
     ) -> str:
         "Expecting string if requesting latex string"
 
-    def evaluate_where(  # noqa: F811
+    def evaluate_where(
         self,
         backend_interface: backend_model.BackendModelGenerator,
         *,
@@ -326,8 +326,8 @@ class ParsedBackendEquation:
         unwanted_dims = set(where.dims).difference(self.sets)
         return (where.sum(unwanted_dims) > 0).astype(bool).transpose(*self.sets)
 
-    @overload  # noqa: F811
-    def evaluate_expression(  # noqa: F811
+    @overload
+    def evaluate_expression(
         self,
         backend_interface: backend_model.BackendModel,
         *,
@@ -337,8 +337,8 @@ class ParsedBackendEquation:
     ) -> xr.DataArray:
         "Expecting anything (most likely an array) if not requesting latex string"
 
-    @overload  # noqa: F811
-    def evaluate_expression(  # noqa: F811
+    @overload
+    def evaluate_expression(
         self,
         backend_interface: backend_model.BackendModel,
         *,
@@ -347,7 +347,7 @@ class ParsedBackendEquation:
     ) -> str:
         "Expecting string if requesting latex string"
 
-    def evaluate_expression(  # noqa: F811
+    def evaluate_expression(
         self,
         backend_interface: backend_model.BackendModel,
         *,
