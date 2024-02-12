@@ -76,10 +76,9 @@ class GurobiBackendModel(backend_model.BackendModel):
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
             expr = element.evaluate_expression(self, where=where, references=references)
+            func = np.frompyfunc(self._instance.addConstr, 1, 1)
+            to_fill = func(expr, where=where.values)
 
-            to_fill = self._apply_func(
-                self._to_gurobi_constraint, where, expr, name=name
-            )
             return to_fill
 
         self._add_component(name, constraint_dict, _constraint_setter, "constraints")

@@ -8,6 +8,7 @@ import os
 import re
 from abc import ABC
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
+from functools import partial
 from pathlib import Path
 from typing import (
     Any,
@@ -110,15 +111,15 @@ class PyomoBackendModel(backend_model.BackendModel):
         name: str,
         constraint_dict: Optional[parsing.UnparsedConstraintDict] = None,
     ) -> None:
+        func = np.frompyfunc(partial(self._to_pyomo_constraint, name=name), 1, 1)
+
         def _constraint_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
             expr = element.evaluate_expression(self, where=where, references=references)
 
             try:
-                to_fill = self._apply_func(
-                    self._to_pyomo_constraint, where, expr, name=name
-                )
+                to_fill = func(expr, where=where.values)
             except BackendError as err:
                 types = self._apply_func(lambda x: type(x).__name__, expr.where(where))
                 offending_items = types.str.startswith("bool").to_series()
@@ -606,7 +607,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             orig.unfix()
 
     def _to_pyomo_constraint(
-        self, mask: Union[bool, np.bool_], expr: Any, *, name: str
+        self, expr: Any, *, name: str
     ) -> Union[type[ObjConstraint], float]:
         """
         Utility function to generate a pyomo constraint for every element of an
@@ -627,17 +628,14 @@ class PyomoBackendModel(backend_model.BackendModel):
                 Otherwise return pmo_constraint(expr=lhs op rhs).
         """
 
-        if mask:
-            if isinstance(expr, (np.bool_, bool)):
-                raise BackendError(
-                    f"(constraints, {name}) | constraint array includes item(s) that resolves to a simple boolean. "
-                    "There must be a math component defined on at least one side of the equation"
-                )
-            constraint = ObjConstraint(expr=expr)
-            self._instance.constraints[name].append(constraint)
-            return constraint
-        else:
-            return np.nan
+        if isinstance(expr, (np.bool_, bool)):
+            raise BackendError(
+                f"(constraints, {name}) | constraint array includes item(s) that resolves to a simple boolean. "
+                "There must be a math component defined on at least one side of the equation"
+            )
+        constraint = ObjConstraint(expr=expr)
+        self._instance.constraints[name].append(constraint)
+        return constraint
 
     def _to_pyomo_expression(
         self, mask: Union[bool, np.bool_], expr: Any, *, name: str

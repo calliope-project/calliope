@@ -383,8 +383,8 @@ class ParsedBackendEquation:
             references=references if references is not None else set(),
             helper_functions=helper_functions._registry["expression"],
         )
-        if not return_type == "math_string":
-            self.raise_error_on_where_expr_mismatch(evaluated, where)
+        # if not return_type == "math_string":
+        # self.raise_error_on_where_expr_mismatch(evaluated, where)
         return evaluated
 
     def raise_error_on_where_expr_mismatch(

@@ -376,9 +376,20 @@ class EvalComparisonOp(EvalToArrayStr):
 
     def as_array(self) -> xr.DataArray:
         lhs, rhs = self._eval("array")
-        return self.eval_attrs["backend_interface"]._apply_func(
-            self._compare_bitwise, self.eval_attrs["where_array"], lhs, rhs
+        where = self.eval_attrs["where_array"]
+        lhs_where = lhs.broadcast_like(where)
+        rhs_where = rhs.broadcast_like(where)
+        match self.op:
+            case "==":
+                op = np.equal
+            case "<=":
+                op = np.less_equal
+            case ">=":
+                op = np.greater_equal
+        constraint = op(
+            lhs_where.values, rhs_where.values, where=where.values, dtype=np.object_
         )
+        return constraint
 
 
 class EvalFunction(EvalToArrayStr):
