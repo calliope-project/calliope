@@ -110,33 +110,33 @@ These runs took place on the University of Cambridge high performance computing 
 As can be seen, CBC is far superior to GLPK.
 If introducing binary constraints, although CBC is an improvement on GLPK, access to a commercial solver is preferable.
 
-**National scale example model size**
+`National scale example model size`
 
-- Variables : 420526 [Nneg: 219026, Free: 105140, Other: 96360]
-- Linear constraints : 586972 [Less: 315373, Greater: 10, Equal: 271589]
+:   * Variables : 420526 [Nneg: 219026, Free: 105140, Other: 96360]
+    * Linear constraints : 586972 [Less: 315373, Greater: 10, Equal: 271589]
 
-**MILP urban scale example model**
+`MILP urban scale example model`
 
-- Variables: 586996 [Nneg: 332913, Free: 78880, Binary: 2, General Integer: 8761, Other: 166440]
-- Linear constraints: 788502 [Less: 394226, Greater: 21, Equal: 394255]
+:   * Variables: 586996 [Nneg: 332913, Free: 78880, Binary: 2, General Integer: 8761, Other: 166440]
+    * Linear constraints: 788502 [Less: 394226, Greater: 21, Equal: 394255]
 
-**Solution time**
+`Solution time`
 
-| Solver             | National | Urban   |
-|--------------------|----------|---------|
-| GLPK               | 4:35:40  | >5hrs   |
-| CBC                | 0:04:45  | 0:52:13 |
-| Gurobi (1 thread)  | 0:02:08  | 0:03:21 |
-| CPLEX (1 thread)   | 0:04:55  | 0:05:56 |
-| Gurobi (4 thread)  | 0:02:27  | 0:03:08 |
-| CPLEX (4 thread)   | 0:02:16  | 0:03:26 |
+:   | Solver             | National | Urban   |
+    |--------------------|----------|---------|
+    | GLPK               | 4:35:40  | >5hrs   |
+    | CBC                | 0:04:45  | 0:52:13 |
+    | Gurobi (1 thread)  | 0:02:08  | 0:03:21 |
+    | CPLEX (1 thread)   | 0:04:55  | 0:05:56 |
+    | Gurobi (4 thread)  | 0:02:27  | 0:03:08 |
+    | CPLEX (4 thread)   | 0:02:16  | 0:03:26 |
 
 !!! info "See also"
-    [Specifying custom solver options][specifying-custom-solver-options]
+    [Specifying custom solver options](advanced/solver.md)
 
 ## Understanding infeasibility and numerical instability
 
-A good first step when faced with an infeasible model is often to remove constraints, in particular more complex constraints and any [custom math][custom-math-formulation] you may have applied.
+A good first step when faced with an infeasible model is often to remove constraints, in particular more complex constraints and any math you may have applied.
 For example, summing over nodes/carriers/techs in a constraint can easily introduce mutually exclusive requirements on capacities or output from specific technologies.
 Once a minimal model works, more complex constraints can be turned on again one after the other.
 
@@ -183,7 +183,6 @@ Particularly if your problem is large, you may not want to rebuild the backend t
 Instead you can interface directly with the backend using the `model.backend` functions, to update individual parameter values ([`model.backend.update_parameter`][calliope.backend.backend_model.BackendModel.update_parameter]) and variable bounds ([`model.backend.update_variable_bounds`][calliope.backend.backend_model.BackendModel.update_variable_bounds]).
 By rerunning the backend specifically, you can optimise your problem with these backend changes, without rebuilding the backend entirely: `model.solve(force=True)`.
 
-
 !!! note
     `model.solve(force=True)` will replace any existing results in `model.results`.
     You may want to save your model before doing this.
@@ -202,22 +201,22 @@ You can do so by setting `#!python calliope.set_log_verbosity("debug")` and then
 
 If you have a bit more Python experience, you can also consider accessing and working with loggers at different points in our internals using the `logging` package.
 
-- For input YAML and CSV file processing: `logging.getLogger("calliope.preprocess")`.
-- For processing of math syntax: `logging.getLogger("calliope.backend")`.
+* For input YAML and CSV file processing: `logging.getLogger("calliope.preprocess")`.
+* For processing of math syntax: `logging.getLogger("calliope.backend")`.
 
 For more examples of using loggers, see the [logging notebook example][calliope-logging-examples].
 
 ### Validating your math syntax
 
-You can do a (relatively) quick check of the validity of any custom math syntax in your model by running `#!python model.validate_math_strings(my_math_dict)`.
+You can do a (relatively) quick check of the validity of any math you want to add to your model by running `#!python model.validate_math_strings(my_math_dict)`.
 This will tell you if any of the syntax is malformed, although it cannot tell you if the model will build when set to the backend to generate an optimisation model.
 
 ### Inspecting private data structures
 
 There are private attributes of the Calliope `Model` object that you can access to gain additional insights into your model runs.
 
-- For all data in one place (i.e., the combination of `inputs` and `results`), the dataset `model._model_data`.
-- For the built backend objects (e.g., Pyomo objects) in an array format, the dataset `model.backend._dataset`.
+* For all data in one place (i.e., the combination of `inputs` and `results`), the dataset `model._model_data`.
+* For the built backend objects (e.g., Pyomo objects) in an array format, the dataset `model.backend._dataset`.
 
 !!! info
     If using Calliope in a Python session, we recommend reading up on the [Python debugger](https://docs.python.org/3/library/pdb.html) and making use of the [`%debug` magic](https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-debug).

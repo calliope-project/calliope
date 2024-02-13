@@ -56,7 +56,10 @@ LOGGER = logging.getLogger(__name__)
 
 class BackendModelGenerator(ABC):
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
-    _COMPONENT_ATTR_METADATA = ["description", "unit"]
+    _COMPONENT_ATTR_METADATA = ["description", "unit", "default"]
+
+    _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
+    _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
 
     def __init__(self, inputs: xr.Dataset, **kwargs):
         """Abstract base class to build a representation of the optimisation problem.
@@ -189,6 +192,7 @@ class BackendModelGenerator(ABC):
             "input_data": self.inputs,
             "helper_functions": helper_functions._registry["where"],
             "apply_where": True,
+            "references": set(),
         }
         for check_type, check_list in check_results.items():
             for check in data_checks[check_type]:
@@ -205,7 +209,7 @@ class BackendModelGenerator(ABC):
         )
 
     def _build(self) -> None:
-        self._add_run_mode_custom_math()
+        self._add_run_mode_math()
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
         for components in [
@@ -224,22 +228,22 @@ class BackendModelGenerator(ABC):
                 )
             LOGGER.info(f"Optimisation Model | {components} | Generated.")
 
-    def _add_run_mode_custom_math(self) -> None:
-        """If not given in the custom_math list, override model math with run mode math"""
+    def _add_run_mode_math(self) -> None:
+        """If not given in the add_math list, override model math with run mode math"""
 
         # FIXME: available modes should not be hardcoded here. They should come from a YAML schema.
         mode = self.inputs.attrs["config"].build.mode
-        custom_math = self.inputs.attrs["applied_custom_math"]
+        add_math = self.inputs.attrs["applied_additional_math"]
         not_run_mode = {"plan", "operate", "spores"}.difference([mode])
-        run_mode_mismatch = not_run_mode.intersection(custom_math)
+        run_mode_mismatch = not_run_mode.intersection(add_math)
         if run_mode_mismatch:
             exceptions.warn(
-                f"Running in {mode} mode, but run mode(s) {run_mode_mismatch} custom "
+                f"Running in {mode} mode, but run mode(s) {run_mode_mismatch} "
                 "math being loaded from file via the model configuration"
             )
 
-        if mode != "plan" and mode not in custom_math:
-            LOGGER.debug(f"Updating math formulation with {mode} mode custom math.")
+        if mode != "plan" and mode not in add_math:
+            LOGGER.debug(f"Updating math formulation with {mode} mode math.")
             filepath = importlib.resources.files("calliope") / "math" / f"{mode}.yaml"
             self.inputs.math.union(AttrDict.from_yaml(filepath), allow_override=True)
 
@@ -290,7 +294,10 @@ class BackendModelGenerator(ABC):
         )
 
         top_level_where = parsed_component.generate_top_level_where_array(
-            self, align_to_foreach_sets=False, break_early=break_early
+            self,
+            align_to_foreach_sets=False,
+            break_early=break_early,
+            references=references,
         )
         if break_early and not top_level_where.any():
             return parsed_component
@@ -309,7 +316,9 @@ class BackendModelGenerator(ABC):
                 .astype(np.dtype("O"))
             )
         for element in equations:
-            where = element.evaluate_where(self, initial_where=top_level_where)
+            where = element.evaluate_where(
+                self, initial_where=top_level_where, references=references
+            )
             if break_early and not where.any():
                 continue
 
@@ -372,7 +381,6 @@ class BackendModelGenerator(ABC):
             model_data (xr.Dataset): Input model data.
             defaults (dict): Parameter defaults.
         """
-
         for param_name, param_data in self.inputs.filter_by_attrs(
             is_result=0
         ).data_vars.items():
@@ -391,7 +399,7 @@ class BackendModelGenerator(ABC):
                 "parameters", param_name, "Component not defined; using default value."
             )
             self.add_parameter(
-                param_name, xr.DataArray(default_val), use_inf_as_na=False
+                param_name, xr.DataArray(default_val), default_val, use_inf_as_na=False
             )
             self.parameters[param_name].attrs["is_result"] = 0
         LOGGER.info("Optimisation Model | parameters | Generated.")
@@ -430,10 +438,12 @@ class BackendModelGenerator(ABC):
         """
 
         add_attrs = {
-            attr: unparsed_dict.get(attr)
+            attr: unparsed_dict.pop(attr)
             for attr in self._COMPONENT_ATTR_METADATA
             if attr in unparsed_dict.keys()
         }
+        if unparsed_dict:
+            add_attrs["yaml_snippet"] = AttrDict(unparsed_dict).to_yaml()
 
         da.attrs.update(
             {

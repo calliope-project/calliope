@@ -285,9 +285,11 @@ class DataSource:
 
         if "select" in self.input.keys():
             selector = tuple(
-                listify(self.input["select"][name])
-                if name in self.input["select"]
-                else slice(None)
+                (
+                    listify(self.input["select"][name])
+                    if name in self.input["select"]
+                    else slice(None)
+                )
                 for name in tdf.index.names
             )
             tdf = tdf.loc[selector]

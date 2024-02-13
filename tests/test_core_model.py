@@ -64,11 +64,11 @@ class TestModel:
         )
 
 
-class TestCustomMath:
+class TestAddMath:
     @pytest.fixture
     def storage_inter_cluster(self):
         return build_model(
-            {"config.init.custom_math": ["storage_inter_cluster"]},
+            {"config.init.add_math": ["storage_inter_cluster"]},
             "simple_supply,two_hours,investment_costs",
         )
 
@@ -97,11 +97,12 @@ class TestCustomMath:
     def test_allowed_internal_constraint(self, override, expected):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             build_model(
-                {"config.init.custom_math": override},
+                {"config.init.add_math": override},
                 "simple_supply,two_hours,investment_costs",
             )
         assert check_error_or_warning(
-            excinfo, f"Attempted to load custom math that does not exist: {expected}"
+            excinfo,
+            f"Attempted to load additional math that does not exist: {expected}",
         )
 
     def test_internal_override_from_yaml(self, temp_path):
@@ -118,7 +119,7 @@ class TestCustomMath:
         )
         new_constraint.to_yaml(temp_path.join("custom-math.yaml"))
         m = build_model(
-            {"config.init.custom_math": [str(temp_path.join("custom-math.yaml"))]},
+            {"config.init.add_math": [str(temp_path.join("custom-math.yaml"))]},
             "simple_supply,two_hours,investment_costs",
         )
         assert "constraint_name" in m.math["constraints"].keys()
@@ -134,7 +135,7 @@ class TestCustomMath:
         )
         new_constraint.to_yaml(file_path)
         m = build_model(
-            {"config.init.custom_math": [str(file_path)]},
+            {"config.init.add_math": [str(file_path)]},
             "simple_supply,two_hours,investment_costs",
         )
         base = simple_supply.math["constraints"][
@@ -163,8 +164,7 @@ class TestCustomMath:
             to_add.append(str(filepath))
 
         m = build_model(
-            {"config.init.custom_math": to_add},
-            "simple_supply,two_hours,investment_costs",
+            {"config.init.add_math": to_add}, "simple_supply,two_hours,investment_costs"
         )
 
         base = simple_supply.math["constraints"][
@@ -187,7 +187,7 @@ class TestCustomMath:
         file_path = temp_path.join("custom-math.yaml")
         new_constraint.to_yaml(file_path)
         m = build_model(
-            {"config.init.custom_math": ["storage_inter_cluster", str(file_path)]},
+            {"config.init.add_math": ["storage_inter_cluster", str(file_path)]},
             "simple_supply,two_hours,investment_costs",
         )
         base = simple_supply.math["variables"]["storage"]
@@ -223,7 +223,7 @@ class TestValidateMathDict:
             ),
         ],
     )
-    def test_custom_math(self, caplog, simple_supply, equation, where):
+    def test_add_math(self, caplog, simple_supply, equation, where):
         with caplog.at_level(logging.INFO, logger=LOGGER):
             simple_supply.validate_math_strings(
                 {
@@ -244,7 +244,7 @@ class TestValidateMathDict:
         ],
     )
     @pytest.mark.parametrize("both_fail", [True, False])
-    def test_custom_math_fails(self, simple_supply, component_dict, both_fail):
+    def test_add_math_fails(self, simple_supply, component_dict, both_fail):
         math_dict = {"constraints": {"foo": component_dict}}
         errors_to_check = [
             "math string parsing (marker indicates where parsing stopped, which might not be the root cause of the issue; sorry...)",
@@ -263,7 +263,7 @@ class TestValidateMathDict:
         assert check_error_or_warning(excinfo, errors_to_check)
 
     @pytest.mark.parametrize("eq_string", ["1 = 1", "1 ==\n1[a]"])
-    def test_custom_math_fails_marker_correct_position(self, simple_supply, eq_string):
+    def test_add_math_fails_marker_correct_position(self, simple_supply, eq_string):
         math_dict = {"constraints": {"foo": {"equations": [{"expression": eq_string}]}}}
 
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:

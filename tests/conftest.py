@@ -145,9 +145,11 @@ def simple_conversion_plus():
 @pytest.fixture(scope="module")
 def dummy_model_data(config_defaults, model_defaults):
     coords = {
-        dim: ["foo", "bar"]
-        if dim != "techs"
-        else ["foobar", "foobaz", "barfoo", "bazfoo"]
+        dim: (
+            ["foo", "bar"]
+            if dim != "techs"
+            else ["foobar", "foobaz", "barfoo", "bazfoo"]
+        )
         for dim in ALL_DIMS
     }
     carrier_dims = ("nodes", "techs", "carriers")

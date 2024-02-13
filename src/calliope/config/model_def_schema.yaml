@@ -360,7 +360,7 @@ properties:
             title: Minimum flow capacity per storage capacity
             description: >-
               ratio of minimum charge/discharge (kW) for a given storage capacity (kWh).
-              Unit: $\text{hour}^{-1}$
+            x-unit: $\text{hour}^{-1}$
 
           flow_cap_per_storage_cap_max:
             $ref: "#/$defs/TechParamNullNumber"
@@ -369,7 +369,7 @@ properties:
             title: Maximum flow capacity per storage capacity
             description: >-
               ratio of maximum charge/discharge (kW) for a given storage capacity (kWh).
-              Unit: $\text{hour}^{-1}$
+            x-unit: $\text{hour}^{-1}$
 
           flow_cap:
             $ref: "#/$defs/TechParamNullNumber"
@@ -380,7 +380,7 @@ properties:
             description: >-
               Sets `flow_cap` to a parameter in operate mode.
               NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
-              Unit: power.
+            x-unit: power.
 
           flow_cap_max:
             $ref: "#/$defs/TechParamNullNumber"
@@ -389,7 +389,7 @@ properties:
             title: Maximum rated flow capacity.
             description: >-
               Limits `flow_cap` to a maximum.
-              Unit: power.
+            x-unit: power.
 
           flow_cap_max_systemwide:
             $ref: "#/$defs/TechParamNullNumber"
@@ -399,7 +399,7 @@ properties:
             description: >-
               Limits the sum of `flow_cap` over all nodes in the model to a maximum.
               If `cap_method=integer`, this will be scaled by the number of integer units of a technology purchased.
-              Unit: power or $\frac{\text{power}}{\text{unit}}$.
+            x-unit: power or $\frac{\text{power}}{\text{unit}}$.
 
           flow_cap_min:
             $ref: "#/$defs/TechParamNullNumber"
@@ -410,7 +410,7 @@ properties:
               Limits `flow_cap` to a minimum.
               NOTE: this will _force_ `flow_cap` to a minimum value unless `cap_method` is set to `integer`.
               If `cap_method=integer`, this will be scaled by the number of integer units of a technology purchased.
-              Unit: power or $\frac{\text{power}}{\text{unit}}$.
+            x-unit: power or $\frac{\text{power}}{\text{unit}}$.
 
           flow_cap_min_systemwide:
             $ref: "#/$defs/TechParamNullNumber"
@@ -420,7 +420,7 @@ properties:
             description: >-
               Limits the sum of `flow_cap` over all nodes in the model to a minimum.
               NOTE: this will _force_ the sum of `flow_cap` to a minimum value unless `cap_method` is set to `integer`.
-              Unit: power.
+            x-unit: power.
 
           flow_out_min_relative:
             $ref: "#/$defs/TechParamNullNumber"
@@ -431,7 +431,7 @@ properties:
             description: >-
               Set to a value between 0 and 1 to force minimum `flow_out` as a fraction of the technology rated capacity.
               If non-zero and `cap_method` is `continuous`, this will force the technology to operate above its minimum value at every timestep.
-              Unit: fraction.
+            x-unit: fraction.
 
           flow_cap_per_unit:
             $ref: "#/$defs/TechParamNullNumber"
@@ -440,7 +440,7 @@ properties:
             title: Flow capacity per purchased unit
             description: >-
               Set the capacity of each integer unit of a technology purchased, if `cap_method` is `integer`.
-              Unit: $\frac{\text{power}}{\text{unit}}$.
+            x-unit: $\frac{\text{power}}{\text{unit}}$.
 
           flow_in_eff:
             $ref: "#/$defs/TechParamNullNumber"
@@ -451,7 +451,7 @@ properties:
             description: >-
               Conversion efficiency from `source`/`flow_in` (tech dependent) into the technology.
               Set as value between 1 (no loss) and 0 (all lost).
-              Unit: fraction.
+            x-unit: fraction.
 
           flow_out_eff:
             $ref: "#/$defs/TechParamNullNumber"
@@ -462,7 +462,7 @@ properties:
             description: >-
               Conversion efficiency from the technology to `sink`/`flow_out` (tech dependent).
               Set as value between 1 (no loss) and 0 (all lost).
-              Unit: fraction.
+            x-unit: fraction.
 
           flow_out_parasitic_eff:
             $ref: "#/$defs/TechParamNullNumber"
@@ -473,7 +473,7 @@ properties:
             description: >-
               Additional losses as flow gets transferred from the plant to the carrier, e.g. due to plant parasitic consumption.
               Set as value between 1 (no loss) and 0 (all lost).
-              Unit: fraction.
+            x-unit: fraction.
 
           flow_ramping:
             $ref: "#/$defs/TechParamNullNumber"
@@ -482,7 +482,7 @@ properties:
             title: Ramping rate
             description: >-
               limit maximum outflow / inflow / outflow - inflow (technology base class dependent) to a fraction of maximum capacity, which increases by that fraction at each timestep.
-              Unit: $\frac{\text{fraction}}{\text{hour}}$.
+            x-unit: $\frac{\text{fraction}}{\text{hour}}$.
 
           export_max:
             $ref: "#/$defs/TechParamNullNumber"
@@ -491,7 +491,7 @@ properties:
             title: Maximum allowed carrier export
             description: >-
               If `carrier_export` is defined, limit the allowed export of produced carrier for a technology.
-              Unit: power.
+            x-unit: power.
 
           lifetime:
             type: ["null", number]
@@ -502,7 +502,7 @@ properties:
             description: >-
               Must be defined if fixed capital costs are defined.
               A reasonable value for many technologies is around 20-25 years.
-              Unit: years.
+            x-unit: years.
 
           area_use:
             $ref: "#/$defs/TechParamNullNumber"
@@ -513,7 +513,7 @@ properties:
             description: >-
               Sets `area_use` to a parameter in operate mode.
               NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
-              Unit: $\text{area}^{2}$.
+            x-unit: $\text{area}^{2}$.
 
           area_use_max:
             $ref: "#/$defs/TechParamNullNumber"
@@ -522,7 +522,7 @@ properties:
             title: Maximum usable area.
             description: >-
               If set to a finite value, limits the upper bound of the `area_use` decision variable to this value.
-              Unit: $\text{area}^{2}$.
+            x-unit: $\text{area}^{2}$.
 
           area_use_min:
             $ref: "#/$defs/TechParamNullNumber"
@@ -531,7 +531,7 @@ properties:
             title: Minimum usable area.
             description: >-
               Limits the lower bound of the `area_use` decision variable to this value.
-              Unit: $\text{area}^{2}$.
+            x-unit: $\text{area}^{2}$.
 
           area_use_per_flow_cap:
             $ref: "#/$defs/TechParamNullNumber"
@@ -540,7 +540,7 @@ properties:
             title: Area use per flow capacity
             description: >-
               If set, forces `area_use` to follow `flow_cap` with the given numerical ratio (e.g. setting to 1.5 means that `area_use == 1.5 * flow_cap`).
-              Unit: $\frac{\text{area}^{2}}{\text{power}}$.
+            x-unit: $\frac{\text{area}^{2}}{\text{power}}$.
 
           storage_cap:
             $ref: "#/$defs/TechParamNullNumber"
@@ -551,7 +551,7 @@ properties:
             description: >-
               Sets `storage_cap` to a parameter in operate mode.
               NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
-              Unit: $\text{area}^{2}$.
+            x-unit: $\text{area}^{2}$.
 
           storage_cap_max:
             $ref: "#/$defs/TechParamNullNumber"
@@ -560,7 +560,7 @@ properties:
             title: Maximum storage capacity.
             description: >-
               Limit upper bound of `storage_cap` decision variable.
-              Unit: energy.
+            x-unit: energy.
 
           storage_cap_min:
             $ref: "#/$defs/TechParamNullNumber"
@@ -569,7 +569,7 @@ properties:
             title: Minimum storage capacity.
             description: >-
               Limit lower bound of `storage_cap` decision variable.
-              Unit: energy.
+            x-unit: energy.
 
           storage_cap_per_unit:
             $ref: "#/$defs/TechParamNullNumber"
@@ -578,7 +578,7 @@ properties:
             title: Storage capacity per purchased unit.
             description: >-
               Set the storage capacity of each integer unit of a technology purchased.
-              Unit: $\frac{\text{energy}}{\text{unit}}$.
+            x-unit: $\frac{\text{energy}}{\text{unit}}$.
 
           storage_discharge_depth:
             $ref: "#/$defs/TechParamNullNumber"
@@ -588,7 +588,7 @@ properties:
             title: Storage depth of discharge.
             description: >-
               Defines the minimum level of storage state of charge, as a fraction of total storage capacity.
-              Unit: fraction.
+            x-unit: fraction.
 
           storage_initial:
             $ref: "#/$defs/TechParamNullNumber"
@@ -596,8 +596,8 @@ properties:
             x-type: float
             title: Initial storage level.
             description: >-
-               Set stored flow in device at the first timestep, as a fraction of total storage capacity.
-               Unit: fraction.
+              Set stored flow in device at the first timestep, as a fraction of total storage capacity.
+            x-unit: fraction.
 
           storage_loss:
             $ref: "#/$defs/TechParamNullNumber"
@@ -607,7 +607,7 @@ properties:
             title: Storage loss rate
             description: >-
                Rate of storage loss per hour, used to calculate lost stored flow as `(1 - storage_loss)^hours_per_timestep`.
-               Unit: $\frac{\text{fraction}}{\text{hour}}$.
+            x-unit: $\frac{\text{fraction}}{\text{hour}}$.
 
           cyclic_storage:
             type: boolean
@@ -618,7 +618,7 @@ properties:
               If true, link storage levels in the last model timestep with the first model timestep.
               `inter_cluster_storage` custom math must be included if using time clustering and setting this to `true`.
               This must be set to `false` if using `operate` mode.
-              Unit: boolean.
+            x-unit: boolean.
 
           purchased_units_min_systemwide:
             $ref: "#/$defs/TechParamNullNumber"
@@ -626,8 +626,8 @@ properties:
             x-type: float
             title: System-wide minimum installed integer units of a technology.
             description: >-
-               sets the lower bound of the sum across all nodes of the decision variable `units` for a particular technology.
-               Unit: integer.
+              sets the lower bound of the sum across all nodes of the decision variable `units` for a particular technology.
+            x-unit: integer.
 
           purchased_units_max_systemwide:
             $ref: "#/$defs/TechParamNullNumber"
@@ -635,8 +635,8 @@ properties:
             x-type: float
             title: System-wide maximum installed integer units of a technology.
             description: >-
-               sets the upper bound of the sum across all nodes of the decision variable `units` for a particular technology.
-               Unit: integer.
+              sets the upper bound of the sum across all nodes of the decision variable `units` for a particular technology.
+            x-unit: integer.
 
           purchased_units:
             $ref: "#/$defs/TechParamNullNumber"
@@ -647,7 +647,7 @@ properties:
             description: >-
               Sets `purchased_units` to a parameter in operate mode.
               NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
-              Unit: integer
+            x-unit: integer
 
           purchased_units_min:
             $ref: "#/$defs/TechParamNullNumber"
@@ -656,7 +656,7 @@ properties:
             title:  Minimum number of purchased units
             description: >-
               Limits the lower bound of units purchased if `cap_method` is `integer`.
-              Unit: integer.
+            x-unit: integer.
 
           purchased_units_max:
             $ref: "#/$defs/TechParamNullNumber"
@@ -666,7 +666,7 @@ properties:
             description: >-
               Limits the upper bound of units purchased if `cap_method` is `integer`.
               If set to `1`, will effectively set the `purchased_units` to a binary decision variable.
-              Unit: integer.
+            x-unit: integer.
 
           sink_unit:
             type: string
@@ -675,7 +675,7 @@ properties:
             x-type: str
             title: Sink unit
             description: >-
-              Sets the unit of `Sink` to either `absolute` (unit: energy), `per_area` (unit: energy/area), or `per_cap` (unit: energy/power).
+              Sets the unit of `Sink` to either `absolute` x-unit: energy), `per_area` x-unit: energy/area), or `per_cap` x-unit: energy/power).
               `per_area` uses the `area_use` decision variable to scale the sink while `per_cap` uses the `flow_cap` decision variable.
             enum: [absolute, per_area, per_cap]
 
@@ -737,7 +737,7 @@ properties:
             description: >-
               Conversion efficiency from the technology from `source`.
               Set as value between 1 (no loss) and 0 (all lost).
-              Unit: fraction.
+            x-unit: fraction.
 
           source_use_min:
             $ref: "#/$defs/TechParamNullNumber"
@@ -778,7 +778,7 @@ properties:
             description: >-
               Sets `source_cap` to a parameter in operate mode.
               NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
-              Unit: power.
+            x-unit: power.
 
           source_cap_max:
             type: number
@@ -788,7 +788,7 @@ properties:
             title: Maximum installed source consumption capacity.
             description: >-
               Upper limit on `source_cap` decision variable.
-              Unit: power.
+            x-unit: power.
 
           source_cap_min:
             type: number
@@ -798,7 +798,7 @@ properties:
             title: Minimum installed source consumption capacity
             description: >-
               Lower limit on `source_cap` decision variable.
-              Unit: power.
+            x-unit: power.
 
           one_way:
             type: boolean
@@ -810,7 +810,7 @@ properties:
 
           distance:
             type: ["null", number]
-            default: .nan
+            default: 1.0
             x-resample_method: mean
             x-type: float
             title: Distance spanned by link.
@@ -825,7 +825,7 @@ properties:
             x-type: float
             title: Inflow (i.e., export from node) efficiency per distance of transmission links.
             description: >-
-              Total link efficiency will be calculated as `\text{flow_in_eff}\mul{}\text{flow_in_eff_per_distance}^\text{distance}$.
+              Total link efficiency will be calculated as $\text{flow\_in\_eff}\times{}\text{flow\_in\_eff\_per\_distance}^\text{distance}$.
               Set as value between 1 (no loss) and 0 (all lost).
 
           flow_out_eff_per_distance:
@@ -835,7 +835,7 @@ properties:
             x-type: float
             title: Outflow (i.e., import from node) efficiency per distance of transmission links.
             description: >-
-              Total link efficiency will be calculated as `\text{flow_out_eff}\mul{}\text{flow_out_eff_per_distance}^\text{distance}$.
+              Total link efficiency will be calculated as $\text{flow\_out\_eff}\times{}\text{flow\_out\_eff\_per\_distance}^\text{distance}$.
               Set as value between 1 (no loss) and 0 (all lost).
 
           cost_flow_cap_per_distance:
@@ -846,7 +846,7 @@ properties:
             description: >-
               Cost per unit of the decision variable `flow_cap` and per unit distance of a transmission link.
               Applied to transmission links only.
-              Unit: $(\text{power}\mul\text{distance}^{-1}$
+            x-unit: $(\text{power}\times\text{distance})^{-1}$
 
           cost_purchase_per_distance:
             $ref: "#/$defs/TechCostNullNumber"
@@ -856,7 +856,7 @@ properties:
             description: >-
               Cost applied if the binary variable `purchased` is 1 or per unit of the integer variable `units`.
               Requires the parameter `cap_method` to be `integer`.
-              Unit: $(\text{purchased_unit}\mul\text{distance})^{-1}$
+            x-unit: $(\text{purchased\_units}\times\text{distance})^{-1}$
 
           cost_flow_cap:
             $ref: "#/$defs/TechCostNullNumber"
@@ -865,7 +865,7 @@ properties:
             title: Cost of flow capacity.
             description: >-
               Cost per unit of the decision variable `flow_cap`.
-              Unit: $\text{power}^{-1}$.
+            x-unit: $\text{power}^{-1}$.
 
           cost_export:
             $ref: "#/$defs/TechCostNullNumber"
@@ -876,7 +876,7 @@ properties:
             description: >-
               Cost per unit of `flow_export` in each timestep.
               Usually used in the negative sense, as a subsidy.
-              Unit: $\text{energy}^{-1}$.
+            x-unit: $\text{energy}^{-1}$.
 
           cost_interest_rate:
             $ref: "#/$defs/TechCostNullNumber"
@@ -885,7 +885,7 @@ properties:
             title: Interest rate.
             description: >-
               Used when computing levelized costs and technology depreciation_rate (relative to lifetime).
-              Unit: fraction
+            x-unit: fraction
 
           cost_om_annual:
             $ref: "#/$defs/TechCostNullNumber"
@@ -895,7 +895,7 @@ properties:
             description: >-
               Annual costs applied per unit `flow_cap`.
               These costs are not subject to being recalculated relative to technology lifetime, only scaled to reflect the fraction of one year that the model represents (e.g., 7 days ~= 0.02 of a year).
-              Unit: $\text{power}^{-1}$.
+            x-unit: $\text{power}^{-1}$.
 
           cost_om_annual_investment_fraction:
             $ref: "#/$defs/TechCostNullNumber"
@@ -904,7 +904,7 @@ properties:
             title: Fractional annual O&M costs.
             description: >-
               Add an additional cost to total investment costs (except `cost_om_annual`) that is a fraction of that total.
-              Unit: fraction / total investment.
+            x-unit: fraction / total investment.
 
           cost_flow_in:
             $ref: "#/$defs/TechCostNullNumber"
@@ -914,7 +914,7 @@ properties:
             title: Carrier inflow cost.
             description: >-
               Cost per unit of `flow_in` in each timestep.
-              Unit: $\text{energy}^{-1}$.
+            x-unit: $\text{energy}^{-1}$.
 
           cost_flow_out:
             $ref: "#/$defs/TechCostNullNumber"
@@ -924,7 +924,7 @@ properties:
             title: Carrier outflow cost
             description: >-
               Cost per unit of `flow_in` in each timestep.
-              Unit: $\text{energy}^{-1}$.
+            x-unit: $\text{energy}^{-1}$.
 
           cost_purchase:
             $ref: "#/$defs/TechCostNullNumber"
@@ -934,7 +934,7 @@ properties:
             description: >-
               Cost applied to the variable `purchased_units`.
               Requires the parameter `cap_method` to be `integer`.
-              Unit: $\text{purchased_unit}^{-1}$
+            x-unit: $\text{purchased\_unit}^{-1}$
 
           cost_area_use:
             $ref: "#/$defs/TechCostNullNumber"
@@ -943,7 +943,7 @@ properties:
             title: Cost of area use.
             description: >-
               Cost per unit `area_use`.
-              Unit: $\text{area}^{-2}$.
+            x-unit: $\text{area}^{-2}$.
 
           cost_source_cap:
             $ref: "#/$defs/TechCostNullNumber"
@@ -952,7 +952,7 @@ properties:
             title: Cost of source flow capacity.
             description: >-
               Cost per unit `source_cap`.
-              Unit: $\{power}^{-1}$.
+            x-unit: $\text{power}^{-1}$.
 
           cost_storage_cap:
             $ref: "#/$defs/TechCostNullNumber"
@@ -961,7 +961,7 @@ properties:
             title: Cost of storage capacity.
             description: >-
               Cost per unit `storage_cap`, i.e., the maximum available capacity of the storage technology's "reservoir".
-              Unit: $\{energy}^{-1}$.
+            x-unit: $\text{energy}^{-1}$.
 
           cost_depreciation_rate:
             $ref: "#/$defs/TechCostNullNumber"
@@ -971,7 +971,7 @@ properties:
             description: >-
               Applied to "annualise" investment costs so they are comparable to variable costs.
               If not provided, this will be calculated using technology `lifetime` and `cost_interest_rate`.
-              Unit: fraction.
+            x-unit: fraction.
 
   nodes:
     type: object

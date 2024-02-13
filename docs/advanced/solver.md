@@ -8,10 +8,10 @@ For example:
 
 ```yaml
 config.solve:
-    solver: gurobi
-    solver_options:
-        Threads: 3
-        NumericFocus: 2
+  solver: gurobi
+  solver_options:
+    Threads: 3
+    NumericFocus: 2
 ```
 
 ## CPLEX
@@ -22,11 +22,11 @@ For example:
 
 ```yaml
 config.solve:
-    solver: cplex
-    solver_options:
-        mipgap: 0.01
-        mip_polishafter_absmipgap: 0.1
-        emphasis_mip: 1
-        mip_cuts: 2
-        mip_cuts_cliques: 3
+  solver: cplex
+  solver_options:
+    mipgap: 0.01
+    mip_polishafter_absmipgap: 0.1
+    emphasis_mip: 1
+    mip_cuts: 2
+    mip_cuts_cliques: 3
 ```

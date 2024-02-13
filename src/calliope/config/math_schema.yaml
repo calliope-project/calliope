@@ -101,6 +101,8 @@ properties:
           unit: &unit
             type: string
             description: Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)
+          default: &default
+            type: number
           foreach: *foreach
           where: *top_level_where
           equations:
@@ -123,6 +125,7 @@ properties:
           description: *description
           active: *active
           unit: *unit
+          default: *default
           foreach: *foreach
           where: *top_level_where
           domain:

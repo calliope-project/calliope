@@ -277,17 +277,26 @@ class TestLatexBackendModel:
                     \section{Where}
 
                     \paragraph{ expr }
+
                     foobar
+
+                    \textbf{Default}: 0
+
                     \begin{equation}
                     \resizebox{\ifdim\width>\linewidth0.95\linewidth\else\width\fi}{!}{$
-                    \begin{array}{r}
+                    \begin{array}{l}
+                        \quad \textit{no_dims} + 2\\
                     \end{array}
-                    \begin{cases}
-                        1 + 2&\quad
-                        \\
-                    \end{cases}
                     $}
                     \end{equation}
+                    \section{Parameters}
+
+                    \paragraph{ no_dims }
+
+                    \textbf{Used in}:
+                    \begin{itemize}
+                        \item expr
+                    \end{itemize}
                     \end{document}"""
                 ),
             ),
@@ -304,15 +313,24 @@ class TestLatexBackendModel:
 
                     foobar
 
+                    **Default**: 0
+
                     .. container:: scrolling-wrapper
 
                         .. math::
-                            \begin{array}{r}
+                            \begin{array}{l}
+                                \quad \textit{no_dims} + 2\\
                             \end{array}
-                            \begin{cases}
-                                1 + 2&\quad
-                                \\
-                            \end{cases}
+
+                    Parameters
+                    ----------
+
+                    no_dims
+                    ^^^^^^^
+
+                    **Used in**:
+
+                    * expr
                     """
                 ),
             ),
@@ -324,16 +342,24 @@ class TestLatexBackendModel:
                     ## Where
 
                     ### expr
+
                     foobar
 
+                    **Default**: 0
+
                     $$
-                    \begin{array}{r}
+                    \begin{array}{l}
+                        \quad \textit{no\_dims} + 2\\
                     \end{array}
-                    \begin{cases}
-                        1 + 2&\quad
-                        \\
-                    \end{cases}
                     $$
+
+                    ## Parameters
+
+                    ### no_dims
+
+                    **Used in**:
+
+                    * [expr](#expr)
                     """
                 ),
             ),
@@ -342,10 +368,94 @@ class TestLatexBackendModel:
     def test_generate_math_doc(self, dummy_model_data, format, expected):
         backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
         backend_model.add_global_expression(
-            "expr", {"equations": [{"expression": "1 + 2"}], "description": "foobar"}
+            "expr",
+            {
+                "equations": [{"expression": "no_dims + 2"}],
+                "description": "foobar",
+                "default": 0,
+            },
         )
         doc = backend_model.generate_math_doc(format=format)
         assert doc == expected
+
+    def test_generate_math_doc_no_params(self, dummy_model_data):
+        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+        backend_model.add_global_expression(
+            "expr",
+            {
+                "equations": [{"expression": "1 + 2"}],
+                "description": "foobar",
+                "default": 0,
+            },
+        )
+        doc = backend_model.generate_math_doc(format="md")
+        assert doc == textwrap.dedent(
+            r"""
+
+                    ## Where
+
+                    ### expr
+
+                    foobar
+
+                    **Default**: 0
+
+                    $$
+                    \begin{array}{l}
+                        \quad 1 + 2\\
+                    \end{array}
+                    $$
+                    """
+        )
+
+    def test_generate_math_doc_mkdocs_tabbed(self, dummy_model_data):
+        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+        backend_model.add_global_expression(
+            "expr",
+            {
+                "equations": [{"expression": "1 + 2"}],
+                "description": "foobar",
+                "default": 0,
+            },
+        )
+        doc = backend_model.generate_math_doc(format="md", mkdocs_tabbed=True)
+        assert doc == textwrap.dedent(
+            r"""
+
+                    ## Where
+
+                    ### expr
+
+                    foobar
+
+                    **Default**: 0
+
+                    === "Math"
+
+                        $$
+                        \begin{array}{l}
+                            \quad 1 + 2\\
+                        \end{array}
+                        $$
+
+                    === "YAML"
+
+                        ```yaml
+                        equations:
+                        - expression: 1 + 2
+                        ```
+                    """
+        )
+
+    def test_generate_math_doc_mkdocs_tabbed_not_in_md(self, dummy_model_data):
+        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            backend_model.generate_math_doc(format="rst", mkdocs_tabbed=True)
+
+        assert check_error_or_warning(
+            excinfo,
+            "Cannot use MKDocs tabs when writing math to a non-Markdown file format.",
+        )
 
     @pytest.mark.parametrize(
         ["kwargs", "expected"],
@@ -354,46 +464,38 @@ class TestLatexBackendModel:
                 {"sets": ["nodes", "techs"]},
                 textwrap.dedent(
                     r"""
-                \begin{array}{r}
+                \begin{array}{l}
                     \forall{}
                     \text{ node }\negthickspace \in \negthickspace\text{ nodes, }
                     \text{ tech }\negthickspace \in \negthickspace\text{ techs }
-                    \\
-                \end{array}
-                \begin{cases}
-                \end{cases}"""
+                    \!\!:\\[2em]
+                \end{array}"""
                 ),
             ),
             (
                 {"sense": r"\min{}"},
                 textwrap.dedent(
                     r"""
-                \begin{array}{r}
-                    \min{}
-                \end{array}
-                \begin{cases}
-                \end{cases}"""
+                \begin{array}{l}
+                    \min{}\!\!:\\[2em]
+                \end{array}"""
                 ),
             ),
             (
                 {"where": r"foo \land bar"},
                 textwrap.dedent(
                     r"""
-                \begin{array}{r}
-                    \text{if } foo \land bar
-                \end{array}
-                \begin{cases}
-                \end{cases}"""
+                \begin{array}{l}
+                    \text{if } foo \land bar\!\!:\\[2em]
+                \end{array}"""
                 ),
             ),
             (
                 {"where": r""},
                 textwrap.dedent(
                     r"""
-                \begin{array}{r}
-                \end{array}
-                \begin{cases}
-                \end{cases}"""
+                \begin{array}{l}
+                \end{array}"""
                 ),
             ),
             (
@@ -405,15 +507,11 @@ class TestLatexBackendModel:
                 },
                 textwrap.dedent(
                     r"""
-                \begin{array}{r}
-                \end{array}
-                \begin{cases}
-                    foo&\quad
-                    \text{if } bar
-                    \\
-                    foo + 1&\quad
-                    \\
-                \end{cases}"""
+                \begin{array}{l}
+                    \quad \text{if } bar\!\!:\\
+                    \qquad foo\\[2em]
+                    \quad foo + 1\\
+                \end{array}"""
                 ),
             ),
         ],

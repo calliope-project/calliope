@@ -161,8 +161,10 @@ class TestBaseMath:
 class CustomMathExamples(ABC):
     TEST_REGISTER: set = set()
 
-    #: source of all custom math files
-    CUSTOM_MATH_DIR = CALLIOPE_DIR.parent.parent / "docs" / "custom_math" / "examples"
+    #: source of all example math files
+    CUSTOM_MATH_DIR = (
+        CALLIOPE_DIR.parent.parent / "docs" / "user_defined_math" / "examples"
+    )
 
     @property
     @abstractmethod
@@ -203,7 +205,7 @@ class CustomMathExamples(ABC):
                 overrides = {}
 
             model = build_test_model(
-                {"config.init.custom_math": [abs_filepath], **overrides}, scenario
+                {"config.init.add_math": [abs_filepath], **overrides}, scenario
             )
 
             compare_lps(model, custom_math, filename)

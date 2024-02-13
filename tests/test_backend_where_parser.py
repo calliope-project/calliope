@@ -94,6 +94,7 @@ def eval_kwargs(dummy_pyomo_backend_model):
         "helper_functions": helper_functions._registry["where"],
         "equation_name": "foo",
         "return_type": "array",
+        "references": set(),
     }
 
 
