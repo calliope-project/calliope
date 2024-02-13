@@ -129,6 +129,7 @@ nav:
     - examples/loading_tabular_data.py
     - examples/calliope_model_object.py
     - examples/calliope_logging.py
+    - examples/pathways.py
   - Advanced features:
     - advanced/constraints.md
     - advanced/index.md

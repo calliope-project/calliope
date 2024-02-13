@@ -226,6 +226,11 @@ overrides:
         initial_storage_cap: 0
         cost_storage_cap.data:  # to be updated from tabular data
           _REPLACE_: null
+        flow_cap_new_max:
+          data: [2000, 3000, 6000, 10000]
+          index: [2020, 2030, 2040, 2050]
+          dims: vintagesteps
+        flow_cap_max: .inf
       ccgt:
         lifetime: 16
         flow_cap_max_systemwide: # A constraint forcing phase-out of CCGT
@@ -252,6 +257,7 @@ overrides:
           data: [1, 0.9, 0.3, 0]
           index: [2020, 2030, 2040, 2050]
           dims: investsteps
+        flow_cap_max: 20000
         cost_flow_cap.data:  # to be updated from tabular data
           _REPLACE_: null
         cost_source_cap.data:  # to be updated from tabular data

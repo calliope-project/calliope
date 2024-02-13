@@ -256,7 +256,7 @@ variables:
     default: 0
     bounds:
       min: 0
-      max: flow_cap_max
+      max: flow_cap_new_max
 
   storage_cap_new:
     description: >-
