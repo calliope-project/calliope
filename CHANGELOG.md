@@ -2,6 +2,9 @@
 
 ### User-facing changes
 
+|new| `mkdocs_tabbed` option when writing math documentation to file (`calliope.Model.math_documentation.write(...)`) which will add YAML snippets to all rendered math as a separate "tab" if writing to Markdown.
+Requires the [PyMdown tabbed extension](https://facelessuser.github.io/pymdown-extensions/extensions/tabbed/) to render the tabs correctly in an [MkDocs](https://www.mkdocs.org/) project.
+
 |new| List of pre-defined parameters given in the `pre-defined` math documentation, with references back to the constraints/variables/global expressions in which they are defined (either in the `expression` string or the `where` string).
 
 |new| Units and default values for variables and global expressions added to the math documentation.

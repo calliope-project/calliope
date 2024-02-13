@@ -328,6 +328,7 @@ class AttrDict(dict):
         yaml_ = ruamel_yaml.YAML()
         yaml_.indent = 2
         yaml_.block_seq_indent = 0
+        yaml_.sort_base_mapping_type_on_output = False
 
         # Numpy objects should be converted to regular Python objects,
         # so that they are properly displayed in the resulting YAML output
