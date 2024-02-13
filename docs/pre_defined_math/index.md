@@ -27,13 +27,3 @@ If you want to introduce new constraints, decision variables, or objectives, you
 See the [user-defined math](../user_defined_math/index.md) section for an in-depth guide to applying your own math.
 
 The pre-defined math can be explored in this section by selecting one of the options in the left-hand-side table of contents.
-
-## A guide to math documentation
-
-If a math component's initial conditions are met (those to the left of the curly brace), it will be applied to a model.
-For each objective, constraint and global expression, a number of sub-conditions then apply (those to the right of the curly brace) to decide on the specific expression to apply at a given iteration of the component dimensions.
-
-In the expressions, terms in **bold** font are decision variables and terms in *italic* font are parameters.
-A list of the decision variables is given at the end of this page.
-A detailed listing of parameters along with their units and default values is given in the [model definition reference sheet][model-definition-schema].
-Those parameters which are defined over time (`timesteps`) in the expressions can be defined by a user as a single, time invariant value, or as a timeseries that is [loaded from file or dataframe](../creating/data_sources.md).

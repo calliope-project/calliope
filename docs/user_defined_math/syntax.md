@@ -212,7 +212,7 @@ Usually you shouldn't need to use this, as your `where` string will mask those N
 But if you're having trouble setting up your math, it is a useful function to getting it over the line.
 
 !!! note
-    Our [internally defined parameters][model-definition-schema] all have default values which propagate to the math.
+    Our internally defined parameters, listed in the `Parameters` section of our [pre-defined base math documentation][base-math] all have default values which propagate to the math.
     You only need to use `default_if_empty` for decision variables and global expressions, and for user-defined parameters.
 
 ## equations
@@ -330,3 +330,10 @@ slices:
   tech_ref:
     - expression: lookup_techs
 ```
+
+## default
+
+Variables and global expressions can take `default` values.
+These values will be used to fill empty array elements (i.e., those that are not captured in the [`where` string](#where-strings)) when conducting math operations.
+A default value is not _required_, but is a useful way to ensure you do not accidentally find yourself with empty array elements creeping into the constraints.
+These manifest as `NaN` values in the optimisation problem, which will cause an error when the problem is sent to the solver.

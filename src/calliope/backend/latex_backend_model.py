@@ -5,7 +5,7 @@ import re
 import textwrap
 import typing
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
+from typing import Any, Literal, Optional, Union, overload
 
 import jinja2
 import numpy as np
@@ -13,9 +13,6 @@ import xarray as xr
 
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import ModelError
-
-if TYPE_CHECKING:
-    pass
 
 _ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
 
@@ -54,19 +51,19 @@ class MathDocumentation:
     def inputs(self, val: xr.Dataset):
         self._inputs = val
 
-    @overload  # noqa: F811
-    def write(  # noqa: F811
+    @overload
+    def write(
         self,
         filename: Literal[None] = None,
         format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
     ) -> str:
         "Expecting string if not giving filename"
 
-    @overload  # noqa: F811
-    def write(self, filename: Union[str, Path]) -> None:  # noqa: F811
+    @overload
+    def write(self, filename: Union[str, Path]) -> None:
         "Expecting None (and format arg is not needed) if giving filename"
 
-    def write(  # noqa: F811
+    def write(
         self,
         filename: Optional[Union[str, Path]] = None,
         format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
@@ -167,17 +164,37 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     Decision Variables
     ------------------
+    {% elif component_type == "parameters" %}
+
+    Parameters
+    ----------
     {% endif %}
     {% for equation in equations %}
 
     {{ equation.name }}
     {{ "^" * equation.name|length }}
-
     {% if equation.description is not none %}
+
     {{ equation.description }}
     {% endif %}
+    {% if equation.references %}
 
+    **Used in**:
+    {% for ref in equation.references %}
+
+    * {{ ref }}
+    {% endfor %}
+    {% endif %}
+    {% if equation.unit is not none %}
+
+    **Unit**: {{ equation.unit }}
+    {% endif %}
+    {% if equation.default is not none %}
+
+    **Default**: {{ equation.default }}
+    {% endif %}
     {% if equation.expression != "" %}
+
     .. container:: scrolling-wrapper
 
         .. math::{{ equation.expression | indent(8) }}
@@ -213,14 +230,35 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     \section{Where}
     {% elif component_type == "variables" %}
     \section{Decision Variables}
+    {% elif component_type == "parameters" %}
+    \section{Parameters}
     {% endif %}
     {% for equation in equations %}
 
     \paragraph{ {{ equation.name }} }
     {% if equation.description is not none %}
+
     {{ equation.description }}
     {% endif %}
+    {% if equation.references %}
+
+    \textbf{Used in}:
+    {% for ref in equation.references %}
+    \begin{itemize}
+        \item {{ ref }}
+    \end{itemize}
+    {% endfor %}
+    {% endif %}
+    {% if equation.unit is not none %}
+
+    \textbf{Unit}: {{ equation.unit }}
+    {% endif %}
+    {% if equation.default is not none %}
+
+    \textbf{Default}: {{ equation.default }}
+    {% endif %}
     {% if equation.expression != "" %}
+
     \begin{equation}
     \resizebox{\ifdim\width>\linewidth0.95\linewidth\else\width\fi}{!}{${{ equation.expression }}
     $}
@@ -245,12 +283,32 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {% elif component_type == "variables" %}
 
     ## Decision Variables
+    {% elif component_type == "parameters" %}
+
+    ## Parameters
     {% endif %}
     {% for equation in equations %}
 
     ### {{ equation.name }}
     {% if equation.description is not none %}
+
     {{ equation.description }}
+    {% endif %}
+    {% if equation.references %}
+
+    **Used in**:
+
+    {% for ref in equation.references %}
+    * [{{ ref }}](#{{ ref }})
+    {% endfor %}
+    {% endif %}
+    {% if equation.unit is not none %}
+
+    **Unit**: {{ equation.unit }}
+    {% endif %}
+    {% if equation.default is not none %}
+
+    **Default**: {{ equation.default }}
     {% endif %}
     {% if equation.expression != "" %}
 
@@ -285,7 +343,12 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         default: Any = np.nan,
         use_inf_as_na: bool = False,
     ) -> None:
-        self._add_to_dataset(parameter_name, parameter_values, "parameters", {})
+
+        attrs = {
+            "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
+            "unit": self._PARAM_UNITS.get(parameter_name, None),
+        }
+        self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
 
     def add_constraint(
         self,
@@ -297,7 +360,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         def _constraint_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
-            self._add_latex_strings(where, element, equation_strings)
+            self._add_latex_strings(where, element, equation_strings, references)
             return where.where(where)
 
         parsed_component = self._add_component(
@@ -318,7 +381,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         def _expression_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
-            self._add_latex_strings(where, element, equation_strings)
+            self._add_latex_strings(where, element, equation_strings, references)
             return where.where(where)
 
         parsed_component = self._add_component(
@@ -372,7 +435,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         def _objective_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> None:
-            self._add_latex_strings(where, element, equation_strings)
+            self._add_latex_strings(where, element, equation_strings, references)
             return None
 
         parsed_component = self._add_component(
@@ -411,26 +474,44 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         components = {
             objtype: [
                 {
-                    "expression": da.attrs["math_string"],
+                    "expression": da.attrs.get("math_string", ""),
                     "name": name,
                     "description": da.attrs.get("description", None),
+                    "references": list(da.attrs.get("references", set())),
+                    "default": da.attrs.get("default", None),
+                    "unit": da.attrs.get("unit", None),
                 }
                 for name, da in getattr(self, objtype).data_vars.items()
                 if "math_string" in da.attrs
+                or (objtype == "parameters" and da.attrs["references"])
             ]
             for objtype in [
                 "objectives",
                 "constraints",
                 "global_expressions",
                 "variables",
+                "parameters",
             ]
             if getattr(self, objtype).data_vars
         }
+        if not components["parameters"]:
+            del components["parameters"]
         return self._render(doc_template, components=components)
 
-    def _add_latex_strings(self, where, element, equation_strings):
-        expr = element.evaluate_expression(self, return_type="math_string")
-        where_latex = element.evaluate_where(self, return_type="math_string")
+    def _add_latex_strings(
+        self,
+        where: xr.DataArray,
+        element: parsing.ParsedBackendEquation,
+        equation_strings: list,
+        references: set,
+    ):
+        expr = element.evaluate_expression(
+            self, return_type="math_string", references=references
+        )
+
+        where_latex = element.evaluate_where(
+            self, return_type="math_string", references=references
+        )
 
         if self.include == "all" or (self.include == "valid" and where.any()):
             equation_strings.append({"expression": expr, "where": where_latex})

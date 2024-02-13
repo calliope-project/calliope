@@ -84,6 +84,7 @@ class EvalString(ABC):
     def __eq__(self, other):
         return self.__repr__() == other
 
+    @abstractmethod
     def __repr__(self) -> str:
         "Return string representation of the parsed grammar"
 
@@ -94,7 +95,7 @@ class EvalToArrayStr(EvalString):
         """Return evaluated expression as a LaTex math string"""
 
     @abstractmethod
-    def as_array(self) -> xr.DataArray | list[str, float]:
+    def as_array(self) -> xr.DataArray | list[str | float]:
         """Return evaluated expression as an array"""
 
     @overload
@@ -104,7 +105,7 @@ class EvalToArrayStr(EvalString):
     @overload
     def eval(
         self, return_type: Literal["array"], **eval_kwargs
-    ) -> xr.DataArray | list[str, float]:
+    ) -> xr.DataArray | list[str | float]:
         """arrays evaluate to arrays"""
 
     def eval(
@@ -126,13 +127,13 @@ class EvalToArrayStr(EvalString):
             helper_functions (dict[str, type[ParsingHelperFunction]]): Dictionary of allowed helper functions.
             as_values (bool, optional): Return array as numeric values, not backend objects. Defaults to False.
         Returns:
-            Union[str, list[str, float], xr.DataArray]:
+            Union[str, list[str | float], xr.DataArray]:
                 If `math_string` is desired, returns a valid LaTex math string.
                 If `array` is desired, returns xarray DataArray or a list of strings/numbers (if the expression represents a list).
         """
 
         self.eval_attrs = eval_kwargs
-        evaluated: Union[str, list[str, float], xr.DataArray]
+        evaluated: Union[str, list[str | float], xr.DataArray]
         if return_type == "array":
             evaluated = self.as_array()
         elif return_type == "math_string":
@@ -357,6 +358,7 @@ class EvalComparisonOp(EvalToArrayStr):
 
     def _compare_bitwise(self, where: bool, lhs: Any, rhs: Any) -> Any:
         "Comparison function for application to individual elements of the array"
+
         if not where or pd.isnull(lhs) or pd.isnull(rhs):
             return np.nan
         match self.op:
@@ -407,12 +409,12 @@ class EvalFunction(EvalToArrayStr):
     @overload
     def _arg_eval(
         self, return_type: Literal["array"], arg: Any
-    ) -> xr.DataArray | list[str, float]:
+    ) -> xr.DataArray | list[str | float]:
         "array return"
 
     def _arg_eval(
         self, return_type: RETURN_T, arg: Any
-    ) -> Union[str, xr.DataArray, list[str, float]]:
+    ) -> Union[str, xr.DataArray, list[str | float]]:
         "Evaluate the arguments of the helper function"
         if isinstance(arg, pp.ParseResults):
             evaluated = arg[0].eval(return_type, **self.eval_attrs)
@@ -600,12 +602,12 @@ class EvalIndexSlice(EvalToArrayStr):
     @overload
     def _eval(
         self, return_type: Literal["array"], as_values: bool
-    ) -> xr.DataArray | list[str, float]:
+    ) -> xr.DataArray | list[str | float]:
         "array return"
 
     def _eval(
         self, return_type: RETURN_T, as_values: bool
-    ) -> Union[str, xr.DataArray, list[str, float]]:
+    ) -> Union[str, xr.DataArray, list[str | float]]:
         "Evaluate the referenced `slice`."
         self.eval_attrs["as_values"] = as_values
         return self.eval_attrs["slice_dict"][self.name][0].eval(
@@ -615,7 +617,7 @@ class EvalIndexSlice(EvalToArrayStr):
     def as_math_string(self) -> str:
         return self._eval("math_string", False)
 
-    def as_array(self) -> xr.DataArray | list[str, float]:
+    def as_array(self) -> xr.DataArray | list[str | float]:
         evaluated = self._eval("array", True)
         if isinstance(evaluated, xr.DataArray) and evaluated.isnull().any():
             evaluated = evaluated.notnull()
@@ -705,7 +707,7 @@ class ListParser(EvalToArrayStr):
         input_list = self.as_array()
         return "[" + ",".join(str(i) for i in input_list) + "]"
 
-    def as_array(self) -> list[str, float]:
+    def as_array(self) -> list[str | float]:
         values = [val.eval("array", **self.eval_attrs) for val in self.val]
         # strings and numbers are returned as xarray arrays of size 1,
         # so we extract those values.
@@ -732,6 +734,7 @@ class EvalUnslicedComponent(EvalToArrayStr):
     def as_math_string(self) -> str:
         self.eval_attrs["as_values"] = False
         evaluated = self.as_array()
+        self.eval_attrs["references"].add(self.name)
 
         if evaluated.shape:
             dims = rf"_\text{{{','.join(str(i).removesuffix('s') for i in evaluated.dims)}}}"
@@ -753,6 +756,8 @@ class EvalUnslicedComponent(EvalToArrayStr):
         else:
             try:
                 evaluated = backend_interface._dataset[self.name]
+                if "default" in evaluated.attrs:
+                    evaluated = evaluated.fillna(evaluated.attrs["default"])
             except KeyError:
                 evaluated = xr.DataArray(self.name, attrs={"obj_type": "string"})
 

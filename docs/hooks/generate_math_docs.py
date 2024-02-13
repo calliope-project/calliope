@@ -5,12 +5,15 @@ Generate LaTeX math to include in the documentation.
 """
 
 import importlib.resources
+import logging
 import tempfile
 import textwrap
 from pathlib import Path
 
 import calliope
 from mkdocs.structure.files import File
+
+logger = logging.getLogger("mkdocs")
 
 TEMPDIR = tempfile.TemporaryDirectory()
 
@@ -19,6 +22,15 @@ MODEL_PATH = Path(__file__).parent / "dummy_model" / "model.yaml"
 PREPEND_SNIPPET = """
 # {title}
 {description}
+
+## A guide to math documentation
+
+If a math component's initial conditions are met (the first `if` statement), it will be applied to a model.
+For each [objective](#objective), [constraint](#subject-to) and [global expression](#where), a number of sub-conditions then apply (the subsequent, indented `if` statements) to decide on the specific expression to apply at a given iteration of the component dimensions.
+
+In the expressions, terms in **bold** font are [decision variables](#decision-variables) and terms in *italic* font are [parameters](#parameters).
+The [decision variables](#decision-variables) and [parameters](#parameters) are listed at the end of the page; they also refer back to the global expressions / constraints in which they are used.
+Those parameters which are defined over time (`timesteps`) in the expressions can be defined by a user as a single, time invariant value, or as a timeseries that is [loaded from file or dataframe](../creating/data_sources.md).
 
 [:fontawesome-solid-download: Download the {math_type} formulation as a YAML file]({filepath})
 """
@@ -74,7 +86,7 @@ def write_file(
 
     files.append(
         File(
-            path=output_file,
+            path=output_file.as_posix(),
             src_dir=TEMPDIR.name,
             dest_dir=config["site_dir"],
             use_directory_urls=config["use_directory_urls"],
@@ -84,8 +96,8 @@ def write_file(
     # Append the source file to make it available for direct download
     files.append(
         File(
-            path=Path("math") / filename,
-            src_dir=importlib.resources.files("calliope"),
+            path=(Path("math") / filename).as_posix(),
+            src_dir=Path(importlib.resources.files("calliope")).as_posix(),
             dest_dir=config["site_dir"],
             use_directory_urls=config["use_directory_urls"],
         )
@@ -164,11 +176,21 @@ def _keep_only_changes(base_model: calliope.Model, model: calliope.Model) -> Non
                     full_del.append(name)
             else:
                 _add_to_description(component_dict, "|NEW|")
+
     model.math_documentation.build()
     for key in expr_del:
         model.math_documentation._instance._dataset[key].attrs["math_string"] = ""
     for key in full_del:
         del model.math_documentation._instance._dataset[key]
+    for var in model.math_documentation._instance._dataset.values():
+        var.attrs["references"] = var.attrs["references"].intersection(
+            model.math_documentation._instance._dataset.keys()
+        )
+        var.attrs["references"] = var.attrs["references"].difference(expr_del)
+
+    logger.info(
+        model.math_documentation._instance._dataset["carrier_in"].attrs["references"]
+    )
 
 
 def _add_to_description(component_dict: dict, update_string: str) -> None:

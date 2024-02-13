@@ -26,9 +26,10 @@ BOOLEANTYPE = Union[np.bool_, np.typing.NDArray[np.bool_]]
 class EvalAttrs(TypedDict):
     equation_name: str
     backend_interface: BackendModel
-    input_data: xr.DataArray
+    input_data: xr.Dataset
     helper_functions: dict[str, Callable]
     apply_where: NotRequired[bool]
+    references: NotRequired[set]
 
 
 class EvalWhere(expression_parser.EvalToArrayStr):
@@ -152,6 +153,7 @@ class DataVarParser(EvalWhere):
             TypeError: Cannot check array contents (`apply_where=False`) of `variable` or `global_expression` math components.
         """
         backend_interface = self.eval_attrs["backend_interface"]
+        self.eval_attrs["references"].add(self.data_var)
         if self.data_var in backend_interface._dataset.data_vars.keys():
             data_var_type = backend_interface._dataset[self.data_var].attrs["obj_type"]
         else:
