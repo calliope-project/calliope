@@ -190,27 +190,27 @@ class Inheritance(ParsingHelperFunction):
             With:
             ```yaml
             node_groups:
-                foo:
-                    available_area: 1
+              foo:
+                available_area: 1
             tech_groups:
-                bar:
-                    flow_cap_max: 1
-                baz:
-                    inherits: bar
-                    flow_out_eff: 0.5
+              bar:
+                flow_cap_max: 1
+              baz:
+                inherits: bar
+                flow_out_eff: 0.5
             nodes:
-                node_1:
-                    inherits: foo
-                    techs: {tech_1, tech_2}
-                node_2:
-                    techs: {tech_1, tech_2}
+              node_1:
+                inherits: foo
+                techs: {tech_1, tech_2}
+              node_2:
+                techs: {tech_1, tech_2}
             techs:
-                tech_1:
-                    ...
-                    inherits: bar
-                tech_2:
-                    ...
-                    inherits: baz
+              tech_1:
+                ...
+                inherits: bar
+              tech_2:
+                ...
+                inherits: baz
             ```
 
             >>> inheritance(nodes=foo)
@@ -346,14 +346,14 @@ class Defined(ParsingHelperFunction):
 
             ```yaml
             nodes:
-                node1:
-                    techs:
-                        tech1:
-                        tech3:
-                node2:
-                    techs:
-                        tech2:
-                        tech3:
+              node1:
+                techs:
+                  tech1:
+                  tech3:
+              node2:
+                techs:
+                  tech2:
+                  tech3:
             ```
             Then:
             ```

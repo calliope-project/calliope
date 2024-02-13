@@ -209,52 +209,6 @@ class TestModelRun:
                 scenario="simple_supply",
             )
 
-    def test_change_date_format(self):
-        """
-        Test the date parser catches a different date format from file than
-        user input/default (inc. if it is just one line of a file that is incorrect)
-        """
-
-        # should pass: changing datetime format from default
-        override = AttrDict.from_yaml_string(
-            """
-            config.init.time_format: "%d/%m/%Y %H:%M:%S"
-            data_sources:
-                demand_elec.source: data_sources/demand_heat_diff_dateformat.csv
-                demand_heat.source: data_sources/demand_heat_diff_dateformat.csv
-        """
-        )
-        model = build_model(override_dict=override, scenario="simple_conversion")
-        assert all(
-            model.inputs.timesteps.to_index()
-            == pd.date_range("2005-01", "2005-01-02 23:00:00", freq="H")
-        )
-
-    def test_incorrect_date_format_one(self):
-        # should fail: wrong dateformat input for one file
-        override = AttrDict.from_yaml_string(
-            "data_sources.demand_elec.source: data_sources/demand_heat_diff_dateformat.csv"
-        )
-
-        with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override, scenario="simple_conversion")
-
-    def test_incorrect_date_format_multi(self):
-        # should fail: wrong dateformat input for all files
-        override3 = {"config.init.time_format": "%d/%m/%Y %H:%M:%S"}
-
-        with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override3, scenario="simple_supply")
-
-    def test_incorrect_date_format_one_value_only(self):
-        # should fail: one value wrong in file
-        override = AttrDict.from_yaml_string(
-            "data_sources.test_demand_elec.source: data_sources/demand_heat_wrong_dateformat.csv"
-        )
-        # check in output error that it points to: 07/01/2005 10:00:00
-        with pytest.raises(exceptions.ModelError):
-            build_model(override_dict=override, scenario="simple_conversion")
-
     def test_inconsistent_time_indices_fails(self):
         """
         Test that, including after any time subsetting, the indices of all time

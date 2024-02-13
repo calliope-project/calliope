@@ -5,12 +5,15 @@ Generate LaTeX math to include in the documentation.
 """
 
 import importlib.resources
+import logging
 import tempfile
 import textwrap
 from pathlib import Path
 
 import calliope
 from mkdocs.structure.files import File
+
+logger = logging.getLogger("mkdocs")
 
 TEMPDIR = tempfile.TemporaryDirectory()
 
@@ -19,6 +22,19 @@ MODEL_PATH = Path(__file__).parent / "dummy_model" / "model.yaml"
 PREPEND_SNIPPET = """
 # {title}
 {description}
+
+## A guide to math documentation
+
+If a math component's initial conditions are met (the first `if` statement), it will be applied to a model.
+For each [objective](#objective), [constraint](#subject-to) and [global expression](#where), a number of sub-conditions then apply (the subsequent, indented `if` statements) to decide on the specific expression to apply at a given iteration of the component dimensions.
+
+In the expressions, terms in **bold** font are [decision variables](#decision-variables) and terms in *italic* font are [parameters](#parameters).
+The [decision variables](#decision-variables) and [parameters](#parameters) are listed at the end of the page; they also refer back to the global expressions / constraints in which they are used.
+Those parameters which are defined over time (`timesteps`) in the expressions can be defined by a user as a single, time invariant value, or as a timeseries that is [loaded from file or dataframe](../creating/data_sources.md).
+
+!!! note
+
+    For every math component in the documentation, we include the YAML snippet that was used to generate the math in a separate tab.
 
 [:fontawesome-solid-download: Download the {math_type} formulation as a YAML file]({filepath})
 """
@@ -33,7 +49,7 @@ def on_files(files: list, config: dict, **kwargs):
         textwrap.dedent(
             """
         Complete base mathematical formulation for a Calliope model.
-        This math is _always_ applied but can be overridden using [custom math][introducing-custom-math-to-your-model].
+        This math is _always_ applied but can be overridden with pre-defined additional math or [your own math][adding-your-own-math-to-a-model].
         """
         ),
         base_model,
@@ -47,8 +63,8 @@ def on_files(files: list, config: dict, **kwargs):
             f"{override}.yaml",
             textwrap.dedent(
                 f"""
-            Inbuilt custom math to apply {custom_model.inputs.attrs['name']} math on top of the [base mathematical formulation][base-math].
-            This math is _only_ applied if referenced in the `config.init.custom_math` list as `{override}`.
+            Pre-defined additional math to apply {custom_model.inputs.attrs['name']} math on top of the [base mathematical formulation][base-math].
+            This math is _only_ applied if referenced in the `config.init.add_math` list as `{override}`.
             """
             ),
             custom_model,
@@ -74,7 +90,7 @@ def write_file(
 
     files.append(
         File(
-            path=output_file,
+            path=output_file.as_posix(),
             src_dir=TEMPDIR.name,
             dest_dir=config["site_dir"],
             use_directory_urls=config["use_directory_urls"],
@@ -84,8 +100,8 @@ def write_file(
     # Append the source file to make it available for direct download
     files.append(
         File(
-            path=Path("math") / filename,
-            src_dir=importlib.resources.files("calliope"),
+            path=(Path("math") / filename).as_posix(),
+            src_dir=Path(importlib.resources.files("calliope")).as_posix(),
             dest_dir=config["site_dir"],
             use_directory_urls=config["use_directory_urls"],
         )
@@ -93,12 +109,12 @@ def write_file(
     nav_reference = [
         idx
         for idx in config["nav"]
-        if isinstance(idx, dict) and set(idx.keys()) == {"Inbuilt math"}
+        if isinstance(idx, dict) and set(idx.keys()) == {"Pre-defined math"}
     ][0]
 
-    nav_reference["Inbuilt math"].append(output_file.as_posix())
+    nav_reference["Pre-defined math"].append(output_file.as_posix())
 
-    math_doc = model.math_documentation.write(format="md")
+    math_doc = model.math_documentation.write(format="md", mkdocs_tabbed=True)
     file_to_download = Path("..") / filename
     output_full_filepath.write_text(
         PREPEND_SNIPPET.format(
@@ -118,7 +134,7 @@ def generate_base_math_model() -> calliope.Model:
         model_config (dict): Calliope model config.
 
     Returns:
-        calliope.Model: Base math model to use in generating custom math docs.
+        calliope.Model: Base math model to use in generating math docs.
     """
     model = calliope.Model(model_definition=MODEL_PATH)
     model.math_documentation.build()
@@ -128,7 +144,7 @@ def generate_base_math_model() -> calliope.Model:
 def generate_custom_math_model(
     base_model: calliope.Model, override: str
 ) -> calliope.Model:
-    """Generate model with documentation for a built-in custom math file, showing only the changes made
+    """Generate model with documentation for a pre-defined math file, showing only the changes made
     relative to the base math.
 
     Args:
@@ -143,7 +159,7 @@ def generate_custom_math_model(
 
 def _keep_only_changes(base_model: calliope.Model, model: calliope.Model) -> None:
     """Compare custom math model with base model and keep only the math strings that are
-    different between the two. Changes are made in-place in the custom math model docs
+    different between the two. Changes are made in-place in the custom math model docs.
 
     Args:
         base_model (calliope.Model): Calliope model with base math applied.
@@ -164,11 +180,21 @@ def _keep_only_changes(base_model: calliope.Model, model: calliope.Model) -> Non
                     full_del.append(name)
             else:
                 _add_to_description(component_dict, "|NEW|")
+
     model.math_documentation.build()
     for key in expr_del:
         model.math_documentation._instance._dataset[key].attrs["math_string"] = ""
     for key in full_del:
         del model.math_documentation._instance._dataset[key]
+    for var in model.math_documentation._instance._dataset.values():
+        var.attrs["references"] = var.attrs["references"].intersection(
+            model.math_documentation._instance._dataset.keys()
+        )
+        var.attrs["references"] = var.attrs["references"].difference(expr_del)
+
+    logger.info(
+        model.math_documentation._instance._dataset["carrier_in"].attrs["references"]
+    )
 
 
 def _add_to_description(component_dict: dict, update_string: str) -> None:

@@ -44,23 +44,23 @@ In this section we will show some examples of loading data and provide the equiv
 
     ```yaml
     data_sources:
-        pv_capacity_factor_data:
-            source: data_sources/pv_resource.csv
-            rows: timesteps
-            add_dimensions:
-                techs: pv
-                parameters: source_use_equals
+      pv_capacity_factor_data:
+        source: data_sources/pv_resource.csv
+        rows: timesteps
+        add_dimensions:
+          techs: pv
+          parameters: source_use_equals
     ```
 
 === "YAML"
 
     ```yaml
     techs:
-        pv:
-            source_use_equals:
-                data: [15, 5, 20, 11, ...]
-                index: ["2005-01-01 12:00:00", "2005-01-01 13:00:00", "2005-01-01 12:00:00", "2005-01-01 13:00:00", ....]
-                dims: "timesteps"
+      pv:
+        source_use_equals:
+          data: [15, 5, 20, 11, ...]
+          index: ["2005-01-01 12:00:00", "2005-01-01 13:00:00", "2005-01-01 12:00:00", "2005-01-01 13:00:00", ....]
+          dims: "timesteps"
     ```
 
 ??? note "Getting timestamp formats right"
@@ -96,27 +96,27 @@ In this section we will show some examples of loading data and provide the equiv
 
     ```yaml
     data_sources:
-        tech_data:
-            source: data_sources/tech_data.csv
-            rows: [techs, parameters]
+      tech_data:
+        source: data_sources/tech_data.csv
+        rows: [techs, parameters]
     ```
 
 === "YAML"
 
     ```yaml
     techs:
-        tech1:
-            base_tech: supply
-            flow_cap_max: 100
-            flow_out_eff: 0.1
-            area_use_max: 500
-            area_use_per_flow_cap: 7
-        tech2:
-            base_tech: demand
-        tech3:
-            base_tech: storage
-            storage_cap_max: 200
-            flow_cap_max: 100
+      tech1:
+        base_tech: supply
+        flow_cap_max: 100
+        flow_out_eff: 0.1
+        area_use_max: 500
+        area_use_per_flow_cap: 7
+      tech2:
+        base_tech: demand
+      tech3:
+        base_tech: storage
+        storage_cap_max: 200
+        flow_cap_max: 100
     ```
 
 ### Loading technology cost data from file
@@ -139,48 +139,48 @@ In this section we will show some examples of loading data and provide the equiv
 
     ```yaml
     data_sources:
-        tech_data:
-            source: data_sources/tech_data.csv
-            rows: [techs, parameters]
-            add_dimensions:
-                costs: monetary
+      tech_data:
+        source: data_sources/tech_data.csv
+        rows: [techs, parameters]
+        add_dimensions:
+          costs: monetary
     ```
 
 === "YAML"
 
     ```yaml
     tech_groups:  # (1)!
-        cost_setter:
-            cost_interest_rate:
-                data: 0.1
-                index: monetary
-                dims: costs
-            cost_flow_cap:
-                data: null
-                index: monetary
-                dims: costs
-            cost_area_use:
-                data: null
-                index: monetary
-                dims: costs
-            cost_flow_out:
-                data: null
-                index: monetary
-                dims: costs
-            cost_storage_cap:
-                data: null
-                index: monetary
-                dims: costs
+      cost_setter:
+        cost_interest_rate:
+          data: 0.1
+          index: monetary
+          dims: costs
+        cost_flow_cap:
+          data: null
+          index: monetary
+          dims: costs
+        cost_area_use:
+          data: null
+          index: monetary
+          dims: costs
+        cost_flow_out:
+          data: null
+          index: monetary
+          dims: costs
+        cost_storage_cap:
+          data: null
+          index: monetary
+          dims: costs
 
     techs:
-        tech1:
-            inherit: cost_setter
-            cost_flow_cap.data: 100
-            cost_area_use.data: 50
-            cost_flow_out.data: 0.2
-        tech3:
-            cost_flow_cap.data: 20
-            cost_storage_cap.data: 150
+      tech1:
+        inherit: cost_setter
+        cost_flow_cap.data: 100
+        cost_area_use.data: 50
+        cost_flow_out.data: 0.2
+      tech3:
+        cost_flow_cap.data: 20
+        cost_storage_cap.data: 150
     ```
 
     1. To limit repetition, we have defined [technology groups](groups.md) for our costs.
@@ -206,12 +206,12 @@ YAML definition to load only data from nodes 1 and 2:
 
 ```yaml
 data_sources:
-    tech_data:
-        source: data_sources/tech_data.csv
-        rows: [techs, parameters]
-        columns: nodes
-        select:
-            nodes: [node1, node2]
+  tech_data:
+    source: data_sources/tech_data.csv
+    rows: [techs, parameters]
+    columns: nodes
+    select:
+      nodes: [node1, node2]
 ```
 
 You may also want to store scenarios in your file.
@@ -229,21 +229,21 @@ YAML definition to load only data from scenario 1:
 
 ```yaml
 data_sources:
-    tech_data:
-        source: data_sources/tech_data.csv
-        rows: [techs, parameters]
-        columns: scenarios
-        select:
-            scenarios: scenario1
-        drop: scenarios
+  tech_data:
+    source: data_sources/tech_data.csv
+    rows: [techs, parameters]
+    columns: scenarios
+    select:
+      scenarios: scenario1
+    drop: scenarios
 ```
 
 You can then also tweak just one line of your data source YAML with an [override](scenarios.md) to point to your other scenario:
 
 ```yaml
 override:
-    switch_to_scenario2:
-        data_sources.tech_data.select.scenarios: scenario2  # (1)!
+  switch_to_scenario2:
+    data_sources.tech_data.select.scenarios: scenario2  # (1)!
 ```
 
 1. We use the dot notation as a shorthand for [abbreviate nested dictionaries](yaml.md#abbreviated-nesting).
@@ -266,10 +266,10 @@ For example, to define costs for the parameter `cost_flow_cap`:
 
     ```yaml
     data_sources:
-        tech_data:
-            source: data_sources/tech_data.csv
-            rows: [techs, costs, parameters]
-            columns: nodes
+      tech_data:
+        source: data_sources/tech_data.csv
+        rows: [techs, costs, parameters]
+        columns: nodes
     ```
 
 === "With `add_dimensions`"
@@ -283,13 +283,13 @@ For example, to define costs for the parameter `cost_flow_cap`:
 
     ```yaml
     data_sources:
-        tech_data:
-            source: data_sources/tech_data.csv
-            rows: techs
-            columns: nodes
-            add_dimensions:
-                costs: monetary
-                parameters: cost_flow_cap
+      tech_data:
+        source: data_sources/tech_data.csv
+        rows: techs
+        columns: nodes
+        add_dimensions:
+          costs: monetary
+          parameters: cost_flow_cap
     ```
 
 Or to define the same timeseries source data for two technologies at different nodes:
@@ -307,10 +307,10 @@ Or to define the same timeseries source data for two technologies at different n
 
     ```yaml
     data_sources:
-        tech_data:
-            source: data_sources/tech_data.csv
-            rows: timesteps
-            columns: [nodes, techs, parameters]
+      tech_data:
+        source: data_sources/tech_data.csv
+        rows: timesteps
+        columns: [nodes, techs, parameters]
     ```
 
 
@@ -325,20 +325,20 @@ Or to define the same timeseries source data for two technologies at different n
 
     ```yaml
     data_sources:
-        tech_data_1:
-            source: data_sources/tech_data.csv
-            rows: timesteps
-            add_dimensions:
-                techs: tech1
-                nodes: node1
-                parameters: source_use_max
-        tech_data_2:
-            source: data_sources/tech_data.csv
-            rows: timesteps
-            add_dimensions:
-                techs: tech2
-                nodes: node2
-                parameters: source_use_max
+      tech_data_1:
+        source: data_sources/tech_data.csv
+        rows: timesteps
+        add_dimensions:
+          techs: tech1
+          nodes: node1
+          parameters: source_use_max
+      tech_data_2:
+        source: data_sources/tech_data.csv
+        rows: timesteps
+        add_dimensions:
+          techs: tech2
+          nodes: node2
+          parameters: source_use_max
     ```
 
 ## Loading CSV files vs `pandas` dataframes
@@ -364,12 +364,12 @@ And then you point to those dictionary keys in the `source` for your data source
 
 ```yaml
 data_sources:
-    ds1:
-        source: data_source_1
-        ...
-    ds2:
-        source: data_source_2
-        ...
+  ds1:
+    source: data_source_1
+    ...
+  ds2:
+    source: data_source_2
+    ...
 ```
 
 !!! note
@@ -402,10 +402,10 @@ Instead, at least list the techs available at each node in YAML.
 E.g.,
     ```yaml
     nodes:
-        node1.techs: {tech1, tech2, tech3}
-        node2.techs: {tech1, tech2}
+      node1.techs: {tech1, tech2, tech3}
+      node2.techs: {tech1, tech2}
     data_sources:
-        ...
+      ...
     ```
 
 ### Data you _cannot_ load in tabular format

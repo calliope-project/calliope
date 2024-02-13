@@ -3,6 +3,11 @@
 !!! warning
 
     Calliope version 0.7 is available as a pre-release with the purpose of gathering feedback from users.
+    To install the pre-release as a user:
+
+    ```shell
+    mamba create -n calliope -c conda-forge/label/calliope_dev -c conda-forge calliope
+    ```
 
     Some functionality is not yet available in 0.7, notably:
 
@@ -10,6 +15,8 @@
     * Plotting (see the [example notebooks](examples/index.md) for sample code on making plots directly with Plotly)
 
     To see a full list of changes, read our [page on migrating between v0.6 and v0.7](migrating.md).
+
+    If you want to install the most recent _stable_ version of Calliope, see our [v0.6.10 documentation](https://calliope.readthedocs.io/en/v0.6.10/).
 
 !!! note
 

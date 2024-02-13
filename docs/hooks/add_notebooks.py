@@ -20,6 +20,8 @@ def on_files(files: list, config: dict, **kwargs):
     """Generate schema markdown reference sheets and attach them to the documentation."""
 
     for file in NOTEBOOK_DIR.glob("**/*.py"):
+        if any(part.startswith(".") for part in file.parts):
+            continue
         output_file = file.relative_to("docs").parent / file.stem / "notebook.ipynb"
         output_temp_file = Path(TEMPDIR.name) / output_file
         output_temp_file.parent.mkdir(parents=True, exist_ok=True)

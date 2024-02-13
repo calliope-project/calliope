@@ -109,12 +109,10 @@ class Model(object):
         if isinstance(model_definition, xr.Dataset):
             self._init_from_model_data(model_definition)
         else:
-            (
-                model_def,
-                self._model_def_path,
-                applied_overrides,
-            ) = load.load_model_definition(
-                model_definition, scenario, override_dict, **kwargs
+            (model_def, self._model_def_path, applied_overrides) = (
+                load.load_model_definition(
+                    model_definition, scenario, override_dict, **kwargs
+                )
             )
             self._init_from_model_def_dict(
                 model_def, applied_overrides, scenario, debug, data_source_dfs
@@ -225,7 +223,7 @@ class Model(object):
 
         self._add_observed_dict("config", model_config)
 
-        math = self._add_math(init_config["custom_math"])
+        math = self._add_math(init_config["add_math"])
         self._add_observed_dict("math", math)
 
         self._model_data.attrs["name"] = init_config["name"]
@@ -316,17 +314,17 @@ class Model(object):
         self._model_data.attrs[name] = dict_to_add
         setattr(self, name, dict_to_add)
 
-    def _add_math(self, custom_math: list) -> AttrDict:
+    def _add_math(self, add_math: list) -> AttrDict:
         """
-        Load the base math and optionally override with custom math from a list of references to custom math files.
+        Load the base math and optionally override with additional math from a list of references to math files.
 
         Args:
-            custom_math (list):
-                List of references to files containing custom mathematical formulations that will be merged with the base formulation.
+            add_math (list):
+                List of references to files containing mathematical formulations that will be merged with the base formulation.
 
         Raises:
             exceptions.ModelError:
-                Referenced internal custom math files or user-defined custom math files must exist.
+                Referenced pre-defined math files or user-defined math files must exist.
 
         Returns:
             AttrDict: Dictionary of math (constraints, variables, objectives, and global expressions).
@@ -336,7 +334,7 @@ class Model(object):
 
         file_errors = []
 
-        for filename in custom_math:
+        for filename in add_math:
             if not f"{filename}".endswith((".yaml", ".yml")):
                 yaml_filepath = math_dir / f"{filename}.yaml"
             else:
@@ -351,9 +349,9 @@ class Model(object):
             base_math.union(override_dict, allow_override=True)
         if file_errors:
             raise exceptions.ModelError(
-                f"Attempted to load custom math that does not exist: {file_errors}"
+                f"Attempted to load additional math that does not exist: {file_errors}"
             )
-        self._model_data.attrs["applied_custom_math"] = custom_math
+        self._model_data.attrs["applied_additional_math"] = add_math
         return base_math
 
     def build(self, force: bool = False, **kwargs) -> None:
@@ -539,7 +537,7 @@ class Model(object):
     def validate_math_strings(self, math_dict: dict) -> None:
         """Validate that `expression` and `where` strings of a dictionary containing string mathematical formulations can be successfully parsed.
 
-        This function can be used to test custom math before attempting to build the optimisation problem.
+        This function can be used to test user-defined math before attempting to build the optimisation problem.
 
         NOTE: strings are not checked for evaluation validity. Evaluation issues will be raised only on calling `Model.build()`.
 

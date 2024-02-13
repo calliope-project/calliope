@@ -4,7 +4,7 @@ copyright: Copyright &copy; since 2013 <a href="https://github.com/calliope-proj
 repo_url: https://github.com/calliope-project/calliope
 hooks:
   - docs/hooks/changelog_highlight.py
-  - docs/hooks/generate_custom_math_examples.py
+  - docs/hooks/generate_math_examples.py
   - docs/hooks/generate_readable_schema.py
   - docs/hooks/generate_math_docs.py
   - docs/hooks/generate_plots.py
@@ -67,6 +67,7 @@ markdown_extensions:
   - attr_list
   - md_in_html
   - mkdocs-click
+  - def_list
   - toc:
       permalink: "¶"
       toc_depth: 3
@@ -86,7 +87,8 @@ markdown_extensions:
       alternate_style: true
   - pymdownx.snippets
   - pymdownx.details
-
+  - pymdownx.tasklist:
+      clickable_checkbox: true
 
 nav:
   - Home: index.md
@@ -104,15 +106,15 @@ nav:
   - Running a model: running.md
   - Analysing a model: analysing.md
   - Troubleshooting: troubleshooting.md
-  - Inbuilt math:
-    - index: math/index.md
-  - Custom math:
-    - custom_math/index.md
-    - custom_math/components.md
-    - custom_math/syntax.md
-    - custom_math/customise.md
-    - Example custom math gallery:
-      - custom_math/examples/index.md
+  - Pre-defined math:
+    - index: pre_defined_math/index.md
+  - Defining your own math:
+    - user_defined_math/index.md
+    - user_defined_math/components.md
+    - user_defined_math/syntax.md
+    - user_defined_math/customise.md
+    - Example additional math gallery:
+      - user_defined_math/examples/index.md
   - Examples and tutorials:
     - examples/index.md
     - National scale example model:

@@ -35,6 +35,8 @@ Without a `where` string, all valid members (according to the `definition_matrix
     1. a reference to an input parameter, where each valid member of the variable (i.e. each value of the variable for a specific combination of indices) will get a different value based on the values of the referenced parameters (see example above).
     If a value for a valid variable member is undefined in the referenced parameter, the decision variable will be unbounded for this member.
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
+1. It can take on a `default` value that will be used in math operations to avoid `NaN` values creeping in.
+The default value should be set such that it has no impact on the optimisation problem if it is included (most of the time, this means setting it to zero).
 
 ## Global Expressions
 
@@ -60,6 +62,8 @@ Without a `where` string, all valid members (according to the `definition_matrix
 1. It has [equations](syntax.md#equations) (and, optionally, [sub-expressions](syntax.md#sub-expressions) and [slices](syntax.md#slices)) with corresponding lists of `where`+`expression` dictionaries.
 The equation expressions do _not_ have comparison operators; those are reserved for [constraints](#constraints)
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
+1. It can take on a `default` value that will be used in math operations to avoid `NaN` values creeping in.
+The default value should be set such that it has no impact on the optimisation problem if it is included (most of the time, this means setting it to zero).
 
 ## Constraints
 
@@ -85,7 +89,7 @@ The equation expressions _must_ have comparison operators.
 
 ## Objectives
 
-With your constrained decision variables and a global expression that binds these variables to costs, you need an objective to minimise/maximise. The default built-in objective is `min_cost_optimisation` and looks as follows:
+With your constrained decision variables and a global expression that binds these variables to costs, you need an objective to minimise/maximise. The default, pre-defined objective is `min_cost_optimisation` and looks as follows:
 
 ```yaml
 objectives:
@@ -102,6 +106,5 @@ These expressions do _not_ have comparison operators.
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
 
 !!! warning
-
     You can only have one objective function activated in your math.
     If you have defined multiple objective functions, you can deactivate unwanted ones using `active: false`, or you can set your top-level `where` string on each that leads to only one being valid for your particular problem.

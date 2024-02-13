@@ -112,7 +112,7 @@ The costs are more numerous as well, and include monetary costs for all relevant
 * carrier conversion capacity
 * variable operational and maintenance costs
 
-### :sparkles: Interlude: inheriting from technology groups
+### Interlude: inheriting from technology groups
 
 You will notice that the above technologies _inherit_ `cost_dim_setter`.
 Inheritance allows us to avoid excessive repetition in our model definition.

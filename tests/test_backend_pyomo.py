@@ -1622,9 +1622,9 @@ class TestClusteringConstraints:
         override = {
             "config.init.time_subset": ["2005-01-01", "2005-01-04"],
             "config.init.time_cluster": "data_sources/cluster_days.csv",
-            "config.init.custom_math": ["storage_inter_cluster"]
-            if storage_inter_cluster
-            else [],
+            "config.init.add_math": (
+                ["storage_inter_cluster"] if storage_inter_cluster else []
+            ),
             "config.build.cyclic_storage": cyclic,
         }
         if storage_initial:
@@ -1746,46 +1746,43 @@ class TestNewBackend:
         base_math.union(mode_custom_math, allow_override=True)
 
         backend = PyomoBackendModel(m.inputs, mode=mode)
-        backend._add_run_mode_custom_math()
+        backend._add_run_mode_math()
 
-        assert f"Updating math formulation with {mode} mode custom math." in caplog.text
+        assert f"Updating math formulation with {mode} mode math." in caplog.text
 
         assert m.math != base_math
         assert backend.inputs.attrs["math"].as_dict() == base_math.as_dict()
 
     def test_add_run_mode_custom_math_before_build(self, caplog, temp_path):
-        """A user can override the run mode custom math by including it directly in the custom math string"""
+        """A user can override the run mode math by including it directly in the additional math list"""
         caplog.set_level(logging.DEBUG)
         custom_math = AttrDict({"variables": {"flow_cap": {"active": True}}})
         file_path = temp_path.join("custom-math.yaml")
         custom_math.to_yaml(file_path)
 
         m = build_model(
-            {"config.init.custom_math": ["operate", str(file_path)]},
+            {"config.init.add_math": ["operate", str(file_path)]},
             "simple_supply,two_hours,investment_costs",
         )
         backend = PyomoBackendModel(m.inputs, mode="operate")
-        backend._add_run_mode_custom_math()
+        backend._add_run_mode_math()
 
-        # We set operate mode explicitly in our custom math so it won't be added again
-        assert (
-            "Updating math formulation with operate mode custom math."
-            not in caplog.text
-        )
+        # We set operate mode explicitly in our additional math so it won't be added again
+        assert "Updating math formulation with operate mode math." not in caplog.text
 
-        # operate mode set it to false, then our custom math set it back to active
+        # operate mode set it to false, then our math set it back to active
         assert m.math.variables.flow_cap.active
-        # operate mode set it to false and our custom math did not override that
+        # operate mode set it to false and our math did not override that
         assert not m.math.variables.storage_cap.active
 
     def test_run_mode_mismatch(self):
         m = build_model(
-            {"config.init.custom_math": ["operate"]},
+            {"config.init.add_math": ["operate"]},
             "simple_supply,two_hours,investment_costs",
         )
         backend = PyomoBackendModel(m.inputs)
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            backend._add_run_mode_custom_math()
+            backend._add_run_mode_math()
 
         assert check_error_or_warning(
             excinfo, "Running in plan mode, but run mode(s) {'operate'}"
@@ -1803,19 +1800,28 @@ class TestNewBackend:
         assert (
             var.to_series().dropna().apply(lambda x: isinstance(x, pmo.variable)).all()
         )
-        assert var.attrs == {
-            "obj_type": "variables",
-            "references": {
-                "flow_in_max",
-                "flow_out_max",
-                "cost_investment",
-                "cost_investment_flow_cap",
-                "symmetric_transmission",
-            },
-            "description": "A technology's flow capacity, also known as its nominal or nameplate capacity.",
-            "unit": "power",
-            "coords_in_name": False,
+        expected_keys = set(
+            [
+                "obj_type",
+                "references",
+                "description",
+                "unit",
+                "default",
+                "yaml_snippet",
+                "coords_in_name",
+            ]
+        )
+        assert not expected_keys.symmetric_difference(var.attrs.keys())
+        assert var.attrs["obj_type"] == "variables"
+        assert var.attrs["references"] == {
+            "flow_in_max",
+            "flow_out_max",
+            "cost_investment",
+            "cost_investment_flow_cap",
+            "symmetric_transmission",
         }
+        assert var.attrs["default"] == 0
+        assert var.attrs["coords_in_name"] is False
 
     def test_new_build_get_variable_as_vals(self, simple_supply):
         var = simple_supply.backend.get_variable("flow_cap", as_backend_objs=False)
@@ -1835,6 +1841,12 @@ class TestNewBackend:
             "original_dtype": np.dtype("float64"),
             "references": {"flow_in_inc_eff"},
             "coords_in_name": False,
+            "default": 1.0,
+            "description": (
+                "Conversion efficiency from `source`/`flow_in` (tech dependent) into the technology. "
+                "Set as value between 1 (no loss) and 0 (all lost)."
+            ),
+            "unit": "fraction.",
         }
 
     def test_new_build_get_parameter_as_vals(self, simple_supply):
@@ -1851,13 +1863,22 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.expression))
             .all()
         )
-        assert expr.attrs == {
-            "obj_type": "global_expressions",
-            "references": {"cost"},
-            "description": "The installation costs of a technology, including annualised investment costs and annual maintenance costs.",
-            "unit": "cost",
-            "coords_in_name": False,
-        }
+        expected_keys = set(
+            [
+                "obj_type",
+                "references",
+                "description",
+                "unit",
+                "default",
+                "yaml_snippet",
+                "coords_in_name",
+            ]
+        )
+        assert not expected_keys.symmetric_difference(expr.attrs.keys())
+        assert expr.attrs["obj_type"] == "global_expressions"
+        assert expr.attrs["references"] == {"cost"}
+        assert expr.attrs["default"] == 0
+        assert expr.attrs["coords_in_name"] is False
 
     def test_new_build_get_global_expression_as_str(self, simple_supply):
         expr = simple_supply.backend.get_global_expression(
@@ -1881,12 +1902,13 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.constraint))
             .all()
         )
-        assert constr.attrs == {
-            "obj_type": "constraints",
-            "references": set(),
-            "description": "Set the global carrier balance of the optimisation problem by fixing the total production of a given carrier to equal the total consumption of that carrier at every node in every timestep.",
-            "coords_in_name": False,
-        }
+        expected_keys = set(
+            ["obj_type", "references", "description", "yaml_snippet", "coords_in_name"]
+        )
+        assert not expected_keys.symmetric_difference(constr.attrs.keys())
+        assert constr.attrs["obj_type"] == "constraints"
+        assert constr.attrs["references"] == set()
+        assert constr.attrs["coords_in_name"] is False
 
     def test_new_build_get_constraint_as_str(self, simple_supply):
         constr = simple_supply.backend.get_constraint(
@@ -2024,10 +2046,11 @@ class TestNewBackend:
 
         assert check_error_or_warning(
             error,
-            f"constraints:{constraint_name}:0 | Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
+            "(constraints, constraint-with-nan) | constraint array includes item(s) that resolves to a simple boolean. "
+            "There must be a math component defined on at least one side of the equation: [('test_demand_elec', 'electricity')]",
         )
 
-    def test_raise_error_on_expression_with_nan(self, simple_supply):
+    def test_add_global_expression(self, simple_supply):
         """
         A very simple expression: The annual and regional sum of `flow_out` for each tech.
         However, not every tech has the variable `flow_out`.
@@ -2047,23 +2070,6 @@ class TestNewBackend:
         assert (
             simple_supply.backend.get_global_expression(expression_name).name
             == expression_name
-        )
-
-        expression_dict = {
-            "foreach": ["techs", "carriers"],
-            "equations": [{"expression": "sum(flow_out, over=[nodes, timesteps])"}],
-            # "where": "carrier_out",  # <- no error would be raised with this uncommented
-        }
-        expression_name = "expression-with-nan"
-
-        with pytest.raises(exceptions.BackendError) as error:
-            simple_supply.backend.add_global_expression(
-                expression_name, expression_dict
-            )
-
-        assert check_error_or_warning(
-            error,
-            f"global_expressions:{expression_name}:0 | Missing a linear expression for some coordinates selected by 'where'. Adapting 'where' might help.",
         )
 
     def test_raise_error_on_excess_dimensions(self, simple_supply):

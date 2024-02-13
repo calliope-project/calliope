@@ -10,6 +10,7 @@ Functionality to add and process time varying parameters
 """
 import logging
 from pathlib import Path
+from typing import overload
 
 import numpy as np
 import pandas as pd
@@ -167,7 +168,7 @@ def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
     Args:
         data (xarray.Dataset): Calliope model data, containing only timeseries data variables.
         clustering_file (str | Path): Path to file containing rows of dates and the corresponding datestamp to which they are to be clustered.
-        time_format (str): The format that dates in `clustering_file` have been defined (e.g., "%Y-%m-%d").
+        time_format (str): The format that dates in `clustering_file` have been defined (e.g., "%Y-%m-%d" or "ISO8601").
 
     Returns:
         xarray.Dataset:
@@ -176,9 +177,11 @@ def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
     """
     clustering_timeseries = pd.read_csv(clustering_file, index_col=0).squeeze()
     clustering_timeseries.index = _datetime_index(
-        clustering_timeseries.index, time_format
+        clustering_timeseries.index + " 00:00:00", time_format
     )
-    representative_days = pd.to_datetime(clustering_timeseries.dropna()).dt.date
+    representative_days = _datetime_index(
+        clustering_timeseries.dropna() + " 00:00:00", time_format
+    ).dt.date
     grouper = representative_days.to_frame("clusters").groupby("clusters")
     data_new = data.sel(
         timesteps=data.timesteps.dt.date.isin(representative_days.values)
@@ -199,14 +202,29 @@ def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
     return data_new
 
 
+@overload
 def _datetime_index(index: pd.Index, format: str) -> pd.Index:
+    "Pass pandas Index"
+
+
+@overload
+def _datetime_index(index: pd.Series, format: str) -> pd.Series:
+    "Pass pandas Series"
+
+
+def _datetime_index(index: pd.Index | pd.Series, format: str) -> pd.Index | pd.Series:
     try:
-        return pd.to_datetime(index, format=format)
+        if format == "ISO8601":
+            dt = pd.to_datetime(index, format=format)
+        else:
+            dt = pd.to_datetime(index, format=format, exact=False)
     except ValueError as e:
         raise exceptions.ModelError(
             f"Error in parsing dates in timeseries data from using datetime format `{format}`. "
             f"Full error: {e}"
         )
+    else:
+        return dt
 
 
 def _check_time_subset(ts_index: pd.Index, time_subset: list[str]):

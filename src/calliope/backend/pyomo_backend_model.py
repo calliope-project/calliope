@@ -50,6 +50,7 @@ COMPONENT_TRANSLATOR = {
 
 
 class PyomoBackendModel(backend_model.BackendModel):
+
     def __init__(self, inputs: xr.Dataset, **kwargs) -> None:
         """Pyomo solver interface class.
 
@@ -97,7 +98,12 @@ class PyomoBackendModel(backend_model.BackendModel):
             parameter_da = parameter_da.astype(float)
 
         parameter_da.attrs["original_dtype"] = parameter_values.dtype
-        self._add_to_dataset(parameter_name, parameter_da, "parameters", {})
+        attrs = {
+            "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
+            "unit": self._PARAM_UNITS.get(parameter_name, None),
+            "default": default,
+        }
+        self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
 
     def add_constraint(
         self,
@@ -109,9 +115,17 @@ class PyomoBackendModel(backend_model.BackendModel):
         ) -> xr.DataArray:
             expr = element.evaluate_expression(self, where=where, references=references)
 
-            to_fill = self._apply_func(
-                self._to_pyomo_constraint, where, expr, name=name
-            )
+            try:
+                to_fill = self._apply_func(
+                    self._to_pyomo_constraint, where, expr, name=name
+                )
+            except BackendError as err:
+                types = self._apply_func(lambda x: type(x).__name__, expr.where(where))
+                offending_items = types.str.startswith("bool").to_series()
+                offending_idx = offending_items[offending_items].index.values
+                err.args = (f"{err.args[0]}: {offending_idx}", *err.args[1:])
+                raise err
+
             return to_fill
 
         self._add_component(name, constraint_dict, _constraint_setter, "constraints")
@@ -145,14 +159,14 @@ class PyomoBackendModel(backend_model.BackendModel):
         if variable_dict is None:
             variable_dict = self.inputs.attrs["math"]["variables"][name]
 
-        def _variable_setter(where):
+        def _variable_setter(where, references):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
-
+            bounds = variable_dict["bounds"]
             return self._apply_func(
                 self._to_pyomo_variable,
                 where,
-                self._get_capacity_bound(variable_dict["bounds"]["max"], name=name),
-                self._get_capacity_bound(variable_dict["bounds"]["min"], name=name),
+                self._get_capacity_bound(bounds["max"], name, references),
+                self._get_capacity_bound(bounds["min"], name, references),
                 name=name,
                 domain_type=domain_type,
             )
@@ -370,14 +384,24 @@ class PyomoBackendModel(backend_model.BackendModel):
     ) -> None:
         new_values = xr.DataArray(new_values)
         parameter_da = self.get_parameter(name)
+        input_da = self.inputs.get(name, xr.DataArray(np.nan))
         missing_dims_in_new_vals = set(parameter_da.dims).difference(new_values.dims)
         missing_dims_in_orig_vals = set(new_values.dims).difference(parameter_da.dims)
         refs_to_update: set = set()
+
+        if missing_dims_in_new_vals:
+            self.log(
+                "parameters",
+                name,
+                f"New values will be broadcast along the {missing_dims_in_new_vals} dimension(s)."
+                "info",
+            )
 
         if (
             (not parameter_da.shape and new_values.shape)
             or missing_dims_in_orig_vals
             or (parameter_da.isnull() & new_values.notnull()).any()
+            or (input_da.isnull() & new_values.notnull()).any()
         ):
             refs_to_update = self._find_all_references(parameter_da.attrs["references"])
             if refs_to_update:
@@ -388,23 +412,22 @@ class PyomoBackendModel(backend_model.BackendModel):
                     f"The optimisation problem components {sorted(refs_to_update)} will be re-built.",
                     "info",
                 )
+
+            if name not in self.inputs:
+                self.inputs[name] = new_values
+            else:
+                new_input_da = new_values.broadcast_like(input_da).fillna(input_da)
+                new_input_da.attrs = input_da.attrs
+                self.inputs[name] = new_input_da
+
             self.delete_component(name, "parameters")
             self.add_parameter(
                 name,
-                new_values,
+                self.inputs[name],
                 default=self.inputs.attrs["defaults"].get(name, np.nan),
             )
-            for ref in refs_to_update:
-                self._rebuild_reference(ref)
+            self._rebuild_references(refs_to_update)
             return None
-
-        if missing_dims_in_new_vals:
-            self.log(
-                "parameters",
-                name,
-                f"New values will be broadcast along the {missing_dims_in_new_vals} dimension(s)."
-                "info",
-            )
 
         self._apply_func(self._update_pyomo_param, parameter_da, new_values)
 
@@ -464,7 +487,9 @@ class PyomoBackendModel(backend_model.BackendModel):
             variable_da = variable_da.where(where.fillna(0))
         self._apply_func(self._unfix_pyomo_variable, variable_da)
 
-    def _get_capacity_bound(self, bound: Any, name: str) -> xr.DataArray:
+    def _get_capacity_bound(
+        self, bound: Any, name: str, references: set
+    ) -> xr.DataArray:
         """
         Generate array for the upper/lower bound of a decision variable.
         Any NaN values will be replaced by None, which Pyomo will correctly interpret as there being no bound to apply.
@@ -484,6 +509,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 f"Applying bound according to the {bound} parameter values.",
             )
             bound_array = self.get_parameter(bound)
+            references.add(bound)
         else:
             bound_array = xr.DataArray(bound)
 
@@ -602,6 +628,11 @@ class PyomoBackendModel(backend_model.BackendModel):
         """
 
         if mask:
+            if isinstance(expr, (np.bool_, bool)):
+                raise BackendError(
+                    f"(constraints, {name}) | constraint array includes item(s) that resolves to a simple boolean. "
+                    "There must be a math component defined on at least one side of the equation"
+                )
             constraint = ObjConstraint(expr=expr)
             self._instance.constraints[name].append(constraint)
             return constraint

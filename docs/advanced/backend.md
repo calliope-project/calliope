@@ -12,7 +12,7 @@ You can use this interface to:
 The optimisation problem has input parameters, decision variables, global expressions, constraints, and an objective.
 The data of all these components are stored as [xarray.DataArray][]s and you can query the backend to inspect them.
 For instance, [`#!python model.backend.parameters`][calliope.backend.backend_model.BackendModel.parameters] will provide you with an [xarray.Dataset][] of input parameters transformed into mutable objects that are used in the optimisation.
-In addition to the input data you provided, these arrays fill in missing data with default values if the parameter is one of those [predefined in Calliope][model-definition-schema].
+In addition to the input data you provided, these arrays fill in missing data with default values if the parameter is one of those [predefined in Calliope][model-definition-schema] (the `Parameters` section of our [pre-defined base math documentation][base-math] shows where these parameters are used within math expressions).
 
 1. Update a parameter value.
 If you are interested in updating a few values in the model, you can run [`#!python model.backend.update_parameter`][calliope.backend.backend_model.BackendModel.update_parameter].
@@ -28,7 +28,7 @@ This will not affect results at this stage, you'll need to rerun the backend (po
 1. Update decision variable bounds.
 Most of the time, decision variable bounds are actually input parameters (e.g., `flow_cap_max` for the upper bound of the `flow_cap` decision variable).
 Therefore, to update the bounds you will update the parameter with [`#!python model.backend.update_parameter`][calliope.backend.backend_model.BackendModel.update_parameter].
-If a fixed numeric value is instead used, e.g. in your own [custom math](../custom_math/index.md), you can update bounds using [`#!python model.backend.update_variable_bounds`][calliope.backend.backend_model.BackendModel.update_variable_bounds].
+If a fixed numeric value is instead used, e.g. in [math that you have additionally defined](../user_defined_math/index.md), you can update bounds using [`#!python model.backend.update_variable_bounds`][calliope.backend.backend_model.BackendModel.update_variable_bounds].
 For instance, to update `flow_out` lower bound to 70 for `battery` at `region2`:
 
     ```python
