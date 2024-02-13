@@ -378,21 +378,21 @@ constraints:
     description: >-
       Fix the flow capacity of any technology using integer units to define its capacity.
     foreach: [nodes, techs, carriers]
-    where: "operating_units"
+    where: "operating_units AND flow_cap_per_unit"
     equations:
-      - where: flow_cap_per_unit
-        expression: flow_cap == purchased_units * flow_cap_per_unit
-      - where: NOT flow_cap_per_unit
-        expression: flow_cap <= purchased_units * bigM
+      - expression: flow_cap == purchased_units * flow_cap_per_unit
 
   flow_capacity_max_purchase_milp:
     description: >-
       Set the upper bound on a technology's flow capacity,
       for any technology with integer capacity purchasing.
     foreach: [nodes, techs, carriers]
-    where: "purchased_units AND flow_cap_max"
+    where: "purchased_units"
     equations:
-      - expression: flow_cap <= flow_cap_max * purchased_units
+      - where: flow_cap_max
+        expression: flow_cap <= flow_cap_max * purchased_units
+      - where: NOT flow_cap_max
+        expression: flow_cap <= bigM * purchased_units
 
   flow_capacity_min_purchase_milp:
     description: >-
