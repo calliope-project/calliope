@@ -45,3 +45,8 @@ model.math_documentation.write(filename="path/to/output/file.[tex|rst|md]")
 
 You can then convert this to a PDF or HTML page using your renderer of choice.
 We recommend you only use HTML as the equations can become too long for a PDF page.
+
+!!! note
+
+    You can add the tabs to flip between rich-text math and the input YAML snippet in your math documentation by using the `mkdocs_tabbed` argument in `model.math_documentation.write`.
+    We use this functionality in our [pre-defined math](../pre_defined_math/index.md).

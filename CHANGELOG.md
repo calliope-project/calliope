@@ -15,6 +15,8 @@ These default values ensure that `NaN` doesn't creep into the built optimisation
 |fixed| Timeseries clustering file can be a non-ISO standard date format.
 Both the index and the values of the timeseries (both being date strings) should be in the user-defined `config.init.time_format`.
 
+|fixed| the decision variable `purchased_units` is linked to `flow_cap` even if neither of the parameters `flow_cap_min` or `flow_cap_max` have been defined by the user.
+
 |changed| `inbuilt` math -> `pre-defined` math and `custom` math -> `pre-defined` math in the documentation.
 
 ## 0.7.0.dev2 (2024-01-26)
