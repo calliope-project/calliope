@@ -5,6 +5,18 @@
 |new| `mkdocs_tabbed` option when writing math documentation to file (`calliope.Model.math_documentation.write(...)`) which will add YAML snippets to all rendered math as a separate "tab" if writing to Markdown.
 Requires the [PyMdown tabbed extension](https://facelessuser.github.io/pymdown-extensions/extensions/tabbed/) to render the tabs correctly in an [MkDocs](https://www.mkdocs.org/) project.
 
+|new| List of pre-defined parameters given in the `pre-defined` math documentation, with references back to the constraints/variables/global expressions in which they are defined (either in the `expression` string or the `where` string).
+
+|new| Units and default values for variables and global expressions added to the math documentation.
+
+|new| Variables and global expressions can have a `default` value, which is used to fill missing array elements when doing math operations.
+These default values ensure that `NaN` doesn't creep into the built optimisation problem math and are set to values that lead to them having no impact on the optimal solution.
+
+|fixed| Timeseries clustering file can be a non-ISO standard date format.
+Both the index and the values of the timeseries (both being date strings) should be in the user-defined `config.init.time_format`.
+
+|changed| `inbuilt` math -> `pre-defined` math and `custom` math -> `pre-defined` math in the documentation.
+
 ## 0.7.0.dev2 (2024-01-26)
 
 v0.7 includes a major change to how Calliope internally operates.
