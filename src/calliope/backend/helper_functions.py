@@ -13,7 +13,6 @@ from abc import ABC, abstractmethod
 from typing import Any, Literal, Mapping, Optional, Union, overload
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 
 from calliope.backend.backend_model import BackendModel
@@ -456,6 +455,7 @@ class Sum(ParsingHelperFunction):
                 NaNs are ignored (xarray.DataArray.sum arg: `skipna: True`) and if all values along the dimension(s) are NaN,
                 the summation will lead to a NaN (xarray.DataArray.sum arg: `min_count=1`).
         """
+
         return array.sum(over, min_count=1, skipna=True)
 
 
@@ -766,64 +766,3 @@ class DefaultIfEmpty(ParsingHelperFunction):
             return xr.DataArray(default)
         else:
             return var.fillna(default)
-
-
-class GetDecommissionCap(ParsingHelperFunction):
-    #:
-    NAME = "get_decommission_cap"
-    #:
-    ALLOWED_IN = ["expression"]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.decommission_year = self.get_decommission_years()
-
-    def get_decommission_years(self) -> xr.DataArray:
-        """For every technology at every investment step, calculate the closest historical investment step to their full lifetime.
-
-        E.g., at 2040, a technology with a lifetime of 20 years will need to decommission its capacity from 2020.
-
-        Returns:
-            xr.DataArray: Lookup array of timestamps to select decision variables from.
-        """
-        first_investstep = pd.to_datetime(self._input_data.investsteps[0].item())
-        if self._backend_interface is not None:
-            return self._backend_interface._apply_func(
-                self._offset_year,
-                self._input_data.investsteps,
-                self._input_data.lifetime,
-                min_bound=first_investstep,
-            )
-        else:
-            return xr.DataArray(np.nan)
-
-    @staticmethod
-    def _offset_year(
-        unix_time: int, offset: int, *, min_bound: pd.Timestamp
-    ) -> pd.Timestamp:
-        if pd.isnull(offset):
-            return pd.NaT
-        new_date = pd.to_datetime(unix_time) - pd.DateOffset(years=offset)
-        if new_date < min_bound:
-            return pd.NaT
-        else:
-            return new_date
-
-    def as_math_string(self, array: str) -> str:
-        array = self._add_to_iterator(array, {"investep": "commission_year"})
-        return array
-
-    def as_array(self, array: xr.DataArray) -> xr.DataArray:
-        """For each investment step in pathway optimisation, get the historical capacity additions that now must be decommissioned.
-
-        Args:
-            array (xr.DataArray): A capacity decision variable (`flow_cap`, `storage_cap`, etc.)
-
-        Returns:
-            xr.DataArray:
-        """
-        return (
-            array.sel(investsteps=self.decommission_year, method="nearest")
-            .where(self.decommission_year.notnull())
-            .fillna(0)
-        )

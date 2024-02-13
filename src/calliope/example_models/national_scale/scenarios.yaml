@@ -213,16 +213,19 @@ overrides:
   pathways:
 
     config.init:
-      custom_math: [pathways]
+      add_math: [pathways]
       time_subset: null
       time_resample: "24h"
 
     techs:
+
       # Update lifetimes to test intra-investstep effects
       battery:
         lifetime: 10
         initial_flow_cap: 0
         initial_storage_cap: 0
+        cost_storage_cap.data:  # to be updated from tabular data
+          _REPLACE_: null
       ccgt:
         lifetime: 16
         flow_cap_max_systemwide: # A constraint forcing phase-out of CCGT
@@ -232,19 +235,34 @@ overrides:
             index: [2020, 2030, 2040, 2050]
             dims: investsteps
         initial_flow_cap: 10000
-        decommission_initial_cap:
-          data: [0, 0.6, 0.4, 0]
+        available_initial_cap:
+          data: [1, 0.6, 0, 0]
           index: [2020, 2030, 2040, 2050]
           dims: investsteps
+        cost_flow_in:
+          _REPLACE_:
+            data: [0.02, 0.025, 0.03, 0.05]
+            index: [["monetary", 2020], ["monetary", 2030], ["monetary", 2040], ["monetary", 2050]]
+            dims: [costs, investsteps]
+        cost_flow_cap.data:  # to be updated from tabular data
+          _REPLACE_: null
       csp:
         lifetime: 24
-        decommission_initial_cap:
-          data: [0, 0.1, 0.6, 0.3]
+        available_initial_cap:
+          data: [1, 0.9, 0.3, 0]
           index: [2020, 2030, 2040, 2050]
           dims: investsteps
+        cost_flow_cap.data:  # to be updated from tabular data
+          _REPLACE_: null
+        cost_source_cap.data:  # to be updated from tabular data
+          _REPLACE_: null
+        cost_storage_cap.data:  # to be updated from tabular data
+          _REPLACE_: null
       region1_to_region2:
         lifetime: 25
         initial_flow_cap: 5000
+        cost_flow_cap.data:  # to be updated from tabular data
+          _REPLACE_: null
     nodes:
       region1_1.techs.csp:
         initial_flow_cap: 1000
@@ -278,15 +296,15 @@ overrides:
       pathway_techs_costs_monetary:
         source: pathways_data/techs_costs_monetary.csv
         rows: [techs, parameters]
-        columns: investsteps
+        columns: vintagesteps
         add_dimensions:
           costs: monetary
 
       # An idea for better handling of "decommissioning", by splitting the available capacity between investment steps
       # However, I can't yet work out _how_ to implement it in code.
-      #commissioning_rates:
-      #  source: pathways_data/commissioning_rates.csv
-      #  rows: techs
-      #  columns: [commissionsteps, investsteps]
-      #  add_dimensions:
-      #    parameters: commissioning_rate
+      vintage_availability:
+        source: pathways_data/vintage_availability.csv
+        rows: techs
+        columns: [vintagesteps, investsteps]
+        add_dimensions:
+          parameters: available_vintages

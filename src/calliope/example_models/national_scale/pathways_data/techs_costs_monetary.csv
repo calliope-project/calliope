@@ -1,7 +1,6 @@
 ,,2020,2030,2040,2050
 battery,cost_storage_cap,200,150,100,80
 ccgt,cost_flow_cap,750,720,700,650
-ccgt,cost_flow_in,0.02,0.025,0.03,0.05
 csp,cost_flow_cap,1000,833,769,714
 csp,cost_source_cap,200,160,130,110
 csp,cost_storage_cap,50,42,38,36
