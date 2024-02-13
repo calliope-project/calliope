@@ -1,3 +1,10 @@
+## 0.7.0.dev3 (dev)
+
+### User-facing changes
+
+|new| `mkdocs_tabbed` option when writing math documentation to file (`calliope.Model.math_documentation.write(...)`) which will add YAML snippets to all rendered math as a separate "tab" if writing to Markdown.
+Requires the [PyMdown tabbed extension](https://facelessuser.github.io/pymdown-extensions/extensions/tabbed/) to render the tabs correctly in an [MkDocs](https://www.mkdocs.org/) project.
+
 ## 0.7.0.dev2 (2024-01-26)
 
 v0.7 includes a major change to how Calliope internally operates.
