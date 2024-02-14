@@ -53,7 +53,7 @@ def update_model_schema(
     Args:
         top_level_property (Literal["nodes", "techs", "parameters"]): Top-level key under which parameters are to be updated/added.
         new_entries (dict): Data to update the schema with.
-        allow_override (bool, optional): _description_. Defaults to True.
+        allow_override (bool, optional): If True, allow existing entries in the schema to be overwritten. Defaults to True.
     """
     new_schema = deepcopy(MODEL_SCHEMA)
     to_update: AttrDict
