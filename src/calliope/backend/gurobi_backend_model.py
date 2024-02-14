@@ -147,10 +147,9 @@ class GurobiBackendModel(backend_model.BackendModel):
             expr = element.evaluate_expression(self, references=references)
 
             if name == self.inputs.attrs["config"].build.objective:
-                text = "activated"
                 self._instance.setObjective(expr.item(), sense=sense)
 
-                self.log("objectives", name, f"Objective {text}.")
+                self.log("objectives", name, "Objective activated.")
 
             return xr.DataArray(expr)
 
