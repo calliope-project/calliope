@@ -179,7 +179,11 @@ class GurobiBackendModel(backend_model.BackendModel):
         if as_backend_objs:
             return variable
         else:
-            return self._apply_func(self._from_gurobi_var, variable)
+            try:
+                func = np.frompyfunc(self._from_gurobi_var, 1, 1)
+                return func(variable, where=variable.notnull().values).fillna(np.nan)
+            except AttributeError:
+                return variable.astype(str).where(variable.notnull())
 
     def get_variable_bounds(self, name: str) -> xr.Dataset:
         variable = self.get_variable(name, as_backend_objs=True)
@@ -198,9 +202,18 @@ class GurobiBackendModel(backend_model.BackendModel):
         if global_expression is None:
             raise KeyError(f"Unknown global_expression: {name}")
         if isinstance(global_expression, xr.DataArray) and not as_backend_objs:
-            return self._apply_func(
-                self._from_gurobi_expr, global_expression, eval_body=eval_body
-            )
+            if not eval_body:
+                return global_expression.astype(str).where(global_expression.notnull())
+            else:
+                try:
+                    func = np.frompyfunc(self._from_gurobi_expr, 1, 1)
+                    return func(
+                        global_expression, where=global_expression.notnull().values
+                    ).fillna(np.nan)
+                except AttributeError:
+                    return global_expression.astype(str).where(
+                        global_expression.notnull()
+                    )
         else:
             return global_expression
 
@@ -477,30 +490,17 @@ class GurobiBackendModel(backend_model.BackendModel):
         return pd.Series(data=vals, index=["lb", "ub"])
 
     @staticmethod
-    def _from_gurobi_var(val: Optional[gurobipy.Var]) -> Any:
+    def _from_gurobi_var(val: gurobipy.Var) -> Any:
         """Evaluate Gurobi variable object.
 
         Args:
             val (gurobipy.LinExpr): expression object to be evaluated
-            eval_body (bool, optional):
-                If True, attempt to evaluate the expression object, which will produce a numeric value.
-                This will only succeed if the backend model has been successfully optimised,
-                otherwise a string representation of the linear expression will be returned
-                (same as eval_body=False). Defaults to False.
 
         Returns:
             Any: If the input is nullable, return np.nan, otherwise a numeric value
             (eval_body=True and problem is optimised) or a string.
         """
-        if pd.isnull(val):  # type: ignore
-            return np.nan
-
-        try:
-            expr = val.x  # type: ignore
-        except AttributeError:
-            return str(val)
-        else:
-            return expr
+        return val.x  # type: ignore
 
     @staticmethod
     def _from_gurobi_expr(val: gurobipy.LinExpr, *, eval_body: bool = False) -> Any:
@@ -518,18 +518,7 @@ class GurobiBackendModel(backend_model.BackendModel):
             Any: If the input is nullable, return np.nan, otherwise a numeric value
             (eval_body=True and problem is optimised) or a string.
         """
-        if pd.isnull(val):  # type: ignore
-            return np.nan
-        else:
-            if eval_body:
-                try:
-                    expr = val.getValue()
-                except AttributeError:
-                    return str(val)
-                else:
-                    return expr
-            else:
-                return str(val)
+        return val.getValue()
 
     @contextmanager
     def _datetime_as_string(self, data: Union[xr.DataArray, xr.Dataset]) -> Iterator:
