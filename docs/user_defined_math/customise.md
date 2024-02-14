@@ -76,7 +76,7 @@ This is usually one of `float` or `str`.
 
 !!! note
 
-    Schema attributes which start with `x-` are calliope-specific.
+    Schema attributes which start with `x-` are Calliope-specific.
     They are not used at all for YAML validation and instead get picked up by us using the utility function `calliope.util.schema.extract_from_schema`.
 
 ## Writing your own math documentation
