@@ -1,3 +1,10 @@
+# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
+# Licensed under the Apache 2.0 License (see LICENSE file).
+
+"""
+Load, update, and access attributes in the Calliope pre-defined YAML schemas
+"""
+
 import importlib
 import re
 import sys
@@ -16,7 +23,8 @@ DATA_SOURCE_SCHEMA = load_config("data_source_schema.yaml")
 MATH_SCHEMA = load_config("math_schema.yaml")
 
 
-def reset_schema():
+def reset():
+    """Reset all module-level schema to the pre-defined dictionaries."""
     importlib.reload(sys.modules[__name__])
 
 
@@ -83,8 +91,11 @@ def validate_dict(to_validate: dict, schema: dict, dict_descriptor: str) -> None
         dict_descriptor (str): Description of the dictionary to validate, to use if an error is raised.
 
     Raises:
-        jsonschema.SchemaError: If the schema itself is malformed, a SchemaError will be raised at the first issue. Other issues than that raised may still exist.
-        calliope.exceptions.ModelError: If the dictionary is not valid according to the schema, a list of the issues found will be collated and raised.
+        jsonschema.SchemaError:
+            If the schema itself is malformed, a SchemaError will be raised at the first issue.
+            Other issues than that raised may still exist.
+        calliope.exceptions.ModelError:
+            If the dictionary is not valid according to the schema, a list of the issues found will be collated and raised.
     """
     errors = []
     validator = jsonschema.Draft202012Validator
@@ -141,8 +152,9 @@ def extract_from_schema(
             Defaults to None, i.e., all property branches are included.
 
     Returns:
-        dict: Flat dictionary of property name : keyword value.
-        Property trees are discarded since property names must be unique.
+        dict:
+            Flat dictionary of property name : keyword value.
+            Property trees are discarded since property names must be unique.
     """
     extracted_keywords: dict = {}
     KeywordValidatingValidator = _extend_with_keyword(

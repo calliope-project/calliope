@@ -436,7 +436,7 @@ class TestUpdateSchema:
             {"foo": {"type": "number", "description": "bar", "default": 1}},
             allow_override=False,
         )
-        schema.reset_schema()
+        schema.reset()
         assert (
             "foo"
             not in schema.MODEL_SCHEMA["properties"]["techs"]["patternProperties"][

@@ -38,7 +38,7 @@ Our YAML schema are used to validate user inputs.
 The model definition schema includes metadata on all our pre-defined parameters, which you can find rendered in our [reference page][model-definition-schema].
 
 When you add your own math you are likely to be adding new parameters to the model.
-You can update the Calliope model definition schema to include your new entries using `calliope.util.schema.update_model_schema`.
+You can update the Calliope model definition schema to include your new entries using [`calliope.util.schema.update_model_schema(...)`][calliope.util.schema.update_model_schema].
 This ensures that your parameters have default values attached to them and if you choose to [write your own documentation](#writing-your-own-math-documentation), your parameters will have this metadata added to their descriptions.
 
 Entries in the schema look like this:
@@ -77,7 +77,12 @@ This is usually one of `float` or `str`.
 !!! note
 
     Schema attributes which start with `x-` are Calliope-specific.
-    They are not used at all for YAML validation and instead get picked up by us using the utility function `calliope.util.schema.extract_from_schema`.
+    They are not used at all for YAML validation and instead get picked up by us using the utility function [calliope.util.schema.extract_from_schema][].
+
+!!! warning
+
+    The schema is update in-place so your edits to it will remain active as long as you are running in the same session.
+    You can reset your updates to the schema and return to the pre-defined schema by calling [`calliope.util.schema.reset()`][calliope.util.schema.reset]
 
 ## Writing your own math documentation
 
