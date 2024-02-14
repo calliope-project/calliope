@@ -81,7 +81,7 @@ This is usually one of `float` or `str`.
 
 !!! warning
 
-    The schema is update in-place so your edits to it will remain active as long as you are running in the same session.
+    The schema is updated in-place so your edits to it will remain active as long as you are running in the same session.
     You can reset your updates to the schema and return to the pre-defined schema by calling [`calliope.util.schema.reset()`][calliope.util.schema.reset]
 
 ## Writing your own math documentation
