@@ -154,7 +154,7 @@ gurobi_cl ResultFile=result.ilp my_saved_model.lp
 !!! info "See also"
     More detail on this Gurobi functionality is available in the [official Gurobi documentation](https://www.gurobi.com/documentation/current/refman/solving_a_model2.html).
 
-To deal with numerically unstable models, try setting `#!yaml onfig.solve.solver_options: {Presolve: 0}`, as large numeric ranges can cause the pre-solver to generate an [infeasible or numerically unstable model](https://www.gurobi.com/documentation/current/refman/numerics_why_scaling_and_g.html).
+To deal with numerically unstable models, try setting `#!yaml config.solve.solver_options: {Presolve: 0}`, as large numeric ranges can cause the pre-solver to generate an [infeasible or numerically unstable model](https://www.gurobi.com/documentation/current/refman/numerics_why_scaling_and_g.html).
 The [Gurobi Guidelines for Numerical Issues](https://www.gurobi.com/documentation/current/refman/numerics_gurobi_guidelines.html) give detailed guidance for strategies to address numerically difficult optimisation problems.
 
 ### Using the CPLEX solver
