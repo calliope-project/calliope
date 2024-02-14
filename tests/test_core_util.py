@@ -406,9 +406,19 @@ class TestUpdateSchema:
 
         extracted_defaults = schema.extract_from_schema(schema.MODEL_SCHEMA, "default")
         assert extracted_defaults[f"{top_level}_foo"] == 1
+        extracted_descriptions = schema.extract_from_schema(
+            schema.MODEL_SCHEMA, "description"
+        )
+        assert extracted_descriptions[f"{top_level}_foo"] == "bar"
+
+        schema.reset()
 
     @pytest.mark.parametrize("top_level", ["parameters", "nodes", "techs"])
     def test_update_schema(self, top_level):
+        schema.update_model_schema(
+            top_level, {f"{top_level}_foo": {"default": 1}}, allow_override=False
+        )
+
         extracted_defaults = schema.extract_from_schema(schema.MODEL_SCHEMA, "default")
         assert extracted_defaults[f"{top_level}_foo"] == 1
 
@@ -421,6 +431,8 @@ class TestUpdateSchema:
         )
         assert extracted_defaults[f"{top_level}_foo"] == 2
 
+        schema.reset()
+
     @pytest.mark.parametrize("top_level", ["parameters", "nodes", "techs"])
     def test_update_schema_malformed(self, top_level):
         with pytest.raises(jsonschema.SchemaError):
@@ -429,6 +441,7 @@ class TestUpdateSchema:
                 {f"{top_level}_foo": {"type": "i_am_not_a_type"}},
                 allow_override=True,
             )
+        schema.reset()
 
     def test_reset_schema(self):
         schema.update_model_schema(
