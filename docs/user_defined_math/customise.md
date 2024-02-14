@@ -34,7 +34,7 @@ config:
 
 ## Adding your parameters to the YAML schema
 
-Our YAML schema are used to validate user inputs.
+Our YAML schemas are used to validate user inputs.
 The model definition schema includes metadata on all our pre-defined parameters, which you can find rendered in our [reference page][model-definition-schema].
 
 When you add your own math you are likely to be adding new parameters to the model.
