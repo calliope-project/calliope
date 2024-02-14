@@ -68,6 +68,7 @@ markdown_extensions:
   - md_in_html
   - mkdocs-click
   - def_list
+  - tables
   - toc:
       permalink: "¶"
       toc_depth: 3
