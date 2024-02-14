@@ -83,6 +83,42 @@ properties:
                       type: string
                       description: Index slice expression, such as a list of set items or a call to a helper function.
 
+  piecewise_constraints:
+    type: object
+    description: All _piecewise_ constraints to apply to the optimisation problem.
+    additionalProperties: false
+    patternProperties:
+      '[^\d^_\W][\w\d]+':
+        type: object
+        description: A named piecewise constraint.
+        additionalProperties: false
+        required: ["equations"]
+        properties:
+          description: *description
+          active: *active
+          foreach: *foreach
+          where: *top_level_where
+          x:
+            type: object
+            description: X-axis of piecewise curve.
+            properties: &piecewiseprops
+              values:
+                oneOf:
+                  - type: string
+                    description: Parameter name containing data, indexed over the `breakpoints` dimension.
+                  - type: array
+                    items:
+                      type: number
+                    description: list of values at each breakpoint.
+                description: Values at each breakpoint on the curve.
+              variables:
+                type: string
+                description: Variable name whose values are assigned at each breakpoint.
+          y:
+            type: object
+            description: Y-axis of piecewise curve.
+            properties: *piecewiseprops
+
   global_expressions:
     type: object
     description: >-

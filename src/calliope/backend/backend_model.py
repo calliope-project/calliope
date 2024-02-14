@@ -48,7 +48,12 @@ from calliope.exceptions import BackendError
 
 T = TypeVar("T")
 _COMPONENTS_T = Literal[
-    "variables", "constraints", "objectives", "parameters", "global_expressions"
+    "variables",
+    "constraints",
+    "piecewise_constraints",
+    "objectives",
+    "parameters",
+    "global_expressions",
 ]
 
 LOGGER = logging.getLogger(__name__)
@@ -117,6 +122,21 @@ class BackendModelGenerator(ABC):
                 Name of the constraint
             constraint_dict (parsing.UnparsedConstraintDict):
                 Constraint configuration dictionary, ready to be parsed and then evaluated.
+        """
+
+    @abstractmethod
+    def add_piecewise_constraint(
+        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraintDict
+    ) -> None:
+        """
+        Add piecewise constraint equation to backend model in-place.
+        Resulting backend dataset entries will be piecewise constraint objects.
+
+        Args:
+            name (str):
+                Name of the piecewise constraint
+            constraint_dict (parsing.UnparsedPiecewiseConstraintDict):
+                Piecewise constraint configuration dictionary, ready to be parsed and then evaluated.
         """
 
     @abstractmethod
@@ -216,6 +236,7 @@ class BackendModelGenerator(ABC):
             "variables",
             "global_expressions",
             "constraints",
+            "piecewise_constraints",
             "objectives",
         ]:
             component = components.removesuffix("s")
@@ -255,7 +276,11 @@ class BackendModelGenerator(ABC):
         component_dict: Optional[Tp],
         component_setter: Callable,
         component_type: Literal[
-            "variables", "global_expressions", "constraints", "objectives"
+            "variables",
+            "global_expressions",
+            "constraints",
+            "piecewise_constraints",
+            "objectives",
         ],
         break_early: bool = True,
     ) -> Optional[parsing.ParsedBackendComponent]:
@@ -463,7 +488,12 @@ class BackendModelGenerator(ABC):
                     continue
 
     def _apply_func(
-        self, func: Callable, *args, output_core_dims: tuple = ((),), **kwargs
+        self,
+        func: Callable,
+        *args,
+        input_core_dims: Optional[list] = None,
+        output_core_dims: tuple = ((),),
+        **kwargs,
     ) -> xr.DataArray:
         """
         Apply a function to every element of an arbitrary number of xarray DataArrays.
@@ -476,10 +506,14 @@ class BackendModelGenerator(ABC):
             args (xr.DataArray):
                 xarray DataArrays which will be broadcast together and then iterated over
                 to apply the function.
-            output_core_dims (tuple):
+            input_core_dims (Optional[tuple], optional):
+                Additional dimensions which `xr.apply_ufunc` won't broadcast on applying `func`.
+                This is directly passed to `xr.apply_ufunc`; see their documentation for more details.
+                Defaults to None.
+            output_core_dims (tuple, optional):
                 Additional dimensions which are expected to be passed back from `xr.apply_ufunc` after applying `func`.
                 This is directly passed to `xr.apply_ufunc`; see their documentation for more details.
-                Defaults to ((), )
+                Defaults to ((), ).
             kwargs (dict[str, Any]):
                 Additional keyword arguments to pass to `func`.
 
@@ -495,6 +529,7 @@ class BackendModelGenerator(ABC):
             dask="parallelized",
             output_dtypes=[np.dtype("O")],
             output_core_dims=output_core_dims,
+            input_core_dims=input_core_dims,
         )
 
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
@@ -529,6 +564,11 @@ class BackendModelGenerator(ABC):
     def constraints(self):
         "Slice of backend dataset to show only built constraints"
         return self._dataset.filter_by_attrs(obj_type="constraints")
+
+    @property
+    def piecewise_constraints(self):
+        "Slice of backend dataset to show only built constraints"
+        return self._dataset.filter_by_attrs(obj_type="piecewise_constraints")
 
     @property
     def variables(self):

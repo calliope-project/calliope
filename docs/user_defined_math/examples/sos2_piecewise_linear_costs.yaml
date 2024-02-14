@@ -1,0 +1,35 @@
+# title: Piecewise linear costs
+#
+# description: |
+#     Add a piecewise cost function that steadily increases investment costs with increasing technology rated capacity.
+#
+#     New indexed parameters:
+#
+#     - `piecewise_cost_investment_x` (defining the new set `breakpoints`)
+#     - `piecewise_cost_investment_y` (defining the new set `breakpoints`)
+#
+# ---
+
+variables:
+  piecewise_cost_investment:
+    description: Investment cost that increases monotonically
+    foreach: [nodes, techs, carriers, costs]
+    where: any(piecewise_cost_investment_x, over=breakpoints) AND any(piecewise_cost_investment_y, over=breakpoints)
+    bounds:
+      min: 0
+      max: .inf
+
+piecewise_constraints:
+  sos2_piecewise_costs:
+    description: >
+      Set investment costs values along a piecewise curve using special ordered sets of type 2 (SOS2).
+    foreach: [nodes, techs, carriers, costs]
+    where: any(piecewise_cost_investment_x, over=breakpoints) AND any(piecewise_cost_investment_y, over=breakpoints)
+    x:
+      variable: flow_cap
+      values: piecewise_cost_investment_x
+    y:
+      variable: piecewise_cost_investment
+      values: piecewise_cost_investment_y
+
+

@@ -46,6 +46,19 @@ class UnparsedConstraintDict(TypedDict):
     slices: NotRequired[dict[str, list[UnparsedEquationDict]]]
 
 
+class UnparsedPiecewiseConstraintAxisDict(TypedDict):
+    values: str | list[int | float]
+    variable: str
+
+
+class UnparsedPiecewiseConstraintDict(TypedDict):
+    description: NotRequired[str]
+    foreach: NotRequired[list]
+    where: NotRequired[str]
+    x: UnparsedPiecewiseConstraintAxisDict
+    y: UnparsedPiecewiseConstraintAxisDict
+
+
 class UnparsedExpressionDict(UnparsedConstraintDict):
     unit: NotRequired[str]
 
@@ -78,6 +91,7 @@ UNPARSED_DICTS = Union[
     UnparsedVariableDict,
     UnparsedExpressionDict,
     UnparsedObjectiveDict,
+    UnparsedPiecewiseConstraintDict,
 ]
 T = TypeVar("T", bound=UNPARSED_DICTS)
 
@@ -439,11 +453,18 @@ class ParsedBackendComponent(ParsedBackendEquation):
         "global_expressions": expression_parser.generate_arithmetic_parser,
         "objectives": expression_parser.generate_arithmetic_parser,
         "variables": lambda x: None,
+        "piecewise_constraints": lambda x: None,
     }
 
     def __init__(
         self,
-        group: Literal["variables", "global_expressions", "constraints", "objectives"],
+        group: Literal[
+            "variables",
+            "global_expressions",
+            "constraints",
+            "piecewise_constraints",
+            "objectives",
+        ],
         name: str,
         unparsed_data: T,
     ) -> None:
