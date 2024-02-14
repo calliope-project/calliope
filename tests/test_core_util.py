@@ -9,9 +9,9 @@ import jsonschema
 import numpy as np
 import pandas as pd
 import pytest
+from calliope.util import schema
 from calliope.util.generate_runs import generate_runs
 from calliope.util.logging import log_time
-from calliope.util.schema import extract_from_schema, validate_dict
 
 from .common.util import check_error_or_warning
 
@@ -138,7 +138,7 @@ class TestValidateDict:
     def test_malformed_schema(self, schema, expected_path):
         to_validate = {"bar": [1, 2, 3]}
         with pytest.raises(jsonschema.SchemaError) as err:
-            validate_dict(to_validate, schema, "foobar")
+            schema.validate_dict(to_validate, schema, "foobar")
         assert check_error_or_warning(
             err,
             f"The foobar schema is malformed{expected_path}: Unevaluated properties are not allowed ('foo' was unexpected)",
@@ -163,7 +163,7 @@ class TestValidateDict:
             "additionalProperties": False,
         }
         with pytest.raises(calliope.exceptions.ModelError) as err:
-            validate_dict(to_validate, schema, "foobar")
+            schema.validate_dict(to_validate, schema, "foobar")
         assert check_error_or_warning(
             err,
             [
@@ -188,7 +188,7 @@ class TestValidateDict:
         to_validate = base_math.union(
             calliope.AttrDict.from_yaml(dict_path), allow_override=True
         )
-        validate_dict(to_validate, math_schema, "")
+        schema.validate_dict(to_validate, math_schema, "")
 
 
 class TestExtractFromSchema:
@@ -339,7 +339,7 @@ class TestExtractFromSchema:
         self, sample_config_schema, expected_config_defaults
     ):
         extracted_defaults = pd.Series(
-            extract_from_schema(sample_config_schema, "default")
+            schema.extract_from_schema(sample_config_schema, "default")
         )
         pd.testing.assert_series_equal(
             extracted_defaults.sort_index(), expected_config_defaults
@@ -349,7 +349,7 @@ class TestExtractFromSchema:
         self, sample_model_def_schema, expected_model_def_defaults
     ):
         extracted_defaults = pd.Series(
-            extract_from_schema(sample_model_def_schema, "default")
+            schema.extract_from_schema(sample_model_def_schema, "default")
         )
         pd.testing.assert_series_equal(
             extracted_defaults.sort_index(), expected_model_def_defaults
@@ -379,10 +379,67 @@ class TestExtractFromSchema:
         prop_keys,
     ):
         extracted_defaults = pd.Series(
-            extract_from_schema(sample_model_def_schema, "default", schema_key)
+            schema.extract_from_schema(sample_model_def_schema, "default", schema_key)
         )
         pd.testing.assert_series_equal(
             expected_model_def_defaults.loc[prop_keys].sort_index(),
             extracted_defaults.sort_index(),
             check_dtype=False,
+        )
+
+
+class TestUpdateSchema:
+
+    @pytest.mark.parametrize("top_level", ["parameters", "nodes", "techs"])
+    def test_add_new_schema(self, top_level):
+        schema.update_model_schema(
+            top_level,
+            {
+                f"{top_level}_foo": {
+                    "type": "number",
+                    "description": "bar",
+                    "default": 1,
+                }
+            },
+            allow_override=False,
+        )
+
+        extracted_defaults = schema.extract_from_schema(schema.MODEL_SCHEMA, "default")
+        assert extracted_defaults[f"{top_level}_foo"] == 1
+
+    @pytest.mark.parametrize("top_level", ["parameters", "nodes", "techs"])
+    def test_update_schema(self, top_level):
+        extracted_defaults = schema.extract_from_schema(schema.MODEL_SCHEMA, "default")
+        assert extracted_defaults[f"{top_level}_foo"] == 1
+
+        schema.update_model_schema(
+            top_level, {f"{top_level}_foo": {"default": 2}}, allow_override=True
+        )
+
+        extracted_defaults = pd.Series(
+            schema.extract_from_schema(schema.MODEL_SCHEMA, "default")
+        )
+        assert extracted_defaults[f"{top_level}_foo"] == 2
+
+    @pytest.mark.parametrize("top_level", ["parameters", "nodes", "techs"])
+    def test_update_schema_malformed(self, top_level):
+        with pytest.raises(jsonschema.SchemaError):
+            schema.update_model_schema(
+                top_level,
+                {f"{top_level}_foo": {"type": "i_am_not_a_type"}},
+                allow_override=True,
+            )
+
+    def test_reset_schema(self):
+        schema.update_model_schema(
+            "techs",
+            {"foo": {"type": "number", "description": "bar", "default": 1}},
+            allow_override=False,
+        )
+        schema.reset_schema()
+        assert (
+            "foo"
+            not in schema.MODEL_SCHEMA["properties"]["techs"]["patternProperties"][
+                "^[^_^\\d][\\w]*$"
+            ]["properties"]
         )
