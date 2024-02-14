@@ -122,7 +122,7 @@ class TestValidateDict:
         reason="Checking the schema itself doesn't seem to be working properly; no clear idea of _why_ yet..."
     )
     @pytest.mark.parametrize(
-        ["schema", "expected_path"],
+        ["schema_dict", "expected_path"],
         [
             ({"foo": 2}, ""),
             ({"properties": {"bar": {"foo": "string"}}}, " at `properties.bar`"),
@@ -135,10 +135,10 @@ class TestValidateDict:
             ),
         ],
     )
-    def test_malformed_schema(self, schema, expected_path):
+    def test_malformed_schema(self, schema_dict, expected_path):
         to_validate = {"bar": [1, 2, 3]}
         with pytest.raises(jsonschema.SchemaError) as err:
-            schema.validate_dict(to_validate, schema, "foobar")
+            schema.validate_dict(to_validate, schema_dict, "foobar")
         assert check_error_or_warning(
             err,
             f"The foobar schema is malformed{expected_path}: Unevaluated properties are not allowed ('foo' was unexpected)",
@@ -152,7 +152,7 @@ class TestValidateDict:
         ],
     )
     def test_invalid_dict(self, to_validate, expected_path):
-        schema = {
+        schema_dict = {
             "properties": {
                 "valid": {
                     "type": "object",
@@ -163,7 +163,7 @@ class TestValidateDict:
             "additionalProperties": False,
         }
         with pytest.raises(calliope.exceptions.ModelError) as err:
-            schema.validate_dict(to_validate, schema, "foobar")
+            schema.validate_dict(to_validate, schema_dict, "foobar")
         assert check_error_or_warning(
             err,
             [
