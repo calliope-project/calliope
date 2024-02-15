@@ -507,11 +507,16 @@ class BackendModelGenerator(ABC):
             func = partial(func, **kwargs)
         vectorised_func = np.frompyfunc(func, len(args), n_out)
         if where is not None:
-            return vectorised_func(
+            da = vectorised_func(
                 *(arg.broadcast_like(where) for arg in args), where=where.values
-            ).fillna(np.nan)
+            )
         else:
-            return vectorised_func(*args)
+            da = vectorised_func(*args)
+        if isinstance(da, xr.DataArray):
+            da = da.fillna(np.nan)
+        else:
+            da = tuple(arr.fillna(np.nan) for arr in da)
+        return da
 
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
         """
@@ -895,6 +900,34 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             for ref in refs:
                 self.delete_component(ref, component)
                 getattr(self, "add_" + component.removesuffix("s"))(name=ref)
+
+    def _get_capacity_bound(
+        self, bound: Any, name: str, references: set, fill_na: Optional[float] = None
+    ) -> xr.DataArray:
+        """
+        Generate array for the upper/lower bound of a decision variable.
+
+        Args:
+            bound (Any): The bound name (corresponding to an array in the model input data) or value.
+            name (str): Name of decision variable.
+
+        Returns:
+            xr.DataArray: Where unbounded, the array entry will be None, otherwise a float value.
+        """
+
+        if isinstance(bound, str):
+            self.log(
+                "variables",
+                name,
+                f"Applying bound according to the {bound} parameter values.",
+            )
+            bound_array = self.get_parameter(bound)
+            fill_na = bound_array.attrs.get("default", fill_na)
+            references.add(bound)
+        else:
+            bound_array = xr.DataArray(bound)
+
+        return bound_array.fillna(fill_na)
 
     @contextmanager
     def _datetime_as_string(self, data: Union[xr.DataArray, xr.Dataset]) -> Iterator:

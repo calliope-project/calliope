@@ -50,7 +50,7 @@ class GurobiBackendModel(backend_model.BackendModel):
     ) -> None:
         self._raise_error_on_preexistence(parameter_name, "parameters")
 
-        parameter_da = parameter_values.fillna(default)
+        parameter_da = parameter_values
         if parameter_da.isnull().all():
             self.log(
                 "parameters",
@@ -60,7 +60,12 @@ class GurobiBackendModel(backend_model.BackendModel):
             parameter_da = parameter_da.astype(float)
 
         parameter_da.attrs["original_dtype"] = parameter_values.dtype
-        self._add_to_dataset(parameter_name, parameter_da, "parameters", {})
+        attrs = {
+            "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
+            "unit": self._PARAM_UNITS.get(parameter_name, None),
+            "default": default,
+        }
+        self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
 
     def add_constraint(
         self,
@@ -108,8 +113,8 @@ class GurobiBackendModel(backend_model.BackendModel):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
 
             bounds = variable_dict["bounds"]
-            lb = self._get_capacity_bound(bounds["min"], name, references)
-            ub = self._get_capacity_bound(bounds["max"], name, references)
+            lb = self._get_capacity_bound(bounds["min"], name, references, -np.inf)
+            ub = self._get_capacity_bound(bounds["max"], name, references, np.inf)
             var = self._apply_func(
                 self._instance.addVar, where, 1, lb, ub, vtype=domain_type
             )
@@ -196,7 +201,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         lb, ub = self._apply_func(
             self._from_gurobi_variable_bounds, variable.notnull(), 2, variable
         )
-        return xr.Dataset({"lb": lb, "ub": ub})
+        return xr.Dataset({"lb": lb, "ub": ub}, attrs=variable.attrs)
 
     def get_global_expression(
         self, name: str, as_backend_objs: bool = True, eval_body: bool = False
@@ -277,7 +282,7 @@ class GurobiBackendModel(backend_model.BackendModel):
                     continue
                 self._apply_func(
                     __renamer,
-                    da.notnull(),
+                    None,
                     1,
                     da,
                     *[da.coords[i] for i in da.dims],
@@ -428,34 +433,6 @@ class GurobiBackendModel(backend_model.BackendModel):
 
     def _del_gurobi_obj(self, obj: Any) -> None:
         self._instance.remove(obj)
-
-    def _get_capacity_bound(
-        self, bound: Any, name: str, references: set
-    ) -> xr.DataArray:
-        """
-        Generate array for the upper/lower bound of a decision variable.
-        Any NaN values will be replaced by None, which we will later interpret as there being no bound to apply.
-
-        Args:
-            bound (Any): The bound name (corresponding to an array in the model input data) or value.
-            name (str): Name of decision variable.
-
-        Returns:
-            xr.DataArray: Where unbounded, the array entry will be None, otherwise a float value.
-        """
-
-        if isinstance(bound, str):
-            self.log(
-                "variables",
-                name,
-                f"Applying bound according to the {bound} parameter values.",
-            )
-            bound_array = self.get_parameter(bound)
-            references.add(bound)
-        else:
-            bound_array = xr.DataArray(bound)
-
-        return bound_array.fillna(None)
 
     def _update_gurobi_variable(
         self, orig: gurobipy.Var, new: Any, *, bound: Literal["lb", "ub"]

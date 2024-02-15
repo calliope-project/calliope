@@ -84,12 +84,6 @@ class PyomoBackendModel(backend_model.BackendModel):
             parameter_values,
             name=parameter_name,
         )
-        if pd.notnull(default):
-            default_obj = ObjParameter(default)
-            self._instance.parameters[parameter_name].append(default_obj)
-            parameter_da = parameter_da.fillna(default_obj)
-        else:
-            parameter_da = parameter_da.fillna(np.nan)
 
         if parameter_da.isnull().all():
             self.log(
@@ -125,7 +119,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 )
             except BackendError as err:
                 types = self._apply_func(lambda x: type(x).__name__, where, 1, expr)
-                offending_items = types.str.startswith("bool").to_series()
+                offending_items = types.to_series().dropna().str.startswith("bool")
                 offending_idx = offending_items[offending_items].index.values
                 err.args = (f"{err.args[0]}: {offending_idx}", *err.args[1:])
                 raise err
@@ -176,7 +170,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 domain_type=domain_type,
             )
             var.attrs = {}
-            return var.fillna(np.nan)
+            return var
 
         self._add_component(name, variable_dict, _variable_setter, "variables")
 
@@ -258,7 +252,9 @@ class PyomoBackendModel(backend_model.BackendModel):
                     body = body.astype(str).where(body.notnull())
             else:
                 body = body.astype(str).where(body.notnull())
-            constraint = xr.Dataset({"lb": lb, "body": body, "ub": ub})
+            constraint = xr.Dataset(
+                {"lb": lb, "body": body, "ub": ub}, attrs=constraint.attrs
+            )
         return constraint
 
     def get_variable(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
@@ -277,7 +273,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         lb, ub = self._apply_func(
             self._from_pyomo_variable_bounds, variable.notnull(), 2, variable
         )
-        return xr.Dataset({"lb": lb, "ub": ub})
+        return xr.Dataset({"lb": lb, "ub": ub}, attrs=variable.attrs)
 
     def get_global_expression(
         self, name: str, as_backend_objs: bool = True, eval_body: bool = False
@@ -288,18 +284,19 @@ class PyomoBackendModel(backend_model.BackendModel):
         if not as_backend_objs:
             if eval_body:
                 try:
-                    global_expression = self._apply_func(
+                    expr = self._apply_func(
                         lambda expr: expr(),
                         global_expression.notnull(),
                         1,
                         global_expression,
                     )
                 except KeyError:
-                    global_expression = global_expression.astype(str)
+                    expr = global_expression.astype(str)
             else:
-                global_expression = global_expression.astype(str)
+                expr = global_expression.astype(str)
+            global_expression = expr.where(expr.notnull())
 
-        return global_expression.where(global_expression.notnull())
+        return global_expression
 
     def _solve(
         self,
@@ -365,15 +362,15 @@ class PyomoBackendModel(backend_model.BackendModel):
             if pd.notnull(val):
                 val.calliope_coords = idx
 
+        to_rename = ["parameters", "variables", "constraints"]
         with self._datetime_as_string(self._dataset):
-            for component_type in ["parameters", "variables", "constraints"]:
-                for da in self._dataset.filter_by_attrs(
-                    coords_in_name=False, **{"obj_type": component_type}
-                ).values():
-                    self._apply_func(
-                        __renamer, da.notnull(), 1, da, *[da.coords[i] for i in da.dims]
-                    )
-                    da.attrs["coords_in_name"] = True
+            for da in self._dataset.filter_by_attrs(coords_in_name=False).values():
+                if da.attrs["obj_type"] not in to_rename:
+                    continue
+                self._apply_func(
+                    __renamer, None, 1, da, *[da.coords[i] for i in da.dims]
+                )
+                da.attrs["coords_in_name"] = True
 
     def to_lp(self, path: Union[str, Path]) -> None:
         self._instance.write(str(path), format="lp", symbolic_solver_labels=True)
@@ -435,7 +432,6 @@ class PyomoBackendModel(backend_model.BackendModel):
             (not parameter_da.shape and new_values.shape)
             or missing_dims_in_orig_vals
             or (parameter_da.isnull() & new_values.notnull()).any()
-            or (input_da.isnull() & new_values.notnull()).any()
         ):
             refs_to_update = self._find_all_references(parameter_da.attrs["references"])
             if refs_to_update:
@@ -521,43 +517,15 @@ class PyomoBackendModel(backend_model.BackendModel):
         variable_da = self.get_variable(name)
         where_da = variable_da.notnull()
         if where is not None:
-            where_da = where_da & where.fillna(0)
+            where_da = where_da & where.fillna(False)
         self._apply_func(self._fix_pyomo_variable, where_da, 1, variable_da)
 
     def unfix_variable(self, name: str, where: Optional[xr.DataArray] = None) -> None:
         variable_da = self.get_variable(name)
         where_da = variable_da.notnull()
         if where is not None:
-            where_da = where_da & where.fillna(0)
+            where_da = where_da & where.fillna(False)
         self._apply_func(self._unfix_pyomo_variable, where_da, 1, variable_da)
-
-    def _get_capacity_bound(
-        self, bound: Any, name: str, references: set
-    ) -> xr.DataArray:
-        """
-        Generate array for the upper/lower bound of a decision variable.
-        Any NaN values will be replaced by None, which Pyomo will correctly interpret as there being no bound to apply.
-
-        Args:
-            bound (Any): The bound name (corresponding to an array in the model input data) or value.
-            name (str): Name of decision variable.
-
-        Returns:
-            xr.DataArray: Where unbounded, the array entry will be None, otherwise a float value.
-        """
-
-        if isinstance(bound, str):
-            self.log(
-                "variables",
-                name,
-                f"Applying bound according to the {bound} parameter values.",
-            )
-            bound_array = self.get_parameter(bound)
-            references.add(bound)
-        else:
-            bound_array = xr.DataArray(bound)
-
-        return bound_array.fillna(None)
 
     def _to_pyomo_param(
         self, val: Any, *, name: str

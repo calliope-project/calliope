@@ -45,7 +45,6 @@ from typing import (
 )
 
 import numpy as np
-import pandas as pd
 import pyparsing as pp
 import xarray as xr
 from typing_extensions import NotRequired, TypedDict, Unpack
@@ -362,20 +361,6 @@ class EvalComparisonOp(EvalToArrayStr):
         rhs = self.rhs.eval(return_type, **self.eval_attrs)
         return lhs, rhs
 
-    def _compare_bitwise(self, where: bool, lhs: Any, rhs: Any) -> Any:
-        "Comparison function for application to individual elements of the array"
-
-        if not where or pd.isnull(lhs) or pd.isnull(rhs):
-            return np.nan
-        match self.op:
-            case "==":
-                constraint = lhs == rhs
-            case "<=":
-                constraint = lhs <= rhs
-            case ">=":
-                constraint = lhs >= rhs
-        return constraint
-
     def as_math_string(self) -> str:
         lhs, rhs = self._eval("math_string")
         return lhs + self.OP_TRANSLATOR[self.op] + rhs
@@ -392,6 +377,7 @@ class EvalComparisonOp(EvalToArrayStr):
                 )
         lhs_where = lhs.broadcast_like(where)
         rhs_where = rhs.broadcast_like(where)
+
         match self.op:
             case "==":
                 op = np.equal
@@ -778,10 +764,10 @@ class EvalUnslicedComponent(EvalToArrayStr):
         else:
             try:
                 evaluated = backend_interface._dataset[self.name]
-                if "default" in evaluated.attrs:
-                    evaluated = evaluated.fillna(evaluated.attrs["default"])
             except KeyError:
                 evaluated = xr.DataArray(self.name, attrs={"obj_type": "string"})
+        if "default" in evaluated.attrs:
+            evaluated = evaluated.fillna(evaluated.attrs["default"])
 
         self.eval_attrs["references"].add(self.name)
         return evaluated

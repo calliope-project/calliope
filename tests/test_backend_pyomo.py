@@ -2264,7 +2264,7 @@ class TestNewBackend:
         )
         assert (
             obj.sel(dims).body.item()
-            == f"parameters[flow_in_eff]*variables[flow_in][{', '.join(dims[i] for i in obj.dims)}]"
+            == f"parameters[flow_in_eff]*variables[flow_in][{', '.join(dims[i] for i in obj.body.dims)}]"
         )
         assert obj.coords_in_name
 
@@ -2369,8 +2369,7 @@ class TestNewBackend:
         expected = simple_supply.backend.get_parameter(
             "source_eff", as_backend_objs=False
         )
-        default_val = simple_supply._model_data.attrs["defaults"]["source_eff"]
-        assert expected.equals(updated_param.fillna(default_val))
+        assert expected.equals(updated_param)
 
     def test_update_parameter_no_refs_to_update(self, simple_supply):
         """flow_cap_per_storage_cap_max isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
@@ -2490,7 +2489,7 @@ class TestNewBackend:
             simple_supply.backend.variables.flow_cap,
         )
         simple_supply.backend.unfix_variable("flow_cap")  # reset
-        assert fixed.sel(techs="test_demand_elec").all()
+        assert fixed.sel(techs="test_demand_elec", carriers="electricity").all()
         assert not fixed.where(where).all()
 
 
