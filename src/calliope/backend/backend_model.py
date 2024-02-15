@@ -479,13 +479,21 @@ class BackendModelGenerator(ABC):
             }
         )
         self._dataset[name] = da
-
         if references is not None:
-            for reference in references:
-                try:
-                    self._dataset[reference].attrs["references"].add(name)
-                except KeyError:
-                    continue
+            self._update_references(name, references)
+
+    def _update_references(self, name: str, references: set):
+        """Update reference lists in dataset objects.
+
+        Args:
+            name (str): Name to update in reference lists.
+            references (set): Names of dataset objects whose reference lists will be updated with `name`.
+        """
+        for reference in references:
+            try:
+                self._dataset[reference].attrs["references"].add(name)
+            except KeyError:
+                continue
 
     def _apply_func(
         self,
@@ -896,6 +904,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             "variables",
             "global_expressions",
             "constraints",
+            "piecewise_constraints",
             "objectives",
         ]
         for component in ordered_components:

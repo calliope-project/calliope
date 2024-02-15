@@ -12,6 +12,7 @@ import numpy as np
 import xarray as xr
 
 from calliope.backend import backend_model, parsing
+from calliope.backend.where_parser import generate_data_var_parser
 from calliope.exceptions import ModelError
 
 _ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
@@ -160,6 +161,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     Subject to
     ----------
+    {% elif component_type == "piecewise_constraints" %}
+
+    Subject to (piecewise)
+    ----------------------
     {% elif component_type == "global_expressions" %}
 
     Where
@@ -230,6 +235,8 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     \section{Objective}
     {% elif component_type == "constraints" %}
     \section{Subject to}
+    {% elif component_type == "piecewise_constraints" %}
+    \section{Subject to (piecewise)}
     {% elif component_type == "global_expressions" %}
     \section{Where}
     {% elif component_type == "variables" %}
@@ -281,6 +288,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {% elif component_type == "constraints" %}
 
     ## Subject to
+    {% elif component_type == "piecewise_constraints" %}
+
+    ## Subject to (piecewise)
     {% elif component_type == "global_expressions" %}
 
     ## Where
@@ -397,10 +407,33 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     ) -> None:
         if constraint_dict is None:
             constraint_dict = self.inputs.attrs["math"]["piecewise_constraints"][name]
+        non_where_refs: set = set()
 
         def _constraint_setter(where: xr.DataArray, references: set) -> xr.DataArray:
             return where.where(where)
 
+        format_vals = {}
+        for axis in ["x", "y"]:
+            for key in ["variable", "values"]:
+                val = constraint_dict[axis][key]
+                non_where_refs.add(val)
+                # This is a hack to get the variables/parameters as strings with their dimensions
+                parsed_ = generate_data_var_parser().parse_string(val, parse_all=True)
+                val_as_math = parsed_[0].eval(
+                    "math_string",
+                    equation_name=name,
+                    helper_functions={},
+                    input_data=self.inputs,
+                    backend_interface=self,
+                    references=non_where_refs,
+                    apply_where=True,
+                )
+                val_as_math = val_as_math.removeprefix(r"\exists (").removesuffix(")")
+                format_vals[f"{key[:3]}_{axis}"] = val_as_math
+        equation = (
+            rf"{ format_vals['var_y']} = { format_vals['val_y'] }, "
+            rf"\text{{if }} { format_vals['var_x'] } = {format_vals['val_x']} "
+        )
         parsed_component = self._add_component(
             name,
             constraint_dict,
@@ -408,11 +441,11 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             "piecewise_constraints",
             break_early=False,
         )
-        equation_strings = []
+        self._update_references(name, non_where_refs)
         self._generate_math_string(
             parsed_component,
             self.piecewise_constraints[name],
-            equations=equation_strings,
+            equations=[{"expression": equation}],
         )
 
     def add_global_expression(
@@ -444,6 +477,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self, name: str, variable_dict: Optional[parsing.UnparsedVariableDict] = None
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
+        bound_refs: set = set()
 
         def _variable_setter(where: xr.DataArray, references: set) -> xr.DataArray:
             return where.where(where)
@@ -451,13 +485,16 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         if variable_dict is None:
             variable_dict = self.inputs.attrs["math"]["variables"][name]
 
+        domain = domain_dict[variable_dict.get("domain", "real")]
+
         parsed_component = self._add_component(
             name, variable_dict, _variable_setter, "variables", break_early=False
         )
-        where_array = self.variables[name]
 
-        domain = domain_dict[variable_dict.get("domain", "real")]
-        lb, ub = self._get_capacity_bounds(name, variable_dict["bounds"])
+        # Have to get bounds _after_ adding component so the variable is available in the backend dataset
+        lb, ub = self._get_capacity_bounds(name, variable_dict["bounds"], bound_refs)
+        self._update_references(name, bound_refs.difference(name))
+        where_array = self.variables[name]
 
         self._generate_math_string(
             parsed_component, where_array, equations=[lb, ub], sense=r"\forall" + domain
@@ -541,6 +578,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             for objtype in [
                 "objectives",
                 "constraints",
+                "piecewise_constraints",
                 "global_expressions",
                 "variables",
                 "parameters",
@@ -627,7 +665,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         return jinja_env.from_string(template).render(**kwargs)
 
     def _get_capacity_bounds(
-        self, name: str, bounds: parsing.UnparsedVariableBoundDict
+        self, name: str, bounds: parsing.UnparsedVariableBoundDict, references: set
     ) -> tuple[dict[str, str], ...]:
         bound_dict: parsing.UnparsedConstraintDict = {
             "equations": [
@@ -638,6 +676,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         parsed_bounds = parsing.ParsedBackendComponent("constraints", name, bound_dict)
         equations = parsed_bounds.parse_equations(self.valid_component_names)
         return tuple(
-            {"expression": eq.evaluate_expression(self, return_type="math_string")}
+            {
+                "expression": eq.evaluate_expression(
+                    self, return_type="math_string", references=references
+                )
+            }
             for eq in equations
         )

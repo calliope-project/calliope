@@ -555,8 +555,12 @@ class TestLatexBackendModel:
 
     def test_get_capacity_bounds(self, dummy_latex_backend_model):
         bounds = {"min": 1, "max": 2e6}
-        lb, ub = dummy_latex_backend_model._get_capacity_bounds("multi_dim_var", bounds)
+        refs = set()
+        lb, ub = dummy_latex_backend_model._get_capacity_bounds(
+            "multi_dim_var", bounds, refs
+        )
         assert lb == {"expression": r"1 \leq \textbf{multi_dim_var}_\text{node,tech}"}
         assert ub == {
             "expression": r"\textbf{multi_dim_var}_\text{node,tech} \leq 2\mathord{\times}10^{+06}"
         }
+        assert refs == {"multi_dim_var"}

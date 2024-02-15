@@ -541,3 +541,13 @@ def generate_where_string_parser() -> pp.ParserElement:
     )
     subset = subset_parser(generic_identifier, evaluatable_string, number)
     return where_parser(bool_operand, helper_function, data_var, comparison, subset)
+
+
+def generate_data_var_parser() -> pp.ParserElement:
+    """
+
+    Returns:
+        pp.ParseResults: evaluatable to a model parameter or decision variable.
+    """
+    _, generic_identifier = expression_parser.setup_base_parser_elements()
+    return data_var_parser(generic_identifier)

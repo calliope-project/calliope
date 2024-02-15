@@ -343,7 +343,7 @@ class ParsedBackendEquation:
     @overload
     def evaluate_expression(
         self,
-        backend_interface: backend_model.BackendModel,
+        backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: Literal["array"] = "array",
         references: Optional[set] = None,
@@ -354,7 +354,7 @@ class ParsedBackendEquation:
     @overload
     def evaluate_expression(
         self,
-        backend_interface: backend_model.BackendModel,
+        backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: Literal["math_string"],
         references: Optional[set] = None,
@@ -363,7 +363,7 @@ class ParsedBackendEquation:
 
     def evaluate_expression(
         self,
-        backend_interface: backend_model.BackendModel,
+        backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: Literal["array", "math_string"] = "array",
         references: Optional[set] = None,

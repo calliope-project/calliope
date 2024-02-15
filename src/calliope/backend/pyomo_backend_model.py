@@ -150,11 +150,15 @@ class PyomoBackendModel(backend_model.BackendModel):
             constraint_dict = self.inputs.attrs["math"]["piecewise_constraints"][name]
 
         def _constraint_setter(where: xr.DataArray, references: set) -> xr.DataArray:
+            vars = []
+            for axis in ["x", "y"]:
+                var = constraint_dict[axis]["variable"]
+                vars.append(self.variables[var])
+                references.add(var)
             return self._apply_func(
                 self._to_pyomo_piecewise_constraint,
                 where,
-                self.variables[constraint_dict["x"]["variable"]],
-                self.variables[constraint_dict["y"]["variable"]],
+                *vars,
                 self._get_piecewise_breakpoints(
                     constraint_dict["x"]["values"], name, references
                 ),
