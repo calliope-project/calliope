@@ -408,6 +408,55 @@ class TestLatexBackendModel:
                     """
         )
 
+    def test_generate_math_doc_mkdocs_tabbed(self, dummy_model_data):
+        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+        backend_model.add_global_expression(
+            "expr",
+            {
+                "equations": [{"expression": "1 + 2"}],
+                "description": "foobar",
+                "default": 0,
+            },
+        )
+        doc = backend_model.generate_math_doc(format="md", mkdocs_tabbed=True)
+        assert doc == textwrap.dedent(
+            r"""
+
+                    ## Where
+
+                    ### expr
+
+                    foobar
+
+                    **Default**: 0
+
+                    === "Math"
+
+                        $$
+                        \begin{array}{l}
+                            \quad 1 + 2\\
+                        \end{array}
+                        $$
+
+                    === "YAML"
+
+                        ```yaml
+                        equations:
+                        - expression: 1 + 2
+                        ```
+                    """
+        )
+
+    def test_generate_math_doc_mkdocs_tabbed_not_in_md(self, dummy_model_data):
+        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+        with pytest.raises(exceptions.ModelError) as excinfo:
+            backend_model.generate_math_doc(format="rst", mkdocs_tabbed=True)
+
+        assert check_error_or_warning(
+            excinfo,
+            "Cannot use MKDocs tabs when writing math to a non-Markdown file format.",
+        )
+
     @pytest.mark.parametrize(
         ["kwargs", "expected"],
         [

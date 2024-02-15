@@ -55,17 +55,19 @@ class MathDocumentation:
     def write(
         self,
         filename: Literal[None] = None,
+        mkdocs_tabbed: bool = False,
         format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
     ) -> str:
         "Expecting string if not giving filename"
 
     @overload
-    def write(self, filename: Union[str, Path]) -> None:
+    def write(self, filename: str | Path, mkdocs_tabbed: bool = False) -> None:
         "Expecting None (and format arg is not needed) if giving filename"
 
     def write(
         self,
         filename: Optional[Union[str, Path]] = None,
+        mkdocs_tabbed: bool = False,
         format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
     ) -> Optional[str]:
         """_summary_
@@ -78,6 +80,8 @@ class MathDocumentation:
                 Not required if filename is given (as the format will be automatically inferred).
                 Required if expecting a string return from calling this function. The LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown).
                 Defaults to None.
+
+                mkdocs_tabbed (bool, optional): If True and Markdown docs are being generated, the equations will be on a tab and the original YAML math definition will be on another tab.
 
         Raises:
             exceptions.ModelError: Math strings need to be built first (`build`)
@@ -103,7 +107,7 @@ class MathDocumentation:
             raise ValueError(
                 f"Math documentation format must be one of {allowed_formats}, received `{format}`"
             )
-        populated_doc = self._instance.generate_math_doc(format)
+        populated_doc = self._instance.generate_math_doc(format, mkdocs_tabbed)
 
         if filename is None:
             return populated_doc
@@ -311,10 +315,25 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     **Default**: {{ equation.default }}
     {% endif %}
     {% if equation.expression != "" %}
+    {% if mkdocs_tabbed and yaml_snippet is not none%}
+
+    === "Math"
+
+        $$
+        {{ equation.expression | trim | escape_underscores | mathify_text_in_text | indent(width=4) }}
+        $$
+
+    === "YAML"
+
+        ```yaml
+        {{ equation.yaml_snippet | trim | indent(width=4) }}
+        ```
+    {% else %}
 
     $$
-    {{ equation.expression | trim | escape_underscores | mathify_text_in_text }}
+    {{ equation.expression | trim | escape_underscores | mathify_text_in_text}}
     $$
+    {% endif %}
     {% endif %}
     {% endfor %}
     {% endfor %}
@@ -456,16 +475,24 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         if key in self._dataset and self._dataset[key].obj_type == component_type:
             del self._dataset[key]
 
-    def generate_math_doc(self, format: _ALLOWED_MATH_FILE_FORMATS = "tex") -> str:
+    def generate_math_doc(
+        self, format: _ALLOWED_MATH_FILE_FORMATS = "tex", mkdocs_tabbed: bool = False
+    ) -> str:
         """Generate the math documentation by embedding LaTeX math in a template.
 
         Args:
             format (Literal["tex", "rst", "md"]):
                 The built LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown). Defaults to "tex".
+            mkdocs_tabbed (bool, optional): If True and format is `md`, the equations will be on a tab and the original YAML math definition will be on another tab.
 
         Returns:
             str: Generated math documentation.
         """
+        if mkdocs_tabbed and format != "md":
+            raise ModelError(
+                "Cannot use MKDocs tabs when writing math to a non-Markdown file format."
+            )
+
         doc_template = self.FORMAT_STRINGS[format]
         components = {
             objtype: [
@@ -476,6 +503,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                     "references": list(da.attrs.get("references", set())),
                     "default": da.attrs.get("default", None),
                     "unit": da.attrs.get("unit", None),
+                    "yaml_snippet": da.attrs.get("yaml_snippet", None),
                 }
                 for name, da in getattr(self, objtype).data_vars.items()
                 if "math_string" in da.attrs
@@ -492,7 +520,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         }
         if not components["parameters"]:
             del components["parameters"]
-        return self._render(doc_template, components=components)
+        return self._render(
+            doc_template, mkdocs_tabbed=mkdocs_tabbed, components=components
+        )
 
     def _add_latex_strings(
         self,
@@ -535,6 +565,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 sets=sets,
             )
             where_array.attrs.update({"math_string": equation_element_string})
+
         return None
 
     @staticmethod

@@ -32,6 +32,10 @@ In the expressions, terms in **bold** font are [decision variables](#decision-va
 The [decision variables](#decision-variables) and [parameters](#parameters) are listed at the end of the page; they also refer back to the global expressions / constraints in which they are used.
 Those parameters which are defined over time (`timesteps`) in the expressions can be defined by a user as a single, time invariant value, or as a timeseries that is [loaded from file or dataframe](../creating/data_sources.md).
 
+!!! note
+
+    For every math component in the documentation, we include the YAML snippet that was used to generate the math in a separate tab.
+
 [:fontawesome-solid-download: Download the {math_type} formulation as a YAML file]({filepath})
 """
 
@@ -110,7 +114,7 @@ def write_file(
 
     nav_reference["Pre-defined math"].append(output_file.as_posix())
 
-    math_doc = model.math_documentation.write(format="md")
+    math_doc = model.math_documentation.write(format="md", mkdocs_tabbed=True)
     file_to_download = Path("..") / filename
     output_full_filepath.write_text(
         PREPEND_SNIPPET.format(

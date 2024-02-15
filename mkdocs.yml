@@ -68,6 +68,7 @@ markdown_extensions:
   - md_in_html
   - mkdocs-click
   - def_list
+  - tables
   - toc:
       permalink: "¶"
       toc_depth: 3
@@ -145,6 +146,7 @@ nav:
       - reference/api/backend_model.md
       - reference/api/helper_functions.md
       - reference/api/example_models.md
+      - reference/api/schema.md
       - reference/api/attrdict.md
       - reference/api/exceptions.md
       - reference/api/logging.md
