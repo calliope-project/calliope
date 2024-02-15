@@ -12,21 +12,26 @@ import logging
 import time
 import typing
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from copy import deepcopy
+from functools import partial
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     Generic,
+    Iterator,
     Literal,
     Optional,
     SupportsFloat,
     TypeVar,
     Union,
+    overload,
 )
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
@@ -450,9 +455,31 @@ class BackendModelGenerator(ABC):
                 except KeyError:
                     continue
 
+    @overload
     def _apply_func(
-        self, func: Callable, *args, output_core_dims: tuple = ((),), **kwargs
+        self,
+        func: Callable,
+        where: Optional[xr.DataArray],
+        n_out: Literal[1],
+        *args,
+        **kwargs,
     ) -> xr.DataArray:
+        "Expecting one output leads to a single DataArray"
+
+    @overload
+    def _apply_func(
+        self,
+        func: Callable,
+        where: Optional[xr.DataArray],
+        n_out: Literal[2, 3, 4, 5],
+        *args,
+        **kwargs,
+    ) -> tuple[xr.DataArray, ...]:
+        "Expecting more that one output leads to a tuple of DataArrays"
+
+    def _apply_func(
+        self, func: Callable, where: Optional[xr.DataArray], n_out: int, *args, **kwargs
+    ) -> xr.DataArray | tuple[xr.DataArray, ...]:
         """
         Apply a function to every element of an arbitrary number of xarray DataArrays.
 
@@ -474,16 +501,15 @@ class BackendModelGenerator(ABC):
         Returns:
             xr.DataArray: Array with func applied to all elements.
         """
-        return xr.apply_ufunc(
-            func,
-            *args,
-            kwargs=kwargs,
-            vectorize=True,
-            keep_attrs=True,
-            dask="parallelized",
-            output_dtypes=[np.dtype("O")],
-            output_core_dims=output_core_dims,
-        )
+        if kwargs:
+            func = partial(func, **kwargs)
+        vectorised_func = np.frompyfunc(func, len(args), n_out)
+        if where is not None:
+            return vectorised_func(
+                *(arg.broadcast_like(where) for arg in args), where=where.values
+            ).fillna(np.nan)
+        else:
+            return vectorised_func(*args)
 
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
         """
@@ -580,6 +606,18 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         Returns:
             xr.DataArray: parameter array.
         """
+
+    @overload
+    def get_constraint(
+        self, name: str, as_backend_objs: Literal[True] = True, eval_body: bool = False
+    ) -> xr.DataArray:
+        "DataArray return on providing constraints as backend objects"
+
+    @overload
+    def get_constraint(
+        self, name: str, as_backend_objs: Literal[False], eval_body: bool = False
+    ) -> xr.Dataset:
+        "Dataset return on providing constraints as lower bound, body, and upper bound"
 
     @abstractmethod
     def get_constraint(
@@ -855,6 +893,26 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             for ref in refs:
                 self.delete_component(ref, component)
                 getattr(self, "add_" + component.removesuffix("s"))(name=ref)
+
+    @contextmanager
+    def _datetime_as_string(self, data: Union[xr.DataArray, xr.Dataset]) -> Iterator:
+        """Context manager to temporarily convert np.dtype("datetime64[ns]") coordinates (e.g. timesteps) to strings with a resolution of minutes.
+
+        Args:
+            data (Union[xr.DataArray, xr.Dataset]): xarray object on whose coordinates the conversion will take place.
+        """
+        datetime_coords = set()
+        for name_, vals_ in data.coords.items():
+            if vals_.dtype.kind == "M":
+                data.coords[name_] = data.coords[name_].dt.strftime("%Y-%m-%d %H:%M")
+                datetime_coords.add(name_)
+        try:
+            yield
+        finally:
+            for name_ in datetime_coords:
+                data.coords[name_] = xr.apply_ufunc(
+                    pd.to_datetime, data.coords[name_], keep_attrs=True
+                )
 
 
 class ShadowPrices:

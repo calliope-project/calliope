@@ -4,10 +4,8 @@
 from __future__ import annotations
 
 import logging
-from contextlib import contextmanager
-from functools import partial
 from pathlib import Path
-from typing import Any, Iterator, Literal, Optional, SupportsFloat, TypeVar, Union
+from typing import Any, Literal, Optional, SupportsFloat, TypeVar, Union, overload
 
 import gurobipy
 import numpy as np
@@ -73,8 +71,7 @@ class GurobiBackendModel(backend_model.BackendModel):
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> xr.DataArray:
             expr = element.evaluate_expression(self, where=where, references=references)
-            func = np.frompyfunc(self._instance.addConstr, 1, 1)
-            to_fill = func(expr, where=where.values)
+            to_fill = self._apply_func(self._instance.addConstr, where, 1, expr)
 
             return to_fill
 
@@ -109,19 +106,14 @@ class GurobiBackendModel(backend_model.BackendModel):
         def _variable_setter(where: xr.DataArray, references: set):
 
             domain_type = domain_dict[variable_dict.get("domain", "real")]
-            func = np.frompyfunc(
-                partial(self._instance.addVar, vtype=domain_type), 2, 1
-            )
 
             bounds = variable_dict["bounds"]
             lb = self._get_capacity_bound(bounds["min"], name, references)
             ub = self._get_capacity_bound(bounds["max"], name, references)
-            var = func(
-                lb.broadcast_like(where).values,
-                ub.broadcast_like(where).values,
-                where=where.values,
+            var = self._apply_func(
+                self._instance.addVar, where, 1, lb, ub, vtype=domain_type
             )
-            return where.copy(data=var).fillna(value=np.nan)
+            return var.fillna(value=np.nan)
 
         self._add_component(name, variable_dict, _variable_setter, "variables")
 
@@ -162,6 +154,18 @@ class GurobiBackendModel(backend_model.BackendModel):
 
         return parameter.astype(parameter.original_dtype)
 
+    @overload
+    def get_constraint(
+        self, name: str, as_backend_objs: Literal[True] = True, eval_body: bool = False
+    ) -> xr.DataArray:
+        "DataArray return on providing constraints as backend objects"
+
+    @overload
+    def get_constraint(
+        self, name: str, as_backend_objs: Literal[False], eval_body: bool = False
+    ) -> xr.Dataset:
+        "Dataset return on providing constraints as lower bound, body, and upper bound"
+
     def get_constraint(
         self, name: str, as_backend_objs: bool = True, eval_body: bool = False
     ) -> Union[xr.DataArray, xr.Dataset]:
@@ -180,20 +184,19 @@ class GurobiBackendModel(backend_model.BackendModel):
             return variable
         else:
             try:
-                func = np.frompyfunc(self._from_gurobi_var, 1, 1)
-                return func(variable, where=variable.notnull().values).fillna(np.nan)
+                return self._apply_func(
+                    self._from_gurobi_var, variable.notnull(), 1, variable
+                )
             except AttributeError:
                 return variable.astype(str).where(variable.notnull())
 
     def get_variable_bounds(self, name: str) -> xr.Dataset:
         variable = self.get_variable(name, as_backend_objs=True)
-        variable_attrs = self._apply_func(
-            self._from_gurobi_variable_bounds,
-            variable,
-            output_core_dims=(["attributes"],),
+
+        lb, ub = self._apply_func(
+            self._from_gurobi_variable_bounds, variable.notnull(), 2, variable
         )
-        variable_attrs.coords["attributes"] = ["lb", "ub"]
-        return variable_attrs.to_dataset("attributes")
+        return xr.Dataset({"lb": lb, "ub": ub})
 
     def get_global_expression(
         self, name: str, as_backend_objs: bool = True, eval_body: bool = False
@@ -206,10 +209,12 @@ class GurobiBackendModel(backend_model.BackendModel):
                 return global_expression.astype(str).where(global_expression.notnull())
             else:
                 try:
-                    func = np.frompyfunc(self._from_gurobi_expr, 1, 1)
-                    return func(
-                        global_expression, where=global_expression.notnull().values
-                    ).fillna(np.nan)
+                    return self._apply_func(
+                        self._from_gurobi_expr,
+                        global_expression.notnull(),
+                        1,
+                        global_expression,
+                    )
                 except AttributeError:
                     return global_expression.astype(str).where(
                         global_expression.notnull()
@@ -265,22 +270,21 @@ class GurobiBackendModel(backend_model.BackendModel):
                 new_obj_name = f"{name}[{','.join(idx)}]"
                 setattr(val, attr, new_obj_name)
 
+        attribute_names = {"variables": "VarName", "constraints": "ConstrName"}
         with self._datetime_as_string(self._dataset):
-            for component_type, attr in {
-                "variables": "VarName",
-                "constraints": "ConstrName",
-            }.items():
-                for da in self._dataset.filter_by_attrs(
-                    coords_in_name=False, **{"obj_type": component_type}
-                ).values():
-                    self._apply_func(
-                        __renamer,
-                        da,
-                        *[da.coords[i] for i in da.dims],
-                        name=da.name,
-                        attr=attr,
-                    )
-                    da.attrs["coords_in_name"] = True
+            for da in self._dataset.filter_by_attrs(coords_in_name=False).values():
+                if da.attrs["obj_type"] not in attribute_names.keys():
+                    continue
+                self._apply_func(
+                    __renamer,
+                    da.notnull(),
+                    1,
+                    da,
+                    *[da.coords[i] for i in da.dims],
+                    name=da.name,
+                    attr=attribute_names[da.attrs["obj_type"]],
+                )
+                da.attrs["coords_in_name"] = True
 
         self._instance.update()
 
@@ -303,7 +307,12 @@ class GurobiBackendModel(backend_model.BackendModel):
         """
         if key in self._dataset and self._dataset[key].obj_type == component_type:
             if component_type in ["variables", "constraints"]:
-                self._apply_func(self._del_gurobi_obj, self._dataset[key])
+                self._apply_func(
+                    self._del_gurobi_obj,
+                    self._dataset[key].notnull(),
+                    1,
+                    self._dataset[key],
+                )
             del self._dataset[key]
         self._instance.update()
 
@@ -380,8 +389,11 @@ class GurobiBackendModel(backend_model.BackendModel):
                     f"New `{bound_name}` bounds will be broadcast along the {missing_dims_in_new_vals} dimension(s).",
                     "info",
                 )
+
             self._apply_func(
                 self._update_gurobi_variable,
+                variable_da.notnull() & xr.DataArray(new_bounds).notnull(),
+                1,
                 variable_da,
                 xr.DataArray(new_bounds),
                 bound=translator[bound_name],
@@ -397,17 +409,25 @@ class GurobiBackendModel(backend_model.BackendModel):
         variable_da = self.get_variable(name)
         if where is not None:
             variable_da = variable_da.where(where.fillna(0))
-        self._apply_func(self._fix_gurobi_variable, variable_da)
+        try:
+            self._apply_func(
+                self._fix_gurobi_variable, variable_da.notnull(), 1, variable_da
+            )
+        except AttributeError:
+            raise BackendError(
+                "Cannot fix variable values without already having solved the model successfully."
+            )
+
         self._instance.update()
 
     def unfix_variable(self, name: str, where: Optional[xr.DataArray] = None) -> None:
         raise BackendError(
-            "Cannot unfix a variable using the Gurobi backend; you will need to rebuild your backend or update variable bounds to match the original bounds."
+            "Cannot unfix a variable using the Gurobi backend; "
+            "you will need to rebuild your backend or update variable bounds to match the original bounds."
         )
 
     def _del_gurobi_obj(self, obj: Any) -> None:
-        if not pd.isnull(obj):
-            self._instance.remove(obj)
+        self._instance.remove(obj)
 
     def _get_capacity_bound(
         self, bound: Any, name: str, references: set
@@ -438,7 +458,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         return bound_array.fillna(None)
 
     def _update_gurobi_variable(
-        self, orig: Optional[gurobipy.Var], new: Any, *, bound: Literal["lb", "ub"]
+        self, orig: gurobipy.Var, new: Any, *, bound: Literal["lb", "ub"]
     ) -> None:
         """Utility function to update gurobi variable bounds in-place.
 
@@ -448,10 +468,9 @@ class GurobiBackendModel(backend_model.BackendModel):
             lb (Any): Value with which to update the lower bound of the variable.
             ub (Any): Value with which to update the upper bound of the variable.
         """
-        if pd.notnull(orig) and pd.notnull(new):  # type: ignore
-            setattr(orig, bound, new)
+        setattr(orig, bound, new)
 
-    def _fix_gurobi_variable(self, orig: Optional[gurobipy.Var]) -> None:
+    def _fix_gurobi_variable(self, orig: gurobipy.Var) -> None:
         """Utility function to fix a Gurobi variable to its value in the optimisation model solution.
         Fixed variables will be considered as parameters in the subsequent solve.
 
@@ -461,20 +480,11 @@ class GurobiBackendModel(backend_model.BackendModel):
         Raises:
             BackendError: Can only fix variables if they have values assigned to them from an optimal solution.
         """
-        if pd.isnull(orig):  # type: ignore
-            return None
-        try:
-            orig.x  # type: ignore
-        except AttributeError:
-            raise BackendError(
-                "Cannot fix variable values without already having solved the model successfully."
-            )
-        else:
-            self._update_gurobi_variable(orig, orig.x, bound="lb")  # type: ignore
-            self._update_gurobi_variable(orig, orig.x, bound="ub")  # type: ignore
+        self._update_gurobi_variable(orig, orig.x, bound="lb")  # type: ignore
+        self._update_gurobi_variable(orig, orig.x, bound="ub")  # type: ignore
 
     @staticmethod
-    def _from_gurobi_variable_bounds(val: Optional[gurobipy.Var]) -> pd.Series:
+    def _from_gurobi_variable_bounds(val: gurobipy.Var) -> pd.Series:
         """Evaluate Gurobi decision variable object bounds.
 
         Args:
@@ -483,11 +493,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         Returns:
             pd.Series: Array of variable upper and lower bound.
         """
-        if pd.isnull(val):  # type: ignore
-            vals = [np.nan, np.nan]
-        else:
-            vals = [val.lb, val.ub]  # type: ignore
-        return pd.Series(data=vals, index=["lb", "ub"])
+        return pd.Series(data=[val.lb, val.ub], index=["lb", "ub"])
 
     @staticmethod
     def _from_gurobi_var(val: gurobipy.Var) -> Any:
@@ -520,26 +526,6 @@ class GurobiBackendModel(backend_model.BackendModel):
         """
         return val.getValue()
 
-    @contextmanager
-    def _datetime_as_string(self, data: Union[xr.DataArray, xr.Dataset]) -> Iterator:
-        """Context manager to temporarily convert np.dtype("datetime64[ns]") coordinates (e.g. timesteps) to strings with a resolution of minutes.
-
-        Args:
-            data (Union[xr.DataArray, xr.Dataset]): xarray object on whose coordinates the conversion will take place.
-        """
-        datetime_coords = set()
-        for name_, vals_ in data.coords.items():
-            if vals_.dtype.kind == "M":
-                data.coords[name_] = data.coords[name_].dt.strftime("%Y-%m-%d %H:%M")
-                datetime_coords.add(name_)
-        try:
-            yield
-        finally:
-            for name_ in datetime_coords:
-                data.coords[name_] = xr.apply_ufunc(
-                    pd.to_datetime, data.coords[name_], keep_attrs=True
-                )
-
 
 class GurobiShadowPrices(backend_model.ShadowPrices):
     def __init__(self, backend_obj: GurobiBackendModel):
@@ -549,7 +535,7 @@ class GurobiShadowPrices(backend_model.ShadowPrices):
     def get(self, name: str) -> xr.DataArray:
         constraint = self._backend_obj.get_constraint(name, as_backend_objs=True)
         return self._backend_obj._apply_func(
-            self._duals_from_gurobi_constraint, constraint
+            self._duals_from_gurobi_constraint, constraint.notnull(), 1, constraint
         )
 
     def activate(self):
@@ -563,13 +549,10 @@ class GurobiShadowPrices(backend_model.ShadowPrices):
         return True
 
     @staticmethod
-    def _duals_from_gurobi_constraint(val: Optional[gurobipy.Constr]) -> float:
-        if pd.isnull(val):  # type: ignore
+    def _duals_from_gurobi_constraint(val: gurobipy.Constr) -> float:
+        try:
+            dual = val.Pi  # type: ignore
+        except AttributeError:
             return np.nan
         else:
-            try:
-                dual = val.Pi  # type: ignore
-            except AttributeError:
-                return np.nan
-            else:
-                return dual
+            return dual

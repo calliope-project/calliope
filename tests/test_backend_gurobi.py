@@ -3,7 +3,6 @@ import logging
 
 import calliope.exceptions as exceptions
 import numpy as np
-import pandas as pd
 import pytest  # noqa: F401
 import xarray as xr
 
@@ -480,17 +479,17 @@ class TestNewBackend:
 
     @staticmethod
     def _is_fixed(val):
-        if pd.notnull(val):
-            return val.lb == val.ub
-        else:
-            return np.nan
+        return val.lb == val.ub
 
     def test_fix_variable(self, simple_supply_gurobi):
         simple_supply_gurobi.build(backend="gurobi", force=True)
         simple_supply_gurobi.solve(force=True)
         simple_supply_gurobi.backend.fix_variable("flow_cap")
         fixed = simple_supply_gurobi.backend._apply_func(
-            self._is_fixed, simple_supply_gurobi.backend.variables.flow_cap
+            self._is_fixed,
+            simple_supply_gurobi.backend.variables.flow_cap.notnull(),
+            1,
+            simple_supply_gurobi.backend.variables.flow_cap,
         )
         assert fixed.where(fixed.notnull()).all()
 
@@ -508,9 +507,11 @@ class TestNewBackend:
         )
         simple_supply_gurobi.backend.fix_variable("flow_cap", where=where)
         fixed = simple_supply_gurobi.backend._apply_func(
-            self._is_fixed, simple_supply_gurobi.backend.variables.flow_cap
+            self._is_fixed,
+            simple_supply_gurobi.backend.variables.flow_cap.notnull(),
+            1,
+            simple_supply_gurobi.backend.variables.flow_cap,
         )
-
         assert not fixed.sel(techs="test_demand_elec", carriers="electricity").any()
         assert fixed.where(where, other=True).all()
         # reset

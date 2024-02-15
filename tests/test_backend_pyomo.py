@@ -5,7 +5,6 @@ from itertools import product
 
 import calliope.exceptions as exceptions
 import numpy as np
-import pandas as pd
 import pyomo.core as po
 import pyomo.kernel as pmo
 import pytest  # noqa: F401
@@ -2411,15 +2410,15 @@ class TestNewBackend:
 
     @staticmethod
     def _is_fixed(val):
-        if pd.notnull(val):
-            return val.fixed
-        else:
-            return np.nan
+        return val.fixed
 
     def test_fix_variable(self, simple_supply):
         simple_supply.backend.fix_variable("flow_cap")
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.flow_cap
+            self._is_fixed,
+            simple_supply.backend.variables.flow_cap.notnull(),
+            1,
+            simple_supply.backend.variables.flow_cap,
         )
         simple_supply.backend.unfix_variable("flow_cap")  # reset
         assert fixed.where(fixed.notnull()).all()
@@ -2431,7 +2430,10 @@ class TestNewBackend:
         )
         simple_supply.backend.fix_variable("flow_cap", where=where)
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.flow_cap
+            self._is_fixed,
+            simple_supply.backend.variables.flow_cap.notnull(),
+            1,
+            simple_supply.backend.variables.flow_cap,
         )
         simple_supply.backend.unfix_variable("flow_cap")  # reset
         assert not fixed.sel(techs="test_demand_elec", carriers="electricity").any()
@@ -2450,7 +2452,10 @@ class TestNewBackend:
         simple_supply.backend.fix_variable("flow_cap")
         simple_supply.backend.unfix_variable("flow_cap")
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.flow_cap
+            self._is_fixed,
+            simple_supply.backend.variables.flow_cap.notnull(),
+            1,
+            simple_supply.backend.variables.flow_cap,
         )
         assert not fixed.where(fixed.notnull()).all()
 
@@ -2462,7 +2467,10 @@ class TestNewBackend:
         simple_supply.backend.fix_variable("flow_cap")
         simple_supply.backend.unfix_variable("flow_cap", where=where)
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.flow_cap
+            self._is_fixed,
+            simple_supply.backend.variables.flow_cap.notnull(),
+            1,
+            simple_supply.backend.variables.flow_cap,
         )
         simple_supply.backend.unfix_variable("flow_cap")  # reset
         assert fixed.sel(techs="test_demand_elec").all()
