@@ -47,7 +47,7 @@ class UnparsedConstraintDict(TypedDict):
 
 
 class UnparsedPiecewiseConstraintAxisDict(TypedDict):
-    values: str | list[int | float]
+    values: str
     variable: str
 
 

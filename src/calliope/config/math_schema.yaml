@@ -104,14 +104,8 @@ properties:
             required: ["values", "variable"]
             properties: &piecewiseprops
               values:
-                oneOf:
-                  - type: string
-                    description: Parameter name containing data, indexed over the `breakpoints` dimension.
-                  - type: array
-                    items:
-                      type: number
-                    description: list of values at each breakpoint.
-                description: Values at each breakpoint on the curve.
+                type: string
+                description: Parameter name containing data, indexed over the `breakpoints` dimension.
               variable:
                 type: string
                 description: Variable name whose values are assigned at each breakpoint.
