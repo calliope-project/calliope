@@ -92,7 +92,7 @@ properties:
         type: object
         description: A named piecewise constraint.
         additionalProperties: false
-        required: ["equations"]
+        required: ["x", "y"]
         properties:
           description: *description
           active: *active
@@ -101,6 +101,7 @@ properties:
           x:
             type: object
             description: X-axis of piecewise curve.
+            required: ["values", "variable"]
             properties: &piecewiseprops
               values:
                 oneOf:
@@ -111,12 +112,13 @@ properties:
                       type: number
                     description: list of values at each breakpoint.
                 description: Values at each breakpoint on the curve.
-              variables:
+              variable:
                 type: string
                 description: Variable name whose values are assigned at each breakpoint.
           y:
             type: object
             description: Y-axis of piecewise curve.
+            required: ["values", "variable"]
             properties: *piecewiseprops
 
   global_expressions:

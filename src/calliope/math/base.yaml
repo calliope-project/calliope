@@ -905,3 +905,5 @@ global_expressions:
           expression: "0"
     active: true  # optional; defaults to true.
   # --8<-- [end:expression]
+
+piecewise_constraints: {}

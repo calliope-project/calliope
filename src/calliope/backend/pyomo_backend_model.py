@@ -27,7 +27,8 @@ import pyomo.kernel as pmo  # type: ignore
 import xarray as xr
 from pyomo.common.tempfiles import TempfileManager  # type: ignore
 from pyomo.core.kernel.piecewise_library.transforms import (
-    TransformedPiecewiseLinearFunction,
+    PiecewiseLinearFunction,
+    piecewise_sos2,
 )
 from pyomo.opt import SolverFactory  # type: ignore
 
@@ -372,7 +373,12 @@ class PyomoBackendModel(backend_model.BackendModel):
                 val.calliope_coords = idx
 
         with self._datetime_as_string(self._dataset):
-            for component_type in ["parameters", "variables", "constraints"]:
+            for component_type in [
+                "parameters",
+                "variables",
+                "constraints",
+                "piecewise_constraints",
+            ]:
                 for da in self._dataset.filter_by_attrs(
                     coords_in_name=False, **{"obj_type": component_type}
                 ).values():
@@ -728,7 +734,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         if mask:
             non_nan_y_vals = y_vals[pd.notnull(y_vals)]
             non_nan_x_vals = x_vals[pd.notnull(x_vals)]
-            var = pmo.piecewise(
+            var = ObjPiecewiseConstraint(
                 breakpoints=non_nan_x_vals,
                 values=non_nan_y_vals,
                 input=x_var,
@@ -1004,20 +1010,21 @@ class ObjConstraint(pmo.constraint, CoordObj):
         return self._update_name(pmo.constraint.getname(self, *args, **kwargs))
 
 
-class ObjPiecewiseConstraint(TransformedPiecewiseLinearFunction, CoordObj):
+class ObjPiecewiseConstraint(piecewise_sos2, CoordObj):
     """
     A pyomo constraint with a `name` property setter (via the `pmo.constraint.getname` method) which replaces a list position as a name with a list of strings.
 
     """
 
     def __init__(self, **kwds):
-        pmo.piecewise.__init__(self, **kwds)
+        func = PiecewiseLinearFunction(
+            breakpoints=kwds.pop("breakpoints"), values=kwds.pop("values")
+        )
+        piecewise_sos2.__init__(self, func, **kwds)
         CoordObj.__init__(self)
 
     def getname(self, *args, **kwargs):
-        return self._update_name(
-            TransformedPiecewiseLinearFunction.getname(self, *args, **kwargs)
-        )
+        return self._update_name(piecewise_sos2.getname(self, *args, **kwargs))
 
 
 class PyomoShadowPrices(backend_model.ShadowPrices):

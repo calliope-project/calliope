@@ -390,6 +390,31 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             parsed_component, self.constraints[name], equations=equation_strings
         )
 
+    def add_piecewise_constraint(
+        self,
+        name: str,
+        constraint_dict: Optional[parsing.UnparsedPiecewiseConstraintDict] = None,
+    ) -> None:
+        if constraint_dict is None:
+            constraint_dict = self.inputs.attrs["math"]["piecewise_constraints"][name]
+
+        def _constraint_setter(where: xr.DataArray, references: set) -> xr.DataArray:
+            return where.where(where)
+
+        parsed_component = self._add_component(
+            name,
+            constraint_dict,
+            _constraint_setter,
+            "piecewise_constraints",
+            break_early=False,
+        )
+        equation_strings = []
+        self._generate_math_string(
+            parsed_component,
+            self.piecewise_constraints[name],
+            equations=equation_strings,
+        )
+
     def add_global_expression(
         self,
         name: str,
