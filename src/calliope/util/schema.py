@@ -1,4 +1,13 @@
+# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
+# Licensed under the Apache 2.0 License (see LICENSE file).
+
+"""
+Load, update, and access attributes in the Calliope pre-defined YAML schemas
+"""
+
+import importlib
 import re
+import sys
 from copy import deepcopy
 from typing import Literal, Optional
 
@@ -14,6 +23,11 @@ DATA_SOURCE_SCHEMA = load_config("data_source_schema.yaml")
 MATH_SCHEMA = load_config("math_schema.yaml")
 
 
+def reset():
+    """Reset all module-level schema to the pre-defined dictionaries."""
+    importlib.reload(sys.modules[__name__])
+
+
 def update_then_validate_config(
     config_key: str, config_dict: AttrDict, **update_kwargs
 ) -> AttrDict:
@@ -27,6 +41,46 @@ def update_then_validate_config(
     return to_validate
 
 
+def update_model_schema(
+    top_level_property: Literal["nodes", "techs", "parameters"],
+    new_entries: dict,
+    allow_override: bool = True,
+):
+    """Update existing entries in the model schema or add a new parameter to the model schema.
+
+    Available attributes:
+
+    * title (str): Short description of the parameter.
+    * description (str): Long description of the parameter.
+    * type (str): expected type of entry. Pre-defined entries tend to use "$ref: "#/$defs/TechParamNullNumber" instead, to allow type to be either numeric or an indexed parameter.
+    * default (str): default value. This will be used in generating the optimisation problem.
+    * x-type (str): type of the non-NaN array entries in the internal calliope representation of the parameter.
+    * x-unit (str): Unit of the parameter to use in documentation.
+    * x-operate-param (bool): If True, this parameter's schema data will only be loaded into the optimisation problem if running in "operate" mode.
+
+    Args:
+        top_level_property (Literal["nodes", "techs", "parameters"]): Top-level key under which parameters are to be updated/added.
+        new_entries (dict): Data to update the schema with.
+        allow_override (bool, optional): If True, allow existing entries in the schema to be overwritten. Defaults to True.
+    """
+    new_schema = deepcopy(MODEL_SCHEMA)
+    to_update: AttrDict
+    if top_level_property == "parameters":
+        to_update = new_schema["properties"][top_level_property]["properties"]
+    else:
+        to_update = new_schema["properties"][top_level_property]["patternProperties"][
+            "^[^_^\\d][\\w]*$"
+        ]["properties"]
+
+    to_update.union(AttrDict(new_entries), allow_override=allow_override)
+
+    validator = jsonschema.Draft202012Validator
+    validator.META_SCHEMA["unevaluatedProperties"] = False
+    validator.check_schema(new_schema)
+
+    MODEL_SCHEMA.union(new_schema, allow_override=True)
+
+
 def validate_dict(to_validate: dict, schema: dict, dict_descriptor: str) -> None:
     """
     Validate a dictionary under a given schema.
@@ -37,8 +91,11 @@ def validate_dict(to_validate: dict, schema: dict, dict_descriptor: str) -> None
         dict_descriptor (str): Description of the dictionary to validate, to use if an error is raised.
 
     Raises:
-        jsonschema.SchemaError: If the schema itself is malformed, a SchemaError will be raised at the first issue. Other issues than that raised may still exist.
-        calliope.exceptions.ModelError: If the dictionary is not valid according to the schema, a list of the issues found will be collated and raised.
+        jsonschema.SchemaError:
+            If the schema itself is malformed, a SchemaError will be raised at the first issue.
+            Other issues than that raised may still exist.
+        calliope.exceptions.ModelError:
+            If the dictionary is not valid according to the schema, a list of the issues found will be collated and raised.
     """
     errors = []
     validator = jsonschema.Draft202012Validator
@@ -95,8 +152,9 @@ def extract_from_schema(
             Defaults to None, i.e., all property branches are included.
 
     Returns:
-        dict: Flat dictionary of property name : keyword value.
-        Property trees are discarded since property names must be unique.
+        dict:
+            Flat dictionary of property name : keyword value.
+            Property trees are discarded since property names must be unique.
     """
     extracted_keywords: dict = {}
     KeywordValidatingValidator = _extend_with_keyword(

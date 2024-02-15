@@ -33,12 +33,10 @@ In this section we will show some examples of loading data and provide the equiv
 
     Data in file:
 
-    ```
-    ,
-    2005-01-01 12:00:00,15
-    2005-01-01 13:00:00,5
-    ...
-    ```
+    | timesteps           |    |
+    | ------------------: | :- |
+    | 2005-01-01 12:00:00 | 15 |
+    | 2005-01-01 13:00:00 | 5  |
 
     YAML definition to load data:
 
@@ -76,17 +74,21 @@ In this section we will show some examples of loading data and provide the equiv
 
     Data in file:
 
-    ```shell
-    tech1,base_tech,supply  # (1)!
-    tech1,flow_cap_max,100
-    tech1,flow_out_eff,0.1
-    tech1,area_use_max,500
-    tech1,area_use_per_flow_cap,7
-    tech2,base_tech,demand
-    tech3,base_tech,storage
-    tech3,storage_cap_max,200
-    tech3,flow_cap_max,100
-    ```
+    <div class="annotate" markdown>
+
+    |       |                       |             |
+    | ----: | --------------------: | :---------- |
+    | tech1 | base_tech             | supply  (1) |
+    | tech1 | flow_cap_max          | 100         |
+    | tech1 | flow_out_eff          | 0.1         |
+    | tech1 | area_use_max          | 500         |
+    | tech1 | area_use_per_flow_cap | 7           |
+    | tech2 | base_tech             | demand      |
+    | tech3 | base_tech             | storage     |
+    | tech3 | storage_cap_max       | 200         |
+    | tech3 | flow_cap_max          | 100         |
+
+    </div>
 
     1. Unlike the previous example, we do not have a "header" row with column names in this file.
     We start directly with defining data.
@@ -125,15 +127,15 @@ In this section we will show some examples of loading data and provide the equiv
 
     Data in file:
 
-    ```
-    tech1,cost_flow_cap,100
-    tech1,cost_area_use,50
-    tech1,cost_flow_out,0.2
-    tech1,cost_interest_rate,0.1
-    tech3,cost_flow_cap,20
-    tech3,cost_storage_cap,150
-    tech3,cost_interest_rate,0.1
-    ```
+    |       |                    |      |
+    | ----: | -----------------: | :--- |
+    | tech1 | cost_flow_cap      | 100  |
+    | tech1 | cost_area_use      | 50   |
+    | tech1 | cost_flow_out      | 0.2  |
+    | tech1 | cost_interest_rate | 0.1  |
+    | tech3 | cost_flow_cap      | 20   |
+    | tech3 | cost_storage_cap   | 150  |
+    | tech3 | cost_interest_rate | 0.1  |
 
     YAML definition to load data:
 
@@ -195,12 +197,11 @@ For instance:
 
 Data in file:
 
-```
-,,node1,node2,node3
-tech1,parameter1,100,200,300
-tech2,parameter1,0.1,0.3,0.5
-tech3,parameter1,20,45,50
-```
+|       |            | node1 | node2 | node3 |
+| ----: | ---------: | :---- | :---- | :---- |
+| tech1 | parameter1 | 100   | 200   | 300   |
+| tech2 | parameter1 | 0.1   | 0.3   | 0.5   |
+| tech3 | parameter1 | 20    | 45    | 50    |
 
 YAML definition to load only data from nodes 1 and 2:
 
@@ -218,12 +219,11 @@ You may also want to store scenarios in your file.
 When you load in the data, you can select your scenario.
 You will also need to `drop` the dimension so that it doesn't appear in the final calliope model dataset:
 
-```
-,,scenario1,scenario2
-tech1,parameter1,100,200
-tech2,parameter1,0.1,0.3
-tech3,parameter1,20,45
-```
+|       |            | scenario1 | scenario2 |
+| ----: | ---------: | :-------- | :-------- |
+| tech1 | parameter1 | 100       | 200       |
+| tech2 | parameter1 | 0.1       | 0.3       |
+| tech3 | parameter1 | 20        | 45        |
 
 YAML definition to load only data from scenario 1:
 
@@ -257,12 +257,11 @@ For example, to define costs for the parameter `cost_flow_cap`:
 
 === "Without `add_dimensions`"
 
-    ```
-    ,,,node1,node2,node3
-    tech1,monetary,cost_flow_cap,100,200,300
-    tech2,monetary,cost_flow_cap,0.1,0.3,0.5
-    tech3,monetary,cost_flow_cap,20,45,50
-    ```
+    |       |          |               | node1 | node2 | node3 |
+    | ----: | -------: | ------------: | :---- | :---- | :---- |
+    | tech1 | monetary | cost_flow_cap | 100   | 200   | 300   |
+    | tech2 | monetary | cost_flow_cap | 0.1   | 0.3   | 0.5   |
+    | tech3 | monetary | cost_flow_cap | 20    | 45    | 50    |
 
     ```yaml
     data_sources:
@@ -274,12 +273,11 @@ For example, to define costs for the parameter `cost_flow_cap`:
 
 === "With `add_dimensions`"
 
-    ```
-    ,node1,node2,node3
-    tech1,100,200,300
-    tech2,0.1,0.3,0.5
-    tech3,20,45,50
-    ```
+    |       | node1 | node2 | node3 |
+    | ----: | :---- | :---- | :---- |
+    | tech1 | 100   | 200   | 300   |
+    | tech2 | 0.1   | 0.3   | 0.5   |
+    | tech3 | 20    | 45    | 50    |
 
     ```yaml
     data_sources:
@@ -296,14 +294,10 @@ Or to define the same timeseries source data for two technologies at different n
 
 === "Without `add_dimensions`"
 
-    ```
-    ,node1,node2
-    ,tech1,tech2
-    ,source_use_max,source_use_max
-    2005-01-01 00:00,100,100
-    2005-01-01 00:00,200,200
-    ...
-    ```
+    |                  | node1<br>tech1<br>source_use_max | node2<br>tech2<br>source_use_max |
+    | ---------------: | :--------------------------------| :------------------------------- |
+    | 2005-01-01 00:00 | 100                              | 200                              |
+    | 2005-01-01 01:00 | 200                              | 200                              |
 
     ```yaml
     data_sources:
@@ -317,11 +311,10 @@ Or to define the same timeseries source data for two technologies at different n
 
 === "With `add_dimensions`"
 
-    ```
-    2005-01-01 00:00,100
-    2005-01-01 00:00,200
-    ...
-    ```
+    |                  |     |
+    | ---------------: | :-- |
+    | 2005-01-01 00:00 | 100 |
+    | 2005-01-01 01:00 | 200 |
 
     ```yaml
     data_sources:

@@ -1,4 +1,4 @@
-## 0.7.0.dev3 (dev)
+## 0.7.0.dev3 (2024-02-14)
 
 ### User-facing changes
 
@@ -12,8 +12,13 @@ Requires the [PyMdown tabbed extension](https://facelessuser.github.io/pymdown-e
 |new| Variables and global expressions can have a `default` value, which is used to fill missing array elements when doing math operations.
 These default values ensure that `NaN` doesn't creep into the built optimisation problem math and are set to values that lead to them having no impact on the optimal solution.
 
+|new| Utility function `calliope.util.schema.update_model_schema(...)` to add user-defined parameters to the model schema / update existing parameters using YAML schema syntax.
+`calliope.util.schema.reset()` can be used to clean the model schema and return to the original, pre-defined schema.
+
 |fixed| Timeseries clustering file can be a non-ISO standard date format.
 Both the index and the values of the timeseries (both being date strings) should be in the user-defined `config.init.time_format`.
+
+|fixed| the decision variable `purchased_units` is linked to `flow_cap` even if neither of the parameters `flow_cap_min` or `flow_cap_max` have been defined by the user.
 
 |changed| `inbuilt` math -> `pre-defined` math and `custom` math -> `pre-defined` math in the documentation.
 

@@ -32,6 +32,58 @@ config:
     add_math: [my_new_math_1.yaml, storage_inter_cluster, my_new_math_2.md]
 ```
 
+## Adding your parameters to the YAML schema
+
+Our YAML schemas are used to validate user inputs.
+The model definition schema includes metadata on all our pre-defined parameters, which you can find rendered in our [reference page][model-definition-schema].
+
+When you add your own math you are likely to be adding new parameters to the model.
+You can update the Calliope model definition schema to include your new entries using [`calliope.util.schema.update_model_schema(...)`][calliope.util.schema.update_model_schema].
+This ensures that your parameters have default values attached to them and if you choose to [write your own documentation](#writing-your-own-math-documentation), your parameters will have this metadata added to their descriptions.
+
+Entries in the schema look like this:
+
+```yaml
+flow_cap_max:
+  $ref: "#/$defs/TechParamNullNumber"  # (1)!
+  default: .inf
+  x-type: float
+  title: Maximum rated flow capacity.
+  description: >-
+    Limits `flow_cap` to a maximum.
+  x-unit: power.
+```
+
+1. This is a cross-reference to a much longer schema entry that says the parameter type is either `None`, a simple number, or an indexed parameter dictionary with the `data`, `index`, and `dims` keys.
+
+When you add your own parameters to the schema, you will need to know the top-level key under which the parameter will be found in your YAML definition: [`nodes`](../creating/nodes.md), [`techs`](../creating/techs.md), or [`parameters`](../creating/parameters.md).
+As a general rule, if it includes the `techs` dimension, put it under `techs`; if it includes `nodes` but _not_ `techs` then put it under `nodes`; if it includes neither dimension, put it under `parameters`.
+
+The dictionary you supply for each parameter can include the following:
+
+* title (str): Short description of the parameter.
+* description (str): Long description of the parameter.
+* type (str or array): expected type of entry.
+We recommend you use the pre-defined cross-reference `$ref: "#/$defs/TechParamNullNumber"` instead of explicitly using this key, to allow the parameter to be either numeric or an indexed parameter.
+If you are adding a cost, you can use the cross reference `$ref: "#/$defs/TechCostNullNumber"`.
+If you want to allow non-numeric data (e.g., strings), you would set `type: string` instead of using the cross-reference.
+* default (str): default value.
+This will be used in generating the optimisation problem.
+* x-type (str): type of the non-NaN array entries in the internal calliope representation of the parameter.
+This is usually one of `float` or `str`.
+* x-unit (str): Unit of the parameter to use in documentation.
+* x-operate-param (bool): If True, this parameter's schema data will only be loaded into the optimisation problem if running in "operate" mode.
+
+!!! note
+
+    Schema attributes which start with `x-` are Calliope-specific.
+    They are not used at all for YAML validation and instead get picked up by us using the utility function [calliope.util.schema.extract_from_schema][].
+
+!!! warning
+
+    The schema is updated in-place so your edits to it will remain active as long as you are running in the same session.
+    You can reset your updates to the schema and return to the pre-defined schema by calling [`calliope.util.schema.reset()`][calliope.util.schema.reset]
+
 ## Writing your own math documentation
 
 You can write your model's mathematical formulation to view it in a rich-text format (as we do for our [pre-defined math](../pre_defined_math/index.md) in this documentation).
@@ -39,9 +91,14 @@ To write a LaTeX, reStructuredText, or Markdown file that includes only the math
 
 ```python
 model = calliope.Model("path/to/model.yaml")
-model.build_math_documentation(include="valid")
-model.write_math_documentation(filename="path/to/output/file.[tex|rst|md]")
+model.math_documentation.build(include="valid")
+model.math_documentation.write(filename="path/to/output/file.[tex|rst|md]")
 ```
 
 You can then convert this to a PDF or HTML page using your renderer of choice.
 We recommend you only use HTML as the equations can become too long for a PDF page.
+
+!!! note
+
+    You can add the tabs to flip between rich-text math and the input YAML snippet in your math documentation by using the `mkdocs_tabbed` argument in `model.math_documentation.write`.
+    We use this functionality in our [pre-defined math](../pre_defined_math/index.md).
