@@ -35,7 +35,7 @@ output = "reports/coverage/coverage.xml"
 
 [tool.black]
 line-length = 88
-skip_magic_trailing_comma = true
+skip-magic-trailing-comma = true
 target-version = ['py310', 'py311', 'py312']
 include = '\.pyi?$'
 exclude = '''
