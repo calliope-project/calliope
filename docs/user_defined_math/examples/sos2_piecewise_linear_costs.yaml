@@ -1,7 +1,8 @@
-# title: Piecewise linear costs
+# title: Piecewise linear costs - economies of scale
 #
 # description: |
-#     Add a piecewise cost function that steadily increases investment costs with increasing technology rated capacity.
+#     Add a piecewise cost function that reduces the incremental increase in investment costs with increasing technology rated capacity.
+#     This emulates "economies of scale", where the more of a technology there is deployed, the less expensive each additional investment in deployment.
 #
 #     New indexed parameters:
 #
@@ -29,5 +30,3 @@ piecewise_constraints:
     x_values: piecewise_cost_investment_x
     y_expression: piecewise_cost_investment
     y_values: piecewise_cost_investment_y
-
-
