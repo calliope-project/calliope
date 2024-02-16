@@ -11,6 +11,7 @@ import pytest  # noqa: F401
 import xarray as xr
 from calliope.attrdict import AttrDict
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
+from pyomo.core.kernel.piecewise_library.transforms import piecewise_sos2
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, check_variable_exists
@@ -2476,6 +2477,122 @@ class TestNewBackend:
         simple_supply.backend.unfix_variable("flow_cap")  # reset
         assert fixed.sel(techs="test_demand_elec").all()
         assert not fixed.where(where).all()
+
+
+class TestPiecewiseConstraints:
+
+    def gen_params(self, data, index=[0, 1, 2]):
+        return {
+            "parameters": {
+                "piecewise_x": {"data": data, "index": index, "dims": "breakpoints"},
+                "piecewise_y": {
+                    "data": [0, 1, 5],
+                    "index": [0, 1, 2],
+                    "dims": "breakpoints",
+                },
+            }
+        }
+
+    @pytest.fixture(scope="class")
+    def working_math(self):
+        return {
+            "foreach": ["nodes", "techs"],
+            "where": "[test_supply_elec] in techs AND piecewise_x AND piecewise_y",
+            "x_values": "piecewise_x",
+            "x_variable": "flow_cap",
+            "y_values": "piecewise_y",
+            "y_variable": "flow_in",
+            "description": "FOO",
+        }
+
+    @pytest.fixture(scope="class")
+    def working_params(self):
+        return self.gen_params([0, 5, 10])
+
+    @pytest.fixture(scope="class")
+    def length_mismatch_params(self):
+        return self.gen_params([0, 10], [0, 1])
+
+    @pytest.fixture(scope="class")
+    def not_reaching_var_bound_with_breakpoint_params(self):
+        return self.gen_params([0, 5, 8])
+
+    @pytest.fixture(scope="class")
+    def working_model(self, working_params, working_math):
+        m = build_model(working_params, "simple_supply,two_hours,investment_costs")
+        m.build()
+        m.backend.add_piecewise_constraint("foo", working_math)
+        return m
+
+    def test_piecewise_type(self, working_model):
+        constr = working_model.backend.get_piecewise_constraint("foo")
+        assert (
+            constr.to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, piecewise_sos2))
+            .all()
+        )
+
+    def test_piecewise_attrs(self, working_model):
+        constr = working_model.backend.get_piecewise_constraint("foo")
+        expected_keys = set(
+            ["obj_type", "references", "description", "yaml_snippet", "coords_in_name"]
+        )
+        assert not expected_keys.symmetric_difference(constr.attrs.keys())
+        assert constr.attrs["obj_type"] == "piecewise_constraints"
+        assert not constr.attrs["references"]
+        assert constr.attrs["coords_in_name"] is False
+
+    @pytest.mark.parametrize(
+        "var", ["flow_cap", "flow_in", "piecewise_x", "piecewise_y"]
+    )
+    def test_piecewise_refs(self, working_model, var):
+        assert "foo" in working_model.backend._dataset[var].attrs["references"]
+
+    def test_piecewise_verbose(self, working_model):
+        working_model.backend.verbose_strings()
+        constr = working_model.backend.get_piecewise_constraint("foo")
+        dims = {
+            "nodes": "a",
+            "techs": "test_supply_elec",
+            "carriers": "electricity",
+            "timesteps": "2005-01-01 00:00",
+        }
+        assert (
+            str(constr.sel(dims).item())
+            == f"piecewise_constraints[foo][{', '.join(dims[i] for i in constr.dims)}]"
+        )
+
+    def test_fails_on_length_mismatch(self, length_mismatch_params, working_math):
+        m = build_model(
+            length_mismatch_params, "simple_supply,two_hours,investment_costs"
+        )
+        m.build()
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            m.backend.add_piecewise_constraint("foo", working_math)
+        assert check_error_or_warning(
+            excinfo,
+            "(piecewise_constraints, foo): Errors in generating piecewise constraint: The number of breakpoints (2) differs from the number of function values (3)",
+        )
+
+    def test_fails_on_not_reaching_bounds(
+        self, not_reaching_var_bound_with_breakpoint_params, working_math
+    ):
+        m = build_model(
+            not_reaching_var_bound_with_breakpoint_params,
+            "simple_supply,two_hours,investment_costs",
+        )
+        m.build()
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            m.backend.add_piecewise_constraint("foo", working_math)
+        assert check_error_or_warning(
+            excinfo,
+            [
+                "(piecewise_constraints, foo): Errors in generating piecewise constraint: Piecewise function domain does not include the upper bound",
+                "ub = 10.0 > 8.0.",
+            ],
+        )
+        assert not check_error_or_warning(excinfo, "To avoid this error")
 
 
 class TestShadowPrices:

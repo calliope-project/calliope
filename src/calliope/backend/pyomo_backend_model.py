@@ -28,6 +28,7 @@ import xarray as xr
 from pyomo.common.tempfiles import TempfileManager  # type: ignore
 from pyomo.core.kernel.piecewise_library.transforms import (
     PiecewiseLinearFunction,
+    PiecewiseValidationError,
     piecewise_sos2,
 )
 from pyomo.opt import SolverFactory  # type: ignore
@@ -114,6 +115,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             "unit": self._PARAM_UNITS.get(parameter_name, None),
             "default": default,
         }
+
         self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
 
     def add_constraint(
@@ -150,24 +152,31 @@ class PyomoBackendModel(backend_model.BackendModel):
             constraint_dict = self.inputs.attrs["math"]["piecewise_constraints"][name]
 
         def _constraint_setter(where: xr.DataArray, references: set) -> xr.DataArray:
-            vars = []
-            for axis in ["x", "y"]:
-                var = constraint_dict[axis]["variable"]
-                vars.append(self.variables[var])
-                references.add(var)
-            return self._apply_func(
-                self._to_pyomo_piecewise_constraint,
-                where,
-                *vars,
-                self._get_piecewise_breakpoints(
-                    constraint_dict["x"]["values"], name, references
-                ),
-                self._get_piecewise_breakpoints(
-                    constraint_dict["y"]["values"], name, references
-                ),
-                name=name,
-                input_core_dims=[[], [], [], ["breakpoints"], ["breakpoints"]],
-            )
+            args = []
+            for val in ["x_variable", "y_variable", "x_values", "y_values"]:
+                val_name = constraint_dict[val]
+                if "variable" in val:
+                    val_da = self.get_variable(val_name)
+                else:
+                    val_da = self.get_parameter(val_name)
+
+                references.add(val_name)
+                args.append(val_da)
+
+            try:
+                return self._apply_func(
+                    self._to_pyomo_piecewise_constraint,
+                    where,
+                    *args,
+                    name=name,
+                    input_core_dims=[[], [], [], ["breakpoints"], ["breakpoints"]],
+                )
+            except (PiecewiseValidationError, ValueError) as err:
+                # We don't want to confuse the user with suggestions of pyomo options they can't access.
+                err_message = err.args[0].split(" To avoid this error")[0]
+                raise BackendError(
+                    f"(piecewise_constraints, {name}): Errors in generating piecewise constraint: {err_message}"
+                )
 
         self._add_component(
             name, constraint_dict, _constraint_setter, "piecewise_constraints"
@@ -564,19 +573,27 @@ class PyomoBackendModel(backend_model.BackendModel):
         return bound_array.fillna(None)
 
     def _get_piecewise_breakpoints(
-        self, breakpoint_vals: Any, name: str, references: set
+        self, breakpoint_vals: str, name: str, references: set
     ) -> xr.DataArray:
-        # TODO: docstring
-        if isinstance(breakpoint_vals, str):
-            self.log(
-                "piecewise_constraints",
-                name,
-                f"Applying bound according to the {breakpoint_vals} parameter values.",
-            )
-            bound_array = self.get_parameter(breakpoint_vals)
-            references.add(breakpoint_vals)
-        else:
-            bound_array = xr.DataArray(breakpoint_vals, dims="breakpoints")
+        """
+        Generate array of piecewise constraint breakpoint values.
+        Only references to model parameters is allowed.
+
+        Args:
+            breakpoint_vals (Any): _description_
+            name (str): _description_
+            references (set): _description_
+
+        Returns:
+            xr.DataArray: Breakpoint array
+        """
+        self.log(
+            "piecewise_constraints",
+            name,
+            f"Applying bound according to the {breakpoint_vals} parameter values.",
+        )
+        bound_array = self.get_parameter(breakpoint_vals)
+        references.add(breakpoint_vals)
 
         return bound_array
 
@@ -743,6 +760,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 values=non_nan_y_vals,
                 input=x_var,
                 output=y_var,
+                require_bounded_input_variable=False,
             )
             self._instance.piecewise_constraints[name].append(var)
             return var

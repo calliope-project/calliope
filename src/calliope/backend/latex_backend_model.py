@@ -12,7 +12,6 @@ import numpy as np
 import xarray as xr
 
 from calliope.backend import backend_model, parsing
-from calliope.backend.where_parser import generate_data_var_parser
 from calliope.exceptions import ModelError
 
 _ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
@@ -376,7 +375,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         attrs = {
             "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
             "unit": self._PARAM_UNITS.get(parameter_name, None),
+            "math_repr": rf"\textit{{{parameter_name}}}"
+            + self._dims_to_var_string(parameter_values),
         }
+
         self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
 
     def add_constraint(
@@ -412,28 +414,24 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         def _constraint_setter(where: xr.DataArray, references: set) -> xr.DataArray:
             return where.where(where)
 
-        format_vals = {}
-        for axis in ["x", "y"]:
-            for key in ["variable", "values"]:
-                val = constraint_dict[axis][key]
-                non_where_refs.add(val)
-                # This is a hack to get the variables/parameters as strings with their dimensions
-                parsed_ = generate_data_var_parser().parse_string(val, parse_all=True)
-                val_as_math = parsed_[0].eval(
-                    "math_string",
-                    equation_name=name,
-                    helper_functions={},
-                    input_data=self.inputs,
-                    backend_interface=self,
-                    references=non_where_refs,
-                    apply_where=True,
-                )
-                val_as_math = val_as_math.removeprefix(r"\exists (").removesuffix(")")
-                format_vals[f"{key[:3]}_{axis}"] = val_as_math
-        equation = (
-            rf"{ format_vals['var_y']} = { format_vals['val_y'] }, "
-            rf"\text{{if }} { format_vals['var_x'] } = {format_vals['val_x']} "
-        )
+        math_parts = {}
+        for val in ["x_variable", "y_variable", "x_values", "y_values"]:
+            val_name = constraint_dict[val]
+            val_da = self._dataset.get(val_name, None)
+            if val_da is not None:
+                non_where_refs.add(val_name)
+                math_parts[val] = val_da.attrs["math_repr"]
+            else:
+                math_parts[val] = rf"\text{{{val_name}}}"
+
+        equation = {
+            "expression": rf"{ math_parts['y_variable']}\mathord{{=}}{ math_parts['y_values'] }",
+            "where": rf"{ math_parts['x_variable'] }\mathord{{=}}{math_parts['x_values']}",
+        }
+        if "foreach" in constraint_dict:
+            constraint_dict["foreach"].append("breakpoints")
+        else:
+            constraint_dict["foreach"] = ["breakpoints"]
         parsed_component = self._add_component(
             name,
             constraint_dict,
@@ -443,9 +441,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
         self._update_references(name, non_where_refs)
         self._generate_math_string(
-            parsed_component,
-            self.piecewise_constraints[name],
-            equations=[{"expression": equation}],
+            parsed_component, self.piecewise_constraints[name], equations=[equation]
         )
 
     def add_global_expression(
@@ -468,9 +464,13 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             "global_expressions",
             break_early=False,
         )
+        expr_da = self.global_expressions[name]
+        expr_da.attrs["math_repr"] = rf"\textbf{{{name}}}" + self._dims_to_var_string(
+            expr_da
+        )
 
         self._generate_math_string(
-            parsed_component, self.global_expressions[name], equations=equation_strings
+            parsed_component, expr_da, equations=equation_strings
         )
 
     def add_variable(
@@ -490,14 +490,17 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         parsed_component = self._add_component(
             name, variable_dict, _variable_setter, "variables", break_early=False
         )
+        var_da = self.variables[name]
+        var_da.attrs["math_repr"] = rf"\textbf{{{name}}}" + self._dims_to_var_string(
+            var_da
+        )
 
         # Have to get bounds _after_ adding component so the variable is available in the backend dataset
         lb, ub = self._get_capacity_bounds(name, variable_dict["bounds"], bound_refs)
         self._update_references(name, bound_refs.difference(name))
-        where_array = self.variables[name]
 
         self._generate_math_string(
-            parsed_component, where_array, equations=[lb, ub], sense=r"\forall" + domain
+            parsed_component, var_da, equations=[lb, ub], sense=r"\forall" + domain
         )
 
     def add_objective(
@@ -683,3 +686,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             }
             for eq in equations
         )
+
+    @staticmethod
+    def _dims_to_var_string(da: xr.DataArray) -> str:
+        if da.shape:
+            return rf"_\text{{{','.join(str(i).removesuffix('s') for i in da.dims)}}}"
+        else:
+            return ""

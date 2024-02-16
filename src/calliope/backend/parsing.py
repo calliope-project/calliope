@@ -46,17 +46,14 @@ class UnparsedConstraintDict(TypedDict):
     slices: NotRequired[dict[str, list[UnparsedEquationDict]]]
 
 
-class UnparsedPiecewiseConstraintAxisDict(TypedDict):
-    values: str
-    variable: str
-
-
 class UnparsedPiecewiseConstraintDict(TypedDict):
     description: NotRequired[str]
     foreach: NotRequired[list]
     where: NotRequired[str]
-    x: UnparsedPiecewiseConstraintAxisDict
-    y: UnparsedPiecewiseConstraintAxisDict
+    x_variable: Required[str]
+    x_values: Required[str]
+    y_variable: Required[str]
+    y_values: Required[str]
 
 
 class UnparsedExpressionDict(UnparsedConstraintDict):

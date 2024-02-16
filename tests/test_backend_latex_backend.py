@@ -97,6 +97,10 @@ class TestLatexBackendModel:
         )
         assert "var" in latex_backend_model.valid_component_names
         assert "math_string" in latex_backend_model.variables["var"].attrs
+        assert (
+            latex_backend_model.variables["var"].attrs["math_repr"]
+            == r"\textbf{var}_\text{node,tech}"
+        )
 
     def test_add_variable_not_valid(self, valid_latex_backend):
         valid_latex_backend.add_variable(
@@ -248,6 +252,47 @@ class TestLatexBackendModel:
         assert dummy_latex_backend_model.objectives["obj"].isnull().all()
         assert "obj" not in dummy_latex_backend_model.valid_component_names
         assert len(dummy_latex_backend_model.objectives.data_vars) == 1
+
+    def test_add_piecewise_constraint(self, dummy_latex_backend_model):
+        dummy_latex_backend_model.add_parameter(
+            "piecewise_x",
+            xr.DataArray(data=[0, 5, 10], coords={"breakpoints": [0, 1, 2]}),
+        )
+        dummy_latex_backend_model.add_parameter(
+            "piecewise_y",
+            xr.DataArray(data=[0, 1, 5], coords={"breakpoints": [0, 1, 2]}),
+        )
+        for param in ["piecewise_x", "piecewise_y"]:
+            dummy_latex_backend_model.inputs[param] = (
+                dummy_latex_backend_model._dataset[param]
+            )
+        dummy_latex_backend_model.add_piecewise_constraint(
+            "p_constr",
+            {
+                "foreach": ["nodes", "techs"],
+                "where": "piecewise_x AND piecewise_y",
+                "x_values": "piecewise_x",
+                "x_variable": "multi_dim_var",
+                "y_values": "piecewise_y",
+                "y_variable": "no_dim_var",
+                "description": "FOO",
+            },
+        )
+        math_string = dummy_latex_backend_model.piecewise_constraints["p_constr"].attrs[
+            "math_string"
+        ]
+        assert (
+            r"\text{ breakpoint }\negthickspace \in \negthickspace\text{ breakpoints }"
+            in math_string
+        )
+        assert (
+            r"\text{if } \textbf{multi_dim_var}_\text{node,tech}\mathord{=}\textit{piecewise_x}_\text{breakpoint}"
+            in math_string
+        )
+        assert (
+            r"\textbf{no_dim_var}\mathord{=}\textit{piecewise_y}_\text{breakpoint}"
+            in math_string
+        )
 
     def test_create_obj_list(self, dummy_latex_backend_model):
         assert dummy_latex_backend_model._create_obj_list("var", "variables") is None

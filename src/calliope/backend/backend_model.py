@@ -61,7 +61,7 @@ LOGGER = logging.getLogger(__name__)
 
 class BackendModelGenerator(ABC):
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
-    _COMPONENT_ATTR_METADATA = ["description", "unit", "default"]
+    _COMPONENT_ATTR_METADATA = ["description", "unit", "default", "math_repr"]
 
     _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
     _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
@@ -668,6 +668,24 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 If as_backend_objs is True, will return an xr.DataArray.
                 Otherwise, a xr.Dataset will be given, indexed over the same dimensions as the xr.DataArray, with variables for the constraint body, and upper (`ub`) and lower (`lb`) bounds.
         """
+
+    def get_piecewise_constraint(self, name: str) -> xr.DataArray:
+        """Get piecewise constraint data as an array of backend interface objects.
+        Can be used to inspect and debug built piecewise constraints.
+
+        Unlike other optimisation problem components, piecewise constraints can only be inspected as backend interface objects.
+        This is because each element is a collection of variables, parameters, constraints, and expressions.
+
+        Args:
+            name (str): Name of piecewise constraint, as given in YAML piecewise constraint key.
+
+        Returns:
+            xr.DataArray: Piecewise constraint array.
+        """
+        p_constraint = self.piecewise_constraints.get(name, None)
+        if p_constraint is None:
+            raise KeyError(f"Unknown piecewise constraint: {name}")
+        return p_constraint
 
     @abstractmethod
     def get_variable(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:

@@ -90,30 +90,22 @@ properties:
     patternProperties:
       '[^\d^_\W][\w\d]+':
         type: object
-        description: A named piecewise constraint.
+        description: A named piecewise constraint, linking an `x`-axis decision variable with a `y`-axis decision variable with values at specified breakpoints.
         additionalProperties: false
-        required: ["x", "y"]
+        required: [x_variable, x_values, y_variable, y_values]
         properties:
           description: *description
           active: *active
           foreach: *foreach
           where: *top_level_where
-          x:
-            type: object
-            description: X-axis of piecewise curve.
-            required: ["values", "variable"]
-            properties: &piecewiseprops
-              values:
-                type: string
-                description: Parameter name containing data, indexed over the `breakpoints` dimension.
-              variable:
-                type: string
-                description: Variable name whose values are assigned at each breakpoint.
-          y:
-            type: object
-            description: Y-axis of piecewise curve.
-            required: ["values", "variable"]
-            properties: *piecewiseprops
+          x_variable: &piecewisevar
+            type: string
+            description: Variable name whose values are assigned at each breakpoint.
+          x_values: &piecewisevals
+            type: string
+            description: Parameter name containing data, indexed over the `breakpoints` dimension.
+          y_variable: *piecewisevar
+          y_values: *piecewisevals
 
   global_expressions:
     type: object
