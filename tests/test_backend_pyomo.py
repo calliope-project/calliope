@@ -2481,10 +2481,10 @@ class TestNewBackend:
 
 class TestPiecewiseConstraints:
 
-    def gen_params(self, data, index=[0, 1, 2]):
+    def gen_params(self, data, index=[0, 1, 2], dim="breakpoints"):
         return {
             "parameters": {
-                "piecewise_x": {"data": data, "index": index, "dims": "breakpoints"},
+                "piecewise_x": {"data": data, "index": index, "dims": dim},
                 "piecewise_y": {
                     "data": [0, 1, 5],
                     "index": [0, 1, 2],
@@ -2516,6 +2516,10 @@ class TestPiecewiseConstraints:
     @pytest.fixture(scope="class")
     def not_reaching_var_bound_with_breakpoint_params(self):
         return self.gen_params([0, 5, 8])
+
+    @pytest.fixture(scope="class")
+    def missing_breakpoint_dims(self):
+        return self.gen_params([0, 5, 10], dim="foobar")
 
     @pytest.fixture(scope="class")
     def working_model(self, working_params, working_math):
@@ -2567,7 +2571,7 @@ class TestPiecewiseConstraints:
             m.backend.add_piecewise_constraint("foo", working_math)
         assert check_error_or_warning(
             excinfo,
-            "(piecewise_constraints, foo): Errors in generating piecewise constraint: The number of breakpoints (2) differs from the number of function values (3)",
+            "(piecewise_constraints, foo) | Errors in generating piecewise constraint: The number of breakpoints (2) differs from the number of function values (3)",
         )
 
     def test_fails_on_not_reaching_bounds(
@@ -2583,11 +2587,36 @@ class TestPiecewiseConstraints:
         assert check_error_or_warning(
             excinfo,
             [
-                "(piecewise_constraints, foo): Errors in generating piecewise constraint: Piecewise function domain does not include the upper bound",
+                "(piecewise_constraints, foo) | Errors in generating piecewise constraint: Piecewise function domain does not include the upper bound",
                 "ub = 10.0 > 8.0.",
             ],
         )
         assert not check_error_or_warning(excinfo, "To avoid this error")
+
+    def test_fails_on_breakpoints_in_foreach(self, working_model, working_math):
+        failing_math = {"foreach": ["nodes", "techs", "carriers", "breakpoints"]}
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            working_model.backend.add_piecewise_constraint(
+                "bar", {**working_math, **failing_math}
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "(piecewise_constraints, bar) | `breakpoints` dimension should not be in `foreach`",
+        )
+
+    def test_fails_on_no_breakpoints_in_params(
+        self, missing_breakpoint_dims, working_math
+    ):
+        m = build_model(
+            missing_breakpoint_dims, "simple_supply,two_hours,investment_costs"
+        )
+        m.build()
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            m.backend.add_piecewise_constraint("bar", working_math)
+        assert check_error_or_warning(
+            excinfo,
+            "(piecewise_constraints, bar) | `x_values` must be indexed over the `breakpoints` dimension",
+        )
 
 
 class TestShadowPrices:

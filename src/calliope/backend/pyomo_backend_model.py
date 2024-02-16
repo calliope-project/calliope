@@ -150,6 +150,11 @@ class PyomoBackendModel(backend_model.BackendModel):
     ) -> None:
         if constraint_dict is None:
             constraint_dict = self.inputs.attrs["math"]["piecewise_constraints"][name]
+        if "breakpoints" in constraint_dict.get("foreach", []):
+            raise BackendError(
+                f"(piecewise_constraints, {name}) | `breakpoints` dimension should not be in `foreach`. "
+                "Instead, index `x_values` and `y_values` parameters over `breakpoints`."
+            )
 
         def _constraint_setter(where: xr.DataArray, references: set) -> xr.DataArray:
             args = []
@@ -167,7 +172,10 @@ class PyomoBackendModel(backend_model.BackendModel):
                     )
                 else:
                     val_da = self.get_parameter(val_name)
-
+                    if "breakpoints" not in val_da.dims:
+                        raise BackendError(
+                            f"(piecewise_constraints, {name}) | `{val}` must be indexed over the `breakpoints` dimension."
+                        )
                 references.add(val_name)
                 args.append(val_da)
 
@@ -183,7 +191,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 # We don't want to confuse the user with suggestions of pyomo options they can't access.
                 err_message = err.args[0].split(" To avoid this error")[0]
                 raise BackendError(
-                    f"(piecewise_constraints, {name}): Errors in generating piecewise constraint: {err_message}"
+                    f"(piecewise_constraints, {name}) | Errors in generating piecewise constraint: {err_message}"
                 )
 
         self._add_component(
