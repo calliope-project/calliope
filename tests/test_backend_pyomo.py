@@ -2496,12 +2496,12 @@ class TestPiecewiseConstraints:
     @pytest.fixture(scope="class")
     def working_math(self):
         return {
-            "foreach": ["nodes", "techs"],
+            "foreach": ["nodes", "techs", "carriers"],
             "where": "[test_supply_elec] in techs AND piecewise_x AND piecewise_y",
             "x_values": "piecewise_x",
-            "x_variable": "flow_cap",
+            "x_expression": "flow_cap",
             "y_values": "piecewise_y",
-            "y_variable": "flow_in",
+            "y_expression": "sum(flow_in, over=timesteps)",
             "description": "FOO",
         }
 
@@ -2552,12 +2552,7 @@ class TestPiecewiseConstraints:
     def test_piecewise_verbose(self, working_model):
         working_model.backend.verbose_strings()
         constr = working_model.backend.get_piecewise_constraint("foo")
-        dims = {
-            "nodes": "a",
-            "techs": "test_supply_elec",
-            "carriers": "electricity",
-            "timesteps": "2005-01-01 00:00",
-        }
+        dims = {"nodes": "a", "techs": "test_supply_elec", "carriers": "electricity"}
         assert (
             str(constr.sel(dims).item())
             == f"piecewise_constraints[foo][{', '.join(dims[i] for i in constr.dims)}]"

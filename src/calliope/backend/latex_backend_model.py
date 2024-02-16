@@ -415,18 +415,21 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             return where.where(where)
 
         math_parts = {}
-        for val in ["x_variable", "y_variable", "x_values", "y_values"]:
+        for val in ["x_expression", "y_expression", "x_values", "y_values"]:
             val_name = constraint_dict[val]
-            val_da = self._dataset.get(val_name, None)
-            if val_da is not None:
-                non_where_refs.add(val_name)
-                math_parts[val] = val_da.attrs["math_repr"]
-            else:
-                math_parts[val] = rf"\text{{{val_name}}}"
+            parsed_val = parsing.ParsedBackendComponent(
+                "piecewise_constraints",
+                name,
+                {"equations": [{"expression": val_name}]},  # type: ignore
+            )
+            eq = parsed_val.parse_equations(self.valid_component_names)
+            math_parts[val] = eq[0].evaluate_expression(
+                self, return_type="math_string", references=non_where_refs
+            )
 
         equation = {
-            "expression": rf"{ math_parts['y_variable']}\mathord{{=}}{ math_parts['y_values'] }",
-            "where": rf"{ math_parts['x_variable'] }\mathord{{=}}{math_parts['x_values']}",
+            "expression": rf"{ math_parts['y_expression']}\mathord{{=}}{ math_parts['y_values'] }",
+            "where": rf"{ math_parts['x_expression'] }\mathord{{=}}{math_parts['x_values']}",
         }
         if "foreach" in constraint_dict:
             constraint_dict["foreach"].append("breakpoints")

@@ -153,10 +153,18 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         def _constraint_setter(where: xr.DataArray, references: set) -> xr.DataArray:
             args = []
-            for val in ["x_variable", "y_variable", "x_values", "y_values"]:
+            for val in ["x_expression", "y_expression", "x_values", "y_values"]:
                 val_name = constraint_dict[val]
-                if "variable" in val:
-                    val_da = self.get_variable(val_name)
+                if "expression" in val:
+                    parsed_component = parsing.ParsedBackendComponent(
+                        "piecewise_constraints",
+                        name,
+                        {"equations": [{"expression": val_name}], **constraint_dict},  # type: ignore
+                    )
+                    eq = parsed_component.parse_equations(self.valid_component_names)
+                    val_da = eq[0].evaluate_expression(
+                        self, where=where, references=references
+                    )
                 else:
                     val_da = self.get_parameter(val_name)
 

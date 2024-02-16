@@ -87,6 +87,10 @@ Without a `where` string, all valid members (according to the `definition_matrix
 The equation expressions _must_ have comparison operators.
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
 
+## Piecewise constraints
+
+If you have non-linear relationships between two decision variables
+
 ## Objectives
 
 With your constrained decision variables and a global expression that binds these variables to costs, you need an objective to minimise/maximise. The default, pre-defined objective is `min_cost_optimisation` and looks as follows:

@@ -92,19 +92,19 @@ properties:
         type: object
         description: A named piecewise constraint, linking an `x`-axis decision variable with a `y`-axis decision variable with values at specified breakpoints.
         additionalProperties: false
-        required: [x_variable, x_values, y_variable, y_values]
+        required: [x_expression, x_values, y_expression, y_values]
         properties:
           description: *description
           active: *active
           foreach: *foreach
           where: *top_level_where
-          x_variable: &piecewisevar
+          x_expression: &piecewisevar
             type: string
             description: Variable name whose values are assigned at each breakpoint.
           x_values: &piecewisevals
             type: string
             description: Parameter name containing data, indexed over the `breakpoints` dimension.
-          y_variable: *piecewisevar
+          y_expression: *piecewisevar
           y_values: *piecewisevals
 
   global_expressions:

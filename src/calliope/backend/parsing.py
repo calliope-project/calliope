@@ -50,9 +50,9 @@ class UnparsedPiecewiseConstraintDict(TypedDict):
     description: NotRequired[str]
     foreach: NotRequired[list]
     where: NotRequired[str]
-    x_variable: Required[str]
+    x_expression: Required[str]
     x_values: Required[str]
-    y_variable: Required[str]
+    y_expression: Required[str]
     y_values: Required[str]
 
 
@@ -450,7 +450,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
         "global_expressions": expression_parser.generate_arithmetic_parser,
         "objectives": expression_parser.generate_arithmetic_parser,
         "variables": lambda x: None,
-        "piecewise_constraints": lambda x: None,
+        "piecewise_constraints": expression_parser.generate_arithmetic_parser,
     }
 
     def __init__(

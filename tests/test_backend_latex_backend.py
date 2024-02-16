@@ -272,9 +272,9 @@ class TestLatexBackendModel:
                 "foreach": ["nodes", "techs"],
                 "where": "piecewise_x AND piecewise_y",
                 "x_values": "piecewise_x",
-                "x_variable": "multi_dim_var",
+                "x_expression": "multi_dim_var + 1",
                 "y_values": "piecewise_y",
-                "y_variable": "no_dim_var",
+                "y_expression": "no_dim_var",
                 "description": "FOO",
             },
         )
@@ -286,7 +286,7 @@ class TestLatexBackendModel:
             in math_string
         )
         assert (
-            r"\text{if } \textbf{multi_dim_var}_\text{node,tech}\mathord{=}\textit{piecewise_x}_\text{breakpoint}"
+            r"\text{if } \textbf{multi_dim_var}_\text{node,tech} + 1\mathord{=}\textit{piecewise_x}_\text{breakpoint}"
             in math_string
         )
         assert (
