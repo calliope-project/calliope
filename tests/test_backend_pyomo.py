@@ -5,6 +5,7 @@ from itertools import product
 
 import calliope.exceptions as exceptions
 import numpy as np
+import pandas as pd
 import pyomo.core as po
 import pyomo.kernel as pmo
 import pytest  # noqa: F401
@@ -1855,6 +1856,15 @@ class TestNewBackend:
         )
         assert param.dtype == np.dtype("float64")
 
+    def test_new_build_get_parameter_as_vals_timeseries_data(self, simple_supply):
+        simple_supply.backend.add_parameter(
+            "important_timestep", xr.DataArray(pd.to_datetime("2005-01-01 01:00"))
+        )
+        param = simple_supply.backend.get_parameter(
+            "important_timestep", as_backend_objs=False
+        )
+        assert param.dtype.kind == "M"
+
     def test_new_build_get_global_expression(self, simple_supply):
         expr = simple_supply.backend.get_global_expression("cost_investment")
         assert (
@@ -1893,6 +1903,14 @@ class TestNewBackend:
         assert (
             expr.to_series().dropna().apply(lambda x: isinstance(x, (float, int))).all()
         )
+
+    def test_new_build_get_global_expression_as_vals_no_solve(
+        self, simple_supply_longnames
+    ):
+        expr = simple_supply_longnames.backend.get_global_expression(
+            "cost", as_backend_objs=False, eval_body=True
+        )
+        assert expr.to_series().dropna().apply(lambda x: isinstance(x, str)).all()
 
     def test_new_build_get_constraint(self, simple_supply):
         constr = simple_supply.backend.get_constraint("system_balance")
@@ -1933,6 +1951,18 @@ class TestNewBackend:
             .to_series()
             .dropna()
             .apply(lambda x: isinstance(x, (float, int)))
+            .all()
+        )
+
+    def test_new_build_get_constraint_as_vals_no_solve(self, simple_supply_longnames):
+        constr = simple_supply_longnames.backend.get_constraint(
+            "system_balance", as_backend_objs=False, eval_body=True
+        )
+        assert (
+            constr["body"]
+            .to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, str))
             .all()
         )
 
@@ -2491,6 +2521,13 @@ class TestNewBackend:
         simple_supply.backend.unfix_variable("flow_cap")  # reset
         assert fixed.sel(techs="test_demand_elec", carriers="electricity").all()
         assert not fixed.where(where).all()
+
+    def test_save_logs(self, simple_supply, tmp_path):
+        dir = tmp_path / "logs"
+        simple_supply.solve(force=True, save_logs=str(dir))
+
+        assert dir.exists()
+        assert any(file.suffixes == [".pyomo", ".lp"] for file in dir.glob("*"))
 
 
 class TestShadowPrices:

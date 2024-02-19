@@ -244,13 +244,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             lb, body, ub = self._apply_func(
                 self._from_pyomo_constraint, constraint.notnull(), 3, constraint
             )
-            if eval_body:
-                try:
-                    body = self._apply_func(lambda bod: bod(), body.notnull(), 1, body)
-                except KeyError:
-                    body = body.astype(str).where(body.notnull())
-            else:
-                body = body.astype(str).where(body.notnull())
+            body = self._from_pyomo_expr(body, eval_body)
             constraint = xr.Dataset(
                 {"lb": lb, "body": body, "ub": ub}, attrs=constraint.attrs
             )
@@ -281,19 +275,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         if global_expression is None:
             raise KeyError(f"Unknown global_expression: {name}")
         if not as_backend_objs:
-            if eval_body:
-                try:
-                    expr = self._apply_func(
-                        lambda expr: expr(),
-                        global_expression.notnull(),
-                        1,
-                        global_expression,
-                    )
-                except KeyError:
-                    expr = global_expression.astype(str)
-            else:
-                expr = global_expression.astype(str)
-            global_expression = expr.where(expr.notnull())
+            global_expression = self._from_pyomo_expr(global_expression, eval_body)
 
         return global_expression
 
@@ -632,32 +614,6 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._instance.constraints[name].append(constraint)
         return constraint
 
-    def _to_pyomo_expression(
-        self, expr: Any, *, name: str
-    ) -> Union[type[pmo.expression], float]:
-        """
-        Utility function to generate a pyomo expression for every element of an
-        xarray DataArray.
-
-        If not np.nan/None, output objects are also added to the backend model object in-place.
-
-
-        Args:
-            mask (Union[bool, np.bool_]): If True, add expression, otherwise return np.nan.
-            expr (Any): Linear expression to add.
-        Kwargs:
-            name (str): Expression name.
-
-        Returns:
-            Union[type[pmo.expression], float]:
-                If mask is True, return np.nan.
-                Otherwise return pmo_expression(expr).
-        """
-
-        expr_obj = pmo.expression(expr)
-        self._instance.global_expressions[name].append(expr_obj)
-        return expr_obj
-
     def _to_pyomo_variable(
         self,
         lb: Any,
@@ -691,6 +647,30 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._instance.variables[name].append(var)
         return var
 
+    def _from_pyomo_expr(self, expr_da: xr.DataArray, eval_body: bool) -> xr.DataArray:
+        """Evaluate an array of Pyomo expression objects.
+
+        Args:
+            expr_da (xr.DataArray): Array containing expression objects
+            eval_body (bool):
+                If True, attempt to evaluate objects as numeric values.
+                Will return string values of the expression math if the optimisation problem hasn't been successfully solved.
+                If False, will return string values of the expression math.
+
+        Returns:
+            xr.DataArray: Array of numeric or math string values.
+        """
+        if eval_body:
+            try:
+                expr = self._apply_func(
+                    lambda expr: expr(), expr_da.notnull(), 1, expr_da
+                )
+            except ValueError:
+                expr = expr_da.astype(str)
+        else:
+            expr = expr_da.astype(str)
+        return expr.where(expr.notnull())
+
     @staticmethod
     def _from_pyomo_param(val: Union[ObjParameter, ObjVariable, float]) -> Any:
         """
@@ -710,7 +690,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
     @staticmethod
     def _from_pyomo_constraint(
-        val: ObjConstraint, *, eval_body: bool = False
+        val: ObjConstraint,
     ) -> tuple[float, pmo.expression, float]:
         """Evaluate Pyomo constraint object.
 
@@ -741,24 +721,6 @@ class PyomoBackendModel(backend_model.BackendModel):
             pd.Series: Array of variable upper and lower bound.
         """
         return val.lb, val.ub
-
-    @staticmethod
-    def _from_pyomo_expr(val: pmo.expression, *, eval_body: bool = False) -> Any:
-        """Evaluate Pyomo expression object.
-
-        Args:
-            val (pmo.expression): expression object to be evaluated
-            eval_body (bool, optional):
-                If True, attempt to evaluate the expression object, which will produce a numeric value.
-                This will only succeed if the backend model has been successfully optimised,
-                otherwise a string representation of the linear expression will be returned
-                (same as eval_body=False). Defaults to False.
-
-        Returns:
-            Any: If the input is nullable, return np.nan, otherwise a numeric value
-            (eval_body=True and problem is optimised) or a string.
-        """
-        return val
 
 
 class CoordObj(ABC):
