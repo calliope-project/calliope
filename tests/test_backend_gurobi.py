@@ -586,7 +586,9 @@ class TestNewBackend:
         expected = dir / "gurobi.log"
         simple_supply_gurobi.solve(force=True, save_logs=str(dir))
 
-        assert simple_supply_gurobi.backend._instance.Params.LogFile == str(expected)
+        assert (
+            simple_supply_gurobi.backend._instance.Params.LogFile == expected.as_posix()
+        )
         assert (
             "LogFile" in simple_supply_gurobi.backend._instance.Params._getChangeList()
         )
