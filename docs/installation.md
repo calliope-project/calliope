@@ -8,7 +8,8 @@ Running Calliope requires four things:
 
 1. The Python programming language, version {{ min_python_version }} to {{ max_python_version }}.
 2. A number of Python add-on modules (see [below for the complete list](#python-module-requirements)).
-3. A solver: Calliope has been tested with CBC, GLPK, Gurobi, and CPLEX. Any other solver that is compatible with Pyomo should also work.
+3. A solver: Calliope has been tested with CBC, GLPK, Gurobi, and CPLEX.
+Any other solver that is compatible with Pyomo should also work.
 4. The Calliope software itself.
 
 ## Recommended installation method
@@ -35,16 +36,10 @@ To use Calliope, you need to activate the `calliope` environment each time
 mamba activate calliope
 ```
 
-You are now ready to use Calliope together with the free and open source GLPK solver.
-However, we recommend to not use this solver where possible, since it performs relatively poorly (both in solution time and stability of result).
-Indeed, our example models use the free and open source CBC solver instead, but installing it on Windows requires an extra step.
-Read the next section for more information on installing alternative solvers.
-
 !!! warning
 
     Although possible, we do not recommend installing Calliope directly via `pip` (`pip install calliope`).
     Non-python binaries are not installed with `pip`, some of which are necessary for stable operation (e.g., `libnetcdf`).
-
 
 ## Updating an existing installation
 
@@ -54,31 +49,40 @@ If following the recommended installation method above, the following command, a
 mamba update -c conda-forge calliope
 ```
 
-## Solvers
+## Choosing a solver
 
-You need at least one of the solvers supported by Pyomo installed. CBC (open-source) or Gurobi (commercial) are recommended for large problems, and have been confirmed to work with Calliope. Refer to the documentation of your solver on how to install it.
+You cannot solve a Calliope model until you have installed a solver.
+The easiest solver to install is [GLPK](#glpk).
+However, we recommend to not use this solver where possible, since it performs relatively poorly (both in solution time and stability of result).
+Indeed, our example models use the free and open source [CBC](#cbc) solver instead, but installing it on Windows requires an extra step.
+[CBC](#cbc) (open-source) or [Gurobi](#gurobi) (commercial) are recommended for large problems, and have been confirmed to work with Calliope.
+The following subsections provide additional detail on how to install a solver.
+This list is not exhaustive; any solvers [supported by Pyomo](https://pyomo.readthedocs.io/en/stable/solving_pyomo_models.html#supported-solvers) can be used.
 
 ### CBC
 
 [CBC](https://github.com/coin-or/Cbc) is our recommended option if you want a free and open-source solver.
-CBC can be installed via conda on Linux and macOS by running `mamba install -c conda-forge coincbc`.
+CBC can be installed via conda on Linux and macOS by running `mamba install -c conda-forge coin-or-cbc`.
 Windows binary packages are somewhat more difficult to install, due to limited information on [the CBC website](https://github.com/coin-or/Cbc), but can be found within their [binary archive](https://www.coin-or.org/download/binary/Cbc/) and are included in their [package releases on GitHub](https://github.com/coin-or/Cbc/releases).
-The GitHub releases are more up-to-date. We recommend you download the relevant binary for [CBC 2.10.8](https://github.com/coin-or/Cbc/releases/download/releases%2F2.10.8/Cbc-releases.2.10.8-w64-msvc17-md.zip) and add `cbc.exe` to a directory known to PATH (e.g. an Anaconda environment 'bin' directory).
+The GitHub releases are more up-to-date. We recommend you download the relevant binary for [CBC 2.10.11](https://github.com/coin-or/Cbc/releases/download/releases%2F2.10.11/Cbc-releases.2.10.11-w64-msvc17-md.zip) and add `cbc.exe` to a directory known to PATH (e.g. an Anaconda environment 'bin' directory).
 
 ### GLPK
 
 [GLPK](https://www.gnu.org/software/glpk/) is free and open-source, but can take too much time and/or too much memory on larger problems.
-If using the recommended installation approach above, GLPK is already installed in the `calliope` environment.
-To install GLPK manually, refer to the [GLPK website](https://www.gnu.org/software/glpk/).
+`GLPK` can be installed from `conda-forge` on all platforms: `mamba install glpk`.
+It is therefore the _easiest_ solver to have installed in your Calliope environment.
 
 ### Gurobi
 
 [Gurobi](https://www.gurobi.com/) is commercial but significantly faster than CBC and GLPK, which is relevant for larger problems.
-It needs a license to work, which can be obtained for free for academic use by creating an account on gurobi.com.
+It needs a license to work, which [can be obtained for free for academic use](https://www.gurobi.com/academia/academic-program-and-licenses/).
 
-While Gurobi can be installed via conda (`mamba install -c gurobi gurobi`) we recommend downloading and installing the installer from the [Gurobi website](https://www.gurobi.com/), as the conda package has repeatedly shown various issues.
+The Gurobi solver interface can be installed via conda (`mamba install gurobi::gurobi`).
 
 After installing, log on to the [Gurobi website](https://www.gurobi.com/) and obtain a (free academic or paid commercial) license, then activate it on your system via the instructions given online (using the `grbgetkey` command).
+
+!!! note
+    If using the Gurobi solver, you can also leverage the reduced time and memory consumption of our [Gurobi optimisation problem backend](advanced/backend_choice.md) - this circumvents Pyomo entirely.
 
 ### CPLEX
 
