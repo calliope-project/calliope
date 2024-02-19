@@ -138,7 +138,7 @@ Demand data are now strictly _positive_ numbers and so are the values of the `ca
 When running in Python, building and solving your optimisation problem have been split into two steps:
 
 1. `model.build()` creates the in-memory Python objects that define optimisation problem components (decision variables, constraints, the objective function, ...).
-This creates the [calliope.Model.backend][] object, which you can query and use to [tweak the optimisation problem](advanced/backend.md) before sending it to the solver.
+This creates the [calliope.Model.backend][] object, which you can query and use to [tweak the optimisation problem](advanced/backend_interface.md) before sending it to the solver.
 
 2. `model.solve()` sends the built optimisation problem to the configured solver and, provided an optimal solution is available, creates the [calliope.Model.results][] object which contains the optimal results.
 
@@ -548,7 +548,7 @@ As in v0.6, cyclic storage defaults to being _on_ (`cyclic_storage: true`).
 
 parameters such as `energy_cap_equals` have been removed.
 You can reimplement them by setting `_max` and `_min` parameters to the same value.
-The benefit of this is that you can switch between fixing the parameter value (previously `_equals`) and having a range of values (different `_min`/`_max` values) by [updating parameters in the build optimisation model](advanced/backend.md#interfacing-with-the-built-optimisation-problem).
+The benefit of this is that you can switch between fixing the parameter value (previously `_equals`) and having a range of values (different `_min`/`_max` values) by [updating parameters in the build optimisation model](advanced/backend_interface.md).
 With `_equals` constraints, it would trigger a completely different mathematical formulation, which you could not then tweak - you had to rebuild the optimisation problem entirely.
 
 === "v0.6"
