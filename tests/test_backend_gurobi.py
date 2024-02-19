@@ -527,6 +527,25 @@ class TestNewBackend:
             "Cannot fix variable values without already having solved the model successfully.",
         )
 
+    def test_fix_variable_before_optimal_solve(self, simple_supply_gurobi):
+
+        simple_supply_gurobi.backend.update_parameter("flow_cap_max", xr.DataArray(0))
+        simple_supply_gurobi.solve(force=True)
+        assert simple_supply_gurobi.results.termination_condition != "optimal"
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            simple_supply_gurobi.backend.fix_variable("flow_cap")
+
+        assert check_error_or_warning(
+            excinfo,
+            "Cannot fix variable values without already having solved the model successfully.",
+        )
+
+        # reset
+        simple_supply_gurobi.backend.update_parameter(
+            "flow_cap_max", simple_supply_gurobi.inputs.flow_cap_max
+        )
+        simple_supply_gurobi.solve(force=True)
+
     def test_unfix_variable(self, simple_supply_gurobi):
         with pytest.raises(exceptions.BackendError) as excinfo:
             simple_supply_gurobi.backend.unfix_variable("flow_cap")
@@ -535,6 +554,53 @@ class TestNewBackend:
             excinfo,
             "Cannot unfix a variable using the Gurobi backend; you will need to rebuild your backend or update variable bounds to match the original bounds.",
         )
+
+    def test_set_solver_option(self, simple_supply_gurobi):
+        simple_supply_gurobi.solve(force=True, solver_options={"Threads": 1})
+        assert simple_supply_gurobi.backend._instance.Params.Threads == 1
+        assert (
+            "Threads" in simple_supply_gurobi.backend._instance.Params._getChangeList()
+        )
+
+    def test_set_warmstart(self, simple_supply_gurobi):
+        simple_supply_gurobi.solve(force=True, warmstart=True)
+        assert simple_supply_gurobi.backend._instance.Params.LPWarmStart == 1
+
+        # warmstart = 1 is the Gurobi default, so no change if warmstart=True
+        assert (
+            "LPWarmStart"
+            not in simple_supply_gurobi.backend._instance.Params._getChangeList()
+        )
+
+    def test_unset_warmstart(self, simple_supply_gurobi):
+        simple_supply_gurobi.solve(force=True, warmstart=False)
+        assert simple_supply_gurobi.backend._instance.Params.LPWarmStart == 0
+        assert (
+            "LPWarmStart"
+            in simple_supply_gurobi.backend._instance.Params._getChangeList()
+        )
+
+    def test_save_logs(self, simple_supply_gurobi, tmp_path):
+        dir = tmp_path / "logs"
+        dir.mkdir()
+        expected = dir / "gurobi.log"
+        simple_supply_gurobi.solve(force=True, save_logs=str(dir))
+
+        assert simple_supply_gurobi.backend._instance.Params.LogFile == str(expected)
+        assert (
+            "LogFile" in simple_supply_gurobi.backend._instance.Params._getChangeList()
+        )
+        assert expected.exists()
+
+    def test_to_lp(self, simple_supply_gurobi, tmp_path):
+        filepath = tmp_path / "out.lp"
+        simple_supply_gurobi.backend.to_lp(filepath)
+
+    def test_to_lp_wrong_file_extension(self, simple_supply_gurobi, tmp_path):
+        filepath = tmp_path / "out.txt"
+        with pytest.raises(ValueError) as excinfo:
+            simple_supply_gurobi.backend.to_lp(filepath)
+        assert check_error_or_warning(excinfo, "File extension must be `.lp`")
 
 
 class TestShadowPrices:

@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import re
 from abc import ABC
 from contextlib import redirect_stderr, redirect_stdout
@@ -321,8 +320,9 @@ class PyomoBackendModel(backend_model.BackendModel):
         solve_kwargs = {}
         if save_logs is not None:
             solve_kwargs.update({"symbolic_solver_labels": True, "keepfiles": True})
-            os.makedirs(save_logs, exist_ok=True)
-            TempfileManager.tempdir = save_logs  # Sets log output dir
+            logdir = Path(save_logs)
+            logdir.mkdir(parents=True, exist_ok=True)
+            TempfileManager.tempdir = logdir  # Sets log output dir
 
         if warmstart and solver in ["glpk", "cbc"]:
             model_warn(

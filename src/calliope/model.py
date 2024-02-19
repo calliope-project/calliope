@@ -9,7 +9,6 @@ Implements the core Model class.
 
 from __future__ import annotations
 
-import importlib
 import logging
 import warnings
 from pathlib import Path
@@ -23,6 +22,7 @@ from calliope import exceptions, io
 from calliope._version import __version__
 from calliope.attrdict import AttrDict
 from calliope.backend import parsing
+from calliope.backend.gurobi_backend_model import GurobiBackendModel
 from calliope.backend.latex_backend_model import LatexBackendModel, MathDocumentation
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.postprocess import postprocess as postprocess_results
@@ -47,14 +47,7 @@ if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
 
 
-if importlib.util.find_spec("gurobipy") is not None:
-    from calliope.backend.gurobi_backend_model import GurobiBackendModel
-
-    T = TypeVar(
-        "T", bound=Union[PyomoBackendModel, GurobiBackendModel, LatexBackendModel]
-    )
-else:
-    T = TypeVar("T", bound=Union[PyomoBackendModel, LatexBackendModel])
+T = TypeVar("T", bound=Union[PyomoBackendModel, GurobiBackendModel, LatexBackendModel])
 
 
 def read_netcdf(path):
@@ -70,9 +63,10 @@ class Model(object):
     A Calliope Model.
     """
 
-    _BACKENDS: dict[str, Callable] = {"pyomo": PyomoBackendModel}
-    if importlib.util.find_spec("gurobipy") is not None:
-        _BACKENDS["gurobi"] = GurobiBackendModel
+    _BACKENDS: dict[str, Callable] = {
+        "pyomo": PyomoBackendModel,
+        "gurobi": GurobiBackendModel,
+    }
 
     _TS_OFFSET = pd.Timedelta(nanoseconds=1)
 

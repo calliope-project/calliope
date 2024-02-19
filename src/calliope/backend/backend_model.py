@@ -278,6 +278,8 @@ class BackendModelGenerator(ABC):
 
         if component_dict is None:
             component_dict = self.inputs.math[component_type][name]
+        if name not in self.inputs.math[component_type]:
+            self.inputs.math[component_type][name] = component_dict
 
         if break_early and not component_dict.get("active", True):
             self.log(
@@ -885,21 +887,18 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             references (set[str]): names of optimisation problem components.
         """
         ordered_components = [
-            "parameters",
             "variables",
             "global_expressions",
             "constraints",
             "objectives",
         ]
         for component in ordered_components:
-            refs = [
-                ref
-                for ref in references
-                if self._dataset[ref].attrs["obj_type"] == component
-            ]
-            for ref in refs:
-                self.delete_component(ref, component)
-                getattr(self, "add_" + component.removesuffix("s"))(name=ref)
+            for math_name, math_dict in self.inputs.attrs["math"][component].items():
+                if math_name in references:
+                    self.delete_component(math_name, component)
+                    getattr(self, "add_" + component.removesuffix("s"))(
+                        math_name, math_dict
+                    )
 
     def _get_capacity_bound(
         self, bound: Any, name: str, references: set, fill_na: Optional[float] = None

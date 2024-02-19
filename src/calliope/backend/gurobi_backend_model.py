@@ -3,11 +3,11 @@
 
 from __future__ import annotations
 
+import importlib
 import logging
 from pathlib import Path
 from typing import Any, Literal, Optional, SupportsFloat, TypeVar, Union, overload
 
-import gurobipy
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -15,6 +15,9 @@ import xarray as xr
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
+
+if importlib.util.find_spec("gurobipy") is not None:
+    import gurobipy
 
 T = TypeVar("T")
 _COMPONENTS_T = Literal[
@@ -39,6 +42,10 @@ class GurobiBackendModel(backend_model.BackendModel):
         Args:
             inputs (xr.Dataset): Calliope model data.
         """
+        if importlib.util.find_spec("gurobipy") is None:
+            raise ImportError(
+                "Install the `gurobipy` package to build the optimisation problem with the Gurobi backend."
+            )
         super().__init__(inputs, gurobipy.Model(), **kwargs)
         self._instance: gurobipy.Model
         self.shadow_prices = GurobiShadowPrices(self)
@@ -246,7 +253,8 @@ class GurobiBackendModel(backend_model.BackendModel):
             self._instance.setParam("LPWarmStart", 0)
 
         if save_logs is not None:
-            BackendWarning("No logs to save in Gurobi")
+            logdir = Path(save_logs)
+            self._instance.setParam("LogFile", (logdir / "gurobi.log").as_posix())
 
         self._instance.update()
 
@@ -414,14 +422,10 @@ class GurobiBackendModel(backend_model.BackendModel):
         variable_da = self.get_variable(name)
         if where is not None:
             variable_da = variable_da.where(where.fillna(0))
-        try:
-            self._apply_func(
-                self._fix_gurobi_variable, variable_da.notnull(), 1, variable_da
-            )
-        except AttributeError:
-            raise BackendError(
-                "Cannot fix variable values without already having solved the model successfully."
-            )
+
+        self._apply_func(
+            self._fix_gurobi_variable, variable_da.notnull(), 1, variable_da
+        )
 
         self._instance.update()
 
