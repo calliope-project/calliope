@@ -48,12 +48,12 @@ from calliope.exceptions import BackendError
 
 T = TypeVar("T")
 _COMPONENTS_T = Literal[
+    "parameters",
     "variables",
+    "global_expressions",
     "constraints",
     "piecewise_constraints",
     "objectives",
-    "parameters",
-    "global_expressions",
 ]
 
 LOGGER = logging.getLogger(__name__)
@@ -240,9 +240,9 @@ class BackendModelGenerator(ABC):
             "objectives",
         ]:
             component = components.removesuffix("s")
-            for name in self.inputs.math[components]:
+            for name, dict_ in self.inputs.math[components].items():
                 start = time.time()
-                getattr(self, f"add_{component}")(name)
+                getattr(self, f"add_{component}")(name, dict_)
                 end = time.time() - start
                 LOGGER.debug(
                     f"Optimisation Model | {components}:{name} | Built in {end:.4f}s"
@@ -273,7 +273,7 @@ class BackendModelGenerator(ABC):
     def _add_component(
         self,
         name: str,
-        component_dict: Optional[Tp],
+        component_dict: Tp,
         component_setter: Callable,
         component_type: Literal[
             "variables",
@@ -303,9 +303,6 @@ class BackendModelGenerator(ABC):
                 objects on duplicate index entries.
         """
         references: set[str] = set()
-
-        if component_dict is None:
-            component_dict = self.inputs.math[component_type][name]
 
         if break_early and not component_dict.get("active", True):
             self.log(
@@ -682,10 +679,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         Returns:
             xr.DataArray: Piecewise constraint array.
         """
-        p_constraint = self.piecewise_constraints.get(name, None)
-        if p_constraint is None:
-            raise KeyError(f"Unknown piecewise constraint: {name}")
-        return p_constraint
+        return self._get_component(name, "piecewise_constraints")
 
     @abstractmethod
     def get_variable(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
@@ -917,15 +911,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         Args:
             references (set[str]): names of optimisation problem components.
         """
-        ordered_components = [
-            "parameters",
-            "variables",
-            "global_expressions",
-            "constraints",
-            "piecewise_constraints",
-            "objectives",
-        ]
-        for component in ordered_components:
+        for component in self._VALID_COMPONENTS:
             refs = [
                 ref
                 for ref in references
@@ -933,7 +919,15 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             ]
             for ref in refs:
                 self.delete_component(ref, component)
-                getattr(self, "add_" + component.removesuffix("s"))(name=ref)
+                dict_ = self.inputs.attrs["math"][component][ref]
+                getattr(self, "add_" + component.removesuffix("s"))(ref, dict_)
+
+    def _get_component(self, name: str, component_group: str) -> xr.DataArray:
+        component = getattr(self, component_group).get(name, None)
+        if component is None:
+            pretty_group_name = component_group.removesuffix("s").replace("_", " ")
+            raise KeyError(f"Unknown {pretty_group_name}: {name}")
+        return component
 
 
 class ShadowPrices:

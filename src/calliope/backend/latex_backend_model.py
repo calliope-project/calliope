@@ -382,9 +382,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
 
     def add_constraint(
-        self,
-        name: str,
-        constraint_dict: Optional[parsing.UnparsedConstraintDict] = None,
+        self, name: str, constraint_dict: parsing.UnparsedConstraintDict
     ) -> None:
         equation_strings: list = []
 
@@ -403,12 +401,8 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_piecewise_constraint(
-        self,
-        name: str,
-        constraint_dict: Optional[parsing.UnparsedPiecewiseConstraintDict] = None,
+        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraintDict
     ) -> None:
-        if constraint_dict is None:
-            constraint_dict = self.inputs.attrs["math"]["piecewise_constraints"][name]
         non_where_refs: set = set()
 
         def _constraint_setter(where: xr.DataArray, references: set) -> xr.DataArray:
@@ -448,9 +442,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_global_expression(
-        self,
-        name: str,
-        expression_dict: Optional[parsing.UnparsedExpressionDict] = None,
+        self, name: str, expression_dict: parsing.UnparsedExpressionDict
     ) -> None:
         equation_strings: list = []
 
@@ -477,16 +469,13 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_variable(
-        self, name: str, variable_dict: Optional[parsing.UnparsedVariableDict] = None
+        self, name: str, variable_dict: parsing.UnparsedVariableDict
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
         bound_refs: set = set()
 
         def _variable_setter(where: xr.DataArray, references: set) -> xr.DataArray:
             return where.where(where)
-
-        if variable_dict is None:
-            variable_dict = self.inputs.attrs["math"]["variables"][name]
 
         domain = domain_dict[variable_dict.get("domain", "real")]
 
@@ -507,7 +496,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_objective(
-        self, name: str, objective_dict: Optional[parsing.UnparsedObjectiveDict] = None
+        self, name: str, objective_dict: parsing.UnparsedObjectiveDict
     ) -> None:
         sense_dict = {
             "minimize": r"\min{}",
@@ -515,8 +504,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             "minimise": r"\min{}",
             "maximise": r"\max{}",
         }
-        if objective_dict is None:
-            objective_dict = self.inputs.attrs["math"]["objectives"][name]
+
         equation_strings: list = []
 
         def _objective_setter(

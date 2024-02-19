@@ -33,6 +33,9 @@ directory = "reports/coverage"
 [tool.coverage.xml]
 output = "reports/coverage/coverage.xml"
 
+[tool.coverage.report]
+exclude_lines = ["if TYPE_CHECKING:"]
+
 [tool.black]
 line-length = 88
 skip_magic_trailing_comma = true

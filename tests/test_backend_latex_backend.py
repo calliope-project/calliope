@@ -68,6 +68,9 @@ class TestMathDocumentation:
 
 
 class TestLatexBackendModel:
+    def test_inputs(self, dummy_latex_backend_model, dummy_model_data):
+        assert dummy_latex_backend_model.inputs.equals(dummy_model_data)
+
     @pytest.mark.parametrize(
         "backend_obj", ["valid_latex_backend", "dummy_latex_backend_model"]
     )
@@ -291,6 +294,38 @@ class TestLatexBackendModel:
         )
         assert (
             r"\textbf{no_dim_var}\mathord{=}\textit{piecewise_y}_\text{breakpoint}"
+            in math_string
+        )
+
+    def test_add_piecewise_constraint_no_foreach(self, dummy_latex_backend_model):
+        dummy_latex_backend_model.add_parameter(
+            "piecewise_x",
+            xr.DataArray(data=[0, 5, 10], coords={"breakpoints": [0, 1, 2]}),
+        )
+        dummy_latex_backend_model.add_parameter(
+            "piecewise_y",
+            xr.DataArray(data=[0, 1, 5], coords={"breakpoints": [0, 1, 2]}),
+        )
+        for param in ["piecewise_x", "piecewise_y"]:
+            dummy_latex_backend_model.inputs[param] = (
+                dummy_latex_backend_model._dataset[param]
+            )
+        dummy_latex_backend_model.add_piecewise_constraint(
+            "p_constr_no_foreach",
+            {
+                "where": "piecewise_x AND piecewise_y",
+                "x_values": "piecewise_x",
+                "x_expression": "sum(multi_dim_var, over=[nodes, techs])",
+                "y_values": "piecewise_y",
+                "y_expression": "no_dim_var",
+                "description": "BAR",
+            },
+        )
+        math_string = dummy_latex_backend_model.piecewise_constraints[
+            "p_constr_no_foreach"
+        ].attrs["math_string"]
+        assert (
+            r"\text{ breakpoint }\negthickspace \in \negthickspace\text{ breakpoints }"
             in math_string
         )
 

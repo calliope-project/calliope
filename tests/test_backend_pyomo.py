@@ -1833,6 +1833,22 @@ class TestNewBackend:
             .any()
         )
 
+    def test_new_build_get_component_exists(self, simple_supply):
+        param = simple_supply.backend._get_component("flow_in_eff", "parameters")
+        assert isinstance(param, xr.DataArray)
+
+    def test_new_build_get_component_does_not_exist(self, simple_supply):
+        with pytest.raises(KeyError) as excinfo:
+            simple_supply.backend._get_component("does_not_exist", "parameters")
+        assert check_error_or_warning(excinfo, "Unknown parameter: does_not_exist")
+
+    def test_new_build_get_component_wrong_group(self, simple_supply):
+        with pytest.raises(KeyError) as excinfo:
+            simple_supply.backend._get_component("flow_in_eff", "piecewise_constraints")
+        assert check_error_or_warning(
+            excinfo, "Unknown piecewise constraint: flow_in_eff"
+        )
+
     def test_new_build_get_parameter(self, simple_supply):
         param = simple_supply.backend.get_parameter("flow_in_eff")
         assert isinstance(param.item(), pmo.parameter)
@@ -2188,6 +2204,21 @@ class TestNewBackend:
         assert check_error_or_warning(
             excinfo,
             "objectives:foo:1 | trying to set two equations for the same component.",
+        )
+
+    def test_add_two_same_constraint_multi_index(self, simple_supply):
+        eq = {"expression": "flow_cap >= 1", "where": "flow_cap"}
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            simple_supply.backend.add_constraint(
+                "foo",
+                {"foreach": ["nodes", "techs", "carriers"], "equations": [eq, eq]},
+            )
+        assert check_error_or_warning(
+            excinfo,
+            [
+                "constraints:foo:1 | trying to set two equations for the same index:",
+                "names=['nodes', 'techs', 'carriers'])",
+            ],
         )
 
     def test_add_valid_obj(self, simple_supply):

@@ -119,9 +119,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
 
     def add_constraint(
-        self,
-        name: str,
-        constraint_dict: Optional[parsing.UnparsedConstraintDict] = None,
+        self, name: str, constraint_dict: parsing.UnparsedConstraintDict
     ) -> None:
         def _constraint_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -144,12 +142,9 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._add_component(name, constraint_dict, _constraint_setter, "constraints")
 
     def add_piecewise_constraint(
-        self,
-        name: str,
-        constraint_dict: Optional[parsing.UnparsedPiecewiseConstraintDict] = None,
+        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraintDict
     ) -> None:
-        if constraint_dict is None:
-            constraint_dict = self.inputs.attrs["math"]["piecewise_constraints"][name]
+
         if "breakpoints" in constraint_dict.get("foreach", []):
             raise BackendError(
                 f"(piecewise_constraints, {name}) | `breakpoints` dimension should not be in `foreach`. "
@@ -199,9 +194,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         )
 
     def add_global_expression(
-        self,
-        name: str,
-        expression_dict: Optional[parsing.UnparsedExpressionDict] = None,
+        self, name: str, expression_dict: parsing.UnparsedExpressionDict
     ) -> None:
         def _expression_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -220,12 +213,9 @@ class PyomoBackendModel(backend_model.BackendModel):
         )
 
     def add_variable(
-        self, name: str, variable_dict: Optional[parsing.UnparsedVariableDict] = None
+        self, name: str, variable_dict: parsing.UnparsedVariableDict
     ) -> None:
         domain_dict = {"real": pmo.RealSet, "integer": pmo.IntegerSet}
-
-        if variable_dict is None:
-            variable_dict = self.inputs.attrs["math"]["variables"][name]
 
         def _variable_setter(where, references):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
@@ -242,12 +232,10 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._add_component(name, variable_dict, _variable_setter, "variables")
 
     def add_objective(
-        self, name: str, objective_dict: Optional[parsing.UnparsedObjectiveDict] = None
+        self, name: str, objective_dict: parsing.UnparsedObjectiveDict
     ) -> None:
         sense_dict = {"minimize": 1, "minimise": 1, "maximize": -1, "maximise": -1}
 
-        if objective_dict is None:
-            objective_dict = self.inputs.attrs["math"]["objectives"][name]
         sense = sense_dict[objective_dict["sense"]]
 
         def _objective_setter(
@@ -269,11 +257,9 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._add_component(name, objective_dict, _objective_setter, "objectives")
 
     def get_parameter(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
-        parameter = self.parameters.get(name, None)
-        if parameter is None:
-            raise KeyError(f"Unknown parameter: {name}")
+        parameter = self._get_component(name, "parameters")
 
-        if as_backend_objs or not isinstance(parameter, xr.DataArray):
+        if as_backend_objs:
             return parameter
 
         param_as_vals = self._apply_func(self._from_pyomo_param, parameter)
@@ -291,10 +277,9 @@ class PyomoBackendModel(backend_model.BackendModel):
     def get_constraint(
         self, name: str, as_backend_objs: bool = True, eval_body: bool = False
     ) -> Union[xr.DataArray, xr.Dataset]:
-        constraint = self.constraints.get(name, None)
-        if constraint is None:
-            raise KeyError(f"Unknown constraint: {name}")
-        if isinstance(constraint, xr.DataArray) and not as_backend_objs:
+        constraint = self._get_component(name, "constraints")
+
+        if not as_backend_objs:
             constraint_attrs = self._apply_func(
                 self._from_pyomo_constraint,
                 constraint,
@@ -306,9 +291,8 @@ class PyomoBackendModel(backend_model.BackendModel):
         return constraint
 
     def get_variable(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
-        variable = self.variables.get(name, None)
-        if variable is None:
-            raise KeyError(f"Unknown variable: {name}")
+        variable = self._get_component(name, "variables")
+
         if as_backend_objs:
             return variable
         else:
@@ -327,9 +311,8 @@ class PyomoBackendModel(backend_model.BackendModel):
     def get_global_expression(
         self, name: str, as_backend_objs: bool = True, eval_body: bool = False
     ) -> xr.DataArray:
-        global_expression = self.global_expressions.get(name, None)
-        if global_expression is None:
-            raise KeyError(f"Unknown global_expression: {name}")
+        global_expression = self._get_component(name, "global_expressions")
+
         if isinstance(global_expression, xr.DataArray) and not as_backend_objs:
             return self._apply_func(
                 self._from_pyomo_expr, global_expression, eval_body=eval_body
