@@ -695,18 +695,23 @@ class ModelDataFactory:
 
         return link_tech_dict
 
-    def _add_to_dataset(self, to_add: xr.Dataset, id: str):
+    def _add_to_dataset(self, to_add: xr.Dataset, id_: str):
         """Add new data to the central class dataset.
 
         Before being added, any dimensions with the `steps` suffix will be cast to datetime dtype.
 
         Args:
             to_add (xr.Dataset): Dataset to merge into the central dataset.
-            id (str): ID of dataset being added, to use in log messages
+            id_ (str): ID of dataset being added, to use in log messages
         """
-        to_add = time.timeseries_to_datetime(to_add, self.config["time_format"], id)
+        to_add_numeric_dims = self._update_numeric_dims(to_add, id_)
+        to_add_numeric_ts_dims = time.timeseries_to_datetime(
+            to_add_numeric_dims, self.config["time_format"], id_
+        )
         self.dataset = xr.merge(
-            [to_add, self.dataset], combine_attrs="no_conflicts", compat="override"
+            [to_add_numeric_ts_dims, self.dataset],
+            combine_attrs="no_conflicts",
+            compat="override",
         ).fillna(self.dataset)
 
     def _log_param_updates(self, param_name: str, param_da: xr.DataArray):
@@ -746,6 +751,30 @@ class ModelDataFactory:
         """
         node_from_data.pop("carrier_out")  # cannot import carriers at the `from` node
         node_to_data.pop("carrier_in")  # cannot export carrier at the `to` node
+
+    @staticmethod
+    def _update_numeric_dims(ds: xr.Dataset, id_: str) -> xr.Dataset:
+        """Try coercing all dimensions to numeric.
+        Any that don't raise an error will remain as numeric.
+
+        Args:
+            ds (xr.Dataset): Dataset possibly containing numeric dimensions.
+            id_ (str): Identifier for `ds` to use in logging.
+
+        Returns:
+            xr.Dataset: Input `ds` with numeric coordinates.
+        """
+
+        for dim_name in ds.dims:
+            try:
+                ds.coords[dim_name] = pd.to_numeric(ds.coords[dim_name].to_index())
+                LOGGER.debug(
+                    f"{id_} | Updating `{dim_name}` dimension index values to numeric type."
+                )
+            except ValueError:
+                continue
+
+        return ds
 
     def _raise_error_on_transmission_tech_def(
         self, tech_def_dict: AttrDict, node_name: str
