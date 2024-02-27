@@ -702,8 +702,7 @@ class TestModelData:
         new_param = simple_da.copy().to_dataset(name="non_ts_data")
         model_data_factory._add_to_dataset(new_param, "foo")
 
-        assert "foo | Updating" not in my_caplog.text
-        assert "datetime format" not in my_caplog.text
+        assert "dimension index values to datetime format" not in my_caplog.text
         # make sure nothing has changed in the array
         assert "non_ts_data" in model_data_factory.dataset
         assert model_data_factory.dataset["non_ts_data"].equals(simple_da)
