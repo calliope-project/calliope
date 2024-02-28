@@ -12,6 +12,8 @@ from typing import Optional
 
 _time_format = "%Y-%m-%d %H:%M:%S"
 
+_orig_py_warning_handlers = logging.getLogger("py.warnings").handlers
+
 
 def setup_root_logger(
     verbosity: str | int, capture_warnings: bool = True
@@ -49,12 +51,15 @@ def setup_root_logger(
     root_logger.addHandler(console)
     root_logger.setLevel(verbosity)
 
+    py_warnings_logger = logging.getLogger("py.warnings")
     if capture_warnings:
         logging.captureWarnings(True)
-        logging.getLogger("py.warnings").setLevel(verbosity)
+        py_warnings_logger.handlers = _orig_py_warning_handlers + [console]
+        py_warnings_logger.setLevel(verbosity)
     else:
         logging.captureWarnings(False)
         logging.getLogger("py.warnings").setLevel("WARNING")
+        py_warnings_logger.handlers = _orig_py_warning_handlers
 
     return root_logger
 
