@@ -754,8 +754,11 @@ class ModelDataFactory:
 
     @staticmethod
     def _update_numeric_dims(ds: xr.Dataset, id_: str) -> xr.Dataset:
-        """Try coercing all dimensions to numeric.
-        Any that don't raise an error will remain as numeric.
+        """Try coercing all dimension data of the input dataset to a numeric data type.
+
+        Any dimensions where _all_ its data is potentially numeric will be returned with all data coerced to numeric.
+        All other dimensions will be returned as they were in the input dataset.
+        No changes are made to data variables in the dataset.
 
         Args:
             ds (xr.Dataset): Dataset possibly containing numeric dimensions.
