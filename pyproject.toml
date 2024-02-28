@@ -38,7 +38,7 @@ exclude_lines = ["if TYPE_CHECKING:"]
 
 [tool.black]
 line-length = 88
-skip_magic_trailing_comma = true
+skip-magic-trailing-comma = true
 target-version = ['py310', 'py311', 'py312']
 include = '\.pyi?$'
 exclude = '''
@@ -94,7 +94,7 @@ where = ["src"]
 include = ["calliope*"]
 
 [tool.setuptools.package-data]
-calliope = ["config/*", "math/*", "example_models/**/*"]
+calliope = ["config/*", "math/*", "example_models/**/*", "py.typed"]
 
 [tool.setuptools]
 license-files = ["LICENSE", "CITATION"]
