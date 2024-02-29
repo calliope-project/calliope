@@ -10,15 +10,6 @@ import warnings
 from typing import Optional, Union
 
 
-def _formatwarning(message, category, *args, **kwargs):
-    """Formats ModelWarnings as "ModelWarning: message" without extra crud"""
-
-    if category in [ModelWarning, BackendWarning]:
-        return f"{category.__name__}: {message}\n"
-    else:
-        return warnings._formatwarning_orig(message, category, *args, **kwargs)
-
-
 class ModelError(Exception):
     """
     ModelErrors should stop execution of the model, e.g. due to a problem
@@ -45,6 +36,15 @@ class ModelWarning(Warning):
 
 class BackendWarning(Warning):
     pass
+
+
+def _formatwarning(message, category, *args, **kwargs):
+    """Formats ModelWarnings as "ModelWarning: message" without extra crud"""
+
+    if category in [ModelWarning, BackendWarning]:
+        return f"{category.__name__}: {message}\n"
+    else:
+        return warnings._formatwarning_orig(message, category, *args, **kwargs)
 
 
 def warn(message, _class=ModelWarning):

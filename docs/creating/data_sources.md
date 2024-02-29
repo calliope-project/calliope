@@ -400,6 +400,11 @@ E.g.,
     data_sources:
       ...
     ```
+6. We process dimension data after loading it in according to a limited set of heuristics:
+    1. we assume any dimension with the suffix `steps` (e.g., `timesteps`, `monthsteps`) is timeseries data, and attempt to convert the data type of the dimension values accordingly.
+    2. We will attempt to convert dimension data to numeric values.
+    Therefore, dimensions with the data `[1, 2]`, `["1", "2"]`, `[1, "2"]`, and `["1.0", 2.0]` will all be converted to having a numeric data type (integer or float).
+    `["foo", "1"]` and `["foo", 1]` will _not_ be converted, as not all dimension data entries are convertible to numeric data types.
 
 ### Data you _cannot_ load in tabular format
 
