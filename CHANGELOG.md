@@ -24,6 +24,9 @@ Both the index and the values of the timeseries (both being date strings) should
 
 |changed| Calliope attribute dictionaries (AttrDicts) no longer sort dictionary keys on `union`. Key order is now: original dictionary key order + any new keys being added in the order they appear in the new dictionary.
 
+|fixed| Dimensions with numeric data can be defined in tabular data _or_ YAML and will appear as numeric in the processed Calliope model input dataset.
+If all dimension data can be coerced to a numeric data type (e.g. `["10", 100, "-1"]`), then it _will_ be coerced (e.g., `[10, 100, -1]`).
+
 ### Internal changes
 
 |new| `py.typed` file so that mypy recognises Calliope as a typed library when it is imported as a dependency.
