@@ -10,7 +10,6 @@ Implements the core Model class.
 from __future__ import annotations
 
 import logging
-import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union
 
@@ -482,10 +481,10 @@ class Model(object):
         Additional kwargs are passed to the backend.
 
         """
-        warnings.warn(
+        exceptions.warn(
             "`run()` is deprecated and will be removed in a "
             "future version. Use `model.build()` followed by `model.solve()`.",
-            DeprecationWarning,
+            FutureWarning,
         )
         self.build(force=force_rerun)
         self.solve(force=force_rerun)

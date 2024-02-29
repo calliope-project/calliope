@@ -38,17 +38,10 @@ class BackendWarning(Warning):
     pass
 
 
-def _formatwarning(message, category, *args, **kwargs):
-    """Formats ModelWarnings as "ModelWarning: message" without extra crud"""
-
-    if category in [ModelWarning, BackendWarning]:
-        return f"{category.__name__}: {message}\n"
-    else:
-        return warnings._formatwarning_orig(message, category, *args, **kwargs)
-
-
-def warn(message, _class=ModelWarning):
-    warnings.formatwarning = _formatwarning
+def warn(message: str, _class: type[Warning] = ModelWarning):
+    warnings.formatwarning = (
+        lambda message, category, *args, **kwargs: f"{category.__name__}: {message}\n"
+    )
     warnings.warn(message, _class)
     warnings.formatwarning = warnings._formatwarning_orig
 
