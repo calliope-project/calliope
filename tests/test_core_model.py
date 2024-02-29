@@ -309,5 +309,5 @@ class TestOperateMode:
     def test_operate_timeseries(self, operate_model):
         assert all(
             operate_model.results.timesteps
-            == pd.date_range("2005-01", "2005-01-02 23:00:00", freq="H")
+            == pd.date_range("2005-01", "2005-01-02 23:00:00", freq="h")
         )

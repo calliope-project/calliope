@@ -645,6 +645,9 @@ class TestUptimeDowntime(CustomMathExamples):
     @pytest.mark.filterwarnings(
         "ignore:(?s).*This parameter will only take effect if you have already defined:calliope.exceptions.ModelWarning"
     )
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Possibly missing data on the timesteps dimension:calliope.exceptions.ModelWarning"
+    )
     def test_downtime(self, build_and_compare):
         overrides = {
             "parameters": {

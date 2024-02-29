@@ -14,13 +14,10 @@ markers = ["serial", "time_intensive"]
 filterwarnings = [
   # https://github.com/pytest-dev/pytest-xdist/issues/825
   "ignore:The --rsyncdir command line argument and rsyncdirs config variable are deprecated.:DeprecationWarning",
-  "ignore:.*`group_share` constraints will be removed in v0.7.0.*:FutureWarning:",
-  "ignore:.*Plotting will no longer be available as a method.*:FutureWarning:",
-  "ignore:.*There will be no default cost class for the objective function in v0.7.0.*:FutureWarning:",
-  "ignore:.*`charge_rate` is renamed to `energy_cap_per_storage_cap_max` and will be removed in v0.7.0.*:FutureWarning:",
-  "ignore:.*Deprecated, pass a TempConstr or use Model.addLConstr.*:DeprecationWarning:pyomo",
-  "ignore:.*distutils Version classes are deprecated.*:DeprecationWarning:",
-  "ignore:.*`np.float` is a deprecated alias.*:DeprecationWarning:",
+  "ignore:(?s).*datetime.datetime.utcfromtimestamp():",
+  "ignore:(?s).*Pyarrow will become a required dependency of pandas:DeprecationWarning",
+  "ignore:.*The return type of `Dataset.dims` will be changed to return a set of dimension names.*:FutureWarning",
+  "ignore:.*Mismatched null-like values None and nan found.*:FutureWarning"
 ]
 
 [tool.coverage.run]

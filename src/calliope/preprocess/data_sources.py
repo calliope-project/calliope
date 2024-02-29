@@ -279,7 +279,7 @@ class DataSource:
 
         tdf: pd.Series
         if isinstance(df, pd.DataFrame):
-            tdf = df.stack(df.columns.names)  # type: ignore
+            tdf = df.stack(df.columns.names, future_stack=True).dropna()
         else:
             tdf = df
 

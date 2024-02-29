@@ -328,7 +328,7 @@ class TestExtractFromSchema:
             {
                 "objective_cost_weights": 1,
                 "available_area": np.inf,
-                "color": None,
+                "color": np.nan,
                 "cap_method": "continuous",
                 "include_storage": False,
                 "flow_cap_per_storage_cap_min": 0,
