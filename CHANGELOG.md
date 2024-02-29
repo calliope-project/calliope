@@ -28,8 +28,6 @@ Both the index and the values of the timeseries (both being date strings) should
 
 |new| `py.typed` file so that mypy recognises Calliope as a typed library when it is imported as a dependency.
 
-|changed| GitHub action versions updated: `codecov/codecov-action` -> v4, `actions/checkout` -> v4, `dawidd6/action-download-artifact` -> v3.
-
 |fixed| Spelling of Black config option `skip-magic-trailing-comma`.
 
 ## 0.7.0.dev2 (2024-01-26)
