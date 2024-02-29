@@ -16,8 +16,8 @@ class TestAttrDict:
         d = {
             "a": 1,
             "b": 2,
-            "c": {"x": "foo", "y": "bar", "z": {"I": 1, "II": 2}},
             "d": None,
+            "c": {"x": "foo", "y": "bar", "z": {"I": 1, "II": 2}},
         }
         return d
 
@@ -238,12 +238,12 @@ class TestAttrDict:
     def test_keys_nested_as_list(self, attr_dict):
         d = attr_dict
         dd = d.keys_nested()
-        assert dd == ["a", "b", "c.x", "c.y", "c.z.I", "c.z.II", "d"]
+        assert dd == ["a", "b", "d", "c.x", "c.y", "c.z.I", "c.z.II"]
 
     def test_keys_nested_as_dict(self, attr_dict):
         d = attr_dict
         dd = d.keys_nested(subkeys_as="dict")
-        assert dd == ["a", "b", {"c": ["x", "y", {"z": ["I", "II"]}]}, "d"]
+        assert dd == ["a", "b", "d", {"c": ["x", "y", {"z": ["I", "II"]}]}]
 
     def test_union(self, attr_dict):
         d = attr_dict
@@ -278,6 +278,18 @@ class TestAttrDict:
         d_new = AttrDict({"1": {"foo": {}}, "baz": {"bar": {}}})
         d.union(d_new)
         assert len(d.baz.bar.keys()) == 0
+
+    def test_union_order_retained(self, attr_dict):
+        d_new = AttrDict({"a": 10, "e": {"b": 1, "a": 2}, "A": -1, "c.z.II": 20})
+        attr_dict.union(d_new, allow_override=True)
+        assert attr_dict == {
+            "a": 10,
+            "b": 2,
+            "d": None,
+            "c": {"x": "foo", "y": "bar", "z": {"I": 1, "II": 20}},
+            "e": {"b": 1, "a": 2},
+            "A": -1,
+        }
 
     def test_del_key_single(self, attr_dict):
         attr_dict.del_key("c")

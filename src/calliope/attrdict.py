@@ -355,7 +355,7 @@ class AttrDict(dict):
 
     def keys_nested(self, subkeys_as="list"):
         """
-        Returns all keys in the AttrDict, sorted, including the keys of
+        Returns all keys in the AttrDict, including the keys of
         nested subdicts (which may be either regular dicts or AttrDicts).
 
         If ``subkeys_as='list'`` (default), then a list of
@@ -366,7 +366,7 @@ class AttrDict(dict):
 
         """
         keys = []
-        for k, v in sorted(self.items()):
+        for k, v in self.items():
             # Check if dict instance (which AttrDict is too),
             # and for non-emptyness of the dict
             if isinstance(v, dict) and v:
