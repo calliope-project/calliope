@@ -152,7 +152,7 @@ def _apply_overrides(
         exceptions.warn(
             "`locations` has been renamed to `nodes` and will stop working "
             "in v0.7.1. Please update your model configuration accordingly.",
-            DeprecationWarning,
+            FutureWarning,
         )
         model_def_copy["nodes"] = model_def_copy["locations"]
         del model_def_copy["locations"]

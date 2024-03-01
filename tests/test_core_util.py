@@ -69,11 +69,19 @@ class TestLogging:
             time_since_solve_start=True,
         )
 
-    @pytest.mark.parametrize(["capture", "expected_level"], [(True, 20), (False, 30)])
-    def test_capture_warnings(self, capture, expected_level):
+    @pytest.mark.parametrize(
+        ["capture", "expected_level", "n_handlers"], [(True, 20, 1), (False, 30, 0)]
+    )
+    def test_capture_warnings(self, capture, expected_level, n_handlers):
         calliope.set_log_verbosity("info", capture_warnings=capture)
 
         assert logging.getLogger("py.warnings").getEffectiveLevel() == expected_level
+        assert len(logging.getLogger("py.warnings").handlers) == n_handlers
+
+    def test_capture_warnings_handlers_dont_append(self):
+        for level in ["critical", "warning", "info", "debug"]:
+            calliope.set_log_verbosity(level, capture_warnings=True)
+            assert len(logging.getLogger("py.warnings").handlers) == 1
 
 
 class TestGenerateRuns:

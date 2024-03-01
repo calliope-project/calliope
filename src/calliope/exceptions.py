@@ -9,20 +9,6 @@ import textwrap
 import warnings
 from typing import Optional, Union
 
-# Enable simple format when printing ModelWarnings
-formatwarning_orig = warnings.showwarning
-
-
-def _formatwarning(message, category, filename, lineno, file=None, line=None):
-    """Formats ModelWarnings as "Warning: message" without extra crud"""
-    if category == ModelWarning:
-        return "Warning: " + str(message) + "\n"
-    else:
-        return formatwarning_orig(message, category, filename, lineno, file, line)
-
-
-warnings.showwarning = _formatwarning
-
 
 class ModelError(Exception):
     """
@@ -52,8 +38,12 @@ class BackendWarning(Warning):
     pass
 
 
-def warn(message, _class=ModelWarning):
+def warn(message: str, _class: type[Warning] = ModelWarning):
+    warnings.formatwarning = (
+        lambda message, category, *args, **kwargs: f"{category.__name__}: {message}\n"
+    )
     warnings.warn(message, _class)
+    warnings.formatwarning = warnings._formatwarning_orig
 
 
 def print_warnings_and_raise_errors(
