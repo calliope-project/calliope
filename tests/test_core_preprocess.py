@@ -182,7 +182,7 @@ class TestModelRun:
         )
         assert all(
             model.inputs.timesteps.to_index()
-            == pd.date_range("2005-01", "2005-01-01 23:00:00", freq="H")
+            == pd.date_range("2005-01", "2005-01-01 23:00:00", freq="h")
         )
 
         # should fail: must be a list, not a string

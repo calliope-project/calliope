@@ -20,7 +20,7 @@ overrides:
       init:
         name: "National-scale example model with time resampling"
         time_subset: ["2005-01", "2005-01"]
-        time_resample: "6H"
+        time_resample: "6h"
 
   time_clustering:
     config:
@@ -70,8 +70,8 @@ overrides:
       init.time_subset: ["2005-01-01", "2005-01-10"]
       build:
         mode: operate
-        operate_window: 12H
-        operate_horizon: 24H
+        operate_window: 12h
+        operate_horizon: 24h
     nodes:
       region1.techs.ccgt.flow_cap: 30000
 

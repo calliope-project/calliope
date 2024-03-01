@@ -41,7 +41,7 @@ properties:
           time_resample:
             type: ["null", string]
             default: null
-            description: setting to adjust time resolution, e.g. "2H" for 2-hourly
+            description: setting to adjust time resolution, e.g. "2h" for 2-hourly
             pattern: "^[0-9]+[a-zA-Z]"
           time_cluster:
             type: ["null", string]

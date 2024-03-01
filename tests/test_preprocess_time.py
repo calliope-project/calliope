@@ -25,7 +25,7 @@ class TestTimeFormat:
         model = build_test_model(override_dict=override, scenario="simple_conversion")
         assert all(
             model.inputs.timesteps.to_index()
-            == pd.date_range("2005-01", "2005-01-02 23:00:00", freq="H")
+            == pd.date_range("2005-01", "2005-01-02 23:00:00", freq="h")
         )
 
     def test_incorrect_date_format_one(self):
@@ -126,7 +126,7 @@ class TestResamplingAndCluster:
         model = build_test_model(
             scenario="simple_supply",
             time_subset=["2005-01-01", "2005-01-04"],
-            time_resample="6H",
+            time_resample="6h",
             time_cluster="data_sources/cluster_days.csv",
         )
 
@@ -155,7 +155,7 @@ class TestResampling:
             "data_sources.demand_elec.source: data_sources/demand_elec_15mins.csv"
         )
 
-        model = build_test_model(override, scenario="simple_supply", time_resample="6H")
+        model = build_test_model(override, scenario="simple_supply", time_resample="6h")
         data = model._model_data
 
         dtindex = pd.DatetimeIndex(
@@ -183,7 +183,7 @@ class TestResampling:
         )
 
         model = build_test_model(
-            override, scenario="simple_supply,one_day", time_resample="2H"
+            override, scenario="simple_supply,one_day", time_resample="2h"
         )
         data = model._model_data
 
@@ -230,7 +230,7 @@ class TestResampling:
             """
         )
 
-        model = build_test_model(override, scenario="simple_supply", time_resample="6H")
+        model = build_test_model(override, scenario="simple_supply", time_resample="6h")
 
         dtindex = pd.DatetimeIndex(
             [
