@@ -25,7 +25,7 @@ variables:
 piecewise_constraints:
   sos2_piecewise_costs:
     description: >
-      Set investment costs values along a piecewise curve using special ordered sets of type 2 (SOS2).
+      Set investment cost values along a piecewise curve using special ordered sets of type 2 (SOS2).
     foreach: [nodes, techs, carriers, costs]
     where: any(piecewise_cost_investment_x, over=breakpoints) AND any(piecewise_cost_investment_y, over=breakpoints)
     x_expression: flow_cap

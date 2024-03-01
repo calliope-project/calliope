@@ -92,6 +92,9 @@ The equation expressions _must_ have comparison operators.
 If you have non-linear relationships between two decision variables, you may want to represent them as a [piecewise linear function](https://en.wikipedia.org/wiki/Piecewise_linear_function).
 The most common form of a piecewise function involves creating special ordered sets of type 2 (SOS2), set of binary variables that are linked together with specific constraints.
 
+!!! note
+    You can find an a fully worked-out example in our [piecewise linear tutorial][defining-piecewise-linear-constraints].
+
 Because the formulation of piecewise constraints is so specific, the math syntax differs from all other modelling components by having `x` and `y` attributes that need to be specified:
 
 ```yaml
@@ -122,7 +125,7 @@ The component attributes combine to describe a piecewise curve that links the `x
 
 !!! note
     If the non-linear function you want to represent is convex, you may be able to avoid SOS2 variables, and instead represent it using [constraint components](#constraints).
-    You can find an example of this in our [dedicated tutorial][defining-piecewise-linear-constraints].
+You can find an example of this in our [piecewise linear costs custom math example][piecewise-linear-costs].
 
 !!! warning
     This approximation of a non-linear relationship may improve the representation of whatever real system you are modelling, but it will come at the cost of a more difficult model to solve.

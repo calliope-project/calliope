@@ -572,7 +572,7 @@ class BackendModelGenerator(ABC):
 
     @property
     def piecewise_constraints(self):
-        "Slice of backend dataset to show only built constraints"
+        "Slice of backend dataset to show only built piecewise constraints"
         return self._dataset.filter_by_attrs(obj_type="piecewise_constraints")
 
     @property
