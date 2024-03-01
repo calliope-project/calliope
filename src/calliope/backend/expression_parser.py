@@ -736,15 +736,12 @@ class EvalUnslicedComponent(EvalToArrayStr):
         evaluated = self.as_array()
         self.eval_attrs["references"].add(self.name)
 
-        if evaluated.shape:
-            dims = rf"_\text{{{','.join(str(i).removesuffix('s') for i in evaluated.dims)}}}"
+        if evaluated.attrs["obj_type"] != "string":
+            data_var_string = evaluated.attrs["math_repr"]
         else:
-            dims = ""
-        if evaluated.attrs["obj_type"] in ["global_expressions", "variables"]:
-            formatted_name = rf"\textbf{{{self.name}}}"
-        elif evaluated.attrs["obj_type"] == "parameters":
-            formatted_name = rf"\textit{{{self.name}}}"
-        return formatted_name + dims
+            data_var_string = rf"\text{{{self.name}}}"
+
+        return data_var_string
 
     def as_array(self) -> xr.DataArray:
         backend_interface = self.eval_attrs["backend_interface"]

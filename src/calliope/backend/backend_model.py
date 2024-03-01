@@ -48,7 +48,12 @@ from calliope.exceptions import BackendError
 
 T = TypeVar("T")
 _COMPONENTS_T = Literal[
-    "variables", "constraints", "objectives", "parameters", "global_expressions"
+    "parameters",
+    "variables",
+    "global_expressions",
+    "constraints",
+    "piecewise_constraints",
+    "objectives",
 ]
 
 LOGGER = logging.getLogger(__name__)
@@ -56,7 +61,7 @@ LOGGER = logging.getLogger(__name__)
 
 class BackendModelGenerator(ABC):
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
-    _COMPONENT_ATTR_METADATA = ["description", "unit", "default"]
+    _COMPONENT_ATTR_METADATA = ["description", "unit", "default", "math_repr"]
 
     _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
     _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
@@ -117,6 +122,21 @@ class BackendModelGenerator(ABC):
                 Name of the constraint
             constraint_dict (parsing.UnparsedConstraintDict):
                 Constraint configuration dictionary, ready to be parsed and then evaluated.
+        """
+
+    @abstractmethod
+    def add_piecewise_constraint(
+        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraintDict
+    ) -> None:
+        """
+        Add piecewise constraint equation to backend model in-place.
+        Resulting backend dataset entries will be piecewise constraint objects.
+
+        Args:
+            name (str):
+                Name of the piecewise constraint
+            constraint_dict (parsing.UnparsedPiecewiseConstraintDict):
+                Piecewise constraint configuration dictionary, ready to be parsed and then evaluated.
         """
 
     @abstractmethod
@@ -216,12 +236,13 @@ class BackendModelGenerator(ABC):
             "variables",
             "global_expressions",
             "constraints",
+            "piecewise_constraints",
             "objectives",
         ]:
             component = components.removesuffix("s")
-            for name in self.inputs.math[components]:
+            for name, dict_ in self.inputs.math[components].items():
                 start = time.time()
-                getattr(self, f"add_{component}")(name)
+                getattr(self, f"add_{component}")(name, dict_)
                 end = time.time() - start
                 LOGGER.debug(
                     f"Optimisation Model | {components}:{name} | Built in {end:.4f}s"
@@ -252,10 +273,14 @@ class BackendModelGenerator(ABC):
     def _add_component(
         self,
         name: str,
-        component_dict: Optional[Tp],
+        component_dict: Tp,
         component_setter: Callable,
         component_type: Literal[
-            "variables", "global_expressions", "constraints", "objectives"
+            "variables",
+            "global_expressions",
+            "constraints",
+            "piecewise_constraints",
+            "objectives",
         ],
         break_early: bool = True,
     ) -> Optional[parsing.ParsedBackendComponent]:
@@ -278,9 +303,6 @@ class BackendModelGenerator(ABC):
                 objects on duplicate index entries.
         """
         references: set[str] = set()
-
-        if component_dict is None:
-            component_dict = self.inputs.math[component_type][name]
 
         if break_early and not component_dict.get("active", True):
             self.log(
@@ -454,16 +476,29 @@ class BackendModelGenerator(ABC):
             }
         )
         self._dataset[name] = da
-
         if references is not None:
-            for reference in references:
-                try:
-                    self._dataset[reference].attrs["references"].add(name)
-                except KeyError:
-                    continue
+            self._update_references(name, references)
+
+    def _update_references(self, name: str, references: set):
+        """Update reference lists in dataset objects.
+
+        Args:
+            name (str): Name to update in reference lists.
+            references (set): Names of dataset objects whose reference lists will be updated with `name`.
+        """
+        for reference in references:
+            try:
+                self._dataset[reference].attrs["references"].add(name)
+            except KeyError:
+                continue
 
     def _apply_func(
-        self, func: Callable, *args, output_core_dims: tuple = ((),), **kwargs
+        self,
+        func: Callable,
+        *args,
+        input_core_dims: Optional[list] = None,
+        output_core_dims: tuple = ((),),
+        **kwargs,
     ) -> xr.DataArray:
         """
         Apply a function to every element of an arbitrary number of xarray DataArrays.
@@ -476,10 +511,14 @@ class BackendModelGenerator(ABC):
             args (xr.DataArray):
                 xarray DataArrays which will be broadcast together and then iterated over
                 to apply the function.
-            output_core_dims (tuple):
+            input_core_dims (Optional[tuple], optional):
+                Additional dimensions which `xr.apply_ufunc` won't broadcast on applying `func`.
+                This is directly passed to `xr.apply_ufunc`; see their documentation for more details.
+                Defaults to None.
+            output_core_dims (tuple, optional):
                 Additional dimensions which are expected to be passed back from `xr.apply_ufunc` after applying `func`.
                 This is directly passed to `xr.apply_ufunc`; see their documentation for more details.
-                Defaults to ((), )
+                Defaults to ((), ).
             kwargs (dict[str, Any]):
                 Additional keyword arguments to pass to `func`.
 
@@ -495,6 +534,7 @@ class BackendModelGenerator(ABC):
             dask="parallelized",
             output_dtypes=[np.dtype("O")],
             output_core_dims=output_core_dims,
+            input_core_dims=input_core_dims,
         )
 
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
@@ -529,6 +569,11 @@ class BackendModelGenerator(ABC):
     def constraints(self):
         "Slice of backend dataset to show only built constraints"
         return self._dataset.filter_by_attrs(obj_type="constraints")
+
+    @property
+    def piecewise_constraints(self):
+        "Slice of backend dataset to show only built piecewise constraints"
+        return self._dataset.filter_by_attrs(obj_type="piecewise_constraints")
 
     @property
     def variables(self):
@@ -620,6 +665,21 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 If as_backend_objs is True, will return an xr.DataArray.
                 Otherwise, a xr.Dataset will be given, indexed over the same dimensions as the xr.DataArray, with variables for the constraint body, and upper (`ub`) and lower (`lb`) bounds.
         """
+
+    def get_piecewise_constraint(self, name: str) -> xr.DataArray:
+        """Get piecewise constraint data as an array of backend interface objects.
+        Can be used to inspect and debug built piecewise constraints.
+
+        Unlike other optimisation problem components, piecewise constraints can only be inspected as backend interface objects.
+        This is because each element is a collection of variables, parameters, constraints, and expressions.
+
+        Args:
+            name (str): Name of piecewise constraint, as given in YAML piecewise constraint key.
+
+        Returns:
+            xr.DataArray: Piecewise constraint array.
+        """
+        return self._get_component(name, "piecewise_constraints")
 
     @abstractmethod
     def get_variable(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
@@ -851,14 +911,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         Args:
             references (set[str]): names of optimisation problem components.
         """
-        ordered_components = [
-            "parameters",
-            "variables",
-            "global_expressions",
-            "constraints",
-            "objectives",
-        ]
-        for component in ordered_components:
+        for component in self._VALID_COMPONENTS:
             refs = [
                 ref
                 for ref in references
@@ -866,7 +919,15 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             ]
             for ref in refs:
                 self.delete_component(ref, component)
-                getattr(self, "add_" + component.removesuffix("s"))(name=ref)
+                dict_ = self.inputs.attrs["math"][component][ref]
+                getattr(self, "add_" + component.removesuffix("s"))(ref, dict_)
+
+    def _get_component(self, name: str, component_group: str) -> xr.DataArray:
+        component = getattr(self, component_group).get(name, None)
+        if component is None:
+            pretty_group_name = component_group.removesuffix("s").replace("_", " ")
+            raise KeyError(f"Unknown {pretty_group_name}: {name}")
+        return component
 
 
 class ShadowPrices:

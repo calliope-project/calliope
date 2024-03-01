@@ -1,0 +1,34 @@
+# title: Piecewise linear costs - economies of scale
+#
+# description: |
+#     Add a piecewise cost function that reduces the incremental increase in investment costs with increasing technology rated capacity.
+#     This emulates "economies of scale", where the more of a technology there is deployed, the less expensive each additional investment in deployment.
+#
+#     A more detailing example can be found in our [dedicated tutorial][defining-piecewise-linear-constraints].
+#
+#     New indexed parameters:
+#
+#     - `piecewise_cost_investment_x` (defining the new set `breakpoints`)
+#     - `piecewise_cost_investment_y` (defining the new set `breakpoints`)
+#
+# ---
+
+variables:
+  piecewise_cost_investment:
+    description: Investment cost that increases monotonically
+    foreach: [nodes, techs, carriers, costs]
+    where: any(piecewise_cost_investment_x, over=breakpoints) AND any(piecewise_cost_investment_y, over=breakpoints)
+    bounds:
+      min: 0
+      max: .inf
+
+piecewise_constraints:
+  sos2_piecewise_costs:
+    description: >
+      Set investment cost values along a piecewise curve using special ordered sets of type 2 (SOS2).
+    foreach: [nodes, techs, carriers, costs]
+    where: any(piecewise_cost_investment_x, over=breakpoints) AND any(piecewise_cost_investment_y, over=breakpoints)
+    x_expression: flow_cap
+    x_values: piecewise_cost_investment_x
+    y_expression: piecewise_cost_investment
+    y_values: piecewise_cost_investment_y

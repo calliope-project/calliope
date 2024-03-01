@@ -1,3 +1,10 @@
+## 0.7.0.dev4 (dev)
+
+### User-facing changes
+
+|new| Piecewise constraints added to the YAML math with its own unique syntax.
+These constraints will be added to the optimisation problem using Special Ordered Sets of Type 2 (SOS2) variables.
+
 ## 0.7.0.dev3 (2024-02-14)
 
 ### User-facing changes
