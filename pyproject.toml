@@ -61,21 +61,26 @@ line-length = 88
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "Q", "W"]
-
 # line too long; Black will handle these
 ignore = ["E501"]
 
+[tool.ruff.lint.mccabe]
 # Unlike Flake8, default to a complexity level of 10.
-mccabe = {max-complexity = 10}
+max-complexity = 10
 
 # Ignore `E402` (import violations) and `F401` (unused imports) in all `__init__.py` files
-per-file-ignores = {"__init__.py" = ["E402", "F401"]}
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402", "F401"]
 
-flake8-quotes = {docstring-quotes = "double"}
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
 
-pydocstyle = {convention = "google"}
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
-pycodestyle = {max-doc-length = 200, ignore-overlong-task-comments = true}
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 200
+ignore-overlong-task-comments = true
 
 [tool.codespell]
 skip = 'tests/**/*,**/*.ipynb,doc/**/*'

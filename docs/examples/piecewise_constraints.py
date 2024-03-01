@@ -16,7 +16,8 @@
 # %% [markdown]
 # # Defining piecewise linear constraints
 #
-# In this tutorial, we use the national scale example model implement a piecewise linear constraint that varies the cost per unit capacity of Concentrated Solar Power (CSP) plants according to their capacity.
+# In this tutorial, we use the national scale example model to implement a piecewise linear constraint.
+# This constraint will represent a non-linear relationship between capacity and cost per unit capacity of Concentrating Solar Power (CSP).
 
 # %%
 
@@ -256,7 +257,7 @@ fig.show()
 # However, if we set `capacity_steps` to `[0, 2500, 5000, 7500, 9000]` then `flow_cap` would _never_ go above a value of 9000.
 #
 # 2. The `x_values` and `y_values` parameters must have the same number of breakpoints and be indexed over `breakpoints`.
-# It is possible to extend these parameters to be indexed over other dimensions (e.g., different technologies with different piecewise curves), but it must _always_ include the `breakpoints` dimension.
+# It is possible to extend these parameters to be indexed over other dimensions (e.g., different technologies with different piecewise curves) but it must _always_ include the `breakpoints` dimension.
 #
 # 3. `x_values` must increase monotonically. That is, `[0, 5000, 2500, 7500, 10000]` is not valid for `capacity_steps` in this example.
 # `y_values`, on the other hand, _can_ vary any way you like; `[0, 6e6, 3.75e6, 8e6, 7.5e6]` is valid for `cost_steps`.
