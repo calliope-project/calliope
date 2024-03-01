@@ -125,7 +125,7 @@ The component attributes combine to describe a piecewise curve that links the `x
 
 !!! note
     If the non-linear function you want to represent is convex, you may be able to avoid SOS2 variables, and instead represent it using [constraint components](#constraints).
-You can find an example of this in our [piecewise linear costs custom math example][piecewise-linear-costs].
+    You can find an example of this in our [piecewise linear costs custom math example][piecewise-linear-costs].
 
 !!! warning
     This approximation of a non-linear relationship may improve the representation of whatever real system you are modelling, but it will come at the cost of a more difficult model to solve.
