@@ -93,7 +93,7 @@ If you have non-linear relationships between two decision variables, you may wan
 The most common form of a piecewise function involves creating special ordered sets of type 2 (SOS2), set of binary variables that are linked together with specific constraints.
 
 !!! note
-    You can find an a fully worked-out example in our [piecewise linear tutorial][defining-piecewise-linear-constraints].
+    You can find a fully worked-out example in our [piecewise linear tutorial][defining-piecewise-linear-constraints].
 
 Because the formulation of piecewise constraints is so specific, the math syntax differs from all other modelling components by having `x` and `y` attributes that need to be specified:
 
