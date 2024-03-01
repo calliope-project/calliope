@@ -533,7 +533,7 @@ class TestSOS2PiecewiseCosts(CustomMathExamples):
                     "dims": "breakpoints",
                 },
                 "piecewise_cost_investment_y": {
-                    "data": [0, 5, 6, 20],
+                    "data": [0, 5, 8, 20],
                     "index": [0, 1, 2, 3],
                     "dims": "breakpoints",
                 },

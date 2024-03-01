@@ -15,7 +15,7 @@ c_e_piecewise_constraints(sos2_piecewise_costs)(a__test_supply_elec__electricity
 
 c_e_piecewise_constraints(sos2_piecewise_costs)(a__test_supply_elec__electricity__monetary)_c(1)_:
 +5.0 piecewise_constraints(sos2_piecewise_costs)(a__test_supply_elec__electricity__monetary)_v(1)
-+6.0 piecewise_constraints(sos2_piecewise_costs)(a__test_supply_elec__electricity__monetary)_v(2)
++8.0 piecewise_constraints(sos2_piecewise_costs)(a__test_supply_elec__electricity__monetary)_v(2)
 +20.0 piecewise_constraints(sos2_piecewise_costs)(a__test_supply_elec__electricity__monetary)_v(3)
 -1 variables(piecewise_cost_investment)(a__test_supply_elec__electricity__monetary)
 = 0

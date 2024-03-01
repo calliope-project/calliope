@@ -4,6 +4,8 @@
 #     Add a piecewise cost function that reduces the incremental increase in investment costs with increasing technology rated capacity.
 #     This emulates "economies of scale", where the more of a technology there is deployed, the less expensive each additional investment in deployment.
 #
+#     A more detailing example can be found in our [dedicated tutorial][defining-piecewise-linear-constraints].
+#
 #     New indexed parameters:
 #
 #     - `piecewise_cost_investment_x` (defining the new set `breakpoints`)
