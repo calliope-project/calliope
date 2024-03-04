@@ -336,9 +336,14 @@ def check_initial(config_model):
         if "file=" in str(v):
             possible_identifiers = k.split(".")
             is_time_varying = any("_time_varying" in i for i in possible_identifiers)
+            is_operating = any("_operating" in i for i in possible_identifiers)
             if is_time_varying:
                 model_warnings.append(
                     "Using custom constraint `{}` with time-varying data.".format(k)
+                )
+            elif is_operating:
+                model_warnings.append(
+                    "Using group constraint `{}` with time-varying data.".format(k)
                 )
             elif (
                 not set(possible_identifiers).intersection(allowed_from_file)
