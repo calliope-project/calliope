@@ -959,6 +959,19 @@ def target_reserve_share_operating_constraint_rule(
             for loc_tech_carrier in backend_model.loc_tech_carriers_prod
             if (loc_tech_carrier.split("::")[-1] == carrier)
             and (loc_tech_carrier.split("::")[0] in locs)
+        ) + sum(
+            (
+                get_param(
+                    backend_model,
+                    "operating_reserve_cap",
+                    ((loc_tech_carrier.rsplit("::", 1)[0]), timestep),
+                )
+            )
+            * backend_model.energy_cap[loc_tech_carrier.rsplit("::", 1)[0]]
+            * timestep_resolution
+            for loc_tech_carrier in backend_model.loc_tech_carriers_prod
+            if (loc_tech_carrier.split("::")[-1] == carrier)
+            and (loc_tech_carrier.split("::")[0] in locs)
         )
 
         return equalizer(lhs, rhs, what)
@@ -1034,6 +1047,19 @@ def target_reserve_adder_operating_constraint_rule(
                     )
                 )
                 * backend_model.carrier_prod[loc_tech_carrier, timestep]
+                for loc_tech_carrier in backend_model.loc_tech_carriers_prod
+                if (loc_tech_carrier.split("::")[-1] == carrier)
+                and (loc_tech_carrier.split("::")[0] in locs)
+            ) + sum(
+                (
+                    get_param(
+                        backend_model,
+                        "operating_reserve_cap",
+                        ((loc_tech_carrier.rsplit("::", 1)[0]), timestep),
+                    )
+                )
+                * backend_model.energy_cap[loc_tech_carrier.rsplit("::", 1)[0]]
+                * timestep_resolution
                 for loc_tech_carrier in backend_model.loc_tech_carriers_prod
                 if (loc_tech_carrier.split("::")[-1] == carrier)
                 and (loc_tech_carrier.split("::")[0] in locs)
