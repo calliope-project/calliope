@@ -6,6 +6,7 @@ from itertools import product
 import calliope.exceptions as exceptions
 import numpy as np
 import pandas as pd
+import pyomo.core as po
 import pyomo.kernel as pmo
 import pytest  # noqa: F401
 import xarray as xr
@@ -1855,12 +1856,21 @@ class TestNewBackend:
         )
         assert param.dtype == np.dtype("float64")
 
+    def test_new_build_get_parameter_as_vals_timeseries_data(self, simple_supply):
+        simple_supply.backend.add_parameter(
+            "important_timestep", xr.DataArray(pd.to_datetime("2005-01-01 01:00"))
+        )
+        param = simple_supply.backend.get_parameter(
+            "important_timestep", as_backend_objs=False
+        )
+        assert param.dtype.kind == "M"
+
     def test_new_build_get_global_expression(self, simple_supply):
         expr = simple_supply.backend.get_global_expression("cost_investment")
         assert (
             expr.to_series()
             .dropna()
-            .apply(lambda x: isinstance(x, pmo.expression))
+            .apply(lambda x: isinstance(x, po.expr.ExpressionBase))
             .all()
         )
         expected_keys = set(
@@ -1893,6 +1903,14 @@ class TestNewBackend:
         assert (
             expr.to_series().dropna().apply(lambda x: isinstance(x, (float, int))).all()
         )
+
+    def test_new_build_get_global_expression_as_vals_no_solve(
+        self, simple_supply_longnames
+    ):
+        expr = simple_supply_longnames.backend.get_global_expression(
+            "cost", as_backend_objs=False, eval_body=True
+        )
+        assert expr.to_series().dropna().apply(lambda x: isinstance(x, str)).all()
 
     def test_new_build_get_constraint(self, simple_supply):
         constr = simple_supply.backend.get_constraint("system_balance")
@@ -1933,6 +1951,18 @@ class TestNewBackend:
             .to_series()
             .dropna()
             .apply(lambda x: isinstance(x, (float, int)))
+            .all()
+        )
+
+    def test_new_build_get_constraint_as_vals_no_solve(self, simple_supply_longnames):
+        constr = simple_supply_longnames.backend.get_constraint(
+            "system_balance", as_backend_objs=False, eval_body=True
+        )
+        assert (
+            constr["body"]
+            .to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, str))
             .all()
         )
 
@@ -2072,27 +2102,12 @@ class TestNewBackend:
             == expression_name
         )
 
-    def test_raise_error_on_excess_dimensions(self, simple_supply):
+    def test_raise_error_on_excess_constraint_dimensions(self, simple_supply):
         """
         A very simple constraint: For each tech, let the `flow_cap` be larger than 100.
         However, we forgot to include `nodes` in `foreach`.
         With `nodes` included, this constraint should build.
         """
-        # add constraint without excess dimensions
-        constraint_dict = {
-            # as 'nodes' is listed here, the constraint will have no excess dimensions
-            "foreach": ["techs", "nodes", "carriers"],
-            "equations": [{"expression": "flow_cap >= 100"}],
-        }
-        constraint_name = "constraint-without-excess-dimensions"
-
-        simple_supply.backend.add_constraint(constraint_name, constraint_dict)
-
-        assert (
-            simple_supply.backend.get_constraint(constraint_name).name
-            == constraint_name
-        )
-
         # add constraint with excess dimensions
         constraint_dict = {
             # as 'nodes' is not listed here, the constraint will have excess dimensions
@@ -2106,7 +2121,29 @@ class TestNewBackend:
 
         assert check_error_or_warning(
             error,
-            f"constraints:{constraint_name}:0 | The linear expression array is indexed over dimensions not present in `foreach`: {{'nodes'}}",
+            f"(constraints:{constraint_name}:0, flow_cap >= 100) | The left-hand side of the equation is indexed over dimensions not present in `foreach`: {{'nodes'}}",
+        )
+
+    def test_raise_error_on_excess_expression_dimensions(self, simple_supply):
+        """
+        A very simple expression: For each tech, add a fixed quantity to `flow_cap`.
+        However, we forgot to include `nodes` in `foreach`.
+        With `nodes` included, this expression would build.
+        """
+        # add global expression with excess dimensions
+        expr_dict = {
+            # as 'nodes' is not listed here, the constraint will have excess dimensions
+            "foreach": ["techs", "carriers"],
+            "equations": [{"expression": "flow_cap + 1"}],
+        }
+        expr_name = "expr-with-excess-dimensions"
+
+        with pytest.raises(exceptions.BackendError) as error:
+            simple_supply.backend.add_global_expression(expr_name, expr_dict)
+
+        assert check_error_or_warning(
+            error,
+            f"global_expressions:{expr_name}:0 | The linear expression array is indexed over dimensions not present in `foreach`: {{'nodes'}}",
         )
 
     @pytest.mark.parametrize(
@@ -2257,7 +2294,7 @@ class TestNewBackend:
         )
         assert (
             obj.sel(dims).body.item()
-            == f"(parameters[flow_in_eff]*variables[flow_in][{', '.join(dims[i] for i in obj.dims)}])"
+            == f"parameters[flow_in_eff]*variables[flow_in][{', '.join(dims[i] for i in obj.body.dims)}]"
         )
         assert obj.coords_in_name
 
@@ -2362,8 +2399,7 @@ class TestNewBackend:
         expected = simple_supply.backend.get_parameter(
             "source_eff", as_backend_objs=False
         )
-        default_val = simple_supply._model_data.attrs["defaults"]["source_eff"]
-        assert expected.equals(updated_param.fillna(default_val))
+        assert expected.equals(updated_param)
 
     def test_update_parameter_no_refs_to_update(self, simple_supply):
         """flow_cap_per_storage_cap_max isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
@@ -2420,15 +2456,15 @@ class TestNewBackend:
 
     @staticmethod
     def _is_fixed(val):
-        if pd.notnull(val):
-            return val.fixed
-        else:
-            return np.nan
+        return val.fixed
 
     def test_fix_variable(self, simple_supply):
         simple_supply.backend.fix_variable("flow_cap")
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.flow_cap
+            self._is_fixed,
+            simple_supply.backend.variables.flow_cap.notnull(),
+            1,
+            simple_supply.backend.variables.flow_cap,
         )
         simple_supply.backend.unfix_variable("flow_cap")  # reset
         assert fixed.where(fixed.notnull()).all()
@@ -2440,7 +2476,10 @@ class TestNewBackend:
         )
         simple_supply.backend.fix_variable("flow_cap", where=where)
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.flow_cap
+            self._is_fixed,
+            simple_supply.backend.variables.flow_cap.notnull(),
+            1,
+            simple_supply.backend.variables.flow_cap,
         )
         simple_supply.backend.unfix_variable("flow_cap")  # reset
         assert not fixed.sel(techs="test_demand_elec", carriers="electricity").any()
@@ -2459,7 +2498,10 @@ class TestNewBackend:
         simple_supply.backend.fix_variable("flow_cap")
         simple_supply.backend.unfix_variable("flow_cap")
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.flow_cap
+            self._is_fixed,
+            simple_supply.backend.variables.flow_cap.notnull(),
+            1,
+            simple_supply.backend.variables.flow_cap,
         )
         assert not fixed.where(fixed.notnull()).all()
 
@@ -2471,11 +2513,21 @@ class TestNewBackend:
         simple_supply.backend.fix_variable("flow_cap")
         simple_supply.backend.unfix_variable("flow_cap", where=where)
         fixed = simple_supply.backend._apply_func(
-            self._is_fixed, simple_supply.backend.variables.flow_cap
+            self._is_fixed,
+            simple_supply.backend.variables.flow_cap.notnull(),
+            1,
+            simple_supply.backend.variables.flow_cap,
         )
         simple_supply.backend.unfix_variable("flow_cap")  # reset
-        assert fixed.sel(techs="test_demand_elec").all()
+        assert fixed.sel(techs="test_demand_elec", carriers="electricity").all()
         assert not fixed.where(where).all()
+
+    def test_save_logs(self, simple_supply, tmp_path):
+        dir = tmp_path / "logs"
+        simple_supply.solve(force=True, save_logs=str(dir))
+
+        assert dir.exists()
+        assert any(file.suffixes == [".pyomo", ".lp"] for file in dir.glob("*"))
 
 
 class TestShadowPrices:
