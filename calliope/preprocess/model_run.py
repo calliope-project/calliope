@@ -405,9 +405,9 @@ def process_techs(config_model):
                     "primary_carrier" + direction, None
                 )
                 if primary_carrier is None and len(carriers) == 1:
-                    tech_result.essentials[
-                        "primary_carrier" + direction
-                    ] = carriers.pop()
+                    tech_result.essentials["primary_carrier" + direction] = (
+                        carriers.pop()
+                    )
                 elif primary_carrier is None and len(carriers) > 1:
                     errors.append(
                         "Primary_carrier{0} must be assigned for tech `{1}` as "

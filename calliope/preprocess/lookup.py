@@ -10,7 +10,6 @@ and loc_tech_carriers, to avoid string operations during backend operations.
 
 """
 
-
 import xarray as xr
 import numpy as np
 import pandas as pd
@@ -194,9 +193,9 @@ def lookup_loc_techs_conversion_plus(dataset, model_run):
                 loc_tech_carriers = loc_tech + "::" + relevant_carriers
             else:
                 continue
-            loc_techs_conversion_plus_array[
-                loc_tech_idx, carrier_tier_idx
-            ] = loc_tech_carriers
+            loc_techs_conversion_plus_array[loc_tech_idx, carrier_tier_idx] = (
+                loc_tech_carriers
+            )
     for k, v in primary_carrier_data.items():
         primary_carrier_data_array = xr.DataArray.from_dict(
             {"data": v, "dims": ["loc_techs_conversion_plus"]}

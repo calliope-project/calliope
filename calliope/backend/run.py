@@ -3,6 +3,7 @@ Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 Licensed under the Apache 2.0 License (see LICENSE file).
 
 """
+
 import logging
 
 import numpy as np
@@ -470,9 +471,9 @@ def run_operate(model_data, timings, backend, build_only):
     operate_params = {
         k.replace("_max", ""): v for k, v in defaults.items() if k.endswith("_max")
     }
-    operate_params[
-        "purchased"
-    ] = 0  # no _max to work from here, so we hardcode a default
+    operate_params["purchased"] = (
+        0  # no _max to work from here, so we hardcode a default
+    )
 
     defaults.update(operate_params)
 

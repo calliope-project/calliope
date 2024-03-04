@@ -308,9 +308,9 @@ def run(
             if save_netcdf and model.run_config.get("spores_options", {}).get(
                 "save_per_spore", False
             ):
-                model.run_config["spores_options"][
-                    "save_per_spore_path"
-                ] = save_netcdf.replace(".nc", "/spore_{}.nc")
+                model.run_config["spores_options"]["save_per_spore_path"] = (
+                    save_netcdf.replace(".nc", "/spore_{}.nc")
+                )
 
             model.run()
             termination = model._model_data.attrs.get(

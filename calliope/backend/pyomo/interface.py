@@ -305,9 +305,11 @@ def get_all_pyomo_model_attrs(backend_model):
     # Indexed objected
     objects = {
         objname: {
-            i.name: [j.name for j in i.index_set().subsets()]
-            if i.name + "_index" == i.index_set().name
-            else [i.index_set().name]
+            i.name: (
+                [j.name for j in i.index_set().subsets()]
+                if i.name + "_index" == i.index_set().name
+                else [i.index_set().name]
+            )
             for i in backend_model.component_objects()
             if isinstance(i, getattr(po.base, objname))
         }

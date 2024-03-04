@@ -213,9 +213,9 @@ def constraints_to_dataset(model_run):
     for k in group_share_data:
         data_dict["group_share_" + k] = {
             "data": group_share_data[k],
-            "dims": "techlists"
-            if k in group_constraints
-            else ("carriers", "techlists"),
+            "dims": (
+                "techlists" if k in group_constraints else ("carriers", "techlists")
+            ),
         }
 
     return data_dict
