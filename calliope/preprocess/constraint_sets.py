@@ -34,21 +34,21 @@ def generate_constraint_sets(model_run):
     constraint_sets = dict()
     # energy_balance.py
     constraint_sets["loc_carriers_system_balance_constraint"] = sets.loc_carriers
-    constraint_sets[
-        "loc_techs_balance_supply_constraint"
-    ] = sets.loc_techs_finite_resource_supply
-    constraint_sets[
-        "loc_techs_balance_demand_constraint"
-    ] = sets.loc_techs_finite_resource_demand
-    constraint_sets[
-        "loc_techs_resource_availability_supply_plus_constraint"
-    ] = sets.loc_techs_finite_resource_supply_plus
-    constraint_sets[
-        "loc_techs_balance_transmission_constraint"
-    ] = sets.loc_techs_transmission
-    constraint_sets[
-        "loc_techs_balance_supply_plus_constraint"
-    ] = sets.loc_techs_supply_plus
+    constraint_sets["loc_techs_balance_supply_constraint"] = (
+        sets.loc_techs_finite_resource_supply
+    )
+    constraint_sets["loc_techs_balance_demand_constraint"] = (
+        sets.loc_techs_finite_resource_demand
+    )
+    constraint_sets["loc_techs_resource_availability_supply_plus_constraint"] = (
+        sets.loc_techs_finite_resource_supply_plus
+    )
+    constraint_sets["loc_techs_balance_transmission_constraint"] = (
+        sets.loc_techs_transmission
+    )
+    constraint_sets["loc_techs_balance_supply_plus_constraint"] = (
+        sets.loc_techs_supply_plus
+    )
     constraint_sets["loc_techs_balance_storage_constraint"] = sets.loc_techs_storage
     if model_run.run.cyclic_storage is True:
         constraint_sets["loc_techs_storage_initial_constraint"] = [
@@ -78,9 +78,9 @@ def generate_constraint_sets(model_run):
 
     # costs.py
     constraint_sets["loc_techs_cost_constraint"] = sets.loc_techs_cost
-    constraint_sets[
-        "loc_techs_cost_investment_constraint"
-    ] = sets.loc_techs_investment_cost
+    constraint_sets["loc_techs_cost_investment_constraint"] = (
+        sets.loc_techs_investment_cost
+    )
     constraint_sets["loc_techs_cost_var_constraint"] = [
         i
         for i in sets.loc_techs_om_cost
@@ -99,9 +99,9 @@ def generate_constraint_sets(model_run):
             ]
         )
     ]
-    constraint_sets[
-        "loc_tech_carriers_export_balance_constraint"
-    ] = sets.loc_tech_carriers_export
+    constraint_sets["loc_tech_carriers_export_balance_constraint"] = (
+        sets.loc_tech_carriers_export
+    )
     constraint_sets["loc_techs_update_costs_var_constraint"] = [
         i for i in sets.loc_techs_om_cost if i in sets.loc_techs_export
     ]
@@ -331,9 +331,9 @@ def generate_constraint_sets(model_run):
     ]
 
     # loc_techs_purchase technologies only exist because they have defined a purchase cost
-    constraint_sets[
-        "loc_techs_update_costs_investment_purchase_milp_constraint"
-    ] = sets.loc_techs_purchase
+    constraint_sets["loc_techs_update_costs_investment_purchase_milp_constraint"] = (
+        sets.loc_techs_purchase
+    )
 
     constraint_sets["techs_unit_capacity_systemwide_milp_constraint"] = [
         i
@@ -345,22 +345,22 @@ def generate_constraint_sets(model_run):
             "techs.{}.constraints.units_equals_systemwide".format(i), None
         )
     ]
-    constraint_sets[
-        "loc_techs_asynchronous_prod_con_milp_constraint"
-    ] = sets.loc_techs_asynchronous_prod_con
+    constraint_sets["loc_techs_asynchronous_prod_con_milp_constraint"] = (
+        sets.loc_techs_asynchronous_prod_con
+    )
 
     # conversion.py
-    constraint_sets[
-        "loc_techs_balance_conversion_constraint"
-    ] = sets.loc_techs_conversion
-    constraint_sets[
-        "loc_techs_cost_var_conversion_constraint"
-    ] = sets.loc_techs_om_cost_conversion
+    constraint_sets["loc_techs_balance_conversion_constraint"] = (
+        sets.loc_techs_conversion
+    )
+    constraint_sets["loc_techs_cost_var_conversion_constraint"] = (
+        sets.loc_techs_om_cost_conversion
+    )
 
     # conversion_plus.py
-    constraint_sets[
-        "loc_techs_balance_conversion_plus_primary_constraint"
-    ] = sets.loc_techs_conversion_plus
+    constraint_sets["loc_techs_balance_conversion_plus_primary_constraint"] = (
+        sets.loc_techs_conversion_plus
+    )
     constraint_sets["loc_techs_carrier_production_max_conversion_plus_constraint"] = [
         i for i in sets.loc_techs_conversion_plus if i not in sets.loc_techs_milp
     ]
@@ -370,26 +370,26 @@ def generate_constraint_sets(model_run):
         if constraint_exists(model_run, i, "constraints.energy_cap_min_use")
         and i not in sets.loc_techs_milp
     ]
-    constraint_sets[
-        "loc_techs_cost_var_conversion_plus_constraint"
-    ] = sets.loc_techs_om_cost_conversion_plus
-    constraint_sets[
-        "loc_techs_balance_conversion_plus_in_2_constraint"
-    ] = sets.loc_techs_in_2
-    constraint_sets[
-        "loc_techs_balance_conversion_plus_in_3_constraint"
-    ] = sets.loc_techs_in_3
-    constraint_sets[
-        "loc_techs_balance_conversion_plus_out_2_constraint"
-    ] = sets.loc_techs_out_2
-    constraint_sets[
-        "loc_techs_balance_conversion_plus_out_3_constraint"
-    ] = sets.loc_techs_out_3
+    constraint_sets["loc_techs_cost_var_conversion_plus_constraint"] = (
+        sets.loc_techs_om_cost_conversion_plus
+    )
+    constraint_sets["loc_techs_balance_conversion_plus_in_2_constraint"] = (
+        sets.loc_techs_in_2
+    )
+    constraint_sets["loc_techs_balance_conversion_plus_in_3_constraint"] = (
+        sets.loc_techs_in_3
+    )
+    constraint_sets["loc_techs_balance_conversion_plus_out_2_constraint"] = (
+        sets.loc_techs_out_2
+    )
+    constraint_sets["loc_techs_balance_conversion_plus_out_3_constraint"] = (
+        sets.loc_techs_out_3
+    )
 
     # network.py
-    constraint_sets[
-        "loc_techs_symmetric_transmission_constraint"
-    ] = sets.loc_techs_transmission
+    constraint_sets["loc_techs_symmetric_transmission_constraint"] = (
+        sets.loc_techs_transmission
+    )
 
     # policy.py
     for sense in ["min", "max", "equals"]:
@@ -479,9 +479,9 @@ def generate_constraint_sets(model_run):
                 continue
             else:
                 for key, loc_tech_carriers in loc_tech_carrier_dict.items():
-                    constraint_sets[
-                        key.format(group_constraint_name)
-                    ] = loc_tech_carriers
+                    constraint_sets[key.format(group_constraint_name)] = (
+                        loc_tech_carriers
+                    )
 
         else:
             if len(loc_techs) == 0:
