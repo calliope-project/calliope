@@ -1,3 +1,9 @@
+## 0.7.0.dev4 (development)
+
+### User-facing changes
+
+|new| Model stores the time it was created and the time solve completed as attributes: `timestamp_model_creation` and `timestamp_solve_complete`
+
 ## 0.7.0.dev3 (2024-02-14)
 
 ### User-facing changes

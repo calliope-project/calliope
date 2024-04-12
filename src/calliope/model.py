@@ -385,11 +385,17 @@ class Model(object):
         backend = self._BACKENDS[backend_name](input, **updated_build_config)
         backend._build()
         self.backend = backend
+
+        # Attach start POSIX timestamp to model data attribute as float
+        self._model_data.attrs["timestamp_model_creation"] = self._timings[
+            "model_creation"
+        ].timestamp()
+
         self._is_built = True
 
     def solve(self, force: bool = False, warmstart: bool = False, **kwargs) -> None:
         """
-        Run the built optimisation problem.
+        Solve the built optimisation problem.
 
         Args:
             force (bool, optional):
@@ -470,6 +476,19 @@ class Model(object):
             [results, self._model_data], compat="override", combine_attrs="no_conflicts"
         )
         self._add_model_data_methods()
+
+        log_time(
+            LOGGER,
+            self._timings,
+            "solve_complete",
+            time_since_solve_start=True,
+            comment="Backend: model run completed",
+        )
+
+        # Attach end POSIX timestamp to result attribute as float
+        self._model_data.attrs["timestamp_solve_complete"] = self._timings[
+            "solve_complete"
+        ].timestamp()
 
         self._is_solved = True
 
