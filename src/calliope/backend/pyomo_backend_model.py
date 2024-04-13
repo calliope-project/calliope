@@ -27,6 +27,7 @@ import pyomo.kernel as pmo  # type: ignore
 import xarray as xr
 from pyomo.common.tempfiles import TempfileManager  # type: ignore
 from pyomo.opt import SolverFactory  # type: ignore
+from pyomo.util.model_size import build_model_size_report  # type: ignore
 
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import BackendError, BackendWarning
@@ -820,6 +821,16 @@ class PyomoBackendModel(backend_model.BackendModel):
                     pd.to_datetime, data.coords[name_], keep_attrs=True
                 )
 
+    def _has_integer_or_binary_variables(self) -> bool:
+        model_report = build_model_size_report(self._instance)
+        binaries = model_report["activated"]["binary_variables"]
+        integers = model_report["activated"]["integer_variables"]
+        number_of_binary_and_integer_vars = binaries + integers
+        if number_of_binary_and_integer_vars:
+            return True
+        else:
+            return False
+
 
 class CoordObj(ABC):
     """Class with methods to update the `name` property of inheriting classes"""
@@ -917,7 +928,11 @@ class PyomoShadowPrices(backend_model.ShadowPrices):
         )
 
     def activate(self):
-        self._dual_obj.activate()
+        if self._backend_obj._has_integer_or_binary_variables():
+            warning_text = "Shadow price tracking on a model with binary or integer variables is not possible. Proceeding without activating shadow price tracking."
+            model_warn(warning_text, _class=BackendWarning)
+        else:
+            self._dual_obj.activate()
 
     def deactivate(self):
         self._dual_obj.deactivate()

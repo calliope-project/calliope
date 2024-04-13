@@ -2491,12 +2491,44 @@ class TestShadowPrices:
         m.build()
         return m
 
+    @pytest.fixture(scope="function")
+    def simple_supply_with_yaml_shadow_prices(self):
+        m = build_model({}, "simple_supply,two_hours,investment_costs,shadow_prices")
+        m.build()
+        return m
+
+    @pytest.fixture(scope="function")
+    def simple_supply_yaml(self):
+        m = build_model({}, "simple_supply,two_hours,investment_costs,shadow_prices")
+        m.build()
+        return m
+
+    @pytest.fixture(scope="function")
+    def simple_supply_yaml_invalid(self):
+        m = build_model(
+            {},
+            "simple_supply,two_hours,investment_costs,shadow_prices_invalid_constraint",
+        )
+        m.build()
+        return m
+
+    @pytest.fixture(scope="function")
+    def supply_milp_yaml(self):
+        m = build_model({}, "supply_milp,two_hours,investment_costs,shadow_prices")
+        m.build()
+        return m
+
     def test_default_to_deactivated(self, simple_supply):
         assert not simple_supply.backend.shadow_prices.is_active
 
-    def test_activate(self, simple_supply):
+    def test_activate_continuous_model(self, simple_supply):
         simple_supply.backend.shadow_prices.activate()
         assert simple_supply.backend.shadow_prices.is_active
+
+    def test_activate_milp_model(self, supply_milp):
+        with pytest.warns(exceptions.BackendWarning) as warning:
+            supply_milp.backend.shadow_prices.activate()
+        assert not supply_milp.backend.shadow_prices.is_active
 
     def test_deactivate(self, simple_supply):
         simple_supply.backend.shadow_prices.activate()
@@ -2516,12 +2548,6 @@ class TestShadowPrices:
         assert shadow_prices.notnull().any()
         assert shadow_prices.isnull().any()
 
-    def test_get_shadow_price_empty_milp(self, supply_milp):
-        supply_milp.backend.shadow_prices.activate()
-        supply_milp.solve(solver="glpk")
-        shadow_prices = supply_milp.backend.shadow_prices.get("system_balance")
-        assert shadow_prices.isnull().all()
-
     def test_shadow_prices_deactivated_with_cbc(self, simple_supply):
         simple_supply.backend.shadow_prices.activate()
         with pytest.warns(exceptions.ModelWarning) as warning:
@@ -2531,3 +2557,24 @@ class TestShadowPrices:
         assert not simple_supply.backend.shadow_prices.is_active
         shadow_prices = simple_supply.backend.shadow_prices.get("system_balance")
         assert shadow_prices.isnull().all()
+
+    def test_yaml_continuous_model(self, simple_supply_yaml):
+        m = simple_supply_yaml
+        m.solve(solver="glpk")
+        assert m.results["shadow_price_system_balance"].sum().item() == pytest.approx(
+            0.0005030505
+        )
+        assert m.results["shadow_price_balance_demand"].sum().item() == pytest.approx(
+            0.0010061011
+        )
+
+    def test_yaml_milp_model(self, supply_milp_yaml):
+        assert not supply_milp_yaml.backend.shadow_prices.is_active
+
+    def test_yaml_with_invalid_constraint(self, simple_supply_yaml_invalid):
+        m = simple_supply_yaml_invalid
+        with pytest.warns(exceptions.ModelWarning) as warning:
+            m.solve()
+        assert check_error_or_warning(warning, "flow_cap_max_foobar was listed")
+        # Since we listed only one (invalid) constraint, tracking should not be active
+        assert not m.backend.shadow_prices.is_active

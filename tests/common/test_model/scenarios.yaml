@@ -444,3 +444,9 @@ overrides:
       demand_elec:
         add_dimensions:
           parameters: sink_use_max
+
+  shadow_prices:
+    config.solve.shadow_prices: ["system_balance", "balance_demand"]
+
+  shadow_prices_invalid_constraint:
+    config.solve.shadow_prices: ["flow_cap_max_foobar"]

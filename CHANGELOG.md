@@ -1,3 +1,9 @@
+## 0.7.0.dev4 (development)
+
+### User-facing changes
+
+|new| Allow extracting shadow prices into results by listing constraints in `config.solve.shadow_prices`, e.g. `config.solve.shadow_prices: ["system_balance"]`  Shadow prices will be added as variables to the model results as `shadow_price_{constraintname}`, e.g. `shadow_price_system_balance`.
+
 ## 0.7.0.dev3 (2024-02-14)
 
 ### User-facing changes

@@ -439,6 +439,23 @@ class Model(object):
 
         solver_config = update_then_validate_config("solve", self.config, **kwargs)
 
+        shadow_prices = solver_config["shadow_prices"]
+
+        if shadow_prices:
+            for constraint_name in shadow_prices:
+                if constraint_name not in self.math.constraints.keys():
+                    shadow_prices.remove(constraint_name)
+                    exceptions.warn(
+                        f"{constraint_name} was listed in `config.solve.shadow_prices`"
+                        "but is not a valid constraint. Shadow prices for this"
+                        "constraint will not be tracked.",
+                        exceptions.ModelWarning,
+                    )
+            # Only actually activate shadow price tracking if at least one valid
+            # constraint remains in the list after filtering out invalid ones
+            if shadow_prices:
+                self.backend.shadow_prices.activate()
+
         if run_mode == "operate":
             if not self._model_data.attrs["allow_operate_mode"]:
                 raise exceptions.ModelError(
@@ -462,6 +479,13 @@ class Model(object):
             results = postprocess_results.postprocess_model_results(
                 results, self._model_data, self._timings
             )
+
+        # Add shadow prices to results
+        if shadow_prices:
+            for constraint in shadow_prices:
+                var_name = f"shadow_price_{constraint}"
+                self._model_data[var_name] = self.backend.shadow_prices.get(constraint)
+                self._model_data[var_name].attrs["is_result"] = 1
 
         self._model_data = self._model_data.drop_vars(to_drop)
 
