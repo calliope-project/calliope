@@ -1,12 +1,12 @@
-Fixes issue(s) #
+Fixes #
 
-Summary of changes in this pull request:
+## Summary of changes in this Pull Request
 
 *
 *
 *
 
-Reviewer checklist:
+## Reviewer checklist
 
 - [ ] Test(s) added to cover contribution
 - [ ] Documentation updated
