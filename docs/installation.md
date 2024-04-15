@@ -17,7 +17,8 @@ The easiest way to get a working Calliope installation is to use the free `mamba
 
 To get `mamba`, the most straightforward approach is to [download and install the "Miniforge" distribution for your operating system](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html).
 
-With mamba installed, you can create a new environment called `calliope` with Calliope as well as the free and open source GLPK solver. Run the following command in a terminal or command-line window:
+With mamba installed, you can create a new environment called `calliope` with Calliope as well as the free and open source GLPK solver. 
+Run the following command in a terminal or command-line window:
 
 ```shell
 mamba create -n calliope -c conda-forge/label/calliope_dev -c conda-forge calliope glpk
