@@ -2526,7 +2526,7 @@ class TestShadowPrices:
         assert simple_supply.backend.shadow_prices.is_active
 
     def test_activate_milp_model(self, supply_milp):
-        with pytest.warns(exceptions.BackendWarning) as warning:
+        with pytest.warns(exceptions.BackendWarning):
             supply_milp.backend.shadow_prices.activate()
         assert not supply_milp.backend.shadow_prices.is_active
 
