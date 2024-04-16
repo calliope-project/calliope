@@ -104,7 +104,9 @@ class Model(object):
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
-        log_time(LOGGER, self._timings, "model_creation", comment="Model: initialising")
+        timestamp_model_creation = log_time(
+            LOGGER, self._timings, "model_creation", comment="Model: initialising"
+        )
         if isinstance(model_definition, xr.Dataset):
             self._init_from_model_data(model_definition)
         else:
@@ -117,6 +119,7 @@ class Model(object):
                 model_def, applied_overrides, scenario, debug, data_source_dfs
             )
 
+        self._model_data.attrs["timestamp_model_creation"] = timestamp_model_creation
         version_def = self._model_data.attrs["calliope_version_defined"]
         version_init = self._model_data.attrs["calliope_version_initialised"]
         if version_def is not None and not version_init.startswith(version_def):
@@ -367,6 +370,12 @@ class Model(object):
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
+        self._model_data.attrs["timestamp_build_start"] = log_time(
+            LOGGER,
+            self._timings,
+            "build_start",
+            comment="Model: backend build starting",
+        )
 
         updated_build_config = {**self.config["build"], **kwargs}
         if updated_build_config["mode"] == "operate":
@@ -386,11 +395,12 @@ class Model(object):
         backend._build()
         self.backend = backend
 
-        # Attach start POSIX timestamp to model data attribute as float
-        self._model_data.attrs["timestamp_model_creation"] = self._timings[
-            "model_creation"
-        ].timestamp()
-
+        self._model_data.attrs["timestamp_build_complete"] = log_time(
+            LOGGER,
+            self._timings,
+            "build_complete",
+            comment="Model: backend build complete",
+        )
         self._is_built = True
 
     def solve(self, force: bool = False, warmstart: bool = False, **kwargs) -> None:
@@ -436,7 +446,7 @@ class Model(object):
             to_drop = []
 
         run_mode = self.backend.inputs.attrs["config"]["build"]["mode"]
-        log_time(
+        self._model_data.attrs["timestamp_solve_start"] = log_time(
             LOGGER,
             self._timings,
             "solve_start",
@@ -477,18 +487,13 @@ class Model(object):
         )
         self._add_model_data_methods()
 
-        log_time(
+        self._model_data.attrs["timestamp_solve_complete"] = log_time(
             LOGGER,
             self._timings,
             "solve_complete",
             time_since_solve_start=True,
-            comment="Backend: model run completed",
+            comment="Backend: model solve completed",
         )
-
-        # Attach end POSIX timestamp to result attribute as float
-        self._model_data.attrs["timestamp_solve_complete"] = self._timings[
-            "solve_complete"
-        ].timestamp()
 
         self._is_solved = True
 

@@ -105,7 +105,7 @@ def log_time(
     comment: Optional[str] = None,
     level: str = "info",
     time_since_solve_start: bool = False,
-):
+) -> float:
     """
     Simultaneously log the time of a Calliope event to dictionary and to the logger.
 
@@ -121,6 +121,9 @@ def log_time(
         time_since_solve_start (bool, optional):
             If True, append comment in log message on the event's time compared to the time since the model was sent to the solver (in seconds).
             Defaults to False.
+
+    Returns:
+        timestamp (float): POSIX timestamp of the logged event
     """
     if comment is None:
         comment = identifier
@@ -132,6 +135,7 @@ def log_time(
         comment += f". Time since start of solving optimisation problem: {time_diff}"
 
     getattr(logger, level.lower())(comment)
+    return now.timestamp()
 
 
 class LogWriter:
