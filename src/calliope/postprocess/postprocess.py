@@ -18,7 +18,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def postprocess_model_results(
-    results: xr.Dataset, model_data: xr.Dataset, timings: dict
+    results: xr.Dataset, model_data: xr.Dataset
 ) -> xr.Dataset:
     """
     Adds additional post-processed result variables to
@@ -29,8 +29,6 @@ def postprocess_model_results(
             Output from the solver backend.
         model_data (xarray.Dataset):
             Calliope model data, stored as [calliope.Model._model_data][].
-        timings (dict):
-            Calliope timing dictionary, stored as [calliope.Model._timings][].
 
     Returns:
         xarray.Dataset:
@@ -49,7 +47,7 @@ def postprocess_model_results(
     results["total_levelised_cost"] = systemwide_levelised_cost(
         results, model_data, total=True
     )
-    results = clean_results(results, zero_threshold, timings)
+    results = clean_results(results, zero_threshold)
 
     for var_data in results.data_vars.values():
         if "is_result" not in var_data.attrs.keys():
@@ -148,7 +146,7 @@ def systemwide_levelised_cost(
     return xr.concat(levelised_cost, dim="carriers")
 
 
-def clean_results(results, zero_threshold, timings):
+def clean_results(results, zero_threshold):
     """
     Remove unreasonably small values (solver output can lead to floating point
     errors) and remove unmet_demand if it was never used (i.e. sum = zero)

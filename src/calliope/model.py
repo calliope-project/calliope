@@ -469,7 +469,7 @@ class Model(object):
         # Add additional post-processed result variables to results
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
             results = postprocess_results.postprocess_model_results(
-                results, self._model_data, self._timings
+                results, self._model_data
             )
 
         log_time(
