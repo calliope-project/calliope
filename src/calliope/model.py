@@ -232,7 +232,7 @@ class Model(object):
         log_time(
             LOGGER,
             self._timings,
-            "model_data_creation",
+            "model_preprocessing_complete",
             comment="Model: preprocessing complete",
         )
 
@@ -278,13 +278,6 @@ class Model(object):
         """
         self._add_observed_dict("config")
         self._add_observed_dict("math")
-
-        log_time(
-            LOGGER,
-            self._timings,
-            "model_data_loaded",
-            comment="Model: loaded model_data",
-        )
 
     def _add_observed_dict(self, name: str, dict_to_add: Optional[dict] = None) -> None:
         """
@@ -478,6 +471,14 @@ class Model(object):
             results = postprocess_results.postprocess_model_results(
                 results, self._model_data, self._timings
             )
+
+        log_time(
+            LOGGER,
+            self._timings,
+            "postprocess_complete",
+            time_since_solve_start=True,
+            comment="Postprocessing: ended",
+        )
 
         self._model_data = self._model_data.drop_vars(to_drop)
 

@@ -14,9 +14,7 @@ import logging
 import numpy as np
 import xarray as xr
 
-from calliope.util.logging import log_time
-
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def postprocess_model_results(
@@ -39,7 +37,6 @@ def postprocess_model_results(
             Input results Dataset, with additional DataArray variables and all instances of unreasonably low numbers (set by zero_threshold) removed.
 
     """
-    log_time(logger, timings, "post_process_start", comment="Postprocessing: started")
 
     zero_threshold = model_data.config.solve.zero_threshold
     results["capacity_factor"] = capacity_factor(results, model_data)
@@ -57,22 +54,6 @@ def postprocess_model_results(
     for var_data in results.data_vars.values():
         if "is_result" not in var_data.attrs.keys():
             var_data.attrs["is_result"] = 1
-
-    log_time(
-        logger,
-        timings,
-        "post_process_end",
-        time_since_solve_start=True,
-        comment="Postprocessing: ended",
-    )
-
-    if "run_solution_returned" in timings.keys():
-        results.attrs["solution_time"] = (
-            timings["run_solution_returned"] - timings["run_start"]
-        ).total_seconds()
-        results.attrs["time_finished"] = timings["run_solution_returned"].strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
 
     return results
 
@@ -186,13 +167,15 @@ def clean_results(results, zero_threshold, timings):
             v.loc[{}] = v.values
 
     if threshold_applied:
-        comment = "All values < {} set to 0 in {}".format(
+        comment = "Postprocessing: All values < {} set to 0 in {}".format(
             zero_threshold, ", ".join(threshold_applied)
         )
+        LOGGER.warn(comment)
     else:
-        comment = "zero threshold of {} not required".format(zero_threshold)
-
-    log_time(logger, timings, "threshold_applied", comment="Postprocessing: " + comment)
+        comment = "Postprocessing: zero threshold of {} not required".format(
+            zero_threshold
+        )
+        LOGGER.info(comment)
 
     # Combine unused_supply and unmet_demand into one variable
     if (
