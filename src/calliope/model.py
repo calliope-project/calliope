@@ -104,7 +104,9 @@ class Model(object):
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
-        log_time(LOGGER, self._timings, "model_creation", comment="Model: initialising")
+        timestamp_model_creation = log_time(
+            LOGGER, self._timings, "model_creation", comment="Model: initialising"
+        )
         if isinstance(model_definition, xr.Dataset):
             self._init_from_model_data(model_definition)
         else:
@@ -117,6 +119,7 @@ class Model(object):
                 model_def, applied_overrides, scenario, debug, data_source_dfs
             )
 
+        self._model_data.attrs["timestamp_model_creation"] = timestamp_model_creation
         version_def = self._model_data.attrs["calliope_version_defined"]
         version_init = self._model_data.attrs["calliope_version_initialised"]
         if version_def is not None and not version_init.startswith(version_def):
@@ -229,7 +232,7 @@ class Model(object):
         log_time(
             LOGGER,
             self._timings,
-            "model_data_creation",
+            "model_preprocessing_complete",
             comment="Model: preprocessing complete",
         )
 
@@ -275,13 +278,6 @@ class Model(object):
         """
         self._add_observed_dict("config")
         self._add_observed_dict("math")
-
-        log_time(
-            LOGGER,
-            self._timings,
-            "model_data_loaded",
-            comment="Model: loaded model_data",
-        )
 
     def _add_observed_dict(self, name: str, dict_to_add: Optional[dict] = None) -> None:
         """
@@ -367,6 +363,12 @@ class Model(object):
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
+        self._model_data.attrs["timestamp_build_start"] = log_time(
+            LOGGER,
+            self._timings,
+            "build_start",
+            comment="Model: backend build starting",
+        )
 
         updated_build_config = {**self.config["build"], **kwargs}
         if updated_build_config["mode"] == "operate":
@@ -385,11 +387,18 @@ class Model(object):
         backend = self._BACKENDS[backend_name](input, **updated_build_config)
         backend._build()
         self.backend = backend
+
+        self._model_data.attrs["timestamp_build_complete"] = log_time(
+            LOGGER,
+            self._timings,
+            "build_complete",
+            comment="Model: backend build complete",
+        )
         self._is_built = True
 
     def solve(self, force: bool = False, warmstart: bool = False, **kwargs) -> None:
         """
-        Run the built optimisation problem.
+        Solve the built optimisation problem.
 
         Args:
             force (bool, optional):
@@ -430,7 +439,7 @@ class Model(object):
             to_drop = []
 
         run_mode = self.backend.inputs.attrs["config"]["build"]["mode"]
-        log_time(
+        self._model_data.attrs["timestamp_solve_start"] = log_time(
             LOGGER,
             self._timings,
             "solve_start",
@@ -460,8 +469,16 @@ class Model(object):
         # Add additional post-processed result variables to results
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
             results = postprocess_results.postprocess_model_results(
-                results, self._model_data, self._timings
+                results, self._model_data
             )
+
+        log_time(
+            LOGGER,
+            self._timings,
+            "postprocess_complete",
+            time_since_solve_start=True,
+            comment="Postprocessing: ended",
+        )
 
         self._model_data = self._model_data.drop_vars(to_drop)
 
@@ -470,6 +487,14 @@ class Model(object):
             [results, self._model_data], compat="override", combine_attrs="no_conflicts"
         )
         self._add_model_data_methods()
+
+        self._model_data.attrs["timestamp_solve_complete"] = log_time(
+            LOGGER,
+            self._timings,
+            "solve_complete",
+            time_since_solve_start=True,
+            comment="Backend: model solve completed",
+        )
 
         self._is_solved = True
 

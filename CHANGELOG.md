@@ -1,3 +1,14 @@
+## 0.7.0.dev4 (development)
+
+### User-facing changes
+
+|new| Model stores key timestamps as attributes:
+* `timestamp_model_creation`: at the start of `Model.__init__()`
+* `timestamp_build_started`: at the start of `Model.build()`
+* `timestamp_build_complete`: at the end of `Model.build()`
+* `timestamp_solve_started`: at the start of `Model.solve()`
+* `timestamp_solve_complete`: at the end of `Model.solve()`
+
 ## 0.7.0.dev3 (2024-02-14)
 
 ### User-facing changes
