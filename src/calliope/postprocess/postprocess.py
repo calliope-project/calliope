@@ -14,11 +14,16 @@ import logging
 import numpy as np
 import xarray as xr
 
+from calliope.backend.backend_model import BackendModel
+
 LOGGER = logging.getLogger(__name__)
 
 
 def postprocess_model_results(
-    results: xr.Dataset, model_data: xr.Dataset
+    backend: BackendModel,
+    results: xr.Dataset,
+    model_data: xr.Dataset,
+    shadow_prices: list,
 ) -> xr.Dataset:
     """
     Adds additional post-processed result variables to
@@ -47,6 +52,13 @@ def postprocess_model_results(
     results["total_levelised_cost"] = systemwide_levelised_cost(
         results, model_data, total=True
     )
+
+    # Add shadow prices to results
+    if shadow_prices:
+        for constraint in shadow_prices:
+            var_name = f"shadow_price_{constraint}"
+            results[var_name] = backend.shadow_prices.get(constraint)
+
     results = clean_results(results, zero_threshold)
 
     for var_data in results.data_vars.values():

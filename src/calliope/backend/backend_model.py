@@ -32,6 +32,7 @@ import xarray as xr
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
+from calliope.exceptions import warn as model_warn
 from calliope.io import load_config
 from calliope.util.schema import (
     MATH_SCHEMA,
@@ -795,6 +796,22 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 Dataset of decision variable values if the solution was optimal/feasible,
                 otherwise an empty dataset.
         """
+
+    def _activate_shadow_prices_if_needed(self, solve_config: dict) -> None:
+        shadow_prices = solve_config.get("shadow_prices", None)
+        if shadow_prices:
+            for constraint_name in shadow_prices:
+                if constraint_name not in list(self.constraints.data_vars):
+                    shadow_prices.remove(constraint_name)
+                    model_warn(
+                        f"{constraint_name} was listed in `config.solve.shadow_prices`"
+                        "but is not a valid constraint. Shadow prices for this"
+                        "constraint will not be tracked."
+                    )
+            # Only actually activate shadow price tracking if at least one valid
+            # constraint remains in the list after filtering out invalid ones
+            if shadow_prices:
+                self.shadow_prices.activate()
 
     def load_results(self) -> xr.Dataset:
         """
