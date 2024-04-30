@@ -797,7 +797,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 otherwise an empty dataset.
         """
 
-    def _activate_shadow_prices_if_needed(self, solve_config: dict) -> None:
+    def _activate_shadow_prices_if_needed(self, solve_config: dict) -> list:
         shadow_prices = solve_config.get("shadow_prices", None)
         if shadow_prices:
             for constraint_name in shadow_prices:
@@ -812,6 +812,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             # constraint remains in the list after filtering out invalid ones
             if shadow_prices:
                 self.shadow_prices.activate()
+        return shadow_prices
 
     def load_results(self) -> xr.Dataset:
         """
