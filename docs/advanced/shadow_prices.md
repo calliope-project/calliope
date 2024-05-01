@@ -3,7 +3,7 @@
 In a linear problem, you can obtain the [shadow prices](https://en.wikipedia.org/wiki/Shadow_price) (dual variables) for each constraint from the Pyomo backend.
 This can prove particularly useful if you are linking Calliope with other models or want to dig deeper into the economic impacts of your designed energy system.
 
-You can access shadow prices by specifying a list of constraints for which shadow prices should be returned in the results, in your `solve` configuration:
+You can access shadow prices by specifying a list of [constraints][base-math] for which shadow prices should be returned in the results, in your `solve` configuration:
 
 ```yaml
 config:
@@ -22,7 +22,10 @@ config:
 
 ## Shadow prices when running in Python
 
-When running in Python, you can turn on shadow price tracking by running `model.backend.shadow_prices.activate()` after `model.build()`. Then, you can access shadow prices for any constraint once you have an optimal solution by running `model.backend.shadow_prices.get("constraint_name")`, which returns an [xarray.DataArray][].
+When running in Python, you can additionally turn on shadow price tracking by running `model.backend.shadow_prices.activate()` after `model.build()`.
+By doing that, or by having added at least one valid constraint in `config.solve.shadow_prices` (see above), shadow price tracking will be enabled.
+
+Then, you can access shadow prices for any constraint once you have an optimal solution by running `model.backend.shadow_prices.get("constraint_name")`, which returns an [xarray.DataArray][].
 
 !!! example
 
