@@ -798,26 +798,24 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
 
     def _activate_shadow_prices_if_needed(self, solve_config: dict) -> list:
-        shadow_prices = solve_config.get("shadow_prices", None)
-        if shadow_prices:
-            for constraint_name in shadow_prices:
-                if constraint_name not in list(self.constraints.data_vars):
-                    shadow_prices.remove(constraint_name)
-                    model_warn(
-                        f"{constraint_name} was listed in `config.solve.shadow_prices`"
-                        "but is not a valid constraint. Shadow prices for this"
-                        "constraint will not be tracked."
-                    )
-            # Only actually activate shadow price tracking if at least one valid
-            # constraint remains in the list after filtering out invalid ones
-            if shadow_prices:
-                self.shadow_prices.activate()
-        return shadow_prices
+        shadow_prices = set(solve_config.get("shadow_prices", []))
+        invalid_constraints = shadow_prices.difference(self.constraints.data_vars)
+        valid_constraints = shadow_prices.intersection(self.constraints.data_vars)
+        if invalid_constraints:
+            model_warn(
+                f"Invalid constraints {invalid_constraints} in `config.solve.shadow_prices`.  "
+                "Their shadow prices will not be tracked."
+            )
+        # Only actually activate shadow price tracking if at least one valid
+        # constraint remains in the list after filtering out invalid ones
+        if valid_constraints:
+            self.shadow_prices.activate()
+        self.tracked_shadow_prices = valid_constraints
 
     def load_results(self) -> xr.Dataset:
         """
-        Evaluate backend decision variables, global expressions, and parameters (if not in inputs)
-        after a successful model run.
+        Evaluate backend decision variables, global expressions, parameters (if not in
+        inputs), and shadow_prices (if tracked), after a successful model run.
 
         Returns:
             xr.Dataset: Dataset of optimal solution results (all numeric data).
@@ -842,7 +840,17 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             if expr.notnull().any()
         }
 
-        results = xr.Dataset({**all_variables, **all_global_expressions}).astype(float)
+        shadow_prices = (
+            self.tracked_shadow_prices if hasattr(self, "tracked_shadow_prices") else []
+        )
+        all_shadow_prices = {
+            f"shadow_price_{constraint}": self.shadow_prices.get(constraint)
+            for constraint in shadow_prices
+        }
+
+        results = xr.Dataset(
+            {**all_variables, **all_global_expressions, **all_shadow_prices}
+        ).astype(float)
 
         return results
 

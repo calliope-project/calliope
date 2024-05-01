@@ -448,9 +448,7 @@ class Model(object):
 
         solver_config = update_then_validate_config("solve", self.config, **kwargs)
 
-        updated_shadow_prices = self.backend._activate_shadow_prices_if_needed(
-            solver_config
-        )
+        self.backend._activate_shadow_prices_if_needed(solver_config)
 
         if run_mode == "operate":
             if not self._model_data.attrs["allow_operate_mode"]:
@@ -473,7 +471,7 @@ class Model(object):
         # Add additional post-processed result variables to results
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
             results = postprocess_results.postprocess_model_results(
-                self.backend, results, self._model_data, updated_shadow_prices
+                results, self._model_data
             )
 
         log_time(

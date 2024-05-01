@@ -2575,6 +2575,8 @@ class TestShadowPrices:
         m = simple_supply_yaml_invalid
         with pytest.warns(exceptions.ModelWarning) as warning:
             m.solve()
-        assert check_error_or_warning(warning, "flow_cap_max_foobar was listed")
+        assert check_error_or_warning(
+            warning, "Invalid constraints {'flow_cap_max_foobar'}"
+        )
         # Since we listed only one (invalid) constraint, tracking should not be active
         assert not m.backend.shadow_prices.is_active
