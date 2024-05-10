@@ -47,6 +47,7 @@ def postprocess_model_results(
     results["total_levelised_cost"] = systemwide_levelised_cost(
         results, model_data, total=True
     )
+
     results = clean_results(results, zero_threshold)
 
     for var_data in results.data_vars.values():

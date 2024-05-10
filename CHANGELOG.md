@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|new| Allow extracting shadow prices into results by listing constraints in `config.solve.shadow_prices`, e.g. `config.solve.shadow_prices: ["system_balance"]`  Shadow prices will be added as variables to the model results as `shadow_price_{constraintname}`, e.g. `shadow_price_system_balance`.
+
 |new| Model stores key timestamps as attributes:
 * `timestamp_model_creation`: at the start of `Model.__init__()`
 * `timestamp_build_started`: at the start of `Model.build()`

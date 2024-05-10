@@ -161,6 +161,14 @@ properties:
             type: number
             default: 1e-10
             description: On postprocessing the optimisation results, values smaller than this threshold will be considered as optimisation artefacts and will be set to zero.
+          shadow_prices:
+            type: array
+            uniqueItems: true
+            items:
+              type: string
+              description: Names of model constraints.
+            default: []
+            description: List of constraints for which to extract shadow prices. Shadow prices will be added as variables to the model results as `shadow_price_{constraintname}`.
 
   parameters:
     type: [object, "null"]
