@@ -19,6 +19,7 @@ from typing import (
     Any,
     Callable,
     Generic,
+    Iterable,
     Literal,
     Optional,
     SupportsFloat,
@@ -32,6 +33,7 @@ import xarray as xr
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
+from calliope.exceptions import warn as model_warn
 from calliope.io import load_config
 from calliope.util.schema import (
     MATH_SCHEMA,
@@ -758,6 +760,18 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             path (Union[str, Path]): Path to which the LP file will be written.
         """
 
+    @property
+    @abstractmethod
+    def has_integer_or_binary_variables(self) -> bool:
+        """Confirm whether or not the built model has binary or integer decision variables.
+
+        This can be used to understand how long the optimisation may take (MILP problems are harder to solve than LP ones),
+        and to verify whether shadow prices can be tracked (they cannot be tracked in MILP problems).
+
+        Returns:
+            bool: If True, the built model has binary or integer decision variables. If False, all decision variables are continuous.
+        """
+
     @abstractmethod
     def _solve(
         self,
@@ -798,8 +812,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
     def load_results(self) -> xr.Dataset:
         """
-        Evaluate backend decision variables, global expressions, and parameters (if not in inputs)
-        after a successful model run.
+        Evaluate backend decision variables, global expressions, parameters (if not in
+        inputs), and shadow_prices (if tracked), after a successful model run.
 
         Returns:
             xr.Dataset: Dataset of optimal solution results (all numeric data).
@@ -824,7 +838,14 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             if expr.notnull().any()
         }
 
-        results = xr.Dataset({**all_variables, **all_global_expressions}).astype(float)
+        all_shadow_prices = {
+            f"shadow_price_{constraint}": self.shadow_prices.get(constraint)
+            for constraint in self.shadow_prices.tracked
+        }
+
+        results = xr.Dataset(
+            {**all_variables, **all_global_expressions, **all_shadow_prices}
+        ).astype(float)
 
         return results
 
@@ -875,6 +896,8 @@ class ShadowPrices:
     To keep memory overhead low. Shadow price tracking is deactivated by default.
     """
 
+    _tracked: set = set()
+
     @abstractmethod
     def get(self, name) -> xr.DataArray:
         """Extract shadow prices (a.k.a. duals) from a constraint.
@@ -898,3 +921,36 @@ class ShadowPrices:
     @abstractmethod
     def is_active(self) -> bool:
         "Check whether shadow price tracking is active or not"
+
+    @property
+    @abstractmethod
+    def available_constraints(self) -> Iterable:
+        "Iterable of constraints that are available to provide shadow prices on"
+
+    @property
+    def tracked(self) -> set:
+        "Constraints being tracked for automatic addition to the results dataset"
+        return self._tracked
+
+    def track_constraints(self, constraints_to_track: list):
+        """Track constraints if they are available in the built backend model.
+
+        If there is at least one available constraint to track,
+        `self.tracked` will be updated and shadow price tracking will be activated.
+
+        Args:
+            constraints_to_track (list): Constraint names to track
+        """
+        shadow_prices = set(constraints_to_track)
+        invalid_constraints = shadow_prices.difference(self.available_constraints)
+        valid_constraints = shadow_prices.intersection(self.available_constraints)
+        if invalid_constraints:
+            model_warn(
+                f"Invalid constraints {invalid_constraints} in `config.solve.shadow_prices`. "
+                "Their shadow prices will not be tracked."
+            )
+        # Only actually activate shadow price tracking if at least one valid
+        # constraint remains in the list after filtering out invalid ones
+        if valid_constraints:
+            self.activate()
+        self._tracked = valid_constraints
