@@ -55,7 +55,7 @@ As with [running in the command-line tool](#shadow-prices-when-using-the-command
     ```python
     model = calliope.examples.national_scale()
     model.build()
-    model.solve(shadow_prices="system_balance")
+    model.solve(shadow_prices=["system_balance"])
 
     balance_price = model.results.shadow_price_system_balance.to_series()
     ```
