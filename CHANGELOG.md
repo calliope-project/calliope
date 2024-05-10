@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|fixed| Force a header row in tabular data loaded from CSV to ([#596](https://github.com/calliope-project/calliope/pull/596)). Fixes issue where unexpected index levels can end up in the loaded data ([#573](https://github.com/calliope-project/calliope/issues/573)).
+
 |new| Allow extracting shadow prices into results by listing constraints in `config.solve.shadow_prices`, e.g. `config.solve.shadow_prices: ["system_balance"]`  Shadow prices will be added as variables to the model results as `shadow_price_{constraintname}`, e.g. `shadow_price_system_balance`.
 
 |new| Model stores key timestamps as attributes:
@@ -10,6 +12,7 @@
 * `timestamp_build_complete`: at the end of `Model.build()`
 * `timestamp_solve_started`: at the start of `Model.solve()`
 * `timestamp_solve_complete`: at the end of `Model.solve()`
+
 
 ## 0.7.0.dev3 (2024-02-14)
 
