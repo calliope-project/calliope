@@ -448,7 +448,8 @@ class Model(object):
 
         solver_config = update_then_validate_config("solve", self.config, **kwargs)
 
-        self.backend._activate_shadow_prices_if_needed(solver_config)
+        shadow_prices = solver_config.get("shadow_prices", [])
+        self.backend.shadow_prices.track_constraints(shadow_prices)
 
         if run_mode == "operate":
             if not self._model_data.attrs["allow_operate_mode"]:

@@ -2477,6 +2477,12 @@ class TestNewBackend:
         assert fixed.sel(techs="test_demand_elec").all()
         assert not fixed.where(where).all()
 
+    def test_has_integer_or_binary_variables_lp(self, simple_supply):
+        assert not simple_supply.backend.has_integer_or_binary_variables
+
+    def test_has_integer_or_binary_variables_milp(self, supply_milp):
+        assert supply_milp.backend.has_integer_or_binary_variables
+
 
 class TestShadowPrices:
     @pytest.fixture(scope="function")
@@ -2521,6 +2527,11 @@ class TestShadowPrices:
     def test_default_to_deactivated(self, simple_supply):
         assert not simple_supply.backend.shadow_prices.is_active
 
+    def test_available_constraints(self, simple_supply):
+        assert set(simple_supply.backend.shadow_prices.available_constraints) == set(
+            simple_supply.backend.constraints.data_vars
+        )
+
     def test_activate_continuous_model(self, simple_supply):
         simple_supply.backend.shadow_prices.activate()
         assert simple_supply.backend.shadow_prices.is_active
@@ -2558,7 +2569,18 @@ class TestShadowPrices:
         shadow_prices = simple_supply.backend.shadow_prices.get("system_balance")
         assert shadow_prices.isnull().all()
 
-    def test_yaml_continuous_model(self, simple_supply_yaml):
+    def test_yaml_continuous_model_tracked(self, simple_supply_yaml):
+        # before solve, there are no constraints to track
+        assert not simple_supply_yaml.backend.shadow_prices.tracked
+
+        simple_supply_yaml.solve(solver="glpk")
+
+        assert simple_supply_yaml.backend.shadow_prices.tracked == {
+            "system_balance",
+            "balance_demand",
+        }
+
+    def test_yaml_continuous_model_result(self, simple_supply_yaml):
         m = simple_supply_yaml
         m.solve(solver="glpk")
         assert m.results["shadow_price_system_balance"].sum().item() == pytest.approx(
