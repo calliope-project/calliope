@@ -22,9 +22,9 @@ def data_dir(tmp_path_factory):
 
 @pytest.fixture(scope="class")
 def generate_data_source_dict(data_dir):
-    def _generate_data_source_dict(filename, df, rows, columns, **to_csv_kwargs):
+    def _generate_data_source_dict(filename, df, rows, columns):
         filepath = data_dir / filename
-        df.to_csv(filepath, **to_csv_kwargs)
+        df.rename_axis(index=rows).to_csv(filepath)
         return {
             "source": filepath.as_posix(),
             "rows": rows,
@@ -40,7 +40,7 @@ class TestDataSourceUtils:
     def source_obj(self, init_config, generate_data_source_dict):
         df = pd.Series({"bar": 0, "baz": 1})
         source_dict = generate_data_source_dict(
-            "foo.csv", df, rows="test_row", columns=None, header=None
+            "foo.csv", df, rows="test_row", columns=None
         )
         ds = data_sources.DataSource(init_config, "ds_name", source_dict)
         ds.input["foo"] = ["foobar"]
@@ -102,7 +102,7 @@ class TestDataSourceInitOneLevel:
     def multi_row_no_col_data(self, generate_data_source_dict):
         df = pd.Series({"bar": 0, "baz": 1})
         return df, generate_data_source_dict(
-            "multi_row_no_col_file.csv", df, rows="test_row", columns=None, header=None
+            "multi_row_no_col_file.csv", df, rows="test_row", columns=None
         )
 
     @pytest.fixture(scope="class")
@@ -201,7 +201,6 @@ class TestDataSourceInitMultiLevel:
             df,
             rows=["test_row1", "test_row2"],
             columns=None,
-            header=None,
         )
 
     @pytest.fixture(scope="class")

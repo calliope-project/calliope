@@ -240,7 +240,8 @@ class DataSource:
             pd.DataFrame: Loaded data without any processing.
         """
         filename = self.input["source"]
-        csv_reader_kwargs = {"header": self.columns, "index_col": self.index}
+        header = [0] if self.columns is None else self.columns
+        csv_reader_kwargs = {"header": header, "index_col": self.index}
         for axis, names in csv_reader_kwargs.items():
             if names is not None:
                 csv_reader_kwargs[axis] = [i for i, _ in enumerate(names)]
@@ -370,6 +371,7 @@ class DataSource:
 
         Args:
             key (str): Definition dictionary key whose value are to be returned as a list.
+            default (Literal[None, 0]): Either zero or None
 
         Returns:
             Optional[list]: If `key` not defined in data source, return None, else return values as a list.
