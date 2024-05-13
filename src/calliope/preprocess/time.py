@@ -93,14 +93,14 @@ def subset_timeseries(ds: xr.Dataset, time_subset: list[str]) -> xr.Dataset:
 
 def resample(data: xr.Dataset, resolution: str) -> xr.Dataset:
     """
-    Function to resample timeseries data from the input resolution (e.g. 1H), to
-    the given resolution (e.g. 2H)
+    Function to resample timeseries data from the input resolution (e.g. 1h), to
+    the given resolution (e.g. 2h)
 
     Args:
         data (xarray.Dataset): Calliope model data, containing only timeseries data variables.
         resolution (str):
             time resolution of the output data, given in Pandas time frequency format.
-            E.g. 1H = 1 hour, 1W = 1 week, 1M = 1 month, 1T = 1 minute.
+            E.g. 1h = 1 hour, 1W = 1 week, 1M = 1 month, 1T = 1 minute.
             Multiples allowed.
 
     Returns:

@@ -14,13 +14,10 @@ markers = ["serial", "time_intensive", "needs_gurobi_license"]
 filterwarnings = [
   # https://github.com/pytest-dev/pytest-xdist/issues/825
   "ignore:The --rsyncdir command line argument and rsyncdirs config variable are deprecated.:DeprecationWarning",
-  "ignore:.*`group_share` constraints will be removed in v0.7.0.*:FutureWarning:",
-  "ignore:.*Plotting will no longer be available as a method.*:FutureWarning:",
-  "ignore:.*There will be no default cost class for the objective function in v0.7.0.*:FutureWarning:",
-  "ignore:.*`charge_rate` is renamed to `energy_cap_per_storage_cap_max` and will be removed in v0.7.0.*:FutureWarning:",
-  "ignore:.*Deprecated, pass a TempConstr or use Model.addLConstr.*:DeprecationWarning:pyomo",
-  "ignore:.*distutils Version classes are deprecated.*:DeprecationWarning:",
-  "ignore:.*`np.float` is a deprecated alias.*:DeprecationWarning:",
+  "ignore:(?s).*datetime.datetime.utcfromtimestamp():",
+  "ignore:(?s).*Pyarrow will become a required dependency of pandas:DeprecationWarning",
+  "ignore:.*The return type of `Dataset.dims` will be changed to return a set of dimension names.*:FutureWarning",
+  "ignore:.*Mismatched null-like values None and nan found.*:FutureWarning"
 ]
 
 [tool.coverage.run]
@@ -38,7 +35,7 @@ exclude_lines = ["if TYPE_CHECKING:", "if importlib.util.find_spec('gurobipy')"]
 
 [tool.black]
 line-length = 88
-skip_magic_trailing_comma = true
+skip-magic-trailing-comma = true
 target-version = ['py310', 'py311', 'py312']
 include = '\.pyi?$'
 exclude = '''
@@ -94,7 +91,7 @@ where = ["src"]
 include = ["calliope*"]
 
 [tool.setuptools.package-data]
-calliope = ["config/*", "math/*", "example_models/**/*"]
+calliope = ["config/*", "math/*", "example_models/**/*", "py.typed"]
 
 [tool.setuptools]
 license-files = ["LICENSE", "CITATION"]

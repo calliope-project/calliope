@@ -6,6 +6,15 @@
 Tests show that using the gurobi solver via the Python API reduces peak memory consumption and runtime by at least 30% for the combined model build and solve steps.
 This requires the `gurobipy` package which can be installed with `mamba`: `mamba install gurobi::gurobi`.
 
+|new| Allow extracting shadow prices into results by listing constraints in `config.solve.shadow_prices`, e.g. `config.solve.shadow_prices: ["system_balance"]`  Shadow prices will be added as variables to the model results as `shadow_price_{constraintname}`, e.g. `shadow_price_system_balance`.
+
+|new| Model stores key timestamps as attributes:
+* `timestamp_model_creation`: at the start of `Model.__init__()`
+* `timestamp_build_started`: at the start of `Model.build()`
+* `timestamp_build_complete`: at the end of `Model.build()`
+* `timestamp_solve_started`: at the start of `Model.solve()`
+* `timestamp_solve_complete`: at the end of `Model.solve()`
+
 ### Internal changes
 
 |new| `gurobipy` is a development dependency that will be added as an optional dependency to the conda-forge calliope feedstock recipe.
@@ -41,6 +50,17 @@ Both the index and the values of the timeseries (both being date strings) should
 |fixed| the decision variable `purchased_units` is linked to `flow_cap` even if neither of the parameters `flow_cap_min` or `flow_cap_max` have been defined by the user.
 
 |changed| `inbuilt` math -> `pre-defined` math and `custom` math -> `pre-defined` math in the documentation.
+
+|changed| Calliope attribute dictionaries (AttrDicts) no longer sort dictionary keys on `union`. Key order is now: original dictionary key order + any new keys being added in the order they appear in the new dictionary.
+
+|fixed| Dimensions with numeric data can be defined in tabular data _or_ YAML and will appear as numeric in the processed Calliope model input dataset.
+If all dimension data can be coerced to a numeric data type (e.g. `["10", 100, "-1"]`), then it _will_ be coerced (e.g., `[10, 100, -1]`).
+
+### Internal changes
+
+|new| `py.typed` file so that mypy recognises Calliope as a typed library when it is imported as a dependency.
+
+|fixed| Spelling of Black config option `skip-magic-trailing-comma`.
 
 ## 0.7.0.dev2 (2024-01-26)
 

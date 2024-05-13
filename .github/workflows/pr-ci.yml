@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - uses: mamba-org/setup-micromamba@v1
       with:
@@ -82,11 +82,13 @@ jobs:
       run: pytest
 
     - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       if: matrix.os == 'ubuntu-latest' && matrix.py3version == '12'
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: true
         directory: "./reports/coverage/"
+        verbose: true
 
   pre-release-version:
     runs-on: ubuntu-latest

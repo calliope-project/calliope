@@ -149,7 +149,7 @@ class TestNationalScaleExampleModelOperate:
 
         assert all(
             model.results.timesteps
-            == pd.date_range("2005-01", "2005-01-03 23:00:00", freq="H")
+            == pd.date_range("2005-01", "2005-01-03 23:00:00", freq="h")
         )
 
     def test_nationalscale_example_results_cbc(self):
@@ -493,5 +493,5 @@ class TestUrbanScaleExampleModelSenseChecks:
 
         assert all(
             model.results.timesteps
-            == pd.date_range("2005-07", "2005-07-04 23:00:00", freq="H")
+            == pd.date_range("2005-07", "2005-07-04 23:00:00", freq="h")
         )

@@ -26,6 +26,7 @@ import pyomo.kernel as pmo  # type: ignore
 import xarray as xr
 from pyomo.common.tempfiles import TempfileManager  # type: ignore
 from pyomo.opt import SolverFactory  # type: ignore
+from pyomo.util.model_size import build_model_size_report  # type: ignore
 
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import BackendError, BackendWarning
@@ -509,6 +510,42 @@ class PyomoBackendModel(backend_model.BackendModel):
             where_da = where_da & where.fillna(False)
         self._apply_func(self._unfix_pyomo_variable, where_da, 1, variable_da)
 
+    @property
+    def has_integer_or_binary_variables(self) -> bool:
+        model_report = build_model_size_report(self._instance)
+        binaries = model_report["activated"]["binary_variables"]
+        integers = model_report["activated"]["integer_variables"]
+        number_of_binary_and_integer_vars = binaries + integers
+        return number_of_binary_and_integer_vars > 0
+
+    def _get_capacity_bound(
+        self, bound: Any, name: str, references: set
+    ) -> xr.DataArray:
+        """
+        Generate array for the upper/lower bound of a decision variable.
+        Any NaN values will be replaced by None, which Pyomo will correctly interpret as there being no bound to apply.
+
+        Args:
+            bound (Any): The bound name (corresponding to an array in the model input data) or value.
+            name (str): Name of decision variable.
+
+        Returns:
+            xr.DataArray: Where unbounded, the array entry will be None, otherwise a float value.
+        """
+
+        if isinstance(bound, str):
+            self.log(
+                "variables",
+                name,
+                f"Applying bound according to the {bound} parameter values.",
+            )
+            bound_array = self.get_parameter(bound)
+            references.add(bound)
+        else:
+            bound_array = xr.DataArray(bound)
+
+        return bound_array.fillna(None)
+
     def _to_pyomo_param(
         self, val: Any, *, name: str
     ) -> Union[type[ObjParameter], float]:
@@ -823,7 +860,11 @@ class PyomoShadowPrices(backend_model.ShadowPrices):
         )
 
     def activate(self):
-        self._dual_obj.activate()
+        if self._backend_obj.has_integer_or_binary_variables:
+            warning_text = "Shadow price tracking on a model with binary or integer variables is not possible. Proceeding without activating shadow price tracking."
+            model_warn(warning_text, _class=BackendWarning)
+        else:
+            self._dual_obj.activate()
 
     def deactivate(self):
         self._dual_obj.deactivate()
@@ -831,6 +872,10 @@ class PyomoShadowPrices(backend_model.ShadowPrices):
     @property
     def is_active(self) -> bool:
         return self._dual_obj.active
+
+    @property
+    def available_constraints(self) -> Iterable:
+        return self._backend_obj.constraints.data_vars
 
     @staticmethod
     def _duals_from_pyomo_constraint(

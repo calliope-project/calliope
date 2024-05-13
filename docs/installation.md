@@ -2,26 +2,31 @@
 
 ## Requirements
 
-Calliope has been tested on Linux, macOS, and Windows.
+Calliope is tested on Linux, macOS, and Windows.
 
 Running Calliope requires four things:
 
 1. The Python programming language, version {{ min_python_version }} to {{ max_python_version }}.
-2. A number of Python add-on modules (see [below for the complete list](#python-module-requirements)).
-3. A solver: Calliope has been tested with CBC, GLPK, Gurobi, and CPLEX.
-Any other solver that is compatible with Pyomo should also work.
+2. A number of Python add-on modules including [Pyomo](https://www.pyomo.org/), [Pandas](https://pandas.pydata.org/) and [Xarray](https://xarray.dev/).
+3. An optimisation solver: Calliope has been tested with CBC, GLPK, Gurobi, and CPLEX. Any other solver that is compatible with Pyomo should also work.
 4. The Calliope software itself.
 
 ## Recommended installation method
 
 The easiest way to get a working Calliope installation is to use the free `mamba` package manager, which can install all of the four things described above in a single step.
 
-To get `mamba`, [download and install the "Mambaforge" distribution for your operating system](https://mamba.readthedocs.io/en/latest/index.html) (using the version for Python 3).
+To get `mamba`, the most straightforward approach is to [download and install the "Miniforge" distribution for your operating system](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html).
 
-With mamba installed, you can create a new environment called `calliope` with all the necessary modules, including the free and open source GLPK solver, by running the following command in a terminal or command-line window
+!!! tip
+
+    Another option is to use the commercially developed [Anaconda Python distribution](https://www.anaconda.com/download), which is available for all operating systems and comes with a graphical user interface to install and manage packages.
+    If you use the Anaconda distribution, you have to replace `mamba` with `conda` in the installation instructions below.
+
+With the package manager installed, you can create a new environment called `calliope` with Calliope as well as the free and open source GLPK solver.
+Run the following command in a terminal or command-line window:
 
 ```shell
-mamba create -n calliope -c conda-forge/label/calliope_dev -c conda-forge calliope
+mamba create -n calliope -c conda-forge/label/calliope_dev -c conda-forge calliope glpk
 ```
 
 !!! note
@@ -88,14 +93,3 @@ After installing, log on to the [Gurobi website](https://www.gurobi.com/) and ob
 
 Another commercial alternative is [CPLEX](https://www.ibm.com/products/ilog-cplex-optimization-studio).
 IBM offer academic licenses for CPLEX. Refer to the IBM website for details.
-
-## Python module requirements
-
-Refer to the [requirements file](https://github.com/calliope-project/calliope/blob/main/requirements/base.txt) in the Calliope repository for a full and up-to-date listing of required third-party packages.
-
-Some of the key packages Calliope relies on are:
-
-* [Pyomo](https://www.pyomo.org/)
-* [Pandas](https://pandas.pydata.org/)
-* [Xarray](https://docs.xarray.dev/en/stable/)
-* [Jupyter](https://jupyter.org/) (optional, but highly recommended, and used for the example notebooks in the tutorials)

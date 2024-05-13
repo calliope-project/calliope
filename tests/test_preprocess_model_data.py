@@ -702,11 +702,66 @@ class TestModelData:
         new_param = simple_da.copy().to_dataset(name="non_ts_data")
         model_data_factory._add_to_dataset(new_param, "foo")
 
-        assert "foo | Updating" not in my_caplog.text
-        assert "datetime format" not in my_caplog.text
+        assert "dimension index values to datetime format" not in my_caplog.text
         # make sure nothing has changed in the array
         assert "non_ts_data" in model_data_factory.dataset
         assert model_data_factory.dataset["non_ts_data"].equals(simple_da)
+
+    @pytest.mark.parametrize(
+        ["data", "kind"],
+        [
+            ([1, 2], "i"),
+            (["1", "2"], "i"),
+            (["1", 2], "i"),
+            ([1, "2"], "i"),
+            ([1.0, 2.0], "f"),
+            (["1.0", "2.0"], "f"),
+            ([1, "2.0"], "f"),
+            (["1", 2.0], "f"),
+        ],
+    )
+    def test_update_numeric_dims(
+        self, my_caplog, model_data_factory: ModelDataFactory, data, kind
+    ):
+        new_idx = pd.Index(data, name="bar")
+        new_param = pd.DataFrame({"my_data": [True, False]}, index=new_idx).to_xarray()
+        updated_ds = model_data_factory._update_numeric_dims(new_param, "foo")
+
+        assert (
+            "foo | Updating `bar` dimension index values to numeric type"
+            in my_caplog.text
+        )
+        assert updated_ds.coords["bar"].dtype.kind == kind
+
+    @pytest.mark.parametrize(["data", "kind"], [(["1", 2], "i"), ([1.0, "2.0"], "f")])
+    def test_update_numeric_dims_in_model_data(
+        self, my_caplog, model_data_factory: ModelDataFactory, data, kind
+    ):
+        new_idx = pd.Index(data, name="bar")
+        new_param = pd.DataFrame({"num_data": [True, False]}, index=new_idx).to_xarray()
+        model_data_factory._add_to_dataset(new_param, "foo")
+
+        assert (
+            "foo | Updating `bar` dimension index values to numeric type"
+            in my_caplog.text
+        )
+        assert model_data_factory.dataset.coords["bar"].dtype.kind == kind
+
+    @pytest.mark.parametrize(
+        "data", [["foo", 2], [1.0, "foo"], ["foo", "bar"], ["Y1", "Y2"]]
+    )
+    def test_update_numeric_dims_no_update(
+        self, my_caplog, model_data_factory: ModelDataFactory, data
+    ):
+        new_idx = pd.Index(data, name="bar")
+        new_param = pd.DataFrame({"ts_data": [True, False]}, index=new_idx).to_xarray()
+        updated_ds = model_data_factory._update_numeric_dims(new_param, "foo")
+
+        assert (
+            "foo | Updating `bar` dimension index values to numeric type"
+            not in my_caplog.text
+        )
+        assert updated_ds.coords["bar"].dtype.kind not in ["f", "i"]
 
     @pytest.mark.parametrize(
         ["coords", "new_coords"],
