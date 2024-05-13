@@ -930,11 +930,15 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         Args:
             bound (Any): The bound name (corresponding to an array in the model input data) or value.
             name (str): Name of decision variable.
+            references (set): set to store (inplace) the name given by `bound`, if `bound` is a reference to an input parameter.
+            fill_na (Optional[float]):
+                Fill bounds with this value, after trying to fill with the default value of the parameter,
+                if `bound` is a reference to an input parameter.
+                Defaults to None.
 
         Returns:
             xr.DataArray: Where unbounded, the array entry will be None, otherwise a float value.
         """
-
         if isinstance(bound, str):
             self.log(
                 "variables",
@@ -946,7 +950,6 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             references.add(bound)
         else:
             bound_array = xr.DataArray(bound)
-
         return bound_array.fillna(fill_na)
 
     @contextmanager

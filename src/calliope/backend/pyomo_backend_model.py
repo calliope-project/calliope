@@ -518,34 +518,6 @@ class PyomoBackendModel(backend_model.BackendModel):
         number_of_binary_and_integer_vars = binaries + integers
         return number_of_binary_and_integer_vars > 0
 
-    def _get_capacity_bound(
-        self, bound: Any, name: str, references: set
-    ) -> xr.DataArray:
-        """
-        Generate array for the upper/lower bound of a decision variable.
-        Any NaN values will be replaced by None, which Pyomo will correctly interpret as there being no bound to apply.
-
-        Args:
-            bound (Any): The bound name (corresponding to an array in the model input data) or value.
-            name (str): Name of decision variable.
-
-        Returns:
-            xr.DataArray: Where unbounded, the array entry will be None, otherwise a float value.
-        """
-
-        if isinstance(bound, str):
-            self.log(
-                "variables",
-                name,
-                f"Applying bound according to the {bound} parameter values.",
-            )
-            bound_array = self.get_parameter(bound)
-            references.add(bound)
-        else:
-            bound_array = xr.DataArray(bound)
-
-        return bound_array.fillna(None)
-
     def _to_pyomo_param(
         self, val: Any, *, name: str
     ) -> Union[type[ObjParameter], float]:

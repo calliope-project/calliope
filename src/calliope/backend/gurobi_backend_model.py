@@ -6,7 +6,16 @@ from __future__ import annotations
 import importlib
 import logging
 from pathlib import Path
-from typing import Any, Literal, Optional, SupportsFloat, TypeVar, Union, overload
+from typing import (
+    Any,
+    Iterable,
+    Literal,
+    Optional,
+    SupportsFloat,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -435,6 +444,13 @@ class GurobiBackendModel(backend_model.BackendModel):
             "you will need to rebuild your backend or update variable bounds to match the original bounds."
         )
 
+    @property
+    def has_integer_or_binary_variables(self) -> bool:
+        self._instance.update()
+        return any(
+            var.vtype != gurobipy.GRB.CONTINUOUS for var in self._instance.getVars()
+        )
+
     def _del_gurobi_obj(self, obj: Any) -> None:
         self._instance.remove(obj)
 
@@ -528,6 +544,10 @@ class GurobiShadowPrices(backend_model.ShadowPrices):
     @property
     def is_active(self) -> bool:
         return True
+
+    @property
+    def available_constraints(self) -> Iterable:
+        return self._backend_obj.constraints.data_vars
 
     @staticmethod
     def _duals_from_gurobi_constraint(val: gurobipy.Constr) -> float:
