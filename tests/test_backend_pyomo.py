@@ -1800,17 +1800,16 @@ class TestNewBackend:
         assert (
             var.to_series().dropna().apply(lambda x: isinstance(x, pmo.variable)).all()
         )
-        expected_keys = set(
-            [
-                "obj_type",
-                "references",
-                "description",
-                "unit",
-                "default",
-                "yaml_snippet",
-                "coords_in_name",
-            ]
-        )
+        expected_keys = {
+            "obj_type",
+            "references",
+            "title",
+            "description",
+            "unit",
+            "default",
+            "yaml_snippet",
+            "coords_in_name",
+        }
         assert not expected_keys.symmetric_difference(var.attrs.keys())
         assert var.attrs["obj_type"] == "variables"
         assert var.attrs["references"] == {
@@ -1842,6 +1841,7 @@ class TestNewBackend:
             "references": {"flow_in_inc_eff"},
             "coords_in_name": False,
             "default": 1.0,
+            "title": "Inflow efficiency",
             "description": (
                 "Conversion efficiency from `source`/`flow_in` (tech dependent) into the technology. "
                 "Set as value between 1 (no loss) and 0 (all lost)."
@@ -1863,17 +1863,16 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.expression))
             .all()
         )
-        expected_keys = set(
-            [
-                "obj_type",
-                "references",
-                "description",
-                "unit",
-                "default",
-                "yaml_snippet",
-                "coords_in_name",
-            ]
-        )
+        expected_keys = {
+            "obj_type",
+            "references",
+            "title",
+            "description",
+            "unit",
+            "default",
+            "yaml_snippet",
+            "coords_in_name",
+        }
         assert not expected_keys.symmetric_difference(expr.attrs.keys())
         assert expr.attrs["obj_type"] == "global_expressions"
         assert expr.attrs["references"] == {"cost"}
@@ -1902,9 +1901,14 @@ class TestNewBackend:
             .apply(lambda x: isinstance(x, pmo.constraint))
             .all()
         )
-        expected_keys = set(
-            ["obj_type", "references", "description", "yaml_snippet", "coords_in_name"]
-        )
+        expected_keys = {
+            "obj_type",
+            "references",
+            "description",
+            "yaml_snippet",
+            "coords_in_name",
+        }
+
         assert not expected_keys.symmetric_difference(constr.attrs.keys())
         assert constr.attrs["obj_type"] == "constraints"
         assert constr.attrs["references"] == set()

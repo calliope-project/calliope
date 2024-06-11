@@ -364,6 +364,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     ) -> None:
 
         attrs = {
+            "title": self._PARAM_TITLES.get(parameter_name, None),
             "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
             "unit": self._PARAM_UNITS.get(parameter_name, None),
         }

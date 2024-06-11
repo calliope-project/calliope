@@ -98,6 +98,7 @@ constraints:
 
 variables:
   storage:
+    Title: virtual stored carrier
     description: >-
       The virtual carrier stored by a `supply_plus` or `storage` technology in each timestep of a clustered day.
       Stored carrier can be negative so long as it does not go below the carrier stored in `storage_inter_cluster`.
@@ -107,6 +108,7 @@ variables:
       min: -.inf
 
   storage_inter_cluster:
+    Title: Virtual inter-cluster stored carrier
     description: >-
       The virtual carrier stored by a `supply_plus` or `storage` technology between days of the entire timeseries.
       Only together with `storage` does this variable's values gain physical significance.
@@ -117,6 +119,7 @@ variables:
       max: .inf
 
   storage_intra_cluster_max:
+    Title: Virtual maximum intra-cluster stored carrier
     description: >-
       Virtual variable to limit the maximum value of `storage` in a given representative day.
     unit: energy
@@ -127,6 +130,7 @@ variables:
       max: .inf
 
   storage_intra_cluster_min:
+    Title: Virtual minimum intra-cluster stored carrier
     description: >-
       Virtual variable to limit the minimum value of `storage` in a given representative day.
     unit: energy
