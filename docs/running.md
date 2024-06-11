@@ -60,7 +60,7 @@ Note that if both a scenario and an override with the same name exist (such as `
 It is also possible to use the `--override_dict` option to pass a YAML string that will be applied after anything applied through `--scenario`:
 
 ```shell
-$ calliope run testmodel/model.yaml --override_dict="{'model.time_subset': ['2005-01-01', '2005-01-31']}" --save_netcdf=results.nc
+$ calliope run testmodel/model.yaml --override_dict="{'init.time_subset': ['2005-01-01', '2005-01-31']}" --save_netcdf=results.nc
 ```
 
 ## Running in Python
