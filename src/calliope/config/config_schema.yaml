@@ -51,6 +51,13 @@ properties:
             type: string
             default: "ISO8601"
             description: Timestamp format of all time series data when read from file. "ISO8601" means "%Y-%m-%d %H:%M:%S".
+          base_math:
+            type: boolean
+            default: true
+            description: >-
+              Whether or not to use the base Calliope math and schema when building models.
+              If "true", the model will use the base Calliope math. Values in "add_math" and "add_schema" will be appended to these.
+              If "false", users must fully define the model math and schema via "add_math" and "add_schema". Use with caution!
           add_math:
             type: array
             default: []
@@ -61,6 +68,16 @@ properties:
               description: >
                 If referring to an pre-defined Calliope math file (see documentation for available files), do not append the reference with ".yaml".
                 If referring to your own math file, ensure the file type is given as a suffix (".yaml" or ".yml").
+                Relative paths will be assumed to be relative to the model definition file given when creating a calliope Model (`calliope.Model(model_definition=...)`)
+          add_schema:
+            type: array
+            default: []
+            description: List of references to files which contain schema definitions for model parameters, including their default value.
+            uniqueItems: true
+            items:
+              type: string
+              description: >
+                Ensure the file type is given as a suffix (".yaml" or ".yml").
                 Relative paths will be assumed to be relative to the model definition file given when creating a calliope Model (`calliope.Model(model_definition=...)`)
           distance_unit:
             type: string
