@@ -64,7 +64,6 @@ class Model(object):
     def __init__(
         self,
         model_definition: str | Path | dict | xr.Dataset,
-        debug: bool = False,
         scenario: Optional[str] = None,
         override_dict: Optional[dict] = None,
         data_source_dfs: Optional[dict[str, pd.DataFrame]] = None,
@@ -79,9 +78,6 @@ class Model(object):
                 If str or Path, must be the path to a model configuration file.
                 If dict or AttrDict, must fully specify the model.
                 If an xarray dataset, must be a valid calliope model.
-            debug (bool, optional):
-                If True, additional debug data will be included in the built model.
-                Defaults to False.
             scenario (str):
                 Comma delimited string of pre-defined `scenarios` to apply to the model,
             override_dict (dict):
@@ -116,7 +112,7 @@ class Model(object):
                 )
             )
             self._init_from_model_def_dict(
-                model_def, applied_overrides, scenario, debug, data_source_dfs
+                model_def, applied_overrides, scenario, data_source_dfs
             )
 
         self._model_data.attrs["timestamp_model_creation"] = timestamp_model_creation
@@ -155,15 +151,15 @@ class Model(object):
         model_definition: calliope.AttrDict,
         applied_overrides: str,
         scenario: Optional[str],
-        debug: bool,
         data_source_dfs: Optional[dict[str, pd.DataFrame]],
     ) -> None:
-        """Initialise the model using a `model_run` dictionary, which may have been loaded from YAML.
+        """Initialise the model using pre-processed YAML files and optional dataframes/dicts.
 
         Args:
-            model_run (calliope.AttrDict): Preprocessed model configuration.
-            debug_data (calliope.AttrDict): Additional data from processing the input configuration.
-            debug (bool): If True, `debug_data` will be attached to the Model object as the attribute `calliope.Model._debug_data`.
+            model_definition (calliope.AttrDict): preprocessed model configuration
+            applied_overrides (str): overrides specified by users
+            scenario (Optional[str]): scenario specified by users
+            data_source_dfs (Optional[dict[str, pd.DataFrame]]): optional files with additional model information
         """
         # First pass to check top-level keys are all good
         validate_dict(model_definition, CONFIG_SCHEMA, "Model definition")
