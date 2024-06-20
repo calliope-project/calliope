@@ -93,9 +93,6 @@ class Model(object):
                 Defaults to None.
         """
         self._timings: dict = {}
-        self.config: AttrDict
-        self.defaults: AttrDict
-        self.math: AttrDict
         self._model_def_path: Optional[Path]
         self.backend: BackendModel
         self.math_documentation = MathDocumentation()
@@ -143,6 +140,18 @@ class Model(object):
         return self._model_data.filter_by_attrs(is_result=1)
 
     @property
+    def config(self):
+        return self._model_data.attrs["config"]
+
+    @property
+    def defaults(self):
+        return self._model_data.attrs["defaults"]
+
+    @property
+    def math(self):
+        return self._model_data.attrs["math"]
+
+    @property
     def is_built(self):
         return self._is_built
 
@@ -172,8 +181,8 @@ class Model(object):
         log_time(
             LOGGER,
             self._timings,
-            "model_run_creation",
-            comment="Model: preprocessing stage 1 (model_run)",
+            "model_definition_creation",
+            comment="Model: preprocessing stage 1 (model_definition)",
         )
         model_config = AttrDict(extract_from_schema(CONFIG_SCHEMA, "default"))
         model_config.union(model_definition.pop("config"), allow_override=True)
@@ -194,8 +203,10 @@ class Model(object):
             "applied_overrides": applied_overrides,
             "scenario": scenario,
             "defaults": param_metadata["default"],
+            "name": init_config["name"],
+            "config": model_config,
+            "math": None,
         }
-
         data_sources = [
             DataSource(
                 init_config,
@@ -208,13 +219,13 @@ class Model(object):
                 "data_sources", {}
             ).items()
         ]
-
         model_data_factory = ModelDataFactory(
             init_config, model_definition, data_sources, attributes, param_metadata
         )
         model_data_factory.build()
 
         self._model_data = model_data_factory.dataset
+        self._model_data.attrs["math"] = self._add_math(init_config["add_math"])
 
         log_time(
             LOGGER,
@@ -222,13 +233,6 @@ class Model(object):
             "model_data_creation",
             comment="Model: preprocessing stage 2 (model_data)",
         )
-
-        self._add_observed_dict("config", model_config)
-
-        math = self._add_math(init_config["add_math"])
-        self._add_observed_dict("math", math)
-
-        self._model_data.attrs["name"] = init_config["name"]
         log_time(
             LOGGER,
             self._timings,
@@ -258,7 +262,6 @@ class Model(object):
             del model_data.attrs["_debug_data"]
 
         self._model_data = model_data
-        self._add_model_data_methods()
 
         if self.results:
             self._is_solved = True
@@ -269,45 +272,6 @@ class Model(object):
             "model_data_loaded",
             comment="Model: loaded model_data",
         )
-
-    def _add_model_data_methods(self):
-        """
-        1. Filter model dataset to produce views on the input/results data
-        2. Add top-level configuration dictionaries simultaneously to the model data attributes and as attributes of this class.
-
-        """
-        self._add_observed_dict("config")
-        self._add_observed_dict("math")
-
-    def _add_observed_dict(self, name: str, dict_to_add: Optional[dict] = None) -> None:
-        """
-        Add the same dictionary as property of model object and an attribute of the model xarray dataset.
-
-        Args:
-            name (str):
-                Name of dictionary which will be set as the model property name and (if necessary) the dataset attribute name.
-            dict_to_add (Optional[dict], optional):
-                If given, set as both the model property and the dataset attribute, otherwise set an existing dataset attribute as a model property of the same name. Defaults to None.
-
-        Raises:
-            exceptions.ModelError: If `dict_to_add` is not given, it must be an attribute of model data.
-            TypeError: `dict_to_add` must be a dictionary.
-        """
-        if dict_to_add is None:
-            try:
-                dict_to_add = self._model_data.attrs[name]
-            except KeyError:
-                raise exceptions.ModelError(
-                    f"Expected the model property `{name}` to be a dictionary attribute of the model dataset. If you are loading the model from a NetCDF file, ensure it is a valid Calliope model."
-                )
-        if not isinstance(dict_to_add, dict):
-            raise TypeError(
-                f"Attempted to add dictionary property `{name}` to model, but received argument of type `{type(dict_to_add).__name__}`"
-            )
-        else:
-            dict_to_add = AttrDict(dict_to_add)
-        self._model_data.attrs[name] = dict_to_add
-        setattr(self, name, dict_to_add)
 
     def _add_math(self, add_math: list) -> AttrDict:
         """
@@ -489,7 +453,6 @@ class Model(object):
         self._model_data = xr.merge(
             [results, self._model_data], compat="override", combine_attrs="no_conflicts"
         )
-        self._add_model_data_methods()
 
         self._model_data.attrs["timestamp_solve_complete"] = log_time(
             LOGGER,
