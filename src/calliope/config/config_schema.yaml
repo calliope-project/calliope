@@ -56,8 +56,8 @@ properties:
             default: true
             description: >-
               Whether or not to use the base Calliope math and schema when building models.
-              If "true", the model will use the base Calliope math. Values in "add_math" and "add_schema" will be appended to these.
-              If "false", users must fully define the model math and schema via "add_math" and "add_schema". Use with caution!
+              If "true", the model will use the base Calliope math. Values in "add_math" will be merged into it.
+              If "false", users must fully define the model math via "add_math". Use with caution!
           add_math:
             type: array
             default: []
