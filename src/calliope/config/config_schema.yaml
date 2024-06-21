@@ -51,6 +51,13 @@ properties:
             type: string
             default: "ISO8601"
             description: Timestamp format of all time series data when read from file. "ISO8601" means "%Y-%m-%d %H:%M:%S".
+          base_math:
+            type: boolean
+            default: true
+            description: >-
+              Whether or not to use the base Calliope math and schema when building models.
+              If "true", the model will use the base Calliope math. Values in "add_math" will be merged into it.
+              If "false", users must fully define the model math via "add_math". Use with caution!
           add_math:
             type: array
             default: []

@@ -1,6 +1,4 @@
-import importlib
 import logging
-from copy import deepcopy
 from itertools import product
 
 import calliope.exceptions as exceptions
@@ -9,8 +7,6 @@ import pandas as pd
 import pyomo.kernel as pmo
 import pytest  # noqa: F401
 import xarray as xr
-from calliope.attrdict import AttrDict
-from calliope.backend.pyomo_backend_model import PyomoBackendModel
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, check_variable_exists
@@ -18,7 +14,7 @@ from .common.util import check_error_or_warning, check_variable_exists
 
 @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
 class TestChecks:
-    @pytest.mark.parametrize("on", (True, False))
+    @pytest.mark.parametrize("on", [True, False])
     def test_operate_cyclic_storage(self, on):
         """Cannot have cyclic storage in operate mode"""
         if on is True:
@@ -60,7 +56,7 @@ class TestChecks:
         with pytest.warns(exceptions.ModelWarning):
             m.build()  # will fail to complete run if there's a problem
 
-    @pytest.mark.parametrize("constr", ("max", "equals"))
+    @pytest.mark.parametrize("constr", ["max", "equals"])
     def test_operate_flow_out_min_relative(self, constr):
         """If we depend on a finite flow_cap, we have to error on a user failing to define it"""
         m = build_model(
@@ -84,7 +80,7 @@ class TestChecks:
             error, ["Operate mode: User must define a finite flow_cap"]
         )
 
-    @pytest.mark.parametrize("constr", ("max", "equals"))
+    @pytest.mark.parametrize("constr", ["max", "equals"])
     def test_operate_flow_cap_source_unit(self, constr):
         """If we depend on a finite flow_cap, we have to error on a user failing to define it"""
         m = build_model(
@@ -112,7 +108,7 @@ class TestChecks:
                 m.build()
 
     @pytest.mark.parametrize(
-        ["source_unit", "constr"],
+        ("source_unit", "constr"),
         list(product(("absolute", "per_cap", "per_area"), ("max", "equals"))),
     )
     def test_operate_source_unit_with_area_use(self, source_unit, constr):
@@ -237,7 +233,7 @@ class TestChecks:
             ],
         )
 
-    @pytest.mark.parametrize("on", (True, False))
+    @pytest.mark.parametrize("on", [True, False])
     def test_operate_source_cap_max(self, on):
         """Some constraints, if not defined, will throw a warning and possibly change values in model_data"""
 
@@ -264,7 +260,7 @@ class TestChecks:
             )
             assert m._model_data.source_cap.loc["a", "test_supply_plus"].item() == 1e6
 
-    @pytest.mark.parametrize("on", (True, False))
+    @pytest.mark.parametrize("on", [True, False])
     def test_operate_storage_initial(self, on):
         """Some constraints, if not defined, will throw a warning and possibly change values in model_data"""
 
@@ -512,8 +508,8 @@ class TestCostConstraints:
         assert "cost_var" not in simple_conversion.backend.expressions
 
     @pytest.mark.parametrize(
-        "tech,scenario,cost",
-        (
+        ("tech", "scenario", "cost"),
+        [
             ("test_supply_elec", "simple_supply", "flow_out"),
             ("test_supply_elec", "simple_supply", "flow_in"),
             ("test_supply_plus", "simple_supply_and_supply_plus", "flow_in"),
@@ -521,7 +517,7 @@ class TestCostConstraints:
             ("test_transmission_elec", "simple_supply", "flow_out"),
             ("test_conversion", "simple_conversion", "flow_in"),
             ("test_conversion_plus", "simple_conversion_plus", "flow_out"),
-        ),
+        ],
     )
     def test_loc_techs_cost_var_constraint(self, tech, scenario, cost):
         """
@@ -672,7 +668,7 @@ class TestCapacityConstraints:
         assert "storage_capacity" not in m.backend.constraints
 
     @pytest.mark.parametrize(
-        "scenario,tech,override",
+        ("scenario", "tech", "override"),
         [
             i + (j,)
             for i in [
@@ -697,7 +693,7 @@ class TestCapacityConstraints:
         )
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
-    @pytest.mark.parametrize("override", (("max", "min")))
+    @pytest.mark.parametrize("override", (["max", "min"]))
     def test_loc_techs_flow_capacity_milp_storage_constraint(self, override):
         """
         i for i in sets.loc_techs_store if constraint_exists(model_run, i, 'constraints.flow_cap_per_storage_cap_max')
@@ -732,7 +728,7 @@ class TestCapacityConstraints:
             ]
         )
 
-    @pytest.mark.parametrize("override", ((None, "max", "min")))
+    @pytest.mark.parametrize("override", ([None, "max", "min"]))
     def test_loc_techs_resource_capacity_constraint(self, override):
         """
         i for i in sets.loc_techs_finite_resource_supply_plus
@@ -939,8 +935,8 @@ class TestCapacityConstraints:
         override = {
             "nodes.a.techs.test_supply_elec.constraints.flow_cap_equals": np.inf
         }
+        m = build_model(override, "simple_supply,two_hours,investment_costs")
         with pytest.raises(exceptions.ModelError) as error:
-            m = build_model(override, "simple_supply,two_hours,investment_costs")
             m.build()
 
         assert check_error_or_warning(
@@ -995,7 +991,7 @@ class TestCapacityConstraints:
             ).sel(techs="test_supply_elec")
         )
 
-    @pytest.mark.parametrize("bound", (("equals", "max")))
+    @pytest.mark.parametrize("bound", (["equals", "max"]))
     def test_techs_flow_capacity_systemwide_no_constraint(self, simple_supply, bound):
         assert "flow_capacity_systemwide" not in simple_supply.backend.constraints
 
@@ -1433,7 +1429,7 @@ class TestMILPConstraints:
 
     @pytest.mark.parametrize(
         ("scenario", "exists", "override_dict"),
-        (
+        [
             ("simple_supply", ("not", "not"), {}),
             ("supply_milp", ("not", "not"), {}),
             (
@@ -1442,7 +1438,7 @@ class TestMILPConstraints:
                 {"techs.test_supply_elec.costs.monetary.purchase": 1},
             ),
             ("supply_purchase", ("is", "not"), {}),
-        ),
+        ],
     )
     def test_loc_techs_update_costs_investment_units_milp_constraint(
         self, scenario, exists, override_dict
@@ -1549,7 +1545,7 @@ class TestMILPConstraints:
         m.build()
         assert "unit_capacity_max_systemwide_milp" in m.backend.constraints
 
-    @pytest.mark.parametrize("tech", (("test_storage"), ("test_transmission_elec")))
+    @pytest.mark.parametrize("tech", [("test_storage"), ("test_transmission_elec")])
     def test_asynchronous_flow_constraint(self, tech):
         """
         Binary switch for flow in/out can be activated using the option
@@ -1723,7 +1719,7 @@ class TestNewBackend:
         m.backend.verbose_strings()
         return m
 
-    @pytest.fixture
+    @pytest.fixture()
     def temp_path(self, tmpdir_factory):
         return tmpdir_factory.mktemp("custom_math")
 
@@ -1733,60 +1729,6 @@ class TestNewBackend:
     def test_new_build_optimal(self, simple_supply):
         assert hasattr(simple_supply, "results")
         assert simple_supply._model_data.attrs["termination_condition"] == "optimal"
-
-    @pytest.mark.parametrize("mode", ["operate", "spores"])
-    def test_add_run_mode_custom_math(self, caplog, mode):
-        caplog.set_level(logging.DEBUG)
-        mode_custom_math = AttrDict.from_yaml(
-            importlib.resources.files("calliope") / "math" / f"{mode}.yaml"
-        )
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-
-        base_math = deepcopy(m.math)
-        base_math.union(mode_custom_math, allow_override=True)
-
-        backend = PyomoBackendModel(m.inputs, mode=mode)
-        backend._add_run_mode_math()
-
-        assert f"Updating math formulation with {mode} mode math." in caplog.text
-
-        assert m.math != base_math
-        assert backend.inputs.attrs["math"].as_dict() == base_math.as_dict()
-
-    def test_add_run_mode_custom_math_before_build(self, caplog, temp_path):
-        """A user can override the run mode math by including it directly in the additional math list"""
-        caplog.set_level(logging.DEBUG)
-        custom_math = AttrDict({"variables": {"flow_cap": {"active": True}}})
-        file_path = temp_path.join("custom-math.yaml")
-        custom_math.to_yaml(file_path)
-
-        m = build_model(
-            {"config.init.add_math": ["operate", str(file_path)]},
-            "simple_supply,two_hours,investment_costs",
-        )
-        backend = PyomoBackendModel(m.inputs, mode="operate")
-        backend._add_run_mode_math()
-
-        # We set operate mode explicitly in our additional math so it won't be added again
-        assert "Updating math formulation with operate mode math." not in caplog.text
-
-        # operate mode set it to false, then our math set it back to active
-        assert m.math.variables.flow_cap.active
-        # operate mode set it to false and our math did not override that
-        assert not m.math.variables.storage_cap.active
-
-    def test_run_mode_mismatch(self):
-        m = build_model(
-            {"config.init.add_math": ["operate"]},
-            "simple_supply,two_hours,investment_costs",
-        )
-        backend = PyomoBackendModel(m.inputs)
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            backend._add_run_mode_math()
-
-        assert check_error_or_warning(
-            excinfo, "Running in plan mode, but run mode(s) {'operate'}"
-        )
 
     @pytest.mark.parametrize(
         "component_type", ["variable", "global_expression", "parameter", "constraint"]
@@ -2131,7 +2073,7 @@ class TestNewBackend:
         assert "bar" not in getattr(backend_instance, component).keys()
 
     @pytest.mark.parametrize(
-        ["component", "eq"],
+        ("component", "eq"),
         [("global_expressions", "flow_cap + 1"), ("constraints", "flow_cap >= 1")],
     )
     def test_add_allnull_expr_or_constr(self, simple_supply, component, eq):
@@ -2212,7 +2154,7 @@ class TestNewBackend:
         assert not simple_supply.backend.variables.flow_out.coords_in_name
 
     @pytest.mark.parametrize(
-        ["objname", "dims", "objtype"],
+        ("objname", "dims", "objtype"),
         [
             (
                 "flow_out",
@@ -2485,31 +2427,31 @@ class TestNewBackend:
 
 
 class TestShadowPrices:
-    @pytest.fixture(scope="function")
+    @pytest.fixture()
     def simple_supply(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.build()
         return m
 
-    @pytest.fixture(scope="function")
+    @pytest.fixture()
     def supply_milp(self):
         m = build_model({}, "supply_milp,two_hours,investment_costs")
         m.build()
         return m
 
-    @pytest.fixture(scope="function")
+    @pytest.fixture()
     def simple_supply_with_yaml_shadow_prices(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs,shadow_prices")
         m.build()
         return m
 
-    @pytest.fixture(scope="function")
+    @pytest.fixture()
     def simple_supply_yaml(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs,shadow_prices")
         m.build()
         return m
 
-    @pytest.fixture(scope="function")
+    @pytest.fixture()
     def simple_supply_yaml_invalid(self):
         m = build_model(
             {},
@@ -2518,7 +2460,7 @@ class TestShadowPrices:
         m.build()
         return m
 
-    @pytest.fixture(scope="function")
+    @pytest.fixture()
     def supply_milp_yaml(self):
         m = build_model({}, "supply_milp,two_hours,investment_costs,shadow_prices")
         m.build()
