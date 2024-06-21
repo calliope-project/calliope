@@ -1,3 +1,4 @@
+import importlib
 import logging
 
 import calliope
@@ -9,6 +10,17 @@ from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
 
 LOGGER = "calliope.model"
+
+
+@pytest.fixture(scope="module")
+def temp_path(tmpdir_factory):
+    return tmpdir_factory.mktemp("custom_math")
+
+
+@pytest.fixture(scope="module")
+def initialised_model():
+    m = build_model({}, "simple_supply,two_hours,investment_costs")
+    return m
 
 
 class TestModel:
@@ -30,29 +42,25 @@ class TestModel:
         simple_supply.info()
 
 
-class TestAddMath:
-    @pytest.fixture
-    def storage_inter_cluster(self):
-        return build_model(
-            {"config.init.add_math": ["storage_inter_cluster"]},
-            "simple_supply,two_hours,investment_costs",
+class TestInitMath:
+    def test_apply_base_math_by_default(self, initialised_model):
+        """Base math should be applied by default."""
+        _, applied_math = initialised_model._math_init_from_yaml(
+            initialised_model.config.init
         )
+        assert "base" in applied_math
+        assert not initialised_model.config.init.add_math
 
-    @pytest.fixture
-    def temp_path(self, tmpdir_factory):
-        return tmpdir_factory.mktemp("custom_math")
-
-    def test_internal_override(self, storage_inter_cluster):
-        assert "storage_intra_max" in storage_inter_cluster.math["constraints"].keys()
-
-    def test_variable_bound(self, storage_inter_cluster):
-        assert (
-            storage_inter_cluster.math["variables"]["storage"]["bounds"]["min"]
-            == -np.inf
-        )
+    def test_base_math_deactivation(self, initialised_model):
+        """Base math should be deactivated if requested in config."""
+        init_config = initialised_model.config.init.copy()
+        init_config["base_math"] = False
+        math, applied_math = initialised_model._math_init_from_yaml(init_config)
+        assert not math
+        assert not applied_math
 
     @pytest.mark.parametrize(
-        ["override", "expected"],
+        ("add_math", "in_error"),
         [
             (["foo"], ["foo"]),
             (["bar", "foo"], ["bar", "foo"]),
@@ -60,18 +68,17 @@ class TestAddMath:
             (["foo.yaml"], ["foo.yaml"]),
         ],
     )
-    def test_allowed_internal_constraint(self, override, expected):
+    def test_math_loading_invalid(self, initialised_model, add_math, in_error):
+        init_config = initialised_model.config.init.copy()
+        init_config.add_math = add_math
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            build_model(
-                {"config.init.add_math": override},
-                "simple_supply,two_hours,investment_costs",
-            )
+            initialised_model._math_init_from_yaml(init_config)
         assert check_error_or_warning(
             excinfo,
-            f"Attempted to load additional math that does not exist: {expected}",
+            f"Attempted to load additional math that does not exist: {in_error}",
         )
 
-    def test_internal_override_from_yaml(self, temp_path):
+    def test_internal_override_from_yaml(self, initialised_model, temp_path):
         new_constraint = calliope.AttrDict(
             {
                 "constraints": {
@@ -83,12 +90,32 @@ class TestAddMath:
                 }
             }
         )
-        new_constraint.to_yaml(temp_path.join("custom-math.yaml"))
-        m = build_model(
-            {"config.init.add_math": [str(temp_path.join("custom-math.yaml"))]},
+        added_math_path = temp_path.join("custom-math.yaml")
+        new_constraint.to_yaml(added_math_path)
+        init_config = initialised_model.config.init
+        init_config["add_math"] = [str(added_math_path)]
+
+        math, applied_math = initialised_model._math_init_from_yaml(init_config)
+        assert "constraint_name" in math.constraints.keys()
+        assert str(added_math_path) in applied_math
+
+
+class TestModelMathOverrides:
+    @pytest.fixture()
+    def storage_inter_cluster(self):
+        return build_model(
+            {"config.init.add_math": ["storage_inter_cluster"]},
             "simple_supply,two_hours,investment_costs",
         )
-        assert "constraint_name" in m.math["constraints"].keys()
+
+    def test_internal_override(self, storage_inter_cluster):
+        assert "storage_intra_max" in storage_inter_cluster.math["constraints"].keys()
+
+    def test_variable_bound(self, storage_inter_cluster):
+        assert (
+            storage_inter_cluster.math["variables"]["storage"]["bounds"]["min"]
+            == -np.inf
+        )
 
     def test_override_existing_internal_constraint(self, temp_path, simple_supply):
         file_path = temp_path.join("custom-math.yaml")
@@ -180,7 +207,7 @@ class TestValidateMathDict:
         ]
 
     @pytest.mark.parametrize(
-        ["equation", "where"],
+        ("equation", "where"),
         [
             ("1 == 1", "True"),
             (
@@ -277,3 +304,37 @@ class TestOperateMode:
             operate_model.results.timesteps
             == pd.date_range("2005-01", "2005-01-02 23:00:00", freq="h")
         )
+
+
+class TestMathUpdate:
+
+    TEST_MODES = ["operate", "spores"]
+
+    @pytest.mark.parametrize("mode", TEST_MODES)
+    def test_math_addition(self, initialised_model, mode):
+        """Run mode math must be added to the model if not present."""
+        mode_custom_math = calliope.AttrDict.from_yaml(
+            importlib.resources.files("calliope") / "math" / f"{mode}.yaml"
+        )
+        new_math = initialised_model.math.copy()
+        new_math.union(mode_custom_math, allow_override=True)
+
+        updated_math, applied_math = initialised_model._math_update_with_mode(
+            {**initialised_model.config.build, **{"mode": mode}}
+        )
+        assert new_math == updated_math
+        assert mode in applied_math
+
+    def test_no_update(self, initialised_model):
+        updated_math, applied_math = initialised_model._math_update_with_mode(
+            initialised_model.config.build
+        )
+        assert updated_math is None
+        assert "base" in applied_math
+
+    @pytest.mark.parametrize("mode", TEST_MODES)
+    def test_mismatch_warning(self, mode):
+        """Warn users is they load unused pre-defined math."""
+        m = build_model({}, "simple_supply,two_hours,investment_costs", add_math=[mode])
+        with pytest.warns(calliope.exceptions.ModelWarning):
+            m._math_update_with_mode(m.config.build)

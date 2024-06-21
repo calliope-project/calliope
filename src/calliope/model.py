@@ -188,9 +188,6 @@ class Model(object):
         model_config.union(model_definition.pop("config"), allow_override=True)
 
         init_config = update_then_validate_config("init", model_config)
-        # We won't store `init` in `self.config`, so we pop it out now.
-        model_config.pop("init")
-
         if init_config["time_cluster"] is not None:
             init_config["time_cluster"] = relative_path(
                 self._model_def_path, init_config["time_cluster"]
@@ -223,9 +220,7 @@ class Model(object):
             init_config, model_definition, data_sources, attributes, param_metadata
         )
         model_data_factory.build()
-
         self._model_data = model_data_factory.dataset
-        self._model_data.attrs["math"] = self._add_math(init_config["add_math"])
 
         log_time(
             LOGGER,
@@ -233,11 +228,17 @@ class Model(object):
             "model_data_creation",
             comment="Model: preprocessing stage 2 (model_data)",
         )
+
+        math, applied_math = self._math_init_from_yaml(init_config)
+        self._model_data.attrs["math"] = math
+        self._model_data.attrs["applied_math"] = applied_math
+        validate_dict(self.math, MATH_SCHEMA, "math")
+
         log_time(
             LOGGER,
             self._timings,
             "model_preprocessing_complete",
-            comment="Model: preprocessing complete",
+            comment="Model: preprocessing complete (model_math)",
         )
 
     def _init_from_model_data(self, model_data: xr.Dataset) -> None:
@@ -273,27 +274,26 @@ class Model(object):
             comment="Model: loaded model_data",
         )
 
-    def _add_math(self, add_math: list) -> AttrDict:
-        """
-        Load the base math and optionally override with additional math from a list of references to math files.
+    def _math_init_from_yaml(self, init_config: dict) -> tuple[AttrDict, list]:
+        """Construct math by combining files specified in the initialisation configuration.
 
         Args:
-            add_math (list):
-                List of references to files containing mathematical formulations that will be merged with the base formulation.
+            init_config (dict): initialization configuration to apply to model math.
 
         Raises:
-            exceptions.ModelError:
-                Referenced pre-defined math files or user-defined math files must exist.
+            exceptions.ModelError: referenced pre-defined math files or user-defined math files must exist.
 
         Returns:
-            AttrDict: Dictionary of math (constraints, variables, objectives, and global expressions).
+            tuple[AttrDict, list]: initialized mathematical formulation and list of applied math files.
         """
+        applied_math = init_config["add_math"].copy()
+        if init_config["base_math"]:
+            applied_math.insert(0, "base")
+
         math_dir = Path(calliope.__file__).parent / "math"
-        base_math = AttrDict.from_yaml(math_dir / "base.yaml")
-
+        math = AttrDict()
         file_errors = []
-
-        for filename in add_math:
+        for filename in applied_math:
             if not f"{filename}".endswith((".yaml", ".yml")):
                 yaml_filepath = math_dir / f"{filename}.yaml"
             else:
@@ -302,26 +302,62 @@ class Model(object):
             if not yaml_filepath.is_file():
                 file_errors.append(filename)
                 continue
-            else:
-                override_dict = AttrDict.from_yaml(yaml_filepath)
+            math.union(AttrDict.from_yaml(yaml_filepath), allow_override=True)
 
-            base_math.union(override_dict, allow_override=True)
         if file_errors:
             raise exceptions.ModelError(
                 f"Attempted to load additional math that does not exist: {file_errors}"
             )
-        self._model_data.attrs["applied_additional_math"] = add_math
-        return base_math
+        return (math, applied_math)
+
+    def _math_update_with_mode(
+        self, build_config: AttrDict
+    ) -> tuple[Union[AttrDict, None], list]:
+        """Evaluate if the model's math needs to be updated to enable the run mode.
+
+        The updated math and new list of applied math will be returned after some checks.
+        Will return an empty dictionary if no update is needed.
+
+        Args:
+            build_config (AttrDict): build configuration to apply to model math.
+
+        Returns:
+            tuple[Union[AttrDict, None], list]: math update and new list of applied files.
+        """
+        # FIXME: available modes should not be hardcoded here. They should come from a YAML schema.
+        mode = build_config["mode"]
+        applied_math = self._model_data.attrs["applied_math"].copy()
+        update_math = None
+
+        not_run_mode = {"plan", "operate", "spores"}.difference([mode])
+        run_mode_mismatch = not_run_mode.intersection(applied_math)
+        if run_mode_mismatch:
+            exceptions.warn(
+                f"Running in {mode} mode, but run mode(s) {run_mode_mismatch} "
+                "math being loaded from file via the model configuration"
+            )
+
+        if mode != "plan" and mode not in applied_math:
+            LOGGER.debug(f"Updating math formulation with {mode} mode math.")
+            filepath = Path(calliope.__file__).parent / "math" / f"{mode}.yaml"
+            mode_math = AttrDict.from_yaml(filepath)
+
+            update_math = self._model_data.attrs["math"].copy()
+            update_math.union(mode_math, allow_override=True)
+            applied_math.append(mode)
+
+        return (update_math, applied_math)
 
     def build(self, force: bool = False, **kwargs) -> None:
         """Build description of the optimisation problem in the chosen backend interface.
 
         Args:
-            force (bool, optional):
-                If ``force`` is True, any existing results will be overwritten.
-                Defaults to False.
-        """
+            force (bool, optional): If True, any existing results will be overwritten. Defaults to False.
 
+        Raises:
+            exceptions.ModelError: trying to re-build a model without enabling the force flag.
+            exceptions.ModelError: trying to run operate mode with incompatible added math.
+        """
         if self._is_built and not force:
             raise exceptions.ModelError(
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
@@ -347,6 +383,14 @@ class Model(object):
             )
         else:
             input = self._model_data
+
+        # Build updates are valid, update configuration and math if necessary
+        self._model_data.attrs["config"]["build"] = updated_build_config
+        math_update, applied_math = self._math_update_with_mode(updated_build_config)
+        if math_update is not None:
+            self._model_data.attrs["math"] = math_update
+            self._model_data.attrs["applied_math"] = applied_math
+
         backend_name = updated_build_config["backend"]
         backend = self._BACKENDS[backend_name](input, **updated_build_config)
         backend._build()
