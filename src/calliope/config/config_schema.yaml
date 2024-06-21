@@ -69,16 +69,6 @@ properties:
                 If referring to an pre-defined Calliope math file (see documentation for available files), do not append the reference with ".yaml".
                 If referring to your own math file, ensure the file type is given as a suffix (".yaml" or ".yml").
                 Relative paths will be assumed to be relative to the model definition file given when creating a calliope Model (`calliope.Model(model_definition=...)`)
-          add_schema:
-            type: array
-            default: []
-            description: List of references to files which contain schema definitions for model parameters, including their default value.
-            uniqueItems: true
-            items:
-              type: string
-              description: >
-                Ensure the file type is given as a suffix (".yaml" or ".yml").
-                Relative paths will be assumed to be relative to the model definition file given when creating a calliope Model (`calliope.Model(model_definition=...)`)
           distance_unit:
             type: string
             default: km
