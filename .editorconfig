@@ -1,0 +1,25 @@
+# Documentation: https://EditorConfig.org
+# Inspired by Django .editorconfig file
+
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+
+[*.{yaml,yml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = true
+indent_size = 4
+
+[LICENSE]
+insert_final_newline = false
+
+[*.{diff,patch}]
+trim_trailing_whitespace = false
