@@ -247,12 +247,6 @@ class Model(object):
             )
             del model_data.attrs["_model_def_dict"]
 
-        if "_debug_data" in model_data.attrs:
-            self._debug_data = AttrDict.from_yaml_string(
-                model_data.attrs["_debug_data"]
-            )
-            del model_data.attrs["_debug_data"]
-
         self._model_data = model_data
         self._add_model_data_methods()
 
