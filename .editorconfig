@@ -20,6 +20,3 @@ indent_size = 4
 
 [LICENSE]
 insert_final_newline = false
-
-[*.{diff,patch}]
-trim_trailing_whitespace = false
