@@ -11,6 +11,10 @@
 * `timestamp_solve_started`: at the start of `Model.solve()`
 * `timestamp_solve_complete`: at the end of `Model.solve()`
 
+### Internal changes
+
+|fixed| Removed unused debug parameter in `Model.__init__()`
+
 ## 0.7.0.dev3 (2024-02-14)
 
 ### User-facing changes
