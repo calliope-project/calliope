@@ -27,6 +27,7 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ##
+"""Expression parsing functionality."""
 
 from __future__ import annotations
 
@@ -39,7 +40,6 @@ from typing import (
     Iterable,
     Iterator,
     Literal,
-    Optional,
     Union,
     overload,
 )
@@ -62,6 +62,8 @@ SUB_EXPRESSION_CLASSIFIER = "$"
 
 
 class EvalAttrs(TypedDict):
+    """Attribute checker class."""
+
     equation_name: str
     where_array: xr.DataArray
     slice_dict: dict
@@ -77,36 +79,40 @@ RETURN_T = Literal["array", "math_string"]
 
 
 class EvalString(ABC):
-    "Parent class for all string evaluation classes - used in type hinting"
+    """Parent class for all string evaluation classes - used in type hinting."""
+
     name: str
     eval_attrs: EvalAttrs
 
     def __eq__(self, other):
+        """Functionality for '==' operations."""
         return self.__repr__() == other
 
     @abstractmethod
     def __repr__(self) -> str:
-        "Return string representation of the parsed grammar"
+        """Return string representation of the parsed grammar."""
 
 
 class EvalToArrayStr(EvalString):
+    """Evaluation for string arrays."""
+
     @abstractmethod
     def as_math_string(self) -> str:
-        """Return evaluated expression as a LaTex math string"""
+        """Evaluate and return expression as LaTeX."""
 
     @abstractmethod
     def as_array(self) -> xr.DataArray | list[str | float]:
-        """Return evaluated expression as an array"""
+        """Evaluate and return expression as a DataArray or list."""
 
+    # Math strings evaluate to strings.
     @overload
-    def eval(self, return_type: Literal["math_string"], **eval_kwargs) -> str:
-        """math strings evaluate to strings"""
+    def eval(self, return_type: Literal["math_string"], **eval_kwargs) -> str: ...
 
+    # Arrays evaluate to arrays
     @overload
     def eval(
         self, return_type: Literal["array"], **eval_kwargs
-    ) -> xr.DataArray | list[str | float]:
-        """arrays evaluate to arrays"""
+    ) -> xr.DataArray | list[str | float]: ...
 
     def eval(
         self, return_type: RETURN_T, **eval_kwargs
@@ -116,6 +122,8 @@ class EvalToArrayStr(EvalString):
         Args:
             return_type (Literal[math_string, input, array]):
                 Dictates how the expression should be evaluated (see `Returns` section).
+            **eval_kwargs: arbitrary keyword arguments.
+
         Keyword Args:
             equation_name (str): Name of math component in which expression is defined.
             slice_dict (dict): Dictionary mapping the index slice name to a parsed equation expression.
@@ -126,12 +134,12 @@ class EvalToArrayStr(EvalString):
             references (set): any references in the math string to other model components.
             helper_functions (dict[str, type[ParsingHelperFunction]]): Dictionary of allowed helper functions.
             as_values (bool, optional): Return array as numeric values, not backend objects. Defaults to False.
+
         Returns:
             Union[str, list[str | float], xr.DataArray]:
                 If `math_string` is desired, returns a valid LaTex math string.
                 If `array` is desired, returns xarray DataArray or a list of strings/numbers (if the expression represents a list).
         """
-
         self.eval_attrs = eval_kwargs
         evaluated: Union[str, list[str | float], xr.DataArray]
         if return_type == "array":
@@ -142,18 +150,22 @@ class EvalToArrayStr(EvalString):
 
 
 class EvalToCallable(EvalString):
+    """Parent class for callable functionality."""
+
     @abstractmethod
     def as_callable(self, return_type: RETURN_T) -> Callable:
-        """"""
+        """Callable processing."""
+        ...
 
     def eval(
         self, return_type: RETURN_T, **eval_kwargs: Unpack[EvalAttrs]  # type: ignore
     ) -> Callable:
         """Evaluate math string expression.
-        Args and kwargs are passed on directly to helper function.
 
         Args:
             return_type (str): Whether to return a math string or xarray DataArray.
+            **eval_kwargs: passed on directly to helper function..
+
         Keyword Args:
             equation_name (str): Name of math component in which expression is defined.
             slice_dict (dict): Dictionary mapping the index slice name to a parsed equation expression.
@@ -164,16 +176,18 @@ class EvalToCallable(EvalString):
             references (set): any references in the math string to other model components.
             helper_functions (dict[str, type[ParsingHelperFunction]]): Dictionary of allowed helper functions.
             as_values (bool, optional): Return array as numeric values, not backend objects. Defaults to False.
+
         Returns:
             Callable: returns helper function.
         """
-
         self.eval_attrs = eval_kwargs
         evaluated = self.as_callable(return_type)
         return evaluated
 
 
 class EvalOperatorOperand(EvalToArrayStr):
+    """Evaluation of math operands."""
+
     LATEX_OPERATOR_LOOKUP: dict[str, str] = {
         "**": "{val}^{{{operand}}}",
         "*": r"{val} \times {operand}",
@@ -184,9 +198,9 @@ class EvalOperatorOperand(EvalToArrayStr):
     SKIP_IF: list[str] = ["+", "-"]
 
     def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed expressions with operands separated
-        by an operator (OPERAND OPERATOR OPERAND OPERATOR OPERAND ...)
+        """Process successfully parsed expressions with operands separated by an operator.
+
+        I.e.: OPERAND OPERATOR OPERAND OPERATOR OPERAND ...
 
         Args:
             tokens (pp.ParseResults):
@@ -197,6 +211,7 @@ class EvalOperatorOperand(EvalToArrayStr):
         self.values = tokens
 
     def __repr__(self) -> str:
+        """Programming / official string representation."""
         first_operand = self.value[0].__repr__()
         operand_operator_pairs = " ".join(
             op + " " + val.__repr__()
@@ -208,7 +223,7 @@ class EvalOperatorOperand(EvalToArrayStr):
     def _operator_operands(
         self, token_list: list
     ) -> Iterator[tuple[str, pp.ParseResults]]:
-        "Generator to extract operators and operands in pairs"
+        """Generator to extract operators and operands in pairs."""
         it = iter(token_list)
         while 1:
             try:
@@ -217,7 +232,7 @@ class EvalOperatorOperand(EvalToArrayStr):
                 break
 
     def _apply_where_array(self, evaluated: xr.DataArray) -> xr.DataArray:
-        "eval util function to apply where arrays to non-latex strings"
+        """Util function to apply where arrays to non-latex strings."""
         where_array = self.eval_attrs["where_array"]
         try:
             evaluated = evaluated.where(where_array)
@@ -237,7 +252,7 @@ class EvalOperatorOperand(EvalToArrayStr):
     def _operate(
         val: xr.DataArray, evaluated_operand: xr.DataArray, operator_: str
     ) -> xr.DataArray:
-        "Apply evaluated operation on two dataarrays"
+        """Apply evaluated operation on two DataArrays."""
         match operator_:
             case "**":
                 val = val**evaluated_operand
@@ -252,6 +267,7 @@ class EvalOperatorOperand(EvalToArrayStr):
         return val
 
     def as_math_string(self) -> str:
+        """Evaluate and return as LaTeX strings."""
         val = self.value[0].eval(return_type="math_string", **self.eval_attrs)
 
         for operator_, operand in self._operator_operands(self.value[1:]):
@@ -274,6 +290,7 @@ class EvalOperatorOperand(EvalToArrayStr):
         return val
 
     def as_array(self) -> xr.DataArray:
+        """Evaluate and return expression as a DataArray."""
         val = self._apply_where_array(
             self.value[0].eval(return_type="array", **self.eval_attrs)
         )
@@ -287,9 +304,10 @@ class EvalOperatorOperand(EvalToArrayStr):
 
 
 class EvalSignOp(EvalToArrayStr):
+    """Class for processing expressions with + or -."""
+
     def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed expressions with a leading + or - sign.
+        """Parse action to process successfully parsed expressions with a leading + or - sign.
 
         Args:
             tokens (pp.ParseResults):
@@ -299,24 +317,27 @@ class EvalSignOp(EvalToArrayStr):
         self.values = tokens
 
     def __repr__(self) -> str:
+        """Programming / official string representation."""
         return str(f"({self.sign}){self.value.__repr__()}")
 
+    # string return
     @overload
-    def _eval(self, return_type: Literal["math_string"]) -> str:
-        "string return"
+    def _eval(self, return_type: Literal["math_string"]) -> str: ...
 
+    # array return
     @overload
-    def _eval(self, return_type: Literal["array"]) -> xr.DataArray:
-        "array return"
+    def _eval(self, return_type: Literal["array"]) -> xr.DataArray: ...
 
     def _eval(self, return_type: RETURN_T) -> Union[xr.DataArray, str]:
-        "Evaluate the element that will have the sign attached to it"
+        """Evaluate the element that will have the sign attached to it."""
         return self.value.eval(return_type, **self.eval_attrs)
 
     def as_math_string(self) -> str:
+        """Evaluate and return expression as LaTeX."""
         return self.sign + self._eval("math_string")
 
     def as_array(self) -> xr.DataArray:
+        """Evaluate and return expression as DataArray."""
         evaluated = self._eval("array")
         if self.sign == "-":
             evaluated = -1 * evaluated
@@ -324,11 +345,12 @@ class EvalSignOp(EvalToArrayStr):
 
 
 class EvalComparisonOp(EvalToArrayStr):
+    """Class for processing comparison operations."""
+
     OP_TRANSLATOR = {"<=": r" \leq ", ">=": r" \geq ", "==": " = "}
 
     def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed equations of the form LHS OPERATOR RHS.
+        """Parse action to process successfully parsed equations of the form LHS OPERATOR RHS.
 
         Args:
             tokens (pp.ParseResults):
@@ -338,27 +360,29 @@ class EvalComparisonOp(EvalToArrayStr):
         self.values = tokens
 
     def __repr__(self) -> str:
+        """Programming / official string representation."""
         return f"{self.lhs.__repr__()} {self.op} {self.rhs.__repr__()}"
 
+    # string return
     @overload
-    def _eval(self, return_type: Literal["math_string"]) -> tuple[str, str]:
-        "string return"
+    def _eval(self, return_type: Literal["math_string"]) -> tuple[str, str]: ...
 
+    # array return
     @overload
-    def _eval(self, return_type: Literal["array"]) -> tuple[xr.DataArray, xr.DataArray]:
-        "array return"
+    def _eval(
+        self, return_type: Literal["array"]
+    ) -> tuple[xr.DataArray, xr.DataArray]: ...
 
     def _eval(
         self, return_type: RETURN_T
     ) -> Union[tuple[str, str], tuple[xr.DataArray, xr.DataArray]]:
-        "Evaluate the LHS and RHS of the comparison"
+        """Evaluate the LHS and RHS of the comparison."""
         lhs = self.lhs.eval(return_type, **self.eval_attrs)
         rhs = self.rhs.eval(return_type, **self.eval_attrs)
         return lhs, rhs
 
     def _compare_bitwise(self, where: bool, lhs: Any, rhs: Any) -> Any:
-        "Comparison function for application to individual elements of the array"
-
+        """Comparison function for application to individual elements of the array."""
         if not where or pd.isnull(lhs) or pd.isnull(rhs):
             return np.nan
         match self.op:
@@ -371,10 +395,12 @@ class EvalComparisonOp(EvalToArrayStr):
         return constraint
 
     def as_math_string(self) -> str:
+        """Evaluate and return expression as LaTeX."""
         lhs, rhs = self._eval("math_string")
         return lhs + self.OP_TRANSLATOR[self.op] + rhs
 
     def as_array(self) -> xr.DataArray:
+        """Evaluate and return expression as DataArray."""
         lhs, rhs = self._eval("array")
         return self.eval_attrs["backend_interface"]._apply_func(
             self._compare_bitwise, self.eval_attrs["where_array"], lhs, rhs
@@ -382,10 +408,12 @@ class EvalComparisonOp(EvalToArrayStr):
 
 
 class EvalFunction(EvalToArrayStr):
+    """Class to process parsed functions."""
+
     def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed helper function strings of the form
-        helper_function_name(*args, **eval_kwargs).
+        """Parse action to process successfully parsed helper function strings.
+
+        Strings must be in the following form: helper_function_name(*args, **eval_kwargs).
 
         Args:
             tokens (pp.ParseResults):
@@ -399,23 +427,22 @@ class EvalFunction(EvalToArrayStr):
         self.values = tokens
 
     def __repr__(self) -> str:
+        """Programming / official string representation."""
         _kwargs = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
         return f"{str(self.func_name)}(args={self.args}, kwargs={{{_kwargs}}})"
 
     @overload
-    def _arg_eval(self, return_type: Literal["math_string"], arg: Any) -> str:
-        "string return"
+    def _arg_eval(self, return_type: Literal["math_string"], arg: Any) -> str: ...
 
     @overload
     def _arg_eval(
         self, return_type: Literal["array"], arg: Any
-    ) -> xr.DataArray | list[str | float]:
-        "array return"
+    ) -> xr.DataArray | list[str | float]: ...
 
     def _arg_eval(
         self, return_type: RETURN_T, arg: Any
     ) -> Union[str, xr.DataArray, list[str | float]]:
-        "Evaluate the arguments of the helper function"
+        """Evaluate the arguments of the helper function."""
         if isinstance(arg, pp.ParseResults):
             evaluated = arg[0].eval(return_type, **self.eval_attrs)
         elif isinstance(arg, list):
@@ -427,16 +454,13 @@ class EvalFunction(EvalToArrayStr):
         return evaluated
 
     @overload
-    def _eval(self, return_type: Literal["math_string"]) -> str:
-        "string return"
+    def _eval(self, return_type: Literal["math_string"]) -> str: ...
 
     @overload
-    def _eval(self, return_type: Literal["array"]) -> xr.DataArray:
-        "array return"
+    def _eval(self, return_type: Literal["array"]) -> xr.DataArray: ...
 
     def _eval(self, return_type: RETURN_T) -> Union[str, xr.DataArray]:
-        "Pass evaluated arguments to evaluated helper function"
-
+        """Pass evaluated arguments to evaluated helper function."""
         helper_function = self.func_name.eval(return_type, **self.eval_attrs)
         if helper_function.ignore_where:
             self.eval_attrs["where_array"] = xr.DataArray(True)
@@ -453,16 +477,20 @@ class EvalFunction(EvalToArrayStr):
         return evaluated
 
     def as_math_string(self) -> str:
+        """Evaluate and return expression as LaTeX."""
         return self._eval("math_string")
 
     def as_array(self) -> xr.DataArray:
+        """Evaluate and return expression as a DataArray."""
         return self._eval("array")
 
 
 class EvalHelperFuncName(EvalToCallable):
+    """For processing parsed helper function names."""
+
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed helper function names.
+        """Parse action to process successfully parsed helper function names.
+
         This is a unique parse action so that we can catch invalid helper functions
         most safely.
 
@@ -474,15 +502,17 @@ class EvalHelperFuncName(EvalToCallable):
             tokens (pp.ParseResults):
                 Has one parsed element: helper_function_name (str).
         """
-        self.name = self.value = tokens[0]  # type: str
+        self.name = self.value = tokens[0]
         self.instring = instring
         self.loc = loc
         self.values = tokens
 
     def __repr__(self) -> str:
+        """Programming / official string representation."""
         return str(self.name)
 
     def as_callable(self, return_type: RETURN_T) -> Callable:
+        """Evalluate and return the callable action of the helper function."""
         helper_functions = self.eval_attrs["helper_functions"]
         equation_name = self.eval_attrs["equation_name"]
         if self.name not in helper_functions.keys():
@@ -499,10 +529,12 @@ class EvalHelperFuncName(EvalToCallable):
 
 
 class EvalSlicedComponent(EvalToArrayStr):
+    """For processing of sliced parameters / decision variables."""
+
     def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed sliced parameters or decision variables
-        of the form param_or_var[*slices].
+        """Process successfully parsed sliced parameters or decision variables.
+
+        In the form of param_or_var[*slices].
 
         Args:
             tokens (pp.ParseResults):
@@ -518,6 +550,7 @@ class EvalSlicedComponent(EvalToArrayStr):
         self.values = tokens
 
     def __repr__(self) -> str:
+        """Programming / official string representation."""
         slices = ", ".join(f"{k}={v.__repr__()}" for k, v in self.slices.items())
         return f"SLICED_{self.obj_name}[{slices}]"
 
@@ -543,15 +576,13 @@ class EvalSlicedComponent(EvalToArrayStr):
         return __replace
 
     @overload
-    def _eval(self, return_type: Literal["math_string"]) -> tuple[str, dict]:
-        "string return"
+    def _eval(self, return_type: Literal["math_string"]) -> tuple[str, dict]: ...
 
     @overload
-    def _eval(self, return_type: Literal["array"]) -> tuple[xr.DataArray, dict]:
-        "array return"
+    def _eval(self, return_type: Literal["array"]) -> tuple[xr.DataArray, dict]: ...
 
     def _eval(self, return_type: RETURN_T) -> tuple[Union[str, xr.DataArray], dict]:
-        "Evaluate the slice dim and vals of each slice element"
+        """Evaluate the slice dim and vals of each slice element."""
         slices: dict[str, Any] = {
             k: v.eval(return_type, **self.eval_attrs) for k, v in self.slices.items()
         }
@@ -560,6 +591,7 @@ class EvalSlicedComponent(EvalToArrayStr):
         return evaluated, slices
 
     def as_math_string(self) -> str:
+        """Evaluate and return expression as LaTeX."""
         evaluated, slices = self._eval("math_string")
         singular_slice_refs = {k.removesuffix("s"): v for k, v in slices.items()}
         id_ = pp.Combine(
@@ -575,15 +607,16 @@ class EvalSlicedComponent(EvalToArrayStr):
         return obj_parser.parse_string(evaluated, parse_all=True)[0]
 
     def as_array(self) -> xr.DataArray:
+        """Evaluate and return expression as DataArray."""
         evaluated, slices = self._eval("array")
         return evaluated.sel(**slices)
 
 
 class EvalIndexSlice(EvalToArrayStr):
+    """For processing `$slice` expressions."""
+
     def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed expression index slice references
-        of the form `$slice`.
+        """Process successfully parsed expression index `$slice` references.
 
         Args:
             tokens (pp.ParseResults):
@@ -593,31 +626,32 @@ class EvalIndexSlice(EvalToArrayStr):
         self.values = tokens
 
     def __repr__(self) -> str:
+        """Programming / official string representation."""
         return "REFERENCE:" + str(self.name)
 
     @overload
-    def _eval(self, return_type: Literal["math_string"], as_values: bool) -> str:
-        "string return"
+    def _eval(self, return_type: Literal["math_string"], as_values: bool) -> str: ...
 
     @overload
     def _eval(
         self, return_type: Literal["array"], as_values: bool
-    ) -> xr.DataArray | list[str | float]:
-        "array return"
+    ) -> xr.DataArray | list[str | float]: ...
 
     def _eval(
         self, return_type: RETURN_T, as_values: bool
     ) -> Union[str, xr.DataArray, list[str | float]]:
-        "Evaluate the referenced `slice`."
+        """Evaluate the referenced `slice`."""
         self.eval_attrs["as_values"] = as_values
         return self.eval_attrs["slice_dict"][self.name][0].eval(
             return_type, **self.eval_attrs
         )
 
     def as_math_string(self) -> str:
+        """Evaluate and return expression as LaTeX."""
         return self._eval("math_string", False)
 
     def as_array(self) -> xr.DataArray | list[str | float]:
+        """Evaluate and return expression as a DataArray or list."""
         evaluated = self._eval("array", True)
         if isinstance(evaluated, xr.DataArray) and evaluated.isnull().any():
             evaluated = evaluated.notnull()
@@ -625,10 +659,10 @@ class EvalIndexSlice(EvalToArrayStr):
 
 
 class EvalSubExpressions(EvalToArrayStr):
+    """For processing sub-expressions."""
+
     def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed sub-expressions of the form
-        `$sub_expressions`.
+        """Process successfully parsed `$sub_expressions`.
 
         Args:
             tokens (pp.ParseResults):
@@ -638,34 +672,38 @@ class EvalSubExpressions(EvalToArrayStr):
         self.values = tokens
 
     def __repr__(self) -> str:
+        """Programming / official string representation."""
         return "SUB_EXPRESSION:" + str(self.name)
 
     @overload
-    def _eval(self, return_type: Literal["math_string"]) -> str:
-        "string return"
+    def _eval(self, return_type: Literal["math_string"]) -> str: ...
 
     @overload
-    def _eval(self, return_type: Literal["array"]) -> xr.DataArray:
-        "array return"
+    def _eval(self, return_type: Literal["array"]) -> xr.DataArray: ...
 
     def _eval(self, return_type: RETURN_T) -> Union[str, xr.DataArray]:
-        "Evaluate the referenced sub_expression"
+        """Evaluate the referenced sub_expression."""
         return self.eval_attrs["sub_expression_dict"][self.name][0].eval(
             return_type, **self.eval_attrs
         )
 
     def as_math_string(self) -> str:
+        """Evaluate and return expression as LaTeX."""
         return self._eval("math_string")
 
     def as_array(self) -> xr.DataArray:
+        """Evaluate and return expression as a DataArray."""
         return self._eval("array")
 
 
 class EvalNumber(EvalToArrayStr):
+    """For processing numbers."""
+
     def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed numbers described as integers (1),
-        floats (1.), or in scientific notation (1e1). Also capture infinity (inf/.inf).
+        """Process successfully parsed numbers.
+
+        Catches integers (1), floats (1.), and in scientific notation (1e1).
+        Also capture infinity (inf/.inf).
 
         Args:
             tokens (pp.ParseResults):
@@ -675,9 +713,11 @@ class EvalNumber(EvalToArrayStr):
         self.values = tokens
 
     def __repr__(self) -> str:
+        """Programming / official string representation."""
         return "NUM:" + str(self.value)
 
     def as_math_string(self) -> str:
+        """Evaluate and return expression as LaTeX."""
         return re.sub(
             r"([\d]+?)e([+-])([\d]+)",
             r"\1\\mathord{\\times}10^{\2\3}",
@@ -685,13 +725,16 @@ class EvalNumber(EvalToArrayStr):
         )
 
     def as_array(self) -> xr.DataArray:
+        """Evaluate and return expression as DataArray."""
         return xr.DataArray(float(self.value), attrs={"obj_type": "number"})
 
 
 class ListParser(EvalToArrayStr):
+    """For parsing lists."""
+
     def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed lists of generic strings.
+        """Process successfully parsed lists of generic strings.
+
         This is required since we call "eval()" on all elements of the where string,
         so lists of strings need to be evaluatable as a whole "package".
 
@@ -701,13 +744,16 @@ class ListParser(EvalToArrayStr):
         self.val = tokens
 
     def __repr__(self) -> str:
+        """Programming / official string representation."""
         return f"{self.val}"
 
     def as_math_string(self) -> str:
+        """Evaluate and return expression as LaTeX."""
         input_list = self.as_array()
         return "[" + ",".join(str(i) for i in input_list) + "]"
 
     def as_array(self) -> list[str | float]:
+        """Evaluate and return expression as a list."""
         values = [val.eval("array", **self.eval_attrs) for val in self.val]
         # strings and numbers are returned as xarray arrays of size 1,
         # so we extract those values.
@@ -715,9 +761,11 @@ class ListParser(EvalToArrayStr):
 
 
 class EvalUnslicedComponent(EvalToArrayStr):
+    """Evaluation of unsliced components."""
+
     def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed generic strings.
+        """Parse action to process successfully parsed generic strings.
+
         This is required since we call "eval()" on all elements of the where string,
         so even arbitrary strings (used in comparison operations) need to be evaluatable.
 
@@ -729,9 +777,11 @@ class EvalUnslicedComponent(EvalToArrayStr):
         self.values = tokens
 
     def __repr__(self) -> str:
+        """Programming / official string representation."""
         return f"COMPONENT:{self.name}"
 
     def as_math_string(self) -> str:
+        """Evaluate and return expression as LaTeX."""
         self.eval_attrs["as_values"] = False
         evaluated = self.as_array()
         self.eval_attrs["references"].add(self.name)
@@ -747,6 +797,7 @@ class EvalUnslicedComponent(EvalToArrayStr):
         return formatted_name + dims
 
     def as_array(self) -> xr.DataArray:
+        """Evaluate and return expression as DataArray."""
         backend_interface = self.eval_attrs["backend_interface"]
 
         if self.eval_attrs.get("as_values", False):
@@ -766,9 +817,11 @@ class EvalUnslicedComponent(EvalToArrayStr):
 
 
 class EvalGenericString(EvalToArrayStr):
+    """For generic string parsing."""
+
     def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed generic strings.
+        """Process successfully parsed generic strings.
+
         This is required since we call "eval()" on all elements of the where string,
         so even arbitrary strings (used in comparison operations) need to be evaluatable.
 
@@ -778,12 +831,15 @@ class EvalGenericString(EvalToArrayStr):
         self.val = tokens[0]
 
     def __repr__(self) -> str:
+        """Programming / official string representation."""
         return f"STRING:{self.val}"
 
     def as_math_string(self):
+        """Evaluate and return expression as LaTeX."""
         return str(self.val)
 
     def as_array(self) -> xr.DataArray:
+        """Evaluate and return expression as DataArray."""
         return xr.DataArray(str(self.val), attrs={"obj_type": "string"})
 
 
@@ -792,8 +848,7 @@ def helper_function_parser(
     generic_identifier: pp.ParserElement,
     allow_function_in_function: bool = False,
 ) -> pp.ParserElement:
-    """
-    Parsing grammar to process helper functions of the form `helper_function(*args, **eval_kwargs)`.
+    """Process helper functions of the form `helper_function(*args, **eval_kwargs)`.
 
     Helper functions can accept other parser elements as arguments,
     i.e., components, parameters or variables, numbers, and other functions.
@@ -823,7 +878,6 @@ def helper_function_parser(
             Parser for functions which will call the function with the specified
             arguments on evaluation.
     """
-
     helper_function = pp.Forward()
     allowed_parser_elements_in_args = list(args)
     lpar = pp.Suppress("(")
@@ -866,9 +920,9 @@ def sliced_param_or_var_parser(
     unsliced_object: pp.ParserElement,
     allow_slice_references: bool = True,
 ) -> pp.ParserElement:
-    """
-    Parsing grammar to process strings representing sliced model parameters or variables,
-    e.g. "source_use_max[node, tech]".
+    """Process strings representing sliced model parameters or variables.
+
+    E.g. "source_use_max[node, tech]".
 
     If a parameter, must be a data variable in the Model._model_data xarray dataset.
 
@@ -898,7 +952,6 @@ def sliced_param_or_var_parser(
             Parser which returns a dictionary with name of parameter/variable and list
             of index items as separate entries on.
     """
-
     lspar = pp.Suppress("[")
     rspar = pp.Suppress("]")
 
@@ -922,8 +975,9 @@ def sliced_param_or_var_parser(
 
 
 def sub_expression_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
-    """
-    Parse strings prepended with the YAML constraint sub-expression classifier `$`. E.g. "$my_sub_expr"
+    """Parse strings prepended with the YAML constraint sub-expression classifier `$`.
+
+    E.g. "$my_sub_expr"
 
     Args:
         generic_identifier (pp.ParserElement):
@@ -934,7 +988,6 @@ def sub_expression_parser(generic_identifier: pp.ParserElement) -> pp.ParserElem
         pp.ParserElement:
             Parser which produces a dictionary of the form {"sub_expression": "my_sub_expression"} on evaluation.
     """
-
     sub_expression = pp.Combine(
         pp.Suppress(SUB_EXPRESSION_CLASSIFIER) + generic_identifier
     )
@@ -944,8 +997,9 @@ def sub_expression_parser(generic_identifier: pp.ParserElement) -> pp.ParserElem
 
 
 def unsliced_object_parser(valid_component_names: Iterable[str]) -> pp.ParserElement:
-    """
-    Create a copy of the generic identifier and set a parse action to find the string in
+    """Parse unsliced objects and identify their corresponding parse actions.
+
+    Creates a copy of the generic identifier and sets a parse action to find the string in
     the list of input parameters or optimisation decision variables.
 
     Args:
@@ -957,7 +1011,6 @@ def unsliced_object_parser(valid_component_names: Iterable[str]) -> pp.ParserEle
             Copy of input parser with added parse action to lookup an unsliced
             parameter/variable value
     """
-
     unsliced_param_or_var = pp.one_of(valid_component_names, as_keyword=True)
     unsliced_param_or_var.set_parse_action(EvalUnslicedComponent)
 
@@ -967,8 +1020,7 @@ def unsliced_object_parser(valid_component_names: Iterable[str]) -> pp.ParserEle
 def evaluatable_identifier_parser(
     identifier: pp.ParserElement, valid_component_names: Iterable
 ) -> pp.ParserElement:
-    """
-    Create an evaluatable copy of the generic identifier that will return a string or a model component as an array.
+    """Create an evaluatable copy of the generic identifier that will return a string or a model component as an array.
 
     Args:
         identifier (pp.ParserElement):
@@ -992,8 +1044,7 @@ def evaluatable_identifier_parser(
 def list_parser(
     number: pp.ParserElement, evaluatable_identifier: pp.ParserElement
 ) -> pp.ParserElement:
-    """
-    Parse strings which define a list of other strings or numbers.
+    """Parse strings which define a list of other strings or numbers.
 
     Lists are defined as anything wrapped in square brackets (`[]`).
 
@@ -1013,17 +1064,14 @@ def list_parser(
 
 
 def setup_base_parser_elements() -> tuple[pp.ParserElement, pp.ParserElement]:
-    """
-    Setup parser elements that will be components of other parsers.
+    """Setup parser elements that will be components of other parsers.
 
     Returns:
-        number (pp.ParserElement):
-            Parser for numbers (integer, float, scientific notation, "inf"/".inf").
-        generic_identifier (pp.ParserElement):
-            Parser for valid python variables without leading underscore and not called "inf".
-            This parser has no parse action.
+        tuple[pp.ParserElement, pp.ParserElement]: (number, generic_identifier)
+            number: parser for numbers (integer, float, scentific notation, "inf"/".inf").
+            generic_identifier: parser for valid python variables without leading
+                underscore and not called "inf". This parser has no parse action.
     """
-
     inf_kw = pp.Combine(pp.Opt(pp.Suppress(".")) + pp.Keyword("inf", caseless=True))
     number = pp.pyparsing_common.number | inf_kw
     generic_identifier = ~inf_kw + pp.Word(pp.alphas, pp.alphanums + "_")
@@ -1033,31 +1081,26 @@ def setup_base_parser_elements() -> tuple[pp.ParserElement, pp.ParserElement]:
     return number, generic_identifier
 
 
-def arithmetic_parser(*args, arithmetic: Optional[pp.Forward] = None) -> pp.Forward:
-    """
-    Parsing grammar to combine equation elements using basic arithmetic (+, -, *, /, **).
-    Can handle the difference between a sign (e.g., -1,+1) and a addition/subtraction (0 - 1, 0 + 1).
+def arithmetic_parser(*args, arithmetic: pp.Forward | None = None) -> pp.Forward:
+    """Parsing grammar to combine equation elements using basic arithmetic (+, -, *, /, **).
 
+    Can handle the difference between a sign (e.g., -1,+1) and a addition/subtraction (0 - 1, 0 + 1).
     Whitespace is ignored on parsing (i.e., "1+1+foo" is equivalent to "1 + 1 + foo").
 
     Args:
-        helper_function (pp.ParserElement):
-            Parsing grammar to process helper functions of the form `helper_function(*args, **eval_kwargs)`.
-        sliced_param_or_var (pp.ParserElement):
-            Parser for sliced parameters or variables, e.g. "foo[bar]"
-        sub_expression (pp.ParserElement):
-            Parser for constraint sub expressions, e.g. "$foo"
-        unsliced_param_or_var (pp.ParserElement):
-            Parser for unsliced parameters or variables, e.g. "foo"
-        number (pp.ParserElement):
-            Parser for numbers (integer, float, scientific notation, "inf"/".inf").
-    Kwargs:
-        arithmetic (Optional[pp.Forward]):
-            If given, will add arithmetic rules to this existing parsing rule.
-            Defaults to None (i.e., arithmetic rules will be a newly generated rule).
+        *args: arguments in the form of a list. These can be:
+            helper_function (pp.ParserElement): parsing grammar to process helper functions
+                of the form `helper_function(*args, **eval_kwargs)`.
+            sliced_param_or_var (pp.ParserElement): parser for sliced parameters or variables, e.g. "foo[bar]"
+            sub_expression (pp.ParserElement): parser for constraint sub expressions, e.g. "$foo"
+            unsliced_param_or_var (pp.ParserElement): parser for unsliced parameters or variables, e.g. "foo"
+            number (pp.ParserElement): parser for numbers (integer, float, scientific notation, "inf"/".inf").
+        arithmetic (pp.Forward | None, optional): If given, add arithmetic rules to this
+            existing parsing rule (otherwise, arithmetic rules will be a newly generated rule).
+            Defaults to None.
+
     Returns:
-        pp.ParserElement:
-            Parser for strings which use arithmetic operations to combine other parser elements.
+        pp.Forward: parser for strings which use arithmetic operations to combine other parser elements.
     """
     signop = pp.one_of(["+", "-"])
     multop = pp.one_of(["*", "/"])
@@ -1080,9 +1123,7 @@ def arithmetic_parser(*args, arithmetic: Optional[pp.Forward] = None) -> pp.Forw
 
 
 def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement:
-    """
-    Parsing grammar to combine equation elements either side of a comparison operator
-    (<= >= ==).
+    """Parsing grammar to combine equation elements either side of a comparison operator (<= >= ==).
 
     Whitespace is ignored on parsing (i.e., "1+foo==$bar" is equivalent to "1 + 1 == $bar").
 
@@ -1094,7 +1135,6 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
         pp.ParserElement:
             Parser for strings of the form "LHS OPERATOR RHS".
     """
-
     comparison_operators = pp.one_of(["<=", ">=", "=="])
     equation_comparison = arithmetic + comparison_operators + arithmetic
     equation_comparison.set_parse_action(EvalComparisonOp)
@@ -1103,9 +1143,9 @@ def equation_comparison_parser(arithmetic: pp.ParserElement) -> pp.ParserElement
 
 
 def generate_slice_parser(valid_component_names: Iterable) -> pp.ParserElement:
-    """
-    Create parser for index slice reference expressions. These expressions are linked
-    to the equation expression by e.g. `$bar` in `foo[bars=$bar]`.
+    """Create parser for index slice reference expressions.
+
+    These expressions are linked to the equation expression by e.g. `$bar` in `foo[bars=$bar]`.
     Unlike sub-expressions and equation expressions, these strings cannot contain arithmetic
     nor references to sub expressions.
 
@@ -1152,9 +1192,9 @@ def generate_slice_parser(valid_component_names: Iterable) -> pp.ParserElement:
 
 
 def generate_sub_expression_parser(valid_component_names: Iterable) -> pp.Forward:
-    """
-    Create parser for sub expressions. These expressions are linked
-    to the equation expression by e.g. `$bar`.
+    """Create parser for sub expressions.
+
+    These expressions are linked to the equation expression by e.g. `$bar`.
     This parser allows arbitrarily nested arithmetic and function calls (and arithmetic inside function calls)
     and reference to index slice expressions.
 
@@ -1187,8 +1227,8 @@ def generate_sub_expression_parser(valid_component_names: Iterable) -> pp.Forwar
 
 
 def generate_arithmetic_parser(valid_component_names: Iterable) -> pp.ParserElement:
-    """
-    Create parser for left-/right-hand side (LHS/RHS) of equation expressions of the form LHS OPERATOR RHS (e.g. `foo == 1 + bar`).
+    """Create parser for arithmetic expressions (+, -, /, *, **).
+
     This parser allows arbitrarily nested arithmetic and function calls (and arithmetic inside function calls)
     and reference to sub-expressions and index slice expressions.
 
@@ -1228,8 +1268,8 @@ def generate_arithmetic_parser(valid_component_names: Iterable) -> pp.ParserElem
 
 
 def generate_equation_parser(valid_component_names: Iterable) -> pp.ParserElement:
-    """
-    Create parser for equation expressions of the form LHS OPERATOR RHS (e.g. `foo == 1 + bar`).
+    """Create parser for equation expressions of the form LHS OPERATOR RHS (e.g. `foo == 1 + bar`).
+
     This parser allows arbitrarily nested arithmetic and function calls (and arithmetic inside function calls)
     and reference to sub-expressions and index slice expressions.
 
@@ -1241,7 +1281,6 @@ def generate_equation_parser(valid_component_names: Iterable) -> pp.ParserElemen
     Returns:
         pp.ParserElement: Parser for expression strings under the constraint key "equation/equations".
     """
-
     arithmetic = generate_arithmetic_parser(valid_component_names)
     equation_comparison = equation_comparison_parser(arithmetic)
 

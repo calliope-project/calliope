@@ -1,5 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
+"""Parsing for 'where' statements."""
 
 from __future__ import annotations
 
@@ -24,6 +25,8 @@ BOOLEANTYPE = Union[np.bool_, np.typing.NDArray[np.bool_]]
 
 
 class EvalAttrs(TypedDict):
+    """Fixed dict checker for `eval_attrs`."""
+
     equation_name: str
     backend_interface: BackendModel
     input_data: xr.Dataset
@@ -33,27 +36,29 @@ class EvalAttrs(TypedDict):
 
 
 class EvalWhere(expression_parser.EvalToArrayStr):
-    "Update type reference for `eval_attrs` to match `where` evaluation kwargs"
+    """Update type reference for `eval_attrs` to match `where` evaluation kwargs."""
+
     eval_attrs: EvalAttrs = {}
 
 
 class EvalNot(EvalWhere, expression_parser.EvalSignOp):
-    "Parse action to process successfully parsed expressions with a leading `not`."
+    """Parse action to process successfully parsed expressions with a leading `not`."""
 
     def as_math_string(self) -> str:
-        """Add sign to stringified data for use in a LaTex math formula"""
+        """Add sign to stringified data for use in a LaTex math formula."""
         evaluated = self.value.eval("math_string", **self.eval_attrs)
         return rf"\neg ({evaluated})"
 
     def as_array(self) -> xr.DataArray:
+        """Negate the evaluated DataArray."""
         evaluated = self.value.eval("array", **self.eval_attrs)
         return ~evaluated
 
 
 class EvalAndOr(EvalWhere, expression_parser.EvalOperatorOperand):
-    """
-    Parse action to process successfully parsed expressions with operands separated
-    by an and/or operator (OPERAND OPERATOR OPERAND OPERATOR OPERAND ...)
+    """Processing of successfully parsed expressions with and/or operators.
+
+    E.g., "OPERAND OPERATOR OPERAND OPERATOR OPERAND ..."
     """
 
     LATEX_OPERATOR_LOOKUP: dict[str, str] = {
@@ -69,7 +74,7 @@ class EvalAndOr(EvalWhere, expression_parser.EvalOperatorOperand):
     def _operate(
         val: xr.DataArray, evaluated_operand: xr.DataArray, operator_: str
     ) -> xr.DataArray:
-        "Apply bitwise comparison between boolean xarray dataarrays."
+        """Apply bitwise comparison between boolean xarray dataarrays."""
         match operator_:
             case "and":
                 val = operator.and_(val, evaluated_operand)
@@ -78,20 +83,23 @@ class EvalAndOr(EvalWhere, expression_parser.EvalOperatorOperand):
         return val
 
     def _apply_where_array(self, evaluated: xr.DataArray) -> xr.DataArray:
-        "Override func from parent class to effectively do nothing."
+        """Override func from parent class to effectively do nothing."""
         return evaluated
 
     def as_math_string(self) -> str:
+        """Process and return as LaTeX."""
         return super().as_math_string()
 
     def as_array(self) -> xr.DataArray:
+        """Process and return as DataArray."""
         return super().as_array()
 
 
 class ConfigOptionParser(EvalWhere):
+    """Parsing of configuration options."""
+
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed configuration option names.
+        """Parse action to process successfully parsed configuration option names.
 
         Args:
             instring (str): String that was parsed (used in error message).
@@ -106,12 +114,15 @@ class ConfigOptionParser(EvalWhere):
         self.loc = loc
 
     def __repr__(self):
+        """Programming / official string representation."""
         return f"CONFIG:{self.config_option}"
 
     def as_math_string(self) -> str:
+        """Process and return as LaTeX."""
         return rf"\text{{config.{self.config_option}}}"
 
     def as_array(self) -> xr.DataArray:
+        """Process and return as DataArray."""
         config_val = (
             self.eval_attrs["input_data"].attrs["config"].build[self.config_option]
         )
@@ -126,9 +137,10 @@ class ConfigOptionParser(EvalWhere):
 
 
 class DataVarParser(EvalWhere):
+    """Data variable processing."""
+
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed model data variable names.
+        """Parse action to process successfully parsed model data variable names.
 
         Args:
             instring (str): String that was parsed (used in error message).
@@ -143,6 +155,7 @@ class DataVarParser(EvalWhere):
         self.loc = loc
 
     def __repr__(self):
+        """Programming / official string representation."""
         return f"DATA_VAR:{self.data_var}"
 
     def _preprocess(self) -> tuple[xr.Dataset, str]:
@@ -182,7 +195,7 @@ class DataVarParser(EvalWhere):
     def _data_var_exists(
         self, source_dataset: xr.Dataset, data_var_type: str
     ) -> xr.DataArray:
-        "mask by setting all (NaN | INF/-INF) to False, otherwise True"
+        """Mask by setting all (NaN | INF/-INF) to False, otherwise True."""
         var = source_dataset.get(self.data_var, xr.DataArray(np.nan))
         if data_var_type == "parameters":
             if self.data_var not in self.eval_attrs["input_data"]:
@@ -193,7 +206,10 @@ class DataVarParser(EvalWhere):
             return var.notnull()
 
     def _data_var_with_default(self, source_dataset: xr.Dataset) -> xr.DataArray:
-        "Access data var and fill with default values. Return default value as an array if var does not exist"
+        """Access data var and fill with default values.
+
+        Return default value as an array if var does not exist.
+        """
         default = source_dataset.attrs["defaults"].get(self.data_var)
         var = source_dataset.get(self.data_var, xr.DataArray(default))
         if default is not None:
@@ -201,6 +217,7 @@ class DataVarParser(EvalWhere):
         return var
 
     def as_math_string(self) -> str:
+        """Process and return as LaTeX."""
         # TODO: add dims from a YAML schema of params that includes default dims
         source_dataset, data_var_type = self._preprocess()
         if data_var_type == "parameters":
@@ -218,6 +235,7 @@ class DataVarParser(EvalWhere):
         return data_var_string
 
     def as_array(self) -> xr.DataArray:
+        """Process and return as DataArray."""
         source_dataset, data_var_type = self._preprocess()
 
         if self.eval_attrs.get("apply_where", True):
@@ -227,7 +245,8 @@ class DataVarParser(EvalWhere):
 
 
 class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):
-    "Parse action to process successfully parsed strings of the form x=y"
+    """Parse action to process successfully parsed strings of the form x=y."""
+
     OP_TRANSLATOR = {
         "<=": r"\mathord{\leq}",
         ">=": r"\mathord{\geq}",
@@ -237,10 +256,11 @@ class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):
     }
 
     def __repr__(self):
-        "Return string representation of the parsed grammar"
+        """Return string representation of the parsed grammar."""
         return f"{self.lhs}{self.op}{self.rhs}"
 
     def as_math_string(self) -> str:
+        """Process and return as LaTeX."""
         self.eval_attrs["apply_where"] = False
         lhs, rhs = self._eval("math_string")
         if r"\text" not in rhs:
@@ -248,6 +268,7 @@ class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):
         return lhs + self.OP_TRANSLATOR[self.op] + rhs
 
     def as_array(self) -> xr.DataArray:
+        """Process and return as DataArray."""
         self.eval_attrs["apply_where"] = False
         lhs, rhs = self._eval("array")
         match self.op:
@@ -265,9 +286,10 @@ class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):
 
 
 class SubsetParser(EvalWhere):
+    """Dimension subset parsing."""
+
     def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed dimension subsetting.
+        """Parse action to process successfully parsed dimension subsetting.
 
         Args:
             instring (str): String that was parsed (used in error message).
@@ -282,29 +304,33 @@ class SubsetParser(EvalWhere):
         self.loc = loc
 
     def __repr__(self):
+        """Return string representation of the parsed grammar."""
         return f"SUBSET:{self.set_name}{self.val}"
 
     def _eval(self) -> list[str | float]:
-        "Evaluate each element of the subset list"
+        """Evaluate each element of the subset list."""
         values = [val.eval("array", **self.eval_attrs) for val in self.val]
         return [val.item() if isinstance(val, xr.DataArray) else val for val in values]
 
     def as_math_string(self) -> str:
+        """Process and return as LaTeX."""
         subset = self._eval()
         set_singular = self.set_name.removesuffix("s")
         subset_string = "[" + ",".join(str(i) for i in subset) + "]"
         return rf"\text{{{set_singular}}} \in \text{{{subset_string}}}"
 
     def as_array(self) -> xr.DataArray:
+        """Process and return as DataArray."""
         subset = self._eval()
         set_item_in_subset = self.eval_attrs["input_data"][self.set_name].isin(subset)
         return set_item_in_subset
 
 
 class BoolOperandParser(EvalWhere):
+    """Boolean operand parsing."""
+
     def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed boolean strings.
+        """Parse action to process successfully parsed boolean strings.
 
         Args:
             tokens (pp.ParseResults): Has one parsed element: boolean (str).
@@ -312,12 +338,15 @@ class BoolOperandParser(EvalWhere):
         self.val = tokens[0].lower()
 
     def __repr__(self):
+        """Programming / official string representation."""
         return f"BOOL:{self.val}"
 
     def as_math_string(self):
+        """Process and return as LaTeX."""
         return self.val
 
     def as_array(self) -> xr.DataArray:
+        """Process and return as DataArray."""
         if self.val == "true":
             bool_val = xr.DataArray(np.True_)
         elif self.val == "false":
@@ -326,9 +355,11 @@ class BoolOperandParser(EvalWhere):
 
 
 class GenericStringParser(expression_parser.EvalString):
+    """Parsing of generic strings."""
+
     def __init__(self, tokens: pp.ParseResults) -> None:
-        """
-        Parse action to process successfully parsed generic strings.
+        """Parse action to process successfully parsed generic strings.
+
         This is required since we call "eval()" on all elements of the where string,
         so even arbitrary strings (used in comparison operations) need to be evaluatable.
 
@@ -338,26 +369,24 @@ class GenericStringParser(expression_parser.EvalString):
         self.val = tokens[0]
 
     def __repr__(self) -> str:
+        """Return string representation of the parsed grammar."""
         return f"STRING:{self.val}"
 
     def eval(self, *args, **eval_kwargs) -> str:
+        """Evaluation just returns the string of values."""
         return str(self.val)
 
 
 def data_var_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
-    """
-    Parsing grammar to process model data variables which can be any valid python
-    identifier (string + "_")
+    """Process model data variables which can be any valid python identifier (string + "_").
 
     Args:
-        generic_identifier (pp.ParserElement):
-            Parser for valid python variables without leading underscore and not called "inf".
-            This parser has no parse action.
+        generic_identifier (pp.ParserElement): parser for valid python variables
+            without leading underscore and not called "inf". This parser has no parse action.
 
     Returns:
-        pp.ParserElement:
-            Parser for model data variables which will access the data variable from the
-            Calliope model dataset.
+        pp.ParserElement: parser for model data variables which will access the data
+            variable from the Calliope model dataset.
     """
     protected_strings = (
         pp.Keyword("and", caseless=True)
@@ -373,8 +402,7 @@ def data_var_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
 
 
 def config_option_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
-    """
-    Parsing grammar to process model configuration option key names of the form "x.y.z".
+    """Parsing grammar to process model configuration option key names of the form "x.y.z".
 
     Args:
         generic_identifier (pp.ParserElement):
@@ -393,7 +421,7 @@ def config_option_parser(generic_identifier: pp.ParserElement) -> pp.ParserEleme
 
 
 def bool_parser() -> pp.ParserElement:
-    "Parsing grammar for True/False (any case), which will evaluate to np.bool_"
+    """Parsing grammar for True/False (any case), which will evaluate to np.bool_."""
     TRUE = pp.Keyword("True", caseless=True)
     FALSE = pp.Keyword("False", caseless=True)
     bool_operand = TRUE | FALSE
@@ -403,7 +431,7 @@ def bool_parser() -> pp.ParserElement:
 
 
 def evaluatable_string_parser(generic_identifier: pp.ParserElement) -> pp.ParserElement:
-    "Parsing grammar to make generic strings used in comparison operations evaluatable"
+    """Parsing grammar to make generic strings used in comparison operations evaluatable."""
     evaluatable_identifier = generic_identifier.copy()
     evaluatable_identifier.set_parse_action(GenericStringParser)
 
@@ -418,16 +446,15 @@ def comparison_parser(
     config_option: pp.ParserElement,
     data_var: pp.ParserElement,
 ) -> pp.ParserElement:
-    """Parsing grammar to process comparisons of the form "variable_or_config=comparator"
+    """Parsing grammar to process comparisons of the form `variable_or_config=comparator`.
 
     Args:
         evaluatable_identifier (pp.ParserElement): parser for evaluatable generic strings
-        number (pp.ParserElement):
-            Parser for numbers (integer, float, scientific notation, "inf"/".inf")
-        bool_operand (pp.ParserElement): Parser for boolean strings
-        config_option (pp.ParserElement):
-            Parser for attribute dictionary keys of the form "x.y.z"
-        data_var (pp.ParserElement): Parser for Calliope model dataset variable names.
+        number (pp.ParserElement): parser for numbers (integer, float, scientific notation, "inf"/".inf")
+        helper_function (pp.ParserElement): parser for helper functions
+        bool_operand (pp.ParserElement): parser for boolean strings
+        config_option (pp.ParserElement): parser for attribute dictionary keys of the form "x.y.z"
+        data_var (pp.ParserElement): parser for Calliope model dataset variable names
 
     Returns:
         pp.ParserElement:
@@ -449,20 +476,15 @@ def subset_parser(
     evaluatable_identifier: pp.ParserElement,
     number: pp.ParserElement,
 ) -> pp.ParserElement:
-    """Parsing grammar to process comparisons of the form "variable_or_config=comparator"
+    """Parsing grammar to process subsets.
 
     Args:
-        evaluatable_identifier (pp.ParserElement): parser for evaluatable generic strings
-        number (pp.ParserElement):
-            Parser for numbers (integer, float, scientific notation, "inf"/".inf")
-        bool_operand (pp.ParserElement): Parser for boolean strings
-        config_option (pp.ParserElement):
-            Parser for attribute dictionary keys of the form "x.y.z"
-        data_var (pp.ParserElement): Parser for Calliope model dataset variable names.
+        generic_identifier (pp.ParserElement): generic identifier parser
+        evaluatable_identifier (pp.ParserElement): evaluatable identifier parser.
+        number (pp.ParserElement): number parser.
 
     Returns:
-        pp.ParserElement:
-            Parser which will return a bool/boolean array as a result of the comparison.
+        pp.ParserElement: subset parser.
     """
     subset = pp.Group(pp.delimited_list(number | evaluatable_identifier))
     subset_expression = (
@@ -484,19 +506,17 @@ def where_parser(
     comparison_parser: pp.ParserElement,
     subset: pp.ParserElement,
 ) -> pp.ParserElement:
-    """
-    Parsing grammar to combine bools/boolean arrays using (case agnostic) AND/OR operators
-    and optional (case agnostic) NOT (to invert the bools).
+    """Parser for strings which use AND/OR/NOT operators to combine other parser elements.
 
     Args:
-        helper_function (pp.ParserElement):
-            Parsing grammar to process helper functions of the form `helper_function(*args, **kwargs)`.
-        data_var (pp.ParserElement): Parser for Calliope model dataset variable names.
-        comparison_parser (pp.ParserElement): Parser for comparisons of the form "variable_or_config=comparator".
+        bool_operand (pp.ParserElement): parser for boolean operands.
+        helper_function (pp.ParserElement): parser for helper functions.
+        data_var (pp.ParserElement): parser for dataset variable names.
+        comparison_parser (pp.ParserElement): parser for comparisons.
+        subset (pp.ParserElement): parser for subsets.
 
     Returns:
-        pp.ParserElement:
-            Parser for strings which use AND/OR/NOT operators to combine other parser elements.
+        pp.ParserElement: where parser.
     """
     notop = pp.Keyword("not", caseless=True)
     andorop = pp.Keyword("and", caseless=True) | pp.Keyword("or", caseless=True)
@@ -513,7 +533,8 @@ def where_parser(
 
 
 def generate_where_string_parser() -> pp.ParserElement:
-    """
+    """Creates and executes the where parser.
+
     Args:
         parse_string (str): Constraint subsetting "where" string.
 
