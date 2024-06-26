@@ -56,7 +56,7 @@ exclude = '''
 [tool.ruff]
 line-length = 88
 [tool.ruff.lint]
-select = ["E", "F", "I", "Q", "W", "D", "PT"]
+select = ["E", "F", "I", "Q", "W", "PT"]
 # line too long; Black will handle these
 ignore = ["E501"]
 

@@ -22,7 +22,7 @@ _MODEL_URBAN = (_EXAMPLES_DIR / "urban_scale" / "model.yaml").as_posix()
 
 class TestLogging:
     @pytest.mark.parametrize(
-        ["level", "include_solver_output", "expected_level", "expected_solver_level"],
+        ("level", "include_solver_output", "expected_level", "expected_solver_level"),
         [
             ("CRITICAL", True, 50, 10),
             ("CRITICAL", False, 50, 50),
@@ -70,7 +70,7 @@ class TestLogging:
         )
 
     @pytest.mark.parametrize(
-        ["capture", "expected_level", "n_handlers"], [(True, 20, 1), (False, 30, 0)]
+        ("capture", "expected_level", "n_handlers"), [(True, 20, 1), (False, 30, 0)]
     )
     def test_capture_warnings(self, capture, expected_level, n_handlers):
         calliope.set_log_verbosity("info", capture_warnings=capture)
@@ -130,7 +130,7 @@ class TestValidateDict:
         reason="Checking the schema itself doesn't seem to be working properly; no clear idea of _why_ yet..."
     )
     @pytest.mark.parametrize(
-        ["schema_dict", "expected_path"],
+        ("schema_dict", "expected_path"),
         [
             ({"foo": 2}, ""),
             ({"properties": {"bar": {"foo": "string"}}}, " at `properties.bar`"),
@@ -153,7 +153,7 @@ class TestValidateDict:
         )
 
     @pytest.mark.parametrize(
-        ["to_validate", "expected_path"],
+        ("to_validate", "expected_path"),
         [
             ({"invalid": {"foo": 2}}, ""),
             ({"valid": {"foo": 2, "invalid": 3}}, "valid: "),
@@ -180,7 +180,7 @@ class TestValidateDict:
             ],
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def base_math(self):
         return calliope.AttrDict.from_yaml(
             Path(calliope.__file__).parent / "math" / "base.yaml"
@@ -320,7 +320,7 @@ class TestExtractFromSchema:
         """
         return calliope.AttrDict.from_yaml_string(schema_string)
 
-    @pytest.fixture
+    @pytest.fixture()
     def expected_config_defaults(self):
         return pd.Series(
             {
@@ -330,7 +330,7 @@ class TestExtractFromSchema:
             }
         ).sort_index()
 
-    @pytest.fixture
+    @pytest.fixture()
     def expected_model_def_defaults(self):
         return pd.Series(
             {
@@ -364,7 +364,7 @@ class TestExtractFromSchema:
         )
 
     @pytest.mark.parametrize(
-        ["schema_key", "prop_keys"],
+        ("schema_key", "prop_keys"),
         [
             ("parameters", ["objective_cost_weights"]),
             ("nodes", ["available_area"]),

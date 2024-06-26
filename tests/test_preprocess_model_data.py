@@ -14,7 +14,7 @@ from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def model_def():
     filepath = Path(__file__).parent / "common" / "test_model" / "model.yaml"
     model_def_dict, model_def_path, _ = load.load_model_definition(
@@ -23,7 +23,7 @@ def model_def():
     return model_def_dict, model_def_path
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def data_source_list(model_def, init_config):
     model_def_dict, model_def_path = model_def
     return [
@@ -34,14 +34,14 @@ def data_source_list(model_def, init_config):
     ]
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def init_config(config_defaults, model_def):
     model_def_dict, _ = model_def
     config_defaults.union(model_def_dict.pop("config"), allow_override=True)
     return config_defaults["init"]
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def model_data_factory(model_def, init_config, model_defaults):
     model_def_dict, _ = model_def
     return ModelDataFactory(
@@ -49,13 +49,13 @@ def model_data_factory(model_def, init_config, model_defaults):
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def model_data_factory_w_params(model_data_factory: ModelDataFactory):
     model_data_factory.add_node_tech_data()
     return model_data_factory
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def my_caplog(caplog):
     caplog.set_level(logging.DEBUG, logger="calliope.preprocess")
     return caplog
@@ -178,7 +178,7 @@ class TestModelData:
         assert model_data_factory.dataset["definition_matrix"].dtype.kind == "b"
 
     @pytest.mark.parametrize(
-        ["existing_distance", "expected_distance"], [(np.nan, 343.834), (1, 1)]
+        ("existing_distance", "expected_distance"), [(np.nan, 343.834), (1, 1)]
     )
     def test_add_link_distances_missing_distance(
         self,
@@ -210,7 +210,7 @@ class TestModelData:
             techs="test_link_a_b_elec"
         ).item() == pytest.approx(expected_distance)
 
-    @pytest.mark.parametrize(["unit", "expected"], [("m", 343834), ("km", 343.834)])
+    @pytest.mark.parametrize(("unit", "expected"), [("m", 343834), ("km", 343.834)])
     def test_add_link_distances_no_da(
         self, my_caplog, model_data_factory_w_params: ModelDataFactory, unit, expected
     ):
@@ -355,7 +355,7 @@ class TestModelData:
         )
 
     @pytest.mark.parametrize(
-        ["param_data", "expected_da"],
+        ("param_data", "expected_da"),
         [
             ({"data": 1, "index": [[]], "dims": []}, xr.DataArray(1)),
             (
@@ -390,7 +390,7 @@ class TestModelData:
         assert param_ds.broadcast_equals(expected_ds)
 
     @pytest.mark.parametrize(
-        ["input_idx", "expected_idx"],
+        ("input_idx", "expected_idx"),
         [
             ("foo", [["foo"]]),
             (["foo"], [["foo"]]),
@@ -409,7 +409,7 @@ class TestModelData:
         assert output == {"index": expected_idx, **dict_skeleton}
 
     @pytest.mark.parametrize(
-        ["input_dim", "expected_dim"],
+        ("input_dim", "expected_dim"),
         [("foo", ["foo"]), (["foo"], ["foo"]), (["foo", "bar"], ["foo", "bar"])],
     )
     def test_prepare_param_dict_indexed_dim(
@@ -434,7 +434,7 @@ class TestModelData:
         assert output == {"data": True, "index": [["foo"], ["bar"]], "dims": ["foobar"]}
 
     def test_prepare_param_dict_not_lookup(self, model_data_factory: ModelDataFactory):
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:  # noqa: PT011, false positive
             model_data_factory._prepare_param_dict("foo", ["foo", "bar"])
         assert check_error_or_warning(
             excinfo,
@@ -523,7 +523,7 @@ class TestModelData:
         )
 
     @pytest.mark.parametrize(
-        ["node_dict", "expected_dict", "expected_inheritance"],
+        ("node_dict", "expected_dict", "expected_inheritance"),
         [
             ({"my_param": 1}, {"my_param": 1}, None),
             (
@@ -708,7 +708,7 @@ class TestModelData:
         assert model_data_factory.dataset["non_ts_data"].equals(simple_da)
 
     @pytest.mark.parametrize(
-        ["data", "kind"],
+        ("data", "kind"),
         [
             ([1, 2], "i"),
             (["1", "2"], "i"),
@@ -733,7 +733,7 @@ class TestModelData:
         )
         assert updated_ds.coords["bar"].dtype.kind == kind
 
-    @pytest.mark.parametrize(["data", "kind"], [(["1", 2], "i"), ([1.0, "2.0"], "f")])
+    @pytest.mark.parametrize(("data", "kind"), [(["1", 2], "i"), ([1.0, "2.0"], "f")])
     def test_update_numeric_dims_in_model_data(
         self, my_caplog, model_data_factory: ModelDataFactory, data, kind
     ):
@@ -764,7 +764,7 @@ class TestModelData:
         assert updated_ds.coords["bar"].dtype.kind not in ["f", "i"]
 
     @pytest.mark.parametrize(
-        ["coords", "new_coords"],
+        ("coords", "new_coords"),
         [(["foobar", "baz"], ["baz"]), (["bazfoo", "baz"], ["bazfoo", "baz"])],
     )
     def test_log_param_updates_new_coord(
@@ -785,7 +785,7 @@ class TestModelData:
             )
 
     @pytest.mark.parametrize(
-        ["index", "new_items"],
+        ("index", "new_items"),
         [
             (("hello", 10), [("foobar", "hello")]),
             (("hello", 30), [("foobar", "hello"), ("foobaz", 30)]),
@@ -844,7 +844,7 @@ class TestModelData:
 
 
 class TestTopLevelParams:
-    @pytest.fixture(scope="function")
+    @pytest.fixture()
     def run_and_test(self, model_data_factory_w_params):
         def _run_and_test(in_dict, out_dict, dims):
             model_data_factory_w_params.model_definition["parameters"] = {
@@ -1000,8 +1000,7 @@ class TestTopLevelParams:
 
 
 class TestActiveFalse:
-    """
-    Test removal of techs, nodes, links, and transmission techs
+    """Test removal of techs, nodes, links, and transmission techs
     with the ``active: False`` configuration option.
 
     """

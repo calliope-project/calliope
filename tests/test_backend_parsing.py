@@ -19,7 +19,7 @@ def string_to_dict(yaml_string):
     return yaml_loader.load(StringIO(yaml_string))
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def component_obj():
     setup_string = """
     foreach: [A, A1]
@@ -31,43 +31,43 @@ def component_obj():
     return parsing.ParsedBackendComponent("constraints", "foo", variable_data)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def exists_array(component_obj, dummy_model_data):
     component_obj.sets = ["nodes", "techs"]
     return component_obj.combine_definition_matrix_and_foreach(dummy_model_data)
 
 
-@pytest.fixture
+@pytest.fixture()
 def valid_component_names(dummy_model_data):
     return ["foo", "bar", "baz", "foobar", *dummy_model_data.data_vars.keys()]
 
 
-@pytest.fixture
+@pytest.fixture()
 def expression_string_parser(valid_component_names):
     return expression_parser.generate_equation_parser(valid_component_names)
 
 
-@pytest.fixture
+@pytest.fixture()
 def arithmetic_string_parser(valid_component_names):
     return expression_parser.generate_arithmetic_parser(valid_component_names)
 
 
-@pytest.fixture
+@pytest.fixture()
 def slice_parser(valid_component_names):
     return expression_parser.generate_slice_parser(valid_component_names)
 
 
-@pytest.fixture
+@pytest.fixture()
 def sub_expression_parser(valid_component_names):
     return expression_parser.generate_sub_expression_parser(valid_component_names)
 
 
-@pytest.fixture
+@pytest.fixture()
 def where_string_parser():
     return where_parser.generate_where_string_parser()
 
 
-@pytest.fixture
+@pytest.fixture()
 def expression_generator():
     def _expression_generator(parse_string, where_string=None):
         expression_dict = {"expression": parse_string}
@@ -78,7 +78,7 @@ def expression_generator():
     return _expression_generator
 
 
-@pytest.fixture
+@pytest.fixture()
 def generate_expression_list(component_obj, expression_string_parser):
     def _generate_expression_list(expression_list, **kwargs):
         return component_obj.generate_expression_list(
@@ -99,7 +99,7 @@ def parse_sub_expressions_and_slices(
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def parsed_sub_expression_dict(component_obj, sub_expression_parser):
     def _parsed_sub_expression_dict(n_foo, n_bar):
         foos = ", ".join(
@@ -122,7 +122,7 @@ def parsed_sub_expression_dict(component_obj, sub_expression_parser):
     return _parsed_sub_expression_dict
 
 
-@pytest.fixture
+@pytest.fixture()
 def parsed_slice_dict(component_obj, slice_parser):
     def _parsed_slice_dict(n_tech1, n_tech2):
         techs1 = ", ".join(["{where: techs, expression: foo}" for i in range(n_tech1)])
@@ -141,7 +141,7 @@ def parsed_slice_dict(component_obj, slice_parser):
     return _parsed_slice_dict
 
 
-@pytest.fixture
+@pytest.fixture()
 def obj_with_sub_expressions_and_slices():
     def _obj_with_sub_expressions_and_slices(equation_string):
         if isinstance(equation_string, str):
@@ -181,7 +181,7 @@ def obj_with_sub_expressions_and_slices():
     return _obj_with_sub_expressions_and_slices
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def equation_obj(expression_string_parser, where_string_parser):
     return parsing.ParsedBackendEquation(
         equation_name="foo",
@@ -191,7 +191,7 @@ def equation_obj(expression_string_parser, where_string_parser):
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def equation_sub_expression_obj(sub_expression_parser, where_string_parser):
     def _equation_sub_expression_obj(name):
         return parsing.ParsedBackendEquation(
@@ -204,7 +204,7 @@ def equation_sub_expression_obj(sub_expression_parser, where_string_parser):
     return _equation_sub_expression_obj
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def equation_slice_obj(slice_parser, where_string_parser):
     def _equation_slice_obj(name):
         return parsing.ParsedBackendEquation(
@@ -217,7 +217,7 @@ def equation_slice_obj(slice_parser, where_string_parser):
     return _equation_slice_obj
 
 
-@pytest.fixture
+@pytest.fixture()
 def dummy_backend_interface(dummy_model_data):
     # ignore the need to define the abstract methods from backend_model.BackendModel
     with patch.multiple(backend_model.BackendModel, __abstractmethods__=set()):
@@ -239,7 +239,7 @@ def dummy_backend_interface(dummy_model_data):
     return DummyBackendModel()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def evaluatable_component_obj(valid_component_names):
     def _evaluatable_component_obj(equation_expressions):
         setup_string = f"""
@@ -291,7 +291,7 @@ def evaluate_component_where(
     return component_obj, equation_where_aligned, request.param[1]
 
 
-@pytest.fixture
+@pytest.fixture()
 def evaluate_component_expression(evaluate_component_where, dummy_backend_interface):
     component_obj, equation_where, n_true = evaluate_component_where
 
@@ -325,7 +325,8 @@ class TestParsedComponent:
         self, component_obj, expression_string_parser, parse_string
     ):
         parsed_ = component_obj._parse_string(expression_string_parser, parse_string)
-        assert isinstance(parsed_, pp.ParseResults) and len(parsed_) == 0
+        assert isinstance(parsed_, pp.ParseResults)
+        assert len(parsed_) == 0
         assert check_error_or_warning(component_obj._errors, parse_string)
 
     @pytest.mark.parametrize(
@@ -333,7 +334,7 @@ class TestParsedComponent:
         ["foo == 1", "$foo + (bar + foobar[A1=a1])**2 >= (dummy_func_1(foo) + 1)"],
     )
     @pytest.mark.parametrize(
-        ["where_string", "expected_where_eval"],
+        ("where_string", "expected_where_eval"),
         [(None, True), ("False", False), ("True or False", True)],
     )
     def test_generate_expression_list(
@@ -467,7 +468,7 @@ class TestParsedComponent:
         )
 
     @pytest.mark.parametrize(
-        ["equation_", "expected"],
+        ("equation_", "expected"),
         [("$foo == $bar", False), ("$foo <= $bar", True), ("$foo * 20 >= $bar", True)],
     )
     def test_add_exprs_to_equation_data_multi(
@@ -543,7 +544,7 @@ class TestParsedComponent:
         )
 
     @pytest.mark.parametrize(
-        ["eq_string", "expected_n_equations"],
+        ("eq_string", "expected_n_equations"),
         [
             ("1 == bar", 1),
             ([{"expression": "1 == bar"}], 1),
@@ -735,7 +736,7 @@ class TestParsedBackendEquation:
         assert found_sub_expressions == {"foo", "bar"}
 
     @pytest.mark.parametrize(
-        ["parse_string", "expected"],
+        ("parse_string", "expected"),
         [
             # sub-expressions in comparisons are always seen
             ("$foo == $bar", ["foo", "bar"]),
@@ -818,7 +819,7 @@ class TestParsedBackendEquation:
         assert found_sub_expressions == {"foo"}
 
     @pytest.mark.parametrize(
-        ["equation_expr", "sub_expression_exprs"],
+        ("equation_expr", "sub_expression_exprs"),
         [
             ("$foo == 1", {"foo": "foo[techs=$tech1] + bar[techs=$tech2]"}),
             ("$foo == $bar", {"foo": "foo[techs=$tech1]", "bar": "bar[techs=$tech2]"}),
@@ -908,12 +909,11 @@ class TestParsedBackendEquation:
         assert not where.any()
 
     @pytest.mark.parametrize(
-        ["where_string", "expected_where_array"],
+        ("where_string", "expected_where_array"),
         [
             ("with_inf", "with_inf_as_bool"),
             ("only_techs", "only_techs_as_bool"),
             ("with_inf and only_techs", "with_inf_and_only_techs_as_bool"),
-            ("with_inf or only_techs", "with_inf_or_only_techs_as_bool"),
             ("with_inf or only_techs", "with_inf_or_only_techs_as_bool"),
             (
                 "with_inf and [bar] in nodes",
@@ -992,7 +992,7 @@ class TestParsedBackendEquation:
 
 
 class TestParsedConstraint:
-    @pytest.fixture
+    @pytest.fixture()
     def constraint_obj(self):
         dict_ = {
             "foreach": ["techs"],
@@ -1044,7 +1044,7 @@ class TestParsedConstraint:
 
 
 class TestParsedVariable:
-    @pytest.fixture
+    @pytest.fixture()
     def variable_obj(self):
         dict_ = {"foreach": ["techs"], "where": "False"}
 
@@ -1066,7 +1066,7 @@ class TestParsedVariable:
 
 
 class TestParsedObjective:
-    @pytest.fixture
+    @pytest.fixture()
     def objective_obj(self):
         dict_ = {
             "equations": [

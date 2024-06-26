@@ -11,7 +11,7 @@ from .common.util import check_error_or_warning
 
 
 class TestAttrDict:
-    @pytest.fixture
+    @pytest.fixture()
     def regular_dict(self):
         d = {
             "a": 1,
@@ -37,16 +37,16 @@ class TestAttrDict:
         d:
     """
 
-    @pytest.fixture
+    @pytest.fixture()
     def yaml_filepath(self):
         this_path = Path(__file__).parent
         return this_path / "common" / "yaml_file.yaml"
 
-    @pytest.fixture
+    @pytest.fixture()
     def yaml_string(self):
         return self.setup_string
 
-    @pytest.fixture
+    @pytest.fixture()
     def attr_dict(self, regular_dict):
         d = regular_dict
         return AttrDict(d)
@@ -58,7 +58,7 @@ class TestAttrDict:
         assert _MISSING.__nonzero__() is False
 
     def test_init_from_nondict(self):
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:  # noqa: PT011, false positive
             AttrDict("foo")
         assert check_error_or_warning(excinfo, "Must pass a dict to AttrDict")
 
@@ -93,7 +93,7 @@ class TestAttrDict:
 
     def test_simple_invalid_yaml(self):
         yaml_string = "1 this is not valid yaml"
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:  # noqa: PT011, false positive
             AttrDict.from_yaml_string(yaml_string)
         assert check_error_or_warning(excinfo, "Could not parse <yaml string> as YAML")
 
@@ -324,7 +324,7 @@ class TestAttrDict:
         yaml_string = """
             import: 'somefile.yaml'
         """
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:  # noqa: PT011, false positive
             AttrDict.from_yaml_string(yaml_string, resolve_imports=True)
         assert check_error_or_warning(excinfo, "`import` must be a list.")
 
