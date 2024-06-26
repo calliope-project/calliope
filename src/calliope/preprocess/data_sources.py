@@ -1,5 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
+"""Preprocessing functionality."""
 
 import logging
 from pathlib import Path
@@ -27,6 +28,8 @@ DTYPE_OPTIONS = {"str": str, "float": float}
 
 
 class DataSourceDict(TypedDict):
+    """Uniform dictionary for data sources."""
+
     rows: NotRequired[str | list[str]]
     columns: NotRequired[str | list[str]]
     source: str
@@ -37,6 +40,8 @@ class DataSourceDict(TypedDict):
 
 
 class DataSource:
+    """Class for in memory data handling."""
+
     MESSAGE_TEMPLATE = "(data_sources, {name}) | {message}."
     PARAMS_TO_INITIALISE_YAML = ["base_tech", "to", "from"]
 
@@ -52,6 +57,7 @@ class DataSource:
 
         Args:
             model_config (dict): Model initialisation configuration dictionary.
+            source_name (str): name of the data source.
             data_source (DataSourceDict): Data source definition dictionary.
             data_source_dfs (Optional[dict[str, pd.DataFrame]]):
                 If given, a dictionary mapping source names in `data_source` to in-memory pandas DataFrames.
@@ -80,7 +86,7 @@ class DataSource:
 
     @property
     def name(self):
-        "Data source name"
+        """Data source name."""
         return self._name
 
     def drop(self, name: str):
@@ -99,7 +105,6 @@ class DataSource:
         This function should be accessed _before_ `self.node_dict`.
 
         """
-
         tech_dict = AttrDict(
             {k: {} for k in self.dataset.get("techs", xr.DataArray([])).values}
         )
@@ -123,7 +128,6 @@ class DataSource:
                 Technology definition dictionary which is a union of any YAML definition and the result of calling `self.tech_dict` across all data sources.
                 Technologies should have their entire definition inheritance chain resolved.
         """
-
         node_tech_vars = self.dataset[
             [
                 k
@@ -190,6 +194,7 @@ class DataSource:
             lookup_dim (str):
                 The dimension to pivot the data table on.
                 The values in this dimension will become the values in the dictionary.
+
         Returns:
             AttrDict:
                 If present in `self.dataset`, a valid Calliope YAML format for the parameter.
@@ -351,13 +356,13 @@ class DataSource:
             self._raise_error(f"Duplicate dimension names found: {tdf.index.names}")
 
     def _raise_error(self, message):
-        "Format error message and then raise Calliope ModelError."
+        """Format error message and then raise Calliope ModelError."""
         raise exceptions.ModelError(
             self.MESSAGE_TEMPLATE.format(name=self.name, message=message)
         )
 
     def _log(self, message, level="debug"):
-        "Format log message and then log to `level`."
+        """Format log message and then log to `level`."""
         getattr(LOGGER, level)(
             self.MESSAGE_TEMPLATE.format(name=self.name, message=message)
         )

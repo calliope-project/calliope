@@ -151,4 +151,4 @@ class LogWriter:
 
     def flush(self):
         """Placeholder for future flush functionality."""
-        raise NotImplementedError
+        pass
