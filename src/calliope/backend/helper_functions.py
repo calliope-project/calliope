@@ -1,8 +1,7 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
-"""
-Functions that can be used to process data in math `where` and `expression` strings.
+"""Functions that can be used to process data in math `where` and `expression` strings.
 
 `NAME` is the function name to use in the math strings.
 """
@@ -24,6 +23,8 @@ _registry: dict[
 
 
 class ParsingHelperFunction(ABC):
+    """Helper class for parsing."""
+
     def __init__(
         self,
         return_type: Literal["array", "math_string"],
@@ -46,16 +47,16 @@ class ParsingHelperFunction(ABC):
     @property
     @abstractmethod
     def ALLOWED_IN(self) -> list[Literal["where", "expression"]]:
-        "List of parseable math strings that this function can be accessed from."
+        """List of parseable math strings that this function can be accessed from."""
 
     @property
     @abstractmethod
     def NAME(self) -> str:
-        "Helper function name that is used in the math expression/where string."
+        """Helper function name that is used in the math expression/where string."""
 
     @property
     def ignore_where(self) -> bool:
-        "If True, `where` arrays will not be applied to the incoming data variables (valid for expression helpers)"
+        """If True, `where` arrays will not be applied to the incoming data variables (valid for expression helpers)."""
         return False
 
     @abstractmethod
@@ -73,9 +74,12 @@ class ParsingHelperFunction(ABC):
         """
 
     def __call__(self, *args, **kwargs) -> Any:
-        """
-        When a helper function is accessed by evaluating a parsing string, this method is called.
-        The value of `return_type` on initialisation of the class defines whether this method returns a string (``return_type=math_string``) or :meth:xr.DataArray (``return_type=array``)
+        """When a helper function is accessed by evaluating a parsing string, this method is called.
+
+        The value of `return_type` on initialisation of the class defines whether this
+        method returns either:
+        - a string (``return_type=math_string``)
+        - :meth:xr.DataArray (``return_type=array``)
         """
         if self._return_type == "math_string":
             return self.as_math_string(*args, **kwargs)
@@ -83,7 +87,7 @@ class ParsingHelperFunction(ABC):
             return self.as_array(*args, **kwargs)
 
     def __init_subclass__(cls):
-        """Override subclass definition in two ways:
+        """Override subclass definition.
 
         1. Do not allow new helper functions to have a name that is already defined (be it a built-in function or a custom function).
         2. Wrap helper function __call__ in a check for the function being allowed in specific parsing string types.
@@ -99,7 +103,7 @@ class ParsingHelperFunction(ABC):
 
     @staticmethod
     def _add_to_iterator(instring: str, iterator_converter: dict[str, str]) -> str:
-        """Utility function for generating latex strings in multiple helper functions.
+        r"""Utility function for generating latex strings in multiple helper functions.
 
         Find an iterator in the iterator substring of the component string
         (anything wrapped in `_text{}`). Other parts of the iterator substring can be anything
@@ -156,6 +160,8 @@ class ParsingHelperFunction(ABC):
 
 
 class Inheritance(ParsingHelperFunction):
+    """Node / tech inheritance handling."""
+
     #:
     ALLOWED_IN = ["where"]
     #:
@@ -164,6 +170,7 @@ class Inheritance(ParsingHelperFunction):
     def as_math_string(
         self, nodes: Optional[str] = None, techs: Optional[str] = None
     ) -> str:
+        """Returns a LaTeX string describing inheritance of nodes or techs."""
         strings = []
         if nodes is not None:
             strings.append(f"nodes={nodes}")
@@ -253,6 +260,8 @@ class Inheritance(ParsingHelperFunction):
 
 
 class WhereAny(ParsingHelperFunction):
+    """Handling of `where` in model definition."""
+
     # Class name doesn't match NAME to avoid a clash with typing.Any
     #:
     NAME = "any"
@@ -260,6 +269,7 @@ class WhereAny(ParsingHelperFunction):
     ALLOWED_IN = ["where"]
 
     def as_math_string(self, array: str, *, over: Union[str, list[str]]) -> str:
+        """Returns a LaTeX string describing `where` functionality."""
         if isinstance(over, str):
             overstring = self._instr(over)
         else:
@@ -301,12 +311,15 @@ class WhereAny(ParsingHelperFunction):
 
 
 class Defined(ParsingHelperFunction):
+    """Handling of dimension definition in calliope definitions."""
+
     #:
     NAME = "defined"
     #:
     ALLOWED_IN = ["where"]
 
     def as_math_string(self, *, within: str, how: Literal["all", "any"], **dims) -> str:
+        """Return a representative LaTeX string."""
         substrings = []
         for name, vals in dims.items():
             substrings.append(self._latex_substring(how, name, vals, within))
@@ -427,12 +440,14 @@ class Defined(ParsingHelperFunction):
 
 
 class Sum(ParsingHelperFunction):
-    #:
+    """Processing of sums in calliope."""
+
     NAME = "sum"
     #:
     ALLOWED_IN = ["expression"]
 
     def as_math_string(self, array: str, *, over: Union[str, list[str]]) -> str:
+        """Return a representative LaTeX for sums."""
         if isinstance(over, str):
             overstring = self._instr(over)
         else:
@@ -459,12 +474,15 @@ class Sum(ParsingHelperFunction):
 
 
 class ReduceCarrierDim(ParsingHelperFunction):
+    """Carrier dimension reductions."""
+
     #:
     NAME = "reduce_carrier_dim"
     #:
     ALLOWED_IN = ["expression"]
 
     def as_math_string(self, array: str, flow_direction: Literal["in", "out"]) -> str:
+        """Return a representative LaTeX string."""
         return rf"\sum\limits_{{\text{{carrier}} \in \text{{carrier_{flow_direction}}}}} ({array})"
 
     def as_array(
@@ -491,12 +509,15 @@ class ReduceCarrierDim(ParsingHelperFunction):
 
 
 class SelectFromLookupArrays(ParsingHelperFunction):
+    """Vectorised indexing functionality."""
+
     #:
     NAME = "select_from_lookup_arrays"
     #:
     ALLOWED_IN = ["expression"]
 
     def as_math_string(self, array: str, **lookup_arrays: str) -> str:
+        """Returns a representative LaTeX string."""
         new_strings = {
             (iterator := dim.removesuffix("s")): rf"={array}[{iterator}]"
             for dim, array in lookup_arrays.items()
@@ -516,6 +537,7 @@ class SelectFromLookupArrays(ParsingHelperFunction):
             lookup_arrays (dict[str, xr.DataArray]):
                 key: dimension on which to apply vectorised indexing
                 value: array whose values are either NaN or values from the dimension given in the key.
+
         Raises:
             BackendError: `array` must be indexed over the dimensions given in the `lookup_arrays` dict keys.
             BackendError: All `lookup_arrays` must be indexed over all the dimensions given in the `lookup_arrays` dict keys.
@@ -589,12 +611,15 @@ class SelectFromLookupArrays(ParsingHelperFunction):
 
 
 class GetValAtIndex(ParsingHelperFunction):
+    """Getter functionality for obtaining values at specific indices."""
+
     #:
     NAME = "get_val_at_index"
     #:
     ALLOWED_IN = ["expression", "where"]
 
     def as_math_string(self, **dim_idx_mapping: str) -> str:
+        """Return a representative LaTeX string."""
         dim, idx = self._mapping_to_dim_idx(**dim_idx_mapping)
         return f"{dim}[{idx}]"
 
@@ -603,12 +628,10 @@ class GetValAtIndex(ParsingHelperFunction):
 
         This function is primarily useful for timeseries data.
 
-        Keyword Args:
-            key (str): Model dimension in which to extract value.
-            value (int): Integer index of the value to extract (assuming zero-indexing).
-
-        Raises:
-            ValueError: Exactly one dimension:index mapping is expected.
+        Args:
+            **dim_idx_mapping (int): kwargs with
+                key (str): Model dimension in which to extract value.
+                value (int): Integer index of the value to extract (assuming zero-indexing).
 
         Returns:
             xr.DataArray: Dimensionless array containing one value.
@@ -631,15 +654,15 @@ class GetValAtIndex(ParsingHelperFunction):
         dim, idx = self._mapping_to_dim_idx(**dim_idx_mapping)
         return self._input_data.coords[dim][int(idx)]
 
+    # For as_array
     @overload
     @staticmethod
-    def _mapping_to_dim_idx(**dim_idx_mapping: int) -> tuple[str, int]:
-        "used in as_array"
+    def _mapping_to_dim_idx(**dim_idx_mapping: int) -> tuple[str, int]: ...
 
+    # For as_math_string
     @overload
     @staticmethod
-    def _mapping_to_dim_idx(**dim_idx_mapping: str) -> tuple[str, str]:
-        "used in as_math_string"
+    def _mapping_to_dim_idx(**dim_idx_mapping: str) -> tuple[str, str]: ...
 
     @staticmethod
     def _mapping_to_dim_idx(**dim_idx_mapping) -> tuple[str, Union[str, int]]:
@@ -649,6 +672,8 @@ class GetValAtIndex(ParsingHelperFunction):
 
 
 class Roll(ParsingHelperFunction):
+    """Rolling functionality for ordered dims."""
+
     #:
     NAME = "roll"
     #:
@@ -656,9 +681,11 @@ class Roll(ParsingHelperFunction):
 
     @property
     def ignore_where(self) -> bool:
+        """Whether or not to ignore `where` functionality."""
         return True
 
     def as_math_string(self, array: str, **roll_kwargs: str) -> str:
+        """Return representative LaTeX string."""
         new_strings = {
             k.removesuffix("s"): f"{-1 * int(v):+d}" for k, v in roll_kwargs.items()
         }
@@ -667,13 +694,14 @@ class Roll(ParsingHelperFunction):
 
     def as_array(self, array: xr.DataArray, **roll_kwargs: int) -> xr.DataArray:
         """Roll (a.k.a., shift) the array along the given dimension(s) by the given number of places.
+
         Rolling keeps the array index labels in the same position, but moves the data by the given number of places.
 
         Args:
             array (xr.DataArray): Array on which to roll data.
-        Keyword Args:
-            key (str): name of dimension on which to roll.
-            value (int): number of places to roll data.
+            **roll_kwargs (int): kwargs with the following
+                key (str): name of dimension on which to roll.
+                value (int): number of places to roll data.
 
         Returns:
             xr.DataArray: `array` with rolled data.
@@ -693,12 +721,15 @@ class Roll(ParsingHelperFunction):
 
 
 class DefaultIfEmpty(ParsingHelperFunction):
+    """Functionality for empty cases."""
+
     #:
     NAME = "default_if_empty"
     #:
     ALLOWED_IN = ["expression"]
 
     def as_math_string(self, var: str, default: float | int) -> str:
+        """Return representative LaTeX string."""
         return rf"({var}\vee{{}}{default})"
 
     def as_array(self, var: xr.DataArray, default: float | int) -> xr.DataArray:
