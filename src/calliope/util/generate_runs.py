@@ -1,13 +1,10 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
-"""
-generate_runs.py
-~~~~~~~~~~~~~~~~
+"""Run generation helper functions.
 
-Generate scripts to run multiple versions of the same model
-in parallel on a cluster or sequentially on any machine.
-
+Generate scripts to run multiple versions of the same model in parallel on a cluster
+or sequentially on any machine.
 """
 
 import os
@@ -18,8 +15,7 @@ from calliope.attrdict import AttrDict
 
 
 def generate_runs(model_file, scenarios=None, additional_args=None, override_dict=None):
-    """
-    Returns a list of "calliope run" invocations.
+    """Returns a list of "calliope run" invocations.
 
     ``scenarios`` must be specified as either a semicolon-separated
     list of scenarios or a semicolon-separated list of comma-separated
@@ -70,6 +66,7 @@ def generate_runs(model_file, scenarios=None, additional_args=None, override_dic
 def generate_bash_script(
     out_file, model_file, scenarios, additional_args=None, override_dict=None, **kwargs
 ):
+    """Produces a bash script to aid in running multiple models."""
     commands = generate_runs(model_file, scenarios, additional_args, override_dict)
 
     base_string = "    {i}) {cmd} ;;\n"
@@ -119,6 +116,7 @@ def generate_bsub_script(
     cluster_threads=1,
     **kwargs,
 ):
+    """BSUB (IBM Spectrum LSF) script generator."""
     # We also need to generate the bash script to run on the cluster
     bash_out_file = out_file + ".array.sh"
     bash_out_file_basename = os.path.basename(bash_out_file)
@@ -154,10 +152,7 @@ def generate_sbatch_script(
     cluster_threads=1,
     **kwargs,
 ):
-    """
-    SBATCH (SLURM) script generator.
-    """
-
+    """SBATCH (SLURM) script generator."""
     # We also need to generate the bash script to run on the cluster
     bash_out_file = out_file + ".array.sh"
     bash_out_file_basename = os.path.basename(bash_out_file)
@@ -206,6 +201,7 @@ def generate_sbatch_script(
 def generate_windows_script(
     out_file, model_file, scenarios, additional_args=None, override_dict=None, **kwargs
 ):
+    """Windows script generator."""
     commands = generate_runs(model_file, scenarios, additional_args, override_dict)
 
     # \r\n are Windows line endings
@@ -233,4 +229,5 @@ _KINDS = {
 
 
 def generate(kind, **kwargs):
+    """Generate scripts for several parallel cluster platforms."""
     _KINDS[kind](**kwargs)
