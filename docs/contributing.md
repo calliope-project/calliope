@@ -196,13 +196,13 @@ Start reading our code and you'll get the hang of it.
 
 We mostly follow the official [Style Guide for Python Code (PEP8)](https://www.python.org/dev/peps/pep-0008/).
 
-We have chosen to use the uncompromising code formatter [`black`](https://github.com/psf/black/) and the linter [`ruff`](https://beta.ruff.rs/docs/).
+We have chosen to use [`ruff`](https://docs.astral.sh/ruff/) for code formatting and linting due to its fast speed and comprehensiveness.
 When run from the root directory of this repository, `pyproject.toml` should ensure that formatting and linting fixes are in line with our custom preferences (e.g., 88 character maximum line length).
-The philosophy behind using `black` is to have uniform style throughout the project dictated by code.
+The philosophy behind using the `ruff` linter is that it's based on [`black`](https://black.readthedocs.io/en/stable/), an uncompromising formatter that ensures uniform style throughout the project.
 Since `black` is designed to minimise diffs, and make patches more human readable, this also makes code reviews more efficient.
-To make this a smooth experience, you should run `pre-commit install` after setting up your development environment, so that `black` makes all the necessary fixes to your code each time you commit, and so that `ruff` will highlight any errors in your code.
-If you prefer, you can also set up your IDE to run these two tools whenever you save your files, and to have `ruff` highlight erroneous code directly as you type.
-Take a look at their documentation for more information on configuring this.
+To make this a smooth experience, you should run `pre-commit install` after setting up your development environment, so that `ruff` makes all the necessary formatting fixes to your code each time you commit, and so that it also highlights any style issues in your code.
+If you prefer, you can also set up your IDE to run `ruff` formatting whenever you save your files, and to have `ruff` highlight erroneous code directly as you type.
+Take a look at its documentation for more information on configuring this.
 
 We require all new contributions to have docstrings for all modules, classes and methods.
 When adding docstrings, we request you use the [Google docstring style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).

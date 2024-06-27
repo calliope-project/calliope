@@ -14,6 +14,8 @@
 ### Internal changes
 
 |fixed| Removed unused debug parameter in `Model.__init__()`
+|changed| Ruff linter checking was extended with pydocstrings and flake8-pytest.
+|changed| Moved from black formatting to the Ruff formatter (black-based, but faster).
 
 ## 0.7.0.dev3 (2024-02-14)
 
