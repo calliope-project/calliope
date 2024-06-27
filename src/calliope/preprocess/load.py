@@ -73,8 +73,10 @@ def _combine_overrides(overrides: AttrDict, scenario_overrides: list):
             combined_override_dict.union(override_with_imports, allow_override=False)
         except KeyError as e:
             raise exceptions.ModelError(
-                str(e)[1:-1] + ". Already specified but defined again in "
-                "override `{}`.".format(override)
+                str(e)[1:-1]
+                + ". Already specified but defined again in " "override `{}`.".format(
+                    override
+                )
             )
 
     return combined_override_dict

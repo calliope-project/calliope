@@ -158,7 +158,9 @@ class EvalToCallable(EvalString):
         ...
 
     def eval(
-        self, return_type: RETURN_T, **eval_kwargs: Unpack[EvalAttrs]  # type: ignore
+        self,
+        return_type: RETURN_T,
+        **eval_kwargs: Unpack[EvalAttrs],  # type: ignore
     ) -> Callable:
         """Evaluate math string expression.
 

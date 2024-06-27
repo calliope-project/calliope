@@ -111,8 +111,9 @@ def print_end_time(start_time, msg="complete"):
     secs = round((end_time - start_time).total_seconds(), 1)
     tend = end_time.strftime(_time_format)
     click.secho(
-        "\nCalliope run {}. "
-        "Elapsed: {} seconds (time at exit: {})".format(msg, secs, tend)
+        "\nCalliope run {}. " "Elapsed: {} seconds (time at exit: {})".format(
+            msg, secs, tend
+        )
     )
 
 

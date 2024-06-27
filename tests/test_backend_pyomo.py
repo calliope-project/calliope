@@ -887,7 +887,7 @@ class TestCapacityConstraints:
             "Cannot use inf for flow_cap_equals for node, tech `('a', 'test_supply_elec')`",
         )
 
-    @pytest.mark.parametrize("bound", (("max")))
+    @pytest.mark.parametrize("bound", ("max"))
     def test_techs_flow_capacity_systemwide_constraint(self, bound):
         """I for i in sets.techs
         if model_run.get_key('techs.{}.constraints.flow_cap_max_systemwide'.format(i), None)

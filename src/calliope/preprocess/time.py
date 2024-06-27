@@ -1,6 +1,7 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Functionality to add and process time varying parameters."""
+
 import logging
 from pathlib import Path
 from typing import overload

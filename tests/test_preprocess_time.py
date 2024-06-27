@@ -6,7 +6,6 @@ from .common.util import build_test_model
 
 
 class TestTimeFormat:
-
     def test_change_date_format(self):
         """
         Test the date parser catches a different date format from file than

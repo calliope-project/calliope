@@ -397,7 +397,6 @@ class TestExtractFromSchema:
 
 
 class TestUpdateSchema:
-
     @pytest.mark.parametrize("top_level", ["parameters", "nodes", "techs"])
     def test_add_new_schema(self, top_level):
         schema.update_model_schema(

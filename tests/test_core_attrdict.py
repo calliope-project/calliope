@@ -356,9 +356,7 @@ class TestAttrDict:
                     baz: 2
                     3:
                         4: 5
-            """.format(
-                imported_file
-            )
+            """.format(imported_file)
 
             d = AttrDict.from_yaml_string(yaml_string, resolve_imports="foobar")
 
