@@ -367,26 +367,24 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
         self._add_all_inputs_as_parameters()
 
-    def add_parameter(
+    def add_parameter(  # noqa: D102, override
         self,
         parameter_name: str,
         parameter_values: xr.DataArray,
         default: Any = np.nan,
         use_inf_as_na: bool = False,
     ) -> None:
-        """Add parameter to docs."""
         attrs = {
             "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
             "unit": self._PARAM_UNITS.get(parameter_name, None),
         }
         self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
 
-    def add_constraint(
+    def add_constraint(  # noqa: D102, override
         self,
         name: str,
         constraint_dict: Optional[parsing.UnparsedConstraintDict] = None,
     ) -> None:
-        """Add constraint to docs."""
         equation_strings: list = []
 
         def _constraint_setter(
@@ -403,12 +401,11 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             parsed_component, self.constraints[name], equations=equation_strings
         )
 
-    def add_global_expression(
+    def add_global_expression(  # noqa: D102, override
         self,
         name: str,
         expression_dict: Optional[parsing.UnparsedExpressionDict] = None,
     ) -> None:
-        """Add global expression to docs."""
         equation_strings: list = []
 
         def _expression_setter(
@@ -429,10 +426,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             parsed_component, self.global_expressions[name], equations=equation_strings
         )
 
-    def add_variable(
+    def add_variable(  # noqa: D102, override
         self, name: str, variable_dict: Optional[parsing.UnparsedVariableDict] = None
     ) -> None:
-        """Add variable to docs."""
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
 
         def _variable_setter(where: xr.DataArray, references: set) -> xr.DataArray:
@@ -453,10 +449,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             parsed_component, where_array, equations=[lb, ub], sense=r"\forall" + domain
         )
 
-    def add_objective(
+    def add_objective(  # noqa: D102, override
         self, name: str, objective_dict: Optional[parsing.UnparsedObjectiveDict] = None
     ) -> None:
-        """Add model objective to docs."""
         sense_dict = {
             "minimize": r"\min{}",
             "maximize": r"\max{}",
@@ -489,10 +484,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     ) -> None:
         return None
 
-    def delete_component(
+    def delete_component(  # noqa: D102, override
         self, key: str, component_type: backend_model._COMPONENTS_T
     ) -> None:
-        """Component deletion."""
         if key in self._dataset and self._dataset[key].obj_type == component_type:
             del self._dataset[key]
 

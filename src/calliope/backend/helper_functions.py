@@ -23,7 +23,7 @@ _registry: dict[
 
 
 class ParsingHelperFunction(ABC):
-    """Helper class for parsing."""
+    """Abstract base class for helper function parsing."""
 
     def __init__(
         self,
@@ -167,10 +167,9 @@ class Inheritance(ParsingHelperFunction):
     #:
     NAME = "inheritance"
 
-    def as_math_string(
+    def as_math_string(  # noqa: D102, override
         self, nodes: Optional[str] = None, techs: Optional[str] = None
     ) -> str:
-        """Returns a LaTeX string describing inheritance of nodes or techs."""
         strings = []
         if nodes is not None:
             strings.append(f"nodes={nodes}")
@@ -268,8 +267,7 @@ class WhereAny(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["where"]
 
-    def as_math_string(self, array: str, *, over: Union[str, list[str]]) -> str:
-        """Returns a LaTeX string describing `where` functionality."""
+    def as_math_string(self, array: str, *, over: Union[str, list[str]]) -> str:  # noqa: D102, override
         if isinstance(over, str):
             overstring = self._instr(over)
         else:
@@ -318,8 +316,7 @@ class Defined(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["where"]
 
-    def as_math_string(self, *, within: str, how: Literal["all", "any"], **dims) -> str:
-        """Return a representative LaTeX string."""
+    def as_math_string(self, *, within: str, how: Literal["all", "any"], **dims) -> str:  # noqa: D102, override
         substrings = []
         for name, vals in dims.items():
             substrings.append(self._latex_substring(how, name, vals, within))
@@ -446,8 +443,7 @@ class Sum(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_math_string(self, array: str, *, over: Union[str, list[str]]) -> str:
-        """Return a representative LaTeX for sums."""
+    def as_math_string(self, array: str, *, over: Union[str, list[str]]) -> str:  # noqa: D102, override
         if isinstance(over, str):
             overstring = self._instr(over)
         else:
@@ -481,8 +477,7 @@ class ReduceCarrierDim(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_math_string(self, array: str, flow_direction: Literal["in", "out"]) -> str:
-        """Return a representative LaTeX string."""
+    def as_math_string(self, array: str, flow_direction: Literal["in", "out"]) -> str:  # noqa: D102, override
         return rf"\sum\limits_{{\text{{carrier}} \in \text{{carrier_{flow_direction}}}}} ({array})"
 
     def as_array(
@@ -516,8 +511,7 @@ class SelectFromLookupArrays(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_math_string(self, array: str, **lookup_arrays: str) -> str:
-        """Returns a representative LaTeX string."""
+    def as_math_string(self, array: str, **lookup_arrays: str) -> str:  # noqa: D102, override
         new_strings = {
             (iterator := dim.removesuffix("s")): rf"={array}[{iterator}]"
             for dim, array in lookup_arrays.items()
@@ -618,8 +612,7 @@ class GetValAtIndex(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression", "where"]
 
-    def as_math_string(self, **dim_idx_mapping: str) -> str:
-        """Return a representative LaTeX string."""
+    def as_math_string(self, **dim_idx_mapping: str) -> str:  # noqa: D102, override
         dim, idx = self._mapping_to_dim_idx(**dim_idx_mapping)
         return f"{dim}[{idx}]"
 
@@ -684,8 +677,7 @@ class Roll(ParsingHelperFunction):
         """Whether or not to ignore `where` functionality."""
         return True
 
-    def as_math_string(self, array: str, **roll_kwargs: str) -> str:
-        """Return representative LaTeX string."""
+    def as_math_string(self, array: str, **roll_kwargs: str) -> str:  # noqa: D102, override
         new_strings = {
             k.removesuffix("s"): f"{-1 * int(v):+d}" for k, v in roll_kwargs.items()
         }
@@ -728,8 +720,7 @@ class DefaultIfEmpty(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_math_string(self, var: str, default: float | int) -> str:
-        """Return representative LaTeX string."""
+    def as_math_string(self, var: str, default: float | int) -> str:  # noqa: D102, override
         return rf"({var}\vee{{}}{default})"
 
     def as_array(self, var: xr.DataArray, default: float | int) -> xr.DataArray:

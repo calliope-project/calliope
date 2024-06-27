@@ -74,7 +74,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         self._add_all_inputs_as_parameters()
 
-    def add_parameter(  # noqa: D102, defined in helper class.
+    def add_parameter(  # noqa: D102, override
         self,
         parameter_name: str,
         parameter_values: xr.DataArray,
@@ -109,7 +109,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         }
         self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
 
-    def add_constraint(  # noqa: D102, defined in helper class.
+    def add_constraint(  # noqa: D102, override
         self,
         name: str,
         constraint_dict: Optional[parsing.UnparsedConstraintDict] = None,
@@ -134,7 +134,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         self._add_component(name, constraint_dict, _constraint_setter, "constraints")
 
-    def add_global_expression(  # noqa: D102, defined in helper class.
+    def add_global_expression(  # noqa: D102, override
         self,
         name: str,
         expression_dict: Optional[parsing.UnparsedExpressionDict] = None,
@@ -155,7 +155,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             name, expression_dict, _expression_setter, "global_expressions"
         )
 
-    def add_variable(  # noqa: D102, defined in helper class.
+    def add_variable(  # noqa: D102, override
         self, name: str, variable_dict: Optional[parsing.UnparsedVariableDict] = None
     ) -> None:
         domain_dict = {"real": pmo.RealSet, "integer": pmo.IntegerSet}
@@ -177,7 +177,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         self._add_component(name, variable_dict, _variable_setter, "variables")
 
-    def add_objective(  # noqa: D102, defined in helper class.
+    def add_objective(  # noqa: D102, override
         self, name: str, objective_dict: Optional[parsing.UnparsedObjectiveDict] = None
     ) -> None:
         sense_dict = {"minimize": 1, "minimise": 1, "maximize": -1, "maximise": -1}
@@ -204,7 +204,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         self._add_component(name, objective_dict, _objective_setter, "objectives")
 
-    def get_parameter(  # noqa: D102, defined in helper class.
+    def get_parameter(  # noqa: D102, override
         self, name: str, as_backend_objs: bool = True
     ) -> xr.DataArray:
         parameter = self.parameters.get(name, None)
@@ -226,7 +226,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             )
             return param_as_vals.astype(parameter.original_dtype)
 
-    def get_constraint(  # noqa: D102, defined in helper class.
+    def get_constraint(  # noqa: D102, override
         self, name: str, as_backend_objs: bool = True, eval_body: bool = False
     ) -> Union[xr.DataArray, xr.Dataset]:
         constraint = self.constraints.get(name, None)
@@ -243,7 +243,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             constraint = constraint_attrs.to_dataset("attributes")
         return constraint
 
-    def get_variable(  # noqa: D102, defined in helper class.
+    def get_variable(  # noqa: D102, override
         self, name: str, as_backend_objs: bool = True
     ) -> xr.DataArray:
         variable = self.variables.get(name, None)
@@ -254,7 +254,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         else:
             return self._apply_func(self._from_pyomo_param, variable)
 
-    def get_variable_bounds(  # noqa: D102, defined in helper class.
+    def get_variable_bounds(  # noqa: D102, override
         self, name: str
     ) -> xr.Dataset:
         variable = self.get_variable(name, as_backend_objs=True)
@@ -266,7 +266,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         variable_attrs.coords["attributes"] = ["lb", "ub"]
         return variable_attrs.to_dataset("attributes")
 
-    def get_global_expression(  # noqa: D102, defined in helper class.
+    def get_global_expression(  # noqa: D102, override
         self, name: str, as_backend_objs: bool = True, eval_body: bool = False
     ) -> xr.DataArray:
         global_expression = self.global_expressions.get(name, None)
@@ -279,7 +279,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         else:
             return global_expression
 
-    def _solve(  # noqa: D102, defined in helper class.
+    def _solve(  # noqa: D102, override
         self,
         solver: str,
         solver_io: Optional[str] = None,
@@ -338,7 +338,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         return results
 
-    def verbose_strings(self) -> None:  # noqa: D102, defined in helper class.
+    def verbose_strings(self) -> None:  # noqa: D102, override
         def __renamer(val, *idx):
             if pd.notnull(val):
                 val.calliope_coords = idx
@@ -351,7 +351,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                     self._apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
                     da.attrs["coords_in_name"] = True
 
-    def to_lp(  # noqa: D102, defined in helper class.
+    def to_lp(  # noqa: D102, override
         self, path: Union[str, Path]
     ) -> None:
         self._instance.write(str(path), format="lp", symbolic_solver_labels=True)
@@ -377,13 +377,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 pmo, f"{COMPONENT_TRANSLATOR[singular_component]}_list"
             )()
 
-    def delete_component(self, key: str, component_type: _COMPONENTS_T) -> None:
-        """Delete a list object from the backend model object.
-
-        Args:
-            key (str): Name of object
-            component_type (str): Object type
-        """
+    def delete_component(self, key: str, component_type: _COMPONENTS_T) -> None:  # noqa: D102, override
         component_dict = getattr(self._instance, component_type)
         if key in component_dict:
             del component_dict[key]
@@ -391,7 +385,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         if key in self._dataset and self._dataset[key].obj_type == component_type:
             del self._dataset[key]
 
-    def update_parameter(  # noqa: D102, defined in helper class.
+    def update_parameter(  # noqa: D102, override
         self, name: str, new_values: Union[xr.DataArray, SupportsFloat]
     ) -> None:
         new_values = xr.DataArray(new_values)
@@ -443,7 +437,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         self._apply_func(self._update_pyomo_param, parameter_da, new_values)
 
-    def update_variable_bounds(  # noqa: D102, defined in helper class.
+    def update_variable_bounds(  # noqa: D102, override
         self,
         name: str,
         *,
@@ -487,7 +481,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 bound=translator[bound_name],
             )
 
-    def fix_variable(  # noqa: D102, defined in helper class.
+    def fix_variable(  # noqa: D102, override
         self, name: str, where: Optional[xr.DataArray] = None
     ) -> None:
         variable_da = self.get_variable(name)
@@ -495,7 +489,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             variable_da = variable_da.where(where.fillna(0))
         self._apply_func(self._fix_pyomo_variable, variable_da)
 
-    def unfix_variable(  # noqa: D102, defined in helper class.
+    def unfix_variable(  # noqa: D102, override
         self, name: str, where: Optional[xr.DataArray] = None
     ) -> None:
         variable_da = self.get_variable(name)
@@ -504,7 +498,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._apply_func(self._unfix_pyomo_variable, variable_da)
 
     @property
-    def has_integer_or_binary_variables(  # noqa: D102, defined in helper class.
+    def has_integer_or_binary_variables(  # noqa: D102, override
         self,
     ) -> bool:
         model_report = build_model_size_report(self._instance)

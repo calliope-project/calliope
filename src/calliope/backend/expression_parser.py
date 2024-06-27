@@ -268,8 +268,7 @@ class EvalOperatorOperand(EvalToArrayStr):
                 val = val - evaluated_operand
         return val
 
-    def as_math_string(self) -> str:
-        """Evaluate and return as LaTeX strings."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         val = self.value[0].eval(return_type="math_string", **self.eval_attrs)
 
         for operator_, operand in self._operator_operands(self.value[1:]):
@@ -291,8 +290,7 @@ class EvalOperatorOperand(EvalToArrayStr):
                 )
         return val
 
-    def as_array(self) -> xr.DataArray:
-        """Evaluate and return expression as a DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         val = self._apply_where_array(
             self.value[0].eval(return_type="array", **self.eval_attrs)
         )
@@ -334,12 +332,10 @@ class EvalSignOp(EvalToArrayStr):
         """Evaluate the element that will have the sign attached to it."""
         return self.value.eval(return_type, **self.eval_attrs)
 
-    def as_math_string(self) -> str:
-        """Evaluate and return expression as LaTeX."""
+    def as_math_string(self) -> str:  # noqa: D102
         return self.sign + self._eval("math_string")
 
-    def as_array(self) -> xr.DataArray:
-        """Evaluate and return expression as DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         evaluated = self._eval("array")
         if self.sign == "-":
             evaluated = -1 * evaluated
@@ -396,13 +392,11 @@ class EvalComparisonOp(EvalToArrayStr):
                 constraint = lhs >= rhs
         return constraint
 
-    def as_math_string(self) -> str:
-        """Evaluate and return expression as LaTeX."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         lhs, rhs = self._eval("math_string")
         return lhs + self.OP_TRANSLATOR[self.op] + rhs
 
-    def as_array(self) -> xr.DataArray:
-        """Evaluate and return expression as DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         lhs, rhs = self._eval("array")
         return self.eval_attrs["backend_interface"]._apply_func(
             self._compare_bitwise, self.eval_attrs["where_array"], lhs, rhs
@@ -478,12 +472,10 @@ class EvalFunction(EvalToArrayStr):
         evaluated = helper_function(*args_, **kwargs_)
         return evaluated
 
-    def as_math_string(self) -> str:
-        """Evaluate and return expression as LaTeX."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         return self._eval("math_string")
 
-    def as_array(self) -> xr.DataArray:
-        """Evaluate and return expression as a DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         return self._eval("array")
 
 
@@ -592,8 +584,7 @@ class EvalSlicedComponent(EvalToArrayStr):
         evaluated = self.obj_name.eval(return_type, **self.eval_attrs)
         return evaluated, slices
 
-    def as_math_string(self) -> str:
-        """Evaluate and return expression as LaTeX."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         evaluated, slices = self._eval("math_string")
         singular_slice_refs = {k.removesuffix("s"): v for k, v in slices.items()}
         id_ = pp.Combine(
@@ -608,8 +599,7 @@ class EvalSlicedComponent(EvalToArrayStr):
         obj_parser.set_parse_action(self._replace_rule(singular_slice_refs))
         return obj_parser.parse_string(evaluated, parse_all=True)[0]
 
-    def as_array(self) -> xr.DataArray:
-        """Evaluate and return expression as DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         evaluated, slices = self._eval("array")
         return evaluated.sel(**slices)
 
@@ -648,12 +638,10 @@ class EvalIndexSlice(EvalToArrayStr):
             return_type, **self.eval_attrs
         )
 
-    def as_math_string(self) -> str:
-        """Evaluate and return expression as LaTeX."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         return self._eval("math_string", False)
 
-    def as_array(self) -> xr.DataArray | list[str | float]:
-        """Evaluate and return expression as a DataArray or list."""
+    def as_array(self) -> xr.DataArray | list[str | float]:  # noqa: D102, override
         evaluated = self._eval("array", True)
         if isinstance(evaluated, xr.DataArray) and evaluated.isnull().any():
             evaluated = evaluated.notnull()
@@ -689,12 +677,10 @@ class EvalSubExpressions(EvalToArrayStr):
             return_type, **self.eval_attrs
         )
 
-    def as_math_string(self) -> str:
-        """Evaluate and return expression as LaTeX."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         return self._eval("math_string")
 
-    def as_array(self) -> xr.DataArray:
-        """Evaluate and return expression as a DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         return self._eval("array")
 
 
@@ -718,16 +704,14 @@ class EvalNumber(EvalToArrayStr):
         """Programming / official string representation."""
         return "NUM:" + str(self.value)
 
-    def as_math_string(self) -> str:
-        """Evaluate and return expression as LaTeX."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         return re.sub(
             r"([\d]+?)e([+-])([\d]+)",
             r"\1\\mathord{\\times}10^{\2\3}",
             f"{float(self.value):.6g}",
         )
 
-    def as_array(self) -> xr.DataArray:
-        """Evaluate and return expression as DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         return xr.DataArray(float(self.value), attrs={"obj_type": "number"})
 
 
@@ -749,13 +733,11 @@ class ListParser(EvalToArrayStr):
         """Programming / official string representation."""
         return f"{self.val}"
 
-    def as_math_string(self) -> str:
-        """Evaluate and return expression as LaTeX."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         input_list = self.as_array()
         return "[" + ",".join(str(i) for i in input_list) + "]"
 
-    def as_array(self) -> list[str | float]:
-        """Evaluate and return expression as a list."""
+    def as_array(self) -> list[str | float]:  # noqa: D102, override
         values = [val.eval("array", **self.eval_attrs) for val in self.val]
         # strings and numbers are returned as xarray arrays of size 1,
         # so we extract those values.
@@ -782,8 +764,7 @@ class EvalUnslicedComponent(EvalToArrayStr):
         """Programming / official string representation."""
         return f"COMPONENT:{self.name}"
 
-    def as_math_string(self) -> str:
-        """Evaluate and return expression as LaTeX."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         self.eval_attrs["as_values"] = False
         evaluated = self.as_array()
         self.eval_attrs["references"].add(self.name)
@@ -798,8 +779,7 @@ class EvalUnslicedComponent(EvalToArrayStr):
             formatted_name = rf"\textit{{{self.name}}}"
         return formatted_name + dims
 
-    def as_array(self) -> xr.DataArray:
-        """Evaluate and return expression as DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         backend_interface = self.eval_attrs["backend_interface"]
 
         if self.eval_attrs.get("as_values", False):
@@ -836,12 +816,10 @@ class EvalGenericString(EvalToArrayStr):
         """Programming / official string representation."""
         return f"STRING:{self.val}"
 
-    def as_math_string(self):
-        """Evaluate and return expression as LaTeX."""
+    def as_math_string(self):  # noqa: D102, override
         return str(self.val)
 
-    def as_array(self) -> xr.DataArray:
-        """Evaluate and return expression as DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         return xr.DataArray(str(self.val), attrs={"obj_type": "string"})
 
 

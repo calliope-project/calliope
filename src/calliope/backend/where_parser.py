@@ -44,13 +44,11 @@ class EvalWhere(expression_parser.EvalToArrayStr):
 class EvalNot(EvalWhere, expression_parser.EvalSignOp):
     """Parse action to process successfully parsed expressions with a leading `not`."""
 
-    def as_math_string(self) -> str:
-        """Add sign to stringified data for use in a LaTex math formula."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         evaluated = self.value.eval("math_string", **self.eval_attrs)
         return rf"\neg ({evaluated})"
 
-    def as_array(self) -> xr.DataArray:
-        """Negate the evaluated DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         evaluated = self.value.eval("array", **self.eval_attrs)
         return ~evaluated
 
@@ -86,12 +84,10 @@ class EvalAndOr(EvalWhere, expression_parser.EvalOperatorOperand):
         """Override func from parent class to effectively do nothing."""
         return evaluated
 
-    def as_math_string(self) -> str:
-        """Process and return as LaTeX."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         return super().as_math_string()
 
-    def as_array(self) -> xr.DataArray:
-        """Process and return as DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         return super().as_array()
 
 
@@ -117,12 +113,10 @@ class ConfigOptionParser(EvalWhere):
         """Programming / official string representation."""
         return f"CONFIG:{self.config_option}"
 
-    def as_math_string(self) -> str:
-        """Process and return as LaTeX."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         return rf"\text{{config.{self.config_option}}}"
 
-    def as_array(self) -> xr.DataArray:
-        """Process and return as DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         config_val = (
             self.eval_attrs["input_data"].attrs["config"].build[self.config_option]
         )
@@ -216,8 +210,7 @@ class DataVarParser(EvalWhere):
             var = var.fillna(default)
         return var
 
-    def as_math_string(self) -> str:
-        """Process and return as LaTeX."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         # TODO: add dims from a YAML schema of params that includes default dims
         source_dataset, data_var_type = self._preprocess()
         if data_var_type == "parameters":
@@ -234,8 +227,7 @@ class DataVarParser(EvalWhere):
             data_var_string = rf"\exists ({data_var_string})"
         return data_var_string
 
-    def as_array(self) -> xr.DataArray:
-        """Process and return as DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         source_dataset, data_var_type = self._preprocess()
 
         if self.eval_attrs.get("apply_where", True):
@@ -259,16 +251,14 @@ class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):
         """Return string representation of the parsed grammar."""
         return f"{self.lhs}{self.op}{self.rhs}"
 
-    def as_math_string(self) -> str:
-        """Process and return as LaTeX."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         self.eval_attrs["apply_where"] = False
         lhs, rhs = self._eval("math_string")
         if r"\text" not in rhs:
             rhs = rf"\text{{{rhs}}}"
         return lhs + self.OP_TRANSLATOR[self.op] + rhs
 
-    def as_array(self) -> xr.DataArray:
-        """Process and return as DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         self.eval_attrs["apply_where"] = False
         lhs, rhs = self._eval("array")
         match self.op:
@@ -312,15 +302,13 @@ class SubsetParser(EvalWhere):
         values = [val.eval("array", **self.eval_attrs) for val in self.val]
         return [val.item() if isinstance(val, xr.DataArray) else val for val in values]
 
-    def as_math_string(self) -> str:
-        """Process and return as LaTeX."""
+    def as_math_string(self) -> str:  # noqa: D102, override
         subset = self._eval()
         set_singular = self.set_name.removesuffix("s")
         subset_string = "[" + ",".join(str(i) for i in subset) + "]"
         return rf"\text{{{set_singular}}} \in \text{{{subset_string}}}"
 
-    def as_array(self) -> xr.DataArray:
-        """Process and return as DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         subset = self._eval()
         set_item_in_subset = self.eval_attrs["input_data"][self.set_name].isin(subset)
         return set_item_in_subset
@@ -341,12 +329,10 @@ class BoolOperandParser(EvalWhere):
         """Programming / official string representation."""
         return f"BOOL:{self.val}"
 
-    def as_math_string(self):
-        """Process and return as LaTeX."""
+    def as_math_string(self):  # noqa: D102, override
         return self.val
 
-    def as_array(self) -> xr.DataArray:
-        """Process and return as DataArray."""
+    def as_array(self) -> xr.DataArray:  # noqa: D102, override
         if self.val == "true":
             bool_val = xr.DataArray(np.True_)
         elif self.val == "false":

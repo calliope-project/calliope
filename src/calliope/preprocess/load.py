@@ -38,9 +38,9 @@ def load_model_definition(
 
     Returns:
         tuple[AttrDict, Optional[Path], str]:
-            - Model definition with overrides applied.
-            - Path to model definition YAML if input `model_definiton` was pathlike, otherwise None.
-            - Expansion of scenarios (which are references to model overrides) into a list of named override(s) that have been applied.
+            1. Model definition with overrides applied.
+            2. Path to model definition YAML if input `model_definiton` was pathlike, otherwise None.
+            3. Expansion of scenarios (which are references to model overrides) into a list of named override(s) that have been applied.
     """
     if not isinstance(model_definition, dict):
         model_def_path = Path(model_definition)
