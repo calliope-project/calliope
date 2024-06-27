@@ -2,6 +2,10 @@
 
 ### User-facing changes
 
+|fixed| Backend parameter updates propagate correctly through global expressions in the order those expressions were defined (#616).
+
+|fixed| If setting `model.backend.verbose_strings()`, rebuilt model components from making backend parameter updates will automatically have verbose strings (#623)
+
 |new| Allow extracting shadow prices into results by listing constraints in `config.solve.shadow_prices`, e.g. `config.solve.shadow_prices: ["system_balance"]`  Shadow prices will be added as variables to the model results as `shadow_price_{constraintname}`, e.g. `shadow_price_system_balance`.
 
 |new| Model stores key timestamps as attributes:
