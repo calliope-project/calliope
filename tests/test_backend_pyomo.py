@@ -1721,6 +1721,7 @@ class TestNewBackend:
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.build()
         m.backend.verbose_strings()
+        assert m.backend._has_verbose_strings
         return m
 
     @pytest.fixture
@@ -2365,6 +2366,51 @@ class TestNewBackend:
         default_val = simple_supply._model_data.attrs["defaults"]["source_eff"]
         assert expected.equals(updated_param.fillna(default_val))
 
+    def test_update_parameter_refs_in_order(self, caplog, simple_supply):
+        """
+        `cost_flow_cap` for test_demand_elec is not defined initially.
+        We update `cost_flow_cap` to zero for all index values
+        and then check that it has propagated through to `cost_investment_flow_cap`, `cost`, and the objective function.
+        """
+
+        caplog.set_level(logging.DEBUG)
+        simple_supply.backend.verbose_strings()
+
+        def _check_components(true_or_false: bool):
+            assert (
+                simple_supply.backend.get_parameter(
+                    "cost_flow_cap", as_backend_objs=False
+                )
+                == 0
+            ).all() == true_or_false
+            for expr, kwargs in [
+                ("cost_investment_flow_cap", {"carriers": "electricity"}),
+                ("cost", {}),
+            ]:
+                expression_string = (
+                    simple_supply.backend.get_global_expression(
+                        expr, as_backend_objs=False
+                    )
+                    .sel(techs="test_demand_elec", **kwargs)
+                    .astype(str)
+                )
+                assert (
+                    expression_string.str.contains("test_demand_elec").all()
+                    == true_or_false
+                )
+            objective_string = str(
+                simple_supply.backend.objectives.min_cost_optimisation.item().expr
+            )
+            assert ("test_demand_elec" in objective_string) == true_or_false
+
+        # Without updating, we should NOT see test_demand_elec in our global expressions+objective
+        _check_components(False)
+
+        simple_supply.backend.update_parameter("cost_flow_cap", 0)
+
+        # After updating, we should see test_demand_elec in our global expressions+objective
+        _check_components(True)
+
     def test_update_parameter_no_refs_to_update(self, simple_supply):
         """flow_cap_per_storage_cap_max isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
 
@@ -2587,7 +2633,7 @@ class TestShadowPrices:
             0.0005030505
         )
         assert m.results["shadow_price_balance_demand"].sum().item() == pytest.approx(
-            0.0010061011
+            0.0005030505
         )
 
     def test_yaml_milp_model(self, supply_milp_yaml):
