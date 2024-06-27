@@ -30,31 +30,12 @@ directory = "reports/coverage"
 [tool.coverage.xml]
 output = "reports/coverage/coverage.xml"
 
-[tool.black]
-line-length = 88
-skip-magic-trailing-comma = true
-target-version = ['py310', 'py311', 'py312']
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.github
-  | \.mypy_cache
-  | \.pytest_cache
-  | \.vscode
-  | _build
-  | build
-  | dist
-  | .*\.egg-info
-
-  # directories without python source files
-  | requirements
-)/
-'''
-
 [tool.ruff]
 line-length = 88
+
+[tool.ruff.format]
+exclude = [".*.egg-info", "requirements/**"]
+
 [tool.ruff.lint]
 select = ["E", "F", "I", "Q", "W", "D", "PT"]
 # line too long; Black will handle these
