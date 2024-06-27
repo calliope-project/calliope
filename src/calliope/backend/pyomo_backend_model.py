@@ -204,9 +204,9 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         self._add_component(name, objective_dict, _objective_setter, "objectives")
 
-    def get_parameter(
+    def get_parameter(  # noqa: D102, defined in helper class.
         self, name: str, as_backend_objs: bool = True
-    ) -> xr.DataArray:  # noqa: D102, defined in helper class.
+    ) -> xr.DataArray:
         parameter = self.parameters.get(name, None)
         if parameter is None:
             raise KeyError(f"Unknown parameter: {name}")
@@ -243,9 +243,9 @@ class PyomoBackendModel(backend_model.BackendModel):
             constraint = constraint_attrs.to_dataset("attributes")
         return constraint
 
-    def get_variable(
+    def get_variable(  # noqa: D102, defined in helper class.
         self, name: str, as_backend_objs: bool = True
-    ) -> xr.DataArray:  # noqa: D102, defined in helper class.
+    ) -> xr.DataArray:
         variable = self.variables.get(name, None)
         if variable is None:
             raise KeyError(f"Unknown variable: {name}")
@@ -254,9 +254,9 @@ class PyomoBackendModel(backend_model.BackendModel):
         else:
             return self._apply_func(self._from_pyomo_param, variable)
 
-    def get_variable_bounds(
+    def get_variable_bounds(  # noqa: D102, defined in helper class.
         self, name: str
-    ) -> xr.Dataset:  # noqa: D102, defined in helper class.
+    ) -> xr.Dataset:
         variable = self.get_variable(name, as_backend_objs=True)
         variable_attrs = self._apply_func(
             self._from_pyomo_variable_bounds,
@@ -351,9 +351,9 @@ class PyomoBackendModel(backend_model.BackendModel):
                     self._apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
                     da.attrs["coords_in_name"] = True
 
-    def to_lp(
+    def to_lp(  # noqa: D102, defined in helper class.
         self, path: Union[str, Path]
-    ) -> None:  # noqa: D102, defined in helper class.
+    ) -> None:
         self._instance.write(str(path), format="lp", symbolic_solver_labels=True)
 
     def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
@@ -487,26 +487,26 @@ class PyomoBackendModel(backend_model.BackendModel):
                 bound=translator[bound_name],
             )
 
-    def fix_variable(
+    def fix_variable(  # noqa: D102, defined in helper class.
         self, name: str, where: Optional[xr.DataArray] = None
-    ) -> None:  # noqa: D102, defined in helper class.
+    ) -> None:
         variable_da = self.get_variable(name)
         if where is not None:
             variable_da = variable_da.where(where.fillna(0))
         self._apply_func(self._fix_pyomo_variable, variable_da)
 
-    def unfix_variable(
+    def unfix_variable(  # noqa: D102, defined in helper class.
         self, name: str, where: Optional[xr.DataArray] = None
-    ) -> None:  # noqa: D102, defined in helper class.
+    ) -> None:
         variable_da = self.get_variable(name)
         if where is not None:
             variable_da = variable_da.where(where.fillna(0))
         self._apply_func(self._unfix_pyomo_variable, variable_da)
 
     @property
-    def has_integer_or_binary_variables(
+    def has_integer_or_binary_variables(  # noqa: D102, defined in helper class.
         self,
-    ) -> bool:  # noqa: D102, defined in helper class.
+    ) -> bool:
         model_report = build_model_size_report(self._instance)
         binaries = model_report["activated"]["binary_variables"]
         integers = model_report["activated"]["integer_variables"]

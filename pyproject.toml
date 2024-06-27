@@ -56,7 +56,7 @@ exclude = '''
 [tool.ruff]
 line-length = 88
 [tool.ruff.lint]
-select = ["E", "F", "I", "Q", "W", "PT"]
+select = ["E", "F", "I", "Q", "W", "D", "PT"]
 # line too long; Black will handle these
 ignore = ["E501"]
 
@@ -68,6 +68,8 @@ max-complexity = 10
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "F401"]
 "*.ipynb" = ["E402"]
+"tests/*" = ["D"]
+"docs/examples/*" = ["D"]
 
 [tool.ruff.lint.flake8-quotes]
 docstring-quotes = "double"

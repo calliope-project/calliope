@@ -1,13 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
-"""
-model_run.py
-~~~~~~~~~~~~
-
-Preprocessing of base model definition and overrides/scenarios into a unified dictionary
-
-"""
+"""Preprocessing of base model definition and overrides/scenarios into a unified dictionary."""
 
 import logging
 from pathlib import Path
@@ -26,8 +19,7 @@ def load_model_definition(
     override_dict: Optional[dict] = None,
     **kwargs,
 ) -> tuple[AttrDict, Optional[Path], str]:
-    """
-    Load model definition from file / dictionary and apply user-defined overrides.
+    """Load model definition from file / dictionary and apply user-defined overrides.
 
     Args:
         model_definition (str | Path | dict):
@@ -42,12 +34,13 @@ def load_model_definition(
             If not None, dictionary of overrides to apply.
             These will be applied _after_ `scenario` overrides.
             Defaults to None.
+        **kwargs: initialisation overrides.
 
     Returns:
         tuple[AttrDict, Optional[Path], str]:
-            1. Model definition with overrides applied.
-            1. Path to model definition YAML if input `model_definiton` was pathlike, otherwise None.
-            1. Expansion of scenarios (which are references to model overrides) into a list of named override(s) that have been applied.
+            - Model definition with overrides applied.
+            - Path to model definition YAML if input `model_definiton` was pathlike, otherwise None.
+            - Expansion of scenarios (which are references to model overrides) into a list of named override(s) that have been applied.
     """
     if not isinstance(model_definition, dict):
         model_def_path = Path(model_definition)
@@ -92,8 +85,7 @@ def _apply_overrides(
     scenario: Optional[str] = None,
     override_dict: Optional[str | dict] = None,
 ) -> tuple[AttrDict, list[str]]:
-    """
-    Generate processed Model configuration, applying any scenario overrides.
+    """Generate processed Model configuration, applying any scenario overrides.
 
     Args:
         model_def (calliope.Attrdict): Loaded model definition as an attribute dictionary.
@@ -112,7 +104,6 @@ def _apply_overrides(
             1. Model definition dictionary with overrides applied from `scenario` and `override_dict`.
             1. Expansion of scenarios (which are references to model overrides) into a list of named override(s) that have been applied.
     """
-
     # The input files are allowed to override other model defaults
     model_def_copy = model_def.copy()
 

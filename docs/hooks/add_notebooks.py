@@ -1,6 +1,7 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-"""
+"""Conversion of examples into Jupyter notebooks.
+
 Convert plaintext example notebooks to .ipynb format and store them as `notebook.ipynb`
 in every example notebook directory in the docs.
 """
@@ -18,7 +19,6 @@ NOTEBOOK_DIR = Path("docs") / "examples"
 
 def on_files(files: list, config: dict, **kwargs):
     """Generate schema markdown reference sheets and attach them to the documentation."""
-
     for file in NOTEBOOK_DIR.glob("**/*.py"):
         if any(part.startswith(".") for part in file.parts):
             continue
