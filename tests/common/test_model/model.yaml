@@ -130,19 +130,16 @@ techs:
       dims: carriers
 
   test_demand_elec:
-    inherit: test_controller
     name: Demand elec tech
     carrier_in: electricity
     base_tech: demand
 
   test_demand_heat:
-    inherit: test_controller
     name: Demand heat tech
     carrier_in: heat
     base_tech: demand
 
   test_demand_coal:
-    inherit: test_controller
     name: Demand coal tech
     carrier_in: coal
     base_tech: demand

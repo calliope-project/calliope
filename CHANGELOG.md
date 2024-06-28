@@ -2,6 +2,10 @@
 
 ### User-facing changes
 
+|fixed| Backend parameter updates propagate correctly through global expressions in the order those expressions were defined (#616).
+
+|fixed| If setting `model.backend.verbose_strings()`, rebuilt model components from making backend parameter updates will automatically have verbose strings (#623).
+
 |fixed| Erroneous use of `dimensions:` in docs example of an indexed parameter (#612).
 
 |changed| `add_dimensions` to `add_dims` in `data_sources` definition to align with `dims` in indexed parameter definition (#621).
@@ -9,6 +13,7 @@
 |new| Allow extracting shadow prices into results by listing constraints in `config.solve.shadow_prices`, e.g. `config.solve.shadow_prices: ["system_balance"]`  Shadow prices will be added as variables to the model results as `shadow_price_{constraintname}`, e.g. `shadow_price_system_balance`.
 
 |new| Model stores key timestamps as attributes:
+
 * `timestamp_model_creation`: at the start of `Model.__init__()`
 * `timestamp_build_started`: at the start of `Model.build()`
 * `timestamp_build_complete`: at the end of `Model.build()`
