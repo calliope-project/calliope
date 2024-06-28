@@ -160,7 +160,7 @@ class ParsingHelperFunction(ABC):
 
 
 class Inheritance(ParsingHelperFunction):
-    """Node / tech inheritance handling."""
+    """Find all nodes / techs that inherit from a node / tech group."""
 
     #:
     ALLOWED_IN = ["where"]
@@ -259,7 +259,7 @@ class Inheritance(ParsingHelperFunction):
 
 
 class WhereAny(ParsingHelperFunction):
-    """Handling of `where` in model definition."""
+    """Apply `any` over a dimension in `where` string."""
 
     # Class name doesn't match NAME to avoid a clash with typing.Any
     #:
@@ -309,7 +309,7 @@ class WhereAny(ParsingHelperFunction):
 
 
 class Defined(ParsingHelperFunction):
-    """Handling of dimension definition in calliope definitions."""
+    """Find all items of one dimension that are defined in an item of another dimension."""
 
     #:
     NAME = "defined"
@@ -437,7 +437,7 @@ class Defined(ParsingHelperFunction):
 
 
 class Sum(ParsingHelperFunction):
-    """Processing of sums in calliope."""
+    """Apply a summation over dimension(s) in math expressions."""
 
     NAME = "sum"
     #:
@@ -470,7 +470,7 @@ class Sum(ParsingHelperFunction):
 
 
 class ReduceCarrierDim(ParsingHelperFunction):
-    """Carrier dimension reductions."""
+    """Sum over the carrier dimension in math components."""
 
     #:
     NAME = "reduce_carrier_dim"
@@ -504,7 +504,7 @@ class ReduceCarrierDim(ParsingHelperFunction):
 
 
 class SelectFromLookupArrays(ParsingHelperFunction):
-    """Vectorised indexing functionality."""
+    """N-dimensional indexing functionality."""
 
     #:
     NAME = "select_from_lookup_arrays"
@@ -605,7 +605,7 @@ class SelectFromLookupArrays(ParsingHelperFunction):
 
 
 class GetValAtIndex(ParsingHelperFunction):
-    """Getter functionality for obtaining values at specific indices."""
+    """Getter functionality for obtaining values at specific integer indices."""
 
     #:
     NAME = "get_val_at_index"
@@ -665,7 +665,7 @@ class GetValAtIndex(ParsingHelperFunction):
 
 
 class Roll(ParsingHelperFunction):
-    """Rolling functionality for ordered dims."""
+    """Roll (a.k.a. shift) items along ordered dimensions."""
 
     #:
     NAME = "roll"
@@ -713,7 +713,7 @@ class Roll(ParsingHelperFunction):
 
 
 class DefaultIfEmpty(ParsingHelperFunction):
-    """Functionality for empty cases."""
+    """Fill empty (NaN) items in arrays."""
 
     #:
     NAME = "default_if_empty"
