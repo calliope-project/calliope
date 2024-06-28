@@ -41,7 +41,7 @@ properties:
     type: object
     description: >-
       Select one or more index item from a dimension.
-      Selection takes place before `drop` and `add_dimensions`,
+      Selection takes place before `drop` and `add_dims`,
       so you can select a single value from a data dimension and then drop the dimension so it doesn't find its way through to the final dataset.
     properties:
       '^[^_^\d][\w]*$':
@@ -56,8 +56,8 @@ properties:
     description: >-
       Dimensions in the rows and/or columns that contain metadata and should therefore not be passed on to the loaded model dataset.
       These could include comments on the source of the data, the data license, or the parameter units.
-      You can also drop a dimension and then reintroduce it in `add_dimensions`, but with different index items.
-  add_dimensions:
+      You can also drop a dimension and then reintroduce it in `add_dims`, but with different index items.
+  add_dims:
     description: >-
       Data dimensions to add after loading in the array.
       These allow you to use the same file to assign values to different parameters/dimension index items

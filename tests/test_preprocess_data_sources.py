@@ -29,7 +29,7 @@ def generate_data_source_dict(data_dir):
             "source": filepath.as_posix(),
             "rows": rows,
             "columns": columns,
-            "add_dimensions": {"parameters": "test_param"},
+            "add_dims": {"parameters": "test_param"},
         }
 
     return _generate_data_source_dict
@@ -392,12 +392,12 @@ class TestDataSourceMalformed:
 
     def test_check_processed_tdf_duplicated_idx(self, source_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            source_obj(drop="test_row2", add_dimensions={"parameters": "test_param"})
+            source_obj(drop="test_row2", add_dims={"parameters": "test_param"})
         assert check_error_or_warning(excinfo, "Duplicate index items found:")
 
     def test_check_processed_tdf_duplicated_dim_name(self, source_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            source_obj(add_dimensions={"test_row2": "foo", "parameters": "test_param"})
+            source_obj(add_dims={"test_row2": "foo", "parameters": "test_param"})
         assert check_error_or_warning(excinfo, "Duplicate dimension names found:")
 
     def test_too_many_called_cols(self, source_obj):
@@ -416,7 +416,7 @@ class TestDataSourceMalformed:
 
     def test_check_for_protected_params(self, source_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            source_obj(add_dimensions={"parameters": "definition_matrix"})
+            source_obj(add_dims={"parameters": "definition_matrix"})
         assert check_error_or_warning(
             excinfo, "`definition_matrix` is a protected array"
         )

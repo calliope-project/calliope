@@ -224,7 +224,7 @@ class TestResampling:
                     columns: nodes
                     select:
                         nodes: b
-                    add_dimensions:
+                    add_dims:
                         parameters: sink_use_equals
                         techs: test_demand_elec
             """
