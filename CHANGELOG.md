@@ -2,6 +2,10 @@
 
 ### User-facing changes
 
+|fixed| Erroneous use of `dimensions:` in docs example of an indexed parameter (#612).
+
+|changed| `add_dimensions` to `add_dims` in `data_sources` definition to align with `dims` in indexed parameter definition (#621).
+
 |new| Allow extracting shadow prices into results by listing constraints in `config.solve.shadow_prices`, e.g. `config.solve.shadow_prices: ["system_balance"]`  Shadow prices will be added as variables to the model results as `shadow_price_{constraintname}`, e.g. `shadow_price_system_balance`.
 
 |new| Model stores key timestamps as attributes:

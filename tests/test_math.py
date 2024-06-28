@@ -686,7 +686,7 @@ class TestNetImportShare(CustomMathExamples):
                 "columns": "nodes",
                 "select": {"nodes": "a"},
                 "drop": "nodes",
-                "add_dimensions": {
+                "add_dims": {
                     "parameters": "sink_use_equals",
                     "techs": "test_demand_heat",
                     "nodes": "c",

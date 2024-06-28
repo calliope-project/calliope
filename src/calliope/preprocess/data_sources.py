@@ -34,7 +34,7 @@ class DataSourceDict(TypedDict):
     columns: NotRequired[str | list[str]]
     source: str
     df: NotRequired[str]
-    add_dimensions: NotRequired[dict[str, str | list[str]]]
+    add_dims: NotRequired[dict[str, str | list[str]]]
     select: dict[str, str | bool | int]
     drop: Hashable | list[Hashable]
 
@@ -302,8 +302,8 @@ class DataSource:
         if "drop" in self.input.keys():
             tdf = tdf.droplevel(self.input["drop"])
 
-        if "add_dimensions" in self.input.keys():
-            for dim_name, index_items in self.input["add_dimensions"].items():
+        if "add_dims" in self.input.keys():
+            for dim_name, index_items in self.input["add_dims"].items():
                 index_items = listify(index_items)
                 tdf = pd.concat(
                     [tdf for _ in index_items], keys=index_items, names=[dim_name]
@@ -342,7 +342,7 @@ class DataSource:
     def _check_processed_tdf(self, tdf: pd.Series):
         if "parameters" not in tdf.index.names:
             self._raise_error(
-                "The `parameters` dimension must exist in on of `rows`, `columns`, or `add_dimensions`."
+                "The `parameters` dimension must exist in on of `rows`, `columns`, or `add_dims`."
             )
 
         duplicated_index = tdf.index.duplicated()

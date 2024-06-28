@@ -302,13 +302,13 @@ tech_cost_data
 #   tech_carrier_data:
 #     source: outputs/loading_tabular_data/tech_carrier_data.csv
 #     rows: [techs, parameters]
-#     add_dimensions:
+#     add_dims:
 #       carriers: electricity
 #   tech_cost_data:
 #     source: outputs/loading_tabular_data/tech_cost_data.csv
 #     rows: parameters
 #     columns: techs
-#     add_dimensions:
+#     add_dims:
 #       costs: monetary
 # ```
 #
@@ -340,13 +340,13 @@ data_sources:
   tech_carrier_data:
     source: outputs/loading_tabular_data/tech_carrier_data.csv
     rows: [techs, parameters]
-    add_dimensions:
+    add_dims:
       carriers: electricity
   tech_cost_data:
     source: outputs/loading_tabular_data/tech_cost_data.csv
     rows: parameters
     columns: techs
-    add_dimensions:
+    add_dims:
       costs: monetary
 nodes:
   A.techs: {supply_tech, storage_tech, demand_tech}
@@ -378,13 +378,13 @@ data_sources:
   tech_carrier_data:
     source: tech_carrier_data_df
     rows: [techs, parameters]
-    add_dimensions:
+    add_dims:
       carriers: electricity
   tech_cost_data:
     source: tech_cost_data_df
     rows: parameters
     columns: techs
-    add_dimensions:
+    add_dims:
       costs: monetary
 nodes:
   A.techs: {supply_tech, storage_tech, demand_tech}
@@ -507,7 +507,7 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 #     source: outputs/loading_tabular_data/tech_cost_data.csv
 #     rows: parameters
 #     columns: techs
-#     add_dimensions:
+#     add_dims:
 #       costs: monetary
 # techs:
 #   supply_tech:
@@ -568,13 +568,13 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 #   tech_carrier_data:
 #     source: outputs/loading_tabular_data/tech_carrier_data.csv
 #     rows: [techs, parameters]
-#     add_dimensions:
+#     add_dims:
 #       carriers: electricity
 #   tech_cost_data:
 #     source: outputs/loading_tabular_data/tech_cost_data.csv
 #     rows: parameters
 #     columns: techs
-#     add_dimensions:
+#     add_dims:
 #       costs: monetary
 # techs:
 #   storage_tech:
@@ -606,13 +606,13 @@ data_sources:
   tech_carrier_data:
     source: outputs/loading_tabular_data/tech_carrier_data.csv
     rows: [techs, parameters]
-    add_dimensions:
+    add_dims:
       carriers: electricity
   tech_cost_data:
     source: outputs/loading_tabular_data/tech_cost_data.csv
     rows: parameters
     columns: techs
-    add_dimensions:
+    add_dims:
       costs: monetary
 techs:
   storage_tech:
@@ -654,13 +654,13 @@ pd.concat([flow_cap_old, flow_cap_new], axis=1, keys=["old", "new"])
 #   tech_carrier_data:
 #     source: outputs/loading_tabular_data/tech_carrier_data.csv
 #     rows: [techs, parameters]
-#     add_dimensions:
+#     add_dims:
 #       carriers: electricity
 #   tech_cost_data:
 #     source: outputs/loading_tabular_data/tech_cost_data.csv
 #     rows: parameters
 #     columns: techs
-#     add_dimensions:
+#     add_dims:
 #       costs: monetary
 # techs:
 #   storage_tech:
@@ -692,13 +692,13 @@ data_sources:
   tech_carrier_data:
     source: outputs/loading_tabular_data/tech_carrier_data.csv
     rows: [techs, parameters]
-    add_dimensions:
+    add_dims:
       carriers: electricity
   tech_cost_data:
     source: outputs/loading_tabular_data/tech_cost_data.csv
     rows: parameters
     columns: techs
-    add_dimensions:
+    add_dims:
       costs: monetary
 techs:
   storage_tech:

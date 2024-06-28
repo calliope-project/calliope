@@ -318,7 +318,7 @@ parameters:
   lookup_techs:
     data: True
     index: [tech_1, tech_2]
-    dimensions: [techs]
+    dims: [techs]
 ```
 
 Then the following slice will select only the `tech_1` and `tech_2` members of `flow_out`:
