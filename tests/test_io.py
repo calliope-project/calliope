@@ -59,7 +59,7 @@ class TestIO:
         assert os.path.isfile(model_file)
 
     @pytest.mark.parametrize(
-        ["attr", "expected_type", "expected_val"],
+        ("attr", "expected_type", "expected_val"),
         [
             ("foo_true", bool, True),
             ("foo_false", bool, False),
@@ -92,7 +92,7 @@ class TestIO:
         assert serialised_list not in model._model_data.attrs.keys()
 
     @pytest.mark.parametrize(
-        ["serialisation_list_name", "list_elements"],
+        ("serialisation_list_name", "list_elements"),
         [
             ("serialised_bools", ["foo_true", "foo_false"]),
             ("serialised_nones", ["foo_none", "scenario"]),

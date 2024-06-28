@@ -6,16 +6,17 @@ import numpy as np
 import pandas as pd
 import pytest
 from calliope import exceptions
-from pytest import approx
 
 from .common.util import check_error_or_warning
+
+approx = pytest.approx
 
 
 class TestModelPreproccessing:
     def test_preprocess_national_scale(self):
         calliope.examples.national_scale()
 
-    @pytest.mark.time_intensive
+    @pytest.mark.time_intensive()
     def test_preprocess_time_clustering(self):
         calliope.examples.time_clustering()
 
@@ -227,7 +228,7 @@ class TestNationalScaleExampleModelSpores:
         assert np.allclose(gurobi_data.flow_cap, gurobi_persistent_data.flow_cap)
         assert np.allclose(gurobi_data.cost, gurobi_persistent_data.cost)
 
-    @pytest.fixture
+    @pytest.fixture()
     def base_model_data(self):
         model = calliope.examples.national_scale(
             time_subset=["2005-01-01", "2005-01-03"], scenario="spores"
@@ -238,7 +239,7 @@ class TestNationalScaleExampleModelSpores:
 
         return model._model_data
 
-    @pytest.mark.parametrize("init_spore", (0, 1, 2))
+    @pytest.mark.parametrize("init_spore", [0, 1, 2])
     def test_nationalscale_skip_cost_op_spores(self, base_model_data, init_spore):
         spores_model = calliope.Model(
             config=None, model_data=base_model_data.loc[{"spores": [init_spore + 1]}]
@@ -259,14 +260,14 @@ class TestNationalScaleExampleModelSpores:
         spores_model = calliope.Model(
             config=None, model_data=base_model_data.loc[{"spores": [0, 1]}]
         )
+        spores_model.build()
         with pytest.raises(exceptions.ModelError) as excinfo:
-            spores_model.build()
             spores_model.solve(force=True)
         assert check_error_or_warning(
             excinfo, "Cannot run SPORES with a SPORES dimension in any input"
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def spores_with_override(self):
         def _spores_with_override(override_dict):
             result_without_override = self.example_tester()

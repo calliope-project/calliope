@@ -1,8 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-"""
-Generates a markdown file listing all custom math examples.
-"""
+"""Generates a markdown file listing all custom math examples."""
 
 import tempfile
 from io import StringIO
@@ -37,7 +35,6 @@ MD_EXAMPLE_STRING = """
 
 def on_files(files: list, config: dict, **kwargs):
     """Generate custom math example markdown files and attach them to the documentation and the navigation tree."""
-
     # Find the navigation tree list that we will populate with reference to new markdown files
     top_level_nav_reference = [
         idx

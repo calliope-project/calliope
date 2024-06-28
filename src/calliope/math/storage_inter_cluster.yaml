@@ -98,7 +98,7 @@ constraints:
 
 variables:
   storage:
-    title: virtual stored carrier
+    title: Virtual stored carrier
     description: >-
       The virtual carrier stored by a `supply_plus` or `storage` technology in each timestep of a clustered day.
       Stored carrier can be negative so long as it does not go below the carrier stored in `storage_inter_cluster`.

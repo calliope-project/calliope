@@ -16,7 +16,7 @@ In brief it is:
 * **columns**: the dimension(s) in your table defined per column.
 * **select**: values within dimensions that you want to select from your tabular data, discarding the rest.
 * **drop**: dimensions to drop from your rows/columns, e.g., a "comment" row.
-* **add_dimensions**: dimensions to add to the table after loading it in, with the corresponding value(s) to assign to the dimension index.
+* **add_dims**: dimensions to add to the table after loading it in, with the corresponding value(s) to assign to the dimension index.
 
 When we refer to "dimensions", we mean the sets over which data is indexed in the model: `nodes`, `techs`, `timesteps`, `carriers`, `costs`.
 In addition, when loading from file, there is the _required_ dimension `parameters`.
@@ -45,7 +45,7 @@ In this section we will show some examples of loading data and provide the equiv
       pv_capacity_factor_data:
         source: data_sources/pv_resource.csv
         rows: timesteps
-        add_dimensions:
+        add_dims:
           techs: pv
           parameters: source_use_equals
     ```
@@ -144,7 +144,7 @@ In this section we will show some examples of loading data and provide the equiv
       tech_data:
         source: data_sources/tech_data.csv
         rows: [techs, parameters]
-        add_dimensions:
+        add_dims:
           costs: monetary
     ```
 
@@ -250,12 +250,12 @@ override:
 
 ## Adding dimensions
 
-We used the `add_dimensions` functionality in some examples earlier in this page.
+We used the `add_dims` functionality in some examples earlier in this page.
 It's a useful mechanism to avoid repetition in the tabular data, and offers you the possibility to use the same data for different parts of your model definition.
 
 For example, to define costs for the parameter `cost_flow_cap`:
 
-=== "Without `add_dimensions`"
+=== "Without `add_dims`"
 
     |       |          |               | node1 | node2 | node3 |
     | ----: | -------: | ------------: | :---- | :---- | :---- |
@@ -271,7 +271,7 @@ For example, to define costs for the parameter `cost_flow_cap`:
         columns: nodes
     ```
 
-=== "With `add_dimensions`"
+=== "With `add_dims`"
 
     |       | node1 | node2 | node3 |
     | ----: | :---- | :---- | :---- |
@@ -285,14 +285,14 @@ For example, to define costs for the parameter `cost_flow_cap`:
         source: data_sources/tech_data.csv
         rows: techs
         columns: nodes
-        add_dimensions:
+        add_dims:
           costs: monetary
           parameters: cost_flow_cap
     ```
 
 Or to define the same timeseries source data for two technologies at different nodes:
 
-=== "Without `add_dimensions`"
+=== "Without `add_dims`"
 
     |                  | node1<br>tech1<br>source_use_max | node2<br>tech2<br>source_use_max |
     | ---------------: | :--------------------------------| :------------------------------- |
@@ -309,7 +309,7 @@ Or to define the same timeseries source data for two technologies at different n
 
 
 
-=== "With `add_dimensions`"
+=== "With `add_dims`"
 
     |                  |     |
     | ---------------: | :-- |
@@ -321,14 +321,14 @@ Or to define the same timeseries source data for two technologies at different n
       tech_data_1:
         source: data_sources/tech_data.csv
         rows: timesteps
-        add_dimensions:
+        add_dims:
           techs: tech1
           nodes: node1
           parameters: source_use_max
       tech_data_2:
         source: data_sources/tech_data.csv
         rows: timesteps
-        add_dimensions:
+        add_dims:
           techs: tech2
           nodes: node2
           parameters: source_use_max
@@ -377,11 +377,11 @@ data_sources:
 To get the expected results when loading tabular data, here are some things to note:
 
 1. You must always have a `parameters` dimension.
-This could be defined in `rows`, `columns`, or `add_dimensions`.
-2. The order of events for `select`, `drop`, `add_dimensions` is:
+This could be defined in `rows`, `columns`, or `add_dims`.
+2. The order of events for `select`, `drop`, `add_dims` is:
     1. `select` from dimensions;
     2. `drop` unwanted dimensions;
-    3. `add_dimensions` to add dimensions.
+    3. `add_dims` to add dimensions.
 This means you can technically select value "A" from dimensions `nodes`, then drop `nodes`, then add `nodes` back in with the value "B".
 This effectively replaces "A" with "B" on that dimension.
 3. The order of tabular data loading is in the order you list the sources.

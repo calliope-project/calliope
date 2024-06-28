@@ -40,7 +40,7 @@ data_sources:
     source: data_sources/techs_carriers.csv
     rows: techs
     columns: parameters
-    add_dimensions:
+    add_dims:
       carriers: power
 
   links:
@@ -52,7 +52,7 @@ data_sources:
     source: data_sources/techs_costs_monetary.csv
     rows: techs
     columns: parameters
-    add_dimensions:
+    add_dims:
       costs: monetary
 
   # will be loaded from the example model directory in calliope source code.

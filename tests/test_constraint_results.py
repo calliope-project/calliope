@@ -1,8 +1,9 @@
 import calliope
 import pytest
-from pytest import approx
 
 from .common.util import build_test_model as build_model
+
+approx = pytest.approx
 
 
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
@@ -102,7 +103,7 @@ class TestUrbanScaleMILP:
 
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestModelSettings:
-    @pytest.fixture
+    @pytest.fixture()
     def run_model(self):
         def _run_model(feasibility, cap_val):
             override_dict = {
@@ -130,15 +131,15 @@ class TestModelSettings:
 
         return _run_model
 
-    @pytest.fixture
+    @pytest.fixture()
     def model_no_unmet(self, run_model):
         return run_model(True, 10)
 
-    @pytest.fixture
+    @pytest.fixture()
     def model_unmet_demand(self, run_model):
         return run_model(True, 5)
 
-    @pytest.fixture
+    @pytest.fixture()
     def model_unused_supply(self, run_model):
         return run_model(True, 15)
 
@@ -179,7 +180,7 @@ class TestModelSettings:
             == approx(1e3 * 15)
         )
 
-    @pytest.mark.parametrize("override", (5, 15))
+    @pytest.mark.parametrize("override", [5, 15])
     def test_expected_infeasible_result(self, override, run_model):
         model = run_model(False, override)
 
@@ -190,7 +191,7 @@ class TestModelSettings:
 
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
 class TestEnergyCapacityPerStorageCapacity:
-    @pytest.fixture
+    @pytest.fixture()
     def model_file(self):
         return "flow_cap_per_storage_cap.yaml"
 
