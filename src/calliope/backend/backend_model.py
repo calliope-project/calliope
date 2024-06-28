@@ -571,6 +571,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         super().__init__(inputs, **kwargs)
         self._instance = instance
         self.shadow_prices: ShadowPrices
+        self._has_verbose_strings: bool = False
 
     @abstractmethod
     def get_parameter(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
@@ -879,11 +880,9 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             "objectives",
         ]
         for component in ordered_components:
-            refs = [
-                ref
-                for ref in references
-                if self._dataset[ref].attrs["obj_type"] == component
-            ]
+            # Rebuild references in the order they are found in the backend dataset
+            # which should correspond to the order they were added to the optimisation problem.
+            refs = [k for k in getattr(self, component).data_vars if k in references]
             for ref in refs:
                 self.delete_component(ref, component)
                 getattr(self, "add_" + component.removesuffix("s"))(name=ref)

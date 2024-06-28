@@ -350,6 +350,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 ).values():
                     self._apply_func(__renamer, da, *[da.coords[i] for i in da.dims])
                     da.attrs["coords_in_name"] = True
+        self._has_verbose_strings = True
 
     def to_lp(  # noqa: D102, override
         self, path: Union[str, Path]
@@ -433,9 +434,12 @@ class PyomoBackendModel(backend_model.BackendModel):
                 default=self.inputs.attrs["defaults"].get(name, np.nan),
             )
             self._rebuild_references(refs_to_update)
-            return None
 
-        self._apply_func(self._update_pyomo_param, parameter_da, new_values)
+            if self._has_verbose_strings:
+                self.verbose_strings()
+
+        else:
+            self._apply_func(self._update_pyomo_param, parameter_da, new_values)
 
     def update_variable_bounds(  # noqa: D102, override
         self,
