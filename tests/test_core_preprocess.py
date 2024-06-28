@@ -12,9 +12,7 @@ from .common.util import check_error_or_warning
 
 class TestModelRun:
     def test_model_from_dict(self, data_source_dir):
-        """
-        Test creating a model from dict/AttrDict instead of from YAML
-        """
+        """Test creating a model from dict/AttrDict instead of from YAML"""
         model_dir = data_source_dir.parent
         model_location = model_dir / "model.yaml"
         model_dict = AttrDict.from_yaml(model_location)
@@ -39,9 +37,7 @@ class TestModelRun:
         "ignore:(?s).*(links, test_link_a_b_elec) | Deactivated:calliope.exceptions.ModelWarning"
     )
     def test_valid_scenarios(self):
-        """
-        Test that valid scenario definition from overrides raises no error and results in applied scenario.
-        """
+        """Test that valid scenario definition from overrides raises no error and results in applied scenario."""
         override = AttrDict.from_yaml_string(
             """
             scenarios:
@@ -67,8 +63,7 @@ class TestModelRun:
         assert model._model_def_dict.techs.test_supply_elec.flow_cap_max == 20
 
     def test_valid_scenario_of_scenarios(self):
-        """
-        Test that valid scenario definition which groups scenarios and overrides raises
+        """Test that valid scenario definition which groups scenarios and overrides raises
         no error and results in applied scenario.
         """
         override = AttrDict.from_yaml_string(
@@ -100,9 +95,7 @@ class TestModelRun:
         assert model._model_def_dict.techs.test_supply_elec.flow_cap_max == 20
 
     def test_invalid_scenarios_dict(self):
-        """
-        Test that invalid scenario definition raises appropriate error
-        """
+        """Test that invalid scenario definition raises appropriate error"""
         override = AttrDict.from_yaml_string(
             """
             scenarios:
@@ -118,9 +111,7 @@ class TestModelRun:
         )
 
     def test_invalid_scenarios_str(self):
-        """
-        Test that invalid scenario definition raises appropriate error
-        """
+        """Test that invalid scenario definition raises appropriate error"""
         override = AttrDict.from_yaml_string(
             """
             scenarios:
@@ -135,9 +126,7 @@ class TestModelRun:
         )
 
     def test_undefined_carriers(self):
-        """
-        Test that user has input either carrier or carrier_in/_out for each tech
-        """
+        """Test that user has input either carrier or carrier_in/_out for each tech"""
         override = AttrDict.from_yaml_string(
             """
             techs:
@@ -153,8 +142,7 @@ class TestModelRun:
             build_model(override_dict=override, scenario="simple_supply,one_day")
 
     def test_incorrect_subset_time(self):
-        """
-        If time_subset is a list, it must have two entries (start_time, end_time)
+        """If time_subset is a list, it must have two entries (start_time, end_time)
         If time_subset is not a list, it should successfully subset on the given
         string/integer
         """
@@ -210,8 +198,7 @@ class TestModelRun:
             )
 
     def test_inconsistent_time_indices_fails(self):
-        """
-        Test that, including after any time subsetting, the indices of all time
+        """Test that, including after any time subsetting, the indices of all time
         varying input data are consistent with each other
         """
         # should fail: wrong length of demand_heat csv vs demand_elec
@@ -235,8 +222,7 @@ class TestModelRun:
             build_model(override_dict=override, scenario="simple_conversion,one_day")
 
     def test_single_timestep(self):
-        """
-        Test that warning is raised on using 1 timestep, that timestep resolution will
+        """Test that warning is raised on using 1 timestep, that timestep resolution will
         be inferred to be 1 hour
         """
         override1 = {
@@ -256,8 +242,7 @@ class TestModelRun:
 class TestChecks:
     @pytest.mark.parametrize("top_level_key", ["init", "solve"])
     def test_unrecognised_config_keys(self, top_level_key):
-        """
-        Check that the only keys allowed in 'model' and 'run' are those in the
+        """Check that the only keys allowed in 'model' and 'run' are those in the
         model defaults
         """
         override = {f"config.{top_level_key}.nonsensical_key": "random_string"}
@@ -270,8 +255,7 @@ class TestChecks:
         )
 
     def test_model_version_mismatch(self):
-        """
-        Model config says config.init.calliope_version = 0.1, which is not what we
+        """Model config says config.init.calliope_version = 0.1, which is not what we
         are running, so we want a warning.
         """
         override = {"config.init.calliope_version": "0.1"}
@@ -284,10 +268,7 @@ class TestChecks:
         )
 
     def test_unspecified_base_tech(self):
-        """
-        All technologies and technology groups must specify a base_tech
-        """
-
+        """All technologies and technology groups must specify a base_tech"""
         override = AttrDict.from_yaml_string(
             """
             techs.test_supply_no_base_tech:
@@ -303,10 +284,7 @@ class TestChecks:
             build_model(override_dict=override, scenario="simple_supply,one_day")
 
     def test_tech_as_base_tech(self):
-        """
-        All technologies and technology groups must specify a base_tech
-        """
-
+        """All technologies and technology groups must specify a base_tech"""
         override1 = AttrDict.from_yaml_string(
             """
             techs.test_supply_tech_base_tech:
@@ -330,8 +308,7 @@ class TestChecks:
         reason="one_way doesn't work yet. We'll need to move this test to `model_data` once it does work."
     )
     def test_one_way(self):
-        """
-        With one_way transmission, we remove one direction of a link from
+        """With one_way transmission, we remove one direction of a link from
         loc_tech_carriers_prod and the other from loc_tech_carriers_con.
         """
         override = {
@@ -364,11 +341,9 @@ class TestChecks:
         reason="Removed this check because it has to happen *after* calling `build`"
     )
     def test_clustering_and_cyclic_storage(self):
-        """
-        Don't allow time clustering with cyclic storage if not also using
+        """Don't allow time clustering with cyclic storage if not also using
         storage_inter_cluster
         """
-
         override = {
             "config.init.time_subset": ["2005-01-01", "2005-01-04"],
             "config.init.time_cluster": "data_sources/cluster_days.csv",
@@ -384,11 +359,9 @@ class TestChecks:
         reason="Removed this check because it has to happen *after* calling `build`"
     )
     def test_storage_inter_cluster_vs_storage_discharge_depth(self):
-        """
-        Check that the storage_inter_cluster is not used together with storage_discharge_depth
-        """
+        """Check that the storage_inter_cluster is not used together with storage_discharge_depth"""
+        override = {"config.init.time_subset": ["2005-01-01", "2005-01-04"]}
         with pytest.raises(exceptions.ModelError) as error:
-            override = {"config.init.time_subset": ["2005-01-01", "2005-01-04"]}
             build_model(override, "clustering,simple_storage,storage_discharge_depth")
 
         assert check_error_or_warning(

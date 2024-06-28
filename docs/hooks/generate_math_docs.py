@@ -1,8 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-"""
-Generate LaTeX math to include in the documentation.
-"""
+"""Generate LaTeX math to include in the documentation."""
 
 import importlib.resources
 import logging
@@ -41,6 +39,7 @@ Those parameters which are defined over time (`timesteps`) in the expressions ca
 
 
 def on_files(files: list, config: dict, **kwargs):
+    """Process documentation for pre-defined calliope math files."""
     model_config = calliope.AttrDict.from_yaml(MODEL_PATH)
 
     base_model = generate_base_math_model()
@@ -82,6 +81,15 @@ def write_file(
     files: list[File],
     config: dict,
 ) -> None:
+    """Parse math files and produce markdown documentation.
+
+    Args:
+        filename (str): name of produced `.md` file.
+        description (str): first paragraph after title.
+        model (calliope.Model): calliope model with the given math.
+        files (list[File]): math files to parse.
+        config (dict): documentation configuration.
+    """
     title = model.inputs.attrs["name"] + " math"
 
     output_file = (Path("math") / filename).with_suffix(".md")
@@ -128,7 +136,7 @@ def write_file(
 
 
 def generate_base_math_model() -> calliope.Model:
-    """Generate model with documentation for the base math
+    """Generate model with documentation for the base math.
 
     Args:
         model_config (dict): Calliope model config.
@@ -144,27 +152,16 @@ def generate_base_math_model() -> calliope.Model:
 def generate_custom_math_model(
     base_model: calliope.Model, override: str
 ) -> calliope.Model:
-    """Generate model with documentation for a pre-defined math file, showing only the changes made
-    relative to the base math.
+    """Generate model with documentation for a pre-defined math file.
+
+    Only the changes made relative to the base math will be shown.
 
     Args:
         base_model (calliope.Model): Calliope model with only the base math applied.
         override (str): Name of override to load from the list available in the model config.
     """
     model = calliope.Model(model_definition=MODEL_PATH, scenario=override)
-    _keep_only_changes(base_model, model)
 
-    return model
-
-
-def _keep_only_changes(base_model: calliope.Model, model: calliope.Model) -> None:
-    """Compare custom math model with base model and keep only the math strings that are
-    different between the two. Changes are made in-place in the custom math model docs.
-
-    Args:
-        base_model (calliope.Model): Calliope model with base math applied.
-        model (calliope.Model): Calliope model with custom math applied.
-    """
     full_del = []
     expr_del = []
     for component_group, component_group_dict in model.math.items():
@@ -196,7 +193,9 @@ def _keep_only_changes(base_model: calliope.Model, model: calliope.Model) -> Non
         model.math_documentation._instance._dataset["carrier_in"].attrs["references"]
     )
 
+    return model
+
 
 def _add_to_description(component_dict: dict, update_string: str) -> None:
-    "Prepend the math component description"
+    """Prepend the math component description."""
     component_dict["description"] = f"{update_string}\n{component_dict['description']}"

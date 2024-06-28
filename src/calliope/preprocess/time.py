@@ -1,13 +1,7 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
+"""Functionality to add and process time varying parameters."""
 
-"""
-time.py
-~~~~~~~
-
-Functionality to add and process time varying parameters
-
-"""
 import logging
 from pathlib import Path
 from typing import overload
@@ -23,10 +17,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 def add_inferred_time_params(model_data: xr.Dataset):
-    # Add timestep_resolution by looking at the time difference between timestep n
-    # and timestep n + 1 for all timesteps
-    # Last timestep has no n + 1, so will be NaT (not a time), we ffill this.
-    # Time resolution is saved in hours (i.e. nanoseconds / 3600e6)
+    """Add timestep_resolution.
+
+    Done by ooking at the time difference between timestep n and timestep n + 1 for all timesteps.
+    Last timestep has no n + 1, so will be NaT (not a time), we ffill this.
+    Time resolution is saved in hours (i.e. nanoseconds / 3600e6)
+    """
     timestep_resolution = (
         model_data.timesteps.diff("timesteps", label="lower")
         .reindex({"timesteps": model_data.timesteps})
@@ -82,7 +78,6 @@ def subset_timeseries(ds: xr.Dataset, time_subset: list[str]) -> xr.Dataset:
     Returns:
         xr.Dataset: Input `ds` with subset timeseries coordinates.
     """
-
     datetime_dims = [k for k, v in ds.coords.items() if v.dtype.kind == "M"]
     for dim_name in datetime_dims:
         _check_time_subset(ds.coords[dim_name].to_index(), time_subset)
@@ -92,9 +87,9 @@ def subset_timeseries(ds: xr.Dataset, time_subset: list[str]) -> xr.Dataset:
 
 
 def resample(data: xr.Dataset, resolution: str) -> xr.Dataset:
-    """
-    Function to resample timeseries data from the input resolution (e.g. 1h), to
-    the given resolution (e.g. 2h)
+    """Function to resample timeseries data.
+
+    Transforms the input resolution (e.g. 1h), to the given resolution (e.g. 2h).
 
     Args:
         data (xarray.Dataset): Calliope model data, containing only timeseries data variables.
@@ -143,8 +138,7 @@ def resample(data: xr.Dataset, resolution: str) -> xr.Dataset:
 
 
 def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
-    """
-    Apply the given clustering time series to the given data.
+    """Apply the given clustering time series to the given data.
 
     Args:
         data (xarray.Dataset): Calliope model data, containing only timeseries data variables.
@@ -184,13 +178,11 @@ def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
 
 
 @overload
-def _datetime_index(index: pd.Index, format: str) -> pd.Index:
-    "Pass pandas Index"
+def _datetime_index(index: pd.Index, format: str) -> pd.Index: ...
 
 
 @overload
-def _datetime_index(index: pd.Series, format: str) -> pd.Series:
-    "Pass pandas Series"
+def _datetime_index(index: pd.Series, format: str) -> pd.Series: ...
 
 
 def _datetime_index(index: pd.Index | pd.Series, format: str) -> pd.Index | pd.Series:
@@ -264,12 +256,12 @@ def _check_missing_data(ds: xr.Dataset, dim_name: str):
 
 
 def _lookup_clusters(dataset: xr.Dataset, grouper: pd.Series) -> xr.Dataset:
-    """
+    """Clustering lookup functionality.
+
     For any given timestep in a time clustered model, get:
     1. the first and last timestep of the cluster,
     2. the last timestep of the cluster corresponding to a date in the original timeseries
     """
-
     dataset["lookup_cluster_first_timestep"] = dataset.timesteps.isin(
         dataset.timesteps.groupby("timesteps.date").first()
     )
