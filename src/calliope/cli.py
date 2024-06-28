@@ -1,14 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
-"""
-
-cli.py
-~~~~~~
-
-Command-line interface.
-
-"""
+"""Command-line interface."""
 
 import contextlib
 import datetime
@@ -75,6 +67,7 @@ _fail_when_infeasible = click.option(
 def format_exceptions(
     debug=False, pdb=False, profile=False, profile_filename=None, start_time=None
 ):
+    """Exception formatting for better reading."""
     try:
         if profile:
             import cProfile
@@ -113,12 +106,14 @@ def format_exceptions(
 
 
 def print_end_time(start_time, msg="complete"):
+    """Track calliope run time."""
     end_time = datetime.datetime.now()
     secs = round((end_time - start_time).total_seconds(), 1)
     tend = end_time.strftime(_time_format)
     click.secho(
-        "\nCalliope run {}. "
-        "Elapsed: {} seconds (time at exit: {})".format(msg, secs, tend)
+        "\nCalliope run {}. " "Elapsed: {} seconds (time at exit: {})".format(
+            msg, secs, tend
+        )
     )
 
 
@@ -127,12 +122,10 @@ def _get_version():
 
 
 def _cli_start(debug, quiet):
-    """
-    Initial setup for CLI commands.
-    Returns ``start_time`` (datetime timestamp)
+    """Initial setup for CLI commands.
 
+    Returns ``start_time`` (datetime timestamp).
     """
-
     if debug:
         click.secho(_get_version())
 
@@ -160,7 +153,7 @@ def _cli_start(debug, quiet):
 @click.pass_context
 @click.option("--version", is_flag=True, default=False, help="Display version.")
 def cli(ctx, version):
-    """Calliope: a multi-scale energy systems modelling framework"""
+    """Calliope: a multi-scale energy systems modelling framework."""
     if ctx.invoked_subcommand is None and not version:
         click.secho(ctx.get_help())
     if version:
@@ -172,10 +165,10 @@ def cli(ctx, version):
 @click.option("--template", type=str, default=None)
 @_debug
 def new(path, template, debug):
-    """
-    Create new model at the given ``path``, based on one of the built-in
-    example models. The target path must not yet exist. Intermediate
-    directories will be created automatically.
+    """Create new model at the given ``path`` based on one of the built-in example models.
+
+    The target path must not yet exist.
+    Intermediate directories will be created automatically.
     """
     _cli_start(debug, quiet=False)
 
@@ -188,10 +181,9 @@ def new(path, template, debug):
 
 
 def _run_setup_model(model_file, scenario, model_format, override_dict):
-    """
-    Build model in CLI commands. Returns ``model``, a ready-to-run
-    calliope.Model instance.
+    """Build model in CLI commands.
 
+    Returns ``model``, a ready-to-run calliope.Model instance.
     """
     # Try to determine model file type if not given explicitly
     if model_format is None:
@@ -256,12 +248,12 @@ def run(
     profile_filename,
     fail_when_infeasible,
 ):
-    """
-    Execute the given model. Tries to guess from the file extension whether
+    """Execute the given model.
+
+    Tries to guess from the file extension whether
     ``model_file`` is a YAML file or a pre-built model saved to NetCDF.
     This can also explicitly be set with the --model_format=yaml or
     --model_format=netcdf option.
-
     """
     start_time = _cli_start(debug, quiet)
     click.secho(
@@ -361,6 +353,7 @@ def generate_runs(
     quiet,
     pdb,
 ):
+    """Generates a script to run multiple models."""
     _cli_start(debug, quiet)
 
     kwargs = dict(
@@ -392,6 +385,7 @@ def generate_runs(
 def generate_scenarios(
     model_file, out_file, overrides, scenario_name_prefix, debug, quiet, pdb
 ):
+    """Generate scenario definitions from given combinations of overrides."""
     _cli_start(debug, quiet)
 
     with format_exceptions(debug, pdb):

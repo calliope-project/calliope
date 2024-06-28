@@ -24,7 +24,7 @@ data_sources:
   nodes:
     source: nodes.csv
     rows: parameters
-    add_dimensions:
+    add_dims:
       nodes: [A, B]
 
   tech_carrier:
@@ -34,12 +34,12 @@ data_sources:
   costs:
     source: costs.csv
     rows: [techs, parameters]
-    add_dimensions:
+    add_dims:
       costs: monetary
 
   time_varying:
     source: time_varying.csv
     rows: timesteps
-    add_dimensions:
+    add_dims:
       parameters: sink_use_max
       techs: demand_tech

@@ -1,13 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
-"""
-postprocess.py
-~~~~~~~~~~~~~~
-
-Functionality to post-process model results.
-
-"""
+"""Functionality to post-process model results."""
 
 import logging
 
@@ -20,22 +13,19 @@ LOGGER = logging.getLogger(__name__)
 def postprocess_model_results(
     results: xr.Dataset, model_data: xr.Dataset
 ) -> xr.Dataset:
-    """
-    Adds additional post-processed result variables to
-    the given model results in-place. Model must have solved successfully.
+    """Post-processing of model results.
+
+    Adds additional post-processed result variables to the given model results
+    in-place. Model must have solved successfully.
+    All instances of unreasonably low numbers (set by zero_threshold) will be removed.
 
     Args:
-        results (xarray.Dataset):
-            Output from the solver backend.
-        model_data (xarray.Dataset):
-            Calliope model data, stored as [calliope.Model._model_data][].
+        results (xarray.Dataset): Output from the solver backend.
+        model_data (xarray.Dataset): Calliope model data.
 
     Returns:
-        xarray.Dataset:
-            Input results Dataset, with additional DataArray variables and all instances of unreasonably low numbers (set by zero_threshold) removed.
-
+        xarray.Dataset: input-results dataset.
     """
-
     zero_threshold = model_data.config.solve.zero_threshold
     results["capacity_factor"] = capacity_factor(results, model_data)
     results["systemwide_capacity_factor"] = capacity_factor(
@@ -58,19 +48,14 @@ def postprocess_model_results(
 
 
 def capacity_factor(results, model_data, systemwide=False):
-    """
-    # In operate mode, flow_cap is an input parameter
-    if "flow_cap" not in results.keys():
-        flow_cap = model_data.flow_cap
-    else:
-        flow_cap = results.flow_cap
+    """Calculation of capacity factors.
 
-    capacity_factors = (results["flow_out"] / flow_cap).fillna(0)
+    Processes whether `flow_cap` is a parameter or a result, then calculates the
+    capacity factor.
 
     The weight of timesteps is considered when computing systemwide capacity factors,
-    such that higher-weighted timesteps have a stronger influence
-    on the resulting system-wide time-averaged capacity factor.
-
+    such that higher-weighted timesteps have a stronger influence on the resulting
+    system-wide time-averaged capacity factor.
     """
     # In operate mode, flow_cap is an input parameter
     if "flow_cap" not in results.keys():
@@ -98,7 +83,8 @@ def capacity_factor(results, model_data, systemwide=False):
 def systemwide_levelised_cost(
     results: xr.Dataset, model_data: xr.Dataset, total: bool = False
 ) -> xr.DataArray:
-    """
+    """Calculates systemwide levelised costs.
+
     Returns a DataArray with systemwide levelised costs for the given
     results, indexed by techs, carriers and costs if total is False,
     or by carriers and costs if total is True.
@@ -119,6 +105,7 @@ def systemwide_levelised_cost(
         total (bool, optional):
             If False (default) returns per-technology levelised cost, if True,
             returns overall system-wide levelised cost.
+
     Returns:
         xr.DataArray: Array of levelised costs.
     """
@@ -148,12 +135,11 @@ def systemwide_levelised_cost(
 
 
 def clean_results(results, zero_threshold):
-    """
-    Remove unreasonably small values (solver output can lead to floating point
-    errors) and remove unmet_demand if it was never used (i.e. sum = zero)
+    """Remove unreasonably small values and unmet_demand if it was never used.
 
+    Used to avoid floating point errors caused by solver output.
     zero_threshold is a value set in model configuration. If not set, defaults
-    to zero (i.e. doesn't do anything). Reasonable value = 1e-12
+    to zero (i.e. doesn't do anything). Reasonable value = 1e-12.
     """
     threshold_applied = []
     for k, v in results.data_vars.items():

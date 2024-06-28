@@ -1,11 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
-"""
-# model.py
-
-Implements the core Model class.
-"""
+"""Implements the core Model class."""
 
 from __future__ import annotations
 
@@ -46,17 +41,13 @@ if TYPE_CHECKING:
 
 
 def read_netcdf(path):
-    """
-    Return a Model object reconstructed from model data in a NetCDF file.
-    """
+    """Return a Model object reconstructed from model data in a NetCDF file."""
     model_data = io.read_netcdf(path)
     return Model(model_definition=model_data)
 
 
 class Model(object):
-    """
-    A Calliope Model.
-    """
+    """A Calliope Model."""
 
     _BACKENDS: dict[str, Callable] = {"pyomo": PyomoBackendModel}
     _TS_OFFSET = pd.Timedelta(nanoseconds=1)
@@ -69,9 +60,7 @@ class Model(object):
         data_source_dfs: Optional[dict[str, pd.DataFrame]] = None,
         **kwargs,
     ):
-        """
-        Returns a new Model from either the path to a YAML model
-        configuration file or a dict fully specifying the model.
+        """Returns a new Model from YAML model configuration files or a fully specified dictionary.
 
         Args:
             model_definition (str | Path | dict | xr.Dataset):
@@ -87,6 +76,7 @@ class Model(object):
                 Model definition `data_source` entries can reference in-memory pandas DataFrames.
                 The referenced data must be supplied here as a dictionary of those DataFrames.
                 Defaults to None.
+            **kwargs: initialisation overrides.
         """
         self._timings: dict = {}
         self.config: AttrDict
@@ -128,22 +118,27 @@ class Model(object):
 
     @property
     def name(self):
+        """Get the model name."""
         return self._model_data.attrs["name"]
 
     @property
     def inputs(self):
+        """Get model input data."""
         return self._model_data.filter_by_attrs(is_result=0)
 
     @property
     def results(self):
+        """Get model result data."""
         return self._model_data.filter_by_attrs(is_result=1)
 
     @property
     def is_built(self):
+        """Get built status."""
         return self._is_built
 
     @property
     def is_solved(self):
+        """Get solved status."""
         return self._is_solved
 
     def _init_from_model_def_dict(
@@ -233,8 +228,8 @@ class Model(object):
         )
 
     def _init_from_model_data(self, model_data: xr.Dataset) -> None:
-        """
-        Initialise the model using a pre-built xarray dataset.
+        """Initialise the model using a pre-built xarray dataset.
+
         This must be a Calliope-compatible dataset, usually a dataset from another Calliope model.
 
         Args:
@@ -261,7 +256,8 @@ class Model(object):
         )
 
     def _add_model_data_methods(self):
-        """
+        """Add observed data to `model`.
+
         1. Filter model dataset to produce views on the input/results data
         2. Add top-level configuration dictionaries simultaneously to the model data attributes and as attributes of this class.
 
@@ -270,14 +266,16 @@ class Model(object):
         self._add_observed_dict("math")
 
     def _add_observed_dict(self, name: str, dict_to_add: Optional[dict] = None) -> None:
-        """
-        Add the same dictionary as property of model object and an attribute of the model xarray dataset.
+        """Add the same dictionary as property of model object and an attribute of the model xarray dataset.
 
         Args:
             name (str):
-                Name of dictionary which will be set as the model property name and (if necessary) the dataset attribute name.
+                Name of dictionary which will be set as the model property name and
+                (if necessary) the dataset attribute name.
             dict_to_add (Optional[dict], optional):
-                If given, set as both the model property and the dataset attribute, otherwise set an existing dataset attribute as a model property of the same name. Defaults to None.
+                If given, set as both the model property and the dataset attribute,
+                otherwise set an existing dataset attribute as a model property of the
+                same name. Defaults to None.
 
         Raises:
             exceptions.ModelError: If `dict_to_add` is not given, it must be an attribute of model data.
@@ -300,8 +298,7 @@ class Model(object):
         setattr(self, name, dict_to_add)
 
     def _add_math(self, add_math: list) -> AttrDict:
-        """
-        Load the base math and optionally override with additional math from a list of references to math files.
+        """Load the base math and optionally override with additional math from a list of references to math files.
 
         Args:
             add_math (list):
@@ -346,8 +343,8 @@ class Model(object):
             force (bool, optional):
                 If ``force`` is True, any existing results will be overwritten.
                 Defaults to False.
+            **kwargs: build configuration overrides.
         """
-
         if self._is_built and not force:
             raise exceptions.ModelError(
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
@@ -387,8 +384,7 @@ class Model(object):
         self._is_built = True
 
     def solve(self, force: bool = False, warmstart: bool = False, **kwargs) -> None:
-        """
-        Solve the built optimisation problem.
+        """Solve the built optimisation problem.
 
         Args:
             force (bool, optional):
@@ -402,13 +398,13 @@ class Model(object):
                 decrease the solution time.
                 Warmstart will not work with some solvers (e.g., CBC, GLPK).
                 Defaults to False.
+            **kwargs: solve configuration overrides.
 
         Raises:
             exceptions.ModelError: Optimisation problem must already be built.
             exceptions.ModelError: Cannot run the model if there are already results loaded, unless `force` is True.
             exceptions.ModelError: Some preprocessing steps will stop a run mode of "operate" from being possible.
         """
-
         # Check that results exist and are non-empty
         if not self._is_built:
             raise exceptions.ModelError(
@@ -492,12 +488,11 @@ class Model(object):
         self._is_solved = True
 
     def run(self, force_rerun=False, **kwargs):
-        """
-        Run the model. If ``force_rerun`` is True, any existing results
-        will be overwritten.
+        """Run the model.
+
+        If ``force_rerun`` is True, any existing results will be overwritten.
 
         Additional kwargs are passed to the backend.
-
         """
         exceptions.warn(
             "`run()` is deprecated and will be removed in a "
@@ -508,22 +503,16 @@ class Model(object):
         self.solve(force=force_rerun)
 
     def to_netcdf(self, path):
-        """
-        Save complete model data (inputs and, if available, results)
-        to a NetCDF file at the given ``path``.
-
-        """
+        """Save complete model data (inputs and, if available, results) to a NetCDF file at the given `path`."""
         io.save_netcdf(self._model_data, path, model=self)
 
     def to_csv(
         self, path: str | Path, dropna: bool = True, allow_overwrite: bool = False
     ):
-        """
-        Save complete model data (inputs and, if available, results)
-        as a set of CSV files to the given ``path``.
+        """Save complete model data (inputs and, if available, results) as a set of CSV files to the given ``path``.
 
         Args:
-            path (str | Path):
+            path (str | Path): file path to save at.
             dropna (bool, optional):
                 If True, NaN values are dropped when saving, resulting in significantly smaller CSV files.
                 Defaults to True
@@ -610,12 +599,12 @@ class Model(object):
     ) -> xr.Dataset:
         """Slice the input data to just the length of operate mode time horizon.
 
-
         Args:
             start_window_idx (int, optional):
                 Set the operate `window` to start at, based on integer index.
                 This is used when re-initialising the backend model for shorter time horizons close to the end of the model period.
                 Defaults to 0.
+            **config_kwargs: kwargs related to operate mode configuration.
 
         Returns:
             xr.Dataset: Slice of input data.
@@ -724,8 +713,9 @@ class Model(object):
         return results
 
     def _recalculate_storage_initial(self, results: xr.Dataset) -> xr.DataArray:
-        """Calculate the initial level of storage devices for a new operate mode time slice
-        based on storage levels at the end of the previous time slice.
+        """Calculate the initial level of storage devices for a new operate mode time slice.
+
+        Based on storage levels at the end of the previous time slice.
 
         Args:
             results (xr.Dataset): Results from the previous time slice.

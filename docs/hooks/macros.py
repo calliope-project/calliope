@@ -1,14 +1,14 @@
+"""Documentation hook macros."""
+
 import pandas as pd
 
 
 def define_env(env):
-    "Hook function"
+    """Hook function."""
 
     @env.macro
     def read_csv(file, **kwargs):
-        """
-        Read a CSV file and render it as a HTML table.
-        """
+        """Read a CSV file and render it as a HTML table."""
         styles = [
             # table properties
             dict(

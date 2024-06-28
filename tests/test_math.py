@@ -123,7 +123,7 @@ class TestBaseMath:
         compare_lps(model, custom_math, "source_max")
 
     def test_balance_transmission(self, compare_lps):
-        "Test with the electricity transmission tech being one way only, while the heat transmission tech is the default two-way."
+        """Test with the electricity transmission tech being one way only, while the heat transmission tech is the default two-way."""
         self.TEST_REGISTER.add("constraints.balance_transmission")
         model = build_test_model(
             {"techs.test_link_a_b_elec.one_way": True}, "simple_conversion,two_hours"
@@ -136,7 +136,7 @@ class TestBaseMath:
         compare_lps(model, custom_math, "balance_transmission")
 
     def test_balance_storage(self, compare_lps):
-        "Test balance storage with one tech having and one tech not having per-tech cyclic storage."
+        """Test balance storage with one tech having and one tech not having per-tech cyclic storage."""
         self.TEST_REGISTER.add("constraints.balance_storage")
         model = build_test_model(
             {
@@ -152,7 +152,7 @@ class TestBaseMath:
 
     @pytest.mark.xfail(reason="not all base math is in the test config dict yet")
     def test_all_math_registered(self, base_math):
-        "After running all the previous tests in the class, the base_math dict should be empty, i.e. all math has been tested"
+        """After running all the previous tests in the class, the base_math dict should be empty, i.e. all math has been tested"""
         for key in self.TEST_REGISTER:
             base_math.del_key(key)
         assert not base_math
@@ -169,7 +169,7 @@ class CustomMathExamples(ABC):
     @property
     @abstractmethod
     def YAML_FILEPATH(self) -> str:
-        "Source of the specific test class custom math"
+        """Source of the specific test class custom math"""
 
     @pytest.fixture(scope="class")
     def abs_filepath(self):
@@ -179,7 +179,7 @@ class CustomMathExamples(ABC):
     def custom_math(self):
         return AttrDict.from_yaml(self.CUSTOM_MATH_DIR / self.YAML_FILEPATH)
 
-    @pytest.fixture
+    @pytest.fixture()
     def build_and_compare(self, abs_filepath, compare_lps):
         def _build_and_compare(
             filename: str,
@@ -214,7 +214,7 @@ class CustomMathExamples(ABC):
 
     @pytest.mark.order(-1)
     def test_all_math_registered(self, custom_math):
-        "After running all the previous tests in the class, the register should be full, i.e. all math has been tested"
+        """After running all the previous tests in the class, the register should be full, i.e. all math has been tested"""
         for key in self.TEST_REGISTER:
             if custom_math.get_key(key, default=None) is not None:
                 custom_math.del_key(key)
@@ -686,7 +686,7 @@ class TestNetImportShare(CustomMathExamples):
                 "columns": "nodes",
                 "select": {"nodes": "a"},
                 "drop": "nodes",
-                "add_dimensions": {
+                "add_dims": {
                     "parameters": "sink_use_equals",
                     "techs": "test_demand_heat",
                     "nodes": "c",

@@ -1,3 +1,5 @@
+"""Public packaging of Calliope."""
+
 from calliope import examples, exceptions
 from calliope._version import __version__
 from calliope.attrdict import AttrDict

@@ -1,8 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-"""
-Generate interactive plots to use within the docs
-"""
+"""Generate interactive plots to use within the docs."""
 
 import tempfile
 from pathlib import Path
@@ -18,7 +16,6 @@ TEMPDIR = tempfile.TemporaryDirectory()
 
 def on_files(files: list, config: dict, **kwargs):
     """Generate schema markdown reference sheets and attach them to the documentation."""
-
     file_obj = _generate_front_page_timeseries_plot(config)
     files.append(file_obj)
 
@@ -140,12 +137,11 @@ def _get_net_flows(model: calliope.Model, **sel) -> pd.DataFrame:
 
     Args:
         model (calliope.Model): Calliope model with results.
-    Keyword Args:
-        Index items on which to slice the flows in xarray before summing over nodes and renaming techs.
+        **sel: Index items on which to slice the flows in xarray before summing over nodes and renaming techs.
+
     Returns:
         pd.DataFrame: Net-flow timeseries tidy dataframe.
     """
-
     if "techs" in sel.keys():
         names = model.inputs.name.sel(techs=sel["techs"])
     else:

@@ -1,5 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
+"""Model data processing functionality."""
 
 import itertools
 import logging
@@ -24,12 +25,16 @@ DATA_T = Optional[float | int | bool | str] | list[Optional[float | int | bool |
 
 
 class Param(TypedDict):
+    """Uniform dictionairy for parameters."""
+
     data: DATA_T
     index: list[list[str]]
     dims: list[str]
 
 
 class ModelDefinition(TypedDict):
+    """Uniform dictionarity for model definition."""
+
     techs: AttrDict
     nodes: AttrDict
     tech_groups: NotRequired[AttrDict]
@@ -41,6 +46,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 class ModelDataFactory:
+    """Model data production class."""
+
     # TODO: move into yaml syntax and have it be updatable
     LOOKUP_PARAMS = {
         "carrier_in": "carriers",
@@ -70,8 +77,7 @@ class ModelDataFactory:
         attributes: dict,
         param_attributes: dict[str, dict],
     ):
-        """Take a Calliope model definition dictionary and convert it into an xarray Dataset, ready for
-        constraint generation.
+        """Take a Calliope model definition dictionary and convert it into an xarray Dataset, ready for constraint generation.
 
         This includes resampling/clustering timeseries data as necessary.
 
@@ -82,7 +88,6 @@ class ModelDataFactory:
             attributes (dict): Attributes to attach to the model Dataset.
             param_attributes (dict[str, dict]): Attributes to attach to the generated model DataArrays.
         """
-
         self.config: dict = model_config
         self.model_definition: ModelDefinition = model_definition.copy()
         self.dataset = xr.Dataset(attrs=AttrDict(attributes))
@@ -97,7 +102,7 @@ class ModelDataFactory:
         self.param_attrs = flipped_attributes
 
     def build(self):
-        "Build dataset from model definition."
+        """Build dataset from model definition."""
         self.add_node_tech_data()
         self.add_top_level_params()
         self.clean_data_from_undefined_members()
@@ -458,8 +463,9 @@ class ModelDataFactory:
     def _prepare_param_dict(
         self, param_name: str, param_data: dict | list[str] | DATA_T
     ) -> Param:
-        """Convert a range of parameter definitions into the blessed `Param` format, i.e.:
+        """Convert a range of parameter definitions into the `Param` format.
 
+        Format is:
         ```
         data: numeric/boolean/string data or list of them.
         index: list of lists containing dimension index items (number of items in the sub-lists == length of `dims`).
@@ -471,7 +477,8 @@ class ModelDataFactory:
             param_data (dict | list[str] | DATA_T): Input unformatted parameter data.
 
         Raises:
-            ValueError: If the parameter is unindexed (i.e., no `dims`/`index`) and is not a lookup array (see LOOKUP_PARAMS), it cannot define a list of data.
+            ValueError: If the parameter is unindexed (i.e., no `dims`/`index`) and is
+                not a lookup array (see LOOKUP_PARAMS), it cannot define a list of data.
 
         Returns:
             Param: Blessed parameter dictionary.
@@ -515,6 +522,7 @@ class ModelDataFactory:
                 Base dictionary to work from.
                 If not defined, `dim_name` will be used to access the dictionary from the base model definition.
                 Defaults to None.
+
         Keyword Args:
             connected_dims (str):
                 Any dimension index items connected to the one for which we're tracing inheritance.
@@ -600,7 +608,6 @@ class ModelDataFactory:
         Returns:
             tuple[AttrDict, Optional[list]]: Definition dictionary with inherited data and a list of the inheritance tree climbed to get there.
         """
-
         to_inherit = dim_item_dict.get("inherit", None)
         dim_groups = AttrDict(
             self.model_definition.get(f"{dim_name.removesuffix('s')}_groups", {})
@@ -715,8 +722,9 @@ class ModelDataFactory:
         ).fillna(self.dataset)
 
     def _log_param_updates(self, param_name: str, param_da: xr.DataArray):
-        """
-        Check array coordinates to see if:
+        """Logger for model parameter updates.
+
+        Checks array coordinates to see if:
             1. any are new compared to the base model dimensions.
             2. any are adding new elements to an existing base model dimension.
 
@@ -741,7 +749,10 @@ class ModelDataFactory:
 
     @staticmethod
     def _update_one_way_links(node_from_data: dict, node_to_data: dict):
-        """For one-way transmission links, delete option to have carrier outflow (imports) at the `from` node and carrier inflow (exports) at the `to` node.
+        """Update functionality for one-way links.
+
+        For one-way transmission links, delete option to have carrier outflow (imports)
+        at the `from` node and carrier inflow (exports) at the `to` node.
 
         Deletions happen on the tech definition dictionaries in-place.
 
@@ -767,7 +778,6 @@ class ModelDataFactory:
         Returns:
             xr.Dataset: Input `ds` with numeric coordinates.
         """
-
         for dim_name in ds.dims:
             try:
                 ds.coords[dim_name] = pd.to_numeric(ds.coords[dim_name].to_index())
