@@ -3,6 +3,7 @@ import logging
 from copy import deepcopy
 from itertools import product
 
+import calliope
 import calliope.exceptions as exceptions
 import numpy as np
 import pandas as pd
@@ -14,6 +15,8 @@ from calliope.backend.pyomo_backend_model import PyomoBackendModel
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, check_variable_exists
+
+DUMMY_INT = 0xDEADBEEF
 
 
 @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
@@ -1724,6 +1727,15 @@ class TestNewBackend:
         assert m.backend._has_verbose_strings
         return m
 
+    @pytest.fixture(scope="class")
+    def simple_supply_updated_cost_flow_cap(
+        self, simple_supply: calliope.Model
+    ) -> calliope.Model:
+
+        simple_supply.backend.verbose_strings()
+        simple_supply.backend.update_parameter("cost_flow_cap", DUMMY_INT)
+        return simple_supply
+
     @pytest.fixture
     def temp_path(self, tmpdir_factory):
         return tmpdir_factory.mktemp("custom_math")
@@ -2293,7 +2305,7 @@ class TestNewBackend:
         assert expected.where(updated_param.notnull()).equals(updated_param)
 
     def test_update_parameter_one_val(self, caplog, simple_supply):
-        updated_param = 1000
+        updated_param = DUMMY_INT
         new_dims = {"techs"}
         caplog.set_level(logging.DEBUG)
 
@@ -2306,7 +2318,7 @@ class TestNewBackend:
         expected = simple_supply.backend.get_parameter(
             "flow_out_eff", as_backend_objs=False
         )
-        assert (expected == updated_param).all()
+        assert (expected == DUMMY_INT).all()
 
     def test_update_parameter_replace_defaults(self, simple_supply):
         updated_param = simple_supply.inputs.flow_out_eff.fillna(0.1)
@@ -2366,50 +2378,47 @@ class TestNewBackend:
         default_val = simple_supply._model_data.attrs["defaults"]["source_eff"]
         assert expected.equals(updated_param.fillna(default_val))
 
-    def test_update_parameter_refs_in_order(self, caplog, simple_supply):
+    @pytest.mark.parametrize("model_suffix", ["_longnames", "_updated_cost_flow_cap"])
+    @pytest.mark.parametrize(
+        ("expr", "kwargs"),
+        [
+            ("cost_investment_flow_cap", {"carriers": "electricity"}),
+            ("cost_investment", {}),
+            ("cost", {}),
+        ],
+    )
+    def test_update_parameter_expr_refs_rebuilt(
+        self, request: pytest.FixtureRequest, model_suffix: str, expr: str, kwargs: dict
+    ):
         """
-        `cost_flow_cap` for test_demand_elec is not defined initially.
-        We update `cost_flow_cap` to zero for all index values
-        and then check that it has propagated through to `cost_investment_flow_cap`, `cost`, and the objective function.
+        Check that parameter re-definition propagates across all cross-referenced global expressions.
         """
+        model: calliope.Model = request.getfixturevalue("simple_supply" + model_suffix)
+        expression_string = (
+            model.backend.get_global_expression(expr, as_backend_objs=False)
+            .sel(techs="test_demand_elec", **kwargs)
+            .astype(str)
+        )
+        if model_suffix.endswith("updated_cost_flow_cap"):
+            assert expression_string.str.contains("test_demand_elec").all()
+        else:
+            assert not (expression_string.str.contains("test_demand_elec").any())
 
-        caplog.set_level(logging.DEBUG)
-        simple_supply.backend.verbose_strings()
-
-        def _check_components(true_or_false: bool):
-            assert (
-                simple_supply.backend.get_parameter(
-                    "cost_flow_cap", as_backend_objs=False
-                )
-                == 0
-            ).all() == true_or_false
-            for expr, kwargs in [
-                ("cost_investment_flow_cap", {"carriers": "electricity"}),
-                ("cost", {}),
-            ]:
-                expression_string = (
-                    simple_supply.backend.get_global_expression(
-                        expr, as_backend_objs=False
-                    )
-                    .sel(techs="test_demand_elec", **kwargs)
-                    .astype(str)
-                )
-                assert (
-                    expression_string.str.contains("test_demand_elec").all()
-                    == true_or_false
-                )
-            objective_string = str(
-                simple_supply.backend.objectives.min_cost_optimisation.item().expr
-            )
-            assert ("test_demand_elec" in objective_string) == true_or_false
-
-        # Without updating, we should NOT see test_demand_elec in our global expressions+objective
-        _check_components(False)
-
-        simple_supply.backend.update_parameter("cost_flow_cap", 0)
-
-        # After updating, we should see test_demand_elec in our global expressions+objective
-        _check_components(True)
+    @pytest.mark.parametrize("model_suffix", ["_longnames", "_updated_cost_flow_cap"])
+    def test_update_parameter_refs_in_obj_func(
+        self, request: pytest.FixtureRequest, model_suffix: str
+    ):
+        """
+        Check that parameter re-definition propagates from global expressions to objective function.
+        """
+        model: calliope.Model = request.getfixturevalue("simple_supply" + model_suffix)
+        objective_string = str(
+            model.backend.objectives.min_cost_optimisation.item().expr
+        )
+        if model_suffix.endswith("updated_cost_flow_cap"):
+            assert "test_demand_elec" in objective_string
+        else:
+            assert "test_demand_elec" not in objective_string
 
     def test_update_parameter_no_refs_to_update(self, simple_supply):
         """flow_cap_per_storage_cap_max isn't defined in the inputs, so is a dimensionless value in the pyomo object, assigned its default value.
