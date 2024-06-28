@@ -82,7 +82,7 @@ $defs:
       Model dimension(s) over which the parameter is indexed.
       Must be same length as the sub-arrays of `index` (if `indexed` does not have any sub-arrays or is simply a single value, `dims` must be of length 1).
       Cannot include `techs` or `nodes` as these will be added automatically in preprocessing.
-      Must include `costs`run.objective
+      Must include `costs` as the string or as an element of the array.
     oneOf:
       - type: string
         enum: [costs]
