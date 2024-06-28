@@ -34,7 +34,7 @@ overrides:
         source: data_sources/supply_plus_resource.csv
         rows: timesteps
         columns: nodes
-        add_dimensions:
+        add_dims:
           parameters: source_use_max
           techs: test_supply_plus
 
@@ -44,7 +44,7 @@ overrides:
         source: data_sources/supply_plus_resource.csv
         rows: timesteps
         columns: nodes
-        add_dimensions:
+        add_dims:
           parameters: source_use_max
           techs: test_supply_plus
 
@@ -60,7 +60,7 @@ overrides:
         columns: nodes
         select:
           nodes: a
-        add_dimensions:
+        add_dims:
           parameters: source_use_max
           techs: test_supply_plus
 
@@ -139,7 +139,7 @@ overrides:
         source: data_sources/demand_heat.csv
         rows: timesteps
         columns: nodes
-        add_dimensions:
+        add_dims:
           parameters: sink_use_equals
           techs: test_demand_heat
 
@@ -164,7 +164,7 @@ overrides:
         columns: nodes
         select:
           nodes: a
-        add_dimensions:
+        add_dims:
           parameters: sink_use_equals
           techs: test_demand_heat
 
@@ -187,7 +187,7 @@ overrides:
         columns: nodes
         select:
           nodes: a
-        add_dimensions:
+        add_dims:
           parameters: sink_use_equals
           techs: test_demand_heat
 
@@ -216,7 +216,7 @@ overrides:
         columns: nodes
         select:
           nodes: a
-        add_dimensions:
+        add_dims:
           parameters: sink_use_equals
           techs: test_demand_heat
     techs:
@@ -241,7 +241,7 @@ overrides:
         columns: nodes
         select:
           nodes: a
-        add_dimensions:
+        add_dims:
           parameters: sink_use_equals
           techs: test_demand_heat
     nodes:
@@ -267,7 +267,7 @@ overrides:
         columns: nodes
         select:
           nodes: a
-        add_dimensions:
+        add_dims:
           parameters: sink_use_equals
           techs: test_demand_heat
     nodes:
@@ -288,7 +288,7 @@ overrides:
         columns: nodes
         select:
           nodes: a
-        add_dimensions:
+        add_dims:
           parameters: sink_use_equals
           techs: test_demand_heat
     nodes:
@@ -442,7 +442,7 @@ overrides:
   demand_elec_max:
     data_sources:
       demand_elec:
-        add_dimensions:
+        add_dims:
           parameters: sink_use_max
 
   shadow_prices:

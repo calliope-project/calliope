@@ -17,50 +17,50 @@ def parse_yaml(yaml_string):
     return AttrDict.from_yaml_string(yaml_string)
 
 
-@pytest.fixture
+@pytest.fixture()
 def base_parser_elements():
     number, identifier = expression_parser.setup_base_parser_elements()
     return number, identifier
 
 
-@pytest.fixture
+@pytest.fixture()
 def number(base_parser_elements):
     return base_parser_elements[0]
 
 
-@pytest.fixture
+@pytest.fixture()
 def identifier(base_parser_elements):
     return base_parser_elements[1]
 
 
-@pytest.fixture
+@pytest.fixture()
 def data_var(identifier):
     return where_parser.data_var_parser(identifier)
 
 
-@pytest.fixture
+@pytest.fixture()
 def config_option(identifier):
     return where_parser.config_option_parser(identifier)
 
 
-@pytest.fixture
+@pytest.fixture()
 def bool_operand():
     return where_parser.bool_parser()
 
 
-@pytest.fixture
+@pytest.fixture()
 def evaluatable_string(identifier):
     return where_parser.evaluatable_string_parser(identifier)
 
 
-@pytest.fixture
+@pytest.fixture()
 def helper_function(number, identifier, evaluatable_string):
     return expression_parser.helper_function_parser(
         evaluatable_string, number, generic_identifier=identifier
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def comparison(
     evaluatable_string, number, helper_function, bool_operand, config_option, data_var
 ):
@@ -74,19 +74,19 @@ def comparison(
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def subset(identifier, evaluatable_string, number):
     return where_parser.subset_parser(identifier, evaluatable_string, number)
 
 
-@pytest.fixture
+@pytest.fixture()
 def where(bool_operand, helper_function, data_var, comparison, subset):
     return where_parser.where_parser(
         bool_operand, helper_function, data_var, comparison, subset
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def eval_kwargs(dummy_pyomo_backend_model):
     return {
         "input_data": dummy_pyomo_backend_model.inputs,
@@ -98,7 +98,7 @@ def eval_kwargs(dummy_pyomo_backend_model):
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def parse_where_string(eval_kwargs, where):
     def _parse_where_string(where_string):
         parsed_ = where.parse_string(where_string, parse_all=True)
@@ -109,7 +109,7 @@ def parse_where_string(eval_kwargs, where):
 
 class TestParserElements:
     @pytest.mark.parametrize(
-        ["data_var_string", "expected"],
+        ("data_var_string", "expected"),
         [("with_inf", "with_inf"), ("all_inf", "all_inf"), ("all_nan", "all_nan")],
     )
     def test_data_var(
@@ -124,7 +124,7 @@ class TestParserElements:
         )
 
     @pytest.mark.parametrize(
-        ["data_var_string", "expected"],
+        ("data_var_string", "expected"),
         [
             ("with_inf", "with_inf_as_bool"),
             ("all_inf", "all_false"),
@@ -142,14 +142,13 @@ class TestParserElements:
         )
 
     @pytest.mark.parametrize(
-        ["data_var_string", "expected_similar"],
+        ("data_var_string", "expected_similar"),
         [("multi_dim_var", "with_inf_as_bool"), ("multi_dim_expr", "all_true")],
     )
     def test_data_var_with_where_decision_variable_or_expr(
         self, data_var, dummy_model_data, data_var_string, expected_similar, eval_kwargs
     ):
-        """
-        Can't quite compare in the same way for decision variables / global expressions
+        """Can't quite compare in the same way for decision variables / global expressions
         as with params, because there is a random element to the `definition_matrix` array
         """
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
@@ -196,7 +195,7 @@ class TestParserElements:
         )
 
     @pytest.mark.parametrize(
-        ["config_string", "expected_val"],
+        ("config_string", "expected_val"),
         [
             ("config.foo", True),
             ("config.FOO", "baz"),
@@ -240,7 +239,7 @@ class TestParserElements:
             parsed_[0].eval(**eval_kwargs)
 
     @pytest.mark.parametrize(
-        ["config_string", "type_"], [("config.b_a", "list"), ("config.bar", "AttrDict")]
+        ("config_string", "type_"), [("config.b_a", "list"), ("config.bar", "AttrDict")]
     )
     def test_config_fail_datatype(
         self, config_option, eval_kwargs, config_string, type_
@@ -253,7 +252,7 @@ class TestParserElements:
         )
 
     @pytest.mark.parametrize(
-        ["bool_string", "expected_true"],
+        ("bool_string", "expected_true"),
         [
             ("true", True),
             ("TRUE", True),
@@ -296,7 +295,7 @@ class TestParserElements:
         assert check_error_or_warning(excinfo, "Found unwanted token")
 
     @pytest.mark.parametrize(
-        ["var_string", "comparison_val", "n_true"],
+        ("var_string", "comparison_val", "n_true"),
         [
             ("all_inf", ".inf", 8),
             ("all_inf", 1, 0),
@@ -318,7 +317,7 @@ class TestParserElements:
         assert evaluated_.sum() == n_true
 
     @pytest.mark.parametrize(
-        ["operator", "comparison_val", "n_true"],
+        ("operator", "comparison_val", "n_true"),
         [("=", ".inf", 1), ("<", 3, 4), ("<=", 3, 5), (">", 1, 5), (">=", 1, 8)],
     )
     def test_comparison_parser_data_var_different_ops(
@@ -330,7 +329,7 @@ class TestParserElements:
         assert evaluated_.sum() == n_true
 
     @pytest.mark.parametrize(
-        ["config_string", "comparison_val", "expected_true"],
+        ("config_string", "comparison_val", "expected_true"),
         [
             ("config.foo", "True", True),
             ("config.foo", "False", False),
@@ -367,7 +366,7 @@ class TestParserElements:
         assert check_error_or_warning(excinfo, "Expected")
 
     @pytest.mark.parametrize(
-        ["subset_string", "expected_subset"],
+        ("subset_string", "expected_subset"),
         [
             ("[bar]", ["bar"]),
             ("[foo, bar]", ["foo", "bar"]),
@@ -398,7 +397,7 @@ class TestParserElements:
         assert check_error_or_warning(excinfo, "Expected")
 
     @pytest.mark.parametrize(
-        ["parser_name", "parse_string", "expected"],
+        ("parser_name", "parse_string", "expected"),
         [
             ("data_var", "foo", "DATA_VAR:foo"),
             ("config_option", "config.bar", "CONFIG:bar"),
@@ -415,7 +414,7 @@ class TestParserElements:
 
 class TestParserMasking:
     @pytest.mark.parametrize(
-        ["instring", "expected"],
+        ("instring", "expected"),
         [
             ("all_inf", "all_false"),
             ("config.foo=True", True),
@@ -432,7 +431,7 @@ class TestParserMasking:
             assert evaluated_ == expected
 
     @pytest.mark.parametrize(
-        ["instring", "expected_true"],
+        ("instring", "expected_true"),
         [
             ("config.foo=True and config.a_b=0", True),
             ("config.foo=False And config.a_b=0", False),
@@ -446,7 +445,7 @@ class TestParserMasking:
         assert evaluated_ if expected_true else not evaluated_
 
     @pytest.mark.parametrize(
-        ["instring", "expected_true"],
+        ("instring", "expected_true"),
         [
             ("config.foo=True or config.a_b=0", True),
             ("config.foo=False Or config.a_b=0", True),
@@ -460,7 +459,7 @@ class TestParserMasking:
         assert evaluated_ if expected_true else not evaluated_
 
     @pytest.mark.parametrize(
-        ["instring", "expected_true"],
+        ("instring", "expected_true"),
         [
             ("not config.foo=True", False),
             ("Not config.foo=False and config.a_b=0", True),
@@ -474,7 +473,7 @@ class TestParserMasking:
         assert evaluated_ if expected_true else not evaluated_
 
     @pytest.mark.parametrize(
-        ["instring", "expected"],
+        ("instring", "expected"),
         [
             ("all_inf and all_nan", "all_false"),
             ("all_inf or not all_nan", "all_true"),
@@ -495,7 +494,7 @@ class TestParserMasking:
         )
 
     @pytest.mark.parametrize(
-        ["instring", "expected"],
+        ("instring", "expected"),
         [
             ("[foo, bar] in nodes", "nodes_true"),
             (
@@ -523,7 +522,7 @@ class TestParserMasking:
         assert evaluated_.equals(dummy_model_data[expected])
 
     @pytest.mark.parametrize(
-        ["instring", "expected"],
+        ("instring", "expected"),
         [
             ("all_inf and all_nan or config.foo=True", "all_true"),
             ("all_inf and (all_nan or config.foo=True)", "all_false"),
@@ -564,13 +563,13 @@ class TestParserMasking:
 
 
 class TestAsMathString:
-    @pytest.fixture
+    @pytest.fixture()
     def latex_eval_kwargs(self, eval_kwargs):
         eval_kwargs["return_type"] = "math_string"
         return eval_kwargs
 
     @pytest.mark.parametrize(
-        ["parser", "instring", "expected"],
+        ("parser", "instring", "expected"),
         [
             ("data_var", "with_inf", r"\exists (\textit{with_inf}_\text{node,tech})"),
             ("data_var", "foo", r"\exists (\textit{foo})"),

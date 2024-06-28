@@ -1,9 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
-"""
-Methods to interface with the optimisation problem
-"""
+"""Methods to interface with the optimisation problem."""
 
 from __future__ import annotations
 
@@ -57,6 +54,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 class BackendModelGenerator(ABC):
+    """Helper class for backends."""
+
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
     _COMPONENT_ATTR_METADATA = ["description", "unit", "default"]
 
@@ -68,8 +67,8 @@ class BackendModelGenerator(ABC):
 
         Args:
             inputs (xr.Dataset): Calliope model data.
+            **kwargs (Any): build configuration overrides.
         """
-
         self._dataset = xr.Dataset()
         self.inputs = inputs.copy()
         self.inputs.attrs = deepcopy(inputs.attrs)
@@ -88,8 +87,8 @@ class BackendModelGenerator(ABC):
         default: Any = np.nan,
         use_inf_as_na: bool = False,
     ) -> None:
-        """
-        Add input parameter to backend model in-place.
+        """Add input parameter to backend model in-place.
+
         If the backend interface allows for mutable parameter objects, they will be
         generated, otherwise a copy of the model input dataset will be used.
         In either case, NaN values are filled with the given parameter default value.
@@ -97,21 +96,19 @@ class BackendModelGenerator(ABC):
         Args:
             parameter_name (str): Name of parameter.
             parameter_values (xr.DataArray): Array of parameter values.
-            default (Any, optional):
-                Default value to fill NaN entries in parameter values array.
-                Defaults to np.nan.
-            use_inf_as_na (bool, optional):
-                If True, will consider np.inf parameter value entries as np.nan and
-                consequently try to fill those entries with the parameter default value.
-                Defaults to False.
+            default (Any, optional): default value to fill NaN entries in parameter
+                values array. Defaults to np.nan.
+            use_inf_as_na (bool, optional): If True, will consider np.inf parameter
+                value entries as np.nan and consequently try to fill those entries
+                with the parameter default value. Defaults to False.
         """
 
     @abstractmethod
     def add_constraint(
         self, name: str, constraint_dict: parsing.UnparsedConstraintDict
     ) -> None:
-        """
-        Add constraint equation to backend model in-place.
+        """Add constraint equation to backend model in-place.
+
         Resulting backend dataset entries will be constraint objects.
 
         Args:
@@ -125,46 +122,39 @@ class BackendModelGenerator(ABC):
     def add_global_expression(
         self, name: str, expression_dict: parsing.UnparsedExpressionDict
     ) -> None:
-        """
-        Add global expression (arithmetic combination of parameters and/or decision variables)
-        to backend model in-place.
+        """Add global expression (arithmetic combination of parameters and/or decision variables) to backend model in-place.
+
         Resulting backend dataset entries will be linear expression objects.
 
         Args:
-            name (str):
-                Name of the global expression
-            expression_dict (parsing.UnparsedExpressionDict):
-                Global expression configuration dictionary, ready to be parsed and then evaluated.
+            name (str): name of the global expression
+            expression_dict (parsing.UnparsedExpressionDict): global expression configuration dictionary, ready to be parsed and then evaluated.
         """
 
     @abstractmethod
     def add_variable(
         self, name: str, variable_dict: parsing.UnparsedVariableDict
     ) -> None:
-        """
-        Add decision variable to backend model in-place.
+        """Add decision variable to backend model in-place.
+
         Resulting backend dataset entries will be decision variable objects.
 
         Args:
-            name (str):
-                Name of the variable.
-            variable_dict (parsing.UnparsedVariableDict):
-                Variable configuration dictionary, ready to be parsed and then evaluated.
+            name (str): name of the variable.
+            variable_dict (parsing.UnparsedVariableDict): unparsed variable configuration dictionary.
         """
 
     @abstractmethod
     def add_objective(
         self, name: str, objective_dict: parsing.UnparsedObjectiveDict
     ) -> None:
-        """
-        Add objective arithmetic to backend model in-place.
+        """Add objective arithmetic to backend model in-place.
+
         Resulting backend dataset entry will be a single, unindexed objective object.
 
         Args:
-            name (str):
-                Name of the objective.
-            objective_dict (parsing.UnparsedObjectiveDict):
-                Objective configuration dictionary, ready to be parsed and then evaluated.
+            name (str): name of the objective.
+            objective_dict (parsing.UnparsedObjectiveDict): unparsed objective configuration dictionary.
         """
 
     def log(
@@ -174,11 +164,13 @@ class BackendModelGenerator(ABC):
         message: str,
         level: Literal["info", "warning", "debug", "error", "critical"] = "debug",
     ):
-        """Log to module-level logger with some prettification of the message
+        """Log to module-level logger with some prettification of the message.
 
         Args:
-            message (str): Message to log.
-            level (Literal["info", "warning", "debug", "error", "critical"], optional): Log level. Defaults to "debug".
+            component_type (_COMPONENTS_T): type of component.
+            component_name (str): name of the component.
+            message (str): message to log.
+            level (Literal["info", "warning", "debug", "error", "critical"], optional): log level. Defaults to "debug".
         """
         getattr(LOGGER, level)(
             f"Optimisation model | {component_type}:{component_name} | {message}"
@@ -231,8 +223,7 @@ class BackendModelGenerator(ABC):
             LOGGER.info(f"Optimisation Model | {components} | Generated.")
 
     def _add_run_mode_math(self) -> None:
-        """If not given in the add_math list, override model math with run mode math"""
-
+        """If not given in the add_math list, override model math with run mode math."""
         # FIXME: available modes should not be hardcoded here. They should come from a YAML schema.
         mode = self.inputs.attrs["config"].build.mode
         add_math = self.inputs.attrs["applied_additional_math"]
@@ -264,20 +255,20 @@ class BackendModelGenerator(ABC):
         """Generalised function to add a optimisation problem component array to the model.
 
         Args:
-            name:
-                Name of the component.
-                If not providing the `component_dict` directly, this name must be available in the input math provided on initialising the class.
-            component_dict (Union[parsing.UnparsedConstraintDict, parsing.UnparsedExpressionDict, parsing.UnparsedObjectiveDict, parsing.UnparsedVariableDict]):
-                Unparsed YAML dictionary configuration.
-            component_setter (Callable):
-                Function to combine evaluated xarray DataArrays into backend component objects.
-                Will receive outputs of `evaluate_where` and (optionally, if `equations` is a component dictionary key) `evaluate_expression` as inputs.
-            component_type (Literal["variables", "global_expressions", "constraints", "objectives"])
+            name (str): name of the component. If not providing the `component_dict` directly,
+                this name must be available in the input math provided on initialising the class.
+            component_dict (Optional[Tp]): unparsed YAML dictionary configuration.
+            component_setter (Callable): function to combine evaluated xarray DataArrays into backend component objects.
+            component_type (Literal["variables", "global_expressions", "constraints", "objectives"]):
+                type of the added component.
+            break_early (bool, optional): break if the component is not active. Defaults to True.
 
         Raises:
-            BackendError:
-                The sub-equations of the parsed component cannot generate component
+            BackendError: The sub-equations of the parsed component cannot generate component
                 objects on duplicate index entries.
+
+        Returns:
+            Optional[parsing.ParsedBackendComponent]: parsed component. None if the break_early condition was met.
         """
         references: set[str] = set()
 
@@ -363,7 +354,8 @@ class BackendModelGenerator(ABC):
     @abstractmethod
     def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         """Attach an empty list object to the backend model object.
-        This may be a backend-specific subclass of a standard list object.
+
+        The attachment may be a backend-specific subclass of a standard list object.
 
         Args:
             key (str): Name of object.
@@ -374,8 +366,8 @@ class BackendModelGenerator(ABC):
         """
 
     def _add_all_inputs_as_parameters(self) -> None:
-        """
-        Add all parameters to backend dataset in-place.
+        """Add all parameters to backend dataset in-place.
+
         If model data does not include a parameter, their default values will be added here
         as unindexed backend dataset parameters.
 
@@ -408,10 +400,7 @@ class BackendModelGenerator(ABC):
 
     @staticmethod
     def _clean_arrays(*args) -> None:
-        """
-        Preemptively delete objects with large memory footprints that might otherwise
-        stick around longer than necessary.
-        """
+        """Preemptively delete of objects with large memory footprints."""
         del args
 
     def _add_to_dataset(
@@ -422,8 +411,7 @@ class BackendModelGenerator(ABC):
         unparsed_dict: Union[parsing.UNPARSED_DICTS, dict],
         references: Optional[set] = None,
     ):
-        """
-        Add array of backend objects to backend dataset in-place.
+        """Add array of backend objects to backend dataset in-place.
 
         Args:
             name (str): Name of entry in dataset.
@@ -438,7 +426,6 @@ class BackendModelGenerator(ABC):
                 All referenced objects will have their "references" attribute updated with this object's name.
                 Defaults to None.
         """
-
         add_attrs = {
             attr: unparsed_dict.pop(attr)
             for attr in self._COMPONENT_ATTR_METADATA
@@ -467,8 +454,7 @@ class BackendModelGenerator(ABC):
     def _apply_func(
         self, func: Callable, *args, output_core_dims: tuple = ((),), **kwargs
     ) -> xr.DataArray:
-        """
-        Apply a function to every element of an arbitrary number of xarray DataArrays.
+        """Apply a function to every element of an arbitrary number of xarray DataArrays.
 
         Args:
             func (Callable):
@@ -500,19 +486,18 @@ class BackendModelGenerator(ABC):
         )
 
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
-        """
+        """Detect if preexistance errors are present the dataset.
+
         We do not allow any overlap of backend object names since they all have to
-        co-exist in the backend dataset.
-        I.e., users cannot overwrite any backend component with another
-        (of the same type or otherwise).
+        co-exist in the backend dataset. I.e., users cannot overwrite any backend
+        component with another (of the same type or otherwise).
 
         Args:
             key (str): Backend object name
             obj_type (Literal["variables", "constraints", "objectives", "parameters", "expressions"]): Object type.
 
         Raises:
-            BackendError:
-                Raised if `key` already exists in the backend model
+            BackendError: if `key` already exists in the backend model
                 (either with the same or different type as `obj_type`).
         """
         if key in self._dataset.keys():
@@ -529,31 +514,37 @@ class BackendModelGenerator(ABC):
 
     @property
     def constraints(self):
-        "Slice of backend dataset to show only built constraints"
+        """Slice of backend dataset to show only built constraints."""
         return self._dataset.filter_by_attrs(obj_type="constraints")
 
     @property
     def variables(self):
-        "Slice of backend dataset to show only built variables"
+        """Slice of backend dataset to show only built variables."""
         return self._dataset.filter_by_attrs(obj_type="variables")
 
     @property
     def parameters(self):
-        "Slice of backend dataset to show only built parameters"
+        """Slice of backend dataset to show only built parameters."""
         return self._dataset.filter_by_attrs(obj_type="parameters")
 
     @property
     def global_expressions(self):
-        "Slice of backend dataset to show only built global expressions"
+        """Slice of backend dataset to show only built global expressions."""
         return self._dataset.filter_by_attrs(obj_type="global_expressions")
 
     @property
     def objectives(self):
-        "Slice of backend dataset to show only built objectives"
+        """Slice of backend dataset to show only built objectives."""
         return self._dataset.filter_by_attrs(obj_type="objectives")
 
     @property
-    def valid_component_names(self):
+    def valid_component_names(self) -> set:
+        """Return a set of valid component names in the model data.
+
+        Returns:
+            set: set of valid names.
+        """
+
         def _filter(val):
             return val in ["variables", "parameters", "global_expressions"]
 
@@ -567,21 +558,24 @@ class BackendModelGenerator(ABC):
 
 
 class BackendModel(BackendModelGenerator, Generic[T]):
+    """Calliope's backend model functionality."""
+
     def __init__(self, inputs: xr.Dataset, instance: T, **kwargs) -> None:
         """Abstract base class to build backend models that interface with solvers.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
             instance (T): Interface model instance.
+            **kwargs: build configuration overrides.
         """
         super().__init__(inputs, **kwargs)
         self._instance = instance
         self.shadow_prices: ShadowPrices
+        self._has_verbose_strings: bool = False
 
     @abstractmethod
     def get_parameter(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
-        """
-        Extract parameter from backend dataset.
+        """Extract parameter from backend dataset.
 
         Args:
             name (str): Name of parameter.
@@ -599,9 +593,9 @@ class BackendModel(BackendModelGenerator, Generic[T]):
     def get_constraint(
         self, name: str, as_backend_objs: bool = True, eval_body: bool = False
     ) -> Union[xr.DataArray, xr.Dataset]:
-        """
-        Get constraint data as either a table of details or as an array of backend interface objects.
-        Can be used to inspect and debug built constraints.
+        """Get constraint data from the backend for debugging.
+
+        Dat can be returned as  a table of details or as an array of backend interface objects
 
         Args:
             name (str): Name of constraint, as given in YAML constraint key.
@@ -625,7 +619,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
     @abstractmethod
     def get_variable(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
-        """Extract decision variable array from backend dataset
+        """Extract decision variable array from backend dataset.
 
         Args:
             name (str): Name of variable.
@@ -642,7 +636,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
     @abstractmethod
     def get_variable_bounds(self, name: str) -> xr.Dataset:
-        """Extract decision variable upper and lower bound array from backend dataset
+        """Extract decision variable upper and lower bound array from backend dataset.
 
         Args:
             name (str): Name of variable.
@@ -655,7 +649,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
     def get_global_expression(
         self, name: str, as_backend_objs: bool = True, eval_body: bool = True
     ) -> xr.DataArray:
-        """Extract global expression array from backend dataset
+        """Extract global expression array from backend dataset.
 
         Args:
             name (str): Name of global expression
@@ -681,12 +675,18 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         self, name: str, new_values: Union[xr.DataArray, SupportsFloat]
     ) -> None:
         """Update parameter elements using an array of new values.
-        If the parameter has not been previously defined, it will be added to the optimisation problem based on the new values given (with NaNs reverting to default values).
-        If the new values have fewer dimensions than are on the parameter array, the new values will be broadcast across the missing dimensions before applying the update.
+
+        If the parameter has not been previously defined, it will be added to the
+        optimisation problem based on the new values given (with NaNs reverting to
+        default values).
+        If the new values have fewer dimensions than are on the parameter array, the
+        new values will be broadcast across the missing dimensions before applying the
+        update.
 
         Args:
             name (str): Parameter to update
-            new_values (Union[xr.DataArray, SupportsFloat]): New values to apply. Any empty (NaN) elements in the array will be skipped.
+            new_values (Union[xr.DataArray, SupportsFloat]): New values to apply. Any
+                empty (NaN) elements in the array will be skipped.
         """
 
     @abstractmethod
@@ -697,8 +697,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         min: Optional[Union[xr.DataArray, SupportsFloat]] = None,
         max: Optional[Union[xr.DataArray, SupportsFloat]] = None,
     ) -> None:
-        """
-        Update the bounds on a decision variable.
+        """Update the bounds on a decision variable.
+
         If the variable bounds are defined by parameters in the math formulation,
         the parameters themselves will be updated.
 
@@ -714,8 +714,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
     @abstractmethod
     def fix_variable(self, name: str, where: Optional[xr.DataArray] = None) -> None:
-        """
-        Fix the variable value to the value quantified on the most recent call to `solve`.
+        """Fix the variable value to the value quantified on the most recent call to `solve`.
+
         Fixed variables will be treated as parameters in the optimisation.
 
         Args:
@@ -728,8 +728,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
     @abstractmethod
     def unfix_variable(self, name: str, where: Optional[xr.DataArray] = None) -> None:
-        """
-        Unfix the variable so that it is treated as a decision variable in the next call to `solve`.
+        """Unfix the variable so that it is treated as a decision variable in the next call to `solve`.
 
         Args:
             name (str): Variable to update
@@ -741,19 +740,23 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
     @abstractmethod
     def verbose_strings(self) -> None:
-        """
-        Update optimisation model object string representations to include the index coordinates of the object.
+        """Update optimisation model object string representations to include the index coordinates of the object.
 
         E.g., `variables(flow_out)[0]` will become `variables(flow_out)[power, region1, ccgt, 2005-01-01 00:00]`
 
-        This takes approximately 10% of the peak memory required to initially build the optimisation problem, so should only be invoked if inspecting the model in detail (e.g., debugging)
+        This takes approximately 10% of the peak memory required to initially build the
+        optimisation problem, so should only be invoked if inspecting the model in
+        detail (e.g., debugging).
 
-        Only string representations of model parameters and variables will be updated since global expressions automatically show the string representation of their contents.
+        Only string representations of model parameters and variables will be updated
+        since global expressions automatically show the string representation of their
+        contents.
         """
 
     @abstractmethod
     def to_lp(self, path: Union[str, Path]) -> None:
         """Write the optimisation problem to file in the linear programming LP format.
+
         The LP file can be used for debugging and to submit to solvers directly.
 
         Args:
@@ -763,57 +766,56 @@ class BackendModel(BackendModelGenerator, Generic[T]):
     @property
     @abstractmethod
     def has_integer_or_binary_variables(self) -> bool:
-        """Confirm whether or not the built model has binary or integer decision variables.
+        """Confirms if the built model has binary or integer decision variables.
 
-        This can be used to understand how long the optimisation may take (MILP problems are harder to solve than LP ones),
-        and to verify whether shadow prices can be tracked (they cannot be tracked in MILP problems).
+        This can be used to understand how long the optimisation may take (MILP
+        problems are harder to solve than LP ones), and to verify whether shadow prices
+        can be tracked (they cannot be tracked in MILP problems).
 
         Returns:
-            bool: If True, the built model has binary or integer decision variables. If False, all decision variables are continuous.
+            bool: True if the built model has binary or integer decision variables.
+                False if all decision variables are continuous.
         """
 
     @abstractmethod
     def _solve(
         self,
         solver: str,
-        solver_io: Optional[str] = None,
-        solver_options: Optional[dict] = None,
-        save_logs: Optional[str] = None,
+        solver_io: str | None = None,
+        solver_options: dict | None = None,
+        save_logs: str | None = None,
         warmstart: bool = False,
         **solve_config,
     ) -> xr.Dataset:
-        """
-        Optimise built model. If solution is optimal, interface objects
-        (decision variables, global expressions, constraints, objective) can be successfully
-        evaluated for their values at optimality.
+        """Optimise built model.
+
+        If solution is optimal, interface objects (decision variables, global
+        expressions, constraints, objective) can be successfully evaluated for their
+        values at optimality.
 
         Args:
             solver (str): Name of solver to optimise with.
-            solver_io (Optional[str], optional):
-                If chosen solver has a python interface, set to "python" for potential
+            solver_io (str | None, optional): If chosen solver has a python interface, set to "python" for potential
                 performance gains, otherwise should be left as None. Defaults to None.
-            solver_options (Optional[dict], optional):
-                Solver options/parameters to pass directly to solver.
-                See solver documentation for available parameters that can be influenced.
+            solver_options (dict | None, optional): Solver options/parameters to pass directly to solver.
+                See solver documentation for available parameters that can be influenced. Defaults to None.
+            save_logs (str | None, optional): If given, solver logs and built LP file will be saved to this filepath.
                 Defaults to None.
-            save_logs (Optional[str], optional):
-                If given, solver logs and built LP file will be saved to this filepath.
-                Defaults to None.
-            warmstart (bool, optional):
-                If True, and the chosen solver is capable of implementing it, an existing
+            warmstart (bool, optional): If True, and the chosen solver is capable of implementing it, an existing
                 optimal solution will be used to warmstart the next solve run.
                 Defaults to False.
+            **solve_config: solve configuration overrides.
 
         Returns:
-            xr.Dataset:
-                Dataset of decision variable values if the solution was optimal/feasible,
+            xr.Dataset: Dataset of decision variable values if the solution was optimal/feasible,
                 otherwise an empty dataset.
         """
 
     def load_results(self) -> xr.Dataset:
-        """
-        Evaluate backend decision variables, global expressions, parameters (if not in
-        inputs), and shadow_prices (if tracked), after a successful model run.
+        """Load and evaluate model results after a successful run.
+
+        Evaluates backend decision variables, global expressions, parameters (if not in
+        inputs), and shadow_prices (if tracked).
 
         Returns:
             xr.Dataset: Dataset of optimal solution results (all numeric data).
@@ -850,8 +852,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         return results
 
     def _find_all_references(self, initial_references: set) -> set:
-        """
-        Find all nested references to optimisation problem components from an initial set of references.
+        """Find all nested references to optimisation problem components from an initial set of references.
 
         Args:
             initial_references (set): names of optimisation problem components.
@@ -859,7 +860,6 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         Returns:
             set: `initial_references` + any names of optimisation problem components referenced from those initial references.
         """
-
         references = initial_references.copy()
         for reference in initial_references:
             new_refs = self._dataset[reference].attrs.get("references", {})
@@ -880,11 +880,9 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             "objectives",
         ]
         for component in ordered_components:
-            refs = [
-                ref
-                for ref in references
-                if self._dataset[ref].attrs["obj_type"] == component
-            ]
+            # Rebuild references in the order they are found in the backend dataset
+            # which should correspond to the order they were added to the optimisation problem.
+            refs = [k for k in getattr(self, component).data_vars if k in references]
             for ref in refs:
                 self.delete_component(ref, component)
                 getattr(self, "add_" + component.removesuffix("s"))(name=ref)
@@ -911,25 +909,25 @@ class ShadowPrices:
 
     @abstractmethod
     def activate(self):
-        "Activate shadow price tracking."
+        """Activate shadow price tracking."""
 
     @abstractmethod
     def deactivate(self):
-        "Deactivate shadow price tracking."
+        """Deactivate shadow price tracking."""
 
     @property
     @abstractmethod
     def is_active(self) -> bool:
-        "Check whether shadow price tracking is active or not"
+        """Check whether shadow price tracking is active or not."""
 
     @property
     @abstractmethod
     def available_constraints(self) -> Iterable:
-        "Iterable of constraints that are available to provide shadow prices on"
+        """Iterable of constraints that are available to provide shadow prices on."""
 
     @property
     def tracked(self) -> set:
-        "Constraints being tracked for automatic addition to the results dataset"
+        """Constraints being tracked for automatic addition to the results dataset."""
         return self._tracked
 
     def track_constraints(self, constraints_to_track: list):
