@@ -1,9 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
-"""
-Implements the AttrDict class (a subclass of regular dict) used for managing model configuration.
-"""
+"""AttrDict implementation (a subclass of regular dict) used for managing model configuration."""
 
 import copy
 import io
@@ -29,7 +26,7 @@ _MISSING = __Missing()
 
 
 def _yaml_load(src):
-    """Load YAML from a file object or path with useful parser errors"""
+    """Load YAML from a file object or path with useful parser errors."""
     yaml = ruamel_yaml.YAML(typ="safe")
     if not isinstance(src, str):
         try:
@@ -52,16 +49,7 @@ def _yaml_load(src):
 
 
 class AttrDict(dict):
-    """
-    A subclass of ``dict`` with key access by attributes::
-
-        d = AttrDict({'a': 1, 'b': 2})
-        d.a == 1  # True
-
-    Includes a range of additional methods to read and write to YAML,
-    and to deal with nested keys.
-
-    """
+    """Extended `dict` class."""
 
     __name__ = "AttrDict"
 
@@ -69,6 +57,15 @@ class AttrDict(dict):
     __setattr__ = dict.__setitem__
 
     def __init__(self, source_dict=None):
+        """A subclass of ``dict`` with key access by attributes.
+
+        Examples:
+            d = AttrDict({'a': 1, 'b': 2})
+            d.a == 1  # True
+
+        Includes a range of additional methods to read and write to YAML,
+        and to deal with nested keys.
+        """
         super().__init__()
 
         if source_dict is not None:
@@ -78,18 +75,17 @@ class AttrDict(dict):
                 raise ValueError("Must pass a dict to AttrDict")
 
     def copy(self):
-        """Override copy method so that it returns an AttrDict"""
+        """Override copy method so that it returns an AttrDict."""
         return AttrDict(self.as_dict().copy())
 
     def __deepcopy__(self, memo):
-        """Override copy method so that it returns an AttrDict"""
+        """Override copy method so that it returns an AttrDict."""
         return AttrDict(copy.deepcopy(self.as_dict(), memo))
 
     def init_from_dict(self, d):
-        """
-        Initialize a new AttrDict from the given dict. Handles any
-        nested dicts by turning them into AttrDicts too::
+        """Initialize a new AttrDict from the given dict.
 
+        Handles any nested dicts by turning them into AttrDicts too:
             d = AttrDict({'a': 1, 'b': {'x': 1, 'y': 2}})
             d.b.x == 1  # True
 
@@ -158,24 +154,24 @@ class AttrDict(dict):
     def from_yaml(
         cls, filename: str | Path, resolve_imports: bool | str = True
     ) -> Self:
-        """
-        Returns an AttrDict initialized from the given path or
-        file object ``f``, which must point to a YAML file. The path can
-        be a string or a pathlib.Path.
+        """Returns an AttrDict initialized from the given path or file path.
+
+        If `resolve_imports` is True, top-level `import:` statements
+        are resolved recursively.
+        If `resolve_imports` is False, top-level `import:` statements
+        are treated like any other key and not further processed.
+        If `resolve_imports` is a string, such as `foobar`, import
+        statements underneath that key are resolved, i.e. `foobar.import:`.
+        When resolving import statements, anything defined locally
+        overrides definitions in the imported file.
 
         Args:
-            filename (str | pathlib.Path):
-            resolve_imports (bool | str, optional):
-                If ``resolve_imports`` is True, top-level ``import:`` statements
-                are resolved recursively.
-                If ``resolve_imports is False, top-level ``import:`` statements
-                are treated like any other key and not further processed.
-                If ``resolve_imports`` is a string, such as ``foobar``, import
-                statements underneath that key are resolved, i.e. ``foobar.import:``.
-                When resolving import statements, anything defined locally
-                overrides definitions in the imported file.
+            filename (str | Path): YAML file.
+            resolve_imports (bool | str, optional): top-level `import:` solving option.
+                Defaults to True.
+
         Returns:
-            calliope.AttrDict:
+            Self: constructed AttrDict
         """
         filename = Path(filename)
         loaded = cls(_yaml_load(filename.read_text(encoding="utf-8")))
@@ -184,8 +180,7 @@ class AttrDict(dict):
 
     @classmethod
     def from_yaml_string(cls, string: str, resolve_imports: bool | str = True) -> Self:
-        """
-        Returns an AttrDict initialized from the given string.
+        """Returns an AttrDict initialized from the given string.
 
         Input string must be valid YAML.
 
@@ -200,6 +195,7 @@ class AttrDict(dict):
                 statements underneath that key are resolved, i.e. ``foobar.import:``.
                 When resolving import statements, anything defined locally
                 overrides definitions in the imported file.
+
         Returns:
             calliope.AttrDict:
 
@@ -209,10 +205,9 @@ class AttrDict(dict):
         return loaded
 
     def set_key(self, key, value):
-        """
-        Set the given ``key`` to the given ``value``. Handles nested
-        keys, e.g.::
+        """Set the given ``key`` to the given ``value``.
 
+        Handles nested keys, e.g.:
             d = AttrDict()
             d.set_key('foo.bar', 1)
             d.foo.bar == 1  # True
@@ -243,13 +238,12 @@ class AttrDict(dict):
                 self[key] = value
 
     def get_key(self, key, default=_MISSING):
-        """
-        Looks up the given ``key``. Like set_key(), deals with nested
-        keys.
+        """Looks up the given ``key``.
+
+        Deals with nested keys.
 
         If default is anything but ``_MISSING``, the given default is
         returned if the key does not exist.
-
         """
         if "." in key:
             # Nested key of form "foo.bar"
@@ -290,17 +284,14 @@ class AttrDict(dict):
             del self[key]
 
     def as_dict(self, flat=False):
-        """
-        Return the AttrDict as a pure dict (with nested dicts if
-        necessary).
-
-        """
+        """Return the AttrDict as a pure dict (with nested dicts if necessary)."""
         if flat:
             return self.as_dict_flat()
         else:
             return self.as_dict_nested()
 
     def as_dict_nested(self):
+        """Return the AttrDict as a pure dict, converting nested AttrDicts."""
         d = {}
         for k, v in self.items():
             if isinstance(v, AttrDict):
@@ -312,6 +303,7 @@ class AttrDict(dict):
         return d
 
     def as_dict_flat(self):
+        """Return a flat dictionary."""
         d = {}
         keys = self.keys_nested()
         for k in keys:
@@ -319,10 +311,10 @@ class AttrDict(dict):
         return d
 
     def to_yaml(self, path=None):
-        """
-        Saves the AttrDict to the ``path`` as a YAML file, or returns
-        a YAML string if ``path`` is None.
+        """Conversion to YAML.
 
+        Saves the AttrDict to the ``path`` as a YAML file or returns a YAML string
+        if ``path`` is None.
         """
         result = self.copy()
         yaml_ = ruamel_yaml.YAML()
@@ -354,9 +346,9 @@ class AttrDict(dict):
             return stream.getvalue()
 
     def keys_nested(self, subkeys_as="list"):
-        """
-        Returns all keys in the AttrDict, including the keys of
-        nested subdicts (which may be either regular dicts or AttrDicts).
+        """Returns all keys in the AttrDict, including nested keys.
+
+        Nested subdicts may be either regular dicts or AttrDicts.
 
         If ``subkeys_as='list'`` (default), then a list of
         all keys is returned, in the form ``['a', 'b.b1', 'b.b2']``.
@@ -380,27 +372,25 @@ class AttrDict(dict):
 
     def union(
         self,
-        other,
-        allow_override=False,
-        allow_replacement=False,
-        allow_subdict_override_with_none=False,
+        other: Self | dict,
+        allow_override: bool = False,
+        allow_replacement: bool = False,
+        allow_subdict_override_with_none: bool = False,
     ):
-        """
-        Merges the AttrDict in-place with the passed ``other``
-        AttrDict. Keys in ``other`` take precedence, and nested keys
-        are properly handled.
+        """In-place merge with another AttrDict.
 
-        If ``allow_override`` is False, a KeyError is raised if
-        other tries to redefine an already defined key.
+        Args:
+            other (Self | dict): other AttrDict to use in union. Takes precedence.
+            allow_override (bool, optional): whether or not to allow overrides of
+                already defined keys. Defaults to False.
+            allow_replacement (bool, optional): allow "_REPLACE_" key to replace an
+                entire sub-dict. Defaults to False.
+            allow_subdict_override_with_none (bool, optional): if False, keys in the
+                form `this.that: None` in `other` will be ignored if subdicts exist in
+                self like `this.that.foo: 1`, rather than wiping them. Defaults to False.
 
-        If ``allow_replacement``, allow "_REPLACE_" key to replace an
-        entire sub-dict.
-
-        If ``allow_subdict_override_with_none`` is False (default),
-        a key of the form ``this.that: None`` in other will be ignored
-        if subdicts exist in self like ``this.that.foo: 1``, rather
-        than wiping them.
-
+        Raises:
+            KeyError: `other` has an already defined key and `allow_override == False`
         """
         self_keys = self.keys_nested()
         other_keys = other.keys_nested()

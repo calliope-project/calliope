@@ -717,7 +717,5 @@ model_from_data_sources_w_deactivations = calliope.Model(model_def)
 definition_matrix_old = (
     model_from_data_sources.inputs.definition_matrix.to_series().dropna()
 )
-definition_matrix_new = (
-    model_from_data_sources_w_deactivations.inputs.definition_matrix.to_series().dropna()
-)
+definition_matrix_new = model_from_data_sources_w_deactivations.inputs.definition_matrix.to_series().dropna()
 pd.concat([definition_matrix_old, definition_matrix_new], axis=1, keys=["old", "new"])

@@ -65,14 +65,14 @@ class TestModel:
 
 
 class TestAddMath:
-    @pytest.fixture
+    @pytest.fixture()
     def storage_inter_cluster(self):
         return build_model(
             {"config.init.add_math": ["storage_inter_cluster"]},
             "simple_supply,two_hours,investment_costs",
         )
 
-    @pytest.fixture
+    @pytest.fixture()
     def temp_path(self, tmpdir_factory):
         return tmpdir_factory.mktemp("custom_math")
 
@@ -86,7 +86,7 @@ class TestAddMath:
         )
 
     @pytest.mark.parametrize(
-        ["override", "expected"],
+        ("override", "expected"),
         [
             (["foo"], ["foo"]),
             (["bar", "foo"], ["bar", "foo"]),
@@ -214,7 +214,7 @@ class TestValidateMathDict:
         ]
 
     @pytest.mark.parametrize(
-        ["equation", "where"],
+        ("equation", "where"),
         [
             ("1 == 1", "True"),
             (

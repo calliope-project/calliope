@@ -60,7 +60,7 @@ class TestDataSourceUtils:
         assert "(data_sources, ds_name) | bar." in caplog.text
 
     @pytest.mark.parametrize(
-        ["key", "expected"],
+        ("key", "expected"),
         [("rows", ["test_row"]), ("columns", None), ("foo", ["foobar"])],
     )
     def test_listify_if_defined(self, source_obj, key, expected):
@@ -71,7 +71,7 @@ class TestDataSourceUtils:
             assert output == expected
 
     @pytest.mark.parametrize(
-        ["loaded", "defined"],
+        ("loaded", "defined"),
         [
             (["foo"], ["foo"]),
             ([None], ["foo"]),
@@ -84,7 +84,7 @@ class TestDataSourceUtils:
         source_obj._compare_axis_names(loaded, defined, "foobar")
 
     @pytest.mark.parametrize(
-        ["loaded", "defined"],
+        ("loaded", "defined"),
         [
             (["bar"], ["foo"]),
             ([None, "foo"], ["foo", "bar"]),
@@ -442,7 +442,7 @@ class TestDataSourceLookupDictFromParam:
         return ds
 
     @pytest.mark.parametrize(
-        ["param", "expected"],
+        ("param", "expected"),
         [
             ("FOO", {"foo1": {"FOO": ["bar1", "bar2"]}}),
             ("BAR", {"foo1": {"BAR": "bar1"}, "foo2": {"BAR": "bar2"}}),

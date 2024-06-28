@@ -1,9 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
-"""
-Load, update, and access attributes in the Calliope pre-defined YAML schemas
-"""
+"""Load, update, and access attributes in the Calliope pre-defined YAML schemas."""
 
 import importlib
 import re
@@ -31,6 +28,7 @@ def reset():
 def update_then_validate_config(
     config_key: str, config_dict: AttrDict, **update_kwargs
 ) -> AttrDict:
+    """Return an updated version of the configuration schema."""
     to_validate = deepcopy(config_dict[config_key])
     to_validate.union(AttrDict(update_kwargs), allow_override=True)
     validate_dict(
@@ -82,8 +80,7 @@ def update_model_schema(
 
 
 def validate_dict(to_validate: dict, schema: dict, dict_descriptor: str) -> None:
-    """
-    Validate a dictionary under a given schema.
+    """Validate a dictionary under a given schema.
 
     Args:
         to_validate (dict): Dictionary to validate.

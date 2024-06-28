@@ -1,9 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
-"""
-Example models that can be loaded directly into a session.
-"""
+"""Example models that can be loaded directly into a session."""
 
 import importlib
 from pathlib import Path

@@ -1,9 +1,10 @@
 import calliope
 import pyomo.core as po
 import pytest
-from pytest import approx
 
 from .common.util import build_test_model as build_model
+
+approx = pytest.approx
 
 
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
@@ -53,7 +54,7 @@ class TestCostMinimisationObjective:
         assert float(model.results.cost.sum()) > 6.6e7
 
     @pytest.mark.parametrize(
-        "scenario,cost_class,weight",
+        ("scenario", "cost_class", "weight"),
         [
             ("monetary_objective", ["monetary"], [1]),
             ("emissions_objective", ["emissions"], [1]),
