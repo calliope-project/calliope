@@ -314,7 +314,7 @@ properties:
             type: ["null", string]
             x-resample_method: first
             x-type: str
-            title: Technology longname.
+            title: Technology long-name.
             description: Long name of technology, which can be used in post-processing (e.g., plotting).
             default: .nan
 

@@ -103,6 +103,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         parameter_da.attrs["original_dtype"] = parameter_values.dtype
         attrs = {
+            "title": self._PARAM_TITLES.get(parameter_name, None),
             "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
             "unit": self._PARAM_UNITS.get(parameter_name, None),
             "default": default,
