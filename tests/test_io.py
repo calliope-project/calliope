@@ -25,6 +25,9 @@ class TestIO:
             "foo_dict": {"foo": {"a": 1}},
             "foo_attrdict": calliope.AttrDict({"foo": {"a": 1}}),
             "foo_set": set(["foo", "bar"]),
+            "foo_set_1_item": set(["foo"]),
+            "foo_list": ["foo", "bar"],
+            "foo_list_1_item": ["foo"],
         }
         model._model_data = model._model_data.assign_attrs(**attrs)
         model.build()
@@ -67,6 +70,9 @@ class TestIO:
             ("foo_dict", dict, {"foo": {"a": 1}}),
             ("foo_attrdict", calliope.AttrDict, calliope.AttrDict({"foo": {"a": 1}})),
             ("foo_set", set, set(["foo", "bar"])),
+            ("foo_set_1_item", set, set(["foo"])),
+            ("foo_list", list, ["foo", "bar"]),
+            ("foo_list_1_item", list, ["foo"]),
         ],
     )
     @pytest.mark.parametrize("model_name", ["model", "model_from_file"])
@@ -100,7 +106,8 @@ class TestIO:
                 "serialised_dicts",
                 ["foo_dict", "foo_attrdict", "defaults", "config", "math"],
             ),
-            ("serialised_sets", ["foo_set"]),
+            ("serialised_sets", ["foo_set", "foo_set_1_item"]),
+            ("serialised_single_element_list", ["foo_list_1_item", "foo_set_1_item"]),
         ],
     )
     def test_serialisation_lists(
