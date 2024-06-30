@@ -16,8 +16,6 @@ from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, check_variable_exists
 
-DUMMY_INT = 0xDEADBEEF
-
 
 @pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
 class TestChecks:
@@ -1627,10 +1625,10 @@ class TestNewBackend:
 
     @pytest.fixture(scope="class")
     def simple_supply_updated_cost_flow_cap(
-        self, simple_supply: calliope.Model
+        self, simple_supply: calliope.Model, dummy_int: int
     ) -> calliope.Model:
         simple_supply.backend.verbose_strings()
-        simple_supply.backend.update_parameter("cost_flow_cap", DUMMY_INT)
+        simple_supply.backend.update_parameter("cost_flow_cap", dummy_int)
         return simple_supply
 
     @pytest.fixture()
@@ -1706,6 +1704,7 @@ class TestNewBackend:
             getattr(simple_supply.backend, f"get_{component_type}")("foo")
 
     def test_new_build_get_variable(self, simple_supply):
+        """Check a decision variable has the correct data type and has all expected attributes."""
         var = simple_supply.backend.get_variable("flow_cap")
         assert (
             var.to_series().dropna().apply(lambda x: isinstance(x, pmo.variable)).all()
@@ -1742,6 +1741,7 @@ class TestNewBackend:
         )
 
     def test_new_build_get_parameter(self, simple_supply):
+        """Check a parameter has the correct data type and has all expected attributes."""
         param = simple_supply.backend.get_parameter("flow_in_eff")
         assert isinstance(param.item(), pmo.parameter)
         assert param.attrs == {
@@ -1766,6 +1766,7 @@ class TestNewBackend:
         assert param.dtype == np.dtype("float64")
 
     def test_new_build_get_global_expression(self, simple_supply):
+        """Check a global expression has the correct data type and has all expected attributes."""
         expr = simple_supply.backend.get_global_expression("cost_investment")
         assert (
             expr.to_series()
@@ -2202,8 +2203,8 @@ class TestNewBackend:
         )
         assert expected.where(updated_param.notnull()).equals(updated_param)
 
-    def test_update_parameter_one_val(self, caplog, simple_supply):
-        updated_param = DUMMY_INT
+    def test_update_parameter_one_val(self, caplog, simple_supply, dummy_int: int):
+        updated_param = dummy_int
         new_dims = {"techs"}
         caplog.set_level(logging.DEBUG)
 
@@ -2216,7 +2217,7 @@ class TestNewBackend:
         expected = simple_supply.backend.get_parameter(
             "flow_out_eff", as_backend_objs=False
         )
-        assert (expected == DUMMY_INT).all()
+        assert (expected == dummy_int).all()
 
     def test_update_parameter_replace_defaults(self, simple_supply):
         updated_param = simple_supply.inputs.flow_out_eff.fillna(0.1)

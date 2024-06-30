@@ -10,8 +10,6 @@ from .common.util import check_error_or_warning
 
 LOGGER = "calliope.model"
 
-DUMMY_INT = 0xDEADBEEF
-
 
 class TestModel:
     @pytest.fixture(scope="module")
@@ -75,9 +73,9 @@ class TestAddMath:
         )
 
     @pytest.fixture(scope="class")
-    def storage_inter_cluster_plus_user_def(self, temp_path):
+    def storage_inter_cluster_plus_user_def(self, temp_path, dummy_int: int):
         new_constraint = calliope.AttrDict(
-            {"variables": {"storage": {"bounds": {"min": DUMMY_INT}}}}
+            {"variables": {"storage": {"bounds": {"min": dummy_int}}}}
         )
         file_path = temp_path.join("custom-math.yaml")
         new_constraint.to_yaml(file_path)

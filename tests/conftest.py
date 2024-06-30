@@ -13,6 +13,12 @@ from .common.util import build_test_model as build_model
 ALL_DIMS = {"nodes", "techs", "carriers", "costs", "timesteps"}
 
 
+@pytest.fixture(scope="session")
+def dummy_int() -> int:
+    """Dummy integer value that will never be confused by a model value/default."""
+    return 0xDEADBEEF
+
+
 @pytest.fixture(
     scope="session",
     params=set(
