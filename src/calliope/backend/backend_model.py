@@ -62,8 +62,9 @@ class BackendModelGenerator(ABC):
     """Helper class for backends."""
 
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
-    _COMPONENT_ATTR_METADATA = ["description", "unit", "default", "math_repr"]
+    _COMPONENT_ATTR_METADATA = ["description", "unit", "default", "title", "math_repr"]
 
+    _PARAM_TITLES = extract_from_schema(MODEL_SCHEMA, "title")
     _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
     _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
 

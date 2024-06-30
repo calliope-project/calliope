@@ -16,7 +16,7 @@ variables:
 ```
 
 1. It needs a unique name (`storage_cap` in the example above).
-1. Ideally, it has a long-form `description` and a `unit` added.
+1. Ideally, it has a long-form name (`title`), a `description` and a `unit` added.
 These are not required, but are useful metadata for later reference.
 1. It can have a top-level `foreach` list and `where` string.
 Without a `foreach`, it becomes an un-indexed variable.
@@ -54,7 +54,7 @@ global_expressions:
 Global expressions are by no means necessary to include, but can make more complex linear expressions easier to keep track of and can reduce post-processing requirements.
 
 1. It needs a unique name (`cost` in the above example).
-1. Ideally, it has a long-form `description` and a `unit` added.
+1. Ideally, it has a long-form name (`title`), a `description` and a `unit` added.
 These are not required, but are useful metadata for later reference.
 1. It can have a top-level `foreach` list and `where` string.
 Without a `foreach`, it becomes an un-indexed expression.
@@ -79,7 +79,7 @@ constraints:
 
 1. It needs a unique name (`set_storage_initial` in the above example).
 1. Ideally, it has a long-form `description` added.
-This is not required, but is useful metadata for later reference.
+These are not required, but are useful metadata for later reference.
 1. It can have a top-level `foreach` list and `where` string.
 Without a `foreach`, it becomes an un-indexed constraint.
 Without a `where` string, all valid members (according to the `definition_matrix`) based on `foreach` will be included in this constraint.

@@ -384,6 +384,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         use_inf_as_na: bool = False,
     ) -> None:
         attrs = {
+            "title": self._PARAM_TITLES.get(parameter_name, None),
             "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
             "unit": self._PARAM_UNITS.get(parameter_name, None),
             "math_repr": rf"\textit{{{parameter_name}}}"

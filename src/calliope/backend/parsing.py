@@ -66,6 +66,7 @@ class UnparsedPiecewiseConstraintDict(TypedDict):
 class UnparsedExpressionDict(UnparsedConstraintDict):
     """Unparsed expression type hint class."""
 
+    title: NotRequired[str]
     unit: NotRequired[str]
 
 
@@ -81,6 +82,7 @@ class UnparsedVariableBoundDict(TypedDict):
 class UnparsedVariableDict(TypedDict):
     """Unparsed variable checker class."""
 
+    title: NotRequired[str]
     description: NotRequired[str]
     unit: NotRequired[str]
     foreach: list[str]

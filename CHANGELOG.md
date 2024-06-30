@@ -5,6 +5,9 @@
 |new| Piecewise constraints added to the YAML math with its own unique syntax (#107).
 These constraints will be added to the optimisation problem using Special Ordered Sets of Type 2 (SOS2) variables.
 
+|new| Decision variables and global expressions can have a `title` defined, which will be available in the model results as attributes of those components and can be used for e.g. visualisation (#582).
+Parameter titles from the model definition schema will also propagate to the model inputs.
+
 |fixed| Backend parameter updates propagate correctly through global expressions in the order those expressions were defined (#616).
 
 |fixed| If setting `model.backend.verbose_strings()`, rebuilt model components from making backend parameter updates will automatically have verbose strings (#623).
