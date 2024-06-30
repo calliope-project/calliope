@@ -28,7 +28,8 @@ The values assigned as parameters will become the array names in your loaded mod
 ### Include a header row
 
 CSV files in which tabular data is stored _must_ have at least one header row.
-If you do not have this header row, then the first row of data will still be taken to be dimension names, which Calliope will complain about.
+If you do not have this header row, then the first row of data will still be taken to be dimension names,
+which will cause an error in Calliope as those names will not match what you have defined in YAML as `rows` and/or `columns` dimensions.
 
 === "Valid CSV (row names only)"
 
