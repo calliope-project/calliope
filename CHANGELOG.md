@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|fixed| Single element lists/sets in the model Dataset attribute dictionary are restored to lists/sets on loading from NetCDF (#614).
+
 |new| Decision variables and global expressions can have a `title` defined, which will be available in the model results as attributes of those components and can be used for e.g. visualisation (#582).
 Parameter titles from the model definition schema will also propagate to the model inputs.
 
