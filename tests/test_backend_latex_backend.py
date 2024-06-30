@@ -35,7 +35,7 @@ class TestMathDocumentation:
         )
 
     @pytest.mark.parametrize(
-        ["format", "startswith"],
+        ("format", "startswith"),
         [
             ("tex", "\n\\documentclass{article}"),
             ("rst", "\nObjective"),
@@ -54,13 +54,13 @@ class TestMathDocumentation:
         assert Path(filepath).exists()
 
     @pytest.mark.parametrize(
-        ["filepath", "format"],
+        ("filepath", "format"),
         [(None, "foo"), ("myfile.foo", None), ("myfile.tex", "foo")],
     )
     def test_invalid_format(self, build_all, tmpdir_factory, filepath, format):
         if filepath is not None:
             filepath = tmpdir_factory.mktemp("custom_math").join(filepath)
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:  # noqa: PT011
             build_all.math_documentation.write(filename="foo", format=format)
         assert check_error_or_warning(
             excinfo, "Math documentation format must be one of"
@@ -333,7 +333,7 @@ class TestLatexBackendModel:
         assert dummy_latex_backend_model._create_obj_list("var", "variables") is None
 
     @pytest.mark.parametrize(
-        ["format", "expected"],
+        ("format", "expected"),
         [
             (
                 "tex",
@@ -538,7 +538,7 @@ class TestLatexBackendModel:
         )
 
     @pytest.mark.parametrize(
-        ["kwargs", "expected"],
+        ("kwargs", "expected"),
         [
             (
                 {"sets": ["nodes", "techs"]},
@@ -602,7 +602,7 @@ class TestLatexBackendModel:
         assert da.math_string == expected
 
     @pytest.mark.parametrize(
-        ["instring", "kwargs", "expected"],
+        ("instring", "kwargs", "expected"),
         [
             ("{{ foo }}", {"foo": 1}, "1"),
             ("{{ foo|removesuffix('s') }}", {"foo": "bars"}, "bar"),

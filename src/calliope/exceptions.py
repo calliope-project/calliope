@@ -1,59 +1,43 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
-"""
-Exceptions and Warning handling.
-"""
+"""Exceptions and Warning handling."""
 
 import textwrap
 import warnings
 from typing import Optional, Union
 
-# Enable simple format when printing ModelWarnings
-formatwarning_orig = warnings.showwarning
-
-
-def _formatwarning(message, category, filename, lineno, file=None, line=None):
-    """Formats ModelWarnings as "Warning: message" without extra crud"""
-    if category == ModelWarning:
-        return "Warning: " + str(message) + "\n"
-    else:
-        return formatwarning_orig(message, category, filename, lineno, file, line)
-
-
-warnings.showwarning = _formatwarning
-
 
 class ModelError(Exception):
-    """
-    ModelErrors should stop execution of the model, e.g. due to a problem
-    with the model formulation or input data.
-
-    """
+    """Should be raised due to problems with the model formulation or input data."""
 
     pass
 
 
 class BackendError(Exception):
+    """Should be raised due to issues during backend processing."""
+
     pass
 
 
 class ModelWarning(Warning):
-    """
-    ModelWarnings should be raised for possible model errors, but
-    where execution can still continue.
-
-    """
+    """Should be raised for possible model errors, but where execution can continue."""
 
     pass
 
 
 class BackendWarning(Warning):
+    """Should be raised for possible backend processing issues where execution may continue."""
+
     pass
 
 
-def warn(message, _class=ModelWarning):
+def warn(message: str, _class: type[Warning] = ModelWarning):
+    """Raises the specified type of warning."""
+    warnings.formatwarning = (
+        lambda message, category, *args, **kwargs: f"{category.__name__}: {message}\n"
+    )
     warnings.warn(message, _class)
+    warnings.formatwarning = warnings._formatwarning_orig
 
 
 def print_warnings_and_raise_errors(
@@ -62,8 +46,10 @@ def print_warnings_and_raise_errors(
     during: str = "model processing",
     bullet: str = " * ",
 ) -> None:
-    """
-    Concatenate collections of warnings/errors and print (warnings) / raise ModelError (errors) with a bullet point list of the concatenated collections.
+    """Process collections of warnings/errors.
+
+    Prints warnings / raises errors with a bullet point list of the concatenated
+    collections.
 
     Lists will return simple bullet lists:
     E.g. warnings=["foo", "bar"] becomes:

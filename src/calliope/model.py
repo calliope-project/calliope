@@ -1,16 +1,10 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
-"""
-# model.py
-
-Implements the core Model class.
-"""
+"""Implements the core Model class."""
 
 from __future__ import annotations
 
 import logging
-import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union
 
@@ -47,17 +41,13 @@ if TYPE_CHECKING:
 
 
 def read_netcdf(path):
-    """
-    Return a Model object reconstructed from model data in a NetCDF file.
-    """
+    """Return a Model object reconstructed from model data in a NetCDF file."""
     model_data = io.read_netcdf(path)
     return Model(model_definition=model_data)
 
 
 class Model(object):
-    """
-    A Calliope Model.
-    """
+    """A Calliope Model."""
 
     _BACKENDS: dict[str, Callable] = {"pyomo": PyomoBackendModel}
     _TS_OFFSET = pd.Timedelta(nanoseconds=1)
@@ -65,24 +55,18 @@ class Model(object):
     def __init__(
         self,
         model_definition: str | Path | dict | xr.Dataset,
-        debug: bool = False,
         scenario: Optional[str] = None,
         override_dict: Optional[dict] = None,
         data_source_dfs: Optional[dict[str, pd.DataFrame]] = None,
         **kwargs,
     ):
-        """
-        Returns a new Model from either the path to a YAML model
-        configuration file or a dict fully specifying the model.
+        """Returns a new Model from YAML model configuration files or a fully specified dictionary.
 
         Args:
             model_definition (str | Path | dict | xr.Dataset):
                 If str or Path, must be the path to a model configuration file.
                 If dict or AttrDict, must fully specify the model.
                 If an xarray dataset, must be a valid calliope model.
-            debug (bool, optional):
-                If True, additional debug data will be included in the built model.
-                Defaults to False.
             scenario (str):
                 Comma delimited string of pre-defined `scenarios` to apply to the model,
             override_dict (dict):
@@ -92,6 +76,7 @@ class Model(object):
                 Model definition `data_source` entries can reference in-memory pandas DataFrames.
                 The referenced data must be supplied here as a dictionary of those DataFrames.
                 Defaults to None.
+            **kwargs: initialisation overrides.
         """
         self._timings: dict = {}
         self.config: AttrDict
@@ -105,7 +90,9 @@ class Model(object):
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
-        log_time(LOGGER, self._timings, "model_creation", comment="Model: initialising")
+        timestamp_model_creation = log_time(
+            LOGGER, self._timings, "model_creation", comment="Model: initialising"
+        )
         if isinstance(model_definition, xr.Dataset):
             self._init_from_model_data(model_definition)
         else:
@@ -115,9 +102,10 @@ class Model(object):
                 )
             )
             self._init_from_model_def_dict(
-                model_def, applied_overrides, scenario, debug, data_source_dfs
+                model_def, applied_overrides, scenario, data_source_dfs
             )
 
+        self._model_data.attrs["timestamp_model_creation"] = timestamp_model_creation
         version_def = self._model_data.attrs["calliope_version_defined"]
         version_init = self._model_data.attrs["calliope_version_initialised"]
         if version_def is not None and not version_init.startswith(version_def):
@@ -130,22 +118,27 @@ class Model(object):
 
     @property
     def name(self):
+        """Get the model name."""
         return self._model_data.attrs["name"]
 
     @property
     def inputs(self):
+        """Get model input data."""
         return self._model_data.filter_by_attrs(is_result=0)
 
     @property
     def results(self):
+        """Get model result data."""
         return self._model_data.filter_by_attrs(is_result=1)
 
     @property
     def is_built(self):
+        """Get built status."""
         return self._is_built
 
     @property
     def is_solved(self):
+        """Get solved status."""
         return self._is_solved
 
     def _init_from_model_def_dict(
@@ -153,15 +146,15 @@ class Model(object):
         model_definition: calliope.AttrDict,
         applied_overrides: str,
         scenario: Optional[str],
-        debug: bool,
         data_source_dfs: Optional[dict[str, pd.DataFrame]],
     ) -> None:
-        """Initialise the model using a `model_run` dictionary, which may have been loaded from YAML.
+        """Initialise the model using pre-processed YAML files and optional dataframes/dicts.
 
         Args:
-            model_run (calliope.AttrDict): Preprocessed model configuration.
-            debug_data (calliope.AttrDict): Additional data from processing the input configuration.
-            debug (bool): If True, `debug_data` will be attached to the Model object as the attribute `calliope.Model._debug_data`.
+            model_definition (calliope.AttrDict): preprocessed model configuration
+            applied_overrides (str): overrides specified by users
+            scenario (Optional[str]): scenario specified by users
+            data_source_dfs (Optional[dict[str, pd.DataFrame]]): optional files with additional model information
         """
         # First pass to check top-level keys are all good
         validate_dict(model_definition, CONFIG_SCHEMA, "Model definition")
@@ -230,13 +223,13 @@ class Model(object):
         log_time(
             LOGGER,
             self._timings,
-            "model_data_creation",
+            "model_preprocessing_complete",
             comment="Model: preprocessing complete",
         )
 
     def _init_from_model_data(self, model_data: xr.Dataset) -> None:
-        """
-        Initialise the model using a pre-built xarray dataset.
+        """Initialise the model using a pre-built xarray dataset.
+
         This must be a Calliope-compatible dataset, usually a dataset from another Calliope model.
 
         Args:
@@ -248,12 +241,6 @@ class Model(object):
                 model_data.attrs["_model_def_dict"]
             )
             del model_data.attrs["_model_def_dict"]
-
-        if "_debug_data" in model_data.attrs:
-            self._debug_data = AttrDict.from_yaml_string(
-                model_data.attrs["_debug_data"]
-            )
-            del model_data.attrs["_debug_data"]
 
         self._model_data = model_data
         self._add_model_data_methods()
@@ -269,7 +256,8 @@ class Model(object):
         )
 
     def _add_model_data_methods(self):
-        """
+        """Add observed data to `model`.
+
         1. Filter model dataset to produce views on the input/results data
         2. Add top-level configuration dictionaries simultaneously to the model data attributes and as attributes of this class.
 
@@ -277,22 +265,17 @@ class Model(object):
         self._add_observed_dict("config")
         self._add_observed_dict("math")
 
-        log_time(
-            LOGGER,
-            self._timings,
-            "model_data_loaded",
-            comment="Model: loaded model_data",
-        )
-
     def _add_observed_dict(self, name: str, dict_to_add: Optional[dict] = None) -> None:
-        """
-        Add the same dictionary as property of model object and an attribute of the model xarray dataset.
+        """Add the same dictionary as property of model object and an attribute of the model xarray dataset.
 
         Args:
             name (str):
-                Name of dictionary which will be set as the model property name and (if necessary) the dataset attribute name.
+                Name of dictionary which will be set as the model property name and
+                (if necessary) the dataset attribute name.
             dict_to_add (Optional[dict], optional):
-                If given, set as both the model property and the dataset attribute, otherwise set an existing dataset attribute as a model property of the same name. Defaults to None.
+                If given, set as both the model property and the dataset attribute,
+                otherwise set an existing dataset attribute as a model property of the
+                same name. Defaults to None.
 
         Raises:
             exceptions.ModelError: If `dict_to_add` is not given, it must be an attribute of model data.
@@ -315,8 +298,7 @@ class Model(object):
         setattr(self, name, dict_to_add)
 
     def _add_math(self, add_math: list) -> AttrDict:
-        """
-        Load the base math and optionally override with additional math from a list of references to math files.
+        """Load the base math and optionally override with additional math from a list of references to math files.
 
         Args:
             add_math (list):
@@ -361,13 +343,19 @@ class Model(object):
             force (bool, optional):
                 If ``force`` is True, any existing results will be overwritten.
                 Defaults to False.
+            **kwargs: build configuration overrides.
         """
-
         if self._is_built and not force:
             raise exceptions.ModelError(
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
+        self._model_data.attrs["timestamp_build_start"] = log_time(
+            LOGGER,
+            self._timings,
+            "build_start",
+            comment="Model: backend build starting",
+        )
 
         updated_build_config = {**self.config["build"], **kwargs}
         if updated_build_config["mode"] == "operate":
@@ -386,11 +374,17 @@ class Model(object):
         backend = self._BACKENDS[backend_name](input, **updated_build_config)
         backend._build()
         self.backend = backend
+
+        self._model_data.attrs["timestamp_build_complete"] = log_time(
+            LOGGER,
+            self._timings,
+            "build_complete",
+            comment="Model: backend build complete",
+        )
         self._is_built = True
 
     def solve(self, force: bool = False, warmstart: bool = False, **kwargs) -> None:
-        """
-        Run the built optimisation problem.
+        """Solve the built optimisation problem.
 
         Args:
             force (bool, optional):
@@ -404,13 +398,13 @@ class Model(object):
                 decrease the solution time.
                 Warmstart will not work with some solvers (e.g., CBC, GLPK).
                 Defaults to False.
+            **kwargs: solve configuration overrides.
 
         Raises:
             exceptions.ModelError: Optimisation problem must already be built.
             exceptions.ModelError: Cannot run the model if there are already results loaded, unless `force` is True.
             exceptions.ModelError: Some preprocessing steps will stop a run mode of "operate" from being possible.
         """
-
         # Check that results exist and are non-empty
         if not self._is_built:
             raise exceptions.ModelError(
@@ -431,7 +425,7 @@ class Model(object):
             to_drop = []
 
         run_mode = self.backend.inputs.attrs["config"]["build"]["mode"]
-        log_time(
+        self._model_data.attrs["timestamp_solve_start"] = log_time(
             LOGGER,
             self._timings,
             "solve_start",
@@ -439,6 +433,9 @@ class Model(object):
         )
 
         solver_config = update_then_validate_config("solve", self.config, **kwargs)
+
+        shadow_prices = solver_config.get("shadow_prices", [])
+        self.backend.shadow_prices.track_constraints(shadow_prices)
 
         if run_mode == "operate":
             if not self._model_data.attrs["allow_operate_mode"]:
@@ -461,8 +458,16 @@ class Model(object):
         # Add additional post-processed result variables to results
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
             results = postprocess_results.postprocess_model_results(
-                results, self._model_data, self._timings
+                results, self._model_data
             )
+
+        log_time(
+            LOGGER,
+            self._timings,
+            "postprocess_complete",
+            time_since_solve_start=True,
+            comment="Postprocessing: ended",
+        )
 
         self._model_data = self._model_data.drop_vars(to_drop)
 
@@ -472,41 +477,42 @@ class Model(object):
         )
         self._add_model_data_methods()
 
+        self._model_data.attrs["timestamp_solve_complete"] = log_time(
+            LOGGER,
+            self._timings,
+            "solve_complete",
+            time_since_solve_start=True,
+            comment="Backend: model solve completed",
+        )
+
         self._is_solved = True
 
     def run(self, force_rerun=False, **kwargs):
-        """
-        Run the model. If ``force_rerun`` is True, any existing results
-        will be overwritten.
+        """Run the model.
+
+        If ``force_rerun`` is True, any existing results will be overwritten.
 
         Additional kwargs are passed to the backend.
-
         """
-        warnings.warn(
+        exceptions.warn(
             "`run()` is deprecated and will be removed in a "
             "future version. Use `model.build()` followed by `model.solve()`.",
-            DeprecationWarning,
+            FutureWarning,
         )
         self.build(force=force_rerun)
         self.solve(force=force_rerun)
 
     def to_netcdf(self, path):
-        """
-        Save complete model data (inputs and, if available, results)
-        to a NetCDF file at the given ``path``.
-
-        """
+        """Save complete model data (inputs and, if available, results) to a NetCDF file at the given `path`."""
         io.save_netcdf(self._model_data, path, model=self)
 
     def to_csv(
         self, path: str | Path, dropna: bool = True, allow_overwrite: bool = False
     ):
-        """
-        Save complete model data (inputs and, if available, results)
-        as a set of CSV files to the given ``path``.
+        """Save complete model data (inputs and, if available, results) as a set of CSV files to the given ``path``.
 
         Args:
-            path (str | Path):
+            path (str | Path): file path to save at.
             dropna (bool, optional):
                 If True, NaN values are dropped when saving, resulting in significantly smaller CSV files.
                 Defaults to True
@@ -593,12 +599,12 @@ class Model(object):
     ) -> xr.Dataset:
         """Slice the input data to just the length of operate mode time horizon.
 
-
         Args:
             start_window_idx (int, optional):
                 Set the operate `window` to start at, based on integer index.
                 This is used when re-initialising the backend model for shorter time horizons close to the end of the model period.
                 Defaults to 0.
+            **config_kwargs: kwargs related to operate mode configuration.
 
         Returns:
             xr.Dataset: Slice of input data.
@@ -707,8 +713,9 @@ class Model(object):
         return results
 
     def _recalculate_storage_initial(self, results: xr.Dataset) -> xr.DataArray:
-        """Calculate the initial level of storage devices for a new operate mode time slice
-        based on storage levels at the end of the previous time slice.
+        """Calculate the initial level of storage devices for a new operate mode time slice.
+
+        Based on storage levels at the end of the previous time slice.
 
         Args:
             results (xr.Dataset): Results from the previous time slice.

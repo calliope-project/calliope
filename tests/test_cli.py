@@ -88,7 +88,7 @@ class TestCLI:
         assert result.exit_code == 1
 
     @pytest.mark.parametrize(
-        "arg", (("--scenario=test"), ("--override_dict={'config.init.name': 'test'}"))
+        "arg", [("--scenario=test"), ("--override_dict={'config.init.name': 'test'}")]
     )
     def test_unavailable_arguments(self, arg):
         runner = CliRunner()

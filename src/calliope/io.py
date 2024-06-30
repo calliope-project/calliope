@@ -1,13 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
-"""
-io.py
-~~~~~
-
-Functions to read and save model results.
-
-"""
+"""Functions to read and save model results."""
 
 import importlib.resources
 from pathlib import Path
@@ -27,7 +20,7 @@ CONFIG_DIR = importlib.resources.files("calliope") / "config"
 
 
 def read_netcdf(path):
-    """Read model_data from NetCDF file"""
+    """Read model_data from NetCDF file."""
     with xr.open_dataset(path) as model_data:
         model_data.load()
 
@@ -119,14 +112,13 @@ def _deserialise(attrs: dict) -> None:
 
 
 def save_netcdf(model_data, path, model=None):
+    """Save the model to a netCDF file."""
     original_model_data_attrs = model_data.attrs
     model_data_attrs = original_model_data_attrs.copy()
 
     if model is not None and hasattr(model, "_model_def_dict"):
         # Attach initial model definition to _model_data
         model_data_attrs["_model_def_dict"] = model._model_def_dict.to_yaml()
-        if hasattr(model, "_debug_data"):
-            model_data_attrs["_debug_data"] = model._debug_data.to_yaml()
 
     _serialise(model_data_attrs)
     for var in model_data.data_vars.values():
@@ -157,8 +149,7 @@ def save_csv(
     dropna: bool = True,
     allow_overwrite: bool = False,
 ):
-    """
-    Save results to CSV.
+    """Save results to CSV.
 
     One file per dataset array will be generated, with the filename matching the array name.
 
@@ -205,6 +196,7 @@ def save_csv(
 
 
 def load_config(filename: str):
+    """Load model configuration from a file."""
     with importlib.resources.as_file(CONFIG_DIR / filename) as f:
         loaded = AttrDict.from_yaml(f)
     return loaded

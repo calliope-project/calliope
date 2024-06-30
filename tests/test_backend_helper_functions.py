@@ -71,7 +71,7 @@ class TestAsArray:
             "return_type": "array",
         }
 
-    @pytest.fixture(scope="function")
+    @pytest.fixture()
     def is_defined_any(self, dummy_model_data):
         def _is_defined(drop_dims, dims):
             return (
@@ -82,7 +82,7 @@ class TestAsArray:
 
         return _is_defined
 
-    @pytest.fixture(scope="function")
+    @pytest.fixture()
     def is_defined_all(self, dummy_model_data):
         def _is_defined(drop_dims, dims):
             return (
@@ -94,10 +94,10 @@ class TestAsArray:
         return _is_defined
 
     @pytest.mark.parametrize(
-        ["string_type", "func_name"], [("where", "inheritance"), ("expression", "sum")]
+        ("string_type", "func_name"), [("where", "inheritance"), ("expression", "sum")]
     )
     def test_duplicate_name_exception(self, string_type, func_name):
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError, match=rf".*{string_type}.*{func_name}.*"):
 
             class MyNewFunc(helper_functions.ParsingHelperFunction):
                 NAME = func_name
@@ -106,13 +106,8 @@ class TestAsArray:
                 def __call__(self):
                     return None
 
-        assert check_error_or_warning(
-            excinfo,
-            f"`{string_type}` string helper function `{func_name}` already exists",
-        )
-
     @pytest.mark.parametrize(
-        ["string_types", "func_name"],
+        ("string_types", "func_name"),
         [(["where"], "sum"), (["expression", "where"], "my_new_func")],
     )
     def test_new_func(self, string_types, func_name):
@@ -142,7 +137,7 @@ class TestAsArray:
         assert summed.equals(xr.DataArray(False))
 
     @pytest.mark.parametrize(
-        ["var", "over", "expected"],
+        ("var", "over", "expected"),
         [("with_inf", "techs", "nodes_true"), ("all_nan", "techs", "nodes_false")],
     )
     def test_any_exists(self, where_any, dummy_model_data, var, over, expected):
@@ -220,7 +215,7 @@ class TestAsArray:
         assert not set(reduced.dims).symmetric_difference(["nodes", "techs"])
 
     @pytest.mark.parametrize(
-        ["lookup", "expected"],
+        ("lookup", "expected"),
         [
             (
                 {"techs": "lookup_techs"},
@@ -286,7 +281,7 @@ class TestAsArray:
             "Trying to select items on the dimension techs from the lookup_techs_no_match lookup array, but no matches found.",
         )
 
-    @pytest.mark.parametrize(["idx", "expected"], [(0, "foo"), (1, "bar"), (-1, "bar")])
+    @pytest.mark.parametrize(("idx", "expected"), [(0, "foo"), (1, "bar"), (-1, "bar")])
     def test_get_val_at_index(self, expression_get_val_at_index, idx, expected):
         assert expression_get_val_at_index(timesteps=idx) == expected
 
@@ -294,13 +289,13 @@ class TestAsArray:
     def test_get_val_at_index_not_one_mapping(
         self, expression_get_val_at_index, mapping
     ):
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError) as excinfo:  # noqa: PT011, false positive.
             expression_get_val_at_index(**mapping)
         assert check_error_or_warning(
             excinfo, "Supply one (and only one) dimension:index mapping"
         )
 
-    @pytest.mark.parametrize(["to_roll", "expected"], [(1, 3), (1.0, 3), (-3.0, 3)])
+    @pytest.mark.parametrize(("to_roll", "expected"), [(1, 3), (1.0, 3), (-3.0, 3)])
     def test_roll(self, expression_roll, dummy_model_data, to_roll, expected):
         rolled = expression_roll(dummy_model_data.with_inf, techs=to_roll)
         assert rolled.sel(nodes="foo", techs="foobar") == expected
@@ -394,7 +389,7 @@ class TestAsMathString:
         )
 
     @pytest.mark.parametrize(
-        ["over", "expected_substring"],
+        ("over", "expected_substring"),
         [
             ("techs", r"\text{tech} \in \text{techs}"),
             (["techs"], r"\substack{\text{tech} \in \text{techs}}"),
@@ -405,7 +400,7 @@ class TestAsMathString:
         ],
     )
     @pytest.mark.parametrize(
-        ["func_string", "latex_func"],
+        ("func_string", "latex_func"),
         [("where_any", r"\bigvee"), ("expression_sum", r"\sum")],
     )
     def test_sum(self, request, over, expected_substring, func_string, latex_func):
@@ -439,12 +434,11 @@ class TestAsMathString:
         assert outstring == "timesteps[1]"
 
     @pytest.mark.parametrize(
-        ["instring", "expected_substring"],
+        ("instring", "expected_substring"),
         [
             (r"\textit{foo}_\text{foo}", r"foo+1"),
             (r"\textit{foo}_\text{bar}", r"bar"),
             (r"\textit{foo}_\text{foo,bar}", r"foo+1,bar"),
-            (r"\textit{foo}_\text{foo}", r"foo+1"),
             (r"\textit{foo}_\text{foobar,bar_foo,foo}", r"foobar,bar_foo,foo+1"),
             (r"\textit{foo}_\text{foo=bar,foo}", r"foo=bar,foo+1"),
             (r"\textit{foo}_\text{baz,foo,bar,foo}", r"baz,foo+1,bar,foo+1"),

@@ -1,9 +1,7 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
-"""
-Create the Calliope logger object and apply other logging tools/functionality.
-"""
+"""Create the Calliope logger object and apply other logging tools/functionality."""
 
 import datetime
 import logging
@@ -11,6 +9,8 @@ import sys
 from typing import Optional
 
 _time_format = "%Y-%m-%d %H:%M:%S"
+
+_orig_py_warning_handlers = logging.getLogger("py.warnings").handlers
 
 
 def setup_root_logger(
@@ -49,12 +49,15 @@ def setup_root_logger(
     root_logger.addHandler(console)
     root_logger.setLevel(verbosity)
 
+    py_warnings_logger = logging.getLogger("py.warnings")
     if capture_warnings:
         logging.captureWarnings(True)
-        logging.getLogger("py.warnings").setLevel(verbosity)
+        py_warnings_logger.handlers = _orig_py_warning_handlers + [console]
+        py_warnings_logger.setLevel(verbosity)
     else:
         logging.captureWarnings(False)
         logging.getLogger("py.warnings").setLevel("WARNING")
+        py_warnings_logger.handlers = _orig_py_warning_handlers
 
     return root_logger
 
@@ -64,9 +67,7 @@ def set_log_verbosity(
     include_solver_output: bool = True,
     capture_warnings: bool = True,
 ):
-    """
-    Set the verbosity of logging and setup the root logger to log to
-    console (stdout) with timestamp output formatting.
+    """Set the verbosity of logging and setup the root logger to log to console (stdout) with timestamp output formatting.
 
     Args:
         verbosity (str | int):
@@ -100,9 +101,8 @@ def log_time(
     comment: Optional[str] = None,
     level: str = "info",
     time_since_solve_start: bool = False,
-):
-    """
-    Simultaneously log the time of a Calliope event to dictionary and to the logger.
+) -> float:
+    """Simultaneously log the time of a Calliope event to dictionary and to the logger.
 
     Args:
         logger (logging.Logger): Logger to use for logging the time.
@@ -116,6 +116,9 @@ def log_time(
         time_since_solve_start (bool, optional):
             If True, append comment in log message on the event's time compared to the time since the model was sent to the solver (in seconds).
             Defaults to False.
+
+    Returns:
+        timestamp (float): POSIX timestamp of the logged event
     """
     if comment is None:
         comment = identifier
@@ -127,20 +130,25 @@ def log_time(
         comment += f". Time since start of solving optimisation problem: {time_diff}"
 
     getattr(logger, level.lower())(comment)
+    return now.timestamp()
 
 
 class LogWriter:
+    """Log writing helper class."""
+
     def __init__(self, logger, level, strip=False):
-        "Custom logger to redirect solver outputs to avoid message duplication."
+        """Custom logger to redirect solver outputs to avoid message duplication."""
         self.logger = logger
         self.level = level
         self.strip = strip
 
     def write(self, message):
+        """Save a message to the logger."""
         if message != "\n":
             if self.strip:
                 message = message.strip()
             getattr(self.logger, self.level)(message)
 
     def flush(self):
+        """Placeholder for future flush functionality."""
         pass
