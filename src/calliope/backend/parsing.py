@@ -54,6 +54,7 @@ class UnparsedConstraintDict(TypedDict):
 class UnparsedExpressionDict(UnparsedConstraintDict):
     """Unparsed expression checker class."""
 
+    title: NotRequired[str]
     unit: NotRequired[str]
 
 
@@ -69,6 +70,7 @@ class UnparsedVariableBoundDict(TypedDict):
 class UnparsedVariableDict(TypedDict):
     """Unparsed variable checker class."""
 
+    title: NotRequired[str]
     description: NotRequired[str]
     unit: NotRequired[str]
     foreach: list[str]

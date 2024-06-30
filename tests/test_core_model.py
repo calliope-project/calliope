@@ -65,14 +65,26 @@ class TestModel:
 
 
 class TestAddMath:
-    @pytest.fixture()
+    @pytest.fixture(scope="class")
     def storage_inter_cluster(self):
         return build_model(
             {"config.init.add_math": ["storage_inter_cluster"]},
             "simple_supply,two_hours,investment_costs",
         )
 
-    @pytest.fixture()
+    @pytest.fixture(scope="class")
+    def storage_inter_cluster_plus_user_def(self, temp_path, dummy_int: int):
+        new_constraint = calliope.AttrDict(
+            {"variables": {"storage": {"bounds": {"min": dummy_int}}}}
+        )
+        file_path = temp_path.join("custom-math.yaml")
+        new_constraint.to_yaml(file_path)
+        return build_model(
+            {"config.init.add_math": ["storage_inter_cluster", str(file_path)]},
+            "simple_supply,two_hours,investment_costs",
+        )
+
+    @pytest.fixture(scope="class")
     def temp_path(self, tmpdir_factory):
         return tmpdir_factory.mktemp("custom_math")
 
@@ -179,30 +191,25 @@ class TestAddMath:
                 assert base[i] == new[i]
 
     def test_override_existing_internal_constraint_merge(
-        self, temp_path, simple_supply
+        self, simple_supply, storage_inter_cluster, storage_inter_cluster_plus_user_def
     ):
-        new_constraint = calliope.AttrDict(
-            {"variables": {"storage": {"bounds": {"min": -1}}}}
-        )
-        file_path = temp_path.join("custom-math.yaml")
-        new_constraint.to_yaml(file_path)
-        m = build_model(
-            {"config.init.add_math": ["storage_inter_cluster", str(file_path)]},
-            "simple_supply,two_hours,investment_costs",
-        )
-        base = simple_supply.math["variables"]["storage"]
-        new = m.math["variables"]["storage"]
+        storage_inter_cluster_math = storage_inter_cluster.math["variables"]["storage"]
+        base_math = simple_supply.math["variables"]["storage"]
+        new_math = storage_inter_cluster_plus_user_def.math["variables"]["storage"]
+        expected = {
+            "title": storage_inter_cluster_math["title"],
+            "description": storage_inter_cluster_math["description"],
+            "default": base_math["default"],
+            "unit": base_math["unit"],
+            "foreach": base_math["foreach"],
+            "where": base_math["where"],
+            "bounds": {
+                "min": new_math["bounds"]["min"],
+                "max": base_math["bounds"]["max"],
+            },
+        }
 
-        for i in base.keys():
-            if i == "bounds":
-                assert new[i]["min"] == -1
-                assert new[i]["max"] == new[i]["max"]
-            elif i == "description":
-                assert new[i].startswith(
-                    "The virtual carrier stored by a `supply_plus` or `storage` technology"
-                )
-            else:
-                assert base[i] == new[i]
+        assert new_math == expected
 
 
 class TestValidateMathDict:

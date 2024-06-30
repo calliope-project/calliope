@@ -15,6 +15,7 @@ import xarray as xr
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
+from calliope.util.tools import listify
 
 CONFIG_DIR = importlib.resources.files("calliope") / "config"
 
@@ -39,13 +40,11 @@ def read_netcdf(path):
 
 
 def _pop_serialised_list(
-    attrs: dict, serialised_items: Union[str, list, np.ndarray]
+    attrs: dict, serialised_items: Union[str, list]
 ) -> Union[list, np.ndarray]:
+    """Pop a list of serialised attributes from the attribute dictionary."""
     serialised_ = attrs.pop(serialised_items, [])
-    if not isinstance(serialised_, (list, np.ndarray)):
-        return [serialised_]
-    else:
-        return serialised_
+    return listify(serialised_)
 
 
 def _serialise(attrs: dict) -> None:
@@ -53,12 +52,21 @@ def _serialise(attrs: dict) -> None:
 
     This will tackle dictionaries (to string), booleans (to int), None (to string), and sets (to list).
 
+    We also make note of any single element lists as they will be stored as simple strings in netcdf format,
+    but we want them to be returned as lists on loading the data from file.
+
     Args:
         attrs (dict):
             Attribute dictionary from an xarray Dataset/DataArray.
             Changes will be made in-place, so be sure to supply a copy of your dictionary if you want access to its original state.
     """
-    # Convert dicts attrs to yaml strings
+    # Keep track of single element lists, to listify them again when loading from file.
+
+    attrs["serialised_single_element_list"] = [
+        k for k, v in attrs.items() if isinstance(v, list) and len(v) == 1
+    ]
+
+    # Convert dict attrs to yaml strings
     dict_attrs = [k for k, v in attrs.items() if isinstance(v, dict)]
     attrs["serialised_dicts"] = dict_attrs
     for attr in dict_attrs:
@@ -89,6 +97,10 @@ def _serialise(attrs: dict) -> None:
             )
     else:
         attrs["serialised_sets"] = set_attrs
+        # Also keep track of single element sets
+        attrs["serialised_single_element_list"].extend(
+            [k for k in set_attrs if len(attrs[k]) == 1]
+        )
 
 
 def _deserialise(attrs: dict) -> None:
@@ -107,6 +119,8 @@ def _deserialise(attrs: dict) -> None:
         attrs[attr] = bool(attrs[attr])
     for attr in _pop_serialised_list(attrs, "serialised_nones"):
         attrs[attr] = None
+    for attr in _pop_serialised_list(attrs, "serialised_single_element_list"):
+        attrs[attr] = listify(attrs[attr])
     for attr in _pop_serialised_list(attrs, "serialised_sets"):
         attrs[attr] = set(attrs[attr])
 
