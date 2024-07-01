@@ -23,6 +23,91 @@ In addition, when loading from file, there is the _required_ dimension `paramete
 This is a placeholder to point Calliope to the parameter name(s) that your tabular data is referring to.
 The values assigned as parameters will become the array names in your loaded model dataset ([`model.inputs`][calliope.Model.inputs]).
 
+## Structuring your CSV files
+
+### Include a header row
+
+CSV files in which tabular data is stored _must_ have at least one header row.
+If you do not have this header row, then the first row of data will still be taken to be dimension names,
+which will cause an error in Calliope as those names will not match what you have defined in YAML as `rows` and/or `columns` dimensions.
+
+=== "Valid CSV (row names only)"
+
+    | timesteps           |    |
+    | ------------------: | :- |
+    | 2005-01-01 12:00:00 | 15 |
+    | 2005-01-01 13:00:00 | 5  |
+
+=== "Valid CSV (column names only)"
+
+    |                     | vals |
+    | ------------------: | :--- |
+    | 2005-01-01 12:00:00 | 15   |
+    | 2005-01-01 13:00:00 | 5    |
+
+=== "Valid CSV (multi-level)"
+
+    | <br><br>timesteps   | <br><br>carriers | node1<br>tech1 |
+    | ------------------: | ---------------: | :------------- |
+    | 2005-01-01 12:00:00 | electricity      | 15             |
+    | 2005-01-01 13:00:00 | electricity      | 5              |
+
+=== "Invalid CSV"
+
+    | 2005-01-01 12:00:00 | 15 |
+    | 2005-01-01 13:00:00 | 5  |
+
+### Use multiple index levels per row or per column
+
+Since you will likely define data that is indexed over two or more dimensions, you can leverage index "levels" in your CSV file.
+Data in dimension rows/columns will be loaded in as the dimension data; everything else will be parameter data.
+
+=== "Two index levels, defined per row"
+
+    | nodes | techs |      |
+    | ----: | ----: | :--- |
+    | node1 | tech1 | 15   |
+    | node2 | tech2 | 5    |
+
+    This will be loaded in as `(node1, tech1): 15`, `(node2, tech2): 5`.
+
+=== "Two index levels, defined per column"
+
+    | node1<br>tech1 | node2<br>tech2 |
+    | :------------- | :------------- |
+    | 15             | 5              |
+
+    This will be loaded in as `(node1, tech1): 15`, `(node2, tech2): 5`.
+
+=== "Four index levels, 2 per row and 2 per column"
+
+    | nodes | techs | cost1<br>carrier1 | cost1<br>carrier2 |
+    | ----: | ----: | :---------------- | :---------------- |
+    | node1 | tech1 | 15                | 150               |
+    | node2 | tech2 | 5                 | 50                |
+
+
+    This will be loaded in as `(node1, tech1, cost1, carrier1): 15`, `(node1, tech1, cost1, carrier2): 150`,
+    `(node2, tech2, cost1, carrier1): 5`, `(node2, tech2, cost1, carrier2): 50`.
+
+### Go for long and thin if it is a sparse array
+
+Although not a strict requirement, if many combinations of dimension items are empty of data, then use a "dense" CSV structure.
+
+=== "Dense CSV (long and thin)"
+
+    | nodes | techs |      |
+    | ----: | ----: | :--- |
+    | node1 | tech1 | 15   |
+    | node2 | tech2 | 5    |
+
+=== "Sparse CSV (square)"
+
+    |       | tech1 | tech2 |
+    | ----: | :---- | :---- |
+    | node1 | 15    |       |
+    | node2 |       | 5     |
+
 ## YAML vs tabular definitions
 
 In this section we will show some examples of loading data and provide the equivalent YAML definition that it would replace.
@@ -76,9 +161,9 @@ In this section we will show some examples of loading data and provide the equiv
 
     <div class="annotate" markdown>
 
-    |       |                       |             |
+    | techs | parameters            | values (1)  |
     | ----: | --------------------: | :---------- |
-    | tech1 | base_tech             | supply  (1) |
+    | tech1 | base_tech             | supply      |
     | tech1 | flow_cap_max          | 100         |
     | tech1 | flow_out_eff          | 0.1         |
     | tech1 | area_use_max          | 500         |
@@ -90,9 +175,8 @@ In this section we will show some examples of loading data and provide the equiv
 
     </div>
 
-    1. Unlike the previous example, we do not have a "header" row with column names in this file.
-    We start directly with defining data.
-    Our dimensions are _only_ defined per row, not per column.
+    1. Unlike the previous example, we have a column name in this file.
+    It doesn't matter what name we give it since it will be ["squeezed"][pandas.DataFrame.squeeze] out of the dataframe.
 
     YAML definition to load data:
 
@@ -127,7 +211,7 @@ In this section we will show some examples of loading data and provide the equiv
 
     Data in file:
 
-    |       |                    |      |
+    | techs | costs              |      |
     | ----: | -----------------: | :--- |
     | tech1 | cost_flow_cap      | 100  |
     | tech1 | cost_area_use      | 50   |
@@ -197,7 +281,7 @@ For instance:
 
 Data in file:
 
-|       |            | node1 | node2 | node3 |
+| techs | parameters | node1 | node2 | node3 |
 | ----: | ---------: | :---- | :---- | :---- |
 | tech1 | parameter1 | 100   | 200   | 300   |
 | tech2 | parameter1 | 0.1   | 0.3   | 0.5   |
@@ -219,7 +303,7 @@ You may also want to store scenarios in your file.
 When you load in the data, you can select your scenario.
 You will also need to `drop` the dimension so that it doesn't appear in the final calliope model dataset:
 
-|       |            | scenario1 | scenario2 |
+| techs | parameters | scenario1 | scenario2 |
 | ----: | ---------: | :-------- | :-------- |
 | tech1 | parameter1 | 100       | 200       |
 | tech2 | parameter1 | 0.1       | 0.3       |
