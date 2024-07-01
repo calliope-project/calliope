@@ -832,16 +832,16 @@ class ObjConstraint(pmo.constraint, CoordObj):
 
 
 class PyomoShadowPrices(backend_model.ShadowPrices):
-    """Pyomo shadowprice functionality."""
+    """Pyomo shadow price functionality."""
 
     def __init__(self, dual_obj: pmo.suffix, backend_obj: PyomoBackendModel):
-        """Create deactivated pyomo shadowprice functions."""
+        """Create deactivated pyomo shadow price functions."""
         self._dual_obj = dual_obj
         self._backend_obj = backend_obj
         self.deactivate()
 
-    def get(self, name: str) -> xr.DataArray:
-        """Get shadowprices of a specific constraint."""
+    def get(self, name: str) -> xr.DataArray:  # noqa: D102, override
+        ...
         constraint = self._backend_obj.get_constraint(name, as_backend_objs=True)
         return self._backend_obj._apply_func(
             self._duals_from_pyomo_constraint,
@@ -851,26 +851,26 @@ class PyomoShadowPrices(backend_model.ShadowPrices):
             dual_getter=self._dual_obj,
         )
 
-    def activate(self):
-        """Activate shadowprice functionality."""
+    def activate(self):  # noqa: D102, override
+        ...
         if self._backend_obj.has_integer_or_binary_variables:
             warning_text = "Shadow price tracking on a model with binary or integer variables is not possible. Proceeding without activating shadow price tracking."
             model_warn(warning_text, _class=BackendWarning)
         else:
             self._dual_obj.activate()
 
-    def deactivate(self):
-        """Deactivate shadowprice functionality."""
+    def deactivate(self):  # noqa: D102, override
+        ...
         self._dual_obj.deactivate()
 
     @property
-    def is_active(self) -> bool:
-        """Check if shadowprice functionality is enabled."""
+    def is_active(self) -> bool:  # noqa: D102, override
+        ...
         return self._dual_obj.active
 
     @property
-    def available_constraints(self) -> Iterable:
-        """Get available constraints."""
+    def available_constraints(self) -> Iterable:  # noqa: D102, override
+        ...
         return self._backend_obj.constraints.data_vars
 
     @staticmethod

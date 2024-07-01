@@ -394,7 +394,7 @@ class BackendModelGenerator(ABC):
             self.log(
                 "parameters", param_name, "Component not defined; using default value."
             )
-            self.add_parameter(param_name, xr.DataArray(default_val), default_val)
+            self.add_parameter(param_name, xr.DataArray(np.nan), default_val)
             self.parameters[param_name].attrs["is_result"] = 0
         LOGGER.info("Optimisation Model | parameters | Generated.")
 
@@ -944,11 +944,12 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 name,
                 f"Applying bound according to the {bound} parameter values.",
             )
-            bound_array = self.get_parameter(bound)
+            bound_array = self.get_parameter(bound).copy()
             fill_na = bound_array.attrs.get("default", fill_na)
             references.add(bound)
         else:
             bound_array = xr.DataArray(bound)
+        bound_array.attrs = {}
         return bound_array.fillna(fill_na)
 
     @contextmanager

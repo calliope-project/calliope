@@ -318,3 +318,32 @@ class TestOperateMode:
             operate_model.results.timesteps
             == pd.date_range("2005-01", "2005-01-02 23:00:00", freq="h")
         )
+
+
+class TestSolve:
+    def test_solve_before_build(self):
+        m = build_model({}, "simple_supply,two_hours,investment_costs")
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            m.solve()
+        assert check_error_or_warning(excinfo, "You must build the optimisation")
+
+    def test_solve_after_solve(self, simple_supply):
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            simple_supply.solve()
+        assert check_error_or_warning(excinfo, "This model object already has results.")
+
+    def test_solve_operate_not_allowed(self, simple_supply):
+        simple_supply.backend.inputs.attrs["config"]["build"]["mode"] = "operate"
+        simple_supply._model_data.attrs["allow_operate_mode"] = False
+
+        try:
+            with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+                simple_supply.solve(force=True)
+            assert check_error_or_warning(excinfo, "Unable to run this model in op")
+        except AssertionError as e:
+            simple_supply.backend.inputs.attrs["config"]["build"]["mode"] = "plan"
+            simple_supply._model_data.attrs["allow_operate_mode"] = True
+            raise e
+        else:
+            simple_supply.backend.inputs.attrs["config"]["build"]["mode"] = "plan"
+            simple_supply._model_data.attrs["allow_operate_mode"] = True
