@@ -14,7 +14,6 @@ from typing import Any, Literal, Mapping, Optional, Union, overload
 import numpy as np
 import xarray as xr
 
-from calliope.backend.backend_model import BackendModel
 from calliope.exceptions import BackendError
 
 _registry: dict[
@@ -31,7 +30,7 @@ class ParsingHelperFunction(ABC):
         *,
         equation_name: str,
         input_data: xr.Dataset,
-        backend_interface: Optional[type[BackendModel]] = None,
+        backend_interface=None,
         **kwargs,
     ) -> None:
         """Abstract helper function class, which all helper functions must subclass.
