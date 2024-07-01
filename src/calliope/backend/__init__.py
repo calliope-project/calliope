@@ -2,11 +2,12 @@
 
 from xarray import Dataset
 
-from calliope import exceptions
-from calliope.attrdict import AttrDict
 from calliope.backend.latex_backend_model import MathDocumentation
 from calliope.backend.parsing import ParsedBackendComponent
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
+from calliope.exceptions import BackendError
+
+MODEL_BACKENDS = ("pyomo",)
 
 
 def get_model_backend(name: str, data: Dataset, **kwargs):
@@ -27,5 +28,5 @@ def get_model_backend(name: str, data: Dataset, **kwargs):
         case "pyomo":
             backend = PyomoBackendModel(data, **kwargs)
         case _:
-            raise exceptions.BackendError(f"Incorrect backend '{name}' requested.")
+            raise BackendError(f"Incorrect backend '{name}' requested.")
     return backend
