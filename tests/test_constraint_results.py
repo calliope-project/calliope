@@ -252,24 +252,3 @@ class TestEnergyCapacityPerStorageCapacity:
         )
         assert flow_capacity == pytest.approx(10)
         assert storage_capacity == pytest.approx(10)
-
-    @pytest.mark.skip(reason="Not expecting operate mode to work at the moment")
-    def test_operate_mode(self, model_file):
-        model = build_model(model_file=model_file, scenario="operate_mode_min")
-        model.build()
-        model.solve()
-
-    @pytest.mark.parametrize(
-        "horizon_window", [(24, 24), (48, 48), (72, 48), (144, 24)]
-    )
-    @pytest.mark.skip(reason="operate mode not yet expected to run")
-    def test_operate_mode_horizon_window(self, model_file, horizon_window):
-        horizon, window = horizon_window
-        override_dict = {"config.init.time_subset": ["2005-01-01", "2005-01-05"]}
-        model = build_model(
-            model_file=model_file,
-            scenario="operate_mode_min",
-            override_dict=override_dict,
-        )
-        model.build()
-        model.solve(operate_horizon=horizon, operate_window=window)
