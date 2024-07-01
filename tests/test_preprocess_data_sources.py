@@ -22,14 +22,14 @@ def data_dir(tmp_path_factory):
 
 @pytest.fixture(scope="class")
 def generate_data_source_dict(data_dir):
-    def _generate_data_source_dict(filename, df, rows, columns, **to_csv_kwargs):
+    def _generate_data_source_dict(filename, df, rows, columns):
         filepath = data_dir / filename
-        df.to_csv(filepath, **to_csv_kwargs)
+        df.rename_axis(index=rows).to_csv(filepath)
         return {
             "source": filepath.as_posix(),
             "rows": rows,
             "columns": columns,
-            "add_dimensions": {"parameters": "test_param"},
+            "add_dims": {"parameters": "test_param"},
         }
 
     return _generate_data_source_dict
@@ -40,7 +40,7 @@ class TestDataSourceUtils:
     def source_obj(self, init_config, generate_data_source_dict):
         df = pd.Series({"bar": 0, "baz": 1})
         source_dict = generate_data_source_dict(
-            "foo.csv", df, rows="test_row", columns=None, header=None
+            "foo.csv", df, rows="test_row", columns=None
         )
         ds = data_sources.DataSource(init_config, "ds_name", source_dict)
         ds.input["foo"] = ["foobar"]
@@ -60,7 +60,7 @@ class TestDataSourceUtils:
         assert "(data_sources, ds_name) | bar." in caplog.text
 
     @pytest.mark.parametrize(
-        ["key", "expected"],
+        ("key", "expected"),
         [("rows", ["test_row"]), ("columns", None), ("foo", ["foobar"])],
     )
     def test_listify_if_defined(self, source_obj, key, expected):
@@ -71,7 +71,7 @@ class TestDataSourceUtils:
             assert output == expected
 
     @pytest.mark.parametrize(
-        ["loaded", "defined"],
+        ("loaded", "defined"),
         [
             (["foo"], ["foo"]),
             ([None], ["foo"]),
@@ -84,7 +84,7 @@ class TestDataSourceUtils:
         source_obj._compare_axis_names(loaded, defined, "foobar")
 
     @pytest.mark.parametrize(
-        ["loaded", "defined"],
+        ("loaded", "defined"),
         [
             (["bar"], ["foo"]),
             ([None, "foo"], ["foo", "bar"]),
@@ -102,7 +102,7 @@ class TestDataSourceInitOneLevel:
     def multi_row_no_col_data(self, generate_data_source_dict):
         df = pd.Series({"bar": 0, "baz": 1})
         return df, generate_data_source_dict(
-            "multi_row_no_col_file.csv", df, rows="test_row", columns=None, header=None
+            "multi_row_no_col_file.csv", df, rows="test_row", columns=None
         )
 
     @pytest.fixture(scope="class")
@@ -201,7 +201,6 @@ class TestDataSourceInitMultiLevel:
             df,
             rows=["test_row1", "test_row2"],
             columns=None,
-            header=None,
         )
 
     @pytest.fixture(scope="class")
@@ -392,12 +391,12 @@ class TestDataSourceMalformed:
 
     def test_check_processed_tdf_duplicated_idx(self, source_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            source_obj(drop="test_row2", add_dimensions={"parameters": "test_param"})
+            source_obj(drop="test_row2", add_dims={"parameters": "test_param"})
         assert check_error_or_warning(excinfo, "Duplicate index items found:")
 
     def test_check_processed_tdf_duplicated_dim_name(self, source_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            source_obj(add_dimensions={"test_row2": "foo", "parameters": "test_param"})
+            source_obj(add_dims={"test_row2": "foo", "parameters": "test_param"})
         assert check_error_or_warning(excinfo, "Duplicate dimension names found:")
 
     def test_too_many_called_cols(self, source_obj):
@@ -416,7 +415,7 @@ class TestDataSourceMalformed:
 
     def test_check_for_protected_params(self, source_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            source_obj(add_dimensions={"parameters": "definition_matrix"})
+            source_obj(add_dims={"parameters": "definition_matrix"})
         assert check_error_or_warning(
             excinfo, "`definition_matrix` is a protected array"
         )
@@ -442,7 +441,7 @@ class TestDataSourceLookupDictFromParam:
         return ds
 
     @pytest.mark.parametrize(
-        ["param", "expected"],
+        ("param", "expected"),
         [
             ("FOO", {"foo1": {"FOO": ["bar1", "bar2"]}}),
             ("BAR", {"foo1": {"BAR": "bar1"}, "foo2": {"BAR": "bar2"}}),

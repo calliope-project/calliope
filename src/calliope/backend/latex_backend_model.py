@@ -1,3 +1,5 @@
+"""LaTeX backend functionality."""
+
 from __future__ import annotations
 
 import logging
@@ -21,8 +23,10 @@ LOGGER = logging.getLogger(__name__)
 
 
 class MathDocumentation:
+    """For math documentation."""
+
     def __init__(self) -> None:
-        """Math documentation builder/writer
+        """Math documentation builder/writer.
 
         Args:
             backend_builder (Callable):
@@ -35,9 +39,11 @@ class MathDocumentation:
 
         Args:
             include (Literal["all", "valid"], optional):
-                Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
+                Defines whether to include all possible math equations ("all") or only
+                those for which at least one index item in the "where" string is valid
+                ("valid"). Defaults to "all".
+            **kwargs: kwargs for the LaTeX backend.
         """
-
         backend = LatexBackendModel(self._inputs, include=include, **kwargs)
         backend._build()
 
@@ -45,24 +51,26 @@ class MathDocumentation:
 
     @property
     def inputs(self):
+        """Getter for backend inputs."""
         return self._inputs
 
     @inputs.setter
     def inputs(self, val: xr.Dataset):
+        """Setter for backend inputs."""
         self._inputs = val
 
+    # Expecting string if not giving filename.
     @overload
     def write(
         self,
         filename: Literal[None] = None,
         mkdocs_tabbed: bool = False,
         format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
-    ) -> str:
-        "Expecting string if not giving filename"
+    ) -> str: ...
 
+    # Expecting None (and format arg is not needed) if giving filename.
     @overload
-    def write(self, filename: str | Path, mkdocs_tabbed: bool = False) -> None:
-        "Expecting None (and format arg is not needed) if giving filename"
+    def write(self, filename: str | Path, mkdocs_tabbed: bool = False) -> None: ...
 
     def write(
         self,
@@ -70,18 +78,18 @@ class MathDocumentation:
         mkdocs_tabbed: bool = False,
         format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
     ) -> Optional[str]:
-        """_summary_
+        """Write model documentation.
+
+        `build` must be run beforehand.
 
         Args:
             filename (Optional[str], optional):
                 If given, will write the built mathematical formulation to a file with the given extension as the file format. Defaults to None.
-
             format (Optional["tex", "rst", "md"], optional):
                 Not required if filename is given (as the format will be automatically inferred).
                 Required if expecting a string return from calling this function. The LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown).
                 Defaults to None.
-
-                mkdocs_tabbed (bool, optional): If True and Markdown docs are being generated, the equations will be on a tab and the original YAML math definition will be on another tab.
+            mkdocs_tabbed (bool, optional): If True and Markdown docs are being generated, the equations will be on a tab and the original YAML math definition will be on another tab.
 
         Raises:
             exceptions.ModelError: Math strings need to be built first (`build`)
@@ -117,6 +125,8 @@ class MathDocumentation:
 
 
 class LatexBackendModel(backend_model.BackendModelGenerator):
+    """Calliope's LaTeX backend."""
+
     # \negthickspace used to counter the introduction of spaces to separate the curly braces
     # in \text. Curly braces need separating otherwise jinja2 gets confused.
     LATEX_EQUATION_ELEMENT = textwrap.dedent(
@@ -347,25 +357,27 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         """Interface to build a string representation of the mathematical formulation using LaTeX math notation.
 
         Args:
+            inputs (xr.Dataset): model data.
             include (Literal["all", "valid"], optional):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
+            **kwargs: for the backend model generator.
         """
         super().__init__(inputs, **kwargs)
         self.include = include
 
         self._add_all_inputs_as_parameters()
 
-    def add_parameter(
+    def add_parameter(  # noqa: D102, override
         self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
-
         attrs = {
+            "title": self._PARAM_TITLES.get(parameter_name, None),
             "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
             "unit": self._PARAM_UNITS.get(parameter_name, None),
         }
         self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
 
-    def add_constraint(
+    def add_constraint(  # noqa: D102, override
         self,
         name: str,
         constraint_dict: Optional[parsing.UnparsedConstraintDict] = None,
@@ -386,7 +398,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             parsed_component, self.constraints[name], equations=equation_strings
         )
 
-    def add_global_expression(
+    def add_global_expression(  # noqa: D102, override
         self,
         name: str,
         expression_dict: Optional[parsing.UnparsedExpressionDict] = None,
@@ -411,7 +423,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             parsed_component, self.global_expressions[name], equations=equation_strings
         )
 
-    def add_variable(
+    def add_variable(  # noqa: D102, override
         self, name: str, variable_dict: Optional[parsing.UnparsedVariableDict] = None
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
@@ -434,7 +446,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             parsed_component, where_array, equations=[lb, ub], sense=r"\forall" + domain
         )
 
-    def add_objective(
+    def add_objective(  # noqa: D102, override
         self, name: str, objective_dict: Optional[parsing.UnparsedObjectiveDict] = None
     ) -> None:
         sense_dict = {
@@ -469,7 +481,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     ) -> None:
         return None
 
-    def delete_component(
+    def delete_component(  # noqa: D102, override
         self, key: str, component_type: backend_model._COMPONENTS_T
     ) -> None:
         if key in self._dataset and self._dataset[key].obj_type == component_type:
@@ -573,7 +585,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         text_starter = r"\\text(?:bf|it)?"  # match one of `\text`, `\textit`, `\textbf`
 
         def __escape_underscore(instring):
-            "KaTeX requires underscores in `\text{...}` blocks to be escaped."
+            r"""KaTeX requires underscores in `\text{...}` blocks to be escaped."""
             return re.sub(
                 rf"{text_starter}{{.*?}}",
                 lambda x: x.group(0).replace("_", r"\_"),
@@ -581,7 +593,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             )
 
         def __mathify_text_in_text(instring):
-            """KaTeX requires `\text{...}` blocks within `\text{...}` blocks to be placed within math blocks.
+            r"""KaTeX requires `\text{...}` blocks within `\text{...}` blocks to be placed within math blocks.
 
             We use `\\(` as the math block descriptor.
             """

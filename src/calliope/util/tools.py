@@ -1,6 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-
+"""Assorted helper tools."""
 
 from pathlib import Path
 from typing import Any, TypeVar
@@ -12,10 +12,10 @@ T = TypeVar("T")
 
 
 def relative_path(base_path_file, path) -> Path:
-    """
+    """Path standardization.
+
     If ``path`` is not absolute, it is interpreted as relative to the
     path of the given ``base_path_file``.
-
     """
     # Check if base_path_file is a string because it might be an AttrDict
     path = Path(path)

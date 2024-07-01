@@ -6,9 +6,26 @@
 Tests show that using the gurobi solver via the Python API reduces peak memory consumption and runtime by at least 30% for the combined model build and solve steps.
 This requires the `gurobipy` package which can be installed with `mamba`: `mamba install gurobi::gurobi`.
 
+|fixed| Force a header row in tabular data loaded from CSV to (#596).
+Fixes issue where unexpected index levels can end up in the loaded data (#573).
+
+|fixed| Single element lists/sets in the model Dataset attribute dictionary are restored to lists/sets on loading from NetCDF (#614).
+
+|new| Decision variables and global expressions can have a `title` defined, which will be available in the model results as attributes of those components and can be used for e.g. visualisation (#582).
+Parameter titles from the model definition schema will also propagate to the model inputs.
+
+|fixed| Backend parameter updates propagate correctly through global expressions in the order those expressions were defined (#616).
+
+|fixed| If setting `model.backend.verbose_strings()`, rebuilt model components from making backend parameter updates will automatically have verbose strings (#623).
+
+|fixed| Erroneous use of `dimensions:` in docs example of an indexed parameter (#612).
+
+|changed| `add_dimensions` to `add_dims` in `data_sources` definition to align with `dims` in indexed parameter definition (#621).
+
 |new| Allow extracting shadow prices into results by listing constraints in `config.solve.shadow_prices`, e.g. `config.solve.shadow_prices: ["system_balance"]`  Shadow prices will be added as variables to the model results as `shadow_price_{constraintname}`, e.g. `shadow_price_system_balance`.
 
 |new| Model stores key timestamps as attributes:
+
 * `timestamp_model_creation`: at the start of `Model.__init__()`
 * `timestamp_build_started`: at the start of `Model.build()`
 * `timestamp_build_complete`: at the end of `Model.build()`
@@ -26,6 +43,12 @@ This requires pre-broadcasting all arrays being passed to the vectorised functio
 
 |changed| Default parameter values are not used to fill NaNs when adding parameters to the backend, but when evaluating expressions.
 This reduces memory footprint of parameter arrays.
+
+|fixed| Removed unused debug parameter in `Model.__init__()`
+
+|changed| Ruff linter checking was extended with pydocstrings and flake8-pytest.
+
+|changed| Moved from black formatting to the Ruff formatter (black-based, but faster).
 
 ## 0.7.0.dev3 (2024-02-14)
 

@@ -33,56 +33,40 @@ output = "reports/coverage/coverage.xml"
 [tool.coverage.report]
 exclude_lines = ["if TYPE_CHECKING:", "if importlib.util.find_spec('gurobipy')"]
 
-[tool.black]
-line-length = 88
-skip-magic-trailing-comma = true
-target-version = ['py310', 'py311', 'py312']
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.github
-  | \.mypy_cache
-  | \.pytest_cache
-  | \.vscode
-  | _build
-  | build
-  | dist
-  | .*\.egg-info
-
-  # directories without python source files
-  | requirements
-)/
-'''
-
 [tool.ruff]
 line-length = 88
-select = ["E", "F", "I", "Q", "W"]
+
+[tool.ruff.format]
+exclude = [".*.egg-info", "requirements/**"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "Q", "W", "D", "PT"]
 # line too long; Black will handle these
 ignore = ["E501"]
 
-[tool.ruff.mccabe]
+[tool.ruff.lint.mccabe]
 # Unlike Flake8, default to a complexity level of 10.
 max-complexity = 10
 
 # Ignore `E402` (import violations) and `F401` (unused imports) in all `__init__.py` files
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "F401"]
 "*.ipynb" = ["E402"]
+"tests/*" = ["D"]
+"docs/examples/*" = ["D"]
 
-[tool.ruff.flake8-quotes]
+[tool.ruff.lint.flake8-quotes]
 docstring-quotes = "double"
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 
-[tool.ruff.pycodestyle]
+[tool.ruff.lint.pycodestyle]
 max-doc-length = 200
 ignore-overlong-task-comments = true
 
 [tool.codespell]
-skip = 'tests/**/*,**/*.ipynb,doc/**/*'
+skip = 'tests/**/*,**/*.ipynb,doc/**/*,AUTHORS'
 count = ''
 quiet-level = 3
 

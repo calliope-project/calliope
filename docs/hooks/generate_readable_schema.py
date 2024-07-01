@@ -1,8 +1,10 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
-"""
-Converts YAML schema to a readable markdown file with nested lists representing the schema properties.
+"""Schema (a.k.a. "properties") documentation functionality.
+
+Converts YAML schema to a readable markdown file with nested lists representing the
+schema properties.
 """
 
 import tempfile
@@ -30,11 +32,15 @@ def on_files(files: list, config: dict, **kwargs):
 
 
 def _schema_to_md(schema: dict, filename: str, config: dict) -> File:
-    """Parse the schema to markdown, edit some lines, then dump to file
+    """Parse the schema to markdown, edit some lines, then dump to file.
 
     Args:
         schema (dict): Path to the YAML schema to be converted.
-        path_to_md (Path): Path to Markdownfile to dump the converted schema.
+        filename (str): Path to Markdownfile to dump the converted schema.
+        config (dict): Documentation configuration.
+
+    Returns:
+        File: markdown (.md) file.
     """
     output_file = (Path("reference") / filename).with_suffix(".md")
     output_full_filepath = Path(TEMPDIR.name) / output_file
@@ -43,8 +49,11 @@ def _schema_to_md(schema: dict, filename: str, config: dict) -> File:
     parser = jsonschema2md.Parser()
     parser.tab_size = 4
 
+    # We don't want to represent the schema as a schema,
+    # so we remove parts of the generated markdown that refers to it as such
     lines = parser.parse_schema(schema)
-    lines = _customise_markdown(lines)
+    assert lines[2] == "## Properties\n\n"
+    del lines[2]
 
     output_full_filepath.write_text("\n".join(lines))
 
@@ -54,13 +63,3 @@ def _schema_to_md(schema: dict, filename: str, config: dict) -> File:
         dest_dir=config["site_dir"],
         use_directory_urls=config["use_directory_urls"],
     )
-
-
-def _customise_markdown(lines: list[str]) -> list[str]:
-    """
-    We don't want to represent the schema as a schema, so we remove parts of the generated markdown that refers to it as such.
-    """
-    # 1. Remove subheadline
-    assert lines[2] == "## Properties\n\n"
-    del lines[2]
-    return lines

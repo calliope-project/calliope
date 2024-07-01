@@ -489,6 +489,7 @@ constraints:
 
 variables:
   flow_cap:
+    title: Technology flow (a.k.a. nominal) capacity
     description: >-
       A technology's flow capacity, also known as its nominal or nameplate capacity.
     default: 0
@@ -499,6 +500,7 @@ variables:
       max: flow_cap_max
 
   link_flow_cap:
+    title: Link flow capacity
     description: >-
       A transmission technology's flow capacity, also known as its nominal or nameplate capacity.
     default: 0
@@ -510,6 +512,7 @@ variables:
       max: .inf
 
   flow_out:
+    title: Carrier outflow
     description: >-
       The outflow of a technology per timestep,
       also known as the flow discharged (from `storage` technologies)
@@ -523,6 +526,7 @@ variables:
       max: .inf
 
   flow_in:
+    title: Carrier inflow
     description: >-
       The inflow to a technology per timestep,
       also known as the flow consumed (by `storage` technologies)
@@ -536,6 +540,7 @@ variables:
       max: .inf
 
   flow_export:
+    title: Carrier export
     description: >-
       The flow of a carrier exported outside the system boundaries by a technology per timestep.
     default: 0
@@ -547,6 +552,7 @@ variables:
       max: .inf
 
   area_use:
+    title: Area utilisation
     description: >-
       The area in space utilised directly (e.g., solar PV panels)
       or indirectly (e.g., biofuel crops) by a technology.
@@ -559,6 +565,7 @@ variables:
       max: area_use_max
 
   source_use:
+    title: Source flow use
     description: >-
       The carrier flow consumed from outside the system boundaries by a `supply` technology.
     default: 0
@@ -570,6 +577,7 @@ variables:
       max: .inf
 
   source_cap:
+    title: Source flow capacity
     description: >-
       The upper limit on a flow that can be consumed from outside the system boundaries
       by a `supply` technology in each timestep.
@@ -583,6 +591,7 @@ variables:
 
   # --8<-- [start:variable]
   storage_cap:
+    title: Stored carrier capacity
     description: >-
       The upper limit on a carrier that can
       be stored by a technology in any timestep.
@@ -598,6 +607,7 @@ variables:
   # --8<-- [end:variable]
 
   storage:
+    title: Stored carrier
     description: >-
       The carrier stored by a `storage` technology in each timestep.
     default: 0
@@ -609,6 +619,7 @@ variables:
       max: .inf
 
   purchased_units:
+    title: Number of purchased units
     description: |
       Integer number of a technology that has been purchased,
       for any technology set to require integer capacity purchasing.
@@ -633,6 +644,7 @@ variables:
       max: purchased_units_max
 
   operating_units:
+    title: Number of operating units
     description: >-
       Integer number of a technology that is operating in each timestep,
       for any technology set to require integer capacity purchasing.
@@ -646,6 +658,7 @@ variables:
       max: .inf
 
   available_flow_cap:
+    title: Available carrier flow capacity
     description: >-
       Flow capacity that will be set to zero if the technology is not operating in a given
       timestep and will be set to the value of the decision variable `flow_cap` otherwise.
@@ -658,6 +671,7 @@ variables:
       max: .inf
 
   async_flow_switch:
+    title: Asynchronous carrier flow switch
     description: >-
       Binary switch to force asynchronous outflow/consumption of technologies with
       both `flow_in` and `flow_out` defined.
@@ -673,6 +687,7 @@ variables:
       max: 1
 
   unmet_demand:
+    title: Unmet demand (load shedding)
     description: >-
       Virtual source of carrier flow to ensure model feasibility.
       This should only be considered a debugging rather than a modelling tool as it may
@@ -688,6 +703,7 @@ variables:
       max: .inf
 
   unused_supply:
+    title: Unused supply (curtailment)
     description: >-
       Virtual sink of carrier flow to ensure model feasibility.
       This should only be considered a debugging rather than a modelling tool as it may
@@ -743,6 +759,7 @@ objectives:
 
 global_expressions:
   flow_out_inc_eff:
+    title: Carrier outflow including losses
     description: >-
       Outflows after taking efficiency losses into account.
     default: 0
@@ -759,6 +776,7 @@ global_expressions:
         expression: flow_out / (flow_out_eff * flow_out_parasitic_eff)
 
   flow_in_inc_eff:
+    title: Carrier inflow including losses
     description: >-
       Inflows after taking efficiency losses into account.
     default: 0
@@ -771,6 +789,7 @@ global_expressions:
         expression: flow_in * flow_in_eff
 
   cost_var:
+    title: Variable operating costs
     description: >-
       The operating costs per timestep of a technology.
     default: 0
@@ -794,6 +813,7 @@ global_expressions:
         - expression: sum(cost_flow_out * flow_out, over=carriers)
 
   cost_investment_flow_cap:
+    title: Flow capacity investment costs
     description: >-
       The investment costs associated with the nominal/rated capacity of a technology.
     default: 0
@@ -809,6 +829,7 @@ global_expressions:
           expression: cost_flow_cap
 
   cost_investment_storage_cap:
+    title: Storage capacity investment costs
     description: >-
       The investment costs associated with the storage capacity of a technology.
     default: 0
@@ -818,6 +839,7 @@ global_expressions:
       - expression: cost_storage_cap * storage_cap
 
   cost_investment_source_cap:
+    title: Source flow capacity investment costs
     description: >-
       The investment costs associated with the source consumption capacity of a technology.
     default: 0
@@ -827,6 +849,7 @@ global_expressions:
       - expression: cost_source_cap * source_cap
 
   cost_investment_area_use:
+    title: Area utilisation investment costs
     description: >-
       The investment costs associated with the area used by a technology.
     default: 0
@@ -836,6 +859,7 @@ global_expressions:
       - expression: cost_area_use * area_use
 
   cost_investment_purchase:
+    title: Binary purchase investment costs
     description: >-
       The investment costs associated with the binary purchase of a technology.
     default: 0
@@ -848,6 +872,7 @@ global_expressions:
         expression: cost_purchase * purchased_units
 
   cost_investment:
+    title: Total investment costs
     description: >-
       The installation costs of a technology, including annualised investment costs and annual maintenance costs.
     default: 0
@@ -883,6 +908,7 @@ global_expressions:
 
   # --8<-- [start:expression]
   cost:
+    title: Total costs
     description: >-
       The total annualised costs of a technology,
       including installation and operation costs.

@@ -1,3 +1,5 @@
+"""Changelog highlighting functionality."""
+
 REPLACEMENTS = {
     # Changelog
     "|new|": "<span class='bubble green'>new</span>",
@@ -13,6 +15,7 @@ REPLACEMENTS = {
 
 
 def on_page_content(html, **kwargs):
+    """Apply the global highlighting configuration to an html file."""
     for old, new in REPLACEMENTS.items():
         html = html.replace(old, new)
     return html

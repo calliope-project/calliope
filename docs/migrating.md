@@ -113,7 +113,7 @@ supply_file.csv:
         source: demand_file.csv
         rows: timesteps
         columns: nodes
-        add_dimensions:
+        add_dims:
           techs: demand_tech
           parameters: sink_equals
 
@@ -121,7 +121,7 @@ supply_file.csv:
         source: supply_file.csv
         rows: timesteps
         columns: nodes
-        add_dimensions:
+        add_dims:
           techs: supply_tech
           parameters: source_max
     ```

@@ -1,5 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
+"""Methods for math syntax parsing."""
 
 from __future__ import annotations
 
@@ -33,11 +34,15 @@ TRUE_ARRAY = xr.DataArray(True)
 
 
 class UnparsedEquationDict(TypedDict):
+    """Unparsed equation checker class."""
+
     where: NotRequired[str]
     expression: str
 
 
 class UnparsedConstraintDict(TypedDict):
+    """Unparsed constraint checker class."""
+
     description: NotRequired[str]
     foreach: NotRequired[list]
     where: NotRequired[str]
@@ -47,10 +52,15 @@ class UnparsedConstraintDict(TypedDict):
 
 
 class UnparsedExpressionDict(UnparsedConstraintDict):
+    """Unparsed expression checker class."""
+
+    title: NotRequired[str]
     unit: NotRequired[str]
 
 
 class UnparsedVariableBoundDict(TypedDict):
+    """Unparsed variable bounds checker class."""
+
     min: str
     max: str
     equals: str
@@ -58,6 +68,9 @@ class UnparsedVariableBoundDict(TypedDict):
 
 
 class UnparsedVariableDict(TypedDict):
+    """Unparsed variable checker class."""
+
+    title: NotRequired[str]
     description: NotRequired[str]
     unit: NotRequired[str]
     foreach: list[str]
@@ -67,6 +80,8 @@ class UnparsedVariableDict(TypedDict):
 
 
 class UnparsedObjectiveDict(TypedDict):
+    """Unparsed model objective checker."""
+
     description: NotRequired[str]
     equations: Required[list[UnparsedEquationDict]]
     sub_expressions: NotRequired[dict[str, list[UnparsedEquationDict]]]
@@ -85,6 +100,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 class ParsedBackendEquation:
+    """Backend equation parser."""
+
     def __init__(
         self,
         equation_name: str,
@@ -94,9 +111,7 @@ class ParsedBackendEquation:
         sub_expressions: Optional[dict[str, pp.ParseResults]] = None,
         slices: Optional[dict[str, pp.ParseResults]] = None,
     ) -> None:
-        """
-        Object for storing a parsed equation expression and corresponding "where" string,
-        with methods to evaluate those elements.
+        """For parsing equation expressions and corresponding "where" strings.
 
         Args:
             equation_name (str): Name of equation.
@@ -143,14 +158,11 @@ class ParsedBackendEquation:
         return self._find_items_in_expression(elements, to_find, valid_eval_classes)
 
     def find_slices(self) -> set[str]:
-        """
-        Identify all the references to array slices in the parsed expression or in the
-        parsed sub-expressions.
+        """Finds all references to array slices in the expression and sub-expressions.
 
         Returns:
             set[str]: Unique slice references.
         """
-
         valid_eval_classes = tuple(
             [
                 expression_parser.EvalOperatorOperand,
@@ -168,18 +180,17 @@ class ParsedBackendEquation:
 
     @staticmethod
     def _find_items_in_expression(
-        parser_elements: Union[list, pp.ParseResults],
+        parser_elements: list | pp.ParseResults,
         to_find: type[expression_parser.EvalString],
         valid_eval_classes: tuple[type[expression_parser.EvalString], ...],
     ) -> set[str]:
-        """
-        Recursively find sub-expressions / index items defined in an equation expression.
+        """Recursively find sub-expressions / index items defined in an equation expression.
 
         Args:
-            parser_elements (pp.ParseResults): list of parser elements to check.
-            to_find (type[expression_parser.EvalString]): type of equation element to search for
-            valid_eval_classes (tuple[type(expression_parser.EvalString)]):
-                Other expression elements that can be recursively searched
+            parser_elements (list | pp.ParseResults): list of parser elements to check.
+            to_find (type[expression_parser.EvalString]): type of equation element to search for.
+            valid_eval_classes (tuple[type[expression_parser.EvalString], ...]): Other expression
+                elements that can be recursively searched
 
         Returns:
             set[str]: All unique component / index item names.
@@ -206,9 +217,7 @@ class ParsedBackendEquation:
         expression_group_name: Literal["sub_expressions", "slices"],
         expression_group_combination: Iterable[ParsedBackendEquation],
     ) -> ParsedBackendEquation:
-        """
-        Add dictionary of parsed sub-expressions/index slices to a copy of self, updating
-        the name and where list of self in the process.
+        """Add parsed sub-expressions/index slices to a copy of self with updated names and were lists.
 
         Args:
             expression_group_name (Literal[sub_expressions, slices]):
@@ -217,8 +226,7 @@ class ParsedBackendEquation:
                 All items of expression_group_name to be added.
 
         Returns:
-            ParsedBackendEquation:
-                Copy of self with added sub-expressions/index slice dictionary and updated name
+            ParsedBackendEquation: Copy of self with added sub-expressions/index slice dictionary and updated name
                 and where list to include those corresponding to the dictionary entries.
         """
         new_where_list = [*self.where]
@@ -243,6 +251,7 @@ class ParsedBackendEquation:
             },
         )
 
+    # Expecting array if not requesting latex string
     @overload
     def evaluate_where(
         self,
@@ -251,9 +260,9 @@ class ParsedBackendEquation:
         return_type: Literal["array"] = "array",
         references: Optional[set] = None,
         initial_where: xr.DataArray = TRUE_ARRAY,
-    ) -> xr.DataArray:
-        "Expecting array if not requesting latex string"
+    ) -> xr.DataArray: ...
 
+    # Expecting string if requesting latex string.
     @overload
     def evaluate_where(
         self,
@@ -261,28 +270,28 @@ class ParsedBackendEquation:
         *,
         return_type: Literal["math_string"],
         references: Optional[set] = None,
-    ) -> str:
-        "Expecting string if requesting latex string"
+    ) -> str: ...
 
     def evaluate_where(
         self,
         backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: str = "array",
-        references: Optional[set] = None,
+        references: set | None = None,
         initial_where: xr.DataArray = TRUE_ARRAY,
     ) -> Union[xr.DataArray, str]:
         """Evaluate parsed backend object dictionary `where` string.
 
         Args:
-            backend_interface (calliope.backend.backend_model.BackendModel): Interface to a optimisation backend.
-
-        Keyword Args:
-            return_type (str, optional):
-                If "array", return xarray.DataArray. If "math_string", return LaTex math string.
+            backend_interface (backend_model.BackendModelGenerator):
+                Interface to an optimisation backend.
+            return_type (str, optional): If "array", return xarray.DataArray.
+                If "math_string", return LaTex math string.
                 Defaults to "array".
-            initial_where (xr.DataArray, optional):
-                If given, the where array resulting from evaluation will be further where'd by this array.
+            references (set | None, optional): List of references to use in evaluation.
+                Defaults to None.
+            initial_where (xr.DataArray, optional): If given, the where array resulting
+                from evaluation will be further where'd by this array.
                 Defaults to xr.DataArray(True) (i.e., no effect).
 
         Returns:
@@ -313,7 +322,7 @@ class ParsedBackendEquation:
             return where
 
     def drop_dims_not_in_foreach(self, where: xr.DataArray) -> xr.DataArray:
-        """the dimensions not included in "foreach" are removed from the input array
+        """Remove all dimensions not included in "foreach" from the input array.
 
         Args:
             where (xr.DataArray): Array with potentially unwanted dimensions
@@ -326,6 +335,7 @@ class ParsedBackendEquation:
         unwanted_dims = set(where.dims).difference(self.sets)
         return (where.sum(unwanted_dims) > 0).astype(bool).transpose(*self.sets)
 
+    # Expecting anything (most likely an array) if not requesting latex string.
     @overload
     def evaluate_expression(
         self,
@@ -334,9 +344,9 @@ class ParsedBackendEquation:
         return_type: Literal["array"] = "array",
         references: Optional[set] = None,
         where: xr.DataArray = TRUE_ARRAY,
-    ) -> xr.DataArray:
-        "Expecting anything (most likely an array) if not requesting latex string"
+    ) -> xr.DataArray: ...
 
+    # Expecting string if requesting latex string.
     @overload
     def evaluate_expression(
         self,
@@ -344,8 +354,7 @@ class ParsedBackendEquation:
         *,
         return_type: Literal["math_string"],
         references: Optional[set] = None,
-    ) -> str:
-        "Expecting string if requesting latex string"
+    ) -> str: ...
 
     def evaluate_expression(
         self,
@@ -355,22 +364,28 @@ class ParsedBackendEquation:
         references: Optional[set] = None,
         where: xr.DataArray = TRUE_ARRAY,
     ) -> Union[xr.DataArray, str]:
-        """Evaluate a math string to produce either an array of backend objects or a LaTex math string.
+        """Evaluate a math string to produce an array backend objects or a LaTex math string.
 
         Args:
-            backend_interface (calliope.backend.backend_model.BackendModel): Interface to a optimisation backend.
+            backend_interface (calliope.backend.backend_model.BackendModel):
+                Interface to a optimisation backend.
 
         Keyword Args:
             return_type (str, optional):
                 If "array", return xarray.DataArray. If "math_string", return LaTex math string.
                 Defaults to "array".
-            references (Optional[set], optional): If given, any references in the math string to other model components will be logged here. Defaults to None.
-            where (xr.DataArray, optional): If given, should be a boolean array with which to mask any produced arrays. Defaults to xr.DataArray(True).
+            references (Optional[set], optional):
+                If given, any references in the math string to other model components
+                will be logged here. Defaults to None.
+            where (xr.DataArray, optional):
+                If given, should be a boolean array with which to mask any produced arrays.
+                Defaults to xr.DataArray(True).
 
         Returns:
             Union[xr.DataArray, str]:
                 If return_type == `array`: array of backend expression objects.
-                If return_type == `math_string`: Valid LaTeX math string defining the "where" conditions using logic notation.
+                If return_type == `math_string`: Valid LaTeX math string defining the
+                "where" conditions using logic notation.
         """
         evaluated = self.expression[0].eval(
             return_type,
@@ -390,8 +405,7 @@ class ParsedBackendEquation:
     def raise_error_on_where_expr_mismatch(
         self, expression: xr.DataArray, where: xr.DataArray
     ) -> None:
-        """
-        Checks if an evaluated expression is consistent with the `where` array.
+        """Checks if an evaluated expression is consistent with the `where` array.
 
         Args:
             expression (xr.DataArray): array of linear expressions or one side of a constraint equation.
@@ -420,11 +434,12 @@ class ParsedBackendEquation:
         message: str,
         level: Literal["info", "warning", "debug", "error", "critical"] = "debug",
     ):
-        """Log to module-level logger with some prettification of the message
+        """Log to module-level logger with some prettification of the message.
 
         Args:
             message (str): Message to log.
-            level (Literal["info", "warning", "debug", "error", "critical"], optional): Log level. Defaults to "debug".
+            level (Literal["info", "warning", "debug", "error", "critical"], optional):
+                Log level. Defaults to "debug".
         """
         getattr(LOGGER, level)(
             f"Math parsing | {self.name} | Component not added; {message}"
@@ -432,6 +447,8 @@ class ParsedBackendEquation:
 
 
 class ParsedBackendComponent(ParsedBackendEquation):
+    """Backend component parser."""
+
     _ERR_BULLET: str = " * "
     _ERR_STRING_ORDER: list[str] = ["expression_group", "id", "expr_or_where"]
     PARSERS: dict[str, Callable] = {
@@ -447,15 +464,17 @@ class ParsedBackendComponent(ParsedBackendEquation):
         name: str,
         unparsed_data: T,
     ) -> None:
-        """
-        Parse an optimisation problem configuration - defined in a dictionary of strings
-        loaded from YAML - into a series of Python objects that can be passed onto a solver
-        interface like Pyomo or Gurobipy.
+        """Parse an optimisation problem configuration.
+
+        Defined in a dictionary of strings loaded from YAML into a series of Python
+        objects that can be passed onto a solver interface like Pyomo or Gurobipy.
 
         Args:
-            group (Literal["variables", "global_expressions", "constraints", "objectives"]): Optimisation problem component group to which the unparsed data belongs.
+            group (Literal["variables", "global_expressions", "constraints", "objectives"]):
+                Optimisation problem component group to which the unparsed data belongs.
             name (str): Name of the optimisation problem component
-            unparsed_data (T): Unparsed math formulation. Expected structure depends on the group to which the optimisation problem component belongs.
+            unparsed_data (T): Unparsed math formulation. Expected structure depends on
+                the group to which the optimisation problem component belongs.
         """
         self.name = f"{group}:{name}"
         self._unparsed: dict = dict(unparsed_data)
@@ -477,17 +496,17 @@ class ParsedBackendComponent(ParsedBackendEquation):
         self.sets: list[str] = unparsed_data.get("foreach", [])  # type:ignore
 
     def get_parsing_position(self):
-        """Create "." separated list from tracked strings"""
+        """Create "." separated list from tracked strings."""
         return ".".join(
             filter(None, [self._tracker[i] for i in self._ERR_STRING_ORDER])
         )
 
     def reset_tracker(self):
-        """Re-initialise error string tracking"""
+        """Re-initialise error string tracking."""
         self._tracker = self._init_tracker()
 
     def _init_tracker(self):
-        "Initialise error string tracking as dictionary of `key: None`"
+        """Initialise error string tracking as dictionary of `key: None`."""
         return {i: None for i in self._ERR_STRING_ORDER}
 
     def parse_top_level_where(
@@ -583,9 +602,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
     def _parse_string(
         self, parser: pp.ParserElement, parse_string: str
     ) -> pp.ParseResults:
-        """
-        Parse equation string according to predefined string parsing grammar
-        given by `self.parser`
+        """Parse equation string according to predefined parsing grammar.
 
         Args:
             parser (pp.ParserElement): Parsing grammar.
@@ -610,8 +627,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
         return parsed
 
     def parse_where_string(self, where_string: str = "True") -> pp.ParseResults:
-        """Parse a "where" string of the form "CONDITION OPERATOR CONDITION", where the
-        operator can be "and"/"or"/"not and"/"not or".
+        """Parse a "where" string of the form "CONDITION OPERATOR CONDITION".
+
+        The operator can be "and"/"or"/"not and"/"not or".
 
         Args:
             where_string (str):
@@ -633,24 +651,25 @@ class ParsedBackendComponent(ParsedBackendEquation):
         expression_group: Literal["equations", "sub_expressions", "slices"],
         id_prefix: str = "",
     ) -> list[ParsedBackendEquation]:
-        """
-        Align user-defined constraint equations/sub-expressions by parsing expressions,
-        specifying a default "where" string if not defined,
-        and providing an ID to enable returning to the initial dictionary.
+        """Align user-defined constraint equations/sub-expressions.
+
+        Achieved by parsing expressions, specifying a default "where" string if not
+        defined, and providing an ID to enable returning to the initial dictionary.
 
         Args:
-            expression_list (list[dict]):
-                list of constraint equations or sub-expressions with arithmetic expression
-                string and optional where string.
-            expression_group (str):
+            expression_parser (pp.ParserElement): parser to use.
+            expression_list (list[UnparsedEquationDict]): list of constraint equations
+                or sub-expressions with arithmetic expression string and optional
+                where string.
+            expression_group (Literal["equations", "sub_expressions", "slices"]):
                 For error reporting, the constraint dict key corresponding to the parse_string.
-            id_prefix (Optional[str]):
-                If provided, will extend the ID from a number corresponding to the
+            id_prefix (str, optional): Extends the ID from a number corresponding to the
                 expression_list position `idx` to a tuple of the form (id_prefix, idx).
+                Defaults to "".
 
         Returns:
-            list[ParsedBackendEquation]:
-                Aligned expression dictionaries with parsed expression strings.
+            list[ParsedBackendEquation]: Aligned expression dictionaries with parsed
+                expression strings.
         """
         parsed_equation_list = []
 
@@ -690,21 +709,24 @@ class ParsedBackendComponent(ParsedBackendEquation):
         parsed_items: dict[str, list[ParsedBackendEquation]],
         expression_group: Literal["sub_expressions", "slices"],
     ) -> list[ParsedBackendEquation]:
-        """
-        Find all sub-expressions referenced in an equation expression and return a
+        """Extend equation expressions with sub-expression data.
+
+        Finds all sub-expressions referenced in an equation expression and returns a
         product of the sub-expression data.
 
         Args:
-            equation_data (ParsedBackendEquation): Equation data dictionary.
+            parsed_equation (ParsedBackendEquation): Equation data dictionary.
             parsed_items (dict[str, list[ParsedBackendEquation]]):
                 Dictionary of expressions to replace within the equation data dictionary.
             expression_group (Literal["sub_expressions", "slices"]):
                 Name of expression group that the parsed_items dict is referencing.
 
         Returns:
-            list[ParsedBackendEquation]:
-                Expanded list of parsed equations with the product of all references to items from the `expression_group` producing a new equation object.
-                E.g., if the input equation object has a reference to an slice which itself has two expression options, two equation objects will be added to the return list.
+            list[ParsedBackendEquation]: Expanded list of parsed equations with the
+                product of all references to items from the `expression_group`
+                producing a new equation object. E.g., if the input equation object has
+                a reference to an slice which itself has two expression options, two
+                equation objects will be added to the return list.
         """
         if expression_group == "sub_expressions":
             equation_items = parsed_equation.find_sub_expressions()
@@ -733,16 +755,23 @@ class ParsedBackendComponent(ParsedBackendEquation):
     def combine_definition_matrix_and_foreach(
         self, input_data: xr.Dataset
     ) -> xr.DataArray:
-        """Generate a multi-dimensional boolean array based on the sets over which the constraint is to be built (defined by "foreach") and the model `exists` array.
+        """Generate a multi-dimensional array where a constraint will be built.
 
-        The `exists` array is a boolean array defining the structure of the model and is True for valid combinations of technologies consuming/producing specific carriers at specific nodes.
+        The multi-dimensional boolean array is based on the sets over which the
+        constraint is to be built (`foreach`) and the model `exists` array.
+
+        The `exists` array is a boolean array defining the structure of the model and
+        is True for valid combinations of technologies consuming/producing specific
+        carriers at specific nodes.
+
         It is indexed over ["nodes", "techs", "carriers"].
 
         Args:
             input_data (xr.Dataset): Calliope model dataset.
 
         Returns:
-            xr.DataArray: boolean array indexed over ["nodes", "techs", "carriers"] + any additional dimensions provided by `foreach`.
+            xr.DataArray: boolean array indexed over ["nodes", "techs", "carriers"]
+                + any additional dimensions provided by `foreach`.
         """
         # Start with (carriers, nodes, techs) and go from there
         exists = input_data.definition_matrix
@@ -762,21 +791,26 @@ class ParsedBackendComponent(ParsedBackendEquation):
         *,
         align_to_foreach_sets: bool = True,
         break_early: bool = True,
-        references: Optional[set] = None,
+        references: set | None = None,
     ) -> xr.DataArray:
-        """
-        Create multi-dimensional array from model inputs and component sets (defined in foreach)
-        and apply the component top-level where to the array.
+        """Generate a multi-dimentional "where" array.
+
+        The multi-dimensional array is created using model inputs and component sets
+        defined in foreach. The component top-level "where" is then applied to the
+        array.
 
         Args:
-            backend_interface (calliope.backend.backend_model.BackendModel): Interface to a optimisation backend.
+            backend_interface (backend_model.BackendModel): Interface to a optimisation backend.
             align_to_foreach_sets (bool, optional):
-                By default, all foreach arrays have the dimensions ("nodes", "techs", "carriers") as well as any additional dimensions provided by the component's "foreach" key.
+                By default, all foreach arrays have the dimensions ("nodes", "techs", "carriers")
+                as well as any additional dimensions provided by the component's "foreach" key.
                 If this argument is True, the dimensions not included in "foreach" are removed from the array.
                 Defaults to True.
             break_early (bool, optional):
-                If any intermediate array has no valid elements (i.e. all are False), the function will return that array rather than continuing - this saves time and memory on large models.
-                Defaults to True.
+                If any intermediate array has no valid elements (i.e. all are False),
+                the function will return that array rather than continuing - saving
+                time and memory on large models. Defaults to True.
+            references (set | None, optional): references to use during evaluation. Defaults to None.
 
         Returns:
             xr.DataArray: Boolean array defining on which index items a parsed component should be built.
@@ -804,10 +838,13 @@ class ParsedBackendComponent(ParsedBackendEquation):
         return where
 
     def raise_caught_errors(self):
-        """If there are any parsing errors, pipe them to the ModelError bullet point list generator"""
+        """If there are any parsing errors, pipe them to the ModelError bullet point list generator."""
         if not self._is_valid:
             exceptions.print_warnings_and_raise_errors(
                 errors={f"{self.name}": self._errors},
-                during="math string parsing (marker indicates where parsing stopped, which might not be the root cause of the issue; sorry...)",
+                during=(
+                    "math string parsing (marker indicates where parsing stopped, "
+                    "which might not be the root cause of the issue; sorry...)"
+                ),
                 bullet=self._ERR_BULLET,
             )

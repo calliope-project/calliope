@@ -1,9 +1,7 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
 
-"""
-Create the Calliope logger object and apply other logging tools/functionality.
-"""
+"""Create the Calliope logger object and apply other logging tools/functionality."""
 
 import datetime
 import logging
@@ -69,9 +67,7 @@ def set_log_verbosity(
     include_solver_output: bool = True,
     capture_warnings: bool = True,
 ):
-    """
-    Set the verbosity of logging and setup the root logger to log to
-    console (stdout) with timestamp output formatting.
+    """Set the verbosity of logging and setup the root logger to log to console (stdout) with timestamp output formatting.
 
     Args:
         verbosity (str | int):
@@ -106,8 +102,7 @@ def log_time(
     level: str = "info",
     time_since_solve_start: bool = False,
 ) -> float:
-    """
-    Simultaneously log the time of a Calliope event to dictionary and to the logger.
+    """Simultaneously log the time of a Calliope event to dictionary and to the logger.
 
     Args:
         logger (logging.Logger): Logger to use for logging the time.
@@ -139,17 +134,21 @@ def log_time(
 
 
 class LogWriter:
+    """Log writing helper class."""
+
     def __init__(self, logger, level, strip=False):
-        "Custom logger to redirect solver outputs to avoid message duplication."
+        """Custom logger to redirect solver outputs to avoid message duplication."""
         self.logger = logger
         self.level = level
         self.strip = strip
 
     def write(self, message):
+        """Save a message to the logger."""
         if message != "\n":
             if self.strip:
                 message = message.strip()
             getattr(self.logger, self.level)(message)
 
     def flush(self):
+        """Placeholder for future flush functionality."""
         pass

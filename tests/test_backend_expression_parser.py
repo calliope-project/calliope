@@ -36,40 +36,40 @@ class DummyFunc2(helper_functions.ParsingHelperFunction):
         return x * 10 + y
 
 
-@pytest.fixture
+@pytest.fixture()
 def valid_component_names():
     return ["foo", "with_inf", "only_techs", "no_dims", "multi_dim_var", "no_dim_var"]
 
 
-@pytest.fixture
+@pytest.fixture()
 def base_parser_elements():
     number, identifier = expression_parser.setup_base_parser_elements()
     return number, identifier
 
 
-@pytest.fixture
+@pytest.fixture()
 def number(base_parser_elements):
     return base_parser_elements[0]
 
 
-@pytest.fixture
+@pytest.fixture()
 def identifier(base_parser_elements):
     return base_parser_elements[1]
 
 
-@pytest.fixture
+@pytest.fixture()
 def evaluatable_identifier(identifier, valid_component_names):
     return expression_parser.evaluatable_identifier_parser(
         identifier, valid_component_names
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def id_list(number, evaluatable_identifier):
     return expression_parser.list_parser(number, evaluatable_identifier)
 
 
-@pytest.fixture
+@pytest.fixture()
 def unsliced_param():
     def _unsliced_param(valid_component_names):
         return expression_parser.unsliced_object_parser(valid_component_names)
@@ -77,12 +77,12 @@ def unsliced_param():
     return _unsliced_param
 
 
-@pytest.fixture
+@pytest.fixture()
 def unsliced_param_with_obj_names(unsliced_param, valid_component_names):
     return unsliced_param(valid_component_names)
 
 
-@pytest.fixture
+@pytest.fixture()
 def sliced_param(
     number, identifier, evaluatable_identifier, unsliced_param_with_obj_names
 ):
@@ -91,12 +91,12 @@ def sliced_param(
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def sub_expression(identifier):
     return expression_parser.sub_expression_parser(identifier)
 
 
-@pytest.fixture
+@pytest.fixture()
 def helper_function(
     number,
     sliced_param,
@@ -116,7 +116,7 @@ def helper_function(
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def helper_function_no_nesting(
     number,
     sliced_param,
@@ -157,7 +157,7 @@ def helper_function_one_parser_in_args(identifier, request):
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def eval_kwargs(dummy_pyomo_backend_model):
     return {
         "helper_functions": helper_functions._registry["expression"],
@@ -172,7 +172,7 @@ def eval_kwargs(dummy_pyomo_backend_model):
     }
 
 
-@pytest.fixture
+@pytest.fixture()
 def arithmetic(
     helper_function, number, sliced_param, sub_expression, unsliced_param_with_obj_names
 ):
@@ -185,7 +185,7 @@ def arithmetic(
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def helper_function_allow_arithmetic(
     number,
     sliced_param,
@@ -209,29 +209,29 @@ def helper_function_allow_arithmetic(
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def equation_comparison(arithmetic):
     return expression_parser.equation_comparison_parser(arithmetic)
 
 
-@pytest.fixture
+@pytest.fixture()
 def generate_equation(valid_component_names):
     return expression_parser.generate_equation_parser(valid_component_names)
 
 
-@pytest.fixture
+@pytest.fixture()
 def generate_slice(valid_component_names):
     return expression_parser.generate_slice_parser(valid_component_names)
 
 
-@pytest.fixture
+@pytest.fixture()
 def generate_sub_expression(valid_component_names):
     return expression_parser.generate_sub_expression_parser(valid_component_names)
 
 
 class TestEquationParserElements:
     @pytest.mark.parametrize(
-        ["string_val", "expected"],
+        ("string_val", "expected"),
         [
             ("0", 0.0),
             ("0.11", 0.11),
@@ -353,7 +353,7 @@ class TestEquationParserElements:
             unsliced_param_with_obj_names.parse_string(string_val, parse_all=True)
 
     @pytest.mark.parametrize(
-        ["string_val", "expected"],
+        ("string_val", "expected"),
         [
             ("foo[techs=tech]", "SLICED_COMPONENT:foo[techs=STRING:tech]"),
             (
@@ -431,7 +431,7 @@ class TestEquationParserElements:
             sub_expression.parse_string(string_val, parse_all=True)
 
     @pytest.mark.parametrize(
-        ["string_val", "expected"],
+        ("string_val", "expected"),
         [
             (
                 f"dummy_func_1(foo[bars={SUB_EXPRESSION_CLASSIFIER}bar])",
@@ -464,7 +464,7 @@ class TestEquationParserElements:
         assert parsed_[0] == expected
 
     @pytest.mark.parametrize(
-        ["string_val", "expected"],
+        ("string_val", "expected"),
         [
             ("dummy_func_1(1)", 10),
             ("dummy_func_1(x=1)", 10),
@@ -578,7 +578,7 @@ class TestEquationParserArithmetic:
         return float(request.param)
 
     @pytest.mark.parametrize(
-        ["sign", "sign_name"],
+        ("sign", "sign_name"),
         [("+", "add"), ("-", "sub"), ("*", "mul"), ("/", "truediv"), ("**", "pow")],
     )
     @pytest.mark.parametrize(
@@ -598,7 +598,7 @@ class TestEquationParserArithmetic:
                 getattr(operator, sign_name)(float1, float2)
             )
 
-    @pytest.mark.parametrize(["sign", "sign_name"], [("+", "pos"), ("-", "neg")])
+    @pytest.mark.parametrize(("sign", "sign_name"), [("+", "pos"), ("-", "neg")])
     @pytest.mark.parametrize(
         "func_string", ["arithmetic", "helper_function_allow_arithmetic"]
     )
@@ -613,7 +613,7 @@ class TestEquationParserArithmetic:
             assert evaluated_ == getattr(operator, sign_name)(float1)
 
     @pytest.mark.parametrize(
-        ["equation_string", "expected"],
+        ("equation_string", "expected"),
         [
             ("1+2*2", 5),
             ("-1 - 2", -3),
@@ -671,7 +671,7 @@ class TestEquationParserArithmetic:
             helper_function.parse_string(helper_func_string, parse_all=True)
 
     @pytest.mark.parametrize(
-        ["string_", "expected"], [("1 + 2", 30), ("1 * 2", 20), ("x=1/2", 5)]
+        ("string_", "expected"), [("1 + 2", 30), ("1 * 2", 20), ("x=1/2", 5)]
     )
     def test_helper_function_allow_arithmetic(
         self, helper_function_allow_arithmetic, eval_kwargs, string_, expected
@@ -758,11 +758,11 @@ class TestEquationParserComparison:
     def var_right(self, request):
         return request.param
 
-    @pytest.fixture
+    @pytest.fixture()
     def expected_left(self, var_left):
         return self.EXPR_PARAMS_AND_EXPECTED_EVAL[var_left]
 
-    @pytest.fixture
+    @pytest.fixture()
     def expected_right(self, var_right):
         return self.EXPR_PARAMS_AND_EXPECTED_EVAL[var_right]
 
@@ -770,7 +770,7 @@ class TestEquationParserComparison:
     def operator(self, request):
         return request.param
 
-    @pytest.fixture
+    @pytest.fixture()
     def single_equation_simple(self, var_left, var_right, operator):
         return f"{var_left} {operator} {var_right}"
 
@@ -792,14 +792,12 @@ class TestEquationParserComparison:
         assert evaluated_expression.op == operator
 
     @pytest.mark.parametrize(
-        ["equation_string", "expected"],
+        ("equation_string", "expected"),
         [
             ("1<=2", True),
             ("1 >= 2", False),
             ("1  ==  2", False),
             ("(1) <= (2)", True),
-            ("1 >= 2", False),
-            ("1 >= 2", False),
             ("1 * 3 <= 1e2", True),
             ("-1 >= -0.1 / 2", False),
             ("2**2 == 4 * 1 / 1 * 1**1", True),
@@ -851,7 +849,7 @@ class TestEquationParserComparison:
 
 
 class TestAsMathString:
-    @pytest.fixture
+    @pytest.fixture()
     def latex_eval_kwargs(self, dummy_latex_backend_model):
         return {
             "helper_functions": helper_functions._registry["expression"],
@@ -866,7 +864,7 @@ class TestAsMathString:
         }
 
     @pytest.mark.parametrize(
-        ["parser", "instring", "expected"],
+        ("parser", "instring", "expected"),
         [
             ("number", "1", "1"),
             ("number", "1.0", "1"),

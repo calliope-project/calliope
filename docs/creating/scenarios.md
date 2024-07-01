@@ -18,9 +18,9 @@ overrides:
   high_cost:
     techs.onshore_wind.cost_flow_cap.data: 2000
   year2005:
-    model.time_subset: ['2005-01-01', '2005-12-31']
+    init.time_subset: ['2005-01-01', '2005-12-31']
   year2006:
-    model.time_subset: ['2006-01-01', '2006-12-31']
+    init.time_subset: ['2006-01-01', '2006-12-31']
 
 config:
     ...
