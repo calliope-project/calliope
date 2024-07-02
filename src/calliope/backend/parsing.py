@@ -84,7 +84,7 @@ UNPARSED_DICTS = (
     UnparsedConstraintDict
     | UnparsedVariableDict
     | UnparsedExpressionDict
-    | UnparsedObjectiveDict,
+    | UnparsedObjectiveDict
 )
 
 T = TypeVar("T", bound=UNPARSED_DICTS)
