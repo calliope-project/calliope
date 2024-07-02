@@ -144,9 +144,9 @@ def extract_from_schema(
     Args:
         schema (dict): Schema to extract keyword from
         keyword (str): property key to extract
-        subset_top_level (Literal["nodes", "techs", "parameters"], optional):
+        subset_top_level (Literal["nodes", "techs", "parameters"] | None, optional):
             Include only those properties that are leaves along a specific top-level property branch.
-            Defaults to None, i.e., all property branches are included.
+            Defaults to None (all property branches are included).
 
     Returns:
         dict:

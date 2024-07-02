@@ -115,10 +115,10 @@ class ParsedBackendEquation:
                 Parsed arithmetic/equation expression.
             where_list (list[pp.ParseResults]):
                 List of parsed where strings.
-            sub_expressions (Optional[dict[str, pp.ParseResults]], optional):
+            sub_expressions (dict[str, pp.ParseResults] | None, optional):
                 Dictionary of parsed sub-expressions with which to replace sub-expression references
                 on evaluation of the parsed expression. Defaults to None.
-            slices (Optional[dict[str, pp.ParseResults]], optional):
+            slices (dict[str, pp.ParseResults] | None, optional):
                 Dictionary of parsed array slices with which to replace slice references
                 on evaluation of the parsed expression / sub-expression. Defaults to None.
         """
@@ -288,7 +288,7 @@ class ParsedBackendEquation:
                 Defaults to xr.DataArray(True) (i.e., no effect).
 
         Returns:
-            Union[xr.DataArray, str]:
+            xr.DataArray | str:
                 If return_type == `array`: Boolean array defining on which index items a parsed component should be built.
                 If return_type == `math_string`: Valid LaTeX math string defining the "where" conditions using logic notation.
         """
@@ -367,7 +367,7 @@ class ParsedBackendEquation:
             return_type (str, optional):
                 If "array", return xarray.DataArray. If "math_string", return LaTex math string.
                 Defaults to "array".
-            references (Optional[set], optional):
+            references (set | None, optional):
                 If given, any references in the math string to other model components
                 will be logged here. Defaults to None.
             where (xr.DataArray, optional):
@@ -375,7 +375,7 @@ class ParsedBackendEquation:
                 Defaults to xr.DataArray(True).
 
         Returns:
-            Union[xr.DataArray, str]:
+            xr.DataArray | str:
                 If return_type == `array`: array of backend expression objects.
                 If return_type == `math_string`: Valid LaTeX math string defining the
                 "where" conditions using logic notation.

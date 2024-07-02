@@ -24,19 +24,19 @@ def load_model_definition(
         model_definition (str | Path | dict):
             If string or pathlib.Path, path to YAML file with model configuration.
             If dictionary, equivalent to loading the model configuration YAML from file.
-        scenario (Optional[str], optional):
+        scenario (str | None, optional):
             If not None, name of scenario to apply.
             Can either be a named scenario, or a comma-separated list of individual overrides to be combined ad-hoc,
             e.g. 'my_scenario_name' or 'override1,override2'.
             Defaults to None.
-        override_dict (Optional[dict], optional):
+        override_dict (dict | None, optional):
             If not None, dictionary of overrides to apply.
             These will be applied _after_ `scenario` overrides.
             Defaults to None.
         **kwargs: initialisation overrides.
 
     Returns:
-        tuple[AttrDict, Optional[Path], str]:
+        tuple[AttrDict, Path | None, str]:
             1. Model definition with overrides applied.
             2. Path to model definition YAML if input `model_definiton` was pathlike, otherwise None.
             3. Expansion of scenarios (which are references to model overrides) into a list of named override(s) that have been applied.
@@ -85,12 +85,12 @@ def _apply_overrides(
 
     Args:
         model_def (calliope.Attrdict): Loaded model definition as an attribute dictionary.
-        scenario (Optional[str], optional):
+        scenario (str | None, optional):
             If not None, name of scenario to apply.
             Can either be a named scenario, or a comma-separated list of individual overrides to be combined ad-hoc,
             e.g. 'my_scenario_name' or 'override1,override2'.
             Defaults to None.
-        override_dict (Optional[dict], optional):
+        override_dict (str | dict | None, optional):
             If not None, dictionary of overrides to apply.
             These will be applied _after_ `scenario` overrides.
             Defaults to None.

@@ -128,12 +128,11 @@ class EvalToArrayStr(EvalString):
             as_values (bool, optional): Return array as numeric values, not backend objects. Defaults to False.
 
         Returns:
-            Union[str, list[str | float], xr.DataArray]:
+            str | list[str | float] | xr.DataArray:
                 If `math_string` is desired, returns a valid LaTex math string.
                 If `array` is desired, returns xarray DataArray or a list of strings/numbers (if the expression represents a list).
         """
         self.eval_attrs = eval_kwargs
-        evaluated: str | list[str | float] | xr.DataArray
         if return_type == "array":
             evaluated = self.as_array()
         elif return_type == "math_string":

@@ -248,7 +248,7 @@ class BackendModelGenerator(ABC):
         Args:
             name (str): name of the component. If not providing the `component_dict` directly,
                 this name must be available in the input math provided on initialising the class.
-            component_dict (Optional[Tp]): unparsed YAML dictionary configuration.
+            component_dict (Tp | None): unparsed YAML dictionary configuration.
             component_setter (Callable): function to combine evaluated xarray DataArrays into backend component objects.
             component_type (Literal["variables", "global_expressions", "constraints", "objectives"]):
                 type of the added component.
@@ -259,7 +259,7 @@ class BackendModelGenerator(ABC):
                 objects on duplicate index entries.
 
         Returns:
-            Optional[parsing.ParsedBackendComponent]: parsed component. None if the break_early condition was met.
+            parsing.ParsedBackendComponent | None: parsed component. None if the break_early condition was met.
         """
         references: set[str] = set()
 
@@ -408,9 +408,9 @@ class BackendModelGenerator(ABC):
             name (str): Name of entry in dataset.
             da (xr.DataArray): Data to add.
             obj_type (str): Type of backend objects in the array.
-            unparsed_dict (DT):
+            unparsed_dict (parsing.UNPARSED_DICTS | dict):
                 Dictionary describing the object being added, from which descriptor attributes will be extracted and added to the array attributes.
-            references (set):
+            references (set | None):
                 All other backend objects which are references in this backend object's linear expression(s).
                 E.g. the constraint "flow_out / flow_out_eff <= flow_cap" references the variables ["flow_out", "flow_cap"]
                 and the parameter ["flow_out_eff"].
@@ -603,7 +603,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 Defaults to False.
 
         Returns:
-            Union[xr.DataArray, xr.Dataset]:
+            xr.DataArray | xr.Dataset:
                 If as_backend_objs is True, will return an xr.DataArray.
                 Otherwise, a xr.Dataset will be given, indexed over the same dimensions as the xr.DataArray, with variables for the constraint body, and upper (`ub`) and lower (`lb`) bounds.
         """
@@ -695,10 +695,10 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
         Args:
             name (str): Variable to update.
-            min (Union[xr.DataArray, SupportsFloat], optional):
+            min (xr.DataArray | SupportsFloat | None, optional):
                 If provided, the Non-NaN values in the array will be used to defined new lower bounds in the decision variable.
                 Defaults to None.
-            max (Union[xr.DataArray, SupportsFloat], optional):
+            max (xr.DataArray | SupportsFloat | None, optional):
                 If provided, the Non-NaN values in the array will be used to defined new upper bounds in the decision variable.
                 Defaults to None.
         """
@@ -711,7 +711,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
         Args:
             name (str): Variable to update.
-            where (xr.DataArray, optional):
+            where (xr.DataArray | None, optional):
                 If provided, only a subset of the coordinates in the variable will be fixed.
                 Must be a boolean array or a float equivalent, where NaN is used instead of False.
                 Defaults to None
@@ -723,7 +723,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
         Args:
             name (str): Variable to update
-            where (xr.DataArray, optional):
+            where (xr.DataArray | None, optional):
                 If provided, only a subset of the coordinates in the variable will be unfixed.
                 Must be a boolean array or a float equivalent, where NaN is used instead of False.
                 Defaults to None
@@ -751,7 +751,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         The LP file can be used for debugging and to submit to solvers directly.
 
         Args:
-            path (Union[str, Path]): Path to which the LP file will be written.
+            path (str | Path): Path to which the LP file will be written.
         """
 
     @property

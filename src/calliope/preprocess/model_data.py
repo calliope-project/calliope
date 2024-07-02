@@ -518,7 +518,7 @@ class ModelDataFactory:
 
         Args:
             dim_name (Literal[nodes, techs]): Name of dimension we're working with.
-            dim_dict (Optional[AttrDict], optional):
+            dim_dict (AttrDict | None, optional):
                 Base dictionary to work from.
                 If not defined, `dim_name` will be used to access the dictionary from the base model definition.
                 Defaults to None.
@@ -597,7 +597,7 @@ class ModelDataFactory:
                 The name of the dimension we're working with, so that we can access the correct `_groups` definitions.
             item_name (str):
                 The current position in the inheritance tree.
-            inheritance (Optional[list], optional):
+            inheritance (list | None, optional):
                 A list of items that have been inherited (starting with the oldest).
                 If the first `dim_item_dict` does not contain `inherit`, this will remain as None.
                 Defaults to None.
@@ -606,7 +606,7 @@ class ModelDataFactory:
             KeyError: Must inherit from a named group item in `node_groups` (for `nodes`) and `tech_groups` (for `techs`)
 
         Returns:
-            tuple[AttrDict, Optional[list]]: Definition dictionary with inherited data and a list of the inheritance tree climbed to get there.
+            tuple[AttrDict, list | None]: Definition dictionary with inherited data and a list of the inheritance tree climbed to get there.
         """
         to_inherit = dim_item_dict.get("inherit", None)
         dim_groups = AttrDict(
