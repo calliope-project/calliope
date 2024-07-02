@@ -2,6 +2,7 @@ import operator
 import random
 
 import numpy as np
+import pandas as pd
 import pyparsing as pp
 import pytest
 import xarray as xr
@@ -591,7 +592,7 @@ class TestEquationParserArithmetic:
         parsed_ = parser_func.parse_string(string_, parse_all=True)
         evaluated_ = parsed_[0].eval(**eval_kwargs)
         if np.isinf(float1) and np.isinf(float2) and sign in ["-", "/"]:
-            assert np.isnan(evaluated_)
+            assert pd.isnull(evaluated_)
         else:
             assert evaluated_ == pytest.approx(
                 getattr(operator, sign_name)(float1, float2)

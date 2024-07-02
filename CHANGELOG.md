@@ -1,6 +1,10 @@
-## 0.7.0.dev4 (development)
+## 0.7.0.dev4 (dev)
 
 ### User-facing changes
+
+|new| Direct interface to the Gurobi Python API using `!#yaml config.build.backend: gurobi` or `!#python model.build(backend="gurobi")`.
+Tests show that using the gurobi solver via the Python API reduces peak memory consumption and runtime by at least 30% for the combined model build and solve steps.
+This requires the `gurobipy` package which can be installed with `mamba`: `mamba install gurobi::gurobi`.
 
 |fixed| Force a header row in tabular data loaded from CSV to (#596).
 Fixes issue where unexpected index levels can end up in the loaded data (#573).
@@ -29,6 +33,16 @@ Parameter titles from the model definition schema will also propagate to the mod
 * `timestamp_solve_complete`: at the end of `Model.solve()`
 
 ### Internal changes
+
+|new| `gurobipy` is a development dependency that will be added as an optional dependency to the conda-forge calliope feedstock recipe.
+
+|changed| Added any new math dicts defined with `calliope.Model.backend.add_[...](...)` to the backend math dict registry stored in `calliope.Model.backend.inputs.attrs["math"]`.
+
+|changed| Function vectorisation when creating backend component arrays uses `numpy.frompyfunc` instead of `xarray.apply_ufunc`, so that masking with a `where` array can be done at function calltime.
+This requires pre-broadcasting all arrays being passed to the vectorised function, but reduces memory peaks in the Gurobi backend interface in particular.
+
+|changed| Default parameter values are not used to fill NaNs when adding parameters to the backend, but when evaluating expressions.
+This reduces memory footprint of parameter arrays.
 
 |fixed| Removed unused debug parameter in `Model.__init__()`
 

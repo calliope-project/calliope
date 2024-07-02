@@ -368,11 +368,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self._add_all_inputs_as_parameters()
 
     def add_parameter(  # noqa: D102, override
-        self,
-        parameter_name: str,
-        parameter_values: xr.DataArray,
-        default: Any = np.nan,
-        use_inf_as_na: bool = False,
+        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
         attrs = {
             "title": self._PARAM_TITLES.get(parameter_name, None),
