@@ -45,7 +45,7 @@ class MathDocumentation:
             **kwargs: kwargs for the LaTeX backend.
         """
         backend = LatexBackendModel(self._inputs, include=include, **kwargs)
-        backend.build_all_math()
+        backend.add_all_math()
 
         self._instance = backend
 
