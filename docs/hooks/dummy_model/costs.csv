@@ -1,4 +1,5 @@
-﻿supply_tech,cost_area_use,1
+﻿techs,parameters,
+supply_tech,cost_area_use,1
 supply_tech,cost_depreciation_rate,1
 supply_tech,cost_export,1
 supply_tech,cost_flow_cap,1

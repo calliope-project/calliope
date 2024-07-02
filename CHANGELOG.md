@@ -5,6 +5,11 @@
 |new| Piecewise constraints added to the YAML math with its own unique syntax (#107).
 These constraints will be added to the optimisation problem using Special Ordered Sets of Type 2 (SOS2) variables.
 
+|fixed| Force a header row in tabular data loaded from CSV to (#596).
+Fixes issue where unexpected index levels can end up in the loaded data (#573).
+
+|fixed| Single element lists/sets in the model Dataset attribute dictionary are restored to lists/sets on loading from NetCDF (#614).
+
 |new| Decision variables and global expressions can have a `title` defined, which will be available in the model results as attributes of those components and can be used for e.g. visualisation (#582).
 Parameter titles from the model definition schema will also propagate to the model inputs.
 
