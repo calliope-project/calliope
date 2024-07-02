@@ -86,7 +86,6 @@ UNPARSED_DICTS = (
     | UnparsedExpressionDict
     | UnparsedObjectiveDict
 )
-
 T = TypeVar("T", bound=UNPARSED_DICTS)
 
 LOGGER = logging.getLogger(__name__)

@@ -193,7 +193,8 @@ class BackendModelGenerator(ABC):
             check_results["warn"], check_results["fail"]
         )
 
-    def _build(self) -> None:
+    def add_all_math(self):
+        """Parse and all the math stored in the input data."""
         self._add_run_mode_math()
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
@@ -407,10 +408,11 @@ class BackendModelGenerator(ABC):
         Args:
             name (str): Name of entry in dataset.
             da (xr.DataArray): Data to add.
-            obj_type (str): Type of backend objects in the array.
+            obj_type (_COMPONENTS_T): Type of backend objects in the array.
             unparsed_dict (parsing.UNPARSED_DICTS | dict):
-                Dictionary describing the object being added, from which descriptor attributes will be extracted and added to the array attributes.
-            references (set | None):
+                Dictionary describing the object being added, from which descriptor
+                attributes will be extracted and added to the array attributes.
+            references (set | None, optional):
                 All other backend objects which are references in this backend object's linear expression(s).
                 E.g. the constraint "flow_out / flow_out_eff <= flow_cap" references the variables ["flow_out", "flow_cap"]
                 and the parameter ["flow_out_eff"].
@@ -676,7 +678,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
         Args:
             name (str): Parameter to update
-            new_values (Union[xr.DataArray, SupportsFloat]): New values to apply. Any
+            new_values (xr.DataArray | SupportsFloat): New values to apply. Any
                 empty (NaN) elements in the array will be skipped.
         """
 

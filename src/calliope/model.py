@@ -5,20 +5,16 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import xarray as xr
 
 import calliope
-from calliope import exceptions, io
+from calliope import backend, exceptions, io
 from calliope._version import __version__
 from calliope.attrdict import AttrDict
-from calliope.backend import parsing
-from calliope.backend.latex_backend_model import LatexBackendModel, MathDocumentation
-from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess import load
 from calliope.preprocess.data_sources import DataSource
@@ -34,11 +30,10 @@ from calliope.util.schema import (
 )
 from calliope.util.tools import relative_path
 
-LOGGER = logging.getLogger(__name__)
-
-T = TypeVar("T", bound=PyomoBackendModel | LatexBackendModel)
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
+
+LOGGER = logging.getLogger(__name__)
 
 
 def read_netcdf(path):
@@ -50,7 +45,6 @@ def read_netcdf(path):
 class Model:
     """A Calliope Model."""
 
-    _BACKENDS: dict[str, Callable] = {"pyomo": PyomoBackendModel}
     _TS_OFFSET = pd.Timedelta(nanoseconds=1)
 
     def __init__(
@@ -87,7 +81,7 @@ class Model:
         self.math: AttrDict
         self._model_def_path: Path | None
         self.backend: BackendModel
-        self.math_documentation = MathDocumentation()
+        self.math_documentation = backend.MathDocumentation()
         self._is_built: bool = False
         self._is_solved: bool = False
 
@@ -149,15 +143,15 @@ class Model:
         model_definition: calliope.AttrDict,
         applied_overrides: str,
         scenario: str | None,
-        data_source_dfs: dict[str, pd.DataFrame] | None,
+        data_source_dfs: dict[str, pd.DataFrame] | None = None,
     ) -> None:
         """Initialise the model using pre-processed YAML files and optional dataframes/dicts.
 
         Args:
-            model_definition (calliope.AttrDict): preprocessed model configuration
+            model_definition (calliope.AttrDict): preprocessed model configuration.
             applied_overrides (str): overrides specified by users
-            scenario (Optional[str]): scenario specified by users
-            data_source_dfs (Optional[dict[str, pd.DataFrame]]): optional files with additional model information
+            scenario (str | None): scenario specified by users
+            data_source_dfs (dict[str, pd.DataFrame] | None, optional): files with additional model information. Defaults to None.
         """
         # First pass to check top-level keys are all good
         validate_dict(model_definition, CONFIG_SCHEMA, "Model definition")
@@ -360,23 +354,24 @@ class Model:
             comment="Model: backend build starting",
         )
 
-        updated_build_config = {**self.config["build"], **kwargs}
-        if updated_build_config["mode"] == "operate":
+        backend_config = {**self.config["build"], **kwargs}
+        if backend_config["mode"] == "operate":
             if not self._model_data.attrs["allow_operate_mode"]:
                 raise exceptions.ModelError(
                     "Unable to run this model in operate (i.e. dispatch) mode, probably because "
                     "there exist non-uniform timesteps (e.g. from time clustering)"
                 )
-            start_window_idx = updated_build_config.pop("start_window_idx", 0)
-            input = self._prepare_operate_mode_inputs(
-                start_window_idx, **updated_build_config
+            start_window_idx = backend_config.pop("start_window_idx", 0)
+            backend_input = self._prepare_operate_mode_inputs(
+                start_window_idx, **backend_config
             )
         else:
-            input = self._model_data
-        backend_name = updated_build_config["backend"]
-        backend = self._BACKENDS[backend_name](input, **updated_build_config)
-        backend._build()
-        self.backend = backend
+            backend_input = self._model_data
+        backend_name = backend_config.pop("backend")
+        self.backend = backend.get_model_backend(
+            backend_name, backend_input, **backend_config
+        )
+        self.backend.add_all_math()
 
         self._model_data.attrs["timestamp_build_complete"] = log_time(
             LOGGER,
@@ -581,7 +576,7 @@ class Model:
         collected_errors: dict = dict()
         for component_group, component_dicts in math_dict.items():
             for name, component_dict in component_dicts.items():
-                parsed = parsing.ParsedBackendComponent(
+                parsed = backend.ParsedBackendComponent(
                     component_group, name, component_dict
                 )
                 parsed.parse_top_level_where(errors="ignore")
