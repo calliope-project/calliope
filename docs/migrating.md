@@ -977,5 +977,7 @@ Now, all components of our internal math are defined in a readable YAML syntax t
 
 You can add your own math to update the pre-defined math and to represent the physical system in ways we do not cover in our base math, or to apply new modelling methods and problem types (e.g., pathway or stochastic optimisation)!
 
+When adding your own math, you can add [piecewise linear constraints](user_defined_math/components.md#piecewise-constraints), which is a new type of constraint compared to what could be defined in v0.6.
+
 !!! info "See also"
     Our [pre-defined](pre_defined_math/index.md) and [user-defined](user_defined_math/index.md) math documentation.

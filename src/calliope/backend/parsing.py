@@ -34,14 +34,14 @@ TRUE_ARRAY = xr.DataArray(True)
 
 
 class UnparsedEquationDict(TypedDict):
-    """Unparsed equation checker class."""
+    """Unparsed equation type hint class."""
 
     where: NotRequired[str]
     expression: str
 
 
 class UnparsedConstraintDict(TypedDict):
-    """Unparsed constraint checker class."""
+    """Unparsed constraint type hint class."""
 
     description: NotRequired[str]
     foreach: NotRequired[list]
@@ -51,15 +51,27 @@ class UnparsedConstraintDict(TypedDict):
     slices: NotRequired[dict[str, list[UnparsedEquationDict]]]
 
 
+class UnparsedPiecewiseConstraintDict(TypedDict):
+    """Unparsed piecewise constraint type hint class."""
+
+    description: NotRequired[str]
+    foreach: NotRequired[list]
+    where: NotRequired[str]
+    x_expression: Required[str]
+    x_values: Required[str]
+    y_expression: Required[str]
+    y_values: Required[str]
+
+
 class UnparsedExpressionDict(UnparsedConstraintDict):
-    """Unparsed expression checker class."""
+    """Unparsed expression type hint class."""
 
     title: NotRequired[str]
     unit: NotRequired[str]
 
 
 class UnparsedVariableBoundDict(TypedDict):
-    """Unparsed variable bounds checker class."""
+    """Unparsed variable bounds type hint class."""
 
     min: str
     max: str
@@ -93,6 +105,7 @@ UNPARSED_DICTS = Union[
     UnparsedVariableDict,
     UnparsedExpressionDict,
     UnparsedObjectiveDict,
+    UnparsedPiecewiseConstraintDict,
 ]
 T = TypeVar("T", bound=UNPARSED_DICTS)
 
@@ -339,7 +352,7 @@ class ParsedBackendEquation:
     @overload
     def evaluate_expression(
         self,
-        backend_interface: backend_model.BackendModel,
+        backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: Literal["array"] = "array",
         references: Optional[set] = None,
@@ -350,7 +363,7 @@ class ParsedBackendEquation:
     @overload
     def evaluate_expression(
         self,
-        backend_interface: backend_model.BackendModel,
+        backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: Literal["math_string"],
         references: Optional[set] = None,
@@ -358,7 +371,7 @@ class ParsedBackendEquation:
 
     def evaluate_expression(
         self,
-        backend_interface: backend_model.BackendModel,
+        backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: Literal["array", "math_string"] = "array",
         references: Optional[set] = None,
@@ -456,11 +469,18 @@ class ParsedBackendComponent(ParsedBackendEquation):
         "global_expressions": expression_parser.generate_arithmetic_parser,
         "objectives": expression_parser.generate_arithmetic_parser,
         "variables": lambda x: None,
+        "piecewise_constraints": expression_parser.generate_arithmetic_parser,
     }
 
     def __init__(
         self,
-        group: Literal["variables", "global_expressions", "constraints", "objectives"],
+        group: Literal[
+            "variables",
+            "global_expressions",
+            "constraints",
+            "piecewise_constraints",
+            "objectives",
+        ],
         name: str,
         unparsed_data: T,
     ) -> None:

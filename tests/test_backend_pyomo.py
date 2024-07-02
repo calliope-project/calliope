@@ -12,6 +12,7 @@ import pytest  # noqa: F401
 import xarray as xr
 from calliope.attrdict import AttrDict
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
+from pyomo.core.kernel.piecewise_library.transforms import piecewise_sos2
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, check_variable_exists
@@ -1740,6 +1741,22 @@ class TestNewBackend:
             .any()
         )
 
+    def test_new_build_get_component_exists(self, simple_supply):
+        param = simple_supply.backend._get_component("flow_in_eff", "parameters")
+        assert isinstance(param, xr.DataArray)
+
+    def test_new_build_get_component_does_not_exist(self, simple_supply):
+        with pytest.raises(KeyError) as excinfo:
+            simple_supply.backend._get_component("does_not_exist", "parameters")
+        assert check_error_or_warning(excinfo, "Unknown parameter: does_not_exist")
+
+    def test_new_build_get_component_wrong_group(self, simple_supply):
+        with pytest.raises(KeyError) as excinfo:
+            simple_supply.backend._get_component("flow_in_eff", "piecewise_constraints")
+        assert check_error_or_warning(
+            excinfo, "Unknown piecewise constraint: flow_in_eff"
+        )
+
     def test_new_build_get_parameter(self, simple_supply):
         """Check a parameter has the correct data type and has all expected attributes."""
         param = simple_supply.backend.get_parameter("flow_in_eff")
@@ -2101,6 +2118,21 @@ class TestNewBackend:
             "objectives:foo:1 | trying to set two equations for the same component.",
         )
 
+    def test_add_two_same_constraint_multi_index(self, simple_supply):
+        eq = {"expression": "flow_cap >= 1", "where": "flow_cap"}
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            simple_supply.backend.add_constraint(
+                "foo",
+                {"foreach": ["nodes", "techs", "carriers"], "equations": [eq, eq]},
+            )
+        assert check_error_or_warning(
+            excinfo,
+            [
+                "constraints:foo:1 | trying to set two equations for the same index:",
+                "names=['nodes', 'techs', 'carriers'])",
+            ],
+        )
+
     def test_add_valid_obj(self, simple_supply):
         eq = {"expression": "bigM", "where": "True"}
         simple_supply.backend.add_objective(
@@ -2434,6 +2466,145 @@ class TestNewBackend:
 
     def test_has_integer_or_binary_variables_milp(self, supply_milp):
         assert supply_milp.backend.has_integer_or_binary_variables
+
+
+class TestPiecewiseConstraints:
+    def gen_params(self, data, index=[0, 1, 2], dim="breakpoints"):
+        return {
+            "parameters": {
+                "piecewise_x": {"data": data, "index": index, "dims": dim},
+                "piecewise_y": {
+                    "data": [0, 1, 5],
+                    "index": [0, 1, 2],
+                    "dims": "breakpoints",
+                },
+            }
+        }
+
+    @pytest.fixture(scope="class")
+    def working_math(self):
+        return {
+            "foreach": ["nodes", "techs", "carriers"],
+            "where": "[test_supply_elec] in techs AND piecewise_x AND piecewise_y",
+            "x_values": "piecewise_x",
+            "x_expression": "flow_cap",
+            "y_values": "piecewise_y",
+            "y_expression": "sum(flow_in, over=timesteps)",
+            "description": "FOO",
+        }
+
+    @pytest.fixture(scope="class")
+    def working_params(self):
+        return self.gen_params([0, 5, 10])
+
+    @pytest.fixture(scope="class")
+    def length_mismatch_params(self):
+        return self.gen_params([0, 10], [0, 1])
+
+    @pytest.fixture(scope="class")
+    def not_reaching_var_bound_with_breakpoint_params(self):
+        return self.gen_params([0, 5, 8])
+
+    @pytest.fixture(scope="class")
+    def missing_breakpoint_dims(self):
+        return self.gen_params([0, 5, 10], dim="foobar")
+
+    @pytest.fixture(scope="class")
+    def working_model(self, working_params, working_math):
+        m = build_model(working_params, "simple_supply,two_hours,investment_costs")
+        m.build()
+        m.backend.add_piecewise_constraint("foo", working_math)
+        return m
+
+    def test_piecewise_type(self, working_model):
+        constr = working_model.backend.get_piecewise_constraint("foo")
+        assert (
+            constr.to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, piecewise_sos2))
+            .all()
+        )
+
+    def test_piecewise_attrs(self, working_model):
+        constr = working_model.backend.get_piecewise_constraint("foo")
+        expected_keys = set(
+            ["obj_type", "references", "description", "yaml_snippet", "coords_in_name"]
+        )
+        assert not expected_keys.symmetric_difference(constr.attrs.keys())
+        assert constr.attrs["obj_type"] == "piecewise_constraints"
+        assert not constr.attrs["references"]
+        assert constr.attrs["coords_in_name"] is False
+
+    @pytest.mark.parametrize(
+        "var", ["flow_cap", "flow_in", "piecewise_x", "piecewise_y"]
+    )
+    def test_piecewise_refs(self, working_model, var):
+        assert "foo" in working_model.backend._dataset[var].attrs["references"]
+
+    def test_piecewise_verbose(self, working_model):
+        working_model.backend.verbose_strings()
+        constr = working_model.backend.get_piecewise_constraint("foo")
+        dims = {"nodes": "a", "techs": "test_supply_elec", "carriers": "electricity"}
+        assert (
+            str(constr.sel(dims).item())
+            == f"piecewise_constraints[foo][{', '.join(dims[i] for i in constr.dims)}]"
+        )
+
+    def test_fails_on_length_mismatch(self, length_mismatch_params, working_math):
+        m = build_model(
+            length_mismatch_params, "simple_supply,two_hours,investment_costs"
+        )
+        m.build()
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            m.backend.add_piecewise_constraint("foo", working_math)
+        assert check_error_or_warning(
+            excinfo,
+            "(piecewise_constraints, foo) | Errors in generating piecewise constraint: The number of breakpoints (2) differs from the number of function values (3)",
+        )
+
+    def test_fails_on_not_reaching_bounds(
+        self, not_reaching_var_bound_with_breakpoint_params, working_math
+    ):
+        m = build_model(
+            not_reaching_var_bound_with_breakpoint_params,
+            "simple_supply,two_hours,investment_costs",
+        )
+        m.build()
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            m.backend.add_piecewise_constraint("foo", working_math)
+        assert check_error_or_warning(
+            excinfo,
+            [
+                "(piecewise_constraints, foo) | Errors in generating piecewise constraint: Piecewise function domain does not include the upper bound",
+                "ub = 10.0 > 8.0.",
+            ],
+        )
+        assert not check_error_or_warning(excinfo, "To avoid this error")
+
+    def test_fails_on_breakpoints_in_foreach(self, working_model, working_math):
+        failing_math = {"foreach": ["nodes", "techs", "carriers", "breakpoints"]}
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            working_model.backend.add_piecewise_constraint(
+                "bar", {**working_math, **failing_math}
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "(piecewise_constraints, bar) | `breakpoints` dimension should not be in `foreach`",
+        )
+
+    def test_fails_on_no_breakpoints_in_params(
+        self, missing_breakpoint_dims, working_math
+    ):
+        m = build_model(
+            missing_breakpoint_dims, "simple_supply,two_hours,investment_costs"
+        )
+        m.build()
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            m.backend.add_piecewise_constraint("bar", working_math)
+        assert check_error_or_warning(
+            excinfo,
+            "(piecewise_constraints, bar) | `x_values` must be indexed over the `breakpoints` dimension",
+        )
 
 
 class TestShadowPrices:

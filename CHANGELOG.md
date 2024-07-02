@@ -2,6 +2,9 @@
 
 ### User-facing changes
 
+|new| Piecewise constraints added to the YAML math with its own unique syntax (#107).
+These constraints will be added to the optimisation problem using Special Ordered Sets of Type 2 (SOS2) variables.
+
 |fixed| Force a header row in tabular data loaded from CSV to (#596).
 Fixes issue where unexpected index levels can end up in the loaded data (#573).
 
