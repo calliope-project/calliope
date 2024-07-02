@@ -55,5 +55,8 @@ jobs:
     - name: upload coverage report to Codecov
       if: github.ref == 'refs/heads/main'
       uses: codecov/codecov-action@v4
-      env:
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: true
         directory: "./reports/coverage/"
+        verbose: true
