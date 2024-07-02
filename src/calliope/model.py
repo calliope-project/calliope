@@ -64,7 +64,7 @@ class Model:
                 If an xarray dataset, must be a valid calliope model.
             scenario (str | None, optional):
                 Comma delimited string of pre-defined `scenarios` to apply to the model.
-                Defaults to None. Defaults to None.
+                Defaults to None.
             override_dict (dict | None, optional):
                 Additional overrides to apply to `config`.
                 These will be applied *after* applying any defined `scenario` overrides.

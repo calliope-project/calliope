@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Literal, Optional, Union
+from typing import Literal
 
 import calliope
 import xarray as xr
@@ -30,7 +30,7 @@ def check_error_or_warning(error_warning, test_string_or_strings):
         )
     elif hasattr(error_warning, "value"):
         output = str(error_warning.value)
-    elif isinstance(error_warning, (list, set)):
+    elif isinstance(error_warning, list | set):
         output = ",".join(error_warning)
 
     if isinstance(test_string_or_strings, list):
@@ -42,7 +42,7 @@ def check_error_or_warning(error_warning, test_string_or_strings):
 
 
 def check_variable_exists(
-    expr_or_constr: Optional[xr.DataArray], variable: str, slices: Optional[dict] = None
+    expr_or_constr: xr.DataArray | None, variable: str, slices: dict | None = None
 ) -> bool:
     """
     Search for existence of a decision variable in a Pyomo constraint.
@@ -78,8 +78,8 @@ def check_variable_exists(
 
 def build_lp(
     model: calliope.Model,
-    outfile: Union[str, Path],
-    math: Optional[dict[Union[dict, list]]] = None,
+    outfile: str | Path,
+    math: dict[str, dict | list] | None = None,
     backend_name: Literal["pyomo"] = "pyomo",
 ) -> None:
     """
@@ -89,8 +89,8 @@ def build_lp(
 
     Args:
         model (calliope.Model): Calliope model.
-        outfile (Union[str, Path]): Path to LP file.
-        math (Optional[dict], optional): All constraint/global expression/objective math to apply. Defaults to None.
+        outfile (str | Path): Path to LP file.
+        math (dict | None, optional): All constraint/global expression/objective math to apply. Defaults to None.
         backend_name (Literal["pyomo"], optional): Backend to use to create the LP file. Defaults to "pyomo".
     """
     backend_instance = backend.get_model_backend(backend_name, model._model_data)

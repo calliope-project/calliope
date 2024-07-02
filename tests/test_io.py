@@ -142,7 +142,7 @@ class TestIO:
         "file_name",
         sorted(
             [
-                "inputs_{}.csv".format(i)
+                f"inputs_{i}.csv"
                 for i in calliope.examples.national_scale().inputs.data_vars.keys()
             ]
         ),
@@ -152,7 +152,7 @@ class TestIO:
 
     def test_csv_contents(self, model_csv_dir):
         with open(
-            os.path.join(model_csv_dir, "inputs_flow_cap_max_systemwide.csv"), "r"
+            os.path.join(model_csv_dir, "inputs_flow_cap_max_systemwide.csv")
         ) as f:
             assert "demand_power" not in f.read()
 
@@ -162,7 +162,7 @@ class TestIO:
             model.to_csv(out_path, dropna=False)
 
             with open(
-                os.path.join(out_path, "inputs_flow_cap_max_systemwide.csv"), "r"
+                os.path.join(out_path, "inputs_flow_cap_max_systemwide.csv")
             ) as f:
                 assert "demand_power" in f.read()
 
@@ -215,7 +215,7 @@ class TestIO:
             out_path = os.path.join(tempdir, "model.lp")
             model.backend.to_lp(out_path)
 
-            with open(out_path, "r") as f:
+            with open(out_path) as f:
                 assert "variables(flow_cap)" in f.read()
 
     @pytest.mark.skip(

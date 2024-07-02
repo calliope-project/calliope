@@ -4,7 +4,6 @@
 
 import importlib.resources
 from pathlib import Path
-from typing import Union
 
 # We import netCDF4 before xarray to mitigate a numpy warning:
 # https://github.com/pydata/xarray/issues/7259
@@ -40,8 +39,8 @@ def read_netcdf(path):
 
 
 def _pop_serialised_list(
-    attrs: dict, serialised_items: Union[str, list]
-) -> Union[list, np.ndarray]:
+    attrs: dict, serialised_items: str | list
+) -> list | np.ndarray:
     """Pop a list of serialised attributes from the attribute dictionary."""
     serialised_ = attrs.pop(serialised_items, [])
     return listify(serialised_)

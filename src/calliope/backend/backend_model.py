@@ -12,14 +12,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
 from copy import deepcopy
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Literal,
-    SupportsFloat,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, Generic, Literal, SupportsFloat, TypeVar
 
 import numpy as np
 import xarray as xr

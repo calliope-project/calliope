@@ -35,11 +35,15 @@ line-length = 88
 
 [tool.ruff.format]
 exclude = [".*.egg-info", "requirements/**"]
+skip-magic-trailing-comma = true
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "Q", "W", "D", "PT"]
+select = ["E", "F", "I", "Q", "W", "D", "PT", "UP"]
 # line too long; Black will handle these
 ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
 
 [tool.ruff.lint.mccabe]
 # Unlike Flake8, default to a complexity level of 10.

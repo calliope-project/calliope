@@ -308,7 +308,7 @@ class TestAttrDict:
             out_file = os.path.join(tempdir, "test.yaml")
             d.to_yaml(out_file)
 
-            with open(out_file, "r") as f:
+            with open(out_file) as f:
                 result = f.read()
 
             assert "some_int: 10" in result
@@ -347,16 +347,16 @@ class TestAttrDict:
             with open(imported_file, "w") as f:
                 f.write(imported_yaml)
 
-            yaml_string = """
+            yaml_string = f"""
                 foobar:
                     import:
-                        - {}
+                        - {imported_file}
                 foo:
                     bar: 1
                     baz: 2
                     3:
                         4: 5
-            """.format(imported_file)
+            """
 
             d = AttrDict.from_yaml_string(yaml_string, resolve_imports="foobar")
 

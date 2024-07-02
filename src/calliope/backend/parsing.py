@@ -9,12 +9,7 @@ import itertools
 import logging
 import operator
 from collections.abc import Callable, Iterable
-from typing import (
-    TYPE_CHECKING,
-    Literal,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import pyparsing as pp
 import xarray as xr
@@ -371,7 +366,7 @@ class ParsedBackendEquation:
             return_type (str, optional):
                 If "array", return xarray.DataArray. If "math_string", return LaTex math string.
                 Defaults to "array".
-            references (Optional[set], optional):
+            references (set | None, optional):
                 If given, any references in the math string to other model components
                 will be logged here. Defaults to None.
             where (xr.DataArray, optional):
@@ -379,7 +374,7 @@ class ParsedBackendEquation:
                 Defaults to xr.DataArray(True).
 
         Returns:
-            Union[xr.DataArray, str]:
+            xr.DataArray | str:
                 If return_type == `array`: array of backend expression objects.
                 If return_type == `math_string`: Valid LaTeX math string defining the
                 "where" conditions using logic notation.
