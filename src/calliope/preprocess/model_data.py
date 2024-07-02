@@ -5,7 +5,7 @@
 import itertools
 import logging
 from copy import deepcopy
-from typing import Literal, Optional
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -21,7 +21,7 @@ from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
 
-DATA_T = Optional[float | int | bool | str] | list[Optional[float | int | bool | str]]
+DATA_T = float | int | bool | str | None | list[float | int | bool | str | None]
 
 
 class Param(TypedDict):
@@ -505,7 +505,7 @@ class ModelDataFactory:
     def _inherit_defs(
         self,
         dim_name: Literal["nodes", "techs"],
-        dim_dict: Optional[AttrDict] = None,
+        dim_dict: AttrDict | None = None,
         **connected_dims: str,
     ) -> AttrDict:
         """For a set of node/tech definitions, climb the inheritance tree to build a final definition dictionary.
@@ -582,8 +582,8 @@ class ModelDataFactory:
         dim_item_dict: AttrDict,
         dim_name: Literal["nodes", "techs"],
         item_name: str,
-        inheritance: Optional[list] = None,
-    ) -> tuple[AttrDict, Optional[list]]:
+        inheritance: list | None = None,
+    ) -> tuple[AttrDict, list | None]:
         """Follow the `inherit` references from `nodes` to `node_groups` / from `techs` to `tech_groups`.
 
         Abstract group definitions (those in `node_groups`/`tech_groups`) can inherit each other, but `nodes`/`techs` cannot.

@@ -3,8 +3,8 @@
 """Preprocessing functionality."""
 
 import logging
+from collections.abc import Hashable
 from pathlib import Path
-from typing import Hashable, Optional
 
 import numpy as np
 import pandas as pd
@@ -50,8 +50,8 @@ class DataSource:
         model_config: dict,
         source_name: str,
         data_source: DataSourceDict,
-        data_source_dfs: Optional[dict[str, pd.DataFrame]] = None,
-        model_definition_path: Optional[Path] = None,
+        data_source_dfs: dict[str, pd.DataFrame] | None = None,
+        model_definition_path: Path | None = None,
     ):
         """Load and format a data source from file / in-memory object.
 
@@ -372,7 +372,7 @@ class DataSource:
             self.MESSAGE_TEMPLATE.format(name=self.name, message=message)
         )
 
-    def _listify_if_defined(self, key: str) -> Optional[list]:
+    def _listify_if_defined(self, key: str) -> list | None:
         """If `key` is in data source definition dictionary, return values as a list.
 
         If values are not yet an iterable, they will be coerced to an iterable of length 1.

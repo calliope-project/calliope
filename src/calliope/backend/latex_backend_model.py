@@ -7,7 +7,7 @@ import re
 import textwrap
 import typing
 from pathlib import Path
-from typing import Any, Literal, Optional, Union, overload
+from typing import Any, Literal, overload
 
 import jinja2
 import numpy as np
@@ -65,7 +65,7 @@ class MathDocumentation:
         self,
         filename: Literal[None] = None,
         mkdocs_tabbed: bool = False,
-        format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
+        format: _ALLOWED_MATH_FILE_FORMATS | None = None,
     ) -> str: ...
 
     # Expecting None (and format arg is not needed) if giving filename.
@@ -74,10 +74,10 @@ class MathDocumentation:
 
     def write(
         self,
-        filename: Optional[Union[str, Path]] = None,
+        filename: str | Path | None = None,
         mkdocs_tabbed: bool = False,
-        format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
-    ) -> Optional[str]:
+        format: _ALLOWED_MATH_FILE_FORMATS | None = None,
+    ) -> str | None:
         """Write model documentation.
 
         `build` must be run beforehand.
@@ -382,9 +382,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
 
     def add_constraint(  # noqa: D102, override
-        self,
-        name: str,
-        constraint_dict: Optional[parsing.UnparsedConstraintDict] = None,
+        self, name: str, constraint_dict: parsing.UnparsedConstraintDict | None = None
     ) -> None:
         equation_strings: list = []
 
@@ -403,9 +401,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_global_expression(  # noqa: D102, override
-        self,
-        name: str,
-        expression_dict: Optional[parsing.UnparsedExpressionDict] = None,
+        self, name: str, expression_dict: parsing.UnparsedExpressionDict | None = None
     ) -> None:
         equation_strings: list = []
 
@@ -428,7 +424,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_dict: Optional[parsing.UnparsedVariableDict] = None
+        self, name: str, variable_dict: parsing.UnparsedVariableDict | None = None
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
 
@@ -451,7 +447,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_dict: Optional[parsing.UnparsedObjectiveDict] = None
+        self, name: str, objective_dict: parsing.UnparsedObjectiveDict | None = None
     ) -> None:
         sense_dict = {
             "minimize": r"\min{}",
@@ -560,12 +556,12 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     def _generate_math_string(
         self,
-        parsed_component: Optional[parsing.ParsedBackendComponent],
+        parsed_component: parsing.ParsedBackendComponent | None,
         where_array: xr.DataArray,
-        equations: Optional[list[dict[str, str]]] = None,
-        sense: Optional[str] = None,
-        where: Optional[str] = None,
-        sets: Optional[list[str]] = None,
+        equations: list[dict[str, str]] | None = None,
+        sense: str | None = None,
+        where: str | None = None,
+        sets: list[str] | None = None,
     ) -> None:
         if parsed_component is not None:
             where = parsed_component.evaluate_where(self, return_type="math_string")

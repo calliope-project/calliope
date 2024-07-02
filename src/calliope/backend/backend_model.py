@@ -9,20 +9,10 @@ import logging
 import time
 import typing
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterable
 from copy import deepcopy
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Generic,
-    Iterable,
-    Literal,
-    Optional,
-    SupportsFloat,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Generic, Literal, SupportsFloat, TypeVar
 
 import numpy as np
 import xarray as xr
@@ -246,13 +236,13 @@ class BackendModelGenerator(ABC):
     def _add_component(
         self,
         name: str,
-        component_dict: Optional[Tp],
+        component_dict: Tp | None,
         component_setter: Callable,
         component_type: Literal[
             "variables", "global_expressions", "constraints", "objectives"
         ],
         break_early: bool = True,
-    ) -> Optional[parsing.ParsedBackendComponent]:
+    ) -> parsing.ParsedBackendComponent | None:
         """Generalised function to add a optimisation problem component array to the model.
 
         Args:
@@ -409,8 +399,8 @@ class BackendModelGenerator(ABC):
         name: str,
         da: xr.DataArray,
         obj_type: _COMPONENTS_T,
-        unparsed_dict: Union[parsing.UNPARSED_DICTS, dict],
-        references: Optional[set] = None,
+        unparsed_dict: parsing.UNPARSED_DICTS | dict,
+        references: set | None = None,
     ):
         """Add array of backend objects to backend dataset in-place.
 
@@ -593,7 +583,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
     @abstractmethod
     def get_constraint(
         self, name: str, as_backend_objs: bool = True, eval_body: bool = False
-    ) -> Union[xr.DataArray, xr.Dataset]:
+    ) -> xr.DataArray | xr.Dataset:
         """Get constraint data from the backend for debugging.
 
         Dat can be returned as  a table of details or as an array of backend interface objects
@@ -673,7 +663,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
     @abstractmethod
     def update_parameter(
-        self, name: str, new_values: Union[xr.DataArray, SupportsFloat]
+        self, name: str, new_values: xr.DataArray | SupportsFloat
     ) -> None:
         """Update parameter elements using an array of new values.
 
@@ -695,8 +685,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         self,
         name: str,
         *,
-        min: Optional[Union[xr.DataArray, SupportsFloat]] = None,
-        max: Optional[Union[xr.DataArray, SupportsFloat]] = None,
+        min: xr.DataArray | SupportsFloat | None = None,
+        max: xr.DataArray | SupportsFloat | None = None,
     ) -> None:
         """Update the bounds on a decision variable.
 
@@ -714,7 +704,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
 
     @abstractmethod
-    def fix_variable(self, name: str, where: Optional[xr.DataArray] = None) -> None:
+    def fix_variable(self, name: str, where: xr.DataArray | None = None) -> None:
         """Fix the variable value to the value quantified on the most recent call to `solve`.
 
         Fixed variables will be treated as parameters in the optimisation.
@@ -728,7 +718,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
 
     @abstractmethod
-    def unfix_variable(self, name: str, where: Optional[xr.DataArray] = None) -> None:
+    def unfix_variable(self, name: str, where: xr.DataArray | None = None) -> None:
         """Unfix the variable so that it is treated as a decision variable in the next call to `solve`.
 
         Args:
@@ -755,7 +745,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
 
     @abstractmethod
-    def to_lp(self, path: Union[str, Path]) -> None:
+    def to_lp(self, path: str | Path) -> None:
         """Write the optimisation problem to file in the linear programming LP format.
 
         The LP file can be used for debugging and to submit to solvers directly.

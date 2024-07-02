@@ -6,7 +6,6 @@
 import datetime
 import logging
 import sys
-from typing import Optional
 
 _time_format = "%Y-%m-%d %H:%M:%S"
 
@@ -98,7 +97,7 @@ def log_time(
     logger: logging.Logger,
     timings: dict,
     identifier: str,
-    comment: Optional[str] = None,
+    comment: str | None = None,
     level: str = "info",
     time_since_solve_start: bool = False,
 ) -> float:

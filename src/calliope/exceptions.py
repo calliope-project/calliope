@@ -4,7 +4,6 @@
 
 import textwrap
 import warnings
-from typing import Optional, Union
 
 
 class ModelError(Exception):
@@ -41,8 +40,8 @@ def warn(message: str, _class: type[Warning] = ModelWarning):
 
 
 def print_warnings_and_raise_errors(
-    warnings: Optional[Union[list[str], dict[str, list[str]]]] = None,
-    errors: Optional[Union[list[str], dict[str, list[str]]]] = None,
+    warnings: list[str] | dict[str, list[str]] | None = None,
+    errors: list[str] | dict[str, list[str]] | None = None,
     during: str = "model processing",
     bullet: str = " * ",
 ) -> None:
@@ -92,7 +91,7 @@ def print_warnings_and_raise_errors(
     def _predicate(string_: str) -> bool:
         return not string_.startswith((bullet, spacer))
 
-    def _indenter(strings: Union[list[str], dict[str, list[str]]]) -> str:
+    def _indenter(strings: list[str] | dict[str, list[str]]) -> str:
         if isinstance(strings, dict):
             sorted_strings = []
             for k, v in strings.items():
