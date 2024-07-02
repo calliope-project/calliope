@@ -278,9 +278,9 @@ class EvalOperatorOperand(EvalToArrayStr):
             # We ignore zeros that do nothing
             if self._skip_component_on_conditional(evaluated_operand, operator_):
                 continue
-            if isinstance(self.value[0], self):
+            if isinstance(self.value[0], type(self)):
                 val = "(" + val + ")"
-            if isinstance(operand, self):
+            if isinstance(operand, type(self)):
                 evaluated_operand = "(" + evaluated_operand + ")"
             if self._skip_component_on_conditional(val, operator_):
                 val = evaluated_operand
