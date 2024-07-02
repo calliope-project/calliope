@@ -59,9 +59,10 @@ class DataSource:
             model_config (dict): Model initialisation configuration dictionary.
             source_name (str): name of the data source.
             data_source (DataSourceDict): Data source definition dictionary.
-            data_source_dfs (Optional[dict[str, pd.DataFrame]]):
+            data_source_dfs (dict[str, pd.DataFrame] | None, optional):
                 If given, a dictionary mapping source names in `data_source` to in-memory pandas DataFrames.
-            model_definition_path (Optional[Path], optional):
+                Defaults to None.
+            model_definition_path (Path | None, optional):
                 If given, the path to the model definition YAML file, relative to which data source filepaths will be set.
                 If None, relative data source filepaths will be considered relative to the current working directory.
                 Defaults to None.
@@ -383,7 +384,7 @@ class DataSource:
             default (Literal[None, 0]): Either zero or None
 
         Returns:
-            Optional[list]: If `key` not defined in data source, return None, else return values as a list.
+            list | None: If `key` not defined in data source, return None, else return values as a list.
         """
         vals = self.input.get(key, None)
         if vals is not None:

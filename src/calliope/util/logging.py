@@ -107,7 +107,7 @@ def log_time(
         logger (logging.Logger): Logger to use for logging the time.
         timings (dict): Dictionary of model timings.
         identifier (str): Short description to use as the event key in `timings`.
-        comment (Optional[str], optional):
+        comment (str | None, optional):
             Long description of the event.
             If not given, `identifier` will be used.
             Defaults to None.

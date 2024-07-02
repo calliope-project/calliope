@@ -150,7 +150,7 @@ class ParsingHelperFunction(ABC):
         """Force a string to a list of length one if not already provided as a list.
 
         Args:
-            vals (Union[list[str], str]): Values (or single value) to force to a list.
+            vals (list[str] | str): Values (or single value) to force to a list.
 
         Returns:
             list[str]: Input forced to a list.
@@ -186,8 +186,8 @@ class Inheritance(ParsingHelperFunction):
         The group items being referenced must be defined by the user in `node_groups`/`tech_groups`.
 
         Args:
-            nodes (Optional[str], optional): group name to search for inheritance of on the `nodes` dimension. Default is None.
-            techs (Optional[str], optional): group name to search for inheritance of on the `techs` dimension. Default is None.
+            nodes (str | None, optional): group name to search for inheritance of on the `nodes` dimension. Default is None.
+            techs (str | None, optional): group name to search for inheritance of on the `techs` dimension. Default is None.
 
         Returns:
             xr.Dataset: Boolean array where values are True where the group is inherited, False otherwise. Array dimensions will equal the number of non-None inputs.
@@ -282,7 +282,7 @@ class WhereAny(ParsingHelperFunction):
 
         Args:
             parameter (str): Reference to a model input parameter
-            over (Union[str, list[str]]): dimension(s) over which to apply `any`.
+            over (str | list[str]): dimension(s) over which to apply `any`.
 
         Returns:
             xr.DataArray:
@@ -453,7 +453,7 @@ class Sum(ParsingHelperFunction):
 
         Args:
             array (xr.DataArray): expression array
-            over (Union[str, list[str]]): dimension(s) over which to apply `sum`.
+            over (str | list[str]): dimension(s) over which to apply `sum`.
 
         Returns:
             xr.DataArray:

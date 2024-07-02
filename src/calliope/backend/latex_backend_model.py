@@ -83,20 +83,24 @@ class MathDocumentation:
         `build` must be run beforehand.
 
         Args:
-            filename (Optional[str], optional):
-                If given, will write the built mathematical formulation to a file with the given extension as the file format. Defaults to None.
-            format (Optional["tex", "rst", "md"], optional):
+            filename (str | Path | None, optional):
+                If given, will write the built mathematical formulation to a file with
+                the given extension as the file format. Defaults to None.
+            mkdocs_tabbed (bool, optional):
+                If True and Markdown docs are being generated, the equations will be on
+                a tab and the original YAML math definition will be on another tab.
+                Defaults to False.
+            format (_ALLOWED_MATH_FILE_FORMATS | None, optional):
                 Not required if filename is given (as the format will be automatically inferred).
                 Required if expecting a string return from calling this function. The LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown).
                 Defaults to None.
-            mkdocs_tabbed (bool, optional): If True and Markdown docs are being generated, the equations will be on a tab and the original YAML math definition will be on another tab.
 
         Raises:
             exceptions.ModelError: Math strings need to be built first (`build`)
             ValueError: The file format (inferred automatically from `filename` or given by `format`) must be one of ["tex", "rst", "md"].
 
         Returns:
-            Optional[str]:
+            str | None:
                 If `filename` is None, the built mathematical formulation documentation will be returned as a string.
         """
         if not hasattr(self, "_instance"):
@@ -463,7 +467,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> None:
             self._add_latex_strings(where, element, equation_strings, references)
-            return None
 
         parsed_component = self._add_component(
             name, objective_dict, _objective_setter, "objectives", break_early=False
@@ -577,8 +580,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 sets=sets,
             )
             where_array.attrs.update({"math_string": equation_element_string})
-
-        return None
 
     @staticmethod
     def _render(template: str, **kwargs) -> str:

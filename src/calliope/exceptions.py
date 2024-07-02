@@ -66,11 +66,11 @@ def print_warnings_and_raise_errors(
             * foobaz
 
     Args:
-        warnings (Optional[Union[list[str], dict[str, list[str]]]], optional):
+        warnings (list[str] | dict[str, list[str]] | None, optional):
             List of warning strings or dictionary of warning strings.
             If None or an empty list, no warnings will be printed.
             Defaults to None.
-        errors (Optional[Union[list[str], dict[str, list[str]]]], optional):
+        errors (list[str] | dict[str, list[str]] | None, optional):
             List of error strings or dictionary of error strings.
             If None or an empty list, no errors will be raised.
             Defaults to None.
@@ -106,5 +106,3 @@ def print_warnings_and_raise_errors(
 
     if errors:
         raise ModelError(f"Errors during {during}:\n" + _indenter(errors))
-
-    return None

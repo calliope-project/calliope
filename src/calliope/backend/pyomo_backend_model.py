@@ -542,7 +542,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             use_inf_as_na (bool, optional): If True, see np.inf as np.nan. Defaults to True.
 
         Returns:
-            Union[type[ObjParameter], float]:
+            type[ObjParameter] | float:
                 If both `val` and `default` are np.nan/None, return np.nan.
                 Otherwise return ObjParameter(val/default).
         """
@@ -623,7 +623,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         If not np.nan/None, output objects are also added to the backend model object in-place.
 
         Args:
-            mask (Union[bool, np.bool_]): If True, add constraint, otherwise return np.nan
+            mask (bool | np.bool_): If True, add constraint, otherwise return np.nan
             expr (Any): Equation expression.
 
         Kwargs:
@@ -654,13 +654,13 @@ class PyomoBackendModel(backend_model.BackendModel):
         If not np.nan/None, output objects are also added to the backend model object in-place.
 
         Args:
-            mask (Union[bool, np.bool_]): If True, add expression, otherwise return np.nan.
+            mask (bool | np.bool_): If True, add expression, otherwise return np.nan.
             expr (Any): Linear expression to add.
         Kwargs:
             name (str): Expression name.
 
         Returns:
-            Union[type[pmo.expression], float]:
+            type[pmo.expression] | float:
                 If mask is True, return np.nan.
                 Otherwise return pmo_expression(expr).
         """
@@ -715,7 +715,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         only if the backend model has been successfully optimised, otherwise evaluation will return None.
 
         Args:
-            val (Union[ObjParameter, pmo.expression, ObjVariable, np.nan]):
+            val (ObjParameter | ObjVariable | float):
                 Item to be evaluated.
 
         Returns:
@@ -792,15 +792,14 @@ class PyomoBackendModel(backend_model.BackendModel):
         """
         if pd.isnull(val):
             return np.nan
-        else:
-            if eval_body:
-                expr = val()
-                if expr is None:
-                    return val.to_string()
-                else:
-                    return expr
-            else:
+        elif eval_body:
+            expr = val()
+            if expr is None:
                 return val.to_string()
+            else:
+                return expr
+        else:
+            return val.to_string()
 
     @contextmanager
     def _datetime_as_string(self, data: xr.DataArray | xr.Dataset) -> Iterator:

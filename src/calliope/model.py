@@ -68,12 +68,14 @@ class Model:
                 If str or Path, must be the path to a model configuration file.
                 If dict or AttrDict, must fully specify the model.
                 If an xarray dataset, must be a valid calliope model.
-            scenario (str):
-                Comma delimited string of pre-defined `scenarios` to apply to the model,
-            override_dict (dict):
+            scenario (str | None, optional):
+                Comma delimited string of pre-defined `scenarios` to apply to the model.
+                Defaults to None.
+            override_dict (dict | None, optional):
                 Additional overrides to apply to `config`.
                 These will be applied *after* applying any defined `scenario` overrides.
-            data_source_dfs (dict[str, pd.DataFrame], optional):
+                Defaults to None.
+            data_source_dfs (dict[str, pd.DataFrame] | None, optional):
                 Model definition `data_source` entries can reference in-memory pandas DataFrames.
                 The referenced data must be supplied here as a dictionary of those DataFrames.
                 Defaults to None.
@@ -273,7 +275,7 @@ class Model:
             name (str):
                 Name of dictionary which will be set as the model property name and
                 (if necessary) the dataset attribute name.
-            dict_to_add (Optional[dict], optional):
+            dict_to_add (dict | None, optional):
                 If given, set as both the model property and the dataset attribute,
                 otherwise set an existing dataset attribute as a model property of the
                 same name. Defaults to None.
