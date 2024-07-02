@@ -371,7 +371,7 @@ class Model:
         self.backend = backend.get_model_backend(
             backend_name, backend_input, **backend_config
         )
-        self.backend.build()
+        self.backend.build_all_math()
 
         self._model_data.attrs["timestamp_build_complete"] = log_time(
             LOGGER,

@@ -1,6 +1,6 @@
-"""Callipe's backend module."""
+"""Calliope's optimisation backend module."""
 
-from xarray import Dataset
+import xarray as xr
 
 from calliope.backend.latex_backend_model import MathDocumentation
 from calliope.backend.parsing import ParsedBackendComponent
@@ -10,7 +10,7 @@ from calliope.exceptions import BackendError
 MODEL_BACKENDS = ("pyomo",)
 
 
-def get_model_backend(name: str, data: Dataset, **kwargs):
+def get_model_backend(name: str, data: xr.Dataset, **kwargs):
     """Assign a backend using the given configuration.
 
     Args:
@@ -29,4 +29,5 @@ def get_model_backend(name: str, data: Dataset, **kwargs):
             backend = PyomoBackendModel(data, **kwargs)
         case _:
             raise BackendError(f"Incorrect backend '{name}' requested.")
+
     return backend

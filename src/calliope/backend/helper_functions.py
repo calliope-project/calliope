@@ -9,12 +9,16 @@
 import functools
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Literal, Mapping, Optional, Union, overload
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
 
 import numpy as np
 import xarray as xr
 
 from calliope.exceptions import BackendError
+
+if TYPE_CHECKING:
+    from calliope.backend.backend_model import BackendModel
 
 _registry: dict[
     Literal["where", "expression"], dict[str, type["ParsingHelperFunction"]]
@@ -30,7 +34,7 @@ class ParsingHelperFunction(ABC):
         *,
         equation_name: str,
         input_data: xr.Dataset,
-        backend_interface=None,
+        backend_interface: type["BackendModel"] | None = None,
         **kwargs,
     ) -> None:
         """Abstract helper function class, which all helper functions must subclass.
