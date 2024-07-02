@@ -8,12 +8,11 @@ import logging
 import os
 import re
 from abc import ABC
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
 from typing import (
     Any,
-    Iterable,
-    Iterator,
     Literal,
     Optional,
     SupportsFloat,

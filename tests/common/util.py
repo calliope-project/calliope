@@ -4,6 +4,7 @@ from typing import Literal, Optional, Union
 
 import calliope
 import xarray as xr
+from calliope import backend
 
 
 def build_test_model(
@@ -79,7 +80,7 @@ def build_lp(
     model: calliope.Model,
     outfile: Union[str, Path],
     math: Optional[dict[Union[dict, list]]] = None,
-    backend: Literal["pyomo"] = "pyomo",
+    backend_name: Literal["pyomo"] = "pyomo",
 ) -> None:
     """
     Write a barebones LP file with which to compare in tests.
@@ -90,9 +91,9 @@ def build_lp(
         model (calliope.Model): Calliope model.
         outfile (Union[str, Path]): Path to LP file.
         math (Optional[dict], optional): All constraint/global expression/objective math to apply. Defaults to None.
-        backend (Literal["pyomo"], optional): Backend to use to create the LP file. Defaults to "pyomo".
+        backend_name (Literal["pyomo"], optional): Backend to use to create the LP file. Defaults to "pyomo".
     """
-    backend_instance = model._BACKENDS[backend](model._model_data)
+    backend_instance = backend.get_model_backend(backend_name, model._model_data)
     for name, dict_ in model.math["variables"].items():
         backend_instance.add_variable(name, dict_)
     for name, dict_ in model.math["global_expressions"].items():

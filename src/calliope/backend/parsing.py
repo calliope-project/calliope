@@ -8,14 +8,11 @@ import functools
 import itertools
 import logging
 import operator
+from collections.abc import Callable, Iterable
 from typing import (
     TYPE_CHECKING,
-    Callable,
-    Iterable,
     Literal,
-    Optional,
     TypeVar,
-    Union,
     overload,
 )
 
@@ -88,12 +85,12 @@ class UnparsedObjectiveDict(TypedDict):
     sense: str
 
 
-UNPARSED_DICTS = Union[
-    UnparsedConstraintDict,
-    UnparsedVariableDict,
-    UnparsedExpressionDict,
-    UnparsedObjectiveDict,
-]
+UNPARSED_DICTS = (
+    UnparsedConstraintDict
+    | UnparsedVariableDict
+    | UnparsedExpressionDict
+    | UnparsedObjectiveDict
+)
 T = TypeVar("T", bound=UNPARSED_DICTS)
 
 LOGGER = logging.getLogger(__name__)
@@ -108,8 +105,8 @@ class ParsedBackendEquation:
         sets: list[str],
         expression: pp.ParseResults,
         where_list: list[pp.ParseResults],
-        sub_expressions: Optional[dict[str, pp.ParseResults]] = None,
-        slices: Optional[dict[str, pp.ParseResults]] = None,
+        sub_expressions: dict[str, pp.ParseResults] | None = None,
+        slices: dict[str, pp.ParseResults] | None = None,
     ) -> None:
         """For parsing equation expressions and corresponding "where" strings.
 
@@ -122,10 +119,10 @@ class ParsedBackendEquation:
                 Parsed arithmetic/equation expression.
             where_list (list[pp.ParseResults]):
                 List of parsed where strings.
-            sub_expressions (Optional[dict[str, pp.ParseResults]], optional):
+            sub_expressions (dict[str, pp.ParseResults] | None, optional):
                 Dictionary of parsed sub-expressions with which to replace sub-expression references
                 on evaluation of the parsed expression. Defaults to None.
-            slices (Optional[dict[str, pp.ParseResults]], optional):
+            slices (dict[str, pp.ParseResults] | None, optional):
                 Dictionary of parsed array slices with which to replace slice references
                 on evaluation of the parsed expression / sub-expression. Defaults to None.
         """
@@ -205,7 +202,7 @@ class ParsedBackendEquation:
             if isinstance(parser_element, to_find):
                 items.append(parser_element.name)
 
-            elif isinstance(parser_element, (pp.ParseResults, list)):
+            elif isinstance(parser_element, pp.ParseResults | list):
                 items.extend(recursive_func(parser_elements=parser_element))
 
             elif isinstance(parser_element, valid_eval_classes):
@@ -258,7 +255,7 @@ class ParsedBackendEquation:
         backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: Literal["array"] = "array",
-        references: Optional[set] = None,
+        references: set | None = None,
         initial_where: xr.DataArray = TRUE_ARRAY,
     ) -> xr.DataArray: ...
 
@@ -269,7 +266,7 @@ class ParsedBackendEquation:
         backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: Literal["math_string"],
-        references: Optional[set] = None,
+        references: set | None = None,
     ) -> str: ...
 
     def evaluate_where(
@@ -279,7 +276,7 @@ class ParsedBackendEquation:
         return_type: str = "array",
         references: set | None = None,
         initial_where: xr.DataArray = TRUE_ARRAY,
-    ) -> Union[xr.DataArray, str]:
+    ) -> xr.DataArray | str:
         """Evaluate parsed backend object dictionary `where` string.
 
         Args:
@@ -295,7 +292,7 @@ class ParsedBackendEquation:
                 Defaults to xr.DataArray(True) (i.e., no effect).
 
         Returns:
-            Union[xr.DataArray, str]:
+            xr.DataArray | str:
                 If return_type == `array`: Boolean array defining on which index items a parsed component should be built.
                 If return_type == `math_string`: Valid LaTeX math string defining the "where" conditions using logic notation.
         """
@@ -342,7 +339,7 @@ class ParsedBackendEquation:
         backend_interface: backend_model.BackendModel,
         *,
         return_type: Literal["array"] = "array",
-        references: Optional[set] = None,
+        references: set | None = None,
         where: xr.DataArray = TRUE_ARRAY,
     ) -> xr.DataArray: ...
 
@@ -353,7 +350,7 @@ class ParsedBackendEquation:
         backend_interface: backend_model.BackendModel,
         *,
         return_type: Literal["math_string"],
-        references: Optional[set] = None,
+        references: set | None = None,
     ) -> str: ...
 
     def evaluate_expression(
@@ -361,9 +358,9 @@ class ParsedBackendEquation:
         backend_interface: backend_model.BackendModel,
         *,
         return_type: Literal["array", "math_string"] = "array",
-        references: Optional[set] = None,
+        references: set | None = None,
         where: xr.DataArray = TRUE_ARRAY,
-    ) -> Union[xr.DataArray, str]:
+    ) -> xr.DataArray | str:
         """Evaluate a math string to produce an array backend objects or a LaTex math string.
 
         Args:
