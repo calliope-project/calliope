@@ -157,9 +157,7 @@ def clean_results(results, zero_threshold):
         )
         LOGGER.warn(comment)
     else:
-        comment = "Postprocessing: zero threshold of {} not required".format(
-            zero_threshold
-        )
+        comment = f"Postprocessing: zero threshold of {zero_threshold} not required"
         LOGGER.info(comment)
 
     # Combine unused_supply and unmet_demand into one variable

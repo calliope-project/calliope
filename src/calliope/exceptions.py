@@ -4,7 +4,6 @@
 
 import textwrap
 import warnings
-from typing import Optional, Union
 
 
 class ModelError(Exception):
@@ -41,8 +40,8 @@ def warn(message: str, _class: type[Warning] = ModelWarning):
 
 
 def print_warnings_and_raise_errors(
-    warnings: Optional[Union[list[str], dict[str, list[str]]]] = None,
-    errors: Optional[Union[list[str], dict[str, list[str]]]] = None,
+    warnings: list[str] | dict[str, list[str]] | None = None,
+    errors: list[str] | dict[str, list[str]] | None = None,
     during: str = "model processing",
     bullet: str = " * ",
 ) -> None:
@@ -67,11 +66,11 @@ def print_warnings_and_raise_errors(
             * foobaz
 
     Args:
-        warnings (Optional[Union[list[str], dict[str, list[str]]]], optional):
+        warnings (list[str] | dict[str, list[str]] | None, optional):
             List of warning strings or dictionary of warning strings.
             If None or an empty list, no warnings will be printed.
             Defaults to None.
-        errors (Optional[Union[list[str], dict[str, list[str]]]], optional):
+        errors (list[str] | dict[str, list[str]] | None, optional):
             List of error strings or dictionary of error strings.
             If None or an empty list, no errors will be raised.
             Defaults to None.
@@ -92,7 +91,7 @@ def print_warnings_and_raise_errors(
     def _predicate(string_: str) -> bool:
         return not string_.startswith((bullet, spacer))
 
-    def _indenter(strings: Union[list[str], dict[str, list[str]]]) -> str:
+    def _indenter(strings: list[str] | dict[str, list[str]]) -> str:
         if isinstance(strings, dict):
             sorted_strings = []
             for k, v in strings.items():
@@ -107,5 +106,3 @@ def print_warnings_and_raise_errors(
 
     if errors:
         raise ModelError(f"Errors during {during}:\n" + _indenter(errors))
-
-    return None

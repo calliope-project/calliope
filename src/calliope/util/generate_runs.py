@@ -53,10 +53,10 @@ def generate_runs(model_file, scenarios=None, additional_args=None, override_dic
         ).strip()
 
         if override_dict:
-            cmd = cmd + ' --override_dict="{}"'.format(override_dict)
+            cmd = f'{cmd} --override_dict="{override_dict}"'
 
         if additional_args:
-            cmd = cmd + " " + additional_args
+            cmd = f"{cmd} {additional_args}"
 
         commands.append(cmd)
 
@@ -83,7 +83,7 @@ def generate_bash_script(
         "",
         "if [[ $# -eq 0 ]] ; then",
         "    echo No parameter given, running all runs sequentially...",
-        "    for i in $(seq 1 {}); do process_case $i; done".format(len(commands)),
+        f"    for i in $(seq 1 {len(commands)}); do process_case $i; done",
         "else",
         "    echo Running run $1",
         "    process_case $1",
@@ -126,10 +126,10 @@ def generate_bsub_script(
 
     lines = [
         "#!/bin/sh",
-        "#BSUB -J calliope[1-{}]".format(len(commands)),
-        "#BSUB -n {}".format(cluster_threads),
-        '#BSUB -R "rusage[mem={}]"'.format(cluster_mem),
-        "#BSUB -W {}".format(cluster_time),
+        f"#BSUB -J calliope[1-{len(commands)}]",
+        f"#BSUB -n {cluster_threads}",
+        f'#BSUB -R "rusage[mem={cluster_mem}]"',
+        f"#BSUB -W {cluster_time}",
         "#BSUB -r",  # Automatically restart failed jobs
         "#BSUB -o log_%I.log",
         "",
@@ -169,12 +169,10 @@ def generate_sbatch_script(
     lines = [
         "#!/bin/bash",
         "#SBATCH -J calliope",  # Name of the job
-        "#SBATCH --array=1-{}".format(len(commands)),  # How many jobs there are
-        "#SBATCH --ntasks={}".format(cluster_threads),
-        "#SBATCH --mem={}".format(cluster_mem),
-        "#SBATCH --time={}".format(
-            cluster_time
-        ),  # How much wallclock time will be required
+        f"#SBATCH --array=1-{len(commands)}",  # How many jobs there are
+        f"#SBATCH --ntasks={cluster_threads}",
+        f"#SBATCH --mem={cluster_mem}",
+        f"#SBATCH --time={cluster_time}",  # How much wallclock time will be required
         "#SBATCH -o log_%a.log",
         "",
         "#! Optional add-ins for SBATCH (uncomment and add info as necessary):",

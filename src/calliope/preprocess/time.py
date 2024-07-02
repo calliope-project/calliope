@@ -219,8 +219,8 @@ def _check_time_subset(ts_index: pd.Index, time_subset: list[str]):
     except ValueError as e:
         raise exceptions.ModelError(
             "Timeseries subset must be in ISO format (anything up to the  "
-            "detail of `%Y-%m-%d %H:%M:%S`).\n User time subset: {}\n "
-            "Error caused: {}".format(time_subset, e)
+            f"detail of `%Y-%m-%d %H:%M:%S`).\n User time subset: {time_subset}\n "
+            f"Error caused: {e}"
         )
 
     df_start_time = ts_index[0]

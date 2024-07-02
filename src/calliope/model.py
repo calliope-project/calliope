@@ -5,8 +5,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, TypeVar
 
 import pandas as pd
 import xarray as xr
@@ -35,7 +36,7 @@ from calliope.util.tools import relative_path
 
 LOGGER = logging.getLogger(__name__)
 
-T = TypeVar("T", bound=Union[PyomoBackendModel, LatexBackendModel])
+T = TypeVar("T", bound=PyomoBackendModel | LatexBackendModel)
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
 
@@ -46,7 +47,7 @@ def read_netcdf(path):
     return Model(model_definition=model_data)
 
 
-class Model(object):
+class Model:
     """A Calliope Model."""
 
     _BACKENDS: dict[str, Callable] = {"pyomo": PyomoBackendModel}
@@ -55,9 +56,9 @@ class Model(object):
     def __init__(
         self,
         model_definition: str | Path | dict | xr.Dataset,
-        scenario: Optional[str] = None,
-        override_dict: Optional[dict] = None,
-        data_source_dfs: Optional[dict[str, pd.DataFrame]] = None,
+        scenario: str | None = None,
+        override_dict: dict | None = None,
+        data_source_dfs: dict[str, pd.DataFrame] | None = None,
         **kwargs,
     ):
         """Returns a new Model from YAML model configuration files or a fully specified dictionary.
@@ -67,12 +68,14 @@ class Model(object):
                 If str or Path, must be the path to a model configuration file.
                 If dict or AttrDict, must fully specify the model.
                 If an xarray dataset, must be a valid calliope model.
-            scenario (str):
-                Comma delimited string of pre-defined `scenarios` to apply to the model,
-            override_dict (dict):
+            scenario (str | None, optional):
+                Comma delimited string of pre-defined `scenarios` to apply to the model.
+                Defaults to None.
+            override_dict (dict | None, optional):
                 Additional overrides to apply to `config`.
                 These will be applied *after* applying any defined `scenario` overrides.
-            data_source_dfs (dict[str, pd.DataFrame], optional):
+                Defaults to None.
+            data_source_dfs (dict[str, pd.DataFrame] | None, optional):
                 Model definition `data_source` entries can reference in-memory pandas DataFrames.
                 The referenced data must be supplied here as a dictionary of those DataFrames.
                 Defaults to None.
@@ -82,7 +85,7 @@ class Model(object):
         self.config: AttrDict
         self.defaults: AttrDict
         self.math: AttrDict
-        self._model_def_path: Optional[Path]
+        self._model_def_path: Path | None
         self.backend: BackendModel
         self.math_documentation = MathDocumentation()
         self._is_built: bool = False
@@ -145,8 +148,8 @@ class Model(object):
         self,
         model_definition: calliope.AttrDict,
         applied_overrides: str,
-        scenario: Optional[str],
-        data_source_dfs: Optional[dict[str, pd.DataFrame]],
+        scenario: str | None,
+        data_source_dfs: dict[str, pd.DataFrame] | None,
     ) -> None:
         """Initialise the model using pre-processed YAML files and optional dataframes/dicts.
 
@@ -265,14 +268,14 @@ class Model(object):
         self._add_observed_dict("config")
         self._add_observed_dict("math")
 
-    def _add_observed_dict(self, name: str, dict_to_add: Optional[dict] = None) -> None:
+    def _add_observed_dict(self, name: str, dict_to_add: dict | None = None) -> None:
         """Add the same dictionary as property of model object and an attribute of the model xarray dataset.
 
         Args:
             name (str):
                 Name of dictionary which will be set as the model property name and
                 (if necessary) the dataset attribute name.
-            dict_to_add (Optional[dict], optional):
+            dict_to_add (dict | None, optional):
                 If given, set as both the model property and the dataset attribute,
                 otherwise set an existing dataset attribute as a model property of the
                 same name. Defaults to None.

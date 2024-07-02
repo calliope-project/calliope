@@ -496,8 +496,7 @@ class TestCostConstraints:
     def test_loc_techs_cost_var_constraint(self, tech, scenario, cost):
         """I for i in sets.loc_techs_om_cost if i not in sets.loc_techs_conversion_plus + sets.loc_techs_conversion"""
         m = build_model(
-            {"techs.{}.costs.monetary.{}".format(tech, cost): 1},
-            "{},two_hours".format(scenario),
+            {f"techs.{tech}.costs.monetary.{cost}": 1}, f"{scenario},two_hours"
         )
         m.build()
         assert "cost_var" in m.backend.expressions
@@ -646,7 +645,7 @@ class TestCapacityConstraints:
         m.build()
         assert hasattr(
             m._backend_model,
-            "flow_capacity_per_storage_capacity_{}_constraint".format(override),
+            f"flow_capacity_per_storage_capacity_{override}_constraint",
         )
 
     @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
@@ -673,9 +672,7 @@ class TestCapacityConstraints:
         m.build()
         assert not any(
             [
-                hasattr(
-                    m._backend_model, "flow_capacity_storage_{}_constraint".format(i)
-                )
+                hasattr(m._backend_model, f"flow_capacity_storage_{i}_constraint")
                 for i in ["max", "min"]
             ]
         )
@@ -700,11 +697,7 @@ class TestCapacityConstraints:
 
         else:
             m = build_model(
-                {
-                    "techs.test_supply_plus.constraints.resource_cap_{}".format(
-                        override
-                    ): 10
-                },
+                {f"techs.test_supply_plus.constraints.resource_cap_{override}": 10},
                 "simple_supply_and_supply_plus,two_hours,investment_costs",
             )
             m.build()
@@ -1801,7 +1794,7 @@ class TestNewBackend:
             "cost", as_backend_objs=False, eval_body=True
         )
         assert (
-            expr.to_series().dropna().apply(lambda x: isinstance(x, (float, int))).all()
+            expr.to_series().dropna().apply(lambda x: isinstance(x, float | int)).all()
         )
 
     def test_new_build_get_constraint(self, simple_supply):
@@ -1847,7 +1840,7 @@ class TestNewBackend:
             constr["body"]
             .to_series()
             .dropna()
-            .apply(lambda x: isinstance(x, (float, int)))
+            .apply(lambda x: isinstance(x, float | int))
             .all()
         )
 

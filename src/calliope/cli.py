@@ -79,7 +79,7 @@ def format_exceptions(
             profile.disable()
             if profile_filename:
                 dump_path = os.path.expanduser(profile_filename)
-                click.secho("\nSaving cProfile output to: {}".format(dump_path))
+                click.secho(f"\nSaving cProfile output to: {dump_path}")
                 profile.dump_stats(dump_path)
             else:
                 click.secho("\n\n----PROFILE OUTPUT----\n\n")
@@ -97,7 +97,7 @@ def format_exceptions(
             stack = traceback.extract_tb(e.__traceback__)
             # Get last stack trace entry still in Calliope
             last = [i for i in stack if "calliope" in i[0]][-1]
-            err_string = "\nError in {}, {}:{}".format(last[2], last[0], last[1])
+            err_string = f"\nError in {last[2]}, {last[0]}:{last[1]}"
             click.secho(err_string, fg="red")
             click.secho(str(e), fg="red")
             if start_time:
@@ -111,14 +111,12 @@ def print_end_time(start_time, msg="complete"):
     secs = round((end_time - start_time).total_seconds(), 1)
     tend = end_time.strftime(_time_format)
     click.secho(
-        "\nCalliope run {}. " "Elapsed: {} seconds (time at exit: {})".format(
-            msg, secs, tend
-        )
+        f"\nCalliope run {msg}. " f"Elapsed: {secs} seconds (time at exit: {tend})"
     )
 
 
 def _get_version():
-    return "Version {}".format(__version__)
+    return f"Version {__version__}"
 
 
 def _cli_start(debug, quiet):
@@ -176,7 +174,7 @@ def new(path, template, debug):
         if template is None:
             template = "national_scale"
         source_path = examples._EXAMPLE_MODEL_DIR / template
-        click.echo("Copying {} template to target directory: {}".format(template, path))
+        click.echo(f"Copying {template} template to target directory: {path}")
         shutil.copytree(source_path, path)
 
 
@@ -194,8 +192,8 @@ def _run_setup_model(model_file, scenario, model_format, override_dict):
         else:
             raise ValueError(
                 "Cannot determine model file format based on file "
-                'extension for "{}". Set format explicitly with '
-                "--model_format.".format(model_file)
+                f'extension for "{model_file}". Set format explicitly with '
+                "--model_format."
             )
 
     if model_format == "yaml":
@@ -208,7 +206,7 @@ def _run_setup_model(model_file, scenario, model_format, override_dict):
             )
         model = read_netcdf(model_file)
     else:
-        raise ValueError("Invalid model format: {}".format(model_format))
+        raise ValueError(f"Invalid model format: {model_format}")
 
     return model
 
@@ -257,9 +255,7 @@ def run(
     """
     start_time = _cli_start(debug, quiet)
     click.secho(
-        "Calliope {} starting at {}\n".format(
-            __version__, start_time.strftime(_time_format)
-        )
+        f"Calliope {__version__} starting at {start_time.strftime(_time_format)}\n"
     )
 
     with format_exceptions(debug, pdb, profile, profile_filename, start_time):
@@ -309,10 +305,10 @@ def run(
             )
 
             if save_csv:
-                click.secho("Saving CSV results to directory: {}".format(save_csv))
+                click.secho(f"Saving CSV results to directory: {save_csv}")
                 model.to_csv(save_csv)
             if save_netcdf:
-                click.secho("Saving NetCDF results to file: {}".format(save_netcdf))
+                click.secho(f"Saving NetCDF results to file: {save_netcdf}")
                 model.to_netcdf(save_netcdf)
 
             print_end_time(start_time)

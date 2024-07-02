@@ -6,7 +6,6 @@ import copy
 import io
 import logging
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import ruamel.yaml as ruamel_yaml
@@ -17,7 +16,7 @@ from calliope.util.tools import relative_path
 logger = logging.getLogger(__name__)
 
 
-class __Missing(object):
+class __Missing:
     def __nonzero__(self):
         return False
 
@@ -41,10 +40,10 @@ def _yaml_load(src):
     try:
         result = yaml.load(src)
         if not isinstance(result, dict):
-            raise ValueError("Could not parse {} as YAML".format(src_name))
+            raise ValueError(f"Could not parse {src_name} as YAML")
         return result
     except ruamel_yaml.YAMLError:
-        logger.error("Parser error when reading YAML " "from {}.".format(src_name))
+        logger.error(f"Parser error when reading YAML from {src_name}.")
         raise
 
 
@@ -113,7 +112,7 @@ class AttrDict(dict):
         cls,
         loaded: Self,
         resolve_imports: bool | str,
-        base_path: Optional[str | Path] = None,
+        base_path: str | Path | None = None,
     ) -> Self:
         if (
             isinstance(resolve_imports, bool)
@@ -405,7 +404,7 @@ class AttrDict(dict):
             wipe_keys = []
         for k in override_keys:
             if not allow_override and k in self_keys:
-                raise KeyError("Key defined twice: {}".format(k))
+                raise KeyError(f"Key defined twice: {k}")
             else:
                 other_value = other.get_key(k)
                 # If other value is None, and would overwrite an entire subdict,

@@ -5,7 +5,7 @@
 import itertools
 import logging
 from copy import deepcopy
-from typing import Literal, Optional
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -21,7 +21,7 @@ from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
 
-DATA_T = Optional[float | int | bool | str] | list[Optional[float | int | bool | str]]
+DATA_T = float | int | bool | str | None | list[float | int | bool | str | None]
 
 
 class Param(TypedDict):
@@ -505,7 +505,7 @@ class ModelDataFactory:
     def _inherit_defs(
         self,
         dim_name: Literal["nodes", "techs"],
-        dim_dict: Optional[AttrDict] = None,
+        dim_dict: AttrDict | None = None,
         **connected_dims: str,
     ) -> AttrDict:
         """For a set of node/tech definitions, climb the inheritance tree to build a final definition dictionary.
@@ -518,7 +518,7 @@ class ModelDataFactory:
 
         Args:
             dim_name (Literal[nodes, techs]): Name of dimension we're working with.
-            dim_dict (Optional[AttrDict], optional):
+            dim_dict (AttrDict | None, optional):
                 Base dictionary to work from.
                 If not defined, `dim_name` will be used to access the dictionary from the base model definition.
                 Defaults to None.
@@ -582,8 +582,8 @@ class ModelDataFactory:
         dim_item_dict: AttrDict,
         dim_name: Literal["nodes", "techs"],
         item_name: str,
-        inheritance: Optional[list] = None,
-    ) -> tuple[AttrDict, Optional[list]]:
+        inheritance: list | None = None,
+    ) -> tuple[AttrDict, list | None]:
         """Follow the `inherit` references from `nodes` to `node_groups` / from `techs` to `tech_groups`.
 
         Abstract group definitions (those in `node_groups`/`tech_groups`) can inherit each other, but `nodes`/`techs` cannot.
@@ -597,7 +597,7 @@ class ModelDataFactory:
                 The name of the dimension we're working with, so that we can access the correct `_groups` definitions.
             item_name (str):
                 The current position in the inheritance tree.
-            inheritance (Optional[list], optional):
+            inheritance (list | None, optional):
                 A list of items that have been inherited (starting with the oldest).
                 If the first `dim_item_dict` does not contain `inherit`, this will remain as None.
                 Defaults to None.
@@ -606,7 +606,7 @@ class ModelDataFactory:
             KeyError: Must inherit from a named group item in `node_groups` (for `nodes`) and `tech_groups` (for `techs`)
 
         Returns:
-            tuple[AttrDict, Optional[list]]: Definition dictionary with inherited data and a list of the inheritance tree climbed to get there.
+            tuple[AttrDict, list | None]: Definition dictionary with inherited data and a list of the inheritance tree climbed to get there.
         """
         to_inherit = dim_item_dict.get("inherit", None)
         dim_groups = AttrDict(

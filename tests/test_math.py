@@ -1,7 +1,6 @@
 import importlib
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pytest
@@ -184,8 +183,8 @@ class CustomMathExamples(ABC):
         def _build_and_compare(
             filename: str,
             scenario: str,
-            overrides: Optional[dict] = None,
-            components: Optional[dict[list[str]]] = None,
+            overrides: dict | None = None,
+            components: dict[list[str]] | None = None,
         ):
             if components is not None:
                 for component_group, component_list in components.items():

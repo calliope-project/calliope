@@ -148,9 +148,7 @@ class TestModelRun:
         """
 
         def override(param):
-            return AttrDict.from_yaml_string(
-                "config.init.time_subset: {}".format(param)
-            )
+            return AttrDict.from_yaml_string(f"config.init.time_subset: {param}")
 
         # should fail: one string in list
         with pytest.raises(exceptions.ModelError):
