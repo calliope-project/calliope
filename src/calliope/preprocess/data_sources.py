@@ -245,13 +245,18 @@ class DataSource:
             pd.DataFrame: Loaded data without any processing.
         """
         filename = self.input["source"]
-        csv_reader_kwargs = {"header": self.columns, "index_col": self.index}
-        for axis, names in csv_reader_kwargs.items():
-            if names is not None:
-                csv_reader_kwargs[axis] = [i for i, _ in enumerate(names)]
+
+        if self.columns is None:
+            self._log(
+                "No column dimensions have been defined. "
+                "We will still assume the first line of the CSV file to contain a header row with index dimensions",
+                level="debug",
+            )
+        header = [0] if self.columns is None else list(range(len(self.columns)))
+        index_col = None if self.index is None else list(range(len(self.index)))
 
         filepath = relative_path(self.model_definition_path, filename)
-        df = pd.read_csv(filepath, encoding="utf-8", **csv_reader_kwargs)
+        df = pd.read_csv(filepath, encoding="utf-8", header=header, index_col=index_col)
         return df
 
     def _df_to_ds(self, df: pd.DataFrame) -> xr.Dataset:
@@ -375,6 +380,7 @@ class DataSource:
 
         Args:
             key (str): Definition dictionary key whose value are to be returned as a list.
+            default (Literal[None, 0]): Either zero or None
 
         Returns:
             Optional[list]: If `key` not defined in data source, return None, else return values as a list.

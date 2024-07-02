@@ -2,6 +2,9 @@
 
 ### User-facing changes
 
+|fixed| Force a header row in tabular data loaded from CSV to (#596).
+Fixes issue where unexpected index levels can end up in the loaded data (#573).
+
 |fixed| Single element lists/sets in the model Dataset attribute dictionary are restored to lists/sets on loading from NetCDF (#614).
 
 |new| Decision variables and global expressions can have a `title` defined, which will be available in the model results as attributes of those components and can be used for e.g. visualisation (#582).
