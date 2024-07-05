@@ -573,17 +573,20 @@ class TestUpdateParameter:
         model: calliope.Model = request.getfixturevalue(
             "built_model_func" + model_suffix
         )
-        if model.backend.inputs.config.build.backend == "gurobi":
+        # TODO: update once we have a `get_objective` method that is backend-agnostic
+        if isinstance(model.backend, calliope.backend.GurobiBackendModel):
             objective_string = str(
                 model.backend.objectives.min_cost_optimisation.item()
             )
-        elif model.backend.inputs.config.build.backend == "pyomo":
+        elif isinstance(model.backend, calliope.backend.PyomoBackendModel):
             objective_string = str(
                 model.backend.objectives.min_cost_optimisation.item().expr
             )
         if model_suffix.endswith("updated_cost_flow_cap"):
             assert "test_demand_elec" in objective_string
         else:
+            # This ensures that the `updated_cost_flow_cap` test passing isn't a false negative.
+            # If this fails, it means that `updated_cost_flow_cap` might be passing for reasons unrelated to a successful rebuild.
             assert "test_demand_elec" not in objective_string
 
     def test_update_parameter_no_refs_to_update(self, solved_model_func):
