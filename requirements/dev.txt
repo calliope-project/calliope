@@ -1,6 +1,5 @@
 glpk == 5.0
 jsonschema2md >= 1, < 2
-gurobipy >= 11, < 12
 mkdocs >= 1.5, < 1.6
 mkdocs-click >= 0.6, < 0.7
 mkdocs-jupyter >= 0.24, < 0.24.7
