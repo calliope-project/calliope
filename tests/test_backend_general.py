@@ -246,7 +246,7 @@ class TestGetters:
             "cost", as_backend_objs=False, eval_body=True
         )
         assert (
-            expr.to_series().dropna().apply(lambda x: isinstance(x, (float, int))).all()
+            expr.to_series().dropna().apply(lambda x: isinstance(x, float | int)).all()
         )
 
     def test_get_global_expression_as_vals_no_solve(self, built_model_cls_longnames):

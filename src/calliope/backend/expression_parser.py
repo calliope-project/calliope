@@ -33,16 +33,8 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Iterable,
-    Iterator,
-    Literal,
-    Union,
-    overload,
-)
+from collections.abc import Callable, Iterable, Iterator
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
 import pyparsing as pp
@@ -115,7 +107,7 @@ class EvalToArrayStr(EvalString):
 
     def eval(
         self, return_type: RETURN_T, **eval_kwargs
-    ) -> Union[str, list[str | float], xr.DataArray]:
+    ) -> str | list[str | float] | xr.DataArray:
         """Evaluate math string expression.
 
         Args:
@@ -135,12 +127,11 @@ class EvalToArrayStr(EvalString):
             as_values (bool, optional): Return array as numeric values, not backend objects. Defaults to False.
 
         Returns:
-            Union[str, list[str | float], xr.DataArray]:
+            str | list[str | float] | xr.DataArray:
                 If `math_string` is desired, returns a valid LaTex math string.
                 If `array` is desired, returns xarray DataArray or a list of strings/numbers (if the expression represents a list).
         """
         self.eval_attrs = eval_kwargs
-        evaluated: Union[str, list[str | float], xr.DataArray]
         if return_type == "array":
             evaluated = self.as_array()
         elif return_type == "math_string":
@@ -277,9 +268,9 @@ class EvalOperatorOperand(EvalToArrayStr):
             # We ignore zeros that do nothing
             if self._skip_component_on_conditional(evaluated_operand, operator_):
                 continue
-            if type(self.value[0]) == type(self):
+            if isinstance(self.value[0], type(self)):
                 val = "(" + val + ")"
-            if type(operand) == type(self):
+            if isinstance(operand, type(self)):
                 evaluated_operand = "(" + evaluated_operand + ")"
             if self._skip_component_on_conditional(val, operator_):
                 val = evaluated_operand
@@ -327,7 +318,7 @@ class EvalSignOp(EvalToArrayStr):
     @overload
     def _eval(self, return_type: Literal["array"]) -> xr.DataArray: ...
 
-    def _eval(self, return_type: RETURN_T) -> Union[xr.DataArray, str]:
+    def _eval(self, return_type: RETURN_T) -> xr.DataArray | str:
         """Evaluate the element that will have the sign attached to it."""
         return self.value.eval(return_type, **self.eval_attrs)
 
@@ -378,7 +369,7 @@ class EvalComparisonOp(EvalToArrayStr):
 
     def _eval(
         self, return_type: RETURN_T
-    ) -> Union[tuple[str, str], tuple[xr.DataArray, xr.DataArray]]:
+    ) -> tuple[str, str] | tuple[xr.DataArray, xr.DataArray]:
         """Evaluate the LHS and RHS of the comparison."""
         lhs = self.lhs.eval(return_type, **self.eval_attrs)
         rhs = self.rhs.eval(return_type, **self.eval_attrs)
@@ -446,7 +437,7 @@ class EvalFunction(EvalToArrayStr):
 
     def _arg_eval(
         self, return_type: RETURN_T, arg: Any
-    ) -> Union[str, xr.DataArray, list[str | float]]:
+    ) -> str | xr.DataArray | list[str | float]:
         """Evaluate the arguments of the helper function."""
         if isinstance(arg, pp.ParseResults):
             evaluated = arg[0].eval(return_type, **self.eval_attrs)
@@ -464,7 +455,7 @@ class EvalFunction(EvalToArrayStr):
     @overload
     def _eval(self, return_type: Literal["array"]) -> xr.DataArray: ...
 
-    def _eval(self, return_type: RETURN_T) -> Union[str, xr.DataArray]:
+    def _eval(self, return_type: RETURN_T) -> str | xr.DataArray:
         """Pass evaluated arguments to evaluated helper function."""
         helper_function = self.func_name.eval(return_type, **self.eval_attrs)
         if helper_function.ignore_where:
@@ -584,7 +575,7 @@ class EvalSlicedComponent(EvalToArrayStr):
     @overload
     def _eval(self, return_type: Literal["array"]) -> tuple[xr.DataArray, dict]: ...
 
-    def _eval(self, return_type: RETURN_T) -> tuple[Union[str, xr.DataArray], dict]:
+    def _eval(self, return_type: RETURN_T) -> tuple[str | xr.DataArray, dict]:
         """Evaluate the slice dim and vals of each slice element."""
         slices: dict[str, Any] = {
             k: v.eval(return_type, **self.eval_attrs) for k, v in self.slices.items()
@@ -640,7 +631,7 @@ class EvalIndexSlice(EvalToArrayStr):
 
     def _eval(
         self, return_type: RETURN_T, as_values: bool
-    ) -> Union[str, xr.DataArray, list[str | float]]:
+    ) -> str | xr.DataArray | list[str | float]:
         """Evaluate the referenced `slice`."""
         self.eval_attrs["as_values"] = as_values
         return self.eval_attrs["slice_dict"][self.name][0].eval(
@@ -680,7 +671,7 @@ class EvalSubExpressions(EvalToArrayStr):
     @overload
     def _eval(self, return_type: Literal["array"]) -> xr.DataArray: ...
 
-    def _eval(self, return_type: RETURN_T) -> Union[str, xr.DataArray]:
+    def _eval(self, return_type: RETURN_T) -> str | xr.DataArray:
         """Evaluate the referenced sub_expression."""
         return self.eval_attrs["sub_expression_dict"][self.name][0].eval(
             return_type, **self.eval_attrs

@@ -6,17 +6,9 @@ from __future__ import annotations
 
 import importlib
 import logging
+from collections.abc import Iterable
 from pathlib import Path
-from typing import (
-    Any,
-    Iterable,
-    Literal,
-    Optional,
-    SupportsFloat,
-    TypeVar,
-    Union,
-    overload,
-)
+from typing import Any, Literal, SupportsFloat, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -89,9 +81,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
 
     def add_constraint(  # noqa: D102, override
-        self,
-        name: str,
-        constraint_dict: Optional[parsing.UnparsedConstraintDict] = None,
+        self, name: str, constraint_dict: parsing.UnparsedConstraintDict | None = None
     ) -> None:
         def _constraint_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -104,9 +94,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._add_component(name, constraint_dict, _constraint_setter, "constraints")
 
     def add_global_expression(  # noqa: D102, override
-        self,
-        name: str,
-        expression_dict: Optional[parsing.UnparsedExpressionDict] = None,
+        self, name: str, expression_dict: parsing.UnparsedExpressionDict | None = None
     ) -> None:
         def _expression_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -122,7 +110,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         )
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_dict: Optional[parsing.UnparsedVariableDict] = None
+        self, name: str, variable_dict: parsing.UnparsedVariableDict | None = None
     ) -> None:
         domain_dict = {"real": gurobipy.GRB.CONTINUOUS, "integer": gurobipy.GRB.INTEGER}
         if variable_dict is None:
@@ -142,7 +130,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._add_component(name, variable_dict, _variable_setter, "variables")
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_dict: Optional[parsing.UnparsedObjectiveDict] = None
+        self, name: str, objective_dict: parsing.UnparsedObjectiveDict | None = None
     ) -> None:
         min_ = gurobipy.GRB.MINIMIZE
         max_ = gurobipy.GRB.MAXIMIZE
@@ -192,7 +180,7 @@ class GurobiBackendModel(backend_model.BackendModel):
 
     def get_constraint(  # noqa: D102, override
         self, name: str, as_backend_objs: bool = True, eval_body: bool = False
-    ) -> Union[xr.DataArray, xr.Dataset]:
+    ) -> xr.DataArray | xr.Dataset:
         constraint = self.constraints.get(name, None)
         if constraint is None:
             raise KeyError(f"Unknown constraint: {name}")
@@ -251,9 +239,9 @@ class GurobiBackendModel(backend_model.BackendModel):
     def _solve(
         self,
         solver: str,
-        solver_io: Optional[str] = None,
-        solver_options: Optional[dict] = None,
-        save_logs: Optional[str] = None,
+        solver_io: str | None = None,
+        solver_options: dict | None = None,
+        save_logs: str | None = None,
         warmstart: bool = False,
         **solve_config,
     ) -> xr.Dataset:
@@ -315,7 +303,7 @@ class GurobiBackendModel(backend_model.BackendModel):
 
         self._instance.update()
 
-    def to_lp(self, path: Union[str, Path]) -> None:  # noqa: D102, override
+    def to_lp(self, path: str | Path) -> None:  # noqa: D102, override
         self._instance.update()
 
         if Path(path).suffix != ".lp":
@@ -344,7 +332,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._instance.update()
 
     def update_parameter(  # noqa: D102, override
-        self, name: str, new_values: Union[xr.DataArray, SupportsFloat]
+        self, name: str, new_values: xr.DataArray | SupportsFloat
     ) -> None:
         new_values = xr.DataArray(new_values)
         parameter_da = self.get_parameter(name)
@@ -388,8 +376,8 @@ class GurobiBackendModel(backend_model.BackendModel):
         self,
         name: str,
         *,
-        min: Optional[Union[xr.DataArray, SupportsFloat]] = None,
-        max: Optional[Union[xr.DataArray, SupportsFloat]] = None,
+        min: xr.DataArray | SupportsFloat | None = None,
+        max: xr.DataArray | SupportsFloat | None = None,
     ) -> None:
         translator = {"min": "lb", "max": "ub"}
         variable_da = self.get_variable(name)
@@ -433,7 +421,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._instance.update()
 
     def fix_variable(  # noqa: D102, override
-        self, name: str, where: Optional[xr.DataArray] = None
+        self, name: str, where: xr.DataArray | None = None
     ) -> None:
         if self._instance.status != gurobipy.GRB.OPTIMAL:
             raise BackendError(
@@ -451,7 +439,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._instance.update()
 
     def unfix_variable(  # noqa: D102, override
-        self, name: str, where: Optional[xr.DataArray] = None
+        self, name: str, where: xr.DataArray | None = None
     ) -> None:
         raise BackendError(
             "Cannot unfix a variable using the Gurobi backend; "

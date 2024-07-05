@@ -46,7 +46,7 @@ This reduces memory footprint of parameter arrays.
 
 |fixed| Removed unused debug parameter in `Model.__init__()`
 
-|changed| Ruff linter checking was extended with pydocstrings and flake8-pytest.
+|changed| Ruff linter checking was extended with pydocstrings, flake8-pytest, and pyupgrade.
 
 |changed| Moved from black formatting to the Ruff formatter (black-based, but faster).
 

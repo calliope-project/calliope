@@ -3,8 +3,8 @@
 """Preprocessing functionality."""
 
 import logging
+from collections.abc import Hashable
 from pathlib import Path
-from typing import Hashable, Optional
 
 import numpy as np
 import pandas as pd
@@ -50,8 +50,8 @@ class DataSource:
         model_config: dict,
         source_name: str,
         data_source: DataSourceDict,
-        data_source_dfs: Optional[dict[str, pd.DataFrame]] = None,
-        model_definition_path: Optional[Path] = None,
+        data_source_dfs: dict[str, pd.DataFrame] | None = None,
+        model_definition_path: Path | None = None,
     ):
         """Load and format a data source from file / in-memory object.
 
@@ -59,9 +59,10 @@ class DataSource:
             model_config (dict): Model initialisation configuration dictionary.
             source_name (str): name of the data source.
             data_source (DataSourceDict): Data source definition dictionary.
-            data_source_dfs (Optional[dict[str, pd.DataFrame]]):
+            data_source_dfs (dict[str, pd.DataFrame] | None, optional):
                 If given, a dictionary mapping source names in `data_source` to in-memory pandas DataFrames.
-            model_definition_path (Optional[Path], optional):
+                Defaults to None.
+            model_definition_path (Path | None, optional):
                 If given, the path to the model definition YAML file, relative to which data source filepaths will be set.
                 If None, relative data source filepaths will be considered relative to the current working directory.
                 Defaults to None.
@@ -372,7 +373,7 @@ class DataSource:
             self.MESSAGE_TEMPLATE.format(name=self.name, message=message)
         )
 
-    def _listify_if_defined(self, key: str) -> Optional[list]:
+    def _listify_if_defined(self, key: str) -> list | None:
         """If `key` is in data source definition dictionary, return values as a list.
 
         If values are not yet an iterable, they will be coerced to an iterable of length 1.
@@ -383,7 +384,7 @@ class DataSource:
             default (Literal[None, 0]): Either zero or None
 
         Returns:
-            Optional[list]: If `key` not defined in data source, return None, else return values as a list.
+            list | None: If `key` not defined in data source, return None, else return values as a list.
         """
         vals = self.input.get(key, None)
         if vals is not None:
