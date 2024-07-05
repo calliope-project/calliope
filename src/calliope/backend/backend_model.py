@@ -455,7 +455,7 @@ class BackendModelGenerator(ABC):
     def _apply_func(  # noqa: D102, override
         self,
         func: Callable,
-        where: Optional[xr.DataArray],
+        where: xr.DataArray,
         n_out: Literal[1],
         *args,
         **kwargs,
@@ -465,14 +465,14 @@ class BackendModelGenerator(ABC):
     def _apply_func(  # noqa: D102, override
         self,
         func: Callable,
-        where: Optional[xr.DataArray],
+        where: xr.DataArray,
         n_out: Literal[2, 3, 4, 5],
         *args,
         **kwargs,
     ) -> tuple[xr.DataArray, ...]: ...
 
     def _apply_func(
-        self, func: Callable, where: Optional[xr.DataArray], n_out: int, *args, **kwargs
+        self, func: Callable, where: xr.DataArray, n_out: int, *args, **kwargs
     ) -> xr.DataArray | tuple[xr.DataArray, ...]:
         """Apply a function to every element of an arbitrary number of xarray DataArrays.
 
@@ -498,12 +498,9 @@ class BackendModelGenerator(ABC):
         if kwargs:
             func = partial(func, **kwargs)
         vectorised_func = np.frompyfunc(func, len(args), n_out)
-        if where is not None:
-            da = vectorised_func(
-                *(arg.broadcast_like(where) for arg in args), where=where.values
-            )
-        else:
-            da = vectorised_func(*args)
+        da = vectorised_func(
+            *(arg.broadcast_like(where) for arg in args), where=where.values
+        )
         if isinstance(da, xr.DataArray):
             da = da.fillna(np.nan)
         else:
@@ -921,7 +918,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 self.delete_component(ref, component)
                 getattr(self, "add_" + component.removesuffix("s"))(name=ref)
 
-    def _get_capacity_bound(
+    def _get_variable_bound(
         self, bound: Any, name: str, references: set, fill_na: Optional[float] = None
     ) -> xr.DataArray:
         """Generate array for the upper/lower bound of a decision variable.

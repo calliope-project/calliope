@@ -979,12 +979,3 @@ You can add your own math to update the pre-defined math and to represent the ph
 
 !!! info "See also"
     Our [pre-defined](pre_defined_math/index.md) and [user-defined](user_defined_math/index.md) math documentation.
-
-### Gurobi backend interface
-
-For those with a license for the Gurobi solver, we have introduced an interface to their Python API.
-This reduces peak memory and time consumption compared to using the Pyomo backend interface with Gurobi as the solver.
-To leverage the Gurobi backend interface, you will need to:
-
-1. Install the gurobi python library into your Calliope environment: `mamba install gurobi::gurobi`.
-1. Select the Gurobi backend in your YAML configuration (`!#yaml config.build.backend: gurobi`) or at build time if running in a Python script or interactively (`!#python model.build(backend="gurobi")`).

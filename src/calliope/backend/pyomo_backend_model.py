@@ -163,8 +163,8 @@ class PyomoBackendModel(backend_model.BackendModel):
         def _variable_setter(where, references):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
             bounds = variable_dict["bounds"]
-            lb = self._get_capacity_bound(bounds["min"], name, references)
-            ub = self._get_capacity_bound(bounds["max"], name, references)
+            lb = self._get_variable_bound(bounds["min"], name, references)
+            ub = self._get_variable_bound(bounds["max"], name, references)
             var = self._apply_func(
                 self._to_pyomo_variable,
                 where,
@@ -358,7 +358,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                     coords_in_name=False, **{"obj_type": component_type}
                 ).values():
                     self._apply_func(
-                        __renamer, None, 1, da, *[da.coords[i] for i in da.dims]
+                        __renamer, da.notnull(), 1, da, *[da.coords[i] for i in da.dims]
                     )
                     da.attrs["coords_in_name"] = True
         self._has_verbose_strings = True

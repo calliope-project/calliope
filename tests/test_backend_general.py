@@ -109,6 +109,22 @@ class TestOptimality:
 
 
 class TestGetters:
+    @pytest.fixture(scope="class")
+    def variable(self, solved_model_cls):
+        return solved_model_cls.backend.get_variable("flow_cap")
+
+    @pytest.fixture(scope="class")
+    def parameter(self, solved_model_cls):
+        return solved_model_cls.backend.get_parameter("flow_in_eff")
+
+    @pytest.fixture(scope="class")
+    def constraint(self, solved_model_cls):
+        return solved_model_cls.backend.get_constraint("system_balance")
+
+    @pytest.fixture(scope="class")
+    def global_expression(self, solved_model_cls):
+        return solved_model_cls.backend.get_global_expression("cost_investment")
+
     @pytest.mark.parametrize(
         "component_type", ["variable", "global_expression", "parameter", "constraint"]
     )
@@ -117,10 +133,8 @@ class TestGetters:
         with pytest.raises(KeyError):
             getattr(solved_model_cls.backend, f"get_{component_type}")("foo")
 
-    def test_get_variable(self, solved_model_cls):
+    def test_get_variable_attrs(self, variable):
         """Check a decision variable has all expected attributes."""
-        var = solved_model_cls.backend.get_variable("flow_cap")
-
         expected_keys = {
             "obj_type",
             "references",
@@ -131,22 +145,33 @@ class TestGetters:
             "yaml_snippet",
             "coords_in_name",
         }
-        assert not expected_keys.symmetric_difference(var.attrs.keys())
-        assert var.attrs["obj_type"] == "variables"
-        assert var.attrs["references"] == {
+        assert not expected_keys.symmetric_difference(variable.attrs.keys())
+
+    def test_get_variable_obj_type(self, variable):
+        """Check a decision variable has the correct obj_type."""
+        assert variable.attrs["obj_type"] == "variables"
+
+    def test_get_variable_refs(self, variable):
+        """Check a decision variable has all expected references to other math components."""
+        assert variable.attrs["references"] == {
             "flow_in_max",
             "flow_out_max",
             "cost_investment",
             "cost_investment_flow_cap",
             "symmetric_transmission",
         }
-        assert var.attrs["default"] == 0
-        assert var.attrs["coords_in_name"] is False
 
-    def test_get_parameter(self, solved_model_cls):
+    def test_get_variable_default(self, variable):
+        """Check a decision variable has expected default val."""
+        assert variable.attrs["default"] == 0
+
+    def test_get_variable_coords_in_name(self, variable):
+        """Check a decision variable does not have verbose strings activated."""
+        assert variable.attrs["coords_in_name"] is False
+
+    def test_get_parameter(self, parameter):
         """Check a parameter has all expected attributes."""
-        param = solved_model_cls.backend.get_parameter("flow_in_eff")
-        assert param.attrs == {
+        assert parameter.attrs == {
             "obj_type": "parameters",
             "is_result": 0,
             "original_dtype": np.dtype("float64"),
@@ -168,19 +193,18 @@ class TestGetters:
         )
         assert param.dtype == np.dtype("float64")
 
-    def test_get_parameter_as_vals_timeseries_data(self, solved_model_cls):
+    def test_get_parameter_as_vals_timeseries_data(self, solved_model_func):
         """Timestep values should have a datetime dtype when resolving the backend parameter objects."""
-        solved_model_cls.backend.add_parameter(
+        solved_model_func.backend.add_parameter(
             "important_timestep", xr.DataArray(pd.to_datetime("2005-01-01 01:00"))
         )
-        param = solved_model_cls.backend.get_parameter(
+        param = solved_model_func.backend.get_parameter(
             "important_timestep", as_backend_objs=False
         )
         assert param.dtype.kind == "M"
 
-    def test_get_global_expression(self, solved_model_cls):
+    def test_get_global_expression_attrs(self, global_expression):
         """Check a global expression has all expected attributes."""
-        expr = solved_model_cls.backend.get_global_expression("cost_investment")
         expected_keys = {
             "obj_type",
             "references",
@@ -191,11 +215,23 @@ class TestGetters:
             "yaml_snippet",
             "coords_in_name",
         }
-        assert not expected_keys.symmetric_difference(expr.attrs.keys())
-        assert expr.attrs["obj_type"] == "global_expressions"
-        assert expr.attrs["references"] == {"cost"}
-        assert expr.attrs["default"] == 0
-        assert expr.attrs["coords_in_name"] is False
+        assert not expected_keys.symmetric_difference(global_expression.attrs.keys())
+
+    def test_get_global_expression_obj_type(self, global_expression):
+        """Check a global expression has expected obj_type."""
+        assert global_expression.attrs["obj_type"] == "global_expressions"
+
+    def test_get_global_expression_refs(self, global_expression):
+        """Check a global expression has all expected math component refs."""
+        assert global_expression.attrs["references"] == {"cost"}
+
+    def test_get_global_expression_default(self, global_expression):
+        """Check a global expression has expected default."""
+        assert global_expression.attrs["default"] == 0
+
+    def test_get_global_expression_coords_in_name(self, global_expression):
+        """Check a global expression does not have verbose strings activated."""
+        assert global_expression.attrs["coords_in_name"] is False
 
     def test_get_global_expression_as_str(self, solved_model_cls):
         """Resolving backend global expressions produces strings."""
@@ -220,9 +256,8 @@ class TestGetters:
         )
         assert expr.to_series().dropna().apply(lambda x: isinstance(x, str)).all()
 
-    def test_get_constraint(self, solved_model_cls):
+    def test_get_constraint_attrs(self, constraint):
         """Check a constraint has all expected attributes."""
-        constr = solved_model_cls.backend.get_constraint("system_balance")
         expected_keys = {
             "obj_type",
             "references",
@@ -231,10 +266,19 @@ class TestGetters:
             "coords_in_name",
         }
 
-        assert not expected_keys.symmetric_difference(constr.attrs.keys())
-        assert constr.attrs["obj_type"] == "constraints"
-        assert constr.attrs["references"] == set()
-        assert constr.attrs["coords_in_name"] is False
+        assert not expected_keys.symmetric_difference(constraint.attrs.keys())
+
+    def test_get_constraint_obj_type(self, constraint):
+        """Check a constraint has expected object type."""
+        assert constraint.attrs["obj_type"] == "constraints"
+
+    def test_get_constraint_refs(self, constraint):
+        """Check a constraint has expected refs to other math components (zero for constraints)."""
+        assert constraint.attrs["references"] == set()
+
+    def test_get_constraint_coords_in_name(self, constraint):
+        """Check a constraint does not have verbose strings activated."""
+        assert constraint.attrs["coords_in_name"] is False
 
 
 class TestAdders:

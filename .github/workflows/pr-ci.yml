@@ -49,10 +49,10 @@ jobs:
         environment-name: ${{ github.event.repository.name }}-${{ matrix.os }}-3${{ matrix.py3version }}-${{ hashFiles('requirements/dev.txt') }}
         environment-file: requirements/base.txt
         create-args: >-
+          -c gurobi
           -f requirements/dev.txt
           curl
           python=3.${{ matrix.py3version }}
-          gurobi::gurobi
         post-cleanup: all
         cache-environment: true
 

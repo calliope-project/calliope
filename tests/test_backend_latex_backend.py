@@ -553,9 +553,9 @@ class TestLatexBackendModel:
         rendered = dummy_latex_backend_model._render(instring, **kwargs)
         assert rendered == expected
 
-    def test_get_capacity_bounds(self, dummy_latex_backend_model):
+    def test_get_variable_bounds(self, dummy_latex_backend_model):
         bounds = {"min": 1, "max": 2e6}
-        lb, ub = dummy_latex_backend_model._get_capacity_bounds("multi_dim_var", bounds)
+        lb, ub = dummy_latex_backend_model._get_variable_bounds("multi_dim_var", bounds)
         assert lb == {"expression": r"1 \leq \textbf{multi_dim_var}_\text{node,tech}"}
         assert ub == {
             "expression": r"\textbf{multi_dim_var}_\text{node,tech} \leq 2\mathord{\times}10^{+06}"

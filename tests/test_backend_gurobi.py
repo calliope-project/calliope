@@ -1,14 +1,10 @@
-import importlib
-
 import calliope.exceptions as exceptions
+import gurobipy
 import pytest  # noqa: F401
 import xarray as xr
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
-
-if importlib.util.find_spec("gurobipy") is not None:
-    import gurobipy
 
 
 class TestNewBackend:
@@ -23,6 +19,13 @@ class TestNewBackend:
 
     @pytest.fixture(scope="class")
     def simple_supply_gurobi(self):
+        m = build_model({}, "simple_supply,two_hours,investment_costs")
+        m.build(backend="gurobi")
+        m.solve()
+        return m
+
+    @pytest.fixture()
+    def simple_supply_gurobi_func(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.build(backend="gurobi")
         m.solve()
@@ -158,60 +161,49 @@ class TestNewBackend:
     def _is_fixed(val):
         return val.lb == val.ub
 
-    def test_fix_variable(self, simple_supply_gurobi):
-        simple_supply_gurobi.build(backend="gurobi", force=True)
-        simple_supply_gurobi.solve(force=True)
-        simple_supply_gurobi.backend.fix_variable("flow_cap")
-        fixed = simple_supply_gurobi.backend._apply_func(
+    def test_fix_variable(self, simple_supply_gurobi_func):
+        simple_supply_gurobi_func.build(backend="gurobi", force=True)
+        simple_supply_gurobi_func.solve(force=True)
+        simple_supply_gurobi_func.backend.fix_variable("flow_cap")
+        fixed = simple_supply_gurobi_func.backend._apply_func(
             self._is_fixed,
-            simple_supply_gurobi.backend.variables.flow_cap.notnull(),
+            simple_supply_gurobi_func.backend.variables.flow_cap.notnull(),
             1,
-            simple_supply_gurobi.backend.variables.flow_cap,
+            simple_supply_gurobi_func.backend.variables.flow_cap,
         )
         assert fixed.where(fixed.notnull()).all()
 
-        # reset
-        simple_supply_gurobi.build(backend="gurobi", force=True)
-        simple_supply_gurobi.solve(force=True)
-
-    def test_fix_variable_where(self, simple_supply_gurobi):
-        simple_supply_gurobi.build(backend="gurobi", force=True)
-        simple_supply_gurobi.solve(force=True)
+    def test_fix_variable_where(self, simple_supply_gurobi_func):
+        simple_supply_gurobi_func.build(backend="gurobi", force=True)
+        simple_supply_gurobi_func.solve(force=True)
 
         where = (
-            simple_supply_gurobi.inputs.flow_cap_max.notnull()
-            & simple_supply_gurobi.backend.variables.flow_cap.notnull()
+            simple_supply_gurobi_func.inputs.flow_cap_max.notnull()
+            & simple_supply_gurobi_func.backend.variables.flow_cap.notnull()
         )
-        simple_supply_gurobi.backend.fix_variable("flow_cap", where=where)
-        fixed = simple_supply_gurobi.backend._apply_func(
+        simple_supply_gurobi_func.backend.fix_variable("flow_cap", where=where)
+        fixed = simple_supply_gurobi_func.backend._apply_func(
             self._is_fixed,
-            simple_supply_gurobi.backend.variables.flow_cap.notnull(),
+            simple_supply_gurobi_func.backend.variables.flow_cap.notnull(),
             1,
-            simple_supply_gurobi.backend.variables.flow_cap,
+            simple_supply_gurobi_func.backend.variables.flow_cap,
         )
         assert not fixed.sel(techs="test_demand_elec", carriers="electricity").any()
         assert fixed.where(where, other=True).all()
-        # reset
-        simple_supply_gurobi.build(backend="gurobi", force=True)
-        simple_supply_gurobi.solve(force=True)
 
-    def test_fix_variable_before_optimal_solve(self, simple_supply_gurobi):
-        simple_supply_gurobi.backend.update_parameter("flow_cap_max", xr.DataArray(0))
-        simple_supply_gurobi.solve(force=True)
-        assert simple_supply_gurobi.results.termination_condition != "optimal"
+    def test_fix_variable_before_optimal_solve(self, simple_supply_gurobi_func):
+        simple_supply_gurobi_func.backend.update_parameter(
+            "flow_cap_max", xr.DataArray(0)
+        )
+        simple_supply_gurobi_func.solve(force=True)
+        assert simple_supply_gurobi_func.results.termination_condition != "optimal"
         with pytest.raises(exceptions.BackendError) as excinfo:
-            simple_supply_gurobi.backend.fix_variable("flow_cap")
+            simple_supply_gurobi_func.backend.fix_variable("flow_cap")
 
         assert check_error_or_warning(
             excinfo,
             "Cannot fix variable values without already having solved the model successfully.",
         )
-
-        # reset
-        simple_supply_gurobi.backend.update_parameter(
-            "flow_cap_max", simple_supply_gurobi.inputs.flow_cap_max
-        )
-        simple_supply_gurobi.solve(force=True)
 
     def test_unfix_variable(self, simple_supply_gurobi):
         with pytest.raises(exceptions.BackendError) as excinfo:

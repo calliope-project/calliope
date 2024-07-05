@@ -31,10 +31,10 @@ jobs:
         environment-name: ${{ github.event.repository.name }}-ubuntu-latest-312-${{ hashFiles('requirements/dev.txt') }}
         environment-file: requirements/base.txt
         create-args: >-
+          -c gurobi
           -f requirements/dev.txt
           python=3.11
           coin-or-cbc
-          gurobi::gurobi
         post-cleanup: all
         cache-environment: true
 

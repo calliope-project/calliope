@@ -62,6 +62,7 @@ plugins:
             - https://docs.python.org/3/objects.inv
             - https://pandas.pydata.org/docs/objects.inv
             - https://docs.xarray.dev/en/stable/objects.inv
+            - https://pyomo.readthedocs.io/en/stable/objects.inv
 markdown_extensions:
   - admonition
   - attr_list

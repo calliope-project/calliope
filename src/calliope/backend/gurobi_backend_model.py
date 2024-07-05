@@ -132,8 +132,8 @@ class GurobiBackendModel(backend_model.BackendModel):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
 
             bounds = variable_dict["bounds"]
-            lb = self._get_capacity_bound(bounds["min"], name, references, -np.inf)
-            ub = self._get_capacity_bound(bounds["max"], name, references, np.inf)
+            lb = self._get_variable_bound(bounds["min"], name, references, -np.inf)
+            ub = self._get_variable_bound(bounds["max"], name, references, np.inf)
             var = self._apply_func(
                 self._instance.addVar, where, 1, lb, ub, vtype=domain_type
             )
@@ -259,7 +259,7 @@ class GurobiBackendModel(backend_model.BackendModel):
     ) -> xr.Dataset:
         self._instance.resetParams()
 
-        if solver_options:
+        if solver_options is not None:
             for k, v in solver_options.items():
                 self._instance.setParam(k, v)
 
@@ -304,7 +304,7 @@ class GurobiBackendModel(backend_model.BackendModel):
                     continue
                 self._apply_func(
                     __renamer,
-                    None,
+                    da.notnull(),
                     1,
                     da,
                     *[da.coords[i] for i in da.dims],
