@@ -726,7 +726,7 @@ If you want cluster the timeseries data yourself, we recommend these tools:
 We were previously using this in our internal clustering.
 * [tslearn](https://tslearn.readthedocs.io/en/stable/index.html): a timeseries-focussed machine learning library.
 
-!!! example "Using the `tsam` library to cluster your timeseries"
+??? example "Using the `tsam` library to cluster your timeseries"
 
     In this example, we will find 12 representative days of a clustered timeseries and save those to file.
     For more configuration options, see the [`tsam` documentation](https://tsam.readthedocs.io/en/).
