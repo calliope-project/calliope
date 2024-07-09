@@ -14,12 +14,10 @@ The diagram below gives an overview:
 
 We distinguish between model _configuration_ (the options provided to Calliope to do its work) and the model _definition_ (your representation of a physical system in YAML).
 
-
 ## Model configuration
 
 The model configuration file `model.yaml` is the place to tell Calliope about how to interpret the model definition and how to build and solve your model.
 It does not contain much data, but the scaffolding with which to construct and run your model.
-
 
 ```yaml
 --8<-- "src/calliope/example_models/national_scale/model.yaml:config"

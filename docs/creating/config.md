@@ -39,6 +39,16 @@ To test your model pipeline, `config.init.time_subset` is a good way to limit yo
 
 ## Deep-dive into some key configuration options
 
+### `config.build.backend`
+
+By default, the optimisation problem is built using the [Pyomo](https://www.pyomo.org/) library.
+For those with a license for the Gurobi solver, we have also developed a direct interface to their Python API.
+This may reduce peak memory and time consumption compared to using the Pyomo interface with Gurobi as the solver.
+To leverage the Gurobi backend interface, you will need to:
+
+1. Install the Gurobi python library into your Calliope environment: `mamba install gurobi::gurobi`.
+1. Select the Gurobi backend in your YAML configuration (`!#yaml config.build.backend: gurobi`) or at build time if running in a Python script or interactively (`!#python model.build(backend="gurobi")`).
+
 ### `config.build.ensure_feasibility`
 
 For a model to find a feasible solution, supply must always be able to meet demand.

@@ -37,7 +37,6 @@ from collections.abc import Callable, Iterable, Iterator
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
-import pandas as pd
 import pyparsing as pp
 import xarray as xr
 from typing_extensions import NotRequired, TypedDict, Unpack
@@ -338,14 +337,20 @@ class EvalComparisonOp(EvalToArrayStr):
 
     OP_TRANSLATOR = {"<=": r" \leq ", ">=": r" \geq ", "==": " = "}
 
-    def __init__(self, tokens: pp.ParseResults) -> None:
+    def __init__(self, instring: str, loc: int, tokens: pp.ParseResults) -> None:
         """Parse action to process successfully parsed equations of the form LHS OPERATOR RHS.
 
         Args:
+            instring (str): String that was parsed (used in error message).
+            loc (int):
+                Location in parsed string where parsing error was logged.
+                This is not used, but comes with `instring` when setting the parse action.
             tokens (pp.ParseResults):
                 Contains a list with an RHS (pp.ParseResults), operator (str), and LHS (pp.ParseResults).
         """
         self.lhs, self.op, self.rhs = tokens
+        self.instring = instring
+        self.loc = loc
         self.values = tokens
 
     def __repr__(self) -> str:
@@ -370,28 +375,32 @@ class EvalComparisonOp(EvalToArrayStr):
         rhs = self.rhs.eval(return_type, **self.eval_attrs)
         return lhs, rhs
 
-    def _compare_bitwise(self, where: bool, lhs: Any, rhs: Any) -> Any:
-        """Comparison function for application to individual elements of the array."""
-        if not where or pd.isnull(lhs) or pd.isnull(rhs):
-            return np.nan
-        match self.op:
-            case "==":
-                constraint = lhs == rhs
-            case "<=":
-                constraint = lhs <= rhs
-            case ">=":
-                constraint = lhs >= rhs
-        return constraint
-
     def as_math_string(self) -> str:  # noqa: D102, override
         lhs, rhs = self._eval("math_string")
         return lhs + self.OP_TRANSLATOR[self.op] + rhs
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         lhs, rhs = self._eval("array")
-        return self.eval_attrs["backend_interface"]._apply_func(
-            self._compare_bitwise, self.eval_attrs["where_array"], lhs, rhs
-        )
+        where = self.eval_attrs["where_array"]
+        for side, arr in {"left": lhs, "right": rhs}.items():
+            extra_dims = set(arr.dims).difference(set(where.dims))
+            if extra_dims:
+                raise BackendError(
+                    f"({self.eval_attrs['equation_name']}, {self.instring}) | "
+                    f"The {side}-hand side of the equation is indexed over dimensions not present in `foreach`: {extra_dims}"
+                )
+        lhs_where = lhs.broadcast_like(where)
+        rhs_where = rhs.broadcast_like(where)
+
+        match self.op:
+            case "==":
+                op = np.equal
+            case "<=":
+                op = np.less_equal
+            case ">=":
+                op = np.greater_equal
+        constraint = op(lhs_where, rhs_where, where=where.values, dtype=np.object_)
+        return xr.DataArray(constraint)
 
 
 class EvalFunction(EvalToArrayStr):
@@ -502,11 +511,11 @@ class EvalHelperFuncName(EvalToCallable):
         equation_name = self.eval_attrs["equation_name"]
         if self.name not in helper_functions.keys():
             raise BackendError(
-                f"({equation_name}, {self.instring}): Invalid helper function defined: {self.name}"
+                f"({equation_name}, {self.instring}) | Invalid helper function defined: {self.name}"
             )
         elif not isinstance(helper_functions[self.name], type(ParsingHelperFunction)):
             raise TypeError(
-                f"({equation_name}, {self.instring}): Helper function must be "
+                f"({equation_name}, {self.instring}) | Helper function must be "
                 f"subclassed from calliope.backend.helper_functions.ParsingHelperFunction: {self.name}"
             )
         else:
@@ -780,10 +789,10 @@ class EvalUnslicedComponent(EvalToArrayStr):
         else:
             try:
                 evaluated = backend_interface._dataset[self.name]
-                if "default" in evaluated.attrs:
-                    evaluated = evaluated.fillna(evaluated.attrs["default"])
             except KeyError:
                 evaluated = xr.DataArray(self.name, attrs={"obj_type": "string"})
+        if "default" in evaluated.attrs:
+            evaluated = evaluated.fillna(evaluated.attrs["default"])
 
         self.eval_attrs["references"].add(self.name)
         return evaluated

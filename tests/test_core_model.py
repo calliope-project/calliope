@@ -318,3 +318,29 @@ class TestOperateMode:
             operate_model.results.timesteps
             == pd.date_range("2005-01", "2005-01-02 23:00:00", freq="h")
         )
+
+    def test_build_operate_not_allowed_build(self):
+        """Cannot build in operate mode if the `allow_operate_mode` attribute is False"""
+
+        m = build_model({}, "simple_supply,two_hours,investment_costs")
+        m._model_data.attrs["allow_operate_mode"] = False
+        with pytest.raises(
+            calliope.exceptions.ModelError, match="Unable to run this model in op"
+        ):
+            m.build(mode="operate")
+
+
+class TestSolve:
+    def test_solve_before_build(self):
+        m = build_model({}, "simple_supply,two_hours,investment_costs")
+        with pytest.raises(
+            calliope.exceptions.ModelError, match="You must build the optimisation"
+        ):
+            m.solve()
+
+    def test_solve_after_solve(self, simple_supply):
+        with pytest.raises(
+            calliope.exceptions.ModelError,
+            match="This model object already has results.",
+        ):
+            simple_supply.solve()

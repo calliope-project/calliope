@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import xarray as xr
 
+from calliope.backend.gurobi_backend_model import GurobiBackendModel
 from calliope.backend.latex_backend_model import MathDocumentation
 from calliope.backend.parsing import ParsedBackendComponent
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
@@ -31,8 +32,8 @@ def get_model_backend(name: str, data: xr.Dataset, **kwargs) -> "BackendModel":
     """
     match name:
         case "pyomo":
-            backend = PyomoBackendModel(data, **kwargs)
+            return PyomoBackendModel(data, **kwargs)
+        case "gurobi":
+            return GurobiBackendModel(data, **kwargs)
         case _:
             raise BackendError(f"Incorrect backend '{name}' requested.")
-
-    return backend
