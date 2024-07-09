@@ -50,6 +50,8 @@ This reduces memory footprint of parameter arrays.
 
 |changed| Moved from black formatting to the Ruff formatter (black-based, but faster).
 
+|fixed| Removed duplicated attribute: `model._timings` | `model._model_data.attrs["timestamps"]` -> `model.timestamps`
+
 ## 0.7.0.dev3 (2024-02-14)
 
 ### User-facing changes

@@ -1,6 +1,9 @@
+import importlib
 import logging
+from copy import deepcopy
 
 import calliope
+import calliope.backend
 import numpy as np
 import pandas as pd
 import pytest
@@ -210,6 +213,55 @@ class TestAddMath:
         }
 
         assert new_math == expected
+
+
+class TestMathMode:
+    """Test math injection during build due to the selected model mode."""
+
+    @pytest.fixture()
+    def temp_path(self, tmpdir_factory):
+        return tmpdir_factory.mktemp("custom_math")
+
+    @pytest.mark.parametrize("mode", ["operate", "spores"])
+    def test_add_run_mode_custom_math(self, caplog, mode):
+        caplog.set_level(logging.DEBUG)
+        mode_custom_math = calliope.AttrDict.from_yaml(
+            importlib.resources.files("calliope") / "math" / f"{mode}.yaml"
+        )
+        m = build_model({}, "simple_supply,two_hours,investment_costs")
+
+        base_math = deepcopy(m.math)
+        base_math.union(mode_custom_math, allow_override=True)
+        m._ensure_mode_math(mode)
+
+        assert f"Updating math formulation with {mode} mode math." in caplog.text
+        assert m.math.as_dict() == base_math.as_dict()
+
+    def test_add_run_mode_custom_math_before_build(self, caplog, temp_path):
+        """Explicit additional math should not be added again."""
+        caplog.set_level(logging.DEBUG)
+        custom_math = calliope.AttrDict({"variables": {"flow_cap": {"active": True}}})
+        file_path = temp_path.join("custom-math.yaml")
+        custom_math.to_yaml(file_path)
+
+        m = build_model(
+            {"config.init.add_math": ["operate", str(file_path)]},
+            "simple_supply,two_hours,investment_costs",
+        )
+        with pytest.warns(calliope.exceptions.ModelWarning):
+            m._ensure_mode_math(m.config.build.mode)
+        assert "Updating math formulation with operate mode math." not in caplog.text
+
+    def test_run_mode_mismatch(self):
+        m = build_model(
+            {"config.init.add_math": ["operate"]},
+            "simple_supply,two_hours,investment_costs",
+        )
+        with pytest.warns(calliope.exceptions.ModelWarning) as excinfo:
+            m._ensure_mode_math(m.config.build.mode)
+        assert check_error_or_warning(
+            excinfo, "Running in plan mode, but run mode(s) {'operate'}"
+        )
 
 
 class TestValidateMathDict:

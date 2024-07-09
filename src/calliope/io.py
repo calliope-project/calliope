@@ -94,12 +94,11 @@ def _serialise(attrs: dict) -> None:
             raise TypeError(
                 f"Cannot serialise a sequence of values stored in a model attribute unless all values are strings, found: {attrs[attr]}"
             )
-    else:
-        attrs["serialised_sets"] = set_attrs
-        # Also keep track of single element sets
-        attrs["serialised_single_element_list"].extend(
-            [k for k in set_attrs if len(attrs[k]) == 1]
-        )
+    attrs["serialised_sets"] = set_attrs
+    # Also keep track of single element sets
+    attrs["serialised_single_element_list"].extend(
+        [k for k in set_attrs if len(attrs[k]) == 1]
+    )
 
 
 def _deserialise(attrs: dict) -> None:
@@ -129,9 +128,9 @@ def save_netcdf(model_data, path, model=None):
     original_model_data_attrs = model_data.attrs
     model_data_attrs = original_model_data_attrs.copy()
 
-    if model is not None and hasattr(model, "_model_def_dict"):
-        # Attach initial model definition to _model_data
-        model_data_attrs["_model_def_dict"] = model._model_def_dict.to_yaml()
+    if model is not None:
+        for name in model._ATTRS_SAVED:
+            model_data_attrs[name] = getattr(model, name).to_yaml()
 
     _serialise(model_data_attrs)
     for var in model_data.data_vars.values():

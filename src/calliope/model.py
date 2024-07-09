@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import importlib
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -46,6 +47,7 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(nanoseconds=1)
+    _ATTRS_SAVED = ("_model_def_dict", "_runtime")
 
     def __init__(
         self,
@@ -84,6 +86,9 @@ class Model:
         self.math_documentation = backend.MathDocumentation()
         self._is_built: bool = False
         self._is_solved: bool = False
+
+        # NOTE: modified stuff
+        self._runtime: AttrDict = AttrDict()
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
@@ -232,11 +237,9 @@ class Model:
             model_data (xr.Dataset):
                 Model dataset with input parameters as arrays and configuration stored in the dataset attributes dictionary.
         """
-        if "_model_def_dict" in model_data.attrs:
-            self._model_def_dict = AttrDict.from_yaml_string(
-                model_data.attrs["_model_def_dict"]
-            )
-            del model_data.attrs["_model_def_dict"]
+        for name in self._ATTRS_SAVED:
+            setattr(self, name, AttrDict.from_yaml_string(model_data.attrs[name]))
+            del model_data.attrs[name]
 
         self._model_data = model_data
         self._add_model_data_methods()
@@ -329,7 +332,7 @@ class Model:
             raise exceptions.ModelError(
                 f"Attempted to load additional math that does not exist: {file_errors}"
             )
-        self._model_data.attrs["applied_additional_math"] = add_math
+        self._runtime["applied_additional_math"] = add_math
         return base_math
 
     def build(self, force: bool = False, **kwargs) -> None:
@@ -353,22 +356,25 @@ class Model:
             comment="Model: backend build starting",
         )
 
-        backend_config = {**self.config["build"], **kwargs}
-        if backend_config["mode"] == "operate":
+        build_config = {**self.config["build"], **kwargs}
+
+        self._ensure_mode_math(build_config["mode"])
+        if build_config["mode"] == "operate":
             if not self._model_data.attrs["allow_operate_mode"]:
                 raise exceptions.ModelError(
                     "Unable to run this model in operate (i.e. dispatch) mode, probably because "
                     "there exist non-uniform timesteps (e.g. from time clustering)"
                 )
-            start_window_idx = backend_config.pop("start_window_idx", 0)
+            start_window_idx = build_config.pop("start_window_idx", 0)
             backend_input = self._prepare_operate_mode_inputs(
-                start_window_idx, **backend_config
+                start_window_idx, **build_config
             )
         else:
             backend_input = self._model_data
-        backend_name = backend_config.pop("backend")
+
+        backend_name = build_config.pop("backend")
         self.backend = backend.get_model_backend(
-            backend_name, backend_input, **backend_config
+            backend_name, backend_input, **build_config
         )
         self.backend.add_all_math()
 
@@ -379,6 +385,26 @@ class Model:
             comment="Model: backend build complete",
         )
         self._is_built = True
+
+    def _ensure_mode_math(self, mode: str) -> None:
+        """Extends model math with the requested mode if it was not initialised."""
+        # FIXME: available modes should not be hardcoded here. They should come from a YAML schema.
+        applied_math = self._runtime["applied_additional_math"]
+        not_run_mode = {"plan", "operate", "spores"}.difference([mode])
+        run_mode_mismatch = not_run_mode.intersection(applied_math)
+        if run_mode_mismatch:
+            exceptions.warn(
+                f"Running in {mode} mode, but run mode(s) {run_mode_mismatch} "
+                "math being loaded from file via the model configuration"
+            )
+
+        if mode != "plan" and mode not in applied_math:
+            LOGGER.debug(f"Updating math formulation with {mode} mode math.")
+            filepath = importlib.resources.files("calliope") / "math" / f"{mode}.yaml"
+            self.math.union(AttrDict.from_yaml(filepath), allow_override=True)
+            self._runtime["applied_additional_math"].append(mode)
+
+        validate_dict(self.math, MATH_SCHEMA, "math")
 
     def solve(self, force: bool = False, warmstart: bool = False, **kwargs) -> None:
         """Solve the built optimisation problem.
