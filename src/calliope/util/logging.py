@@ -123,7 +123,7 @@ def log_time(
     timings[identifier] = now.timestamp()
 
     if time_since_solve_start and "solve_start" in timings:
-        time_diff = now - timings["solve_start"]
+        time_diff = now - fromtimestamp(timings["solve_start"])
         comment += f". Time since start of solving optimisation problem: {time_diff}"
 
     getattr(logger, level.lower())(comment)
