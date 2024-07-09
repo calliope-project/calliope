@@ -75,7 +75,7 @@ class Model:
                 Defaults to None.
             **kwargs: initialisation overrides.
         """
-        self._timings: dict = {}
+        self._timestamps: dict = {}
         self.config: AttrDict
         self.defaults: AttrDict
         self.math: AttrDict
@@ -87,8 +87,8 @@ class Model:
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
-        timestamp_model_creation = log_time(
-            LOGGER, self._timings, "model_creation", comment="Model: initialising"
+        log_time(
+            LOGGER, self._timestamps, "model_creation", comment="Model: initialising"
         )
         if isinstance(model_definition, xr.Dataset):
             self._init_from_model_data(model_definition)
@@ -102,7 +102,6 @@ class Model:
                 model_def, applied_overrides, scenario, data_source_dfs
             )
 
-        self._model_data.attrs["timestamp_model_creation"] = timestamp_model_creation
         version_def = self._model_data.attrs["calliope_version_defined"]
         version_init = self._model_data.attrs["calliope_version_initialised"]
         if version_def is not None and not version_init.startswith(version_def):
@@ -159,7 +158,7 @@ class Model:
         self._model_def_dict = model_definition
         log_time(
             LOGGER,
-            self._timings,
+            self._timestamps,
             "model_run_creation",
             comment="Model: preprocessing stage 1 (model_run)",
         )
@@ -206,7 +205,7 @@ class Model:
 
         log_time(
             LOGGER,
-            self._timings,
+            self._timestamps,
             "model_data_creation",
             comment="Model: preprocessing stage 2 (model_data)",
         )
@@ -219,7 +218,7 @@ class Model:
         self._model_data.attrs["name"] = init_config["name"]
         log_time(
             LOGGER,
-            self._timings,
+            self._timestamps,
             "model_preprocessing_complete",
             comment="Model: preprocessing complete",
         )
@@ -247,7 +246,7 @@ class Model:
 
         log_time(
             LOGGER,
-            self._timings,
+            self._timestamps,
             "model_data_loaded",
             comment="Model: loaded model_data",
         )
@@ -347,9 +346,9 @@ class Model:
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
-        self._model_data.attrs["timestamp_build_start"] = log_time(
+        log_time(
             LOGGER,
-            self._timings,
+            self._timestamps,
             "build_start",
             comment="Model: backend build starting",
         )
@@ -373,9 +372,9 @@ class Model:
         )
         self.backend.add_all_math()
 
-        self._model_data.attrs["timestamp_build_complete"] = log_time(
+        log_time(
             LOGGER,
-            self._timings,
+            self._timestamps,
             "build_complete",
             comment="Model: backend build complete",
         )
@@ -423,9 +422,9 @@ class Model:
             to_drop = []
 
         run_mode = self.backend.inputs.attrs["config"]["build"]["mode"]
-        self._model_data.attrs["timestamp_solve_start"] = log_time(
+        log_time(
             LOGGER,
-            self._timings,
+            self._timestamps,
             "solve_start",
             comment=f"Optimisation model | starting model in {run_mode} mode.",
         )
@@ -442,7 +441,7 @@ class Model:
 
         log_time(
             LOGGER,
-            self._timings,
+            self._timestamps,
             "solver_exit",
             time_since_solve_start=True,
             comment="Backend: solver finished running",
@@ -456,7 +455,7 @@ class Model:
 
         log_time(
             LOGGER,
-            self._timings,
+            self._timestamps,
             "postprocess_complete",
             time_since_solve_start=True,
             comment="Postprocessing: ended",
@@ -470,9 +469,9 @@ class Model:
         )
         self._add_model_data_methods()
 
-        self._model_data.attrs["timestamp_solve_complete"] = log_time(
+        log_time(
             LOGGER,
-            self._timings,
+            self._timestamps,
             "solve_complete",
             time_since_solve_start=True,
             comment="Backend: model solve completed",

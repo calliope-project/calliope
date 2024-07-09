@@ -3,9 +3,9 @@
 
 """Create the Calliope logger object and apply other logging tools/functionality."""
 
-import datetime
 import logging
 import sys
+from datetime import datetime
 
 _time_format = "%Y-%m-%d %H:%M:%S"
 
@@ -100,7 +100,7 @@ def log_time(
     comment: str | None = None,
     level: str = "info",
     time_since_solve_start: bool = False,
-) -> float:
+) -> None:
     """Simultaneously log the time of a Calliope event to dictionary and to the logger.
 
     Args:
@@ -115,21 +115,23 @@ def log_time(
         time_since_solve_start (bool, optional):
             If True, append comment in log message on the event's time compared to the time since the model was sent to the solver (in seconds).
             Defaults to False.
-
-    Returns:
-        timestamp (float): POSIX timestamp of the logged event
     """
     if comment is None:
         comment = identifier
 
-    timings[identifier] = now = datetime.datetime.now()
+    now = datetime.now()
+    timings[identifier] = now.timestamp()
 
     if time_since_solve_start and "solve_start" in timings:
         time_diff = now - timings["solve_start"]
         comment += f". Time since start of solving optimisation problem: {time_diff}"
 
     getattr(logger, level.lower())(comment)
-    return now.timestamp()
+
+
+def fromtimestamp(timestamp: float):
+    """Wrapper to convert a float timestamp to a datetime object."""
+    return datetime.fromtimestamp(timestamp)
 
 
 class LogWriter:

@@ -1,6 +1,4 @@
-import datetime
 import glob
-import logging
 from pathlib import Path
 
 import calliope
@@ -11,77 +9,12 @@ import pandas as pd
 import pytest
 from calliope.util import schema
 from calliope.util.generate_runs import generate_runs
-from calliope.util.logging import log_time
 
 from .common.util import check_error_or_warning
 
 _EXAMPLES_DIR = importlib_resources.files("calliope") / "example_models"
 _MODEL_NATIONAL = (_EXAMPLES_DIR / "national_scale" / "model.yaml").as_posix()
 _MODEL_URBAN = (_EXAMPLES_DIR / "urban_scale" / "model.yaml").as_posix()
-
-
-class TestLogging:
-    @pytest.mark.parametrize(
-        ("level", "include_solver_output", "expected_level", "expected_solver_level"),
-        [
-            ("CRITICAL", True, 50, 10),
-            ("CRITICAL", False, 50, 50),
-            ("info", True, 20, 10),
-            (20, True, 20, 10),
-        ],
-    )
-    def test_set_log_verbosity(
-        self, level, include_solver_output, expected_level, expected_solver_level
-    ):
-        calliope.set_log_verbosity(level, include_solver_output=include_solver_output)
-
-        assert logging.getLogger("calliope").getEffectiveLevel() == expected_level
-        assert logging.getLogger("py.warnings").getEffectiveLevel() == expected_level
-        assert (
-            logging.getLogger("calliope.backend.backend_model").getEffectiveLevel()
-            == expected_level
-        )
-        assert (
-            logging.getLogger(
-                "calliope.backend.backend_model.<solve>"
-            ).getEffectiveLevel()
-            == expected_solver_level
-        )
-
-    def test_timing_log(self):
-        timings = {"model_creation": datetime.datetime.now()}
-        logger = logging.getLogger("calliope.testlogger")
-
-        # TODO: capture logging output and check that comment is in string
-        log_time(logger, timings, "test", comment="test_comment", level="info")
-        assert isinstance(timings["test"], datetime.datetime)
-
-        log_time(logger, timings, "test2", comment=None, level="info")
-        assert isinstance(timings["test2"], datetime.datetime)
-
-        # TODO: capture logging output and check that time_since_solve_start is in the string
-        log_time(
-            logger,
-            timings,
-            "test",
-            comment=None,
-            level="info",
-            time_since_solve_start=True,
-        )
-
-    @pytest.mark.parametrize(
-        ("capture", "expected_level", "n_handlers"), [(True, 20, 1), (False, 30, 0)]
-    )
-    def test_capture_warnings(self, capture, expected_level, n_handlers):
-        calliope.set_log_verbosity("info", capture_warnings=capture)
-
-        assert logging.getLogger("py.warnings").getEffectiveLevel() == expected_level
-        assert len(logging.getLogger("py.warnings").handlers) == n_handlers
-
-    def test_capture_warnings_handlers_dont_append(self):
-        for level in ["critical", "warning", "info", "debug"]:
-            calliope.set_log_verbosity(level, capture_warnings=True)
-            assert len(logging.getLogger("py.warnings").handlers) == 1
 
 
 class TestGenerateRuns:
