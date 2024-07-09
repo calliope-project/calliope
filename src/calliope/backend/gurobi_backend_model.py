@@ -71,12 +71,12 @@ class GurobiBackendModel(backend_model.BackendModel):
             )
             parameter_da = parameter_da.astype(float)
 
-        parameter_da.attrs["original_dtype"] = parameter_values.dtype
         attrs = {
             "title": self._PARAM_TITLES.get(parameter_name, None),
             "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
             "unit": self._PARAM_UNITS.get(parameter_name, None),
             "default": default,
+            "original_dtype": parameter_values.dtype.name,
         }
         self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
 
@@ -92,6 +92,66 @@ class GurobiBackendModel(backend_model.BackendModel):
             return to_fill
 
         self._add_component(name, constraint_dict, _constraint_setter, "constraints")
+
+    def add_piecewise_constraint(  # noqa: D102, override
+        self,
+        name: str,
+        constraint_dict: parsing.UnparsedPiecewiseConstraintDict | None = None,
+    ) -> None:
+        if constraint_dict is None:
+            constraint_dict = self.inputs.math["piecewise_constraints"][name]
+
+        if "breakpoints" in constraint_dict.get("foreach", []):
+            raise BackendError(
+                f"(piecewise_constraints, {name}) | `breakpoints` dimension should not be in `foreach`. "
+                "Instead, index `x_values` and `y_values` parameters over `breakpoints`."
+            )
+
+        def _constraint_setter(where: xr.DataArray, references: set) -> xr.DataArray:
+            expressions = []
+            vals = []
+            for axis in ["x", "y"]:
+                expression_name = constraint_dict[f"{axis}_expression"]
+                if expression_name not in self.variables:
+                    raise BackendError(
+                        "(piecewise_constraints, {name}) | The Gurobi backend cannot build piecewise constraints with math expressions. Only decision variables are allowed."
+                    )
+                parsed_component = parsing.ParsedBackendComponent(
+                    "piecewise_constraints",
+                    name,
+                    {"equations": [{"expression": expression_name}], **constraint_dict},  # type: ignore
+                )
+                eq = parsed_component.parse_equations(self.valid_component_names)
+                expression_da = eq[0].evaluate_expression(
+                    self, where=where, references=references
+                )
+                val_name = constraint_dict[f"{axis}_values"]
+                val_da = self.get_parameter(val_name)
+                if "breakpoints" not in val_da.dims:
+                    raise BackendError(
+                        f"(piecewise_constraints, {name}) | `{axis}_values` must be indexed over the `breakpoints` dimension."
+                    )
+                references.add(val_name)
+                expressions.append(expression_da)
+                vals.extend([*val_da.to_dataset("breakpoints").data_vars.values()])
+            try:
+                return self._apply_func(
+                    self._to_gurobi_piecewise_constraint,
+                    where,
+                    1,
+                    *expressions,
+                    *vals,
+                    name=name,
+                    n_breakpoints=len(self.inputs.breakpoints),
+                )
+            except gurobipy.GurobiError as err:
+                raise BackendError(
+                    f"(piecewise_constraints, {name}) | Errors in generating piecewise constraint: {err}"
+                )
+
+        self._add_component(
+            name, constraint_dict, _constraint_setter, "piecewise_constraints"
+        )
 
     def add_global_expression(  # noqa: D102, override
         self, name: str, expression_dict: parsing.UnparsedExpressionDict | None = None
@@ -285,7 +345,12 @@ class GurobiBackendModel(backend_model.BackendModel):
                 new_obj_name = f"{name}[{', '.join(idx)}]"
                 setattr(val, attr, new_obj_name)
 
-        attribute_names = {"variables": "VarName", "constraints": "ConstrName"}
+        self._instance.update()
+        attribute_names = {
+            "variables": "VarName",
+            "constraints": "ConstrName",
+            "piecewise_constraints": "GenConstrName",
+        }
         with self._datetime_as_string(self._dataset):
             for da in self._dataset.filter_by_attrs(coords_in_name=False).values():
                 if da.attrs["obj_type"] not in attribute_names.keys():
@@ -300,7 +365,6 @@ class GurobiBackendModel(backend_model.BackendModel):
                     attr=attribute_names[da.attrs["obj_type"]],
                 )
                 da.attrs["coords_in_name"] = True
-
         self._instance.update()
 
     def to_lp(self, path: str | Path) -> None:  # noqa: D102, override
@@ -455,6 +519,32 @@ class GurobiBackendModel(backend_model.BackendModel):
 
     def _del_gurobi_obj(self, obj: Any) -> None:
         self._instance.remove(obj)
+
+    def _to_gurobi_piecewise_constraint(
+        self, x_var: Any, y_var: Any, *vals: xr.DataArray, name: str, n_breakpoints: int
+    ) -> gurobipy.GenConstr | float:
+        """Utility function to generate a pyomo piecewise constraint for every element of an xarray DataArray.
+
+        The x-axis decision variable need not be bounded.
+        This aligns piecewise constraint functionality with other possible backends (e.g., gurobipy).
+
+        Args:
+            x_var (Any): The x-axis decision variable to constrain.
+            y_var (Any): The y-axis decision variable to constrain.
+            *vals (xr.DataArray): The x-axis and y-axis decision variable values at each piecewise constraint breakpoint.
+            name (str): The name of the piecewise constraint.
+            n_breakpoints (int): number of breakpoints
+
+        Returns:
+            type[ObjPiecewiseConstraint] | float:
+                If mask is True, return np.nan. Otherwise return piecewise_sos2(...).
+        """
+        y_vals = pd.Series(vals[n_breakpoints:]).dropna()
+        x_vals = pd.Series(vals[:n_breakpoints]).dropna()
+        var = self._instance.addGenConstrPWL(
+            xpts=x_vals, ypts=y_vals, xvar=x_var, yvar=y_var, name=name
+        )
+        return var
 
     def _update_gurobi_variable(
         self, orig: gurobipy.Var, new: Any, *, bound: Literal["lb", "ub"]

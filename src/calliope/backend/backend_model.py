@@ -63,7 +63,14 @@ class BackendModelGenerator(ABC):
     """Helper class for backends."""
 
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
-    _COMPONENT_ATTR_METADATA = ["description", "unit", "default", "title", "math_repr"]
+    _COMPONENT_ATTR_METADATA = [
+        "description",
+        "unit",
+        "default",
+        "title",
+        "math_repr",
+        "original_dtype",
+    ]
 
     _PARAM_TITLES = extract_from_schema(MODEL_SCHEMA, "title")
     _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
@@ -296,8 +303,8 @@ class BackendModelGenerator(ABC):
 
         if component_dict is None:
             component_dict = self.inputs.math[component_type][name]
-        if name not in self.inputs.math[component_type]:
-            self.inputs.math[component_type][name] = component_dict
+        if name not in self.inputs.math.get(component_type, {}):
+            self.inputs.math.set_key(f"{component_type}.name", component_dict)
 
         if break_early and not component_dict.get("active", True):
             self.log(
@@ -449,22 +456,23 @@ class BackendModelGenerator(ABC):
                 All referenced objects will have their "references" attribute updated with this object's name.
                 Defaults to None.
         """
-        add_attrs = {
-            attr: unparsed_dict.pop(attr)
-            for attr in self._COMPONENT_ATTR_METADATA
-            if attr in unparsed_dict.keys()
-        }
-        if unparsed_dict:
-            add_attrs["yaml_snippet"] = AttrDict(unparsed_dict).to_yaml()
+        yaml_snippet_attrs = {}
+        add_attrs = {}
+        for attr, val in unparsed_dict.items():
+            if attr in self._COMPONENT_ATTR_METADATA:
+                add_attrs[attr] = val
+            else:
+                yaml_snippet_attrs[attr] = val
 
-        da.attrs.update(
-            {
-                "obj_type": obj_type,
-                "references": set(),
-                "coords_in_name": False,
-                **add_attrs,  # type: ignore
-            }
-        )
+        if yaml_snippet_attrs:
+            add_attrs["yaml_snippet"] = AttrDict(yaml_snippet_attrs).to_yaml()
+
+        da.attrs = {
+            "obj_type": obj_type,
+            "references": set(),
+            "coords_in_name": False,
+            **add_attrs,  # type: ignore
+        }
         self._dataset[name] = da
         if references is not None:
             self._update_references(name, references)

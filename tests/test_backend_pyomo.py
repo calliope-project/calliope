@@ -2071,10 +2071,6 @@ class TestPiecewiseConstraints:
         return self.gen_params([0, 5, 8])
 
     @pytest.fixture(scope="class")
-    def missing_breakpoint_dims(self):
-        return self.gen_params([0, 5, 10], dim="foobar")
-
-    @pytest.fixture(scope="class")
     def working_model(self, working_params, working_math):
         m = build_model(working_params, "simple_supply,two_hours,investment_costs")
         m.build()
@@ -2088,31 +2084,6 @@ class TestPiecewiseConstraints:
             .dropna()
             .apply(lambda x: isinstance(x, piecewise_sos2))
             .all()
-        )
-
-    def test_piecewise_attrs(self, working_model):
-        constr = working_model.backend.get_piecewise_constraint("foo")
-        expected_keys = set(
-            ["obj_type", "references", "description", "yaml_snippet", "coords_in_name"]
-        )
-        assert not expected_keys.symmetric_difference(constr.attrs.keys())
-        assert constr.attrs["obj_type"] == "piecewise_constraints"
-        assert not constr.attrs["references"]
-        assert constr.attrs["coords_in_name"] is False
-
-    @pytest.mark.parametrize(
-        "var", ["flow_cap", "flow_in", "piecewise_x", "piecewise_y"]
-    )
-    def test_piecewise_refs(self, working_model, var):
-        assert "foo" in working_model.backend._dataset[var].attrs["references"]
-
-    def test_piecewise_verbose(self, working_model):
-        working_model.backend.verbose_strings()
-        constr = working_model.backend.get_piecewise_constraint("foo")
-        dims = {"nodes": "a", "techs": "test_supply_elec", "carriers": "electricity"}
-        assert (
-            str(constr.sel(dims).item())
-            == f"piecewise_constraints[foo][{', '.join(dims[i] for i in constr.dims)}]"
         )
 
     def test_fails_on_length_mismatch(self, length_mismatch_params, working_math):
@@ -2145,31 +2116,6 @@ class TestPiecewiseConstraints:
             ],
         )
         assert not check_error_or_warning(excinfo, "To avoid this error")
-
-    def test_fails_on_breakpoints_in_foreach(self, working_model, working_math):
-        failing_math = {"foreach": ["nodes", "techs", "carriers", "breakpoints"]}
-        with pytest.raises(exceptions.BackendError) as excinfo:
-            working_model.backend.add_piecewise_constraint(
-                "bar", {**working_math, **failing_math}
-            )
-        assert check_error_or_warning(
-            excinfo,
-            "(piecewise_constraints, bar) | `breakpoints` dimension should not be in `foreach`",
-        )
-
-    def test_fails_on_no_breakpoints_in_params(
-        self, missing_breakpoint_dims, working_math
-    ):
-        m = build_model(
-            missing_breakpoint_dims, "simple_supply,two_hours,investment_costs"
-        )
-        m.build()
-        with pytest.raises(exceptions.BackendError) as excinfo:
-            m.backend.add_piecewise_constraint("bar", working_math)
-        assert check_error_or_warning(
-            excinfo,
-            "(piecewise_constraints, bar) | `x_values` must be indexed over the `breakpoints` dimension",
-        )
 
 
 class TestShadowPrices:

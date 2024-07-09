@@ -81,32 +81,29 @@ class PyomoBackendModel(backend_model.BackendModel):
         self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
         self._raise_error_on_preexistence(parameter_name, "parameters")
-
-        self._create_obj_list(parameter_name, "parameters")
-
-        parameter_da = self._apply_func(
-            self._to_pyomo_param,
-            parameter_values.notnull(),
-            1,
-            parameter_values,
-            name=parameter_name,
-        )
-
-        if parameter_da.isnull().all():
+        if parameter_values.isnull().all():
             self.log(
                 "parameters",
                 parameter_name,
                 "Component not added; no data found in array.",
             )
-            self.delete_component(parameter_name, "parameters")
-            parameter_da = parameter_da.astype(float)
+            parameter_da = parameter_values.astype(float)
+        else:
+            self._create_obj_list(parameter_name, "parameters")
+            parameter_da = self._apply_func(
+                self._to_pyomo_param,
+                parameter_values.notnull(),
+                1,
+                parameter_values,
+                name=parameter_name,
+            )
 
-        parameter_da.attrs["original_dtype"] = parameter_values.dtype
         attrs = {
             "title": self._PARAM_TITLES.get(parameter_name, None),
             "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
             "unit": self._PARAM_UNITS.get(parameter_name, None),
             "default": default,
+            "original_dtype": parameter_values.dtype.name,
         }
 
         self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
@@ -135,8 +132,12 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._add_component(name, constraint_dict, _constraint_setter, "constraints")
 
     def add_piecewise_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraintDict
+        self,
+        name: str,
+        constraint_dict: parsing.UnparsedPiecewiseConstraintDict | None = None,
     ) -> None:
+        if constraint_dict is None:
+            constraint_dict = self.inputs.attrs["math"]["piecewise_constraints"][name]
         if "breakpoints" in constraint_dict.get("foreach", []):
             raise BackendError(
                 f"(piecewise_constraints, {name}) | `breakpoints` dimension should not be in `foreach`. "
@@ -144,31 +145,37 @@ class PyomoBackendModel(backend_model.BackendModel):
             )
 
         def _constraint_setter(where: xr.DataArray, references: set) -> xr.DataArray:
-            args = []
-            for val in ["x_expression", "y_expression", "x_values", "y_values"]:
-                val_name = constraint_dict[val]
-                if "expression" in val:
-                    parsed_component = parsing.ParsedBackendComponent(
-                        "piecewise_constraints",
-                        name,
-                        {"equations": [{"expression": val_name}], **constraint_dict},  # type: ignore
+            expressions = []
+            vals = []
+            for axis in ["x", "y"]:
+                expression_name = constraint_dict[f"{axis}_expression"]
+                parsed_component = parsing.ParsedBackendComponent(
+                    "piecewise_constraints",
+                    name,
+                    {"equations": [{"expression": expression_name}], **constraint_dict},  # type: ignore
+                )
+                eq = parsed_component.parse_equations(self.valid_component_names)
+                expression_da = eq[0].evaluate_expression(
+                    self, where=where, references=references
+                )
+                val_name = constraint_dict[f"{axis}_values"]
+                val_da = self.get_parameter(val_name)
+                if "breakpoints" not in val_da.dims:
+                    raise BackendError(
+                        f"(piecewise_constraints, {name}) | `{axis}_values` must be indexed over the `breakpoints` dimension."
                     )
-                    eq = parsed_component.parse_equations(self.valid_component_names)
-                    val_da = eq[0].evaluate_expression(
-                        self, where=where, references=references
-                    )
-                else:
-                    val_da = self.get_parameter(val_name)
-                    if "breakpoints" not in val_da.dims:
-                        raise BackendError(
-                            f"(piecewise_constraints, {name}) | `{val}` must be indexed over the `breakpoints` dimension."
-                        )
                 references.add(val_name)
-                args.append(val_da)
-
+                expressions.append(expression_da)
+                vals.extend([*val_da.to_dataset("breakpoints").data_vars.values()])
             try:
                 return self._apply_func(
-                    self._to_pyomo_piecewise_constraint, where, 1, *args, name=name
+                    self._to_pyomo_piecewise_constraint,
+                    where,
+                    1,
+                    *expressions,
+                    *vals,
+                    name=name,
+                    n_breakpoints=len(self.inputs.breakpoints),
                 )
             except (PiecewiseValidationError, ValueError) as err:
                 # We don't want to confuse the user with suggestions of pyomo options they can't access.
@@ -262,7 +269,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         param_as_vals = self._apply_func(
             self._from_pyomo_param, parameter.notnull(), 1, parameter
         )
-        if parameter.original_dtype.kind == "M":  # i.e., np.datetime64
+        if parameter.original_dtype == "M":  # i.e., np.datetime64
             self.log("parameters", name, "Converting Pyomo object to datetime dtype.")
             return xr.apply_ufunc(pd.to_datetime, param_as_vals)
         else:
@@ -703,13 +710,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         return constraint
 
     def _to_pyomo_piecewise_constraint(
-        self,
-        x_var: Any,
-        y_var: Any,
-        x_vals: xr.DataArray,
-        y_vals: xr.DataArray,
-        *,
-        name: str,
+        self, x_var: Any, y_var: Any, *vals: xr.DataArray, name: str, n_breakpoints: int
     ) -> type[ObjPiecewiseConstraint] | float:
         """Utility function to generate a pyomo piecewise constraint for every element of an xarray DataArray.
 
@@ -719,19 +720,19 @@ class PyomoBackendModel(backend_model.BackendModel):
         Args:
             x_var (Any): The x-axis decision variable to constrain.
             y_var (Any): The y-axis decision variable to constrain.
-            x_vals (xr.DataArray): The x-axis decision variable values at each piecewise constraint breakpoint.
-            y_vals (xr.DataArray): The y-axis decision variable values at each piecewise constraint breakpoint.
+            *vals (xr.DataArray): The x-axis and y-axis decision variable values at each piecewise constraint breakpoint.
             name (str): The name of the piecewise constraint.
+            n_breakpoints (int): number of breakpoints
 
         Returns:
             type[ObjPiecewiseConstraint] | float:
                 If mask is True, return np.nan. Otherwise return piecewise_sos2(...).
         """
-        non_nan_y_vals = y_vals[pd.notnull(y_vals)]
-        non_nan_x_vals = x_vals[pd.notnull(x_vals)]
+        y_vals = pd.Series(vals[n_breakpoints:]).dropna()
+        x_vals = pd.Series(vals[:n_breakpoints]).dropna()
         var = ObjPiecewiseConstraint(
-            breakpoints=non_nan_x_vals,
-            values=non_nan_y_vals,
+            breakpoints=x_vals,
+            values=y_vals,
             input=x_var,
             output=y_var,
             require_bounded_input_variable=False,

@@ -174,7 +174,7 @@ class TestGetters:
         assert parameter.attrs == {
             "obj_type": "parameters",
             "is_result": 0,
-            "original_dtype": np.dtype("float64"),
+            "original_dtype": "float64",
             "references": {"flow_in_inc_eff"},
             "coords_in_name": False,
             "default": 1.0,
@@ -675,3 +675,117 @@ class TestMILP:
     def test_has_integer_or_binary_variables_milp(self, solved_model_milp_cls):
         """MILP models have integer / binary variables."""
         assert solved_model_milp_cls.backend.has_integer_or_binary_variables
+
+
+class TestPiecewiseConstraints:
+    def gen_params(self, data, index=[0, 1, 2], dim="breakpoints"):
+        return {
+            "parameters": {
+                "piecewise_x": {"data": data, "index": index, "dims": dim},
+                "piecewise_y": {
+                    "data": [0, 1, 5],
+                    "index": [0, 1, 2],
+                    "dims": "breakpoints",
+                },
+            }
+        }
+
+    @pytest.fixture(scope="class")
+    def working_math(self):
+        return {
+            "foreach": ["nodes", "techs", "carriers"],
+            "where": "[test_supply_elec] in techs AND piecewise_x AND piecewise_y",
+            "x_values": "piecewise_x",
+            "x_expression": "flow_cap",
+            "y_values": "piecewise_y",
+            "y_expression": "source_cap",
+            "description": "FOO",
+        }
+
+    @pytest.fixture(scope="class")
+    def working_params(self):
+        return self.gen_params([0, 5, 10])
+
+    @pytest.fixture(scope="class")
+    def length_mismatch_params(self):
+        return self.gen_params([0, 10], [0, 1])
+
+    @pytest.fixture(scope="class")
+    def not_reaching_var_bound_with_breakpoint_params(self):
+        return self.gen_params([0, 5, 8])
+
+    @pytest.fixture(scope="class")
+    def missing_breakpoint_dims(self):
+        return self.gen_params([0, 5, 10], dim="foobar")
+
+    @pytest.fixture(scope="class")
+    def working_model(self, backend, working_params, working_math):
+        m = build_model(working_params, "simple_supply,two_hours,investment_costs")
+        m.build(backend=backend)
+        m.backend.add_piecewise_constraint("foo", working_math)
+        return m
+
+    @pytest.fixture(scope="class")
+    def piecewise_constraint(self, working_model):
+        return working_model.backend.get_piecewise_constraint("foo")
+
+    def test_piecewise_attrs(self, piecewise_constraint):
+        expected_keys = set(
+            ["obj_type", "references", "description", "yaml_snippet", "coords_in_name"]
+        )
+        assert not expected_keys.symmetric_difference(piecewise_constraint.attrs.keys())
+
+    def test_piecewise_obj_type(self, piecewise_constraint):
+        assert piecewise_constraint.attrs["obj_type"] == "piecewise_constraints"
+
+    def test_piecewise_refs(self, piecewise_constraint):
+        assert not piecewise_constraint.attrs["references"]
+
+    def test_piecewise_obj_coords_in_name(self, piecewise_constraint):
+        assert piecewise_constraint.attrs["coords_in_name"] is False
+
+    @pytest.mark.parametrize(
+        "var", ["flow_cap", "source_cap", "piecewise_x", "piecewise_y"]
+    )
+    def test_piecewise_upstream_refs(self, working_model, var):
+        assert "foo" in working_model.backend._dataset[var].attrs["references"]
+
+    def test_piecewise_verbose(self, working_model):
+        working_model.backend.verbose_strings()
+        constr = working_model.backend.get_piecewise_constraint("foo")
+        dims = {"nodes": "a", "techs": "test_supply_elec", "carriers": "electricity"}
+        constraint_item = constr.sel(dims).item()
+        if isinstance(working_model.backend, calliope.backend.GurobiBackendModel):
+            constraint_string = constraint_item.GenConstrName
+            prepend = "foo"
+        elif isinstance(working_model.backend, calliope.backend.PyomoBackendModel):
+            constraint_string = str(constraint_item)
+            prepend = "piecewise_constraints[foo]"
+        assert (
+            constraint_string == f"{prepend}[{', '.join(dims[i] for i in constr.dims)}]"
+        )
+
+    def test_fails_on_breakpoints_in_foreach(self, working_model, working_math):
+        failing_math = {"foreach": ["nodes", "techs", "carriers", "breakpoints"]}
+        with pytest.raises(calliope.exceptions.BackendError) as excinfo:
+            working_model.backend.add_piecewise_constraint(
+                "bar", {**working_math, **failing_math}
+            )
+        assert check_error_or_warning(
+            excinfo,
+            "(piecewise_constraints, bar) | `breakpoints` dimension should not be in `foreach`",
+        )
+
+    def test_fails_on_no_breakpoints_in_params(
+        self, missing_breakpoint_dims, working_math, backend
+    ):
+        m = build_model(
+            missing_breakpoint_dims, "simple_supply,two_hours,investment_costs"
+        )
+        m.build(backend=backend)
+        with pytest.raises(calliope.exceptions.BackendError) as excinfo:
+            m.backend.add_piecewise_constraint("bar", working_math)
+        assert check_error_or_warning(
+            excinfo,
+            "(piecewise_constraints, bar) | `x_values` must be indexed over the `breakpoints` dimension",
+        )

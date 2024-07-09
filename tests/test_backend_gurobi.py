@@ -302,3 +302,79 @@ class TestShadowPrices:
         supply_milp.solve()
         shadow_prices = supply_milp.backend.shadow_prices.get("system_balance")
         assert shadow_prices.isnull().all()
+
+
+class TestPiecewiseConstraints:
+    def gen_params(self, data, index=[0, 1, 2], dim="breakpoints"):
+        return {
+            "parameters": {
+                "piecewise_x": {"data": data, "index": index, "dims": dim},
+                "piecewise_y": {
+                    "data": [0, 1, 5],
+                    "index": [0, 1, 2],
+                    "dims": "breakpoints",
+                },
+            }
+        }
+
+    @pytest.fixture(scope="class")
+    def working_math(self):
+        return {
+            "foreach": ["nodes", "techs", "carriers"],
+            "where": "[test_supply_elec] in techs AND piecewise_x AND piecewise_y",
+            "x_values": "piecewise_x",
+            "x_expression": "flow_cap",
+            "y_values": "piecewise_y",
+            "y_expression": "source_cap",
+            "description": "FOO",
+        }
+
+    @pytest.fixture(scope="class")
+    def failing_math(self, working_math):
+        return {**working_math, **{"y_expression": "sum(flow_in, over=timesteps)"}}
+
+    @pytest.fixture(scope="class")
+    def working_params(self):
+        return self.gen_params([0, 5, 10])
+
+    @pytest.fixture(scope="class")
+    def length_mismatch_params(self):
+        return self.gen_params([0, 10], [0, 1])
+
+    @pytest.fixture(scope="class")
+    def working_model(self, working_params, working_math):
+        m = build_model(working_params, "simple_supply,two_hours,investment_costs")
+        m.build(backend="gurobi")
+        m.backend.add_piecewise_constraint("foo", working_math)
+        return m
+
+    def test_piecewise_type(self, working_model):
+        constr = working_model.backend.get_piecewise_constraint("foo")
+        assert (
+            constr.to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, gurobipy.GenConstr))
+            .all()
+        )
+
+    def test_fails_on_length_mismatch(self, length_mismatch_params, working_math):
+        m = build_model(
+            length_mismatch_params, "simple_supply,two_hours,investment_costs"
+        )
+        m.build(backend="gurobi")
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            m.backend.add_piecewise_constraint("foo", working_math)
+        assert check_error_or_warning(
+            excinfo,
+            "Errors in generating piecewise constraint: Arguments xpts and ypts must have the same length",
+        )
+
+    def test_expressions_not_allowed(self, working_params, failing_math):
+        m = build_model(working_params, "simple_supply,two_hours,investment_costs")
+        m.build(backend="gurobi")
+        with pytest.raises(exceptions.BackendError) as excinfo:
+            m.backend.add_piecewise_constraint("foo", failing_math)
+        assert check_error_or_warning(
+            excinfo,
+            "The Gurobi backend cannot build piecewise constraints with math expressions.",
+        )
