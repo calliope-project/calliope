@@ -138,7 +138,8 @@ nav:
     - advanced/scripts.md
     - advanced/mode.md
     - advanced/solver.md
-    - advanced/backend.md
+    - advanced/backend_choice.md
+    - advanced/backend_interface.md
     - advanced/shadow_prices.md
   - Reference:
     - Command line interface: reference/cli.md

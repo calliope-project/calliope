@@ -9,22 +9,23 @@ import logging
 import time
 import typing
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterable, Iterator
+from contextlib import contextmanager
 from copy import deepcopy
+from functools import partial
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Generic,
-    Iterable,
     Literal,
-    Optional,
     SupportsFloat,
     TypeVar,
-    Union,
+    overload,
 )
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
@@ -87,11 +88,7 @@ class BackendModelGenerator(ABC):
 
     @abstractmethod
     def add_parameter(
-        self,
-        parameter_name: str,
-        parameter_values: xr.DataArray,
-        default: Any = np.nan,
-        use_inf_as_na: bool = False,
+        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
         """Add input parameter to backend model in-place.
 
@@ -102,11 +99,9 @@ class BackendModelGenerator(ABC):
         Args:
             parameter_name (str): Name of parameter.
             parameter_values (xr.DataArray): Array of parameter values.
-            default (Any, optional): default value to fill NaN entries in parameter
-                values array. Defaults to np.nan.
-            use_inf_as_na (bool, optional): If True, will consider np.inf parameter
-                value entries as np.nan and consequently try to fill those entries
-                with the parameter default value. Defaults to False.
+            default (Any, optional):
+                Default value to fill NaN entries in parameter values array.
+                Defaults to np.nan.
         """
 
     @abstractmethod
@@ -223,7 +218,8 @@ class BackendModelGenerator(ABC):
             check_results["warn"], check_results["fail"]
         )
 
-    def _build(self) -> None:
+    def add_all_math(self):
+        """Parse and all the math stored in the input data."""
         self._add_run_mode_math()
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
@@ -267,7 +263,7 @@ class BackendModelGenerator(ABC):
     def _add_component(
         self,
         name: str,
-        component_dict: Tp,
+        component_dict: Tp | None,
         component_setter: Callable,
         component_type: Literal[
             "variables",
@@ -277,13 +273,13 @@ class BackendModelGenerator(ABC):
             "objectives",
         ],
         break_early: bool = True,
-    ) -> Optional[parsing.ParsedBackendComponent]:
+    ) -> parsing.ParsedBackendComponent | None:
         """Generalised function to add a optimisation problem component array to the model.
 
         Args:
             name (str): name of the component. If not providing the `component_dict` directly,
                 this name must be available in the input math provided on initialising the class.
-            component_dict (Optional[Tp]): unparsed YAML dictionary configuration.
+            component_dict (Tp | None): unparsed YAML dictionary configuration.
             component_setter (Callable): function to combine evaluated xarray DataArrays into backend component objects.
             component_type (Literal["variables", "global_expressions", "constraints", "objectives"]):
                 type of the added component.
@@ -294,9 +290,14 @@ class BackendModelGenerator(ABC):
                 objects on duplicate index entries.
 
         Returns:
-            Optional[parsing.ParsedBackendComponent]: parsed component. None if the break_early condition was met.
+            parsing.ParsedBackendComponent | None: parsed component. None if the break_early condition was met.
         """
         references: set[str] = set()
+
+        if component_dict is None:
+            component_dict = self.inputs.math[component_type][name]
+        if name not in self.inputs.math[component_type]:
+            self.inputs.math[component_type][name] = component_dict
 
         if break_early and not component_dict.get("active", True):
             self.log(
@@ -415,9 +416,7 @@ class BackendModelGenerator(ABC):
             self.log(
                 "parameters", param_name, "Component not defined; using default value."
             )
-            self.add_parameter(
-                param_name, xr.DataArray(default_val), default_val, use_inf_as_na=False
-            )
+            self.add_parameter(param_name, xr.DataArray(np.nan), default_val)
             self.parameters[param_name].attrs["is_result"] = 0
         LOGGER.info("Optimisation Model | parameters | Generated.")
 
@@ -431,18 +430,19 @@ class BackendModelGenerator(ABC):
         name: str,
         da: xr.DataArray,
         obj_type: _COMPONENTS_T,
-        unparsed_dict: Union[parsing.UNPARSED_DICTS, dict],
-        references: Optional[set] = None,
+        unparsed_dict: parsing.UNPARSED_DICTS | dict,
+        references: set | None = None,
     ):
         """Add array of backend objects to backend dataset in-place.
 
         Args:
             name (str): Name of entry in dataset.
             da (xr.DataArray): Data to add.
-            obj_type (str): Type of backend objects in the array.
-            unparsed_dict (DT):
-                Dictionary describing the object being added, from which descriptor attributes will be extracted and added to the array attributes.
-            references (set):
+            obj_type (_COMPONENTS_T): Type of backend objects in the array.
+            unparsed_dict (parsing.UNPARSED_DICTS | dict):
+                Dictionary describing the object being added, from which descriptor
+                attributes will be extracted and added to the array attributes.
+            references (set | None, optional):
                 All other backend objects which are references in this backend object's linear expression(s).
                 E.g. the constraint "flow_out / flow_out_eff <= flow_cap" references the variables ["flow_out", "flow_cap"]
                 and the parameter ["flow_out_eff"].
@@ -482,14 +482,24 @@ class BackendModelGenerator(ABC):
             except KeyError:
                 continue
 
-    def _apply_func(
+    @overload
+    def _apply_func(  # noqa: D102, override
+        self, func: Callable, where: xr.DataArray, n_out: Literal[1], *args, **kwargs
+    ) -> xr.DataArray: ...
+
+    @overload
+    def _apply_func(  # noqa: D102, override
         self,
         func: Callable,
+        where: xr.DataArray,
+        n_out: Literal[2, 3, 4, 5],
         *args,
-        input_core_dims: Optional[list] = None,
-        output_core_dims: tuple = ((),),
         **kwargs,
-    ) -> xr.DataArray:
+    ) -> tuple[xr.DataArray, ...]: ...
+
+    def _apply_func(
+        self, func: Callable, where: xr.DataArray, n_out: int, *args, **kwargs
+    ) -> xr.DataArray | tuple[xr.DataArray, ...]:
         """Apply a function to every element of an arbitrary number of xarray DataArrays.
 
         Args:
@@ -497,34 +507,31 @@ class BackendModelGenerator(ABC):
                 Un-vectorized function to call.
                 Number of accepted args should equal len(args).
                 Number of accepted kwargs should equal len(kwargs).
-            args (xr.DataArray):
-                xarray DataArrays which will be broadcast together and then iterated over
-                to apply the function.
-            input_core_dims (Optional[tuple], optional):
-                Additional dimensions which `xr.apply_ufunc` won't broadcast on applying `func`.
-                This is directly passed to `xr.apply_ufunc`; see their documentation for more details.
-                Defaults to None.
-            output_core_dims (tuple, optional):
-                Additional dimensions which are expected to be passed back from `xr.apply_ufunc` after applying `func`.
-                This is directly passed to `xr.apply_ufunc`; see their documentation for more details.
-                Defaults to ((), ).
-            kwargs (dict[str, Any]):
+            where (Optional[xr.DataArray]):
+                If given, boolean array that will be used to:
+                1. broadcast *args,
+                2. mask the vectorised function call so that it is only applied on True elements.
+            n_out (int): Number of expected output DataArrays.
+            *args (xr.DataArray):
+                xarray DataArrays which will have `func` applied on every element.
+                If `where` is None, these arrays should already have been broadcast together.
+            **kwargs (dict[str, Any]):
                 Additional keyword arguments to pass to `func`.
 
         Returns:
-            xr.DataArray: Array with func applied to all elements.
+            xr.DataArray | tuple[xr.DataArray, ...]: Array or tuple of arrays with `func` applied to all array elements.
         """
-        return xr.apply_ufunc(
-            func,
-            *args,
-            kwargs=kwargs,
-            vectorize=True,
-            keep_attrs=True,
-            dask="parallelized",
-            output_dtypes=[np.dtype("O")],
-            output_core_dims=output_core_dims,
-            input_core_dims=input_core_dims,
+        if kwargs:
+            func = partial(func, **kwargs)
+        vectorised_func = np.frompyfunc(func, len(args), n_out)
+        da = vectorised_func(
+            *(arg.broadcast_like(where) for arg in args), where=where.values
         )
+        if isinstance(da, xr.DataArray):
+            da = da.fillna(np.nan)
+        else:
+            da = tuple(arr.fillna(np.nan) for arr in da)
+        return da
 
     def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
         """Detect if preexistance errors are present the dataset.
@@ -635,10 +642,20 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             xr.DataArray: parameter array.
         """
 
+    @overload
+    def get_constraint(  # noqa: D102, override
+        self, name: str, as_backend_objs: Literal[True] = True, eval_body: bool = False
+    ) -> xr.DataArray: ...
+
+    @overload
+    def get_constraint(  # noqa: D102, override
+        self, name: str, as_backend_objs: Literal[False], eval_body: bool = False
+    ) -> xr.Dataset: ...
+
     @abstractmethod
     def get_constraint(
         self, name: str, as_backend_objs: bool = True, eval_body: bool = False
-    ) -> Union[xr.DataArray, xr.Dataset]:
+    ) -> xr.DataArray | xr.Dataset:
         """Get constraint data from the backend for debugging.
 
         Dat can be returned as  a table of details or as an array of backend interface objects
@@ -658,7 +675,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 Defaults to False.
 
         Returns:
-            Union[xr.DataArray, xr.Dataset]:
+            xr.DataArray | xr.Dataset:
                 If as_backend_objs is True, will return an xr.DataArray.
                 Otherwise, a xr.Dataset will be given, indexed over the same dimensions as the xr.DataArray, with variables for the constraint body, and upper (`ub`) and lower (`lb`) bounds.
         """
@@ -734,7 +751,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
     @abstractmethod
     def update_parameter(
-        self, name: str, new_values: Union[xr.DataArray, SupportsFloat]
+        self, name: str, new_values: xr.DataArray | SupportsFloat
     ) -> None:
         """Update parameter elements using an array of new values.
 
@@ -747,7 +764,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
         Args:
             name (str): Parameter to update
-            new_values (Union[xr.DataArray, SupportsFloat]): New values to apply. Any
+            new_values (xr.DataArray | SupportsFloat): New values to apply. Any
                 empty (NaN) elements in the array will be skipped.
         """
 
@@ -756,8 +773,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         self,
         name: str,
         *,
-        min: Optional[Union[xr.DataArray, SupportsFloat]] = None,
-        max: Optional[Union[xr.DataArray, SupportsFloat]] = None,
+        min: xr.DataArray | SupportsFloat | None = None,
+        max: xr.DataArray | SupportsFloat | None = None,
     ) -> None:
         """Update the bounds on a decision variable.
 
@@ -766,35 +783,35 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
         Args:
             name (str): Variable to update.
-            min (Union[xr.DataArray, SupportsFloat], optional):
+            min (xr.DataArray | SupportsFloat | None, optional):
                 If provided, the Non-NaN values in the array will be used to defined new lower bounds in the decision variable.
                 Defaults to None.
-            max (Union[xr.DataArray, SupportsFloat], optional):
+            max (xr.DataArray | SupportsFloat | None, optional):
                 If provided, the Non-NaN values in the array will be used to defined new upper bounds in the decision variable.
                 Defaults to None.
         """
 
     @abstractmethod
-    def fix_variable(self, name: str, where: Optional[xr.DataArray] = None) -> None:
+    def fix_variable(self, name: str, where: xr.DataArray | None = None) -> None:
         """Fix the variable value to the value quantified on the most recent call to `solve`.
 
         Fixed variables will be treated as parameters in the optimisation.
 
         Args:
             name (str): Variable to update.
-            where (xr.DataArray, optional):
+            where (xr.DataArray | None, optional):
                 If provided, only a subset of the coordinates in the variable will be fixed.
                 Must be a boolean array or a float equivalent, where NaN is used instead of False.
                 Defaults to None
         """
 
     @abstractmethod
-    def unfix_variable(self, name: str, where: Optional[xr.DataArray] = None) -> None:
+    def unfix_variable(self, name: str, where: xr.DataArray | None = None) -> None:
         """Unfix the variable so that it is treated as a decision variable in the next call to `solve`.
 
         Args:
             name (str): Variable to update
-            where (xr.DataArray, optional):
+            where (xr.DataArray | None, optional):
                 If provided, only a subset of the coordinates in the variable will be unfixed.
                 Must be a boolean array or a float equivalent, where NaN is used instead of False.
                 Defaults to None
@@ -816,13 +833,13 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
 
     @abstractmethod
-    def to_lp(self, path: Union[str, Path]) -> None:
+    def to_lp(self, path: str | Path) -> None:
         """Write the optimisation problem to file in the linear programming LP format.
 
         The LP file can be used for debugging and to submit to solvers directly.
 
         Args:
-            path (Union[str, Path]): Path to which the LP file will be written.
+            path (str | Path): Path to which the LP file will be written.
         """
 
     @property
@@ -935,7 +952,6 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             references (set[str]): names of optimisation problem components.
         """
         ordered_components = [
-            "parameters",
             "variables",
             "global_expressions",
             "constraints",
@@ -956,6 +972,57 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             pretty_group_name = component_group.removesuffix("s").replace("_", " ")
             raise KeyError(f"Unknown {pretty_group_name}: {name}")
         return component
+
+    def _get_variable_bound(
+        self, bound: Any, name: str, references: set, fill_na: float | None = None
+    ) -> xr.DataArray:
+        """Generate array for either the upper or lower bound of a decision variable.
+
+        Args:
+            bound (Any): The bound name (corresponding to an array in the model input data) or value.
+            name (str): Name of decision variable.
+            references (set): set to store (inplace) the name given by `bound`, if `bound` is a reference to an input parameter.
+            fill_na (Optional[float]):
+                Fill bounds with this value, after trying to fill with the default value of the parameter,
+                if `bound` is a reference to an input parameter.
+                Defaults to None.
+
+        Returns:
+            xr.DataArray: Where unbounded, the array entry will be None, otherwise a float value.
+        """
+        if isinstance(bound, str):
+            self.log(
+                "variables",
+                name,
+                f"Applying bound according to the {bound} parameter values.",
+            )
+            bound_array = self.get_parameter(bound).copy()
+            fill_na = bound_array.attrs.get("default", fill_na)
+            references.add(bound)
+        else:
+            bound_array = xr.DataArray(bound)
+        bound_array.attrs = {}
+        return bound_array.fillna(fill_na)
+
+    @contextmanager
+    def _datetime_as_string(self, data: xr.DataArray | xr.Dataset) -> Iterator:
+        """Context manager to temporarily convert np.dtype("datetime64[ns]") coordinates (e.g. timesteps) to strings with a resolution of minutes.
+
+        Args:
+            data (Union[xr.DataArray, xr.Dataset]): xarray object on whose coordinates the conversion will take place.
+        """
+        datetime_coords = set()
+        for name_, vals_ in data.coords.items():
+            if vals_.dtype.kind == "M":
+                data.coords[name_] = data.coords[name_].dt.strftime("%Y-%m-%d %H:%M")
+                datetime_coords.add(name_)
+        try:
+            yield
+        finally:
+            for name_ in datetime_coords:
+                data.coords[name_] = xr.apply_ufunc(
+                    pd.to_datetime, data.coords[name_], keep_attrs=True
+                )
 
 
 class ShadowPrices:

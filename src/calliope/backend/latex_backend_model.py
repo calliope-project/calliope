@@ -7,7 +7,7 @@ import re
 import textwrap
 import typing
 from pathlib import Path
-from typing import Any, Literal, Optional, Union, overload
+from typing import Any, Literal, overload
 
 import jinja2
 import numpy as np
@@ -45,7 +45,7 @@ class MathDocumentation:
             **kwargs: kwargs for the LaTeX backend.
         """
         backend = LatexBackendModel(self._inputs, include=include, **kwargs)
-        backend._build()
+        backend.add_all_math()
 
         self._instance = backend
 
@@ -65,7 +65,7 @@ class MathDocumentation:
         self,
         filename: Literal[None] = None,
         mkdocs_tabbed: bool = False,
-        format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
+        format: _ALLOWED_MATH_FILE_FORMATS | None = None,
     ) -> str: ...
 
     # Expecting None (and format arg is not needed) if giving filename.
@@ -74,29 +74,33 @@ class MathDocumentation:
 
     def write(
         self,
-        filename: Optional[Union[str, Path]] = None,
+        filename: str | Path | None = None,
         mkdocs_tabbed: bool = False,
-        format: Optional[_ALLOWED_MATH_FILE_FORMATS] = None,
-    ) -> Optional[str]:
+        format: _ALLOWED_MATH_FILE_FORMATS | None = None,
+    ) -> str | None:
         """Write model documentation.
 
         `build` must be run beforehand.
 
         Args:
-            filename (Optional[str], optional):
-                If given, will write the built mathematical formulation to a file with the given extension as the file format. Defaults to None.
-            format (Optional["tex", "rst", "md"], optional):
+            filename (str | Path | None, optional):
+                If given, will write the built mathematical formulation to a file with
+                the given extension as the file format. Defaults to None.
+            mkdocs_tabbed (bool, optional):
+                If True and Markdown docs are being generated, the equations will be on
+                a tab and the original YAML math definition will be on another tab.
+                Defaults to False.
+            format (_ALLOWED_MATH_FILE_FORMATS | None, optional):
                 Not required if filename is given (as the format will be automatically inferred).
                 Required if expecting a string return from calling this function. The LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown).
                 Defaults to None.
-            mkdocs_tabbed (bool, optional): If True and Markdown docs are being generated, the equations will be on a tab and the original YAML math definition will be on another tab.
 
         Raises:
             exceptions.ModelError: Math strings need to be built first (`build`)
             ValueError: The file format (inferred automatically from `filename` or given by `format`) must be one of ["tex", "rst", "md"].
 
         Returns:
-            Optional[str]:
+            str | None:
                 If `filename` is None, the built mathematical formulation documentation will be returned as a string.
         """
         if not hasattr(self, "_instance"):
@@ -377,11 +381,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self._add_all_inputs_as_parameters()
 
     def add_parameter(  # noqa: D102, override
-        self,
-        parameter_name: str,
-        parameter_values: xr.DataArray,
-        default: Any = np.nan,
-        use_inf_as_na: bool = False,
+        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
         attrs = {
             "title": self._PARAM_TITLES.get(parameter_name, None),
@@ -394,7 +394,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
 
     def add_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedConstraintDict
+        self, name: str, constraint_dict: parsing.UnparsedConstraintDict | None = None
     ) -> None:
         equation_strings: list = []
 
@@ -454,7 +454,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_global_expression(  # noqa: D102, override
-        self, name: str, expression_dict: parsing.UnparsedExpressionDict
+        self, name: str, expression_dict: parsing.UnparsedExpressionDict | None = None
     ) -> None:
         equation_strings: list = []
 
@@ -481,7 +481,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_dict: parsing.UnparsedVariableDict
+        self, name: str, variable_dict: parsing.UnparsedVariableDict | None = None
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
         bound_refs: set = set()
@@ -499,8 +499,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             var_da
         )
 
-        # Have to get bounds _after_ adding component so the variable is available in the backend dataset
-        lb, ub = self._get_capacity_bounds(name, variable_dict["bounds"], bound_refs)
+        domain = domain_dict[variable_dict.get("domain", "real")]
+        lb, ub = self._get_variable_bounds_string(
+            name, variable_dict["bounds"], bound_refs
+        )
         self._update_references(name, bound_refs.difference(name))
 
         self._generate_math_string(
@@ -508,7 +510,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_dict: parsing.UnparsedObjectiveDict
+        self, name: str, objective_dict: parsing.UnparsedObjectiveDict | None = None
     ) -> None:
         sense_dict = {
             "minimize": r"\min{}",
@@ -523,7 +525,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
         ) -> None:
             self._add_latex_strings(where, element, equation_strings, references)
-            return None
 
         parsed_component = self._add_component(
             name, objective_dict, _objective_setter, "objectives", break_early=False
@@ -617,12 +618,12 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     def _generate_math_string(
         self,
-        parsed_component: Optional[parsing.ParsedBackendComponent],
+        parsed_component: parsing.ParsedBackendComponent | None,
         where_array: xr.DataArray,
-        equations: Optional[list[dict[str, str]]] = None,
-        sense: Optional[str] = None,
-        where: Optional[str] = None,
-        sets: Optional[list[str]] = None,
+        equations: list[dict[str, str]] | None = None,
+        sense: str | None = None,
+        where: str | None = None,
+        sets: list[str] | None = None,
     ) -> None:
         if parsed_component is not None:
             where = parsed_component.evaluate_where(self, return_type="math_string")
@@ -638,8 +639,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 sets=sets,
             )
             where_array.attrs.update({"math_string": equation_element_string})
-
-        return None
 
     @staticmethod
     def _render(template: str, **kwargs) -> str:
@@ -670,9 +669,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         jinja_env.filters["mathify_text_in_text"] = __mathify_text_in_text
         return jinja_env.from_string(template).render(**kwargs)
 
-    def _get_capacity_bounds(
+    def _get_variable_bounds_string(
         self, name: str, bounds: parsing.UnparsedVariableBoundDict, references: set
     ) -> tuple[dict[str, str], ...]:
+        """Convert variable upper and lower bounds into math string expressions."""
         bound_dict: parsing.UnparsedConstraintDict = {
             "equations": [
                 {"expression": f"{bounds['min']} <= {name}"},

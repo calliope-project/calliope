@@ -6,7 +6,7 @@ import importlib
 import re
 import sys
 from copy import deepcopy
-from typing import Literal, Optional
+from typing import Literal
 
 import jsonschema
 
@@ -134,7 +134,7 @@ def validate_dict(to_validate: dict, schema: dict, dict_descriptor: str) -> None
 def extract_from_schema(
     schema: dict,
     keyword: str,
-    subset_top_level: Optional[Literal["nodes", "techs", "parameters"]] = None,
+    subset_top_level: Literal["nodes", "techs", "parameters"] | None = None,
 ) -> dict:
     """Extract a keyword for each leaf property in the schema.
 
@@ -144,9 +144,9 @@ def extract_from_schema(
     Args:
         schema (dict): Schema to extract keyword from
         keyword (str): property key to extract
-        subset_top_level (Literal["nodes", "techs", "parameters"], optional):
+        subset_top_level (Literal["nodes", "techs", "parameters"] | None, optional):
             Include only those properties that are leaves along a specific top-level property branch.
-            Defaults to None, i.e., all property branches are included.
+            Defaults to None (all property branches are included).
 
     Returns:
         dict:
@@ -182,7 +182,6 @@ def _extend_with_keyword(
                     continue
                 instance.setdefault(".".join(new_key.groups()), val)
 
-        for error in validate_properties(validator, properties, instance, schema):
-            yield error
+        yield from validate_properties(validator, properties, instance, schema)
 
     return jsonschema.validators.extend(validator_class, {"properties": set_defaults})

@@ -190,7 +190,7 @@ By rerunning the backend specifically, you can optimise your problem with these 
 !!! info "See also"
     [Backend model API][calliope.backend.backend_model.BackendModel],
     [Tutorial on interacting with the Backend][building-and-checking-the-optimisation-problem],
-    [Interfacing with the built optimisation problem](advanced/backend.md)
+    [Interfacing with the built optimisation problem](advanced/backend_interface.md)
 
 ## Debugging model errors
 

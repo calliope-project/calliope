@@ -5,7 +5,8 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Callable, Union
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pyparsing as pp
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
 
 pp.ParserElement.enablePackrat()
 
-BOOLEANTYPE = Union[np.bool_, np.typing.NDArray[np.bool_]]
+BOOLEANTYPE = np.bool_ | np.typing.NDArray[np.bool_]
 
 
 class EvalAttrs(TypedDict):
@@ -121,7 +122,7 @@ class ConfigOptionParser(EvalWhere):
             self.eval_attrs["input_data"].attrs["config"].build[self.config_option]
         )
 
-        if not isinstance(config_val, (int, float, str, bool, np.bool_)):
+        if not isinstance(config_val, int | float | str | bool | np.bool_):
             raise BackendError(
                 f"(where, {self.instring}): Configuration option resolves to invalid "
                 f"type `{type(config_val).__name__}`, expected a number, string, or boolean."

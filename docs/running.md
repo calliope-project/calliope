@@ -34,7 +34,6 @@ $ calliope run testmodel/model.yaml --save_netcdf=results.nc --save_csv=outputs
 !!! warning
     The command-line tool does not save results by default -- the modeller must specify one of the `-save` options.
 
-
 ### Applying a scenario or override on the command line
 
 !!! note "See also"

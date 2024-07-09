@@ -4,7 +4,6 @@
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
@@ -15,29 +14,29 @@ LOGGER = logging.getLogger(__name__)
 
 def load_model_definition(
     model_definition: str | Path | dict,
-    scenario: Optional[str] = None,
-    override_dict: Optional[dict] = None,
+    scenario: str | None = None,
+    override_dict: dict | None = None,
     **kwargs,
-) -> tuple[AttrDict, Optional[Path], str]:
+) -> tuple[AttrDict, Path | None, str]:
     """Load model definition from file / dictionary and apply user-defined overrides.
 
     Args:
         model_definition (str | Path | dict):
             If string or pathlib.Path, path to YAML file with model configuration.
             If dictionary, equivalent to loading the model configuration YAML from file.
-        scenario (Optional[str], optional):
+        scenario (str | None, optional):
             If not None, name of scenario to apply.
             Can either be a named scenario, or a comma-separated list of individual overrides to be combined ad-hoc,
             e.g. 'my_scenario_name' or 'override1,override2'.
             Defaults to None.
-        override_dict (Optional[dict], optional):
+        override_dict (dict | None, optional):
             If not None, dictionary of overrides to apply.
             These will be applied _after_ `scenario` overrides.
             Defaults to None.
         **kwargs: initialisation overrides.
 
     Returns:
-        tuple[AttrDict, Optional[Path], str]:
+        tuple[AttrDict, Path | None, str]:
             1. Model definition with overrides applied.
             2. Path to model definition YAML if input `model_definiton` was pathlike, otherwise None.
             3. Expansion of scenarios (which are references to model overrides) into a list of named override(s) that have been applied.
@@ -66,17 +65,12 @@ def _combine_overrides(overrides: AttrDict, scenario_overrides: list):
             yaml_string = overrides[override].to_yaml()
             override_with_imports = AttrDict.from_yaml_string(yaml_string)
         except KeyError:
-            raise exceptions.ModelError(
-                "Override `{}` is not defined.".format(override)
-            )
+            raise exceptions.ModelError(f"Override `{override}` is not defined.")
         try:
             combined_override_dict.union(override_with_imports, allow_override=False)
         except KeyError as e:
             raise exceptions.ModelError(
-                str(e)[1:-1]
-                + ". Already specified but defined again in " "override `{}`.".format(
-                    override
-                )
+                f"{str(e)[1:-1]}. Already specified but defined again in override `{override}`."
             )
 
     return combined_override_dict
@@ -84,19 +78,19 @@ def _combine_overrides(overrides: AttrDict, scenario_overrides: list):
 
 def _apply_overrides(
     model_def: AttrDict,
-    scenario: Optional[str] = None,
-    override_dict: Optional[str | dict] = None,
+    scenario: str | None = None,
+    override_dict: str | dict | None = None,
 ) -> tuple[AttrDict, list[str]]:
     """Generate processed Model configuration, applying any scenario overrides.
 
     Args:
         model_def (calliope.Attrdict): Loaded model definition as an attribute dictionary.
-        scenario (Optional[str], optional):
+        scenario (str | None, optional):
             If not None, name of scenario to apply.
             Can either be a named scenario, or a comma-separated list of individual overrides to be combined ad-hoc,
             e.g. 'my_scenario_name' or 'override1,override2'.
             Defaults to None.
-        override_dict (Optional[dict], optional):
+        override_dict (str | dict | None, optional):
             If not None, dictionary of overrides to apply.
             These will be applied _after_ `scenario` overrides.
             Defaults to None.
@@ -159,7 +153,7 @@ def _load_overrides_from_scenario(
     model_def: AttrDict, scenario: str, overrides: dict, scenarios: dict
 ) -> list[str]:
     if scenario in scenarios.keys():
-        LOGGER.info("Loading overrides from scenario: {} ".format(scenario))
+        LOGGER.info(f"Loading overrides from scenario: {scenario} ")
         scenario_list = listify(scenarios[scenario])
     else:
         scenario_list = scenario.split(",")

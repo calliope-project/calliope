@@ -9,13 +9,16 @@
 import functools
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Literal, Mapping, Optional, Union, overload
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
 import xarray as xr
 
-from calliope.backend.backend_model import BackendModel
 from calliope.exceptions import BackendError
+
+if TYPE_CHECKING:
+    from calliope.backend.backend_model import BackendModel
 
 _registry: dict[
     Literal["where", "expression"], dict[str, type["ParsingHelperFunction"]]
@@ -31,7 +34,7 @@ class ParsingHelperFunction(ABC):
         *,
         equation_name: str,
         input_data: xr.Dataset,
-        backend_interface: Optional[type[BackendModel]] = None,
+        backend_interface: type["BackendModel"] | None = None,
         **kwargs,
     ) -> None:
         """Abstract helper function class, which all helper functions must subclass.
@@ -145,11 +148,11 @@ class ParsingHelperFunction(ABC):
         dim_singular = dim.removesuffix("s")
         return rf"\text{{{dim_singular}}} \in \text{{{dim}}}"
 
-    def _listify(self, vals: Union[list[str], str]) -> list[str]:
+    def _listify(self, vals: list[str] | str) -> list[str]:
         """Force a string to a list of length one if not already provided as a list.
 
         Args:
-            vals (Union[list[str], str]): Values (or single value) to force to a list.
+            vals (list[str] | str): Values (or single value) to force to a list.
 
         Returns:
             list[str]: Input forced to a list.
@@ -168,7 +171,7 @@ class Inheritance(ParsingHelperFunction):
     NAME = "inheritance"
 
     def as_math_string(  # noqa: D102, override
-        self, nodes: Optional[str] = None, techs: Optional[str] = None
+        self, nodes: str | None = None, techs: str | None = None
     ) -> str:
         strings = []
         if nodes is not None:
@@ -178,15 +181,15 @@ class Inheritance(ParsingHelperFunction):
         return rf"\text{{inherits({','.join(strings)})}}"
 
     def as_array(
-        self, *, nodes: Optional[str] = None, techs: Optional[str] = None
+        self, *, nodes: str | None = None, techs: str | None = None
     ) -> xr.DataArray:
         """Find all technologies and/or nodes which inherit from a particular technology or node group.
 
         The group items being referenced must be defined by the user in `node_groups`/`tech_groups`.
 
         Args:
-            nodes (Optional[str], optional): group name to search for inheritance of on the `nodes` dimension. Default is None.
-            techs (Optional[str], optional): group name to search for inheritance of on the `techs` dimension. Default is None.
+            nodes (str | None, optional): group name to search for inheritance of on the `nodes` dimension. Default is None.
+            techs (str | None, optional): group name to search for inheritance of on the `techs` dimension. Default is None.
 
         Returns:
             xr.Dataset: Boolean array where values are True where the group is inherited, False otherwise. Array dimensions will equal the number of non-None inputs.
@@ -267,7 +270,7 @@ class WhereAny(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["where"]
 
-    def as_math_string(self, array: str, *, over: Union[str, list[str]]) -> str:  # noqa: D102, override
+    def as_math_string(self, array: str, *, over: str | list[str]) -> str:  # noqa: D102, override
         if isinstance(over, str):
             overstring = self._instr(over)
         else:
@@ -276,12 +279,12 @@ class WhereAny(ParsingHelperFunction):
         # Using bigvee for "collective-or"
         return rf"\bigvee\limits_{{{overstring}}} ({array})"
 
-    def as_array(self, parameter: str, *, over: Union[str, list[str]]) -> xr.DataArray:
+    def as_array(self, parameter: str, *, over: str | list[str]) -> xr.DataArray:
         """Reduce the boolean where array of a model parameter by applying `any` over some dimension(s).
 
         Args:
             parameter (str): Reference to a model input parameter
-            over (Union[str, list[str]]): dimension(s) over which to apply `any`.
+            over (str | list[str]): dimension(s) over which to apply `any`.
 
         Returns:
             xr.DataArray:
@@ -416,11 +419,7 @@ class Defined(ParsingHelperFunction):
         return set(definition_matrix.dims).difference([*dim_names, within])
 
     def _latex_substring(
-        self,
-        how: Literal["all", "any"],
-        dim: str,
-        vals: Union[str, list[str]],
-        within: str,
+        self, how: Literal["all", "any"], dim: str, vals: str | list[str], within: str
     ) -> str:
         if how == "all":
             # Using wedge for "collective-and"
@@ -443,7 +442,7 @@ class Sum(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_math_string(self, array: str, *, over: Union[str, list[str]]) -> str:  # noqa: D102, override
+    def as_math_string(self, array: str, *, over: str | list[str]) -> str:  # noqa: D102, override
         if isinstance(over, str):
             overstring = self._instr(over)
         else:
@@ -451,14 +450,12 @@ class Sum(ParsingHelperFunction):
             overstring = rf"\substack{{{foreach_string}}}"
         return rf"\sum\limits_{{{overstring}}} ({array})"
 
-    def as_array(
-        self, array: xr.DataArray, *, over: Union[str, list[str]]
-    ) -> xr.DataArray:
+    def as_array(self, array: xr.DataArray, *, over: str | list[str]) -> xr.DataArray:
         """Sum an expression array over the given dimension(s).
 
         Args:
             array (xr.DataArray): expression array
-            over (Union[str, list[str]]): dimension(s) over which to apply `sum`.
+            over (str | list[str]): dimension(s) over which to apply `sum`.
 
         Returns:
             xr.DataArray:
@@ -658,7 +655,7 @@ class GetValAtIndex(ParsingHelperFunction):
     def _mapping_to_dim_idx(**dim_idx_mapping: str) -> tuple[str, str]: ...
 
     @staticmethod
-    def _mapping_to_dim_idx(**dim_idx_mapping) -> tuple[str, Union[str, int]]:
+    def _mapping_to_dim_idx(**dim_idx_mapping) -> tuple[str, str | int]:
         if len(dim_idx_mapping) != 1:
             raise ValueError("Supply one (and only one) dimension:index mapping")
         return next(iter(dim_idx_mapping.items()))

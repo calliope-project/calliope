@@ -20,6 +20,9 @@ config:
   solve:
     solver: cbc
 
+parameters:
+  bigM: 1e3
+
 data_sources:
   demand_elec:
     source: data_sources/demand_elec.csv
