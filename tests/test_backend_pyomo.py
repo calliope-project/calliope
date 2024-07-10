@@ -2078,6 +2078,7 @@ class TestPiecewiseConstraints:
         return m
 
     def test_piecewise_type(self, working_model):
+        """All piecewise elements are the correct Pyomo type."""
         constr = working_model.backend.get_piecewise_constraint("foo")
         assert (
             constr.to_series()
@@ -2086,21 +2087,33 @@ class TestPiecewiseConstraints:
             .all()
         )
 
+    def test_piecewise_verbose(self, working_model):
+        """All piecewise elements have the full set of dimensions when verbose."""
+        working_model.backend.verbose_strings()
+        constr = working_model.backend.get_piecewise_constraint("foo")
+        dims = {"nodes": "a", "techs": "test_supply_elec", "carriers": "electricity"}
+        constraint_item = constr.sel(dims).item()
+        assert (
+            str(constraint_item)
+            == f"piecewise_constraints[foo][{', '.join(dims[i] for i in constr.dims)}]"
+        )
+
     def test_fails_on_length_mismatch(self, length_mismatch_params, working_math):
+        """Expected error when number of breakpoints on X and Y don't match."""
         m = build_model(
             length_mismatch_params, "simple_supply,two_hours,investment_costs"
         )
         m.build()
-        with pytest.raises(exceptions.BackendError) as excinfo:
+        with pytest.raises(
+            exceptions.BackendError,
+            match="The number of breakpoints (2) differs from the number of function values (3)",
+        ):
             m.backend.add_piecewise_constraint("foo", working_math)
-        assert check_error_or_warning(
-            excinfo,
-            "(piecewise_constraints, foo) | Errors in generating piecewise constraint: The number of breakpoints (2) differs from the number of function values (3)",
-        )
 
     def test_fails_on_not_reaching_bounds(
         self, not_reaching_var_bound_with_breakpoint_params, working_math
     ):
+        """Expected error when breakpoints exceed upper bound of the variable (pyomo-specific error)."""
         m = build_model(
             not_reaching_var_bound_with_breakpoint_params,
             "simple_supply,two_hours,investment_costs",

@@ -730,42 +730,33 @@ class TestPiecewiseConstraints:
         return working_model.backend.get_piecewise_constraint("foo")
 
     def test_piecewise_attrs(self, piecewise_constraint):
+        """Check a piecewise constraint has all expected attributes."""
         expected_keys = set(
             ["obj_type", "references", "description", "yaml_snippet", "coords_in_name"]
         )
         assert not expected_keys.symmetric_difference(piecewise_constraint.attrs.keys())
 
     def test_piecewise_obj_type(self, piecewise_constraint):
+        """Check a piecewise constraint has expected object type."""
         assert piecewise_constraint.attrs["obj_type"] == "piecewise_constraints"
 
     def test_piecewise_refs(self, piecewise_constraint):
+        """Check a piecewise constraint has expected refs to other math components (zero for piecewise constraints)."""
         assert not piecewise_constraint.attrs["references"]
 
     def test_piecewise_obj_coords_in_name(self, piecewise_constraint):
+        """Check a piecewise constraint does not have verbose strings activated."""
         assert piecewise_constraint.attrs["coords_in_name"] is False
 
     @pytest.mark.parametrize(
         "var", ["flow_cap", "source_cap", "piecewise_x", "piecewise_y"]
     )
     def test_piecewise_upstream_refs(self, working_model, var):
+        """Expected tracking of piecewise constraint in component reference chains."""
         assert "foo" in working_model.backend._dataset[var].attrs["references"]
 
-    def test_piecewise_verbose(self, working_model):
-        working_model.backend.verbose_strings()
-        constr = working_model.backend.get_piecewise_constraint("foo")
-        dims = {"nodes": "a", "techs": "test_supply_elec", "carriers": "electricity"}
-        constraint_item = constr.sel(dims).item()
-        if isinstance(working_model.backend, calliope.backend.GurobiBackendModel):
-            constraint_string = constraint_item.GenConstrName
-            prepend = "foo"
-        elif isinstance(working_model.backend, calliope.backend.PyomoBackendModel):
-            constraint_string = str(constraint_item)
-            prepend = "piecewise_constraints[foo]"
-        assert (
-            constraint_string == f"{prepend}[{', '.join(dims[i] for i in constr.dims)}]"
-        )
-
     def test_fails_on_breakpoints_in_foreach(self, working_model, working_math):
+        """Expected error when defining `breakpoints` in foreach."""
         failing_math = {"foreach": ["nodes", "techs", "carriers", "breakpoints"]}
         with pytest.raises(calliope.exceptions.BackendError) as excinfo:
             working_model.backend.add_piecewise_constraint(
@@ -779,6 +770,7 @@ class TestPiecewiseConstraints:
     def test_fails_on_no_breakpoints_in_params(
         self, missing_breakpoint_dims, working_math, backend
     ):
+        """Expected error when parameter defining breakpoints isn't indexed over `breakpoints`."""
         m = build_model(
             missing_breakpoint_dims, "simple_supply,two_hours,investment_costs"
         )

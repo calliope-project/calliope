@@ -131,63 +131,6 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         self._add_component(name, constraint_dict, _constraint_setter, "constraints")
 
-    def add_piecewise_constraint(  # noqa: D102, override
-        self,
-        name: str,
-        constraint_dict: parsing.UnparsedPiecewiseConstraintDict | None = None,
-    ) -> None:
-        if constraint_dict is None:
-            constraint_dict = self.inputs.attrs["math"]["piecewise_constraints"][name]
-        if "breakpoints" in constraint_dict.get("foreach", []):
-            raise BackendError(
-                f"(piecewise_constraints, {name}) | `breakpoints` dimension should not be in `foreach`. "
-                "Instead, index `x_values` and `y_values` parameters over `breakpoints`."
-            )
-
-        def _constraint_setter(where: xr.DataArray, references: set) -> xr.DataArray:
-            expressions = []
-            vals = []
-            for axis in ["x", "y"]:
-                expression_name = constraint_dict[f"{axis}_expression"]
-                parsed_component = parsing.ParsedBackendComponent(
-                    "piecewise_constraints",
-                    name,
-                    {"equations": [{"expression": expression_name}], **constraint_dict},  # type: ignore
-                )
-                eq = parsed_component.parse_equations(self.valid_component_names)
-                expression_da = eq[0].evaluate_expression(
-                    self, where=where, references=references
-                )
-                val_name = constraint_dict[f"{axis}_values"]
-                val_da = self.get_parameter(val_name)
-                if "breakpoints" not in val_da.dims:
-                    raise BackendError(
-                        f"(piecewise_constraints, {name}) | `{axis}_values` must be indexed over the `breakpoints` dimension."
-                    )
-                references.add(val_name)
-                expressions.append(expression_da)
-                vals.extend([*val_da.to_dataset("breakpoints").data_vars.values()])
-            try:
-                return self._apply_func(
-                    self._to_pyomo_piecewise_constraint,
-                    where,
-                    1,
-                    *expressions,
-                    *vals,
-                    name=name,
-                    n_breakpoints=len(self.inputs.breakpoints),
-                )
-            except (PiecewiseValidationError, ValueError) as err:
-                # We don't want to confuse the user with suggestions of pyomo options they can't access.
-                err_message = err.args[0].split(" To avoid this error")[0]
-                raise BackendError(
-                    f"(piecewise_constraints, {name}) | Errors in generating piecewise constraint: {err_message}"
-                )
-
-        self._add_component(
-            name, constraint_dict, _constraint_setter, "piecewise_constraints"
-        )
-
     def add_global_expression(  # noqa: D102, override
         self, name: str, expression_dict: parsing.UnparsedExpressionDict | None = None
     ) -> None:
@@ -581,30 +524,25 @@ class PyomoBackendModel(backend_model.BackendModel):
         number_of_binary_and_integer_vars = binaries + integers
         return number_of_binary_and_integer_vars > 0
 
-    def _get_piecewise_breakpoints(
-        self, breakpoint_vals: str, name: str, references: set
-    ) -> xr.DataArray:
-        """Generate array of piecewise constraint breakpoint values.
-
-        Only references to model parameters are allowed.
-
-        Args:
-            breakpoint_vals (Any): parameter name defining breakpoint values.
-            name (str): Name of piecewise constraint, for logging purposes.
-            references (set): References to other optimisation model components to be updated in-place.
-
-        Returns:
-            xr.DataArray: Breakpoint array
-        """
-        self.log(
-            "piecewise_constraints",
-            name,
-            f"Applying bound according to the {breakpoint_vals} parameter values.",
-        )
-        bound_array = self.get_parameter(breakpoint_vals)
-        references.add(breakpoint_vals)
-
-        return bound_array
+    def _to_piecewise_constraint(  # noqa: D102, override
+        self, x_var: Any, y_var: Any, *vals: float, name: str, n_breakpoints: int
+    ) -> type[ObjPiecewiseConstraint]:
+        y_vals = pd.Series(vals[n_breakpoints:]).dropna()
+        x_vals = pd.Series(vals[:n_breakpoints]).dropna()
+        try:
+            var = ObjPiecewiseConstraint(
+                breakpoints=x_vals,
+                values=y_vals,
+                input=x_var,
+                output=y_var,
+                require_bounded_input_variable=False,
+            )
+            self._instance.piecewise_constraints[name].append(var)
+        except (PiecewiseValidationError, ValueError) as err:
+            # We don't want to confuse the user with suggestions of pyomo options they can't access.
+            err_message = err.args[0].split(" To avoid this error")[0]
+            raise BackendError(err_message)
+        return var
 
     def _to_pyomo_param(
         self, val: Any, *, name: str, default: Any = np.nan
@@ -708,37 +646,6 @@ class PyomoBackendModel(backend_model.BackendModel):
         constraint = ObjConstraint(expr=expr)
         self._instance.constraints[name].append(constraint)
         return constraint
-
-    def _to_pyomo_piecewise_constraint(
-        self, x_var: Any, y_var: Any, *vals: xr.DataArray, name: str, n_breakpoints: int
-    ) -> type[ObjPiecewiseConstraint] | float:
-        """Utility function to generate a pyomo piecewise constraint for every element of an xarray DataArray.
-
-        The x-axis decision variable need not be bounded.
-        This aligns piecewise constraint functionality with other possible backends (e.g., gurobipy).
-
-        Args:
-            x_var (Any): The x-axis decision variable to constrain.
-            y_var (Any): The y-axis decision variable to constrain.
-            *vals (xr.DataArray): The x-axis and y-axis decision variable values at each piecewise constraint breakpoint.
-            name (str): The name of the piecewise constraint.
-            n_breakpoints (int): number of breakpoints
-
-        Returns:
-            type[ObjPiecewiseConstraint] | float:
-                If mask is True, return np.nan. Otherwise return piecewise_sos2(...).
-        """
-        y_vals = pd.Series(vals[n_breakpoints:]).dropna()
-        x_vals = pd.Series(vals[:n_breakpoints]).dropna()
-        var = ObjPiecewiseConstraint(
-            breakpoints=x_vals,
-            values=y_vals,
-            input=x_var,
-            output=y_var,
-            require_bounded_input_variable=False,
-        )
-        self._instance.piecewise_constraints[name].append(var)
-        return var
 
     def _to_pyomo_variable(
         self,
