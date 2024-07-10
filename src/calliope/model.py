@@ -81,7 +81,7 @@ class Model:
         self.config: AttrDict
         self.defaults: AttrDict
         self.math: AttrDict
-        self._model_def_path: Path | None
+        self._def_path: Path | None
         self.backend: BackendModel
         self.math_documentation = backend.MathDocumentation()
         self._is_built: bool = False
@@ -98,10 +98,8 @@ class Model:
         if isinstance(model_definition, xr.Dataset):
             self._init_from_model_data(model_definition)
         else:
-            (model_def, self._model_def_path, applied_overrides) = (
-                load.load_model_definition(
-                    model_definition, scenario, override_dict, **kwargs
-                )
+            (model_def, self._def_path, applied_overrides) = load.load_model_definition(
+                model_definition, scenario, override_dict, **kwargs
             )
             self._init_from_model_def_dict(
                 model_def, applied_overrides, scenario, data_source_dfs
@@ -176,7 +174,7 @@ class Model:
 
         if init_config["time_cluster"] is not None:
             init_config["time_cluster"] = relative_path(
-                self._model_def_path, init_config["time_cluster"]
+                self._def_path, init_config["time_cluster"]
             )
 
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
@@ -190,11 +188,7 @@ class Model:
 
         data_sources = [
             DataSource(
-                init_config,
-                source_name,
-                source_dict,
-                data_source_dfs,
-                self._model_def_path,
+                init_config, source_name, source_dict, data_source_dfs, self._def_path
             )
             for source_name, source_dict in model_definition.pop(
                 "data_sources", {}
@@ -319,7 +313,7 @@ class Model:
             if not f"{filename}".endswith((".yaml", ".yml")):
                 yaml_filepath = math_dir / f"{filename}.yaml"
             else:
-                yaml_filepath = relative_path(self._model_def_path, filename)
+                yaml_filepath = relative_path(self._def_path, filename)
 
             if not yaml_filepath.is_file():
                 file_errors.append(filename)

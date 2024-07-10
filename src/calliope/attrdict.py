@@ -229,12 +229,11 @@ class AttrDict(dict):
                 # want to overwrite so stop and warn the user
                 else:
                     raise KeyError("Cannot set nested key on non-dict key.")
+        elif key in self and isinstance(value, AttrDict):
+            for k, v in value.items():
+                self[key].set_key(k, v)
         else:
-            if key in self and isinstance(value, AttrDict):
-                for k, v in value.items():
-                    self[key].set_key(k, v)
-            else:
-                self[key] = value
+            self[key] = value
 
     def get_key(self, key, default=_MISSING):
         """Looks up the given ``key``.
@@ -258,12 +257,10 @@ class AttrDict(dict):
                     return default
             else:
                 value = self[key].get_key(remainder)
+        elif default != _MISSING:
+            return self.get(key, default)
         else:
-            # Single, non-nested key of form "foo"
-            if default != _MISSING:
-                return self.get(key, default)
-            else:
-                return self[key]
+            return self[key]
         return value
 
     def del_key(self, key):
