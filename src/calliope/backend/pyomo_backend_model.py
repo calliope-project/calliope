@@ -212,16 +212,9 @@ class PyomoBackendModel(backend_model.BackendModel):
         param_as_vals = self._apply_func(
             self._from_pyomo_param, parameter.notnull(), 1, parameter
         )
-        if parameter.original_dtype == "M":  # i.e., np.datetime64
-            self.log("parameters", name, "Converting Pyomo object to datetime dtype.")
-            return xr.apply_ufunc(pd.to_datetime, param_as_vals)
-        else:
-            self.log(
-                "parameters",
-                name,
-                f"Converting Pyomo object to {parameter.original_dtype} dtype.",
-            )
-            return param_as_vals.astype(parameter.original_dtype)
+        orig_dtype = parameter.original_dtype
+        self.log("parameters", name, f"Converting Pyomo object to {orig_dtype} dtype.")
+        return param_as_vals.astype(orig_dtype)
 
     @overload
     def get_constraint(  # noqa: D102, override

@@ -25,7 +25,6 @@ from typing import (
 )
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
@@ -1116,9 +1115,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             yield
         finally:
             for name_ in datetime_coords:
-                data.coords[name_] = xr.apply_ufunc(
-                    pd.to_datetime, data.coords[name_], keep_attrs=True
-                )
+                data.coords[name_] = data.coords[name_].astype("datetime64[ns]")
 
 
 class ShadowPrices:

@@ -254,7 +254,24 @@ class TestGetters:
         expr = built_model_cls_longnames.backend.get_global_expression(
             "cost", as_backend_objs=False, eval_body=True
         )
-        assert expr.to_series().dropna().apply(lambda x: isinstance(x, str)).all()
+        assert (
+            expr.where(expr != "nan")
+            .to_series()
+            .dropna()
+            .apply(lambda x: isinstance(x, str))
+            .all()
+        )
+
+    def test_timeseries_dtype(self, built_model_cls_longnames):
+        """Getting verbose strings leads to the timeseries being stringified then converted back to datetime."""
+        expr = built_model_cls_longnames.backend.get_global_expression(
+            "flow_out_inc_eff", as_backend_objs=False, eval_body=True
+        )
+        assert (
+            expr.where(expr != "nan").to_series().dropna().str.contains("2005-").all()
+        )
+        assert built_model_cls_longnames.backend._dataset.timesteps.dtype.kind == "M"
+        assert built_model_cls_longnames.backend.inputs.timesteps.dtype.kind == "M"
 
     def test_get_constraint_attrs(self, constraint):
         """Check a constraint has all expected attributes."""
