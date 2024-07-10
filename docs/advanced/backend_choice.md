@@ -10,10 +10,9 @@ However, it is otherwise a relatively memory and time-consuming library for buil
 
 Since larger models tend to require a commercial solver to successfully complete in a reasonable amount of time (see our [solver comparison for justification](solver.md)), we have also introduced a direct interface to the Gurobi solver Python API.
 Our tests show that this reduces peak memory consumption and time to solution compared to using the Pyomo backend with Gurobi as the solver in both cases.
-If you have access to a Gurobi License, this does not require any extra effort on your part.
-You just need to:
+If you have access to a Gurobi license, this does not require any extra effort on your part, besides having to:
 
-1. Install the gurobi python library into your Calliope environment: `mamba install gurobi::gurobi`.
+1. Install the Gurobi Python library into your Calliope environment: `mamba install gurobi::gurobi`.
 1. Select the Gurobi backend in your YAML configuration (`!#yaml config.build.backend: gurobi`) or at build time if running in a Python script or interactively (`!#python model.build(backend="gurobi")`).
 
 You can still [interface with your optimisation problem](backend_interface.md), but some methods will raise an exception when the Gurobi Python API does not allow for something that the Pyomo API does.

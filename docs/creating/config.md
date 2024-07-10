@@ -41,7 +41,7 @@ To test your model pipeline, `config.init.time_subset` is a good way to limit yo
 
 ### `config.build.backend`
 
-By default, the optimisation problem is built using the [pyomo][] library.
+By default, the optimisation problem is built using the [Pyomo](https://www.pyomo.org/) library.
 For those with a license for the Gurobi solver, we have also developed a direct interface to their Python API.
 This may reduce peak memory and time consumption compared to using the Pyomo interface with Gurobi as the solver.
 To leverage the Gurobi backend interface, you will need to:

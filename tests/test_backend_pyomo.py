@@ -1,13 +1,17 @@
+import importlib
 import logging
+from copy import deepcopy
 from itertools import product
 
 import calliope
+import calliope.exceptions as exceptions
 import numpy as np
 import pyomo.core as po
 import pyomo.kernel as pmo
 import pytest  # noqa: F401
 import xarray as xr
-from calliope import exceptions
+from calliope.attrdict import AttrDict
+from calliope.backend.pyomo_backend_model import PyomoBackendModel
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, check_variable_exists
@@ -1603,6 +1607,72 @@ class TestModelDataChecks:
 
 class TestNewBackend:
     LOGGER = logging.getLogger("calliope.backend.backend_model")
+
+    @pytest.fixture(scope="class")
+    def simple_supply_updated_cost_flow_cap(
+        self, simple_supply: calliope.Model, dummy_int: int
+    ) -> calliope.Model:
+        simple_supply.backend.verbose_strings()
+        simple_supply.backend.update_parameter("cost_flow_cap", dummy_int)
+        return simple_supply
+
+    @pytest.fixture()
+    def temp_path(self, tmpdir_factory):
+        return tmpdir_factory.mktemp("custom_math")
+
+    @pytest.mark.parametrize("mode", ["operate", "spores"])
+    def test_add_run_mode_custom_math(self, caplog, mode):
+        caplog.set_level(logging.DEBUG)
+        mode_custom_math = AttrDict.from_yaml(
+            importlib.resources.files("calliope") / "math" / f"{mode}.yaml"
+        )
+        m = build_model({}, "simple_supply,two_hours,investment_costs")
+
+        base_math = deepcopy(m.math)
+        base_math.union(mode_custom_math, allow_override=True)
+
+        backend = PyomoBackendModel(m.inputs, mode=mode)
+        backend._add_run_mode_math()
+
+        assert f"Updating math formulation with {mode} mode math." in caplog.text
+
+        assert m.math != base_math
+        assert backend.inputs.attrs["math"].as_dict() == base_math.as_dict()
+
+    def test_add_run_mode_custom_math_before_build(self, caplog, temp_path):
+        """A user can override the run mode math by including it directly in the additional math list"""
+        caplog.set_level(logging.DEBUG)
+        custom_math = AttrDict({"variables": {"flow_cap": {"active": True}}})
+        file_path = temp_path.join("custom-math.yaml")
+        custom_math.to_yaml(file_path)
+
+        m = build_model(
+            {"config.init.add_math": ["operate", str(file_path)]},
+            "simple_supply,two_hours,investment_costs",
+        )
+        backend = PyomoBackendModel(m.inputs, mode="operate")
+        backend._add_run_mode_math()
+
+        # We set operate mode explicitly in our additional math so it won't be added again
+        assert "Updating math formulation with operate mode math." not in caplog.text
+
+        # operate mode set it to false, then our math set it back to active
+        assert m.math.variables.flow_cap.active
+        # operate mode set it to false and our math did not override that
+        assert not m.math.variables.storage_cap.active
+
+    def test_run_mode_mismatch(self):
+        m = build_model(
+            {"config.init.add_math": ["operate"]},
+            "simple_supply,two_hours,investment_costs",
+        )
+        backend = PyomoBackendModel(m.inputs)
+        with pytest.warns(exceptions.ModelWarning) as excinfo:
+            backend._add_run_mode_math()
+
+        assert check_error_or_warning(
+            excinfo, "Running in plan mode, but run mode(s) {'operate'}"
+        )
 
     def test_new_build_get_variable(self, simple_supply):
         """Check a decision variable has the correct data type and has all expected attributes."""

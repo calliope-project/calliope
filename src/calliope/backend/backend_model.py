@@ -890,7 +890,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
     def _get_variable_bound(
         self, bound: Any, name: str, references: set, fill_na: float | None = None
     ) -> xr.DataArray:
-        """Generate array for the upper/lower bound of a decision variable.
+        """Generate array for either the upper or lower bound of a decision variable.
 
         Args:
             bound (Any): The bound name (corresponding to an array in the model input data) or value.

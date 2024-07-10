@@ -440,7 +440,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         where_array = self.variables[name]
 
         domain = domain_dict[variable_dict.get("domain", "real")]
-        lb, ub = self._get_variable_bounds(name, variable_dict["bounds"])
+        lb, ub = self._get_variable_bounds_string(name, variable_dict["bounds"])
 
         self._generate_math_string(
             parsed_component, where_array, equations=[lb, ub], sense=r"\forall" + domain
@@ -606,9 +606,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         jinja_env.filters["mathify_text_in_text"] = __mathify_text_in_text
         return jinja_env.from_string(template).render(**kwargs)
 
-    def _get_variable_bounds(
+    def _get_variable_bounds_string(
         self, name: str, bounds: parsing.UnparsedVariableBoundDict
     ) -> tuple[dict[str, str], ...]:
+        """Convert variable upper and lower bounds into math string expressions."""
         bound_dict: parsing.UnparsedConstraintDict = {
             "equations": [
                 {"expression": f"{bounds['min']} <= {name}"},
