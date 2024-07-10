@@ -112,7 +112,7 @@ class BackendModelGenerator(ABC):
 
     @abstractmethod
     def add_constraint(
-        self, name: str, constraint_dict: parsing.UnparsedConstraintDict | None = None
+        self, name: str, constraint_dict: parsing.UnparsedConstraintDict
     ) -> None:
         """Add constraint equation to backend model in-place.
 
@@ -121,16 +121,13 @@ class BackendModelGenerator(ABC):
         Args:
             name (str):
                 Name of the constraint
-            constraint_dict (parsing.UnparsedConstraintDict | None, optional):
+            constraint_dict (parsing.UnparsedConstraintDict):
                 Constraint configuration dictionary, ready to be parsed and then evaluated.
-                If None, will find dictionary in model math based on name. Defaults to None.
         """
 
     @abstractmethod
     def add_piecewise_constraint(
-        self,
-        name: str,
-        constraint_dict: parsing.UnparsedPiecewiseConstraintDict | None = None,
+        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraintDict
     ) -> None:
         """Add piecewise constraint equation to backend model in-place.
 
@@ -139,14 +136,12 @@ class BackendModelGenerator(ABC):
         Args:
             name (str):
                 Name of the piecewise constraint
-            constraint_dict (parsing.UnparsedPiecewiseConstraintDict | None, optional):
-                Piecewise constraint configuration dictionary, ready to be parsed and then evaluated.
-                If None, will find dictionary in model math based on name. Defaults to None.
+            constraint_dict (parsing.UnparsedPiecewiseConstraintDict): Piecewise constraint configuration dictionary, ready to be parsed and then evaluated.
         """
 
     @abstractmethod
     def add_global_expression(
-        self, name: str, expression_dict: parsing.UnparsedExpressionDict | None = None
+        self, name: str, expression_dict: parsing.UnparsedExpressionDict
     ) -> None:
         """Add global expression (arithmetic combination of parameters and/or decision variables) to backend model in-place.
 
@@ -154,14 +149,12 @@ class BackendModelGenerator(ABC):
 
         Args:
             name (str): name of the global expression
-            expression_dict (parsing.UnparsedExpressionDict | None, optional):
-                Global expression configuration dictionary, ready to be parsed and then evaluated.
-                If None, will find dictionary in model math based on name. Defaults to None.
+            expression_dict (parsing.UnparsedExpressionDict): Global expression configuration dictionary, ready to be parsed and then evaluated.
         """
 
     @abstractmethod
     def add_variable(
-        self, name: str, variable_dict: parsing.UnparsedVariableDict | None = None
+        self, name: str, variable_dict: parsing.UnparsedVariableDict
     ) -> None:
         """Add decision variable to backend model in-place.
 
@@ -169,14 +162,12 @@ class BackendModelGenerator(ABC):
 
         Args:
             name (str): name of the variable.
-            variable_dict (parsing.UnparsedVariableDict | None, optional):
-                Unparsed variable configuration dictionary.
-                If None, will find dictionary in model math based on name. Defaults to None.
+            variable_dict (parsing.UnparsedVariableDict): Unparsed variable configuration dictionary.
         """
 
     @abstractmethod
     def add_objective(
-        self, name: str, objective_dict: parsing.UnparsedObjectiveDict | None = None
+        self, name: str, objective_dict: parsing.UnparsedObjectiveDict
     ) -> None:
         """Add objective arithmetic to backend model in-place.
 
@@ -184,9 +175,7 @@ class BackendModelGenerator(ABC):
 
         Args:
             name (str): name of the objective.
-            objective_dict (parsing.UnparsedObjectiveDict | None, optional):
-                Unparsed objective configuration dictionary.
-                If None, will find dictionary in model math based on name. Defaults to None.
+            objective_dict (parsing.UnparsedObjectiveDict): Unparsed objective configuration dictionary.
         """
 
     def log(
@@ -279,7 +268,7 @@ class BackendModelGenerator(ABC):
     def _add_component(
         self,
         name: str,
-        component_dict: Tp | None,
+        component_dict: Tp,
         component_setter: Callable,
         component_type: Literal[
             "variables",
@@ -295,7 +284,7 @@ class BackendModelGenerator(ABC):
         Args:
             name (str): name of the component. If not providing the `component_dict` directly,
                 this name must be available in the input math provided on initialising the class.
-            component_dict (Tp | None): unparsed YAML dictionary configuration.
+            component_dict (Tp): unparsed YAML dictionary configuration.
             component_setter (Callable): function to combine evaluated xarray DataArrays into backend component objects.
             component_type (Literal["variables", "global_expressions", "constraints", "objectives"]):
                 type of the added component.
@@ -310,8 +299,6 @@ class BackendModelGenerator(ABC):
         """
         references: set[str] = set()
 
-        if component_dict is None:
-            component_dict = self.inputs.math[component_type][name]
         if name not in self.inputs.math.get(component_type, {}):
             self.inputs.math.set_key(f"{component_type}.name", component_dict)
 
@@ -644,13 +631,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         self._has_verbose_strings: bool = False
 
     def add_piecewise_constraint(  # noqa: D102, override
-        self,
-        name: str,
-        constraint_dict: parsing.UnparsedPiecewiseConstraintDict | None = None,
+        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraintDict
     ) -> None:
-        if constraint_dict is None:
-            constraint_dict = self.inputs.math["piecewise_constraints"][name]
-
         if "breakpoints" in constraint_dict.get("foreach", []):
             raise BackendError(
                 f"(piecewise_constraints, {name}) | `breakpoints` dimension should not be in `foreach`. "
