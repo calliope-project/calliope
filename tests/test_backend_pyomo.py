@@ -2104,11 +2104,12 @@ class TestPiecewiseConstraints:
             length_mismatch_params, "simple_supply,two_hours,investment_costs"
         )
         m.build()
-        with pytest.raises(
-            exceptions.BackendError,
-            match="The number of breakpoints (2) differs from the number of function values (3)",
-        ):
+        with pytest.raises(exceptions.BackendError) as excinfo:
             m.backend.add_piecewise_constraint("foo", working_math)
+        assert check_error_or_warning(
+            excinfo,
+            "The number of breakpoints (2) differs from the number of function values (3)",
+        )
 
     def test_fails_on_not_reaching_bounds(
         self, not_reaching_var_bound_with_breakpoint_params, working_math
