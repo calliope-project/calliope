@@ -6,7 +6,10 @@ import xarray as xr
 
 from calliope.backend.backend_model import BackendSetup
 from calliope.backend.gurobi_backend_model import GurobiBackendModel
-from calliope.backend.latex_backend_model import LatexBackendModel, MathDocumentation
+from calliope.backend.latex_backend_model import (
+    ALLOWED_MATH_FILE_FORMATS,
+    LatexBackendModel,
+)
 from calliope.backend.parsing import ParsedBackendComponent
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.exceptions import BackendError

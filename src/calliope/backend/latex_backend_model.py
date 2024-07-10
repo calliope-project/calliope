@@ -1,13 +1,9 @@
 """LaTeX backend functionality."""
 
-from __future__ import annotations
-
 import logging
 import re
 import textwrap
-import typing
-from pathlib import Path
-from typing import Any, Literal, overload
+from typing import Any, Literal
 
 import jinja2
 import numpy as np
@@ -21,116 +17,10 @@ from calliope.backend.backend_model import (
 )
 from calliope.exceptions import ModelError
 
-_ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
+ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-class MathDocumentation:
-    """For math documentation."""
-
-    def __init__(self) -> None:
-        """Math documentation builder/writer.
-
-        Args:
-            backend_builder (Callable):
-                Method to generate all optimisation problem components on a calliope.backend_model.BackendModel object.
-        """
-        self._inputs: xr.Dataset
-
-    def build(self, include: Literal["all", "valid"] = "all", **kwargs) -> None:
-        """Build string representations of the mathematical formulation using LaTeX math notation, ready to be written with `write`.
-
-        Args:
-            include (Literal["all", "valid"], optional):
-                Defines whether to include all possible math equations ("all") or only
-                those for which at least one index item in the "where" string is valid
-                ("valid"). Defaults to "all".
-            **kwargs: kwargs for the LaTeX backend.
-        """
-        backend = LatexBackendModel(self._inputs, include=include, **kwargs)
-        backend.add_all_math()
-
-        self._instance = backend
-
-    @property
-    def inputs(self):
-        """Getter for backend inputs."""
-        return self._inputs
-
-    @inputs.setter
-    def inputs(self, val: xr.Dataset):
-        """Setter for backend inputs."""
-        self._inputs = val
-
-    # Expecting string if not giving filename.
-    @overload
-    def write(
-        self,
-        filename: Literal[None] = None,
-        mkdocs_tabbed: bool = False,
-        format: _ALLOWED_MATH_FILE_FORMATS | None = None,
-    ) -> str: ...
-
-    # Expecting None (and format arg is not needed) if giving filename.
-    @overload
-    def write(self, filename: str | Path, mkdocs_tabbed: bool = False) -> None: ...
-
-    def write(
-        self,
-        filename: str | Path | None = None,
-        mkdocs_tabbed: bool = False,
-        format: _ALLOWED_MATH_FILE_FORMATS | None = None,
-    ) -> str | None:
-        """Write model documentation.
-
-        `build` must be run beforehand.
-
-        Args:
-            filename (str | Path | None, optional):
-                If given, will write the built mathematical formulation to a file with
-                the given extension as the file format. Defaults to None.
-            mkdocs_tabbed (bool, optional):
-                If True and Markdown docs are being generated, the equations will be on
-                a tab and the original YAML math definition will be on another tab.
-                Defaults to False.
-            format (_ALLOWED_MATH_FILE_FORMATS | None, optional):
-                Not required if filename is given (as the format will be automatically inferred).
-                Required if expecting a string return from calling this function. The LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown).
-                Defaults to None.
-
-        Raises:
-            exceptions.ModelError: Math strings need to be built first (`build`)
-            ValueError: The file format (inferred automatically from `filename` or given by `format`) must be one of ["tex", "rst", "md"].
-
-        Returns:
-            str | None:
-                If `filename` is None, the built mathematical formulation documentation will be returned as a string.
-        """
-        if not hasattr(self, "_instance"):
-            raise ModelError(
-                "Build the documentation (`build`) before trying to write it"
-            )
-
-        if format is None and filename is not None:
-            format = Path(filename).suffix.removeprefix(".")  # type: ignore
-            LOGGER.info(
-                f"Inferring math documentation format from filename as `{format}`."
-            )
-
-        allowed_formats = typing.get_args(_ALLOWED_MATH_FILE_FORMATS)
-        if format is None or format not in allowed_formats:
-            raise ValueError(
-                f"Math documentation format must be one of {allowed_formats}, received `{format}`"
-            )
-        populated_doc = self._instance.generate_math_doc(format, mkdocs_tabbed)
-
-        if filename is None:
-            return populated_doc
-        else:
-            Path(filename).write_text(populated_doc)
-            return None
 
 
 class LatexBackendModel(BackendModelGenerator):
@@ -488,7 +378,7 @@ class LatexBackendModel(BackendModelGenerator):
             del self._dataset[key]
 
     def generate_math_doc(
-        self, format: _ALLOWED_MATH_FILE_FORMATS = "tex", mkdocs_tabbed: bool = False
+        self, format: ALLOWED_MATH_FILE_FORMATS = "tex", mkdocs_tabbed: bool = False
     ) -> str:
         """Generate the math documentation by embedding LaTeX math in a template.
 

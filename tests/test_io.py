@@ -94,9 +94,11 @@ class TestIO:
     )
     @pytest.mark.parametrize("model_name", ["model", "model_from_file"])
     def test_serialised_list_popped(self, request, serialised_list, model_name):
+        # TODO-Ivan: should be NO attrs
         model = request.getfixturevalue(model_name)
         assert serialised_list not in model._model_data.attrs.keys()
 
+    # TODO-Ivan: should use the class parameter?
     @pytest.mark.parametrize(
         ("serialisation_list_name", "list_elements"),
         [
@@ -104,7 +106,7 @@ class TestIO:
             ("serialised_nones", ["foo_none", "scenario"]),
             (
                 "serialised_dicts",
-                ["foo_dict", "foo_attrdict", "defaults", "config", "math"],
+                ["foo_dict", "foo_attrdict", "defaults", "config", "math", "_runtime"],
             ),
             ("serialised_sets", ["foo_set", "foo_set_1_item"]),
             ("serialised_single_element_list", ["foo_list_1_item", "foo_set_1_item"]),

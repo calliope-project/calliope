@@ -47,7 +47,10 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(nanoseconds=1)
-    _ATTRS_SAVED = ("_runtime", "math")
+    _ATTRS_SAVED = (
+        "_runtime",
+        "math",
+    )  # TODO-Ivan: how to handle non Attr-Dict things?
 
     def __init__(
         self,
@@ -80,14 +83,13 @@ class Model:
         self._timestamps: dict = {}
         self.config: AttrDict
         self.defaults: AttrDict
-        self.backend: BackendModel
-        self.math_documentation = backend.MathDocumentation()
         self._is_built: bool = False
         self._is_solved: bool = False
 
         # NOTE: modified stuff
         self._def_path: Path | None
         self._runtime: AttrDict = AttrDict()
+        self.backend: BackendModel | None = None
         self.math: AttrDict = AttrDict()
 
         # try to set logging output format assuming python interactive. Will
@@ -112,8 +114,6 @@ class Model:
                 f"Model configuration specifies calliope version {version_def}, "
                 f"but you are running {version_init}. Proceed with caution!"
             )
-
-        self.math_documentation.inputs = self._model_data
 
     @property
     def name(self):
@@ -231,7 +231,7 @@ class Model:
                 Model dataset with input parameters as arrays and configuration stored in the dataset attributes dictionary.
         """
         for name in self._ATTRS_SAVED:
-            setattr(self, name, AttrDict.from_yaml_string(model_data.attrs[name]))
+            setattr(self, name, AttrDict(model_data.attrs[name]))
             del model_data.attrs[name]
 
         self._model_data = model_data

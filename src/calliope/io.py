@@ -130,7 +130,7 @@ def save_netcdf(model_data, path, model=None):
 
     if model is not None:
         for name in model._ATTRS_SAVED:
-            model_data_attrs[name] = getattr(model, name).to_yaml()
+            model_data_attrs[name] = getattr(model, name)
 
     _serialise(model_data_attrs)
     for var in model_data.data_vars.values():
