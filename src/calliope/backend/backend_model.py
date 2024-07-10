@@ -19,6 +19,7 @@ from typing import (
     Generic,
     Literal,
     SupportsFloat,
+    TypedDict,
     TypeVar,
     overload,
 )
@@ -51,6 +52,13 @@ _COMPONENTS_T = Literal[
 LOGGER = logging.getLogger(__name__)
 
 
+class BackendSetup(TypedDict):
+    """Standard backend settings."""
+
+    inputs: xr.Dataset
+    math: AttrDict
+
+
 class BackendModelGenerator(ABC):
     """Helper class for backends."""
 
@@ -61,19 +69,20 @@ class BackendModelGenerator(ABC):
     _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
     _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
 
-    def __init__(self, inputs: xr.Dataset, **kwargs):
+    def __init__(self, setup: BackendSetup, **kwargs):
         """Abstract base class to build a representation of the optimisation problem.
 
         Args:
-            inputs (xr.Dataset): Calliope model data.
+            setup (BackendSetup): standard backend inputs.
             **kwargs (Any): build configuration overrides.
         """
         self._dataset = xr.Dataset()
-        self.inputs = inputs.copy()
-        self.inputs.attrs = deepcopy(inputs.attrs)
+        self.inputs = setup["inputs"].copy()
+        self.inputs.attrs = deepcopy(setup["inputs"].attrs)
         self.inputs.attrs["config"]["build"] = update_then_validate_config(
             "build", self.inputs.attrs["config"], **kwargs
         )
+        self.math: AttrDict = deepcopy(setup["math"])
         self._check_inputs()
 
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
@@ -206,7 +215,7 @@ class BackendModelGenerator(ABC):
             "objectives",
         ]:
             component = components.removesuffix("s")
-            for name in self.inputs.math[components]:
+            for name in self.math[components]:
                 start = time.time()
                 getattr(self, f"add_{component}")(name)
                 end = time.time() - start
@@ -246,9 +255,9 @@ class BackendModelGenerator(ABC):
         references: set[str] = set()
 
         if component_dict is None:
-            component_dict = self.inputs.math[component_type][name]
-        if name not in self.inputs.math[component_type]:
-            self.inputs.math[component_type][name] = component_dict
+            component_dict = self.math[component_type][name]
+        if name not in self.math[component_type]:
+            self.math[component_type][name] = component_dict
 
         if break_early and not component_dict.get("active", True):
             self.log(
@@ -345,10 +354,6 @@ class BackendModelGenerator(ABC):
 
         If model data does not include a parameter, their default values will be added here
         as unindexed backend dataset parameters.
-
-        Args:
-            model_data (xr.Dataset): Input model data.
-            defaults (dict): Parameter defaults.
         """
         for param_name, param_data in self.inputs.filter_by_attrs(
             is_result=0
@@ -543,7 +548,7 @@ class BackendModelGenerator(ABC):
         in_math = set(
             name
             for component in ["variables", "global_expressions"]
-            for name in self.inputs.math[component].keys()
+            for name in self.math[component].keys()
         )
         return in_data.union(in_math)
 
@@ -551,15 +556,15 @@ class BackendModelGenerator(ABC):
 class BackendModel(BackendModelGenerator, Generic[T]):
     """Calliope's backend model functionality."""
 
-    def __init__(self, inputs: xr.Dataset, instance: T, **kwargs) -> None:
+    def __init__(self, setup: BackendSetup, instance: T, **kwargs) -> None:
         """Abstract base class to build backend models that interface with solvers.
 
         Args:
-            inputs (xr.Dataset): Calliope model data.
+            setup (BackendSetup): standard backend inputs.
             instance (T): Interface model instance.
             **kwargs: build configuration overrides.
         """
-        super().__init__(inputs, **kwargs)
+        super().__init__(setup, **kwargs)
         self._instance = instance
         self.shadow_prices: ShadowPrices
         self._has_verbose_strings: bool = False

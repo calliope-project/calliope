@@ -47,7 +47,7 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(nanoseconds=1)
-    _ATTRS_SAVED = ("_runtime",)
+    _ATTRS_SAVED = ("_runtime", "math")
 
     def __init__(
         self,
@@ -80,15 +80,15 @@ class Model:
         self._timestamps: dict = {}
         self.config: AttrDict
         self.defaults: AttrDict
-        self.math: AttrDict
-        self._def_path: Path | None
         self.backend: BackendModel
         self.math_documentation = backend.MathDocumentation()
         self._is_built: bool = False
         self._is_solved: bool = False
 
         # NOTE: modified stuff
+        self._def_path: Path | None
         self._runtime: AttrDict = AttrDict()
+        self.math: AttrDict = AttrDict()
 
         # try to set logging output format assuming python interactive. Will
         # use CLI logging format if model called from CLI
@@ -211,8 +211,7 @@ class Model:
 
         self._add_observed_dict("config", model_config)
 
-        math = self._add_math(init_config["add_math"])
-        self._add_observed_dict("math", math)
+        self.math = self._add_math(init_config["add_math"])
 
         self._model_data.attrs["name"] = init_config["name"]
         log_time(
@@ -256,7 +255,6 @@ class Model:
 
         """
         self._add_observed_dict("config")
-        self._add_observed_dict("math")
 
     def _add_observed_dict(self, name: str, dict_to_add: dict | None = None) -> None:
         """Add the same dictionary as property of model object and an attribute of the model xarray dataset.
@@ -367,8 +365,9 @@ class Model:
             backend_input = self._model_data
 
         backend_name = build_config.pop("backend")
+        backend_setup = backend.BackendSetup(inputs=backend_input, math=self.math)
         self.backend = backend.get_model_backend(
-            backend_name, backend_input, **build_config
+            backend_name, backend_setup, **build_config
         )
         self.backend.add_all_math()
 

@@ -13,7 +13,12 @@ import jinja2
 import numpy as np
 import xarray as xr
 
-from calliope.backend import backend_model, parsing
+from calliope.backend import parsing
+from calliope.backend.backend_model import (
+    _COMPONENTS_T,
+    BackendModelGenerator,
+    BackendSetup,
+)
 from calliope.exceptions import ModelError
 
 _ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
@@ -128,7 +133,7 @@ class MathDocumentation:
             return None
 
 
-class LatexBackendModel(backend_model.BackendModelGenerator):
+class LatexBackendModel(BackendModelGenerator):
     """Calliope's LaTeX backend."""
 
     # \negthickspace used to counter the introduction of spaces to separate the curly braces
@@ -356,17 +361,17 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     FORMAT_STRINGS = {"rst": RST_DOC, "tex": TEX_DOC, "md": MD_DOC}
 
     def __init__(
-        self, inputs: xr.Dataset, include: Literal["all", "valid"] = "all", **kwargs
+        self, setup: BackendSetup, include: Literal["all", "valid"] = "all", **kwargs
     ) -> None:
         """Interface to build a string representation of the mathematical formulation using LaTeX math notation.
 
         Args:
-            inputs (xr.Dataset): model data.
+            setup (BackendSetup): standard backend inputs.
             include (Literal["all", "valid"], optional):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
             **kwargs: for the backend model generator.
         """
-        super().__init__(inputs, **kwargs)
+        super().__init__(setup, **kwargs)
         self.include = include
 
         self._add_all_inputs_as_parameters()
@@ -432,7 +437,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             return where.where(where)
 
         if variable_dict is None:
-            variable_dict = self.inputs.attrs["math"]["variables"][name]
+            variable_dict = self.math["variables"][name]
 
         parsed_component = self._add_component(
             name, variable_dict, _variable_setter, "variables", break_early=False
@@ -456,7 +461,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             "maximise": r"\max{}",
         }
         if objective_dict is None:
-            objective_dict = self.inputs.attrs["math"]["objectives"][name]
+            objective_dict = self.math["objectives"][name]
         equation_strings: list = []
 
         def _objective_setter(
@@ -475,14 +480,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             sense=sense_dict[objective_dict["sense"]],
         )
 
-    def _create_obj_list(
-        self, key: str, component_type: backend_model._COMPONENTS_T
-    ) -> None:
+    def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         return None
 
-    def delete_component(  # noqa: D102, override
-        self, key: str, component_type: backend_model._COMPONENTS_T
-    ) -> None:
+    def delete_component(self, key: str, component_type: _COMPONENTS_T) -> None:  # noqa: D102, override
         if key in self._dataset and self._dataset[key].obj_type == component_type:
             del self._dataset[key]
 

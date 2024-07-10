@@ -4,8 +4,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 import xarray as xr
+from calliope import backend
 from calliope.attrdict import AttrDict
-from calliope.backend import latex_backend_model, pyomo_backend_model
 from calliope.util.schema import CONFIG_SCHEMA, MODEL_SCHEMA, extract_from_schema
 
 from .common.util import build_test_model as build_model
@@ -291,10 +291,20 @@ def dummy_model_data(config_defaults, model_defaults):
             **model_defaults,
         }
     )
-    model_data.attrs["math"] = AttrDict(
+
+    return model_data
+
+
+@pytest.fixture(scope="module")
+def dummy_model_math():
+    return AttrDict(
         {"constraints": {}, "variables": {}, "global_expressions": {}, "objectives": {}}
     )
-    return model_data
+
+
+@pytest.fixture(scope="module")
+def dummy_backend_setup(dummy_model_data, dummy_model_math):
+    return backend.BackendSetup(inputs=dummy_model_data, math=dummy_model_math)
 
 
 def populate_backend_model(backend):
@@ -330,18 +340,18 @@ def populate_backend_model(backend):
 
 
 @pytest.fixture(scope="module")
-def dummy_pyomo_backend_model(dummy_model_data):
-    backend = pyomo_backend_model.PyomoBackendModel(dummy_model_data)
-    return populate_backend_model(backend)
+def dummy_pyomo_backend_model(dummy_backend_setup):
+    pyomo_backend = backend.get_model_backend("pyomo", dummy_backend_setup)
+    return populate_backend_model(pyomo_backend)
 
 
 @pytest.fixture(scope="module")
-def dummy_latex_backend_model(dummy_model_data):
-    backend = latex_backend_model.LatexBackendModel(dummy_model_data)
-    return populate_backend_model(backend)
+def dummy_latex_backend_model(dummy_backend_setup):
+    latex_backend = backend.LatexBackendModel(dummy_backend_setup)
+    return populate_backend_model(latex_backend)
 
 
 @pytest.fixture(scope="class")
-def valid_latex_backend(dummy_model_data):
-    backend = latex_backend_model.LatexBackendModel(dummy_model_data, include="valid")
-    return populate_backend_model(backend)
+def valid_latex_backend(dummy_backend_setup):
+    latex_valid = backend.LatexBackendModel(dummy_backend_setup, include="valid")
+    return populate_backend_model(latex_valid)

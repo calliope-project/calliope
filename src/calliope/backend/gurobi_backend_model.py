@@ -14,7 +14,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from calliope.backend import backend_model, parsing
+from calliope.backend import parsing
+from calliope.backend.backend_model import BackendModel, BackendSetup, ShadowPrices
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
 
@@ -37,21 +38,22 @@ COMPONENT_TRANSLATOR = {
 }
 
 
-class GurobiBackendModel(backend_model.BackendModel):
+class GurobiBackendModel(BackendModel):
     """gurobipy-specific backend functionality."""
 
-    def __init__(self, inputs: xr.Dataset, **kwargs) -> None:
+    def __init__(self, setup: BackendSetup, **kwargs) -> None:
         """Gurobi solver interface class.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
+            setup (BackendSetup): standard backend inputs.
             **kwargs: passed directly to the solver.
         """
         if importlib.util.find_spec("gurobipy") is None:
             raise ImportError(
                 "Install the `gurobipy` package to build the optimisation problem with the Gurobi backend."
             )
-        super().__init__(inputs, gurobipy.Model(), **kwargs)
+        super().__init__(setup, gurobipy.Model(), **kwargs)
         self._instance: gurobipy.Model
         self.shadow_prices = GurobiShadowPrices(self)
 
@@ -114,7 +116,7 @@ class GurobiBackendModel(backend_model.BackendModel):
     ) -> None:
         domain_dict = {"real": gurobipy.GRB.CONTINUOUS, "integer": gurobipy.GRB.INTEGER}
         if variable_dict is None:
-            variable_dict = self.inputs.attrs["math"]["variables"][name]
+            variable_dict = self.math["variables"][name]
 
         def _variable_setter(where: xr.DataArray, references: set):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
@@ -142,7 +144,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         }
 
         if objective_dict is None:
-            objective_dict = self.inputs.attrs["math"]["objectives"][name]
+            objective_dict = self.math["objectives"][name]
         sense = sense_dict[objective_dict["sense"]]
 
         def _objective_setter(
@@ -391,7 +393,7 @@ class GurobiBackendModel(backend_model.BackendModel):
                 )
                 continue
 
-            existing_bound_param = self.inputs.attrs["math"].get_key(
+            existing_bound_param = self.math.get_key(
                 f"variables.{name}.bounds.{bound_name}", None
             )
             if existing_bound_param in self.parameters:
@@ -526,7 +528,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         return val.getValue()
 
 
-class GurobiShadowPrices(backend_model.ShadowPrices):
+class GurobiShadowPrices(ShadowPrices):
     """Gurobi shadow price functionality."""
 
     def __init__(self, backend_obj: GurobiBackendModel):

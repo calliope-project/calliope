@@ -93,7 +93,9 @@ def build_lp(
         math (dict | None, optional): All constraint/global expression/objective math to apply. Defaults to None.
         backend_name (Literal["pyomo"], optional): Backend to use to create the LP file. Defaults to "pyomo".
     """
-    backend_instance = backend.get_model_backend(backend_name, model._model_data)
+
+    backend_setup = backend.BackendSetup(inputs=model._model_data, math=model.math)
+    backend_instance = backend.get_model_backend(backend_name, backend_setup)
     for name, dict_ in model.math["variables"].items():
         backend_instance.add_variable(name, dict_)
     for name, dict_ in model.math["global_expressions"].items():

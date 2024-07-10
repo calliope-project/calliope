@@ -181,7 +181,7 @@ class TestIO:
             with pytest.warns(exceptions.ModelWarning):
                 model.to_csv(out_path, dropna=False)
 
-    @pytest.mark.parametrize("attr", ["config", "math"])
+    @pytest.mark.parametrize("attr", ["config"])  # TODO-Ivan: remove, soon invalid
     def test_dicts_as_model_attrs_and_property(self, model_from_file, attr):
         assert attr in model_from_file._model_data.attrs.keys()
         assert hasattr(model_from_file, attr)

@@ -21,7 +21,8 @@ from pyomo.common.tempfiles import TempfileManager  # type: ignore
 from pyomo.opt import SolverFactory  # type: ignore
 from pyomo.util.model_size import build_model_size_report  # type: ignore
 
-from calliope.backend import backend_model, parsing
+from calliope.backend import parsing
+from calliope.backend.backend_model import BackendModel, BackendSetup, ShadowPrices
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
 from calliope.util.logging import LogWriter
@@ -42,17 +43,17 @@ COMPONENT_TRANSLATOR = {
 }
 
 
-class PyomoBackendModel(backend_model.BackendModel):
+class PyomoBackendModel(BackendModel):
     """Pyomo-specific backend functionality."""
 
-    def __init__(self, inputs: xr.Dataset, **kwargs) -> None:
+    def __init__(self, setup: BackendSetup, **kwargs) -> None:
         """Pyomo solver interface class.
 
         Args:
-            inputs (xr.Dataset): Calliope model data.
+            setup (BackendSetup): standard backend inputs.
             **kwargs: passed directly to the solver.
         """
-        super().__init__(inputs, pmo.block(), **kwargs)
+        super().__init__(setup, pmo.block(), **kwargs)
 
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()
@@ -143,7 +144,7 @@ class PyomoBackendModel(backend_model.BackendModel):
     ) -> None:
         domain_dict = {"real": pmo.RealSet, "integer": pmo.IntegerSet}
         if variable_dict is None:
-            variable_dict = self.inputs.attrs["math"]["variables"][name]
+            variable_dict = self.math["variables"][name]
 
         def _variable_setter(where, references):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
@@ -170,7 +171,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         sense_dict = {"minimize": 1, "minimise": 1, "maximize": -1, "maximise": -1}
 
         if objective_dict is None:
-            objective_dict = self.inputs.attrs["math"]["objectives"][name]
+            objective_dict = self.math["objectives"][name]
         sense = sense_dict[objective_dict["sense"]]
 
         def _objective_setter(
@@ -457,7 +458,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 )
                 continue
 
-            existing_bound_param = self.inputs.attrs["math"].get_key(
+            existing_bound_param = self.math.get_key(
                 f"variables.{name}.bounds.{bound_name}", None
             )
             if existing_bound_param in self.parameters:
@@ -814,7 +815,7 @@ class ObjConstraint(pmo.constraint, CoordObj):
         return self._update_name(pmo.constraint.getname(self, *args, **kwargs))
 
 
-class PyomoShadowPrices(backend_model.ShadowPrices):
+class PyomoShadowPrices(ShadowPrices):
     """Pyomo shadow price functionality."""
 
     def __init__(self, dual_obj: pmo.suffix, backend_obj: PyomoBackendModel):
