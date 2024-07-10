@@ -59,8 +59,8 @@ class TestModelRun:
         )
         model = build_model(override_dict=override, scenario="scenario_1")
 
-        assert model._model_def_dict.techs.test_supply_gas.flow_cap_max == 20
-        assert model._model_def_dict.techs.test_supply_elec.flow_cap_max == 20
+        assert model.inputs.sel(techs="test_supply_gas")["flow_cap_max"] == 20
+        assert model.inputs.sel(techs="test_supply_elec")["flow_cap_max"] == 20
 
     def test_valid_scenario_of_scenarios(self):
         """Test that valid scenario definition which groups scenarios and overrides raises
@@ -91,8 +91,8 @@ class TestModelRun:
         )
         model = build_model(override_dict=override, scenario="scenario_2")
 
-        assert model._model_def_dict.techs.test_supply_gas.flow_cap_max == 20
-        assert model._model_def_dict.techs.test_supply_elec.flow_cap_max == 20
+        assert model.inputs.sel(techs="test_supply_gas")["flow_cap_max"] == 20
+        assert model.inputs.sel(techs="test_supply_elec")["flow_cap_max"] == 20
 
     def test_invalid_scenarios_dict(self):
         """Test that invalid scenario definition raises appropriate error"""

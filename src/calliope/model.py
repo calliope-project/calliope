@@ -47,7 +47,7 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(nanoseconds=1)
-    _ATTRS_SAVED = ("_model_def_dict", "_runtime")
+    _ATTRS_SAVED = ("_runtime",)
 
     def __init__(
         self,
@@ -160,7 +160,7 @@ class Model:
         # First pass to check top-level keys are all good
         validate_dict(model_definition, CONFIG_SCHEMA, "Model definition")
 
-        self._model_def_dict = model_definition
+        model_definition
         log_time(
             LOGGER,
             self._timestamps,

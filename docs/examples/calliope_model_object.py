@@ -37,41 +37,32 @@ m = calliope.examples.urban_scale()
 print(m.info())
 
 # %% [markdown]
-# ## Model definition dictionary
-#
-# `m._model_def_dict` is a python dictionary that holds all the data from the model definition YAML files, restructured into one dictionary.
-#
-# The underscore before the method indicates that it defaults to being hidden (i.e. you wouldn't see it by trying a tab auto-complete and it isn't documented)
+# `techs` parameters can be accessed by selecting a specific technology.
+# Note how only the relevant carrier holds information for this parameter.
 
 # %%
-m._model_def_dict.keys()
+m.inputs.sel(techs="pv")["flow_cap_max"]
 
 # %% [markdown]
-# `techs` hold only the information about a technology that is specific to that node
+# `nodes` parameters can be accessed in a similar way, and you can even combine both for specific searches:
 
 # %%
-m._model_def_dict["techs"]["pv"]
-
-# %% [markdown]
-# `nodes` hold only the information about a technology that is specific to that node
-
-# %%
-m._model_def_dict["nodes"]["X2"]["techs"]["pv"]
+m.inputs.sel(techs="pv", nodes="X2")["flow_cap_max"]
 
 # %% [markdown]
 # ## Model data
 #
-# `m._model_data` is an xarray Dataset.
-# Like `_model_def_dict` it is a hidden prperty of the Model as you are expected to access the data via the public property `inputs`
+# `m._model_data` is an xarray Dataset containing the full Model data, and is a hidden property.
+# You are expected to access the data via the public property `inputs`
 
 # %%
-m.inputs
+m._model_data
 
 # %% [markdown]
 # Until we solve the model, `inputs` is the same as `_model_data`
 
 # %%
-m._model_data
+m.inputs
 
 # %% [markdown]
 # We can find the same PV `flow_cap_max` data as seen in `m._model_run`
