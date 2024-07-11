@@ -29,12 +29,11 @@ class MathDocumentation:
                 which at least one "where" case is valid ("valid"). Defaults to "all".
             **kwargs: kwargs for the LaTeX backend.
         """
-        self.name: str = (
-            model.inputs.attrs["name"] + " math"
-        )  # TODO-Ivan: should be model.name?
+        # TODO-Ivan: should be model.name?
+        self.name: str = model.inputs.attrs["name"] + " math"
         self.math: AttrDict = deepcopy(model.math)
 
-        setup = BackendSetup(inputs=model.inputs, math=model.math)
+        setup = BackendSetup(inputs=model._model_data, math=model.math)
         self.backend: LatexBackendModel = LatexBackendModel(setup, include, **kwargs)
         self.backend.add_all_math()
 
