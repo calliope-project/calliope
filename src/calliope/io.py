@@ -129,6 +129,7 @@ def save_netcdf(model_data, path, model=None):
     model_data_attrs = original_model_data_attrs.copy()
 
     if model is not None:
+        model_data_attrs["name"] = model.name
         for name in model._ATTRS_SAVED:
             model_data_attrs[name] = getattr(model, name)
 

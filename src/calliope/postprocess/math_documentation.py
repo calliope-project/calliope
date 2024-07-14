@@ -30,7 +30,7 @@ class MathDocumentation:
             **kwargs: kwargs for the LaTeX backend.
         """
         # TODO-Ivan: should be model.name?
-        self.name: str = model.inputs.attrs["name"] + " math"
+        self.name: str = model.name + " math"
         self.math: AttrDict = deepcopy(model.math)
 
         setup = BackendSetup(inputs=model._model_data, math=model.math)

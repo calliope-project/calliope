@@ -47,10 +47,7 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(nanoseconds=1)
-    _ATTRS_SAVED = (
-        "_runtime",
-        "math",
-    )  # TODO-Ivan: how to handle non Attr-Dict things?
+    _ATTRS_SAVED = ("_runtime", "math")
 
     def __init__(
         self,
@@ -118,7 +115,7 @@ class Model:
     @property
     def name(self):
         """Get the model name."""
-        return self._model_data.attrs["name"]
+        return self._model_data.attrs["config"]["init"]["name"]
 
     @property
     def inputs(self):
@@ -169,8 +166,6 @@ class Model:
         model_config.union(model_definition.pop("config"), allow_override=True)
 
         init_config = update_then_validate_config("init", model_config)
-        # We won't store `init` in `self.config`, so we pop it out now.
-        model_config.pop("init")
 
         if init_config["time_cluster"] is not None:
             init_config["time_cluster"] = relative_path(
@@ -213,7 +208,6 @@ class Model:
 
         self.math = self._add_math(init_config["add_math"])
 
-        self._model_data.attrs["name"] = init_config["name"]
         log_time(
             LOGGER,
             self._timestamps,
@@ -231,7 +225,7 @@ class Model:
                 Model dataset with input parameters as arrays and configuration stored in the dataset attributes dictionary.
         """
         for name in self._ATTRS_SAVED:
-            setattr(self, name, AttrDict(model_data.attrs[name]))
+            setattr(self, name, model_data.attrs[name])
             del model_data.attrs[name]
 
         self._model_data = model_data
@@ -302,7 +296,7 @@ class Model:
         Returns:
             AttrDict: Dictionary of math (constraints, variables, objectives, and global expressions).
         """
-        math_dir = Path(calliope.__file__).parent / "math"
+        math_dir = importlib.resources.files("calliope") / "math"
         base_math = AttrDict.from_yaml(math_dir / "base.yaml")
 
         file_errors = []
