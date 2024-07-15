@@ -132,6 +132,12 @@ def save_netcdf(model_data, path, model=None):
     if model is not None and hasattr(model, "_model_def_dict"):
         # Attach initial model definition to _model_data
         model_data_attrs["_model_def_dict"] = model._model_def_dict.to_yaml()
+        for name in model.ATTRS_SAVED:
+            attr = getattr(model, name)
+            if hasattr(attr, "to_dict"):
+                model_data_attrs[name] = attr.to_dict()
+            else:
+                model_data_attrs[name] = getattr(model, name)
 
     _serialise(model_data_attrs)
     for var in model_data.data_vars.values():

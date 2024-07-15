@@ -12,13 +12,10 @@ import pandas as pd
 import xarray as xr
 
 import calliope
-from calliope import backend, exceptions, io
+from calliope import backend, exceptions, io, preprocess
 from calliope._version import __version__
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
-from calliope.preprocess import load
-from calliope.preprocess.data_sources import DataSource
-from calliope.preprocess.model_data import ModelDataFactory
 from calliope.util.logging import log_time
 from calliope.util.schema import (
     CONFIG_SCHEMA,
@@ -45,7 +42,8 @@ def read_netcdf(path):
 class Model:
     """A Calliope Model."""
 
-    _TS_OFFSET = pd.Timedelta(nanoseconds=1)
+    _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
+    ATTRS_SAVED = ("_def_path",)
 
     def __init__(
         self,
@@ -79,7 +77,7 @@ class Model:
         self.config: AttrDict
         self.defaults: AttrDict
         self.math: AttrDict
-        self._model_def_path: Path | None
+        self._def_path: str | None = None
         self.backend: BackendModel
         self.math_documentation = backend.MathDocumentation()
         self._is_built: bool = False
@@ -93,14 +91,20 @@ class Model:
         if isinstance(model_definition, xr.Dataset):
             self._init_from_model_data(model_definition)
         else:
-            (model_def, self._model_def_path, applied_overrides) = (
-                load.load_model_definition(
-                    model_definition, scenario, override_dict, **kwargs
-                )
+            if isinstance(model_definition, dict):
+                model_def_dict = AttrDict(model_definition)
+            else:
+                self._def_path = str(model_definition)
+                model_def_dict = AttrDict.from_yaml(model_definition)
+
+            (model_def, applied_overrides) = preprocess.load_scenario_overrides(
+                model_def_dict, scenario, override_dict, **kwargs
             )
+
             self._init_from_model_def_dict(
                 model_def, applied_overrides, scenario, data_source_dfs
             )
+            # self._math = preprocess.ModelMath(self._def_path, self.config["init"]["add_math"])
 
         self._model_data.attrs["timestamp_model_creation"] = timestamp_model_creation
         version_def = self._model_data.attrs["calliope_version_defined"]
@@ -172,7 +176,7 @@ class Model:
 
         if init_config["time_cluster"] is not None:
             init_config["time_cluster"] = relative_path(
-                self._model_def_path, init_config["time_cluster"]
+                self._def_path, init_config["time_cluster"]
             )
 
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
@@ -185,19 +189,15 @@ class Model:
         }
 
         data_sources = [
-            DataSource(
-                init_config,
-                source_name,
-                source_dict,
-                data_source_dfs,
-                self._model_def_path,
+            preprocess.DataSource(
+                init_config, source_name, source_dict, data_source_dfs, self._def_path
             )
             for source_name, source_dict in model_definition.pop(
                 "data_sources", {}
             ).items()
         ]
 
-        model_data_factory = ModelDataFactory(
+        model_data_factory = preprocess.ModelDataFactory(
             init_config, model_definition, data_sources, attributes, param_metadata
         )
         model_data_factory.build()
@@ -238,6 +238,9 @@ class Model:
                 model_data.attrs["_model_def_dict"]
             )
             del model_data.attrs["_model_def_dict"]
+        if "_def_path" in model_data.attrs:
+            self._def_path = model_data.attrs["_def_path"]
+            del model_data.attrs["_def_path"]
 
         self._model_data = model_data
         self._add_model_data_methods()
@@ -317,7 +320,7 @@ class Model:
             if not f"{filename}".endswith((".yaml", ".yml")):
                 yaml_filepath = math_dir / f"{filename}.yaml"
             else:
-                yaml_filepath = relative_path(self._model_def_path, filename)
+                yaml_filepath = relative_path(self._def_path, filename)
 
             if not yaml_filepath.is_file():
                 file_errors.append(filename)
