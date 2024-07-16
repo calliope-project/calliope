@@ -2,6 +2,7 @@
 
 import logging
 from copy import deepcopy
+from importlib.resources import files
 from pathlib import Path
 
 from calliope.attrdict import AttrDict
@@ -9,51 +10,65 @@ from calliope.exceptions import ModelError
 from calliope.util.schema import MATH_SCHEMA, validate_dict
 from calliope.util.tools import relative_path
 
-MATH_DIR = Path(__file__).parent / "math"
 LOGGER = logging.getLogger(__name__)
+MATH_DIR = files("calliope") / "math"
 
 
 class ModelMath:
     """Calliope math preprocessing."""
 
-    ATTRS_TO_SAVE = ("applied_files",)
+    ATTRS_TO_SAVE = ("_history",)
 
-    def __init__(self, model_def_path: str | Path | None, math_to_add: list | dict):
-        """Contains and handles Calliope YAML math definitions.
+    def __init__(
+        self,
+        math_to_add: list | dict | None = None,
+        model_def_path: str | Path | None = None,
+    ):
+        """Calliope YAML math handler.
+
+        Can be initialised in the following ways:
+        - default: base model math is loaded.
+        - list of math files: pre-defined or user-defined math files.
+        - dictionary: fully defined math dictionary with configuration saved as keys (see `ATTRS_TO_SAVE`).
 
         Args:
-            model_def_path (str): path to model definition.
-            math_to_add (list | dict): Either a list of math file paths or a saved dictionary.
+            math_to_add (list | dict | None, optional): Calliope math to load. Defaults to None (only base math).
+            model_def_path (str | Path | None, optional): Model definition path, needed for user math. Defaults to None.
         """
-        self.applied_files: set[str]
+        self._history: list[str] = []
         self.math: AttrDict = AttrDict()
-        self.def_path: str | Path | None = model_def_path
+        if math_to_add is None:
+            math_to_add = []
 
         if isinstance(math_to_add, list):
-            self._init_from_list(math_to_add)
-        elif isinstance(math_to_add, dict):
+            self._init_from_list(math_to_add, model_def_path)
+        else:
             self._init_from_dict(math_to_add)
 
-    def _init_from_list(self, math_to_add: list[str]) -> None:
-        """Load the base math and optionally merge additional math.
-
-        Internal math has no suffix. User defined math must be relative to the model definition file.
-
-        Args: math_to_add (list): References to math files to merge.
-
-        Returns:
-            AttrDict: Dictionary of math (constraints, variables, objectives, and global expressions).
-        """
-        math_files = ["base"] + math_to_add
-        for filename in math_files:
-            self.add_math(filename)
-
-    def _init_from_dict(self, math_dict: dict) -> None:
-        """Load math from a dictionary definition.
+    def _init_from_list(
+        self, math_to_add: list[str], model_def_path: str | Path | None = None
+    ):
+        """Load math definition from a list of files.
 
         Args:
-            math_dict (dict): dictionary with model math.
+            math_to_add (list[str]): Calliope math files to load. Suffix implies user-math.
+            model_def_path (str | Path | None, optional): Model definition path. Defaults to None.
+
+        Raises:
+            ModelError: user-math requested without providing `model_def_path`.
         """
+        for math_name in ["base"] + math_to_add:
+            if not math_name.endswith((".yaml", ".yml")):
+                self.add_pre_defined_math(math_name)
+            elif model_def_path is not None:
+                self.add_user_defined_math(math_name, model_def_path)
+            else:
+                raise ModelError(
+                    "Must declare `model_def_path` when requesting user math."
+                )
+
+    def _init_from_dict(self, math_dict: dict) -> None:
+        """Load math from a dictionary definition, recuperating relevant attributes."""
         self.math = AttrDict(math_dict)
         for attr in self.ATTRS_TO_SAVE:
             setattr(self, attr, self.math[attr])
@@ -66,27 +81,45 @@ class ModelMath:
             math[attr] = getattr(self, attr)
         return math
 
-    def add_math(self, math_file: str | Path, override=False) -> None:
-        """If not given in the add_math list, override model math with run mode math."""
-        file = str(math_file)
+    def check_in_history(self, math_name: str) -> bool:
+        """Evaluate if math has already been applied."""
+        return math_name in self._history
 
-        if file in self.applied_files and not override:
-            raise ModelError(f"Attempted to override existing math definition {file}.")
+    def _add_math(self, math: AttrDict):
+        """Add math into the model."""
+        self.math.union(math, allow_override=True)
 
-        if f"{file}".endswith((".yaml", ".yml")):
-            yaml_filepath = relative_path(self.def_path, file)
-        else:
-            yaml_filepath = MATH_DIR / f"{file}.yaml"
-
+    def _add_math_from_file(self, yaml_filepath: Path, name: str) -> None:
         try:
             math = AttrDict.from_yaml(yaml_filepath)
         except FileNotFoundError:
-            raise ModelError(f"Failed to load math from {yaml_filepath}")
+            raise ModelError(
+                f"Attempted to load math file that does not exist: {yaml_filepath}"
+            )
+        self._add_math(math)
+        self._history.append(name)
 
-        self.math.union(math, allow_override=True)
-        self.applied_files.add(file)
-        LOGGER.debug(f"Adding {file} math formulation.")
+    def add_pre_defined_math(self, math_name: str) -> None:
+        """Add pre-defined Calliope math (no suffix)."""
+        if self.check_in_history(math_name):
+            raise ModelError(
+                f"Attempted to override math with pre-defined math file '{math_name}'."
+            )
+        self._add_math_from_file(MATH_DIR / f"{math_name}.yaml", math_name)
+
+    def add_user_defined_math(
+        self, math_relative_path: str | Path, model_def_path: str | Path
+    ) -> None:
+        """Add user-defined Calliope math, relative to the model definition path."""
+        math_name = str(math_relative_path)
+        if self.check_in_history(math_name):
+            raise ModelError(
+                f"Attempted to override math with user-defined math file '{math_name}'"
+            )
+        self._add_math_from_file(
+            relative_path(model_def_path, math_relative_path), math_name
+        )
 
     def validate(self) -> None:
-        """Test that the model math is correct."""
+        """Test that the model math is correctly defined."""
         validate_dict(self.math, MATH_SCHEMA, "math")
