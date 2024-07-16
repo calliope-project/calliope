@@ -5,12 +5,15 @@ from typing import TYPE_CHECKING
 import xarray as xr
 
 from calliope.backend.gurobi_backend_model import GurobiBackendModel
-from calliope.backend.latex_backend_model import MathDocumentation
+from calliope.backend.latex_backend_model import (
+    ALLOWED_MATH_FILE_FORMATS,
+    LatexBackendModel,
+)
 from calliope.backend.parsing import ParsedBackendComponent
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.exceptions import BackendError
 
-MODEL_BACKENDS = ("pyomo",)
+MODEL_BACKENDS = ("pyomo", "gurobi")
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel

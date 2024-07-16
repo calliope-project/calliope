@@ -13,7 +13,6 @@ import xarray as xr
 
 import calliope
 from calliope import backend, exceptions, io, preprocess
-from calliope._version import __version__
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.util.logging import log_time
@@ -79,7 +78,6 @@ class Model:
         self.math: AttrDict
         self._def_path: str | None = None
         self.backend: BackendModel
-        self.math_documentation = backend.MathDocumentation()
         self._is_built: bool = False
         self._is_solved: bool = False
 
@@ -114,8 +112,6 @@ class Model:
                 f"Model configuration specifies calliope version {version_def}, "
                 f"but you are running {version_init}. Proceed with caution!"
             )
-
-        self.math_documentation.inputs = self._model_data
 
     @property
     def name(self):
@@ -182,7 +178,7 @@ class Model:
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
         attributes = {
             "calliope_version_defined": init_config["calliope_version"],
-            "calliope_version_initialised": __version__,
+            "calliope_version_initialised": calliope.__version__,
             "applied_overrides": applied_overrides,
             "scenario": scenario,
             "defaults": param_metadata["default"],
