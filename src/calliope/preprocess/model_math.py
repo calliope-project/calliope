@@ -1,12 +1,12 @@
-"""Calliope math handling."""
+"""Calliope math handling with interfaces for pre-defined and user-defined files."""
 
 import logging
 from copy import deepcopy
 from importlib.resources import files
 from pathlib import Path
 
+from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.exceptions import ModelError
 from calliope.util.schema import MATH_SCHEMA, validate_dict
 from calliope.util.tools import relative_path
 
@@ -69,7 +69,7 @@ class ModelMath:
             elif model_def_path is not None:
                 self.add_user_defined_math(math_name, model_def_path)
             else:
-                raise ModelError(
+                raise exceptions.ModelError(
                     "Must declare `model_def_path` when requesting user math."
                 )
 
@@ -99,16 +99,17 @@ class ModelMath:
         try:
             math = AttrDict.from_yaml(yaml_filepath)
         except FileNotFoundError:
-            raise ModelError(
+            raise exceptions.ModelError(
                 f"Attempted to load math file that does not exist: {yaml_filepath}"
             )
         self._add_math(math)
         self._history.append(name)
+        LOGGER.info(f"ModelMath: added file '{name}'.")
 
     def add_pre_defined_math(self, math_name: str) -> None:
         """Add pre-defined Calliope math (no suffix)."""
         if self.check_in_history(math_name):
-            raise ModelError(
+            raise exceptions.ModelError(
                 f"Attempted to override math with pre-defined math file '{math_name}'."
             )
         self._add_math_from_file(MATH_DIR / f"{math_name}.yaml", math_name)
@@ -119,13 +120,21 @@ class ModelMath:
         """Add user-defined Calliope math, relative to the model definition path."""
         math_name = str(math_relative_path)
         if self.check_in_history(math_name):
-            raise ModelError(
+            raise exceptions.ModelError(
                 f"Attempted to override math with user-defined math file '{math_name}'"
             )
         self._add_math_from_file(
             relative_path(model_def_path, math_relative_path), math_name
         )
 
-    def validate(self) -> None:
-        """Test that the model math is correctly defined."""
-        validate_dict(self._data, MATH_SCHEMA, "math")
+    def validate(self, extra_math: dict | None = None):
+        """Test current math and optional external math against the MATH schema.
+
+        Args:
+            extra_math (dict | None, optional): Temporary math to merge into the check. Defaults to None.
+        """
+        math_to_validate = deepcopy(self._data)
+        if extra_math is not None:
+            math_to_validate.union(AttrDict(extra_math), allow_override=True)
+        validate_dict(math_to_validate, MATH_SCHEMA, "math")
+        LOGGER.info("ModelMath: validated math against schema.")

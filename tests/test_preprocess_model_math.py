@@ -1,5 +1,6 @@
 """Test the model math handler."""
 
+import logging
 from copy import deepcopy
 from pathlib import Path
 from random import shuffle
@@ -43,26 +44,19 @@ def user_math_path(def_path, user_math):
     return str(file_path)
 
 
-def test_validate_fail(model_math_default):
-    """Invalid math keys must trigger a failure."""
-    model_math_default._data["foo"] = "bar"
-    with pytest.raises(ModelError):
-        model_math_default.validate()
-
-
 @pytest.mark.parametrize("invalid_obj", [1, "foo", {"foo": "bar"}, True, ModelMath])
 def test_invalid_eq(model_math_default, invalid_obj):
     """Comparisons should not work with invalid objects."""
     assert not model_math_default == invalid_obj
 
 
-@pytest.mark.parametrize(
-    "modes", [[], ["storage_inter_cluster"], ["operate", "storage_inter_cluster"]]
-)
+@pytest.mark.parametrize("modes", [[], ["storage_inter_cluster"]])
 class TestInit:
-    def test_init_order(self, modes, model_math_default):
+    def test_init_order(self, caplog, modes, model_math_default):
         """Math should be added in order, keeping defaults."""
-        model_math = ModelMath(modes)
+        with caplog.at_level(logging.INFO):
+            model_math = ModelMath(modes)
+        assert all(f"ModelMath: added file '{i}'." in caplog.messages for i in modes)
         assert model_math_default._history + modes == model_math._history
 
     def test_init_order_user_math(
@@ -155,3 +149,16 @@ class TestMathLoading:
         """Requesting inexistent user modes should fail."""
         with pytest.raises(ModelError):
             model_math_w_mode_user.add_user_defined_math(invalid_mode, def_path)
+
+
+class TestValidate:
+    def test_validate_math_fail(self, model_math_default):
+        """Invalid math keys must trigger a failure."""
+        with pytest.raises(ModelError):
+            # TODO: remove AttrDict once https://github.com/calliope-project/calliope/issues/640 is solved
+            model_math_default.validate(calliope.AttrDict({"foo": "bar"}))
+
+    def test_math_default(self, caplog, model_math_default):
+        with caplog.at_level(logging.INFO):
+            model_math_default.validate()
+        assert "ModelMath: validated math against schema." in caplog.messages
