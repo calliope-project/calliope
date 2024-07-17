@@ -36,7 +36,7 @@ class ModelMath:
             model_def_path (str | Path | None, optional): Model definition path, needed for user math. Defaults to None.
         """
         self._history: list[str] = []
-        self.math: AttrDict = AttrDict()
+        self._data: AttrDict = AttrDict()
         if math_to_add is None:
             math_to_add = []
 
@@ -44,6 +44,12 @@ class ModelMath:
             self._init_from_list(math_to_add, model_def_path)
         else:
             self._init_from_dict(math_to_add)
+
+    def __eq__(self, other):
+        """Compare between two model math instantiations."""
+        if not isinstance(other, ModelMath):
+            return NotImplemented
+        return self._history == other._history and self._data == other._data
 
     def _init_from_list(
         self, math_to_add: list[str], model_def_path: str | Path | None = None
@@ -69,14 +75,14 @@ class ModelMath:
 
     def _init_from_dict(self, math_dict: dict) -> None:
         """Load math from a dictionary definition, recuperating relevant attributes."""
-        self.math = AttrDict(math_dict)
+        self._data = AttrDict(math_dict)
         for attr in self.ATTRS_TO_SAVE:
-            setattr(self, attr, self.math[attr])
-            del self.math[attr]
+            setattr(self, attr, self._data[attr])
+            del self._data[attr]
 
     def to_dict(self) -> dict:
         """Translate into a dictionary."""
-        math = deepcopy(self.math)
+        math = deepcopy(self._data)
         for attr in self.ATTRS_TO_SAVE:
             math[attr] = getattr(self, attr)
         return math
@@ -87,7 +93,7 @@ class ModelMath:
 
     def _add_math(self, math: AttrDict):
         """Add math into the model."""
-        self.math.union(math, allow_override=True)
+        self._data.union(math, allow_override=True)
 
     def _add_math_from_file(self, yaml_filepath: Path, name: str) -> None:
         try:
@@ -122,4 +128,4 @@ class ModelMath:
 
     def validate(self) -> None:
         """Test that the model math is correctly defined."""
-        validate_dict(self.math, MATH_SCHEMA, "math")
+        validate_dict(self._data, MATH_SCHEMA, "math")
