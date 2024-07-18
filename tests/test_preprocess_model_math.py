@@ -57,7 +57,7 @@ class TestInit:
         with caplog.at_level(logging.INFO):
             model_math = ModelMath(modes)
         assert all(f"ModelMath: added file '{i}'." in caplog.messages for i in modes)
-        assert model_math_default._history + modes == model_math._history
+        assert model_math_default.history + modes == model_math.history
 
     def test_init_order_user_math(
         self, modes, user_math_path, def_path, model_math_default
@@ -65,7 +65,7 @@ class TestInit:
         """User math order should be respected."""
         modes = _shuffle_modes(modes + [user_math_path])
         model_math = ModelMath(modes, def_path)
-        assert model_math_default._history + modes == model_math._history
+        assert model_math_default.history + modes == model_math.history
 
     def test_init_user_math_invalid(self, modes, user_math_path):
         """Init with user math should fail if model definition path is not given."""
@@ -76,7 +76,7 @@ class TestInit:
         """Math dictionary reload should lead to no alterations."""
         modes = _shuffle_modes(modes + [user_math_path])
         model_math = ModelMath(modes, def_path)
-        saved = model_math.to_dict()
+        saved = dict(model_math)
         reloaded = ModelMath(saved)
         assert model_math == reloaded
 
@@ -88,7 +88,7 @@ class TestMathLoading:
 
     @pytest.fixture(scope="class")
     def model_math_w_mode(self, model_math_default, pre_defined_mode):
-        model_math_default.add_pre_defined_math(pre_defined_mode)
+        model_math_default.add_pre_defined_file(pre_defined_mode)
         return model_math_default
 
     @pytest.fixture(scope="class")
@@ -100,7 +100,7 @@ class TestMathLoading:
     def test_predefined_add(self, model_math_w_mode, predefined_mode_data):
         """Added mode should be in data."""
         flat = predefined_mode_data.as_dict_flat()
-        assert all(model_math_w_mode._data.get_key(i) == flat[i] for i in flat.keys())
+        assert all(model_math_w_mode.data.get_key(i) == flat[i] for i in flat.keys())
 
     def test_predefined_add_history(self, pre_defined_mode, model_math_w_mode):
         """Added modes should be recorded."""
@@ -109,17 +109,17 @@ class TestMathLoading:
     def test_predefined_add_duplicate(self, pre_defined_mode, model_math_w_mode):
         """Adding the same mode twice is invalid."""
         with pytest.raises(ModelError):
-            model_math_w_mode.add_pre_defined_math(pre_defined_mode)
+            model_math_w_mode.add_pre_defined_file(pre_defined_mode)
 
     @pytest.mark.parametrize("invalid_mode", ["foobar", "foobar.yaml", "operate.yaml"])
     def test_predefined_add_fail(self, invalid_mode, model_math_w_mode):
         """Requesting inexistent modes or modes with suffixes should fail."""
         with pytest.raises(ModelError):
-            model_math_w_mode.add_pre_defined_math(invalid_mode)
+            model_math_w_mode.add_pre_defined_file(invalid_mode)
 
     @pytest.fixture(scope="class")
     def model_math_w_mode_user(self, model_math_w_mode, user_math_path, def_path):
-        model_math_w_mode.add_user_defined_math(user_math_path, def_path)
+        model_math_w_mode.add_user_defined_file(user_math_path, def_path)
         return model_math_w_mode
 
     def test_user_math_add(
@@ -130,7 +130,7 @@ class TestMathLoading:
         expected_math.union(user_math, allow_override=True)
         flat = expected_math.as_dict_flat()
         assert all(
-            model_math_w_mode_user._data.get_key(i) == flat[i] for i in flat.keys()
+            model_math_w_mode_user.data.get_key(i) == flat[i] for i in flat.keys()
         )
 
     def test_user_math_add_history(self, model_math_w_mode_user, user_math_path):
@@ -142,13 +142,13 @@ class TestMathLoading:
     ):
         """Adding the same user math file twice should fail."""
         with pytest.raises(ModelError):
-            model_math_w_mode_user.add_user_defined_math(user_math_path, def_path)
+            model_math_w_mode_user.add_user_defined_file(user_math_path, def_path)
 
     @pytest.mark.parametrize("invalid_mode", ["foobar", "foobar.yaml", "operate.yaml"])
     def test_user_math_add_fail(self, invalid_mode, model_math_w_mode_user, def_path):
         """Requesting inexistent user modes should fail."""
         with pytest.raises(ModelError):
-            model_math_w_mode_user.add_user_defined_math(invalid_mode, def_path)
+            model_math_w_mode_user.add_user_defined_file(invalid_mode, def_path)
 
 
 class TestValidate:
