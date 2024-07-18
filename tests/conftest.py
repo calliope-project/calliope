@@ -6,6 +6,7 @@ import pytest
 import xarray as xr
 from calliope.attrdict import AttrDict
 from calliope.backend import latex_backend_model, pyomo_backend_model
+from calliope.preprocess import ModelMath
 from calliope.util.schema import CONFIG_SCHEMA, MODEL_SCHEMA, extract_from_schema
 
 from .common.util import build_test_model as build_model
@@ -156,6 +157,22 @@ def simple_conversion_plus():
 
 
 @pytest.fixture(scope="module")
+def dummy_model_math():
+    math = AttrDict(
+        {
+            "data": {
+                "constraints": {},
+                "variables": {},
+                "global_expressions": {},
+                "objectives": {},
+            },
+            "history": [],
+        }
+    )
+    return ModelMath(math)
+
+
+@pytest.fixture(scope="module")
 def dummy_model_data(config_defaults, model_defaults):
     coords = {
         dim: (
@@ -291,9 +308,6 @@ def dummy_model_data(config_defaults, model_defaults):
             **model_defaults,
         }
     )
-    model_data.attrs["math"] = AttrDict(
-        {"constraints": {}, "variables": {}, "global_expressions": {}, "objectives": {}}
-    )
     return model_data
 
 
@@ -330,18 +344,20 @@ def populate_backend_model(backend):
 
 
 @pytest.fixture(scope="module")
-def dummy_pyomo_backend_model(dummy_model_data):
-    backend = pyomo_backend_model.PyomoBackendModel(dummy_model_data)
+def dummy_pyomo_backend_model(dummy_model_data, dummy_model_math):
+    backend = pyomo_backend_model.PyomoBackendModel(dummy_model_data, dummy_model_math)
     return populate_backend_model(backend)
 
 
 @pytest.fixture(scope="module")
-def dummy_latex_backend_model(dummy_model_data):
-    backend = latex_backend_model.LatexBackendModel(dummy_model_data)
+def dummy_latex_backend_model(dummy_model_data, dummy_model_math):
+    backend = latex_backend_model.LatexBackendModel(dummy_model_data, dummy_model_math)
     return populate_backend_model(backend)
 
 
 @pytest.fixture(scope="class")
-def valid_latex_backend(dummy_model_data):
-    backend = latex_backend_model.LatexBackendModel(dummy_model_data, include="valid")
+def valid_latex_backend(dummy_model_data, dummy_model_math):
+    backend = latex_backend_model.LatexBackendModel(
+        dummy_model_data, dummy_model_math, include="valid"
+    )
     return populate_backend_model(backend)

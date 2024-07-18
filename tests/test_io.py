@@ -104,7 +104,14 @@ class TestIO:
             ("serialised_nones", ["foo_none", "scenario"]),
             (
                 "serialised_dicts",
-                ["foo_dict", "foo_attrdict", "defaults", "config", "math"],
+                [
+                    "foo_dict",
+                    "foo_attrdict",
+                    "defaults",
+                    "config",
+                    "math",
+                    "_model_def_dict",
+                ],
             ),
             ("serialised_sets", ["foo_set", "foo_set_1_item"]),
             ("serialised_single_element_list", ["foo_list_1_item", "foo_set_1_item"]),
@@ -181,7 +188,7 @@ class TestIO:
             with pytest.warns(exceptions.ModelWarning):
                 model.to_csv(out_path, dropna=False)
 
-    @pytest.mark.parametrize("attr", ["config", "math"])
+    @pytest.mark.parametrize("attr", ["config"])
     def test_dicts_as_model_attrs_and_property(self, model_from_file, attr):
         assert attr in model_from_file._model_data.attrs.keys()
         assert hasattr(model_from_file, attr)

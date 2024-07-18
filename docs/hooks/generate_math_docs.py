@@ -166,15 +166,15 @@ def generate_custom_math_documentation(
 
     full_del = []
     expr_del = []
-    for component_group, component_group_dict in model.math.items():
+    for component_group, component_group_dict in model.math.data.items():
         for name, component_dict in component_group_dict.items():
-            if name in base_documentation.math[component_group]:
+            if name in base_documentation.math.data[component_group]:
                 if not component_dict.get("active", True):
                     expr_del.append(name)
                     component_dict["description"] = "|REMOVED|"
                     component_dict["active"] = True
                 elif (
-                    base_documentation.math[component_group].get(name, {})
+                    base_documentation.math.data[component_group].get(name, {})
                     != component_dict
                 ):
                     _add_to_description(component_dict, "|UPDATED|")

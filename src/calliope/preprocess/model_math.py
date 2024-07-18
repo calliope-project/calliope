@@ -21,7 +21,7 @@ class ModelMath:
 
     def __init__(
         self,
-        math_to_add: list | dict | None = None,
+        math_to_add: str | list | dict | None = None,
         model_def_path: str | Path | None = None,
     ):
         """Calliope YAML math handler.
@@ -32,13 +32,15 @@ class ModelMath:
         - dictionary: fully defined math dictionary with configuration saved as keys (see `ATTRS_TO_SAVE`).
 
         Args:
-            math_to_add (list | dict | None, optional): Calliope math to load. Defaults to None (only base math).
+            math_to_add (str | list | dict | None, optional): Calliope math to load. Defaults to None (only base math).
             model_def_path (str | Path | None, optional): Model definition path, needed for user math. Defaults to None.
         """
         self.history: list[str] = []
         self.data: AttrDict = AttrDict()
         if math_to_add is None:
             math_to_add = []
+        elif isinstance(math_to_add, str):
+            math_to_add = [math_to_add]
 
         if isinstance(math_to_add, list):
             self._init_from_list(["plan"] + math_to_add, model_def_path)

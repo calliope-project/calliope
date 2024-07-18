@@ -1,4 +1,3 @@
-import importlib
 import logging
 from copy import deepcopy
 from itertools import product
@@ -1623,21 +1622,18 @@ class TestNewBackend:
     @pytest.mark.parametrize("mode", ["operate", "spores"])
     def test_add_run_mode_custom_math(self, caplog, mode):
         caplog.set_level(logging.DEBUG)
-        mode_custom_math = AttrDict.from_yaml(
-            importlib.resources.files("calliope") / "math" / f"{mode}.yaml"
-        )
         m = build_model({}, "simple_supply,two_hours,investment_costs")
 
         base_math = deepcopy(m.math)
-        base_math.union(mode_custom_math, allow_override=True)
+        base_math.add_pre_defined_file(mode)
 
-        backend = PyomoBackendModel(m.inputs, mode=mode)
+        backend = PyomoBackendModel(m.inputs, m.math, mode=mode)
         backend._add_run_mode_math()
 
         assert f"Updating math formulation with {mode} mode math." in caplog.text
 
         assert m.math != base_math
-        assert backend.inputs.attrs["math"].as_dict() == base_math.as_dict()
+        assert backend.math == base_math
 
     def test_add_run_mode_custom_math_before_build(self, caplog, temp_path):
         """A user can override the run mode math by including it directly in the additional math list"""
@@ -1650,23 +1646,23 @@ class TestNewBackend:
             {"config.init.add_math": ["operate", str(file_path)]},
             "simple_supply,two_hours,investment_costs",
         )
-        backend = PyomoBackendModel(m.inputs, mode="operate")
+        backend = PyomoBackendModel(m.inputs, m.math, mode="operate")
         backend._add_run_mode_math()
 
         # We set operate mode explicitly in our additional math so it won't be added again
         assert "Updating math formulation with operate mode math." not in caplog.text
 
         # operate mode set it to false, then our math set it back to active
-        assert m.math.variables.flow_cap.active
+        assert m.math.data.variables.flow_cap.active
         # operate mode set it to false and our math did not override that
-        assert not m.math.variables.storage_cap.active
+        assert not m.math.data.variables.storage_cap.active
 
     def test_run_mode_mismatch(self):
         m = build_model(
             {"config.init.add_math": ["operate"]},
             "simple_supply,two_hours,investment_costs",
         )
-        backend = PyomoBackendModel(m.inputs)
+        backend = PyomoBackendModel(m.inputs, m.math)
         with pytest.warns(exceptions.ModelWarning) as excinfo:
             backend._add_run_mode_math()
 

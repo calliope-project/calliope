@@ -42,7 +42,7 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
-    ATTRS_SAVED = ("_def_path",)
+    ATTRS_SAVED = ("_def_path", "math", "_model_def_dict")
 
     def __init__(
         self,
@@ -75,7 +75,7 @@ class Model:
         self._timings: dict = {}
         self.config: AttrDict
         self.defaults: AttrDict
-        self._math: preprocess.ModelMath
+        self.math: preprocess.ModelMath
         self._def_path: str | None = None
         self.backend: BackendModel
         self._is_built: bool = False
@@ -102,7 +102,7 @@ class Model:
             self._init_from_model_def_dict(
                 model_def, applied_overrides, scenario, data_source_dfs
             )
-            self._math = preprocess.ModelMath(
+            self.math = preprocess.ModelMath(
                 self.config["init"]["add_math"], self._def_path
             )
 
@@ -227,13 +227,14 @@ class Model:
                 Model dataset with input parameters as arrays and configuration stored in the dataset attributes dictionary.
         """
         if "_model_def_dict" in model_data.attrs:
-            self._model_def_dict = AttrDict.from_yaml_string(
-                model_data.attrs["_model_def_dict"]
-            )
+            self._model_def_dict = AttrDict(model_data.attrs["_model_def_dict"])
             del model_data.attrs["_model_def_dict"]
         if "_def_path" in model_data.attrs:
             self._def_path = model_data.attrs["_def_path"]
             del model_data.attrs["_def_path"]
+        if "math" in model_data.attrs:
+            self.math = preprocess.ModelMath(model_data.attrs["math"])
+            del model_data.attrs["math"]
 
         self._model_data = model_data
         self._add_model_data_methods()
@@ -325,7 +326,7 @@ class Model:
             backend_input = self._model_data
         backend_name = backend_config.pop("backend")
         self.backend = backend.get_model_backend(
-            backend_name, backend_input, self._math, **backend_config
+            backend_name, backend_input, self.math, **backend_config
         )
         self.backend.add_all_math()
 
@@ -453,7 +454,15 @@ class Model:
 
     def to_netcdf(self, path):
         """Save complete model data (inputs and, if available, results) to a NetCDF file at the given `path`."""
-        io.save_netcdf(self._model_data, path, model=self)
+        saved_attrs = {}
+        for attr in set(self.ATTRS_SAVED) & set(self.__dict__.keys()):
+            if not isinstance(getattr(self, attr), str | list | None):
+                # TODO: remove `dict`` once AttrDict init issue is fixed
+                saved_attrs[attr] = dict(getattr(self, attr))
+            else:
+                saved_attrs[attr] = getattr(self, attr)
+
+        io.save_netcdf(self._model_data, path, **saved_attrs)
 
     def to_csv(
         self, path: str | Path, dropna: bool = True, allow_overwrite: bool = False
@@ -517,8 +526,8 @@ class Model:
         """
         validate_dict(math_dict, MATH_SCHEMA, "math")
         valid_component_names = [
-            *self._math.data["variables"].keys(),
-            *self._math.data["global_expressions"].keys(),
+            *self.math.data["variables"].keys(),
+            *self.math.data["global_expressions"].keys(),
             *math_dict.get("variables", {}).keys(),
             *math_dict.get("global_expressions", {}).keys(),
             *self.inputs.data_vars.keys(),

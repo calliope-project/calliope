@@ -78,7 +78,7 @@ class TestBaseMath:
         self.TEST_REGISTER.add("constraints.storage_max")
         model = build_test_model(scenario="simple_storage,two_hours,investment_costs")
         custom_math = {
-            "constraints": {"storage_max": model.math.constraints.storage_max}
+            "constraints": {"storage_max": model.math.data.constraints.storage_max}
         }
         compare_lps(model, custom_math, "storage_max")
 
@@ -93,7 +93,7 @@ class TestBaseMath:
         )
 
         custom_math = {
-            "constraints": {"flow_out_max": model.math.constraints.flow_out_max}
+            "constraints": {"flow_out_max": model.math.data.constraints.flow_out_max}
         }
         compare_lps(model, custom_math, "flow_out_max")
 
@@ -105,7 +105,7 @@ class TestBaseMath:
         )
         custom_math = {
             "constraints": {
-                "balance_conversion": model.math.constraints.balance_conversion
+                "balance_conversion": model.math.data.constraints.balance_conversion
             }
         }
 
@@ -117,7 +117,7 @@ class TestBaseMath:
             {}, "simple_supply_plus,resample_two_days,investment_costs"
         )
         custom_math = {
-            "constraints": {"my_constraint": model.math.constraints.source_max}
+            "constraints": {"my_constraint": model.math.data.constraints.source_max}
         }
         compare_lps(model, custom_math, "source_max")
 
@@ -129,7 +129,7 @@ class TestBaseMath:
         )
         custom_math = {
             "constraints": {
-                "my_constraint": model.math.constraints.balance_transmission
+                "my_constraint": model.math.data.constraints.balance_transmission
             }
         }
         compare_lps(model, custom_math, "balance_transmission")
@@ -145,7 +145,9 @@ class TestBaseMath:
             "simple_storage,two_hours",
         )
         custom_math = {
-            "constraints": {"my_constraint": model.math.constraints.balance_storage}
+            "constraints": {
+                "my_constraint": model.math.data.constraints.balance_storage
+            }
         }
         compare_lps(model, custom_math, "balance_storage")
 

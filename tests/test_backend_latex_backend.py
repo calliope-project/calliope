@@ -306,8 +306,12 @@ class TestLatexBackendModel:
             ),
         ],
     )
-    def test_generate_math_doc(self, dummy_model_data, format, expected):
-        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+    def test_generate_math_doc(
+        self, dummy_model_data, dummy_model_math, format, expected
+    ):
+        backend_model = latex_backend_model.LatexBackendModel(
+            dummy_model_data, dummy_model_math
+        )
         backend_model.add_global_expression(
             "expr",
             {
@@ -319,8 +323,10 @@ class TestLatexBackendModel:
         doc = backend_model.generate_math_doc(format=format)
         assert doc == expected
 
-    def test_generate_math_doc_no_params(self, dummy_model_data):
-        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+    def test_generate_math_doc_no_params(self, dummy_model_data, dummy_model_math):
+        backend_model = latex_backend_model.LatexBackendModel(
+            dummy_model_data, dummy_model_math
+        )
         backend_model.add_global_expression(
             "expr",
             {
@@ -349,8 +355,10 @@ class TestLatexBackendModel:
                     """
         )
 
-    def test_generate_math_doc_mkdocs_tabbed(self, dummy_model_data):
-        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+    def test_generate_math_doc_mkdocs_tabbed(self, dummy_model_data, dummy_model_math):
+        backend_model = latex_backend_model.LatexBackendModel(
+            dummy_model_data, dummy_model_math
+        )
         backend_model.add_global_expression(
             "expr",
             {
@@ -388,8 +396,12 @@ class TestLatexBackendModel:
                     """
         )
 
-    def test_generate_math_doc_mkdocs_tabbed_not_in_md(self, dummy_model_data):
-        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+    def test_generate_math_doc_mkdocs_tabbed_not_in_md(
+        self, dummy_model_data, dummy_model_math
+    ):
+        backend_model = latex_backend_model.LatexBackendModel(
+            dummy_model_data, dummy_model_math
+        )
         with pytest.raises(exceptions.ModelError) as excinfo:
             backend_model.generate_math_doc(format="rst", mkdocs_tabbed=True)
 

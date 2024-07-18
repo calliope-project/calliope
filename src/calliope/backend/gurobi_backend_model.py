@@ -116,7 +116,7 @@ class GurobiBackendModel(backend_model.BackendModel):
     ) -> None:
         domain_dict = {"real": gurobipy.GRB.CONTINUOUS, "integer": gurobipy.GRB.INTEGER}
         if variable_dict is None:
-            variable_dict = self.inputs.attrs["math"]["variables"][name]
+            variable_dict = self.math.data["variables"][name]
 
         def _variable_setter(where: xr.DataArray, references: set):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
@@ -144,7 +144,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         }
 
         if objective_dict is None:
-            objective_dict = self.inputs.attrs["math"]["objectives"][name]
+            objective_dict = self.math.data["objectives"][name]
         sense = sense_dict[objective_dict["sense"]]
 
         def _objective_setter(
@@ -393,7 +393,7 @@ class GurobiBackendModel(backend_model.BackendModel):
                 )
                 continue
 
-            existing_bound_param = self.inputs.attrs["math"].get_key(
+            existing_bound_param = self.math.data.get_key(
                 f"variables.{name}.bounds.{bound_name}", None
             )
             if existing_bound_param in self.parameters:

@@ -79,7 +79,7 @@ def check_variable_exists(
 def build_lp(
     model: calliope.Model,
     outfile: str | Path,
-    math: dict[str, dict | list] | None = None,
+    math_data: dict[str, dict | list] | None = None,
     backend_name: Literal["pyomo"] = "pyomo",
 ) -> None:
     """
@@ -93,14 +93,16 @@ def build_lp(
         math (dict | None, optional): All constraint/global expression/objective math to apply. Defaults to None.
         backend_name (Literal["pyomo"], optional): Backend to use to create the LP file. Defaults to "pyomo".
     """
-    backend_instance = backend.get_model_backend(backend_name, model._model_data)
-    for name, dict_ in model.math["variables"].items():
+    backend_instance = backend.get_model_backend(
+        backend_name, model._model_data, model.math
+    )
+    for name, dict_ in model.math.data["variables"].items():
         backend_instance.add_variable(name, dict_)
-    for name, dict_ in model.math["global_expressions"].items():
+    for name, dict_ in model.math.data["global_expressions"].items():
         backend_instance.add_global_expression(name, dict_)
 
-    if isinstance(math, dict):
-        for component_group, component_math in math.items():
+    if isinstance(math_data, dict):
+        for component_group, component_math in math_data.items():
             component = component_group.removesuffix("s")
             if isinstance(component_math, dict):
                 for name, dict_ in component_math.items():
@@ -110,16 +112,16 @@ def build_lp(
                     getattr(backend_instance, f"add_{component}")(name)
 
     # MUST have an objective for a valid LP file
-    if math is None or "objectives" not in math.keys():
+    if math_data is None or "objectives" not in math_data.keys():
         backend_instance.add_objective(
             "dummy_obj", {"equations": [{"expression": "1 + 1"}], "sense": "minimize"}
         )
         backend_instance._instance.objectives["dummy_obj"][0].activate()
-    elif "objectives" in math.keys():
-        if isinstance(math["objectives"], dict):
-            objectives = list(math["objectives"].keys())
+    elif "objectives" in math_data.keys():
+        if isinstance(math_data["objectives"], dict):
+            objectives = list(math_data["objectives"].keys())
         else:
-            objectives = math["objectives"]
+            objectives = math_data["objectives"]
         assert len(objectives) == 1, "Can only test with one objective"
         backend_instance._instance.objectives[objectives[0]][0].activate()
 

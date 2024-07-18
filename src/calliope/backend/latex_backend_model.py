@@ -353,7 +353,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             "maximise": r"\max{}",
         }
         if objective_dict is None:
-            objective_dict = self.inputs.attrs["math"]["objectives"][name]
+            objective_dict = self.math.data["objectives"][name]
         equation_strings: list = []
 
         def _objective_setter(

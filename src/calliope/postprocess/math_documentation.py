@@ -2,11 +2,9 @@
 
 import logging
 import typing
-from copy import deepcopy
 from pathlib import Path
 from typing import Literal
 
-from calliope.attrdict import AttrDict
 from calliope.backend import ALLOWED_MATH_FILE_FORMATS, LatexBackendModel
 from calliope.model import Model
 
@@ -31,11 +29,15 @@ class MathDocumentation:
             **kwargs: kwargs for the LaTeX backend.
         """
         self.name: str = model.name + " math"
-        self.math: AttrDict = deepcopy(model.math)
         self.backend: LatexBackendModel = LatexBackendModel(
-            model._model_data, include, **kwargs
+            model._model_data, model.math, include, **kwargs
         )
         self.backend.add_all_math()
+
+    @property
+    def math(self):
+        """Direct access to backend math."""
+        return self.backend.math
 
     def write(
         self,

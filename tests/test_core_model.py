@@ -66,7 +66,7 @@ class TestModel:
 class TestValidateMathDict:
     def test_base_math(self, caplog, simple_supply):
         with caplog.at_level(logging.INFO, logger=LOGGER):
-            simple_supply.validate_math_strings(simple_supply.math)
+            simple_supply.validate_math_strings(simple_supply.math.data)
         assert "Model: validated math strings" in [
             rec.message for rec in caplog.records
         ]
