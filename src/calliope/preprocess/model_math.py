@@ -27,7 +27,7 @@ class ModelMath:
         """Calliope YAML math handler.
 
         Can be initialised in the following ways:
-        - default: base model math is loaded.
+        - default: 'plan' model math is loaded.
         - list of math files: pre-defined or user-defined math files.
         - dictionary: fully defined math dictionary with configuration saved as keys (see `ATTRS_TO_SAVE`).
 
@@ -41,7 +41,7 @@ class ModelMath:
             math_to_add = []
 
         if isinstance(math_to_add, list):
-            self._init_from_list(["base"] + math_to_add, model_def_path)
+            self._init_from_list(["plan"] + math_to_add, model_def_path)
         else:
             self._init_from_dict(math_to_add)
 

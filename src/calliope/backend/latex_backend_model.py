@@ -11,8 +11,10 @@ import jinja2
 import numpy as np
 import xarray as xr
 
-from calliope.backend import backend_model, parsing
 from calliope.exceptions import ModelError
+from calliope.preprocess import ModelMath
+
+from . import backend_model, parsing
 
 ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
 LOGGER = logging.getLogger(__name__)
@@ -246,17 +248,22 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     FORMAT_STRINGS = {"rst": RST_DOC, "tex": TEX_DOC, "md": MD_DOC}
 
     def __init__(
-        self, inputs: xr.Dataset, include: Literal["all", "valid"] = "all", **kwargs
+        self,
+        inputs: xr.Dataset,
+        math: ModelMath,
+        include: Literal["all", "valid"] = "all",
+        **kwargs,
     ) -> None:
         """Interface to build a string representation of the mathematical formulation using LaTeX math notation.
 
         Args:
             inputs (xr.Dataset): model data.
+            math (ModelMath): Calliope math.
             include (Literal["all", "valid"], optional):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
             **kwargs: for the backend model generator.
         """
-        super().__init__(inputs, **kwargs)
+        super().__init__(inputs, math, **kwargs)
         self.include = include
 
         self._add_all_inputs_as_parameters()
@@ -322,7 +329,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             return where.where(where)
 
         if variable_dict is None:
-            variable_dict = self.inputs.attrs["math"]["variables"][name]
+            variable_dict = self.math.data["variables"][name]
 
         parsed_component = self._add_component(
             name, variable_dict, _variable_setter, "variables", break_early=False

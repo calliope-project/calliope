@@ -17,6 +17,7 @@ import xarray as xr
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
+from calliope.preprocess import ModelMath
 
 if importlib.util.find_spec("gurobipy") is not None:
     import gurobipy
@@ -40,18 +41,19 @@ COMPONENT_TRANSLATOR = {
 class GurobiBackendModel(backend_model.BackendModel):
     """gurobipy-specific backend functionality."""
 
-    def __init__(self, inputs: xr.Dataset, **kwargs) -> None:
+    def __init__(self, inputs: xr.Dataset, math: ModelMath, **kwargs) -> None:
         """Gurobi solver interface class.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
+            math (ModelMath): Calliope math.
             **kwargs: passed directly to the solver.
         """
         if importlib.util.find_spec("gurobipy") is None:
             raise ImportError(
                 "Install the `gurobipy` package to build the optimisation problem with the Gurobi backend."
             )
-        super().__init__(inputs, gurobipy.Model(), **kwargs)
+        super().__init__(inputs, math, gurobipy.Model(), **kwargs)
         self._instance: gurobipy.Model
         self.shadow_prices = GurobiShadowPrices(self)
 

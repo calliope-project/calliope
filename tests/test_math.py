@@ -45,7 +45,7 @@ class TestBaseMath:
 
     @pytest.fixture(scope="class")
     def base_math(self):
-        return AttrDict.from_yaml(CALLIOPE_DIR / "math" / "base.yaml")
+        return AttrDict.from_yaml(CALLIOPE_DIR / "math" / "plan.yaml")
 
     def test_flow_cap(self, compare_lps):
         self.TEST_REGISTER.add("variables.flow_cap")

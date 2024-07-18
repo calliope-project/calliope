@@ -75,7 +75,7 @@ class Model:
         self._timings: dict = {}
         self.config: AttrDict
         self.defaults: AttrDict
-        self.math: AttrDict
+        self._math: preprocess.ModelMath
         self._def_path: str | None = None
         self.backend: BackendModel
         self._is_built: bool = False
@@ -102,7 +102,9 @@ class Model:
             self._init_from_model_def_dict(
                 model_def, applied_overrides, scenario, data_source_dfs
             )
-            # self._math = preprocess.ModelMath(self._def_path, self.config["init"]["add_math"])
+            self._math = preprocess.ModelMath(
+                self.config["init"]["add_math"], self._def_path
+            )
 
         self._model_data.attrs["timestamp_model_creation"] = timestamp_model_creation
         version_def = self._model_data.attrs["calliope_version_defined"]
@@ -167,8 +169,6 @@ class Model:
         model_config.union(model_definition.pop("config"), allow_override=True)
 
         init_config = update_then_validate_config("init", model_config)
-        # We won't store `init` in `self.config`, so we pop it out now.
-        model_config.pop("init")
 
         if init_config["time_cluster"] is not None:
             init_config["time_cluster"] = relative_path(
@@ -208,9 +208,6 @@ class Model:
         )
 
         self._add_observed_dict("config", model_config)
-
-        math = self._add_math(init_config["add_math"])
-        self._add_observed_dict("math", math)
 
         self._model_data.attrs["name"] = init_config["name"]
         log_time(
@@ -259,7 +256,6 @@ class Model:
 
         """
         self._add_observed_dict("config")
-        self._add_observed_dict("math")
 
     def _add_observed_dict(self, name: str, dict_to_add: dict | None = None) -> None:
         """Add the same dictionary as property of model object and an attribute of the model xarray dataset.
@@ -292,45 +288,6 @@ class Model:
             dict_to_add = AttrDict(dict_to_add)
         self._model_data.attrs[name] = dict_to_add
         setattr(self, name, dict_to_add)
-
-    def _add_math(self, add_math: list) -> AttrDict:
-        """Load the base math and optionally override with additional math from a list of references to math files.
-
-        Args:
-            add_math (list):
-                List of references to files containing mathematical formulations that will be merged with the base formulation.
-
-        Raises:
-            exceptions.ModelError:
-                Referenced pre-defined math files or user-defined math files must exist.
-
-        Returns:
-            AttrDict: Dictionary of math (constraints, variables, objectives, and global expressions).
-        """
-        math_dir = Path(calliope.__file__).parent / "math"
-        base_math = AttrDict.from_yaml(math_dir / "base.yaml")
-
-        file_errors = []
-
-        for filename in add_math:
-            if not f"{filename}".endswith((".yaml", ".yml")):
-                yaml_filepath = math_dir / f"{filename}.yaml"
-            else:
-                yaml_filepath = relative_path(self._def_path, filename)
-
-            if not yaml_filepath.is_file():
-                file_errors.append(filename)
-                continue
-            else:
-                override_dict = AttrDict.from_yaml(yaml_filepath)
-
-            base_math.union(override_dict, allow_override=True)
-        if file_errors:
-            raise exceptions.ModelError(
-                f"Attempted to load additional math that does not exist: {file_errors}"
-            )
-        self._model_data.attrs["applied_additional_math"] = add_math
-        return base_math
 
     def build(self, force: bool = False, **kwargs) -> None:
         """Build description of the optimisation problem in the chosen backend interface.
@@ -368,7 +325,7 @@ class Model:
             backend_input = self._model_data
         backend_name = backend_config.pop("backend")
         self.backend = backend.get_model_backend(
-            backend_name, backend_input, **backend_config
+            backend_name, backend_input, self._math, **backend_config
         )
         self.backend.add_all_math()
 
@@ -560,8 +517,8 @@ class Model:
         """
         validate_dict(math_dict, MATH_SCHEMA, "math")
         valid_component_names = [
-            *self.math["variables"].keys(),
-            *self.math["global_expressions"].keys(),
+            *self._math.data["variables"].keys(),
+            *self._math.data["global_expressions"].keys(),
             *math_dict.get("variables", {}).keys(),
             *math_dict.get("global_expressions", {}).keys(),
             *self.inputs.data_vars.keys(),

@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import importlib
 import logging
 import time
 import typing
@@ -33,12 +32,11 @@ from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
 from calliope.exceptions import warn as model_warn
 from calliope.io import load_config
+from calliope.preprocess import ModelMath
 from calliope.util.schema import (
-    MATH_SCHEMA,
     MODEL_SCHEMA,
     extract_from_schema,
     update_then_validate_config,
-    validate_dict,
 )
 
 if TYPE_CHECKING:
@@ -64,11 +62,12 @@ class BackendModelGenerator(ABC):
     _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
     _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
 
-    def __init__(self, inputs: xr.Dataset, **kwargs):
+    def __init__(self, inputs: xr.Dataset, math: ModelMath, **kwargs):
         """Abstract base class to build a representation of the optimisation problem.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
+            math (ModelMath): Calliope math.
             **kwargs (Any): build configuration overrides.
         """
         self._dataset = xr.Dataset()
@@ -77,6 +76,7 @@ class BackendModelGenerator(ABC):
         self.inputs.attrs["config"]["build"] = update_then_validate_config(
             "build", self.inputs.attrs["config"], **kwargs
         )
+        self.math: ModelMath = deepcopy(math)
         self._check_inputs()
 
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
@@ -201,6 +201,7 @@ class BackendModelGenerator(ABC):
     def add_all_math(self):
         """Parse and all the math stored in the input data."""
         self._add_run_mode_math()
+        self.math.validate()
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
         for components in [
@@ -210,7 +211,7 @@ class BackendModelGenerator(ABC):
             "objectives",
         ]:
             component = components.removesuffix("s")
-            for name in self.inputs.math[components]:
+            for name in self.math.data[components]:
                 start = time.time()
                 getattr(self, f"add_{component}")(name)
                 end = time.time() - start
@@ -223,21 +224,16 @@ class BackendModelGenerator(ABC):
         """If not given in the add_math list, override model math with run mode math."""
         # FIXME: available modes should not be hardcoded here. They should come from a YAML schema.
         mode = self.inputs.attrs["config"].build.mode
-        add_math = self.inputs.attrs["applied_additional_math"]
         not_run_mode = {"plan", "operate", "spores"}.difference([mode])
-        run_mode_mismatch = not_run_mode.intersection(add_math)
+        run_mode_mismatch = not_run_mode.intersection(self.math.history)
         if run_mode_mismatch:
             exceptions.warn(
                 f"Running in {mode} mode, but run mode(s) {run_mode_mismatch} "
                 "math being loaded from file via the model configuration"
             )
-
-        if mode != "plan" and mode not in add_math:
+        if mode not in self.math.history:
             LOGGER.debug(f"Updating math formulation with {mode} mode math.")
-            filepath = importlib.resources.files("calliope") / "math" / f"{mode}.yaml"
-            self.inputs.math.union(AttrDict.from_yaml(filepath), allow_override=True)
-
-        validate_dict(self.inputs.math, MATH_SCHEMA, "math")
+            self.math.add_pre_defined_file(mode)
 
     def _add_component(
         self,
@@ -270,9 +266,9 @@ class BackendModelGenerator(ABC):
         references: set[str] = set()
 
         if component_dict is None:
-            component_dict = self.inputs.math[component_type][name]
-        if name not in self.inputs.math[component_type]:
-            self.inputs.math[component_type][name] = component_dict
+            component_dict = self.math.data[component_type][name]
+        if name not in self.math.data[component_type]:
+            self.math.data[component_type][name] = component_dict
 
         if break_early and not component_dict.get("active", True):
             self.log(
@@ -567,7 +563,7 @@ class BackendModelGenerator(ABC):
         in_math = set(
             name
             for component in ["variables", "global_expressions"]
-            for name in self.inputs.math[component].keys()
+            for name in self.math.data[component].keys()
         )
         return in_data.union(in_math)
 
@@ -575,15 +571,18 @@ class BackendModelGenerator(ABC):
 class BackendModel(BackendModelGenerator, Generic[T]):
     """Calliope's backend model functionality."""
 
-    def __init__(self, inputs: xr.Dataset, instance: T, **kwargs) -> None:
+    def __init__(
+        self, inputs: xr.Dataset, math: ModelMath, instance: T, **kwargs
+    ) -> None:
         """Abstract base class to build backend models that interface with solvers.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
+            math (ModelMath): Calliope math.
             instance (T): Interface model instance.
             **kwargs: build configuration overrides.
         """
-        super().__init__(inputs, **kwargs)
+        super().__init__(inputs, math, **kwargs)
         self._instance = instance
         self.shadow_prices: ShadowPrices
         self._has_verbose_strings: bool = False
@@ -594,6 +593,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
         Args:
             name (str): Name of parameter.
+            math (ModelMath): Calliope math.
             as_backend_objs (bool, optional): TODO: hide this and create a method to edit parameter values (to handle interfaces with non-mutable params)
                 If True, will keep the array entries as backend interface objects,
                 which can be updated to update the underlying model.

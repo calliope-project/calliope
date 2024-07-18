@@ -183,7 +183,7 @@ class TestValidateDict:
     @pytest.fixture()
     def base_math(self):
         return calliope.AttrDict.from_yaml(
-            Path(calliope.__file__).parent / "math" / "base.yaml"
+            Path(calliope.__file__).parent / "math" / "plan.yaml"
         )
 
     @pytest.mark.parametrize(
