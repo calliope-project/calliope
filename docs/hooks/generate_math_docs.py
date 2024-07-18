@@ -45,7 +45,7 @@ def on_files(files: list, config: dict, **kwargs):
 
     base_documentation = generate_base_math_documentation()
     write_file(
-        "base.yaml",
+        "plan.yaml",
         textwrap.dedent(
             """
         Complete base mathematical formulation for a Calliope model.

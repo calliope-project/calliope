@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|new| Math has been removed from `model.math`, and can now be accessed via `model.math.data`.
+
 |new| Direct interface to the Gurobi Python API using `!#yaml config.build.backend: gurobi` or `!#python model.build(backend="gurobi")`.
 Tests show that using the gurobi solver via the Python API reduces peak memory consumption and runtime by at least 30% for the combined model build and solve steps.
 This requires the `gurobipy` package which can be installed with `mamba`: `mamba install gurobi::gurobi`.
@@ -33,6 +35,10 @@ Parameter titles from the model definition schema will also propagate to the mod
 * `timestamp_solve_complete`: at the end of `Model.solve()`
 
 ### Internal changes
+
+|new| `ModelMath` is a new helper class to handle math additions, including separate methods for pre-defined math, user-defined math and validation checks.
+
+|changed| `MathDocumentation` has been extracted from `Model`/`LatexBackend`, and now is a postprocessing module which can take models as input.
 
 |new| `gurobipy` is a development dependency that will be added as an optional dependency to the conda-forge calliope feedstock recipe.
 
