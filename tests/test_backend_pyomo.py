@@ -17,7 +17,9 @@ from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, check_variable_exists
 
 
-@pytest.mark.xfail(reason="Not expecting operate mode to work at the moment")
+@pytest.mark.xfail(
+    reason="Need to reintroduce these checks in config/model_data_checks.yaml where it's reasonable to do so"
+)
 class TestChecks:
     @pytest.mark.parametrize("on", [True, False])
     def test_operate_cyclic_storage(self, on):
