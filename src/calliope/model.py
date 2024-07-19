@@ -41,7 +41,7 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
-    ATTRS_SAVED = ("_def_path", "math", "_model_def_dict")
+    ATTRS_SAVED = ("_def_path", "math")
 
     def __init__(
         self,
@@ -157,7 +157,6 @@ class Model:
         # First pass to check top-level keys are all good
         validate_dict(model_definition, CONFIG_SCHEMA, "Model definition")
 
-        self._model_def_dict = model_definition
         log_time(
             LOGGER,
             self._timings,
@@ -225,8 +224,6 @@ class Model:
             model_data (xr.Dataset):
                 Model dataset with input parameters as arrays and configuration stored in the dataset attributes dictionary.
         """
-        if "_model_def_dict" in model_data.attrs:
-            self._model_def_dict = AttrDict(model_data.attrs.pop("_model_def_dict"))
         if "_def_path" in model_data.attrs:
             self._def_path = model_data.attrs.pop("_def_path")
         if "math" in model_data.attrs:
