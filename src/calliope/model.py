@@ -18,7 +18,6 @@ from calliope.postprocess import postprocess as postprocess_results
 from calliope.util.logging import log_time
 from calliope.util.schema import (
     CONFIG_SCHEMA,
-    MATH_SCHEMA,
     MODEL_SCHEMA,
     extract_from_schema,
     update_then_validate_config,
@@ -75,7 +74,7 @@ class Model:
         self._timings: dict = {}
         self.config: AttrDict
         self.defaults: AttrDict
-        self.math: preprocess.ModelMath
+        self.math: preprocess.CalliopeMath
         self._def_path: str | None = None
         self.backend: BackendModel
         self._is_built: bool = False
@@ -102,7 +101,7 @@ class Model:
             self._init_from_model_def_dict(
                 model_def, applied_overrides, scenario, data_source_dfs
             )
-            self.math = preprocess.ModelMath(
+            self.math = preprocess.CalliopeMath(
                 self.config["init"]["add_math"], self._def_path
             )
 
@@ -227,14 +226,11 @@ class Model:
                 Model dataset with input parameters as arrays and configuration stored in the dataset attributes dictionary.
         """
         if "_model_def_dict" in model_data.attrs:
-            self._model_def_dict = AttrDict(model_data.attrs["_model_def_dict"])
-            del model_data.attrs["_model_def_dict"]
+            self._model_def_dict = AttrDict(model_data.attrs.pop("_model_def_dict"))
         if "_def_path" in model_data.attrs:
-            self._def_path = model_data.attrs["_def_path"]
-            del model_data.attrs["_def_path"]
+            self._def_path = model_data.attrs.pop("_def_path")
         if "math" in model_data.attrs:
-            self.math = preprocess.ModelMath(model_data.attrs["math"])
-            del model_data.attrs["math"]
+            self.math = preprocess.CalliopeMath(model_data.attrs.pop("math"))
 
         self._model_data = model_data
         self._add_model_data_methods()
@@ -457,7 +453,6 @@ class Model:
         saved_attrs = {}
         for attr in set(self.ATTRS_SAVED) & set(self.__dict__.keys()):
             if not isinstance(getattr(self, attr), str | list | None):
-                # TODO: remove `dict`` once AttrDict init issue is fixed
                 saved_attrs[attr] = dict(getattr(self, attr))
             else:
                 saved_attrs[attr] = getattr(self, attr)
@@ -524,7 +519,7 @@ class Model:
             If all components of the dictionary are parsed successfully, this function will log a success message to the INFO logging level and return None.
             Otherwise, a calliope.ModelError will be raised with parsing issues listed.
         """
-        validate_dict(math_dict, MATH_SCHEMA, "math")
+        self.math.validate(math_dict)
         valid_component_names = [
             *self.math.data["variables"].keys(),
             *self.math.data["global_expressions"].keys(),

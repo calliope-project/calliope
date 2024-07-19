@@ -1628,9 +1628,6 @@ class TestNewBackend:
         base_math.add_pre_defined_file(mode)
 
         backend = PyomoBackendModel(m.inputs, m.math, mode=mode)
-        backend._add_run_mode_math()
-
-        assert f"Updating math formulation with {mode} mode math." in caplog.text
 
         assert m.math != base_math
         assert backend.math == base_math
@@ -1646,11 +1643,7 @@ class TestNewBackend:
             {"config.init.add_math": ["operate", str(file_path)]},
             "simple_supply,two_hours,investment_costs",
         )
-        backend = PyomoBackendModel(m.inputs, m.math, mode="operate")
-        backend._add_run_mode_math()
-
-        # We set operate mode explicitly in our additional math so it won't be added again
-        assert "Updating math formulation with operate mode math." not in caplog.text
+        PyomoBackendModel(m.inputs, m.math, mode="operate")
 
         # operate mode set it to false, then our math set it back to active
         assert m.math.data.variables.flow_cap.active
@@ -1662,9 +1655,9 @@ class TestNewBackend:
             {"config.init.add_math": ["operate"]},
             "simple_supply,two_hours,investment_costs",
         )
-        backend = PyomoBackendModel(m.inputs, m.math)
+
         with pytest.warns(exceptions.ModelWarning) as excinfo:
-            backend._add_run_mode_math()
+            PyomoBackendModel(m.inputs, m.math)
 
         assert check_error_or_warning(
             excinfo, "Running in plan mode, but run mode(s) {'operate'}"

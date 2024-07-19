@@ -12,7 +12,7 @@ from calliope.backend.latex_backend_model import (
 from calliope.backend.parsing import ParsedBackendComponent
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.exceptions import BackendError
-from calliope.preprocess import ModelMath
+from calliope.preprocess import CalliopeMath
 
 MODEL_BACKENDS = ("pyomo", "gurobi")
 
@@ -21,14 +21,14 @@ if TYPE_CHECKING:
 
 
 def get_model_backend(
-    name: str, data: xr.Dataset, math: ModelMath, **kwargs
+    name: str, data: xr.Dataset, math: CalliopeMath, **kwargs
 ) -> "BackendModel":
     """Assign a backend using the given configuration.
 
     Args:
         name (str): name of the backend to use.
         data (Dataset): model data for the backend.
-        math (ModelMath): Calliope math.
+        math (CalliopeMath): Calliope math.
         **kwargs: backend keyword arguments corresponding to model.config.build.
 
     Raises:

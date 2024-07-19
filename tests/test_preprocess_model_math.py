@@ -8,7 +8,7 @@ from random import shuffle
 import calliope
 import pytest
 from calliope.exceptions import ModelError
-from calliope.preprocess import ModelMath
+from calliope.preprocess import CalliopeMath
 
 
 def _shuffle_modes(modes: list):
@@ -18,7 +18,7 @@ def _shuffle_modes(modes: list):
 
 @pytest.fixture(scope="module")
 def model_math_default():
-    return ModelMath()
+    return CalliopeMath()
 
 
 @pytest.fixture(scope="module")
@@ -44,7 +44,7 @@ def user_math_path(def_path, user_math):
     return str(file_path)
 
 
-@pytest.mark.parametrize("invalid_obj", [1, "foo", {"foo": "bar"}, True, ModelMath])
+@pytest.mark.parametrize("invalid_obj", [1, "foo", {"foo": "bar"}, True, CalliopeMath])
 def test_invalid_eq(model_math_default, invalid_obj):
     """Comparisons should not work with invalid objects."""
     assert not model_math_default == invalid_obj
@@ -55,8 +55,10 @@ class TestInit:
     def test_init_order(self, caplog, modes, model_math_default):
         """Math should be added in order, keeping defaults."""
         with caplog.at_level(logging.INFO):
-            model_math = ModelMath(modes)
-        assert all(f"ModelMath: added file '{i}'." in caplog.messages for i in modes)
+            model_math = CalliopeMath(modes)
+        assert all(
+            f"Math preprocessing | added file '{i}'." in caplog.messages for i in modes
+        )
         assert model_math_default.history + modes == model_math.history
 
     def test_init_order_user_math(
@@ -64,20 +66,20 @@ class TestInit:
     ):
         """User math order should be respected."""
         modes = _shuffle_modes(modes + [user_math_path])
-        model_math = ModelMath(modes, def_path)
+        model_math = CalliopeMath(modes, def_path)
         assert model_math_default.history + modes == model_math.history
 
     def test_init_user_math_invalid(self, modes, user_math_path):
         """Init with user math should fail if model definition path is not given."""
         with pytest.raises(ModelError):
-            ModelMath(modes + [user_math_path])
+            CalliopeMath(modes + [user_math_path])
 
     def test_init_dict(self, modes, user_math_path, def_path):
         """Math dictionary reload should lead to no alterations."""
         modes = _shuffle_modes(modes + [user_math_path])
-        model_math = ModelMath(modes, def_path)
+        model_math = CalliopeMath(modes, def_path)
         saved = dict(model_math)
-        reloaded = ModelMath(saved)
+        reloaded = CalliopeMath(saved)
         assert model_math == reloaded
 
 
@@ -161,4 +163,4 @@ class TestValidate:
     def test_math_default(self, caplog, model_math_default):
         with caplog.at_level(logging.INFO):
             model_math_default.validate()
-        assert "ModelMath: validated math against schema." in caplog.messages
+        assert "Math preprocessing | validated math against schema." in caplog.messages

@@ -14,8 +14,8 @@ LOGGER = logging.getLogger(__name__)
 MATH_DIR = files("calliope") / "math"
 
 
-class ModelMath:
-    """Calliope math preprocessing."""
+class CalliopeMath:
+    """Calliope math handling."""
 
     ATTRS_TO_SAVE = ("history", "data")
 
@@ -49,7 +49,7 @@ class ModelMath:
 
     def __eq__(self, other):
         """Compare between two model math instantiations."""
-        if not isinstance(other, ModelMath):
+        if not isinstance(other, CalliopeMath):
             return NotImplemented
         return self.history == other.history and self.data == other.data
 
@@ -133,4 +133,4 @@ class ModelMath:
         if extra_math is not None:
             math_to_validate.union(AttrDict(extra_math), allow_override=True)
         validate_dict(math_to_validate, MATH_SCHEMA, "math")
-        LOGGER.info("ModelMath: validated math against schema.")
+        LOGGER.info("Math preprocessing | validated math against schema.")

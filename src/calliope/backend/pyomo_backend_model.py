@@ -23,7 +23,7 @@ from pyomo.util.model_size import build_model_size_report  # type: ignore
 
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
-from calliope.preprocess import ModelMath
+from calliope.preprocess import CalliopeMath
 from calliope.util.logging import LogWriter
 
 from . import backend_model, parsing
@@ -47,12 +47,12 @@ COMPONENT_TRANSLATOR = {
 class PyomoBackendModel(backend_model.BackendModel):
     """Pyomo-specific backend functionality."""
 
-    def __init__(self, inputs: xr.Dataset, math: ModelMath, **kwargs) -> None:
+    def __init__(self, inputs: xr.Dataset, math: CalliopeMath, **kwargs) -> None:
         """Pyomo solver interface class.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
-            math (ModelMath): Calliope math.
+            math (CalliopeMath): Calliope math.
             **kwargs: passed directly to the solver.
         """
         super().__init__(inputs, math, pmo.block(), **kwargs)

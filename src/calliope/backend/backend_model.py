@@ -32,7 +32,7 @@ from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
 from calliope.exceptions import warn as model_warn
 from calliope.io import load_config
-from calliope.preprocess import ModelMath
+from calliope.preprocess import CalliopeMath
 from calliope.util.schema import (
     MODEL_SCHEMA,
     extract_from_schema,
@@ -62,12 +62,12 @@ class BackendModelGenerator(ABC):
     _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
     _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
 
-    def __init__(self, inputs: xr.Dataset, math: ModelMath, **kwargs):
+    def __init__(self, inputs: xr.Dataset, math: CalliopeMath, **kwargs):
         """Abstract base class to build a representation of the optimisation problem.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
-            math (ModelMath): Calliope math.
+            math (CalliopeMath): Calliope math.
             **kwargs (Any): build configuration overrides.
         """
         self._dataset = xr.Dataset()
@@ -76,10 +76,12 @@ class BackendModelGenerator(ABC):
         self.inputs.attrs["config"]["build"] = update_then_validate_config(
             "build", self.inputs.attrs["config"], **kwargs
         )
-        self.math: ModelMath = deepcopy(math)
-        self._check_inputs()
-
+        self.math: CalliopeMath = deepcopy(math)
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
+
+        self._check_inputs()
+        self._add_run_mode_math()
+        self.math.validate()
 
     @abstractmethod
     def add_parameter(
@@ -200,8 +202,6 @@ class BackendModelGenerator(ABC):
 
     def add_all_math(self):
         """Parse and all the math stored in the input data."""
-        self._add_run_mode_math()
-        self.math.validate()
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
         for components in [
@@ -232,7 +232,6 @@ class BackendModelGenerator(ABC):
                 "math being loaded from file via the model configuration"
             )
         if mode not in self.math.history:
-            LOGGER.debug(f"Updating math formulation with {mode} mode math.")
             self.math.add_pre_defined_file(mode)
 
     def _add_component(
@@ -572,13 +571,13 @@ class BackendModel(BackendModelGenerator, Generic[T]):
     """Calliope's backend model functionality."""
 
     def __init__(
-        self, inputs: xr.Dataset, math: ModelMath, instance: T, **kwargs
+        self, inputs: xr.Dataset, math: CalliopeMath, instance: T, **kwargs
     ) -> None:
         """Abstract base class to build backend models that interface with solvers.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
-            math (ModelMath): Calliope math.
+            math (CalliopeMath): Calliope math.
             instance (T): Interface model instance.
             **kwargs: build configuration overrides.
         """
@@ -593,7 +592,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
         Args:
             name (str): Name of parameter.
-            math (ModelMath): Calliope math.
+            math (CalliopeMath): Calliope math.
             as_backend_objs (bool, optional): TODO: hide this and create a method to edit parameter values (to handle interfaces with non-mutable params)
                 If True, will keep the array entries as backend interface objects,
                 which can be updated to update the underlying model.

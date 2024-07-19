@@ -11,10 +11,9 @@ import jinja2
 import numpy as np
 import xarray as xr
 
+from calliope.backend import backend_model, parsing
 from calliope.exceptions import ModelError
-from calliope.preprocess import ModelMath
-
-from . import backend_model, parsing
+from calliope.preprocess import CalliopeMath
 
 ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
 LOGGER = logging.getLogger(__name__)
@@ -250,7 +249,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     def __init__(
         self,
         inputs: xr.Dataset,
-        math: ModelMath,
+        math: CalliopeMath,
         include: Literal["all", "valid"] = "all",
         **kwargs,
     ) -> None:
@@ -258,7 +257,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
         Args:
             inputs (xr.Dataset): model data.
-            math (ModelMath): Calliope math.
+            math (CalliopeMath): Calliope math.
             include (Literal["all", "valid"], optional):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
             **kwargs: for the backend model generator.

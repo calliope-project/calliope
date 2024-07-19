@@ -6,7 +6,7 @@ import pytest
 import xarray as xr
 from calliope.attrdict import AttrDict
 from calliope.backend import latex_backend_model, pyomo_backend_model
-from calliope.preprocess import ModelMath
+from calliope.preprocess import CalliopeMath
 from calliope.util.schema import CONFIG_SCHEMA, MODEL_SCHEMA, extract_from_schema
 
 from .common.util import build_test_model as build_model
@@ -169,7 +169,7 @@ def dummy_model_math():
             "history": [],
         }
     )
-    return ModelMath(math)
+    return CalliopeMath(math)
 
 
 @pytest.fixture(scope="module")
