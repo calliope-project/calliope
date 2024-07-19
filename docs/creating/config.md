@@ -38,7 +38,8 @@ None of the configuration options are _required_ as there is a default value for
 To test your model pipeline, `config.init.time_subset` is a good way to limit your model size by slicing the time dimension to a smaller range.
 
 !!! note
-    Various capabilities are available to adjust the temporal resolution of a model on-the-fly, both by resampling or using externally-provided clustering. See [time adjustment] for more details.
+    Various capabilities are available to adjust the temporal resolution of a model on-the-fly, both by resampling or using externally-provided clustering.
+    See our [time adjustment page](../advanced/time.md) for more details.
 
 ## Deep-dive into some key configuration options
 
