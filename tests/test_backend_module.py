@@ -6,7 +6,7 @@ from calliope.backend.backend_model import BackendModel
 from calliope.exceptions import BackendError
 
 
-@pytest.mark.parametrize("valid_backend", backend.MODEL_BACKENDS)
+@pytest.mark.parametrize("valid_backend", ["pyomo", "gurobi"])
 def test_valid_model_backend(simple_supply, valid_backend):
     """Requesting a valid model backend must result in a backend instance."""
     backend_obj = backend.get_model_backend(

@@ -40,7 +40,9 @@ def listify(var: Any) -> list:
     Returns:
         list: List containing `var` or elements of `var` (if input was a non-string iterable).
     """
-    if not isinstance(var, str) and hasattr(var, "__iter__"):
+    if var is None:
+        var = []
+    elif not isinstance(var, str) and hasattr(var, "__iter__"):
         var = list(var)
     else:
         var = [var]

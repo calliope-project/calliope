@@ -200,8 +200,8 @@ class BackendModelGenerator(ABC):
             check_results["warn"], check_results["fail"]
         )
 
-    def add_all_math(self):
-        """Parse and all the math stored in the input data."""
+    def add_optimisation_components(self):
+        """Parse math and inputs and set optimisation problem."""
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
         for components in [

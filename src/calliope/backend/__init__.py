@@ -14,8 +14,6 @@ from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.exceptions import BackendError
 from calliope.preprocess import CalliopeMath
 
-MODEL_BACKENDS = ("pyomo", "gurobi")
-
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
 

@@ -32,7 +32,7 @@ class MathDocumentation:
         self.backend: LatexBackendModel = LatexBackendModel(
             model._model_data, model.math, include, **kwargs
         )
-        self.backend.add_all_math()
+        self.backend.add_optimisation_components()
 
     @property
     def math(self):

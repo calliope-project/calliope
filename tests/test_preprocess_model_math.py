@@ -11,11 +11,6 @@ from calliope.exceptions import ModelError
 from calliope.preprocess import CalliopeMath
 
 
-def _shuffle_modes(modes: list):
-    shuffle(modes)
-    return modes
-
-
 @pytest.fixture(scope="module")
 def model_math_default():
     return CalliopeMath()
@@ -65,7 +60,8 @@ class TestInit:
         self, modes, user_math_path, def_path, model_math_default
     ):
         """User math order should be respected."""
-        modes = _shuffle_modes(modes + [user_math_path])
+        modes = modes + [user_math_path]
+        shuffle(modes)
         model_math = CalliopeMath(modes, def_path)
         assert model_math_default.history + modes == model_math.history
 
@@ -76,7 +72,8 @@ class TestInit:
 
     def test_init_dict(self, modes, user_math_path, def_path):
         """Math dictionary reload should lead to no alterations."""
-        modes = _shuffle_modes(modes + [user_math_path])
+        modes = modes + [user_math_path]
+        shuffle(modes)
         model_math = CalliopeMath(modes, def_path)
         saved = dict(model_math)
         reloaded = CalliopeMath(saved)
@@ -106,7 +103,7 @@ class TestMathLoading:
 
     def test_predefined_add_history(self, pre_defined_mode, model_math_w_mode):
         """Added modes should be recorded."""
-        assert model_math_w_mode.check_in_history(pre_defined_mode)
+        assert model_math_w_mode.in_history(pre_defined_mode)
 
     def test_predefined_add_duplicate(self, pre_defined_mode, model_math_w_mode):
         """Adding the same mode twice is invalid."""
@@ -137,7 +134,7 @@ class TestMathLoading:
 
     def test_user_math_add_history(self, model_math_w_mode_user, user_math_path):
         """Added user math should be recorded."""
-        assert model_math_w_mode_user.check_in_history(user_math_path)
+        assert model_math_w_mode_user.in_history(user_math_path)
 
     def test_user_math_add_duplicate(
         self, model_math_w_mode_user, user_math_path, def_path
