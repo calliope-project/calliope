@@ -102,7 +102,7 @@ class ModelMath:
             )
         self._add_math(math)
         self.history.append(name)
-        LOGGER.info(f"ModelMath: added file '{name}'.")
+        LOGGER.info(f"Math preprocessing | added file '{name}'.")
 
     def add_pre_defined_file(self, filename: str) -> None:
         """Add pre-defined Calliope math (no suffix)."""
