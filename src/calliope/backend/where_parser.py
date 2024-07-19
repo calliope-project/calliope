@@ -153,7 +153,7 @@ class DataVarParser(EvalWhere):
         """Programming / official string representation."""
         return f"DATA_VAR:{self.data_var}"
 
-    def _preprocess(self) -> tuple[xr.Dataset, str]:
+    def _preprocess(self) -> str:
         """Get data variable from the optimisation problem dataset.
 
         Raises:
@@ -179,13 +179,7 @@ class DataVarParser(EvalWhere):
                 "These arrays cannot be used for comparison with expected values. "
                 f"Received `{self.data_var}`."
             )
-
-        if data_var_type == "parameters":
-            source_dataset = self.eval_attrs["input_data"]
-        else:
-            source_dataset = backend_interface._dataset
-
-        return source_dataset, data_var_type
+        return data_var_type
 
     def _data_var_exists(
         self, source_dataset: xr.Dataset, data_var_type: str
@@ -212,24 +206,26 @@ class DataVarParser(EvalWhere):
         return var
 
     def as_math_string(self) -> str:  # noqa: D102, override
-        # TODO: add dims from a YAML schema of params that includes default dims
-        source_dataset, data_var_type = self._preprocess()
-        if data_var_type == "parameters":
-            data_var_string = rf"\textit{{{self.data_var}}}"
-        else:
-            data_var_string = rf"\textbf{{{self.data_var}}}"
+        self._preprocess()
 
-        var = source_dataset.get(self.data_var, None)
-        if var is not None and var.shape:
-            data_var_string += (
-                rf"_\text{{{','.join(str(i).removesuffix('s') for i in var.dims)}}}"
-            )
+        var = self.eval_attrs["backend_interface"]._dataset.get(
+            self.data_var, xr.DataArray()
+        )
+
+        try:
+            data_var_string = var.attrs["math_repr"]
+        except (AttributeError, KeyError):
+            data_var_string = rf"\text{{{self.data_var}}}"
         if self.eval_attrs.get("apply_where", True):
             data_var_string = rf"\exists ({data_var_string})"
         return data_var_string
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
-        source_dataset, data_var_type = self._preprocess()
+        data_var_type = self._preprocess()
+        if data_var_type == "parameters":
+            source_dataset = self.eval_attrs["input_data"]
+        else:
+            source_dataset = self.eval_attrs["backend_interface"]._dataset
 
         if self.eval_attrs.get("apply_where", True):
             return self._data_var_exists(source_dataset, data_var_type)

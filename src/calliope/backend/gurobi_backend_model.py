@@ -71,17 +71,17 @@ class GurobiBackendModel(backend_model.BackendModel):
             )
             parameter_da = parameter_da.astype(float)
 
-        parameter_da.attrs["original_dtype"] = parameter_values.dtype
         attrs = {
             "title": self._PARAM_TITLES.get(parameter_name, None),
             "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
             "unit": self._PARAM_UNITS.get(parameter_name, None),
             "default": default,
+            "original_dtype": parameter_values.dtype.name,
         }
         self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
 
     def add_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedConstraintDict | None = None
+        self, name: str, constraint_dict: parsing.UnparsedConstraint
     ) -> None:
         def _constraint_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -94,7 +94,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._add_component(name, constraint_dict, _constraint_setter, "constraints")
 
     def add_global_expression(  # noqa: D102, override
-        self, name: str, expression_dict: parsing.UnparsedExpressionDict | None = None
+        self, name: str, expression_dict: parsing.UnparsedExpression
     ) -> None:
         def _expression_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -110,11 +110,9 @@ class GurobiBackendModel(backend_model.BackendModel):
         )
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_dict: parsing.UnparsedVariableDict | None = None
+        self, name: str, variable_dict: parsing.UnparsedVariable
     ) -> None:
         domain_dict = {"real": gurobipy.GRB.CONTINUOUS, "integer": gurobipy.GRB.INTEGER}
-        if variable_dict is None:
-            variable_dict = self.inputs.attrs["math"]["variables"][name]
 
         def _variable_setter(where: xr.DataArray, references: set):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
@@ -130,19 +128,15 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._add_component(name, variable_dict, _variable_setter, "variables")
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_dict: parsing.UnparsedObjectiveDict | None = None
+        self, name: str, objective_dict: parsing.UnparsedObjective
     ) -> None:
-        min_ = gurobipy.GRB.MINIMIZE
-        max_ = gurobipy.GRB.MAXIMIZE
         sense_dict = {
-            "minimize": min_,
-            "minimise": min_,
-            "maximize": max_,
-            "maximise": max_,
+            "minimize": gurobipy.GRB.MINIMIZE,
+            "minimise": gurobipy.GRB.MINIMIZE,
+            "maximize": gurobipy.GRB.MAXIMIZE,
+            "maximise": gurobipy.GRB.MAXIMIZE,
         }
 
-        if objective_dict is None:
-            objective_dict = self.inputs.attrs["math"]["objectives"][name]
         sense = sense_dict[objective_dict["sense"]]
 
         def _objective_setter(
@@ -285,7 +279,12 @@ class GurobiBackendModel(backend_model.BackendModel):
                 new_obj_name = f"{name}[{', '.join(idx)}]"
                 setattr(val, attr, new_obj_name)
 
-        attribute_names = {"variables": "VarName", "constraints": "ConstrName"}
+        self._instance.update()
+        attribute_names = {
+            "variables": "VarName",
+            "constraints": "ConstrName",
+            "piecewise_constraints": "GenConstrName",
+        }
         with self._datetime_as_string(self._dataset):
             for da in self._dataset.filter_by_attrs(coords_in_name=False).values():
                 if da.attrs["obj_type"] not in attribute_names.keys():
@@ -300,7 +299,6 @@ class GurobiBackendModel(backend_model.BackendModel):
                     attr=attribute_names[da.attrs["obj_type"]],
                 )
                 da.attrs["coords_in_name"] = True
-
         self._instance.update()
 
     def to_lp(self, path: str | Path) -> None:  # noqa: D102, override
@@ -455,6 +453,28 @@ class GurobiBackendModel(backend_model.BackendModel):
 
     def _del_gurobi_obj(self, obj: Any) -> None:
         self._instance.remove(obj)
+
+    def _to_piecewise_constraint(  # noqa: D102, override
+        self,
+        x_var: gurobipy.Var,
+        y_var: gurobipy.Var,
+        *vals: float,
+        name: str,
+        n_breakpoints: int,
+    ) -> gurobipy.GenConstr:
+        if not isinstance(x_var, gurobipy.Var) or not isinstance(y_var, gurobipy.Var):
+            raise BackendError(
+                "Gurobi backend can only build piecewise constraints using decision variables."
+            )
+        y_vals = list(pd.Series(vals[n_breakpoints:]).dropna().values)
+        x_vals = list(pd.Series(vals[:n_breakpoints]).dropna().values)
+        try:
+            var = self._instance.addGenConstrPWL(
+                xpts=x_vals, ypts=y_vals, xvar=x_var, yvar=y_var, name=name
+            )
+        except gurobipy.GurobiError as err:
+            raise BackendError(err)
+        return var
 
     def _update_gurobi_variable(
         self, orig: gurobipy.Var, new: Any, *, bound: Literal["lb", "ub"]

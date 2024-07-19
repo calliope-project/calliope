@@ -18,6 +18,11 @@ import pyomo.environ as pe  # type: ignore
 import pyomo.kernel as pmo  # type: ignore
 import xarray as xr
 from pyomo.common.tempfiles import TempfileManager  # type: ignore
+from pyomo.core.kernel.piecewise_library.transforms import (
+    PiecewiseLinearFunction,
+    PiecewiseValidationError,
+    piecewise_sos2,
+)
 from pyomo.opt import SolverFactory  # type: ignore
 from pyomo.util.model_size import build_model_size_report  # type: ignore
 
@@ -28,7 +33,12 @@ from calliope.util.logging import LogWriter
 
 T = TypeVar("T")
 _COMPONENTS_T = Literal[
-    "variables", "constraints", "objectives", "parameters", "global_expressions"
+    "variables",
+    "constraints",
+    "piecewise_constraints",
+    "objectives",
+    "parameters",
+    "global_expressions",
 ]
 
 LOGGER = logging.getLogger(__name__)
@@ -38,6 +48,7 @@ COMPONENT_TRANSLATOR = {
     "variable": "variable",
     "global_expression": "expression",
     "constraint": "constraint",
+    "piecewise_constraint": "block",
     "objective": "objective",
 }
 
@@ -58,6 +69,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._instance.variables = pmo.variable_dict()
         self._instance.global_expressions = pmo.expression_dict()
         self._instance.constraints = pmo.constraint_dict()
+        self._instance.piecewise_constraints = pmo.block_dict()
         self._instance.objectives = pmo.objective_dict()
 
         self._instance.dual = pmo.suffix(direction=pmo.suffix.IMPORT)
@@ -69,37 +81,35 @@ class PyomoBackendModel(backend_model.BackendModel):
         self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
         self._raise_error_on_preexistence(parameter_name, "parameters")
-
-        self._create_obj_list(parameter_name, "parameters")
-
-        parameter_da = self._apply_func(
-            self._to_pyomo_param,
-            parameter_values.notnull(),
-            1,
-            parameter_values,
-            name=parameter_name,
-        )
-
-        if parameter_da.isnull().all():
+        if parameter_values.isnull().all():
             self.log(
                 "parameters",
                 parameter_name,
                 "Component not added; no data found in array.",
             )
-            self.delete_component(parameter_name, "parameters")
-            parameter_da = parameter_da.astype(float)
+            parameter_da = parameter_values.astype(float)
+        else:
+            self._create_obj_list(parameter_name, "parameters")
+            parameter_da = self._apply_func(
+                self._to_pyomo_param,
+                parameter_values.notnull(),
+                1,
+                parameter_values,
+                name=parameter_name,
+            )
 
-        parameter_da.attrs["original_dtype"] = parameter_values.dtype
         attrs = {
             "title": self._PARAM_TITLES.get(parameter_name, None),
             "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
             "unit": self._PARAM_UNITS.get(parameter_name, None),
             "default": default,
+            "original_dtype": parameter_values.dtype.name,
         }
+
         self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
 
     def add_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedConstraintDict | None = None
+        self, name: str, constraint_dict: parsing.UnparsedConstraint
     ) -> None:
         def _constraint_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -122,7 +132,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._add_component(name, constraint_dict, _constraint_setter, "constraints")
 
     def add_global_expression(  # noqa: D102, override
-        self, name: str, expression_dict: parsing.UnparsedExpressionDict | None = None
+        self, name: str, expression_dict: parsing.UnparsedExpression
     ) -> None:
         def _expression_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -139,11 +149,9 @@ class PyomoBackendModel(backend_model.BackendModel):
         )
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_dict: parsing.UnparsedVariableDict | None = None
+        self, name: str, variable_dict: parsing.UnparsedVariable
     ) -> None:
         domain_dict = {"real": pmo.RealSet, "integer": pmo.IntegerSet}
-        if variable_dict is None:
-            variable_dict = self.inputs.attrs["math"]["variables"][name]
 
         def _variable_setter(where, references):
             domain_type = domain_dict[variable_dict.get("domain", "real")]
@@ -165,12 +173,10 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._add_component(name, variable_dict, _variable_setter, "variables")
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_dict: parsing.UnparsedObjectiveDict | None = None
+        self, name: str, objective_dict: parsing.UnparsedObjective
     ) -> None:
         sense_dict = {"minimize": 1, "minimise": 1, "maximize": -1, "maximise": -1}
 
-        if objective_dict is None:
-            objective_dict = self.inputs.attrs["math"]["objectives"][name]
         sense = sense_dict[objective_dict["sense"]]
 
         def _objective_setter(
@@ -194,26 +200,17 @@ class PyomoBackendModel(backend_model.BackendModel):
     def get_parameter(  # noqa: D102, override
         self, name: str, as_backend_objs: bool = True
     ) -> xr.DataArray:
-        parameter = self.parameters.get(name, None)
-        if parameter is None:
-            raise KeyError(f"Unknown parameter: {name}")
+        parameter = self._get_component(name, "parameters")
 
-        if as_backend_objs or not isinstance(parameter, xr.DataArray):
+        if as_backend_objs:
             return parameter
 
         param_as_vals = self._apply_func(
             self._from_pyomo_param, parameter.notnull(), 1, parameter
         )
-        if parameter.original_dtype.kind == "M":  # i.e., np.datetime64
-            self.log("parameters", name, "Converting Pyomo object to datetime dtype.")
-            return xr.apply_ufunc(pd.to_datetime, param_as_vals)
-        else:
-            self.log(
-                "parameters",
-                name,
-                f"Converting Pyomo object to {parameter.original_dtype} dtype.",
-            )
-            return param_as_vals.astype(parameter.original_dtype)
+        orig_dtype = parameter.original_dtype
+        self.log("parameters", name, f"Converting Pyomo object to {orig_dtype} dtype.")
+        return param_as_vals.astype(orig_dtype)
 
     @overload
     def get_constraint(  # noqa: D102, override
@@ -244,9 +241,8 @@ class PyomoBackendModel(backend_model.BackendModel):
     def get_variable(  # noqa: D102, override
         self, name: str, as_backend_objs: bool = True
     ) -> xr.DataArray:
-        variable = self.variables.get(name, None)
-        if variable is None:
-            raise KeyError(f"Unknown variable: {name}")
+        variable = self._get_component(name, "variables")
+
         if as_backend_objs:
             return variable
         else:
@@ -338,7 +334,12 @@ class PyomoBackendModel(backend_model.BackendModel):
                 val.calliope_coords = idx
 
         with self._datetime_as_string(self._dataset):
-            for component_type in ["parameters", "variables", "constraints"]:
+            for component_type in [
+                "parameters",
+                "variables",
+                "constraints",
+                "piecewise_constraints",
+            ]:
                 for da in self._dataset.filter_by_attrs(
                     coords_in_name=False, **{"obj_type": component_type}
                 ).values():
@@ -372,7 +373,9 @@ class PyomoBackendModel(backend_model.BackendModel):
                 pmo, f"{COMPONENT_TRANSLATOR[singular_component]}_list"
             )()
 
-    def delete_component(self, key: str, component_type: _COMPONENTS_T) -> None:  # noqa: D102, override
+    def delete_component(  # noqa: D102, override
+        self, key: str, component_type: _COMPONENTS_T
+    ) -> None:
         component_dict = getattr(self._instance, component_type)
         if key in component_dict:
             del component_dict[key]
@@ -503,14 +506,32 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._apply_func(self._unfix_pyomo_variable, where_da, 1, variable_da)
 
     @property
-    def has_integer_or_binary_variables(  # noqa: D102, override
-        self,
-    ) -> bool:
+    def has_integer_or_binary_variables(self) -> bool:  # noqa: D102, override
         model_report = build_model_size_report(self._instance)
         binaries = model_report["activated"]["binary_variables"]
         integers = model_report["activated"]["integer_variables"]
         number_of_binary_and_integer_vars = binaries + integers
         return number_of_binary_and_integer_vars > 0
+
+    def _to_piecewise_constraint(  # noqa: D102, override
+        self, x_var: Any, y_var: Any, *vals: float, name: str, n_breakpoints: int
+    ) -> type[ObjPiecewiseConstraint]:
+        y_vals = pd.Series(vals[n_breakpoints:]).dropna()
+        x_vals = pd.Series(vals[:n_breakpoints]).dropna()
+        try:
+            var = ObjPiecewiseConstraint(
+                breakpoints=x_vals,
+                values=y_vals,
+                input=x_var,
+                output=y_var,
+                require_bounded_input_variable=False,
+            )
+            self._instance.piecewise_constraints[name].append(var)
+        except (PiecewiseValidationError, ValueError) as err:
+            # We don't want to confuse the user with suggestions of pyomo options they can't access.
+            err_message = err.args[0].split(" To avoid this error")[0]
+            raise BackendError(err_message)
+        return var
 
     def _to_pyomo_param(self, val: Any, *, name: str) -> type[ObjParameter] | float:
         """Utility function to generate a pyomo parameter for every element of an xarray DataArray.
@@ -812,6 +833,26 @@ class ObjConstraint(pmo.constraint, CoordObj):
     def getname(self, *args, **kwargs):
         """Get constraint name."""
         return self._update_name(pmo.constraint.getname(self, *args, **kwargs))
+
+
+class ObjPiecewiseConstraint(piecewise_sos2, CoordObj):
+    """Pyomo SOS2 piecewise constraint wrapper."""
+
+    def __init__(self, **kwds):
+        """Create a Pyomo SOS2 piecesise constraint.
+
+        Created with a `name` property setter (via the `piecewise_sos2.getname` method)
+        which replaces a list position as a name with a list of strings.
+        """
+        func = PiecewiseLinearFunction(
+            breakpoints=kwds.pop("breakpoints"), values=kwds.pop("values")
+        )
+        piecewise_sos2.__init__(self, func, **kwds)
+        CoordObj.__init__(self)
+
+    def getname(self, *args, **kwargs):
+        """Get piecewise constraint name."""
+        return self._update_name(piecewise_sos2.getname(self, *args, **kwargs))
 
 
 class PyomoShadowPrices(backend_model.ShadowPrices):

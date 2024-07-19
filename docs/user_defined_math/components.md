@@ -87,6 +87,51 @@ Without a `where` string, all valid members (according to the `definition_matrix
 The equation expressions _must_ have comparison operators.
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
 
+## Piecewise constraints
+
+If you have non-linear relationships between two decision variables, you may want to represent them as a [piecewise linear function](https://en.wikipedia.org/wiki/Piecewise_linear_function).
+The most common form of a piecewise function involves creating special ordered sets of type 2 (SOS2), set of binary variables that are linked together with specific constraints.
+
+!!! note
+    You can find a fully worked-out example in our [piecewise linear tutorial][defining-piecewise-linear-constraints].
+
+Because the formulation of piecewise constraints is so specific, the math syntax differs from all other modelling components by having `x` and `y` attributes that need to be specified:
+
+```yaml
+piecewise_constraints:
+  sos2_piecewise_flow_out:
+    description: Set outflow to follow capacity according to a piecewise curve.
+    foreach: [nodes, techs, carriers]
+    where: piecewise_x AND piecewise_y
+    x_expression: flow_cap
+    x_values: piecewise_x
+    y_expression: flow_out
+    y_values: piecewise_y
+    active: true
+```
+
+1. It needs a unique name (`sos2_piecewise_flow_out` in the above example).
+1. Ideally, it has a long-form `description` added.
+This is not required, but is useful metadata for later reference.
+1. It can have a top-level `foreach` list and `where` string.
+Without a `foreach`, it becomes an un-indexed constraint.
+Without a `where` string, all valid members (according to the `definition_matrix`) based on `foreach` will be included in this constraint.
+1. It has `x` and `y` [expression strings](syntax.md#expression-strings) (`x_expression`, `y_expression`).
+1. It has `x` and `y` parameter references (`x_values`, `y_values`).
+This should be a string name referencing an input parameter that contains the `breakpoints` dimension.
+The values given by this parameter will be used to set the respective (`x` / `y`) expression at each breakpoint.
+1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
+
+The component attributes combine to describe a piecewise curve that links the `x_expression` and `y_expression` according to their respective values in `x_values` and `y_values` at each breakpoint.
+
+!!! note
+    If the non-linear function you want to represent is convex, you may be able to avoid SOS2 variables, and instead represent it using [constraint components](#constraints).
+    You can find an example of this in our [piecewise linear costs custom math example][piecewise-linear-costs].
+
+!!! warning
+    This approximation of a non-linear relationship may improve the representation of whatever real system you are modelling, but it will come at the cost of a more difficult model to solve.
+    Indeed, introducing piecewise constraints may mean your model can no longer reach a solution with the computational resources you have available.
+
 ## Objectives
 
 With your constrained decision variables and a global expression that binds these variables to costs, you need an objective to minimise/maximise. The default, pre-defined objective is `min_cost_optimisation` and looks as follows:

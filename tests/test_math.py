@@ -514,6 +514,41 @@ class TestPiecewiseCosts(CustomMathExamples):
         )
 
 
+class TestSOS2PiecewiseCosts(CustomMathExamples):
+    YAML_FILEPATH = "sos2_piecewise_linear_costs.yaml"
+
+    def test_piecewise(self, build_and_compare):
+        overrides = {
+            "techs.test_supply_elec.lifetime": 10,
+            "techs.test_supply_elec.cost_interest_rate": {
+                "data": 0.1,
+                "index": "monetary",
+                "dims": "costs",
+            },
+            "techs.test_supply_elec": {
+                "piecewise_cost_investment_x": {
+                    "data": [0, 1, 2, 10],
+                    "index": [0, 1, 2, 3],
+                    "dims": "breakpoints",
+                },
+                "piecewise_cost_investment_y": {
+                    "data": [0, 5, 8, 20],
+                    "index": [0, 1, 2, 3],
+                    "dims": "breakpoints",
+                },
+            },
+        }
+        build_and_compare(
+            "sos2_piecewise_cost_investment",
+            "supply_purchase,two_hours",
+            overrides,
+            components={
+                "piecewise_constraints": ["sos2_piecewise_costs"],
+                "variables": ["piecewise_cost_investment"],
+            },
+        )
+
+
 class TestPiecewiseEfficiency(CustomMathExamples):
     YAML_FILEPATH = "piecewise_linear_efficiency.yaml"
 

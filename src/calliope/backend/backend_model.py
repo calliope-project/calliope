@@ -25,7 +25,6 @@ from typing import (
 )
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
@@ -48,7 +47,12 @@ from calliope.exceptions import BackendError
 
 T = TypeVar("T")
 _COMPONENTS_T = Literal[
-    "variables", "constraints", "objectives", "parameters", "global_expressions"
+    "parameters",
+    "variables",
+    "global_expressions",
+    "constraints",
+    "piecewise_constraints",
+    "objectives",
 ]
 
 LOGGER = logging.getLogger(__name__)
@@ -58,7 +62,14 @@ class BackendModelGenerator(ABC):
     """Helper class for backends."""
 
     _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
-    _COMPONENT_ATTR_METADATA = ["description", "unit", "default", "title"]
+    _COMPONENT_ATTR_METADATA = [
+        "description",
+        "unit",
+        "default",
+        "title",
+        "math_repr",
+        "original_dtype",
+    ]
 
     _PARAM_TITLES = extract_from_schema(MODEL_SCHEMA, "title")
     _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
@@ -101,7 +112,7 @@ class BackendModelGenerator(ABC):
 
     @abstractmethod
     def add_constraint(
-        self, name: str, constraint_dict: parsing.UnparsedConstraintDict
+        self, name: str, constraint_dict: parsing.UnparsedConstraint
     ) -> None:
         """Add constraint equation to backend model in-place.
 
@@ -110,13 +121,27 @@ class BackendModelGenerator(ABC):
         Args:
             name (str):
                 Name of the constraint
-            constraint_dict (parsing.UnparsedConstraintDict):
+            constraint_dict (parsing.UnparsedConstraint):
                 Constraint configuration dictionary, ready to be parsed and then evaluated.
         """
 
     @abstractmethod
+    def add_piecewise_constraint(
+        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraint
+    ) -> None:
+        """Add piecewise constraint equation to backend model in-place.
+
+        Resulting backend dataset entries will be piecewise constraint objects.
+
+        Args:
+            name (str):
+                Name of the piecewise constraint
+            constraint_dict (parsing.UnparsedPiecewiseConstraint): Piecewise constraint configuration dictionary, ready to be parsed and then evaluated.
+        """
+
+    @abstractmethod
     def add_global_expression(
-        self, name: str, expression_dict: parsing.UnparsedExpressionDict
+        self, name: str, expression_dict: parsing.UnparsedExpression
     ) -> None:
         """Add global expression (arithmetic combination of parameters and/or decision variables) to backend model in-place.
 
@@ -124,25 +149,23 @@ class BackendModelGenerator(ABC):
 
         Args:
             name (str): name of the global expression
-            expression_dict (parsing.UnparsedExpressionDict): global expression configuration dictionary, ready to be parsed and then evaluated.
+            expression_dict (parsing.UnparsedExpression): Global expression configuration dictionary, ready to be parsed and then evaluated.
         """
 
     @abstractmethod
-    def add_variable(
-        self, name: str, variable_dict: parsing.UnparsedVariableDict
-    ) -> None:
+    def add_variable(self, name: str, variable_dict: parsing.UnparsedVariable) -> None:
         """Add decision variable to backend model in-place.
 
         Resulting backend dataset entries will be decision variable objects.
 
         Args:
             name (str): name of the variable.
-            variable_dict (parsing.UnparsedVariableDict): unparsed variable configuration dictionary.
+            variable_dict (parsing.UnparsedVariable): Unparsed variable configuration dictionary.
         """
 
     @abstractmethod
     def add_objective(
-        self, name: str, objective_dict: parsing.UnparsedObjectiveDict
+        self, name: str, objective_dict: parsing.UnparsedObjective
     ) -> None:
         """Add objective arithmetic to backend model in-place.
 
@@ -150,7 +173,7 @@ class BackendModelGenerator(ABC):
 
         Args:
             name (str): name of the objective.
-            objective_dict (parsing.UnparsedObjectiveDict): unparsed objective configuration dictionary.
+            objective_dict (parsing.UnparsedObjective): Unparsed objective configuration dictionary.
         """
 
     def log(
@@ -207,12 +230,13 @@ class BackendModelGenerator(ABC):
             "variables",
             "global_expressions",
             "constraints",
+            "piecewise_constraints",
             "objectives",
         ]:
             component = components.removesuffix("s")
-            for name in self.inputs.math[components]:
+            for name, dict_ in self.inputs.math[components].items():
                 start = time.time()
-                getattr(self, f"add_{component}")(name)
+                getattr(self, f"add_{component}")(name, dict_)
                 end = time.time() - start
                 LOGGER.debug(
                     f"Optimisation Model | {components}:{name} | Built in {end:.4f}s"
@@ -242,10 +266,14 @@ class BackendModelGenerator(ABC):
     def _add_component(
         self,
         name: str,
-        component_dict: Tp | None,
+        component_dict: Tp,
         component_setter: Callable,
         component_type: Literal[
-            "variables", "global_expressions", "constraints", "objectives"
+            "variables",
+            "global_expressions",
+            "constraints",
+            "piecewise_constraints",
+            "objectives",
         ],
         break_early: bool = True,
     ) -> parsing.ParsedBackendComponent | None:
@@ -254,7 +282,7 @@ class BackendModelGenerator(ABC):
         Args:
             name (str): name of the component. If not providing the `component_dict` directly,
                 this name must be available in the input math provided on initialising the class.
-            component_dict (Tp | None): unparsed YAML dictionary configuration.
+            component_dict (Tp): unparsed YAML dictionary configuration.
             component_setter (Callable): function to combine evaluated xarray DataArrays into backend component objects.
             component_type (Literal["variables", "global_expressions", "constraints", "objectives"]):
                 type of the added component.
@@ -269,10 +297,8 @@ class BackendModelGenerator(ABC):
         """
         references: set[str] = set()
 
-        if component_dict is None:
-            component_dict = self.inputs.math[component_type][name]
-        if name not in self.inputs.math[component_type]:
-            self.inputs.math[component_type][name] = component_dict
+        if name not in self.inputs.math.get(component_type, {}):
+            self.inputs.math.set_key(f"{component_type}.name", component_dict)
 
         if break_early and not component_dict.get("active", True):
             self.log(
@@ -424,30 +450,39 @@ class BackendModelGenerator(ABC):
                 All referenced objects will have their "references" attribute updated with this object's name.
                 Defaults to None.
         """
-        add_attrs = {
-            attr: unparsed_dict.pop(attr)
-            for attr in self._COMPONENT_ATTR_METADATA
-            if attr in unparsed_dict.keys()
+        yaml_snippet_attrs = {}
+        add_attrs = {}
+        for attr, val in unparsed_dict.items():
+            if attr in self._COMPONENT_ATTR_METADATA:
+                add_attrs[attr] = val
+            else:
+                yaml_snippet_attrs[attr] = val
+
+        if yaml_snippet_attrs:
+            add_attrs["yaml_snippet"] = AttrDict(yaml_snippet_attrs).to_yaml()
+
+        da.attrs = {
+            "obj_type": obj_type,
+            "references": set(),
+            "coords_in_name": False,
+            **add_attrs,  # type: ignore
         }
-        if unparsed_dict:
-            add_attrs["yaml_snippet"] = AttrDict(unparsed_dict).to_yaml()
-
-        da.attrs.update(
-            {
-                "obj_type": obj_type,
-                "references": set(),
-                "coords_in_name": False,
-                **add_attrs,  # type: ignore
-            }
-        )
         self._dataset[name] = da
-
         if references is not None:
-            for reference in references:
-                try:
-                    self._dataset[reference].attrs["references"].add(name)
-                except KeyError:
-                    continue
+            self._update_references(name, references)
+
+    def _update_references(self, name: str, references: set):
+        """Update reference lists in dataset objects.
+
+        Args:
+            name (str): Name to update in reference lists.
+            references (set): Names of dataset objects whose reference lists will be updated with `name`.
+        """
+        for reference in references:
+            try:
+                self._dataset[reference].attrs["references"].add(name)
+            except KeyError:
+                continue
 
     @overload
     def _apply_func(  # noqa: D102, override
@@ -533,6 +568,11 @@ class BackendModelGenerator(ABC):
         return self._dataset.filter_by_attrs(obj_type="constraints")
 
     @property
+    def piecewise_constraints(self):
+        """Slice of backend dataset to show only built piecewise constraints."""
+        return self._dataset.filter_by_attrs(obj_type="piecewise_constraints")
+
+    @property
     def variables(self):
         """Slice of backend dataset to show only built variables."""
         return self._dataset.filter_by_attrs(obj_type="variables")
@@ -588,6 +628,79 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         self.shadow_prices: ShadowPrices
         self._has_verbose_strings: bool = False
 
+    def add_piecewise_constraint(  # noqa: D102, override
+        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraint
+    ) -> None:
+        if "breakpoints" in constraint_dict.get("foreach", []):
+            raise BackendError(
+                f"(piecewise_constraints, {name}) | `breakpoints` dimension should not be in `foreach`. "
+                "Instead, index `x_values` and `y_values` parameters over `breakpoints`."
+            )
+
+        def _constraint_setter(where: xr.DataArray, references: set) -> xr.DataArray:
+            expressions = []
+            vals = []
+            for axis in ["x", "y"]:
+                expression_name = constraint_dict[f"{axis}_expression"]  # type: ignore
+                parsed_component = parsing.ParsedBackendComponent(  # type: ignore
+                    "piecewise_constraints",
+                    name,
+                    {"equations": [{"expression": expression_name}], **constraint_dict},
+                )
+                eq = parsed_component.parse_equations(self.valid_component_names)
+                expression_da = eq[0].evaluate_expression(
+                    self, where=where, references=references
+                )
+                val_name = constraint_dict[f"{axis}_values"]  # type: ignore
+                val_da = self.get_parameter(val_name)
+                if "breakpoints" not in val_da.dims:
+                    raise BackendError(
+                        f"(piecewise_constraints, {name}) | "
+                        f"`{axis}_values` must be indexed over the `breakpoints` dimension."
+                    )
+                references.add(val_name)
+                expressions.append(expression_da)
+                vals.extend([*val_da.to_dataset("breakpoints").data_vars.values()])
+            try:
+                return self._apply_func(
+                    self._to_piecewise_constraint,
+                    where,
+                    1,
+                    *expressions,
+                    *vals,
+                    name=name,
+                    n_breakpoints=len(self.inputs.breakpoints),
+                )
+            except BackendError as err:
+                raise BackendError(
+                    f"(piecewise_constraints, {name}) | Errors in generating piecewise constraint: {err}"
+                )
+
+        self._add_component(
+            name, constraint_dict, _constraint_setter, "piecewise_constraints"
+        )
+
+    @abstractmethod
+    def _to_piecewise_constraint(
+        self, x_var: Any, y_var: Any, *vals: float, name: str, n_breakpoints: int
+    ) -> Any:
+        """Utility function to generate a pyomo piecewise constraint for every element of an xarray DataArray.
+
+        The x-axis decision variable need not be bounded.
+        This aligns piecewise constraint functionality with other possible backends (e.g., gurobipy).
+
+        Args:
+            x_var (Any): The x-axis decision variable to constrain.
+            y_var (Any): The y-axis decision variable to constrain.
+            *vals (xr.DataArray): The x-axis and y-axis decision variable values at each piecewise constraint breakpoint.
+            name (str): The name of the piecewise constraint.
+            n_breakpoints (int): number of breakpoints
+
+        Returns:
+            Any:
+                Return piecewise_constraint object.
+        """
+
     @abstractmethod
     def get_parameter(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
         """Extract parameter from backend dataset.
@@ -641,6 +754,22 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 If as_backend_objs is True, will return an xr.DataArray.
                 Otherwise, a xr.Dataset will be given, indexed over the same dimensions as the xr.DataArray, with variables for the constraint body, and upper (`ub`) and lower (`lb`) bounds.
         """
+
+    def get_piecewise_constraint(self, name: str) -> xr.DataArray:
+        """Get piecewise constraint data as an array of backend interface objects.
+
+        This method can be used to inspect and debug built piecewise constraints.
+
+        Unlike other optimisation problem components, piecewise constraints can only be inspected as backend interface objects.
+        This is because each element is a collection of variables, parameters, constraints, and expressions.
+
+        Args:
+            name (str): Name of piecewise constraint, as given in YAML piecewise constraint key.
+
+        Returns:
+            xr.DataArray: Piecewise constraint array.
+        """
+        return self._get_component(name, "piecewise_constraints")
 
     @abstractmethod
     def get_variable(self, name: str, as_backend_objs: bool = True) -> xr.DataArray:
@@ -909,7 +1038,15 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             refs = [k for k in getattr(self, component).data_vars if k in references]
             for ref in refs:
                 self.delete_component(ref, component)
-                getattr(self, "add_" + component.removesuffix("s"))(name=ref)
+                dict_ = self.inputs.attrs["math"][component][ref]
+                getattr(self, "add_" + component.removesuffix("s"))(ref, dict_)
+
+    def _get_component(self, name: str, component_group: str) -> xr.DataArray:
+        component = getattr(self, component_group).get(name, None)
+        if component is None:
+            pretty_group_name = component_group.removesuffix("s").replace("_", " ")
+            raise KeyError(f"Unknown {pretty_group_name}: {name}")
+        return component
 
     def _get_variable_bound(
         self, bound: Any, name: str, references: set, fill_na: float | None = None
@@ -958,9 +1095,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             yield
         finally:
             for name_ in datetime_coords:
-                data.coords[name_] = xr.apply_ufunc(
-                    pd.to_datetime, data.coords[name_], keep_attrs=True
-                )
+                data.coords[name_] = data.coords[name_].astype("datetime64[ns]")
 
 
 class ShadowPrices:
