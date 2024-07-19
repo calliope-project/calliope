@@ -112,7 +112,7 @@ class BackendModelGenerator(ABC):
 
     @abstractmethod
     def add_constraint(
-        self, name: str, constraint_dict: parsing.UnparsedConstraintDict
+        self, name: str, constraint_dict: parsing.UnparsedConstraint
     ) -> None:
         """Add constraint equation to backend model in-place.
 
@@ -121,13 +121,13 @@ class BackendModelGenerator(ABC):
         Args:
             name (str):
                 Name of the constraint
-            constraint_dict (parsing.UnparsedConstraintDict):
+            constraint_dict (parsing.UnparsedConstraint):
                 Constraint configuration dictionary, ready to be parsed and then evaluated.
         """
 
     @abstractmethod
     def add_piecewise_constraint(
-        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraintDict
+        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraint
     ) -> None:
         """Add piecewise constraint equation to backend model in-place.
 
@@ -136,12 +136,12 @@ class BackendModelGenerator(ABC):
         Args:
             name (str):
                 Name of the piecewise constraint
-            constraint_dict (parsing.UnparsedPiecewiseConstraintDict): Piecewise constraint configuration dictionary, ready to be parsed and then evaluated.
+            constraint_dict (parsing.UnparsedPiecewiseConstraint): Piecewise constraint configuration dictionary, ready to be parsed and then evaluated.
         """
 
     @abstractmethod
     def add_global_expression(
-        self, name: str, expression_dict: parsing.UnparsedExpressionDict
+        self, name: str, expression_dict: parsing.UnparsedExpression
     ) -> None:
         """Add global expression (arithmetic combination of parameters and/or decision variables) to backend model in-place.
 
@@ -149,25 +149,23 @@ class BackendModelGenerator(ABC):
 
         Args:
             name (str): name of the global expression
-            expression_dict (parsing.UnparsedExpressionDict): Global expression configuration dictionary, ready to be parsed and then evaluated.
+            expression_dict (parsing.UnparsedExpression): Global expression configuration dictionary, ready to be parsed and then evaluated.
         """
 
     @abstractmethod
-    def add_variable(
-        self, name: str, variable_dict: parsing.UnparsedVariableDict
-    ) -> None:
+    def add_variable(self, name: str, variable_dict: parsing.UnparsedVariable) -> None:
         """Add decision variable to backend model in-place.
 
         Resulting backend dataset entries will be decision variable objects.
 
         Args:
             name (str): name of the variable.
-            variable_dict (parsing.UnparsedVariableDict): Unparsed variable configuration dictionary.
+            variable_dict (parsing.UnparsedVariable): Unparsed variable configuration dictionary.
         """
 
     @abstractmethod
     def add_objective(
-        self, name: str, objective_dict: parsing.UnparsedObjectiveDict
+        self, name: str, objective_dict: parsing.UnparsedObjective
     ) -> None:
         """Add objective arithmetic to backend model in-place.
 
@@ -175,7 +173,7 @@ class BackendModelGenerator(ABC):
 
         Args:
             name (str): name of the objective.
-            objective_dict (parsing.UnparsedObjectiveDict): Unparsed objective configuration dictionary.
+            objective_dict (parsing.UnparsedObjective): Unparsed objective configuration dictionary.
         """
 
     def log(
@@ -631,7 +629,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         self._has_verbose_strings: bool = False
 
     def add_piecewise_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraintDict
+        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraint
     ) -> None:
         if "breakpoints" in constraint_dict.get("foreach", []):
             raise BackendError(

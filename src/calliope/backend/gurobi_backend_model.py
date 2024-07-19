@@ -81,7 +81,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
 
     def add_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedConstraintDict
+        self, name: str, constraint_dict: parsing.UnparsedConstraint
     ) -> None:
         def _constraint_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -94,7 +94,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._add_component(name, constraint_dict, _constraint_setter, "constraints")
 
     def add_global_expression(  # noqa: D102, override
-        self, name: str, expression_dict: parsing.UnparsedExpressionDict
+        self, name: str, expression_dict: parsing.UnparsedExpression
     ) -> None:
         def _expression_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -110,7 +110,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         )
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_dict: parsing.UnparsedVariableDict
+        self, name: str, variable_dict: parsing.UnparsedVariable
     ) -> None:
         domain_dict = {"real": gurobipy.GRB.CONTINUOUS, "integer": gurobipy.GRB.INTEGER}
 
@@ -128,7 +128,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._add_component(name, variable_dict, _variable_setter, "variables")
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_dict: parsing.UnparsedObjectiveDict
+        self, name: str, objective_dict: parsing.UnparsedObjective
     ) -> None:
         sense_dict = {
             "minimize": gurobipy.GRB.MINIMIZE,

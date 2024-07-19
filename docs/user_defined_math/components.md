@@ -119,6 +119,7 @@ Without a `where` string, all valid members (according to the `definition_matrix
 1. It has `x` and `y` [expression strings](syntax.md#expression-strings) (`x_expression`, `y_expression`).
 1. It has `x` and `y` parameter references (`x_values`, `y_values`).
 This should be a string name referencing an input parameter that contains the `breakpoints` dimension.
+The values given by this parameter will be used to set the respective (`x` / `y`) expression at each breakpoint.
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
 
 The component attributes combine to describe a piecewise curve that links the `x_expression` and `y_expression` according to their respective values in `x_values` and `y_values` at each breakpoint.

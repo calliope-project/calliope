@@ -394,7 +394,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
 
     def add_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedConstraintDict | None = None
+        self, name: str, constraint_dict: parsing.UnparsedConstraint | None = None
     ) -> None:
         equation_strings: list = []
 
@@ -413,7 +413,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_piecewise_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraintDict
+        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraint
     ) -> None:
         non_where_refs: set = set()
 
@@ -454,7 +454,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_global_expression(  # noqa: D102, override
-        self, name: str, expression_dict: parsing.UnparsedExpressionDict | None = None
+        self, name: str, expression_dict: parsing.UnparsedExpression | None = None
     ) -> None:
         equation_strings: list = []
 
@@ -481,7 +481,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_dict: parsing.UnparsedVariableDict | None = None
+        self, name: str, variable_dict: parsing.UnparsedVariable | None = None
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
         bound_refs: set = set()
@@ -510,7 +510,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_dict: parsing.UnparsedObjectiveDict | None = None
+        self, name: str, objective_dict: parsing.UnparsedObjective | None = None
     ) -> None:
         sense_dict = {
             "minimize": r"\min{}",
@@ -670,10 +670,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         return jinja_env.from_string(template).render(**kwargs)
 
     def _get_variable_bounds_string(
-        self, name: str, bounds: parsing.UnparsedVariableBoundDict, references: set
+        self, name: str, bounds: parsing.UnparsedVariableBound, references: set
     ) -> tuple[dict[str, str], ...]:
         """Convert variable upper and lower bounds into math string expressions."""
-        bound_dict: parsing.UnparsedConstraintDict = {
+        bound_dict: parsing.UnparsedConstraint = {
             "equations": [
                 {"expression": f"{bounds['min']} <= {name}"},
                 {"expression": f"{name} <= {bounds['max']}"},

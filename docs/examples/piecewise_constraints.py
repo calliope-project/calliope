@@ -81,6 +81,7 @@ new_params = {
         },
     }
 }
+print(new_params)
 m = calliope.examples.national_scale(override_dict=new_params)
 
 # %%
