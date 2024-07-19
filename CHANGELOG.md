@@ -36,6 +36,8 @@ Parameter titles from the model definition schema will also propagate to the mod
 
 ### Internal changes
 
+|changed| `model._model_def_dict` has been removed.
+
 |new| `ModelMath` is a new helper class to handle math additions, including separate methods for pre-defined math, user-defined math and validation checks.
 
 |changed| `MathDocumentation` has been extracted from `Model`/`LatexBackend`, and now is a postprocessing module which can take models as input.
