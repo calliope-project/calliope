@@ -109,7 +109,7 @@ def build_lp(
                     getattr(backend_instance, f"add_{component}")(name, dict_)
             elif isinstance(component_math, list):
                 for name in component_math:
-                    dict_ = model.math[component_group][name]
+                    dict_ = model.math.data[component_group][name]
                     getattr(backend_instance, f"add_{component}")(name, dict_)
 
     # MUST have an objective for a valid LP file

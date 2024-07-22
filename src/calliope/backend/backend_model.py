@@ -44,14 +44,15 @@ if TYPE_CHECKING:
 from calliope.exceptions import BackendError
 
 T = TypeVar("T")
-_COMPONENTS_T = Literal[
-    "parameters",
+ORDERED_COMPONENTS_T = Literal[
     "variables",
     "global_expressions",
     "constraints",
     "piecewise_constraints",
     "objectives",
 ]
+ALL_COMPONENTS_T = Literal["parameters", ORDERED_COMPONENTS_T]
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ LOGGER = logging.getLogger(__name__)
 class BackendModelGenerator(ABC):
     """Helper class for backends."""
 
-    _VALID_COMPONENTS: tuple[_COMPONENTS_T, ...] = typing.get_args(_COMPONENTS_T)
+    LID_COMPONENTS: tuple[ALL_COMPONENTS_T, ...] = typing.get_args(ALL_COMPONENTS_T)
     _COMPONENT_ATTR_METADATA = [
         "description",
         "unit",
@@ -180,7 +181,7 @@ class BackendModelGenerator(ABC):
 
     def log(
         self,
-        component_type: _COMPONENTS_T,
+        component_type: ALL_COMPONENTS_T,
         component_name: str,
         message: str,
         level: Literal["info", "warning", "debug", "error", "critical"] = "debug",
@@ -188,7 +189,7 @@ class BackendModelGenerator(ABC):
         """Log to module-level logger with some prettification of the message.
 
         Args:
-            component_type (_COMPONENTS_T): type of component.
+            component_type (ALL_COMPONENTS_T): type of component.
             component_name (str): name of the component.
             message (str): message to log.
             level (Literal["info", "warning", "debug", "error", "critical"], optional): log level. Defaults to "debug".
@@ -227,13 +228,7 @@ class BackendModelGenerator(ABC):
         """Parse math and inputs and set optimisation problem."""
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
-        for components in [
-            "variables",
-            "global_expressions",
-            "constraints",
-            "piecewise_constraints",
-            "objectives",
-        ]:
+        for components in typing.get_args(ORDERED_COMPONENTS_T):
             component = components.removesuffix("s")
             for name, dict_ in self.math.data[components].items():
                 start = time.time()
@@ -263,13 +258,7 @@ class BackendModelGenerator(ABC):
         name: str,
         component_dict: Tp,
         component_setter: Callable,
-        component_type: Literal[
-            "variables",
-            "global_expressions",
-            "constraints",
-            "piecewise_constraints",
-            "objectives",
-        ],
+        component_type: ORDERED_COMPONENTS_T,
         break_early: bool = True,
     ) -> parsing.ParsedBackendComponent | None:
         """Generalised function to add a optimisation problem component array to the model.
@@ -279,7 +268,7 @@ class BackendModelGenerator(ABC):
                 this name must be available in the input math provided on initialising the class.
             component_dict (Tp): unparsed YAML dictionary configuration.
             component_setter (Callable): function to combine evaluated xarray DataArrays into backend component objects.
-            component_type (Literal["variables", "global_expressions", "constraints", "objectives"]):
+            component_type (Literal["variables", "global_expressions", "constraints", "piecewise_constraints", "objectives"]):
                 type of the added component.
             break_early (bool, optional): break if the component is not active. Defaults to True.
 
@@ -292,7 +281,7 @@ class BackendModelGenerator(ABC):
         """
         references: set[str] = set()
 
-        if name not in self.inputs.math.get(component_type, {}):
+        if name not in self.math.data.get(component_type, {}):
             self.math.data.set_key(f"{component_type}.name", component_dict)
 
         if break_early and not component_dict.get("active", True):
@@ -363,7 +352,7 @@ class BackendModelGenerator(ABC):
         return parsed_component
 
     @abstractmethod
-    def delete_component(self, key: str, component_type: _COMPONENTS_T) -> None:
+    def delete_component(self, key: str, component_type: ALL_COMPONENTS_T) -> None:
         """Delete a list object from the backend model object.
 
         Args:
@@ -372,7 +361,7 @@ class BackendModelGenerator(ABC):
         """
 
     @abstractmethod
-    def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+    def _create_obj_list(self, key: str, component_type: ALL_COMPONENTS_T) -> None:
         """Attach an empty list object to the backend model object.
 
         The attachment may be a backend-specific subclass of a standard list object.
@@ -425,7 +414,7 @@ class BackendModelGenerator(ABC):
         self,
         name: str,
         da: xr.DataArray,
-        obj_type: _COMPONENTS_T,
+        obj_type: ALL_COMPONENTS_T,
         unparsed_dict: parsing.UNPARSED_DICTS | dict,
         references: set | None = None,
     ):
@@ -434,7 +423,7 @@ class BackendModelGenerator(ABC):
         Args:
             name (str): Name of entry in dataset.
             da (xr.DataArray): Data to add.
-            obj_type (_COMPONENTS_T): Type of backend objects in the array.
+            obj_type (ALL_COMPONENTS_T): Type of backend objects in the array.
             unparsed_dict (parsing.UNPARSED_DICTS | dict):
                 Dictionary describing the object being added, from which descriptor
                 attributes will be extracted and added to the array attributes.
@@ -530,7 +519,7 @@ class BackendModelGenerator(ABC):
             da = tuple(arr.fillna(np.nan) for arr in da)
         return da
 
-    def _raise_error_on_preexistence(self, key: str, obj_type: _COMPONENTS_T):
+    def _raise_error_on_preexistence(self, key: str, obj_type: ALL_COMPONENTS_T):
         """Detect if preexistance errors are present the dataset.
 
         We do not allow any overlap of backend object names since they all have to
@@ -1025,19 +1014,13 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         Args:
             references (set[str]): names of optimisation problem components.
         """
-        ordered_components = [
-            "variables",
-            "global_expressions",
-            "constraints",
-            "objectives",
-        ]
-        for component in ordered_components:
+        for component in typing.get_args(ORDERED_COMPONENTS_T):
             # Rebuild references in the order they are found in the backend dataset
             # which should correspond to the order they were added to the optimisation problem.
             refs = [k for k in getattr(self, component).data_vars if k in references]
             for ref in refs:
                 self.delete_component(ref, component)
-                dict_ = self.inputs.attrs["math"][component][ref]
+                dict_ = self.math.data[component][ref]
                 getattr(self, "add_" + component.removesuffix("s"))(ref, dict_)
 
     def _get_component(self, name: str, component_group: str) -> xr.DataArray:
