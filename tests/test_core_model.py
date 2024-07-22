@@ -1,4 +1,5 @@
 import logging
+from contextlib import contextmanager
 
 import calliope
 import pandas as pd
@@ -132,39 +133,107 @@ class TestValidateMathDict:
 
 
 class TestOperateMode:
+    @contextmanager
+    def caplog_session(self, request):
+        """caplog for class/session-scoped fixtures.
+
+        See https://github.com/pytest-dev/pytest/discussions/11177
+        """
+        request.node.add_report_section = lambda *args: None
+        logging_plugin = request.config.pluginmanager.getplugin("logging-plugin")
+        for _ in logging_plugin.pytest_runtest_setup(request.node):
+            yield pytest.LogCaptureFixture(request.node, _ispytest=True)
+
     @pytest.fixture(scope="class")
     def plan_model(self):
+        """Solve in plan mode for the same overrides, to check against operate mode model."""
         model = build_model({}, "simple_supply,operate,var_costs,investment_costs")
         model.build(mode="plan")
         model.solve()
         return model
+
+    @pytest.fixture(
+        scope="class", params=[("6h", "12h"), ("12h", "12h"), ("16h", "20h")]
+    )
+    def operate_model_and_log(self, request):
+        """Solve in plan mode, then use plan mode results to set operate mode inputs, then solve in operate mode.
+
+        Three different operate/horizon windows chosen:
+        ("6h", "12h"): Both window and horizon fit completely into the model time range (48hr)
+        ("12h", "12h"): Both window and horizon are the same length, so there is no need to rebuild the optimisation problem towards the end of horizon
+        ("16h", "20h"): Neither window or horizon fit completely into the model time range (48hr)
+        """
+        model = build_model({}, "simple_supply,operate,var_costs,investment_costs")
+        model.build(mode="plan")
+        model.solve()
+        model.build(
+            force=True,
+            mode="operate",
+            operate_use_cap_results=True,
+            operate_window=request.param[0],
+            operate_horizon=request.param[1],
+        )
+
+        with self.caplog_session(request) as caplog:
+            with caplog.at_level(logging.INFO):
+                model.solve(force=True)
+            log = caplog.text
+
+        return model, log
 
     @pytest.fixture(scope="class")
-    def operate_model(self):
-        model = build_model({}, "simple_supply,operate,var_costs,investment_costs")
-        model.build(mode="plan")
-        model.solve()
-        model.build(force=True, mode="operate", operate_use_cap_results=True)
-        model.solve(force=True)
+    def rerun_operate_log(self, request, operate_model_and_log):
+        """Solve in operate mode a second time, to trigger new log messages."""
+        with self.caplog_session(request) as caplog:
+            with caplog.at_level(logging.INFO):
+                operate_model_and_log[0].solve(force=True)
+            return caplog.text
 
-        return model
-
-    def test_use_cap_results(self, plan_model, operate_model):
-        assert plan_model.backend.inputs.attrs["config"]["build"]["mode"] == "plan"
+    def test_backend_build_mode(self, operate_model_and_log):
+        """Verify that we have run in operate mode"""
+        operate_model, _ = operate_model_and_log
         assert (
             operate_model.backend.inputs.attrs["config"]["build"]["mode"] == "operate"
         )
+
+    def test_operate_mode_success(self, operate_model_and_log):
+        """Solving in operate mode should lead to an optimal solution."""
+        operate_model, _ = operate_model_and_log
         assert operate_model.results.attrs["termination_condition"] == "optimal"
 
+    def test_use_cap_results(self, plan_model, operate_model_and_log):
+        """Operate mode uses plan mode outputs as inputs."""
+        operate_model, _ = operate_model_and_log
         assert plan_model.results.flow_cap.equals(operate_model.inputs.flow_cap)
 
-    def test_rerun_operate(self, caplog, operate_model):
-        with caplog.at_level(logging.INFO):
-            operate_model.solve(force=True)
-        assert "Resetting model to first time window." in caplog.text
-        assert "Reaching the end of the timeseries." in caplog.text
+    def test_not_reset_model_window(self, operate_model_and_log):
+        """We do not expect the first time window to need resetting on solving in operate mode for the first time."""
+        _, log = operate_model_and_log
+        assert "Resetting model to first time window." not in log
 
-    def test_operate_timeseries(self, operate_model):
+    def test_reset_model_window(self, rerun_operate_log):
+        """The backend model time window needs resetting back to the start on rerunning in operate mode."""
+        assert "Resetting model to first time window." in rerun_operate_log
+
+    def test_end_of_horizon(self, operate_model_and_log):
+        """Check that increasingly shorter time horizons are logged as model rebuilds."""
+        operate_model, log = operate_model_and_log
+        config = operate_model.backend.inputs.attrs["config"]["build"]
+        if config["operate_window"] != config["operate_horizon"]:
+            assert "Reaching the end of the timeseries." in log
+        else:
+            assert "Reaching the end of the timeseries." not in log
+
+    def test_operate_backend_timesteps_align(self, operate_model_and_log):
+        """Check that the timesteps in both backend xarray objects have updated together."""
+        operate_model, _ = operate_model_and_log
+        assert operate_model.backend.inputs.timesteps.equals(
+            operate_model.backend._dataset.timesteps
+        )
+
+    def test_operate_timeseries(self, operate_model_and_log):
+        """Check that the full timeseries exists in the operate model results."""
+        operate_model, _ = operate_model_and_log
         assert all(
             operate_model.results.timesteps
             == pd.date_range("2005-01", "2005-01-02 23:00:00", freq="h")

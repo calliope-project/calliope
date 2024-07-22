@@ -564,15 +564,16 @@ class TestParserMasking:
 
 class TestAsMathString:
     @pytest.fixture()
-    def latex_eval_kwargs(self, eval_kwargs):
+    def latex_eval_kwargs(self, eval_kwargs, dummy_latex_backend_model):
         eval_kwargs["return_type"] = "math_string"
+        eval_kwargs["backend_interface"] = dummy_latex_backend_model
         return eval_kwargs
 
     @pytest.mark.parametrize(
         ("parser", "instring", "expected"),
         [
             ("data_var", "with_inf", r"\exists (\textit{with_inf}_\text{node,tech})"),
-            ("data_var", "foo", r"\exists (\textit{foo})"),
+            ("data_var", "foo", r"\exists (\text{foo})"),
             ("data_var", "no_dims", r"\exists (\textit{no_dims})"),
             ("config_option", "config.foo", r"\text{config.foo}"),
             ("bool_operand", "True", "true"),

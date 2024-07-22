@@ -611,7 +611,6 @@ class Model:
         LOGGER.info("Optimisation model | Running first time window.")
 
         step_results = self.backend._solve(warmstart=False, **solver_config)
-        init_timesteps = step_results.timesteps.copy()
 
         results_list = []
 
@@ -625,11 +624,11 @@ class Model:
             )
             previous_step_results = results_list[-1]
             horizonstep = self._model_data.horizonsteps.sel(windowsteps=windowstep)
-            new_param_data = self.inputs.sel(
+            new_inputs = self.inputs.sel(
                 timesteps=slice(windowstep, horizonstep)
             ).drop_vars(["horizonsteps", "windowsteps"], errors="ignore")
 
-            if len(new_param_data.timesteps) != len(step_results.timesteps):
+            if len(new_inputs.timesteps) != len(step_results.timesteps):
                 LOGGER.info(
                     "Optimisation model | Reaching the end of the timeseries. "
                     "Re-building model with shorter time horizon."
@@ -640,10 +639,12 @@ class Model:
                     **self.backend.inputs.attrs["config"]["build"],
                 )
             else:
-                for param_name, param_data in new_param_data.data_vars.items():
+                self.backend._dataset.coords["timesteps"] = new_inputs.timesteps
+                self.backend.inputs.coords["timesteps"] = new_inputs.timesteps
+                for param_name, param_data in new_inputs.data_vars.items():
                     if "timesteps" in param_data.dims:
-                        param_data.coords["timesteps"] = init_timesteps
                         self.backend.update_parameter(param_name, param_data)
+                        self.backend.inputs[param_name] = param_data
 
             if "storage" in step_results:
                 self.backend.update_parameter(
@@ -652,7 +653,6 @@ class Model:
                 )
 
             step_results = self.backend._solve(warmstart=False, **solver_config)
-            step_results.coords["timesteps"] = new_param_data.coords["timesteps"]
 
         results_list.append(step_results.sel(timesteps=slice(windowstep, None)))
         results = xr.concat(results_list, dim="timesteps", combine_attrs="no_conflicts")

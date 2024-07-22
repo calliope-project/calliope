@@ -65,6 +65,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     Subject to
     ----------
+    {% elif component_type == "piecewise_constraints" %}
+
+    Subject to (piecewise)
+    ----------------------
     {% elif component_type == "global_expressions" %}
 
     Where
@@ -135,6 +139,8 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     \section{Objective}
     {% elif component_type == "constraints" %}
     \section{Subject to}
+    {% elif component_type == "piecewise_constraints" %}
+    \section{Subject to (piecewise)}
     {% elif component_type == "global_expressions" %}
     \section{Where}
     {% elif component_type == "variables" %}
@@ -186,6 +192,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {% elif component_type == "constraints" %}
 
     ## Subject to
+    {% elif component_type == "piecewise_constraints" %}
+
+    ## Subject to (piecewise)
     {% elif component_type == "global_expressions" %}
 
     ## Where
@@ -274,11 +283,14 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             "title": self._PARAM_TITLES.get(parameter_name, None),
             "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
             "unit": self._PARAM_UNITS.get(parameter_name, None),
+            "math_repr": rf"\textit{{{parameter_name}}}"
+            + self._dims_to_var_string(parameter_values),
         }
+
         self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
 
     def add_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedConstraintDict | None = None
+        self, name: str, constraint_dict: parsing.UnparsedConstraint | None = None
     ) -> None:
         equation_strings: list = []
 
@@ -296,8 +308,49 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             parsed_component, self.constraints[name], equations=equation_strings
         )
 
+    def add_piecewise_constraint(  # noqa: D102, override
+        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraint
+    ) -> None:
+        non_where_refs: set = set()
+
+        def _constraint_setter(where: xr.DataArray, references: set) -> xr.DataArray:
+            return where.where(where)
+
+        math_parts = {}
+        for val in ["x_expression", "y_expression", "x_values", "y_values"]:
+            val_name = constraint_dict[val]
+            parsed_val = parsing.ParsedBackendComponent(
+                "piecewise_constraints",
+                name,
+                {"equations": [{"expression": val_name}]},  # type: ignore
+            )
+            eq = parsed_val.parse_equations(self.valid_component_names)
+            math_parts[val] = eq[0].evaluate_expression(
+                self, return_type="math_string", references=non_where_refs
+            )
+
+        equation = {
+            "expression": rf"{ math_parts['y_expression']}\mathord{{=}}{ math_parts['y_values'] }",
+            "where": rf"{ math_parts['x_expression'] }\mathord{{=}}{math_parts['x_values']}",
+        }
+        if "foreach" in constraint_dict:
+            constraint_dict["foreach"].append("breakpoints")
+        else:
+            constraint_dict["foreach"] = ["breakpoints"]
+        parsed_component = self._add_component(
+            name,
+            constraint_dict,
+            _constraint_setter,
+            "piecewise_constraints",
+            break_early=False,
+        )
+        self._update_references(name, non_where_refs)
+        self._generate_math_string(
+            parsed_component, self.piecewise_constraints[name], equations=[equation]
+        )
+
     def add_global_expression(  # noqa: D102, override
-        self, name: str, expression_dict: parsing.UnparsedExpressionDict | None = None
+        self, name: str, expression_dict: parsing.UnparsedExpression | None = None
     ) -> None:
         equation_strings: list = []
 
@@ -314,36 +367,44 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             "global_expressions",
             break_early=False,
         )
+        expr_da = self.global_expressions[name]
+        expr_da.attrs["math_repr"] = rf"\textbf{{{name}}}" + self._dims_to_var_string(
+            expr_da
+        )
 
         self._generate_math_string(
-            parsed_component, self.global_expressions[name], equations=equation_strings
+            parsed_component, expr_da, equations=equation_strings
         )
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_dict: parsing.UnparsedVariableDict | None = None
+        self, name: str, variable_dict: parsing.UnparsedVariable | None = None
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
+        bound_refs: set = set()
 
         def _variable_setter(where: xr.DataArray, references: set) -> xr.DataArray:
             return where.where(where)
 
-        if variable_dict is None:
-            variable_dict = self.math.data["variables"][name]
-
         parsed_component = self._add_component(
             name, variable_dict, _variable_setter, "variables", break_early=False
         )
-        where_array = self.variables[name]
+        var_da = self.variables[name]
+        var_da.attrs["math_repr"] = rf"\textbf{{{name}}}" + self._dims_to_var_string(
+            var_da
+        )
 
         domain = domain_dict[variable_dict.get("domain", "real")]
-        lb, ub = self._get_variable_bounds_string(name, variable_dict["bounds"])
+        lb, ub = self._get_variable_bounds_string(
+            name, variable_dict["bounds"], bound_refs
+        )
+        self._update_references(name, bound_refs.difference(name))
 
         self._generate_math_string(
-            parsed_component, where_array, equations=[lb, ub], sense=r"\forall" + domain
+            parsed_component, var_da, equations=[lb, ub], sense=r"\forall" + domain
         )
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_dict: parsing.UnparsedObjectiveDict | None = None
+        self, name: str, objective_dict: parsing.UnparsedObjective | None = None
     ) -> None:
         sense_dict = {
             "minimize": r"\min{}",
@@ -351,8 +412,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             "minimise": r"\min{}",
             "maximise": r"\max{}",
         }
-        if objective_dict is None:
-            objective_dict = self.math.data["objectives"][name]
         equation_strings: list = []
 
         def _objective_setter(
@@ -419,6 +478,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             for objtype in [
                 "objectives",
                 "constraints",
+                "piecewise_constraints",
                 "global_expressions",
                 "variables",
                 "parameters",
@@ -503,10 +563,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         return jinja_env.from_string(template).render(**kwargs)
 
     def _get_variable_bounds_string(
-        self, name: str, bounds: parsing.UnparsedVariableBoundDict
+        self, name: str, bounds: parsing.UnparsedVariableBound, references: set
     ) -> tuple[dict[str, str], ...]:
         """Convert variable upper and lower bounds into math string expressions."""
-        bound_dict: parsing.UnparsedConstraintDict = {
+        bound_dict: parsing.UnparsedConstraint = {
             "equations": [
                 {"expression": f"{bounds['min']} <= {name}"},
                 {"expression": f"{name} <= {bounds['max']}"},
@@ -515,6 +575,17 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         parsed_bounds = parsing.ParsedBackendComponent("constraints", name, bound_dict)
         equations = parsed_bounds.parse_equations(self.valid_component_names)
         return tuple(
-            {"expression": eq.evaluate_expression(self, return_type="math_string")}
+            {
+                "expression": eq.evaluate_expression(
+                    self, return_type="math_string", references=references
+                )
+            }
             for eq in equations
         )
+
+    @staticmethod
+    def _dims_to_var_string(da: xr.DataArray) -> str:
+        if da.shape:
+            return rf"_\text{{{','.join(str(i).removesuffix('s') for i in da.dims)}}}"
+        else:
+            return ""

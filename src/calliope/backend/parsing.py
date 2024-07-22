@@ -25,33 +25,45 @@ if TYPE_CHECKING:
 TRUE_ARRAY = xr.DataArray(True)
 
 
-class UnparsedEquationDict(TypedDict):
-    """Unparsed equation checker class."""
+class UnparsedEquation(TypedDict):
+    """Unparsed equation type hint class."""
 
     where: NotRequired[str]
     expression: str
 
 
-class UnparsedConstraintDict(TypedDict):
-    """Unparsed constraint checker class."""
+class UnparsedConstraint(TypedDict):
+    """Unparsed constraint type hint class."""
 
     description: NotRequired[str]
     foreach: NotRequired[list]
     where: NotRequired[str]
-    equations: Required[list[UnparsedEquationDict]]
-    sub_expressions: NotRequired[dict[str, list[UnparsedEquationDict]]]
-    slices: NotRequired[dict[str, list[UnparsedEquationDict]]]
+    equations: Required[list[UnparsedEquation]]
+    sub_expressions: NotRequired[dict[str, list[UnparsedEquation]]]
+    slices: NotRequired[dict[str, list[UnparsedEquation]]]
 
 
-class UnparsedExpressionDict(UnparsedConstraintDict):
-    """Unparsed expression checker class."""
+class UnparsedPiecewiseConstraint(TypedDict):
+    """Unparsed piecewise constraint type hint class."""
+
+    description: NotRequired[str]
+    foreach: NotRequired[list]
+    where: NotRequired[str]
+    x_expression: Required[str]
+    x_values: Required[str]
+    y_expression: Required[str]
+    y_values: Required[str]
+
+
+class UnparsedExpression(UnparsedConstraint):
+    """Unparsed expression type hint class."""
 
     title: NotRequired[str]
     unit: NotRequired[str]
 
 
-class UnparsedVariableBoundDict(TypedDict):
-    """Unparsed variable bounds checker class."""
+class UnparsedVariableBound(TypedDict):
+    """Unparsed variable bounds type hint class."""
 
     min: str
     max: str
@@ -59,7 +71,7 @@ class UnparsedVariableBoundDict(TypedDict):
     scale: NotRequired[str]
 
 
-class UnparsedVariableDict(TypedDict):
+class UnparsedVariable(TypedDict):
     """Unparsed variable checker class."""
 
     title: NotRequired[str]
@@ -68,23 +80,24 @@ class UnparsedVariableDict(TypedDict):
     foreach: list[str]
     where: str
     domain: NotRequired[str]
-    bounds: UnparsedVariableBoundDict
+    bounds: UnparsedVariableBound
 
 
-class UnparsedObjectiveDict(TypedDict):
+class UnparsedObjective(TypedDict):
     """Unparsed model objective checker."""
 
     description: NotRequired[str]
-    equations: Required[list[UnparsedEquationDict]]
-    sub_expressions: NotRequired[dict[str, list[UnparsedEquationDict]]]
+    equations: Required[list[UnparsedEquation]]
+    sub_expressions: NotRequired[dict[str, list[UnparsedEquation]]]
     sense: str
 
 
 UNPARSED_DICTS = (
-    UnparsedConstraintDict
-    | UnparsedVariableDict
-    | UnparsedExpressionDict
-    | UnparsedObjectiveDict
+    UnparsedConstraint
+    | UnparsedVariable
+    | UnparsedExpression
+    | UnparsedObjective
+    | UnparsedPiecewiseConstraint
 )
 T = TypeVar("T", bound=UNPARSED_DICTS)
 
@@ -331,7 +344,7 @@ class ParsedBackendEquation:
     @overload
     def evaluate_expression(
         self,
-        backend_interface: backend_model.BackendModel,
+        backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: Literal["array"] = "array",
         references: set | None = None,
@@ -342,7 +355,7 @@ class ParsedBackendEquation:
     @overload
     def evaluate_expression(
         self,
-        backend_interface: backend_model.BackendModel,
+        backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: Literal["math_string"],
         references: set | None = None,
@@ -350,7 +363,7 @@ class ParsedBackendEquation:
 
     def evaluate_expression(
         self,
-        backend_interface: backend_model.BackendModel,
+        backend_interface: backend_model.BackendModelGenerator,
         *,
         return_type: Literal["array", "math_string"] = "array",
         references: set | None = None,
@@ -448,11 +461,18 @@ class ParsedBackendComponent(ParsedBackendEquation):
         "global_expressions": expression_parser.generate_arithmetic_parser,
         "objectives": expression_parser.generate_arithmetic_parser,
         "variables": lambda x: None,
+        "piecewise_constraints": expression_parser.generate_arithmetic_parser,
     }
 
     def __init__(
         self,
-        group: Literal["variables", "global_expressions", "constraints", "objectives"],
+        group: Literal[
+            "variables",
+            "global_expressions",
+            "constraints",
+            "piecewise_constraints",
+            "objectives",
+        ],
         name: str,
         unparsed_data: T,
     ) -> None:
@@ -538,7 +558,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 List of parsed equations ready to be evaluated.
                 The length of the list depends on the product of provided equations and sub-expression/slice references.
         """
-        equation_expression_list: list[UnparsedEquationDict]
+        equation_expression_list: list[UnparsedEquation]
         equation_expression_list = self._unparsed.get("equations", [])
 
         equations = self.generate_expression_list(
@@ -639,7 +659,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
     def generate_expression_list(
         self,
         expression_parser: pp.ParserElement,
-        expression_list: list[UnparsedEquationDict],
+        expression_list: list[UnparsedEquation],
         expression_group: Literal["equations", "sub_expressions", "slices"],
         id_prefix: str = "",
     ) -> list[ParsedBackendEquation]:
@@ -650,7 +670,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
 
         Args:
             expression_parser (pp.ParserElement): parser to use.
-            expression_list (list[UnparsedEquationDict]): list of constraint equations
+            expression_list (list[UnparsedEquation]): list of constraint equations
                 or sub-expressions with arithmetic expression string and optional
                 where string.
             expression_group (Literal["equations", "sub_expressions", "slices"]):

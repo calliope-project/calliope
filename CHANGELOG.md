@@ -4,6 +4,9 @@
 
 |new| Math has been removed from `model.math`, and can now be accessed via `model.math.data`.
 
+|new| Piecewise constraints added to the YAML math with its own unique syntax (#107).
+These constraints will be added to the optimisation problem using Special Ordered Sets of Type 2 (SOS2) variables.
+
 |new| Direct interface to the Gurobi Python API using `!#yaml config.build.backend: gurobi` or `!#python model.build(backend="gurobi")`.
 Tests show that using the gurobi solver via the Python API reduces peak memory consumption and runtime by at least 30% for the combined model build and solve steps.
 This requires the `gurobipy` package which can be installed with `mamba`: `mamba install gurobi::gurobi`.
