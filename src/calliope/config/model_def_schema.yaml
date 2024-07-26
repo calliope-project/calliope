@@ -675,7 +675,7 @@ properties:
             x-type: str
             title: Sink unit
             description: >-
-              Sets the unit of `Sink` to either `absolute` x-unit: energy), `per_area` x-unit: energy/area), or `per_cap` x-unit: energy/power).
+              Sets the unit of `Sink` to either `absolute` (e.g. kWh), `per_area` (e.g. kWh/m2), or `per_cap` (e.g. kWh/kW).
               `per_area` uses the `area_use` decision variable to scale the sink while `per_cap` uses the `flow_cap` decision variable.
             enum: [absolute, per_area, per_cap]
 
