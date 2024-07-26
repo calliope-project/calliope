@@ -707,7 +707,7 @@ properties:
             title: Required sink use.
             description: >-
               Required amount of carrier removal from the system (e.g., electricity demand, transport distance).
-              Unit dictated by `source_unit`.
+              Unit dictated by `sink_unit`.
 
           source_unit:
             type: string
