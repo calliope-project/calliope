@@ -29,6 +29,9 @@ fail:
   - where: storage_initial>1
     message: "storage_initial is a fraction; values larger than 1 are not allowed."
 
+  - where: storage_initial<0
+    message: "storage_initial is a fraction; values smaller than 0 are not allowed."
+
   - where: integer_dispatch=True AND NOT cap_method=integer
     message: Cannot use the integer `integer_dispatch` unless the technology is using an integer unit capacities (`cap_method=integer`).
 
