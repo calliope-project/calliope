@@ -697,7 +697,7 @@ properties:
             title: Maximum bound on sink.
             description: >-
               Maximum sink use to remove a carrier from the system (e.g., electricity demand, transport distance).
-              Unit dictated by `source_unit`.
+              Unit dictated by `sink_unit`.
 
           sink_use_equals:
             $ref: "#/$defs/TechParamNullNumber"
