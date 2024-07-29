@@ -9,16 +9,20 @@ from .common.util import build_test_model, check_error_or_warning
 class TestMathDocumentation:
     @pytest.fixture(scope="class")
     def no_build(self):
-        return build_test_model({}, "simple_supply,two_hours,investment_costs")
+        model = build_test_model({}, "simple_supply,two_hours,investment_costs")
+        model.build()
+        return model
 
     @pytest.fixture(scope="class")
     def build_all(self):
         model = build_test_model({}, "simple_supply,two_hours,investment_costs")
+        model.build()
         return MathDocumentation(model, include="all")
 
     @pytest.fixture(scope="class")
     def build_valid(self):
         model = build_test_model({}, "simple_supply,two_hours,investment_costs")
+        model.build()
         return MathDocumentation(model, include="valid")
 
     @pytest.mark.parametrize(

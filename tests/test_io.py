@@ -104,7 +104,7 @@ class TestIO:
             ("serialised_nones", ["foo_none", "scenario"]),
             (
                 "serialised_dicts",
-                ["foo_dict", "foo_attrdict", "defaults", "config", "math"],
+                ["foo_dict", "foo_attrdict", "defaults", "config", "applied_math"],
             ),
             ("serialised_sets", ["foo_set", "foo_set_1_item"]),
             ("serialised_single_element_list", ["foo_list_1_item", "foo_set_1_item"]),

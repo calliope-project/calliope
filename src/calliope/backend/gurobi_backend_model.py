@@ -57,8 +57,6 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._instance: gurobipy.Model
         self.shadow_prices = GurobiShadowPrices(self)
 
-        self._add_all_inputs_as_parameters()
-
     def add_parameter(  # noqa: D102, override
         self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:

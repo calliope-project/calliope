@@ -1,16 +1,16 @@
 import logging
-from copy import deepcopy
 from itertools import product
 
 import calliope
+import calliope.backend
 import calliope.exceptions as exceptions
+import calliope.preprocess
 import numpy as np
 import pyomo.core as po
 import pyomo.kernel as pmo
 import pytest  # noqa: F401
 import xarray as xr
-from calliope.attrdict import AttrDict
-from calliope.backend.pyomo_backend_model import PyomoBackendModel
+from calliope.backend import PyomoBackendModel
 from pyomo.core.kernel.piecewise_library.transforms import piecewise_sos2
 
 from .common.util import build_test_model as build_model
@@ -1518,7 +1518,7 @@ class TestClusteringConstraints:
         override = {
             "config.init.time_subset": ["2005-01-01", "2005-01-04"],
             "config.init.time_cluster": "data_sources/cluster_days.csv",
-            "config.init.add_math": (
+            "config.build.add_math": (
                 ["storage_inter_cluster"] if storage_inter_cluster else []
             ),
             "config.build.cyclic_storage": cyclic,
@@ -1622,49 +1622,34 @@ class TestNewBackend:
     def temp_path(self, tmpdir_factory):
         return tmpdir_factory.mktemp("custom_math")
 
-    @pytest.mark.parametrize("mode", ["operate", "spores"])
+    @pytest.mark.parametrize("mode", ["operate", "plan"])
     def test_add_run_mode_custom_math(self, caplog, mode):
         caplog.set_level(logging.DEBUG)
         m = build_model({}, "simple_supply,two_hours,investment_costs")
+        math = calliope.preprocess.CalliopeMath([mode])
 
-        base_math = deepcopy(m.math)
-        base_math.add_pre_defined_file(mode)
+        backend = PyomoBackendModel(m.inputs, math, mode=mode)
 
-        backend = PyomoBackendModel(m.inputs, m.math, mode=mode)
+        assert backend.math == math
 
-        assert m.math != base_math
-        assert backend.math == base_math
-
-    def test_add_run_mode_custom_math_before_build(self, caplog, temp_path):
-        """A user can override the run mode math by including it directly in the additional math list"""
+    def test_add_run_mode_custom_math_before_build(self, caplog):
+        """Run mode math is applied before anything else."""
         caplog.set_level(logging.DEBUG)
-        custom_math = AttrDict({"variables": {"flow_cap": {"active": True}}})
-        file_path = temp_path.join("custom-math.yaml")
-        custom_math.to_yaml(file_path)
+        custom_math = {"constraints": {"force_zero_area_use": {"active": True}}}
 
         m = build_model(
-            {"config.init.add_math": ["operate", str(file_path)]},
+            {
+                "config.build.operate_window": "12H",
+                "config.build.operate_horizon": "12H",
+            },
             "simple_supply,two_hours,investment_costs",
         )
-        PyomoBackendModel(m.inputs, m.math, mode="operate")
+        m.build(mode="operate", add_math_dict=custom_math)
 
         # operate mode set it to false, then our math set it back to active
-        assert m.math.data.variables.flow_cap.active
+        assert m.applied_math.data.constraints.force_zero_area_use.active
         # operate mode set it to false and our math did not override that
-        assert not m.math.data.variables.storage_cap.active
-
-    def test_run_mode_mismatch(self):
-        m = build_model(
-            {"config.init.add_math": ["operate"]},
-            "simple_supply,two_hours,investment_costs",
-        )
-
-        with pytest.warns(exceptions.ModelWarning) as excinfo:
-            PyomoBackendModel(m.inputs, m.math)
-
-        assert check_error_or_warning(
-            excinfo, "Running in plan mode, but run mode(s) {'operate'}"
-        )
+        assert not m.applied_math.data.variables.storage_cap.active
 
     def test_new_build_get_variable(self, simple_supply):
         """Check a decision variable has the correct data type and has all expected attributes."""
@@ -2241,3 +2226,84 @@ class TestShadowPrices:
         )
         # Since we listed only one (invalid) constraint, tracking should not be active
         assert not m.backend.shadow_prices.is_active
+
+
+class TestValidateMathDict:
+    LOGGER = "calliope.backend.backend_model"
+
+    @pytest.fixture()
+    def validate_math(self):
+        def _validate_math(math_dict: dict):
+            m = build_model({}, "simple_supply,investment_costs")
+            math = calliope.preprocess.CalliopeMath(["plan", math_dict])
+            backend = calliope.backend.PyomoBackendModel(m._model_data, math)
+            backend._add_all_inputs_as_parameters()
+            backend._validate_math_string_parsing()
+
+        return _validate_math
+
+    def test_base_math(self, caplog, validate_math):
+        with caplog.at_level(logging.INFO, logger=self.LOGGER):
+            validate_math({})
+        assert "Optimisation Model | Validated math strings." in [
+            rec.message for rec in caplog.records
+        ]
+
+    @pytest.mark.parametrize(
+        ("equation", "where"),
+        [
+            ("1 == 1", "True"),
+            (
+                "sum(flow_out * flow_out_eff, over=[nodes, carriers, techs, timesteps]) <= .inf",
+                "base_tech=supply and flow_out_eff>0",
+            ),
+        ],
+    )
+    def test_add_math(self, caplog, validate_math, equation, where):
+        with caplog.at_level(logging.INFO, logger=self.LOGGER):
+            validate_math(
+                {
+                    "constraints": {
+                        "foo": {"equations": [{"expression": equation}], "where": where}
+                    }
+                }
+            )
+        assert "Optimisation Model | Validated math strings." in [
+            rec.message for rec in caplog.records
+        ]
+
+    @pytest.mark.parametrize(
+        "component_dict",
+        [
+            {"equations": [{"expression": "1 = 1"}]},
+            {"equations": [{"expression": "1 = 1"}], "where": "foo[bar]"},
+        ],
+    )
+    @pytest.mark.parametrize("both_fail", [True, False])
+    def test_add_math_fails(self, validate_math, component_dict, both_fail):
+        math_dict = {"constraints": {"foo": component_dict}}
+        errors_to_check = [
+            "math string parsing (marker indicates where parsing stopped, but may not point to the root cause of the issue)",
+            " * constraints:foo:",
+            "equations[0].expression",
+            "where",
+        ]
+        if both_fail:
+            math_dict["constraints"]["bar"] = component_dict
+            errors_to_check.append("* constraints:bar:")
+        else:
+            math_dict["constraints"]["bar"] = {"equations": [{"expression": "1 == 1"}]}
+
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            validate_math(math_dict)
+        assert check_error_or_warning(excinfo, errors_to_check)
+
+    @pytest.mark.parametrize("eq_string", ["1 = 1", "1 ==\n1[a]"])
+    def test_add_math_fails_marker_correct_position(self, validate_math, eq_string):
+        math_dict = {"constraints": {"foo": {"equations": [{"expression": eq_string}]}}}
+
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            validate_math(math_dict)
+        errorstrings = str(excinfo.value).split("\n")
+        # marker should be at the "=" sign, i.e., 2 characters from the end
+        assert len(errorstrings[-2]) - 2 == len(errorstrings[-1])

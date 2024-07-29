@@ -855,8 +855,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
             exceptions.print_warnings_and_raise_errors(
                 errors={f"{self.name}": self._errors},
                 during=(
-                    "math string parsing (marker indicates where parsing stopped, "
-                    "which might not be the root cause of the issue; sorry...)"
+                    "math string parsing (marker indicates where parsing stopped, but may not point to the root cause of the issue)"
                 ),
                 bullet=self._ERR_BULLET,
             )

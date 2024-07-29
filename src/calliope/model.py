@@ -41,7 +41,7 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
-    ATTRS_SAVED = ("_def_path", "math")
+    ATTRS_SAVED = ("_def_path", "applied_math")
 
     def __init__(
         self,
@@ -74,7 +74,7 @@ class Model:
         self._timings: dict = {}
         self.config: AttrDict
         self.defaults: AttrDict
-        self.math: preprocess.CalliopeMath
+        self.applied_math: preprocess.CalliopeMath
         self._def_path: str | None = None
         self.backend: BackendModel
         self._is_built: bool = False
@@ -100,9 +100,6 @@ class Model:
 
             self._init_from_model_def_dict(
                 model_def, applied_overrides, scenario, data_source_dfs
-            )
-            self.math = preprocess.CalliopeMath(
-                self.config["init"]["add_math"], self._def_path
             )
 
         self._model_data.attrs["timestamp_model_creation"] = timestamp_model_creation
@@ -226,8 +223,10 @@ class Model:
         """
         if "_def_path" in model_data.attrs:
             self._def_path = model_data.attrs.pop("_def_path")
-        if "math" in model_data.attrs:
-            self.math = preprocess.CalliopeMath(model_data.attrs.pop("math"))
+        if "applied_math" in model_data.attrs:
+            self.applied_math = preprocess.CalliopeMath.from_dict(
+                model_data.attrs.pop("applied_math")
+            )
 
         self._model_data = model_data
         self._add_model_data_methods()
@@ -283,13 +282,18 @@ class Model:
         self._model_data.attrs[name] = dict_to_add
         setattr(self, name, dict_to_add)
 
-    def build(self, force: bool = False, **kwargs) -> None:
+    def build(
+        self, force: bool = False, add_math_dict: dict | None = None, **kwargs
+    ) -> None:
         """Build description of the optimisation problem in the chosen backend interface.
 
         Args:
             force (bool, optional):
                 If ``force`` is True, any existing results will be overwritten.
                 Defaults to False.
+            add_math_dict (dict | None, optional):
+                Additional math to apply on top of the YAML base / additional math files.
+                Content of this dictionary will override any matching key:value pairs in the loaded math files.
             **kwargs: build configuration overrides.
         """
         if self._is_built and not force:
@@ -305,7 +309,8 @@ class Model:
         )
 
         backend_config = {**self.config["build"], **kwargs}
-        if backend_config["mode"] == "operate":
+        mode = backend_config["mode"]
+        if mode == "operate":
             if not self._model_data.attrs["allow_operate_mode"]:
                 raise exceptions.ModelError(
                     "Unable to run this model in operate (i.e. dispatch) mode, probably because "
@@ -317,11 +322,20 @@ class Model:
             )
         else:
             backend_input = self._model_data
+
+        init_math_list = [] if backend_config.get("ignore_mode_math") else [mode]
+        end_math_list = [] if add_math_dict is None else [add_math_dict]
+        full_math_list = init_math_list + backend_config["add_math"] + end_math_list
+        LOGGER.debug(f"Math preprocessing | Loading math: {full_math_list}")
+        model_math = preprocess.CalliopeMath(full_math_list, self._def_path)
+
         backend_name = backend_config.pop("backend")
         self.backend = backend.get_model_backend(
-            backend_name, backend_input, self.math, **backend_config
+            backend_name, backend_input, model_math, **backend_config
         )
         self.backend.add_optimisation_components()
+
+        self.applied_math = model_math
 
         self._model_data.attrs["timestamp_build_complete"] = log_time(
             LOGGER,
@@ -489,60 +503,6 @@ class Model:
             f"Model size:   {msize} ({msize_exists.item()} valid node:tech:carrier combinations)"
         )
         return "\n".join(info_strings)
-
-    def validate_math_strings(self, math_dict: dict) -> None:
-        """Validate that `expression` and `where` strings of a dictionary containing string mathematical formulations can be successfully parsed.
-
-        This function can be used to test user-defined math before attempting to build the optimisation problem.
-
-        NOTE: strings are not checked for evaluation validity. Evaluation issues will be raised only on calling `Model.build()`.
-
-        Args:
-            math_dict (dict): Math formulation dictionary to validate. Top level keys must be one or more of ["variables", "global_expressions", "constraints", "objectives"], e.g.:
-                ```python
-                {
-                    "constraints": {
-                        "my_constraint_name":
-                            {
-                                "foreach": ["nodes"],
-                                "where": "base_tech=supply",
-                                "equations": [{"expression": "sum(flow_cap, over=techs) >= 10"}]
-                            }
-
-                        }
-                }
-                ```
-        Returns:
-            If all components of the dictionary are parsed successfully, this function will log a success message to the INFO logging level and return None.
-            Otherwise, a calliope.ModelError will be raised with parsing issues listed.
-        """
-        self.math.validate(math_dict)
-        valid_component_names = [
-            *self.math.data["variables"].keys(),
-            *self.math.data["global_expressions"].keys(),
-            *math_dict.get("variables", {}).keys(),
-            *math_dict.get("global_expressions", {}).keys(),
-            *self.inputs.data_vars.keys(),
-            *self.inputs.attrs["defaults"].keys(),
-        ]
-        collected_errors: dict = dict()
-        for component_group, component_dicts in math_dict.items():
-            for name, component_dict in component_dicts.items():
-                parsed = backend.ParsedBackendComponent(
-                    component_group, name, component_dict
-                )
-                parsed.parse_top_level_where(errors="ignore")
-                parsed.parse_equations(set(valid_component_names), errors="ignore")
-                if not parsed._is_valid:
-                    collected_errors[f"{component_group}:{name}"] = parsed._errors
-
-        if collected_errors:
-            exceptions.print_warnings_and_raise_errors(
-                during="math string parsing (marker indicates where parsing stopped, which might not be the root cause of the issue; sorry...)",
-                errors=collected_errors,
-            )
-
-        LOGGER.info("Model: validated math strings")
 
     def _prepare_operate_mode_inputs(
         self, start_window_idx: int = 0, **config_kwargs

@@ -92,7 +92,6 @@ class BackendModelGenerator(ABC):
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
         self._check_inputs()
-        self._add_run_mode_math()
         self.math.validate()
 
     @abstractmethod
@@ -224,10 +223,36 @@ class BackendModelGenerator(ABC):
             check_results["warn"], check_results["fail"]
         )
 
-    def add_optimisation_components(self):
+    def _validate_math_string_parsing(self) -> None:
+        """Validate that `expression` and `where` strings of the math dictionary can be successfully parsed.
+
+        NOTE: strings are not checked for evaluation validity.
+        Evaluation issues will be raised only on adding a component to the backend.
+        """
+        validation_errors: dict = dict()
+        for component_group in typing.get_args(ORDERED_COMPONENTS_T):
+            for name, dict_ in self.math.data[component_group].items():
+                parsed = parsing.ParsedBackendComponent(component_group, name, dict_)
+                parsed.parse_top_level_where(errors="ignore")
+                parsed.parse_equations(self.valid_component_names, errors="ignore")
+                if not parsed._is_valid:
+                    validation_errors[f"{component_group}:{name}"] = parsed._errors
+
+        if validation_errors:
+            exceptions.print_warnings_and_raise_errors(
+                during="math string parsing (marker indicates where parsing stopped, but may not point to the root cause of the issue)",
+                errors=validation_errors,
+            )
+
+        LOGGER.info("Optimisation Model | Validated math strings.")
+
+    def add_optimisation_components(self) -> None:
         """Parse math and inputs and set optimisation problem."""
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
+        self._add_all_inputs_as_parameters()
+        if self.inputs.attrs["config"]["build"]["pre_validate_math_strings"]:
+            self._validate_math_string_parsing()
         for components in typing.get_args(ORDERED_COMPONENTS_T):
             component = components.removesuffix("s")
             for name, dict_ in self.math.data[components].items():
@@ -238,20 +263,6 @@ class BackendModelGenerator(ABC):
                     f"Optimisation Model | {components}:{name} | Built in {end:.4f}s"
                 )
             LOGGER.info(f"Optimisation Model | {components} | Generated.")
-
-    def _add_run_mode_math(self) -> None:
-        """If not given in the add_math list, override model math with run mode math."""
-        # FIXME: available modes should not be hardcoded here. They should come from a YAML schema.
-        mode = self.inputs.attrs["config"].build.mode
-        not_run_mode = {"plan", "operate", "spores"}.difference([mode])
-        run_mode_mismatch = not_run_mode.intersection(self.math.history)
-        if run_mode_mismatch:
-            exceptions.warn(
-                f"Running in {mode} mode, but run mode(s) {run_mode_mismatch} "
-                "math being loaded from file via the model configuration"
-            )
-        if mode not in self.math.history:
-            self.math.add_pre_defined_file(mode)
 
     def _add_component(
         self,
@@ -281,8 +292,8 @@ class BackendModelGenerator(ABC):
         """
         references: set[str] = set()
 
-        if name not in self.math.data.get(component_type, {}):
-            self.math.data.set_key(f"{component_type}.name", component_dict)
+        if name not in self.math.data[component_type]:
+            self.math.add(AttrDict({f"{component_type}.{name}": component_dict}))
 
         if break_early and not component_dict.get("active", True):
             self.log(
@@ -591,7 +602,7 @@ class BackendModelGenerator(ABC):
         in_math = set(
             name
             for component in ["variables", "global_expressions"]
-            for name in self.math.data[component].keys()
+            for name in self.math.data[component]
         )
         return in_data.union(in_math)
 
@@ -694,7 +705,6 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
         Args:
             name (str): Name of parameter.
-            math (CalliopeMath): Calliope math.
             as_backend_objs (bool, optional): TODO: hide this and create a method to edit parameter values (to handle interfaces with non-mutable params)
                 If True, will keep the array entries as backend interface objects,
                 which can be updated to update the underlying model.

@@ -2,6 +2,8 @@ import logging
 from contextlib import contextmanager
 
 import calliope
+import calliope.backend
+import calliope.preprocess
 import pandas as pd
 import pytest
 
@@ -62,74 +64,6 @@ class TestModel:
             excinfo,
             "Attempted to add dictionary property `baz` to model, but received argument of type `str`",
         )
-
-
-class TestValidateMathDict:
-    def test_base_math(self, caplog, simple_supply):
-        with caplog.at_level(logging.INFO, logger=LOGGER):
-            simple_supply.validate_math_strings(simple_supply.math.data)
-        assert "Model: validated math strings" in [
-            rec.message for rec in caplog.records
-        ]
-
-    @pytest.mark.parametrize(
-        ("equation", "where"),
-        [
-            ("1 == 1", "True"),
-            (
-                "flow_out * flow_out_eff + sum(cost, over=costs) <= .inf",
-                "base_tech=supply and flow_out_eff>0",
-            ),
-        ],
-    )
-    def test_add_math(self, caplog, simple_supply, equation, where):
-        with caplog.at_level(logging.INFO, logger=LOGGER):
-            simple_supply.validate_math_strings(
-                {
-                    "constraints": {
-                        "foo": {"equations": [{"expression": equation}], "where": where}
-                    }
-                }
-            )
-        assert "Model: validated math strings" in [
-            rec.message for rec in caplog.records
-        ]
-
-    @pytest.mark.parametrize(
-        "component_dict",
-        [
-            {"equations": [{"expression": "1 = 1"}]},
-            {"equations": [{"expression": "1 = 1"}], "where": "foo[bar]"},
-        ],
-    )
-    @pytest.mark.parametrize("both_fail", [True, False])
-    def test_add_math_fails(self, simple_supply, component_dict, both_fail):
-        math_dict = {"constraints": {"foo": component_dict}}
-        errors_to_check = [
-            "math string parsing (marker indicates where parsing stopped, which might not be the root cause of the issue; sorry...)",
-            " * constraints:foo:",
-            "equations[0].expression",
-            "where",
-        ]
-        if both_fail:
-            math_dict["constraints"]["bar"] = component_dict
-            errors_to_check.append("* constraints:bar:")
-        else:
-            math_dict["constraints"]["bar"] = {"equations": [{"expression": "1 == 1"}]}
-
-        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            simple_supply.validate_math_strings(math_dict)
-        assert check_error_or_warning(excinfo, errors_to_check)
-
-    @pytest.mark.parametrize("eq_string", ["1 = 1", "1 ==\n1[a]"])
-    def test_add_math_fails_marker_correct_position(self, simple_supply, eq_string):
-        math_dict = {"constraints": {"foo": {"equations": [{"expression": eq_string}]}}}
-
-        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            simple_supply.validate_math_strings(math_dict)
-        errorstrings = str(excinfo.value).split("\n")
-        # marker should be at the "=" sign, i.e., 2 characters from the end
-        assert len(errorstrings[-2]) - 2 == len(errorstrings[-1])
 
 
 class TestOperateMode:
@@ -248,6 +182,34 @@ class TestOperateMode:
             calliope.exceptions.ModelError, match="Unable to run this model in op"
         ):
             m.build(mode="operate")
+
+
+class TestBuild:
+    @pytest.fixture(scope="class")
+    def init_model(self):
+        return build_model({}, "simple_supply,two_hours,investment_costs")
+
+    def test_ignore_mode_math(self, init_model):
+        init_model.build(ignore_mode_math=True, force=True)
+        assert all(
+            var.obj_type == "parameters"
+            for var in init_model.backend._dataset.data_vars.values()
+        )
+
+    def test_add_math_dict_with_mode_math(self, init_model):
+        init_model.build(
+            add_math_dict={"constraints": {"system_balance": {"active": False}}},
+            force=True,
+        )
+        assert len(init_model.backend.constraints) > 0
+        assert "system_balance" not in init_model.backend.constraints
+
+    def test_add_math_dict_ignore_mode_math(self, init_model):
+        new_var = {
+            "variables": {"foo": {"active": True, "bounds": {"min": -1, "max": 1}}}
+        }
+        init_model.build(add_math_dict=new_var, ignore_mode_math=True, force=True)
+        assert set(init_model.backend.variables) == {"foo"}
 
 
 class TestSolve:

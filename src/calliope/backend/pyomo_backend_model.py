@@ -78,8 +78,6 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._instance.dual = pmo.suffix(direction=pmo.suffix.IMPORT)
         self.shadow_prices = PyomoShadowPrices(self._instance.dual, self)
 
-        self._add_all_inputs_as_parameters()
-
     def add_parameter(  # noqa: D102, override
         self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:

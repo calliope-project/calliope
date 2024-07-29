@@ -10,7 +10,7 @@ from calliope.exceptions import BackendError
 def test_valid_model_backend(simple_supply, valid_backend):
     """Requesting a valid model backend must result in a backend instance."""
     backend_obj = backend.get_model_backend(
-        valid_backend, simple_supply._model_data, simple_supply.math
+        valid_backend, simple_supply._model_data, simple_supply.applied_math
     )
     assert isinstance(backend_obj, BackendModel)
 
@@ -19,4 +19,6 @@ def test_valid_model_backend(simple_supply, valid_backend):
 def test_invalid_model_backend(spam, simple_supply):
     """Backend requests should catch invalid setups."""
     with pytest.raises(BackendError):
-        backend.get_model_backend(spam, simple_supply._model_data, simple_supply.math)
+        backend.get_model_backend(
+            spam, simple_supply._model_data, simple_supply.applied_math
+        )

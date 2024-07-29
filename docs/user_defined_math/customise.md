@@ -4,8 +4,8 @@ Once you understand the [math components](components.md) and the [formulation sy
 
 You can find examples of additional math that we have put together in our [math example gallery](examples/index.md).
 
-Whenever you introduce your own math, it will be applied on top of the [base math][base-math].
-Therefore, you can include base math overrides as well as add new math.
+Whenever you introduce your own math, it will be applied on top of the pre-defined math for your chosen run [mode](../creating/config.md#configbuildmode).
+Therefore, you can override the pre-defined math as well as add new math.
 For example, you may want to introduce a timeseries parameter to the pre-defined `storage_max` constraint to limit maximum storage capacity on a per-timestep basis:
 
 ```yaml
@@ -16,11 +16,16 @@ storage_max:
 
 The other elements of the `storage_max` constraints have not changed (`foreach`, `where`, ...), so we do not need to define them again when adding our own twist on the pre-defined math.
 
-When defining your model, you can reference any number of YAML files containing the math you want to add in `config.init`. The paths are relative to your main model configuration file:
+!!! note
+
+    If you prefer to start from scratch with your math, you can ask Calliope to _not_ load the pre-defined math for your chosen run mode by setting `#!yaml config.build.ignore_mode_math: true`.
+
+When defining your model, you can reference any number of YAML files containing the math you want to add in `config.build`.
+The paths are relative to your main model configuration file:
 
 ```yaml
 config:
-  init:
+  build:
     add_math: [my_new_math_1.yaml, my_new_math_2.yaml]
 ```
 
@@ -28,9 +33,21 @@ You can also define a mixture of your own math and the [pre-defined math](../pre
 
 ```yaml
 config:
-  init:
+  build:
     add_math: [my_new_math_1.yaml, storage_inter_cluster, my_new_math_2.md]
 ```
+
+Finally, when working in an interactive Python session, you can add math as a dictionary at build time:
+
+```python
+model.build(add_math_dict={...})
+```
+
+This will be applied after the pre-defined mode math and any math from file listed in `config.build.add_math`.
+
+!!! note
+
+    When working in an interactive Python session, you can view the final math dictionary that has been applied to build the optimisation problem by inspecting `model.applied_math` after a successful call to `model.build()`.
 
 ## Adding your parameters to the YAML schema
 
@@ -90,9 +107,13 @@ You can write your model's mathematical formulation to view it in a rich-text fo
 To write a LaTeX, reStructuredText, or Markdown file that includes only the math valid for your model:
 
 ```python
+from calliope.postprocess.math_documentation import MathDocumentation
+
 model = calliope.Model("path/to/model.yaml")
-model.math_documentation.build(include="valid")
-model.math_documentation.write(filename="path/to/output/file.[tex|rst|md]")
+model.build()
+
+math_documentation = MathDocumentation(model, include="valid")
+math_documentation.write(filename="path/to/output/file.[tex|rst|md]")
 ```
 
 You can then convert this to a PDF or HTML page using your renderer of choice.
@@ -100,5 +121,5 @@ We recommend you only use HTML as the equations can become too long for a PDF pa
 
 !!! note
 
-    You can add the tabs to flip between rich-text math and the input YAML snippet in your math documentation by using the `mkdocs_tabbed` argument in `model.math_documentation.write`.
+    You can add the tabs to flip between rich-text math and the input YAML snippet in your math documentation by using the `mkdocs_tabbed` argument in `math_documentation.write`.
     We use this functionality in our [pre-defined math](../pre_defined_math/index.md).

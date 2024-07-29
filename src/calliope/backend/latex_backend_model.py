@@ -274,8 +274,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         super().__init__(inputs, math, **kwargs)
         self.include = include
 
-        self._add_all_inputs_as_parameters()
-
     def add_parameter(  # noqa: D102, override
         self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
@@ -485,7 +483,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             ]
             if getattr(self, objtype).data_vars
         }
-        if not components["parameters"]:
+        if "parameters" in components and not components["parameters"]:
             del components["parameters"]
         return self._render(
             doc_template, mkdocs_tabbed=mkdocs_tabbed, components=components

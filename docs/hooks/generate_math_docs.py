@@ -145,6 +145,7 @@ def generate_base_math_documentation() -> MathDocumentation:
         MathDocumentation: model math documentation with latex backend.
     """
     model = calliope.Model(model_definition=MODEL_PATH)
+    model.build()
     return MathDocumentation(model)
 
 
@@ -163,10 +164,11 @@ def generate_custom_math_documentation(
         MathDocumentation: model math documentation with latex backend.
     """
     model = calliope.Model(model_definition=MODEL_PATH, scenario=override)
+    model.build()
 
     full_del = []
     expr_del = []
-    for component_group, component_group_dict in model.math.data.items():
+    for component_group, component_group_dict in model.applied_math.data.items():
         for name, component_dict in component_group_dict.items():
             if name in base_documentation.math.data[component_group]:
                 if not component_dict.get("active", True):
