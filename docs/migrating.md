@@ -714,17 +714,10 @@ Time masking and clustering capabilities have been severely reduced.
 Time resampling and clustering are now accessible by top-level configuration keys: e.g., `config.init.time_resample: 2H`, `config.init.time_cluster: cluster_file.csv`.
 Clustering is simplified to only matching model dates to representative days, with those representative days being in the clustered timeseries.
 
-If you want to masking/cluster data you should now leverage other tools.
+If you want to masking/cluster data you should now leverage other tools, some of which you can find referenced on our [time adjustment](advanced/time.md#time-clustering) page.
 We made this decision due to the complex nature of time clustering.
 With our former implementation, we were making decisions about the data that the user should have more awareness of and control over.
 It is also a constantly evolving field, but not the focus of Calliope, so we are liable to fall behind on the best-in-class methods.
-
-If you want cluster the timeseries data yourself, we recommend these tools:
-
-* [tsam](https://github.com/FZJ-IEK3-VSA/tsam): designed specifically for large-scale energy system models.
-* [scikit-learn](https://scikit-learn.org/stable/): a general machine learning library that has a clustering module.
-We were previously using this in our internal clustering.
-* [tslearn](https://tslearn.readthedocs.io/en/stable/index.html): a timeseries-focussed machine learning library.
 
 ## Additions
 
