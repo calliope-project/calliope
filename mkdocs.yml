@@ -1,5 +1,6 @@
 site_name: Calliope
-site_url: https://calliope.readthedocs.io/
+# FIXME: `en/latest` should be changed to `en/stable` once there is a stable mkdocs based release
+site_url: https://calliope.readthedocs.io/en/latest/
 copyright: Copyright &copy; since 2013 <a href="https://github.com/calliope-project/calliope/blob/main/AUTHORS">Calliope contributors</a> (Apache 2.0 licensed)
 repo_url: https://github.com/calliope-project/calliope
 hooks:
