@@ -26,11 +26,8 @@ fail:
   - where: carrier_export and not any(carrier_out, over=nodes)
     message: "Export carriers must be one of the technology outflow carriers."
 
-  - where: storage_initial>1
-    message: "storage_initial is a fraction; values larger than 1 are not allowed."
-
-  - where: storage_initial<0
-    message: "storage_initial is a fraction; values smaller than 0 are not allowed."
+  - where: storage_initial<0 OR storage_initial>1
+    message: "storage_initial is a fraction, requiring values within the interval [0, 1]."
 
   - where: flow_cap_min<0
     message: "flow_cap_min has to be non-negative."
