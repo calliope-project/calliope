@@ -740,7 +740,7 @@ This means you could define different output carriers for a `supply` technology,
 
 ### `templates` for nodes
 
-The new [`templates` key](#parent--base_tech--template) can be applied to `nodes` as well as `techs`.
+The new [`templates` key](creating/templates.md) can be applied to `nodes` as well as `techs`.
 This makes up for the [removal of grouping node names in keys by comma separation](#comma-separated-node-definitions).
 
 So, to achieve this result:
