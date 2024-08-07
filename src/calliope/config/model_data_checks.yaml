@@ -29,12 +29,6 @@ fail:
   - where: storage_initial<0 OR storage_initial>1
     message: "storage_initial is a fraction, requiring values within the interval [0, 1]."
 
-  - where: flow_cap_min<0
-    message: "flow_cap_min has to be non-negative."
-
-  - where: (flow_cap_min AND flow_cap_max) AND flow_cap_max<flow_cap_min
-    message: "flow_cap_min should be less than (or equal to) flow_cap_max."
-
   - where: integer_dispatch=True AND NOT cap_method=integer
     message: Cannot use the integer `integer_dispatch` unless the technology is using an integer unit capacities (`cap_method=integer`).
 
