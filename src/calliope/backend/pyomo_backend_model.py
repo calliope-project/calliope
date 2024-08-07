@@ -352,6 +352,9 @@ class PyomoBackendModel(backend_model.BackendModel):
     def to_lp(self, path: str | Path) -> None:  # noqa: D102, override
         self._instance.write(str(path), format="lp", symbolic_solver_labels=True)
 
+    def to_mps(self, path: str | Path) -> None:  # noqa: D102, override
+        self._instance.write(str(path), format="mps", symbolic_solver_labels=True)
+
     def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         """Attach an empty pyomo kernel list object to the pyomo model object.
 

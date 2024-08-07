@@ -917,6 +917,16 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             path (str | Path): Path to which the LP file will be written.
         """
 
+    @abstractmethod
+    def to_mps(self, path: str | Path) -> None:
+        """Write the optimisation problem to file in the Mathematical Programming System (MPS) format.
+
+        The MPS file can be used for debugging and to submit to solvers directly.
+
+        Args:
+            path (str | Path): Path to which the MPS file will be written.
+        """
+
     @property
     @abstractmethod
     def has_integer_or_binary_variables(self) -> bool:
