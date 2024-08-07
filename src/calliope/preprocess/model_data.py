@@ -37,8 +37,7 @@ class ModelDefinition(TypedDict):
 
     techs: AttrDict
     nodes: AttrDict
-    tech_groups: NotRequired[AttrDict]
-    node_groups: NotRequired[AttrDict]
+    templates: NotRequired[AttrDict]
     parameters: NotRequired[AttrDict]
 
 
@@ -149,7 +148,7 @@ class ModelDataFactory:
     def add_node_tech_data(self):
         """For each node, extract technology definitions and node-level parameters and convert them to arrays.
 
-        The node definition will first be updated according to any defined inheritance (via `inherit`),
+        The node definition will first be updated according to any defined inheritance (via `template`),
         before processing each defined tech (which will also be updated according to its inheritance tree).
 
         Node and tech definitions will be validated against the model definition schema here.
@@ -399,7 +398,7 @@ class ModelDataFactory:
                 if "base_tech" in tech_dict.keys():
                     raise exceptions.ModelError(
                         f"(nodes, {node}), (techs, {tech_name}) | Defining a technology `base_tech` at a node is not supported; "
-                        "limit yourself to defining this parameter within `techs` or `tech_groups`"
+                        "limit yourself to defining this parameter within `techs` or `templates`"
                     )
                 refs.update(tech_dict.keys())
 
@@ -510,7 +509,7 @@ class ModelDataFactory:
     ) -> AttrDict:
         """For a set of node/tech definitions, climb the inheritance tree to build a final definition dictionary.
 
-        For `techs` at `nodes`, the first step is to inherit the technology definition from `techs`, _then_ to climb `inherit` references.
+        For `techs` at `nodes`, the first step is to inherit the technology definition from `techs`, _then_ to climb `template` references.
 
         Base definitions will take precedence over inherited ones and more recent inherited definitions will take precedence over older ones.
 
@@ -571,7 +570,7 @@ class ModelDataFactory:
 
             if inheritance is not None:
                 updated_item_def[f"{dim_name}_inheritance"] = ",".join(inheritance)
-                del updated_item_def["inherit"]
+                del updated_item_def["template"]
 
             updated_defs[item_name] = updated_item_def
 
@@ -584,34 +583,32 @@ class ModelDataFactory:
         item_name: str,
         inheritance: list | None = None,
     ) -> tuple[AttrDict, list | None]:
-        """Follow the `inherit` references from `nodes` to `node_groups` / from `techs` to `tech_groups`.
+        """Follow the `template` references from `nodes` / `techs` to `templates`.
 
-        Abstract group definitions (those in `node_groups`/`tech_groups`) can inherit each other, but `nodes`/`techs` cannot.
+        Abstract template definitions (those in `templates`) can inherit each other, but `nodes`/`techs` cannot.
 
-        This function will be called recursively until a definition dictionary without `inherit` is reached.
+        This function will be called recursively until a definition dictionary without `template` is reached.
 
         Args:
             dim_item_dict (AttrDict):
-                Dictionary (possibly) containing `inherit`. If it doesn't contain `inherit`, the climbing stops here.
+                Dictionary (possibly) containing `template`. If it doesn't contain `template`, the climbing stops here.
             dim_name (Literal[nodes, techs]):
                 The name of the dimension we're working with, so that we can access the correct `_groups` definitions.
             item_name (str):
                 The current position in the inheritance tree.
             inheritance (list | None, optional):
                 A list of items that have been inherited (starting with the oldest).
-                If the first `dim_item_dict` does not contain `inherit`, this will remain as None.
+                If the first `dim_item_dict` does not contain `template`, this will remain as None.
                 Defaults to None.
 
         Raises:
-            KeyError: Must inherit from a named group item in `node_groups` (for `nodes`) and `tech_groups` (for `techs`)
+            KeyError: Must inherit from a named template item in `templates`.
 
         Returns:
             tuple[AttrDict, list | None]: Definition dictionary with inherited data and a list of the inheritance tree climbed to get there.
         """
-        to_inherit = dim_item_dict.get("inherit", None)
-        dim_groups = AttrDict(
-            self.model_definition.get(f"{dim_name.removesuffix('s')}_groups", {})
-        )
+        to_inherit = dim_item_dict.get("template", None)
+        dim_groups = AttrDict(self.model_definition.get("templates", {}))
         if to_inherit is None:
             if dim_name == "techs" and item_name in self.tech_data_from_sources:
                 _data_source_dict = deepcopy(self.tech_data_from_sources[item_name])
@@ -620,7 +617,7 @@ class ModelDataFactory:
             updated_dim_item_dict = dim_item_dict
         elif to_inherit not in dim_groups:
             raise KeyError(
-                f"({dim_name}, {item_name}) | Cannot find `{to_inherit}` in inheritance tree."
+                f"({dim_name}, {item_name}) | Cannot find `{to_inherit}` in template inheritance tree."
             )
         else:
             base_def_dict, inheritance = self._climb_inheritance_tree(

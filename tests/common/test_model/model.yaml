@@ -32,17 +32,13 @@ data_sources:
       parameters: sink_use_equals
       techs: test_demand_elec
 
-node_groups:
-  init_nodes:
-    techs.test_demand_elec:
-
 nodes:
-  a.inherit: init_nodes
-  b.inherit: init_nodes
+  a.template: init_nodes
+  b.template: init_nodes
 
 techs:
   test_supply_gas:
-    inherit: test_controller
+    template: test_controller
     name: Supply tech
     carrier_out: gas
     base_tech: supply
@@ -51,7 +47,7 @@ techs:
     flow_out_eff: 0.9
 
   test_supply_elec:
-    inherit: test_controller
+    template: test_controller
     name: Supply tech
     carrier_out: electricity
     base_tech: supply
@@ -60,7 +56,7 @@ techs:
     flow_out_eff: 0.9
 
   test_supply_coal:
-    inherit: test_controller
+    template: test_controller
     name: Supply tech
     carrier_out: coal
     base_tech: supply
@@ -69,7 +65,7 @@ techs:
     flow_out_eff: 0.9
 
   test_supply_plus:
-    inherit: test_controller
+    template: test_controller
     name: Supply tech with storage
     carrier_out: electricity
     base_tech: supply
@@ -82,7 +78,7 @@ techs:
     include_storage: true
 
   test_storage:
-    inherit: test_controller
+    template: test_controller
     name: Storage tech
     carrier_out: electricity
     carrier_in: electricity
@@ -94,7 +90,7 @@ techs:
     storage_loss: 0.01
 
   test_conversion:
-    inherit: test_controller
+    template: test_controller
     name: Conversion tech
     carrier_in: gas
     carrier_out: heat
@@ -106,7 +102,7 @@ techs:
     flow_out_eff: 0.9
 
   test_conversion_plus:
-    inherit: test_controller
+    template: test_controller
     name: Conversion tech with linked carriers out
     carrier_in: gas
     carrier_out: [electricity, heat]
@@ -118,7 +114,7 @@ techs:
     heat_to_power_ratio: 0.8
 
   test_chp:
-    inherit: test_controller
+    template: test_controller
     name: Conversion tech with unlinked carriers out
     carrier_in: gas
     carrier_out: [electricity, heat]
@@ -149,23 +145,23 @@ techs:
     sink_use_max: 10
 
   test_link_a_b_elec:
-    inherit: test_transmission_elec
+    template: test_transmission_elec
     distance: 1
 
   test_link_a_b_heat:
-    inherit: test_transmission_heat
+    template: test_transmission_heat
     distance: 2
 
-tech_groups:
+templates:
   test_controller: {}
 
   test_transmission:
     from: a
     to: b
-    inherit: test_controller
+    template: test_controller
 
   test_transmission_elec:
-    inherit: test_transmission
+    template: test_transmission
     name: Transmission elec tech
     carrier_in: electricity
     carrier_out: electricity
@@ -173,9 +169,12 @@ tech_groups:
     flow_cap_max: 10
 
   test_transmission_heat:
-    inherit: test_transmission
+    template: test_transmission
     name: Transmission heat tech
     carrier_in: heat
     carrier_out: heat
     base_tech: transmission
     flow_cap_max: 5
+
+  init_nodes:
+    techs.test_demand_elec:

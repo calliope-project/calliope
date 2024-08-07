@@ -40,7 +40,7 @@ overrides:
           dims: costs
       # --8<-- [end:boiler]
     # --8<-- [start:heat_pipes]
-    tech_groups:
+    templates:
       heat_pipes:
         force_async_flow: true
     # --8<-- [end:heat_pipes]

@@ -21,24 +21,24 @@ nodes:
       battery:
 
   region1_1:
-    inherit: csp_regions
+    template: csp_regions
     latitude: 41
     longitude: -2
 
   region1_2:
-    inherit: csp_regions
+    template: csp_regions
     latitude: 39
     longitude: -1
 
   region1_3:
-    inherit: csp_regions
+    template: csp_regions
     latitude: 39
     longitude: -2
 # --8<-- [end:other-locs]
 
-# --8<-- [start:node-groups]
-node_groups:
+# --8<-- [start:templates]
+templates:
   csp_regions:
     techs:
       csp:
-# --8<-- [end:node-groups]
+# --8<-- [end:templates]

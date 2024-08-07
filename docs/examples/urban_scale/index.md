@@ -37,7 +37,7 @@ You can find out more about this user-defined math [below](#interlude-user-defin
 ### Bringing the YAML files together
 
 Technically, you could define everything about your model in the same file as your configuration.
-One file with the top-level keys `config`, `parameters`, `techs`, `nodes`, `tech_groups`, `node_groups`, `scenarios`, `overrides`.
+One file with the top-level keys `config`, `parameters`, `techs`, `nodes`, `templates`, `scenarios`, `overrides`.
 However, this tends to become unwieldy.
 
 Instead, various parts of the model are defined in different files and then we `import` them in the YAML file that we are going to load into calliope (`calliope.Model("my_main_model_file.yaml")`).
@@ -127,14 +127,14 @@ The definition of this technology in the example model's configuration looks as 
 --8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:pv"
 ```
 
-### Interlude: inheriting from technology groups
+### Interlude: inheriting from templates
 
 You will notice that the above technologies _inherit_ `interest_rate_setter`.
 Inheritance allows us to avoid excessive repetition in our model definition.
 In this case, `interest_rate_setter` defines an interest rate that will be used to annualise any investment costs the technology defines.
 
-Technologies can inherit from anything defined in `tech_groups`, while nodes can inherit from anything in `node_groups`.
-items in `[tech/node]_groups` can also inherit from each other, so you can create inheritance chains.
+Technologies / nodes can inherit from anything defined in `templates`.
+items in `templates` can also inherit from each other, so you can create inheritance chains.
 
 `interest_rate_setter` looks like this:
 
@@ -241,10 +241,10 @@ Gas is made available in each node without consideration of transmission.
 --8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:transmission"
 ```
 
-To avoid excessive duplication in model definition, our transmission technologies inherit most of the their parameters from technology _groups_:
+To avoid excessive duplication in model definition, our transmission technologies inherit most of the their parameters from _templates_:
 
 ```yaml
---8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:transmission-tech-groups"
+--8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:transmission-templates"
 ```
 
 `power_lines` has an efficiency of 0.95, so a loss during transmission of 0.05.

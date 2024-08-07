@@ -5,19 +5,19 @@
 # --8<-- [start:--8<-- [end:Note: ']' and ']' is used in tutorial documentation only
 
 # --8<-- [start:interest-rate-setter]
-tech_groups:
+templates:
   interest_rate_setter:
     cost_interest_rate:
       data: 0.10
       index: monetary
       dims: costs
 # --8<-- [end:interest-rate-setter]
-# --8<-- [start:transmission-tech-groups]
+# --8<-- [start:transmission-templates]
   power_lines:
     name: "Electrical power distribution"
     color: "#6783E3"
     base_tech: transmission
-    inherit: interest_rate_setter
+    template: interest_rate_setter
     carrier_in: electricity
     carrier_out: electricity
     flow_cap_max: 2000
@@ -32,7 +32,7 @@ tech_groups:
     name: "District heat distribution"
     color: "#823739"
     base_tech: transmission
-    inherit: interest_rate_setter
+    template: interest_rate_setter
     carrier_in: heat
     carrier_out: heat
     flow_cap_max: 2000
@@ -42,7 +42,7 @@ tech_groups:
       data: 0.3
       index: monetary
       dims: costs
-# --8<-- [end:transmission-tech-groups]
+# --8<-- [end:transmission-templates]
 techs:
   ##-GRID SUPPLY-##
   # --8<-- [start:supply]
@@ -50,7 +50,7 @@ techs:
     name: "National grid import"
     color: "#C5ABE3"
     base_tech: supply
-    inherit: interest_rate_setter
+    template: interest_rate_setter
     carrier_out: electricity
     source_use_max: .inf
     flow_cap_max: 2000
@@ -68,7 +68,7 @@ techs:
     name: "Natural gas import"
     color: "#C98AAD"
     base_tech: supply
-    inherit: interest_rate_setter
+    template: interest_rate_setter
     carrier_out: gas
     source_use_max: .inf
     flow_cap_max: 2000
@@ -90,7 +90,7 @@ techs:
     color: "#F9D956"
     base_tech: supply
     carrier_out: electricity
-    inherit: interest_rate_setter
+    template: interest_rate_setter
     carrier_export: electricity
     source_unit: per_area
     area_use_per_flow_cap: 7 # 7m2 of panels needed to fit 1kWp of panels
@@ -111,7 +111,7 @@ techs:
     name: "Natural gas boiler"
     color: "#8E2999"
     base_tech: conversion
-    inherit: interest_rate_setter
+    template: interest_rate_setter
     carrier_in: gas
     carrier_out: heat
     flow_cap_max:
@@ -132,7 +132,7 @@ techs:
     name: "Combined heat and power"
     color: "#E4AB97"
     base_tech: conversion
-    inherit: interest_rate_setter
+    template: interest_rate_setter
     carrier_in: gas
     carrier_out: [electricity, heat]
     carrier_export: electricity
@@ -177,27 +177,27 @@ techs:
   X1_to_X2:
     from: X1
     to: X2
-    inherit: power_lines
+    template: power_lines
     distance: 10
   X1_to_X3:
     from: X1
     to: X3
-    inherit: power_lines
+    template: power_lines
     distance: 5
   X1_to_N1:
     from: X1
     to: N1
-    inherit: heat_pipes
+    template: heat_pipes
     distance: 3
   N1_to_X2:
     from: N1
     to: X2
-    inherit: heat_pipes
+    template: heat_pipes
     distance: 3
   N1_to_X3:
     from: N1
     to: X3
-    inherit: heat_pipes
+    template: heat_pipes
     distance: 4
 
 # --8<-- [end:transmission]
