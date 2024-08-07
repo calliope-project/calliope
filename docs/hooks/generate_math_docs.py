@@ -122,7 +122,7 @@ def write_file(
 
     nav_reference["Pre-defined math"].append(output_file.as_posix())
 
-    math_doc = model.math_documentation.write(format="md", mkdocs_tabbed=True)
+    math_doc = model.math_documentation.write(format="md", mkdocs_features=True)
     file_to_download = Path("..") / filename
     output_full_filepath.write_text(
         PREPEND_SNIPPET.format(
