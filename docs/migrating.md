@@ -181,10 +181,10 @@ This split means you can change configuration options on-the-fly if you are work
 `locations` (abbreviated to `locs` in the Calliope data dimensions) has been renamed to `nodes` (no abbreviation).
 This allows us to not require an abbreviation and is a disambiguation from the [pandas.DataFrame.loc][] and [xarray.DataArray.loc][] methods.
 
-### `parent` → `base_tech` + `inherit`
+### `parent` → `base_tech` + `template`
 
 Technology inheritance has been unlinked from its abstract "base" technology.
-`inherit` allows for inheriting attributes from `tech_groups` while `base_tech` is fixed to be one of [`demand`, `supply`, `conversion`, `transmission`, `storage`].
+`template` allows for inheriting attributes from `templates` while `base_tech` is fixed to be one of [`demand`, `supply`, `conversion`, `transmission`, `storage`].
 
 === "v0.6"
 
@@ -214,7 +214,7 @@ Technology inheritance has been unlinked from its abstract "base" technology.
 === "v0.7"
 
     ```yaml
-    tech_groups:
+    templates:
       common_interest_rate:
         cost_interest_rate:
           data: 0.1
@@ -223,10 +223,10 @@ Technology inheritance has been unlinked from its abstract "base" technology.
     techs:
       supply_tech:
         base_tech: supply
-        inherit: common_interest_rate
+        template: common_interest_rate
       conversion_tech:
         base_tech: conversion
-        inherit: common_interest_rate
+        template: common_interest_rate
     ```
 
 ### `costs.monetary.flow_cap` → `cost_flow_cap`
@@ -309,7 +309,7 @@ Instead, links are defined as separate transmission technologies in `techs`, inc
     ```
 
 !!! note
-    You can use [`tech_groups`](creating/groups.md) to minimise duplications in the new transmission technology definition.
+    You can use [`templates`](creating/templates.md) to minimise duplications in the new transmission technology definition.
 
 ### Renaming parameters/decision variables without core changes in function
 
@@ -587,7 +587,7 @@ Instead, you should define your coordinates using [`latitude`/`longitude`](#defi
 Defining duplicate definitions for nodes by chaining their names in the YAML key (`node1,node2,node3: ...`) is no longer possible.
 We are trying to minimise the custom elements of our YAML files which allows us to leverage YAML schemas to validate user inputs and to keep our YAML readers more maintainable.
 
-You can now use [`node_groups`](#node_groups) to minimise duplicating key-value pairs in your YAML definitions.
+You can now use [`templates`](#templates-for-nodes) to minimise duplicating key-value pairs in your YAML definitions.
 
 ### `supply_plus` and `conversion_plus` technology base classes
 
@@ -738,9 +738,9 @@ This means you could define different output carriers for a `supply` technology,
 !!! warning
     Although our math should be set up to handle multiple carriers and different inflow/outflow carriers for non-conversion technologies, we do not have any direct tests to check possible edge cases.
 
-### `node_groups`
+### `templates` for nodes
 
-`node_groups` is the equivalent of `tech_groups` for inheritance of attributes in `nodes`.
+The new [`templates` key](#parent--base_tech--template) can be applied to `nodes` as well as `techs`.
 This makes up for the [removal of grouping node names in keys by comma separation](#comma-separated-node-definitions).
 
 So, to achieve this result:
@@ -780,16 +780,16 @@ We would do:
 === "v0.7"
 
     ```yaml
-    node_groups:
+    templates:
       standard_tech_list:
         techs:
           battery:
           demand_electricity:
           ccgt:
     nodes:
-      region1.inherit: standard_tech_list
-      region2.inherit: standard_tech_list
-      region3.inherit: standard_tech_list
+      region1.template: standard_tech_list
+      region2.template: standard_tech_list
+      region3.template: standard_tech_list
     ```
 
 ### Inflow and outflow efficiencies

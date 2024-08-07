@@ -13,9 +13,10 @@ This establishes the basic characteristics in the optimisation model (decision v
 * `conversion`: Converts from one carrier to another.
 
 ??? info "Sharing configuration through inheritance"
-    To share definitions between technologies and/or nodes, you can use configuration inheritance (the `inherit` key).
-    This allows a technology/node to inherit definitions from [`tech_group`/`node_group` definitions](groups.md).
-    Note that `inherit` is different to setting a `base_tech`.
+
+    To share definitions between technologies and/or nodes, you can use configuration inheritance (the `template` key).
+    This allows a technology/node to inherit definitions from [`template` definitions](templates.md).
+    Note that `template` is different to setting a `base_tech`.
     Setting a base_tech does not entail any configuration options being inherited.
     It is only used when building the optimisation problem (i.e., in the `math`).
 

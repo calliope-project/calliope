@@ -235,7 +235,7 @@ In this section we will show some examples of loading data and provide the equiv
 === "YAML"
 
     ```yaml
-    tech_groups:  # (1)!
+    templates:  # (1)!
       cost_setter:
         cost_interest_rate:
           data: 0.1
@@ -260,7 +260,7 @@ In this section we will show some examples of loading data and provide the equiv
 
     techs:
       tech1:
-        inherit: cost_setter
+        template: cost_setter
         cost_flow_cap.data: 100
         cost_area_use.data: 50
         cost_flow_out.data: 0.2
@@ -269,7 +269,7 @@ In this section we will show some examples of loading data and provide the equiv
         cost_storage_cap.data: 150
     ```
 
-    1. To limit repetition, we have defined [technology groups](groups.md) for our costs.
+    1. To limit repetition, we have defined [templates](templates.md) for our costs.
 
 !!! info "See also"
     Our [data source loading tutorial][loading-tabular-data] has more examples of loading tabular data into your model.
