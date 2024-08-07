@@ -350,9 +350,13 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._has_verbose_strings = True
 
     def to_lp(self, path: str | Path) -> None:  # noqa: D102, override
+        if Path(path).suffix != ".lp":
+            raise ValueError("File extension must be `.lp`")
         self._instance.write(str(path), format="lp", symbolic_solver_labels=True)
 
     def to_mps(self, path: str | Path) -> None:  # noqa: D102, override
+        if Path(path).suffix != ".mps":
+            raise ValueError("File extension must be `.mps`")
         self._instance.write(str(path), format="mps", symbolic_solver_labels=True)
 
     def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
