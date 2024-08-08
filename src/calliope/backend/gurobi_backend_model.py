@@ -310,15 +310,15 @@ class GurobiBackendModel(backend_model.BackendModel):
     def to_lp(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
         self._instance.update()
 
-        if Path(path).suffix != ".lp":
-            raise ValueError("File extension must be `.lp`")
+        if "".join(Path(path).suffixes) not in [".lp", ".lp.gz", ".lp.bz2", ".lp.7z"]:
+            raise ValueError("File extension must be `.lp`, or `.lp.*` with any of the accepted compression formats.")
         self._instance.write(str(path), **kwargs)
 
     def to_mps(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
         self._instance.update()
 
-        if Path(path).suffix != ".mps":
-            raise ValueError("File extension must be `.mps`")
+        if "".join(Path(path).suffixes) not in [".mps", ".mps.gz", ".mps.bz2", ".mps.7z"]:
+            raise ValueError("File extension must be `.mps`, or `.mps.*` with any of the accepted compression formats.")
         self._instance.write(str(path), **kwargs)
 
     def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
