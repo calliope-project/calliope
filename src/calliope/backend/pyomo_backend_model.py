@@ -352,11 +352,13 @@ class PyomoBackendModel(backend_model.BackendModel):
     def to_lp(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
         if Path(path).suffix != ".lp":
             raise ValueError("File extension must be `.lp`")
+        kwargs.setdefault("symbolic_solver_labels", True)
         self._instance.write(str(path), format="lp", **kwargs)
 
     def to_mps(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
         if Path(path).suffix != ".mps":
             raise ValueError("File extension must be `.mps`")
+        kwargs.setdefault("symbolic_solver_labels", True)
         self._instance.write(str(path), format="mps", **kwargs)
 
     def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
