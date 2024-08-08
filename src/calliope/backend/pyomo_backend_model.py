@@ -312,8 +312,12 @@ class PyomoBackendModel(backend_model.BackendModel):
         termination = results.solver[0].termination_condition
 
         if pe.TerminationCondition.to_solver_status(termination) == pe.SolverStatus.ok:
-            self._instance.load_solution(results.solution[0])
-            results = self.load_results()
+            if len(results.solution) == 0:
+                model_warn("Solver status OK, but solver did not return a solution.", _class=BackendWarning)
+                results = xr.Dataset()
+            else:
+                self._instance.load_solution(results.solution[0])
+                results = self.load_results()
         else:
             self._solve_logger.critical("Problem status:")
             for line in str(results.problem[0]).split("\n"):
