@@ -57,8 +57,9 @@ class GurobiBackendModel(backend_model.BackendModel):
 
         self._add_all_inputs_as_parameters()
 
-        if self.inputs.attrs["config"].build.get("GRBIgnoreNames", False):
-            self._instance.Params.IgnoreNames = 1
+        for k in self.inputs.attrs["config"].build.keys():
+            if k.startswith("GRB"):
+                self._instance.setParam(k[3:], self.inputs.attrs["config"].build[k])
 
 
     def add_parameter(  # noqa: D102, override
