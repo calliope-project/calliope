@@ -57,6 +57,10 @@ class GurobiBackendModel(backend_model.BackendModel):
 
         self._add_all_inputs_as_parameters()
 
+        if self.inputs.attrs["config"].build.get("GRBIgnoreNames", False):
+            self._instance.Params.IgnoreNames = 1
+
+
     def add_parameter(  # noqa: D102, override
         self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
@@ -276,7 +280,7 @@ class GurobiBackendModel(backend_model.BackendModel):
     def verbose_strings(self) -> None:  # noqa: D102, override
         def __renamer(val, *idx, name: str, attr: str):
             if pd.notnull(val):
-                new_obj_name = f"{name}[{', '.join(idx)}]"
+                new_obj_name = f"{name}[{','.join(idx)}]"
                 setattr(val, attr, new_obj_name)
 
         self._instance.update()
