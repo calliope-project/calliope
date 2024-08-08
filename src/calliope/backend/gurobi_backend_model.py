@@ -57,6 +57,11 @@ class GurobiBackendModel(backend_model.BackendModel):
 
         self._add_all_inputs_as_parameters()
 
+        for k in self.inputs.attrs["config"].build.keys():
+            if k.startswith("GRB"):
+                self._instance.setParam(k[3:], self.inputs.attrs["config"].build[k])
+
+
     def add_parameter(  # noqa: D102, override
         self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
@@ -276,7 +281,8 @@ class GurobiBackendModel(backend_model.BackendModel):
     def verbose_strings(self) -> None:  # noqa: D102, override
         def __renamer(val, *idx, name: str, attr: str):
             if pd.notnull(val):
-                new_obj_name = f"{name}[{', '.join(idx)}]"
+                # see: https://stackoverflow.com/a/27086669
+                new_obj_name = f"{name}[{'_'.join(idx)}]".replace(" ", r"_").replace(":", r"_").replace("-", r"_")
                 setattr(val, attr, new_obj_name)
 
         self._instance.update()
@@ -301,12 +307,19 @@ class GurobiBackendModel(backend_model.BackendModel):
                 da.attrs["coords_in_name"] = True
         self._instance.update()
 
-    def to_lp(self, path: str | Path) -> None:  # noqa: D102, override
+    def to_lp(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
         self._instance.update()
 
-        if Path(path).suffix != ".lp":
-            raise ValueError("File extension must be `.lp`")
-        self._instance.write(str(path))
+        if "".join(Path(path).suffixes) not in [".lp", ".lp.gz", ".lp.bz2", ".lp.7z"]:
+            raise ValueError("File extension must be `.lp`, or `.lp.*` with any of the accepted compression formats.")
+        self._instance.write(str(path), **kwargs)
+
+    def to_mps(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
+        self._instance.update()
+
+        if "".join(Path(path).suffixes) not in [".mps", ".mps.gz", ".mps.bz2", ".mps.7z"]:
+            raise ValueError("File extension must be `.mps`, or `.mps.*` with any of the accepted compression formats.")
+        self._instance.write(str(path), **kwargs)
 
     def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         pass
