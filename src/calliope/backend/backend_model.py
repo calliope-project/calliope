@@ -908,23 +908,25 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
 
     @abstractmethod
-    def to_lp(self, path: str | Path) -> None:
+    def to_lp(self, path: str | Path, **kwargs) -> None:
         """Write the optimisation problem to file in the linear programming LP format.
 
         The LP file can be used for debugging and to submit to solvers directly.
 
         Args:
             path (str | Path): Path to which the LP file will be written.
+            **kwargs: Keyword arguments that are passed to the backend's file writer.
         """
 
     @abstractmethod
-    def to_mps(self, path: str | Path) -> None:
+    def to_mps(self, path: str | Path, **kwargs) -> None:
         """Write the optimisation problem to file in the Mathematical Programming System (MPS) format.
 
         The MPS file can be used for debugging and to submit to solvers directly.
 
         Args:
             path (str | Path): Path to which the MPS file will be written.
+            **kwargs: Keyword arguments that are passed to the backend's file writer.
         """
 
     @property

@@ -301,19 +301,19 @@ class GurobiBackendModel(backend_model.BackendModel):
                 da.attrs["coords_in_name"] = True
         self._instance.update()
 
-    def to_lp(self, path: str | Path) -> None:  # noqa: D102, override
+    def to_lp(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
         self._instance.update()
 
         if Path(path).suffix != ".lp":
             raise ValueError("File extension must be `.lp`")
-        self._instance.write(str(path))
+        self._instance.write(str(path), **kwargs)
 
-    def to_mps(self, path: str | Path) -> None:  # noqa: D102, override
+    def to_mps(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
         self._instance.update()
 
         if Path(path).suffix != ".mps":
             raise ValueError("File extension must be `.mps`")
-        self._instance.write(str(path))
+        self._instance.write(str(path), **kwargs)
 
     def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         pass
