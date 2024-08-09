@@ -1,3 +1,6 @@
+import:
+  - plan.yaml
+
 constraints:
   cost_sum_max:
     equations:

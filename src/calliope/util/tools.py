@@ -19,13 +19,13 @@ def relative_path(base_path_file, path) -> Path:
     """
     # Check if base_path_file is a string because it might be an AttrDict
     path = Path(path)
-    if base_path_file is not None:
+    if path.is_absolute() or base_path_file is None:
+        return path
+    else:
         base_path_file = Path(base_path_file)
         if base_path_file.is_file():
             base_path_file = base_path_file.parent
-        if not path.is_absolute():
-            path = base_path_file.absolute() / path
-    return path
+        return base_path_file.absolute() / path
 
 
 def listify(var: Any) -> list:
@@ -40,7 +40,9 @@ def listify(var: Any) -> list:
     Returns:
         list: List containing `var` or elements of `var` (if input was a non-string iterable).
     """
-    if not isinstance(var, str) and hasattr(var, "__iter__"):
+    if var is None:
+        var = []
+    elif not isinstance(var, str) and hasattr(var, "__iter__"):
         var = list(var)
     else:
         var = [var]

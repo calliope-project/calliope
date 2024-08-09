@@ -113,6 +113,7 @@ class AttrDict(dict):
         loaded: Self,
         resolve_imports: bool | str,
         base_path: str | Path | None = None,
+        allow_override: bool = False,
     ) -> Self:
         if (
             isinstance(resolve_imports, bool)
@@ -137,7 +138,7 @@ class AttrDict(dict):
             path = relative_path(base_path, k)
             imported = cls.from_yaml(path)
             # loaded is added to imported (i.e. it takes precedence)
-            imported.union(loaded_dict)
+            imported.union(loaded_dict, allow_override=allow_override)
             loaded_dict = imported
         # 'import' key itself is no longer needed
         loaded_dict.del_key("import")
@@ -151,7 +152,10 @@ class AttrDict(dict):
 
     @classmethod
     def from_yaml(
-        cls, filename: str | Path, resolve_imports: bool | str = True
+        cls,
+        filename: str | Path,
+        resolve_imports: bool | str = True,
+        allow_override: bool = False,
     ) -> Self:
         """Returns an AttrDict initialized from the given path or file path.
 
@@ -168,39 +172,54 @@ class AttrDict(dict):
             filename (str | Path): YAML file.
             resolve_imports (bool | str, optional): top-level `import:` solving option.
                 Defaults to True.
+            allow_override (bool, optional): whether or not to allow overrides of already defined keys.
+                Defaults to False.
 
         Returns:
             Self: constructed AttrDict
         """
         filename = Path(filename)
         loaded = cls(_yaml_load(filename.read_text(encoding="utf-8")))
-        loaded = cls._resolve_imports(loaded, resolve_imports, filename)
+        loaded = cls._resolve_imports(
+            loaded, resolve_imports, filename, allow_override=allow_override
+        )
         return loaded
 
     @classmethod
-    def from_yaml_string(cls, string: str, resolve_imports: bool | str = True) -> Self:
+    def from_yaml_string(
+        cls,
+        string: str,
+        resolve_imports: bool | str = True,
+        allow_override: bool = False,
+    ) -> Self:
         """Returns an AttrDict initialized from the given string.
 
         Input string must be valid YAML.
 
+        If `resolve_imports` is True, top-level `import:` statements
+        are resolved recursively.
+        If `resolve_imports` is False, top-level `import:` statements
+        are treated like any other key and not further processed.
+        If `resolve_imports` is a string, such as `foobar`, import
+        statements underneath that key are resolved, i.e. `foobar.import:`.
+        When resolving import statements, anything defined locally
+        overrides definitions in the imported file.
+
         Args:
             string (str): Valid YAML string.
-            resolve_imports (bool | str, optional):
-                If ``resolve_imports`` is True, top-level ``import:`` statements
-                are resolved recursively.
-                If ``resolve_imports is False, top-level ``import:`` statements
-                are treated like any other key and not further processed.
-                If ``resolve_imports`` is a string, such as ``foobar``, import
-                statements underneath that key are resolved, i.e. ``foobar.import:``.
-                When resolving import statements, anything defined locally
-                overrides definitions in the imported file.
+            resolve_imports (bool | str, optional): top-level `import:` solving option.
+                Defaults to True.
+            allow_override (bool, optional): whether or not to allow overrides of already defined keys.
+                Defaults to False.
 
         Returns:
             calliope.AttrDict:
 
         """
         loaded = cls(_yaml_load(string))
-        loaded = cls._resolve_imports(loaded, resolve_imports)
+        loaded = cls._resolve_imports(
+            loaded, resolve_imports, allow_override=allow_override
+        )
         return loaded
 
     def set_key(self, key, value):

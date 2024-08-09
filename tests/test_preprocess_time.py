@@ -110,7 +110,7 @@ class TestClustering:
     @pytest.mark.parametrize(
         "var",
         [
-            "lookup_cluster_first_timestep",
+            "cluster_first_timestep",
             "lookup_cluster_last_timestep",
             "lookup_datestep_cluster",
             "lookup_datestep_last_cluster_timestep",

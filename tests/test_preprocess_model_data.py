@@ -7,7 +7,7 @@ import pytest
 import xarray as xr
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.preprocess import data_sources, load
+from calliope.preprocess import data_sources, scenarios
 from calliope.preprocess.model_data import ModelDataFactory
 
 from .common.util import build_test_model as build_model
@@ -16,11 +16,12 @@ from .common.util import check_error_or_warning
 
 @pytest.fixture()
 def model_def():
-    filepath = Path(__file__).parent / "common" / "test_model" / "model.yaml"
-    model_def_dict, model_def_path, _ = load.load_model_definition(
-        filepath.as_posix(), scenario="simple_supply,empty_tech_node"
+    model_def_path = Path(__file__).parent / "common" / "test_model" / "model.yaml"
+    model_dict = AttrDict.from_yaml(model_def_path)
+    model_def_override, _ = scenarios.load_scenario_overrides(
+        model_dict, scenario="simple_supply,empty_tech_node"
     )
-    return model_def_dict, model_def_path
+    return model_def_override, model_def_path
 
 
 @pytest.fixture()

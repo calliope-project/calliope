@@ -2,8 +2,9 @@ overrides:
   storage_inter_cluster:
     config.init:
       name: inter-cluster storage
-      add_math: ["storage_inter_cluster"]
       time_cluster: cluster_days.csv
+    config.build:
+      add_math: ["storage_inter_cluster"]
 
 config.init.name: base
 

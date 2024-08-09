@@ -37,32 +37,9 @@ m = calliope.examples.urban_scale()
 print(m.info())
 
 # %% [markdown]
-# ## Model definition dictionary
-#
-# `m._model_def_dict` is a python dictionary that holds all the data from the model definition YAML files, restructured into one dictionary.
-#
-# The underscore before the method indicates that it defaults to being hidden (i.e. you wouldn't see it by trying a tab auto-complete and it isn't documented)
-
-# %%
-m._model_def_dict.keys()
-
-# %% [markdown]
-# `techs` hold only the information about a technology that is specific to that node
-
-# %%
-m._model_def_dict["techs"]["pv"]
-
-# %% [markdown]
-# `nodes` hold only the information about a technology that is specific to that node
-
-# %%
-m._model_def_dict["nodes"]["X2"]["techs"]["pv"]
-
-# %% [markdown]
 # ## Model data
 #
-# `m._model_data` is an xarray Dataset.
-# Like `_model_def_dict` it is a hidden prperty of the Model as you are expected to access the data via the public property `inputs`
+# `m._model_data` is an xarray Dataset, a hidden property of the Model as you are expected to access the data via the public property `inputs`
 
 # %%
 m.inputs
