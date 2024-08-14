@@ -24,8 +24,8 @@ from pyomo.core.kernel.piecewise_library.transforms import (
     piecewise_sos2,
 )
 from pyomo.opt import SolverFactory  # type: ignore
-from pyomo.util.model_size import build_model_size_report  # type: ignore
 from pyomo.opt.base import ProblemFormat  # type: ignore
+from pyomo.util.model_size import build_model_size_report  # type: ignore
 
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import BackendError, BackendWarning
@@ -285,7 +285,11 @@ class PyomoBackendModel(backend_model.BackendModel):
             self.shadow_prices.deactivate()
         opt = SolverFactory(solver, solver_io=solver_io)
 
-        solve_kwargs = {"symbolic_solver_labels": False, "keepfiles": False, "tee": True}
+        solve_kwargs = {
+            "symbolic_solver_labels": False,
+            "keepfiles": False,
+            "tee": True,
+        }
         valid_solve_kwargs = ["symbolic_solver_labels", "keepfiles"]
 
         if solver_options:
@@ -297,7 +301,9 @@ class PyomoBackendModel(backend_model.BackendModel):
                     elif k in valid_solve_kwargs:
                         solve_kwargs[k] = v
                     else:
-                        model_warn(f"Solver option {k} is not a valid Pyomo option and will be ignored.")
+                        model_warn(
+                            f"Solver option {k} is not a valid Pyomo option and will be ignored."
+                        )
                 else:
                     opt.options[k] = v
 
@@ -325,7 +331,10 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         if pe.TerminationCondition.to_solver_status(termination) == pe.SolverStatus.ok:
             if len(results.solution) == 0:
-                model_warn("Solver status OK, but solver did not return a solution.", _class=BackendWarning)
+                model_warn(
+                    "Solver status OK, but solver did not return a solution.",
+                    _class=BackendWarning,
+                )
                 results = xr.Dataset()
             else:
                 self._instance.load_solution(results.solution[0])

@@ -61,7 +61,6 @@ class GurobiBackendModel(backend_model.BackendModel):
             if k.startswith("GRB"):
                 self._instance.setParam(k[3:], self.inputs.attrs["config"].build[k])
 
-
     def add_parameter(  # noqa: D102, override
         self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
@@ -282,7 +281,11 @@ class GurobiBackendModel(backend_model.BackendModel):
         def __renamer(val, *idx, name: str, attr: str):
             if pd.notnull(val):
                 # see: https://stackoverflow.com/a/27086669
-                new_obj_name = f"{name}[{'_'.join(idx)}]".replace(" ", r"_").replace(":", r"_").replace("-", r"_")
+                new_obj_name = (
+                    f"{name}[{'_'.join(idx)}]".replace(" ", r"_")
+                    .replace(":", r"_")
+                    .replace("-", r"_")
+                )
                 setattr(val, attr, new_obj_name)
 
         self._instance.update()
@@ -310,15 +313,21 @@ class GurobiBackendModel(backend_model.BackendModel):
     def to_lp(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
         self._instance.update()
 
-        if "".join(Path(path).suffixes) not in [".lp", ".lp.gz", ".lp.bz2", ".lp.7z"]:
-            raise ValueError("File extension must be `.lp`, or `.lp.*` with any of the accepted compression formats.")
+        valid_suffixes = [".lp", ".lp.gz", ".lp.bz2", ".lp.7z"]
+        if "".join(Path(path).suffixes) not in valid_suffixes:
+            raise ValueError(
+                "File extension must be `.lp`, or `.lp.*` with any of the accepted compression formats."
+            )
         self._instance.write(str(path), **kwargs)
 
     def to_mps(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
         self._instance.update()
 
-        if "".join(Path(path).suffixes) not in [".mps", ".mps.gz", ".mps.bz2", ".mps.7z"]:
-            raise ValueError("File extension must be `.mps`, or `.mps.*` with any of the accepted compression formats.")
+        valid_suffixes = [".mps", ".mps.gz", ".mps.bz2", ".mps.7z"]
+        if "".join(Path(path).suffixes) not in valid_suffixes:
+            raise ValueError(
+                "File extension must be `.mps`, or `.mps.*` with any of the accepted compression formats."
+            )
         self._instance.write(str(path), **kwargs)
 
     def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
