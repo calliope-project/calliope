@@ -916,6 +916,10 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         Args:
             path (str | Path): Path to which the LP file will be written.
             **kwargs: Keyword arguments that are passed to the backend's file writer.
+
+        Possible keyword arguments:
+            symbolic_solver_labels (bool, optional): If True, will use symbolic names for variables and constraints.
+                Defaults to False. _May not be supported by all backends._
         """
 
     @abstractmethod
@@ -927,6 +931,10 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         Args:
             path (str | Path): Path to which the MPS file will be written.
             **kwargs: Keyword arguments that are passed to the backend's file writer.
+
+        Possible keyword arguments:
+            symbolic_solver_labels (bool, optional): If True, will use symbolic names for variables and constraints.
+                Defaults to False. _May not be supported by all backends._
         """
 
     @property

@@ -375,15 +375,46 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._has_verbose_strings = True
 
     def to_lp(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
+        kwargs_defaults = {"symbolic_solver_labels": True}
+        supported_kwargs = ["symbolic_solver_labels"]
+        invalid_kwargs = [key for key in kwargs if key not in supported_kwargs]
+
         if Path(path).suffix != ".lp":
             raise ValueError("File extension must be `.lp`")
-        kwargs.setdefault("symbolic_solver_labels", True)
+
+        if len(invalid_kwargs) > 0:
+            model_warn(
+                f"Backend 'pyomo' does not support the following kwargs: {invalid_kwargs}. They will be ignored."
+            )
+            for key in invalid_kwargs:
+                del kwargs[key]
+
+        for key, value in kwargs_defaults.items():
+            kwargs.setdefault(key, value)
+
+        if any(key not in supported_kwargs for key in kwargs.keys()):
+            model_warn("Backend 'pyomo' does not support")
+
         self._instance.write(str(path), format="lp", **kwargs)
 
     def to_mps(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
+        kwargs_defaults = {"symbolic_solver_labels": True}
+        supported_kwargs = ["symbolic_solver_labels"]
+        invalid_kwargs = [key for key in kwargs if key not in supported_kwargs]
+
         if Path(path).suffix != ".mps":
             raise ValueError("File extension must be `.mps`")
-        kwargs.setdefault("symbolic_solver_labels", True)
+
+        if len(invalid_kwargs) > 0:
+            model_warn(
+                f"Backend 'pyomo' does not support the following kwargs: {invalid_kwargs}. They will be ignored."
+            )
+            for key in invalid_kwargs:
+                del kwargs[key]
+
+        for key, value in kwargs_defaults.items():
+            kwargs.setdefault(key, value)
+
         self._instance.write(str(path), format="mps", **kwargs)
 
     def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:

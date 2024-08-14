@@ -311,23 +311,53 @@ class GurobiBackendModel(backend_model.BackendModel):
         self._instance.update()
 
     def to_lp(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
+        kwargs_defaults = {}
+        supported_kwargs = []
+        invalid_kwargs = [key for key in kwargs if key not in supported_kwargs]
+        valid_suffixes = [".lp", ".lp.gz", ".lp.bz2", ".lp.7z"]
+
         self._instance.update()
 
-        valid_suffixes = [".lp", ".lp.gz", ".lp.bz2", ".lp.7z"]
         if "".join(Path(path).suffixes) not in valid_suffixes:
             raise ValueError(
                 "File extension must be `.lp`, or `.lp.*` with any of the accepted compression formats."
             )
+
+        if len(invalid_kwargs) > 0:
+            model_warn(
+                f"Backend 'gurobi' does not support the following kwargs: {invalid_kwargs}. They will be ignored."
+            )
+            for key in invalid_kwargs:
+                del kwargs[key]
+
+        for key, value in kwargs_defaults.items():
+            kwargs.setdefault(key, value)
+
         self._instance.write(str(path), **kwargs)
 
     def to_mps(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
+        kwargs_defaults = {}
+        supported_kwargs = []
+        invalid_kwargs = [key for key in kwargs if key not in supported_kwargs]
+        valid_suffixes = [".mps", ".mps.gz", ".mps.bz2", ".mps.7z"]
+
         self._instance.update()
 
-        valid_suffixes = [".mps", ".mps.gz", ".mps.bz2", ".mps.7z"]
         if "".join(Path(path).suffixes) not in valid_suffixes:
             raise ValueError(
                 "File extension must be `.mps`, or `.mps.*` with any of the accepted compression formats."
             )
+
+        if len(invalid_kwargs) > 0:
+            model_warn(
+                f"Backend 'gurobi' does not support the following kwargs: {invalid_kwargs}. They will be ignored."
+            )
+            for key in invalid_kwargs:
+                del kwargs[key]
+
+        for key, value in kwargs_defaults.items():
+            kwargs.setdefault(key, value)
+
         self._instance.write(str(path), **kwargs)
 
     def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
