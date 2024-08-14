@@ -282,7 +282,7 @@ class GurobiBackendModel(backend_model.BackendModel):
             if pd.notnull(val):
                 # see: https://stackoverflow.com/a/27086669
                 new_obj_name = (
-                    f"{name}[{'_'.join(idx)}]".replace(" ", r"_")
+                    f"{name}[{'__'.join(idx)}]".replace(" ", r"_")
                     .replace(":", r"_")
                     .replace("-", r"_")
                 )
