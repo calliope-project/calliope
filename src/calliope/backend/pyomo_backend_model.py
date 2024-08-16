@@ -79,35 +79,19 @@ class PyomoBackendModel(backend_model.BackendModel):
         self.shadow_prices = PyomoShadowPrices(self._instance.dual, self)
 
     def add_parameter(  # noqa: D102, override
-        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
+        self, name: str, parameter_dict: dict, values: xr.DataArray
     ) -> None:
-        self._raise_error_on_preexistence(parameter_name, "parameters")
-        if parameter_values.isnull().all():
-            self.log(
-                "parameters",
-                parameter_name,
-                "Component not added; no data found in array.",
-            )
-            parameter_da = parameter_values.astype(float)
+        self._raise_error_on_preexistence(name, "parameters")
+        if values.isnull().all():
+            self.log("parameters", name, "Component not added; no data found in array.")
+            parameter_da = values.astype(float)
         else:
-            self._create_obj_list(parameter_name, "parameters")
+            self._create_obj_list(name, "parameters")
             parameter_da = self._apply_func(
-                self._to_pyomo_param,
-                parameter_values.notnull(),
-                1,
-                parameter_values,
-                name=parameter_name,
+                self._to_pyomo_param, values.notnull(), 1, values, name=name
             )
 
-        attrs = {
-            "title": self._PARAM_TITLES.get(parameter_name, None),
-            "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
-            "unit": self._PARAM_UNITS.get(parameter_name, None),
-            "default": default,
-            "original_dtype": parameter_values.dtype.name,
-        }
-
-        self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
+        self._add_to_dataset(name, parameter_da, "parameters", parameter_dict)
 
     def add_constraint(  # noqa: D102, override
         self, name: str, constraint_dict: parsing.UnparsedConstraint
@@ -209,9 +193,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         param_as_vals = self._apply_func(
             self._from_pyomo_param, parameter.notnull(), 1, parameter
         )
-        orig_dtype = parameter.original_dtype
-        self.log("parameters", name, f"Converting Pyomo object to {orig_dtype} dtype.")
-        return param_as_vals.astype(orig_dtype).where(param_as_vals.notnull())
+        return self._convert_parameter_dtype(param_as_vals)
 
     @overload
     def get_constraint(  # noqa: D102, override
@@ -426,9 +408,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
             self.delete_component(name, "parameters")
             self.add_parameter(
-                name,
-                self.inputs[name],
-                default=self.inputs.attrs["defaults"].get(name, np.nan),
+                name, self.inputs.math.parameters[name], self.inputs[name]
             )
             self._rebuild_references(refs_to_update)
             if self._has_verbose_strings:

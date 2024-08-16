@@ -40,7 +40,6 @@ def read_netcdf(path):
 class Model:
     """A Calliope Model."""
 
-    _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
     ATTRS_SAVED = ("_def_path", "applied_math")
 
     def __init__(
@@ -224,7 +223,7 @@ class Model:
         if "_def_path" in model_data.attrs:
             self._def_path = model_data.attrs.pop("_def_path")
         if "applied_math" in model_data.attrs:
-            self.applied_math = preprocess.CalliopeMath.from_dict(
+            self.applied_math = backend.CalliopeMath.from_dict(
                 model_data.attrs.pop("applied_math")
             )
 
@@ -308,34 +307,12 @@ class Model:
             comment="Model: backend build starting",
         )
 
-        backend_config = {**self.config["build"], **kwargs}
-        mode = backend_config["mode"]
-        if mode == "operate":
-            if not self._model_data.attrs["allow_operate_mode"]:
-                raise exceptions.ModelError(
-                    "Unable to run this model in operate (i.e. dispatch) mode, probably because "
-                    "there exist non-uniform timesteps (e.g. from time clustering)"
-                )
-            start_window_idx = backend_config.pop("start_window_idx", 0)
-            backend_input = self._prepare_operate_mode_inputs(
-                start_window_idx, **backend_config
-            )
-        else:
-            backend_input = self._model_data
-
-        init_math_list = [] if backend_config.get("ignore_mode_math") else [mode]
-        end_math_list = [] if add_math_dict is None else [add_math_dict]
-        full_math_list = init_math_list + backend_config["add_math"] + end_math_list
-        LOGGER.debug(f"Math preprocessing | Loading math: {full_math_list}")
-        model_math = preprocess.CalliopeMath(full_math_list, self._def_path)
-
-        backend_name = backend_config.pop("backend")
-        self.backend = backend.get_model_backend(
-            backend_name, backend_input, model_math, **backend_config
+        self.backend = backend.manager.get_backend_model(
+            self._model_data, self._def_path, add_math_dict=add_math_dict, **kwargs
         )
         self.backend.add_optimisation_components()
 
-        self.applied_math = model_math
+        self.applied_math = self.backend.math
 
         self._model_data.attrs["timestamp_build_complete"] = log_time(
             LOGGER,
@@ -503,137 +480,3 @@ class Model:
             f"Model size:   {msize} ({msize_exists.item()} valid node:tech:carrier combinations)"
         )
         return "\n".join(info_strings)
-
-    def _prepare_operate_mode_inputs(
-        self, start_window_idx: int = 0, **config_kwargs
-    ) -> xr.Dataset:
-        """Slice the input data to just the length of operate mode time horizon.
-
-        Args:
-            start_window_idx (int, optional):
-                Set the operate `window` to start at, based on integer index.
-                This is used when re-initialising the backend model for shorter time horizons close to the end of the model period.
-                Defaults to 0.
-            **config_kwargs: kwargs related to operate mode configuration.
-
-        Returns:
-            xr.Dataset: Slice of input data.
-        """
-        window = config_kwargs["operate_window"]
-        horizon = config_kwargs["operate_horizon"]
-        self._model_data.coords["windowsteps"] = pd.date_range(
-            self.inputs.timesteps[0].item(),
-            self.inputs.timesteps[-1].item(),
-            freq=window,
-        )
-        horizonsteps = self._model_data.coords["windowsteps"] + pd.Timedelta(horizon)
-        # We require an offset because pandas / xarray slicing is _inclusive_ of both endpoints
-        # where we only want it to be inclusive of the left endpoint.
-        # Except in the last time horizon, where we want it to include the right endpoint.
-        clipped_horizonsteps = horizonsteps.clip(
-            max=self._model_data.timesteps[-1] + self._TS_OFFSET
-        ).drop_vars("timesteps")
-        self._model_data.coords["horizonsteps"] = clipped_horizonsteps - self._TS_OFFSET
-        sliced_inputs = self._model_data.sel(
-            timesteps=slice(
-                self._model_data.windowsteps[start_window_idx],
-                self._model_data.horizonsteps[start_window_idx],
-            )
-        )
-        if config_kwargs.get("operate_use_cap_results", False):
-            to_parameterise = extract_from_schema(MODEL_SCHEMA, "x-operate-param")
-            if not self._is_solved:
-                raise exceptions.ModelError(
-                    "Cannot use plan mode capacity results in operate mode if a solution does not yet exist for the model."
-                )
-            for parameter in to_parameterise.keys():
-                if parameter in self._model_data:
-                    self._model_data[parameter].attrs["is_result"] = 0
-
-        return sliced_inputs
-
-    def _solve_operate(self, **solver_config) -> xr.Dataset:
-        """Solve in operate (i.e. dispatch) mode.
-
-        Optimisation is undertaken iteratively for slices of the timeseries, with
-        some data being passed between slices.
-
-        Returns:
-            xr.Dataset: Results dataset.
-        """
-        if self.backend.inputs.timesteps[0] != self._model_data.timesteps[0]:
-            LOGGER.info("Optimisation model | Resetting model to first time window.")
-            self.build(
-                force=True,
-                **{"mode": "operate", **self.backend.inputs.attrs["config"]["build"]},
-            )
-
-        LOGGER.info("Optimisation model | Running first time window.")
-
-        step_results = self.backend._solve(warmstart=False, **solver_config)
-
-        results_list = []
-
-        for idx, windowstep in enumerate(self._model_data.windowsteps[1:]):
-            windowstep_as_string = windowstep.dt.strftime("%Y-%m-%d %H:%M:%S").item()
-            LOGGER.info(
-                f"Optimisation model | Running time window starting at {windowstep_as_string}."
-            )
-            results_list.append(
-                step_results.sel(timesteps=slice(None, windowstep - self._TS_OFFSET))
-            )
-            previous_step_results = results_list[-1]
-            horizonstep = self._model_data.horizonsteps.sel(windowsteps=windowstep)
-            new_inputs = self.inputs.sel(
-                timesteps=slice(windowstep, horizonstep)
-            ).drop_vars(["horizonsteps", "windowsteps"], errors="ignore")
-
-            if len(new_inputs.timesteps) != len(step_results.timesteps):
-                LOGGER.info(
-                    "Optimisation model | Reaching the end of the timeseries. "
-                    "Re-building model with shorter time horizon."
-                )
-                self.build(
-                    force=True,
-                    start_window_idx=idx + 1,
-                    **self.backend.inputs.attrs["config"]["build"],
-                )
-            else:
-                self.backend._dataset.coords["timesteps"] = new_inputs.timesteps
-                self.backend.inputs.coords["timesteps"] = new_inputs.timesteps
-                for param_name, param_data in new_inputs.data_vars.items():
-                    if "timesteps" in param_data.dims:
-                        self.backend.update_parameter(param_name, param_data)
-                        self.backend.inputs[param_name] = param_data
-
-            if "storage" in step_results:
-                self.backend.update_parameter(
-                    "storage_initial",
-                    self._recalculate_storage_initial(previous_step_results),
-                )
-
-            step_results = self.backend._solve(warmstart=False, **solver_config)
-
-        results_list.append(step_results.sel(timesteps=slice(windowstep, None)))
-        results = xr.concat(results_list, dim="timesteps", combine_attrs="no_conflicts")
-        results.attrs["termination_condition"] = ",".join(
-            set(result.attrs["termination_condition"] for result in results_list)
-        )
-
-        return results
-
-    def _recalculate_storage_initial(self, results: xr.Dataset) -> xr.DataArray:
-        """Calculate the initial level of storage devices for a new operate mode time slice.
-
-        Based on storage levels at the end of the previous time slice.
-
-        Args:
-            results (xr.Dataset): Results from the previous time slice.
-
-        Returns:
-            xr.DataArray: `storage_initial` values for the new time slice.
-        """
-        end_storage = results.storage.isel(timesteps=-1).drop_vars("timesteps")
-
-        new_initial_storage = end_storage / self.inputs.storage_cap
-        return new_initial_storage

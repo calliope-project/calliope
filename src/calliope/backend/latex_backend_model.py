@@ -5,10 +5,9 @@ from __future__ import annotations
 import logging
 import re
 import textwrap
-from typing import Any, Literal
+from typing import Literal
 
 import jinja2
-import numpy as np
 import xarray as xr
 
 from calliope.backend import backend_model, parsing
@@ -308,20 +307,16 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self.include = include
 
     def add_parameter(  # noqa: D102, override
-        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
+        self, name: str, parameter_dict: dict, values: xr.DataArray
     ) -> None:
-        attrs = {
-            "title": self._PARAM_TITLES.get(parameter_name, None),
-            "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
-            "unit": self._PARAM_UNITS.get(parameter_name, None),
-            "math_repr": rf"\textit{{{parameter_name}}}"
-            + self._dims_to_var_string(parameter_values),
-        }
+        math_repr = rf"\textit{{{name}}}" + self._dims_to_var_string(values)
 
-        self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
+        self._add_to_dataset(
+            name, values, "parameters", {"math_repr": math_repr, **parameter_dict}
+        )
 
     def add_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedConstraint | None = None
+        self, name: str, constraint_dict: parsing.UnparsedConstraint
     ) -> None:
         equation_strings: list = []
 
@@ -355,7 +350,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 name,
                 {"equations": [{"expression": val_name}]},  # type: ignore
             )
-            eq = parsed_val.parse_equations(self.valid_component_names)
+            eq = parsed_val.parse_equations(self.math.valid_component_names)
             math_parts[val] = eq[0].evaluate_expression(
                 self, return_type="math_string", references=non_where_refs
             )
@@ -381,7 +376,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_global_expression(  # noqa: D102, override
-        self, name: str, expression_dict: parsing.UnparsedExpression | None = None
+        self, name: str, expression_dict: parsing.UnparsedExpression
     ) -> None:
         equation_strings: list = []
 
@@ -408,7 +403,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_dict: parsing.UnparsedVariable | None = None
+        self, name: str, variable_dict: parsing.UnparsedVariable
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
         bound_refs: set = set()
@@ -435,7 +430,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_dict: parsing.UnparsedObjective | None = None
+        self, name: str, objective_dict: parsing.UnparsedObjective
     ) -> None:
         sense_dict = {
             "minimize": r"\min{}",
@@ -618,7 +613,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             ]
         }
         parsed_bounds = parsing.ParsedBackendComponent("constraints", name, bound_dict)
-        equations = parsed_bounds.parse_equations(self.valid_component_names)
+        equations = parsed_bounds.parse_equations(self.math.valid_component_names)
         return tuple(
             {
                 "expression": eq.evaluate_expression(

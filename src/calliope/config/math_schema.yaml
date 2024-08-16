@@ -3,6 +3,53 @@ title: Math formulation schema
 description: All options available to formulate math to use in solving an optimisation problem with Calliope.
 additionalProperties: false
 properties:
+  dimensions:
+    type: object
+    description: All dimensions that will be referenced in the optimisation problem.
+    additionalProperties: false
+    patternProperties:
+      '[^\d^_\W][\w\d]+':
+        type: object
+        description: A named dimension
+        additionalProperties: false
+        required: ["type", "ordered"]
+        properties:
+          title: &title
+            type: string
+            description: The component long name, for use in visualisation.
+          type: &type
+            type: string
+            enum: ["datetime", "string", "int", "float"]
+            description: The expected data type of the component values, to they will be coerced.
+          ordered:
+            type: boolean
+            description: Whether the order of the dimension values is important and so should be strictly adhered to.
+  parameters:
+    type: object
+    description: All input parameters that will be referenced in the optimisation problem.
+    additionalProperties: false
+    patternProperties:
+      '[^\d^_\W][\w\d]+':
+        type: object
+        description: A named parameter
+        additionalProperties: false
+        required: ["type", "default"]
+        properties:
+          default:
+            type: [number, string, boolean]
+            description: The default value to apply when a value is not given for a combination of dimension values.
+          title: *title
+          type: *type
+          description: &description
+            type: string
+            description: A verbose description of the component.
+          unit: &unit
+            type: string
+            description: Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)
+          resample_method:
+            type: string
+            enum: ["mean", "sum", "first"]
+            description: The method to apply to the parameter values if resampling the `timesteps` dimension using `config.build.time_resample`.
   constraints:
     type: object
     description: All constraints to apply to the optimisation problem.
@@ -14,12 +61,8 @@ properties:
         additionalProperties: false
         required: ["equations"]
         properties:
-          title: &title
-            type: string
-            description: The component long name, for use in visualisation.
-          description: &description
-            type: string
-            description: A verbose description of the component.
+          title: *title
+          description: *description
           active: &active
             type: boolean
             description: If False, this component will be ignored entirely at the optimisation problem build phase.
@@ -126,9 +169,7 @@ properties:
           title: *title
           description: *description
           active: *active
-          unit: &unit
-            type: string
-            description: Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)
+          unit: *unit
           default: &default
             type: number
           foreach: *foreach

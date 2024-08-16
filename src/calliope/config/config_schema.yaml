@@ -38,11 +38,6 @@ properties:
             description: >-
               Subset of timesteps as an two-element list giving the **inclusive** range.
               For example, ['2005-01', '2005-04'] will create a time subset from '2005-01-01 00:00:00' to '2005-04-31 23:59:59'.
-          time_resample:
-            type: ["null", string]
-            default: null
-            description: setting to adjust time resolution, e.g. "2h" for 2-hourly
-            pattern: "^[0-9]+[a-zA-Z]"
           time_cluster:
             type: ["null", string]
             default: null
@@ -123,7 +118,11 @@ properties:
             description: >-
               If true, the Calliope math definition will be scanned for parsing errors _before_ undertaking the much more expensive operation of building the optimisation problem.
               You can switch this off (e.g., if you know there are no parsing errors) to reduce overall build time.
-
+          time_resample:
+            type: ["null", string]
+            default: null
+            description: setting to adjust time resolution, e.g. "2h" for 2-hourly
+            pattern: "^[0-9]+[a-zA-Z]"
       solve:
         type: object
         description: All configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`).

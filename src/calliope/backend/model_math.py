@@ -5,20 +5,25 @@ import logging
 import typing
 from copy import deepcopy
 from pathlib import Path
+from typing import Literal
 
 from calliope.attrdict import AttrDict
-from calliope.exceptions import ModelError
+from calliope.backend import parsing
+from calliope.exceptions import ModelError, print_warnings_and_raise_errors
 from calliope.util.schema import MATH_SCHEMA, validate_dict
 from calliope.util.tools import relative_path
 
 LOGGER = logging.getLogger(__name__)
-ORDERED_COMPONENTS_T = typing.Literal[
+
+
+ORDERED_COMPONENTS_T = Literal[
     "variables",
     "global_expressions",
     "constraints",
     "piecewise_constraints",
     "objectives",
 ]
+ALL_COMPONENTS_T = Literal["dimensions", "parameters", ORDERED_COMPONENTS_T]
 
 
 class CalliopeMath:
@@ -41,7 +46,7 @@ class CalliopeMath:
         """
         self.history: list[str] = []
         self.data: AttrDict = AttrDict(
-            {name: {} for name in typing.get_args(ORDERED_COMPONENTS_T)}
+            {name: {} for name in typing.get_args(ALL_COMPONENTS_T)}
         )
 
         for math in math_to_add:
@@ -79,6 +84,18 @@ class CalliopeMath:
         """
         self.data.union(math, allow_override=True)
 
+    @property
+    def valid_component_names(self) -> set:
+        """Return a set of valid component names in the model data.
+
+        Returns:
+            set: set of valid names.
+        """
+        names = set()
+        for component_group in ["variables", "parameters", "global_expressions"]:
+            names.update(self.data[component_group].keys())
+        return names
+
     @classmethod
     def from_dict(cls, math_dict: dict) -> "CalliopeMath":
         """Load a CalliopeMath object from a dictionary representation, recuperating relevant attributes.
@@ -108,6 +125,22 @@ class CalliopeMath:
     def validate(self) -> None:
         """Test current math and optional external math against the MATH schema."""
         validate_dict(self.data, MATH_SCHEMA, "math")
+
+        validation_errors: dict = dict()
+        for component_group in typing.get_args(ORDERED_COMPONENTS_T):
+            for name, dict_ in self.data[component_group].items():
+                parsed = parsing.ParsedBackendComponent(component_group, name, dict_)
+                parsed.parse_top_level_where(errors="ignore")
+                parsed.parse_equations(self.valid_component_names, errors="ignore")
+                if not parsed._is_valid:
+                    validation_errors[f"{component_group}:{name}"] = parsed._errors
+
+        if validation_errors:
+            print_warnings_and_raise_errors(
+                during="math string parsing (marker indicates where parsing stopped, but may not point to the root cause of the issue)",
+                errors=validation_errors,
+            )
+
         LOGGER.info("Math preprocessing | validated math against schema.")
 
     def _add_pre_defined_file(self, filename: str) -> None:

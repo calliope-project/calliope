@@ -29,7 +29,7 @@ class EvalAttrs(TypedDict):
     """Fixed dict checker for `eval_attrs`."""
 
     equation_name: str
-    backend_interface: BackendModel
+    backend_interface: BackendModel | None
     input_data: xr.Dataset
     helper_functions: dict[str, Callable]
     apply_where: NotRequired[bool]
@@ -162,7 +162,10 @@ class DataVarParser(EvalWhere):
         """
         backend_interface = self.eval_attrs["backend_interface"]
         self.eval_attrs["references"].add(self.data_var)
-        if self.data_var in backend_interface._dataset.data_vars.keys():
+        if (
+            backend_interface is not None
+            and self.data_var in backend_interface._dataset.data_vars.keys()
+        ):
             data_var_type = backend_interface._dataset[self.data_var].attrs["obj_type"]
         else:
             data_var_type = "parameters"
@@ -199,18 +202,19 @@ class DataVarParser(EvalWhere):
 
         Return default value as an array if var does not exist.
         """
-        default = source_dataset.attrs["defaults"].get(self.data_var)
-        var = source_dataset.get(self.data_var, xr.DataArray(default))
-        if default is not None:
-            var = var.fillna(default)
+        var = source_dataset.get(self.data_var, xr.DataArray(np.nan))
+        if "default" in var.attrs:
+            var = var.fillna(var.attrs["default"])
         return var
 
     def as_math_string(self) -> str:  # noqa: D102, override
         self._preprocess()
-
-        var = self.eval_attrs["backend_interface"]._dataset.get(
-            self.data_var, xr.DataArray()
-        )
+        if self.eval_attrs["backend_interface"] is None:
+            var = self.eval_attrs["input_data"].get(self.data_var, xr.DataArray())
+        else:
+            var = self.eval_attrs["backend_interface"]._dataset.get(
+                self.data_var, xr.DataArray()
+            )
 
         try:
             data_var_string = var.attrs["math_repr"]
@@ -222,7 +226,10 @@ class DataVarParser(EvalWhere):
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         data_var_type = self._preprocess()
-        if data_var_type == "parameters":
+        if (
+            self.eval_attrs["backend_interface"] is None
+            or data_var_type == "parameters"
+        ):
             source_dataset = self.eval_attrs["input_data"]
         else:
             source_dataset = self.eval_attrs["backend_interface"]._dataset
