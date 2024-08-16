@@ -626,7 +626,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                     "unit": da.attrs.get("unit", None),
                     "yaml_snippet": da.attrs.get("yaml_snippet", None),
                 }
-                for name, da in getattr(self, objtype).data_vars.items()
+                for name, da in sorted(getattr(self, objtype).data_vars.items())
                 if "math_string" in da.attrs
                 or (objtype == "parameters" and da.attrs["references"])
             ]
