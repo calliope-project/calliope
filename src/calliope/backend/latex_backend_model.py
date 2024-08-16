@@ -618,8 +618,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                     "expression": da.attrs.get("math_string", ""),
                     "name": name,
                     "description": da.attrs.get("description", None),
-                    "used_in": list(da.attrs.get("references", set()) - set([name])),
-                    "uses": list(uses[name] - set([name])),
+                    "used_in": sorted(
+                        list(da.attrs.get("references", set()) - set([name]))
+                    ),
+                    "uses": sorted(list(uses[name] - set([name]))),
                     "default": da.attrs.get("default", None),
                     "unit": da.attrs.get("unit", None),
                     "yaml_snippet": da.attrs.get("yaml_snippet", None),
