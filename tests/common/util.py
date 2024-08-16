@@ -81,7 +81,7 @@ def build_lp(
     outfile: str | Path,
     math: dict[str, dict | list] | None = None,
     backend_name: Literal["pyomo"] = "pyomo",
-) -> None:
+) -> "backend.BackendModel":
     """
     Write a barebones LP file with which to compare in tests.
     All model parameters and variables will be loaded automatically, as well as a dummy objective if one isn't provided as part of `math`.
@@ -94,6 +94,7 @@ def build_lp(
         backend_name (Literal["pyomo"], optional): Backend to use to create the LP file. Defaults to "pyomo".
     """
     backend_instance = backend.get_model_backend(backend_name, model._model_data)
+
     for name, dict_ in model.math["variables"].items():
         backend_instance.add_variable(name, dict_)
     for name, dict_ in model.math["global_expressions"].items():
