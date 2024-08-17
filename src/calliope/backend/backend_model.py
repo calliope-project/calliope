@@ -31,7 +31,7 @@ from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
 from calliope.exceptions import warn as model_warn
 from calliope.io import load_config
-from calliope.preprocess import CalliopeMath
+from calliope.preprocess.model_math import ORDERED_COMPONENTS_T, CalliopeMath
 from calliope.util.schema import (
     MODEL_SCHEMA,
     extract_from_schema,
@@ -44,13 +44,6 @@ if TYPE_CHECKING:
 from calliope.exceptions import BackendError
 
 T = TypeVar("T")
-ORDERED_COMPONENTS_T = Literal[
-    "variables",
-    "global_expressions",
-    "constraints",
-    "piecewise_constraints",
-    "objectives",
-]
 ALL_COMPONENTS_T = Literal["parameters", ORDERED_COMPONENTS_T]
 
 
@@ -539,7 +532,7 @@ class BackendModelGenerator(ABC):
 
         Args:
             key (str): Backend object name
-            obj_type (Literal["variables", "constraints", "objectives", "parameters", "expressions"]): Object type.
+            obj_type (ALL_COMPONENTS_T): Object type.
 
         Raises:
             BackendError: if `key` already exists in the backend model

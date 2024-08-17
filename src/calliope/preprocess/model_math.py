@@ -2,6 +2,7 @@
 
 import importlib.resources
 import logging
+import typing
 from copy import deepcopy
 from pathlib import Path
 
@@ -11,6 +12,13 @@ from calliope.util.schema import MATH_SCHEMA, validate_dict
 from calliope.util.tools import relative_path
 
 LOGGER = logging.getLogger(__name__)
+ORDERED_COMPONENTS_T = typing.Literal[
+    "variables",
+    "global_expressions",
+    "constraints",
+    "piecewise_constraints",
+    "objectives",
+]
 
 
 class CalliopeMath:
@@ -33,13 +41,7 @@ class CalliopeMath:
         """
         self.history: list[str] = []
         self.data: AttrDict = AttrDict(
-            {
-                "variables": {},
-                "global_expressions": {},
-                "constraints": {},
-                "piecewise_constraints": {},
-                "objectives": {},
-            }
+            {name: {} for name in typing.get_args(ORDERED_COMPONENTS_T)}
         )
 
         for math in math_to_add:
@@ -61,12 +63,13 @@ class CalliopeMath:
 
     def __repr__(self) -> str:
         """Custom string representation of class."""
-        return f"""Calliope math definition dictionary with:
-    {len(self.data["variables"])} decision variable(s)
-    {len(self.data["global_expressions"])} global expression(s)
-    {len(self.data["constraints"])} constraint(s)
-    {len(self.data["piecewise_constraints"])} piecewise constraint(s)
-    {len(self.data["objectives"])} objective(s)
+        return f"""
+        Calliope math definition dictionary with:
+        {len(self.data["variables"])} decision variable(s)
+        {len(self.data["global_expressions"])} global expression(s)
+        {len(self.data["constraints"])} constraint(s)
+        {len(self.data["piecewise_constraints"])} piecewise constraint(s)
+        {len(self.data["objectives"])} objective(s)
         """
 
     def add(self, math: AttrDict):
@@ -127,7 +130,7 @@ class CalliopeMath:
             self._add_file(f / f"{filename}.yaml", filename)
 
     def _add_user_defined_file(
-        self, relative_filepath: str | Path, model_def_path: str | Path
+        self, relative_filepath: str | Path, model_def_path: str | Path | None
     ) -> None:
         """Add user-defined Calliope math, relative to the model definition path.
 
