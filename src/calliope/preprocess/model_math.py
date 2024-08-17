@@ -63,13 +63,12 @@ class CalliopeMath:
 
     def __repr__(self) -> str:
         """Custom string representation of class."""
-        return f"""
-        Calliope math definition dictionary with:
-        {len(self.data["variables"])} decision variable(s)
-        {len(self.data["global_expressions"])} global expression(s)
-        {len(self.data["constraints"])} constraint(s)
-        {len(self.data["piecewise_constraints"])} piecewise constraint(s)
-        {len(self.data["objectives"])} objective(s)
+        return f"""Calliope math definition dictionary with:
+    {len(self.data["variables"])} decision variable(s)
+    {len(self.data["global_expressions"])} global expression(s)
+    {len(self.data["constraints"])} constraint(s)
+    {len(self.data["piecewise_constraints"])} piecewise constraint(s)
+    {len(self.data["objectives"])} objective(s)
         """
 
     def add(self, math: AttrDict):
