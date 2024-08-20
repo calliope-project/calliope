@@ -470,10 +470,12 @@ class TestModelData:
         }
 
     def test_template_defs_nodes_from_base(self, model_data_factory: ModelDataFactory):
+        """Without a `dim_dict` to start off inheritance chaining, the `dim_name` will be used to find keys."""
         new_def_dict = model_data_factory._inherit_defs(dim_name="nodes")
         assert set(new_def_dict.keys()) == {"a", "b", "c"}
 
     def test_template_defs_techs(self, model_data_factory: ModelDataFactory):
+        """`dim_dict` overrides content of base model definition."""
         model_data_factory.model_definition.set_key("techs.foo.base_tech", "supply")
         model_data_factory.model_definition.set_key("techs.foo.my_param", 2)
 
@@ -484,6 +486,7 @@ class TestModelData:
         assert new_def_dict == {"foo": {"my_param": 1, "base_tech": "supply"}}
 
     def test_template_defs_techs_inherit(self, model_data_factory: ModelDataFactory):
+        """Use of template is tracked in updated definition dictionary (as `techs_inheritance` here)."""
         model_data_factory.model_definition.set_key(
             "techs.foo.template", "test_controller"
         )
@@ -503,6 +506,7 @@ class TestModelData:
         }
 
     def test_template_defs_techs_empty_def(self, model_data_factory: ModelDataFactory):
+        """An empty `dim_dict` entry can be handled, by returning the model definition for that entry."""
         model_data_factory.model_definition.set_key("techs.foo.base_tech", "supply")
         model_data_factory.model_definition.set_key("techs.foo.my_param", 2)
 
@@ -515,6 +519,7 @@ class TestModelData:
     def test_template_defs_techs_missing_base_def(
         self, model_data_factory: ModelDataFactory
     ):
+        """If inheriting from a template, checks against the schema will still be undertaken."""
         def_dict = {"foo": {"base_tech": "supply"}}
         with pytest.raises(KeyError) as excinfo:
             model_data_factory._inherit_defs(
@@ -551,34 +556,36 @@ class TestModelData:
             ),
         ],
     )
-    def test_climb_inheritance_tree(
+    def test_climb_template_tree(
         self,
         model_data_factory: ModelDataFactory,
         node_dict,
         expected_dict,
         expected_inheritance,
     ):
+        """Templates should be found and applied in order of 'ancestry' (newer dict keys replace older ones if they overlap)."""
         group_dict = {
             "foo_group": {"template": "bar_group", "my_param": 1},
             "bar_group": {"my_param": 2, "my_other_param": 2},
         }
         model_data_factory.model_definition["templates"] = AttrDict(group_dict)
-        new_dict, inheritance = model_data_factory._climb_inheritance_tree(
+        new_dict, inheritance = model_data_factory._climb_template_tree(
             AttrDict(node_dict), "nodes", "A"
         )
         assert new_dict == expected_dict
         assert inheritance == expected_inheritance
 
-    def test_climb_inheritance_tree_missing_ancestor(
+    def test_climb_template_tree_missing_ancestor(
         self, model_data_factory: ModelDataFactory
     ):
+        """Referencing a template that doesn't exist in `templates` raises an error."""
         group_dict = {
             "foo_group": {"template": "bar_group", "my_param": 1},
             "bar_group": {"my_param": 2, "my_other_param": 2},
         }
         model_data_factory.model_definition["templates"] = AttrDict(group_dict)
         with pytest.raises(KeyError) as excinfo:
-            model_data_factory._climb_inheritance_tree(
+            model_data_factory._climb_template_tree(
                 AttrDict({"template": "not_there"}), "nodes", "A"
             )
 

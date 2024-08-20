@@ -557,7 +557,7 @@ class ModelDataFactory:
                 item_base_def.union(item_def, allow_override=True)
             else:
                 item_base_def = item_def
-            updated_item_def, inheritance = self._climb_inheritance_tree(
+            updated_item_def, inheritance = self._climb_template_tree(
                 item_base_def, dim_name, item_name
             )
 
@@ -576,7 +576,7 @@ class ModelDataFactory:
 
         return updated_defs
 
-    def _climb_inheritance_tree(
+    def _climb_template_tree(
         self,
         dim_item_dict: AttrDict,
         dim_name: Literal["nodes", "techs"],
@@ -590,8 +590,7 @@ class ModelDataFactory:
         This function will be called recursively until a definition dictionary without `template` is reached.
 
         Args:
-            dim_item_dict (AttrDict):
-                Dictionary (possibly) containing `template`. If it doesn't contain `template`, the climbing stops here.
+            dim_item_dict (AttrDict): Dictionary (possibly) containing `template`.
             dim_name (Literal[nodes, techs]):
                 The name of the dimension we're working with, so that we can access the correct `_groups` definitions.
             item_name (str):
@@ -620,7 +619,7 @@ class ModelDataFactory:
                 f"({dim_name}, {item_name}) | Cannot find `{to_inherit}` in template inheritance tree."
             )
         else:
-            base_def_dict, inheritance = self._climb_inheritance_tree(
+            base_def_dict, inheritance = self._climb_template_tree(
                 dim_groups[to_inherit], dim_name, to_inherit, inheritance
             )
             updated_dim_item_dict = deepcopy(base_def_dict)
