@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|fixed| Contribution of `cost_om_annual_investment_fraction` to total investment costs, to not apply to depreciated costs (#645).
+
 |fixed| Math for multi-carrier variable export costs (#663).
 
 |new| Piecewise constraints added to the YAML math with its own unique syntax (#107).
