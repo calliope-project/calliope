@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|fixed| Math for multi-carrier variable export costs (#663).
+
 |new| Piecewise constraints added to the YAML math with its own unique syntax (#107).
 These constraints will be added to the optimisation problem using Special Ordered Sets of Type 2 (SOS2) variables.
 
