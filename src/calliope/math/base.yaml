@@ -800,9 +800,9 @@ global_expressions:
       - expression: timestep_weights * ($cost_export + $cost_flow_out + $cost_flow_in)
     sub_expressions:
       cost_export:
-        - where: flow_export
+        - where: any(carrier_export, over=carriers) AND any(cost_export, over=carriers)
           expression: sum(cost_export * flow_export, over=carriers)
-        - where: NOT flow_export
+        - where: NOT (any(carrier_export, over=carriers) AND any(cost_export, over=carriers))
           expression: "0"
       cost_flow_in:
         - where: "base_tech=supply"
