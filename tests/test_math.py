@@ -149,6 +149,62 @@ class TestBaseMath:
         }
         compare_lps(model, custom_math, "balance_storage")
 
+    @pytest.mark.parametrize("with_export", [True, False])
+    def test_cost_var_with_export(self, compare_lps, with_export):
+        """Test variable costs in the objective."""
+        self.TEST_REGISTER.add("global_expressions.cost_var")
+        override = {
+            "techs.test_conversion_plus.cost_flow_out": {
+                "data": [1, 2],
+                "index": [["electricity", "monetary"], ["heat", "monetary"]],
+                "dims": ["carriers", "costs"],
+            },
+            "techs.test_conversion_plus.cost_flow_in": {
+                "data": 4,
+                "index": "monetary",
+                "dims": "costs",
+            },
+        }
+        if with_export:
+            override.update(
+                {
+                    "techs.test_conversion_plus": {
+                        "carrier_export": "heat",
+                        "cost_export": {
+                            "data": 3,
+                            "index": [["heat", "monetary"]],
+                            "dims": ["carriers", "costs"],
+                        },
+                    },
+                    "techs.test_supply_elec": {
+                        "carrier_export": "electricity",
+                        "cost_export": {
+                            "data": 5,
+                            "index": "monetary",
+                            "dims": "costs",
+                        },
+                    },
+                }
+            )
+        model = build_test_model(
+            override, "conversion_and_conversion_plus,var_costs,two_hours"
+        )
+        custom_math = {
+            # need the expression defined in a constraint/objective for it to appear in the LP file bounds
+            "objectives": {
+                "foo": {
+                    "equations": [
+                        {
+                            "expression": "sum(cost_var, over=[nodes, techs, costs, timesteps])"
+                        }
+                    ],
+                    "sense": "minimise",
+                }
+            }
+        }
+        suffix = "_with_export" if with_export else ""
+        compare_lps(model, custom_math, f"cost_var{suffix}")
+
     @pytest.mark.xfail(reason="not all base math is in the test config dict yet")
     def test_all_math_registered(self, base_math):
         """After running all the previous tests in the class, the base_math dict should be empty, i.e. all math has been tested"""
@@ -731,12 +787,12 @@ class TestNetImportShare(CustomMathExamples):
             "links_a_c_heat": {
                 "from": "a",
                 "to": "c",
-                "inherit": "test_transmission_heat",
+                "template": "test_transmission_heat",
             },
             "links_a_c_elec": {
                 "from": "a",
                 "to": "c",
-                "inherit": "test_transmission_elec",
+                "template": "test_transmission_elec",
             },
         },
     }

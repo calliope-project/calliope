@@ -51,7 +51,7 @@ overrides:
     # FIXME: replace group constraint in SPORES mode
     # group_constraints:
     #    systemwide_cost_max.cost_max.monetary: 1e10  # very large, non-infinite value
-    tech_groups:
+    templates:
       cost_dim_setter:
         cost_flow_cap:
           index: [monetary, spores_score]
@@ -140,7 +140,7 @@ overrides:
         name: "Cold fusion"
         color: "#233B39"
         base_tech: supply
-        inherit: cost_dim_setter
+        template: cost_dim_setter
         carrier_out: power
         flow_cap_max: 10000
         lifetime: 50

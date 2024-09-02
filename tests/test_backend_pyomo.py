@@ -1605,7 +1605,9 @@ class TestModelDataChecks:
 
         with pytest.raises(exceptions.ModelError) as error:
             m.build()
-        assert check_error_or_warning(error, "values larger than 1 are not allowed")
+        assert check_error_or_warning(
+            error, "requiring values within the interval [0, 1]"
+        )
 
 
 class TestNewBackend:

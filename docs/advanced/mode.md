@@ -98,9 +98,9 @@ Technologies at locations with higher scores will be penalised in the objective 
 In the [national scale example model](../examples/national_scale/index.md), this would look something like:
 
 ```yaml
-tech_groups:
+templates:
   add_spores_score:
-    inherit: cost_dim_setter
+    template: cost_dim_setter
     cost_flow_cap:
       data: [null, null]
       index: ["monetary", "spores_score"]
@@ -112,16 +112,16 @@ tech_groups:
 
 techs:
   ccgt:
-    inherit: add_spores_score
+    template: add_spores_score
     cost_flow_cap.data: [750, 0]
   csp:
-    inherit: add_spores_score
+    template: add_spores_score
     cost_flow_cap.data: [1000, 0]
   battery:
-    inherit: add_spores_score
+    template: add_spores_score
     cost_flow_cap.data: [null, 0]
   region1_to_region2:
-    inherit: add_spores_score
+    template: add_spores_score
     cost_flow_cap.data: [10000, 0]
 ```
 

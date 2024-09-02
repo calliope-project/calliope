@@ -16,6 +16,6 @@ The ["urban scale" example](urban_scale/index.md) builds a model for part of a d
 
 * Use of conversion technologies with singular and multiple output carriers.
 * Revenue generation, by carrier export.
-* Inheriting from technology groups
+* Inheriting from templates
 
 The ["MILP" example](milp/index.md) extends the urban scale example, exhibiting binary and integer decision variable functionality (extended an LP model to a MILP model).

@@ -209,18 +209,10 @@ properties:
     additionalProperties: false
     patternProperties: *nested_pattern
 
-  tech_groups:
+  templates:
     type: [object, "null"]
     description: >-
-      Abstract technology definitions from which techs can `inherit`.
-      See the model definition schema for more guidance on content.
-    additionalProperties: false
-    patternProperties: *nested_pattern
-
-  node_groups:
-    type: [object, "null"]
-    description: >-
-      Abstract technology definitions from which nodes can `inherit`.
+      Abstract technology/node templates from which techs/nodes can `inherit`.
       See the model definition schema for more guidance on content.
     additionalProperties: false
     patternProperties: *nested_pattern
