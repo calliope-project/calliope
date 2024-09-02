@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import xarray as xr
+
 from calliope import exceptions
 from calliope.backend import helper_functions
 
@@ -71,7 +72,7 @@ class TestAsArray:
             "return_type": "array",
         }
 
-    @pytest.fixture()
+    @pytest.fixture
     def is_defined_any(self, dummy_model_data):
         def _is_defined(drop_dims, dims):
             return (
@@ -82,7 +83,7 @@ class TestAsArray:
 
         return _is_defined
 
-    @pytest.fixture()
+    @pytest.fixture
     def is_defined_all(self, dummy_model_data):
         def _is_defined(drop_dims, dims):
             return (

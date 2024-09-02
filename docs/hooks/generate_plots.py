@@ -5,11 +5,12 @@
 import tempfile
 from pathlib import Path
 
-import calliope
 import pandas as pd
 import plotly.graph_objects as go
 import xarray as xr
 from mkdocs.structure.files import File
+
+import calliope
 
 TEMPDIR = tempfile.TemporaryDirectory()
 

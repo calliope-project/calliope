@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import xarray as xr
+
 from calliope.attrdict import AttrDict
 from calliope.backend import latex_backend_model, pyomo_backend_model
 from calliope.util.schema import CONFIG_SCHEMA, MODEL_SCHEMA, extract_from_schema
@@ -52,7 +53,7 @@ def simple_supply():
     return m
 
 
-@pytest.fixture()
+@pytest.fixture
 def simple_supply_build_func():
     m = build_model({}, "simple_supply,two_hours,investment_costs")
     m.build()

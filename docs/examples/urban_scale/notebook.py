@@ -18,9 +18,10 @@
 # This notebook will show you how to load, build, solve, and examine the results of the urban scale example model.
 
 # %%
-import calliope
 import pandas as pd
 import plotly.express as px
+
+import calliope
 
 # We increase logging verbosity
 calliope.set_log_verbosity("INFO", include_solver_output=False)
