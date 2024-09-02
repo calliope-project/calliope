@@ -2,7 +2,7 @@
 
 ### User-facing changes
 
-|changed| `node_groups` and `tech_groups` changed to a general top-level `templates` key, accessed via the `template` key in `nodes` and `techs` (#600).
+|changed| `node_groups` and `tech_groups` changed to a general top-level `templates` key, accessed via the `template` key (replacing `inherit`) in `nodes` and `techs` (#600).
 
 |new| Piecewise constraints added to the YAML math with its own unique syntax (#107).
 These constraints will be added to the optimisation problem using Special Ordered Sets of Type 2 (SOS2) variables.
