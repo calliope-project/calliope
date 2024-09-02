@@ -800,9 +800,9 @@ global_expressions:
       - expression: timestep_weights * ($cost_export + $cost_flow_out + $cost_flow_in)
     sub_expressions:
       cost_export:
-        - where: flow_export
+        - where: any(carrier_export, over=carriers) AND any(cost_export, over=carriers)
           expression: sum(cost_export * flow_export, over=carriers)
-        - where: NOT flow_export
+        - where: NOT (any(carrier_export, over=carriers) AND any(cost_export, over=carriers))
           expression: "0"
       cost_flow_in:
         - where: "base_tech=supply"
@@ -884,13 +884,13 @@ global_expressions:
     equations:
       - expression: >
           $annualisation_weight * (
-            $depreciation_rate * (
+            ($depreciation_rate + cost_om_annual_investment_fraction) * (
               sum(default_if_empty(cost_investment_flow_cap, 0), over=carriers) +
               default_if_empty(cost_investment_storage_cap, 0) +
               default_if_empty(cost_investment_source_cap, 0) +
               default_if_empty(cost_investment_area_use, 0) +
               default_if_empty(cost_investment_purchase, 0)
-            ) * (1 + cost_om_annual_investment_fraction)
+            )
             + sum(cost_om_annual * flow_cap, over=carriers)
           )
     sub_expressions:

@@ -903,7 +903,7 @@ properties:
             x-type: float
             title: Fractional annual O&M costs.
             description: >-
-              Add an additional cost to total investment costs (except `cost_om_annual`) that is a fraction of that total.
+              Add a fraction of the sum of all investment costs except `cost_om_annual` as an additional cost, to represent fixed annual O&M costs. Warning: the sum of all investment costs includes not just those associated with `flow_cap` but also others like those associated with `area_use`!
             x-unit: fraction / total investment.
 
           cost_flow_in:
