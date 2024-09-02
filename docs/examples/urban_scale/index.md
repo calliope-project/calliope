@@ -130,7 +130,7 @@ The definition of this technology in the example model's configuration looks as 
 ### Interlude: inheriting from templates
 
 You will notice that the above technologies _inherit_ `interest_rate_setter`.
-Inheritance allows us to avoid excessive repetition in our model definition.
+Templates allow us to avoid excessive repetition in our model definition.
 In this case, `interest_rate_setter` defines an interest rate that will be used to annualise any investment costs the technology defines.
 
 Technologies / nodes can inherit from anything defined in `templates`.

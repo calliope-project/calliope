@@ -113,7 +113,7 @@ The costs are more numerous as well, and include monetary costs for all relevant
 ### Interlude: inheriting from templates
 
 You will notice that the above technologies _inherit_ `cost_dim_setter`.
-Inheritance allows us to avoid excessive repetition in our model definition.
+Templates allow us to avoid excessive repetition in our model definition.
 In this case, `cost_dim_setter` defines the dimension and index of costs, allowing us to keep our definition of technology costs to only defining `data`.
 By defining `data`, the technologies override the `null` setting applied by `cost_dim_setter`.
 We also use it to set the `interest_rate` for all technologies, which will be used to annualise any investment costs each technology defines.

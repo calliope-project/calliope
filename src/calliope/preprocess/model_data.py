@@ -82,7 +82,7 @@ class ModelDataFactory:
 
         Args:
             model_config (dict): Model initialisation configuration (i.e., `config.init`).
-            model_definition (ModelDefinition): Definition of model nodes and technologies, and their potential inheritance `groups`.
+            model_definition (ModelDefinition): Definition of model nodes and technologies, and their potential `templates`.
             data_sources (list[data_sources.DataSource]): Pre-loaded data sources that will be used to initialise the dataset before handling definitions given in `model_definition`.
             attributes (dict): Attributes to attach to the model Dataset.
             param_attributes (dict[str, dict]): Attributes to attach to the generated model DataArrays.

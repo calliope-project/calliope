@@ -48,7 +48,7 @@ nodes:
       demand_power:
     ```
 
-Inheritance chains can also be set up.
+Inheritance chains can also be created.
 That is, templates can inherit from other templates.
 E.g.:
 
@@ -78,7 +78,7 @@ techs:
     ...
 ```
 
-Finally, inherited properties can always be overridden by the inheriting component.
+Finally, template properties can always be overridden by the inheriting component.
 This can be useful to streamline setting costs, e.g.:
 
 ```yaml
