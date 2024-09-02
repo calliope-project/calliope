@@ -110,16 +110,16 @@ The costs are more numerous as well, and include monetary costs for all relevant
 * carrier conversion capacity
 * variable operational and maintenance costs
 
-### Interlude: inheriting from technology groups
+### Interlude: inheriting from templates
 
 You will notice that the above technologies _inherit_ `cost_dim_setter`.
-Inheritance allows us to avoid excessive repetition in our model definition.
+Templates allow us to avoid excessive repetition in our model definition.
 In this case, `cost_dim_setter` defines the dimension and index of costs, allowing us to keep our definition of technology costs to only defining `data`.
 By defining `data`, the technologies override the `null` setting applied by `cost_dim_setter`.
 We also use it to set the `interest_rate` for all technologies, which will be used to annualise any investment costs each technology defines.
 
-Technologies can inherit from anything defined in `tech_groups`, while nodes can inherit from anything in `node_groups`.
-items in `[tech/node]_groups` can also inherit from each other, so you can create inheritance chains.
+Technologies and nodes can inherit from anything defined in `templates`.
+items in `templates` can also inherit from each other, so you can create inheritance chains.
 
 `cost_dim_setter` looks like this:
 
@@ -185,7 +185,7 @@ Transmission technologies look different to other technologies, as they link the
 As the name suggests, it applies no cost or efficiency losses to this transmission.
 
 We can see that those technologies which rely on `free_transmission` inherit a lot of this information from elsewhere in the model definition.
-`free_transmission` is defined in `tech_groups`, which makes it inheritable.
+`free_transmission` is defined in `templates`, which makes it inheritable.
 
 ```yaml
 --8<-- "src/calliope/example_models/national_scale/model_config/techs.yaml:free-transmission"
@@ -234,11 +234,11 @@ The remaining nodes look similar:
 ```
 
 `region2` is very similar to `region1`, except that it does not include the `ccgt` technology.
-The three `region1-` locations are defined together using the node group `csp_regions`, except for their geospatial coordinates.
+The three `region1-` locations are defined together using the template `csp_regions`, except for their geospatial coordinates.
 They allow only the `csp` technology, this allows us to model three possible sites for CSP plants.
 
 ```yaml
---8<-- "src/calliope/example_models/national_scale/model_config/locations.yaml:node-groups"
+--8<-- "src/calliope/example_models/national_scale/model_config/locations.yaml:templates"
 ```
 
 ---

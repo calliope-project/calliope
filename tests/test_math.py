@@ -787,12 +787,12 @@ class TestNetImportShare(CustomMathExamples):
             "links_a_c_heat": {
                 "from": "a",
                 "to": "c",
-                "inherit": "test_transmission_heat",
+                "template": "test_transmission_heat",
             },
             "links_a_c_elec": {
                 "from": "a",
                 "to": "c",
-                "inherit": "test_transmission_elec",
+                "template": "test_transmission_elec",
             },
         },
     }

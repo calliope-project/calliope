@@ -266,7 +266,7 @@ class TestChecks:
         )
 
     def test_unspecified_base_tech(self):
-        """All technologies and technology groups must specify a base_tech"""
+        """All technologies must specify a base_tech"""
         override = AttrDict.from_yaml_string(
             """
             techs.test_supply_no_base_tech:
@@ -282,7 +282,7 @@ class TestChecks:
             build_model(override_dict=override, scenario="simple_supply,one_day")
 
     def test_tech_as_base_tech(self):
-        """All technologies and technology groups must specify a base_tech"""
+        """All technologies must specify a base_tech"""
         override1 = AttrDict.from_yaml_string(
             """
             techs.test_supply_tech_base_tech:

@@ -5,7 +5,7 @@
 # Note: --8<--start:'' and --8<--end:'' is used in tutorial documentation only
 
 # --8<-- [start:cost-dim-setter]
-tech_groups:
+templates:
   cost_dim_setter:
     cost_flow_cap:
       data: null
@@ -56,7 +56,7 @@ techs:
     name: "Combined cycle gas turbine"
     color: "#E37A72"
     base_tech: supply
-    inherit: cost_dim_setter
+    template: cost_dim_setter
     carrier_out: power
     flow_out_eff: 0.5
     flow_cap_max: 40000 # kW
@@ -73,7 +73,7 @@ techs:
     name: "Concentrating solar power"
     color: "#F9CF22"
     base_tech: supply
-    inherit: cost_dim_setter
+    template: cost_dim_setter
     carrier_out: power
     source_unit: per_area
     include_storage: True
@@ -101,7 +101,7 @@ techs:
     name: "Battery storage"
     color: "#3B61E3"
     base_tech: storage
-    inherit: cost_dim_setter
+    template: cost_dim_setter
     carrier_in: power
     carrier_out: power
     flow_cap_max: 1000 # kW
@@ -139,7 +139,7 @@ techs:
     name: "AC power transmission"
     color: "#8465A9"
     base_tech: transmission
-    inherit: cost_dim_setter
+    template: cost_dim_setter
     carrier_in: power
     carrier_out: power
     flow_out_eff: 0.85
@@ -151,14 +151,14 @@ techs:
   region1_to_region1_1:
     from: region1
     to: region1_1
-    inherit: free_transmission
+    template: free_transmission
   region1_to_region1_2:
     from: region1
     to: region1_2
-    inherit: free_transmission
+    template: free_transmission
   region1_to_region1_3:
     from: region1
     to: region1_3
-    inherit: free_transmission
+    template: free_transmission
 
   # --8<-- [end:transmission]

@@ -71,7 +71,7 @@ techs:
     base_tech: demand
     sink_use_equals: file=demand_elec.csv
 
-node_groups:
+templates:
   node_techs:
     techs:
       cheap_polluting_supply:
@@ -81,9 +81,9 @@ node_groups:
 
 nodes:
   a:
-    inherit: node_techs
+    template: node_techs
   b:
-    inherit: node_techs
+    template: node_techs
 
 overrides:
   illegal_string_cost_class:

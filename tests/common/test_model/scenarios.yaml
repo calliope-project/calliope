@@ -81,7 +81,7 @@ overrides:
               index: monetary
               dims: costs
 
-    tech_groups.test_transmission.active: false
+    templates.test_transmission.active: false
 
   supply_purchase:
     nodes:
@@ -99,7 +99,7 @@ overrides:
               index: monetary
               dims: costs
 
-    tech_groups.test_transmission.active: false
+    templates.test_transmission.active: false
 
   supply_milp:
     techs:
@@ -114,7 +114,7 @@ overrides:
         techs:
           test_supply_elec:
       b.active: false
-    tech_groups.test_transmission.active: false
+    templates.test_transmission.active: false
 
   supply_export:
     techs:
@@ -177,7 +177,7 @@ overrides:
           test_conversion:
           test_conversion_plus:
 
-    tech_groups.test_transmission.active: false
+    templates.test_transmission.active: false
 
   conversion_plus_milp:
     data_sources:
@@ -206,7 +206,7 @@ overrides:
           test_supply_gas:
           test_conversion_plus:
 
-    tech_groups.test_transmission.active: false
+    templates.test_transmission.active: false
 
   conversion_milp:
     data_sources:
@@ -231,7 +231,7 @@ overrides:
           test_supply_gas:
           test_conversion:
 
-    tech_groups.test_transmission.active: false
+    templates.test_transmission.active: false
 
   conversion_plus_purchase:
     data_sources:
@@ -257,7 +257,7 @@ overrides:
               index: monetary
               dims: costs
 
-    tech_groups.test_transmission.active: false
+    templates.test_transmission.active: false
 
   simple_conversion_plus:
     data_sources:
@@ -278,7 +278,7 @@ overrides:
           test_supply_coal:
           test_conversion_plus:
 
-    tech_groups.test_transmission.active: false
+    templates.test_transmission.active: false
 
   simple_chp:
     data_sources:
@@ -298,7 +298,7 @@ overrides:
           test_supply_gas:
           test_chp:
 
-    tech_groups.test_transmission.active: false
+    templates.test_transmission.active: false
 
   fuel_distribution:
     techs:
@@ -307,7 +307,7 @@ overrides:
         carrier_out: electricity
     nodes:
       a:
-        inherit: init_nodes
+        template: init_nodes
         techs:
           test_conversion:
             cost_flow_in:
@@ -315,10 +315,10 @@ overrides:
               index: [[monetary, coal], [monetary, gas]]
               dims: [costs, carriers]
       b:
-        inherit: init_nodes
+        template: init_nodes
 
-    tech_groups.test_transmission.active: false
-    node_groups:
+    templates.test_transmission.active: false
+    templates:
       init_nodes:
         techs:
           test_demand_elec:
@@ -357,7 +357,7 @@ overrides:
             flow_cap_per_unit: 10
             storage_cap_per_unit: 15
 
-    tech_groups.test_transmission.active: false
+    templates.test_transmission.active: false
 
   storage_purchase:
     nodes:
@@ -372,7 +372,7 @@ overrides:
               index: monetary
               dims: costs
 
-    tech_groups.test_transmission.active: false
+    templates.test_transmission.active: false
 
   spores:
     config:
@@ -419,7 +419,7 @@ overrides:
     config.build.operate_horizon: 12h
 
   investment_costs:
-    tech_groups:
+    templates:
       test_controller:
         lifetime: 25
         cost_interest_rate:
@@ -432,7 +432,7 @@ overrides:
           dims: costs
 
   var_costs:
-    tech_groups:
+    templates:
       test_controller:
         cost_flow_out:
           data: 0.1

@@ -2,6 +2,9 @@
 
 ### User-facing changes
 
+|changed| `node_groups` and `tech_groups` changed to a general top-level `templates` key,
+accessed via the `template` key (replacing `inherit`) in `nodes` and `techs` (#600).
+
 |fixed| Contribution of `cost_om_annual_investment_fraction` to total investment costs, to not apply to depreciated costs (#645).
 
 |fixed| Math for multi-carrier variable export costs (#663).
