@@ -73,6 +73,7 @@ class Model:
         self._timings: dict = {}
         self.config: AttrDict
         self.defaults: AttrDict
+        self.user_math: AttrDict
         self.applied_math: preprocess.CalliopeMath
         self._def_path: str | None = None
         self.backend: BackendModel
@@ -161,8 +162,9 @@ class Model:
         )
         model_config = AttrDict(extract_from_schema(CONFIG_SCHEMA, "default"))
         model_config.union(model_definition.pop("config"), allow_override=True)
-
         init_config = update_then_validate_config("init", model_config)
+
+        user_math = model_definition.pop("math", AttrDict())
 
         if init_config["time_cluster"] is not None:
             init_config["time_cluster"] = relative_path(
@@ -202,6 +204,7 @@ class Model:
         )
 
         self._add_observed_dict("config", model_config)
+        self._add_observed_dict("user_math", user_math)
 
         self._model_data.attrs["name"] = init_config["name"]
         log_time(
@@ -306,9 +309,12 @@ class Model:
             "build_start",
             comment="Model: backend build starting",
         )
+        math_dict = self.user_math.copy()
+        if add_math_dict is not None:
+            math_dict.union(add_math_dict)
 
         self.backend = backend.manager.get_backend_model(
-            self._model_data, self._def_path, add_math_dict=add_math_dict, **kwargs
+            self._model_data, math_dict, **kwargs
         )
         self.backend.add_optimisation_components()
 

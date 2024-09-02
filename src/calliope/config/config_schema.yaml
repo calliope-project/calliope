@@ -1,4 +1,3 @@
-
 # yaml-language-server: $schema=https://json-schema.org/draft/2020-12/schema#
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
@@ -61,17 +60,6 @@ properties:
           Additional configuration items will be passed onto math string parsing and can therefore be accessed in the `where` strings by `config.[item-name]`, where "[item-name]" is the name of your own configuration item.
         additionalProperties: true
         properties:
-          add_math:
-            type: array
-            default: []
-            description: List of references to files which contain additional mathematical formulations to be applied on top of or instead of the base mode math.
-            uniqueItems: true
-            items:
-              type: string
-              description: >
-                If referring to an pre-defined Calliope math file (see documentation for available files), do not append the reference with ".yaml".
-                If referring to your own math file, ensure the file type is given as a suffix (".yaml" or ".yml").
-                Relative paths will be assumed to be relative to the model definition file given when creating a calliope Model (`calliope.Model(model_definition=...)`).
           ignore_mode_math:
             type: boolean
             default: false
@@ -180,6 +168,15 @@ properties:
               description: Names of model constraints.
             default: []
             description: List of constraints for which to extract shadow prices. Shadow prices will be added as variables to the model results as `shadow_price_{constraintname}`.
+
+  math:
+    type: [object, "null"]
+    description: >-
+      Calliope math definition.
+      See the math definition schema for more guidance on content.
+    additionalProperties: false
+    patternProperties:
+      '^[^_^\d][\w]*$': {}
 
   parameters:
     type: [object, "null"]

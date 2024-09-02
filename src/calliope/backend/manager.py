@@ -28,21 +28,19 @@ TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
 LOGGER = logging.getLogger(__name__)
 
 
-def get_backend_model(
-    data: xr.Dataset, definition_path: str | Path | None, **kwargs
-) -> BackendModel:
+def get_backend_model(data: xr.Dataset, math_dict: dict, **kwargs) -> BackendModel:
     """Build backend model.
 
     Args:
         data (xr.Dataset): Input data.
-        definition_path (str | Path | None): Path to model YAML definition.
+        math_dict (dict): Math definition dictionary.
         **kwargs: build configuration options.
 
     Returns:
         BackendModel: Instantiated backend object.
     """
     config = update_then_validate_config("build", data.attrs["config"], **kwargs)
-    math = prepare_math(config, definition_path)
+    math = prepare_math(math_dict, config.mode, config.ignore_mode_math)
     if config["pre_validate_math_strings"]:
         math.validate()
     updated_data = prepare_inputs(data, config, math)
@@ -136,22 +134,23 @@ def _input_data_checks(data: xr.Dataset):
     )
 
 
-def prepare_math(config: dict, definition_path: str | Path | None) -> CalliopeMath:
+def prepare_math(user_math: dict, mode: str, ignore_mode_math: bool) -> CalliopeMath:
     """Prepare configured math as a CalliopeMath object.
 
     Args:
-        config (dict): Build configuration.
-        definition_path (str | Path | None): Path to model YAML definition, relative to which math files can be loaded.
+        user_math (dict): User-defined math.
+        mode (str): Build mode.
+        ignore_mode_math (bool): If True, initialise math with pre-defined mode math, otherwise only use user-defined math.
 
     Returns:
         CalliopeMath: Prepared math dictionary.
     """
-    init_math_list = [] if config["ignore_mode_math"] else [config["mode"]]
-    end_math_list = [] if config["add_math_dict"] is None else [config["add_math_dict"]]
-    full_math_list = init_math_list + config["add_math"] + end_math_list
+    init_math_list = [] if ignore_mode_math else [mode]
+
+    full_math_list = init_math_list + [user_math]
 
     LOGGER.debug(f"Math preprocessing | Loading math: {full_math_list}")
-    math = CalliopeMath(full_math_list, definition_path)
+    math = CalliopeMath(full_math_list)
 
     return math
 

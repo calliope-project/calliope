@@ -1,7 +1,5 @@
 # --8<-- [start:import]
 import: # Import other files from paths relative to this file, or absolute paths
-  - "model_config/techs.yaml"
-  - "model_config/locations.yaml"
   - "scenarios.yaml"
 # --8<-- [end:import]
 
@@ -17,47 +15,73 @@ config:
   build:
     mode: plan # Choices: plan, operate
     ensure_feasibility: true # Switching on unmet demand
-    add_math: ["additional_math.yaml"]
 
   solve:
     solver: cbc
 # --8<-- [end:config]
 
-# --8<-- [start:parameters]
-parameters:
-  objective_cost_weights:
-    data: 1
-    index: monetary
-    dims: costs
-  # `bigM` sets the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
-  bigM: 1e6
-# --8<-- [end:parameters]
+model:
+  import:
+    - "model_config/techs.yaml"
+    - "model_config/locations.yaml"
 
-# --8<-- [start:data-sources]
-data_sources:
-  demand:
-    source: data_sources/demand.csv
-    rows: timesteps
-    columns: [techs, nodes]
-    add_dims:
-      parameters: sink_use_equals
-  pv_resource:
-    source: data_sources/pv_resource.csv
-    rows: timesteps
-    columns: [comment, scaler]
-    add_dims:
-      parameters: source_use_equals
-      techs: pv
-    select:
-      scaler: per_area
-    drop: [comment, scaler]
-  export_power:
-    source: data_sources/export_power.csv
-    rows: timesteps
-    columns: nodes
-    add_dims:
-      parameters: cost_export
-      techs: chp
-      costs: monetary
-      carriers: electricity
-# --8<-- [end:data-sources]
+  # --8<-- [start:parameters]
+  parameters:
+    objective_cost_weights:
+      data: 1
+      index: monetary
+      dims: costs
+    # `bigM` sets the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
+    bigM: 1e6
+  # --8<-- [end:parameters]
+
+  # --8<-- [start:data-sources]
+  data_sources:
+    demand:
+      source: data_sources/demand.csv
+      rows: timesteps
+      columns: [techs, nodes]
+      add_dims:
+        parameters: sink_use_equals
+    pv_resource:
+      source: data_sources/pv_resource.csv
+      rows: timesteps
+      columns: [comment, scaler]
+      add_dims:
+        parameters: source_use_equals
+        techs: pv
+      select:
+        scaler: per_area
+      drop: [comment, scaler]
+    export_power:
+      source: data_sources/export_power.csv
+      rows: timesteps
+      columns: nodes
+      add_dims:
+        parameters: cost_export
+        techs: chp
+        costs: monetary
+        carriers: electricity
+  # --8<-- [end:data-sources]
+
+math:
+  parameters:
+    heat_to_power_ratio:
+      type: float
+      default: .nan
+
+  constraints:
+    link_chp_outputs:
+      description: Fix the relationship between heat and electricity output
+      foreach: [nodes, techs, timesteps]
+      where: "[chp] in techs"
+      equations:
+        - expression: flow_out[carriers=electricity] * heat_to_power_ratio == flow_out[carriers=heat]
+
+    balance_conversion:
+      # Remove the link between CHP inflow and heat outflow (now dealt with in `link_chp_outputs`)
+      equations:
+        - where: "NOT [chp] in techs"
+          expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
+        - where: "[chp] in techs"
+          expression: flow_out_inc_eff[carriers=electricity] == sum(flow_in_inc_eff, over=carriers)
