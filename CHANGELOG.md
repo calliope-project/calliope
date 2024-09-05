@@ -2,6 +2,10 @@
 
 ### User-facing changes
 
+|new| Math component cross-references in both directions ("uses" and "used in") in Markdown math documentation (#643).
+
+|fixed| Duplicated links in math documentation (#651).
+
 |changed| `node_groups` and `tech_groups` changed to a general top-level `templates` key,
 accessed via the `template` key (replacing `inherit`) in `nodes` and `techs` (#600).
 
