@@ -407,9 +407,16 @@ properties:
             x-type: float
             title: Minimum rated flow capacity.
             description: >-
-              Limits `flow_cap` to a minimum.
-              NOTE: this will _force_ `flow_cap` to a minimum value unless `cap_method` is set to `integer`.
-              If `cap_method=integer`, this will be scaled by the number of integer units of a technology purchased.
+              This acts as lower limit (lower bound) for flow_cap.
+              If `cap_method` = integer, this will be scaled by the number of integer units of a technology purchased.
+
+              !!! note
+                  If `cap_method` = continuous (which is set by default), then setting `flow_cap_min` to any value greater than 0 forces the model to always respect that limit, which in turn forces investment into the technology.
+                  Use this to enforce given investment plans, or to account for existing technologies that cannot be decommissioned.
+
+                  An example: If `cap_method` = continuous and `flow_cap_min` = 100, then flow_cap has to be at least 100.
+                  It going to 0 is not possible, unless you switch to `cap_method` = integer (see [cap_method][]).
+
             x-unit: power or $\frac{\text{power}}{\text{unit}}$.
 
           flow_cap_min_systemwide:
