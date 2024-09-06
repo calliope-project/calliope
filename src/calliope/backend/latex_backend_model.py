@@ -540,7 +540,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self._update_references(name, bound_refs.difference(name))
 
         self._generate_math_string(
-            parsed_component, var_da, equations=[lb, ub], sense=r"\forall" + domain
+            parsed_component, var_da, equations=[lb, ub], sense=r"\in" + domain
         )
 
     def add_objective(  # noqa: D102, override
