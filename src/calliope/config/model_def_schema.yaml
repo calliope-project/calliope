@@ -415,7 +415,7 @@ properties:
                   Use this to enforce given investment plans, or to account for existing technologies that cannot be decommissioned.
 
                   An example: If `cap_method` = continuous and `flow_cap_min` = 100, then flow_cap has to be at least 100.
-                  It going to 0 is not possible, unless you switch to `cap_method` = integer (see [cap_method][]).
+                  This means that going to 0 is not possible, unless you switch to `cap_method` = integer (see [cap_method][]).
 
             x-unit: power or $\frac{\text{power}}{\text{unit}}$.
 
