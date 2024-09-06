@@ -2,7 +2,10 @@
 
 ### User-facing changes
 
+
 |fixed| Decision variable domain in math docs to use $\in$ instead of $\forall$ (#652).
+
+|fixed| Clarity of `flow_cap_min` description in documentation (#653).
 
 |changed| API/schema documentation is de-ranked in documentation search bar results (#670).
 
