@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|fixed| Decision variable domain in math docs to use $\in$ instead of $\forall$ (#652).
+
 |changed| API/schema documentation is de-ranked in documentation search bar results (#670).
 
 |new| Math component cross-references in both directions ("uses" and "used in") in Markdown math documentation (#643).
