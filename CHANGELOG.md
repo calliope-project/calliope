@@ -4,6 +4,8 @@
 
 |fixed| clarity of `flow_cap_min` description in documentation (#653).
 
+|changed| API/schema documentation is de-ranked in documentation search bar results (#670).
+
 |new| Math component cross-references in both directions ("uses" and "used in") in Markdown math documentation (#643).
 
 |fixed| Duplicated links in math documentation (#651).
