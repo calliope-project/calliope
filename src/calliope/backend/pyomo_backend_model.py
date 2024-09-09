@@ -24,6 +24,7 @@ from pyomo.core.kernel.piecewise_library.transforms import (
     piecewise_sos2,
 )
 from pyomo.opt import SolverFactory  # type: ignore
+from pyomo.opt.base import ProblemFormat  # type: ignore
 from pyomo.util.model_size import build_model_size_report  # type: ignore
 
 from calliope.backend import backend_model, parsing
@@ -284,11 +285,28 @@ class PyomoBackendModel(backend_model.BackendModel):
             self.shadow_prices.deactivate()
         opt = SolverFactory(solver, solver_io=solver_io)
 
+        solve_kwargs = {
+            "symbolic_solver_labels": False,
+            "keepfiles": False,
+            "tee": True,
+        }
+        valid_solve_kwargs = ["symbolic_solver_labels", "keepfiles"]
+
         if solver_options:
             for k, v in solver_options.items():
-                opt.options[k] = v
+                if k.startswith("pyomo_"):
+                    k = k[6:]
+                    if k == "problem_format":
+                        opt.set_problem_format(getattr(ProblemFormat, v))
+                    elif k in valid_solve_kwargs:
+                        solve_kwargs[k] = v
+                    else:
+                        model_warn(
+                            f"Solver option {k} is not a valid Pyomo option and will be ignored."
+                        )
+                else:
+                    opt.options[k] = v
 
-        solve_kwargs = {}
         if save_logs is not None:
             solve_kwargs.update({"symbolic_solver_labels": True, "keepfiles": True})
             logdir = Path(save_logs)
@@ -307,13 +325,20 @@ class PyomoBackendModel(backend_model.BackendModel):
                 # Ignore most of gurobipy's logging, as it's output is
                 # already captured through STDOUT
                 logging.getLogger("gurobipy").setLevel(logging.ERROR)
-                results = opt.solve(self._instance, tee=True, **solve_kwargs)
+                results = opt.solve(self._instance, **solve_kwargs)
 
         termination = results.solver[0].termination_condition
 
         if pe.TerminationCondition.to_solver_status(termination) == pe.SolverStatus.ok:
-            self._instance.load_solution(results.solution[0])
-            results = self.load_results()
+            if len(results.solution) == 0:
+                model_warn(
+                    "Solver status OK, but solver did not return a solution.",
+                    _class=BackendWarning,
+                )
+                results = xr.Dataset()
+            else:
+                self._instance.load_solution(results.solution[0])
+                results = self.load_results()
         else:
             self._solve_logger.critical("Problem status:")
             for line in str(results.problem[0]).split("\n"):
@@ -349,8 +374,48 @@ class PyomoBackendModel(backend_model.BackendModel):
                     da.attrs["coords_in_name"] = True
         self._has_verbose_strings = True
 
-    def to_lp(self, path: str | Path) -> None:  # noqa: D102, override
-        self._instance.write(str(path), format="lp", symbolic_solver_labels=True)
+    def to_lp(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
+        kwargs_defaults = {"symbolic_solver_labels": True}
+        supported_kwargs = ["symbolic_solver_labels"]
+        invalid_kwargs = [key for key in kwargs if key not in supported_kwargs]
+
+        if Path(path).suffix != ".lp":
+            raise ValueError("File extension must be `.lp`")
+
+        if len(invalid_kwargs) > 0:
+            model_warn(
+                f"Backend 'pyomo' does not support the following kwargs: {invalid_kwargs}. They will be ignored."
+            )
+            for key in invalid_kwargs:
+                del kwargs[key]
+
+        for key, value in kwargs_defaults.items():
+            kwargs.setdefault(key, value)
+
+        if any(key not in supported_kwargs for key in kwargs.keys()):
+            model_warn("Backend 'pyomo' does not support")
+
+        self._instance.write(str(path), format="lp", **kwargs)
+
+    def to_mps(self, path: str | Path, **kwargs) -> None:  # noqa: D102, override
+        kwargs_defaults = {"symbolic_solver_labels": True}
+        supported_kwargs = ["symbolic_solver_labels"]
+        invalid_kwargs = [key for key in kwargs if key not in supported_kwargs]
+
+        if Path(path).suffix != ".mps":
+            raise ValueError("File extension must be `.mps`")
+
+        if len(invalid_kwargs) > 0:
+            model_warn(
+                f"Backend 'pyomo' does not support the following kwargs: {invalid_kwargs}. They will be ignored."
+            )
+            for key in invalid_kwargs:
+                del kwargs[key]
+
+        for key, value in kwargs_defaults.items():
+            kwargs.setdefault(key, value)
+
+        self._instance.write(str(path), format="mps", **kwargs)
 
     def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
         """Attach an empty pyomo kernel list object to the pyomo model object.
