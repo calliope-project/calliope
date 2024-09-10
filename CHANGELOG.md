@@ -1,7 +1,6 @@
-## 0.7.0.dev4 (dev)
+## 0.7.0.dev4 (2024-09-10)
 
 ### User-facing changes
-
 
 |fixed| Decision variable domain in math docs to use $\in$ instead of $\forall$ (#652).
 
