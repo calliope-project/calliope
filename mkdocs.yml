@@ -25,6 +25,9 @@ theme:
     - navigation.top
     - content.code.copy
     - content.code.annotate
+    - search.suggest
+    - search.highlight
+    - search.share
   logo: img/logo-bw.png
   favicon: img/favicon.ico
 extra_css:

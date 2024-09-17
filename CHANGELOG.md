@@ -1,8 +1,16 @@
-## 0.7.0.dev4 (dev)
+## 0.7.0.dev5 (Unreleased)
+
+## 0.7.0.dev4 (2024-09-10)
 
 ### User-facing changes
 
 |changed| cost expressions in math, to split out investment costs into the capital cost (`cost_investment`), annualised capital cost (`cost_investment_annualised`), fixed operation costs (`cost_operation_fixed`) and variable operation costs (`cost_operation_variable`, previously `cost_var`) (#645).
+
+|fixed| Decision variable domain in math docs to use $\in$ instead of $\forall$ (#652).
+
+|fixed| Clarity of `flow_cap_min` description in documentation (#653).
+
+|changed| API/schema documentation is de-ranked in documentation search bar results (#670).
 
 |new| Math component cross-references in both directions ("uses" and "used in") in Markdown math documentation (#643).
 
