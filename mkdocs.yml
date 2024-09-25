@@ -106,7 +106,7 @@ nav:
     - Nodes: creating/nodes.md
     - Inheriting from templates: creating/templates.md
     - Indexed parameters: creating/parameters.md
-    - Loading tabular data: creating/data_sources.md
+    - Loading data tables: creating/data_tables.md
     - Scenarios and overrides: creating/scenarios.md
   - Running a model: running.md
   - Analysing a model: analysing.md
@@ -157,7 +157,7 @@ nav:
       - reference/api/exceptions.md
       - reference/api/logging.md
     - reference/config_schema.md
-    - reference/data_source_schema.md
+    - reference/data_table_schema.md
     - reference/model_schema.md
     - reference/math_schema.md
   - migrating.md

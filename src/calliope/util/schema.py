@@ -16,7 +16,7 @@ from calliope.io import load_config
 
 CONFIG_SCHEMA = load_config("config_schema.yaml")
 MODEL_SCHEMA = load_config("model_def_schema.yaml")
-DATA_SOURCE_SCHEMA = load_config("data_source_schema.yaml")
+DATA_TABLE_SCHEMA = load_config("data_table_schema.yaml")
 MATH_SCHEMA = load_config("math_schema.yaml")
 
 

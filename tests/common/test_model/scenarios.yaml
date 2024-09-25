@@ -29,9 +29,9 @@ overrides:
           test_supply_elec:
 
   simple_supply_plus: # does not have a solution
-    data_sources:
+    data_tables:
       supply_plus_resource:
-        source: data_sources/supply_plus_resource.csv
+        data: data_tables/supply_plus_resource.csv
         rows: timesteps
         columns: nodes
         add_dims:
@@ -39,9 +39,9 @@ overrides:
           techs: test_supply_plus
 
   simple_supply_and_supply_plus:
-    data_sources:
+    data_tables:
       supply_plus_resource:
-        source: data_sources/supply_plus_resource.csv
+        data: data_tables/supply_plus_resource.csv
         rows: timesteps
         columns: nodes
         add_dims:
@@ -53,9 +53,9 @@ overrides:
       b.techs.test_supply_elec:
 
   supply_and_supply_plus_milp:
-    data_sources:
+    data_tables:
       supply_plus_resource:
-        source: data_sources/supply_plus_resource.csv
+        data: data_tables/supply_plus_resource.csv
         rows: timesteps
         columns: nodes
         select:
@@ -134,9 +134,9 @@ overrides:
           test_supply_elec:
 
   simple_conversion:
-    data_sources:
+    data_tables:
       demand_heat:
-        source: data_sources/demand_heat.csv
+        data: data_tables/demand_heat.csv
         rows: timesteps
         columns: nodes
         add_dims:
@@ -157,9 +157,9 @@ overrides:
           test_conversion:
 
   conversion_and_conversion_plus:
-    data_sources:
+    data_tables:
       demand_heat:
-        source: data_sources/demand_heat.csv
+        data: data_tables/demand_heat.csv
         rows: timesteps
         columns: nodes
         select:
@@ -180,9 +180,9 @@ overrides:
     templates.test_transmission.active: false
 
   conversion_plus_milp:
-    data_sources:
+    data_tables:
       demand_heat:
-        source: data_sources/demand_heat.csv
+        data: data_tables/demand_heat.csv
         rows: timesteps
         columns: nodes
         select:
@@ -209,9 +209,9 @@ overrides:
     templates.test_transmission.active: false
 
   conversion_milp:
-    data_sources:
+    data_tables:
       demand_heat:
-        source: data_sources/demand_heat.csv
+        data: data_tables/demand_heat.csv
         rows: timesteps
         columns: nodes
         select:
@@ -234,9 +234,9 @@ overrides:
     templates.test_transmission.active: false
 
   conversion_plus_purchase:
-    data_sources:
+    data_tables:
       demand_heat:
-        source: data_sources/demand_heat.csv
+        data: data_tables/demand_heat.csv
         rows: timesteps
         columns: nodes
         select:
@@ -260,9 +260,9 @@ overrides:
     templates.test_transmission.active: false
 
   simple_conversion_plus:
-    data_sources:
+    data_tables:
       demand_heat:
-        source: data_sources/demand_heat.csv
+        data: data_tables/demand_heat.csv
         rows: timesteps
         columns: nodes
         select:
@@ -281,9 +281,9 @@ overrides:
     templates.test_transmission.active: false
 
   simple_chp:
-    data_sources:
+    data_tables:
       demand_heat:
-        source: data_sources/demand_heat.csv
+        data: data_tables/demand_heat.csv
         rows: timesteps
         columns: nodes
         select:
@@ -440,7 +440,7 @@ overrides:
           dims: costs
 
   demand_elec_max:
-    data_sources:
+    data_tables:
       demand_elec:
         add_dims:
           parameters: sink_use_max

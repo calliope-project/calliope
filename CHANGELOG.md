@@ -1,5 +1,10 @@
 ## 0.7.0.dev5 (Unreleased)
 
+### User-facing changes
+
+|changed| `data_sources` -> `data_tables` and `data_sources.source` -> `data_tables.data`.
+This change has occurred to avoid confusion between data "sources" and model energy "sources" (#673).
+
 ## 0.7.0.dev4 (2024-09-10)
 
 ### User-facing changes
