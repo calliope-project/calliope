@@ -8,8 +8,9 @@ import tempfile
 import textwrap
 from pathlib import Path
 
-import calliope
 from mkdocs.structure.files import File
+
+import calliope
 
 logger = logging.getLogger("mkdocs")
 

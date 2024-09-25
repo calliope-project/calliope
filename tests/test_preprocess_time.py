@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest  # noqa: F401
+
 from calliope import AttrDict, exceptions
 
 from .common.util import build_test_model

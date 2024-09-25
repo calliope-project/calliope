@@ -1,9 +1,10 @@
 import warnings
 
-import calliope
-import calliope.exceptions as exceptions
 import pandas as pd
 import pytest
+
+import calliope
+import calliope.exceptions as exceptions
 from calliope.attrdict import AttrDict
 
 from .common.util import build_test_model as build_model

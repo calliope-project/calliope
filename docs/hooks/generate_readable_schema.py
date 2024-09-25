@@ -12,8 +12,9 @@ import textwrap
 from pathlib import Path
 
 import jsonschema2md
-from calliope.util import schema
 from mkdocs.structure.files import File
+
+from calliope.util import schema
 
 TEMPDIR = tempfile.TemporaryDirectory()
 

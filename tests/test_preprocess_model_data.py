@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.preprocess import data_sources, load
@@ -14,7 +15,7 @@ from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
 
 
-@pytest.fixture()
+@pytest.fixture
 def model_def():
     filepath = Path(__file__).parent / "common" / "test_model" / "model.yaml"
     model_def_dict, model_def_path, _ = load.load_model_definition(
@@ -23,7 +24,7 @@ def model_def():
     return model_def_dict, model_def_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def data_source_list(model_def, init_config):
     model_def_dict, model_def_path = model_def
     return [
@@ -34,14 +35,14 @@ def data_source_list(model_def, init_config):
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def init_config(config_defaults, model_def):
     model_def_dict, _ = model_def
     config_defaults.union(model_def_dict.pop("config"), allow_override=True)
     return config_defaults["init"]
 
 
-@pytest.fixture()
+@pytest.fixture
 def model_data_factory(model_def, init_config, model_defaults):
     model_def_dict, _ = model_def
     return ModelDataFactory(
@@ -49,13 +50,13 @@ def model_data_factory(model_def, init_config, model_defaults):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def model_data_factory_w_params(model_data_factory: ModelDataFactory):
     model_data_factory.add_node_tech_data()
     return model_data_factory
 
 
-@pytest.fixture()
+@pytest.fixture
 def my_caplog(caplog):
     caplog.set_level(logging.DEBUG, logger="calliope.preprocess")
     return caplog
@@ -854,7 +855,7 @@ class TestModelData:
 
 
 class TestTopLevelParams:
-    @pytest.fixture()
+    @pytest.fixture
     def run_and_test(self, model_data_factory_w_params):
         def _run_and_test(in_dict, out_dict, dims):
             model_data_factory_w_params.model_definition["parameters"] = {

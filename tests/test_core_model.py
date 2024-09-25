@@ -1,10 +1,11 @@
 import logging
 from contextlib import contextmanager
 
-import calliope
 import numpy as np
 import pandas as pd
 import pytest
+
+import calliope
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning

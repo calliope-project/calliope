@@ -1,6 +1,7 @@
-import calliope
 import pyomo.core as po
 import pytest
+
+import calliope
 
 from .common.util import build_test_model as build_model
 

@@ -6,6 +6,7 @@ import pandas as pd
 import pyparsing as pp
 import pytest
 import xarray as xr
+
 from calliope import exceptions
 from calliope.backend import expression_parser, helper_functions
 
@@ -36,40 +37,40 @@ class DummyFunc2(helper_functions.ParsingHelperFunction):
         return x * 10 + y
 
 
-@pytest.fixture()
+@pytest.fixture
 def valid_component_names():
     return ["foo", "with_inf", "only_techs", "no_dims", "multi_dim_var", "no_dim_var"]
 
 
-@pytest.fixture()
+@pytest.fixture
 def base_parser_elements():
     number, identifier = expression_parser.setup_base_parser_elements()
     return number, identifier
 
 
-@pytest.fixture()
+@pytest.fixture
 def number(base_parser_elements):
     return base_parser_elements[0]
 
 
-@pytest.fixture()
+@pytest.fixture
 def identifier(base_parser_elements):
     return base_parser_elements[1]
 
 
-@pytest.fixture()
+@pytest.fixture
 def evaluatable_identifier(identifier, valid_component_names):
     return expression_parser.evaluatable_identifier_parser(
         identifier, valid_component_names
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def id_list(number, evaluatable_identifier):
     return expression_parser.list_parser(number, evaluatable_identifier)
 
 
-@pytest.fixture()
+@pytest.fixture
 def unsliced_param():
     def _unsliced_param(valid_component_names):
         return expression_parser.unsliced_object_parser(valid_component_names)
@@ -77,12 +78,12 @@ def unsliced_param():
     return _unsliced_param
 
 
-@pytest.fixture()
+@pytest.fixture
 def unsliced_param_with_obj_names(unsliced_param, valid_component_names):
     return unsliced_param(valid_component_names)
 
 
-@pytest.fixture()
+@pytest.fixture
 def sliced_param(
     number, identifier, evaluatable_identifier, unsliced_param_with_obj_names
 ):
@@ -91,12 +92,12 @@ def sliced_param(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def sub_expression(identifier):
     return expression_parser.sub_expression_parser(identifier)
 
 
-@pytest.fixture()
+@pytest.fixture
 def helper_function(
     number,
     sliced_param,
@@ -116,7 +117,7 @@ def helper_function(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def helper_function_no_nesting(
     number,
     sliced_param,
@@ -157,7 +158,7 @@ def helper_function_one_parser_in_args(identifier, request):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def eval_kwargs(dummy_pyomo_backend_model):
     return {
         "helper_functions": helper_functions._registry["expression"],
@@ -172,7 +173,7 @@ def eval_kwargs(dummy_pyomo_backend_model):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def arithmetic(
     helper_function, number, sliced_param, sub_expression, unsliced_param_with_obj_names
 ):
@@ -185,7 +186,7 @@ def arithmetic(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def helper_function_allow_arithmetic(
     number,
     sliced_param,
@@ -209,22 +210,22 @@ def helper_function_allow_arithmetic(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def equation_comparison(arithmetic):
     return expression_parser.equation_comparison_parser(arithmetic)
 
 
-@pytest.fixture()
+@pytest.fixture
 def generate_equation(valid_component_names):
     return expression_parser.generate_equation_parser(valid_component_names)
 
 
-@pytest.fixture()
+@pytest.fixture
 def generate_slice(valid_component_names):
     return expression_parser.generate_slice_parser(valid_component_names)
 
 
-@pytest.fixture()
+@pytest.fixture
 def generate_sub_expression(valid_component_names):
     return expression_parser.generate_sub_expression_parser(valid_component_names)
 
@@ -758,11 +759,11 @@ class TestEquationParserComparison:
     def var_right(self, request):
         return request.param
 
-    @pytest.fixture()
+    @pytest.fixture
     def expected_left(self, var_left):
         return self.EXPR_PARAMS_AND_EXPECTED_EVAL[var_left]
 
-    @pytest.fixture()
+    @pytest.fixture
     def expected_right(self, var_right):
         return self.EXPR_PARAMS_AND_EXPECTED_EVAL[var_right]
 
@@ -770,7 +771,7 @@ class TestEquationParserComparison:
     def operator(self, request):
         return request.param
 
-    @pytest.fixture()
+    @pytest.fixture
     def single_equation_simple(self, var_left, var_right, operator):
         return f"{var_left} {operator} {var_right}"
 
@@ -849,7 +850,7 @@ class TestEquationParserComparison:
 
 
 class TestAsMathString:
-    @pytest.fixture()
+    @pytest.fixture
     def latex_eval_kwargs(self, dummy_latex_backend_model):
         return {
             "helper_functions": helper_functions._registry["expression"],

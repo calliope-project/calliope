@@ -1,10 +1,11 @@
 import shutil
 from pathlib import Path
 
-import calliope
 import numpy as np
 import pandas as pd
 import pytest
+
+import calliope
 from calliope import exceptions
 
 from .common.util import check_error_or_warning
@@ -16,7 +17,7 @@ class TestModelPreproccessing:
     def test_preprocess_national_scale(self):
         calliope.examples.national_scale()
 
-    @pytest.mark.time_intensive()
+    @pytest.mark.time_intensive
     def test_preprocess_time_clustering(self):
         calliope.examples.time_clustering()
 
@@ -112,7 +113,7 @@ class TestNationalScaleExampleModelSenseChecks:
     def test_nationalscale_example_results_cbc(self, example_tester):
         example_tester()
 
-    @pytest.mark.needs_gurobi_license()
+    @pytest.mark.needs_gurobi_license
     def test_nationalscale_example_results_gurobi(self, example_tester):
         pytest.importorskip("gurobipy")
         example_tester(solver="gurobi", solver_io="python")
@@ -214,7 +215,7 @@ class TestNationalScaleExampleModelSpores:
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
 
-    @pytest.mark.needs_gurobi_license()
+    @pytest.mark.needs_gurobi_license
     @pytest.mark.filterwarnings(
         "ignore:(?s).*`gurobi_persistent`.*:calliope.exceptions.ModelWarning"
     )
@@ -230,7 +231,7 @@ class TestNationalScaleExampleModelSpores:
         assert np.allclose(gurobi_data.flow_cap, gurobi_persistent_data.flow_cap)
         assert np.allclose(gurobi_data.cost, gurobi_persistent_data.cost)
 
-    @pytest.fixture()
+    @pytest.fixture
     def base_model_data(self):
         model = calliope.examples.national_scale(
             time_subset=["2005-01-01", "2005-01-03"], scenario="spores"
@@ -269,7 +270,7 @@ class TestNationalScaleExampleModelSpores:
             excinfo, "Cannot run SPORES with a SPORES dimension in any input"
         )
 
-    @pytest.fixture()
+    @pytest.fixture
     def spores_with_override(self):
         def _spores_with_override(override_dict):
             result_without_override = self.example_tester()
@@ -441,7 +442,7 @@ class TestUrbanScaleExampleModelSenseChecks:
     def test_urban_example_results_area(self):
         self.example_tester("per_area")
 
-    @pytest.mark.needs_gurobi_license()
+    @pytest.mark.needs_gurobi_license
     def test_urban_example_results_area_gurobi(self):
         pytest.importorskip("gurobipy")
         self.example_tester("per_area", solver="gurobi", solver_io="python")
@@ -449,7 +450,7 @@ class TestUrbanScaleExampleModelSenseChecks:
     def test_urban_example_results_cap(self):
         self.example_tester("per_cap")
 
-    @pytest.mark.needs_gurobi_license()
+    @pytest.mark.needs_gurobi_license
     def test_urban_example_results_cap_gurobi(self):
         pytest.importorskip("gurobipy")
         self.example_tester("per_cap", solver="gurobi", solver_io="python")

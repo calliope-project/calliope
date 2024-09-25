@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 import xarray as xr
+
 from calliope import exceptions
 from calliope.backend import latex_backend_model
 

@@ -1,8 +1,9 @@
 import logging
 
-import calliope
 import pandas as pd
 import pytest
+
+import calliope
 from calliope.preprocess import data_sources
 from calliope.util.schema import CONFIG_SCHEMA, extract_from_schema
 

@@ -2,8 +2,9 @@ import os
 from pathlib import Path
 from typing import Literal
 
-import calliope
 import xarray as xr
+
+import calliope
 from calliope import backend
 
 

@@ -4,8 +4,9 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from calliope import AttrDict
 from pyomo.repn.tests import lp_diff
+
+from calliope import AttrDict
 
 from .common.util import build_lp, build_test_model
 
@@ -234,7 +235,7 @@ class CustomMathExamples(ABC):
     def custom_math(self):
         return AttrDict.from_yaml(self.CUSTOM_MATH_DIR / self.YAML_FILEPATH)
 
-    @pytest.fixture()
+    @pytest.fixture
     def build_and_compare(self, abs_filepath, compare_lps):
         def _build_and_compare(
             filename: str,
