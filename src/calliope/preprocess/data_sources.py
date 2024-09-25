@@ -5,6 +5,7 @@
 import logging
 from collections.abc import Hashable
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -34,9 +35,10 @@ class DataSourceDict(TypedDict):
     columns: NotRequired[str | list[str]]
     source: str
     df: NotRequired[str]
+    map_dims: NotRequired[dict[str, str]]
     add_dims: NotRequired[dict[str, str | list[str]]]
-    select: dict[str, str | bool | int]
-    drop: Hashable | list[Hashable]
+    select: NotRequired[dict[str, str | bool | int]]
+    drop: NotRequired[Hashable | list[Hashable]]
 
 
 class DataSource:
@@ -275,22 +277,28 @@ class DataSource:
                 "Data source must be a pandas DataFrame. "
                 "If you are providing an in-memory object, ensure it is not a pandas Series by calling the method `to_frame()`"
             )
-        for axis, names in {"columns": self.columns, "index": self.index}.items():
-            if names is None:
-                if len(getattr(df, axis).names) != 1:
-                    self._raise_error(f"Expected a single {axis} level in loaded data.")
-                df = df.squeeze(axis=axis)
-            else:
-                if len(getattr(df, axis).names) != len(names):
-                    self._raise_error(
-                        f"Expected {len(names)} {axis} levels in loaded data."
-                    )
-                self._compare_axis_names(getattr(df, axis).names, names, axis)
-                df.rename_axis(inplace=True, **{axis: names})
 
         tdf: pd.Series
+        axis_names: dict[Literal["columns", "index"], None | list[str]] = {
+            "columns": self.columns,
+            "index": self.index,
+        }
+        squeeze_me: dict[Literal["columns", "index"], bool] = {
+            "columns": self.columns is None,
+            "index": self.index is None,
+        }
+        for axis, names in axis_names.items():
+            if names is None and len(getattr(df, axis).names) != 1:
+                self._raise_error(f"Expected a single {axis} level in loaded data.")
+            elif names is not None:
+                df = self._rename_axes(df, axis, names)
+
+        for axis, squeeze in squeeze_me.items():
+            if squeeze:
+                df = df.squeeze(axis=axis)
+
         if isinstance(df, pd.DataFrame):
-            tdf = df.stack(df.columns.names, future_stack=True).dropna()
+            tdf = df.stack(tuple(df.columns.names), future_stack=True).dropna()
         else:
             tdf = df
 
@@ -314,7 +322,6 @@ class DataSource:
                 tdf = pd.concat(
                     [tdf for _ in index_items], keys=index_items, names=[dim_name]
                 )
-
         self._check_processed_tdf(tdf)
         self._check_for_protected_params(tdf)
 
@@ -327,6 +334,29 @@ class DataSource:
 
         self._log(f"Loaded arrays:\n{ds}")
         return ds
+
+    def _rename_axes(
+        self, df: pd.DataFrame, axis: Literal["columns", "index"], names: list[str]
+    ) -> pd.DataFrame:
+        """Check and rename DataFrame index and column names according to data table definition.
+
+        Args:
+            df (pd.DataFrame): Loaded data table as a DataFrame.
+            axis (Literal[columns, index]): DataFrame axis.
+            names (list[str] | None): Expected dimension names along `axis`.
+
+        Returns:
+            pd.DataFrame: `df` with all dimensions on `axis` appropriately named.
+        """
+        if len(getattr(df, axis).names) != len(names):
+            self._raise_error(f"Expected {len(names)} {axis} levels in loaded data.")
+        mapper = self.input.get("map_dims", {})
+        if mapper:
+            df.rename_axis(inplace=True, **{axis: mapper})
+        self._compare_axis_names(getattr(df, axis).names, names, axis)
+        df.rename_axis(inplace=True, **{axis: names})
+
+        return df
 
     def _check_for_protected_params(self, tdf: pd.Series):
         """Raise an error if any defined parameters are in a pre-configured set of _protected_ parameters.
