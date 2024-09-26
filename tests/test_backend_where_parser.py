@@ -2,6 +2,7 @@ import numpy as np
 import pyparsing
 import pytest
 import xarray as xr
+
 from calliope.attrdict import AttrDict
 from calliope.backend import expression_parser, helper_functions, where_parser
 from calliope.exceptions import BackendError
@@ -17,50 +18,50 @@ def parse_yaml(yaml_string):
     return AttrDict.from_yaml_string(yaml_string)
 
 
-@pytest.fixture()
+@pytest.fixture
 def base_parser_elements():
     number, identifier = expression_parser.setup_base_parser_elements()
     return number, identifier
 
 
-@pytest.fixture()
+@pytest.fixture
 def number(base_parser_elements):
     return base_parser_elements[0]
 
 
-@pytest.fixture()
+@pytest.fixture
 def identifier(base_parser_elements):
     return base_parser_elements[1]
 
 
-@pytest.fixture()
+@pytest.fixture
 def data_var(identifier):
     return where_parser.data_var_parser(identifier)
 
 
-@pytest.fixture()
+@pytest.fixture
 def config_option(identifier):
     return where_parser.config_option_parser(identifier)
 
 
-@pytest.fixture()
+@pytest.fixture
 def bool_operand():
     return where_parser.bool_parser()
 
 
-@pytest.fixture()
+@pytest.fixture
 def evaluatable_string(identifier):
     return where_parser.evaluatable_string_parser(identifier)
 
 
-@pytest.fixture()
+@pytest.fixture
 def helper_function(number, identifier, evaluatable_string):
     return expression_parser.helper_function_parser(
         evaluatable_string, number, generic_identifier=identifier
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def comparison(
     evaluatable_string, number, helper_function, bool_operand, config_option, data_var
 ):
@@ -74,19 +75,19 @@ def comparison(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def subset(identifier, evaluatable_string, number):
     return where_parser.subset_parser(identifier, evaluatable_string, number)
 
 
-@pytest.fixture()
+@pytest.fixture
 def where(bool_operand, helper_function, data_var, comparison, subset):
     return where_parser.where_parser(
         bool_operand, helper_function, data_var, comparison, subset
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def eval_kwargs(dummy_pyomo_backend_model):
     return {
         "input_data": dummy_pyomo_backend_model.inputs,
@@ -98,7 +99,7 @@ def eval_kwargs(dummy_pyomo_backend_model):
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def parse_where_string(eval_kwargs, where):
     def _parse_where_string(where_string):
         parsed_ = where.parse_string(where_string, parse_all=True)
@@ -563,7 +564,7 @@ class TestParserMasking:
 
 
 class TestAsMathString:
-    @pytest.fixture()
+    @pytest.fixture
     def latex_eval_kwargs(self, eval_kwargs, dummy_latex_backend_model):
         eval_kwargs["return_type"] = "math_string"
         eval_kwargs["backend_interface"] = dummy_latex_backend_model

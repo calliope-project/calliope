@@ -121,5 +121,7 @@ We recommend you only use HTML as the equations can become too long for a PDF pa
 
 !!! note
 
-    You can add the tabs to flip between rich-text math and the input YAML snippet in your math documentation by using the `mkdocs_tabbed` argument in `math_documentation.write`.
+    You can add interactive elements to your documentation, if you are planning to host them online using MKDocs.
+    This includes tabs to flip between rich-text math and the input YAML snippet, and dropdown lists for math component cross-references.
+    Just set the `mkdocs_features` argument to `True` in `math_documentation.write`.
     We use this functionality in our [pre-defined math](../pre_defined_math/index.md).

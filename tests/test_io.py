@@ -1,10 +1,11 @@
 import os
 import tempfile
 
-import calliope
-import calliope.io
 import pytest  # noqa: F401
 import xarray as xr
+
+import calliope
+import calliope.io
 from calliope import exceptions
 
 from .common.util import check_error_or_warning

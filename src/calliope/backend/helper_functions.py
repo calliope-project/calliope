@@ -163,7 +163,7 @@ class ParsingHelperFunction(ABC):
 
 
 class Inheritance(ParsingHelperFunction):
-    """Find all nodes / techs that inherit from a node / tech group."""
+    """Find all nodes / techs that inherit from a template."""
 
     #:
     ALLOWED_IN = ["where"]
@@ -183,9 +183,9 @@ class Inheritance(ParsingHelperFunction):
     def as_array(
         self, *, nodes: str | None = None, techs: str | None = None
     ) -> xr.DataArray:
-        """Find all technologies and/or nodes which inherit from a particular technology or node group.
+        """Find all technologies and/or nodes which inherit from a particular template.
 
-        The group items being referenced must be defined by the user in `node_groups`/`tech_groups`.
+        The group items being referenced must be defined by the user in `templates`.
 
         Args:
             nodes (str | None, optional): group name to search for inheritance of on the `nodes` dimension. Default is None.
@@ -197,28 +197,27 @@ class Inheritance(ParsingHelperFunction):
         Examples:
             With:
             ```yaml
-            node_groups:
+            templates:
               foo:
                 available_area: 1
-            tech_groups:
               bar:
                 flow_cap_max: 1
               baz:
-                inherits: bar
+                template: bar
                 flow_out_eff: 0.5
             nodes:
               node_1:
-                inherits: foo
+                template: foo
                 techs: {tech_1, tech_2}
               node_2:
                 techs: {tech_1, tech_2}
             techs:
               tech_1:
                 ...
-                inherits: bar
+                template: bar
               tech_2:
                 ...
-                inherits: baz
+                template: baz
             ```
 
             >>> inheritance(nodes=foo)

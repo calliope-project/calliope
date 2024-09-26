@@ -90,10 +90,18 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     {{ equation.description }}
     {% endif %}
-    {% if equation.references %}
+    {% if equation.used_in %}
 
     **Used in**:
-    {% for ref in equation.references %}
+    {% for ref in equation.used_in %}
+
+    * {{ ref }}
+    {% endfor %}
+    {% endif %}
+    {% if equation.uses %}
+
+    **Uses**:
+    {% for ref in equation.uses %}
 
     * {{ ref }}
     {% endfor %}
@@ -155,10 +163,19 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     {{ equation.description }}
     {% endif %}
-    {% if equation.references %}
+    {% if equation.used_in %}
 
     \textbf{Used in}:
-    {% for ref in equation.references %}
+    {% for ref in equation.used_in %}
+    \begin{itemize}
+        \item {{ ref }}
+    \end{itemize}
+    {% endfor %}
+    {% endif %}
+    {% if equation.uses %}
+
+    \textbf{Uses}:
+    {% for ref in equation.uses %}
     \begin{itemize}
         \item {{ ref }}
     \end{itemize}
@@ -212,12 +229,28 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     {{ equation.description }}
     {% endif %}
-    {% if equation.references %}
+    {% if equation.used_in %}
 
+    {% if mkdocs_features %}
+    ??? info "Used in"
+    {% else %}
     **Used in**:
+    {% endif %}
 
-    {% for ref in equation.references %}
-    * [{{ ref }}](#{{ ref }})
+    {% for ref in equation.used_in %}
+    {{ "    " if mkdocs_features else "" }}* [{{ ref }}](#{{ ref }})
+    {% endfor %}
+    {% endif %}
+    {% if equation.uses %}
+
+    {% if mkdocs_features %}
+    ??? info "Uses"
+    {% else %}
+    **Uses**:
+    {% endif %}
+
+    {% for ref in equation.uses %}
+    {{ "    " if mkdocs_features else "" }}* [{{ ref }}](#{{ ref }})
     {% endfor %}
     {% endif %}
     {% if equation.unit is not none %}
@@ -229,7 +262,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     **Default**: {{ equation.default }}
     {% endif %}
     {% if equation.expression != "" %}
-    {% if mkdocs_tabbed and yaml_snippet is not none%}
+    {% if mkdocs_features and yaml_snippet is not none%}
 
     === "Math"
 
@@ -398,7 +431,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self._update_references(name, bound_refs.difference(name))
 
         self._generate_math_string(
-            parsed_component, var_da, equations=[lb, ub], sense=r"\forall" + domain
+            parsed_component, var_da, equations=[lb, ub], sense=r"\in" + domain
         )
 
     def add_objective(  # noqa: D102, override
@@ -440,36 +473,50 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             del self._dataset[key]
 
     def generate_math_doc(
-        self, format: ALLOWED_MATH_FILE_FORMATS = "tex", mkdocs_tabbed: bool = False
+        self, format: ALLOWED_MATH_FILE_FORMATS = "tex", mkdocs_features: bool = False
     ) -> str:
         """Generate the math documentation by embedding LaTeX math in a template.
 
         Args:
             format (Literal["tex", "rst", "md"]):
                 The built LaTeX math will be embedded in a document of the given format (tex=LaTeX, rst=reStructuredText, md=Markdown). Defaults to "tex".
-            mkdocs_tabbed (bool, optional): If True and format is `md`, the equations will be on a tab and the original YAML math definition will be on another tab.
+            mkdocs_features (bool, optional):
+                If True and format is `md`, then:
+                - the equations will be on a tab and the original YAML math definition will be on another tab;
+                - the equation cross-references will be given in a drop-down list.
 
         Returns:
             str: Generated math documentation.
         """
-        if mkdocs_tabbed and format != "md":
+        if mkdocs_features and format != "md":
             raise ModelError(
-                "Cannot use MKDocs tabs when writing math to a non-Markdown file format."
+                "Cannot use MKDocs features when writing math to a non-Markdown file format."
             )
 
         doc_template = self.FORMAT_STRINGS[format]
+        uses = {
+            name: set(
+                other
+                for other, da_other in self._dataset.data_vars.items()
+                if name in da_other.attrs.get("references", set())
+            )
+            for name in self._dataset.data_vars
+        }
         components = {
             objtype: [
                 {
                     "expression": da.attrs.get("math_string", ""),
                     "name": name,
                     "description": da.attrs.get("description", None),
-                    "references": list(da.attrs.get("references", set())),
+                    "used_in": sorted(
+                        list(da.attrs.get("references", set()) - set([name]))
+                    ),
+                    "uses": sorted(list(uses[name] - set([name]))),
                     "default": da.attrs.get("default", None),
                     "unit": da.attrs.get("unit", None),
                     "yaml_snippet": da.attrs.get("yaml_snippet", None),
                 }
-                for name, da in getattr(self, objtype).data_vars.items()
+                for name, da in sorted(getattr(self, objtype).data_vars.items())
                 if "math_string" in da.attrs
                 or (objtype == "parameters" and da.attrs["references"])
             ]
@@ -486,7 +533,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         if "parameters" in components and not components["parameters"]:
             del components["parameters"]
         return self._render(
-            doc_template, mkdocs_tabbed=mkdocs_tabbed, components=components
+            doc_template, mkdocs_features=mkdocs_features, components=components
         )
 
     def _add_latex_strings(

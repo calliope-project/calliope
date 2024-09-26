@@ -21,9 +21,10 @@
 
 # %%
 
-import calliope
 import numpy as np
 import plotly.express as px
+
+import calliope
 
 calliope.set_log_verbosity("INFO", include_solver_output=False)
 

@@ -1,3 +1,8 @@
+---
+search:
+    boost: 0.5
+---
+
 # CLI Reference
 
 This page provides documentation for the `calliope` command line tool.

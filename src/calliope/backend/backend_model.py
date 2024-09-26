@@ -1056,13 +1056,14 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 name,
                 f"Applying bound according to the {bound} parameter values.",
             )
-            bound_array = self.get_parameter(bound).copy()
+            bound_array = self.get_parameter(bound)
             fill_na = bound_array.attrs.get("default", fill_na)
             references.add(bound)
         else:
             bound_array = xr.DataArray(bound)
-        bound_array.attrs = {}
-        return bound_array.fillna(fill_na)
+        filled_bound_array = bound_array.fillna(fill_na)
+        filled_bound_array.attrs = {}
+        return filled_bound_array
 
     @contextmanager
     def _datetime_as_string(self, data: xr.DataArray | xr.Dataset) -> Iterator:

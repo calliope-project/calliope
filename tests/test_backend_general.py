@@ -1,10 +1,11 @@
 import logging
 
-import calliope
 import numpy as np
 import pandas as pd
 import pytest  # noqa: F401
 import xarray as xr
+
+import calliope
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
@@ -25,7 +26,7 @@ def built_model_cls_longnames(backend) -> calliope.Model:
     return m
 
 
-@pytest.fixture()
+@pytest.fixture
 def built_model_func_longnames(backend) -> calliope.Model:
     m = build_model({}, "simple_supply,two_hours,investment_costs")
     m.build(backend=backend, pre_validate_math_strings=False)
@@ -33,7 +34,7 @@ def built_model_func_longnames(backend) -> calliope.Model:
     return m
 
 
-@pytest.fixture()
+@pytest.fixture
 def solved_model_func(backend) -> calliope.Model:
     m = build_model({}, "simple_supply,two_hours,investment_costs")
     m.build(backend=backend, pre_validate_math_strings=False)
@@ -65,7 +66,7 @@ def solved_model_cls(backend) -> calliope.Model:
     return m
 
 
-@pytest.fixture()
+@pytest.fixture
 def built_model_func_updated_cost_flow_cap(backend, dummy_int: int) -> calliope.Model:
     m = build_model({}, "simple_supply,two_hours,investment_costs")
     m.build(backend=backend, pre_validate_math_strings=False)

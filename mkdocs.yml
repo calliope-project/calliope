@@ -1,5 +1,6 @@
 site_name: Calliope
-site_url: https://calliope.readthedocs.io/
+# FIXME: `en/latest` should be changed to `en/stable` once there is a stable mkdocs based release
+site_url: https://calliope.readthedocs.io/en/latest/
 copyright: Copyright &copy; since 2013 <a href="https://github.com/calliope-project/calliope/blob/main/AUTHORS">Calliope contributors</a> (Apache 2.0 licensed)
 repo_url: https://github.com/calliope-project/calliope
 hooks:
@@ -24,6 +25,9 @@ theme:
     - navigation.top
     - content.code.copy
     - content.code.annotate
+    - search.suggest
+    - search.highlight
+    - search.share
   logo: img/logo-bw.png
   favicon: img/favicon.ico
 extra_css:
@@ -100,7 +104,7 @@ nav:
     - Model configuration: creating/config.md
     - Technologies: creating/techs.md
     - Nodes: creating/nodes.md
-    - Inheriting from technology and node groups: creating/groups.md
+    - Inheriting from templates: creating/templates.md
     - Indexed parameters: creating/parameters.md
     - Loading tabular data: creating/data_sources.md
     - Scenarios and overrides: creating/scenarios.md

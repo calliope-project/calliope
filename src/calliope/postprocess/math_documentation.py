@@ -3,7 +3,7 @@
 import logging
 import typing
 from pathlib import Path
-from typing import Literal
+from typing import Literal, overload
 
 from calliope.backend import ALLOWED_MATH_FILE_FORMATS, LatexBackendModel
 from calliope.model import Model
@@ -39,10 +39,23 @@ class MathDocumentation:
         """Direct access to backend math."""
         return self.backend.math
 
+    # Expecting string if not giving filename.
+    @overload
+    def write(
+        self,
+        filename: Literal[None] = None,
+        mkdocs_features: bool = False,
+        format: ALLOWED_MATH_FILE_FORMATS | None = None,
+    ) -> str: ...
+
+    # Expecting None (and format arg is not needed) if giving filename.
+    @overload
+    def write(self, filename: str | Path, mkdocs_features: bool = False) -> None: ...
+
     def write(
         self,
         filename: str | Path | None = None,
-        mkdocs_tabbed: bool = False,
+        mkdocs_features: bool = False,
         format: ALLOWED_MATH_FILE_FORMATS | None = None,
     ) -> str | None:
         """Write model documentation.
@@ -51,9 +64,10 @@ class MathDocumentation:
             filename (str | Path | None, optional):
                 If given, will write the built mathematical formulation to a file with
                 the given extension as the file format. Defaults to None.
-            mkdocs_tabbed (bool, optional):
-                If True and Markdown docs are being generated, the equations will be on
-                a tab and the original YAML math definition will be on another tab.
+            mkdocs_features (bool, optional):
+                If True and Markdown docs are being generated, then:
+                - the equations will be on a tab and the original YAML math definition will be on another tab;
+                - the equation cross-references will be given in a drop-down list.
                 Defaults to False.
             format (ALLOWED_MATH_FILE_FORMATS | None, optional):
                 Not required if filename is given (as the format will be automatically inferred).
@@ -78,7 +92,7 @@ class MathDocumentation:
             raise ValueError(
                 f"Math documentation format must be one of {allowed_formats}, received `{format}`"
             )
-        populated_doc = self.backend.generate_math_doc(format, mkdocs_tabbed)
+        populated_doc = self.backend.generate_math_doc(format, mkdocs_features)
 
         if filename is None:
             return populated_doc

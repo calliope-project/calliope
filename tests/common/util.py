@@ -2,10 +2,11 @@ import os
 from pathlib import Path
 from typing import Literal
 
+import xarray as xr
+
 import calliope
 import calliope.backend
 import calliope.preprocess
-import xarray as xr
 
 
 def build_test_model(

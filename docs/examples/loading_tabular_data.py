@@ -22,8 +22,9 @@
 # %%
 from pathlib import Path
 
-import calliope
 import pandas as pd
+
+import calliope
 
 calliope.set_log_verbosity("INFO", include_solver_output=False)
 

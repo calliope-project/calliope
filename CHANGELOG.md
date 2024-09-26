@@ -1,8 +1,29 @@
-## 0.7.0.dev4 (dev)
+## 0.7.0.dev5 (Unreleased)
 
 ### User-facing changes
 
 |new| Math has been removed from `model.math`, and can now be accessed via `model.math.data`.
+
+## 0.7.0.dev4 (2024-09-10)
+
+### User-facing changes
+
+|fixed| Decision variable domain in math docs to use $\in$ instead of $\forall$ (#652).
+
+|fixed| Clarity of `flow_cap_min` description in documentation (#653).
+
+|changed| API/schema documentation is de-ranked in documentation search bar results (#670).
+
+|new| Math component cross-references in both directions ("uses" and "used in") in Markdown math documentation (#643).
+
+|fixed| Duplicated links in math documentation (#651).
+
+|changed| `node_groups` and `tech_groups` changed to a general top-level `templates` key,
+accessed via the `template` key (replacing `inherit`) in `nodes` and `techs` (#600).
+
+|fixed| Contribution of `cost_om_annual_investment_fraction` to total investment costs, to not apply to depreciated costs (#645).
+
+|fixed| Math for multi-carrier variable export costs (#663).
 
 |new| Piecewise constraints added to the YAML math with its own unique syntax (#107).
 These constraints will be added to the optimisation problem using Special Ordered Sets of Type 2 (SOS2) variables.

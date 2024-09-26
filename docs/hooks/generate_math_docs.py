@@ -8,9 +8,10 @@ import tempfile
 import textwrap
 from pathlib import Path
 
+from mkdocs.structure.files import File
+
 import calliope
 from calliope.postprocess.math_documentation import MathDocumentation
-from mkdocs.structure.files import File
 
 logger = logging.getLogger("mkdocs")
 
@@ -123,9 +124,8 @@ def write_file(
 
     nav_reference["Pre-defined math"].append(output_file.as_posix())
 
-    md_doc = math_documentation.write(format="md", mkdocs_tabbed=True)
-
     title = math_documentation.name
+    math_doc = math_documentation.write(format="md", mkdocs_features=True)
     file_to_download = Path("..") / filename
     output_full_filepath.write_text(
         PREPEND_SNIPPET.format(
@@ -134,7 +134,7 @@ def write_file(
             math_type=title.lower(),
             filepath=file_to_download,
         )
-        + md_doc
+        + math_doc
     )
 
 

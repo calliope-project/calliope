@@ -52,13 +52,13 @@ Configuration options are any that are defined in `config.build`, where you can 
 
     1.  `get_val_at_index` is a [helper function](#helper-functions); read more below!
 
-1. Checking the `base_tech` of a technology (`storage`, `supply`, etc.) or its inheritance chain (if using `tech_groups` and the `inherit` parameter).
+1. Checking the `base_tech` of a technology (`storage`, `supply`, etc.) or its inheritance chain (if using `templates` and the `template` parameter).
 
     ??? example "Examples"
 
         - If you want to create a decision variable across only `storage` technologies, you would include `base_tech=storage`.
-        - If you want to apply a constraint across only your own `rooftop_supply` technologies (e.g., you have defined `rooftop_supply` in `tech_groups` and your technologies `pv` and `solar_thermal` define `#!yaml inherit: rooftop_supply`), you would include `inheritance(rooftop_supply)`.
-        Note that `base_tech=...` is a simple check for the given value of `base_tech`, while `inheritance()` is a helper function ([see below](#helper-functions)) which can deal with the fact that intermediate groups may be present, e.g. `pv` might inherit from `rooftop_supply` which in turn might inherit from `electricity_supply`.
+        - If you want to apply a constraint across only your own `rooftop_supply` technologies (e.g., you have defined `rooftop_supply` in `templates` and your technologies `pv` and `solar_thermal` define `#!yaml template: rooftop_supply`), you would include `inheritance(rooftop_supply)`.
+        Note that `base_tech=...` is a simple check for the given value of `base_tech`, while `inheritance()` is a helper function ([see below](#helper-functions)) which can deal with finding techs/nodes using the same template, e.g. `pv` might inherit the `rooftop_supply` template which in turn might inherit the template `electricity_supply`.
 
 1. Subsetting a set.
 The sets available to subset are always [`nodes`, `techs`, `carriers`] + any additional sets defined by you in [`foreach`](#foreach-lists).
@@ -118,23 +118,23 @@ Some of these helper functions require a good understanding of their functionali
 
 ### inheritance
 
-using `inheritance(...)` in a `where` string allows you to grab a subset of technologies that all share the same [`tech_group`](../creating/groups.md) in the technology's `inherit` key.
-If a `tech_group` also inherits from another `tech_group` (chained inheritance), you will get all `techs` that are children along that inheritance chain.
+using `inheritance(...)` in a `where` string allows you to grab a subset of technologies / nodes that all share the same [`template`](../creating/templates.md) in the technology's / node's `template` key.
+If a `template` also inherits from another `template` (chained inheritance), you will get all `techs`/`nodes` that are children along that inheritance chain.
 
 So, for the definition:
 
 ```yaml
-tech_groups:
+templates:
   techgroup1:
-    inherit: techgroup2
+    template: techgroup2
     flow_cap_max: 10
   techgroup2:
     base_tech: supply
 techs:
   tech1:
-    inherit: techgroup1
+    template: techgroup1
   tech2:
-    inherit: techgroup2
+    template: techgroup2
 ```
 
 `inheritance(techgroup1)` will give the `[tech1]` subset and `inheritance(techgroup2)` will give the `[tech1, tech2]` subset.

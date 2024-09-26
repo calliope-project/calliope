@@ -1,17 +1,18 @@
 import logging
 from itertools import product
 
-import calliope
-import calliope.backend
-import calliope.exceptions as exceptions
-import calliope.preprocess
 import numpy as np
 import pyomo.core as po
 import pyomo.kernel as pmo
 import pytest  # noqa: F401
 import xarray as xr
-from calliope.backend import PyomoBackendModel
 from pyomo.core.kernel.piecewise_library.transforms import piecewise_sos2
+
+import calliope
+import calliope.backend
+import calliope.exceptions as exceptions
+import calliope.preprocess
+from calliope.backend import PyomoBackendModel
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, check_variable_exists
@@ -1604,7 +1605,9 @@ class TestModelDataChecks:
 
         with pytest.raises(exceptions.ModelError) as error:
             m.build()
-        assert check_error_or_warning(error, "values larger than 1 are not allowed")
+        assert check_error_or_warning(
+            error, "requiring values within the interval [0, 1]"
+        )
 
 
 class TestNewBackend:
@@ -1618,7 +1621,7 @@ class TestNewBackend:
         simple_supply.backend.update_parameter("cost_flow_cap", dummy_int)
         return simple_supply
 
-    @pytest.fixture()
+    @pytest.fixture
     def temp_path(self, tmpdir_factory):
         return tmpdir_factory.mktemp("custom_math")
 
@@ -2109,31 +2112,31 @@ class TestPiecewiseConstraints:
 
 
 class TestShadowPrices:
-    @pytest.fixture()
+    @pytest.fixture
     def simple_supply(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.build()
         return m
 
-    @pytest.fixture()
+    @pytest.fixture
     def supply_milp(self):
         m = build_model({}, "supply_milp,two_hours,investment_costs")
         m.build()
         return m
 
-    @pytest.fixture()
+    @pytest.fixture
     def simple_supply_with_yaml_shadow_prices(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs,shadow_prices")
         m.build()
         return m
 
-    @pytest.fixture()
+    @pytest.fixture
     def simple_supply_yaml(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs,shadow_prices")
         m.build()
         return m
 
-    @pytest.fixture()
+    @pytest.fixture
     def simple_supply_yaml_invalid(self):
         m = build_model(
             {},
@@ -2142,7 +2145,7 @@ class TestShadowPrices:
         m.build()
         return m
 
-    @pytest.fixture()
+    @pytest.fixture
     def supply_milp_yaml(self):
         m = build_model({}, "supply_milp,two_hours,investment_costs,shadow_prices")
         m.build()
@@ -2231,7 +2234,7 @@ class TestShadowPrices:
 class TestValidateMathDict:
     LOGGER = "calliope.backend.backend_model"
 
-    @pytest.fixture()
+    @pytest.fixture
     def validate_math(self):
         def _validate_math(math_dict: dict):
             m = build_model({}, "simple_supply,investment_costs")

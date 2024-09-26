@@ -1,6 +1,7 @@
 """Test backend module functionality (`__init__.py`)."""
 
 import pytest
+
 from calliope import backend
 from calliope.backend.backend_model import BackendModel
 from calliope.exceptions import BackendError

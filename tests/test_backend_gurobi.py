@@ -1,7 +1,8 @@
-import calliope.exceptions as exceptions
 import gurobipy
 import pytest  # noqa: F401
 import xarray as xr
+
+import calliope.exceptions as exceptions
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
@@ -24,7 +25,7 @@ class TestNewBackend:
         m.solve()
         return m
 
-    @pytest.fixture()
+    @pytest.fixture
     def simple_supply_gurobi_func(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.build(backend="gurobi", pre_validate_math_strings=False)
@@ -260,13 +261,13 @@ class TestNewBackend:
 
 
 class TestShadowPrices:
-    @pytest.fixture()
+    @pytest.fixture
     def simple_supply(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         m.build(backend="gurobi")
         return m
 
-    @pytest.fixture()
+    @pytest.fixture
     def supply_milp(self):
         m = build_model({}, "supply_milp,two_hours,investment_costs")
         m.build(backend="gurobi")

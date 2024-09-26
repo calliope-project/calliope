@@ -109,11 +109,7 @@ jobs:
       - uses: mamba-org/setup-micromamba@v1
         with:
           micromamba-version: latest
-          environment-name: pipbuild
-          create-args: >-
-            python=3.11
-            pip
-            build
+          environment-file: .github/workflows/pr-ci-pipbuild-environment.yml
           post-cleanup: all
           cache-environment: true
       - name: Build package

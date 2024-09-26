@@ -8,11 +8,13 @@ schema properties.
 """
 
 import tempfile
+import textwrap
 from pathlib import Path
 
 import jsonschema2md
-from calliope.util import schema
 from mkdocs.structure.files import File
+
+from calliope.util import schema
 
 TEMPDIR = tempfile.TemporaryDirectory()
 
@@ -55,7 +57,16 @@ def _schema_to_md(schema: dict, filename: str, config: dict) -> File:
     assert lines[2] == "## Properties\n\n"
     del lines[2]
 
-    output_full_filepath.write_text("\n".join(lines))
+    initial_lines = textwrap.dedent(
+        """
+        ---
+        search:
+          boost: 0.25
+        ---
+
+        """
+    )
+    output_full_filepath.write_text(initial_lines.lstrip() + "\n".join(lines))
 
     return File(
         path=output_file,
