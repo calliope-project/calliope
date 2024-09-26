@@ -383,6 +383,8 @@ class TestLatexBackendModel:
                     \begin{itemize}
                         \item expr
                     \end{itemize}
+
+                    \textbf{Default}: 0
                     \end{document}"""
                 ),
             ),
@@ -421,6 +423,8 @@ class TestLatexBackendModel:
                     **Used in**:
 
                     * expr
+
+                    **Default**: 0
                     """
                 ),
             ),
@@ -454,6 +458,8 @@ class TestLatexBackendModel:
                     **Used in**:
 
                     * [expr](#expr)
+
+                    **Default**: 0
                     """
                 ),
             ),
@@ -589,6 +595,8 @@ class TestLatexBackendModel:
                     ??? info "Used in"
 
                         * [expr](#expr)
+
+                    **Default**: 0
                     """
         )
 
@@ -709,3 +717,53 @@ class TestLatexBackendModel:
             "expression": r"\textbf{multi_dim_var}_\text{node,tech} \leq 2\mathord{\times}10^{+06}"
         }
         assert refs == {"multi_dim_var"}
+
+    def test_param_type(self, dummy_model_data):
+        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+        backend_model.add_global_expression(
+            "expr",
+            {
+                "equations": [{"expression": "1 + flow_cap_max"}],
+                "description": "foobar",
+                "default": 0,
+            },
+        )
+        doc = backend_model.generate_math_doc(format="md")
+        assert doc == textwrap.dedent(
+            r"""
+
+            ## Where
+
+            ### expr
+
+            foobar
+
+            **Uses**:
+
+            * [flow_cap_max](#flow_cap_max)
+
+            **Default**: 0
+
+            $$
+            \begin{array}{l}
+                \quad 1 + \textit{flow\_cap\_max}\\
+            \end{array}
+            $$
+
+            ## Parameters
+
+            ### flow_cap_max
+
+            Limits `flow_cap` to a maximum.
+
+            **Used in**:
+
+            * [expr](#expr)
+
+            **Unit**: power.
+
+            **Default**: inf
+
+            **Type**: float
+            """
+        )

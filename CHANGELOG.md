@@ -1,5 +1,9 @@
 ## 0.7.0.dev5 (Unreleased)
 
+### User-facing changes
+
+|new| (non-NaN) Default values and data types for parameters appear in math documentation (if they appear in the model definition schema) (#677).
+
 ## 0.7.0.dev4 (2024-09-10)
 
 ### User-facing changes
