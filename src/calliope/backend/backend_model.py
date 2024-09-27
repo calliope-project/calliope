@@ -28,7 +28,7 @@ import xarray as xr
 from calliope.attrdict import AttrDict
 from calliope.backend import parsing
 from calliope.exceptions import warn as model_warn
-from calliope.preprocess.model_math import ORDERED_COMPONENTS_T, CalliopeMath
+from calliope.preprocess import ORDERED_COMPONENTS_T, CalliopeMath
 
 if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
@@ -45,7 +45,6 @@ LOGGER = logging.getLogger(__name__)
 class BackendModelGenerator(ABC):
     """Helper class for backends."""
 
-    LID_COMPONENTS: tuple[ALL_COMPONENTS_T, ...] = typing.get_args(ALL_COMPONENTS_T)
     _COMPONENT_ATTR_METADATA = [
         "description",
         "unit",
