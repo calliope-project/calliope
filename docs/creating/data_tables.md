@@ -17,6 +17,7 @@ In brief it is:
 * **select**: values within dimensions that you want to select from your tabular data, discarding the rest.
 * **drop**: dimensions to drop from your rows/columns, e.g., a "comment" row.
 * **add_dims**: dimensions to add to the table after loading it in, with the corresponding value(s) to assign to the dimension index.
+* **map_dims**: dimension names to map from those defined in the data table (e.g `time`) to those used in the Calliope model (e.g. `timesteps`).
 
 When we refer to "dimensions", we mean the sets over which data is indexed in the model: `nodes`, `techs`, `timesteps`, `carriers`, `costs`.
 In addition, when loading from file, there is the _required_ dimension `parameters`.
@@ -391,8 +392,6 @@ Or to define the same timeseries source data for two technologies at different n
         columns: [nodes, techs, parameters]
     ```
 
-
-
 === "With `add_dims`"
 
     |                  |     |
@@ -416,6 +415,57 @@ Or to define the same timeseries source data for two technologies at different n
           techs: tech2
           nodes: node2
           parameters: source_use_max
+    ```
+
+## Mapping dimension names
+
+Sometimes, data tables are prepared in a model-agnostic fashion, and it would require extra effort to follow Calliope's dimension naming conventions.
+To enable these tables to be loaded without Calliope complaining, we can rename dimensions when loading them using `map_dims`.
+
+For example, if we have the `time` dimension in file, we can map it to the Calliope-compliant `timesteps` dimension:
+
+=== "Without `map_dims`"
+
+    Data in file:
+
+    | timesteps           | source_use_equals |
+    | ------------------: | :---------------- |
+    | 2005-01-01 12:00:00 | 15                |
+    | 2005-01-01 13:00:00 | 5                 |
+
+    YAML definition to load data:
+
+    ```yaml
+    data_sources:
+      pv_capacity_factor_data:
+        source: data_sources/pv_resource.csv
+        rows: timesteps
+        columns: parameters
+        add_dims:
+          techs: pv
+    ```
+
+=== "With `map_dims`"
+
+    Data in file:
+
+    | time                | source_use_equals |
+    | ------------------: | :---------------- |
+    | 2005-01-01 12:00:00 | 15                |
+    | 2005-01-01 13:00:00 | 5                 |
+
+    YAML definition to load data:
+
+    ```yaml
+    data_sources:
+      pv_capacity_factor_data:
+        source: data_sources/pv_resource.csv
+        rows: timesteps
+        columns: parameters
+        add_dims:
+          techs: pv
+        map_dims:
+          time: timesteps
     ```
 
 ## Loading CSV files vs `pandas` dataframes
