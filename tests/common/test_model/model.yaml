@@ -23,9 +23,9 @@ config:
 parameters:
   bigM: 1e3
 
-data_sources:
+data_tables:
   demand_elec:
-    source: data_sources/demand_elec.csv
+    data: data_tables/demand_elec.csv
     rows: timesteps
     columns: nodes
     add_dims:

@@ -43,7 +43,7 @@ def model_defaults():
 
 @pytest.fixture(scope="session")
 def data_source_dir():
-    return Path(__file__).parent / "common" / "test_model" / "data_sources"
+    return Path(__file__).parent / "common" / "test_model" / "data_tables"
 
 
 @pytest.fixture(scope="session")

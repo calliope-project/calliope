@@ -8,7 +8,7 @@ import xarray as xr
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.preprocess import data_sources, scenarios
+from calliope.preprocess import data_tables, scenarios
 from calliope.preprocess.model_data import ModelDataFactory
 
 from .common.util import build_test_model as build_model
@@ -29,10 +29,8 @@ def model_def():
 def data_source_list(model_def, init_config):
     model_def_dict, model_def_path = model_def
     return [
-        data_sources.DataSource(
-            init_config, source_name, source_dict, {}, model_def_path
-        )
-        for source_name, source_dict in model_def_dict.pop("data_sources", {}).items()
+        data_tables.DataTable(init_config, source_name, source_dict, {}, model_def_path)
+        for source_name, source_dict in model_def_dict.pop("data_tables", {}).items()
     ]
 
 
@@ -882,7 +880,7 @@ class TestTopLevelParams:
             build_model({"parameters.flow_out_eff": 1}, "simple_supply,two_hours")
         assert check_error_or_warning(
             excinfo,
-            "A parameter with this name has already been defined in a data source or at a node/tech level.",
+            "A parameter with this name has already been defined in a data table or at a node/tech level.",
         )
 
     @pytest.mark.parametrize("val", [1, 1.0, np.inf, "foo"])

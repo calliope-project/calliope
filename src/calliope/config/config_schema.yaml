@@ -191,7 +191,7 @@ properties:
     patternProperties:
       '^[^_^\d][\w]*$': {}
 
-  data_sources:
+  data_tables:
     type: [object, "null"]
     description: >-
       Reference to files from which to load parts (or all) of the model definition.

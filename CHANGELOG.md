@@ -2,7 +2,10 @@
 
 ### User-facing changes
 
-|new| Math has been removed from `model.math`, and can now be accessed via `model.math.data`.
+|new| Math has been removed from `model.math`, and can now be accessed via `model.math.data` (#639).
+
+|changed| `data_sources` -> `data_tables` and `data_sources.source` -> `data_tables.data`.
+This change has occurred to avoid confusion between data "sources" and model energy "sources" (#673).
 
 ## 0.7.0.dev4 (2024-09-10)
 

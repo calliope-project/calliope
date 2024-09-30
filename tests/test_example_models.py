@@ -37,11 +37,11 @@ class TestModelPreproccessing:
 
 class TestNationalScaleExampleModelSenseChecks:
     @pytest.fixture(scope="class")
-    def nat_model_from_data_sources(self):
+    def nat_model_from_data_tables(self):
         df = pd.read_csv(
             calliope.examples._EXAMPLE_MODEL_DIR
             / "national_scale"
-            / "data_sources"
+            / "data_tables"
             / "time_varying_params.csv",
             index_col=0,
             header=[0, 1, 2, 3],
@@ -49,9 +49,9 @@ class TestNationalScaleExampleModelSenseChecks:
         model = calliope.Model(
             Path(__file__).parent
             / "common"
-            / "national_scale_from_data_sources"
+            / "national_scale_from_data_tables"
             / "model.yaml",
-            data_source_dfs={"time_varying_df": df},
+            data_table_dfs={"time_varying_df": df},
             time_subset=["2005-01-01", "2005-01-01"],
         )
         model.build()
@@ -65,7 +65,7 @@ class TestNationalScaleExampleModelSenseChecks:
         model.build()
         return model
 
-    @pytest.fixture(params=["nat_model", "nat_model_from_data_sources"])
+    @pytest.fixture(params=["nat_model", "nat_model_from_data_tables"])
     def example_tester(self, request):
         def _example_tester(solver="cbc", solver_io=None):
             model = request.getfixturevalue(request.param)
@@ -131,7 +131,7 @@ class TestNationalScaleExampleModelSenseChecks:
             pytest.skip("GLPK not installed")
 
     def test_fails_gracefully_without_timeseries(self):
-        override = {"data_sources": {"_REPLACE_": {}}}
+        override = {"data_tables": {"_REPLACE_": {}}}
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             calliope.examples.national_scale(override_dict=override)
 
@@ -397,10 +397,10 @@ class TestNationalScaleResampledExampleModelSenseChecks:
 
 class TestUrbanScaleExampleModelSenseChecks:
     def example_tester(self, source_unit, solver="cbc", solver_io=None):
-        data_sources = f"data_sources.pv_resource.select.scaler: {source_unit}"
+        data_tables = f"data_tables.pv_resource.select.scaler: {source_unit}"
         unit_override = {
             "techs.pv.source_unit": source_unit,
-            **calliope.AttrDict.from_yaml_string(data_sources),
+            **calliope.AttrDict.from_yaml_string(data_tables),
         }
 
         model = calliope.examples.urban_scale(
