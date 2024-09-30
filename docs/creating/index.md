@@ -35,7 +35,7 @@ We distinguish between:
 - the model **definition** (your representation of a physical system in YAML).
 
 Model configuration is everything under the top-level YAML key [`config`](config.md).
-Model definition is everything else, under the top-level YAML keys [`parameters`](parameters.md), [`techs`](techs.md), [`nodes`](nodes.md), [`templates`](templates.md), and [`data_sources`](data_sources.md).
+Model definition is everything else, under the top-level YAML keys [`parameters`](parameters.md), [`techs`](techs.md), [`nodes`](nodes.md), [`templates`](templates.md), and [`data_tables`](data_tables.md).
 
 It is possible to define alternatives to the model configuration/definition that you can refer to when you initialise your model.
 These are defined under the top-level YAML keys [`scenarios` and `overrides`](scenarios.md).
@@ -52,7 +52,7 @@ The layout of that directory typically looks roughly like this (`+` denotes dire
     + model_definition
         - nodes.yaml
         - techs.yaml
-    + data_sources
+    + data_tables
         - solar_resource.csv
         - electricity_demand.csv
     - model.yaml
@@ -63,7 +63,7 @@ In the above example, the files `model.yaml`, `nodes.yaml` and `techs.yaml` toge
 This definition could be in one file, but it is more readable when split into multiple.
 We use the above layout in the example models.
 
-Inside the `data_sources` directory, tabular data are stored as CSV files.
+Inside the `data_tables` directory, tabular data are stored as CSV files.
 
 !!! note
     The easiest way to create a new model is to use the `calliope new` command, which makes a copy of one of the built-in examples models:
@@ -85,4 +85,4 @@ The rest of this section discusses everything you need to know to set up a model
 - More details on the [model configuration](config.md).
 - The key parts of the model definition, first, the [technologies](techs.md), then, the [nodes](nodes.md), the locations in space where technologies can be placed.
 - How to use [technology and node templates](templates.md) to reduce repetition in the model definition.
-- Other important features to be aware of when defining your model: defining [indexed parameters](parameters.md), i.e. parameter which are not indexed over technologies and nodes, [loading tabular data](data_sources.md), and defining [scenarios and overrides](scenarios.md).
+- Other important features to be aware of when defining your model: defining [indexed parameters](parameters.md), i.e. parameter which are not indexed over technologies and nodes, [loading tabular data](data_tables.md), and defining [scenarios and overrides](scenarios.md).

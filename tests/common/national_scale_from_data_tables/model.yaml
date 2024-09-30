@@ -21,35 +21,35 @@ nodes:
   region1_2.techs: {csp}
   region1_3.techs: {csp}
 
-data_sources:
+data_tables:
   dimensionless_params:
-    source: data_sources/dimensionless_params.csv
+    data: data_tables/dimensionless_params.csv
     rows: parameters
 
   costs_params:
-    source: data_sources/costs_params.csv
+    data: data_tables/costs_params.csv
     rows: costs
     columns: parameters
 
   nodes_base_info:
-    source: data_sources/nodes_base_info.csv
+    data: data_tables/nodes_base_info.csv
     rows: nodes
     columns: parameters
 
   techs_carriers_at_nodes:
-    source: data_sources/techs_carriers.csv
+    data: data_tables/techs_carriers.csv
     rows: techs
     columns: parameters
     add_dims:
       carriers: power
 
   links:
-    source: data_sources/links.csv
+    data: data_tables/links.csv
     rows: techs
     columns: parameters
 
   techs_costs_monetary:
-    source: data_sources/techs_costs_monetary.csv
+    data: data_tables/techs_costs_monetary.csv
     rows: techs
     columns: parameters
     add_dims:
@@ -57,22 +57,22 @@ data_sources:
 
   # will be loaded from the example model directory in calliope source code.
   time_varying_data_from_df:
-    source: time_varying_df
+    data: time_varying_df
     rows: timesteps
     columns: [comment, nodes, techs, parameters]
     drop: comment
 
   techs_base_info:
-    source: data_sources/techs_base_info.csv
+    data: data_tables/techs_base_info.csv
     rows: techs
     columns: parameters
 
   techs_constraints:
-    source: data_sources/techs_constraints.csv
+    data: data_tables/techs_constraints.csv
     rows: techs
     columns: parameters
 
   techs_node_constraints:
-    source: data_sources/techs_node_constraints.csv
+    data: data_tables/techs_node_constraints.csv
     rows: [nodes, techs]
     columns: parameters
