@@ -66,6 +66,7 @@ class BackendModelGenerator(ABC):
         "description",
         "unit",
         "default",
+        "type",
         "title",
         "math_repr",
         "original_dtype",
@@ -74,6 +75,7 @@ class BackendModelGenerator(ABC):
     _PARAM_TITLES = extract_from_schema(MODEL_SCHEMA, "title")
     _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
     _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
+    _PARAM_TYPE = extract_from_schema(MODEL_SCHEMA, "x-type")
 
     def __init__(self, inputs: xr.Dataset, **kwargs):
         """Abstract base class to build a representation of the optimisation problem.
