@@ -9,6 +9,7 @@ from typing import Any, Literal
 
 import jinja2
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 from calliope.backend import backend_model, parsing
@@ -114,6 +115,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     **Default**: {{ equation.default }}
     {% endif %}
+    {% if equation.type is not none %}
+
+    **Type**: {{ equation.type }}
+    {% endif %}
     {% if equation.expression != "" %}
 
     .. container:: scrolling-wrapper
@@ -189,6 +194,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     \textbf{Default}: {{ equation.default }}
     {% endif %}
+    {% if equation.type is not none %}
+
+    \textbf{Type}: {{ equation.type }}
+    {% endif %}
     {% if equation.expression != "" %}
 
     \begin{equation}
@@ -261,6 +270,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     **Default**: {{ equation.default }}
     {% endif %}
+    {% if equation.type is not none %}
+
+    **Type**: {{ equation.type }}
+    {% endif %}
     {% if equation.expression != "" %}
     {% if mkdocs_features and yaml_snippet is not none%}
 
@@ -314,14 +327,17 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             "title": self._PARAM_TITLES.get(parameter_name, None),
             "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
             "unit": self._PARAM_UNITS.get(parameter_name, None),
+            "type": self._PARAM_TYPE.get(parameter_name, None),
             "math_repr": rf"\textit{{{parameter_name}}}"
             + self._dims_to_var_string(parameter_values),
         }
+        if pd.notna(default):
+            attrs["default"] = default
 
         self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
 
     def add_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedConstraint | None = None
+        self, name: str, constraint_dict: parsing.UnparsedConstraint
     ) -> None:
         equation_strings: list = []
 
@@ -381,7 +397,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_global_expression(  # noqa: D102, override
-        self, name: str, expression_dict: parsing.UnparsedExpression | None = None
+        self, name: str, expression_dict: parsing.UnparsedExpression
     ) -> None:
         equation_strings: list = []
 
@@ -408,7 +424,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_dict: parsing.UnparsedVariable | None = None
+        self, name: str, variable_dict: parsing.UnparsedVariable
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
         bound_refs: set = set()
@@ -435,7 +451,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_dict: parsing.UnparsedObjective | None = None
+        self, name: str, objective_dict: parsing.UnparsedObjective
     ) -> None:
         sense_dict = {
             "minimize": r"\min{}",
@@ -513,6 +529,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                     ),
                     "uses": sorted(list(uses[name] - set([name]))),
                     "default": da.attrs.get("default", None),
+                    "type": da.attrs.get("type", None),
                     "unit": da.attrs.get("unit", None),
                     "yaml_snippet": da.attrs.get("yaml_snippet", None),
                 }
