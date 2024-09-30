@@ -5,43 +5,43 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
+
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.preprocess import data_sources, load
+from calliope.preprocess import data_tables, scenarios
 from calliope.preprocess.model_data import ModelDataFactory
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
 
 
-@pytest.fixture()
+@pytest.fixture
 def model_def():
-    filepath = Path(__file__).parent / "common" / "test_model" / "model.yaml"
-    model_def_dict, model_def_path, _ = load.load_model_definition(
-        filepath.as_posix(), scenario="simple_supply,empty_tech_node"
+    model_def_path = Path(__file__).parent / "common" / "test_model" / "model.yaml"
+    model_dict = AttrDict.from_yaml(model_def_path)
+    model_def_override, _ = scenarios.load_scenario_overrides(
+        model_dict, scenario="simple_supply,empty_tech_node"
     )
-    return model_def_dict, model_def_path
+    return model_def_override, model_def_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def data_source_list(model_def, init_config):
     model_def_dict, model_def_path = model_def
     return [
-        data_sources.DataSource(
-            init_config, source_name, source_dict, {}, model_def_path
-        )
-        for source_name, source_dict in model_def_dict.pop("data_sources", {}).items()
+        data_tables.DataTable(init_config, source_name, source_dict, {}, model_def_path)
+        for source_name, source_dict in model_def_dict.pop("data_tables", {}).items()
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def init_config(config_defaults, model_def):
     model_def_dict, _ = model_def
     config_defaults.union(model_def_dict.pop("config"), allow_override=True)
     return config_defaults["init"]
 
 
-@pytest.fixture()
+@pytest.fixture
 def model_data_factory(model_def, init_config, model_defaults):
     model_def_dict, _ = model_def
     return ModelDataFactory(
@@ -49,13 +49,13 @@ def model_data_factory(model_def, init_config, model_defaults):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def model_data_factory_w_params(model_data_factory: ModelDataFactory):
     model_data_factory.add_node_tech_data()
     return model_data_factory
 
 
-@pytest.fixture()
+@pytest.fixture
 def my_caplog(caplog):
     caplog.set_level(logging.DEBUG, logger="calliope.preprocess")
     return caplog
@@ -854,7 +854,7 @@ class TestModelData:
 
 
 class TestTopLevelParams:
-    @pytest.fixture()
+    @pytest.fixture
     def run_and_test(self, model_data_factory_w_params):
         def _run_and_test(in_dict, out_dict, dims):
             model_data_factory_w_params.model_definition["parameters"] = {
@@ -880,7 +880,7 @@ class TestTopLevelParams:
             build_model({"parameters.flow_out_eff": 1}, "simple_supply,two_hours")
         assert check_error_or_warning(
             excinfo,
-            "A parameter with this name has already been defined in a data source or at a node/tech level.",
+            "A parameter with this name has already been defined in a data table or at a node/tech level.",
         )
 
     @pytest.mark.parametrize("val", [1, 1.0, np.inf, "foo"])

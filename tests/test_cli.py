@@ -2,11 +2,12 @@ import os
 import tempfile
 from pathlib import Path
 
-import calliope
 import importlib_resources
 import pytest  # noqa: F401
-from calliope import AttrDict, cli
 from click.testing import CliRunner
+
+import calliope
+from calliope import AttrDict, cli
 
 _MODEL_NATIONAL = (
     importlib_resources.files("calliope")

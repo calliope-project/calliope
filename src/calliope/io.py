@@ -3,6 +3,7 @@
 """Functions to read and save model results."""
 
 import importlib.resources
+from copy import deepcopy
 from pathlib import Path
 
 # We import netCDF4 before xarray to mitigate a numpy warning:
@@ -124,16 +125,13 @@ def _deserialise(attrs: dict) -> None:
         attrs[attr] = set(attrs[attr])
 
 
-def save_netcdf(model_data, path, model=None):
+def save_netcdf(model_data, path, **kwargs):
     """Save the model to a netCDF file."""
-    original_model_data_attrs = model_data.attrs
-    model_data_attrs = original_model_data_attrs.copy()
+    original_model_data_attrs = deepcopy(model_data.attrs)
+    for key, value in kwargs.items():
+        model_data.attrs[key] = value
 
-    if model is not None and hasattr(model, "_model_def_dict"):
-        # Attach initial model definition to _model_data
-        model_data_attrs["_model_def_dict"] = model._model_def_dict.to_yaml()
-
-    _serialise(model_data_attrs)
+    _serialise(model_data.attrs)
     for var in model_data.data_vars.values():
         _serialise(var.attrs)
 
@@ -147,7 +145,6 @@ def save_netcdf(model_data, path, model=None):
     }
 
     try:
-        model_data.attrs = model_data_attrs
         model_data.to_netcdf(path, format="netCDF4", encoding=encoding)
         model_data.close()  # Force-close NetCDF file after writing
     finally:  # Revert model_data.attrs back

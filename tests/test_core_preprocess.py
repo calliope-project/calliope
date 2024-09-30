@@ -1,9 +1,10 @@
 import warnings
 
-import calliope
-import calliope.exceptions as exceptions
 import pandas as pd
 import pytest
+
+import calliope
+import calliope.exceptions as exceptions
 from calliope.attrdict import AttrDict
 
 from .common.util import build_test_model as build_model
@@ -25,8 +26,8 @@ class TestModelRun:
             }
         )
         model_dict.union(node_dict)
-        for src in model_dict["data_sources"].values():
-            src["source"] = (model_dir / src["source"]).as_posix()
+        for src in model_dict["data_tables"].values():
+            src["data"] = (model_dir / src["data"]).as_posix()
         # test as AttrDict
         calliope.Model(model_dict)
 
@@ -36,18 +37,18 @@ class TestModelRun:
     @pytest.mark.filterwarnings(
         "ignore:(?s).*(links, test_link_a_b_elec) | Deactivated:calliope.exceptions.ModelWarning"
     )
-    def test_valid_scenarios(self):
+    def test_valid_scenarios(self, dummy_int):
         """Test that valid scenario definition from overrides raises no error and results in applied scenario."""
         override = AttrDict.from_yaml_string(
-            """
+            f"""
             scenarios:
                 scenario_1: ['one', 'two']
 
             overrides:
                 one:
-                    techs.test_supply_gas.flow_cap_max: 20
+                    techs.test_supply_gas.flow_cap_max: {dummy_int}
                 two:
-                    techs.test_supply_elec.flow_cap_max: 20
+                    techs.test_supply_elec.flow_cap_max: {dummy_int/2}
 
             nodes:
                 a:
@@ -59,24 +60,29 @@ class TestModelRun:
         )
         model = build_model(override_dict=override, scenario="scenario_1")
 
-        assert model._model_def_dict.techs.test_supply_gas.flow_cap_max == 20
-        assert model._model_def_dict.techs.test_supply_elec.flow_cap_max == 20
+        assert (
+            model._model_data.sel(techs="test_supply_gas")["flow_cap_max"] == dummy_int
+        )
+        assert (
+            model._model_data.sel(techs="test_supply_elec")["flow_cap_max"]
+            == dummy_int / 2
+        )
 
-    def test_valid_scenario_of_scenarios(self):
+    def test_valid_scenario_of_scenarios(self, dummy_int):
         """Test that valid scenario definition which groups scenarios and overrides raises
         no error and results in applied scenario.
         """
         override = AttrDict.from_yaml_string(
-            """
+            f"""
             scenarios:
                 scenario_1: ['one', 'two']
                 scenario_2: ['scenario_1', 'new_location']
 
             overrides:
                 one:
-                    techs.test_supply_gas.flow_cap_max: 20
+                    techs.test_supply_gas.flow_cap_max: {dummy_int}
                 two:
-                    techs.test_supply_elec.flow_cap_max: 20
+                    techs.test_supply_elec.flow_cap_max: {dummy_int/2}
                 new_location:
                     nodes.b.techs:
                         test_supply_elec:
@@ -91,8 +97,13 @@ class TestModelRun:
         )
         model = build_model(override_dict=override, scenario="scenario_2")
 
-        assert model._model_def_dict.techs.test_supply_gas.flow_cap_max == 20
-        assert model._model_def_dict.techs.test_supply_elec.flow_cap_max == 20
+        assert (
+            model._model_data.sel(techs="test_supply_gas")["flow_cap_max"] == dummy_int
+        )
+        assert (
+            model._model_data.sel(techs="test_supply_elec")["flow_cap_max"]
+            == dummy_int / 2
+        )
 
     def test_invalid_scenarios_dict(self):
         """Test that invalid scenario definition raises appropriate error"""
@@ -201,7 +212,7 @@ class TestModelRun:
         """
         # should fail: wrong length of demand_heat csv vs demand_elec
         override = AttrDict.from_yaml_string(
-            "data_sources.demand_elec.source: data_sources/demand_heat_wrong_length.csv"
+            "data_tables.demand_elec.data: data_tables/demand_heat_wrong_length.csv"
         )
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.warns(exceptions.ModelWarning) as excinfo:
@@ -212,7 +223,7 @@ class TestModelRun:
 
     def test_inconsistent_time_indices_passes_thanks_to_time_subsetting(self):
         override = AttrDict.from_yaml_string(
-            "data_sources.demand_elec.source: data_sources/demand_heat_wrong_length.csv"
+            "data_tables.demand_elec.data: data_tables/demand_heat_wrong_length.csv"
         )
         # should pass: wrong length of demand_heat csv, but time subsetting removes the difference
         with warnings.catch_warnings():
@@ -344,7 +355,7 @@ class TestChecks:
         """
         override = {
             "config.init.time_subset": ["2005-01-01", "2005-01-04"],
-            "config.init.time_cluster": "data_sources/cluster_days.csv",
+            "config.init.time_cluster": "data_tables/cluster_days.csv",
             "config.build.cyclic_storage": True,
         }
 

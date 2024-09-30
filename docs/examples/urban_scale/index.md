@@ -1,6 +1,6 @@
 ---
 demand:
-    file: "src/calliope/example_models/urban_scale/data_sources/demand.csv"
+    file: "src/calliope/example_models/urban_scale/data_tables/demand.csv"
     header: [0, 1]
     index_col: 0
 ---
@@ -50,10 +50,10 @@ The import section in our file looks like this:
 ### Referencing tabular data
 
 As of Calliope v0.7.0 it is possible to load tabular data completely separately from the YAML model definition.
-To do this we reference data tables under the `data_sources` key:
+To do this we reference data tables under the `data_tables` key:
 
 ```yaml
---8<-- "src/calliope/example_models/urban_scale/model.yaml:data-sources"
+--8<-- "src/calliope/example_models/urban_scale/model.yaml:data-tables"
 ```
 
 In the Calliope example models, we only load timeseries data from file, including for [energy demand](#demand-technologies), [electricity export price](#revenue-by-export) and [solar PV resource availability](#supply-technologies).
@@ -63,7 +63,7 @@ As an example, the data in the energy demand CSV file looks like this:
 {{ read_csv(page.meta.demand.file, header=page.meta.demand.header, index_col=page.meta.demand.index_col) }}
 
 You'll notice that in each row there is reference to a timestep, and in each column to a technology and a node.
-Therefore, we reference `timesteps` in our data source `rows` and `nodes` and `techs` in our data source columns.
+Therefore, we reference `timesteps` in our data table _rows_, and `nodes` and `techs` in our data table _columns_.
 Since all the data refers to the one parameter `sink_use_equals`, we don't add that information in the CSV file, but instead add it on as a dimension when loading the file.
 
 !!! info

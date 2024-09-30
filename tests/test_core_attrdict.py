@@ -5,13 +5,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 import ruamel.yaml as ruamel_yaml
+
 from calliope.attrdict import _MISSING, AttrDict
 
 from .common.util import check_error_or_warning
 
 
 class TestAttrDict:
-    @pytest.fixture()
+    @pytest.fixture
     def regular_dict(self):
         d = {
             "a": 1,
@@ -37,16 +38,16 @@ class TestAttrDict:
         d:
     """
 
-    @pytest.fixture()
+    @pytest.fixture
     def yaml_filepath(self):
         this_path = Path(__file__).parent
         return this_path / "common" / "yaml_file.yaml"
 
-    @pytest.fixture()
+    @pytest.fixture
     def yaml_string(self):
         return self.setup_string
 
-    @pytest.fixture()
+    @pytest.fixture
     def attr_dict(self, regular_dict):
         d = regular_dict
         return AttrDict(d)

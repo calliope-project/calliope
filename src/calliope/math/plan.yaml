@@ -196,10 +196,10 @@ constraints:
             (
               (timesteps=get_val_at_index(timesteps=0) AND cyclic_storage=True)
               OR NOT timesteps=get_val_at_index(timesteps=0)
-            ) AND NOT lookup_cluster_first_timestep=True
+            ) AND NOT cluster_first_timestep=True
           expression: (1 - storage_loss) ** roll(timestep_resolution, timesteps=1) * roll(storage, timesteps=1)
         - where: >-
-            lookup_cluster_first_timestep=True AND NOT
+            cluster_first_timestep=True AND NOT
             (timesteps=get_val_at_index(timesteps=0) AND NOT cyclic_storage=True)
           expression: >-
             (1 - storage_loss) **

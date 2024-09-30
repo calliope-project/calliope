@@ -22,8 +22,9 @@
 # %%
 from pathlib import Path
 
-import calliope
 import pandas as pd
+
+import calliope
 
 calliope.set_log_verbosity("INFO", include_solver_output=False)
 
@@ -177,7 +178,7 @@ model_from_yaml.inputs.cost_flow_cap.to_dataframe()
 # ## Defining data in the tabular CSV format
 
 # %% [markdown]
-# We could have defined these same tables in CSV files and loaded them using `data-sources`.
+# We could have defined these same tables in CSV files and loaded them using `data_tables`.
 # We don't yet have those CSV files ready, so we'll create them programmatically.
 # In practice, you would likely write these files using software like Excel.
 
@@ -188,14 +189,14 @@ model_from_yaml.inputs.cost_flow_cap.to_dataframe()
 # Some are long and thin with all the dimensions grouped in each row (or the `index`), while others have dimensions grouped in the columns.
 # This is to show what is possible.
 # You might choose to always have long and thin data, or to always have certain dimensions in the rows and others in the columns.
-# So long as you then define your data source correctly in the model definition, so that Calliope knows exactly how to process your data, it doesn't matter what shape it is stored in.
+# So long as you then define your data table correctly in the model definition, so that Calliope knows exactly how to process your data, it doesn't matter what shape it is stored in.
 
 # %% [markdown]
 # First, we create a directory to hold the tabular data we are about to generate.
 
 # %%
-data_source_path = Path(".") / "outputs" / "loading_tabular_data"
-data_source_path.mkdir(parents=True, exist_ok=True)
+data_table_path = Path(".") / "outputs" / "loading_tabular_data"
+data_table_path.mkdir(parents=True, exist_ok=True)
 
 # %% [markdown]
 # Next we group together **technology data where no extra dimensions are needed**.
@@ -219,7 +220,7 @@ tech_data = pd.DataFrame(
         },
     }
 )
-tech_data.to_csv(data_source_path / "tech_data.csv")
+tech_data.to_csv(data_table_path / "tech_data.csv")
 tech_data
 
 # %% [markdown]
@@ -237,7 +238,7 @@ tech_timestep_data = pd.DataFrame(
         },
     }
 )
-tech_timestep_data.to_csv(data_source_path / "tech_timestep_data.csv")
+tech_timestep_data.to_csv(data_table_path / "tech_timestep_data.csv")
 tech_timestep_data
 
 # %% [markdown]
@@ -257,7 +258,7 @@ tech_carrier_data = pd.Series(
         ("transmission_tech", "carrier_out"): 1,
     }
 )
-tech_carrier_data.to_csv(data_source_path / "tech_carrier_data.csv")
+tech_carrier_data.to_csv(data_table_path / "tech_carrier_data.csv")
 tech_carrier_data
 # %% [markdown]
 # And the **technology data with the `nodes` dimension**:
@@ -265,7 +266,7 @@ tech_carrier_data
 tech_node_data = pd.Series(
     {("supply_tech", "B", "flow_cap_max"): 8, ("supply_tech", "A", "flow_cap_max"): 10}
 )
-tech_node_data.to_csv(data_source_path / "tech_node_data.csv")
+tech_node_data.to_csv(data_table_path / "tech_node_data.csv")
 tech_node_data
 # %% [markdown]
 # Finally, we deal with the **technology data with the `costs` dimension**.
@@ -280,40 +281,40 @@ tech_cost_data = pd.DataFrame(
         "supply_tech": {"cost_flow_cap": 2},
     }
 )
-tech_cost_data.to_csv(data_source_path / "tech_cost_data.csv")
+tech_cost_data.to_csv(data_table_path / "tech_cost_data.csv")
 tech_cost_data
 
 # %% [markdown]
-# Now our YAML model definition can simply link to each of the CSV files we created in the `data_sources`` section, instead of needing to define the data in YAML directly:
+# Now our YAML model definition can simply link to each of the CSV files we created in the `data_tables` section, instead of needing to define the data in YAML directly:
 #
 # ```yaml
-# data_sources:
+# data_tables:
 #   tech_data:
-#     source: outputs/loading_tabular_data/tech_data.csv
+#     data: outputs/loading_tabular_data/tech_data.csv
 #     rows: parameters
 #     columns: techs
 #   tech_node_data:
-#     source: outputs/loading_tabular_data/tech_node_data.csv
+#     data: outputs/loading_tabular_data/tech_node_data.csv
 #     rows: [techs, nodes, parameters]
 #   tech_timestep_data:
-#     source: outputs/loading_tabular_data/tech_timestep_data.csv
+#     data: outputs/loading_tabular_data/tech_timestep_data.csv
 #     rows: timesteps
 #     columns: [techs, parameters]
 #   tech_carrier_data:
-#     source: outputs/loading_tabular_data/tech_carrier_data.csv
+#     data: outputs/loading_tabular_data/tech_carrier_data.csv
 #     rows: [techs, parameters]
 #     add_dims:
 #       carriers: electricity
 #   tech_cost_data:
-#     source: outputs/loading_tabular_data/tech_cost_data.csv
+#     data: outputs/loading_tabular_data/tech_cost_data.csv
 #     rows: parameters
 #     columns: techs
 #     add_dims:
 #       costs: monetary
 # ```
 #
-# When loading data sources, assigning techs to nodes is done automatically to some extent.
-# That is, if a tech is defined at a node in a data source (in this case, only for `supply_tech`), then Calliope assumes that this tech should be allowed to exist at the corresponding node.
+# When loading data tables, assigning techs to nodes is done automatically to some extent.
+# That is, if a tech is defined at a node in a data table (in this case, only for `supply_tech`), then Calliope assumes that this tech should be allowed to exist at the corresponding node.
 # Since it is easy to lose track of which parameters you've defined at nodes and which ones not, it is _much_ safer to explicitly define a list of technologies at each node in your YAML definition:
 #
 # ```yaml
@@ -325,25 +326,25 @@ tech_cost_data
 # %%
 model_def = calliope.AttrDict.from_yaml_string(
     """
-data_sources:
+data_tables:
   tech_data:
-    source: outputs/loading_tabular_data/tech_data.csv
+    data: outputs/loading_tabular_data/tech_data.csv
     rows: parameters
     columns: techs
   tech_node_data:
-    source: outputs/loading_tabular_data/tech_node_data.csv
+    data: outputs/loading_tabular_data/tech_node_data.csv
     rows: [techs, nodes, parameters]
   tech_timestep_data:
-    source: outputs/loading_tabular_data/tech_timestep_data.csv
+    data: outputs/loading_tabular_data/tech_timestep_data.csv
     rows: timesteps
     columns: [techs, parameters]
   tech_carrier_data:
-    source: outputs/loading_tabular_data/tech_carrier_data.csv
+    data: outputs/loading_tabular_data/tech_carrier_data.csv
     rows: [techs, parameters]
     add_dims:
       carriers: electricity
   tech_cost_data:
-    source: outputs/loading_tabular_data/tech_cost_data.csv
+    data: outputs/loading_tabular_data/tech_cost_data.csv
     rows: parameters
     columns: techs
     add_dims:
@@ -353,35 +354,35 @@ nodes:
   B.techs: {supply_tech, demand_tech}
 """
 )
-model_from_data_sources = calliope.Model(model_def)
+model_from_data_tables = calliope.Model(model_def)
 
 # %% [markdown]
 # ### Loading directly from in-memory dataframes
 # If you create your tabular data in an automated manner in a Python script, you may want to load it directly into Calliope rather than saving it to file first.
-# You can do that by setting the data source as the name of a key in a dictionary that you supply when you load the model:
+# You can do that by setting `data` as the name of a key in a dictionary that you supply when you load the model:
 
 # %%
 model_def = calliope.AttrDict.from_yaml_string(
     """
-data_sources:
+data_tables:
   tech_data:
-    source: tech_data_df
+    data: tech_data_df
     rows: parameters
     columns: techs
   tech_node_data:
-    source: tech_node_data_df
+    data: tech_node_data_df
     rows: [techs, nodes, parameters]
   tech_timestep_data:
-    source: tech_timestep_data_df
+    data: tech_timestep_data_df
     rows: timesteps
     columns: [techs, parameters]
   tech_carrier_data:
-    source: tech_carrier_data_df
+    data: tech_carrier_data_df
     rows: [techs, parameters]
     add_dims:
       carriers: electricity
   tech_cost_data:
-    source: tech_cost_data_df
+    data: tech_cost_data_df
     rows: parameters
     columns: techs
     add_dims:
@@ -391,9 +392,9 @@ nodes:
   B.techs: {supply_tech, demand_tech}
 """
 )
-model_from_data_sources = calliope.Model(
+model_from_data_tables = calliope.Model(
     model_def,
-    data_source_dfs={
+    data_table_dfs={
         "tech_data_df": tech_data,
         # NOTE: inputs must be dataframes.
         # pandas Series objects must therefore be converted:
@@ -413,15 +414,15 @@ model_from_yaml.build(force=True)
 model_from_yaml.solve(force=True)
 
 # %%
-model_from_data_sources.build(force=True)
-model_from_data_sources.solve(force=True)
+model_from_data_tables.build(force=True)
+model_from_data_tables.solve(force=True)
 
 # %% [markdown]
 # **Input data**. Now we check if the input data are exactly the same across both models:"
 
 # %%
 for variable_name, variable_data in model_from_yaml.inputs.data_vars.items():
-    if variable_data.broadcast_equals(model_from_data_sources.inputs[variable_name]):
+    if variable_data.broadcast_equals(model_from_data_tables.inputs[variable_name]):
         print(f"Great work, {variable_name} matches")
     else:
         print(f"!!! Something's wrong! {variable_name} doesn't match !!!")
@@ -432,20 +433,20 @@ for variable_name, variable_data in model_from_yaml.inputs.data_vars.items():
 
 # %%
 for variable_name, variable_data in model_from_yaml.results.data_vars.items():
-    if variable_data.broadcast_equals(model_from_data_sources.results[variable_name]):
+    if variable_data.broadcast_equals(model_from_data_tables.results[variable_name]):
         print(f"Great work, {variable_name} matches")
     else:
         print(f"!!! Something's wrong! {variable_name} doesn't match !!!")
 
 # %% [markdown]
-# ## Mixing YAML and data source definitions
+# ## Mixing YAML and data table definitions
 # It is possible to only put some data into CSV files and define the rest in YAML.
 # In fact, it almost always makes sense to build these hybrid definitions. For smaller models, you may only want to store timeseries data stored in CSV files and everything else in YAML:
 #
 # ```yaml
-# data_sources:
+# data_tables:
 #   tech_timestep_data:
-#     source: outputs/loading_tabular_data/tech_timestep_data.csv
+#     data: outputs/loading_tabular_data/tech_timestep_data.csv
 #     rows: timesteps
 #     columns: [techs, parameters]
 # techs:
@@ -498,13 +499,13 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 #
 #
 # ```yaml
-# data_sources:
+# data_tables:
 #   tech_timestep_data:
-#     source: outputs/loading_tabular_data/tech_timestep_data.csv
+#     data: outputs/loading_tabular_data/tech_timestep_data.csv
 #     rows: timesteps
 #     columns: [techs, parameters]
 #   tech_cost_data:
-#     source: outputs/loading_tabular_data/tech_cost_data.csv
+#     data: outputs/loading_tabular_data/tech_cost_data.csv
 #     rows: parameters
 #     columns: techs
 #     add_dims:
@@ -547,31 +548,31 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 # %% [markdown]
 # ## Overriding tabular data with YAML
 #
-# Another reason to mix tabular data sources with YAML is to allow you to keep track of overrides to specific parts of the model definition.
+# Another reason to mix tabular data with YAML is to allow you to keep track of overrides to specific parts of the model definition.
 #
 # For instance, we could change the number of a couple of parameters:
 #
 #
 # ```yaml
-# data_sources:
+# data_tables:
 #   tech_data:
-#     source: outputs/loading_tabular_data/tech_data.csv
+#     data: outputs/loading_tabular_data/tech_data.csv
 #     rows: parameters
 #     columns: techs
 #   tech_node_data:
-#     source: outputs/loading_tabular_data/tech_node_data.csv
+#     data: outputs/loading_tabular_data/tech_node_data.csv
 #     rows: [techs, nodes, parameters]
 #   tech_timestep_data:
-#     source: outputs/loading_tabular_data/tech_timestep_data.csv
+#     data: outputs/loading_tabular_data/tech_timestep_data.csv
 #     rows: timesteps
 #     columns: [techs, parameters]
 #   tech_carrier_data:
-#     source: outputs/loading_tabular_data/tech_carrier_data.csv
+#     data: outputs/loading_tabular_data/tech_carrier_data.csv
 #     rows: [techs, parameters]
 #     add_dims:
 #       carriers: electricity
 #   tech_cost_data:
-#     source: outputs/loading_tabular_data/tech_cost_data.csv
+#     data: outputs/loading_tabular_data/tech_cost_data.csv
 #     rows: parameters
 #     columns: techs
 #     add_dims:
@@ -591,25 +592,25 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 # %%
 model_def = calliope.AttrDict.from_yaml_string(
     """
-data_sources:
+data_tables:
   tech_data:
-    source: outputs/loading_tabular_data/tech_data.csv
+    data: outputs/loading_tabular_data/tech_data.csv
     rows: parameters
     columns: techs
   tech_node_data:
-    source: outputs/loading_tabular_data/tech_node_data.csv
+    data: outputs/loading_tabular_data/tech_node_data.csv
     rows: [techs, nodes, parameters]
   tech_timestep_data:
-    source: outputs/loading_tabular_data/tech_timestep_data.csv
+    data: outputs/loading_tabular_data/tech_timestep_data.csv
     rows: timesteps
     columns: [techs, parameters]
   tech_carrier_data:
-    source: outputs/loading_tabular_data/tech_carrier_data.csv
+    data: outputs/loading_tabular_data/tech_carrier_data.csv
     rows: [techs, parameters]
     add_dims:
       carriers: electricity
   tech_cost_data:
-    source: outputs/loading_tabular_data/tech_cost_data.csv
+    data: outputs/loading_tabular_data/tech_cost_data.csv
     rows: parameters
     columns: techs
     add_dims:
@@ -625,39 +626,39 @@ nodes:
   B.techs: {supply_tech, demand_tech}
 """
 )
-model_from_data_sources_w_override = calliope.Model(model_def)
+model_from_data_tables_w_override = calliope.Model(model_def)
 
 # Let's compare the two after overriding `flow_cap_max`
-flow_cap_old = model_from_data_sources.inputs.flow_cap_max.to_series().dropna()
+flow_cap_old = model_from_data_tables.inputs.flow_cap_max.to_series().dropna()
 flow_cap_new = (
-    model_from_data_sources_w_override.inputs.flow_cap_max.to_series().dropna()
+    model_from_data_tables_w_override.inputs.flow_cap_max.to_series().dropna()
 )
 pd.concat([flow_cap_old, flow_cap_new], axis=1, keys=["old", "new"])
 
 # %% [markdown]
-# We can also switch off technologies / nodes that would otherwise be introduced by our data sources:
+# We can also switch off technologies / nodes that would otherwise be introduced by our data tables:
 #
 #
 # ```yaml
-# data_sources:
+# data_tables:
 #   tech_data:
-#     source: outputs/loading_tabular_data/tech_data.csv
+#     data: outputs/loading_tabular_data/tech_data.csv
 #     rows: parameters
 #     columns: techs
 #   tech_node_data:
-#     source: outputs/loading_tabular_data/tech_node_data.csv
+#     data: outputs/loading_tabular_data/tech_node_data.csv
 #     rows: [techs, nodes, parameters]
 #   tech_timestep_data:
-#     source: outputs/loading_tabular_data/tech_timestep_data.csv
+#     data: outputs/loading_tabular_data/tech_timestep_data.csv
 #     rows: timesteps
 #     columns: [techs, parameters]
 #   tech_carrier_data:
-#     source: outputs/loading_tabular_data/tech_carrier_data.csv
+#     data: outputs/loading_tabular_data/tech_carrier_data.csv
 #     rows: [techs, parameters]
 #     add_dims:
 #       carriers: electricity
 #   tech_cost_data:
-#     source: outputs/loading_tabular_data/tech_cost_data.csv
+#     data: outputs/loading_tabular_data/tech_cost_data.csv
 #     rows: parameters
 #     columns: techs
 #     add_dims:
@@ -677,25 +678,25 @@ pd.concat([flow_cap_old, flow_cap_new], axis=1, keys=["old", "new"])
 # %%
 model_def = calliope.AttrDict.from_yaml_string(
     """
-data_sources:
+data_tables:
   tech_data:
-    source: outputs/loading_tabular_data/tech_data.csv
+    data: outputs/loading_tabular_data/tech_data.csv
     rows: parameters
     columns: techs
   tech_node_data:
-    source: outputs/loading_tabular_data/tech_node_data.csv
+    data: outputs/loading_tabular_data/tech_node_data.csv
     rows: [techs, nodes, parameters]
   tech_timestep_data:
-    source: outputs/loading_tabular_data/tech_timestep_data.csv
+    data: outputs/loading_tabular_data/tech_timestep_data.csv
     rows: timesteps
     columns: [techs, parameters]
   tech_carrier_data:
-    source: outputs/loading_tabular_data/tech_carrier_data.csv
+    data: outputs/loading_tabular_data/tech_carrier_data.csv
     rows: [techs, parameters]
     add_dims:
       carriers: electricity
   tech_cost_data:
-    source: outputs/loading_tabular_data/tech_cost_data.csv
+    data: outputs/loading_tabular_data/tech_cost_data.csv
     rows: parameters
     columns: techs
     add_dims:
@@ -711,11 +712,13 @@ nodes:
       active: false
 """
 )
-model_from_data_sources_w_deactivations = calliope.Model(model_def)
+model_from_data_tables_w_deactivations = calliope.Model(model_def)
 
 # Let's compare the two after overriding `flow_cap_max`
 definition_matrix_old = (
-    model_from_data_sources.inputs.definition_matrix.to_series().dropna()
+    model_from_data_tables.inputs.definition_matrix.to_series().dropna()
 )
-definition_matrix_new = model_from_data_sources_w_deactivations.inputs.definition_matrix.to_series().dropna()
+definition_matrix_new = (
+    model_from_data_tables_w_deactivations.inputs.definition_matrix.to_series().dropna()
+)
 pd.concat([definition_matrix_old, definition_matrix_new], axis=1, keys=["old", "new"])

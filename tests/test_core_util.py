@@ -3,12 +3,13 @@ import glob
 import logging
 from pathlib import Path
 
-import calliope
 import importlib_resources
 import jsonschema
 import numpy as np
 import pandas as pd
 import pytest
+
+import calliope
 from calliope.util import schema
 from calliope.util.generate_runs import generate_runs
 from calliope.util.logging import log_time
@@ -180,10 +181,10 @@ class TestValidateDict:
             ],
         )
 
-    @pytest.fixture()
+    @pytest.fixture
     def base_math(self):
         return calliope.AttrDict.from_yaml(
-            Path(calliope.__file__).parent / "math" / "base.yaml"
+            Path(calliope.__file__).parent / "math" / "plan.yaml"
         )
 
     @pytest.mark.parametrize(
@@ -194,7 +195,8 @@ class TestValidateDict:
             Path(calliope.__file__).parent / "config" / "math_schema.yaml"
         )
         to_validate = base_math.union(
-            calliope.AttrDict.from_yaml(dict_path), allow_override=True
+            calliope.AttrDict.from_yaml(dict_path, allow_override=True),
+            allow_override=True,
         )
         schema.validate_dict(to_validate, math_schema, "")
 
@@ -320,7 +322,7 @@ class TestExtractFromSchema:
         """
         return calliope.AttrDict.from_yaml_string(schema_string)
 
-    @pytest.fixture()
+    @pytest.fixture
     def expected_config_defaults(self):
         return pd.Series(
             {
@@ -330,7 +332,7 @@ class TestExtractFromSchema:
             }
         ).sort_index()
 
-    @pytest.fixture()
+    @pytest.fixture
     def expected_model_def_defaults(self):
         return pd.Series(
             {

@@ -33,9 +33,9 @@ parameters:
   bigM: 1e6
 # --8<-- [end:parameters]
 
-data_sources:
+data_tables:
   time_varying_parameters:
-    source: data_sources/time_varying_params.csv
+    data: data_tables/time_varying_params.csv
     rows: timesteps
     columns: [comment, nodes, techs, parameters]
     drop: comment

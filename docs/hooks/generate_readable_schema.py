@@ -12,8 +12,9 @@ import textwrap
 from pathlib import Path
 
 import jsonschema2md
-from calliope.util import schema
 from mkdocs.structure.files import File
+
+from calliope.util import schema
 
 TEMPDIR = tempfile.TemporaryDirectory()
 
@@ -21,7 +22,7 @@ SCHEMAS = {
     "config_schema": schema.CONFIG_SCHEMA,
     "model_schema": schema.MODEL_SCHEMA,
     "math_schema": schema.MATH_SCHEMA,
-    "data_source_schema": schema.DATA_SOURCE_SCHEMA,
+    "data_table_schema": schema.DATA_TABLE_SCHEMA,
 }
 
 

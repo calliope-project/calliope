@@ -8,8 +8,10 @@ import tempfile
 import textwrap
 from pathlib import Path
 
-import calliope
 from mkdocs.structure.files import File
+
+import calliope
+from calliope.postprocess.math_documentation import MathDocumentation
 
 logger = logging.getLogger("mkdocs")
 
@@ -28,7 +30,7 @@ For each [objective](#objective), [constraint](#subject-to) and [global expressi
 
 In the expressions, terms in **bold** font are [decision variables](#decision-variables) and terms in *italic* font are [parameters](#parameters).
 The [decision variables](#decision-variables) and [parameters](#parameters) are listed at the end of the page; they also refer back to the global expressions / constraints in which they are used.
-Those parameters which are defined over time (`timesteps`) in the expressions can be defined by a user as a single, time invariant value, or as a timeseries that is [loaded from file or dataframe](../creating/data_sources.md).
+Those parameters which are defined over time (`timesteps`) in the expressions can be defined by a user as a single, time invariant value, or as a timeseries that is [loaded from file or dataframe](../creating/data_tables.md).
 
 !!! note
 
@@ -42,31 +44,33 @@ def on_files(files: list, config: dict, **kwargs):
     """Process documentation for pre-defined calliope math files."""
     model_config = calliope.AttrDict.from_yaml(MODEL_PATH)
 
-    base_model = generate_base_math_model()
+    base_documentation = generate_base_math_documentation()
     write_file(
-        "base.yaml",
+        "plan.yaml",
         textwrap.dedent(
             """
         Complete base mathematical formulation for a Calliope model.
         This math is _always_ applied but can be overridden with pre-defined additional math or [your own math][adding-your-own-math-to-a-model].
         """
         ),
-        base_model,
+        base_documentation,
         files,
         config,
     )
 
     for override in model_config["overrides"].keys():
-        custom_model = generate_custom_math_model(base_model, override)
+        custom_documentation = generate_custom_math_documentation(
+            base_documentation, override
+        )
         write_file(
             f"{override}.yaml",
             textwrap.dedent(
                 f"""
-            Pre-defined additional math to apply {custom_model.inputs.attrs['name']} math on top of the [base mathematical formulation][base-math].
+            Pre-defined additional math to apply {custom_documentation.name} math on top of the [base mathematical formulation][base-math].
             This math is _only_ applied if referenced in the `config.init.add_math` list as `{override}`.
             """
             ),
-            custom_model,
+            custom_documentation,
             files,
             config,
         )
@@ -77,7 +81,7 @@ def on_files(files: list, config: dict, **kwargs):
 def write_file(
     filename: str,
     description: str,
-    model: calliope.Model,
+    math_documentation: MathDocumentation,
     files: list[File],
     config: dict,
 ) -> None:
@@ -86,12 +90,10 @@ def write_file(
     Args:
         filename (str): name of produced `.md` file.
         description (str): first paragraph after title.
-        model (calliope.Model): calliope model with the given math.
+        math_documentation (MathDocumentation): calliope math documentation.
         files (list[File]): math files to parse.
         config (dict): documentation configuration.
     """
-    title = model.inputs.attrs["name"] + " math"
-
     output_file = (Path("math") / filename).with_suffix(".md")
     output_full_filepath = Path(TEMPDIR.name) / output_file
     output_full_filepath.parent.mkdir(exist_ok=True, parents=True)
@@ -122,7 +124,8 @@ def write_file(
 
     nav_reference["Pre-defined math"].append(output_file.as_posix())
 
-    math_doc = model.math_documentation.write(format="md", mkdocs_features=True)
+    title = math_documentation.name
+    math_doc = math_documentation.write(format="md", mkdocs_features=True)
     file_to_download = Path("..") / filename
     output_full_filepath.write_text(
         PREPEND_SNIPPET.format(
@@ -135,65 +138,67 @@ def write_file(
     )
 
 
-def generate_base_math_model() -> calliope.Model:
-    """Generate model with documentation for the base math.
-
-    Args:
-        model_config (dict): Calliope model config.
+def generate_base_math_documentation() -> MathDocumentation:
+    """Generate model documentation for the base math.
 
     Returns:
-        calliope.Model: Base math model to use in generating math docs.
+        MathDocumentation: model math documentation with latex backend.
     """
     model = calliope.Model(model_definition=MODEL_PATH)
-    model.math_documentation.build()
-    return model
+    model.build()
+    return MathDocumentation(model)
 
 
-def generate_custom_math_model(
-    base_model: calliope.Model, override: str
-) -> calliope.Model:
-    """Generate model with documentation for a pre-defined math file.
+def generate_custom_math_documentation(
+    base_documentation: MathDocumentation, override: str
+) -> MathDocumentation:
+    """Generate model documentation for a pre-defined math file.
 
     Only the changes made relative to the base math will be shown.
 
     Args:
-        base_model (calliope.Model): Calliope model with only the base math applied.
+        base_documentation (MathDocumentation): model documentation with only the base math applied.
         override (str): Name of override to load from the list available in the model config.
+
+    Returns:
+        MathDocumentation: model math documentation with latex backend.
     """
     model = calliope.Model(model_definition=MODEL_PATH, scenario=override)
+    model.build()
 
     full_del = []
     expr_del = []
-    for component_group, component_group_dict in model.math.items():
+    for component_group, component_group_dict in model.applied_math.data.items():
         for name, component_dict in component_group_dict.items():
-            if name in base_model.math[component_group]:
+            if name in base_documentation.math.data[component_group]:
                 if not component_dict.get("active", True):
                     expr_del.append(name)
                     component_dict["description"] = "|REMOVED|"
                     component_dict["active"] = True
-                elif base_model.math[component_group].get(name, {}) != component_dict:
+                elif (
+                    base_documentation.math.data[component_group].get(name, {})
+                    != component_dict
+                ):
                     _add_to_description(component_dict, "|UPDATED|")
                 else:
                     full_del.append(name)
             else:
                 _add_to_description(component_dict, "|NEW|")
 
-    model.math_documentation.build()
+    math_documentation = MathDocumentation(model)
     for key in expr_del:
-        model.math_documentation._instance._dataset[key].attrs["math_string"] = ""
+        math_documentation.backend._dataset[key].attrs["math_string"] = ""
     for key in full_del:
-        del model.math_documentation._instance._dataset[key]
-    for var in model.math_documentation._instance._dataset.values():
+        del math_documentation.backend._dataset[key]
+    for var in math_documentation.backend._dataset.values():
         var.attrs["references"] = var.attrs["references"].intersection(
-            model.math_documentation._instance._dataset.keys()
+            math_documentation.backend._dataset.keys()
         )
         var.attrs["references"] = var.attrs["references"].difference(expr_del)
 
-    logger.info(
-        model.math_documentation._instance._dataset["carrier_in"].attrs["references"]
-    )
+    logger.info(math_documentation.backend._dataset["carrier_in"].attrs["references"])
 
-    return model
+    return math_documentation
 
 
 def _add_to_description(component_dict: dict, update_string: str) -> None:

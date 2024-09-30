@@ -107,7 +107,7 @@ If you are defining a `constraint`, then you also need to define a comparison op
 You do not need to define the sets of math components in expressions, unless you are actively "slicing" them.
 Behind the scenes, we will make sure that every relevant element of the defined `foreach` sets are matched together when applying the expression (we [merge the underlying xarray DataArrays](https://docs.xarray.dev/en/stable/user-guide/combining.html)).
 Slicing math components involves appending the component with square brackets that contain the slices, e.g. `flow_out[carriers=electricity, nodes=[A, B]]` will slice the `flow_out` decision variable to focus on `electricity` in its `carriers` dimension and only has two nodes (`A` and `B`) on its `nodes` dimension.
-To find out what dimensions you can slice a component on, see your input data (`model.inputs`) for parameters and the definition for decision variables in your loaded math dictionary (`model.math.variables`).
+To find out what dimensions you can slice a component on, see your input data (`model.inputs`) for parameters and the definition for decision variables in your math dictionary.
 
 ## Helper functions
 
