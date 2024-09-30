@@ -1,17 +1,17 @@
-# Loading tabular data (`data_sources`)
+# Loading tabular data (`data_tables`)
 
 We have chosen YAML syntax to define Calliope models as it is human-readable.
 However, when you have a large dataset, the YAML files can become large and ultimately not as readable as we would like.
 For instance, for parameters that vary in time we would have a list of 8760 values and timestamps to put in our YAML file!
 
-Therefore, alongside your YAML model definition, you can load tabular data from CSV files (or from in-memory [pandas.DataFrame][] objects) under the `data_sources` top-level key.
+Therefore, alongside your YAML model definition, you can load tabular data from CSV files (or from in-memory [pandas.DataFrame][] objects) under the `data_tables` top-level key.
 As of Calliope v0.7.0, this tabular data can be of _any_ kind.
 Prior to this, loading from file was limited to timeseries data.
 
-The full syntax from loading tabular data can be found in the associated [schema][data-source-schema].
+The full syntax from loading tabular data can be found in the associated [schema][data-table-schema].
 In brief it is:
 
-* **source**: path to file or reference name for an in-memory object.
+* **data**: path to file or reference name for an in-memory object.
 * **rows**: the dimension(s) in your table defined per row.
 * **columns**: the dimension(s) in your table defined per column.
 * **select**: values within dimensions that you want to select from your tabular data, discarding the rest.
@@ -126,9 +126,9 @@ In this section we will show some examples of loading data and provide the equiv
     YAML definition to load data:
 
     ```yaml
-    data_sources:
+    data_tables:
       pv_capacity_factor_data:
-        source: data_sources/pv_resource.csv
+        data: data_tables/pv_resource.csv
         rows: timesteps
         add_dims:
           techs: pv
@@ -181,9 +181,9 @@ In this section we will show some examples of loading data and provide the equiv
     YAML definition to load data:
 
     ```yaml
-    data_sources:
+    data_tables:
       tech_data:
-        source: data_sources/tech_data.csv
+        data: data_tables/tech_data.csv
         rows: [techs, parameters]
     ```
 
@@ -224,9 +224,9 @@ In this section we will show some examples of loading data and provide the equiv
     YAML definition to load data:
 
     ```yaml
-    data_sources:
+    data_tables:
       tech_data:
-        source: data_sources/tech_data.csv
+        data: data_tables/tech_data.csv
         rows: [techs, parameters]
         add_dims:
           costs: monetary
@@ -272,7 +272,7 @@ In this section we will show some examples of loading data and provide the equiv
     1. To limit repetition, we have defined [templates](templates.md) for our costs.
 
 !!! info "See also"
-    Our [data source loading tutorial][loading-tabular-data] has more examples of loading tabular data into your model.
+    Our [data table loading tutorial][loading-tabular-data] has more examples of loading tabular data into your model.
 
 ## Selecting dimension values and dropping dimensions
 
@@ -290,9 +290,9 @@ Data in file:
 YAML definition to load only data from nodes 1 and 2:
 
 ```yaml
-data_sources:
+data_tables:
   tech_data:
-    source: data_sources/tech_data.csv
+    data: data_tables/tech_data.csv
     rows: [techs, parameters]
     columns: nodes
     select:
@@ -312,9 +312,9 @@ You will also need to `drop` the dimension so that it doesn't appear in the fina
 YAML definition to load only data from scenario 1:
 
 ```yaml
-data_sources:
+data_tables:
   tech_data:
-    source: data_sources/tech_data.csv
+    data: data_tables/tech_data.csv
     rows: [techs, parameters]
     columns: scenarios
     select:
@@ -322,12 +322,12 @@ data_sources:
     drop: scenarios
 ```
 
-You can then also tweak just one line of your data source YAML with an [override](scenarios.md) to point to your other scenario:
+You can then also tweak just one line of your data table YAML with an [override](scenarios.md) to point to your other scenario:
 
 ```yaml
 override:
   switch_to_scenario2:
-    data_sources.tech_data.select.scenarios: scenario2  # (1)!
+    data_tables.tech_data.select.scenarios: scenario2  # (1)!
 ```
 
 1. We use the dot notation as a shorthand for [abbreviate nested dictionaries](yaml.md#abbreviated-nesting).
@@ -348,9 +348,9 @@ For example, to define costs for the parameter `cost_flow_cap`:
     | tech3 | monetary | cost_flow_cap | 20    | 45    | 50    |
 
     ```yaml
-    data_sources:
+    data_tables:
       tech_data:
-        source: data_sources/tech_data.csv
+        data: data_tables/tech_data.csv
         rows: [techs, costs, parameters]
         columns: nodes
     ```
@@ -364,9 +364,9 @@ For example, to define costs for the parameter `cost_flow_cap`:
     | tech3 | 20    | 45    | 50    |
 
     ```yaml
-    data_sources:
+    data_tables:
       tech_data:
-        source: data_sources/tech_data.csv
+        data: data_tables/tech_data.csv
         rows: techs
         columns: nodes
         add_dims:
@@ -384,9 +384,9 @@ Or to define the same timeseries source data for two technologies at different n
     | 2005-01-01 01:00 | 200                              | 200                              |
 
     ```yaml
-    data_sources:
+    data_tables:
       tech_data:
-        source: data_sources/tech_data.csv
+        data: data_tables/tech_data.csv
         rows: timesteps
         columns: [nodes, techs, parameters]
     ```
@@ -401,16 +401,16 @@ Or to define the same timeseries source data for two technologies at different n
     | 2005-01-01 01:00 | 200 |
 
     ```yaml
-    data_sources:
+    data_tables:
       tech_data_1:
-        source: data_sources/tech_data.csv
+        data: data_tables/tech_data.csv
         rows: timesteps
         add_dims:
           techs: tech1
           nodes: node1
           parameters: source_use_max
       tech_data_2:
-        source: data_sources/tech_data.csv
+        data: data_tables/tech_data.csv
         rows: timesteps
         add_dims:
           techs: tech2
@@ -420,10 +420,10 @@ Or to define the same timeseries source data for two technologies at different n
 
 ## Loading CSV files vs `pandas` dataframes
 
-To load from CSV, set the filepath in `source` to point to your file.
+To load from CSV, set the filepath in `data` to point to your file.
 This filepath can either be relative to your `model.yaml` file (as in the above examples) or an absolute path.
 
-To load from a [pandas.DataFrame][], you can specify the `data_source_dfs` dictionary of objects when you initialise your model:
+To load from a [pandas.DataFrame][], you can specify the `data_table_dfs` dictionary of objects when you initialise your model:
 
 ```python
 import calliope
@@ -433,19 +433,19 @@ df2 = pd.DataFrame(...)
 
 model = calliope.Model(
     "path/to/model.yaml",
-    data_source_dfs={"data_source_1": df1, "data_source_2": df2}
+    data_table_dfs={"data_source_1": df1, "data_source_2": df2}
 )
 ```
 
-And then you point to those dictionary keys in the `source` for your data source:
+And then you point to those dictionary keys in the `data` for your data table:
 
 ```yaml
-data_sources:
+data_tables:
   ds1:
-    source: data_source_1
+    data: data_source_1
     ...
   ds2:
-    source: data_source_2
+    data: data_source_2
     ...
 ```
 
@@ -454,7 +454,7 @@ data_sources:
     Rows correspond to your dataframe index levels and columns to your dataframe column levels.
 
     You _cannot_ specify [pandas.Series][] objects.
-    Ensure you convert them to dataframes (`to_frame()`) before adding them to your data source dictionary.
+    Ensure you convert them to dataframes (`to_frame()`) before adding them to your data table dictionary.
 
 ## Important considerations
 
@@ -468,8 +468,8 @@ This could be defined in `rows`, `columns`, or `add_dims`.
     3. `add_dims` to add dimensions.
 This means you can technically select value "A" from dimensions `nodes`, then drop `nodes`, then add `nodes` back in with the value "B".
 This effectively replaces "A" with "B" on that dimension.
-3. The order of tabular data loading is in the order you list the sources.
-If a new table has data which clashes with preceding data sources, it will override that data.
+3. The order of tabular data loading is in the order you list the tables.
+If a new table has data which clashes with preceding tables, it will override that data.
 This may have unexpected results if the files have different dimensions as the dimensions will be broadcast to match each other.
 4. CSV files must have `.csv` in their filename (even if compressed, e.g., `.csv.zip`).
 If they don't, they won't be picked up by Calliope.
@@ -481,7 +481,7 @@ E.g.,
     nodes:
       node1.techs: {tech1, tech2, tech3}
       node2.techs: {tech1, tech2}
-    data_sources:
+    data_tables:
       ...
     ```
 6. We process dimension data after loading it in according to a limited set of heuristics:

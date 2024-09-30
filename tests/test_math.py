@@ -770,9 +770,9 @@ class TestNetImportShare(CustomMathExamples):
     YAML_FILEPATH = "net_import_share.yaml"
     shared_overrides = {
         "parameters.net_import_share": 1.5,
-        "data_sources": {
+        "data_tables": {
             "demand_heat": {
-                "source": "data_sources/demand_heat.csv",
+                "data": "data_tables/demand_heat.csv",
                 "rows": "timesteps",
                 "columns": "nodes",
                 "select": {"nodes": "a"},

@@ -4,6 +4,9 @@
 
 |new| (non-NaN) Default values and data types for parameters appear in math documentation (if they appear in the model definition schema) (#677).
 
+|changed| `data_sources` -> `data_tables` and `data_sources.source` -> `data_tables.data`.
+This change has occurred to avoid confusion between data "sources" and model energy "sources" (#673).
+
 ## 0.7.0.dev4 (2024-09-10)
 
 ### User-facing changes
