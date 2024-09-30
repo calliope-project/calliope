@@ -26,6 +26,7 @@ from calliope.util.tools import listify, relative_path
 LOGGER = logging.getLogger(__name__)
 
 DTYPE_OPTIONS = {"str": str, "float": float}
+AXIS_T = Literal["columns", "index"]
 
 
 class DataTableDict(TypedDict):
@@ -279,11 +280,11 @@ class DataTable:
             )
 
         tdf: pd.Series
-        axis_names: dict[Literal["columns", "index"], None | list[str]] = {
+        axis_names: dict[AXIS_T, None | list[str]] = {
             "columns": self.columns,
             "index": self.index,
         }
-        squeeze_me: dict[Literal["columns", "index"], bool] = {
+        squeeze_me: dict[AXIS_T, bool] = {
             "columns": self.columns is None,
             "index": self.index is None,
         }
@@ -336,7 +337,7 @@ class DataTable:
         return ds
 
     def _rename_axes(
-        self, df: pd.DataFrame, axis: Literal["columns", "index"], names: list[str]
+        self, df: pd.DataFrame, axis: AXIS_T, names: list[str]
     ) -> pd.DataFrame:
         """Check and rename DataFrame index and column names according to data table definition.
 
