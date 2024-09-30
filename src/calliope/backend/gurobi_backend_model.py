@@ -275,7 +275,7 @@ class GurobiBackendModel(backend_model.BackendModel):
 
     def verbose_strings(self) -> None:  # noqa: D102, override
         def __renamer(val, *idx, name: str, attr: str):
-            if pd.notnull(val):
+            if pd.notna(val):
                 new_obj_name = f"{name}[{', '.join(idx)}]"
                 setattr(val, attr, new_obj_name)
 

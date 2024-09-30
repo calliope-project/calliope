@@ -331,7 +331,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
     def verbose_strings(self) -> None:  # noqa: D102, override
         def __renamer(val, *idx):
-            if pd.notnull(val):
+            if pd.notna(val):
                 val.calliope_coords = idx
 
         with self._datetime_as_string(self._dataset):
