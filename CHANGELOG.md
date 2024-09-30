@@ -2,8 +2,6 @@
 
 ### User-facing changes
 
-|changed| cost expressions in math, to split out investment costs into the capital cost (`cost_investment`), annualised capital cost (`cost_investment_annualised`), fixed operation costs (`cost_operation_fixed`) and variable operation costs (`cost_operation_variable`, previously `cost_var`) (#645).
-
 |new| dimension renaming functionality when loading from a data source, using the `map_dims` option (#680).
 
 ## 0.7.0.dev4 (2024-09-10)
