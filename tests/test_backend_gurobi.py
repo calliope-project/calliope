@@ -28,7 +28,7 @@ class TestNewBackend:
     @pytest.fixture
     def simple_supply_gurobi_func(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.build(backend="gurobi")
+        m.build(backend="gurobi", pre_validate_math_strings=False)
         m.solve()
         return m
 

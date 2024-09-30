@@ -29,7 +29,7 @@ def built_model_cls_longnames(backend) -> calliope.Model:
 @pytest.fixture
 def built_model_func_longnames(backend) -> calliope.Model:
     m = build_model({}, "simple_supply,two_hours,investment_costs")
-    m.build(backend=backend)
+    m.build(backend=backend, pre_validate_math_strings=False)
     m.backend.verbose_strings()
     return m
 
@@ -37,7 +37,7 @@ def built_model_func_longnames(backend) -> calliope.Model:
 @pytest.fixture
 def solved_model_func(backend) -> calliope.Model:
     m = build_model({}, "simple_supply,two_hours,investment_costs")
-    m.build(backend=backend)
+    m.build(backend=backend, pre_validate_math_strings=False)
     m.solve()
     return m
 
@@ -69,7 +69,7 @@ def solved_model_cls(backend) -> calliope.Model:
 @pytest.fixture
 def built_model_func_updated_cost_flow_cap(backend, dummy_int: int) -> calliope.Model:
     m = build_model({}, "simple_supply,two_hours,investment_costs")
-    m.build(backend=backend)
+    m.build(backend=backend, pre_validate_math_strings=False)
     m.backend.verbose_strings()
     m.backend.update_parameter("cost_flow_cap", dummy_int)
     return m

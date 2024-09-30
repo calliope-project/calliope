@@ -37,18 +37,18 @@ class TestModelRun:
     @pytest.mark.filterwarnings(
         "ignore:(?s).*(links, test_link_a_b_elec) | Deactivated:calliope.exceptions.ModelWarning"
     )
-    def test_valid_scenarios(self):
+    def test_valid_scenarios(self, dummy_int):
         """Test that valid scenario definition from overrides raises no error and results in applied scenario."""
         override = AttrDict.from_yaml_string(
-            """
+            f"""
             scenarios:
                 scenario_1: ['one', 'two']
 
             overrides:
                 one:
-                    techs.test_supply_gas.flow_cap_max: 20
+                    techs.test_supply_gas.flow_cap_max: {dummy_int}
                 two:
-                    techs.test_supply_elec.flow_cap_max: 20
+                    techs.test_supply_elec.flow_cap_max: {dummy_int/2}
 
             nodes:
                 a:
@@ -60,24 +60,29 @@ class TestModelRun:
         )
         model = build_model(override_dict=override, scenario="scenario_1")
 
-        assert model._model_def_dict.techs.test_supply_gas.flow_cap_max == 20
-        assert model._model_def_dict.techs.test_supply_elec.flow_cap_max == 20
+        assert (
+            model._model_data.sel(techs="test_supply_gas")["flow_cap_max"] == dummy_int
+        )
+        assert (
+            model._model_data.sel(techs="test_supply_elec")["flow_cap_max"]
+            == dummy_int / 2
+        )
 
-    def test_valid_scenario_of_scenarios(self):
+    def test_valid_scenario_of_scenarios(self, dummy_int):
         """Test that valid scenario definition which groups scenarios and overrides raises
         no error and results in applied scenario.
         """
         override = AttrDict.from_yaml_string(
-            """
+            f"""
             scenarios:
                 scenario_1: ['one', 'two']
                 scenario_2: ['scenario_1', 'new_location']
 
             overrides:
                 one:
-                    techs.test_supply_gas.flow_cap_max: 20
+                    techs.test_supply_gas.flow_cap_max: {dummy_int}
                 two:
-                    techs.test_supply_elec.flow_cap_max: 20
+                    techs.test_supply_elec.flow_cap_max: {dummy_int/2}
                 new_location:
                     nodes.b.techs:
                         test_supply_elec:
@@ -92,8 +97,13 @@ class TestModelRun:
         )
         model = build_model(override_dict=override, scenario="scenario_2")
 
-        assert model._model_def_dict.techs.test_supply_gas.flow_cap_max == 20
-        assert model._model_def_dict.techs.test_supply_elec.flow_cap_max == 20
+        assert (
+            model._model_data.sel(techs="test_supply_gas")["flow_cap_max"] == dummy_int
+        )
+        assert (
+            model._model_data.sel(techs="test_supply_elec")["flow_cap_max"]
+            == dummy_int / 2
+        )
 
     def test_invalid_scenarios_dict(self):
         """Test that invalid scenario definition raises appropriate error"""

@@ -1,3 +1,6 @@
+import:
+  - plan.yaml
+
 constraints:
   flow_capacity_per_storage_capacity_min.active: false
   flow_capacity_per_storage_capacity_max.active: false
