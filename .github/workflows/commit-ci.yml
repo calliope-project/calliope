@@ -27,7 +27,7 @@ jobs:
 
     - uses: mamba-org/setup-micromamba@v1
       with:
-        micromamba-version: latest
+        micromamba-version: '1.5.10-0'
         environment-name: ${{ github.event.repository.name }}-ubuntu-latest-312-${{ hashFiles('requirements/dev.txt') }}
         environment-file: requirements/base.txt
         create-args: >-
