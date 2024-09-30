@@ -2,13 +2,13 @@
 # yaml-language-server: $schema=https://json-schema.org/draft/2020-12/schema#
 
 $schema: https://json-schema.org/draft/2020-12/schema#
-title: Data source schema
+title: Data table schema
 description: All options available to load model definition data from file.
 type: object
 additionalProperties: false
-required: ["source"]
+required: ["data"]
 $defs:
-  DataSourceVals:
+  DataTableVals:
     oneOf:
       - type: "null"
       - type: string
@@ -25,14 +25,14 @@ properties:
       Names of dimensions defined row-wise.
       Each name should correspond to a column in your data that contains index items.
       These columns must be to the left of the columns containing your data.
-    $ref: "#/$defs/DataSourceVals"
+    $ref: "#/$defs/DataTableVals"
   columns:
     description:  >-
       Names of dimensions defined column-wise.
       Each name should correspond to a row in your data that contains index items.
       These rows must be above the rows containing your data.
-    $ref: "#/$defs/DataSourceVals"
-  source:
+    $ref: "#/$defs/DataTableVals"
+  data:
     description: >-
       Relative or absolute filepath.
       If relative, will be relative to the model config file used to initialise the model.
@@ -52,7 +52,7 @@ properties:
               type: [string, boolean, number]
   drop:
     type: [string, array]
-    $ref: "#/$defs/DataSourceVals"
+    $ref: "#/$defs/DataTableVals"
     description: >-
       Dimensions in the rows and/or columns that contain metadata and should therefore not be passed on to the loaded model dataset.
       These could include comments on the source of the data, the data license, or the parameter units.
@@ -79,4 +79,4 @@ properties:
       '^[^_^\d][\w]*$':
         type: [string, array]
         description: Keys are dimension names (must not be in `rows` or `columns`), values are index items of that dimension to add.
-        $ref: "#/$defs/DataSourceVals"
+        $ref: "#/$defs/DataTableVals"

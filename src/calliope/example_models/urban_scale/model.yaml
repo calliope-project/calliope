@@ -33,16 +33,16 @@ parameters:
   bigM: 1e6
 # --8<-- [end:parameters]
 
-# --8<-- [start:data-sources]
-data_sources:
+# --8<-- [start:data-tables]
+data_tables:
   demand:
-    source: data_sources/demand.csv
+    data: data_tables/demand.csv
     rows: timesteps
     columns: [techs, nodes]
     add_dims:
       parameters: sink_use_equals
   pv_resource:
-    source: data_sources/pv_resource.csv
+    data: data_tables/pv_resource.csv
     rows: timesteps
     columns: [comment, scaler]
     add_dims:
@@ -52,7 +52,7 @@ data_sources:
       scaler: per_area
     drop: [comment, scaler]
   export_power:
-    source: data_sources/export_power.csv
+    data: data_tables/export_power.csv
     rows: timesteps
     columns: nodes
     add_dims:
@@ -60,4 +60,4 @@ data_sources:
       techs: chp
       costs: monetary
       carriers: electricity
-# --8<-- [end:data-sources]
+# --8<-- [end:data-tables]

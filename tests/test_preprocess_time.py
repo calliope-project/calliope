@@ -17,9 +17,9 @@ class TestTimeFormat:
         override = AttrDict.from_yaml_string(
             """
             config.init.time_format: "%d/%m/%Y %H:%M"
-            data_sources:
-                demand_elec.source: data_sources/demand_heat_diff_dateformat.csv
-                demand_heat.source: data_sources/demand_heat_diff_dateformat.csv
+            data_tables:
+                demand_elec.data: data_tables/demand_heat_diff_dateformat.csv
+                demand_heat.data: data_tables/demand_heat_diff_dateformat.csv
         """
         )
         model = build_test_model(override_dict=override, scenario="simple_conversion")
@@ -31,7 +31,7 @@ class TestTimeFormat:
     def test_incorrect_date_format_one(self):
         # should fail: wrong dateformat input for one file
         override = AttrDict.from_yaml_string(
-            "data_sources.demand_elec.source: data_sources/demand_heat_diff_dateformat.csv"
+            "data_tables.demand_elec.data: data_tables/demand_heat_diff_dateformat.csv"
         )
 
         with pytest.raises(exceptions.ModelError):
@@ -47,7 +47,7 @@ class TestTimeFormat:
     def test_incorrect_date_format_one_value_only(self):
         # should fail: one value wrong in file
         override = AttrDict.from_yaml_string(
-            "data_sources.test_demand_elec.source: data_sources/demand_heat_wrong_dateformat.csv"
+            "data_tables.test_demand_elec.data: data_tables/demand_heat_wrong_dateformat.csv"
         )
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.raises(exceptions.ModelError):
@@ -61,12 +61,12 @@ class TestClustering:
     def clustered_model(self, request):
         cluster_init = {
             "time_subset": ["2005-01-01", "2005-01-04"],
-            "time_cluster": f"data_sources/{request.param}.csv",
+            "time_cluster": f"data_tables/{request.param}.csv",
         }
         if "diff_dateformat" in request.param:
             cluster_init["override_dict"] = {
-                "data_sources": {
-                    "demand_elec.source": "data_sources/demand_heat_diff_dateformat.csv"
+                "data_tables": {
+                    "demand_elec.data": "data_tables/demand_heat_diff_dateformat.csv"
                 }
             }
             cluster_init["time_format"] = "%d/%m/%Y %H:%M"
@@ -127,7 +127,7 @@ class TestResamplingAndCluster:
             scenario="simple_supply",
             time_subset=["2005-01-01", "2005-01-04"],
             time_resample="6h",
-            time_cluster="data_sources/cluster_days.csv",
+            time_cluster="data_tables/cluster_days.csv",
         )
 
         dtindex = pd.DatetimeIndex(
@@ -152,7 +152,7 @@ class TestResampling:
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
         override = AttrDict.from_yaml_string(
-            "data_sources.demand_elec.source: data_sources/demand_elec_15mins.csv"
+            "data_tables.demand_elec.data: data_tables/demand_elec_15mins.csv"
         )
 
         model = build_test_model(override, scenario="simple_supply", time_resample="6h")
@@ -179,7 +179,7 @@ class TestResampling:
         CSV has daily timeseries varying from 15min to 2h resolution, resample all to 2h
         """
         override = AttrDict.from_yaml_string(
-            "data_sources.demand_elec.source: data_sources/demand_elec_15T_to_2h.csv"
+            "data_tables.demand_elec.data: data_tables/demand_elec_15T_to_2h.csv"
         )
 
         model = build_test_model(
@@ -214,12 +214,12 @@ class TestResampling:
         # it is only different for '2005-01-02'
         override = AttrDict.from_yaml_string(
             """
-            data_sources:
+            data_tables:
                 demand_elec:
                     select:
                         nodes: a
                 demand_elec_15m:
-                    source: data_sources/demand_elec_15mins.csv
+                    data: data_tables/demand_elec_15mins.csv
                     rows: timesteps
                     columns: nodes
                     select:

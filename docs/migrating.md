@@ -67,9 +67,9 @@ Instead, you define all your technology parameters at the same level.
         dims: costs
     ```
 
-### `file=`/`df=` → `data_sources` section
+### `file=`/`df=` → `data_tables` section
 
-`file=/df=` parameter values as references to timeseries data is replaced with loading tabular data at the top-level using the `data_sources` key.
+`file=/df=` parameter values as references to timeseries data is replaced with loading tabular data at the top-level using the `data_tables` key.
 
 Assuming you have these two files:
 
@@ -108,9 +108,9 @@ supply_file.csv:
 === "v0.7"
 
     ```yaml
-    data_sources:
+    data_tables:
       demand_data:
-        source: demand_file.csv
+        data: demand_file.csv
         rows: timesteps
         columns: nodes
         add_dims:
@@ -118,7 +118,7 @@ supply_file.csv:
           parameters: sink_equals
 
       supply_data:
-        source: supply_file.csv
+        data: supply_file.csv
         rows: timesteps
         columns: nodes
         add_dims:
@@ -127,7 +127,7 @@ supply_file.csv:
     ```
 
 !!! info "See also"
-    [`data_sources` introduction](creating/data_sources.md); [`data_sources` tutorial][loading-tabular-data].
+    [`data_tables` introduction](creating/data_tables.md); [`data_tables` tutorial][loading-tabular-data].
 
 ### Negative → positive demand and carrier consumption values
 
@@ -358,7 +358,7 @@ Instead of defining the binary trigger `force_resource` to enforce the productio
 
 If you want these resource uses to be upper or lower bounds, use the equivalent `_max`/`_min` parameters.
 
-You can find an example of this change [above](#filedf-→-data_sources-section).
+You can find an example of this change [above](#filedf-→-data_tables-section).
 
 ### `units` + `purchased` → `purchased_units`
 
@@ -690,8 +690,8 @@ We have re-implemented all these constraints as tested additional math snippets,
 
 ### Configuration options
 
-* With the [change in how timeseries data is defined](#filedf-→-data_sources-section), we have removed the reference to a `timeseries_data_path`.
-Instead, data source filepaths should always be relative to the `model.yaml` file or they should be absolute paths.
+* With the [change in how timeseries data is defined](#filedf-→-data_tables-section), we have removed the reference to a `timeseries_data_path`.
+Instead, data table filepaths should always be relative to the `model.yaml` file or they should be absolute paths.
 * We have removed `run.relax_constraint` alongside [removing group constraints](#group-constraints).
 * We have removed `model.file_allowed`, which many users will not even know existed (it was a largely internal configuration option)!
 Instead, it is possible to index any parameter over the time dimension.
@@ -957,11 +957,11 @@ nodes:
 
 ### Loading non-timeseries tabular data
 
-With the [change in loading timeseries data](#filedf-→-data_sources-section), we have expanded loading of tabular data to allow any data input.
+With the [change in loading timeseries data](#filedf-→-data_tables-section), we have expanded loading of tabular data to allow any data input.
 Technically, you can now define all your data in tables (although we would still recommend a mix of YAML and tabular model definition).
 
 !!! info "See also"
-    `data_sources` [introduction](creating/data_sources.md) and [tutorial][loading-tabular-data].
+    `data_tables` [introduction](creating/data_tables.md) and [tutorial][loading-tabular-data].
 
 ### YAML-based math syntax
 

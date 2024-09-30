@@ -16,7 +16,7 @@ from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.io import load_config
 from calliope.util.schema import (
-    DATA_SOURCE_SCHEMA,
+    DATA_TABLE_SCHEMA,
     MODEL_SCHEMA,
     extract_from_schema,
     validate_dict,
@@ -28,12 +28,12 @@ LOGGER = logging.getLogger(__name__)
 DTYPE_OPTIONS = {"str": str, "float": float}
 
 
-class DataSourceDict(TypedDict):
-    """Uniform dictionary for data sources."""
+class DataTableDict(TypedDict):
+    """Uniform dictionary for data tables."""
 
     rows: NotRequired[str | list[str]]
     columns: NotRequired[str | list[str]]
-    source: str
+    data: str
     df: NotRequired[str]
     map_dims: NotRequired[dict[str, str]]
     add_dims: NotRequired[dict[str, str | list[str]]]
@@ -41,59 +41,59 @@ class DataSourceDict(TypedDict):
     drop: NotRequired[Hashable | list[Hashable]]
 
 
-class DataSource:
+class DataTable:
     """Class for in memory data handling."""
 
-    MESSAGE_TEMPLATE = "(data_sources, {name}) | {message}."
+    MESSAGE_TEMPLATE = "(data_tables, {name}) | {message}."
     PARAMS_TO_INITIALISE_YAML = ["base_tech", "to", "from"]
 
     def __init__(
         self,
         model_config: dict,
-        source_name: str,
-        data_source: DataSourceDict,
-        data_source_dfs: dict[str, pd.DataFrame] | None = None,
+        table_name: str,
+        data_table: DataTableDict,
+        data_table_dfs: dict[str, pd.DataFrame] | None = None,
         model_definition_path: Path | None = None,
     ):
-        """Load and format a data source from file / in-memory object.
+        """Load and format a data table from file / in-memory object.
 
         Args:
             model_config (dict): Model initialisation configuration dictionary.
-            source_name (str): name of the data source.
-            data_source (DataSourceDict): Data source definition dictionary.
-            data_source_dfs (dict[str, pd.DataFrame] | None, optional):
-                If given, a dictionary mapping source names in `data_source` to in-memory pandas DataFrames.
+            table_name (str): name of the data table.
+            data_table (DataTableDict): Data table definition dictionary.
+            data_table_dfs (dict[str, pd.DataFrame] | None, optional):
+                If given, a dictionary mapping table names in `data_table` to in-memory pandas DataFrames.
                 Defaults to None.
             model_definition_path (Path | None, optional):
-                If given, the path to the model definition YAML file, relative to which data source filepaths will be set.
-                If None, relative data source filepaths will be considered relative to the current working directory.
+                If given, the path to the model definition YAML file, relative to which data table filepaths will be set.
+                If None, relative data table filepaths will be considered relative to the current working directory.
                 Defaults to None.
         """
-        validate_dict(data_source, DATA_SOURCE_SCHEMA, "data source")
-        self.input = data_source
-        self.dfs = data_source_dfs if data_source_dfs is not None else dict()
+        validate_dict(data_table, DATA_TABLE_SCHEMA, "data table")
+        self.input = data_table
+        self.dfs = data_table_dfs if data_table_dfs is not None else dict()
         self.model_definition_path = model_definition_path
         self.config = model_config
 
         self.columns = self._listify_if_defined("columns")
         self.index = self._listify_if_defined("rows")
-        self._name = source_name
+        self._name = table_name
         self.protected_params = load_config("protected_parameters.yaml")
 
-        if ".csv" in Path(self.input["source"]).suffixes:
+        if ".csv" in Path(self.input["data"]).suffixes:
             df = self._read_csv()
         else:
-            df = self.dfs[self.input["source"]]
+            df = self.dfs[self.input["data"]]
 
         self.dataset = self._df_to_ds(df)
 
     @property
     def name(self):
-        """Data source name."""
+        """Data table name."""
         return self._name
 
     def drop(self, name: str):
-        """Drop a data in-place from the data source.
+        """Drop a data in-place from the data table.
 
         Args:
             name (str): Name of data array to drop.
@@ -120,15 +120,15 @@ class DataSource:
         return tech_dict, base_tech_data
 
     def node_dict(self, techs_incl_inheritance: AttrDict) -> AttrDict:
-        """Create a dummy node definition dictionary from the dimensions defined across all data sources.
+        """Create a dummy node definition dictionary from the dimensions defined across all data tables.
 
         This definition dictionary will ensure that the minimal YAML content is still possible.
 
-        This function should be run _after_ `self._update_tech_def_from_data_source`.
+        This function should be run _after_ `self._update_tech_def_from_data_table`.
 
         Args:
             techs_incl_inheritance (AttrDict):
-                Technology definition dictionary which is a union of any YAML definition and the result of calling `self.tech_dict` across all data sources.
+                Technology definition dictionary which is a union of any YAML definition and the result of calling `self.tech_dict` across all data tables.
                 Technologies should have their entire definition inheritance chain resolved.
         """
         node_tech_vars = self.dataset[
@@ -247,7 +247,7 @@ class DataSource:
         Returns:
             pd.DataFrame: Loaded data without any processing.
         """
-        filename = self.input["source"]
+        filename = self.input["data"]
 
         if self.columns is None:
             self._log(
@@ -274,7 +274,7 @@ class DataSource:
         """
         if not isinstance(df, pd.DataFrame):
             self._raise_error(
-                "Data source must be a pandas DataFrame. "
+                "Data table must be a pandas DataFrame. "
                 "If you are providing an in-memory object, ensure it is not a pandas Series by calling the method `to_frame()`"
             )
 
@@ -372,7 +372,7 @@ class DataSource:
         if not invalid_params.empty:
             extra_info = set(self.protected_params[k] for k in invalid_params)
             exceptions.print_warnings_and_raise_errors(
-                errors=list(extra_info), during=f"data source loading ({self.name})"
+                errors=list(extra_info), during=f"data table loading ({self.name})"
             )
 
     def _check_processed_tdf(self, tdf: pd.Series):
@@ -404,7 +404,7 @@ class DataSource:
         )
 
     def _listify_if_defined(self, key: str) -> list | None:
-        """If `key` is in data source definition dictionary, return values as a list.
+        """If `key` is in data sourtablece definition dictionary, return values as a list.
 
         If values are not yet an iterable, they will be coerced to an iterable of length 1.
         If they are an iterable, they will be coerced to a list.
@@ -414,7 +414,7 @@ class DataSource:
             default (Literal[None, 0]): Either zero or None
 
         Returns:
-            list | None: If `key` not defined in data source, return None, else return values as a list.
+            list | None: If `key` not defined in data table, return None, else return values as a list.
         """
         vals = self.input.get(key, None)
         if vals is not None:
@@ -422,14 +422,14 @@ class DataSource:
         return vals
 
     def _compare_axis_names(self, loaded_names: list, defined_names: list, axis: str):
-        """Check loaded axis level names compared to those given by `rows` and `columns` in data source definition dictionary.
+        """Check loaded axis level names compared to those given by `rows` and `columns` in data table definition dictionary.
 
         The data file / in-memory object does not need to have any level names defined,
-        but if they _are_ defined then they must match those given in the data source definition dictionary.
+        but if they _are_ defined then they must match those given in the data table definition dictionary.
 
         Args:
             loaded_names (list): Names as defined in the loaded data file / in-memory object.
-            defined_names (list): Names as defined in the data source dictionary.
+            defined_names (list): Names as defined in the data table dictionary.
             axis (str): Axis on which the names are levels.
         """
         if any(
