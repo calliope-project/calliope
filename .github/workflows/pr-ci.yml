@@ -109,7 +109,11 @@ jobs:
       - uses: mamba-org/setup-micromamba@v1
         with:
           micromamba-version: '1.5.10-0'
-          environment-file: .github/workflows/pr-ci-pipbuild-environment.yml
+          environment-name: pipbuild
+          create-args: >-
+            python=3.11
+            pip
+            python-build
           post-cleanup: all
           cache-environment: true
       - name: Build package
@@ -128,3 +132,4 @@ jobs:
     with:
       package_name: calliope
       version: ${{needs.pre-release-version.outputs.version}}
+      pip_args: ''
