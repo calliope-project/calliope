@@ -17,7 +17,7 @@ from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.preprocess import data_tables, time
 from calliope.util.schema import MODEL_SCHEMA, validate_dict
-from calliope.util.tools import listify
+from calliope.util.tools import climb_template_tree, listify
 
 LOGGER = logging.getLogger(__name__)
 
@@ -555,10 +555,15 @@ class ModelDataFactory:
 
                 item_base_def = deepcopy(base_def[item_name])
                 item_base_def.union(item_def, allow_override=True)
+                if item_name in self.tech_data_from_tables:
+                    _data_table_dict = deepcopy(self.tech_data_from_tables[item_name])
+                    _data_table_dict.union(item_base_def, allow_override=True)
+                    item_base_def = _data_table_dict
             else:
                 item_base_def = item_def
-            updated_item_def, inheritance = self._climb_template_tree(
-                item_base_def, dim_name, item_name
+            templates = self.model_definition.get("templates", AttrDict())
+            updated_item_def, inheritance = climb_template_tree(
+                item_base_def, templates, item_name
             )
 
             if not updated_item_def.get("active", True):
@@ -575,60 +580,6 @@ class ModelDataFactory:
             updated_defs[item_name] = updated_item_def
 
         return updated_defs
-
-    def _climb_template_tree(
-        self,
-        dim_item_dict: AttrDict,
-        dim_name: Literal["nodes", "techs"],
-        item_name: str,
-        inheritance: list | None = None,
-    ) -> tuple[AttrDict, list | None]:
-        """Follow the `template` references from `nodes` / `techs` to `templates`.
-
-        Abstract template definitions (those in `templates`) can inherit each other, but `nodes`/`techs` cannot.
-
-        This function will be called recursively until a definition dictionary without `template` is reached.
-
-        Args:
-            dim_item_dict (AttrDict): Dictionary (possibly) containing `template`.
-            dim_name (Literal[nodes, techs]):
-                The name of the dimension we're working with, so that we can access the correct `_groups` definitions.
-            item_name (str):
-                The current position in the inheritance tree.
-            inheritance (list | None, optional):
-                A list of items that have been inherited (starting with the oldest).
-                If the first `dim_item_dict` does not contain `template`, this will remain as None.
-                Defaults to None.
-
-        Raises:
-            KeyError: Must inherit from a named template item in `templates`.
-
-        Returns:
-            tuple[AttrDict, list | None]: Definition dictionary with inherited data and a list of the inheritance tree climbed to get there.
-        """
-        to_inherit = dim_item_dict.get("template", None)
-        dim_groups = AttrDict(self.model_definition.get("templates", {}))
-        if to_inherit is None:
-            if dim_name == "techs" and item_name in self.tech_data_from_tables:
-                _data_table_dict = deepcopy(self.tech_data_from_tables[item_name])
-                _data_table_dict.union(dim_item_dict, allow_override=True)
-                dim_item_dict = _data_table_dict
-            updated_dim_item_dict = dim_item_dict
-        elif to_inherit not in dim_groups:
-            raise KeyError(
-                f"({dim_name}, {item_name}) | Cannot find `{to_inherit}` in template inheritance tree."
-            )
-        else:
-            base_def_dict, inheritance = self._climb_template_tree(
-                dim_groups[to_inherit], dim_name, to_inherit, inheritance
-            )
-            updated_dim_item_dict = deepcopy(base_def_dict)
-            updated_dim_item_dict.union(dim_item_dict, allow_override=True)
-            if inheritance is not None:
-                inheritance.append(to_inherit)
-            else:
-                inheritance = [to_inherit]
-        return updated_dim_item_dict, inheritance
 
     def _deactivate_item(self, **item_ref):
         for dim_name, item_name in item_ref.items():

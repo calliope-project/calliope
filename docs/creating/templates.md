@@ -2,9 +2,11 @@
 # Inheriting from templates: `templates`
 
 For larger models, duplicate entries can start to crop up and become cumbersome.
-To streamline data entry, technologies and nodes can inherit common data from a `template`.
+To streamline data entry, technologies, nodes, and data tables can inherit common data from a `template`.
 
-For example, if we want to set interest rate to `0.1` across all our technologies, we could define:
+## Templates in technologies
+
+If we want to set interest rate to `0.1` across all our technologies, we could define:
 
 ```yaml
 templates:
@@ -21,6 +23,8 @@ techs:
     template: interest_rate_setter
     ...
 ```
+
+## Templates in nodes
 
 Similarly, if we want to allow the same technologies at all our nodes:
 
@@ -47,6 +51,37 @@ nodes:
       battery:
       demand_power:
     ```
+
+## Templates in data tables
+
+Data tables can also store common options under the `templates` key, for example:
+
+```yaml
+templates:
+  common_data_options:
+    rows: timesteps
+    columns: nodes
+    add_dims:
+      parameters: source_use_max
+data_tables:
+  pv_data:
+    data: /path/to/pv_timeseries.csv
+    template: common_data_options
+    add_dims:
+      techs: pv
+  wind_data:
+    data: /path/to/wind_timeseries.csv
+    template: common_data_options
+    add_dims:
+      techs: wind
+  hydro_data:
+    data: /path/to/hydro_timeseries.csv
+    template: common_data_options
+    add_dims:
+      techs: hydro
+```
+
+## Inheritance chains
 
 Inheritance chains can also be created.
 That is, templates can inherit from other templates.
@@ -78,7 +113,9 @@ techs:
     ...
 ```
 
-Finally, template properties can always be overridden by the inheriting component.
+## Overriding template values
+
+Template properties can always be overridden by the inheriting component.
 This can be useful to streamline setting costs, e.g.:
 
 ```yaml

@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|new| Data tables can inherit options from `templates`, like `techs` and `nodes` (#676).
+
 |new| Math has been removed from `model.math`, and can now be accessed via `model.math.data` (#639).
 
 |new| (non-NaN) Default values and data types for parameters appear in math documentation (if they appear in the model definition schema) (#677).
