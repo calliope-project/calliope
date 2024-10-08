@@ -37,6 +37,7 @@ class DataTableDict(TypedDict):
     add_dims: NotRequired[dict[str, str | list[str]]]
     select: dict[str, str | bool | int]
     drop: Hashable | list[Hashable]
+    template: NotRequired[str]
 
 
 class DataTable:
