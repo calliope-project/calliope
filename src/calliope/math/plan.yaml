@@ -892,6 +892,7 @@ global_expressions:
     title: Equivalent annual investment costs
     description: >-
       An annuity factor has been applied to scale lifetime investment costs to annual values that can be directly compared to operation costs.
+      If the modeling period is not equal to one full year, this will be scaled accordingly.
     default: 0
     unit: cost
     foreach: [nodes, techs, costs]
@@ -915,6 +916,7 @@ global_expressions:
     title: Total fixed operation costs
     description: >-
       The fixed, annual operation costs of a technology, which are calculated relative to investment costs.
+      If the modeling period is not equal to one full year, this will be scaled accordingly.
     default: 0
     unit: cost
     foreach: [nodes, techs, costs]
