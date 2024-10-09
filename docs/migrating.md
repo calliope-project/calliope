@@ -326,6 +326,7 @@ Here are the main changes to parameter/decision variable names that are not link
 * `energy_cap_min_use` → `flow_out_min_relative` (i.e., the value is relative to `flow_cap`).
 * `parasitic_eff` →  `flow_out_parasitic_eff`.
 * `force_asynchronous_prod_con` → `force_async_flow`.
+* `cost_var` → `cost_operation_variable`.
 * `exists` → `active`.
 
 !!! info "See also"
@@ -364,6 +365,11 @@ You can find an example of this change [above](#filedf-→-data_tables-section).
 
 We have rolled the integer decision variable `units` and the binary `purchased` into one decision variable `purchased_units`.
 To achieve the same functionality for `purchased`, set `purchased_units_max: 1`.
+
+### `cost_investment` → `cost_investment_annualised` + `cost_operation_fixed`
+
+Investment costs are split out into the component caused by annual operation and maintenance (`cost_operation_fixed`) and an annualised equivalent of the initial capital investment (`cost_investment_annualised`).
+`cost_investment` still exists in the model results and represents the initial capital investment, i.e., without applying the economic depreciation rate.
 
 ### Explicitly triggering MILP and storage decision variables/constraints
 

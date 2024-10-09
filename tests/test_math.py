@@ -150,9 +150,9 @@ class TestBaseMath:
         compare_lps(model, custom_math, "balance_storage")
 
     @pytest.mark.parametrize("with_export", [True, False])
-    def test_cost_var_with_export(self, compare_lps, with_export):
+    def test_cost_operation_variable(self, compare_lps, with_export):
         """Test variable costs in the objective."""
-        self.TEST_REGISTER.add("global_expressions.cost_var")
+        self.TEST_REGISTER.add("global_expressions.cost_operation_variable")
         override = {
             "techs.test_conversion_plus.cost_flow_out": {
                 "data": [1, 2],
@@ -195,7 +195,7 @@ class TestBaseMath:
                 "foo": {
                     "equations": [
                         {
-                            "expression": "sum(cost_var, over=[nodes, techs, costs, timesteps])"
+                            "expression": "sum(cost_operation_variable, over=[nodes, techs, costs, timesteps])"
                         }
                     ],
                     "sense": "minimise",
@@ -203,7 +203,7 @@ class TestBaseMath:
             }
         }
         suffix = "_with_export" if with_export else ""
-        compare_lps(model, custom_math, f"cost_var{suffix}")
+        compare_lps(model, custom_math, f"cost_operation_variable{suffix}")
 
     @pytest.mark.xfail(reason="not all base math is in the test config dict yet")
     def test_all_math_registered(self, base_math):

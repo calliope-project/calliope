@@ -152,12 +152,11 @@ class TestGetters:
         """Check a decision variable has the correct obj_type."""
         assert variable.attrs["obj_type"] == "variables"
 
-    def test_get_variable_refs(self, variable):
+    def test_get_variable_refs(self, variable, solved_model_cls):
         """Check a decision variable has all expected references to other math components."""
         assert variable.attrs["references"] == {
             "flow_in_max",
             "flow_out_max",
-            "cost_investment",
             "cost_investment_flow_cap",
             "symmetric_transmission",
         }
@@ -224,7 +223,7 @@ class TestGetters:
 
     def test_get_global_expression_refs(self, global_expression):
         """Check a global expression has all expected math component refs."""
-        assert global_expression.attrs["references"] == {"cost"}
+        assert global_expression.attrs["references"] == {"cost_investment_annualised"}
 
     def test_get_global_expression_default(self, global_expression):
         """Check a global expression has expected default."""

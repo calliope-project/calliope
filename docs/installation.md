@@ -68,7 +68,7 @@ This list is not exhaustive; any solvers [supported by Pyomo](https://pyomo.read
 
 [CBC](https://github.com/coin-or/Cbc) is our recommended option if you want a free and open-source solver.
 CBC can be installed via conda on Linux and macOS by running `mamba install -c conda-forge coin-or-cbc`.
-Windows binary packages are somewhat more difficult to install, due to limited information on [the CBC website](https://github.com/coin-or/Cbc), but can be found within their [binary archive](https://www.coin-or.org/download/binary/Cbc/) and are included in their [package releases on GitHub](https://github.com/coin-or/Cbc/releases).
+Windows binary packages are somewhat more difficult to install, due to limited information on [the CBC website](https://github.com/coin-or/Cbc), but are included in their [package releases on GitHub](https://github.com/coin-or/Cbc/releases).
 The GitHub releases are more up-to-date. We recommend you download the relevant binary for [CBC 2.10.11](https://github.com/coin-or/Cbc/releases/download/releases%2F2.10.11/Cbc-releases.2.10.11-w64-msvc17-md.zip) and add `cbc.exe` to a directory known to PATH (e.g. an Anaconda environment 'bin' directory).
 
 ### GLPK

@@ -47,14 +47,9 @@ global_expressions:
       OR cost_investment_purchase OR piecewise_cost_investment)
     equations:
       - expression: >
-          $annualisation_weight * (
-            $depreciation_rate * (
-              sum(default_if_empty(cost_investment_flow_cap, 0), over=carriers) +
-              default_if_empty(cost_investment_storage_cap, 0) +
-              default_if_empty(cost_investment_source_cap, 0) +
-              default_if_empty(cost_investment_area_use, 0) +
-              default_if_empty(cost_investment_purchase, 0) +
-              default_if_empty(piecewise_cost_investment, 0)
-            ) * (1 + cost_om_annual_investment_fraction)
-            + sum(cost_om_annual * default_if_empty(flow_cap, 0), over=carriers)
-          )
+          sum(default_if_empty(cost_investment_flow_cap, 0), over=carriers) +
+          default_if_empty(cost_investment_storage_cap, 0) +
+          default_if_empty(cost_investment_source_cap, 0) +
+          default_if_empty(cost_investment_area_use, 0) +
+          default_if_empty(cost_investment_purchase, 0) +
+          default_if_empty(piecewise_cost_investment, 0)

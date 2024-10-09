@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|changed| cost expressions in math, to split out investment costs into the capital cost (`cost_investment`), annualised capital cost (`cost_investment_annualised`), fixed operation costs (`cost_operation_fixed`) and variable operation costs (`cost_operation_variable`, previously `cost_var`) (#645).
+
 |new| Math has been removed from `model.math`, and can now be accessed via `model.math.data` (#639).
 
 |new| (non-NaN) Default values and data types for parameters appear in math documentation (if they appear in the model definition schema) (#677).
