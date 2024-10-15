@@ -11,6 +11,7 @@ from calliope import AttrDict
 from .common.util import build_lp, build_test_model
 
 CALLIOPE_DIR: Path = importlib.resources.files("calliope")
+PLAN_MATH: AttrDict = AttrDict.from_yaml(CALLIOPE_DIR / "math" / "plan.yaml")
 
 
 @pytest.fixture(scope="class")
@@ -46,7 +47,7 @@ class TestBaseMath:
 
     @pytest.fixture(scope="class")
     def base_math(self):
-        return AttrDict.from_yaml(CALLIOPE_DIR / "math" / "base.yaml")
+        return AttrDict.from_yaml(CALLIOPE_DIR / "math" / "plan.yaml")
 
     def test_flow_cap(self, compare_lps):
         self.TEST_REGISTER.add("variables.flow_cap")
@@ -79,7 +80,7 @@ class TestBaseMath:
         self.TEST_REGISTER.add("constraints.storage_max")
         model = build_test_model(scenario="simple_storage,two_hours,investment_costs")
         custom_math = {
-            "constraints": {"storage_max": model.math.constraints.storage_max}
+            "constraints": {"storage_max": PLAN_MATH.constraints.storage_max}
         }
         compare_lps(model, custom_math, "storage_max")
 
@@ -94,7 +95,7 @@ class TestBaseMath:
         )
 
         custom_math = {
-            "constraints": {"flow_out_max": model.math.constraints.flow_out_max}
+            "constraints": {"flow_out_max": PLAN_MATH.constraints.flow_out_max}
         }
         compare_lps(model, custom_math, "flow_out_max")
 
@@ -106,7 +107,7 @@ class TestBaseMath:
         )
         custom_math = {
             "constraints": {
-                "balance_conversion": model.math.constraints.balance_conversion
+                "balance_conversion": PLAN_MATH.constraints.balance_conversion
             }
         }
 
@@ -118,7 +119,7 @@ class TestBaseMath:
             {}, "simple_supply_plus,resample_two_days,investment_costs"
         )
         custom_math = {
-            "constraints": {"my_constraint": model.math.constraints.source_max}
+            "constraints": {"my_constraint": PLAN_MATH.constraints.source_max}
         }
         compare_lps(model, custom_math, "source_max")
 
@@ -129,9 +130,7 @@ class TestBaseMath:
             {"techs.test_link_a_b_elec.one_way": True}, "simple_conversion,two_hours"
         )
         custom_math = {
-            "constraints": {
-                "my_constraint": model.math.constraints.balance_transmission
-            }
+            "constraints": {"my_constraint": PLAN_MATH.constraints.balance_transmission}
         }
         compare_lps(model, custom_math, "balance_transmission")
 
@@ -146,14 +145,14 @@ class TestBaseMath:
             "simple_storage,two_hours",
         )
         custom_math = {
-            "constraints": {"my_constraint": model.math.constraints.balance_storage}
+            "constraints": {"my_constraint": PLAN_MATH.constraints.balance_storage}
         }
         compare_lps(model, custom_math, "balance_storage")
 
     @pytest.mark.parametrize("with_export", [True, False])
-    def test_cost_var_with_export(self, compare_lps, with_export):
+    def test_cost_operation_variable(self, compare_lps, with_export):
         """Test variable costs in the objective."""
-        self.TEST_REGISTER.add("global_expressions.cost_var")
+        self.TEST_REGISTER.add("global_expressions.cost_operation_variable")
         override = {
             "techs.test_conversion_plus.cost_flow_out": {
                 "data": [1, 2],
@@ -196,7 +195,7 @@ class TestBaseMath:
                 "foo": {
                     "equations": [
                         {
-                            "expression": "sum(cost_var, over=[nodes, techs, costs, timesteps])"
+                            "expression": "sum(cost_operation_variable, over=[nodes, techs, costs, timesteps])"
                         }
                     ],
                     "sense": "minimise",
@@ -204,7 +203,7 @@ class TestBaseMath:
             }
         }
         suffix = "_with_export" if with_export else ""
-        compare_lps(model, custom_math, f"cost_var{suffix}")
+        compare_lps(model, custom_math, f"cost_operation_variable{suffix}")
 
     @pytest.mark.xfail(reason="not all base math is in the test config dict yet")
     def test_all_math_registered(self, base_math):
@@ -261,7 +260,7 @@ class CustomMathExamples(ABC):
                 overrides = {}
 
             model = build_test_model(
-                {"config.init.add_math": [abs_filepath], **overrides}, scenario
+                {"config.build.add_math": [abs_filepath], **overrides}, scenario
             )
 
             compare_lps(model, custom_math, filename)

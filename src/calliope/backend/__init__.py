@@ -5,23 +5,28 @@ from typing import TYPE_CHECKING
 import xarray as xr
 
 from calliope.backend.gurobi_backend_model import GurobiBackendModel
-from calliope.backend.latex_backend_model import MathDocumentation
+from calliope.backend.latex_backend_model import (
+    ALLOWED_MATH_FILE_FORMATS,
+    LatexBackendModel,
+)
 from calliope.backend.parsing import ParsedBackendComponent
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.exceptions import BackendError
-
-MODEL_BACKENDS = ("pyomo",)
+from calliope.preprocess import CalliopeMath
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
 
 
-def get_model_backend(name: str, data: xr.Dataset, **kwargs) -> "BackendModel":
+def get_model_backend(
+    name: str, data: xr.Dataset, math: CalliopeMath, **kwargs
+) -> "BackendModel":
     """Assign a backend using the given configuration.
 
     Args:
         name (str): name of the backend to use.
         data (Dataset): model data for the backend.
+        math (CalliopeMath): Calliope math.
         **kwargs: backend keyword arguments corresponding to model.config.build.
 
     Raises:
@@ -32,8 +37,8 @@ def get_model_backend(name: str, data: xr.Dataset, **kwargs) -> "BackendModel":
     """
     match name:
         case "pyomo":
-            return PyomoBackendModel(data, **kwargs)
+            return PyomoBackendModel(data, math, **kwargs)
         case "gurobi":
-            return GurobiBackendModel(data, **kwargs)
+            return GurobiBackendModel(data, math, **kwargs)
         case _:
             raise BackendError(f"Incorrect backend '{name}' requested.")

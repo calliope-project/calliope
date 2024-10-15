@@ -105,7 +105,7 @@ class TestIO:
             ("serialised_nones", ["foo_none", "scenario"]),
             (
                 "serialised_dicts",
-                ["foo_dict", "foo_attrdict", "defaults", "config", "math"],
+                ["foo_dict", "foo_attrdict", "defaults", "config", "applied_math"],
             ),
             ("serialised_sets", ["foo_set", "foo_set_1_item"]),
             ("serialised_single_element_list", ["foo_list_1_item", "foo_set_1_item"]),
@@ -182,7 +182,7 @@ class TestIO:
             with pytest.warns(exceptions.ModelWarning):
                 model.to_csv(out_path, dropna=False)
 
-    @pytest.mark.parametrize("attr", ["config", "math"])
+    @pytest.mark.parametrize("attr", ["config"])
     def test_dicts_as_model_attrs_and_property(self, model_from_file, attr):
         assert attr in model_from_file._model_data.attrs.keys()
         assert hasattr(model_from_file, attr)
@@ -200,11 +200,9 @@ class TestIO:
         model.to_netcdf(out_path)
         model_from_disk = calliope.read_netcdf(out_path)
 
-        # Ensure _model_def_dict doesn't exist to simulate a re-run via the backend
-        delattr(model_from_disk, "_model_def_dict")
+        # Simulate a re-run via the backend
         model_from_disk.build()
         model_from_disk.solve(force=True)
-        assert not hasattr(model_from_disk, "_model_def_dict")
 
         with tempfile.TemporaryDirectory() as tempdir:
             out_path = os.path.join(tempdir, "model.nc")

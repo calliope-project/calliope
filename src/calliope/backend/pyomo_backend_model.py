@@ -26,10 +26,12 @@ from pyomo.core.kernel.piecewise_library.transforms import (
 from pyomo.opt import SolverFactory  # type: ignore
 from pyomo.util.model_size import build_model_size_report  # type: ignore
 
-from calliope.backend import backend_model, parsing
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
+from calliope.preprocess import CalliopeMath
 from calliope.util.logging import LogWriter
+
+from . import backend_model, parsing
 
 T = TypeVar("T")
 _COMPONENTS_T = Literal[
@@ -56,14 +58,15 @@ COMPONENT_TRANSLATOR = {
 class PyomoBackendModel(backend_model.BackendModel):
     """Pyomo-specific backend functionality."""
 
-    def __init__(self, inputs: xr.Dataset, **kwargs) -> None:
+    def __init__(self, inputs: xr.Dataset, math: CalliopeMath, **kwargs) -> None:
         """Pyomo solver interface class.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
+            math (CalliopeMath): Calliope math.
             **kwargs: passed directly to the solver.
         """
-        super().__init__(inputs, pmo.block(), **kwargs)
+        super().__init__(inputs, math, pmo.block(), **kwargs)
 
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()
@@ -74,8 +77,6 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         self._instance.dual = pmo.suffix(direction=pmo.suffix.IMPORT)
         self.shadow_prices = PyomoShadowPrices(self._instance.dual, self)
-
-        self._add_all_inputs_as_parameters()
 
     def add_parameter(  # noqa: D102, override
         self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
@@ -330,7 +331,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
     def verbose_strings(self) -> None:  # noqa: D102, override
         def __renamer(val, *idx):
-            if pd.notnull(val):
+            if pd.notna(val):
                 val.calliope_coords = idx
 
         with self._datetime_as_string(self._dataset):
@@ -460,7 +461,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 )
                 continue
 
-            existing_bound_param = self.inputs.attrs["math"].get_key(
+            existing_bound_param = self.math.data.get_key(
                 f"variables.{name}.bounds.{bound_name}", None
             )
             if existing_bound_param in self.parameters:

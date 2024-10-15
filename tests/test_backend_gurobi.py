@@ -28,7 +28,7 @@ class TestNewBackend:
     @pytest.fixture
     def simple_supply_gurobi_func(self):
         m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.build(backend="gurobi")
+        m.build(backend="gurobi", pre_validate_math_strings=False)
         m.solve()
         return m
 
@@ -154,7 +154,7 @@ class TestNewBackend:
 
         assert "flow_cap[a, test_supply_elec, electricity]" in obj.sel(dims).item()
         # parameters are not gurobi objects, so we don't get their names in our strings
-        assert "parameters[cost_interest_rate]" not in obj.sel(dims).item()
+        assert "cost_flow_cap" not in obj.sel(dims).item()
 
         assert not obj.coords_in_name
 

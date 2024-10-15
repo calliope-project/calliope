@@ -4,6 +4,12 @@
 
 |new| dimension renaming functionality when loading from a data source, using the `rename_dims` option (#680).
 
+|changed| cost expressions in math, to split out investment costs into the capital cost (`cost_investment`), annualised capital cost (`cost_investment_annualised`), fixed operation costs (`cost_operation_fixed`) and variable operation costs (`cost_operation_variable`, previously `cost_var`) (#645).
+
+|new| Math has been removed from `model.math`, and can now be accessed via `model.math.data` (#639).
+
+|new| (non-NaN) Default values and data types for parameters appear in math documentation (if they appear in the model definition schema) (#677).
+
 |changed| `data_sources` -> `data_tables` and `data_sources.source` -> `data_tables.data`.
 This change has occurred to avoid confusion between data "sources" and model energy "sources" (#673).
 
@@ -62,6 +68,12 @@ Parameter titles from the model definition schema will also propagate to the mod
 * `timestamp_solve_complete`: at the end of `Model.solve()`
 
 ### Internal changes
+
+|changed| `model._model_def_dict` has been removed.
+
+|new| `CalliopeMath` is a new helper class to handle math additions, including separate methods for pre-defined math, user-defined math and validation checks.
+
+|changed| `MathDocumentation` has been extracted from `Model`/`LatexBackend`, and now is a postprocessing module which can take models as input.
 
 |new| `gurobipy` is a development dependency that will be added as an optional dependency to the conda-forge calliope feedstock recipe.
 

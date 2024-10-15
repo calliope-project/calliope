@@ -17,6 +17,7 @@ import xarray as xr
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
+from calliope.preprocess import CalliopeMath
 
 if importlib.util.find_spec("gurobipy") is not None:
     import gurobipy
@@ -40,22 +41,21 @@ COMPONENT_TRANSLATOR = {
 class GurobiBackendModel(backend_model.BackendModel):
     """gurobipy-specific backend functionality."""
 
-    def __init__(self, inputs: xr.Dataset, **kwargs) -> None:
+    def __init__(self, inputs: xr.Dataset, math: CalliopeMath, **kwargs) -> None:
         """Gurobi solver interface class.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
+            math (CalliopeMath): Calliope math.
             **kwargs: passed directly to the solver.
         """
         if importlib.util.find_spec("gurobipy") is None:
             raise ImportError(
                 "Install the `gurobipy` package to build the optimisation problem with the Gurobi backend."
             )
-        super().__init__(inputs, gurobipy.Model(), **kwargs)
+        super().__init__(inputs, math, gurobipy.Model(), **kwargs)
         self._instance: gurobipy.Model
         self.shadow_prices = GurobiShadowPrices(self)
-
-        self._add_all_inputs_as_parameters()
 
     def add_parameter(  # noqa: D102, override
         self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
@@ -275,7 +275,7 @@ class GurobiBackendModel(backend_model.BackendModel):
 
     def verbose_strings(self) -> None:  # noqa: D102, override
         def __renamer(val, *idx, name: str, attr: str):
-            if pd.notnull(val):
+            if pd.notna(val):
                 new_obj_name = f"{name}[{', '.join(idx)}]"
                 setattr(val, attr, new_obj_name)
 
@@ -389,7 +389,7 @@ class GurobiBackendModel(backend_model.BackendModel):
                 )
                 continue
 
-            existing_bound_param = self.inputs.attrs["math"].get_key(
+            existing_bound_param = self.math.data.get_key(
                 f"variables.{name}.bounds.{bound_name}", None
             )
             if existing_bound_param in self.parameters:

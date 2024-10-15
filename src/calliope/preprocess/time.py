@@ -262,11 +262,14 @@ def _lookup_clusters(dataset: xr.Dataset, grouper: pd.Series) -> xr.Dataset:
     1. the first and last timestep of the cluster,
     2. the last timestep of the cluster corresponding to a date in the original timeseries
     """
-    dataset["lookup_cluster_first_timestep"] = dataset.timesteps.isin(
+    dataset["cluster_first_timestep"] = dataset.timesteps.isin(
         dataset.timesteps.groupby("timesteps.date").first()
     )
-    dataset["lookup_cluster_last_timestep"] = dataset.timesteps.isin(
-        dataset.timesteps.groupby("timesteps.date").last()
+    dataset["lookup_cluster_last_timestep"] = (
+        dataset.timesteps.groupby("timesteps.date")
+        .last()
+        .rename({"date": "timesteps"})
+        .reindex_like(dataset.timesteps)
     )
 
     dataset["lookup_datestep_cluster"] = xr.DataArray(

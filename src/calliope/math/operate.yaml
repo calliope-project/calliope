@@ -1,3 +1,6 @@
+import:
+  - plan.yaml
+
 constraints:
   flow_capacity_per_storage_capacity_min.active: false
   flow_capacity_per_storage_capacity_max.active: false
@@ -22,7 +25,13 @@ variables:
 
 global_expressions:
   cost_investment.active: false
+  cost_investment_annualised.active: false
+  cost_investment_flow_cap.active: false
+  cost_investment_storage_cap.active: false
+  cost_investment_source_cap.active: false
+  cost_investment_area_use.active: false
+  cost_investment_purchase.active: false
   cost:
-    where: "cost_export OR cost_flow_in OR cost_flow_out"
+    where: "cost_operation_variable"
     equations:
-      - expression: $cost_var_sum
+      - expression: sum(cost_operation_variable, over=timesteps)

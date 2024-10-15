@@ -13,11 +13,11 @@ config:
     calliope_version: 0.7.0
     # Time series data path - can either be a path relative to this file, or an absolute path
     time_subset: ["2005-07-01", "2005-07-02"] # Subset of timesteps
-    add_math: ["additional_math.yaml"]
 
   build:
     mode: plan # Choices: plan, operate
     ensure_feasibility: true # Switching on unmet demand
+    add_math: ["additional_math.yaml"]
 
   solve:
     solver: cbc

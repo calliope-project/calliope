@@ -12,17 +12,14 @@ import pandas as pd
 import xarray as xr
 
 import calliope
-from calliope import backend, exceptions, io
-from calliope._version import __version__
+from calliope import backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
-from calliope.preprocess import load
 from calliope.preprocess.data_tables import DataTable
 from calliope.preprocess.model_data import ModelDataFactory
 from calliope.util.logging import log_time
 from calliope.util.schema import (
     CONFIG_SCHEMA,
-    MATH_SCHEMA,
     MODEL_SCHEMA,
     extract_from_schema,
     update_then_validate_config,
@@ -45,7 +42,8 @@ def read_netcdf(path):
 class Model:
     """A Calliope Model."""
 
-    _TS_OFFSET = pd.Timedelta(nanoseconds=1)
+    _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
+    ATTRS_SAVED = ("_def_path", "applied_math")
 
     def __init__(
         self,
@@ -78,10 +76,9 @@ class Model:
         self._timings: dict = {}
         self.config: AttrDict
         self.defaults: AttrDict
-        self.math: AttrDict
-        self._model_def_path: Path | None
+        self.applied_math: preprocess.CalliopeMath
+        self._def_path: str | None = None
         self.backend: BackendModel
-        self.math_documentation = backend.MathDocumentation()
         self._is_built: bool = False
         self._is_solved: bool = False
 
@@ -93,11 +90,16 @@ class Model:
         if isinstance(model_definition, xr.Dataset):
             self._init_from_model_data(model_definition)
         else:
-            (model_def, self._model_def_path, applied_overrides) = (
-                load.load_model_definition(
-                    model_definition, scenario, override_dict, **kwargs
-                )
+            if isinstance(model_definition, dict):
+                model_def_dict = AttrDict(model_definition)
+            else:
+                self._def_path = str(model_definition)
+                model_def_dict = AttrDict.from_yaml(model_definition)
+
+            (model_def, applied_overrides) = preprocess.load_scenario_overrides(
+                model_def_dict, scenario, override_dict, **kwargs
             )
+
             self._init_from_model_def_dict(
                 model_def, applied_overrides, scenario, data_table_dfs
             )
@@ -110,8 +112,6 @@ class Model:
                 f"Model configuration specifies calliope version {version_def}, "
                 f"but you are running {version_init}. Proceed with caution!"
             )
-
-        self.math_documentation.inputs = self._model_data
 
     @property
     def name(self):
@@ -156,7 +156,6 @@ class Model:
         # First pass to check top-level keys are all good
         validate_dict(model_definition, CONFIG_SCHEMA, "Model definition")
 
-        self._model_def_dict = model_definition
         log_time(
             LOGGER,
             self._timings,
@@ -167,18 +166,16 @@ class Model:
         model_config.union(model_definition.pop("config"), allow_override=True)
 
         init_config = update_then_validate_config("init", model_config)
-        # We won't store `init` in `self.config`, so we pop it out now.
-        model_config.pop("init")
 
         if init_config["time_cluster"] is not None:
             init_config["time_cluster"] = relative_path(
-                self._model_def_path, init_config["time_cluster"]
+                self._def_path, init_config["time_cluster"]
             )
 
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
         attributes = {
             "calliope_version_defined": init_config["calliope_version"],
-            "calliope_version_initialised": __version__,
+            "calliope_version_initialised": calliope.__version__,
             "applied_overrides": applied_overrides,
             "scenario": scenario,
             "defaults": param_metadata["default"],
@@ -186,11 +183,7 @@ class Model:
 
         data_tables = [
             DataTable(
-                init_config,
-                source_name,
-                source_dict,
-                data_table_dfs,
-                self._model_def_path,
+                init_config, source_name, source_dict, data_table_dfs, self._def_path
             )
             for source_name, source_dict in model_definition.pop(
                 "data_tables", {}
@@ -213,9 +206,6 @@ class Model:
 
         self._add_observed_dict("config", model_config)
 
-        math = self._add_math(init_config["add_math"])
-        self._add_observed_dict("math", math)
-
         self._model_data.attrs["name"] = init_config["name"]
         log_time(
             LOGGER,
@@ -233,11 +223,12 @@ class Model:
             model_data (xr.Dataset):
                 Model dataset with input parameters as arrays and configuration stored in the dataset attributes dictionary.
         """
-        if "_model_def_dict" in model_data.attrs:
-            self._model_def_dict = AttrDict.from_yaml_string(
-                model_data.attrs["_model_def_dict"]
+        if "_def_path" in model_data.attrs:
+            self._def_path = model_data.attrs.pop("_def_path")
+        if "applied_math" in model_data.attrs:
+            self.applied_math = preprocess.CalliopeMath.from_dict(
+                model_data.attrs.pop("applied_math")
             )
-            del model_data.attrs["_model_def_dict"]
 
         self._model_data = model_data
         self._add_model_data_methods()
@@ -260,7 +251,6 @@ class Model:
 
         """
         self._add_observed_dict("config")
-        self._add_observed_dict("math")
 
     def _add_observed_dict(self, name: str, dict_to_add: dict | None = None) -> None:
         """Add the same dictionary as property of model object and an attribute of the model xarray dataset.
@@ -294,52 +284,18 @@ class Model:
         self._model_data.attrs[name] = dict_to_add
         setattr(self, name, dict_to_add)
 
-    def _add_math(self, add_math: list) -> AttrDict:
-        """Load the base math and optionally override with additional math from a list of references to math files.
-
-        Args:
-            add_math (list):
-                List of references to files containing mathematical formulations that will be merged with the base formulation.
-
-        Raises:
-            exceptions.ModelError:
-                Referenced pre-defined math files or user-defined math files must exist.
-
-        Returns:
-            AttrDict: Dictionary of math (constraints, variables, objectives, and global expressions).
-        """
-        math_dir = Path(calliope.__file__).parent / "math"
-        base_math = AttrDict.from_yaml(math_dir / "base.yaml")
-
-        file_errors = []
-
-        for filename in add_math:
-            if not f"{filename}".endswith((".yaml", ".yml")):
-                yaml_filepath = math_dir / f"{filename}.yaml"
-            else:
-                yaml_filepath = relative_path(self._model_def_path, filename)
-
-            if not yaml_filepath.is_file():
-                file_errors.append(filename)
-                continue
-            else:
-                override_dict = AttrDict.from_yaml(yaml_filepath)
-
-            base_math.union(override_dict, allow_override=True)
-        if file_errors:
-            raise exceptions.ModelError(
-                f"Attempted to load additional math that does not exist: {file_errors}"
-            )
-        self._model_data.attrs["applied_additional_math"] = add_math
-        return base_math
-
-    def build(self, force: bool = False, **kwargs) -> None:
+    def build(
+        self, force: bool = False, add_math_dict: dict | None = None, **kwargs
+    ) -> None:
         """Build description of the optimisation problem in the chosen backend interface.
 
         Args:
             force (bool, optional):
                 If ``force`` is True, any existing results will be overwritten.
                 Defaults to False.
+            add_math_dict (dict | None, optional):
+                Additional math to apply on top of the YAML base / additional math files.
+                Content of this dictionary will override any matching key:value pairs in the loaded math files.
             **kwargs: build configuration overrides.
         """
         if self._is_built and not force:
@@ -355,7 +311,8 @@ class Model:
         )
 
         backend_config = {**self.config["build"], **kwargs}
-        if backend_config["mode"] == "operate":
+        mode = backend_config["mode"]
+        if mode == "operate":
             if not self._model_data.attrs["allow_operate_mode"]:
                 raise exceptions.ModelError(
                     "Unable to run this model in operate (i.e. dispatch) mode, probably because "
@@ -367,11 +324,20 @@ class Model:
             )
         else:
             backend_input = self._model_data
+
+        init_math_list = [] if backend_config.get("ignore_mode_math") else [mode]
+        end_math_list = [] if add_math_dict is None else [add_math_dict]
+        full_math_list = init_math_list + backend_config["add_math"] + end_math_list
+        LOGGER.debug(f"Math preprocessing | Loading math: {full_math_list}")
+        model_math = preprocess.CalliopeMath(full_math_list, self._def_path)
+
         backend_name = backend_config.pop("backend")
         self.backend = backend.get_model_backend(
-            backend_name, backend_input, **backend_config
+            backend_name, backend_input, model_math, **backend_config
         )
-        self.backend.add_all_math()
+        self.backend.add_optimisation_components()
+
+        self.applied_math = model_math
 
         self._model_data.attrs["timestamp_build_complete"] = log_time(
             LOGGER,
@@ -497,7 +463,14 @@ class Model:
 
     def to_netcdf(self, path):
         """Save complete model data (inputs and, if available, results) to a NetCDF file at the given `path`."""
-        io.save_netcdf(self._model_data, path, model=self)
+        saved_attrs = {}
+        for attr in set(self.ATTRS_SAVED) & set(self.__dict__.keys()):
+            if not isinstance(getattr(self, attr), str | list | None):
+                saved_attrs[attr] = dict(getattr(self, attr))
+            else:
+                saved_attrs[attr] = getattr(self, attr)
+
+        io.save_netcdf(self._model_data, path, **saved_attrs)
 
     def to_csv(
         self, path: str | Path, dropna: bool = True, allow_overwrite: bool = False
@@ -532,60 +505,6 @@ class Model:
             f"Model size:   {msize} ({msize_exists.item()} valid node:tech:carrier combinations)"
         )
         return "\n".join(info_strings)
-
-    def validate_math_strings(self, math_dict: dict) -> None:
-        """Validate that `expression` and `where` strings of a dictionary containing string mathematical formulations can be successfully parsed.
-
-        This function can be used to test user-defined math before attempting to build the optimisation problem.
-
-        NOTE: strings are not checked for evaluation validity. Evaluation issues will be raised only on calling `Model.build()`.
-
-        Args:
-            math_dict (dict): Math formulation dictionary to validate. Top level keys must be one or more of ["variables", "global_expressions", "constraints", "objectives"], e.g.:
-                ```python
-                {
-                    "constraints": {
-                        "my_constraint_name":
-                            {
-                                "foreach": ["nodes"],
-                                "where": "base_tech=supply",
-                                "equations": [{"expression": "sum(flow_cap, over=techs) >= 10"}]
-                            }
-
-                        }
-                }
-                ```
-        Returns:
-            If all components of the dictionary are parsed successfully, this function will log a success message to the INFO logging level and return None.
-            Otherwise, a calliope.ModelError will be raised with parsing issues listed.
-        """
-        validate_dict(math_dict, MATH_SCHEMA, "math")
-        valid_component_names = [
-            *self.math["variables"].keys(),
-            *self.math["global_expressions"].keys(),
-            *math_dict.get("variables", {}).keys(),
-            *math_dict.get("global_expressions", {}).keys(),
-            *self.inputs.data_vars.keys(),
-            *self.inputs.attrs["defaults"].keys(),
-        ]
-        collected_errors: dict = dict()
-        for component_group, component_dicts in math_dict.items():
-            for name, component_dict in component_dicts.items():
-                parsed = backend.ParsedBackendComponent(
-                    component_group, name, component_dict
-                )
-                parsed.parse_top_level_where(errors="ignore")
-                parsed.parse_equations(set(valid_component_names), errors="ignore")
-                if not parsed._is_valid:
-                    collected_errors[f"{component_group}:{name}"] = parsed._errors
-
-        if collected_errors:
-            exceptions.print_warnings_and_raise_errors(
-                during="math string parsing (marker indicates where parsing stopped, which might not be the root cause of the issue; sorry...)",
-                errors=collected_errors,
-            )
-
-        LOGGER.info("Model: validated math strings")
 
     def _prepare_operate_mode_inputs(
         self, start_window_idx: int = 0, **config_kwargs

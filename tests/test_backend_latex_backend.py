@@ -1,5 +1,4 @@
 import textwrap
-from pathlib import Path
 
 import pytest
 import xarray as xr
@@ -7,65 +6,7 @@ import xarray as xr
 from calliope import exceptions
 from calliope.backend import latex_backend_model
 
-from .common.util import build_test_model, check_error_or_warning
-
-
-class TestMathDocumentation:
-    @pytest.fixture(scope="class")
-    def no_build(self):
-        return build_test_model({}, "simple_supply,two_hours,investment_costs")
-
-    @pytest.fixture(scope="class")
-    def build_all(self):
-        model = build_test_model({}, "simple_supply,two_hours,investment_costs")
-        model.math_documentation.build(include="all")
-        return model
-
-    @pytest.fixture(scope="class")
-    def build_valid(self):
-        model = build_test_model({}, "simple_supply,two_hours,investment_costs")
-        model.math_documentation.build(include="valid")
-        return model
-
-    def test_write_before_build(self, no_build, tmpdir_factory):
-        filepath = tmpdir_factory.mktemp("custom_math").join("foo.tex")
-        with pytest.raises(exceptions.ModelError) as excinfo:
-            no_build.math_documentation.write(filepath)
-        assert check_error_or_warning(
-            excinfo, "Build the documentation (`build`) before trying to write it"
-        )
-
-    @pytest.mark.parametrize(
-        ("format", "startswith"),
-        [
-            ("tex", "\n\\documentclass{article}"),
-            ("rst", "\nObjective"),
-            ("md", "\n## Objective"),
-        ],
-    )
-    @pytest.mark.parametrize("include", ["build_all", "build_valid"])
-    def test_string_return(self, request, format, startswith, include):
-        model = request.getfixturevalue(include)
-        string_math = model.math_documentation.write(format=format)
-        assert string_math.startswith(startswith)
-
-    def test_to_file(self, build_all, tmpdir_factory):
-        filepath = tmpdir_factory.mktemp("custom_math").join("custom-math.tex")
-        build_all.math_documentation.write(filename=filepath)
-        assert Path(filepath).exists()
-
-    @pytest.mark.parametrize(
-        ("filepath", "format"),
-        [(None, "foo"), ("myfile.foo", None), ("myfile.tex", "foo")],
-    )
-    def test_invalid_format(self, build_all, tmpdir_factory, filepath, format):
-        if filepath is not None:
-            filepath = tmpdir_factory.mktemp("custom_math").join(filepath)
-        with pytest.raises(ValueError) as excinfo:  # noqa: PT011
-            build_all.math_documentation.write(filename="foo", format=format)
-        assert check_error_or_warning(
-            excinfo, "Math documentation format must be one of"
-        )
+from .common.util import check_error_or_warning
 
 
 class TestLatexBackendModel:
@@ -383,6 +324,8 @@ class TestLatexBackendModel:
                     \begin{itemize}
                         \item expr
                     \end{itemize}
+
+                    \textbf{Default}: 0
                     \end{document}"""
                 ),
             ),
@@ -421,6 +364,8 @@ class TestLatexBackendModel:
                     **Used in**:
 
                     * expr
+
+                    **Default**: 0
                     """
                 ),
             ),
@@ -454,13 +399,20 @@ class TestLatexBackendModel:
                     **Used in**:
 
                     * [expr](#expr)
+
+                    **Default**: 0
                     """
                 ),
             ),
         ],
     )
-    def test_generate_math_doc(self, dummy_model_data, format, expected):
-        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+    def test_generate_math_doc(
+        self, dummy_model_data, dummy_model_math, format, expected
+    ):
+        backend_model = latex_backend_model.LatexBackendModel(
+            dummy_model_data, dummy_model_math
+        )
+        backend_model._add_all_inputs_as_parameters()
         backend_model.add_global_expression(
             "expr",
             {
@@ -472,8 +424,10 @@ class TestLatexBackendModel:
         doc = backend_model.generate_math_doc(format=format)
         assert doc == expected
 
-    def test_generate_math_doc_no_params(self, dummy_model_data):
-        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+    def test_generate_math_doc_no_params(self, dummy_model_data, dummy_model_math):
+        backend_model = latex_backend_model.LatexBackendModel(
+            dummy_model_data, dummy_model_math
+        )
         backend_model.add_global_expression(
             "expr",
             {
@@ -502,8 +456,12 @@ class TestLatexBackendModel:
                     """
         )
 
-    def test_generate_math_doc_mkdocs_features_tabs(self, dummy_model_data):
-        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+    def test_generate_math_doc_mkdocs_features_tabs(
+        self, dummy_model_data, dummy_model_math
+    ):
+        backend_model = latex_backend_model.LatexBackendModel(
+            dummy_model_data, dummy_model_math
+        )
         backend_model.add_global_expression(
             "expr",
             {
@@ -541,8 +499,13 @@ class TestLatexBackendModel:
                     """
         )
 
-    def test_generate_math_doc_mkdocs_features_admonition(self, dummy_model_data):
-        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+    def test_generate_math_doc_mkdocs_features_admonition(
+        self, dummy_model_data, dummy_model_math
+    ):
+        backend_model = latex_backend_model.LatexBackendModel(
+            dummy_model_data, dummy_model_math
+        )
+        backend_model._add_all_inputs_as_parameters()
         backend_model.add_global_expression(
             "expr",
             {
@@ -589,11 +552,17 @@ class TestLatexBackendModel:
                     ??? info "Used in"
 
                         * [expr](#expr)
+
+                    **Default**: 0
                     """
         )
 
-    def test_generate_math_doc_mkdocs_features_not_in_md(self, dummy_model_data):
-        backend_model = latex_backend_model.LatexBackendModel(dummy_model_data)
+    def test_generate_math_doc_mkdocs_features_not_in_md(
+        self, dummy_model_data, dummy_model_math
+    ):
+        backend_model = latex_backend_model.LatexBackendModel(
+            dummy_model_data, dummy_model_math
+        )
         with pytest.raises(exceptions.ModelError) as excinfo:
             backend_model.generate_math_doc(format="rst", mkdocs_features=True)
 
@@ -709,3 +678,56 @@ class TestLatexBackendModel:
             "expression": r"\textbf{multi_dim_var}_\text{node,tech} \leq 2\mathord{\times}10^{+06}"
         }
         assert refs == {"multi_dim_var"}
+
+    def test_param_type(self, dummy_model_data, dummy_model_math):
+        backend_model = latex_backend_model.LatexBackendModel(
+            dummy_model_data, dummy_model_math
+        )
+        backend_model._add_all_inputs_as_parameters()
+        backend_model.add_global_expression(
+            "expr",
+            {
+                "equations": [{"expression": "1 + flow_cap_max"}],
+                "description": "foobar",
+                "default": 0,
+            },
+        )
+        doc = backend_model.generate_math_doc(format="md")
+        assert doc == textwrap.dedent(
+            r"""
+
+            ## Where
+
+            ### expr
+
+            foobar
+
+            **Uses**:
+
+            * [flow_cap_max](#flow_cap_max)
+
+            **Default**: 0
+
+            $$
+            \begin{array}{l}
+                \quad 1 + \textit{flow\_cap\_max}\\
+            \end{array}
+            $$
+
+            ## Parameters
+
+            ### flow_cap_max
+
+            Limits `flow_cap` to a maximum.
+
+            **Used in**:
+
+            * [expr](#expr)
+
+            **Unit**: power.
+
+            **Default**: inf
+
+            **Type**: float
+            """
+        )

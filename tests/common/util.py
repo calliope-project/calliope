@@ -5,7 +5,8 @@ from typing import Literal
 import xarray as xr
 
 import calliope
-from calliope import backend
+import calliope.backend
+import calliope.preprocess
 
 
 def build_test_model(
@@ -80,9 +81,9 @@ def check_variable_exists(
 def build_lp(
     model: calliope.Model,
     outfile: str | Path,
-    math: dict[str, dict | list] | None = None,
+    math_data: dict[str, dict | list] | None = None,
     backend_name: Literal["pyomo"] = "pyomo",
-) -> "backend.BackendModel":
+) -> "calliope.backend.backend_model.BackendModel":
     """
     Write a barebones LP file with which to compare in tests.
     All model parameters and variables will be loaded automatically, as well as a dummy objective if one isn't provided as part of `math`.
@@ -94,41 +95,43 @@ def build_lp(
         math (dict | None, optional): All constraint/global expression/objective math to apply. Defaults to None.
         backend_name (Literal["pyomo"], optional): Backend to use to create the LP file. Defaults to "pyomo".
     """
-    backend_instance = backend.get_model_backend(backend_name, model._model_data)
+    math = calliope.preprocess.CalliopeMath(
+        ["plan", *model.config.build.get("add_math", [])]
+    )
 
-    for name, dict_ in model.math["variables"].items():
-        backend_instance.add_variable(name, dict_)
-    for name, dict_ in model.math["global_expressions"].items():
-        backend_instance.add_global_expression(name, dict_)
-
-    if isinstance(math, dict):
-        for component_group, component_math in math.items():
-            component = component_group.removesuffix("s")
+    math_to_add = calliope.AttrDict()
+    if isinstance(math_data, dict):
+        for component_group, component_math in math_data.items():
             if isinstance(component_math, dict):
-                for name, dict_ in component_math.items():
-                    getattr(backend_instance, f"add_{component}")(name, dict_)
+                math_to_add.union(calliope.AttrDict({component_group: component_math}))
             elif isinstance(component_math, list):
                 for name in component_math:
-                    dict_ = model.math[component_group][name]
-                    getattr(backend_instance, f"add_{component}")(name, dict_)
+                    math_to_add.set_key(
+                        f"{component_group}.{name}", math.data[component_group][name]
+                    )
+    if math_data is None or "objectives" not in math_to_add.keys():
+        obj = {
+            "dummy_obj": {"equations": [{"expression": "1 + 1"}], "sense": "minimize"}
+        }
+        math_to_add.union(calliope.AttrDict({"objectives": obj}))
+        obj_to_activate = "dummy_obj"
+    else:
+        obj_to_activate = list(math_to_add["objectives"].keys())[0]
+    del math.data["constraints"]
+    del math.data["objectives"]
+    math.add(math_to_add)
 
-    # MUST have an objective for a valid LP file
-    if math is None or "objectives" not in math.keys():
-        backend_instance.add_objective(
-            "dummy_obj", {"equations": [{"expression": "1 + 1"}], "sense": "minimize"}
-        )
-        backend_instance._instance.objectives["dummy_obj"][0].activate()
-    elif "objectives" in math.keys():
-        if isinstance(math["objectives"], dict):
-            objectives = list(math["objectives"].keys())
-        else:
-            objectives = math["objectives"]
-        assert len(objectives) == 1, "Can only test with one objective"
-        backend_instance._instance.objectives[objectives[0]][0].activate()
+    model.build(
+        add_math_dict=math.data,
+        ignore_mode_math=True,
+        objective=obj_to_activate,
+        add_math=[],
+        pre_validate_math_strings=False,
+    )
 
-    backend_instance.verbose_strings()
+    model.backend.verbose_strings()
 
-    backend_instance.to_lp(str(outfile))
+    model.backend.to_lp(str(outfile))
 
     # strip trailing whitespace from `outfile` after the fact,
     # so it can be reliably compared other files in future
@@ -139,4 +142,4 @@ def build_lp(
 
     # reintroduce the trailing newline since both Pyomo and file formatters love them.
     Path(outfile).write_text("\n".join(stripped_lines) + "\n")
-    return backend_instance
+    return model.backend

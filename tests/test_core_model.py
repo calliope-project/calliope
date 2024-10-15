@@ -1,11 +1,12 @@
 import logging
 from contextlib import contextmanager
 
-import numpy as np
 import pandas as pd
 import pytest
 
 import calliope
+import calliope.backend
+import calliope.preprocess
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
@@ -64,222 +65,6 @@ class TestModel:
             excinfo,
             "Attempted to add dictionary property `baz` to model, but received argument of type `str`",
         )
-
-
-class TestAddMath:
-    @pytest.fixture(scope="class")
-    def storage_inter_cluster(self):
-        return build_model(
-            {"config.init.add_math": ["storage_inter_cluster"]},
-            "simple_supply,two_hours,investment_costs",
-        )
-
-    @pytest.fixture(scope="class")
-    def storage_inter_cluster_plus_user_def(self, temp_path, dummy_int: int):
-        new_constraint = calliope.AttrDict(
-            {"variables": {"storage": {"bounds": {"min": dummy_int}}}}
-        )
-        file_path = temp_path.join("custom-math.yaml")
-        new_constraint.to_yaml(file_path)
-        return build_model(
-            {"config.init.add_math": ["storage_inter_cluster", str(file_path)]},
-            "simple_supply,two_hours,investment_costs",
-        )
-
-    @pytest.fixture(scope="class")
-    def temp_path(self, tmpdir_factory):
-        return tmpdir_factory.mktemp("custom_math")
-
-    def test_internal_override(self, storage_inter_cluster):
-        assert "storage_intra_max" in storage_inter_cluster.math["constraints"].keys()
-
-    def test_variable_bound(self, storage_inter_cluster):
-        assert (
-            storage_inter_cluster.math["variables"]["storage"]["bounds"]["min"]
-            == -np.inf
-        )
-
-    @pytest.mark.parametrize(
-        ("override", "expected"),
-        [
-            (["foo"], ["foo"]),
-            (["bar", "foo"], ["bar", "foo"]),
-            (["foo", "storage_inter_cluster"], ["foo"]),
-            (["foo.yaml"], ["foo.yaml"]),
-        ],
-    )
-    def test_allowed_internal_constraint(self, override, expected):
-        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            build_model(
-                {"config.init.add_math": override},
-                "simple_supply,two_hours,investment_costs",
-            )
-        assert check_error_or_warning(
-            excinfo,
-            f"Attempted to load additional math that does not exist: {expected}",
-        )
-
-    def test_internal_override_from_yaml(self, temp_path):
-        new_constraint = calliope.AttrDict(
-            {
-                "constraints": {
-                    "constraint_name": {
-                        "foreach": [],
-                        "where": "",
-                        "equations": [{"expression": ""}],
-                    }
-                }
-            }
-        )
-        new_constraint.to_yaml(temp_path.join("custom-math.yaml"))
-        m = build_model(
-            {"config.init.add_math": [str(temp_path.join("custom-math.yaml"))]},
-            "simple_supply,two_hours,investment_costs",
-        )
-        assert "constraint_name" in m.math["constraints"].keys()
-
-    def test_override_existing_internal_constraint(self, temp_path, simple_supply):
-        file_path = temp_path.join("custom-math.yaml")
-        new_constraint = calliope.AttrDict(
-            {
-                "constraints": {
-                    "flow_capacity_per_storage_capacity_min": {"foreach": ["nodes"]}
-                }
-            }
-        )
-        new_constraint.to_yaml(file_path)
-        m = build_model(
-            {"config.init.add_math": [str(file_path)]},
-            "simple_supply,two_hours,investment_costs",
-        )
-        base = simple_supply.math["constraints"][
-            "flow_capacity_per_storage_capacity_min"
-        ]
-        new = m.math["constraints"]["flow_capacity_per_storage_capacity_min"]
-
-        for i in base.keys():
-            if i == "foreach":
-                assert new[i] == ["nodes"]
-            else:
-                assert base[i] == new[i]
-
-    def test_override_order(self, temp_path, simple_supply):
-        to_add = []
-        for path_suffix, foreach in [(1, "nodes"), (2, "techs")]:
-            constr = calliope.AttrDict(
-                {
-                    "constraints.flow_capacity_per_storage_capacity_min.foreach": [
-                        foreach
-                    ]
-                }
-            )
-            filepath = temp_path.join(f"custom-math-{path_suffix}.yaml")
-            constr.to_yaml(filepath)
-            to_add.append(str(filepath))
-
-        m = build_model(
-            {"config.init.add_math": to_add}, "simple_supply,two_hours,investment_costs"
-        )
-
-        base = simple_supply.math["constraints"][
-            "flow_capacity_per_storage_capacity_min"
-        ]
-        new = m.math["constraints"]["flow_capacity_per_storage_capacity_min"]
-
-        for i in base.keys():
-            if i == "foreach":
-                assert new[i] == ["techs"]
-            else:
-                assert base[i] == new[i]
-
-    def test_override_existing_internal_constraint_merge(
-        self, simple_supply, storage_inter_cluster, storage_inter_cluster_plus_user_def
-    ):
-        storage_inter_cluster_math = storage_inter_cluster.math["variables"]["storage"]
-        base_math = simple_supply.math["variables"]["storage"]
-        new_math = storage_inter_cluster_plus_user_def.math["variables"]["storage"]
-        expected = {
-            "title": storage_inter_cluster_math["title"],
-            "description": storage_inter_cluster_math["description"],
-            "default": base_math["default"],
-            "unit": base_math["unit"],
-            "foreach": base_math["foreach"],
-            "where": base_math["where"],
-            "bounds": {
-                "min": new_math["bounds"]["min"],
-                "max": base_math["bounds"]["max"],
-            },
-        }
-
-        assert new_math == expected
-
-
-class TestValidateMathDict:
-    def test_base_math(self, caplog, simple_supply):
-        with caplog.at_level(logging.INFO, logger=LOGGER):
-            simple_supply.validate_math_strings(simple_supply.math)
-        assert "Model: validated math strings" in [
-            rec.message for rec in caplog.records
-        ]
-
-    @pytest.mark.parametrize(
-        ("equation", "where"),
-        [
-            ("1 == 1", "True"),
-            (
-                "flow_out * flow_out_eff + sum(cost, over=costs) <= .inf",
-                "base_tech=supply and flow_out_eff>0",
-            ),
-        ],
-    )
-    def test_add_math(self, caplog, simple_supply, equation, where):
-        with caplog.at_level(logging.INFO, logger=LOGGER):
-            simple_supply.validate_math_strings(
-                {
-                    "constraints": {
-                        "foo": {"equations": [{"expression": equation}], "where": where}
-                    }
-                }
-            )
-        assert "Model: validated math strings" in [
-            rec.message for rec in caplog.records
-        ]
-
-    @pytest.mark.parametrize(
-        "component_dict",
-        [
-            {"equations": [{"expression": "1 = 1"}]},
-            {"equations": [{"expression": "1 = 1"}], "where": "foo[bar]"},
-        ],
-    )
-    @pytest.mark.parametrize("both_fail", [True, False])
-    def test_add_math_fails(self, simple_supply, component_dict, both_fail):
-        math_dict = {"constraints": {"foo": component_dict}}
-        errors_to_check = [
-            "math string parsing (marker indicates where parsing stopped, which might not be the root cause of the issue; sorry...)",
-            " * constraints:foo:",
-            "equations[0].expression",
-            "where",
-        ]
-        if both_fail:
-            math_dict["constraints"]["bar"] = component_dict
-            errors_to_check.append("* constraints:bar:")
-        else:
-            math_dict["constraints"]["bar"] = {"equations": [{"expression": "1 == 1"}]}
-
-        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            simple_supply.validate_math_strings(math_dict)
-        assert check_error_or_warning(excinfo, errors_to_check)
-
-    @pytest.mark.parametrize("eq_string", ["1 = 1", "1 ==\n1[a]"])
-    def test_add_math_fails_marker_correct_position(self, simple_supply, eq_string):
-        math_dict = {"constraints": {"foo": {"equations": [{"expression": eq_string}]}}}
-
-        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            simple_supply.validate_math_strings(math_dict)
-        errorstrings = str(excinfo.value).split("\n")
-        # marker should be at the "=" sign, i.e., 2 characters from the end
-        assert len(errorstrings[-2]) - 2 == len(errorstrings[-1])
 
 
 class TestOperateMode:
@@ -398,6 +183,34 @@ class TestOperateMode:
             calliope.exceptions.ModelError, match="Unable to run this model in op"
         ):
             m.build(mode="operate")
+
+
+class TestBuild:
+    @pytest.fixture(scope="class")
+    def init_model(self):
+        return build_model({}, "simple_supply,two_hours,investment_costs")
+
+    def test_ignore_mode_math(self, init_model):
+        init_model.build(ignore_mode_math=True, force=True)
+        assert all(
+            var.obj_type == "parameters"
+            for var in init_model.backend._dataset.data_vars.values()
+        )
+
+    def test_add_math_dict_with_mode_math(self, init_model):
+        init_model.build(
+            add_math_dict={"constraints": {"system_balance": {"active": False}}},
+            force=True,
+        )
+        assert len(init_model.backend.constraints) > 0
+        assert "system_balance" not in init_model.backend.constraints
+
+    def test_add_math_dict_ignore_mode_math(self, init_model):
+        new_var = {
+            "variables": {"foo": {"active": True, "bounds": {"min": -1, "max": 1}}}
+        }
+        init_model.build(add_math_dict=new_var, ignore_mode_math=True, force=True)
+        assert set(init_model.backend.variables) == {"foo"}
 
 
 class TestSolve:
