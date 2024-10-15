@@ -2,7 +2,7 @@
 
 ### User-facing changes
 
-|new| dimension renaming functionality when loading from a data source, using the `map_dims` option (#680).
+|new| dimension renaming functionality when loading from a data source, using the `rename_dims` option (#680).
 
 |changed| `data_sources` -> `data_tables` and `data_sources.source` -> `data_tables.data`.
 This change has occurred to avoid confusion between data "sources" and model energy "sources" (#673).

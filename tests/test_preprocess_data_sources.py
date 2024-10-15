@@ -355,7 +355,7 @@ class TestDataTableSelectDropAdd:
         )
 
 
-class TestDataTableMapDims:
+class TestDataTableRenameDims:
     @pytest.fixture(scope="class")
     def multi_row_one_col_data(self, data_dir, init_config, dummy_int):
         """Fixture to create the xarray dataset from the data table, including dimension name mapping."""
@@ -375,7 +375,7 @@ class TestDataTableMapDims:
                 "rows": new_idx,
                 "columns": new_cols,
                 "add_dims": {"parameters": "test_param"},
-                "map_dims": mapping,
+                "rename_dims": mapping,
             }
             ds = data_tables.DataTable(init_config, "ds_name", table_dict)
             return ds.dataset

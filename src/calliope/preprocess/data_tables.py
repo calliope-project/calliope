@@ -36,7 +36,7 @@ class DataTableDict(TypedDict):
     columns: NotRequired[str | list[str]]
     data: str
     df: NotRequired[str]
-    map_dims: NotRequired[dict[str, str]]
+    rename_dims: NotRequired[dict[str, str]]
     add_dims: NotRequired[dict[str, str | list[str]]]
     select: NotRequired[dict[str, str | bool | int]]
     drop: NotRequired[Hashable | list[Hashable]]
@@ -351,7 +351,7 @@ class DataTable:
         """
         if len(getattr(df, axis).names) != len(names):
             self._raise_error(f"Expected {len(names)} {axis} levels in loaded data.")
-        mapper = self.input.get("map_dims", {})
+        mapper = self.input.get("rename_dims", {})
         if mapper:
             df.rename_axis(inplace=True, **{axis: mapper})
         self._compare_axis_names(getattr(df, axis).names, names, axis)

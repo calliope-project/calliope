@@ -57,7 +57,7 @@ properties:
       Dimensions in the rows and/or columns that contain metadata and should therefore not be passed on to the loaded model dataset.
       These could include comments on the source of the data, the data license, or the parameter units.
       You can also drop a dimension and then reintroduce it in `add_dims`, but with different index items.
-  map_dims:
+  rename_dims:
     type: object
     description: >-
       Mapping between dimension names in the data table being loaded to equivalent Calliope dimension names.
