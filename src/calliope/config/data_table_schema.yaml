@@ -57,6 +57,15 @@ properties:
       Dimensions in the rows and/or columns that contain metadata and should therefore not be passed on to the loaded model dataset.
       These could include comments on the source of the data, the data license, or the parameter units.
       You can also drop a dimension and then reintroduce it in `add_dims`, but with different index items.
+  rename_dims:
+    type: object
+    description: >-
+      Mapping between dimension names in the data table being loaded to equivalent Calliope dimension names.
+      For instance, the "time" column in the data table would need to be mapped to "timesteps": `{"time": "timesteps"}`.
+    unevaluatedProperties:
+      type: string
+      description: Key is a Calliope dimension name (must not be in `rows` or `columns`), value is the dimension name in the data tables.
+      pattern: '^[^_^\d][\w]*$'
   add_dims:
     description: >-
       Data dimensions to add after loading in the array.
