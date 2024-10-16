@@ -525,13 +525,19 @@ class TestClimbTemplateTree:
         assert new_dict == expected_dict
         assert inheritance == expected_inheritance
 
-    def test_climb_template_tree_missing_ancestor(self, templates):
+    @pytest.mark.parametrize(
+        ("item_name", "expected_message_prefix"), [("A", "A | "), (None, "")]
+    )
+    def test_climb_template_tree_missing_ancestor(
+        self, templates, item_name, expected_message_prefix
+    ):
         """Referencing a template that doesn't exist in `templates` raises an error."""
         with pytest.raises(KeyError) as excinfo:
             climb_template_tree(
-                calliope.AttrDict({"template": "not_there"}), templates, "A"
+                calliope.AttrDict({"template": "not_there"}), templates, item_name
             )
 
         assert check_error_or_warning(
-            excinfo, "A | Cannot find `not_there` in template inheritance tree."
+            excinfo,
+            f"{expected_message_prefix}Cannot find `not_there` in template inheritance tree.",
         )

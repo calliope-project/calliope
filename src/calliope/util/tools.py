@@ -54,9 +54,9 @@ def listify(var: Any) -> list:
 
 
 def climb_template_tree(
-    dim_item_dict: "AttrDict",
+    input_dict: "AttrDict",
     templates: "AttrDict",
-    item_name: str,
+    item_name: str | None = None,
     inheritance: list | None = None,
 ) -> tuple["AttrDict", list | None]:
     """Follow the `template` references from model definition elements to `templates`.
@@ -67,13 +67,15 @@ def climb_template_tree(
     This function will be called recursively until a definition dictionary without `template` is reached.
 
     Args:
-        dim_item_dict (AttrDict): Dictionary (possibly) containing `template`.
+        input_dict (AttrDict): Dictionary (possibly) containing `template`.
         templates (AttrDict): Dictionary of available templates.
-        item_name (str):
+        item_name (str | None, optional):
             The current position in the inheritance tree.
+            If given, used only for a more expressive KeyError.
+            Defaults to None.
         inheritance (list | None, optional):
             A list of items that have been inherited (starting with the oldest).
-            If the first `dim_item_dict` does not contain `template`, this will remain as None.
+            If the first `input_dict` does not contain `template`, this will remain as None.
             Defaults to None.
 
     Raises:
@@ -82,21 +84,22 @@ def climb_template_tree(
     Returns:
         tuple[AttrDict, list | None]: Definition dictionary with inherited data and a list of the inheritance tree climbed to get there.
     """
-    to_inherit = dim_item_dict.get("template", None)
+    to_inherit = input_dict.get("template", None)
     if to_inherit is None:
-        updated_dim_item_dict = dim_item_dict
+        updated_input_dict = input_dict
     elif to_inherit not in templates:
-        raise KeyError(
-            f"{item_name} | Cannot find `{to_inherit}` in template inheritance tree."
-        )
+        message = f"Cannot find `{to_inherit}` in template inheritance tree."
+        if item_name is not None:
+            message = f"{item_name} | {message}"
+        raise KeyError(message)
     else:
         base_def_dict, inheritance = climb_template_tree(
             templates[to_inherit], templates, to_inherit, inheritance
         )
-        updated_dim_item_dict = deepcopy(base_def_dict)
-        updated_dim_item_dict.union(dim_item_dict, allow_override=True)
+        updated_input_dict = deepcopy(base_def_dict)
+        updated_input_dict.union(input_dict, allow_override=True)
         if inheritance is not None:
             inheritance.append(to_inherit)
         else:
             inheritance = [to_inherit]
-    return updated_dim_item_dict, inheritance
+    return updated_input_dict, inheritance
