@@ -25,7 +25,7 @@ from calliope.util.schema import (
     update_then_validate_config,
     validate_dict,
 )
-from calliope.util.tools import relative_path
+from calliope.util.tools import climb_template_tree, relative_path
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
@@ -180,15 +180,15 @@ class Model:
             "scenario": scenario,
             "defaults": param_metadata["default"],
         }
-
-        data_tables = [
-            DataTable(
-                init_config, source_name, source_dict, data_table_dfs, self._def_path
+        templates = model_definition.get("templates", AttrDict())
+        data_tables: list[DataTable] = []
+        for table_name, table_dict in model_definition.pop("data_tables", {}).items():
+            table_dict, _ = climb_template_tree(table_dict, templates, table_name)
+            data_tables.append(
+                DataTable(
+                    init_config, table_name, table_dict, data_table_dfs, self._def_path
+                )
             )
-            for source_name, source_dict in model_definition.pop(
-                "data_tables", {}
-            ).items()
-        ]
 
         model_data_factory = ModelDataFactory(
             init_config, model_definition, data_tables, attributes, param_metadata
