@@ -462,7 +462,8 @@ class Sum(ParsingHelperFunction):
                 NaNs are ignored (xarray.DataArray.sum arg: `skipna: True`) and if all values along the dimension(s) are NaN,
                 the summation will lead to a NaN (xarray.DataArray.sum arg: `min_count=1`).
         """
-        return array.sum(over, min_count=1, skipna=True)
+        filtered_over = set(self._listify(over)).intersection(array.dims)
+        return array.sum(filtered_over, min_count=1, skipna=True)
 
 
 class ReduceCarrierDim(ParsingHelperFunction):

@@ -2,6 +2,7 @@ import logging
 
 import pandas as pd
 import pytest
+import xarray as xr
 
 import calliope
 from calliope.preprocess import data_tables
@@ -354,6 +355,65 @@ class TestDataTableSelectDropAdd:
         )
 
 
+class TestDataTableRenameDims:
+    @pytest.fixture(scope="class")
+    def multi_row_one_col_data(self, data_dir, init_config, dummy_int):
+        """Fixture to create the xarray dataset from the data table, including dimension name mapping."""
+
+        def _multi_row_one_col_data(
+            mapping: dict, new_idx: list, new_cols: list
+        ) -> xr.Dataset:
+            df = pd.DataFrame(
+                {"foo": {("bar1", "bar2"): 0, ("baz1", "baz2"): dummy_int}}
+            )
+            filepath = data_dir / "multi_row_one_col_file.csv"
+            df.rename_axis(
+                index=["test_row1", "test_row2"], columns=["test_col"]
+            ).to_csv(filepath)
+            table_dict: data_tables.DataTableDict = {
+                "data": filepath.as_posix(),
+                "rows": new_idx,
+                "columns": new_cols,
+                "add_dims": {"parameters": "test_param"},
+                "rename_dims": mapping,
+            }
+            ds = data_tables.DataTable(init_config, "ds_name", table_dict)
+            return ds.dataset
+
+        return _multi_row_one_col_data
+
+    def test_fails_without_rename(self, dummy_int, multi_row_one_col_data):
+        """Test that without dimension name mapping, the dataframe doesn't load successfully."""
+        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
+            multi_row_one_col_data({}, ["foobar", "test_row2"], ["test_col"])
+        assert check_error_or_warning(
+            excinfo,
+            "Trying to set names for index but names in the file do no match names provided | "
+            "in file: ['test_row1', 'test_row2'] | defined: ['foobar', 'test_row2'].",
+        )
+
+    @pytest.mark.parametrize(
+        ("mapping", "idx", "col"),
+        [
+            ({"test_row1": "foobar"}, ["foobar", "test_row2"], ["test_col"]),
+            (
+                {"test_row1": "foobar", "test_col": "foobaz"},
+                ["foobar", "test_row2"],
+                ["foobaz"],
+            ),
+        ],
+    )
+    def test_rename(self, dummy_int, multi_row_one_col_data, mapping, idx, col):
+        """Test that dimension name mapping propagates through from the initial dataframe to the final dataset."""
+        dataset = multi_row_one_col_data(mapping, idx, col)
+        assert not any(k in dataset.dims for k in mapping.keys())
+        assert all(v in dataset.dims for v in mapping.values())
+        assert (
+            dataset["test_param"].sel(foobar="baz1", test_row2="baz2").item()
+            == dummy_int
+        )
+
+
 class TestDataTableMalformed:
     @pytest.fixture(scope="class")
     def table_obj(self, init_config):
@@ -450,7 +510,7 @@ class TestDataTableLookupDictFromParam:
     def test_carrier_info_dict_from_model_data_var_missing_dim(self, table_obj):
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             table_obj.lookup_dict_from_param("FOO", "foobar")
-        check_error_or_warning(
+        assert check_error_or_warning(
             excinfo,
             "Loading FOO with missing dimension(s). Must contain `techs` and `foobar`, received: ('techs', 'carriers')",
         )
@@ -604,7 +664,7 @@ class TestDataTableNodeDict:
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             table_obj(df_dict).node_dict(tech_dict)
 
-        check_error_or_warning(
+        assert check_error_or_warning(
             excinfo,
             "Cannot define transmission technology data over the `nodes` dimension",
         )

@@ -265,7 +265,7 @@ constraints:
     slices:
       final_step:
         - expression: get_val_at_index(timesteps=-1)
-    active: true  # optional; defaults to true.
+    active: true # optional; defaults to true.
   # --8<-- [end:constraint]
 
   balance_transmission:
@@ -279,7 +279,7 @@ constraints:
 
   symmetric_transmission:
     description: >-
-       Fix the flow capacity of two `transmission` technologies representing the same link in the system.
+      Fix the flow capacity of two `transmission` technologies representing the same link in the system.
     foreach: [nodes, techs]
     where: "base_tech=transmission"
     equations:
@@ -599,11 +599,11 @@ variables:
     unit: energy
     foreach: [nodes, techs]
     where: "include_storage=True OR base_tech=storage"
-    domain: real  # optional; defaults to real.
+    domain: real # optional; defaults to real.
     bounds:
       min: storage_cap_min
       max: storage_cap_max
-    active: true  # optional; defaults to true.
+    active: true # optional; defaults to true.
   # --8<-- [end:variable]
 
   storage:
@@ -721,7 +721,6 @@ variables:
       min: -.inf
       max: 0
 
-
 objectives:
   # --8<-- [start:objective]
   min_cost_optimisation:
@@ -754,7 +753,7 @@ objectives:
         - where: "NOT config.ensure_feasibility=True"
           expression: "0"
     sense: minimise
-    active: true  # optional; defaults to true.
+    active: true # optional; defaults to true.
   # --8<-- [end:objective]
 
 global_expressions:
@@ -788,7 +787,7 @@ global_expressions:
       - where: NOT base_tech=transmission
         expression: flow_in * flow_in_eff
 
-  cost_var:
+  cost_operation_variable:
     title: Variable operating costs
     description: >-
       The operating costs per timestep of a technology.
@@ -874,7 +873,7 @@ global_expressions:
   cost_investment:
     title: Total investment costs
     description: >-
-      The installation costs of a technology, including annualised investment costs and annual maintenance costs.
+      The installation costs of a technology, including those linked to the nameplate capacity, land use, storage size, and binary/integer unit purchase.
     default: 0
     unit: cost
     foreach: [nodes, techs, costs]
@@ -882,19 +881,26 @@ global_expressions:
       cost_investment_flow_cap OR cost_investment_storage_cap OR cost_investment_source_cap OR
       cost_investment_area_use OR cost_investment_purchase
     equations:
-      - expression: >
-          $annualisation_weight * (
-            ($depreciation_rate + cost_om_annual_investment_fraction) * (
-              sum(default_if_empty(cost_investment_flow_cap, 0), over=carriers) +
-              default_if_empty(cost_investment_storage_cap, 0) +
-              default_if_empty(cost_investment_source_cap, 0) +
-              default_if_empty(cost_investment_area_use, 0) +
-              default_if_empty(cost_investment_purchase, 0)
-            )
-            + sum(cost_om_annual * flow_cap, over=carriers)
-          )
+      - expression: >-
+          sum(default_if_empty(cost_investment_flow_cap, 0), over=carriers) +
+          default_if_empty(cost_investment_storage_cap, 0) +
+          default_if_empty(cost_investment_source_cap, 0) +
+          default_if_empty(cost_investment_area_use, 0) +
+          default_if_empty(cost_investment_purchase, 0)
+
+  cost_investment_annualised:
+    title: Equivalent annual investment costs
+    description: >-
+      An annuity factor has been applied to scale lifetime investment costs to annual values that can be directly compared to operation costs.
+      If the modeling period is not equal to one full year, this will be scaled accordingly.
+    default: 0
+    unit: cost
+    foreach: [nodes, techs, costs]
+    where: cost_investment
+    equations:
+      - expression: $annualisation_weight * $depreciation_rate * cost_investment
     sub_expressions:
-      annualisation_weight:
+      annualisation_weight: &annualisation_weight
         - expression: sum(timestep_resolution * timestep_weights, over=timesteps) / 8760
       depreciation_rate:
         - where: cost_depreciation_rate
@@ -906,6 +912,24 @@ global_expressions:
             (cost_interest_rate * ((1 + cost_interest_rate) ** lifetime)) /
             (((1 + cost_interest_rate) ** lifetime) - 1)
 
+  cost_operation_fixed:
+    title: Total fixed operation costs
+    description: >-
+      The fixed, annual operation costs of a technology, which are calculated relative to investment costs.
+      If the modeling period is not equal to one full year, this will be scaled accordingly.
+    default: 0
+    unit: cost
+    foreach: [nodes, techs, costs]
+    where: cost_investment AND (cost_om_annual OR cost_om_annual_investment_fraction)
+    equations:
+      - expression: >-
+          $annualisation_weight * (
+            sum(cost_om_annual * flow_cap, over=carriers) +
+            cost_investment * cost_om_annual_investment_fraction
+          )
+    sub_expressions:
+      annualisation_weight: *annualisation_weight
+
   # --8<-- [start:expression]
   cost:
     title: Total costs
@@ -915,21 +939,19 @@ global_expressions:
     default: 0
     unit: cost
     foreach: [nodes, techs, costs]
-    where: "cost_investment OR cost_var"
+    where: "cost_investment_annualised OR cost_operation_variable OR cost_operation_fixed"
     equations:
-      - expression: $cost_investment + $cost_var_sum
+      - expression: >-
+          default_if_empty(cost_investment_annualised, 0) +
+          $cost_operation_sum +
+          default_if_empty(cost_operation_fixed, 0)
     sub_expressions:
-      cost_investment:
-        - where: "cost_investment"
-          expression: cost_investment
-        - where: "NOT cost_investment"
+      cost_operation_sum:
+        - where: "cost_operation_variable"
+          expression: sum(cost_operation_variable, over=timesteps)
+        - where: "NOT cost_operation_variable"
           expression: "0"
-      cost_var_sum:
-        - where: "cost_var"
-          expression: sum(cost_var, over=timesteps)
-        - where: "NOT cost_var"
-          expression: "0"
-    active: true  # optional; defaults to true.
+    active: true # optional; defaults to true.
   # --8<-- [end:expression]
 
 piecewise_constraints: {}

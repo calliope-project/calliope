@@ -13,6 +13,7 @@ import calliope
 from calliope.util import schema
 from calliope.util.generate_runs import generate_runs
 from calliope.util.logging import log_time
+from calliope.util.tools import climb_template_tree
 
 from .common.util import check_error_or_warning
 
@@ -464,4 +465,79 @@ class TestUpdateSchema:
             not in schema.MODEL_SCHEMA["properties"]["techs"]["patternProperties"][
                 "^[^_^\\d][\\w]*$"
             ]["properties"]
+        )
+
+
+class TestClimbTemplateTree:
+    @pytest.fixture
+    def templates(self) -> "calliope.AttrDict":
+        return calliope.AttrDict(
+            {
+                "foo_group": {"template": "bar_group", "my_param": 1},
+                "bar_group": {"my_param": 2, "my_other_param": 2},
+                "data_table_group": {"rows": ["foobar"]},
+            }
+        )
+
+    @pytest.mark.parametrize(
+        ("starting_dict", "expected_dict", "expected_inheritance"),
+        [
+            ({"my_param": 1}, {"my_param": 1}, None),
+            (
+                {"template": "foo_group"},
+                {"my_param": 1, "my_other_param": 2, "template": "foo_group"},
+                ["bar_group", "foo_group"],
+            ),
+            (
+                {"template": "bar_group"},
+                {"my_param": 2, "my_other_param": 2, "template": "bar_group"},
+                ["bar_group"],
+            ),
+            (
+                {"template": "bar_group", "my_param": 3, "my_own_param": 1},
+                {
+                    "my_param": 3,
+                    "my_other_param": 2,
+                    "my_own_param": 1,
+                    "template": "bar_group",
+                },
+                ["bar_group"],
+            ),
+            (
+                {"template": "data_table_group", "columns": "techs"},
+                {
+                    "columns": "techs",
+                    "rows": ["foobar"],
+                    "template": "data_table_group",
+                },
+                ["data_table_group"],
+            ),
+        ],
+    )
+    def test_climb_template_tree(
+        self, templates, starting_dict, expected_dict, expected_inheritance
+    ):
+        """Templates should be found and applied in order of 'ancestry' (newer dict keys replace older ones if they overlap)."""
+
+        new_dict, inheritance = climb_template_tree(
+            calliope.AttrDict(starting_dict), templates, "A"
+        )
+        assert new_dict == expected_dict
+        assert inheritance == expected_inheritance
+
+    @pytest.mark.parametrize(
+        ("item_name", "expected_message_prefix"), [("A", "A | "), (None, "")]
+    )
+    def test_climb_template_tree_missing_ancestor(
+        self, templates, item_name, expected_message_prefix
+    ):
+        """Referencing a template that doesn't exist in `templates` raises an error."""
+        with pytest.raises(KeyError) as excinfo:
+            climb_template_tree(
+                calliope.AttrDict({"template": "not_there"}), templates, item_name
+            )
+
+        assert check_error_or_warning(
+            excinfo,
+            f"{expected_message_prefix}Cannot find `not_there` in template inheritance tree.",
         )

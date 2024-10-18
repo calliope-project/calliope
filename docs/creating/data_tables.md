@@ -14,9 +14,11 @@ In brief it is:
 * **data**: path to file or reference name for an in-memory object.
 * **rows**: the dimension(s) in your table defined per row.
 * **columns**: the dimension(s) in your table defined per column.
-* **select**: values within dimensions that you want to select from your tabular data, discarding the rest.
-* **drop**: dimensions to drop from your rows/columns, e.g., a "comment" row.
-* **add_dims**: dimensions to add to the table after loading it in, with the corresponding value(s) to assign to the dimension index.
+* [**select**](#selecting-dimension-values-and-dropping-dimensions): values within dimensions that you want to select from your tabular data, discarding the rest.
+* [**drop**](#selecting-dimension-values-and-dropping-dimensions): dimensions to drop from your rows/columns, e.g., a "comment" row.
+* [**add_dims**](#adding-dimensions): dimensions to add to the table after loading it in, with the corresponding value(s) to assign to the dimension index.
+* [**rename_dims**](#renaming-dimensions-on-load): dimension names to map from those defined in the data table (e.g `time`) to those used in the Calliope model (e.g. `timesteps`).
+* [**template**](#using-a-template): Reference to a [template](templates.md) from which to inherit common configuration options.
 
 When we refer to "dimensions", we mean the sets over which data is indexed in the model: `nodes`, `techs`, `timesteps`, `carriers`, `costs`.
 In addition, when loading from file, there is the _required_ dimension `parameters`.
@@ -391,8 +393,6 @@ Or to define the same timeseries source data for two technologies at different n
         columns: [nodes, techs, parameters]
     ```
 
-
-
 === "With `add_dims`"
 
     |                  |     |
@@ -416,6 +416,116 @@ Or to define the same timeseries source data for two technologies at different n
           techs: tech2
           nodes: node2
           parameters: source_use_max
+    ```
+
+## Using a template
+
+Templates allow us to define common options that are inherited by several data tables.
+They can be particularly useful if you are storing your data in many small tables.
+
+To assign the same input timeseries data for (tech1, node1) and (tech2, node2) using [`add_dims`](#adding-dimensions):
+
+=== "Without `template`"
+
+    |                  |     |
+    | ---------------: | :-- |
+    | 2005-01-01 00:00 | 100 |
+    | 2005-01-01 01:00 | 200 |
+
+    ```yaml
+    data_tables:
+      tech_data_1:
+        data: data_tables/tech_data.csv
+        rows: timesteps
+        add_dims:
+          techs: tech1
+          nodes: node1
+          parameters: source_use_max
+      tech_data_2:
+        data: data_tables/tech_data.csv
+        rows: timesteps
+        add_dims:
+          techs: tech2
+          nodes: node2
+          parameters: source_use_max
+    ```
+
+=== "With `template`"
+
+    |                  |     |
+    | ---------------: | :-- |
+    | 2005-01-01 00:00 | 100 |
+    | 2005-01-01 01:00 | 200 |
+
+    ```yaml
+    templates:
+      common_data_options:
+        data: data_tables/tech_data.csv
+        rows: timesteps
+        add_dims:
+          parameters: source_use_max
+    data_tables:
+      tech_data_1:
+        template: common_data_options
+        add_dims:
+          techs: tech1
+          nodes: node1
+      tech_data_2:
+        template: common_data_options
+        add_dims:
+          techs: tech2
+          nodes: node2
+    ```
+
+## Renaming dimensions on load
+
+Sometimes, data tables are prepared in a model-agnostic fashion, and it would require extra effort to follow Calliope's dimension naming conventions.
+To enable these tables to be loaded without Calliope complaining, we can rename dimensions when loading them using `rename_dims`.
+
+For example, if we have the `time` dimension in file, we can map it to the Calliope-compliant `timesteps` dimension:
+
+=== "Without `rename_dims`"
+
+    Data in file:
+
+    | timesteps           | source_use_equals |
+    | ------------------: | :---------------- |
+    | 2005-01-01 12:00:00 | 15                |
+    | 2005-01-01 13:00:00 | 5                 |
+
+    YAML definition to load data:
+
+    ```yaml
+    data_sources:
+      pv_capacity_factor_data:
+        source: data_sources/pv_resource.csv
+        rows: timesteps
+        columns: parameters
+        add_dims:
+          techs: pv
+    ```
+
+=== "With `rename_dims`"
+
+    Data in file:
+
+    | time                | source_use_equals |
+    | ------------------: | :---------------- |
+    | 2005-01-01 12:00:00 | 15                |
+    | 2005-01-01 13:00:00 | 5                 |
+
+    YAML definition to load data:
+
+    ```yaml
+    data_sources:
+      pv_capacity_factor_data:
+        source: data_sources/pv_resource.csv
+        rows: timesteps
+        columns: parameters
+        add_dims:
+          techs: pv
+        rename_dims:
+          time: timesteps
     ```
 
 ## Loading CSV files vs `pandas` dataframes
