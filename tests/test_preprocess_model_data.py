@@ -6,9 +6,8 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from calliope import exceptions
-from calliope.attrdict import AttrDict
-from calliope.preprocess import data_tables, scenarios
+from calliope import AttrDict, exceptions
+from calliope.preprocess import scenarios
 from calliope.preprocess.model_data import ModelDataFactory
 
 from .common.util import build_test_model as build_model
@@ -23,15 +22,6 @@ def model_def():
         model_dict, scenario="simple_supply,empty_tech_node"
     )
     return model_def_override, model_def_path
-
-
-@pytest.fixture
-def data_source_list(model_def, init_config):
-    model_def_dict, model_def_path = model_def
-    return [
-        data_tables.DataTable(init_config, source_name, source_dict, {}, model_def_path)
-        for source_name, source_dict in model_def_dict.pop("data_tables", {}).items()
-    ]
 
 
 @pytest.fixture
@@ -529,67 +519,6 @@ class TestModelData:
             excinfo,
             "(foobar, bar), (techs, foo) | Reference to item not defined in base techs",
         )
-
-    @pytest.mark.parametrize(
-        ("node_dict", "expected_dict", "expected_inheritance"),
-        [
-            ({"my_param": 1}, {"my_param": 1}, None),
-            (
-                {"template": "foo_group"},
-                {"my_param": 1, "my_other_param": 2, "template": "foo_group"},
-                ["bar_group", "foo_group"],
-            ),
-            (
-                {"template": "bar_group"},
-                {"my_param": 2, "my_other_param": 2, "template": "bar_group"},
-                ["bar_group"],
-            ),
-            (
-                {"template": "bar_group", "my_param": 3, "my_own_param": 1},
-                {
-                    "my_param": 3,
-                    "my_other_param": 2,
-                    "my_own_param": 1,
-                    "template": "bar_group",
-                },
-                ["bar_group"],
-            ),
-        ],
-    )
-    def test_climb_template_tree(
-        self,
-        model_data_factory: ModelDataFactory,
-        node_dict,
-        expected_dict,
-        expected_inheritance,
-    ):
-        """Templates should be found and applied in order of 'ancestry' (newer dict keys replace older ones if they overlap)."""
-        group_dict = {
-            "foo_group": {"template": "bar_group", "my_param": 1},
-            "bar_group": {"my_param": 2, "my_other_param": 2},
-        }
-        model_data_factory.model_definition["templates"] = AttrDict(group_dict)
-        new_dict, inheritance = model_data_factory._climb_template_tree(
-            AttrDict(node_dict), "nodes", "A"
-        )
-        assert new_dict == expected_dict
-        assert inheritance == expected_inheritance
-
-    def test_climb_template_tree_missing_ancestor(
-        self, model_data_factory: ModelDataFactory
-    ):
-        """Referencing a template that doesn't exist in `templates` raises an error."""
-        group_dict = {
-            "foo_group": {"template": "bar_group", "my_param": 1},
-            "bar_group": {"my_param": 2, "my_other_param": 2},
-        }
-        model_data_factory.model_definition["templates"] = AttrDict(group_dict)
-        with pytest.raises(KeyError) as excinfo:
-            model_data_factory._climb_template_tree(
-                AttrDict({"template": "not_there"}), "nodes", "A"
-            )
-
-        assert check_error_or_warning(excinfo, "(nodes, A) | Cannot find `not_there`")
 
     def test_deactivate_single_dim(self, model_data_factory_w_params: ModelDataFactory):
         assert "a" in model_data_factory_w_params.dataset.nodes
