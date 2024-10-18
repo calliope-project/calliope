@@ -747,3 +747,71 @@ class DefaultIfEmpty(ParsingHelperFunction):
             return xr.DataArray(default)
         else:
             return var.fillna(default)
+
+
+class Where(ParsingHelperFunction):
+    """Apply `where` array _within_ an expression string."""
+
+    #:
+    NAME = "where"
+    #:
+    ALLOWED_IN = ["expression"]
+
+    def as_math_string(self, array: str, where_array: str) -> str:  # noqa: D102, override
+        return rf"({array} \text{{if }} {where_array} == True)"
+
+    def as_array(self, array: xr.DataArray, where_array: xr.DataArray) -> xr.DataArray:
+        """Apply a `where` array to a math array within an expression string.
+
+        Args:
+            array (xr.DataArray): Math component array.
+            where_array (xr.DataArray):
+                Boolean where array.
+                If not `bool` type, NaNs and 0 will be assumed as False and all other values will be assumed as True.
+
+        Returns:
+            xr.DataArray:
+                Returns the input array with the where array applied.
+
+        Examples:
+            input:
+
+            ```yaml
+            parameters:
+              node_grouping:
+                data: True
+                index: [[group_1, region1], [group_1, region1_1], [group_2, region1_2], [group_2, region1_3], [group_3, region2]]
+                dims: [cap_node_groups, nodes]
+            ```
+
+            ```
+            >>> flow_cap_max
+            [out] <xarray.DataArray 'flow_cap_max' (nodes: 5, techs: 8)> Size: 320B
+                  array([[   nan, 30000.,    nan,    nan,    nan,    nan,    nan, 10000.],
+                      [   nan,    nan, 10000.,    nan,    nan,    nan,    nan,    nan],
+                      [   nan,    nan, 10000.,    nan,    nan,    nan,    nan,    nan],
+                      [   nan,    nan, 10000.,    nan,    nan,    nan,    nan,    nan],
+                      [ 1000.,    nan,    nan,    nan,    nan,    nan,    nan, 10000.]])
+                  Coordinates:
+                  * nodes    (nodes) object 40B 'region1' 'region1_1' ... 'region1_3' 'region2'
+                  * techs    (techs) object 64B 'battery' 'ccgt' ... 'region1_to_region2'
+            >>> where(flow_cap_max, node_grouping)
+            [out] <xarray.DataArray 'flow_cap_max' (nodes: 5, techs: 8, cap_node_groups: 3)>
+                  array([[[   nan,    nan,    nan],
+                          [30000.,    nan,    nan],
+                          ...
+                          [   nan,    nan,    nan],
+                          [   nan,    nan, 10000.]]])
+                  Coordinates:
+                  * nodes            (nodes) object 40B 'region1' 'region1_1' ... 'region2'
+                  * techs            (techs) object 64B 'battery' ... 'region1_to_region2'
+                  * cap_node_groups  (cap_node_groups) object 24B 'group_1' 'group_2' 'group_3'
+            ```
+        """
+        if (
+            self._backend_interface is not None
+            and where_array.name in self._backend_interface._dataset
+        ):
+            where_array = self._input_data[where_array.name]
+
+        return array.where(where_array.fillna(False).astype(bool))

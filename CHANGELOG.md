@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|new| `where(array, where_array)` math helper function to apply a where array _inside_ an expression, to enable extending component dimensions on-the-fly, and applying filtering to different components within the expression (#604, #679).
+
 |new| Math has been removed from `model.math`, and can now be accessed via `model.math.data` (#639).
 
 |new| (non-NaN) Default values and data types for parameters appear in math documentation (if they appear in the model definition schema) (#677).
