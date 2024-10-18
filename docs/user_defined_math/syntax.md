@@ -215,6 +215,21 @@ But if you're having trouble setting up your math, it is a useful function to ge
     Our internally defined parameters, listed in the `Parameters` section of our [pre-defined base math documentation][base-math] all have default values which propagate to the math.
     You only need to use `default_if_empty` for decision variables and global expressions, and for user-defined parameters.
 
+### where
+
+[Where strings](#where-strings) only allow you to apply conditions across the whole expression equations.
+Sometimes, it's necessary to apply specific conditions to different components _within_ the expression.
+Using `where(<math_component>, <boolean_array>)` helper function enables this,
+where `<math_component>` is a reference to a parameter, variable, or global expression and `<boolean_array>` is a reference to an array in your model inputs that contains only `True`/`1` and `False`/`0`/`NaN` values.
+`<boolean_array>` will then be applied to `<math_component>`, keeping only the values in `<math_component>` where `<boolean_array>` is `True`/`1`.
+
+This helper function can also be used to _extend_ the dimensions of a `<math_component>`.
+If the ``<boolean_array>`` has any dimensions not present in `<math_component>`, `<math_component>` will be [broadcast](https://tutorial.xarray.dev/fundamentals/02.3_aligning_data_objects.html#broadcasting-adjusting-arrays-to-the-same-shape) to include those dimensions.
+
+!!! note
+    `Where` gets referred to a lot in Calliope math.
+    It always means the same thing: applying [xarray.DataArray.where][].
+
 ## equations
 
 Equations are combinations of [expression strings](#expression-strings) and [where strings](#where-strings).

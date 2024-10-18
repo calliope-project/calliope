@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|new| `where(array, where_array)` math helper function to apply a where array _inside_ an expression, to enable extending component dimensions on-the-fly, and applying filtering to different components within the expression (#604, #679).
+
 |new| Data tables can inherit options from `templates`, like `techs` and `nodes` (#676).
 
 |new| dimension renaming functionality when loading from a data source, using the `rename_dims` option (#680).
