@@ -809,10 +809,7 @@ class Where(ParsingHelperFunction):
                   * cap_node_groups  (cap_node_groups) object 24B 'group_1' 'group_2' 'group_3'
             ```
         """
-        if (
-            self._backend_interface is not None
-            and where_array.name in self._backend_interface._dataset
-        ):
+        if self._backend_interface is not None:
             where_array = self._input_data[where_array.name]
 
         return array.where(where_array.fillna(False).astype(bool))
