@@ -7,12 +7,11 @@ objectives(foo)(0):
 
 s.t.
 
-c_e_ONE_VAR_CONSTANT:
-+1 ONE_VAR_CONSTANT
-= 1
+c_l_constraints(flow_capacity_minimum)(a__test_supply_elec__electricity)_:
++1 variables(flow_cap)(a__test_supply_elec__electricity)
+>= 1.0
 
 bounds
-   1 <= ONE_VAR_CONSTANT <= 1
-   1.0 <= variables(flow_cap)(a__test_supply_elec__electricity) <= +inf
+   0 <= variables(flow_cap)(a__test_supply_elec__electricity) <= +inf
    0 <= variables(flow_cap)(b__test_supply_elec__electricity) <= 100.0
 end

@@ -75,7 +75,7 @@ bounds
    0 <= variables(flow_cap)(a__test_link_a_b_heat__heat) <= 5.0
    0 <= variables(flow_out)(a__test_link_a_b_heat__heat__2005_01_01_01_00) <= +inf
    0 <= variables(flow_out)(a__test_supply_elec__electricity__2005_01_01_00_00) <= +inf
-   100.0 <= variables(flow_cap)(a__test_supply_elec__electricity) <= 100.0
+   0 <= variables(flow_cap)(a__test_supply_elec__electricity) <= 10.0
    0 <= variables(flow_out)(a__test_supply_elec__electricity__2005_01_01_01_00) <= +inf
    0 <= variables(flow_out)(b__test_link_a_b_elec__electricity__2005_01_01_00_00) <= +inf
    0 <= variables(flow_cap)(b__test_link_a_b_elec__electricity) <= 10.0

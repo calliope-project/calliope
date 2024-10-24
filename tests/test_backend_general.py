@@ -666,11 +666,11 @@ class TestUpdateVariable:
     def test_update_variable_error_update_parameter_instead(self, solved_model_func):
         """Check that expected error is raised if trying to update a variable bound that was set by a parameter."""
         with pytest.raises(calliope.exceptions.BackendError) as excinfo:
-            solved_model_func.backend.update_variable_bounds("flow_cap", min=1)
+            solved_model_func.backend.update_variable_bounds("flow_cap", max=1)
         assert check_error_or_warning(
             excinfo,
             "Cannot update variable bounds that have been set by parameters."
-            " Use `update_parameter('flow_cap_min')` to update the min bound of flow_cap.",
+            " Use `update_parameter('flow_cap_max')` to update the max bound of flow_cap.",
         )
 
     def test_fix_variable_before_solve(self, built_model_cls_longnames):
