@@ -39,7 +39,16 @@ class DummyFunc2(helper_functions.ParsingHelperFunction):
 
 @pytest.fixture
 def valid_component_names():
-    return ["foo", "with_inf", "only_techs", "no_dims", "multi_dim_var", "no_dim_var"]
+    return [
+        "foo",
+        "with_inf",
+        "only_techs",
+        "no_dims",
+        "multi_dim_var",
+        "no_dim_var",
+        "all_true",
+        "only_techs_as_bool",
+    ]
 
 
 @pytest.fixture
@@ -565,6 +574,24 @@ class TestEquationParserElements:
             with pytest.raises(pp.ParseException) as excinfo:
                 parser_.parse_string(helper_func_string.format(string_), parse_all=True)
             assert check_error_or_warning(excinfo, "Expected")
+
+
+class TestEquationParserHelper:
+    @pytest.mark.parametrize(
+        ("where", "expected_notnull"),
+        [
+            ("all_true", [[True, True, True, True], [True, True, True, True]]),
+            ("only_techs_as_bool", [False, True, True, True]),
+        ],
+    )
+    def test_helper_function_where(
+        self, helper_function, eval_kwargs, where, expected_notnull
+    ):
+        """Test that `where` helper function works as expected when passed a backend interface object."""
+        string_ = f"where(no_dims, {where})"
+        parsed_ = helper_function.parse_string(string_, parse_all=True)
+        evaluated_ = parsed_[0].eval(**eval_kwargs)
+        np.testing.assert_array_equal(evaluated_.notnull(), expected_notnull)
 
 
 class TestEquationParserArithmetic:

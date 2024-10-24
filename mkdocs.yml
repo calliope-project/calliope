@@ -117,6 +117,7 @@ nav:
     - user_defined_math/index.md
     - user_defined_math/components.md
     - user_defined_math/syntax.md
+    - user_defined_math/helper_functions.md
     - user_defined_math/customise.md
     - Example additional math gallery:
       - user_defined_math/examples/index.md
