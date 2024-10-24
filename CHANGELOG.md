@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|fixed| Technology capacity lower bound constraints so that `[cap-type]_min` (e.g., `flow_cap_min`) is not always enforced if the `purchased_units` variable is active (#643).
+
 |new| Data tables can inherit options from `templates`, like `techs` and `nodes` (#676).
 
 |new| dimension renaming functionality when loading from a data source, using the `rename_dims` option (#680).
