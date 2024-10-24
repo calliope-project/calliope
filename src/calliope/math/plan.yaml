@@ -394,7 +394,7 @@ constraints:
       - where: NOT flow_cap_max
         expression: flow_cap <= bigM * purchased_units
 
-  flow_capacity_min:
+  flow_capacity_minimum:
     description: >-
       Set the lower bound on a technology's flow capacity,
       for any technology with a non-zero lower bound,
@@ -429,7 +429,6 @@ constraints:
       - where: purchased_units
         expression: storage_cap >= storage_cap_min * purchased_units
 
-
   area_use_minimum:
     description: >-
       Set the lower bound on a technology's area use
@@ -443,7 +442,7 @@ constraints:
       - where: purchased_units
         expression: area_use >= area_use_min * purchased_units
 
-  source_cap_minimum:
+  source_capacity_minimum:
     description: >-
       Set the lower bound on a technology's source capacity
       for any supply technology with a non-zero lower bound,
