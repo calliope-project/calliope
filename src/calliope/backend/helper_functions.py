@@ -758,58 +758,50 @@ class Where(ParsingHelperFunction):
     #:
     ALLOWED_IN = ["expression"]
 
-    def as_math_string(self, array: str, where_array: str) -> str:  # noqa: D102, override
-        return rf"({array} \text{{if }} {where_array} == True)"
+    def as_math_string(self, array: str, condition: str) -> str:  # noqa: D102, override
+        return rf"({array} \text{{if }} {condition} == True)"
 
-    def as_array(self, array: xr.DataArray, where_array: xr.DataArray) -> xr.DataArray:
-        """Apply a `where` array to a math array within an expression string.
+    def as_array(self, array: xr.DataArray, condition: xr.DataArray) -> xr.DataArray:
+        """Apply a `where` condition to a math array within an expression string.
 
         Args:
             array (xr.DataArray): Math component array.
-            where_array (xr.DataArray):
+            condition (xr.DataArray):
                 Boolean where array.
                 If not `bool` type, NaNs and 0 will be assumed as False and all other values will be assumed as True.
 
         Returns:
             xr.DataArray:
-                Returns the input array with the where array applied.
+                Returns the input array with the condition applied,
+                including having been broadcast across any new dimensions provided by the condition.
 
         Examples:
-            input:
+            One common use-case is to introduce a new dimension to the variable which represents subsets of one of the main model dimensions.
+            In this case, each member of `cap_node_groups` is a subset of `nodes` and we want to sum `flow_cap` over each of those subsets and set a maximum value.
 
+            input:
             ```yaml
             parameters:
               node_grouping:
                 data: True
                 index: [[group_1, region1], [group_1, region1_1], [group_2, region1_2], [group_2, region1_3], [group_3, region2]]
                 dims: [cap_node_groups, nodes]
+              node_group_max:
+                data: [1, 2, 3]
+                index: [group_1, group_2, group_3]
+                dims: cap_node_groups
             ```
 
-            ```
-            >>> flow_cap_max
-            [out] <xarray.DataArray 'flow_cap_max' (nodes: 5, techs: 8)> Size: 320B
-                  array([[   nan, 30000.,    nan,    nan,    nan,    nan,    nan, 10000.],
-                      [   nan,    nan, 10000.,    nan,    nan,    nan,    nan,    nan],
-                      [   nan,    nan, 10000.,    nan,    nan,    nan,    nan,    nan],
-                      [   nan,    nan, 10000.,    nan,    nan,    nan,    nan,    nan],
-                      [ 1000.,    nan,    nan,    nan,    nan,    nan,    nan, 10000.]])
-                  Coordinates:
-                  * nodes    (nodes) object 40B 'region1' 'region1_1' ... 'region1_3' 'region2'
-                  * techs    (techs) object 64B 'battery' 'ccgt' ... 'region1_to_region2'
-            >>> where(flow_cap_max, node_grouping)
-            [out] <xarray.DataArray 'flow_cap_max' (nodes: 5, techs: 8, cap_node_groups: 3)>
-                  array([[[   nan,    nan,    nan],
-                          [30000.,    nan,    nan],
-                          ...
-                          [   nan,    nan,    nan],
-                          [   nan,    nan, 10000.]]])
-                  Coordinates:
-                  * nodes            (nodes) object 40B 'region1' 'region1_1' ... 'region2'
-                  * techs            (techs) object 64B 'battery' ... 'region1_to_region2'
-                  * cap_node_groups  (cap_node_groups) object 24B 'group_1' 'group_2' 'group_3'
+            math:
+            ```yaml
+            constraints:
+                my_new_constraint:
+                    foreach: [techs, cap_node_groups]
+                    equations:
+                        - expression: sum(where(flow_cap, node_grouping), over=nodes) <= node_group_max
             ```
         """
         if self._backend_interface is not None:
-            where_array = self._input_data[where_array.name]
+            condition = self._input_data[condition.name]
 
-        return array.where(where_array.fillna(False).astype(bool))
+        return array.where(condition.fillna(False).astype(bool))
