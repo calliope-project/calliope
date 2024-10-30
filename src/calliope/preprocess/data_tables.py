@@ -51,7 +51,6 @@ class DataTable:
 
     def __init__(
         self,
-        model_config: dict,
         table_name: str,
         data_table: DataTableDict,
         data_table_dfs: dict[str, pd.DataFrame] | None = None,
@@ -60,7 +59,6 @@ class DataTable:
         """Load and format a data table from file / in-memory object.
 
         Args:
-            model_config (dict): Model initialisation configuration dictionary.
             table_name (str): name of the data table.
             data_table (DataTableDict): Data table definition dictionary.
             data_table_dfs (dict[str, pd.DataFrame] | None, optional):
@@ -75,7 +73,6 @@ class DataTable:
         self.input = data_table
         self.dfs = data_table_dfs if data_table_dfs is not None else dict()
         self.model_definition_path = model_definition_path
-        self.config = model_config
 
         self.columns = self._listify_if_defined("columns")
         self.index = self._listify_if_defined("rows")

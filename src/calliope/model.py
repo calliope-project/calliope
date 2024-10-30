@@ -12,7 +12,7 @@ import pandas as pd
 import xarray as xr
 
 import calliope
-from calliope import backend, exceptions, io, preprocess
+from calliope import backend, config, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess.data_tables import DataTable
@@ -43,7 +43,7 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
-    ATTRS_SAVED = ("_def_path", "applied_math")
+    ATTRS_SAVED = ("_def_path", "applied_math", "config")
 
     def __init__(
         self,
@@ -74,7 +74,7 @@ class Model:
             **kwargs: initialisation overrides.
         """
         self._timings: dict = {}
-        self.config: AttrDict
+        self.config: config.CalliopeConfig
         self.defaults: AttrDict
         self.applied_math: preprocess.CalliopeMath
         self._def_path: str | None = None
@@ -162,19 +162,22 @@ class Model:
             "model_run_creation",
             comment="Model: preprocessing stage 1 (model_run)",
         )
-        model_config = AttrDict(extract_from_schema(CONFIG_SCHEMA, "default"))
-        model_config.union(model_definition.pop("config"), allow_override=True)
 
-        init_config = update_then_validate_config("init", model_config)
+        model_config = config.CalliopeConfig(model_definition.pop("config"))
 
-        if init_config["time_cluster"] is not None:
-            init_config["time_cluster"] = relative_path(
-                self._def_path, init_config["time_cluster"]
+        if model_config.init.data["time_cluster"] is not None:
+            model_config.init.update(
+                {
+                    "time_cluster": relative_path(
+                        self._def_path, model_config.init.data["time_cluster"]
+                    )
+                }
             )
+        model_config.init.validate()
 
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
         attributes = {
-            "calliope_version_defined": init_config["calliope_version"],
+            "calliope_version_defined": model_config.init.data["calliope_version"],
             "calliope_version_initialised": calliope.__version__,
             "applied_overrides": applied_overrides,
             "scenario": scenario,
@@ -185,13 +188,15 @@ class Model:
         for table_name, table_dict in model_definition.pop("data_tables", {}).items():
             table_dict, _ = climb_template_tree(table_dict, templates, table_name)
             data_tables.append(
-                DataTable(
-                    init_config, table_name, table_dict, data_table_dfs, self._def_path
-                )
+                DataTable(table_name, table_dict, data_table_dfs, self._def_path)
             )
 
         model_data_factory = ModelDataFactory(
-            init_config, model_definition, data_tables, attributes, param_metadata
+            model_config.init.data,
+            model_definition,
+            data_tables,
+            attributes,
+            param_metadata,
         )
         model_data_factory.build()
 
@@ -204,9 +209,10 @@ class Model:
             comment="Model: preprocessing stage 2 (model_data)",
         )
 
-        self._add_observed_dict("config", model_config)
+        self._model_data.attrs["name"] = model_config.init.data["name"]
 
-        self._model_data.attrs["name"] = init_config["name"]
+        self.config = model_config
+
         log_time(
             LOGGER,
             self._timings,
@@ -229,9 +235,10 @@ class Model:
             self.applied_math = preprocess.CalliopeMath.from_dict(
                 model_data.attrs.pop("applied_math")
             )
+        if "config" in model_data.attrs:
+            self.config = config.CalliopeConfig(model_data.attrs.pop("config"))
 
         self._model_data = model_data
-        self._add_model_data_methods()
 
         if self.results:
             self._is_solved = True
@@ -242,47 +249,6 @@ class Model:
             "model_data_loaded",
             comment="Model: loaded model_data",
         )
-
-    def _add_model_data_methods(self):
-        """Add observed data to `model`.
-
-        1. Filter model dataset to produce views on the input/results data
-        2. Add top-level configuration dictionaries simultaneously to the model data attributes and as attributes of this class.
-
-        """
-        self._add_observed_dict("config")
-
-    def _add_observed_dict(self, name: str, dict_to_add: dict | None = None) -> None:
-        """Add the same dictionary as property of model object and an attribute of the model xarray dataset.
-
-        Args:
-            name (str):
-                Name of dictionary which will be set as the model property name and
-                (if necessary) the dataset attribute name.
-            dict_to_add (dict | None, optional):
-                If given, set as both the model property and the dataset attribute,
-                otherwise set an existing dataset attribute as a model property of the
-                same name. Defaults to None.
-
-        Raises:
-            exceptions.ModelError: If `dict_to_add` is not given, it must be an attribute of model data.
-            TypeError: `dict_to_add` must be a dictionary.
-        """
-        if dict_to_add is None:
-            try:
-                dict_to_add = self._model_data.attrs[name]
-            except KeyError:
-                raise exceptions.ModelError(
-                    f"Expected the model property `{name}` to be a dictionary attribute of the model dataset. If you are loading the model from a NetCDF file, ensure it is a valid Calliope model."
-                )
-        if not isinstance(dict_to_add, dict):
-            raise TypeError(
-                f"Attempted to add dictionary property `{name}` to model, but received argument of type `{type(dict_to_add).__name__}`"
-            )
-        else:
-            dict_to_add = AttrDict(dict_to_add)
-        self._model_data.attrs[name] = dict_to_add
-        setattr(self, name, dict_to_add)
 
     def build(
         self, force: bool = False, add_math_dict: dict | None = None, **kwargs
@@ -310,30 +276,35 @@ class Model:
             comment="Model: backend build starting",
         )
 
-        backend_config = {**self.config["build"], **kwargs}
-        mode = backend_config["mode"]
+        self.config.build.data_temp = kwargs
+        latest_build_config = self.config.build.data
+        mode = self.config.build.mode
         if mode == "operate":
             if not self._model_data.attrs["allow_operate_mode"]:
                 raise exceptions.ModelError(
                     "Unable to run this model in operate (i.e. dispatch) mode, probably because "
                     "there exist non-uniform timesteps (e.g. from time clustering)"
                 )
-            start_window_idx = backend_config.pop("start_window_idx", 0)
+            start_window_idx = self.config.build.data.pop("start_window_idx", 0)
             backend_input = self._prepare_operate_mode_inputs(
-                start_window_idx, **backend_config
+                start_window_idx, **self.config.build.data
             )
         else:
             backend_input = self._model_data
 
-        init_math_list = [] if backend_config.get("ignore_mode_math") else [mode]
+        init_math_list = [] if self.config.build.data["ignore_mode_math"] else [mode]
         end_math_list = [] if add_math_dict is None else [add_math_dict]
-        full_math_list = init_math_list + backend_config["add_math"] + end_math_list
+        full_math_list = (
+            init_math_list + self.config.build.data["add_math"] + end_math_list
+        )
         LOGGER.debug(f"Math preprocessing | Loading math: {full_math_list}")
         model_math = preprocess.CalliopeMath(full_math_list, self._def_path)
 
-        backend_name = backend_config.pop("backend")
         self.backend = backend.get_model_backend(
-            backend_name, backend_input, model_math, **backend_config
+            latest_build_config["backend"],
+            backend_input,
+            model_math,
+            **latest_build_config,
         )
         self.backend.add_optimisation_components()
 
@@ -370,7 +341,7 @@ class Model:
             exceptions.ModelError: Some preprocessing steps will stop a run mode of "operate" from being possible.
         """
         # Check that results exist and are non-empty
-        if not self._is_built:
+        if not self.is_built:
             raise exceptions.ModelError(
                 "You must build the optimisation problem (`.build()`) "
                 "before you can run it."
@@ -388,7 +359,7 @@ class Model:
         else:
             to_drop = []
 
-        run_mode = self.backend.inputs.attrs["config"]["build"]["mode"]
+        run_mode = self.config.build.data["mode"]
         self._model_data.attrs["timestamp_solve_start"] = log_time(
             LOGGER,
             self._timings,
