@@ -14,12 +14,13 @@ from pathlib import Path
 import jsonschema2md
 from mkdocs.structure.files import File
 
+from calliope import AttrDict, config
 from calliope.util import schema
 
 TEMPDIR = tempfile.TemporaryDirectory()
 
 SCHEMAS = {
-    "config_schema": schema.CONFIG_SCHEMA,
+    "config_schema": AttrDict.from_yaml(config.CalliopeConfig().model_yaml_schema()),
     "model_schema": schema.MODEL_SCHEMA,
     "math_schema": schema.MATH_SCHEMA,
     "data_table_schema": schema.DATA_TABLE_SCHEMA,

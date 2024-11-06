@@ -51,8 +51,9 @@ overrides:
       init.time_subset: ["2005-07-01", "2005-07-10"]
       build:
         mode: operate
-        operate_window: 2h
-        operate_horizon: 48h
+        operate:
+          window: 2h
+          horizon: 48h
 
     nodes:
       X1:

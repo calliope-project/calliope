@@ -311,6 +311,7 @@ class ParsedBackendEquation:
                 helper_functions=helper_functions._registry["where"],
                 input_data=backend_interface.inputs,
                 backend_interface=backend_interface,
+                build_config=backend_interface.config,
                 references=references if references is not None else set(),
                 apply_where=True,
             )

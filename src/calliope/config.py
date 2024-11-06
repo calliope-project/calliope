@@ -5,8 +5,9 @@
 from collections.abc import Hashable
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Literal, Self, TypeVar, overload
+from typing import Annotated, Literal, Self, TypeVar, get_args, overload
 
+import jsonref
 from pydantic import AfterValidator, BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
 
@@ -67,7 +68,16 @@ class ConfigBaseModel(BaseModel):
         Returns:
             BaseModel: New model instance.
         """
-        updated = super().model_copy(update=update_dict, deep=deep)
+        new_dict: dict = {}
+        # Iterate through dict to be updated and convert any sub-dicts into their respective pydantic model objects
+        for key, val in update_dict.items():
+            key_class = getattr(self, key)
+            if isinstance(key_class, ConfigBaseModel):
+                new_dict[key] = key_class.update(val)
+                key_class._kwargs = val
+            else:
+                new_dict[key] = val
+        updated = super().model_copy(update=new_dict, deep=deep)
         updated.model_validate(updated)
         self._kwargs = update_dict
         return updated
@@ -87,20 +97,31 @@ class ConfigBaseModel(BaseModel):
         Returns:
             None | str: If `filepath` is given, returns None. Otherwise, returns the YAML string.
         """
-        return AttrDict(self.model_json_schema()).to_yaml(filepath)
+        schema_dict = jsonref.replace_refs(self.model_json_schema())
+        return AttrDict(schema_dict).to_yaml(filepath)
+
+    @property
+    def applied_keyword_overrides(self) -> dict:
+        """Most recently applied keyword overrides used to update this configuration.
+
+        Returns:
+            dict: Description of applied overrides.
+        """
+        return self._kwargs
 
 
-class ModeBaseModel(BaseModel):
+class ModeBaseModel(ConfigBaseModel):
     """Mode-specific configuration, which will be hidden from the string representation of the model if that mode is not activated."""
 
-    _mode: str
+    mode: MODES_T = Field(default="plan")
+    """Mode in which to run the optimisation."""
 
     @model_validator(mode="after")
     def update_repr(self) -> Self:
         """Hide config from model string representation if mode is not activated."""
         for key, val in self.model_fields.items():
-            if key.startswith(self._mode):
-                val.repr = self.mode == self._mode
+            if key in get_args(MODES_T):
+                val.repr = self.mode == key
         return self
 
 
@@ -108,6 +129,7 @@ class Init(ConfigBaseModel):
     """All configuration options used when initialising a Calliope model."""
 
     model_config = {
+        "title": "init",
         "extra": "forbid",
         "frozen": True,
         "json_schema_extra": hide_from_schema(["def_path"]),
@@ -116,6 +138,8 @@ class Init(ConfigBaseModel):
     }
 
     def_path: Path = Field(default=".", repr=False, exclude=True)
+    """The path to the main model definition YAML file, if one has been used to instantiate the Calliope Model class."""
+
     name: str | None = Field(default=None)
     """Model name"""
 
@@ -155,17 +179,52 @@ class Init(ConfigBaseModel):
     @classmethod
     def abs_path(cls, data):
         """Add model definition path."""
-        if "time_cluster" in data:
+        if data.get("time_cluster", None) is not None:
             data["time_cluster"] = tools.relative_path(
                 data["def_path"], data["time_cluster"]
             )
         return data
 
 
-class BuildBase(BaseModel):
+class BuildOperate(ConfigBaseModel):
+    """Operate mode configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
+
+    model_config = {
+        "title": "operate",
+        "extra": "forbid",
+        "json_schema_extra": hide_from_schema(["start_window_idx"]),
+        "revalidate_instances": "always",
+        "use_attribute_docstrings": True,
+    }
+
+    window: str = Field(default="24h")
+    """
+    Operate mode rolling `window`, given as a pandas frequency string.
+    See [here](https://pandas.pydata.org/docs/user_guide/timeseries.html#offset-aliases) for a list of frequency aliases.
+    """
+
+    horizon: str = Field(default="48h")
+    """
+    Operate mode rolling `horizon`, given as a pandas frequency string.
+    See [here](https://pandas.pydata.org/docs/user_guide/timeseries.html#offset-aliases) for a list of frequency aliases.
+    Must be ≥ `window`
+    """
+
+    use_cap_results: bool = Field(default=False)
+    """If the model already contains `plan` mode results, use those optimal capacities as input parameters to the `operate` mode run."""
+
+    start_window_idx: int = Field(default=0, repr=False, exclude=True)
+    """Which time window to build. This is used to track the window when re-building the model part way through solving in `operate` mode."""
+
+
+class Build(ModeBaseModel):
     """Base configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
-    model_config = {"extra": "allow", "revalidate_instances": "always"}
+    model_config = {
+        "title": "build",
+        "extra": "allow",
+        "revalidate_instances": "always",
+    }
     add_math: UniqueList[str] = Field(default=[])
     """
     List of references to files which contain additional mathematical formulations to be applied on top of or instead of the base mode math.
@@ -189,9 +248,6 @@ class BuildBase(BaseModel):
     This should only be used as a debugging option (as any unmet demand/unused supply is a sign of improper model formulation).
     """
 
-    mode: MODES_T = Field(default="plan")
-    """Mode in which to run the optimisation."""
-
     objective: str = Field(default="min_cost_optimisation")
     """Name of internal objective function to use, from those defined in the pre-defined math and any applied additional math."""
 
@@ -201,47 +257,55 @@ class BuildBase(BaseModel):
     You can switch this off (e.g., if you know there are no parsing errors) to reduce overall build time.
     """
 
+    operate: BuildOperate = BuildOperate()
 
-class BuildOperate(ModeBaseModel):
-    """Operate mode configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
-    _mode = "operate"
+class SolveSpores(ConfigBaseModel):
+    """SPORES configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
-    operate_window: str = Field(default=None)
+    number: int = Field(default=3)
+    """SPORES mode number of iterations after the initial base run."""
+
+    score_cost_class: str = Field(default="score")
+    """SPORES mode cost class to vary between iterations after the initial base run."""
+
+    slack_cost_group: str = Field(default=None)
+    """SPORES mode cost class to keep below the given `slack` (usually "monetary")."""
+
+    save_per_spore: bool = Field(default=False)
     """
-    Operate mode rolling `window`, given as a pandas frequency string.
-    See [here](https://pandas.pydata.org/docs/user_guide/timeseries.html#offset-aliases) for a list of frequency aliases.
-    """
-
-    operate_horizon: str = Field(default=None)
-    """
-    Operate mode rolling `horizon`, given as a pandas frequency string.
-    See [here](https://pandas.pydata.org/docs/user_guide/timeseries.html#offset-aliases) for a list of frequency aliases.
-    Must be ≥ `operate_window`
-    """
-
-    operate_use_cap_results: bool = Field(default=False)
-    """If the model already contains `plan` mode results, use those optimal capacities as input parameters to the `operate` mode run."""
-
-
-class Build(ConfigBaseModel, BuildOperate, BuildBase):
-    """All configuration options used when building a Calliope optimisation problem (`calliope.Model.build`).
-
-    Additional configuration items will be passed onto math string parsing and can therefore be accessed in the `where` strings by `config.[item-name]`,
-    where "[item-name]" is the name of your own configuration item.
+    Whether or not to save the result of each SPORES mode run between iterations.
+    If False, will consolidate all iterations into one dataset after completion of N iterations (defined by `number`) and save that one dataset.
     """
 
+    save_per_spore_path: Path | None = Field(default=None)
+    """If saving per spore, the path to save to."""
 
-class SolveBase(BaseModel):
+    skip_cost_op: bool = Field(default=False)
+    """If the model already contains `plan` mode results, use those as the initial base run results and start with SPORES iterations immediately."""
+
+    @model_validator(mode="after")
+    def require_save_per_spore_path(self) -> Self:
+        """Ensure that path is given if saving per spore."""
+        if self.save_per_spore:
+            if self.save_per_spore_path is None:
+                raise ValueError(
+                    "Must define `save_per_spore_path` if you want to save each SPORES result separately."
+                )
+            elif not self.save_per_spore_path.is_dir():
+                raise ValueError("`save_per_spore_path` must be a directory.")
+        return self
+
+
+class Solve(ModeBaseModel):
     """Base configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
     model_config = {
+        "title": "solve",
         "extra": "forbid",
         "revalidate_instances": "always",
         "json_schema_extra": hide_from_schema(["mode"]),
     }
-
-    mode: Literal["plan", "spores", "operate"] = Field(default="plan", repr=False)
 
     save_logs: Path | None = Field(default=None)
     """If given, should be a path to a directory in which to save optimisation logs."""
@@ -264,55 +328,38 @@ class SolveBase(BaseModel):
     shadow_prices: UniqueList[str] = Field(default=[])
     """Names of model constraints."""
 
-
-class SolveSpores(ModeBaseModel):
-    """SPORES configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
-
-    _mode = "spores"
-
-    mode: MODES_T = Field(default=None)
-
-    spores_number: int = Field(default=3)
-    """SPORES mode number of iterations after the initial base run."""
-
-    spores_score_cost_class: str = Field(default="spores_score")
-    """SPORES mode cost class to vary between iterations after the initial base run."""
-
-    spores_slack_cost_group: str = Field(default=None)
-    """SPORES mode cost class to keep below the given `slack` (usually "monetary")."""
-
-    spores_save_per_spore: bool = Field(default=False)
-    """
-    Whether or not to save the result of each SPORES mode run between iterations.
-    If False, will consolidate all iterations into one dataset after completion of N iterations (defined by `spores_number`) and save that one dataset.
-    """
-
-    spores_save_per_spore_path: Path | None = Field(default=None)
-    """If saving per spore, the path to save to."""
-
-    spores_skip_cost_op: bool = Field(default=False)
-    """If the model already contains `plan` mode results, use those as the initial base run results and start with SPORES iterations immediately."""
-
-    @model_validator(mode="after")
-    def save_per_spore_path(self) -> Self:
-        """Ensure that path is given if saving per spore."""
-        if self.spores_save_per_spore:
-            if self.spores_save_per_spore_path is None:
-                raise ValueError(
-                    "Must define `spores_save_per_spore_path` if you want to save each SPORES result separately."
-                )
-            elif not self.spores_save_per_spore_path.is_dir():
-                raise ValueError("`spores_save_per_spore_path` must be a directory.")
-        return self
-
-
-class Solve(ConfigBaseModel, SolveSpores, SolveBase):
-    """All configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
+    spores: SolveSpores = SolveSpores()
 
 
 class CalliopeConfig(ConfigBaseModel):
     """Calliope configuration class."""
 
-    init: Init
-    build: Build
-    solve: Solve
+    model_config = {"title": "config"}
+    init: Init = Init()
+    build: Build = Build()
+    solve: Solve = Solve()
+
+    @model_validator(mode="before")
+    @classmethod
+    def update_solve_mode(cls, data):
+        """Solve mode should match build mode."""
+        data["solve"]["mode"] = data["build"]["mode"]
+        return data
+
+    def update(self, update_dict: dict, deep: bool = False) -> Self:
+        """Return a new iteration of the model with updated fields.
+
+        Updates are validated and stored in the parent class in the `_kwargs` key.
+
+        Args:
+            update_dict (dict): Dictionary with which to update the base model.
+            deep (bool, optional): Set to True to make a deep copy of the model. Defaults to False.
+
+        Returns:
+            BaseModel: New model instance.
+        """
+        update_dict_temp = AttrDict(update_dict)
+        if update_dict_temp.get_key("build.mode", None) is not None:
+            update_dict_temp.set_key("solve.mode", update_dict_temp["build"]["mode"])
+        updated = super().update(update_dict_temp.as_dict(), deep=deep)
+        return updated

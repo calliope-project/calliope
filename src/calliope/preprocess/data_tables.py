@@ -54,7 +54,7 @@ class DataTable:
         table_name: str,
         data_table: DataTableDict,
         data_table_dfs: dict[str, pd.DataFrame] | None = None,
-        model_definition_path: Path | None = None,
+        model_definition_path: Path = Path("."),
     ):
         """Load and format a data table from file / in-memory object.
 
@@ -64,7 +64,7 @@ class DataTable:
             data_table_dfs (dict[str, pd.DataFrame] | None, optional):
                 If given, a dictionary mapping table names in `data_table` to in-memory pandas DataFrames.
                 Defaults to None.
-            model_definition_path (Path | None, optional):
+            model_definition_path (Path, optional):
                 If given, the path to the model definition YAML file, relative to which data table filepaths will be set.
                 If None, relative data table filepaths will be considered relative to the current working directory.
                 Defaults to None.

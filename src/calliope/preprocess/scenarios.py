@@ -15,7 +15,6 @@ def load_scenario_overrides(
     model_definition: dict,
     scenario: str | None = None,
     override_dict: dict | None = None,
-    **kwargs,
 ) -> tuple[AttrDict, str]:
     """Apply user-defined overrides to the model definition.
 
@@ -28,8 +27,6 @@ def load_scenario_overrides(
         override_dict (dict | None, optional):
             Overrides to apply _after_ `scenario` overrides.
             Defaults to None.
-        **kwargs:
-            initialisation overrides.
 
     Returns:
         tuple[AttrDict, str]:
@@ -87,10 +84,6 @@ def load_scenario_overrides(
         del model_def_with_overrides["locations"]
 
     _log_overrides(model_def_dict, model_def_with_overrides)
-
-    model_def_with_overrides.union(
-        AttrDict({"config.init": kwargs}), allow_override=True
-    )
 
     return (model_def_with_overrides, ";".join(applied_overrides))
 
