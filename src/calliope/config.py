@@ -97,8 +97,12 @@ class ConfigBaseModel(BaseModel):
         Returns:
             None | str: If `filepath` is given, returns None. Otherwise, returns the YAML string.
         """
-        schema_dict = jsonref.replace_refs(self.model_json_schema())
-        return AttrDict(schema_dict).to_yaml(filepath)
+        # By default, the schema uses $ref/$def cross-referencing for each pydantic model class,
+        # but this isn't very readable when rendered in our documentation.
+        # So, we resolve references and then delete all the `$defs`
+        schema_dict = AttrDict(jsonref.replace_refs(self.model_json_schema()))
+        schema_dict.del_key("$defs")
+        return schema_dict.to_yaml(filepath)
 
     @property
     def applied_keyword_overrides(self) -> dict:

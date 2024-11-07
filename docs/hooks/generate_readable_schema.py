@@ -20,7 +20,9 @@ from calliope.util import schema
 TEMPDIR = tempfile.TemporaryDirectory()
 
 SCHEMAS = {
-    "config_schema": AttrDict.from_yaml(config.CalliopeConfig().model_yaml_schema()),
+    "config_schema": AttrDict.from_yaml_string(
+        config.CalliopeConfig().model_yaml_schema()
+    ),
     "model_schema": schema.MODEL_SCHEMA,
     "math_schema": schema.MATH_SCHEMA,
     "data_table_schema": schema.DATA_TABLE_SCHEMA,
