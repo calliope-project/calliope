@@ -37,7 +37,7 @@ When checking the existence of an input parameter it is possible to first sum it
         - If you want to apply a constraint across all `nodes` and `techs`, but only for node+tech combinations where the `flow_out_eff` parameter has been defined, you would include `flow_out_eff`.
         - If you want to apply a constraint over `techs` and `timesteps`, but only for combinations where the `source_use_max` parameter has at least one `node` with a value defined, you would include `any(resource, over=nodes)`.  (1)
 
-    1.  `any` is a [helper function](helper_functions.md#any); read more below!
+    1.  `any` is a [helper function](helper_functions.md#any)!
 
 1. Checking the value of a configuration option or an input parameter.
 Checks can use any of the operators: `>`, `<`, `=`, `<=`, `>=`.
@@ -50,7 +50,7 @@ Configuration options are any that are defined in `config.build`, where you can 
         - If you want to apply a constraint only for the first timestep in your timeseries, you would include `timesteps=get_val_at_index(dim=timesteps, idx=0)`. (1)
         - If you want to apply a constraint only for the last timestep in your timeseries, you would include `timesteps=get_val_at_index(dim=timesteps, idx=-1)`.
 
-    1.  `get_val_at_index` is a [helper function](helper_functions.md#get_val_at_index); read more below!
+    1.  `get_val_at_index` is a [helper function](helper_functions.md#get_val_at_index)!
 
 1. Checking the `base_tech` of a technology (`storage`, `supply`, etc.) or its inheritance chain (if using `templates` and the `template` parameter).
 
@@ -58,7 +58,7 @@ Configuration options are any that are defined in `config.build`, where you can 
 
         - If you want to create a decision variable across only `storage` technologies, you would include `base_tech=storage`.
         - If you want to apply a constraint across only your own `rooftop_supply` technologies (e.g., you have defined `rooftop_supply` in `templates` and your technologies `pv` and `solar_thermal` define `#!yaml template: rooftop_supply`), you would include `inheritance(rooftop_supply)`.
-        Note that `base_tech=...` is a simple check for the given value of `base_tech`, while `inheritance()` is a helper function ([see below](helper_functions.md)) which can deal with finding techs/nodes using the same template, e.g. `pv` might inherit the `rooftop_supply` template which in turn might inherit the template `electricity_supply`.
+        Note that `base_tech=...` is a simple check for the given value of `base_tech`, while `inheritance()` is a [helper function](helper_functions.md) which can deal with finding techs/nodes using the same template, e.g. `pv` might inherit the `rooftop_supply` template which in turn might inherit the template `electricity_supply`.
 
 1. Subsetting a set.
 The sets available to subset are always [`nodes`, `techs`, `carriers`] + any additional sets defined by you in [`foreach`](#foreach-lists).
@@ -67,7 +67,7 @@ The sets available to subset are always [`nodes`, `techs`, `carriers`] + any add
 
         - If you want to filter `nodes` where any of a set of `techs` are defined: `defined(techs=[tech1, tech2], within=nodes, how=any)` (1).
 
-    1. `defined` is a [helper function](helper_functions.md#defined); read more below!
+    1. `defined` is a [helper function](helper_functions.md#defined)!
 
 To combine statements you can use the operators `and`/`or`.
 You can also use the `not` operator to negate any of the statements.
