@@ -369,7 +369,7 @@ constraints:
   storage_capacity_units_milp:
     description: >-
       Fix the storage capacity of any technology using integer units to define its capacity.
-    foreach: [nodes, techs, carriers]
+    foreach: [nodes, techs]
     where: "storage AND purchased_units AND storage_cap_per_unit"
     equations:
       - expression: storage_cap == purchased_units * storage_cap_per_unit
@@ -378,7 +378,7 @@ constraints:
     description: >-
       Fix the flow capacity of any technology using integer units to define its capacity.
     foreach: [nodes, techs, carriers]
-    where: "operating_units AND flow_cap_per_unit"
+    where: "purchased_units AND flow_cap_per_unit"
     equations:
       - expression: flow_cap == purchased_units * flow_cap_per_unit
 
@@ -595,7 +595,7 @@ variables:
     foreach: [nodes, techs]
     where: "(area_use_min OR area_use_max OR area_use_per_flow_cap OR sink_unit=per_area OR source_unit=per_area)"
     bounds:
-      min: 0
+      min: 0 # set in a distinct constraint to handle the integer purchase variable
       max: area_use_max
 
   source_use:
@@ -620,7 +620,7 @@ variables:
     foreach: [nodes, techs]
     where: "base_tech=supply"
     bounds:
-      min: 0
+      min: 0 # set in a distinct constraint to handle the integer purchase variable
       max: source_cap_max
 
   # --8<-- [start:variable]
@@ -696,6 +696,10 @@ variables:
     description: >-
       Flow capacity that will be set to zero if the technology is not operating in a given
       timestep and will be set to the value of the decision variable `flow_cap` otherwise.
+      This is useful when you want to set a minimum flow capacity for any technology investment, but also want to allow the model to decide the capacity.
+      It is expected to only be used when `purchased_units_max == 1`,
+      i.e., the `purchased_units` decision variable is binary.
+      If `purchased_units_max > 1`, you may get strange results and should instead use the less flexible `flow_cap_per_unit`.
     default: 0
     unit: power
     foreach: [nodes, techs, carriers, timesteps]
