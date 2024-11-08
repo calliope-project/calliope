@@ -950,7 +950,7 @@ properties:
             title: Cost of area use.
             description: >-
               Cost per unit `area_use`.
-            x-unit: $\text{area}^{-2}$.
+            x-unit: $\text{area}^{-1}$.
 
           cost_source_cap:
             $ref: "#/$defs/TechCostNullNumber"
