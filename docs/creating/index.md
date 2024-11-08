@@ -6,14 +6,24 @@ The model specifies one or more **nodes** along with the technologies allowed at
 **Demand technologies** remove carriers from the system through a **sink**, while **storage technologies** can store carriers at a specific node.
 Putting all of these possibilities together allows a modeller to specify as simple or as complex a model as necessary to answer a given research question.
 
-??? info "An overview of the Calliope terminology"
-    The terminology defined here is used throughout the documentation and the model code and configuration files:
+![Visual description of the Calliope terminology.](../img/description_of_system.svg)
 
-    * **Technology**: a technology that produces, consumes, converts or transports carriers.
-    * **Node**: a site which can contain multiple technologies and which may contain other nodes for carrier balancing purposes.
-    * **Source**: a source of commodity that can (or must) be used by a technology to introduce carriers into the system.
-    * **Sink**: a commodity sink that can (or must) be used by a technology to remove carriers from the system.
-    * **Carrier**: a carrier that groups technologies together into the same network, for example `electricity` or `heat`.
+??? info "An overview of the Calliope terminology"
+    The terminology defined here is used throughout the documentation, and the model code and configuration files:
+
+    * **Carrier**: a commodity that is tracked inside the system boundary and can be produced or consumed by a _technology_.
+    > E.g., electricity, heat, hydrogen, water, CO<sub>2</sub>.
+    * **Technology**: an entity that produces, consumes, converts, stores or transports _carriers_.
+    > E.g., a _wind turbine_ that produces electricity, a _heat pump_ that converts electricity to heat, or a _battery_ that stores electricity.
+    * **Node**: a geographic point or area which can contain multiple _technologies_ and at which _carrier_ flows in and out must balance.
+    > E.g., a building in a district, an administrative region in a country, a country in a continent.
+    * **Source**: a commodity that can (or must) be used by a _technology_ to introduce carriers into the system.
+    Unlike _carriers_, _sources_ are not explicitly tracked as they are outside the system boundary.
+    > E.g., energy from the sun to power a solar panel, natural gas to power a gas turbine.
+    * **Sink**: a commodity that can (or must) be used by a _technology_ to remove carriers from the system.
+    Unlike _carriers_, _sinks_ are not explicitly tracked as they are outside system boundary.
+    > E.g., electricity consumed by household appliances, liquid fuel consumed by vehicles.
+
 
     As more generally in constrained optimisation, the following terms are also used:
 

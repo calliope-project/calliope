@@ -2,6 +2,9 @@
 
 ### User-facing changes
 
+|changed| "An overview of the Calliope terminology" information admonition to remove self-references and improve understandability.
+Now also includes a visual depiction of how the different defined components connect together.
+
 |new| Data tables can inherit options from `templates`, like `techs` and `nodes` (#676).
 
 |new| dimension renaming functionality when loading from a data source, using the `rename_dims` option (#680).
