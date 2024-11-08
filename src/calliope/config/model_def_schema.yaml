@@ -520,7 +520,7 @@ properties:
             description: >-
               Sets `area_use` to a parameter in operate mode.
               NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
-            x-unit: $\text{area}^{2}$.
+            x-unit: $\text{area}$.
 
           area_use_max:
             $ref: "#/$defs/TechParamNullNumber"
@@ -529,7 +529,7 @@ properties:
             title: Maximum usable area.
             description: >-
               If set to a finite value, limits the upper bound of the `area_use` decision variable to this value.
-            x-unit: $\text{area}^{2}$.
+            x-unit: $\text{area}$.
 
           area_use_min:
             $ref: "#/$defs/TechParamNullNumber"
@@ -538,7 +538,7 @@ properties:
             title: Minimum usable area.
             description: >-
               Limits the lower bound of the `area_use` decision variable to this value.
-            x-unit: $\text{area}^{2}$.
+            x-unit: $\text{area}$.
 
           area_use_per_flow_cap:
             $ref: "#/$defs/TechParamNullNumber"
@@ -547,7 +547,7 @@ properties:
             title: Area use per flow capacity
             description: >-
               If set, forces `area_use` to follow `flow_cap` with the given numerical ratio (e.g. setting to 1.5 means that `area_use == 1.5 * flow_cap`).
-            x-unit: $\frac{\text{area}^{2}}{\text{power}}$.
+            x-unit: $\frac{\text{area}}{\text{power}}$.
 
           storage_cap:
             $ref: "#/$defs/TechParamNullNumber"
@@ -558,7 +558,7 @@ properties:
             description: >-
               Sets `storage_cap` to a parameter in operate mode.
               NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
-            x-unit: $\text{area}^{2}$.
+            x-unit: $\text{area}$.
 
           storage_cap_max:
             $ref: "#/$defs/TechParamNullNumber"
@@ -1016,3 +1016,7 @@ properties:
             minimum: 0
             default: .inf
             x-resample_method: mean
+            title: Available area at the given node.
+            description: >-
+              Limits the total area that can be occupied by all technologies which have the `area_use` decision variable activated.
+            x-unit: $\text{area}$.

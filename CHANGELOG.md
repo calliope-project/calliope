@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|fixed| Area-based parameters have appropriate documented units of `area` rather than `area^2` (#701).
+
 |new| Data tables can inherit options from `templates`, like `techs` and `nodes` (#676).
 
 |new| dimension renaming functionality when loading from a data source, using the `rename_dims` option (#680).
