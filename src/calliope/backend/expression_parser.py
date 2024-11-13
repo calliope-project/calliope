@@ -789,7 +789,7 @@ class EvalUnslicedComponent(EvalToArrayStr):
                 evaluated = backend_interface._dataset[self.name]
             except KeyError:
                 evaluated = xr.DataArray(self.name, attrs={"obj_type": "string"})
-        if "default" in evaluated.attrs and pd.notnull(evaluated.attrs["default"]):
+        if "default" in evaluated.attrs and pd.notna(evaluated.attrs["default"]):
             evaluated = evaluated.fillna(evaluated.attrs["default"])
 
         self.eval_attrs["references"].add(self.name)

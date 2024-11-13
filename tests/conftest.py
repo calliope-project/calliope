@@ -43,7 +43,7 @@ def model_defaults():
 
 @pytest.fixture(scope="session")
 def data_source_dir():
-    return Path(__file__).parent / "common" / "test_model" / "data_sources"
+    return Path(__file__).parent / "common" / "test_model" / "data_tables"
 
 
 @pytest.fixture(scope="session")
@@ -300,9 +300,13 @@ def dummy_model_data(config_defaults, model_defaults):
             "all_nan": np.nan,
             "with_inf": 100,
             "only_techs": 5,
+            "no_dims": 0,
             **model_defaults,
         }
     )
+    # This value is set on the parameter directly to ensure it finds its way through to the LaTex math.
+    model_data.no_dims.attrs["default"] = 0
+
     return model_data
 
 

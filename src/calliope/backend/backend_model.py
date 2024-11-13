@@ -45,10 +45,12 @@ LOGGER = logging.getLogger(__name__)
 class BackendModelGenerator(ABC):
     """Helper class for backends."""
 
+    LID_COMPONENTS: tuple[ALL_COMPONENTS_T, ...] = typing.get_args(ALL_COMPONENTS_T)
     _COMPONENT_ATTR_METADATA = [
         "description",
         "unit",
         "default",
+        "type",
         "title",
         "math_repr",
         "original_dtype",
@@ -65,6 +67,9 @@ class BackendModelGenerator(ABC):
         self.inputs = inputs
         self.math = math
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
+
+        self._check_inputs()
+        self.math.validate()
 
     @abstractmethod
     def add_parameter(

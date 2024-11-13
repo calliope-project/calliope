@@ -1,4 +1,4 @@
-# Parameters for which loading from file via `data_sources` is prohibited
+# Parameters for which loading from file via `data_tables` is prohibited
 active: >-
   Technology/Node activation (`active`) can only be used in the
   YAML model definition.

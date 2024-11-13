@@ -15,6 +15,7 @@ config:
   build:
     mode: plan # Choices: plan, operate
     ensure_feasibility: true # Switching on unmet demand
+    add_math: ["additional_math.yaml"]
 
   solve:
     solver: cbc
@@ -36,15 +37,15 @@ model:
   # --8<-- [end:parameters]
 
   # --8<-- [start:data-sources]
-  data_sources:
+  data_tables:
     demand:
-      source: data_sources/demand.csv
+      source: data_tables/demand.csv
       rows: timesteps
       columns: [techs, nodes]
       add_dims:
         parameters: sink_use_equals
     pv_resource:
-      source: data_sources/pv_resource.csv
+      source: data_tables/pv_resource.csv
       rows: timesteps
       columns: [comment, scaler]
       add_dims:
@@ -54,7 +55,7 @@ model:
         scaler: per_area
       drop: [comment, scaler]
     export_power:
-      source: data_sources/export_power.csv
+      source: data_tables/export_power.csv
       rows: timesteps
       columns: nodes
       add_dims:

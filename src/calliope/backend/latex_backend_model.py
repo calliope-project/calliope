@@ -113,6 +113,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     **Default**: {{ equation.default }}
     {% endif %}
+    {% if equation.type is not none %}
+
+    **Type**: {{ equation.type }}
+    {% endif %}
     {% if equation.expression != "" %}
 
     .. container:: scrolling-wrapper
@@ -188,6 +192,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     \textbf{Default}: {{ equation.default }}
     {% endif %}
+    {% if equation.type is not none %}
+
+    \textbf{Type}: {{ equation.type }}
+    {% endif %}
     {% if equation.expression != "" %}
 
     \begin{equation}
@@ -259,6 +267,10 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {% if equation.default is not none %}
 
     **Default**: {{ equation.default }}
+    {% endif %}
+    {% if equation.type is not none %}
+
+    **Type**: {{ equation.type }}
     {% endif %}
     {% if equation.expression != "" %}
     {% if mkdocs_features and yaml_snippet is not none%}
@@ -508,6 +520,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                     ),
                     "uses": sorted(list(uses[name] - set([name]))),
                     "default": da.attrs.get("default", None),
+                    "type": da.attrs.get("type", None),
                     "unit": da.attrs.get("unit", None),
                     "yaml_snippet": da.attrs.get("yaml_snippet", None),
                 }

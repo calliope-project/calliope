@@ -15,6 +15,8 @@ import calliope
 from calliope import backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
+from calliope.preprocess.data_tables import DataTable
+from calliope.preprocess.model_data import ModelDataFactory
 from calliope.util.logging import log_time
 from calliope.util.schema import (
     CONFIG_SCHEMA,
@@ -23,7 +25,7 @@ from calliope.util.schema import (
     update_then_validate_config,
     validate_dict,
 )
-from calliope.util.tools import relative_path
+from calliope.util.tools import climb_template_tree, relative_path
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
@@ -47,7 +49,7 @@ class Model:
         model_definition: str | Path | dict | xr.Dataset,
         scenario: str | None = None,
         override_dict: dict | None = None,
-        data_source_dfs: dict[str, pd.DataFrame] | None = None,
+        data_table_dfs: dict[str, pd.DataFrame] | None = None,
         **kwargs,
     ):
         """Returns a new Model from YAML model configuration files or a fully specified dictionary.
@@ -64,8 +66,8 @@ class Model:
                 Additional overrides to apply to `config`.
                 These will be applied *after* applying any defined `scenario` overrides.
                 Defaults to None.
-            data_source_dfs (dict[str, pd.DataFrame] | None, optional):
-                Model definition `data_source` entries can reference in-memory pandas DataFrames.
+            data_table_dfs (dict[str, pd.DataFrame] | None, optional):
+                Model definition `data_table` entries can reference in-memory pandas DataFrames.
                 The referenced data must be supplied here as a dictionary of those DataFrames.
                 Defaults to None.
             **kwargs: initialisation overrides.
@@ -99,7 +101,7 @@ class Model:
             )
 
             self._init_from_model_def_dict(
-                model_def, applied_overrides, scenario, data_source_dfs
+                model_def, applied_overrides, scenario, data_table_dfs
             )
 
         self._model_data.attrs["timestamp_model_creation"] = timestamp_model_creation
@@ -141,7 +143,7 @@ class Model:
         model_definition: calliope.AttrDict,
         applied_overrides: str,
         scenario: str | None,
-        data_source_dfs: dict[str, pd.DataFrame] | None = None,
+        data_table_dfs: dict[str, pd.DataFrame] | None = None,
     ) -> None:
         """Initialise the model using pre-processed YAML files and optional dataframes/dicts.
 
@@ -149,7 +151,7 @@ class Model:
             model_definition (calliope.AttrDict): preprocessed model configuration.
             applied_overrides (str): overrides specified by users
             scenario (str | None): scenario specified by users
-            data_source_dfs (dict[str, pd.DataFrame] | None, optional): files with additional model information. Defaults to None.
+            data_table_dfs (dict[str, pd.DataFrame] | None, optional): files with additional model information. Defaults to None.
         """
         # First pass to check top-level keys are all good
         validate_dict(model_definition, CONFIG_SCHEMA, "Model definition")
@@ -179,18 +181,18 @@ class Model:
             "scenario": scenario,
             "defaults": param_metadata["default"],
         }
-
-        data_sources = [
-            preprocess.DataSource(
-                init_config, source_name, source_dict, data_source_dfs, self._def_path
+        templates = model_definition.get("templates", AttrDict())
+        data_tables: list[DataTable] = []
+        for table_name, table_dict in model_definition.pop("data_tables", {}).items():
+            table_dict, _ = climb_template_tree(table_dict, templates, table_name)
+            data_tables.append(
+                DataTable(
+                    init_config, table_name, table_dict, data_table_dfs, self._def_path
+                )
             )
-            for source_name, source_dict in model_definition.pop(
-                "data_sources", {}
-            ).items()
-        ]
 
-        model_data_factory = preprocess.ModelDataFactory(
-            init_config, model_definition, data_sources, attributes, param_metadata
+        model_data_factory = ModelDataFactory(
+            init_config, model_definition, data_tables, attributes, param_metadata
         )
         model_data_factory.build()
 
@@ -226,7 +228,7 @@ class Model:
         if "_def_path" in model_data.attrs:
             self._def_path = model_data.attrs.pop("_def_path")
         if "applied_math" in model_data.attrs:
-            self.applied_math = backend.CalliopeMath.from_dict(
+            self.applied_math = preprocess.CalliopeMath.from_dict(
                 model_data.attrs.pop("applied_math")
             )
 

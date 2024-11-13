@@ -15,9 +15,9 @@ from typing_extensions import NotRequired, TypedDict
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.preprocess import data_sources, time
+from calliope.preprocess import data_tables, time
 from calliope.util.schema import MODEL_SCHEMA, validate_dict
-from calliope.util.tools import listify
+from calliope.util.tools import climb_template_tree, listify
 
 LOGGER = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ class ModelDataFactory:
         self,
         model_config: dict,
         model_definition: ModelDefinition,
-        data_sources: list[data_sources.DataSource],
+        data_tables: list[data_tables.DataTable],
         attributes: dict,
         param_attributes: dict[str, dict],
     ):
@@ -83,15 +83,15 @@ class ModelDataFactory:
         Args:
             model_config (dict): Model initialisation configuration (i.e., `config.init`).
             model_definition (ModelDefinition): Definition of model nodes and technologies, and their potential `templates`.
-            data_sources (list[data_sources.DataSource]): Pre-loaded data sources that will be used to initialise the dataset before handling definitions given in `model_definition`.
+            data_tables (list[data_tables.DataTable]): Pre-loaded data tables that will be used to initialise the dataset before handling definitions given in `model_definition`.
             attributes (dict): Attributes to attach to the model Dataset.
             param_attributes (dict[str, dict]): Attributes to attach to the generated model DataArrays.
         """
         self.config: dict = model_config
         self.model_definition: ModelDefinition = model_definition.copy()
         self.dataset = xr.Dataset(attrs=AttrDict(attributes))
-        self.tech_data_from_sources = AttrDict()
-        self.init_from_data_sources(data_sources)
+        self.tech_data_from_tables = AttrDict()
+        self.init_from_data_tables(data_tables)
 
         flipped_attributes: dict[str, dict] = dict()
         for key, val in param_attributes.items():
@@ -110,39 +110,39 @@ class ModelDataFactory:
         self.update_time_dimension_and_params()
         self.assign_input_attr()
 
-    def init_from_data_sources(self, data_sources: list[data_sources.DataSource]):
+    def init_from_data_tables(self, data_tables: list[data_tables.DataTable]):
         """Initialise the model definition and dataset using data loaded from file / in-memory objects.
 
-        A basic skeleton of the dictionary format model definition is created from the data sources,
+        A basic skeleton of the dictionary format model definition is created from the data tables,
         namely technology and technology-at-node lists (without parameter definitions).
 
         Args:
-            data_sources (list[data_sources.DataSource]): Pre-loaded data sources.
+            data_tables (list[data_tables.DataTable]): Pre-loaded data tables.
         """
-        for data_source in data_sources:
-            tech_dict, base_tech_data = data_source.tech_dict()
+        for data_table in data_tables:
+            tech_dict, base_tech_data = data_table.tech_dict()
             tech_dict.union(
                 self.model_definition.get("techs", AttrDict()), allow_override=True
             )
             self.model_definition["techs"] = tech_dict
-            self.tech_data_from_sources.union(base_tech_data)
+            self.tech_data_from_tables.union(base_tech_data)
 
         techs_incl_inheritance = self._inherit_defs("techs")
-        for data_source in data_sources:
-            node_dict = data_source.node_dict(techs_incl_inheritance)
+        for data_table in data_tables:
+            node_dict = data_table.node_dict(techs_incl_inheritance)
             node_dict.union(
                 self.model_definition.get("nodes", AttrDict()), allow_override=True
             )
             self.model_definition["nodes"] = node_dict
             for param, lookup_dim in self.LOOKUP_PARAMS.items():
-                lookup_dict = data_source.lookup_dict_from_param(param, lookup_dim)
-                self.tech_data_from_sources.union(lookup_dict)
+                lookup_dict = data_table.lookup_dict_from_param(param, lookup_dim)
+                self.tech_data_from_tables.union(lookup_dict)
                 if lookup_dict:
-                    data_source.drop(param)
+                    data_table.drop(param)
 
-        for data_source in data_sources:
+        for data_table in data_tables:
             self._add_to_dataset(
-                data_source.dataset, f"(data_sources, {data_source.name})"
+                data_table.dataset, f"(data_tables, {data_table.name})"
             )
 
     def add_node_tech_data(self):
@@ -219,7 +219,7 @@ class ModelDataFactory:
             if name in self.dataset.data_vars:
                 exceptions.warn(
                     f"(parameters, {name}) | "
-                    "A parameter with this name has already been defined in a data source or at a node/tech level. "
+                    "A parameter with this name has already been defined in a data table or at a node/tech level. "
                     f"Non-NaN data defined here will override existing data for this parameter."
                 )
             param_dict = self._prepare_param_dict(name, data)
@@ -553,10 +553,15 @@ class ModelDataFactory:
 
                 item_base_def = deepcopy(base_def[item_name])
                 item_base_def.union(item_def, allow_override=True)
+                if item_name in self.tech_data_from_tables:
+                    _data_table_dict = deepcopy(self.tech_data_from_tables[item_name])
+                    _data_table_dict.union(item_base_def, allow_override=True)
+                    item_base_def = _data_table_dict
             else:
                 item_base_def = item_def
-            updated_item_def, inheritance = self._climb_template_tree(
-                item_base_def, dim_name, item_name
+            templates = self.model_definition.get("templates", AttrDict())
+            updated_item_def, inheritance = climb_template_tree(
+                item_base_def, templates, item_name
             )
 
             if not updated_item_def.get("active", True):
@@ -573,60 +578,6 @@ class ModelDataFactory:
             updated_defs[item_name] = updated_item_def
 
         return updated_defs
-
-    def _climb_template_tree(
-        self,
-        dim_item_dict: AttrDict,
-        dim_name: Literal["nodes", "techs"],
-        item_name: str,
-        inheritance: list | None = None,
-    ) -> tuple[AttrDict, list | None]:
-        """Follow the `template` references from `nodes` / `techs` to `templates`.
-
-        Abstract template definitions (those in `templates`) can inherit each other, but `nodes`/`techs` cannot.
-
-        This function will be called recursively until a definition dictionary without `template` is reached.
-
-        Args:
-            dim_item_dict (AttrDict): Dictionary (possibly) containing `template`.
-            dim_name (Literal[nodes, techs]):
-                The name of the dimension we're working with, so that we can access the correct `_groups` definitions.
-            item_name (str):
-                The current position in the inheritance tree.
-            inheritance (list | None, optional):
-                A list of items that have been inherited (starting with the oldest).
-                If the first `dim_item_dict` does not contain `template`, this will remain as None.
-                Defaults to None.
-
-        Raises:
-            KeyError: Must inherit from a named template item in `templates`.
-
-        Returns:
-            tuple[AttrDict, list | None]: Definition dictionary with inherited data and a list of the inheritance tree climbed to get there.
-        """
-        to_inherit = dim_item_dict.get("template", None)
-        dim_groups = AttrDict(self.model_definition.get("templates", {}))
-        if to_inherit is None:
-            if dim_name == "techs" and item_name in self.tech_data_from_sources:
-                _data_source_dict = deepcopy(self.tech_data_from_sources[item_name])
-                _data_source_dict.union(dim_item_dict, allow_override=True)
-                dim_item_dict = _data_source_dict
-            updated_dim_item_dict = dim_item_dict
-        elif to_inherit not in dim_groups:
-            raise KeyError(
-                f"({dim_name}, {item_name}) | Cannot find `{to_inherit}` in template inheritance tree."
-            )
-        else:
-            base_def_dict, inheritance = self._climb_template_tree(
-                dim_groups[to_inherit], dim_name, to_inherit, inheritance
-            )
-            updated_dim_item_dict = deepcopy(base_def_dict)
-            updated_dim_item_dict.union(dim_item_dict, allow_override=True)
-            if inheritance is not None:
-                inheritance.append(to_inherit)
-            else:
-                inheritance = [to_inherit]
-        return updated_dim_item_dict, inheritance
 
     def _deactivate_item(self, **item_ref):
         for dim_name, item_name in item_ref.items():

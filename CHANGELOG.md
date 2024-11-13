@@ -2,7 +2,22 @@
 
 ### User-facing changes
 
-|new| Math has been removed from `model.math`, and can now be accessed via `model.math.data`.
+|changed| Helper functions are now documented on their own page within the "Defining your own math" section of the documentation (#698).
+
+|new| `where(array, condition)` math helper function to apply a where array _inside_ an expression, to enable extending component dimensions on-the-fly, and applying filtering to different components within the expression (#604, #679).
+
+|new| Data tables can inherit options from `templates`, like `techs` and `nodes` (#676).
+
+|new| dimension renaming functionality when loading from a data source, using the `rename_dims` option (#680).
+
+|changed| cost expressions in math, to split out investment costs into the capital cost (`cost_investment`), annualised capital cost (`cost_investment_annualised`), fixed operation costs (`cost_operation_fixed`) and variable operation costs (`cost_operation_variable`, previously `cost_var`) (#645).
+
+|new| Math has been removed from `model.math`, and can now be accessed via `model.math.data` (#639).
+
+|new| (non-NaN) Default values and data types for parameters appear in math documentation (if they appear in the model definition schema) (#677).
+
+|changed| `data_sources` -> `data_tables` and `data_sources.source` -> `data_tables.data`.
+This change has occurred to avoid confusion between data "sources" and model energy "sources" (#673).
 
 ## 0.7.0.dev4 (2024-09-10)
 

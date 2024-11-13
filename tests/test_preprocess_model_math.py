@@ -5,13 +5,14 @@ from copy import deepcopy
 from pathlib import Path
 from random import shuffle
 
-import calliope
 import pytest
+
+import calliope
 from calliope.exceptions import ModelError
 from calliope.preprocess import CalliopeMath
 
 
-@pytest.fixture()
+@pytest.fixture
 def model_math_default():
     return CalliopeMath([])
 
@@ -91,12 +92,12 @@ class TestMathLoading:
     def pre_defined_mode(self):
         return "storage_inter_cluster"
 
-    @pytest.fixture()
+    @pytest.fixture
     def model_math_w_mode(self, model_math_default, pre_defined_mode):
         model_math_default._add_pre_defined_file(pre_defined_mode)
         return model_math_default
 
-    @pytest.fixture()
+    @pytest.fixture
     def model_math_w_mode_user(self, model_math_w_mode, user_math_path, def_path):
         model_math_w_mode._add_user_defined_file(user_math_path, def_path)
         return model_math_w_mode

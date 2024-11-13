@@ -26,8 +26,8 @@ class TestModelRun:
             }
         )
         model_dict.union(node_dict)
-        for src in model_dict["data_sources"].values():
-            src["source"] = (model_dir / src["source"]).as_posix()
+        for src in model_dict["data_tables"].values():
+            src["data"] = (model_dir / src["data"]).as_posix()
         # test as AttrDict
         calliope.Model(model_dict)
 
@@ -212,7 +212,7 @@ class TestModelRun:
         """
         # should fail: wrong length of demand_heat csv vs demand_elec
         override = AttrDict.from_yaml_string(
-            "data_sources.demand_elec.source: data_sources/demand_heat_wrong_length.csv"
+            "data_tables.demand_elec.data: data_tables/demand_heat_wrong_length.csv"
         )
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.warns(exceptions.ModelWarning) as excinfo:
@@ -223,7 +223,7 @@ class TestModelRun:
 
     def test_inconsistent_time_indices_passes_thanks_to_time_subsetting(self):
         override = AttrDict.from_yaml_string(
-            "data_sources.demand_elec.source: data_sources/demand_heat_wrong_length.csv"
+            "data_tables.demand_elec.data: data_tables/demand_heat_wrong_length.csv"
         )
         # should pass: wrong length of demand_heat csv, but time subsetting removes the difference
         with warnings.catch_warnings():
@@ -355,7 +355,7 @@ class TestChecks:
         """
         override = {
             "config.init.time_subset": ["2005-01-01", "2005-01-04"],
-            "config.init.time_cluster": "data_sources/cluster_days.csv",
+            "config.init.time_cluster": "data_tables/cluster_days.csv",
             "config.build.cyclic_storage": True,
         }
 

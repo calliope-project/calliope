@@ -13,14 +13,14 @@ def build_test_model(
     override_dict=None,
     scenario=None,
     model_file="model.yaml",
-    data_source_dfs=None,
+    data_table_dfs=None,
     **init_kwargs,
 ):
     return calliope.Model(
         os.path.join(os.path.dirname(__file__), "test_model", model_file),
         override_dict=override_dict,
         scenario=scenario,
-        data_source_dfs=data_source_dfs,
+        data_table_dfs=data_table_dfs,
         **init_kwargs,
     )
 

@@ -17,29 +17,29 @@ techs:
     from: A
     to: B
 
-data_sources:
+data_tables:
   techs:
-    source: techs.csv
+    data: techs.csv
     rows: [techs, parameters]
 
   nodes:
-    source: nodes.csv
+    data: nodes.csv
     rows: parameters
     add_dims:
       nodes: [A, B]
 
   tech_carrier:
-    source: tech_carrier.csv
+    data: tech_carrier.csv
     rows: [techs, carriers, parameters]
 
   costs:
-    source: costs.csv
+    data: costs.csv
     rows: [techs, parameters]
     add_dims:
       costs: monetary
 
   time_varying:
-    source: time_varying.csv
+    data: time_varying.csv
     rows: timesteps
     add_dims:
       parameters: sink_use_max

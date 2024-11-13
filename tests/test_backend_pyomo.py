@@ -482,7 +482,7 @@ class TestCostConstraints:
 
     def test_loc_techs_not_cost_var_constraint(self, simple_conversion):
         """I for i in sets.loc_techs_om_cost if i not in sets.loc_techs_conversion_plus + sets.loc_techs_conversion"""
-        assert "cost_var" not in simple_conversion.backend.expressions
+        assert "cost_operation_variable" not in simple_conversion.backend.expressions
 
     @pytest.mark.parametrize(
         ("tech", "scenario", "cost"),
@@ -502,7 +502,7 @@ class TestCostConstraints:
             {f"techs.{tech}.costs.monetary.{cost}": 1}, f"{scenario},two_hours"
         )
         m.build()
-        assert "cost_var" in m.backend.expressions
+        assert "cost_operation_variable" in m.backend.expressions
 
     def test_one_way_om_cost(self):
         """With one_way transmission, it should still be possible to set an flow_out cost."""
@@ -521,13 +521,17 @@ class TestCostConstraints:
             "timesteps": m.backend._dataset.timesteps[1],
         }
         assert check_variable_exists(
-            m.backend.get_expression("cost_var", as_backend_objs=False), "flow_out", idx
+            m.backend.get_expression("cost_operation_variable", as_backend_objs=False),
+            "flow_out",
+            idx,
         )
 
         idx["nodes"] = "a"
         idx["techs"] = "test_transmission_elec:b"
         assert not check_variable_exists(
-            m.backend.get_expression("cost_var", as_backend_objs=False), "flow_out", idx
+            m.backend.get_expression("cost_operation_variable", as_backend_objs=False),
+            "flow_out",
+            idx,
         )
 
 
@@ -560,17 +564,18 @@ class TestExportConstraints:
 
     def test_loc_techs_update_costs_var_constraint(self, supply_export):
         """I for i in sets.loc_techs_om_cost if i in sets.loc_techs_export"""
-        assert "cost_var" in supply_export.backend.expressions
+        assert "cost_operation_variable" in supply_export.backend.expressions
 
         m = build_model(
             {"techs.test_supply_elec.costs.monetary.flow_out": 0.1},
             "supply_export,two_hours,investment_costs",
         )
         m.build()
-        assert "cost_var" in m.backend.expressions
+        assert "cost_operation_variable" in m.backend.expressions
 
         assert check_variable_exists(
-            m.backend.get_expression("cost_var", as_backend_objs=False), "flow_export"
+            m.backend.get_expression("cost_operation_variable", as_backend_objs=False),
+            "flow_export",
         )
 
     def test_loc_tech_carriers_export_max_constraint(self):
@@ -1518,7 +1523,7 @@ class TestClusteringConstraints:
     ):
         override = {
             "config.init.time_subset": ["2005-01-01", "2005-01-04"],
-            "config.init.time_cluster": "data_sources/cluster_days.csv",
+            "config.init.time_cluster": "data_tables/cluster_days.csv",
             "config.build.add_math": (
                 ["storage_inter_cluster"] if storage_inter_cluster else []
             ),
@@ -2001,7 +2006,10 @@ class TestVerboseStrings:
             "variables[flow_cap][a, test_supply_elec, electricity]"
             in obj.sel(dims).item()
         )
-        assert "parameters[cost_interest_rate]" in obj.sel(dims).item()
+        assert (
+            "parameters[cost_flow_cap][test_supply_elec, monetary]"
+            in obj.sel(dims).item()
+        )
 
         assert not obj.coords_in_name
 

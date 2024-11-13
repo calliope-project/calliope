@@ -5,6 +5,7 @@
 import logging
 from collections.abc import Hashable
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -15,7 +16,7 @@ from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.io import load_config
 from calliope.util.schema import (
-    DATA_SOURCE_SCHEMA,
+    DATA_TABLE_SCHEMA,
     MODEL_SCHEMA,
     extract_from_schema,
     validate_dict,
@@ -25,73 +26,76 @@ from calliope.util.tools import listify, relative_path
 LOGGER = logging.getLogger(__name__)
 
 DTYPE_OPTIONS = {"str": str, "float": float}
+AXIS_T = Literal["columns", "index"]
 
 
-class DataSourceDict(TypedDict):
-    """Uniform dictionary for data sources."""
+class DataTableDict(TypedDict):
+    """Uniform dictionary for data tables."""
 
     rows: NotRequired[str | list[str]]
     columns: NotRequired[str | list[str]]
-    source: str
+    data: str
     df: NotRequired[str]
+    rename_dims: NotRequired[dict[str, str]]
     add_dims: NotRequired[dict[str, str | list[str]]]
-    select: dict[str, str | bool | int]
-    drop: Hashable | list[Hashable]
+    select: NotRequired[dict[str, str | bool | int]]
+    drop: NotRequired[Hashable | list[Hashable]]
+    template: NotRequired[str]
 
 
-class DataSource:
+class DataTable:
     """Class for in memory data handling."""
 
-    MESSAGE_TEMPLATE = "(data_sources, {name}) | {message}."
+    MESSAGE_TEMPLATE = "(data_tables, {name}) | {message}."
     PARAMS_TO_INITIALISE_YAML = ["base_tech", "to", "from"]
 
     def __init__(
         self,
         model_config: dict,
-        source_name: str,
-        data_source: DataSourceDict,
-        data_source_dfs: dict[str, pd.DataFrame] | None = None,
+        table_name: str,
+        data_table: DataTableDict,
+        data_table_dfs: dict[str, pd.DataFrame] | None = None,
         model_definition_path: Path | None = None,
     ):
-        """Load and format a data source from file / in-memory object.
+        """Load and format a data table from file / in-memory object.
 
         Args:
             model_config (dict): Model initialisation configuration dictionary.
-            source_name (str): name of the data source.
-            data_source (DataSourceDict): Data source definition dictionary.
-            data_source_dfs (dict[str, pd.DataFrame] | None, optional):
-                If given, a dictionary mapping source names in `data_source` to in-memory pandas DataFrames.
+            table_name (str): name of the data table.
+            data_table (DataTableDict): Data table definition dictionary.
+            data_table_dfs (dict[str, pd.DataFrame] | None, optional):
+                If given, a dictionary mapping table names in `data_table` to in-memory pandas DataFrames.
                 Defaults to None.
             model_definition_path (Path | None, optional):
-                If given, the path to the model definition YAML file, relative to which data source filepaths will be set.
-                If None, relative data source filepaths will be considered relative to the current working directory.
+                If given, the path to the model definition YAML file, relative to which data table filepaths will be set.
+                If None, relative data table filepaths will be considered relative to the current working directory.
                 Defaults to None.
         """
-        validate_dict(data_source, DATA_SOURCE_SCHEMA, "data source")
-        self.input = data_source
-        self.dfs = data_source_dfs if data_source_dfs is not None else dict()
+        validate_dict(data_table, DATA_TABLE_SCHEMA, "data table")
+        self.input = data_table
+        self.dfs = data_table_dfs if data_table_dfs is not None else dict()
         self.model_definition_path = model_definition_path
         self.config = model_config
 
         self.columns = self._listify_if_defined("columns")
         self.index = self._listify_if_defined("rows")
-        self._name = source_name
+        self._name = table_name
         self.protected_params = load_config("protected_parameters.yaml")
 
-        if ".csv" in Path(self.input["source"]).suffixes:
+        if ".csv" in Path(self.input["data"]).suffixes:
             df = self._read_csv()
         else:
-            df = self.dfs[self.input["source"]]
+            df = self.dfs[self.input["data"]]
 
         self.dataset = self._df_to_ds(df)
 
     @property
     def name(self):
-        """Data source name."""
+        """Data table name."""
         return self._name
 
     def drop(self, name: str):
-        """Drop a data in-place from the data source.
+        """Drop a data in-place from the data table.
 
         Args:
             name (str): Name of data array to drop.
@@ -118,15 +122,15 @@ class DataSource:
         return tech_dict, base_tech_data
 
     def node_dict(self, techs_incl_inheritance: AttrDict) -> AttrDict:
-        """Create a dummy node definition dictionary from the dimensions defined across all data sources.
+        """Create a dummy node definition dictionary from the dimensions defined across all data tables.
 
         This definition dictionary will ensure that the minimal YAML content is still possible.
 
-        This function should be run _after_ `self._update_tech_def_from_data_source`.
+        This function should be run _after_ `self._update_tech_def_from_data_table`.
 
         Args:
             techs_incl_inheritance (AttrDict):
-                Technology definition dictionary which is a union of any YAML definition and the result of calling `self.tech_dict` across all data sources.
+                Technology definition dictionary which is a union of any YAML definition and the result of calling `self.tech_dict` across all data tables.
                 Technologies should have their entire definition inheritance chain resolved.
         """
         node_tech_vars = self.dataset[
@@ -245,7 +249,7 @@ class DataSource:
         Returns:
             pd.DataFrame: Loaded data without any processing.
         """
-        filename = self.input["source"]
+        filename = self.input["data"]
 
         if self.columns is None:
             self._log(
@@ -272,25 +276,31 @@ class DataSource:
         """
         if not isinstance(df, pd.DataFrame):
             self._raise_error(
-                "Data source must be a pandas DataFrame. "
+                "Data table must be a pandas DataFrame. "
                 "If you are providing an in-memory object, ensure it is not a pandas Series by calling the method `to_frame()`"
             )
-        for axis, names in {"columns": self.columns, "index": self.index}.items():
-            if names is None:
-                if len(getattr(df, axis).names) != 1:
-                    self._raise_error(f"Expected a single {axis} level in loaded data.")
-                df = df.squeeze(axis=axis)
-            else:
-                if len(getattr(df, axis).names) != len(names):
-                    self._raise_error(
-                        f"Expected {len(names)} {axis} levels in loaded data."
-                    )
-                self._compare_axis_names(getattr(df, axis).names, names, axis)
-                df.rename_axis(inplace=True, **{axis: names})
 
         tdf: pd.Series
+        axis_names: dict[AXIS_T, None | list[str]] = {
+            "columns": self.columns,
+            "index": self.index,
+        }
+        squeeze_me: dict[AXIS_T, bool] = {
+            "columns": self.columns is None,
+            "index": self.index is None,
+        }
+        for axis, names in axis_names.items():
+            if names is None and len(getattr(df, axis).names) != 1:
+                self._raise_error(f"Expected a single {axis} level in loaded data.")
+            elif names is not None:
+                df = self._rename_axes(df, axis, names)
+
+        for axis, squeeze in squeeze_me.items():
+            if squeeze:
+                df = df.squeeze(axis=axis)
+
         if isinstance(df, pd.DataFrame):
-            tdf = df.stack(df.columns.names, future_stack=True).dropna()
+            tdf = df.stack(tuple(df.columns.names), future_stack=True).dropna()
         else:
             tdf = df
 
@@ -314,7 +324,6 @@ class DataSource:
                 tdf = pd.concat(
                     [tdf for _ in index_items], keys=index_items, names=[dim_name]
                 )
-
         self._check_processed_tdf(tdf)
         self._check_for_protected_params(tdf)
 
@@ -327,6 +336,29 @@ class DataSource:
 
         self._log(f"Loaded arrays:\n{ds}")
         return ds
+
+    def _rename_axes(
+        self, df: pd.DataFrame, axis: AXIS_T, names: list[str]
+    ) -> pd.DataFrame:
+        """Check and rename DataFrame index and column names according to data table definition.
+
+        Args:
+            df (pd.DataFrame): Loaded data table as a DataFrame.
+            axis (Literal[columns, index]): DataFrame axis.
+            names (list[str] | None): Expected dimension names along `axis`.
+
+        Returns:
+            pd.DataFrame: `df` with all dimensions on `axis` appropriately named.
+        """
+        if len(getattr(df, axis).names) != len(names):
+            self._raise_error(f"Expected {len(names)} {axis} levels in loaded data.")
+        mapper = self.input.get("rename_dims", {})
+        if mapper:
+            df.rename_axis(inplace=True, **{axis: mapper})
+        self._compare_axis_names(getattr(df, axis).names, names, axis)
+        df.rename_axis(inplace=True, **{axis: names})
+
+        return df
 
     def _check_for_protected_params(self, tdf: pd.Series):
         """Raise an error if any defined parameters are in a pre-configured set of _protected_ parameters.
@@ -342,7 +374,7 @@ class DataSource:
         if not invalid_params.empty:
             extra_info = set(self.protected_params[k] for k in invalid_params)
             exceptions.print_warnings_and_raise_errors(
-                errors=list(extra_info), during=f"data source loading ({self.name})"
+                errors=list(extra_info), during=f"data table loading ({self.name})"
             )
 
     def _check_processed_tdf(self, tdf: pd.Series):
@@ -374,7 +406,7 @@ class DataSource:
         )
 
     def _listify_if_defined(self, key: str) -> list | None:
-        """If `key` is in data source definition dictionary, return values as a list.
+        """If `key` is in data sourtablece definition dictionary, return values as a list.
 
         If values are not yet an iterable, they will be coerced to an iterable of length 1.
         If they are an iterable, they will be coerced to a list.
@@ -384,7 +416,7 @@ class DataSource:
             default (Literal[None, 0]): Either zero or None
 
         Returns:
-            list | None: If `key` not defined in data source, return None, else return values as a list.
+            list | None: If `key` not defined in data table, return None, else return values as a list.
         """
         vals = self.input.get(key, None)
         if vals is not None:
@@ -392,14 +424,14 @@ class DataSource:
         return vals
 
     def _compare_axis_names(self, loaded_names: list, defined_names: list, axis: str):
-        """Check loaded axis level names compared to those given by `rows` and `columns` in data source definition dictionary.
+        """Check loaded axis level names compared to those given by `rows` and `columns` in data table definition dictionary.
 
         The data file / in-memory object does not need to have any level names defined,
-        but if they _are_ defined then they must match those given in the data source definition dictionary.
+        but if they _are_ defined then they must match those given in the data table definition dictionary.
 
         Args:
             loaded_names (list): Names as defined in the loaded data file / in-memory object.
-            defined_names (list): Names as defined in the data source dictionary.
+            defined_names (list): Names as defined in the data table dictionary.
             axis (str): Axis on which the names are levels.
         """
         if any(
