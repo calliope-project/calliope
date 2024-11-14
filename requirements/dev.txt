@@ -6,6 +6,7 @@ mkdocs-jupyter >= 0.24, < 0.24.7
 mkdocs-macros-plugin >= 1.0, < 2
 mkdocs-material >= 9.5, < 10
 mkdocstrings-python >= 1.7, < 2
+mypy >= 1.13.0, < 2
 pandas-stubs
 plotly >= 5, < 6
 pre-commit < 4
