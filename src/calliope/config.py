@@ -5,7 +5,7 @@
 from collections.abc import Hashable
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Literal, Self, TypeVar, overload
+from typing import Annotated, Literal, Self, TypeVar
 
 import jsonref
 from pydantic import AfterValidator, BaseModel, Field, model_validator
@@ -82,27 +82,20 @@ class ConfigBaseModel(BaseModel):
         self._kwargs = update_dict
         return updated
 
-    @overload
-    def model_yaml_schema(self, filepath: str | Path) -> None: ...
-
-    @overload
-    def model_yaml_schema(self, filepath: None = None) -> str: ...
-
-    def model_yaml_schema(self, filepath: str | Path | None = None) -> None | str:
-        """Generate a YAML schema for the class.
+    def model_json_schema(self, replace_refs=False) -> AttrDict:
+        """Generate an AttrDict with the schema of this class.
 
         Args:
-            filepath (str | Path | None, optional): If given, save schema to given path. Defaults to None.
+            replace_refs (bool, optional): If True, replace $ref/$def for better readability. Defaults to False.
 
         Returns:
-            None | str: If `filepath` is given, returns None. Otherwise, returns the YAML string.
+            AttrDict: class schema.
         """
-        # By default, the schema uses $ref/$def cross-referencing for each pydantic model class,
-        # but this isn't very readable when rendered in our documentation.
-        # So, we resolve references and then delete all the `$defs`
-        schema_dict = AttrDict(jsonref.replace_refs(self.model_json_schema()))
-        schema_dict.del_key("$defs")
-        return schema_dict.to_yaml(filepath)
+        schema_dict = AttrDict(super().model_json_schema())
+        if replace_refs:
+            schema_dict = AttrDict(jsonref.replace_refs(schema_dict))
+            schema_dict.del_key("$defs")
+        return schema_dict
 
     @property
     def applied_keyword_overrides(self) -> dict:

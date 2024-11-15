@@ -36,7 +36,7 @@ def user_math(dummy_int):
 @pytest.fixture(scope="module")
 def user_math_path(def_path, user_math):
     file_path = def_path / "custom-math.yaml"
-    user_math.to_yaml(def_path / file_path)
+    user_math.save_yaml(def_path / file_path)
     return "custom-math.yaml"
 
 

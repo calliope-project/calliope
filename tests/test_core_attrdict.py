@@ -307,7 +307,7 @@ class TestAttrDict:
         d.a_list = [0, 1, 2]
         with tempfile.TemporaryDirectory() as tempdir:
             out_file = os.path.join(tempdir, "test.yaml")
-            d.to_yaml(out_file)
+            d.save_yaml(out_file)
 
             with open(out_file) as f:
                 result = f.read()
@@ -318,7 +318,7 @@ class TestAttrDict:
 
     def test_to_yaml_string(self, yaml_filepath):
         d = AttrDict.from_yaml(yaml_filepath)
-        result = d.to_yaml()
+        result = d.as_yaml_str()
         assert "a: 1" in result
 
     def test_import_must_be_list(self):

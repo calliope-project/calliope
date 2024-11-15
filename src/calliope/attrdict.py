@@ -329,12 +329,8 @@ class AttrDict(dict):
             d[k] = self.get_key(k)
         return d
 
-    def to_yaml(self, path=None):
-        """Conversion to YAML.
-
-        Saves the AttrDict to the ``path`` as a YAML file or returns a YAML string
-        if ``path`` is None.
-        """
+    def as_yaml_str(self) -> str:
+        """Return a serialised YAML string."""
         result = self.copy()
         yaml_ = ruamel_yaml.YAML()
         yaml_.indent = 2
@@ -359,13 +355,19 @@ class AttrDict(dict):
         # handle multi-line strings.
         walk_tree(result)
 
-        if path is not None:
-            with open(path, "w") as f:
-                yaml_.dump(result, f)
-        else:
-            stream = io.StringIO()
-            yaml_.dump(result, stream)
-            return stream.getvalue()
+        stream = io.StringIO()
+        yaml_.dump(result, stream)
+        return stream.getvalue()
+
+    def save_yaml(self, path: str) -> None:
+        """Save AttrDict as a yaml file.
+
+        Args:
+            path (str): path of saved YAML.
+        """
+        yaml_str = self.as_yaml_str()
+        with open(path, "w") as f:
+            f.write(yaml_str)
 
     def keys_nested(self, subkeys_as="list"):
         """Returns all keys in the AttrDict, including nested keys.
