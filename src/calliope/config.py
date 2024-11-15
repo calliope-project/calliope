@@ -5,7 +5,7 @@
 from collections.abc import Hashable
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Literal, Self, TypeVar, get_args, overload
+from typing import Annotated, Literal, Self, TypeVar, overload
 
 import jsonref
 from pydantic import AfterValidator, BaseModel, Field, model_validator
@@ -114,21 +114,6 @@ class ConfigBaseModel(BaseModel):
         return self._kwargs
 
 
-class ModeBaseModel(ConfigBaseModel):
-    """Mode-specific configuration, which will be hidden from the string representation of the model if that mode is not activated."""
-
-    mode: MODES_T = Field(default="plan")
-    """Mode in which to run the optimisation."""
-
-    @model_validator(mode="after")
-    def update_repr(self) -> Self:
-        """Hide config from model string representation if mode is not activated."""
-        for key, val in self.model_fields.items():
-            if key in get_args(MODES_T):
-                val.repr = self.mode == key
-        return self
-
-
 class Init(ConfigBaseModel):
     """All configuration options used when initialising a Calliope model."""
 
@@ -221,7 +206,7 @@ class BuildOperate(ConfigBaseModel):
     """Which time window to build. This is used to track the window when re-building the model part way through solving in `operate` mode."""
 
 
-class Build(ModeBaseModel):
+class Build(ConfigBaseModel):
     """Base configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
     model_config = {
@@ -229,6 +214,10 @@ class Build(ModeBaseModel):
         "extra": "allow",
         "revalidate_instances": "always",
     }
+
+    mode: MODES_T = Field(default="plan")
+    """Mode in which to run the optimisation."""
+
     add_math: UniqueList[str] = Field(default=[])
     """
     List of references to files which contain additional mathematical formulations to be applied on top of or instead of the base mode math.
@@ -301,14 +290,13 @@ class SolveSpores(ConfigBaseModel):
         return self
 
 
-class Solve(ModeBaseModel):
+class Solve(ConfigBaseModel):
     """Base configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
     model_config = {
         "title": "solve",
         "extra": "forbid",
         "revalidate_instances": "always",
-        "json_schema_extra": hide_from_schema(["mode"]),
     }
 
     save_logs: Path | None = Field(default=None)
