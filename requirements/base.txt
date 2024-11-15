@@ -15,3 +15,4 @@ pyparsing >= 3.0, < 3.1
 ruamel.yaml >= 0.18, < 0.19
 typing-extensions >= 4, < 5
 xarray >= 2024.1, < 2024.4
+pydantic >= 2.9.2

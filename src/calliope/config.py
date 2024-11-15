@@ -342,28 +342,3 @@ class CalliopeConfig(ConfigBaseModel):
     init: Init = Init()
     build: Build = Build()
     solve: Solve = Solve()
-
-    @model_validator(mode="before")
-    @classmethod
-    def update_solve_mode(cls, data):
-        """Solve mode should match build mode."""
-        data["solve"]["mode"] = data["build"]["mode"]
-        return data
-
-    def update(self, update_dict: dict, deep: bool = False) -> Self:
-        """Return a new iteration of the model with updated fields.
-
-        Updates are validated and stored in the parent class in the `_kwargs` key.
-
-        Args:
-            update_dict (dict): Dictionary with which to update the base model.
-            deep (bool, optional): Set to True to make a deep copy of the model. Defaults to False.
-
-        Returns:
-            BaseModel: New model instance.
-        """
-        update_dict_temp = AttrDict(update_dict)
-        if update_dict_temp.get_key("build.mode", None) is not None:
-            update_dict_temp.set_key("solve.mode", update_dict_temp["build"]["mode"])
-        updated = super().update(update_dict_temp.as_dict(), deep=deep)
-        return updated

@@ -267,26 +267,26 @@ class Model:
             comment="Model: backend build starting",
         )
 
-        this_build_config = self.config.update({"build": kwargs}).build
-        mode = this_build_config.mode
+        build_config = self.config.update({"build": kwargs}).build
+        mode = build_config.mode
         if mode == "operate":
             if not self._model_data.attrs["allow_operate_mode"]:
                 raise exceptions.ModelError(
                     "Unable to run this model in operate (i.e. dispatch) mode, probably because "
                     "there exist non-uniform timesteps (e.g. from time clustering)"
                 )
-            backend_input = self._prepare_operate_mode_inputs(this_build_config.operate)
+            backend_input = self._prepare_operate_mode_inputs(build_config.operate)
         else:
             backend_input = self._model_data
 
-        init_math_list = [] if this_build_config.ignore_mode_math else [mode]
+        init_math_list = [] if build_config.ignore_mode_math else [mode]
         end_math_list = [] if add_math_dict is None else [add_math_dict]
-        full_math_list = init_math_list + this_build_config.add_math + end_math_list
+        full_math_list = init_math_list + build_config.add_math + end_math_list
         LOGGER.debug(f"Math preprocessing | Loading math: {full_math_list}")
         model_math = preprocess.CalliopeMath(full_math_list, self.config.init.def_path)
 
         self.backend = backend.get_model_backend(
-            this_build_config, backend_input, model_math
+            build_config, backend_input, model_math
         )
         self.backend.add_optimisation_components()
 
@@ -341,26 +341,23 @@ class Model:
         else:
             to_drop = []
 
-        kwargs["mode"] = self.config.build.applied_keyword_overrides.get(
-            "mode", self.config.build.mode
-        )
-
-        this_solve_config = self.config.update({"solve": kwargs}).solve
+        solve_config = self.config.update({"solve": kwargs}).solve
+        mode = self.config.build.mode
         self._model_data.attrs["timestamp_solve_start"] = log_time(
             LOGGER,
             self._timings,
             "solve_start",
-            comment=f"Optimisation model | starting model in {this_solve_config.mode} mode.",
+            comment=f"Optimisation model | starting model in {mode} mode.",
         )
 
-        shadow_prices = this_solve_config.shadow_prices
+        shadow_prices = solve_config.shadow_prices
         self.backend.shadow_prices.track_constraints(shadow_prices)
 
-        if this_solve_config.mode == "operate":
-            results = self._solve_operate(**this_solve_config.model_dump())
+        if mode == "operate":
+            results = self._solve_operate(**solve_config.model_dump())
         else:
             results = self.backend._solve(
-                warmstart=warmstart, **this_solve_config.model_dump()
+                warmstart=warmstart, **solve_config.model_dump()
             )
 
         log_time(

@@ -13,16 +13,15 @@ import pyparsing as pp
 import xarray as xr
 from typing_extensions import NotRequired, TypedDict
 
+from calliope import config
 from calliope.backend import expression_parser
 from calliope.exceptions import BackendError
 
 if TYPE_CHECKING:
-    from calliope import config
     from calliope.backend.backend_model import BackendModel
 
 
 pp.ParserElement.enablePackrat()
-
 BOOLEANTYPE = np.bool_ | np.typing.NDArray[np.bool_]
 
 
