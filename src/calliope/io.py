@@ -5,6 +5,7 @@
 import importlib.resources
 from copy import deepcopy
 from pathlib import Path
+from typing import Literal
 
 # We import netCDF4 before xarray to mitigate a numpy warning:
 # https://github.com/pydata/xarray/issues/7259
@@ -13,7 +14,6 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.util.tools import listify
 
@@ -125,7 +125,12 @@ def _deserialise(attrs: dict) -> None:
         attrs[attr] = set(attrs[attr])
 
 
-def save_netcdf(model_data, path, **kwargs):
+def save_netcdf(
+    model_data: xr.Dataset,
+    group_name: Literal["inputs", "results"],
+    path: str | Path,
+    **kwargs,
+):
     """Save the model to a netCDF file."""
     original_model_data_attrs = deepcopy(model_data.attrs)
     for key, value in kwargs.items():
@@ -145,7 +150,9 @@ def save_netcdf(model_data, path, **kwargs):
     }
 
     try:
-        model_data.to_netcdf(path, format="netCDF4", encoding=encoding)
+        model_data.to_netcdf(
+            path, format="netCDF4", encoding=encoding, group=group_name
+        )
         model_data.close()  # Force-close NetCDF file after writing
     finally:  # Revert model_data.attrs back
         model_data.attrs = original_model_data_attrs
@@ -155,6 +162,7 @@ def save_netcdf(model_data, path, **kwargs):
 
 def save_csv(
     model_data: xr.Dataset,
+    group_name: Literal["inputs", "results"],
     path: str | Path,
     dropna: bool = True,
     allow_overwrite: bool = False,
@@ -167,6 +175,7 @@ def save_csv(
 
     Args:
         model_data (xr.Dataset): Calliope model data.
+        group_name (Literal["inputs", "results"]): which of input or output data the `model_data` represents.
         path (str | Path): Directory to which the CSV files will be saved
         dropna (bool, optional):
             If True, drop all NaN values in the data series before saving to file.
@@ -179,21 +188,8 @@ def save_csv(
     path = Path(path)
     path.mkdir(parents=True, exist_ok=allow_overwrite)
 
-    # a MILP model which optimises to within the MIP gap, but does not fully
-    # converge on the LP relaxation, may return as 'feasible', not 'optimal'
-    if "termination_condition" not in model_data.attrs or model_data.attrs[
-        "termination_condition"
-    ] in ["optimal", "feasible"]:
-        data_vars = model_data.data_vars
-    else:
-        data_vars = model_data.filter_by_attrs(is_result=0).data_vars
-        exceptions.warn(
-            "Model termination condition was not optimal, saving inputs only."
-        )
-
-    for var_name, var in data_vars.items():
-        in_out = "results" if var.attrs["is_result"] else "inputs"
-        out_path = path / f"{in_out}_{var_name}.csv"
+    for var_name, var in model_data.items():
+        out_path = path / f"{group_name}_{var_name}.csv"
         if not var.shape:
             series = pd.Series(var.item())
             keep_index = False

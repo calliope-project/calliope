@@ -1,27 +1,26 @@
-dimensions:
+dims:
   carriers:
     title: "Energy / commodity carriers"
-    type: string
+    type: str
     ordered: false
   costs:
     title: "Cost classes"
-    type: string
+    type: str
     ordered: false
   nodes:
     title: "Geographic spatial nodes"
-    type: string
+    type: str
     ordered: false
   techs:
     title: "Technologies"
-    type: string
+    type: str
     ordered: false
   timesteps:
     title: "Time steps"
-    type: datetime
+    type: datetime64
     ordered: true
 
 parameters:
-
   area_use_max:
     default: .inf
     type: float
@@ -524,6 +523,103 @@ parameters:
     type: float
     title: Weight per timestep.
     unit: fraction.
+
+lookups:
+  base_tech:
+    type: str
+    one_of: [demand, supply, conversion, storage, transmission]
+    title: Abstract base technology name.
+    description: Should be the name of one of the abstract base classes, from which some initial parameter defaults will be derived and with which certain base math will be triggered.
+
+  carrier_in:
+    description: >-
+      Carrier(s) consumed by this technology.
+      Only `transmission`, `conversion`, `storage`, and `demand` technologies can define this parameter
+    type: float
+
+  carrier_out:
+    description: >-
+      Carrier(s) produced by this technology.
+      Only `transmission`, `conversion`, `storage`, and `supply` technologies can define this parameter
+    type: float
+
+  carrier_export:
+    description: >-
+      Carrier(s) produced by this technology that can be exported out of the system boundaries without having to go to a pre-defined `sink` (i.e., via a `demand` technology).
+      Must be a subset of `carrier_out`.
+    type: float
+
+  cap_method:
+    type: str
+    default: continuous
+    title: Capacity method switch.
+    description: One of 'continuous' (LP model) or 'integer' (integer/binary unit capacity).
+    one_of: [continuous, integer]
+
+  definition_matrix:
+    type: bool
+    description: >-
+      Whether a technology is defined with particular carriers and at a particular node.
+
+  integer_dispatch:
+    type: float
+    default: .nan
+    title: Integer dispatch switch.
+    description: |
+      When true, will limit per-timestep out/inflows relative to the number of units of a technology that are in operation.
+      Requires `cap_method=integer`.
+
+  include_storage:
+    type: float
+    default: .nan
+    title: Storage method switch.
+    description: When true, math will be triggered to allow discontinuous carrier inflow and outflows across timesteps.
+
+  force_async_flow:
+    type: float
+    default: .nan
+    title: Force asynchronous out/inflow.
+    description: If True, non-zero `flow_out` and `flow_in` cannot both occur in the same timestep.
+
+  cyclic_storage:
+    type: float
+    default: 1.
+    title: Cyclic storage switch.
+    description: >
+      If true, link storage levels in the last model timestep with the first model timestep.
+      `inter_cluster_storage` custom math must be included if using time clustering and setting this to `true`.
+      This must be set to `false` if using `operate` mode.
+
+  sink_unit:
+    type: str
+    default: absolute
+    title: Sink unit
+    description: >-
+      Sets the unit of `Sink` to either `absolute` (unit: `energy`), `per_area` (unit: `energy/area`), or `per_cap` (unit: `energy/power`).
+      `per_area` uses the `area_use` decision variable to scale the sink while `per_cap` uses the `flow_cap` decision variable.
+    one_of: [absolute, per_area, per_cap]
+
+  source_unit:
+    type: str
+    default: absolute
+    title: Source unit
+    description: >-
+      Sets the unit of `Source` to either `absolute` (unit: `energy`), `per_area` (unit: `energy/area`), or `per_cap` (unit: `energy/power`).
+      `per_area` uses the `area_use` decision variable to scale the source while `per_cap` uses the `flow_cap` decision variable.
+    one_of: [absolute, per_area, per_cap]
+
+  source_cap_equals_flow_cap:
+    type: float
+    default: .nan
+    title: Source capacity equals flow capacity.
+    description: If true, the decision variables `source_cap` and `flow_cap` are forced to equal one another.
+
+  one_way:
+    type: float
+    default: .nan
+    title: One way transmission.
+    description: Forces a transmission technology to only move flow in one direction on the link, i.e. from `from` to `to`.
+
 
 constraints:
   flow_capacity_per_storage_capacity_min:

@@ -307,43 +307,6 @@ properties:
             description: One of 'continuous' (LP model) or 'integer' (integer/binary unit capacity).
             enum: [continuous, integer]
 
-          integer_dispatch:
-            type: boolean
-            default: false
-            x-resample_method: first
-            x-type: float
-            title: Integer dispatch switch.
-            description: |
-              When true, will limit per-timestep out/inflows relative to the number of units of a technology that are in operation.
-              Requires `cap_method=integer`.
-
-          include_storage:
-            type: boolean
-            default: false
-            x-resample_method: first
-            x-type: float
-            title: Storage method switch.
-            description: When true, math will be triggered to allow discontinuous carrier inflow and outflows across timesteps.
-
-          force_async_flow:
-            type: boolean
-            default: false
-            x-resample_method: first
-            x-type: float
-            title: Force asynchronous out/inflow.
-            description: If True, non-zero `flow_out` and `flow_in` cannot both occur in the same timestep.
-
-          cyclic_storage:
-            type: boolean
-            default: true
-            x-type: float
-            title: Cyclic storage switch.
-            description: >
-              If true, link storage levels in the last model timestep with the first model timestep.
-              `inter_cluster_storage` custom math must be included if using time clustering and setting this to `true`.
-              This must be set to `false` if using `operate` mode.
-            x-unit: boolean.
-
           sink_unit:
             type: string
             default: absolute
@@ -365,22 +328,6 @@ properties:
               Sets the unit of `Source` to either `absolute` (unit: `energy`), `per_area` (unit: `energy/area`), or `per_cap` (unit: `energy/power`).
               `per_area` uses the `area_use` decision variable to scale the source while `per_cap` uses the `flow_cap` decision variable.
             enum: [absolute, per_area, per_cap]
-
-          source_cap_equals_flow_cap:
-            type: boolean
-            default: false
-            x-resample_method: first
-            x-type: float
-            title: Source capacity equals flow capacity.
-            description: If true, the decision variables `source_cap` and `flow_cap` are forced to equal one another.
-
-          one_way:
-            type: boolean
-            default: false
-            x-resample_method: first
-            x-type: float
-            title: One way transmission.
-            description: Forces a transmission technology to only move flow in one direction on the link, i.e. from `from` to `to`.
 
   nodes:
     type: object

@@ -311,7 +311,7 @@ def dummy_model_data(config_defaults, model_defaults):
 
 
 def populate_backend_model(backend):
-    backend._add_all_inputs_as_parameters()
+    backend._add_all_parameters()
     backend.add_variable(
         "multi_dim_var",
         {

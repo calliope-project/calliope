@@ -36,7 +36,9 @@ LOGGER = logging.getLogger(__name__)
 def read_netcdf(path):
     """Return a Model object reconstructed from model data in a NetCDF file."""
     model_data = io.read_netcdf(path)
-    return Model(model_definition=model_data)
+    model = Model(model_definition=model_data["inputs"])
+    model.results = model_data["results"]
+    return model
 
 
 class Model:
@@ -104,9 +106,9 @@ class Model:
                 model_def, applied_overrides, scenario, data_table_dfs
             )
 
-        self._model_data.attrs["timestamp_model_creation"] = timestamp_model_creation
-        version_def = self._model_data.attrs["calliope_version_defined"]
-        version_init = self._model_data.attrs["calliope_version_initialised"]
+        self.inputs.attrs["timestamp_model_creation"] = timestamp_model_creation
+        version_def = self.inputs.attrs["calliope_version_defined"]
+        version_init = self.inputs.attrs["calliope_version_initialised"]
         if version_def is not None and not version_init.startswith(version_def):
             exceptions.warn(
                 f"Model configuration specifies calliope version {version_def}, "
@@ -116,17 +118,7 @@ class Model:
     @property
     def name(self):
         """Get the model name."""
-        return self._model_data.attrs["name"]
-
-    @property
-    def inputs(self):
-        """Get model input data."""
-        return self._model_data.filter_by_attrs(is_result=0)
-
-    @property
-    def results(self):
-        """Get model result data."""
-        return self._model_data.filter_by_attrs(is_result=1)
+        return self.inputs.attrs["name"]
 
     @property
     def is_built(self):
@@ -196,7 +188,7 @@ class Model:
         )
         model_data_factory.build()
 
-        self._model_data = model_data_factory.dataset
+        self.inputs = model_data_factory.dataset
 
         log_time(
             LOGGER,
@@ -208,7 +200,7 @@ class Model:
         self._add_observed_dict("config", model_config)
         self._add_observed_dict("user_math", user_math)
 
-        self._model_data.attrs["name"] = init_config["name"]
+        self.inputs.attrs["name"] = init_config["name"]
         log_time(
             LOGGER,
             self._timings,
@@ -232,7 +224,7 @@ class Model:
                 model_data.attrs.pop("applied_math")
             )
 
-        self._model_data = model_data
+        self.inputs = model_data
         self._add_model_data_methods()
 
         if self.results:
@@ -272,7 +264,7 @@ class Model:
         """
         if dict_to_add is None:
             try:
-                dict_to_add = self._model_data.attrs[name]
+                dict_to_add = self.inputs.attrs[name]
             except KeyError:
                 raise exceptions.ModelError(
                     f"Expected the model property `{name}` to be a dictionary attribute of the model dataset. If you are loading the model from a NetCDF file, ensure it is a valid Calliope model."
@@ -283,7 +275,7 @@ class Model:
             )
         else:
             dict_to_add = AttrDict(dict_to_add)
-        self._model_data.attrs[name] = dict_to_add
+        self.inputs.attrs[name] = dict_to_add
         setattr(self, name, dict_to_add)
 
     def build(
@@ -305,7 +297,7 @@ class Model:
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
-        self._model_data.attrs["timestamp_build_start"] = log_time(
+        self.inputs.attrs["timestamp_build_start"] = log_time(
             LOGGER,
             self._timings,
             "build_start",
@@ -316,13 +308,13 @@ class Model:
             math_dict.union(add_math_dict)
 
         self.backend = backend.manager.get_backend_model(
-            self._model_data, math_dict, **kwargs
+            self.inputs, math_dict, **kwargs
         )
         self.backend.add_optimisation_components()
 
         self.applied_math = self.backend.math
 
-        self._model_data.attrs["timestamp_build_complete"] = log_time(
+        self.inputs.attrs["timestamp_build_complete"] = log_time(
             LOGGER,
             self._timings,
             "build_complete",
@@ -366,13 +358,9 @@ class Model:
                     "Use model.solve(force=True) to force"
                     "the results to be overwritten with a new run."
                 )
-            else:
-                to_drop = self.results.data_vars
-        else:
-            to_drop = []
 
         run_mode = self.backend.inputs.attrs["config"]["build"]["mode"]
-        self._model_data.attrs["timestamp_solve_start"] = log_time(
+        self.inputs.attrs["timestamp_solve_start"] = log_time(
             LOGGER,
             self._timings,
             "solve_start",
@@ -400,7 +388,7 @@ class Model:
         # Add additional post-processed result variables to results
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
             results = postprocess_results.postprocess_model_results(
-                results, self._model_data
+                results, self.backend.inputs
             )
 
         log_time(
@@ -411,15 +399,9 @@ class Model:
             comment="Postprocessing: ended",
         )
 
-        self._model_data = self._model_data.drop_vars(to_drop)
+        self.results = results
 
-        self._model_data.attrs.update(results.attrs)
-        self._model_data = xr.merge(
-            [results, self._model_data], compat="override", combine_attrs="no_conflicts"
-        )
-        self._add_model_data_methods()
-
-        self._model_data.attrs["timestamp_solve_complete"] = log_time(
+        self.inputs.attrs["timestamp_solve_complete"] = log_time(
             LOGGER,
             self._timings,
             "solve_complete",
@@ -453,7 +435,8 @@ class Model:
             else:
                 saved_attrs[attr] = getattr(self, attr)
 
-        io.save_netcdf(self._model_data, path, **saved_attrs)
+        io.save_netcdf(self.inputs, "inputs", path, **saved_attrs)
+        io.save_netcdf(self.results, "results", path)
 
     def to_csv(
         self, path: str | Path, dropna: bool = True, allow_overwrite: bool = False
@@ -471,7 +454,12 @@ class Model:
                 Defaults to False.
 
         """
-        io.save_csv(self._model_data, path, dropna, allow_overwrite)
+        io.save_csv(self.inputs, "inputs", path, dropna, allow_overwrite)
+
+        if self.results:
+            io.save_csv(self.results, "results", path, dropna, allow_overwrite)
+        else:
+            exceptions.warn("No results available, saving inputs only.")
 
     def info(self) -> str:
         """Generate basic description of the model, combining its name and a rough indication of the model size.
@@ -482,8 +470,8 @@ class Model:
         info_strings = []
         model_name = self.name
         info_strings.append(f"Model name:   {model_name}")
-        msize = dict(self._model_data.dims)
-        msize_exists = self._model_data.definition_matrix.sum()
+        msize = dict(self.inputs.dims)
+        msize_exists = self.inputs.definition_matrix.sum()
         info_strings.append(
             f"Model size:   {msize} ({msize_exists.item()} valid node:tech:carrier combinations)"
         )

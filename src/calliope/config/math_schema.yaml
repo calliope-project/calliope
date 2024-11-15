@@ -3,7 +3,7 @@ title: Math formulation schema
 description: All options available to formulate math to use in solving an optimisation problem with Calliope.
 additionalProperties: false
 properties:
-  dimensions:
+  dims:
     type: object
     description: All dimensions that will be referenced in the optimisation problem.
     additionalProperties: false
@@ -19,7 +19,7 @@ properties:
             description: The component long name, for use in visualisation.
           type: &type
             type: string
-            enum: ["datetime", "string", "int", "float"]
+            enum: ["datetime64", "str", "int", "float", "bool"]
             description: The expected data type of the component values, to they will be coerced.
           ordered:
             type: boolean
@@ -50,6 +50,25 @@ properties:
             type: string
             enum: ["mean", "sum", "first"]
             description: The method to apply to the parameter values if resampling the `timesteps` dimension using `config.build.time_resample`.
+  lookups:
+    type: object
+    description: All lookup tables that will be referenced in the optimisation problem.
+    additionalProperties: false
+    patternProperties:
+      '[^\d^_\W][\w\d]+':
+        type: object
+        description: A named lookup
+        additionalProperties: false
+        required: ["type"]
+        properties:
+          default:
+            type: [number, string, boolean]
+            description: The default value to apply when a value is not given for a combination of dimension values.
+          title: *title
+          type: *type
+          description: *description
+          one_of:
+            type: array
   constraints:
     type: object
     description: All constraints to apply to the optimisation problem.

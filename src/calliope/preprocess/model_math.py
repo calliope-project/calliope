@@ -23,7 +23,7 @@ ORDERED_COMPONENTS_T = Literal[
     "piecewise_constraints",
     "objectives",
 ]
-ALL_COMPONENTS_T = Literal["dimensions", "parameters", ORDERED_COMPONENTS_T]
+ALL_COMPONENTS_T = Literal["dims", "parameters", ORDERED_COMPONENTS_T]
 
 
 class CalliopeMath:
@@ -69,7 +69,7 @@ class CalliopeMath:
     def __repr__(self) -> str:
         """Custom string representation of class."""
         return f"""Calliope math definition dictionary with:
-    {len(self.data["dimensions"])} dimension(s)
+    {len(self.data["dims"])} dimension(s)
     {len(self.data["parameters"])} parameter(s)
     {len(self.data["variables"])} decision variable(s)
     {len(self.data["global_expressions"])} global expression(s)

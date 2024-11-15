@@ -68,9 +68,6 @@ class BackendModelGenerator(ABC):
         self.math = math
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
-        self._check_inputs()
-        self.math.validate()
-
     @abstractmethod
     def add_parameter(
         self, name: str, parameter_dict: dict, values: xr.DataArray
@@ -176,7 +173,7 @@ class BackendModelGenerator(ABC):
         """Parse math and inputs and set optimisation problem."""
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
-        self._add_all_inputs_as_parameters()
+        self._add_all_parameters()
         for components in typing.get_args(ORDERED_COMPONENTS_T):
             component = components.removesuffix("s")
             for name, dict_ in self.math.data[components].items():
@@ -309,7 +306,7 @@ class BackendModelGenerator(ABC):
             BackendError: Cannot overwrite object of same name and type.
         """
 
-    def _add_all_inputs_as_parameters(self) -> None:
+    def _add_all_parameters(self) -> None:
         """Add all parameters to backend dataset in-place.
 
         If model data does not include a parameter, their default values will be added here
@@ -319,17 +316,10 @@ class BackendModelGenerator(ABC):
             model_data (xr.Dataset): Input model data.
             defaults (dict): Parameter defaults.
         """
-        for param_name, param_dict in self.math.data.parameters.items():
-            param_data = self.inputs.get(param_name)
-            if param_data is None:
-                self.log(
-                    "parameters",
-                    param_name,
-                    "Component not defined; using default value.",
-                )
-                self.add_parameter(param_name, param_dict, xr.DataArray(np.nan))
-            else:
-                self.add_parameter(param_name, param_dict, param_data)
+        for name, data in self.inputs.filter_by_attrs(
+            obj_type="parameters"
+        ).data_vars.items():
+            self.add_parameter(name, data.attrs, data)
         LOGGER.info("Optimisation Model | parameters | Generated.")
 
     @staticmethod

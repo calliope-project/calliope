@@ -89,25 +89,62 @@ def prepare_inputs(data: xr.Dataset, config: dict, math: CalliopeMath) -> xr.Dat
     Returns:
         xr.Dataset: Prepared input dataset (copy of `data`).
     """
-    data = data.copy()
-    for param_name, param_dict in math.data["parameters"].items():
-        if param_name not in data.data_vars:
-            data[param_name] = xr.DataArray(np.nan)
-        data[param_name].attrs = param_dict
+    backend_data = xr.Dataset(attrs=data.attrs)
+    for dim_name, dim_def_dict in math.data["dims"].items():
+        backend_data.coords[dim_name] = _get_dim(data, dim_name, dim_def_dict)
+    for obj_type in ["parameters", "lookups"]:
+        for array_name, array_def_dict in math.data[obj_type].items():
+            backend_data[array_name] = _get_array(data, array_name, array_def_dict)
+            backend_data[array_name].attrs["obj_type"] = obj_type
 
-    _input_data_checks(data)
-    data.attrs = deepcopy(data.attrs)
+    _input_data_checks(backend_data)
+    backend_data.attrs = deepcopy(data.attrs)
     if config["time_resample"] is not None:
-        data = resample(data, config["time_resample"], math)
+        data = resample(backend_data, config["time_resample"], math)
     if config["mode"] == "operate":
-        if not data.attrs["allow_operate_mode"]:
+        if not backend_data.attrs["allow_operate_mode"]:
             raise exceptions.ModelError(
                 "Unable to run this model in operate (i.e. dispatch) mode, probably because "
                 "there exist non-uniform timesteps (e.g. from time clustering)"
             )
         start_window_idx = config.pop("start_window_idx", 0)
-        data = prepare_operate_mode_inputs(data, start_window_idx, **config)
-    return data
+        backend_data = prepare_operate_mode_inputs(
+            backend_data, start_window_idx, **config
+        )
+    return backend_data
+
+
+def _get_dim(data: xr.Dataset, dim_name: str, dim_def_dict: dict) -> xr.DataArray:
+    if dim_name in data:
+        dim = data[dim_name].astype(dim_def_dict["type"])
+        dim.attrs = dim_def_dict
+    else:
+        dim = xr.DataArray(np.nan, attrs=dim_def_dict)
+    return dim
+
+
+def _get_array(data: xr.Dataset, array_name: str, array_def_dict: dict) -> xr.DataArray:
+    if array_name in data:
+        array = data[array_name]
+        if array.dims:
+            array = array.groupby(data[array_name].notnull()).map(
+                _update_dtypes, dtype=array_def_dict["type"]
+            )
+        else:
+            array = array.astype(array_def_dict["type"])
+
+        array.attrs = array_def_dict
+    else:
+        array = xr.DataArray(np.nan, attrs=array_def_dict)
+    return array
+
+
+def _update_dtypes(da: xr.DataArray, *, dtype: str, **kwargs) -> xr.DataArray:
+    if da.notnull().any():
+        LOGGER.info(f"Updating non-NaN values of parameter `{da.name}` to {dtype} type")
+        da = da.astype(dtype)
+
+    return da
 
 
 def _input_data_checks(data: xr.Dataset):
@@ -290,10 +327,10 @@ def solve_operate(
         else:
             backend._dataset.coords["timesteps"] = new_inputs.timesteps
             backend.inputs.coords["timesteps"] = new_inputs.timesteps
-            for param_name, param_data in new_inputs.data_vars.items():
+            for array_name, param_data in new_inputs.data_vars.items():
                 if "timesteps" in param_data.dims:
-                    backend.update_parameter(param_name, param_data)
-                    backend.inputs[param_name] = param_data
+                    backend.update_parameter(array_name, param_data)
+                    backend.inputs[array_name] = param_data
 
         if "storage" in step_results:
             backend.update_parameter(

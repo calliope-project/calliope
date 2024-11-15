@@ -412,7 +412,7 @@ class TestLatexBackendModel:
         backend_model = latex_backend_model.LatexBackendModel(
             dummy_model_data, dummy_model_math
         )
-        backend_model._add_all_inputs_as_parameters()
+        backend_model._add_all_parameters()
         backend_model.add_global_expression(
             "expr",
             {
@@ -505,7 +505,7 @@ class TestLatexBackendModel:
         backend_model = latex_backend_model.LatexBackendModel(
             dummy_model_data, dummy_model_math
         )
-        backend_model._add_all_inputs_as_parameters()
+        backend_model._add_all_parameters()
         backend_model.add_global_expression(
             "expr",
             {
@@ -683,7 +683,7 @@ class TestLatexBackendModel:
         backend_model = latex_backend_model.LatexBackendModel(
             dummy_model_data, dummy_model_math
         )
-        backend_model._add_all_inputs_as_parameters()
+        backend_model._add_all_parameters()
         backend_model.add_global_expression(
             "expr",
             {
