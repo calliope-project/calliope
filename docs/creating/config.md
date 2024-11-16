@@ -84,7 +84,7 @@ In fact, you can use a set of results from using `plan` model to initialise both
 ### `config.solve.solver`
 
 Possible options for solver include `glpk`, `gurobi`, `cplex`, and `cbc`.
-The interface to these solvers is done through the Pyomo library. Any [solver compatible with Pyomo](https://pyomo.readthedocs.io/en/6.5.0/solving_pyomo_models.html#supported-solvers) should work with Calliope.
+The interface to these solvers is done through the Pyomo library. Any [solver compatible with Pyomo](https://pyomo.readthedocs.io/en/latest/reference/topical/appsi/appsi.solvers.html) should work with Calliope.
 
 For solvers with which Pyomo provides more than one way to interface, the additional `solver_io` option can be used.
 In the case of Gurobi, for example, it is usually fastest to use the direct Python interface:
