@@ -15,8 +15,8 @@ from typing_extensions import NotRequired, TypedDict
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.config import Init
 from calliope.preprocess import data_tables, time
+from calliope.schemas.config_schema import Init
 from calliope.util.schema import MODEL_SCHEMA, validate_dict
 from calliope.util.tools import climb_template_tree, listify
 
