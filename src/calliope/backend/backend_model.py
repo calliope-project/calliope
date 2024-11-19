@@ -446,7 +446,7 @@ class BackendModelGenerator(ABC):
                 yaml_snippet_attrs[attr] = val
 
         if yaml_snippet_attrs:
-            add_attrs["yaml_snippet"] = AttrDict(yaml_snippet_attrs).as_yaml_str()
+            add_attrs["yaml_snippet"] = AttrDict(yaml_snippet_attrs).to_yaml()
 
         da.attrs = {
             "obj_type": obj_type,

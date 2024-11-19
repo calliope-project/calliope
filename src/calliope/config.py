@@ -82,19 +82,15 @@ class ConfigBaseModel(BaseModel):
         self._kwargs = update_dict
         return updated
 
-    def model_json_schema(self, replace_refs=False) -> AttrDict:
-        """Generate an AttrDict with the schema of this class.
-
-        Args:
-            replace_refs (bool, optional): If True, replace $ref/$def for better readability. Defaults to False.
+    def model_no_ref_schema(self) -> AttrDict:
+        """Generate an AttrDict with the schema replacing $ref/$def for better readability.
 
         Returns:
             AttrDict: class schema.
         """
         schema_dict = AttrDict(super().model_json_schema())
-        if replace_refs:
-            schema_dict = AttrDict(jsonref.replace_refs(schema_dict))
-            schema_dict.del_key("$defs")
+        schema_dict = AttrDict(jsonref.replace_refs(schema_dict))
+        schema_dict.del_key("$defs")
         return schema_dict
 
     @property

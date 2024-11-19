@@ -399,4 +399,4 @@ def generate_scenarios(
             }
         }
 
-        AttrDict(scenarios).save_yaml(out_file)
+        AttrDict(scenarios).to_yaml(out_file)
