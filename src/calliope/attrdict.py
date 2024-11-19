@@ -359,7 +359,6 @@ class AttrDict(dict):
         yaml_.dump(result, stream)
         yaml_str = stream.getvalue()
         if path:
-            yaml_str = self.to_yaml()
             with open(path, "w") as f:
                 f.write(yaml_str)
         return yaml_str
