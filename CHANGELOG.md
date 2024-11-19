@@ -21,7 +21,7 @@ This change has occurred to avoid confusion between data "sources" and model ene
 
 ### Internal changes
 
-|fixed| Avoided gurobi 12.0 incompatibility with pyomo by removing upper version limit.
+|fixed| Avoided gurobi 12.0 incompatibility with pyomo by setting the lower bound to v6.8.2.
 
 ## 0.7.0.dev4 (2024-09-10)
 
