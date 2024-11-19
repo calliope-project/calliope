@@ -1,5 +1,7 @@
 """Test data table schema validation."""
 
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -8,8 +10,10 @@ from calliope.schemas.data_table_schema import DataTable
 
 from .common.util import check_error_or_warning
 
-FULL_TABLE_CONFIG = """
-data: time_varying_df
+
+@pytest.fixture
+def full_data_table_config():
+    return """data: time_varying_df
 rows: timesteps
 columns: [comment, nodes, techs]
 select:
@@ -23,6 +27,16 @@ rename_dims:
     location: nodes
 template: some_template
 """
+
+
+@pytest.fixture
+def model_yaml_data_tables() -> AttrDict:
+    return AttrDict.from_yaml(
+        Path(__file__).parent
+        / "common"
+        / "national_scale_from_data_tables"
+        / "model.yaml"
+    )
 
 
 @pytest.mark.parametrize(
@@ -71,7 +85,12 @@ def test_add_dims_overlap(rows, columns, add_dims):
     )
 
 
-@pytest.mark.parametrize("data_table", [FULL_TABLE_CONFIG])
-def test_full_table_config(data_table):
+def test_full_table_config(full_data_table_config):
     """Test a fully fledged data table configuration."""
-    DataTable(**AttrDict.from_yaml_string(data_table))
+    DataTable(**AttrDict.from_yaml_string(full_data_table_config))
+
+
+def test_data_table_model(model_yaml_data_tables):
+    """Data table validation must conform to expected usage."""
+    for data_table in model_yaml_data_tables["data_tables"].values():
+        DataTable(**data_table)

@@ -10,7 +10,7 @@ from copy import deepcopy
 from typing import Annotated, Literal, TypeVar
 
 import jsonschema
-from pydantic import AfterValidator, Field, constr
+from pydantic import AfterValidator, Field
 from pydantic_core import PydanticCustomError
 
 from calliope.attrdict import AttrDict
@@ -24,7 +24,8 @@ MATH_SCHEMA = load_config("math_schema.yaml")
 
 # Regular string pattern for most calliope attributes
 FIELD_REGEX = r"^[^_^\d][\w]*$"
-AttrStr = constr(pattern=FIELD_REGEX)
+AttrStr = Annotated[str, Field(pattern=FIELD_REGEX)]
+
 # ==
 # Taken from https://github.com/pydantic/pydantic-core/pull/820#issuecomment-1670475909
 T = TypeVar("T", bound=Hashable)

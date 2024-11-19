@@ -1,14 +1,10 @@
 """Implements the data table configuration class."""
 
-from typing import Self
-
 from pydantic import BaseModel, model_validator
+from typing_extensions import Self
 
 from calliope.util.schema import AttrStr, UniqueList
 from calliope.util.tools import listify
-
-# Get rid of pyright false negatives (see https://github.com/microsoft/pylance-release/issues/5457)
-# pyright: reportInvalidTypeForm=false
 
 
 class DataTable(BaseModel):
