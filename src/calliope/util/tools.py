@@ -15,7 +15,7 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 
-def relative_path(base_path_file, path) -> Path:
+def relative_path(base_path_file: str | Path, path: str | Path) -> Path:
     """Path standardization.
 
     If ``path`` is not absolute, it is interpreted as relative to the
@@ -23,7 +23,7 @@ def relative_path(base_path_file, path) -> Path:
     """
     # Check if base_path_file is a string because it might be an AttrDict
     path = Path(path)
-    if path.is_absolute() or base_path_file is None:
+    if path.is_absolute():
         return path
     else:
         base_path_file = Path(base_path_file)

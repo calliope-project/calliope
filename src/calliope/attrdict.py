@@ -9,6 +9,7 @@ from pathlib import Path
 
 import numpy as np
 import ruamel.yaml as ruamel_yaml
+from ruamel.yaml.scalarstring import walk_tree
 from typing_extensions import Self
 
 from calliope.util.tools import relative_path
@@ -354,6 +355,9 @@ class AttrDict(dict):
                 result.set_key(k, yaml_.seq(v))
 
         result = result.as_dict()
+
+        # handle multi-line strings.
+        walk_tree(result)
 
         if path is not None:
             with open(path, "w") as f:

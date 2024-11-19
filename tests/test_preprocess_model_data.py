@@ -202,10 +202,14 @@ class TestModelData:
 
     @pytest.mark.parametrize(("unit", "expected"), [("m", 343834), ("km", 343.834)])
     def test_add_link_distances_no_da(
-        self, my_caplog, model_data_factory_w_params: ModelDataFactory, unit, expected
+        self,
+        mocker,
+        my_caplog,
+        model_data_factory_w_params: ModelDataFactory,
+        unit,
+        expected,
     ):
-        _default_distance_unit = model_data_factory_w_params.config["distance_unit"]
-        model_data_factory_w_params.config["distance_unit"] = unit
+        mocker.patch.object(ModelDataFactory, "config.distance_unit", return_value=unit)
         model_data_factory_w_params.clean_data_from_undefined_members()
         model_data_factory_w_params.dataset["latitude"] = (
             pd.Series({"A": 51.507222, "B": 48.8567})
@@ -220,7 +224,6 @@ class TestModelData:
         del model_data_factory_w_params.dataset["distance"]
 
         model_data_factory_w_params.add_link_distances()
-        model_data_factory_w_params.config["distance_unit"] = _default_distance_unit
         assert "Link distance matrix automatically computed" in my_caplog.text
         assert (
             model_data_factory_w_params.dataset["distance"].dropna("techs")
