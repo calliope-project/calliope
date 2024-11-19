@@ -2248,7 +2248,7 @@ class TestValidateMathDict:
             m = build_model({}, "simple_supply,investment_costs")
             math = calliope.preprocess.CalliopeMath(["plan", math_dict])
             backend = calliope.backend.PyomoBackendModel(m._model_data, math)
-            backend._add_all_inputs_as_parameters()
+            backend._add_all_parameters()
             backend._validate_math_string_parsing()
 
         return _validate_math

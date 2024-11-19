@@ -10,9 +10,7 @@ import xarray as xr
 LOGGER = logging.getLogger(__name__)
 
 
-def postprocess_model_results(
-    results: xr.Dataset, model_data: xr.Dataset
-) -> xr.Dataset:
+def postprocess_model_results(results: xr.Dataset, inputs: xr.Dataset) -> xr.Dataset:
     """Post-processing of model results.
 
     Adds additional post-processed result variables to the given model results
@@ -21,21 +19,19 @@ def postprocess_model_results(
 
     Args:
         results (xarray.Dataset): Output from the solver backend.
-        model_data (xarray.Dataset): Calliope model data.
+        inputs (xarray.Dataset): Calliope model data.
 
     Returns:
         xarray.Dataset: input-results dataset.
     """
-    zero_threshold = model_data.config.solve.zero_threshold
-    results["capacity_factor"] = capacity_factor(results, model_data)
+    zero_threshold = inputs.config.solve.zero_threshold
+    results["capacity_factor"] = capacity_factor(results, inputs)
     results["systemwide_capacity_factor"] = capacity_factor(
-        results, model_data, systemwide=True
+        results, inputs, systemwide=True
     )
-    results["systemwide_levelised_cost"] = systemwide_levelised_cost(
-        results, model_data
-    )
+    results["systemwide_levelised_cost"] = systemwide_levelised_cost(results, inputs)
     results["total_levelised_cost"] = systemwide_levelised_cost(
-        results, model_data, total=True
+        results, inputs, total=True
     )
 
     results = clean_results(results, zero_threshold)
@@ -47,7 +43,7 @@ def postprocess_model_results(
     return results
 
 
-def capacity_factor(results, model_data, systemwide=False):
+def capacity_factor(results, inputs, systemwide=False):
     """Calculation of capacity factors.
 
     Processes whether `flow_cap` is a parameter or a result, then calculates the
@@ -59,17 +55,17 @@ def capacity_factor(results, model_data, systemwide=False):
     """
     # In operate mode, flow_cap is an input parameter
     if "flow_cap" not in results.keys():
-        flow_cap = model_data.flow_cap
+        flow_cap = inputs.flow_cap
     else:
         flow_cap = results.flow_cap
 
     if systemwide:
-        prod_sum = (results["flow_out"] * model_data.timestep_weights).sum(
+        prod_sum = (results["flow_out"] * inputs.timestep_weights).sum(
             dim=["timesteps", "nodes"], min_count=1
         )
 
         cap_sum = flow_cap.where(lambda x: x > 0).sum(dim="nodes", min_count=1)
-        time_sum = (model_data.timestep_resolution * model_data.timestep_weights).sum()
+        time_sum = (inputs.timestep_resolution * inputs.timestep_weights).sum()
 
         capacity_factors = (prod_sum / (cap_sum * time_sum)).fillna(0)
     else:
@@ -81,7 +77,7 @@ def capacity_factor(results, model_data, systemwide=False):
 
 
 def systemwide_levelised_cost(
-    results: xr.Dataset, model_data: xr.Dataset, total: bool = False
+    results: xr.Dataset, inputs: xr.Dataset, total: bool = False
 ) -> xr.DataArray:
     """Calculates systemwide levelised costs.
 
@@ -101,7 +97,7 @@ def systemwide_levelised_cost(
 
     Args:
         results (xarray.Dataset): Model results.
-        model_data (xarray.Dataset): Model input data.
+        inputs (xarray.Dataset): Model input data.
         total (bool, optional):
             If False (default) returns per-technology levelised cost, if True,
             returns overall system-wide levelised cost.
@@ -110,9 +106,9 @@ def systemwide_levelised_cost(
         xr.DataArray: Array of levelised costs.
     """
     # Here we scale production by timestep weight
-    flow_out = results["flow_out"] * model_data.timestep_weights
+    flow_out = results["flow_out"] * inputs.timestep_weights
     cost = results["cost"].sum(dim="nodes", min_count=1)
-    flow_out = (results["flow_out"] * model_data.timestep_weights).sum(
+    flow_out = (results["flow_out"] * inputs.timestep_weights).sum(
         dim=["timesteps", "nodes"], min_count=1
     )
 
@@ -120,7 +116,7 @@ def systemwide_levelised_cost(
         # cost is the total cost of the system
         # flow_out is only the flow_out of supply and conversion technologies
         allowed_techs = ("supply", "supply_plus", "conversion", "conversion_plus")
-        valid_techs = model_data.base_tech.isin(allowed_techs)
+        valid_techs = inputs.base_tech.isin(allowed_techs)
         cost = cost.sum(dim="techs", min_count=1)
         flow_out = flow_out.sel(techs=valid_techs).sum(dim="techs", min_count=1)
 

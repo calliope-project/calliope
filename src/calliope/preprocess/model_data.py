@@ -252,8 +252,6 @@ class ModelDataFactory:
         # By default, the model allows operate mode
         self.dataset.attrs["allow_operate_mode"] = 1
 
-        if self.config["time_resample"] is not None:
-            self.dataset = time.resample(self.dataset, self.config["time_resample"])
         if self.config["time_cluster"] is not None:
             self.dataset = time.cluster(
                 self.dataset, self.config["time_cluster"], self.config["time_format"]

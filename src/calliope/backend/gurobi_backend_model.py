@@ -58,27 +58,15 @@ class GurobiBackendModel(backend_model.BackendModel):
         self.shadow_prices = GurobiShadowPrices(self)
 
     def add_parameter(  # noqa: D102, override
-        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
+        self, name: str, parameter_dict: dict, values: xr.DataArray
     ) -> None:
-        self._raise_error_on_preexistence(parameter_name, "parameters")
+        self._raise_error_on_preexistence(name, "parameters")
 
-        parameter_da = parameter_values
-        if parameter_da.isnull().all():
-            self.log(
-                "parameters",
-                parameter_name,
-                "Component not added; no data found in array.",
-            )
-            parameter_da = parameter_da.astype(float)
+        if values.isnull().all():
+            self.log("parameters", name, "Component not added; no data found in array.")
+            values = values.astype(float)
 
-        attrs = {
-            "title": self._PARAM_TITLES.get(parameter_name, None),
-            "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
-            "unit": self._PARAM_UNITS.get(parameter_name, None),
-            "default": default,
-            "original_dtype": parameter_values.dtype.name,
-        }
-        self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
+        self._add_to_dataset(name, values, "parameters", parameter_dict)
 
     def add_constraint(  # noqa: D102, override
         self, name: str, constraint_dict: parsing.UnparsedConstraint
@@ -160,7 +148,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         if parameter is None:
             raise KeyError(f"Unknown parameter: {name}")
 
-        return parameter.astype(parameter.original_dtype)
+        return self._convert_parameter_dtype(parameter)
 
     @overload
     def get_constraint(  # noqa: D102, override
@@ -348,11 +336,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         self.inputs[name] = new_parameter_da
 
         self.delete_component(name, "parameters")
-        self.add_parameter(
-            name,
-            new_parameter_da,
-            default=self.inputs.attrs["defaults"].get(name, np.nan),
-        )
+        self.add_parameter(name, self.inputs.math.parameters[name], new_parameter_da)
 
         refs_to_update = self._find_all_references(parameter_da.attrs["references"])
 
