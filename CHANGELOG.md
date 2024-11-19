@@ -2,6 +2,9 @@
 
 ### User-facing changes
 
+|changed| Single data entries defined in YAML indexed parameters will not be automatically broadcast along indexed dimensions.
+To achieve the same functionality as in `<v0.7.dev4`, the user must set the new `init` configuration option `broadcast_param_data` to True (#615).
+
 |changed| Helper functions are now documented on their own page within the "Defining your own math" section of the documentation (#698).
 
 |new| `where(array, condition)` math helper function to apply a where array _inside_ an expression, to enable extending component dimensions on-the-fly, and applying filtering to different components within the expression (#604, #679).

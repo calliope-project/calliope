@@ -210,7 +210,7 @@ If you define a lookup parameter "lookup_techs" as:
 ```yaml
 parameters:
   lookup_techs:
-    data: True
+    data: [True, True]
     index: [tech_1, tech_2]
     dims: [techs]
 ```
