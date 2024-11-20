@@ -26,9 +26,7 @@ import xarray as xr
 
 # %%
 # Loading model files and building the model
-model = calliope.Model(
-    "example_models/latest_national_scale/model.yaml", scenario="simplified_spores"
-)
+model = calliope.examples.national_scale(scenario="spores")
 model.build()
 
 # Solving
