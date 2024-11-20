@@ -1,0 +1,7 @@
+constraints:
+  total_system_cost_max:
+    description: >
+      Limit total system cost. Conceived for use in SPORES mode to apply a maximum
+      relaxation to the system cost compared to the least-cost feasible option.
+    equations:
+      - expression: sum(cost[costs=monetary], over=[nodes, techs]) <= spores_cost_max * (1 + spores_slack)
