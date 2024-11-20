@@ -342,7 +342,8 @@ class Model:
             to_drop = []
 
         solve_config = self.config.update({"solve": kwargs}).solve
-        mode = self.config.build.mode
+        # FIXME: find a way to avoid overcomplicated passing of settings between modes
+        mode = self.config.update(self.config.applied_keyword_overrides).build.mode
         self._model_data.attrs["timestamp_solve_start"] = log_time(
             LOGGER,
             self._timings,
