@@ -5,7 +5,7 @@
 from collections.abc import Hashable
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Literal, Self, TypeVar, get_args, overload
+from typing import Annotated, Literal, Self, TypeVar
 
 import jsonref
 from pydantic import AfterValidator, BaseModel, Field, model_validator
@@ -82,27 +82,16 @@ class ConfigBaseModel(BaseModel):
         self._kwargs = update_dict
         return updated
 
-    @overload
-    def model_yaml_schema(self, filepath: str | Path) -> None: ...
-
-    @overload
-    def model_yaml_schema(self, filepath: None = None) -> str: ...
-
-    def model_yaml_schema(self, filepath: str | Path | None = None) -> None | str:
-        """Generate a YAML schema for the class.
-
-        Args:
-            filepath (str | Path | None, optional): If given, save schema to given path. Defaults to None.
+    def model_no_ref_schema(self) -> AttrDict:
+        """Generate an AttrDict with the schema replacing $ref/$def for better readability.
 
         Returns:
-            None | str: If `filepath` is given, returns None. Otherwise, returns the YAML string.
+            AttrDict: class schema.
         """
-        # By default, the schema uses $ref/$def cross-referencing for each pydantic model class,
-        # but this isn't very readable when rendered in our documentation.
-        # So, we resolve references and then delete all the `$defs`
-        schema_dict = AttrDict(jsonref.replace_refs(self.model_json_schema()))
+        schema_dict = AttrDict(super().model_json_schema())
+        schema_dict = AttrDict(jsonref.replace_refs(schema_dict))
         schema_dict.del_key("$defs")
-        return schema_dict.to_yaml(filepath)
+        return schema_dict
 
     @property
     def applied_keyword_overrides(self) -> dict:
@@ -112,21 +101,6 @@ class ConfigBaseModel(BaseModel):
             dict: Description of applied overrides.
         """
         return self._kwargs
-
-
-class ModeBaseModel(ConfigBaseModel):
-    """Mode-specific configuration, which will be hidden from the string representation of the model if that mode is not activated."""
-
-    mode: MODES_T = Field(default="plan")
-    """Mode in which to run the optimisation."""
-
-    @model_validator(mode="after")
-    def update_repr(self) -> Self:
-        """Hide config from model string representation if mode is not activated."""
-        for key, val in self.model_fields.items():
-            if key in get_args(MODES_T):
-                val.repr = self.mode == key
-        return self
 
 
 class Init(ConfigBaseModel):
@@ -221,7 +195,7 @@ class BuildOperate(ConfigBaseModel):
     """Which time window to build. This is used to track the window when re-building the model part way through solving in `operate` mode."""
 
 
-class Build(ModeBaseModel):
+class Build(ConfigBaseModel):
     """Base configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
     model_config = {
@@ -229,6 +203,10 @@ class Build(ModeBaseModel):
         "extra": "allow",
         "revalidate_instances": "always",
     }
+
+    mode: MODES_T = Field(default="plan")
+    """Mode in which to run the optimisation."""
+
     add_math: UniqueList[str] = Field(default=[])
     """
     List of references to files which contain additional mathematical formulations to be applied on top of or instead of the base mode math.
@@ -301,14 +279,13 @@ class SolveSpores(ConfigBaseModel):
         return self
 
 
-class Solve(ModeBaseModel):
+class Solve(ConfigBaseModel):
     """Base configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
     model_config = {
         "title": "solve",
         "extra": "forbid",
         "revalidate_instances": "always",
-        "json_schema_extra": hide_from_schema(["mode"]),
     }
 
     save_logs: Path | None = Field(default=None)
@@ -342,28 +319,3 @@ class CalliopeConfig(ConfigBaseModel):
     init: Init = Init()
     build: Build = Build()
     solve: Solve = Solve()
-
-    @model_validator(mode="before")
-    @classmethod
-    def update_solve_mode(cls, data):
-        """Solve mode should match build mode."""
-        data["solve"]["mode"] = data["build"]["mode"]
-        return data
-
-    def update(self, update_dict: dict, deep: bool = False) -> Self:
-        """Return a new iteration of the model with updated fields.
-
-        Updates are validated and stored in the parent class in the `_kwargs` key.
-
-        Args:
-            update_dict (dict): Dictionary with which to update the base model.
-            deep (bool, optional): Set to True to make a deep copy of the model. Defaults to False.
-
-        Returns:
-            BaseModel: New model instance.
-        """
-        update_dict_temp = AttrDict(update_dict)
-        if update_dict_temp.get_key("build.mode", None) is not None:
-            update_dict_temp.set_key("solve.mode", update_dict_temp["build"]["mode"])
-        updated = super().update(update_dict_temp.as_dict(), deep=deep)
-        return updated
