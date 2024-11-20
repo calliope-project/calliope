@@ -126,27 +126,11 @@ spore_ds = xr.concat(spores, dim="spores")
 score_da = xr.concat(scores, dim="spores")
 
 # %% [markdown]
-# ## Plotting and sense-check
+# ## Sense-check
 
 # %%
-# Import plotting libraries
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-
-# %%
-# Extract the deployed capacities across SPORES, which we want to visualise
+# Extract the deployed capacities across SPORES, which we want to inspect
 flow_caps = spore_ds.flow_cap.where(
     model.backend.inputs["spores_tracker"].notnull()).sel(
         carriers='power').to_series().dropna().unstack("spores")
 flow_caps
-
-# %%
-# Plot the capacities per location across the generated SPORES
-ax = plt.subplot(111)
-colors = mpl.colormaps['Pastel1'].colors
-flow_caps.plot.bar(
-    ax=ax, ylabel="Capacity (kW)", ylim=[0, 40000],
-    color=colors[0:len(flow_caps.columns)]
-)
-
-# %%
