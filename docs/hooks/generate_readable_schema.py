@@ -20,9 +20,7 @@ from calliope.util import schema
 TEMPDIR = tempfile.TemporaryDirectory()
 
 SCHEMAS = {
-    "config_schema": config_schema.CalliopeConfig().model_json_schema(
-        replace_refs=True
-    ),
+    "config_schema": config_schema.CalliopeConfig().model_no_ref_schema(),
     "model_schema": schema.MODEL_SCHEMA,
     "math_schema": schema.MATH_SCHEMA,
     "data_table_schema": schema.DATA_TABLE_SCHEMA,

@@ -329,7 +329,7 @@ class AttrDict(dict):
             d[k] = self.get_key(k)
         return d
 
-    def as_yaml_str(self) -> str:
+    def to_yaml(self, path: str | None = None) -> str:
         """Return a serialised YAML string."""
         result = self.copy()
         yaml_ = ruamel_yaml.YAML()
@@ -357,7 +357,11 @@ class AttrDict(dict):
 
         stream = io.StringIO()
         yaml_.dump(result, stream)
-        return stream.getvalue()
+        yaml_str = stream.getvalue()
+        if path:
+            with open(path, "w") as f:
+                f.write(yaml_str)
+        return yaml_str
 
     def save_yaml(self, path: str) -> None:
         """Save AttrDict as a yaml file.
