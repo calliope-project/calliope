@@ -363,16 +363,6 @@ class AttrDict(dict):
                 f.write(yaml_str)
         return yaml_str
 
-    def save_yaml(self, path: str) -> None:
-        """Save AttrDict as a yaml file.
-
-        Args:
-            path (str): path of saved YAML.
-        """
-        yaml_str = self.to_yaml()
-        with open(path, "w") as f:
-            f.write(yaml_str)
-
     def keys_nested(self, subkeys_as="list"):
         """Returns all keys in the AttrDict, including nested keys.
 

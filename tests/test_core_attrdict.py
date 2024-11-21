@@ -307,7 +307,7 @@ class TestAttrDict:
         d.a_list = [0, 1, 2]
         with tempfile.TemporaryDirectory() as tempdir:
             out_file = os.path.join(tempdir, "test.yaml")
-            d.save_yaml(out_file)
+            d.to_yaml(out_file)
 
             with open(out_file) as f:
                 result = f.read()
