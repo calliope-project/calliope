@@ -70,7 +70,7 @@ def _serialise(attrs: dict) -> None:
     dict_attrs = [k for k, v in attrs.items() if isinstance(v, dict)]
     attrs["serialised_dicts"] = dict_attrs
     for attr in dict_attrs:
-        attrs[attr] = AttrDict(attrs[attr]).as_yaml_str()
+        attrs[attr] = AttrDict(attrs[attr]).to_yaml()
 
     # Convert boolean attrs to ints
     bool_attrs = [k for k, v in attrs.items() if isinstance(v, bool)]

@@ -88,11 +88,11 @@ def load_scenario_overrides(
     return (model_def_with_overrides, ";".join(applied_overrides))
 
 
-def _combine_overrides(overrides: AttrDict, scenario_overrides: list):
+def _combine_overrides(overrides: AttrDict, scenario_overrides: list[AttrDict]):
     combined_override_dict = AttrDict()
     for override in scenario_overrides:
         try:
-            yaml_string = overrides[override].as_yaml_str()
+            yaml_string = overrides[override].to_yaml()
             override_with_imports = AttrDict.from_yaml_string(yaml_string)
         except KeyError:
             raise exceptions.ModelError(f"Override `{override}` is not defined.")

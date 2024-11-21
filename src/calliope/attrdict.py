@@ -369,7 +369,7 @@ class AttrDict(dict):
         Args:
             path (str): path of saved YAML.
         """
-        yaml_str = self.as_yaml_str()
+        yaml_str = self.to_yaml()
         with open(path, "w") as f:
             f.write(yaml_str)
 
