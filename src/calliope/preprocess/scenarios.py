@@ -88,7 +88,7 @@ def load_scenario_overrides(
     return (model_def_with_overrides, ";".join(applied_overrides))
 
 
-def _combine_overrides(overrides: AttrDict, scenario_overrides: list):
+def _combine_overrides(overrides: AttrDict, scenario_overrides: list[AttrDict]):
     combined_override_dict = AttrDict()
     for override in scenario_overrides:
         try:

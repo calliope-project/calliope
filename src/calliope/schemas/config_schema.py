@@ -2,38 +2,19 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Implements the Calliope configuration class."""
 
-from collections.abc import Hashable
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Literal, Self, TypeVar
+from typing import Literal, Self
 
 import jsonref
-from pydantic import AfterValidator, BaseModel, Field, model_validator
-from pydantic_core import PydanticCustomError
+from pydantic import BaseModel, Field, model_validator
 
 from calliope.attrdict import AttrDict
 from calliope.util import tools
+from calliope.util.schema import UniqueList
 
 MODES_T = Literal["plan", "operate", "spores"]
 CONFIG_T = Literal["init", "build", "solve"]
-
-# ==
-# Taken from https://github.com/pydantic/pydantic-core/pull/820#issuecomment-1670475909
-T = TypeVar("T", bound=Hashable)
-
-
-def _validate_unique_list(v: list[T]) -> list[T]:
-    if len(v) != len(set(v)):
-        raise PydanticCustomError("unique_list", "List must be unique")
-    return v
-
-
-UniqueList = Annotated[
-    list[T],
-    AfterValidator(_validate_unique_list),
-    Field(json_schema_extra={"uniqueItems": True}),
-]
-# ==
 
 
 def hide_from_schema(to_hide: list[str]):
