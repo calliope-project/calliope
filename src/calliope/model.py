@@ -39,6 +39,11 @@ def read_netcdf(path):
     return Model(model_definition=model_data)
 
 
+def read_yaml(path: str | Path):
+    """Return a dictionary constructed using Calliope-flavoured YAML."""
+    return io.read_rich_yaml(path, template_sections={"techs", "nodes", "data_tables"})
+
+
 class Model:
     """A Calliope Model."""
 

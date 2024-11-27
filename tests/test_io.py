@@ -1,12 +1,16 @@
 import os
 import tempfile
+from pathlib import Path
 
+import numpy as np
 import pytest  # noqa: F401
+import ruamel.yaml as ruamel_yaml
 import xarray as xr
 
 import calliope
 import calliope.io
 from calliope import exceptions
+from calliope.attrdict import AttrDict
 
 from .common.util import check_error_or_warning
 
@@ -233,3 +237,171 @@ class TestIO:
             for i in ["0", "1", "2", "3"]:
                 assert os.path.isfile(os.path.join(tempdir, "output", f"spore_{i}.nc"))
             assert not os.path.isfile(os.path.join(tempdir, "output.nc"))
+
+
+class TestYaml:
+
+    @pytest.fixture
+    def dummy_yaml_import(self):
+        return """
+            import: ['somefile.yaml']
+        """
+
+    def test_do_not_resolve_imports(self, dummy_yaml_import):
+        """Text inputs that attempt to import files should raise an error."""
+
+        with pytest.raises(ValueError) as exinfo:  # noqa: PT011, false positive
+            calliope.io.read_rich_yaml(dummy_yaml_import)
+
+        assert check_error_or_warning(
+            exinfo,
+            "Imports are not possible for non-file yaml inputs."
+        )
+
+    @pytest.fixture
+    def dummy_imported_file(self, tmp_path) -> Path:
+        file = tmp_path / "test_import.yaml"
+        text = """
+            somekey.nested: 1
+            anotherkey: 2
+        """
+        with open(file, "w") as f:
+            f.write(text)
+        return file
+
+    def test_import(self, dummy_imported_file):
+        file = dummy_imported_file.parent /  "main_file.yaml"
+        text = """
+            import:
+                - test_import.yaml
+            foo:
+                bar: 1
+                baz: 2
+                3:
+                    4: 5
+        """
+        with open(file, "w") as f:
+            f.write(text)
+        d = calliope.io.read_rich_yaml(file)
+
+        assert "somekey.nested" in d.keys_nested()
+        assert d.get_key("anotherkey") == 2
+
+    def test_import_must_be_list(self, tmp_path):
+        file = tmp_path /  "non_list_import.yaml"
+        text = """
+            import: test_import.yaml
+            foo:
+                bar: 1
+                baz: 2
+                3:
+                    4: 5
+        """
+        with open(file, "w") as f:
+            f.write(text)
+
+        with pytest.raises(ValueError) as excinfo:  # noqa: PT011, false positive
+            calliope.io.read_rich_yaml(file)
+        assert check_error_or_warning(excinfo, "`import` must be a list.")
+
+    def test_from_yaml_string(self):
+        yaml_string = """
+        # a comment
+        a: 1
+        b: 2
+        # a comment about `c`
+        c:  # a comment inline with `c`
+            x: foo  # a comment on foo
+
+            #
+            y: bar  #
+            z:
+                I: 1
+                II: 2
+        d:
+    """
+        d = calliope.io.read_rich_yaml(yaml_string)
+        assert d.a == 1
+        assert d.c.z.II == 2
+
+    def test_from_yaml_string_dot_strings(self):
+        yaml_string = "a.b.c: 1\na.b.foo: 2"
+        d = calliope.io.read_rich_yaml(yaml_string)
+        assert d.a.b.c == 1
+        assert d.a.b.foo == 2
+
+    def test_from_yaml_string_dot_strings_duplicate(self):
+        yaml_string = "a.b.c: 1\na.b.c: 2"
+        with pytest.raises(ruamel_yaml.constructor.DuplicateKeyError):
+            calliope.io.read_rich_yaml(yaml_string)
+
+    def test_simple_invalid_yaml(self):
+        yaml_string = "1 this is not valid yaml"
+        with pytest.raises(ValueError) as excinfo:  # noqa: PT011, false positive
+            calliope.io.read_rich_yaml(yaml_string)
+        assert check_error_or_warning(excinfo, "Could not parse <yaml string> as YAML")
+
+    def test_parser_error(self):
+        with pytest.raises(ruamel_yaml.YAMLError):
+            calliope.io.read_rich_yaml(
+                """
+            foo: bar
+            baz: 1
+                - foobar
+                bar: baz
+
+            """
+            )
+
+    @pytest.fixture
+    def multi_order_yaml(self):
+        return calliope.io.read_rich_yaml(
+            """
+            A.B.C: 10
+            A.B:
+                E: 20
+            C: "foobar"
+        """
+        )
+
+    def test_order_of_subdicts(self, multi_order_yaml):
+
+        assert multi_order_yaml.A.B.C == 10
+        assert multi_order_yaml.A.B.E == 20
+        assert multi_order_yaml.C == "foobar"
+
+    def test_as_dict_with_sublists(self):
+        d = calliope.io.read_rich_yaml("a: [{x: 1}, {y: 2}]")
+        dd = d.as_dict()
+        assert dd["a"][0]["x"] == 1
+        assert all([isinstance(dd["a"][0], dict), not isinstance(dd["a"][0], AttrDict)])  # Not AttrDict!
+
+
+    def test_replacement_null_from_file(self, multi_order_yaml):
+        replacement = calliope.io.read_rich_yaml("C._REPLACE_: null")
+        multi_order_yaml.union(replacement, allow_override=True, allow_replacement=True)
+        assert multi_order_yaml.C is None
+
+    @pytest.fixture
+    def yaml_from_path(self):
+        this_path = Path(__file__).parent
+        return calliope.io.read_rich_yaml(this_path / "common" / "yaml_file.yaml")
+
+    def test_from_yaml_path(self, yaml_from_path):
+        assert yaml_from_path.a == 1
+        assert yaml_from_path.c.z.II == 2
+
+    def test_to_yaml(self, yaml_from_path):
+        yaml_from_path.set_key("numpy.some_int", np.int32(10))
+        yaml_from_path.set_key("numpy.some_float", np.float64(0.5))
+        yaml_from_path.a_list = [0, 1, 2]
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_file = os.path.join(tempdir, "test.yaml")
+            yaml_from_path.to_yaml(out_file)
+
+            with open(out_file) as f:
+                result = f.read()
+
+            assert "some_int: 10" in result
+            assert "some_float: 0.5" in result
+            assert "a_list:\n- 0\n- 1\n- 2" in result

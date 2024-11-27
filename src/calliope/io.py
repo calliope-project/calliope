@@ -1,8 +1,11 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-"""Functions to read and save model results."""
+"""Functions to read and save model results and configuration."""
 
 import importlib.resources
+import logging
+import os
+from collections.abc import Iterable
 from copy import deepcopy
 from pathlib import Path
 
@@ -11,11 +14,14 @@ from pathlib import Path
 import netCDF4  # noqa: F401
 import numpy as np
 import pandas as pd
+import ruamel.yaml as ruamel_yaml
 import xarray as xr
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.util.tools import listify
+from calliope.util.tools import climb_template_tree, listify, relative_path
+
+logger = logging.getLogger(__name__)
 
 CONFIG_DIR = importlib.resources.files("calliope") / "config"
 
@@ -208,5 +214,98 @@ def save_csv(
 def load_config(filename: str):
     """Load model configuration from a file."""
     with importlib.resources.as_file(CONFIG_DIR / filename) as f:
-        loaded = AttrDict.from_yaml(f)
+        loaded = read_rich_yaml(f)
     return loaded
+
+
+def read_rich_yaml(
+    yaml: str | Path,
+    allow_override: bool = False,
+    template_sections: None | Iterable[str] = None,
+) -> AttrDict:
+    """Returns an AttrDict initialised from the given YAML file or string.
+
+    Uses calliope's "flavour" for YAML files.
+
+    Args:
+        yaml (str | Path): YAML file path or string.
+        resolve_imports (bool, optional): Solve imports recursively. Defaults to True.
+        allow_override (bool, optional): Allow overrides for already defined keys. Defaults to False.
+        template_sections: (Iterable[str], optional): Replace tempalte for the requested sections. Defaults to False.
+
+    Raises:
+        ValueError: Import solving requested for non-file input YAML.
+    """
+    if isinstance(yaml, str) and not os.path.exists(yaml):
+        yaml_path = None
+        yaml_text = yaml
+    else:
+        yaml_path = Path(yaml)
+        yaml_text = yaml_path.read_text(encoding="utf-8")
+
+    yaml_dict = AttrDict(_yaml_load(yaml_text))
+    yaml_dict = _resolve_yaml_imports(
+        yaml_dict, base_path=yaml_path, allow_override=allow_override
+    )
+    if template_sections:
+        yaml_dict = _resolve_yaml_templates(yaml_dict, template_sections)
+    return yaml_dict
+
+
+def _yaml_load(src):
+    """Load YAML from a file object or path with useful parser errors."""
+    yaml = ruamel_yaml.YAML(typ="safe")
+    if not isinstance(src, str):
+        try:
+            src_name = src.name
+        except AttributeError:
+            src_name = "<yaml stringio>"
+        # Force-load file streams as that allows the parser to print
+        # much more context when it encounters an error
+        src = src.read()
+    else:
+        src_name = "<yaml string>"
+    try:
+        result = yaml.load(src)
+        if not isinstance(result, dict):
+            raise ValueError(f"Could not parse {src_name} as YAML")
+        return result
+    except ruamel_yaml.YAMLError:
+        logger.error(f"Parser error when reading YAML from {src_name}.")
+        raise
+
+
+def _resolve_yaml_imports(
+    loaded: AttrDict, base_path: str | Path | None, allow_override: bool
+) -> AttrDict:
+    loaded_dict = loaded
+    imports = loaded_dict.get_key("import", None)
+    if imports:
+        if not isinstance(imports, list):
+            raise ValueError("`import` must be a list.")
+        if base_path is None:
+            raise ValueError("Imports are not possible for non-file yaml inputs.")
+
+        for k in imports:
+            path = relative_path(base_path, k)
+            imported = read_rich_yaml(path)
+            # loaded is added to imported (i.e. it takes precedence)
+            imported.union(loaded_dict, allow_override=allow_override)
+            loaded_dict = imported
+        # 'import' key itself is no longer needed
+        loaded_dict.del_key("import")
+
+    return loaded_dict
+
+
+def _resolve_yaml_templates(data: AttrDict, sections: Iterable[str]) -> AttrDict:
+    """Fill and then remove template definitions in the given sections."""
+    if "templates" in data:
+        templates = data.pop("templates")
+        for section in sections:
+            for item, values in data[section].items():
+                if "template" in values:
+                    filled, _ = climb_template_tree(values, templates)
+                    data[section][item] = filled
+                    data[section][item].pop("template")
+    return data
