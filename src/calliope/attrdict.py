@@ -410,6 +410,9 @@ class AttrDict(dict):
         Raises:
             KeyError: `other` has an already defined key and `allow_override == False`
         """
+        if not isinstance(other, AttrDict):
+            # FIXME-yaml: remove AttrDict wrapping in uses of this function.
+            other = AttrDict(other)
         self_keys = self.keys_nested()
         other_keys = other.keys_nested()
         if allow_replacement:

@@ -221,7 +221,6 @@ def load_config(filename: str):
 def read_rich_yaml(
     yaml: str | Path,
     allow_override: bool = False,
-    template_sections: None | Iterable[str] = None,
 ) -> AttrDict:
     """Returns an AttrDict initialised from the given YAML file or string.
 
@@ -247,8 +246,6 @@ def read_rich_yaml(
     yaml_dict = _resolve_yaml_imports(
         yaml_dict, base_path=yaml_path, allow_override=allow_override
     )
-    if template_sections:
-        yaml_dict = _resolve_yaml_templates(yaml_dict, template_sections)
     return yaml_dict
 
 
@@ -298,14 +295,70 @@ def _resolve_yaml_imports(
     return loaded_dict
 
 
-def _resolve_yaml_templates(data: AttrDict, sections: Iterable[str]) -> AttrDict:
-    """Fill and then remove template definitions in the given sections."""
-    if "templates" in data:
-        templates = data.pop("templates")
-        for section in sections:
-            for item, values in data[section].items():
-                if "template" in values:
-                    filled, _ = climb_template_tree(values, templates)
-                    data[section][item] = filled
-                    data[section][item].pop("template")
-    return data
+class TemplateSolver:
+    """Resolves templates in dictionaries obtained from YAML files."""
+
+    TEMPLATES_SECTION: str = "templates"
+    TEMPLATE_CALL: str = "template"
+
+    def __init__(self, data: AttrDict):
+        """Initialise the solver."""
+        self._raw_templates: AttrDict = data.get_key(self.TEMPLATES_SECTION, None)
+        self._raw_data: AttrDict = data
+        self.resolved_templates: AttrDict
+        self.resolved_data: AttrDict
+        self.resolve()
+
+    def resolve(self):
+        """Fill in template references and remove template definitions and calls."""
+        self.resolved_templates = AttrDict()
+        for key, value in self._raw_templates.items():
+            if not isinstance(value, dict):
+                raise ValueError("Template definitions must be YAML blocks.")
+            self.resolved_templates[key] = self._resolve_template(key)
+        self.resolved_data = self._resolve_data(self._raw_data)
+
+    def _resolve_template(self, name: str, stack: None | set[str] = None) -> AttrDict:
+        """Resolves templates recursively.
+
+        Catches circular template definitions.
+        """
+        if stack is None:
+            stack = set()
+        elif name in stack:
+            raise ValueError(f"Circular template reference detected for '{name}'.")
+        stack.add(name)
+
+        result = AttrDict()
+        raw_data = self._raw_templates[name]
+        if self.TEMPLATE_CALL in raw_data:
+            # Current template takes precedence when overriding values
+            inherited_name = raw_data[self.TEMPLATE_CALL]
+            if inherited_name in self.resolved_templates:
+                inherited_data = self.resolved_templates[inherited_name]
+            else:
+                inherited_data = self._resolve_template(inherited_name, stack)
+            result.union(inherited_data)
+
+        local_data = {k: raw_data[k] for k in raw_data.keys() - {self.TEMPLATE_CALL}}
+        result.union(local_data, allow_override=True)
+
+        stack.remove(name)
+        return result
+
+    def _resolve_data(self, section, level: int = 0):
+        if isinstance(section, dict):
+            result = AttrDict()
+            if self.TEMPLATES_SECTION in section:
+                if level != 0:
+                    raise ValueError("Template definitions must be placed at the top level of the YAML file.")
+            if self.TEMPLATE_CALL in section:
+                # Prefill template first so it can be overwritten by local values.
+                result.update(self.resolved_templates[section[self.TEMPLATE_CALL]])
+            keys = section.keys() - {self.TEMPLATE_CALL, self.TEMPLATES_SECTION}
+            for key in keys:
+                result[key] = self._resolve_data(section[key], level=level+1)
+        else:
+            result = section
+        return result
+

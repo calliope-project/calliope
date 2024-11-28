@@ -240,7 +240,6 @@ class TestIO:
 
 
 class TestYaml:
-
     @pytest.fixture
     def dummy_yaml_import(self):
         return """
@@ -254,8 +253,7 @@ class TestYaml:
             calliope.io.read_rich_yaml(dummy_yaml_import)
 
         assert check_error_or_warning(
-            exinfo,
-            "Imports are not possible for non-file yaml inputs."
+            exinfo, "Imports are not possible for non-file yaml inputs."
         )
 
     @pytest.fixture
@@ -270,7 +268,7 @@ class TestYaml:
         return file
 
     def test_import(self, dummy_imported_file):
-        file = dummy_imported_file.parent /  "main_file.yaml"
+        file = dummy_imported_file.parent / "main_file.yaml"
         text = """
             import:
                 - test_import.yaml
@@ -288,7 +286,7 @@ class TestYaml:
         assert d.get_key("anotherkey") == 2
 
     def test_import_must_be_list(self, tmp_path):
-        file = tmp_path /  "non_list_import.yaml"
+        file = tmp_path / "non_list_import.yaml"
         text = """
             import: test_import.yaml
             foo:
@@ -365,7 +363,6 @@ class TestYaml:
         )
 
     def test_order_of_subdicts(self, multi_order_yaml):
-
         assert multi_order_yaml.A.B.C == 10
         assert multi_order_yaml.A.B.E == 20
         assert multi_order_yaml.C == "foobar"
@@ -374,8 +371,9 @@ class TestYaml:
         d = calliope.io.read_rich_yaml("a: [{x: 1}, {y: 2}]")
         dd = d.as_dict()
         assert dd["a"][0]["x"] == 1
-        assert all([isinstance(dd["a"][0], dict), not isinstance(dd["a"][0], AttrDict)])  # Not AttrDict!
-
+        assert all(
+            [isinstance(dd["a"][0], dict), not isinstance(dd["a"][0], AttrDict)]
+        )  # Not AttrDict!
 
     def test_replacement_null_from_file(self, multi_order_yaml):
         replacement = calliope.io.read_rich_yaml("C._REPLACE_: null")
@@ -405,3 +403,110 @@ class TestYaml:
             assert "some_int: 10" in result
             assert "some_float: 0.5" in result
             assert "a_list:\n- 0\n- 1\n- 2" in result
+
+
+class TestYAMLTemplates:
+
+    @pytest.fixture
+    def dummy_solved_template(self) -> calliope.io.TemplateSolver:
+        text = """
+        templates:
+            T1:
+                A: ["foo", "bar"]
+                B: 1
+            T2:
+                C: bar
+                template: T1
+            T3:
+                template: T1
+                B: 11
+            T4:
+                template: T3
+                A: ["bar", "foobar"]
+                B: "1"
+                C: {"foo": "bar"}
+                D: true
+        a:
+            template: T1
+            a1: 1
+        b:
+            template: T3
+        c:
+            template: T4
+            D: false
+        """
+        yaml_data = calliope.io.read_rich_yaml(text)
+        return calliope.io.TemplateSolver(yaml_data)
+
+    def test_inheritance_templates(self, dummy_solved_template):
+        templates = dummy_solved_template.resolved_templates
+        assert all(
+            [
+                templates.T1 == {"A": ["foo", "bar"], "B": 1},
+                templates.T2 == {"A": ["foo", "bar"], "B": 1, "C": "bar"},
+                templates.T3 == {"A": ["foo", "bar"], "B": 11},
+                templates.T4 == {"A": ["bar", "foobar"], "B": "1", "C": {"foo": "bar"}, "D": True}
+            ]
+        )
+
+    def test_template_inheritance_data(self, dummy_solved_template):
+        data = dummy_solved_template.resolved_data
+        assert all(
+            [
+                data.a == {"A": ["foo", "bar"], "B": 1, "a1": 1},
+                data.b == {"A": ["foo", "bar"], "B": 11},
+                data.c == {"A": ["bar", "foobar"], "B": "1", "C": {"foo": "bar"}, "D": False}
+            ]
+        )
+
+    def test_invalid_template_error(self):
+        text = calliope.io.read_rich_yaml(
+            """
+            templates:
+                T1: "not_a_yaml_block"
+                T2:
+                    foo: bar
+            a:
+                template: T2
+            """
+        )
+        with pytest.raises(ValueError, match="Template definitions must be YAML blocks."):
+            calliope.io.TemplateSolver(text)
+
+    def test_circular_template_error(self):
+        text = calliope.io.read_rich_yaml(
+            """
+            templates:
+                T1:
+                    template: T2
+                    bar: foo
+                T2:
+                    template: T1
+                    foo: bar
+            a:
+                template: T2
+            """
+        )
+        with pytest.raises(ValueError, match="Circular template reference detected"):
+            calliope.io.TemplateSolver(text)
+
+    def test_incorrect_template_placement_error(self):
+        text = calliope.io.read_rich_yaml(
+            """
+            templates:
+                T1:
+                    stuff: null
+                T2:
+                    foo: bar
+            a:
+                template: T2
+            b:
+                templates:
+                    T3:
+                        this: "should not be here"
+            """
+        )
+        with pytest.raises(ValueError, match="Template definitions must be placed at the top level of the YAML file."):
+            calliope.io.TemplateSolver(text)
+
+
