@@ -6,4 +6,4 @@ definition_matrix: >-
   `definition_matrix` is a protected array.
   It will be generated internally based on the values you assign to the `carrier_in` and `carrier_out` parameters.
 template: >-
-  Technology/Node template inheritance (`template`) can only be used in the YAML model definition.
+  Template inheritance (`template`) can only be used in the YAML model definition.

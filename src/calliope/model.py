@@ -90,18 +90,8 @@ class Model:
         if isinstance(model_definition, xr.Dataset):
             self._init_from_model_data(model_definition)
         else:
-            if isinstance(model_definition, dict):
-                model_def_dict = AttrDict(model_definition)
-            else:
-                self._def_path = str(model_definition)
-                model_def_dict = AttrDict.from_yaml(model_definition)
-
-            (model_def, applied_overrides) = preprocess.load_scenario_overrides(
-                model_def_dict, scenario, override_dict, **kwargs
-            )
-
-            self._init_from_model_def_dict(
-                model_def, applied_overrides, scenario, data_table_dfs
+            self._init_from_model_definition(
+                model_definition, scenario, override_dict, data_table_dfs, **kwargs
             )
 
         self._model_data.attrs["timestamp_model_creation"] = timestamp_model_creation
@@ -138,23 +128,38 @@ class Model:
         """Get solved status."""
         return self._is_solved
 
-    def _init_from_model_def_dict(
+    def _init_from_model_definition(
         self,
-        model_definition: calliope.AttrDict,
-        applied_overrides: str,
+        model_definition: dict | str,
         scenario: str | None,
-        data_table_dfs: dict[str, pd.DataFrame] | None = None,
+        override_dict: dict | None,
+        data_table_dfs: dict[str, pd.DataFrame] | None,
+        **kwargs
     ) -> None:
         """Initialise the model using pre-processed YAML files and optional dataframes/dicts.
 
         Args:
             model_definition (calliope.AttrDict): preprocessed model configuration.
-            applied_overrides (str): overrides specified by users
             scenario (str | None): scenario specified by users
-            data_table_dfs (dict[str, pd.DataFrame] | None, optional): files with additional model information. Defaults to None.
+            override_dict (dict | None): overrides to apply after scenarios.
+            data_table_dfs (dict[str, pd.DataFrame] | None): files with additional model information.
+            **kwargs: initialisation overrides.
         """
+        if isinstance(model_definition, dict):
+            model_def_raw = AttrDict(model_definition)
+        else:
+            self._def_path = str(model_definition)
+            model_def_raw = io.read_rich_yaml(model_definition)
+
+        (model_def_full, applied_overrides) = preprocess.load_scenario_overrides(
+            model_def_raw, scenario, override_dict, **kwargs
+        )
+
+        # FIXME-yaml: reintroduce after cleaning inheritance
+        # model_def_full = io.TemplateSolver.resolve_templates(model_def_overridden)
+
         # First pass to check top-level keys are all good
-        validate_dict(model_definition, CONFIG_SCHEMA, "Model definition")
+        validate_dict(model_def_full, CONFIG_SCHEMA, "Model definition")
 
         log_time(
             LOGGER,
@@ -163,7 +168,7 @@ class Model:
             comment="Model: preprocessing stage 1 (model_run)",
         )
         model_config = AttrDict(extract_from_schema(CONFIG_SCHEMA, "default"))
-        model_config.union(model_definition.pop("config"), allow_override=True)
+        model_config.union(model_def_full.pop("config"), allow_override=True)
 
         init_config = update_then_validate_config("init", model_config)
 
@@ -180,9 +185,9 @@ class Model:
             "scenario": scenario,
             "defaults": param_metadata["default"],
         }
-        templates = model_definition.get("templates", AttrDict())
+        templates = model_def_full.get("templates", AttrDict())
         data_tables: list[DataTable] = []
-        for table_name, table_dict in model_definition.pop("data_tables", {}).items():
+        for table_name, table_dict in model_def_full.pop("data_tables", {}).items():
             table_dict, _ = climb_template_tree(table_dict, templates, table_name)
             data_tables.append(
                 DataTable(
@@ -191,7 +196,7 @@ class Model:
             )
 
         model_data_factory = ModelDataFactory(
-            init_config, model_definition, data_tables, attributes, param_metadata
+            init_config, model_def_full, data_tables, attributes, param_metadata
         )
         model_data_factory.build()
 

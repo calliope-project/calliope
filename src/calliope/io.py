@@ -307,9 +307,9 @@ class TemplateSolver:
         self._raw_data: AttrDict = data
         self.resolved_templates: AttrDict
         self.resolved_data: AttrDict
-        self.resolve()
+        self._resolve()
 
-    def resolve(self):
+    def _resolve(self):
         """Fill in template references and remove template definitions and calls."""
         self.resolved_templates = AttrDict()
         for key, value in self._raw_templates.items():
@@ -361,4 +361,10 @@ class TemplateSolver:
         else:
             result = section
         return result
+
+    @classmethod
+    def resolve_templates(cls, data: AttrDict) -> AttrDict:
+        """Resolve calliope-flavoured templates."""
+        solver = cls(data)
+        return solver.resolved_data
 
