@@ -19,11 +19,6 @@ def where():
 
 
 @pytest.fixture(scope="class")
-def where_inheritance(where, parsing_kwargs):
-    return where["inheritance"](**parsing_kwargs)
-
-
-@pytest.fixture(scope="class")
 def where_any(where, parsing_kwargs):
     return where["any"](**parsing_kwargs)
 
@@ -100,7 +95,7 @@ class TestAsArray:
         return _is_defined
 
     @pytest.mark.parametrize(
-        ("string_type", "func_name"), [("where", "inheritance"), ("expression", "sum")]
+        ("string_type", "func_name"), [("where", "defined"), ("expression", "sum")]
     )
     def test_duplicate_name_exception(self, string_type, func_name):
         with pytest.raises(ValueError, match=rf".*{string_type}.*{func_name}.*"):
@@ -125,18 +120,6 @@ class TestAsArray:
                 return None
 
         assert all(func_name in helper_functions._registry[i] for i in string_types)
-
-    def test_nodes_inheritance(self, where_inheritance, dummy_model_data):
-        boo_bool = where_inheritance(nodes="boo")
-        assert boo_bool.equals(dummy_model_data.nodes_inheritance_boo_bool)
-
-    def test_techs_inheritance(self, where_inheritance, dummy_model_data):
-        boo_bool = where_inheritance(techs="boo")
-        assert boo_bool.equals(dummy_model_data.techs_inheritance_boo_bool)
-
-    def test_techs_and_nodes_inheritance(self, where_inheritance, dummy_model_data):
-        boo_bool = where_inheritance(techs="boo", nodes="boo")
-        assert boo_bool.equals(dummy_model_data.multi_inheritance_boo_bool)
 
     def test_any_not_exists(self, where_any):
         summed = where_any("foo", over="techs")
@@ -396,18 +379,6 @@ class TestAsMathString:
             "return_type": "math_string",
             "equation_name": "foo",
         }
-
-    def test_techs_inheritance(self, where_inheritance):
-        assert where_inheritance(techs="boo") == r"\text{inherits(techs=boo)}"
-
-    def test_nodes_inheritance(self, where_inheritance):
-        assert where_inheritance(nodes="boo") == r"\text{inherits(nodes=boo)}"
-
-    def test_techs_and_nodes_inheritance(self, where_inheritance):
-        assert (
-            where_inheritance(nodes="boo", techs="bar")
-            == r"\text{inherits(nodes=boo,techs=bar)}"
-        )
 
     def test_any_not_exists(self, where_any):
         summed_string = where_any("foo", over="techs")

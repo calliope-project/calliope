@@ -228,13 +228,13 @@ properties:
     additionalProperties: false
     patternProperties: *nested_pattern
 
-  templates:
-    type: [object, "null"]
-    description: >-
-      Abstract technology/node templates from which techs/nodes can `inherit`.
-      See the model definition schema for more guidance on content.
-    additionalProperties: false
-    patternProperties: *nested_pattern
+  # templates:
+  #   type: [object, "null"]
+  #   description: >-
+  #     Abstract technology/node templates from which techs/nodes can `inherit`.
+  #     See the model definition schema for more guidance on content.
+  #   additionalProperties: false
+  #   patternProperties: *nested_pattern
 
   overrides:
     type: [object, "null"]

@@ -1,21 +1,53 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-"""Preprocessing of base model definition and overrides/scenarios into a unified dictionary."""
+"""Preprocessing of model definition into a unified dictionary."""
 
 import logging
+from pathlib import Path
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
+from calliope.io import read_rich_yaml
 from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
 
 
-def load_scenario_overrides(
-    model_definition: dict,
+def prepare_model_definition(
+    data: str | Path | dict,
     scenario: str | None = None,
     override_dict: dict | None = None,
-    **kwargs,
+) -> tuple[AttrDict, str]:
+    """Arrenge model definition data folloging our standardised order of priority.
+
+    Should always be called when defining calliope models from configuration files.
+    The order of priority is:
+
+    - scenarios/overrides > templates > regular data sections
+
+    Args:
+        data (str | Path | dict): _description_
+        scenario (str | None, optional): _description_. Defaults to None.
+        override_dict (dict | None, optional): _description_. Defaults to None.
+
+    Returns:
+        tuple[AttrDict, str]: _description_
+    """
+    if isinstance(data, dict):
+        model_def = AttrDict(data)
+    else:
+        model_def = read_rich_yaml(data)
+    model_def, applied_overrides = _load_scenario_overrides(model_def, scenario, override_dict)
+    template_solver = TemplateSolver(model_def)
+    model_def = template_solver.resolved_data
+
+    return model_def, applied_overrides
+
+
+def _load_scenario_overrides(
+    model_definition: dict,
+    scenario: str | None = None,
+    override_dict: dict | None = None
 ) -> tuple[AttrDict, str]:
     """Apply user-defined overrides to the model definition.
 
@@ -44,7 +76,7 @@ def load_scenario_overrides(
     # First pass of applying override dict before applying scenarios,
     # so that can override scenario definitions by override_dict
     if isinstance(override_dict, str):
-        override_dict = AttrDict.from_yaml_string(override_dict)
+        override_dict = read_rich_yaml(override_dict)
 
     if isinstance(override_dict, dict):
         override_dict = AttrDict(override_dict)
@@ -88,10 +120,6 @@ def load_scenario_overrides(
 
     _log_overrides(model_def_dict, model_def_with_overrides)
 
-    model_def_with_overrides.union(
-        AttrDict({"config.init": kwargs}), allow_override=True
-    )
-
     return (model_def_with_overrides, ";".join(applied_overrides))
 
 
@@ -100,7 +128,7 @@ def _combine_overrides(overrides: AttrDict, scenario_overrides: list):
     for override in scenario_overrides:
         try:
             yaml_string = overrides[override].to_yaml()
-            override_with_imports = AttrDict.from_yaml_string(yaml_string)
+            override_with_imports = read_rich_yaml(yaml_string)
         except KeyError:
             raise exceptions.ModelError(f"Override `{override}` is not defined.")
         try:
@@ -153,3 +181,77 @@ def _log_overrides(init_model_def: AttrDict, overriden_model_def: AttrDict) -> N
         else:
             continue
         LOGGER.debug(message)
+
+
+class TemplateSolver:
+    """Resolves templates before they reach Calliope models."""
+
+    TEMPLATES_SECTION: str = "templates"
+    TEMPLATE_CALL: str = "template"
+
+    def __init__(self, data: AttrDict):
+        """Initialise the solver."""
+        self._raw_templates: AttrDict = data.get_key(self.TEMPLATES_SECTION, AttrDict())
+        self._raw_data: AttrDict = data
+        self.resolved_templates: AttrDict
+        self.resolved_data: AttrDict
+        self._resolve()
+
+    def _resolve(self):
+        """Fill in template references and remove template definitions and calls."""
+        self.resolved_templates = AttrDict()
+        for key, value in self._raw_templates.items():
+            if not isinstance(value, dict):
+                raise exceptions.ModelError("Template definitions must be YAML blocks.")
+            self.resolved_templates[key] = self._resolve_template(key)
+        self.resolved_data = self._resolve_data(self._raw_data)
+
+    def _resolve_template(self, name: str, stack: None | set[str] = None) -> AttrDict:
+        """Resolves templates recursively.
+
+        Catches circular template definitions.
+        """
+        if stack is None:
+            stack = set()
+        elif name in stack:
+            raise exceptions.ModelError(f"Circular template reference detected for '{name}'.")
+        stack.add(name)
+
+        result = AttrDict()
+        raw_data = self._raw_templates[name]
+        if self.TEMPLATE_CALL in raw_data:
+            # Current template takes precedence when overriding values
+            inherited_name = raw_data[self.TEMPLATE_CALL]
+            if inherited_name in self.resolved_templates:
+                inherited_data = self.resolved_templates[inherited_name]
+            else:
+                inherited_data = self._resolve_template(inherited_name, stack)
+            result.union(inherited_data)
+
+        local_data = {k: raw_data[k] for k in raw_data.keys() - {self.TEMPLATE_CALL}}
+        result.union(local_data, allow_override=True)
+
+        stack.remove(name)
+        return result
+
+    def _resolve_data(self, section, level: int = 0):
+        if isinstance(section, dict):
+            if self.TEMPLATES_SECTION in section:
+                if level != 0:
+                    raise exceptions.ModelError("Template definitions must be placed at the top level of the YAML file.")
+            if self.TEMPLATE_CALL in section:
+                template = self.resolved_templates[section[self.TEMPLATE_CALL]].copy()
+            else:
+                template = AttrDict()
+
+            local = AttrDict()
+            for key in section.keys() - {self.TEMPLATE_CALL, self.TEMPLATES_SECTION}:
+                local[key] = self._resolve_data(section[key], level=level+1)
+
+            # Local values have priority.
+            template.union(local, allow_override=True)
+            result = template
+        else:
+            result = section
+        return result
+

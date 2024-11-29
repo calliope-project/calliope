@@ -8,6 +8,7 @@ from pathlib import Path
 
 from calliope.attrdict import AttrDict
 from calliope.exceptions import ModelError
+from calliope.io import read_rich_yaml
 from calliope.util.schema import MATH_SCHEMA, validate_dict
 from calliope.util.tools import relative_path
 
@@ -166,7 +167,7 @@ class CalliopeMath:
 
     def _add_file(self, yaml_filepath: Path, name: str) -> None:
         try:
-            math = AttrDict.from_yaml(yaml_filepath, allow_override=True)
+            math = read_rich_yaml(yaml_filepath, allow_override=True)
         except FileNotFoundError:
             raise ModelError(
                 f"Math preprocessing | File does not exist: {yaml_filepath}"

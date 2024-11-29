@@ -5,7 +5,6 @@
 import importlib.resources
 import logging
 import os
-from collections.abc import Iterable
 from copy import deepcopy
 from pathlib import Path
 
@@ -19,7 +18,7 @@ import xarray as xr
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.util.tools import climb_template_tree, listify, relative_path
+from calliope.util.tools import listify, relative_path
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +119,7 @@ def _deserialise(attrs: dict) -> None:
             Changes will be made in-place, so be sure to supply a copy of your dictionary if you want access to its original state.
     """
     for attr in _pop_serialised_list(attrs, "serialised_dicts"):
-        attrs[attr] = AttrDict.from_yaml_string(attrs[attr])
+        attrs[attr] = read_rich_yaml(attrs[attr])
     for attr in _pop_serialised_list(attrs, "serialised_bools"):
         attrs[attr] = bool(attrs[attr])
     for attr in _pop_serialised_list(attrs, "serialised_nones"):
@@ -228,9 +227,7 @@ def read_rich_yaml(
 
     Args:
         yaml (str | Path): YAML file path or string.
-        resolve_imports (bool, optional): Solve imports recursively. Defaults to True.
         allow_override (bool, optional): Allow overrides for already defined keys. Defaults to False.
-        template_sections: (Iterable[str], optional): Replace tempalte for the requested sections. Defaults to False.
 
     Raises:
         ValueError: Import solving requested for non-file input YAML.
@@ -293,78 +290,3 @@ def _resolve_yaml_imports(
         loaded_dict.del_key("import")
 
     return loaded_dict
-
-
-class TemplateSolver:
-    """Resolves templates in dictionaries obtained from YAML files."""
-
-    TEMPLATES_SECTION: str = "templates"
-    TEMPLATE_CALL: str = "template"
-
-    def __init__(self, data: AttrDict):
-        """Initialise the solver."""
-        self._raw_templates: AttrDict = data.get_key(self.TEMPLATES_SECTION, None)
-        self._raw_data: AttrDict = data
-        self.resolved_templates: AttrDict
-        self.resolved_data: AttrDict
-        self._resolve()
-
-    def _resolve(self):
-        """Fill in template references and remove template definitions and calls."""
-        self.resolved_templates = AttrDict()
-        for key, value in self._raw_templates.items():
-            if not isinstance(value, dict):
-                raise ValueError("Template definitions must be YAML blocks.")
-            self.resolved_templates[key] = self._resolve_template(key)
-        self.resolved_data = self._resolve_data(self._raw_data)
-
-    def _resolve_template(self, name: str, stack: None | set[str] = None) -> AttrDict:
-        """Resolves templates recursively.
-
-        Catches circular template definitions.
-        """
-        if stack is None:
-            stack = set()
-        elif name in stack:
-            raise ValueError(f"Circular template reference detected for '{name}'.")
-        stack.add(name)
-
-        result = AttrDict()
-        raw_data = self._raw_templates[name]
-        if self.TEMPLATE_CALL in raw_data:
-            # Current template takes precedence when overriding values
-            inherited_name = raw_data[self.TEMPLATE_CALL]
-            if inherited_name in self.resolved_templates:
-                inherited_data = self.resolved_templates[inherited_name]
-            else:
-                inherited_data = self._resolve_template(inherited_name, stack)
-            result.union(inherited_data)
-
-        local_data = {k: raw_data[k] for k in raw_data.keys() - {self.TEMPLATE_CALL}}
-        result.union(local_data, allow_override=True)
-
-        stack.remove(name)
-        return result
-
-    def _resolve_data(self, section, level: int = 0):
-        if isinstance(section, dict):
-            result = AttrDict()
-            if self.TEMPLATES_SECTION in section:
-                if level != 0:
-                    raise ValueError("Template definitions must be placed at the top level of the YAML file.")
-            if self.TEMPLATE_CALL in section:
-                # Prefill template first so it can be overwritten by local values.
-                result.update(self.resolved_templates[section[self.TEMPLATE_CALL]])
-            keys = section.keys() - {self.TEMPLATE_CALL, self.TEMPLATES_SECTION}
-            for key in keys:
-                result[key] = self._resolve_data(section[key], level=level+1)
-        else:
-            result = section
-        return result
-
-    @classmethod
-    def resolve_templates(cls, data: AttrDict) -> AttrDict:
-        """Resolve calliope-flavoured templates."""
-        solver = cls(data)
-        return solver.resolved_data
-

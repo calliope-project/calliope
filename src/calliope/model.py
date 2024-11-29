@@ -25,7 +25,7 @@ from calliope.util.schema import (
     update_then_validate_config,
     validate_dict,
 )
-from calliope.util.tools import climb_template_tree, relative_path
+from calliope.util.tools import relative_path
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
@@ -90,6 +90,9 @@ class Model:
         if isinstance(model_definition, xr.Dataset):
             self._init_from_model_data(model_definition)
         else:
+            if not isinstance(model_definition, dict):
+                # Only file definitions allow relative files.
+                self._def_path = str(model_definition)
             self._init_from_model_definition(
                 model_definition, scenario, override_dict, data_table_dfs, **kwargs
             )
@@ -134,7 +137,7 @@ class Model:
         scenario: str | None,
         override_dict: dict | None,
         data_table_dfs: dict[str, pd.DataFrame] | None,
-        **kwargs
+        **kwargs,
     ) -> None:
         """Initialise the model using pre-processed YAML files and optional dataframes/dicts.
 
@@ -145,19 +148,10 @@ class Model:
             data_table_dfs (dict[str, pd.DataFrame] | None): files with additional model information.
             **kwargs: initialisation overrides.
         """
-        if isinstance(model_definition, dict):
-            model_def_raw = AttrDict(model_definition)
-        else:
-            self._def_path = str(model_definition)
-            model_def_raw = io.read_rich_yaml(model_definition)
-
-        (model_def_full, applied_overrides) = preprocess.load_scenario_overrides(
-            model_def_raw, scenario, override_dict, **kwargs
+        (model_def_full, applied_overrides) = preprocess.prepare_model_definition(
+            model_definition, scenario, override_dict
         )
-
-        # FIXME-yaml: reintroduce after cleaning inheritance
-        # model_def_full = io.TemplateSolver.resolve_templates(model_def_overridden)
-
+        model_def_full.union(AttrDict({"config.init": kwargs}), allow_override=True)
         # First pass to check top-level keys are all good
         validate_dict(model_def_full, CONFIG_SCHEMA, "Model definition")
 
@@ -185,10 +179,8 @@ class Model:
             "scenario": scenario,
             "defaults": param_metadata["default"],
         }
-        templates = model_def_full.get("templates", AttrDict())
         data_tables: list[DataTable] = []
         for table_name, table_dict in model_def_full.pop("data_tables", {}).items():
-            table_dict, _ = climb_template_tree(table_dict, templates, table_name)
             data_tables.append(
                 DataTable(
                     init_config, table_name, table_dict, data_table_dfs, self._def_path

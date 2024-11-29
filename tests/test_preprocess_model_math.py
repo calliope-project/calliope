@@ -9,6 +9,7 @@ import pytest
 
 import calliope
 from calliope.exceptions import ModelError
+from calliope.io import read_rich_yaml
 from calliope.preprocess import CalliopeMath
 
 
@@ -105,7 +106,7 @@ class TestMathLoading:
     @pytest.fixture(scope="class")
     def predefined_mode_data(self, pre_defined_mode):
         path = Path(calliope.__file__).parent / "math" / f"{pre_defined_mode}.yaml"
-        math = calliope.AttrDict.from_yaml(path)
+        math = read_rich_yaml(path)
         return math
 
     def test_predefined_add(self, model_math_w_mode, predefined_mode_data):

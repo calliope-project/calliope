@@ -7,7 +7,7 @@ import pytest
 import xarray as xr
 
 from calliope import AttrDict, exceptions
-from calliope.preprocess import scenarios
+from calliope.preprocess import prepare_model_definition
 from calliope.preprocess.model_data import ModelDataFactory
 
 from .common.util import build_test_model as build_model
@@ -17,9 +17,8 @@ from .common.util import check_error_or_warning
 @pytest.fixture
 def model_def():
     model_def_path = Path(__file__).parent / "common" / "test_model" / "model.yaml"
-    model_dict = AttrDict.from_yaml(model_def_path)
-    model_def_override, _ = scenarios.load_scenario_overrides(
-        model_dict, scenario="simple_supply,empty_tech_node"
+    model_def_override, _ = prepare_model_definition(
+        model_def_path, scenario="simple_supply,empty_tech_node"
     )
     return model_def_override, model_def_path
 
@@ -87,9 +86,7 @@ class TestModelData:
             "heat",
         }
         assert set(model_data_factory_w_params.dataset.data_vars.keys()) == {
-            "nodes_inheritance",
             "distance",
-            "techs_inheritance",
             "name",
             "carrier_out",
             "carrier_in",
@@ -444,7 +441,7 @@ class TestModelData:
             f"foo | Length mismatch between data ({param_data}) and index ([['foo'], ['bar']]) for parameter definition",
         )
 
-    def test_template_defs_inactive(
+    def test_inherit_defs_inactive(
         self, my_caplog, model_data_factory: ModelDataFactory
     ):
         def_dict = {"A": {"active": False}}
@@ -454,30 +451,12 @@ class TestModelData:
         assert "(nodes, A) | Deactivated." in my_caplog.text
         assert not new_def_dict
 
-    def test_template_defs_nodes_inherit(self, model_data_factory: ModelDataFactory):
-        def_dict = {
-            "A": {"template": "init_nodes", "my_param": 1},
-            "B": {"my_param": 2},
-        }
-        new_def_dict = model_data_factory._inherit_defs(
-            dim_name="nodes", dim_dict=AttrDict(def_dict)
-        )
-
-        assert new_def_dict == {
-            "A": {
-                "nodes_inheritance": "init_nodes",
-                "my_param": 1,
-                "techs": {"test_demand_elec": None},
-            },
-            "B": {"my_param": 2},
-        }
-
-    def test_template_defs_nodes_from_base(self, model_data_factory: ModelDataFactory):
+    def test_inherit_defs_nodes_from_base(self, model_data_factory: ModelDataFactory):
         """Without a `dim_dict` to start off inheritance chaining, the `dim_name` will be used to find keys."""
         new_def_dict = model_data_factory._inherit_defs(dim_name="nodes")
         assert set(new_def_dict.keys()) == {"a", "b", "c"}
 
-    def test_template_defs_techs(self, model_data_factory: ModelDataFactory):
+    def test_inherit_defs_techs(self, model_data_factory: ModelDataFactory):
         """`dim_dict` overrides content of base model definition."""
         model_data_factory.model_definition.set_key("techs.foo.base_tech", "supply")
         model_data_factory.model_definition.set_key("techs.foo.my_param", 2)
@@ -488,27 +467,7 @@ class TestModelData:
         )
         assert new_def_dict == {"foo": {"my_param": 1, "base_tech": "supply"}}
 
-    def test_template_defs_techs_inherit(self, model_data_factory: ModelDataFactory):
-        """Use of template is tracked in updated definition dictionary (as `techs_inheritance` here)."""
-        model_data_factory.model_definition.set_key(
-            "techs.foo.template", "test_controller"
-        )
-        model_data_factory.model_definition.set_key("techs.foo.base_tech", "supply")
-        model_data_factory.model_definition.set_key("techs.foo.my_param", 2)
-
-        def_dict = {"foo": {"my_param": 1}}
-        new_def_dict = model_data_factory._inherit_defs(
-            dim_name="techs", dim_dict=AttrDict(def_dict)
-        )
-        assert new_def_dict == {
-            "foo": {
-                "my_param": 1,
-                "base_tech": "supply",
-                "techs_inheritance": "test_controller",
-            }
-        }
-
-    def test_template_defs_techs_empty_def(self, model_data_factory: ModelDataFactory):
+    def test_inherit_defs_techs_empty_def(self, model_data_factory: ModelDataFactory):
         """An empty `dim_dict` entry can be handled, by returning the model definition for that entry."""
         model_data_factory.model_definition.set_key("techs.foo.base_tech", "supply")
         model_data_factory.model_definition.set_key("techs.foo.my_param", 2)
@@ -519,7 +478,7 @@ class TestModelData:
         )
         assert new_def_dict == {"foo": {"my_param": 2, "base_tech": "supply"}}
 
-    def test_template_defs_techs_missing_base_def(
+    def test_inherit_defs_techs_missing_base_def(
         self, model_data_factory: ModelDataFactory
     ):
         """If inheriting from a template, checks against the schema will still be undertaken."""

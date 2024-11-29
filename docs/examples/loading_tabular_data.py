@@ -25,6 +25,7 @@ from pathlib import Path
 import pandas as pd
 
 import calliope
+from calliope.io import read_rich_yaml
 
 calliope.set_log_verbosity("INFO", include_solver_output=False)
 
@@ -92,7 +93,7 @@ calliope.set_log_verbosity("INFO", include_solver_output=False)
 # When this is used to initialise a Calliope model, it is processed into a set of data tables ([xarray.DataArray](https://docs.xarray.dev/en/stable/generated/xarray.DataArray.html)) internally:
 
 # %%
-model_def = calliope.AttrDict.from_yaml_string(
+model_def = read_rich_yaml(
     """
 techs:
   supply_tech:
@@ -324,7 +325,7 @@ tech_cost_data
 # ```
 
 # %%
-model_def = calliope.AttrDict.from_yaml_string(
+model_def = read_rich_yaml(
     """
 data_tables:
   tech_data:
@@ -362,7 +363,7 @@ model_from_data_tables = calliope.Model(model_def)
 # You can do that by setting `data` as the name of a key in a dictionary that you supply when you load the model:
 
 # %%
-model_def = calliope.AttrDict.from_yaml_string(
+model_def = read_rich_yaml(
     """
 data_tables:
   tech_data:
@@ -590,7 +591,7 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 #
 
 # %%
-model_def = calliope.AttrDict.from_yaml_string(
+model_def = read_rich_yaml(
     """
 data_tables:
   tech_data:
@@ -676,7 +677,7 @@ pd.concat([flow_cap_old, flow_cap_new], axis=1, keys=["old", "new"])
 # ```
 
 # %%
-model_def = calliope.AttrDict.from_yaml_string(
+model_def = read_rich_yaml(
     """
 data_tables:
   tech_data:

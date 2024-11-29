@@ -40,7 +40,6 @@ class DataTableDict(TypedDict):
     add_dims: NotRequired[dict[str, str | list[str]]]
     select: NotRequired[dict[str, str | bool | int]]
     drop: NotRequired[Hashable | list[Hashable]]
-    template: NotRequired[str]
 
 
 class DataTable:
@@ -131,7 +130,7 @@ class DataTable:
         Args:
             techs_incl_inheritance (AttrDict):
                 Technology definition dictionary which is a union of any YAML definition and the result of calling `self.tech_dict` across all data tables.
-                Technologies should have their entire definition inheritance chain resolved.
+                Technologies should have their definition inheritance resolved.
         """
         node_tech_vars = self.dataset[
             [

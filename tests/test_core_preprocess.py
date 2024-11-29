@@ -6,6 +6,7 @@ import pytest
 import calliope
 import calliope.exceptions as exceptions
 from calliope.attrdict import AttrDict
+from calliope.io import read_rich_yaml
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
@@ -16,7 +17,7 @@ class TestModelRun:
         """Test creating a model from dict/AttrDict instead of from YAML"""
         model_dir = data_source_dir.parent
         model_location = model_dir / "model.yaml"
-        model_dict = AttrDict.from_yaml(model_location)
+        model_dict = read_rich_yaml(model_location)
         node_dict = AttrDict(
             {
                 "nodes": {
@@ -39,7 +40,7 @@ class TestModelRun:
     )
     def test_valid_scenarios(self, dummy_int):
         """Test that valid scenario definition from overrides raises no error and results in applied scenario."""
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             f"""
             scenarios:
                 scenario_1: ['one', 'two']
@@ -72,7 +73,7 @@ class TestModelRun:
         """Test that valid scenario definition which groups scenarios and overrides raises
         no error and results in applied scenario.
         """
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             f"""
             scenarios:
                 scenario_1: ['one', 'two']
@@ -107,7 +108,7 @@ class TestModelRun:
 
     def test_invalid_scenarios_dict(self):
         """Test that invalid scenario definition raises appropriate error"""
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             """
             scenarios:
                 scenario_1:
@@ -123,7 +124,7 @@ class TestModelRun:
 
     def test_invalid_scenarios_str(self):
         """Test that invalid scenario definition raises appropriate error"""
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             """
             scenarios:
                 scenario_1: 'foo'
@@ -138,7 +139,7 @@ class TestModelRun:
 
     def test_undefined_carriers(self):
         """Test that user has input either carrier or carrier_in/_out for each tech"""
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             """
             techs:
                 test_undefined_carrier:
@@ -159,7 +160,7 @@ class TestModelRun:
         """
 
         def override(param):
-            return AttrDict.from_yaml_string(f"config.init.time_subset: {param}")
+            return read_rich_yaml(f"config.init.time_subset: {param}")
 
         # should fail: one string in list
         with pytest.raises(exceptions.ModelError):
@@ -211,7 +212,7 @@ class TestModelRun:
         varying input data are consistent with each other
         """
         # should fail: wrong length of demand_heat csv vs demand_elec
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             "data_tables.demand_elec.data: data_tables/demand_heat_wrong_length.csv"
         )
         # check in output error that it points to: 07/01/2005 10:00:00
@@ -222,7 +223,7 @@ class TestModelRun:
         )
 
     def test_inconsistent_time_indices_passes_thanks_to_time_subsetting(self):
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             "data_tables.demand_elec.data: data_tables/demand_heat_wrong_length.csv"
         )
         # should pass: wrong length of demand_heat csv, but time subsetting removes the difference
@@ -278,7 +279,7 @@ class TestChecks:
 
     def test_unspecified_base_tech(self):
         """All technologies must specify a base_tech"""
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             """
             techs.test_supply_no_base_tech:
                     name: Supply tech
@@ -294,7 +295,7 @@ class TestChecks:
 
     def test_tech_as_base_tech(self):
         """All technologies must specify a base_tech"""
-        override1 = AttrDict.from_yaml_string(
+        override1 = read_rich_yaml(
             """
             techs.test_supply_tech_base_tech:
                 name: Supply tech
