@@ -18,17 +18,17 @@ def prepare_model_definition(
     scenario: str | None = None,
     override_dict: dict | None = None,
 ) -> tuple[AttrDict, str]:
-    """Arrenge model definition data folloging our standardised order of priority.
+    """Arrange model definition data folloging our standardised order of priority.
 
     Should always be called when defining calliope models from configuration files.
     The order of priority is:
 
-    - scenarios/overrides > templates > regular data sections
+    - override_dict > scenarios > data section > template
 
     Args:
-        data (str | Path | dict): _description_
-        scenario (str | None, optional): _description_. Defaults to None.
-        override_dict (dict | None, optional): _description_. Defaults to None.
+        data (str | Path | dict): model data file or dictionary.
+        scenario (str | None, optional): scenario to run. Defaults to None.
+        override_dict (dict | None, optional): additional overrides. Defaults to None.
 
     Returns:
         tuple[AttrDict, str]: _description_

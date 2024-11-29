@@ -116,7 +116,7 @@ class DataTable:
         for param in self.PARAMS_TO_INITIALISE_YAML:
             if param in self.dataset:
                 base_tech_dict = self.dataset[param].to_dataframe().dropna().T.to_dict()
-                base_tech_data.union(AttrDict(base_tech_dict))
+                base_tech_data.union(base_tech_dict)
 
         return tech_dict, base_tech_data
 
@@ -229,15 +229,13 @@ class DataTable:
             )
         else:
             lookup_dict.union(
-                AttrDict(
-                    self.dataset[param]
-                    .to_series()
-                    .reset_index(lookup_dim)
-                    .groupby("techs")
-                    .apply(__extract_data)
-                    .dropna()
-                    .to_dict()
-                )
+                self.dataset[param]
+                .to_series()
+                .reset_index(lookup_dim)
+                .groupby("techs")
+                .apply(__extract_data)
+                .dropna()
+                .to_dict()
             )
 
         return lookup_dict

@@ -637,12 +637,10 @@ class ModelDataFactory:
                 self._update_one_way_links(node_from_data, node_to_data)
 
             link_tech_dict.union(
-                AttrDict(
-                    {
-                        node_from: {link_name: node_from_data},
-                        node_to: {link_name: node_to_data},
-                    }
-                )
+                {
+                    node_from: {link_name: node_from_data},
+                    node_to: {link_name: node_to_data},
+                }
             )
 
         return link_tech_dict

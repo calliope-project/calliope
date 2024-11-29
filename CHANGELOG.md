@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|changed| `template:` can now be used anywhere within YAML definition files, not just in the `nodes`, `techs` and `data_tables` sections.
+
 |changed| Single data entries defined in YAML indexed parameters will not be automatically broadcast along indexed dimensions.
 To achieve the same functionality as in `<v0.7.dev4`, the user must set the new `init` configuration option `broadcast_param_data` to True (#615).
 
@@ -23,6 +25,10 @@ To achieve the same functionality as in `<v0.7.dev4`, the user must set the new 
 This change has occurred to avoid confusion between data "sources" and model energy "sources" (#673).
 
 ### Internal changes
+
+|changed| Model definition reading is now defined in a single place (preprocess/model_definition.py).
+
+|changed| Moved YAML reading/importing functionality out of `AttrDict`. It is now part of our `io` functionality.
 
 |fixed| Avoided gurobi 12.0 incompatibility with pyomo by setting the lower bound to v6.8.2.
 

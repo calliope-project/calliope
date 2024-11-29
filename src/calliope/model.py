@@ -151,7 +151,7 @@ class Model:
         (model_def_full, applied_overrides) = preprocess.prepare_model_definition(
             model_definition, scenario, override_dict
         )
-        model_def_full.union(AttrDict({"config.init": kwargs}), allow_override=True)
+        model_def_full.union({"config.init": kwargs}, allow_override=True)
         # First pass to check top-level keys are all good
         validate_dict(model_def_full, CONFIG_SCHEMA, "Model definition")
 
