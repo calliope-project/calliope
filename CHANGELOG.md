@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|fixed| Area-based parameters have appropriate documented units of `area` rather than `area^2` (#701).
+
 |fixed| Technology capacity lower bound constraints so that `[cap-type]_min` (e.g., `flow_cap_min`) is not always enforced if the `purchased_units` variable is active (#643).
 
 |changed| Single data entries defined in YAML indexed parameters will not be automatically broadcast along indexed dimensions.
