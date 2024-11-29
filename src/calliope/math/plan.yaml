@@ -369,7 +369,7 @@ constraints:
   storage_capacity_units_milp:
     description: >-
       Fix the storage capacity of any technology using integer units to define its capacity.
-    foreach: [nodes, techs, carriers]
+    foreach: [nodes, techs]
     where: "storage AND purchased_units AND storage_cap_per_unit"
     equations:
       - expression: storage_cap == purchased_units * storage_cap_per_unit
@@ -378,7 +378,7 @@ constraints:
     description: >-
       Fix the flow capacity of any technology using integer units to define its capacity.
     foreach: [nodes, techs, carriers]
-    where: "operating_units AND flow_cap_per_unit"
+    where: "purchased_units AND flow_cap_per_unit"
     equations:
       - expression: flow_cap == purchased_units * flow_cap_per_unit
 
@@ -394,14 +394,18 @@ constraints:
       - where: NOT flow_cap_max
         expression: flow_cap <= bigM * purchased_units
 
-  flow_capacity_min_purchase_milp:
+  flow_capacity_minimum:
     description: >-
       Set the lower bound on a technology's flow capacity,
-      for any technology with integer capacity purchasing.
+      for any technology with a non-zero lower bound,
+      with or without integer capacity purchasing.
     foreach: [nodes, techs, carriers]
-    where: "purchased_units AND flow_cap_min"
+    where: "flow_cap_min"
     equations:
-      - expression: flow_cap >= flow_cap_min * purchased_units
+      - where: NOT purchased_units
+        expression: flow_cap >= flow_cap_min
+      - where: purchased_units
+        expression: flow_cap >= flow_cap_min * purchased_units
 
   storage_capacity_max_purchase_milp:
     description: >-
@@ -412,14 +416,44 @@ constraints:
     equations:
       - expression: storage_cap <= storage_cap_max * purchased_units
 
-  storage_capacity_min_purchase_milp:
+  storage_capacity_minimum:
     description: >-
-      Set the lower bound on a technology's storage capacity,
-      for any technology with integer capacity purchasing.
+      Set the lower bound on a technology's storage capacity
+      for any technology with a non-zero lower bound,
+      with or without integer capacity purchasing.
     foreach: [nodes, techs]
-    where: "purchased_units AND storage_cap_min"
+    where: "storage_cap_min"
     equations:
-      - expression: storage_cap >= storage_cap_min * purchased_units
+      - where: NOT purchased_units
+        expression: storage_cap >= storage_cap_min
+      - where: purchased_units
+        expression: storage_cap >= storage_cap_min * purchased_units
+
+  area_use_minimum:
+    description: >-
+      Set the lower bound on a technology's area use
+      for any technology with a non-zero lower bound,
+      with or without integer capacity purchasing.
+    foreach: [nodes, techs]
+    where: "area_use_min"
+    equations:
+      - where: NOT purchased_units
+        expression: area_use >= area_use_min
+      - where: purchased_units
+        expression: area_use >= area_use_min * purchased_units
+
+  source_capacity_minimum:
+    description: >-
+      Set the lower bound on a technology's source capacity
+      for any supply technology with a non-zero lower bound,
+      with or without integer capacity purchasing.
+    foreach: [nodes, techs]
+    where: "base_tech=supply AND source_cap_min"
+    equations:
+      - where: NOT purchased_units
+        expression: source_cap >= source_cap_min
+      - where: purchased_units
+        expression: source_cap >= source_cap_min * purchased_units
 
   unit_capacity_max_systemwide_milp:
     description: >-
@@ -496,7 +530,7 @@ variables:
     unit: power
     foreach: [nodes, techs, carriers]
     bounds:
-      min: flow_cap_min
+      min: 0  # set in a distinct constraint to handle the integer purchase variable
       max: flow_cap_max
 
   link_flow_cap:
@@ -561,7 +595,7 @@ variables:
     foreach: [nodes, techs]
     where: "(area_use_min OR area_use_max OR area_use_per_flow_cap OR sink_unit=per_area OR source_unit=per_area)"
     bounds:
-      min: area_use_min
+      min: 0 # set in a distinct constraint to handle the integer purchase variable
       max: area_use_max
 
   source_use:
@@ -586,7 +620,7 @@ variables:
     foreach: [nodes, techs]
     where: "base_tech=supply"
     bounds:
-      min: source_cap_min
+      min: 0 # set in a distinct constraint to handle the integer purchase variable
       max: source_cap_max
 
   # --8<-- [start:variable]
@@ -601,7 +635,7 @@ variables:
     where: "include_storage=True OR base_tech=storage"
     domain: real # optional; defaults to real.
     bounds:
-      min: storage_cap_min
+      min: 0  # set in a distinct constraint to handle the integer purchase variable
       max: storage_cap_max
     active: true # optional; defaults to true.
   # --8<-- [end:variable]
@@ -662,6 +696,10 @@ variables:
     description: >-
       Flow capacity that will be set to zero if the technology is not operating in a given
       timestep and will be set to the value of the decision variable `flow_cap` otherwise.
+      This is useful when you want to set a minimum flow capacity for any technology investment, but also want to allow the model to decide the capacity.
+      It is expected to only be used when `purchased_units_max == 1`,
+      i.e., the `purchased_units` decision variable is binary.
+      If `purchased_units_max > 1`, you may get strange results and should instead use the less flexible `flow_cap_per_unit`.
     default: 0
     unit: power
     foreach: [nodes, techs, carriers, timesteps]

@@ -75,6 +75,10 @@ count = ''
 quiet-level = 3
 ignore-words-list = "socio-economic"  # British english spelling that isn't covered by the inbuilt dictionary
 
+[tool.mypy]
+ignore_missing_imports = true
+files = "src/"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["calliope*"]

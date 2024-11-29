@@ -47,6 +47,8 @@ The import section in our file looks like this:
 --8<-- "src/calliope/example_models/urban_scale/model.yaml:import"
 ```
 
+## Model definition
+
 ### Referencing tabular data
 
 As of Calliope v0.7.0 it is possible to load tabular data completely separately from the YAML model definition.
@@ -56,7 +58,7 @@ To do this we reference data tables under the `data_tables` key:
 --8<-- "src/calliope/example_models/urban_scale/model.yaml:data-tables"
 ```
 
-In the Calliope example models, we only load timeseries data from file, including for [energy demand](#demand-technologies), [electricity export price](#revenue-by-export) and [solar PV resource availability](#supply-technologies).
+In the Calliope urban scale example model, we only load timeseries data from file, including for [energy demand](#demand-technologies), [electricity export price](#revenue-by-export) and [solar PV resource availability](#supply-technologies).
 These are large tables of data that do not work well in YAML files!
 As an example, the data in the energy demand CSV file looks like this:
 
@@ -68,8 +70,6 @@ Since all the data refers to the one parameter `sink_use_equals`, we don't add t
 
 !!! info
     You can read more about loading data from file in [our dedicated tutorial][loading-tabular-data].
-
-## Model definition
 
 ### Indexed parameters
 
@@ -125,21 +125,6 @@ The definition of this technology in the example model's configuration looks as 
 
 ```yaml
 --8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:pv"
-```
-
-### Interlude: inheriting from templates
-
-You will notice that the above technologies _inherit_ `interest_rate_setter`.
-Templates allow us to avoid excessive repetition in our model definition.
-In this case, `interest_rate_setter` defines an interest rate that will be used to annualise any investment costs the technology defines.
-
-Technologies / nodes can inherit from anything defined in `templates`.
-items in `templates` can also inherit from each other, so you can create inheritance chains.
-
-`interest_rate_setter` looks like this:
-
-```yaml
---8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:interest-rate-setter"
 ```
 
 ### Conversion technologies
@@ -241,7 +226,7 @@ Gas is made available in each node without consideration of transmission.
 --8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:transmission"
 ```
 
-To avoid excessive duplication in model definition, our transmission technologies inherit most of the their parameters from _templates_:
+To avoid excessive duplication in model definition, our transmission technologies inherit most of the their parameters from [templates](../../creating/templates.md):
 
 ```yaml
 --8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:transmission-templates"
