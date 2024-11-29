@@ -13,6 +13,7 @@ config:
     calliope_version: 0.7.0
     # Time series data path - can either be a path relative to this file, or an absolute path
     time_subset: ["2005-07-01", "2005-07-02"] # Subset of timesteps
+    broadcast_param_data: true  # allow single indexed parameter data entries to be broadcast across all index items, if there are multiple entries.
 
   build:
     mode: plan # Choices: plan, operate
@@ -31,6 +32,10 @@ parameters:
     dims: costs
   # `bigM` sets the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
   bigM: 1e6
+  cost_interest_rate:
+    data: 0.10
+    index: monetary
+    dims: costs
 # --8<-- [end:parameters]
 
 # --8<-- [start:data-tables]

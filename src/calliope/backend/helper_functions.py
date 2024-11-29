@@ -748,3 +748,60 @@ class DefaultIfEmpty(ParsingHelperFunction):
             return xr.DataArray(default)
         else:
             return var.fillna(default)
+
+
+class Where(ParsingHelperFunction):
+    """Apply `where` array _within_ an expression string."""
+
+    #:
+    NAME = "where"
+    #:
+    ALLOWED_IN = ["expression"]
+
+    def as_math_string(self, array: str, condition: str) -> str:  # noqa: D102, override
+        return rf"({array} \text{{if }} {condition} == True)"
+
+    def as_array(self, array: xr.DataArray, condition: xr.DataArray) -> xr.DataArray:
+        """Apply a `where` condition to a math array within an expression string.
+
+        Args:
+            array (xr.DataArray): Math component array.
+            condition (xr.DataArray):
+                Boolean where array.
+                If not `bool` type, NaNs and 0 will be assumed as False and all other values will be assumed as True.
+
+        Returns:
+            xr.DataArray:
+                Returns the input array with the condition applied,
+                including having been broadcast across any new dimensions provided by the condition.
+
+        Examples:
+            One common use-case is to introduce a new dimension to the variable which represents subsets of one of the main model dimensions.
+            In this case, each member of `cap_node_groups` is a subset of `nodes` and we want to sum `flow_cap` over each of those subsets and set a maximum value.
+
+            input:
+            ```yaml
+            parameters:
+              node_grouping:
+                data: True
+                index: [[group_1, region1], [group_1, region1_1], [group_2, region1_2], [group_2, region1_3], [group_3, region2]]
+                dims: [cap_node_groups, nodes]
+              node_group_max:
+                data: [1, 2, 3]
+                index: [group_1, group_2, group_3]
+                dims: cap_node_groups
+            ```
+
+            math:
+            ```yaml
+            constraints:
+                my_new_constraint:
+                    foreach: [techs, cap_node_groups]
+                    equations:
+                        - expression: sum(where(flow_cap, node_grouping), over=nodes) <= node_group_max
+            ```
+        """
+        if self._backend_interface is not None:
+            condition = self._input_data[condition.name]
+
+        return array.where(condition.fillna(False).astype(bool))

@@ -4,6 +4,13 @@
 
 |fixed| Technology capacity lower bound constraints so that `[cap-type]_min` (e.g., `flow_cap_min`) is not always enforced if the `purchased_units` variable is active (#643).
 
+|changed| Single data entries defined in YAML indexed parameters will not be automatically broadcast along indexed dimensions.
+To achieve the same functionality as in `<v0.7.dev4`, the user must set the new `init` configuration option `broadcast_param_data` to True (#615).
+
+|changed| Helper functions are now documented on their own page within the "Defining your own math" section of the documentation (#698).
+
+|new| `where(array, condition)` math helper function to apply a where array _inside_ an expression, to enable extending component dimensions on-the-fly, and applying filtering to different components within the expression (#604, #679).
+
 |new| Data tables can inherit options from `templates`, like `techs` and `nodes` (#676).
 
 |new| dimension renaming functionality when loading from a data source, using the `rename_dims` option (#680).
@@ -16,6 +23,10 @@
 
 |changed| `data_sources` -> `data_tables` and `data_sources.source` -> `data_tables.data`.
 This change has occurred to avoid confusion between data "sources" and model energy "sources" (#673).
+
+### Internal changes
+
+|fixed| Avoided gurobi 12.0 incompatibility with pyomo by setting the lower bound to v6.8.2.
 
 ## 0.7.0.dev4 (2024-09-10)
 

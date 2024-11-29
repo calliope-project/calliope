@@ -486,6 +486,13 @@ class ModelDataFactory:
             data = param_data["data"]
             index_items = [listify(idx) for idx in listify(param_data["index"])]
             dims = listify(param_data["dims"])
+            broadcast_param_data = self.config.broadcast_param_data
+            if not broadcast_param_data and len(listify(data)) != len(index_items):
+                raise exceptions.ModelError(
+                    f"{param_name} | Length mismatch between data ({data}) and index ({index_items}) for parameter definition. "
+                    "Check lengths of arrays or set `config.init.broadcast_param_data` to True "
+                    "to allow single data entries to be broadcast across all parameter index items."
+                )
         elif param_name in self.LOOKUP_PARAMS.keys():
             data = True
             index_items = [[i] for i in listify(param_data)]
