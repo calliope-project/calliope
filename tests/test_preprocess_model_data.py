@@ -431,6 +431,19 @@ class TestModelData:
             "foo | Cannot pass parameter data as a list unless the parameter is one of the pre-defined lookup arrays",
         )
 
+    @pytest.mark.parametrize("param_data", [1, [1], [1, 2, 3]])
+    def test_prepare_param_dict_no_broadcast_allowed(
+        self, model_data_factory, param_data
+    ):
+        model_data_factory.config.broadcast_param_data = False
+        param_dict = {"data": param_data, "index": [["foo"], ["bar"]], "dims": "foobar"}
+        with pytest.raises(exceptions.ModelError) as excinfo:  # noqa: PT011, false positive
+            model_data_factory._prepare_param_dict("foo", param_dict)
+        assert check_error_or_warning(
+            excinfo,
+            f"foo | Length mismatch between data ({param_data}) and index ([['foo'], ['bar']]) for parameter definition",
+        )
+
     def test_template_defs_inactive(
         self, my_caplog, model_data_factory: ModelDataFactory
     ):
