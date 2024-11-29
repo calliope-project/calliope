@@ -2,14 +2,10 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Assorted helper tools."""
 
-from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import Any, TypeVar
 
 from typing_extensions import ParamSpec
-
-if TYPE_CHECKING:
-    from calliope import AttrDict
 
 P = ParamSpec("P")
 T = TypeVar("T")

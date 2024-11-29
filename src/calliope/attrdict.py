@@ -5,13 +5,10 @@
 import copy
 import io
 import logging
-from pathlib import Path
 
 import numpy as np
 import ruamel.yaml as ruamel_yaml
 from typing_extensions import Self
-
-from calliope.util.tools import relative_path
 
 logger = logging.getLogger(__name__)
 

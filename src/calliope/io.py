@@ -217,10 +217,7 @@ def load_config(filename: str):
     return loaded
 
 
-def read_rich_yaml(
-    yaml: str | Path,
-    allow_override: bool = False,
-) -> AttrDict:
+def read_rich_yaml(yaml: str | Path, allow_override: bool = False) -> AttrDict:
     """Returns an AttrDict initialised from the given YAML file or string.
 
     Uses calliope's "flavour" for YAML files.

@@ -2,11 +2,117 @@ import pytest
 
 from calliope.exceptions import ModelError
 from calliope.io import read_rich_yaml
-from calliope.preprocess.scenarios import TemplateSolver
+from calliope.preprocess.model_definition import TemplateSolver
+
+from .common.util import build_test_model as build_model
+from .common.util import check_error_or_warning
+
+
+class TestScenarioOverrides:
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*(links, test_link_a_b_elec) | Deactivated:calliope.exceptions.ModelWarning"
+    )
+    def test_valid_scenarios(self, dummy_int):
+        """Test that valid scenario definition from overrides raises no error and results in applied scenario."""
+        override = read_rich_yaml(
+            f"""
+            scenarios:
+                scenario_1: ['one', 'two']
+
+            overrides:
+                one:
+                    techs.test_supply_gas.flow_cap_max: {dummy_int}
+                two:
+                    techs.test_supply_elec.flow_cap_max: {dummy_int/2}
+
+            nodes:
+                a:
+                    techs:
+                        test_supply_gas:
+                        test_supply_elec:
+                        test_demand_elec:
+            """
+        )
+        model = build_model(override_dict=override, scenario="scenario_1")
+
+        assert (
+            model._model_data.sel(techs="test_supply_gas")["flow_cap_max"] == dummy_int
+        )
+        assert (
+            model._model_data.sel(techs="test_supply_elec")["flow_cap_max"]
+            == dummy_int / 2
+        )
+
+    def test_valid_scenario_of_scenarios(self, dummy_int):
+        """Test that valid scenario definition which groups scenarios and overrides raises
+        no error and results in applied scenario.
+        """
+        override = read_rich_yaml(
+            f"""
+            scenarios:
+                scenario_1: ['one', 'two']
+                scenario_2: ['scenario_1', 'new_location']
+
+            overrides:
+                one:
+                    techs.test_supply_gas.flow_cap_max: {dummy_int}
+                two:
+                    techs.test_supply_elec.flow_cap_max: {dummy_int/2}
+                new_location:
+                    nodes.b.techs:
+                        test_supply_elec:
+
+            nodes:
+                a:
+                    techs:
+                        test_supply_gas:
+                        test_supply_elec:
+                        test_demand_elec:
+            """
+        )
+        model = build_model(override_dict=override, scenario="scenario_2")
+
+        assert (
+            model._model_data.sel(techs="test_supply_gas")["flow_cap_max"] == dummy_int
+        )
+        assert (
+            model._model_data.sel(techs="test_supply_elec")["flow_cap_max"]
+            == dummy_int / 2
+        )
+
+    def test_invalid_scenarios_dict(self):
+        """Test that invalid scenario definition raises appropriate error"""
+        override = read_rich_yaml(
+            """
+            scenarios:
+                scenario_1:
+                    techs.foo.bar: 1
+            """
+        )
+        with pytest.raises(ModelError) as excinfo:
+            build_model(override_dict=override, scenario="scenario_1")
+
+        assert check_error_or_warning(
+            excinfo, "(scenarios, scenario_1) | Unrecognised override name: techs."
+        )
+
+    def test_invalid_scenarios_str(self):
+        """Test that invalid scenario definition raises appropriate error"""
+        override = read_rich_yaml(
+            """
+            scenarios:
+                scenario_1: 'foo'
+            """
+        )
+        with pytest.raises(ModelError) as excinfo:
+            build_model(override_dict=override, scenario="scenario_1")
+
+        assert check_error_or_warning(
+            excinfo, "(scenarios, scenario_1) | Unrecognised override name: foo."
+        )
 
 
 class TestTemplateSolver:
-
     @pytest.fixture
     def dummy_solved_template(self) -> TemplateSolver:
         text = """
@@ -45,7 +151,8 @@ class TestTemplateSolver:
                 templates.T1 == {"A": ["foo", "bar"], "B": 1},
                 templates.T2 == {"A": ["foo", "bar"], "B": 1, "C": "bar"},
                 templates.T3 == {"A": ["foo", "bar"], "B": 11},
-                templates.T4 == {"A": ["bar", "foobar"], "B": "1", "C": {"foo": "bar"}, "D": True}
+                templates.T4
+                == {"A": ["bar", "foobar"], "B": "1", "C": {"foo": "bar"}, "D": True},
             ]
         )
 
@@ -55,7 +162,8 @@ class TestTemplateSolver:
             [
                 data.a == {"A": ["foo", "bar"], "B": 1, "a1": 1},
                 data.b == {"A": ["foo", "bar"], "B": 11},
-                data.c == {"A": ["bar", "foobar"], "B": "1", "C": {"foo": "bar"}, "D": False}
+                data.c
+                == {"A": ["bar", "foobar"], "B": "1", "C": {"foo": "bar"}, "D": False},
             ]
         )
 
@@ -70,7 +178,9 @@ class TestTemplateSolver:
                 template: T2
             """
         )
-        with pytest.raises(ModelError, match="Template definitions must be YAML blocks."):
+        with pytest.raises(
+            ModelError, match="Template definitions must be YAML blocks."
+        ):
             TemplateSolver(text)
 
     def test_circular_template_error(self):
@@ -106,5 +216,8 @@ class TestTemplateSolver:
                         this: "should not be here"
             """
         )
-        with pytest.raises(ModelError, match="Template definitions must be placed at the top level of the YAML file."):
+        with pytest.raises(
+            ModelError,
+            match="Template definitions must be placed at the top level of the YAML file.",
+        ):
             TemplateSolver(text)

@@ -16,7 +16,6 @@ class TestAttrDict:
         }
         return d
 
-
     @pytest.fixture
     def attr_dict(self, regular_dict):
         d = regular_dict
@@ -211,4 +210,3 @@ class TestAttrDict:
     def test_to_yaml_string(self, attr_dict):
         result = attr_dict.to_yaml()
         assert "a: 1" in result
-

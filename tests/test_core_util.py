@@ -184,9 +184,7 @@ class TestValidateDict:
 
     @pytest.fixture
     def base_math(self):
-        return read_rich_yaml(
-            Path(calliope.__file__).parent / "math" / "plan.yaml"
-        )
+        return read_rich_yaml(Path(calliope.__file__).parent / "math" / "plan.yaml")
 
     @pytest.mark.parametrize(
         "dict_path", glob.glob(str(Path(calliope.__file__).parent / "math" / "*.yaml"))
@@ -196,8 +194,7 @@ class TestValidateDict:
             Path(calliope.__file__).parent / "config" / "math_schema.yaml"
         )
         to_validate = base_math.union(
-            read_rich_yaml(dict_path, allow_override=True),
-            allow_override=True,
+            read_rich_yaml(dict_path, allow_override=True), allow_override=True
         )
         schema.validate_dict(to_validate, math_schema, "")
 

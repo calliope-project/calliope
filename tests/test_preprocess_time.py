@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest  # noqa: F401
 
-from calliope import AttrDict, exceptions
+from calliope import exceptions
 from calliope.io import read_rich_yaml
 
 from .common.util import build_test_model

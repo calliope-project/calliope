@@ -37,7 +37,9 @@ def prepare_model_definition(
         model_def = AttrDict(data)
     else:
         model_def = read_rich_yaml(data)
-    model_def, applied_overrides = _load_scenario_overrides(model_def, scenario, override_dict)
+    model_def, applied_overrides = _load_scenario_overrides(
+        model_def, scenario, override_dict
+    )
     template_solver = TemplateSolver(model_def)
     model_def = template_solver.resolved_data
 
@@ -47,7 +49,7 @@ def prepare_model_definition(
 def _load_scenario_overrides(
     model_definition: dict,
     scenario: str | None = None,
-    override_dict: dict | None = None
+    override_dict: dict | None = None,
 ) -> tuple[AttrDict, str]:
     """Apply user-defined overrides to the model definition.
 
@@ -214,7 +216,9 @@ class TemplateSolver:
         if stack is None:
             stack = set()
         elif name in stack:
-            raise exceptions.ModelError(f"Circular template reference detected for '{name}'.")
+            raise exceptions.ModelError(
+                f"Circular template reference detected for '{name}'."
+            )
         stack.add(name)
 
         result = AttrDict()
@@ -238,7 +242,9 @@ class TemplateSolver:
         if isinstance(section, dict):
             if self.TEMPLATES_SECTION in section:
                 if level != 0:
-                    raise exceptions.ModelError("Template definitions must be placed at the top level of the YAML file.")
+                    raise exceptions.ModelError(
+                        "Template definitions must be placed at the top level of the YAML file."
+                    )
             if self.TEMPLATE_CALL in section:
                 template = self.resolved_templates[section[self.TEMPLATE_CALL]].copy()
             else:
@@ -246,7 +252,7 @@ class TemplateSolver:
 
             local = AttrDict()
             for key in section.keys() - {self.TEMPLATE_CALL, self.TEMPLATES_SECTION}:
-                local[key] = self._resolve_data(section[key], level=level+1)
+                local[key] = self._resolve_data(section[key], level=level + 1)
 
             # Local values have priority.
             template.union(local, allow_override=True)
@@ -254,4 +260,3 @@ class TemplateSolver:
         else:
             result = section
         return result
-
