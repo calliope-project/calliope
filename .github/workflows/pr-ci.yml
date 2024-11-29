@@ -45,7 +45,7 @@ jobs:
 
     - uses: mamba-org/setup-micromamba@v1
       with:
-        micromamba-version: '1.5.10-0'
+        micromamba-version: latest
         environment-name: ${{ github.event.repository.name }}-${{ matrix.os }}-3${{ matrix.py3version }}-${{ hashFiles('requirements/dev.txt') }}
         environment-file: requirements/base.txt
         create-args: >-
@@ -108,7 +108,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: mamba-org/setup-micromamba@v1
         with:
-          micromamba-version: '1.5.10-0'
+          micromamba-version: latest
           environment-name: pipbuild
           create-args: >-
             python=3.11
