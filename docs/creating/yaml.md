@@ -1,4 +1,4 @@
-# Brief introduction to YAML as used in Calliope
+# YAML as used in Calliope
 
 All model configuration/definition files (with the exception of tabular data files) are in the YAML format, "a human friendly data serialisation standard for all programming languages".
 
@@ -359,7 +359,7 @@ This can be useful to streamline setting costs for different technologies.
 
 ### Overriding one file with another
 
-Generally, if an the imported file and the current file define the same option, Calliope will raise an exception.
+Generally, if the imported file and the current file define the same option, Calliope will raise an exception.
 
 However, you can define `overrides` which you can then reference when loading your Calliope model (see [Scenarios and overrides](scenarios.md)). These `override` settings will override any data that match the same name and will add new data if it wasn't already there.
 
