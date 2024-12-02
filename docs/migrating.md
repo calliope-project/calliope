@@ -309,7 +309,7 @@ Instead, links are defined as separate transmission technologies in `techs`, inc
     ```
 
 !!! note
-    You can use [`templates`](creating/templates.md) to minimise duplications in the new transmission technology definition.
+    You can use [`templates`](creating/yaml.md#reusing-definitions-through-templates) to minimise duplications in the new transmission technology definition.
 
 ### Renaming parameters/decision variables without core changes in function
 
@@ -746,8 +746,7 @@ This means you could define different output carriers for a `supply` technology,
 
 ### `templates` for nodes
 
-The new [`templates` key](creating/templates.md) can be applied to `nodes` as well as `techs`.
-This makes up for the [removal of grouping node names in keys by comma separation](#comma-separated-node-definitions).
+The new [`templates` key](creating/yaml.md#reusing-definitions-through-templates) makes up for the [removal of grouping node names in keys by comma separation](#comma-separated-node-definitions).
 
 So, to achieve this result:
 

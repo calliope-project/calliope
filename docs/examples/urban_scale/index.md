@@ -226,7 +226,7 @@ Gas is made available in each node without consideration of transmission.
 --8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:transmission"
 ```
 
-To avoid excessive duplication in model definition, our transmission technologies inherit most of the their parameters from [templates](../../creating/templates.md):
+To avoid excessive duplication in model definition, our transmission technologies inherit most of the their parameters from [templates](../../creating/yaml.md#reusing-definitions-through-templates):
 
 ```yaml
 --8<-- "src/calliope/example_models/urban_scale/model_config/techs.yaml:transmission-templates"

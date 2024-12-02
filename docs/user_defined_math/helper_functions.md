@@ -8,7 +8,7 @@ Helper functions generally require a good understanding of their functionality, 
 
 ## inheritance
 
-Using `inheritance(...)` in a `where` string allows you to grab a subset of technologies / nodes that all share the same [`template`](../creating/templates.md) in the technology's / node's `template` key.
+Using `inheritance(...)` in a `where` string allows you to grab a subset of technologies / nodes that all share the same [`template`](../creating/yaml.md#reusing-definitions-through-templates) in the technology's / node's `template` key.
 If a `template` also inherits from another `template` (chained inheritance), you will get all `techs`/`nodes` that are children along that inheritance chain.
 
 So, for the definition:

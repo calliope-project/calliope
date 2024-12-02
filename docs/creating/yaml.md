@@ -2,9 +2,90 @@
 
 All model configuration/definition files (with the exception of tabular data files) are in the YAML format, "a human friendly data serialisation standard for all programming languages".
 
+## A quick introduction to YAML
+
 Configuration for Calliope is usually specified as `option: value` entries, where `value` might be a number, a text string, or a list (e.g. a list of further settings).
 
-## Abbreviated nesting
+!!! info "See also"
+    See the [YAML website](https://yaml.org/) for more general information about YAML.
+
+### Data types
+
+Using quotation marks (`'` or `"`) to enclose strings is optional, but can help with readability.
+The three ways of setting `option` to `text` below are equivalent:
+
+```yaml
+option1: "text"
+option2: 'text'
+option3: text
+```
+
+Without quotations, the following values in YAML will be converted to different Python types:
+
+- Any unquoted number will be interpreted as numeric (e.g., `1`, `1e6` `1e-10`).
+- `true` or `false` values will be interpreted as boolean.
+- `.inf` and `.nan` values will be interpreted as the float values `np.inf` (infinite) and `np.nan` (not a number), respectively.
+- `null` values will interpreted as `None`.
+
+### Comments
+
+Comments can be inserted anywhere in YAML files with the `#` symbol.
+The remainder of a line after `#` is interpreted as a comment.
+Therefore, if you have a string with a `#` in it, make sure to use explicit quotation marks.
+
+```yaml
+# This is a comment
+option1: "text with ##hashtags## needs quotation marks"
+```
+
+### Lists and dictionaries
+
+Lists in YAML can be of the form `[...]` or a series of lines starting with `-`.
+These two lists are equivalent:
+
+```yaml
+key: [option1, option2]
+```
+
+```yaml
+key:
+  - option1
+  - option2
+```
+
+Dictionaries can be of the form `{...}` or a series of lines _without_ a starting `-`.
+These two dictionaries are equivalent:
+
+```yaml
+key: {option1: value1, option2: value2}
+```
+
+```yaml
+key:
+  option1: value1
+  option2: value2
+```
+
+To continue dictionary nesting, you can add more `{}` parentheses or you can indent your lines further.
+We prefer to use 2 spaces for indenting as this makes the nested data structures more readable than the often-used 4 spaces.
+
+We sometimes also use lists of dictionaries in Calliope, e.g.:
+
+```yaml
+key:
+  - option1: value1
+    option2: value2
+  - option3: value3
+    option4: value4
+```
+
+Which is equivalent in Python to `#!python {"key": [{"option1": value1, "option2": value2}, {"option3": value3, "option4": value4}]}`.
+
+## Calliope's additional YAML features
+
+To make model definition easier, we add some extra features that go beyond regular YAML formatting.
+
+### Abbreviated nesting
 
 Calliope allows an abbreviated form for long, nested settings:
 
@@ -20,7 +101,7 @@ can be written as:
 one.two.three: x
 ```
 
-## Relative file imports
+### Relative file imports
 
 Calliope also allows a special `import:` directive in any YAML file.
 This can specify one or several YAML files to import, e.g.:
@@ -125,9 +206,160 @@ scenarios:
     * The imported files may include further files, so arbitrary degrees of nested configurations are possible.
     * The `import` statement can either give an absolute path or a path relative to the importing file.
 
-## Overriding one file with another
+### Reusing definitions through templates
 
-While generally, as stated above, if an the imported file and the current file define the same option, Calliope will raise an exception.
+For larger models, duplicate entries can start to crop up and become cumbersome.
+To streamline data entry, any section can inherit common data from a `template` which is defined in the top-level `templates` section.
+
+???+ example "Example 1: templates in technologies"
+
+    If we want to set interest rate to `0.1` across all our technologies, we could define:
+
+    ```yaml
+    templates:
+      interest_rate_setter:
+        cost_interest_rate:
+        data: 0.1
+        index: monetary
+        dims: costs
+    techs:
+      ccgt:
+        template: interest_rate_setter
+        ...
+      ac_transmission:
+        template: interest_rate_setter
+        ...
+    ```
+
+??? example "Example 2: templates in nodes"
+
+    Similarly, if we want to allow the same technologies at all our nodes:
+
+    ```yaml
+    templates:
+      standard_tech_list:
+        techs: {ccgt, battery, demand_power}  # (1)!
+    nodes:
+      region1:
+        template: standard_tech_list
+        ...
+      region2:
+        template: standard_tech_list
+        ...
+    ...
+      region100:
+        template: standard_tech_list
+    ```
+
+    This YAML syntax is shortform for:
+
+    ```yaml
+    nodes:
+      region1:
+        techs:
+          ccgt:
+          battery:
+          demand_power:
+      ...
+    ...
+    ```
+
+??? example "Example 3: templates in data tables"
+
+    Storing common options under the `templates` key is also useful for data tables, for example:
+
+    ```yaml
+    templates:
+      common_data_options:
+        rows: timesteps
+        columns: nodes
+        add_dims:
+          parameters: source_use_max
+    data_tables:
+      pv_data:
+        data: /path/to/pv_timeseries.csv
+        template: common_data_options
+        add_dims:
+          techs: pv
+      wind_data:
+        data: /path/to/wind_timeseries.csv
+        template: common_data_options
+        add_dims:
+          techs: wind
+      hydro_data:
+        data: /path/to/hydro_timeseries.csv
+        template: common_data_options
+        add_dims:
+          techs: hydro
+    ```
+
+Inheritance chains can also be created.
+That is, templates can inherit from other templates.
+
+??? example "Example 4: template inheritance chain"
+
+    ```yaml
+    templates:
+      interest_rate_setter:
+        cost_interest_rate:
+          data: 0.1
+          index: monetary
+          dims: costs
+      investment_cost_setter:
+        template: interest_rate_setter
+        cost_flow_cap:
+          data: 100
+          index: monetary
+          dims: costs
+        cost_area_use:
+           data: 1
+           index: monetary
+           dims: costs
+    techs:
+      ccgt:
+        template: investment_cost_setter
+        ...
+      ac_transmission:
+        template: interest_rate_setter
+        ...
+    ```
+
+Template properties can always be overridden by the inheriting component.
+That is, the 'local' value has priority over the inherited template value.
+This can be useful to streamline setting costs for different technologies.
+
+??? example "Example 5: overriding template values"
+
+    In this example, a technology overrides a single templated cost.
+
+    ```yaml
+    templates:
+      interest_rate_setter:
+        cost_interest_rate:
+          data: 0.1
+          index: monetary
+          dims: costs
+      investment_cost_setter:
+        template: interest_rate_setter
+        cost_interest_rate.data: 0.2  # this will replace `0.1` in the `interest_rate_setter`.
+        cost_flow_cap:
+          data: null
+          index: monetary
+          dims: costs
+        cost_area_use:
+          data: null
+          index: monetary
+          dims: costs
+    techs:
+      ccgt:
+        template: investment_cost_setter
+        cost_flow_cap.data: 100  # this will replace `null` in the `investment_cost_setter`.
+        ...
+    ```
+
+### Overriding one file with another
+
+Generally, if an the imported file and the current file define the same option, Calliope will raise an exception.
 
 However, you can define `overrides` which you can then reference when loading your Calliope model (see [Scenarios and overrides](scenarios.md)). These `override` settings will override any data that match the same name and will add new data if it wasn't already there.
 
@@ -167,74 +399,3 @@ Will lead to:
 one.four: y
 four.five.six: y
 ```
-
-## Data types
-
-Using quotation marks (`'` or `"`) to enclose strings is optional, but can help with readability.
-The three ways of setting `option` to `text` below are equivalent:
-
-```yaml
-option: "text"
-option: 'text'
-option: text
-```
-
-Without quotations, the following values in YAML will be converted to different Python types:
-
-- Any unquoted number will be interpreted as numeric.
-- `true` or `false` values will be interpreted as boolean.
-- `.inf` and `.nan` values will be interpreted as the float values `np.inf` (infinite) and `np.nan` (not a number), respectively.
-- `null` values will interpreted as `None`.
-
-## Comments
-
-Comments can be inserted anywhere in YAML files with the `#` symbol.
-The remainder of a line after `#` is interpreted as a comment.
-Therefore, if you have a string with a `#` in it, make sure to use explicit quotation marks.
-
-
-## Lists and dictionaries
-
-Lists in YAML can be of the form `[...]` or a series of lines starting with `-`.
-These two lists are equivalent:
-
-```yaml
-key: [option1, option2]
-```
-
-```yaml
-key:
-  - option1
-  - option2
-```
-
-Dictionaries can be of the form `{...}` or a series of lines _without_ a starting `-`.
-These two dictionaries are equivalent:
-
-```yaml
-key: {option1: value1, option2: value2}
-```
-
-```yaml
-key:
-  option1: value1
-  option2: value2
-```
-
-To continue dictionary nesting, you can add more `{}` parentheses or you can indent your lines further.
-We prefer to use 2 spaces for indenting as this makes the nested data structures more readable than the often-used 4 spaces.
-
-We sometimes also use lists of dictionaries in Calliope, e.g.:
-
-```yaml
-key:
-  - option1: value1
-    option2: value2
-  - option3: value3
-    option4: value4
-```
-
-Which is equivalent in Python to `#!python {"key": [{"option1": value1, "option2": value2}, {"option3": value3, "option4": value4}]}`.
-
-!!! info "See also"
-    See the [YAML website](https://yaml.org/) for more general information about YAML.
