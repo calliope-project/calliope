@@ -4,6 +4,10 @@
 
 |changed| `template:` can now be used anywhere within YAML definition files, not just in the `nodes`, `techs` and `data_tables` sections.
 
+|fixed| Area-based parameters have appropriate documented units of `area` rather than `area^2` (#701).
+
+|fixed| Technology capacity lower bound constraints so that `[cap-type]_min` (e.g., `flow_cap_min`) is not always enforced if the `purchased_units` variable is active (#643).
+
 |changed| Single data entries defined in YAML indexed parameters will not be automatically broadcast along indexed dimensions.
 To achieve the same functionality as in `<v0.7.dev4`, the user must set the new `init` configuration option `broadcast_param_data` to True (#615).
 
