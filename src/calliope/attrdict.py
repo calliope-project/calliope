@@ -21,29 +21,6 @@ class __Missing:
 _MISSING = __Missing()
 
 
-def _yaml_load(src):
-    """Load YAML from a file object or path with useful parser errors."""
-    yaml = ruamel_yaml.YAML(typ="safe")
-    if not isinstance(src, str):
-        try:
-            src_name = src.name
-        except AttributeError:
-            src_name = "<yaml stringio>"
-        # Force-load file streams as that allows the parser to print
-        # much more context when it encounters an error
-        src = src.read()
-    else:
-        src_name = "<yaml string>"
-    try:
-        result = yaml.load(src)
-        if not isinstance(result, dict):
-            raise ValueError(f"Could not parse {src_name} as YAML")
-        return result
-    except ruamel_yaml.YAMLError:
-        logger.error(f"Parser error when reading YAML from {src_name}.")
-        raise
-
-
 class AttrDict(dict):
     """Extended `dict` class."""
 
