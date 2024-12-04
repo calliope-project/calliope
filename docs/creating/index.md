@@ -10,7 +10,7 @@ However, it is just as applicable to other types of flows, such as water!
 
 **Nodes** contain groups of _technologies_ and are usually geographic, e.g., a country, municipality or a single house.
 
-Flows can enter the system from **Sources**, e.g., energy from the sun to power a solar panel, and can exit it into **Sinks**, e.g., electricity consumed by household appliances.
+Flows can enter the system from **sources**, e.g., energy from the sun to power a solar panel, and can exit it into **sinks**, e.g., electricity consumed by household appliances.
 Unlike _carriers_, we do not explicitly track the type of commodity described by sources and sinks.
 
 Putting all of these possibilities together allows a modeller to create a model that is as simple or complex as necessary to answer a given research question.
