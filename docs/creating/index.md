@@ -1,35 +1,22 @@
 # Creating a model
 
-In short, a Calliope model works like this: **supply technologies** can take a **source** from outside of the modeled system and turn it into a specific **carrier** in the system.
-The model specifies one or more **nodes** along with the technologies allowed at those nodes.
-**Transmission technologies** can move the same carrier from one node to another, while **conversion technologies** can convert one carrier into another at the same node.
-**Demand technologies** remove carriers from the system through a **sink**, while **storage technologies** can store carriers at a specific node.
-Putting all of these possibilities together allows a modeller to specify as simple or as complex a model as necessary to answer a given research question.
+A Calliope model is a collection of interconnected technologies, nodes and carriers describing a real world system of flows.
+Usually, we consider those to be _energy_ flows, and most of what you will read in this documentation concerns energy systems.
+However, it is just as applicable to other types of flows, such as water!
+
+**Carriers** are commodities whose flows we track, e.g., electricity, heat, hydrogen, water, CO<sub>2</sub>.
+
+**Technologies** supply, consume, convert, store or transmit _carriers_, e.g., transmission lines/pipes, batteries, power plants, wind turbines, or home appliances.
+
+**Nodes** contain groups of _technologies_ and are usually geographic, e.g., a country, municipality or a single house.
+
+Flows can enter the system from **Sources**, e.g., energy from the sun to power a solar panel, and can exit it into **Sinks**, e.g., electricity consumed by household appliances.
+Unlike _carriers_, we do not explicitly track the type of commodity described by sources and sinks.
+
+Putting all of these possibilities together allows a modeller to create a model that is as simple or complex as necessary to answer a given research question.
+Calliope's syntax ensures these models are intuitive, and easy to understand and share.
 
 ![Visual description of the Calliope terminology.](../img/description_of_system.svg)
-
-??? info "An overview of the Calliope terminology"
-    The terminology defined here is used throughout the documentation, and the model code and configuration files:
-
-    * **Carrier**: a commodity that is tracked inside the system boundary and can be produced or consumed by a _technology_.
-    > E.g., electricity, heat, hydrogen, water, CO<sub>2</sub>.
-    * **Technology**: an entity that produces, consumes, converts, stores or transports _carriers_.
-    > E.g., a _wind turbine_ that produces electricity, a _heat pump_ that converts electricity to heat, or a _battery_ that stores electricity.
-    * **Node**: a geographic point or area which can contain multiple _technologies_ and at which _carrier_ flows in and out must balance.
-    > E.g., a building in a district, an administrative region in a country, a country in a continent.
-    * **Source**: a commodity that can (or must) be used by a _technology_ to introduce carriers into the system.
-    Unlike _carriers_, _sources_ are not explicitly tracked as they are outside the system boundary.
-    > E.g., energy from the sun to power a solar panel, natural gas to power a gas turbine.
-    * **Sink**: a commodity that can (or must) be used by a _technology_ to remove carriers from the system.
-    Unlike _carriers_, _sinks_ are not explicitly tracked as they are outside system boundary.
-    > E.g., electricity consumed by household appliances, liquid fuel consumed by vehicles.
-
-
-    As more generally in constrained optimisation, the following terms are also used:
-
-    * Parameter: a fixed coefficient that enters into model equations.
-    * Variable: a variable coefficient (decision variable) that enters into model equations.
-    * Constraint: an equality or inequality expression that constrains one or several variables.
 
 !!! example
     Refer to the [examples and tutorials section](../examples/index.md) for a more practical look at how to build a Calliope model.
