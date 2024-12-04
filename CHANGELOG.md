@@ -2,6 +2,9 @@
 
 ### User-facing changes
 
+|changed| "An overview of the Calliope terminology" information admonition to remove self-references and improve understandability.
+Now also includes a visual depiction of how the different defined components connect together (#699).
+
 |fixed| Area-based parameters have appropriate documented units of `area` rather than `area^2` (#701).
 
 |fixed| Technology capacity lower bound constraints so that `[cap-type]_min` (e.g., `flow_cap_min`) is not always enforced if the `purchased_units` variable is active (#643).
