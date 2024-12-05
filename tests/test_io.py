@@ -308,8 +308,7 @@ import_key_a.nested: 1
 import_key_b: 2
 import_key_c: [1, 2, 3]
         """
-        with open(file, "w") as f:
-            f.write(text)
+        file.write_text(text)
         return file
 
     def test_text_read(self, yaml_text, expected_dict):
@@ -320,8 +319,7 @@ import_key_c: [1, 2, 3]
     def test_file_read(self, test_group, yaml_text, expected_dict, tmp_path):
         """Loading from files should be correct."""
         file = tmp_path / f"{test_group}.yaml"
-        with open(file, "w") as f:
-            f.write(yaml_text)
+        file.write_text(yaml_text)
         read = calliope.io.read_rich_yaml(file)
         assert read == expected_dict
 
@@ -346,8 +344,7 @@ import_key_c: [1, 2, 3]
 import:
     - {dummy_imported_file.name}
 """
-        with open(file, "w") as f:
-            f.write(import_text + yaml_text)
+        file.write_text(import_text + yaml_text)
         d = calliope.io.read_rich_yaml(file)
 
         assert "import_key_a.nested" in d.keys_nested()
@@ -359,8 +356,7 @@ import:
     ):
         file = dummy_imported_file.parent / f"{test_group}_invalid_import_type.yaml"
         import_text = f"""import: {dummy_imported_file.name}\n"""
-        with open(file, "w") as f:
-            f.write(import_text + yaml_text)
+        file.write_text(import_text + yaml_text)
 
         with pytest.raises(ValueError) as excinfo:  # noqa: PT011, false positive
             calliope.io.read_rich_yaml(file)
@@ -423,11 +419,10 @@ import:
         yaml_dict.set_key("numpy.some_float", np.float64(0.5))
         yaml_dict.a_list = [0, 1, 2]
         with tempfile.TemporaryDirectory() as tempdir:
-            out_file = os.path.join(tempdir, "test.yaml")
+            out_file = Path(tempdir) / "test.yaml"
             calliope.io.to_yaml(yaml_dict, path=out_file)
 
-            with open(out_file) as f:
-                result = f.read()
+            result = out_file.read_text()
 
             assert "some_int: 10" in result
             assert "some_float: 0.5" in result

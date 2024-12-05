@@ -251,8 +251,9 @@ class TemplateSolver:
                 template = AttrDict()
 
             local = AttrDict()
-            for key in section.keys() - {self.TEMPLATE_CALL, self.TEMPLATES_SECTION}:
-                local[key] = self._resolve_data(section[key], level=level + 1)
+            for key in section.keys():
+                if key not in [self.TEMPLATE_CALL, self.TEMPLATES_SECTION]:
+                    local[key] = self._resolve_data(section[key], level=level + 1)
 
             # Local values have priority.
             template.union(local, allow_override=True)

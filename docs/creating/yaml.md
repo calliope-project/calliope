@@ -215,147 +215,260 @@ To streamline data entry, any section can inherit common data from a `template` 
 
     If we want to set interest rate to `0.1` across all our technologies, we could define:
 
-    ```yaml
-    templates:
-      interest_rate_setter:
-        cost_interest_rate:
-        data: 0.1
-        index: monetary
-        dims: costs
-    techs:
-      ccgt:
-        template: interest_rate_setter
-        ...
-      ac_transmission:
-        template: interest_rate_setter
-        ...
-    ```
+    === "Using templates"
+
+        ```yaml
+        templates:
+          interest_rate_setter:
+            cost_interest_rate:
+              data: 0.1
+              index: monetary
+              dims: costs
+        techs:
+          ccgt:
+            flow_out_eff: 0.5
+            template: interest_rate_setter
+          ac_transmission:
+            flow_out_eff: 0.98
+            template: interest_rate_setter
+        ```
+    === "Without templates"
+
+        ```yaml
+        techs:
+          ccgt:
+            flow_out_eff: 0.5
+            cost_interest_rate:
+              data: 0.1
+              index: monetary
+              dims: costs
+          ac_transmission:
+            flow_out_eff: 0.98
+            cost_interest_rate:
+              data: 0.1
+              index: monetary
+              dims: costs
+        ```
 
 ??? example "Example 2: templates in nodes"
 
     Similarly, if we want to allow the same technologies at all our nodes:
 
-    ```yaml
-    templates:
-      standard_tech_list:
-        techs: {ccgt, battery, demand_power}  # (1)!
-    nodes:
-      region1:
-        template: standard_tech_list
-        ...
-      region2:
-        template: standard_tech_list
-        ...
-    ...
-      region100:
-        template: standard_tech_list
-    ```
+    === "Using templates"
 
-    This YAML syntax is shortform for:
+        ```yaml
+        templates:
+          standard_tech_list:
+            techs: {ccgt, battery, demand_power}
+        nodes:
+          region1:
+            template: standard_tech_list
+            latitude: 39
+            longitude: -2
+          region2:
+            template: standard_tech_list
+            latitude: 40
+            longitude: 0
+        ```
 
-    ```yaml
-    nodes:
-      region1:
-        techs:
-          ccgt:
-          battery:
-          demand_power:
-      ...
-    ...
-    ```
+    === "Without templates"
+
+        ```yaml
+        nodes:
+          region1:
+            techs:
+              ccgt:
+              battery:
+              demand_power:
+            latitude: 39
+            longitude: -2
+          region2:
+            techs:
+              ccgt:
+              battery:
+              demand_power:
+            latitude: 40
+            longitude: 0
+        ```
 
 ??? example "Example 3: templates in data tables"
 
-    Storing common options under the `templates` key is also useful for data tables, for example:
+    Storing common options under the `templates` key is also useful for data tables.
 
-    ```yaml
-    templates:
-      common_data_options:
-        rows: timesteps
-        columns: nodes
-        add_dims:
-          parameters: source_use_max
-    data_tables:
-      pv_data:
-        data: /path/to/pv_timeseries.csv
-        template: common_data_options
-        add_dims:
-          techs: pv
-      wind_data:
-        data: /path/to/wind_timeseries.csv
-        template: common_data_options
-        add_dims:
-          techs: wind
-      hydro_data:
-        data: /path/to/hydro_timeseries.csv
-        template: common_data_options
-        add_dims:
-          techs: hydro
-    ```
+    === "Using templates"
+
+        ```yaml
+        templates:
+          common_data_options:
+            rows: timesteps
+            columns: nodes
+            add_dims:
+              parameters: source_use_max
+        data_tables:
+          pv_data:
+            data: /path/to/pv_timeseries.csv
+            template: common_data_options
+            add_dims:
+              techs: pv
+          wind_data:
+            data: /path/to/wind_timeseries.csv
+            template: common_data_options
+            add_dims:
+              techs: wind
+          hydro_data:
+            data: /path/to/hydro_timeseries.csv
+            template: common_data_options
+            add_dims:
+              techs: hydro
+        ```
+    === "Without templates"
+
+        ```yaml
+        data_tables:
+          pv_data:
+            data: /path/to/pv_timeseries.csv
+            rows: timesteps
+            columns: nodes
+            add_dims:
+              parameters: source_use_max
+              techs: pv
+          wind_data:
+            data: /path/to/wind_timeseries.csv
+            rows: timesteps
+            columns: nodes
+            add_dims:
+              parameters: source_use_max
+              techs: wind
+          hydro_data:
+            data: /path/to/hydro_timeseries.csv
+            rows: timesteps
+            columns: nodes
+            add_dims:
+              parameters: source_use_max
+              techs: hydro
+        ```
 
 Inheritance chains can also be created.
 That is, templates can inherit from other templates.
 
 ??? example "Example 4: template inheritance chain"
 
-    ```yaml
-    templates:
-      interest_rate_setter:
-        cost_interest_rate:
-          data: 0.1
-          index: monetary
-          dims: costs
-      investment_cost_setter:
-        template: interest_rate_setter
-        cost_flow_cap:
-          data: 100
-          index: monetary
-          dims: costs
-        cost_area_use:
-           data: 1
-           index: monetary
-           dims: costs
-    techs:
-      ccgt:
-        template: investment_cost_setter
-        ...
-      ac_transmission:
-        template: interest_rate_setter
-        ...
-    ```
+    A two-level template inheritance chain.
 
-Template properties can always be overridden by the inheriting component.
-That is, the 'local' value has priority over the inherited template value.
+    === "Using templates"
+
+        ```yaml
+        templates:
+          interest_rate_setter:
+            cost_interest_rate:
+              data: 0.1
+              index: monetary
+              dims: costs
+          investment_cost_setter:
+            template: interest_rate_setter
+            cost_flow_cap:
+              data: 100
+              index: monetary
+              dims: costs
+            cost_area_use:
+               data: 1
+               index: monetary
+               dims: costs
+        techs:
+          ccgt:
+            template: investment_cost_setter
+            flow_out_eff: 0.5
+          ac_transmission:
+            template: interest_rate_setter
+            flow_out_eff: 0.98
+        ```
+
+    === "Without templates"
+
+        ```yaml
+        techs:
+          ccgt:
+            cost_interest_rate:
+              data: 0.1
+              index: monetary
+              dims: costs
+            cost_flow_cap:
+              data: 100
+              index: monetary
+              dims: costs
+            cost_area_use:
+               data: 1
+               index: monetary
+               dims: costs
+            flow_out_eff: 0.5
+          ac_transmission:
+            cost_interest_rate:
+              data: 0.1
+              index: monetary
+              dims: costs
+            cost_flow_cap:
+              data: 100
+              index: monetary
+              dims: costs
+            cost_area_use:
+               data: 1
+               index: monetary
+               dims: costs
+            flow_out_eff: 0.98
+        ```
+
+Template properties can always be overwritten by the inheriting component.
+That is, a 'local' value has priority over the template value.
 This can be useful to streamline setting costs for different technologies.
 
 ??? example "Example 5: overriding template values"
 
     In this example, a technology overrides a single templated cost.
 
-    ```yaml
-    templates:
-      interest_rate_setter:
-        cost_interest_rate:
-          data: 0.1
-          index: monetary
-          dims: costs
-      investment_cost_setter:
-        template: interest_rate_setter
-        cost_interest_rate.data: 0.2  # this will replace `0.1` in the `interest_rate_setter`.
-        cost_flow_cap:
-          data: null
-          index: monetary
-          dims: costs
-        cost_area_use:
-          data: null
-          index: monetary
-          dims: costs
-    techs:
-      ccgt:
-        template: investment_cost_setter
-        cost_flow_cap.data: 100  # this will replace `null` in the `investment_cost_setter`.
-        ...
-    ```
+    === "Using templates"
+
+        ```yaml
+        templates:
+          interest_rate_setter:
+            cost_interest_rate:
+              data: 0.1
+              index: monetary
+              dims: costs
+          investment_cost_setter:
+            template: interest_rate_setter
+            cost_interest_rate.data: 0.2  # this will replace `0.1` in the `interest_rate_setter`.
+            cost_flow_cap:
+              data: null
+              index: monetary
+              dims: costs
+            cost_area_use:
+              data: null
+              index: monetary
+              dims: costs
+        techs:
+          ccgt:
+            template: investment_cost_setter
+            cost_flow_cap.data: 100  # this will replace `null` in the `investment_cost_setter`.
+        ```
+
+    === "Without templates"
+
+        ```yaml
+        techs:
+          ccgt:
+            cost_interest_rate:
+              data: 0.2
+              index: monetary
+              dims: costs
+            cost_flow_cap:
+              data: 100
+              index: monetary
+              dims: costs
+            cost_area_use:
+              data: null
+              index: monetary
+              dims: costs
+        ```
 
 ### Overriding one file with another
 
