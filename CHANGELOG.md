@@ -1,4 +1,4 @@
-## 0.7.0.dev5 (Unreleased)
+## 0.7.0.dev5 (2024-12-04)
 
 ### User-facing changes
 
