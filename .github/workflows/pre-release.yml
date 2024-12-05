@@ -1,0 +1,62 @@
+name: Pull Request CI
+
+on:
+  pull_request:
+    branches:
+      - "main"
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+concurrency:
+  # Use github.run_id on main branch
+  # Use github.event.pull_request.number on pull requests, so it's unique per pull request
+  # Use github.ref on other branches, so it's unique per branch
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-release-version:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.pull_request.title, 'Release v')
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+    steps:
+      - id: get-version
+        run: |
+          fullname="${{github.event.pull_request.title}}"
+          echo "version=${fullname#"Release "}" >> $GITHUB_OUTPUT
+
+  pip-test:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.pull_request.title, 'Release v')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          micromamba-version: '1.5.10-0'
+          environment-name: pipbuild
+          create-args: >-
+            python=3.11
+            pip
+            python-build
+          post-cleanup: all
+          cache-environment: true
+      - name: Build package
+        run: python -m build
+      - name: Test package install
+        run: |
+          pip install dist/calliope-*.tar.gz
+          calliope --help
+
+  pre-release:
+    needs: [pre-release-version, pip-test]
+    if: needs.pip-test.result == 'success' && startsWith(github.event.pull_request.title, 'Release v')
+    uses: arup-group/actions-city-modelling-lab/.github/workflows/pip-build.yml@main
+    secrets:
+      TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+    with:
+      package_name: calliope
+      version: ${{needs.pre-release-version.outputs.version}}
+      pip_args: ''
