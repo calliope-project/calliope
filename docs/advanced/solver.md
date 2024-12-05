@@ -2,7 +2,7 @@
 
 ## Gurobi
 
-Refer to the [Gurobi manual](https://www.gurobi.com/documentation/), which contains a list of parameters.
+Refer to the [Gurobi manual](https://docs.gurobi.com/projects/optimizer/en/current/reference/parameters.html), which contains a list of parameters.
 Simply use the names given in the documentation (e.g. "NumericFocus" to set the numerical focus value).
 For example:
 
