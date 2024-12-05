@@ -6,6 +6,7 @@ import importlib.resources
 import logging
 import os
 from copy import deepcopy
+from io import StringIO
 from pathlib import Path
 
 # We import netCDF4 before xarray to mitigate a numpy warning:
@@ -23,6 +24,8 @@ from calliope.util.tools import listify, relative_path
 logger = logging.getLogger(__name__)
 
 CONFIG_DIR = importlib.resources.files("calliope") / "config"
+YAML_INDENT = 2
+YAML_BLOCK_SEQUENCE_INDENT = 0
 
 
 def read_netcdf(path):
@@ -75,7 +78,7 @@ def _serialise(attrs: dict) -> None:
     dict_attrs = [k for k, v in attrs.items() if isinstance(v, dict)]
     attrs["serialised_dicts"] = dict_attrs
     for attr in dict_attrs:
-        attrs[attr] = AttrDict(attrs[attr]).to_yaml()
+        attrs[attr] = to_yaml(attrs[attr])
 
     # Convert boolean attrs to ints
     bool_attrs = [k for k, v in attrs.items() if isinstance(v, bool)]
@@ -287,3 +290,42 @@ def _resolve_yaml_imports(
         loaded_dict.del_key("import")
 
     return loaded_dict
+
+
+def to_yaml(data: AttrDict | dict, path: None | str | Path = None) -> str:
+    """Conversion to YAML.
+
+    Saves the AttrDict to the ``path`` as a YAML file or returns a YAML string
+    if ``path`` is None.
+    """
+    result = AttrDict(data).copy()
+    # Prepare YAML parsing settings
+    yaml_ = ruamel_yaml.YAML()
+    yaml_.indent = YAML_INDENT
+    yaml_.block_seq_indent = YAML_BLOCK_SEQUENCE_INDENT
+    yaml_.sort_base_mapping_type_on_output = (
+        False  # FIXME: identify if this is necessary
+    )
+
+    # Numpy objects should be converted to regular Python objects,
+    # so that they are properly displayed in the resulting YAML output
+    for k in result.keys_nested():
+        # Convert numpy numbers to regular python ones
+        v = result.get_key(k)
+        if isinstance(v, np.floating):
+            result.set_key(k, float(v))
+        elif isinstance(v, np.integer):
+            result.set_key(k, int(v))
+        # Lists are turned into seqs so that they are formatted nicely
+        elif isinstance(v, list):
+            result.set_key(k, yaml_.seq(v))
+
+    result = result.as_dict()
+
+    if path is not None:
+        with open(path, "w") as f:
+            yaml_.dump(result, f)
+
+    stream = StringIO()
+    yaml_.dump(result, stream)
+    return stream.getvalue()

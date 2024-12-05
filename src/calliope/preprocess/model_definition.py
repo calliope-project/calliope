@@ -7,7 +7,7 @@ from pathlib import Path
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.io import read_rich_yaml
+from calliope.io import read_rich_yaml, to_yaml
 from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
@@ -129,7 +129,7 @@ def _combine_overrides(overrides: AttrDict, scenario_overrides: list):
     combined_override_dict = AttrDict()
     for override in scenario_overrides:
         try:
-            yaml_string = overrides[override].to_yaml()
+            yaml_string = to_yaml(overrides[override])
             override_with_imports = read_rich_yaml(yaml_string)
         except KeyError:
             raise exceptions.ModelError(f"Override `{override}` is not defined.")

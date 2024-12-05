@@ -3,11 +3,8 @@
 """AttrDict implementation (a subclass of regular dict) used for managing model configuration."""
 
 import copy
-import io
 import logging
 
-import numpy as np
-import ruamel.yaml as ruamel_yaml
 from typing_extensions import Self
 
 logger = logging.getLogger(__name__)
@@ -186,41 +183,6 @@ class AttrDict(dict):
         for k in keys:
             d[k] = self.get_key(k)
         return d
-
-    def to_yaml(self, path=None):
-        """Conversion to YAML.
-
-        Saves the AttrDict to the ``path`` as a YAML file or returns a YAML string
-        if ``path`` is None.
-        """
-        result = self.copy()
-        yaml_ = ruamel_yaml.YAML()
-        yaml_.indent = 2
-        yaml_.block_seq_indent = 0
-        yaml_.sort_base_mapping_type_on_output = False
-
-        # Numpy objects should be converted to regular Python objects,
-        # so that they are properly displayed in the resulting YAML output
-        for k in result.keys_nested():
-            # Convert numpy numbers to regular python ones
-            v = result.get_key(k)
-            if isinstance(v, np.floating):
-                result.set_key(k, float(v))
-            elif isinstance(v, np.integer):
-                result.set_key(k, int(v))
-            # Lists are turned into seqs so that they are formatted nicely
-            elif isinstance(v, list):
-                result.set_key(k, yaml_.seq(v))
-
-        result = result.as_dict()
-
-        if path is not None:
-            with open(path, "w") as f:
-                yaml_.dump(result, f)
-        else:
-            stream = io.StringIO()
-            yaml_.dump(result, stream)
-            return stream.getvalue()
 
     def keys_nested(self, subkeys_as="list"):
         """Returns all keys in the AttrDict, including nested keys.

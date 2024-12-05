@@ -206,7 +206,3 @@ class TestAttrDict:
     def test_del_key_nested(self, attr_dict):
         attr_dict.del_key("c.z.I")
         assert "I" not in attr_dict.c.z
-
-    def test_to_yaml_string(self, attr_dict):
-        result = attr_dict.to_yaml()
-        assert "a: 1" in result
