@@ -246,19 +246,10 @@ def read_rich_yaml(yaml: str | Path, allow_override: bool = False) -> AttrDict:
     return yaml_dict
 
 
-def _yaml_load(src):
+def _yaml_load(src: str):
     """Load YAML from a file object or path with useful parser errors."""
     yaml = ruamel_yaml.YAML(typ="safe")
-    if not isinstance(src, str):
-        try:
-            src_name = src.name
-        except AttributeError:
-            src_name = "<yaml stringio>"
-        # Force-load file streams as that allows the parser to print
-        # much more context when it encounters an error
-        src = src.read()
-    else:
-        src_name = "<yaml string>"
+    src_name = "<yaml string>"
     try:
         result = yaml.load(src)
         if not isinstance(result, dict):
@@ -303,9 +294,8 @@ def to_yaml(data: AttrDict | dict, path: None | str | Path = None) -> str:
     yaml_ = ruamel_yaml.YAML()
     yaml_.indent = YAML_INDENT
     yaml_.block_seq_indent = YAML_BLOCK_SEQUENCE_INDENT
-    yaml_.sort_base_mapping_type_on_output = (
-        False  # FIXME: identify if this is necessary
-    )
+    # Keep dictionary order
+    yaml_.sort_base_mapping_type_on_output = False  # type: ignore[assignment]
 
     # Numpy objects should be converted to regular Python objects,
     # so that they are properly displayed in the resulting YAML output

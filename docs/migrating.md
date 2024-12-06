@@ -181,9 +181,11 @@ This split means you can change configuration options on-the-fly if you are work
 `locations` (abbreviated to `locs` in the Calliope data dimensions) has been renamed to `nodes` (no abbreviation).
 This allows us to not require an abbreviation and is a disambiguation from the [pandas.DataFrame.loc][] and [xarray.DataArray.loc][] methods.
 
-### `parent` → `base_tech`
+### `parent` and `tech_groups` → `base_tech` and `templates`
 
-Technology inheritance has been renamed to `base_tech`, which is fixed to be one of [`demand`, `supply`, `conversion`, `transmission`, `storage`].
+Technology `parent` inheritance has been renamed to `base_tech`, which is fixed to be one of [`demand`, `supply`, `conversion`, `transmission`, `storage`].
+
+The `tech_groups` functionality has been removed in favour of a new, more flexible, `templates` functionality.
 
 === "v0.6"
 
