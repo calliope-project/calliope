@@ -6,29 +6,6 @@ Their functionality is detailed in the [helper function API page](../reference/a
 Here, we give a brief summary.
 Helper functions generally require a good understanding of their functionality, so make sure you are comfortable with them beforehand.
 
-## inheritance
-
-Using `inheritance(...)` in a `where` string allows you to grab a subset of technologies / nodes that all share the same [`template`](../creating/templates.md) in the technology's / node's `template` key.
-If a `template` also inherits from another `template` (chained inheritance), you will get all `techs`/`nodes` that are children along that inheritance chain.
-
-So, for the definition:
-
-```yaml
-templates:
-  techgroup1:
-    template: techgroup2
-    flow_cap_max: 10
-  techgroup2:
-    base_tech: supply
-techs:
-  tech1:
-    template: techgroup1
-  tech2:
-    template: techgroup2
-```
-
-`inheritance(techgroup1)` will give the `[tech1]` subset and `inheritance(techgroup2)` will give the `[tech1, tech2]` subset.
-
 ## any
 
 Parameters are indexed over multiple dimensions.

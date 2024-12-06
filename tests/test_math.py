@@ -7,11 +7,12 @@ import pytest
 from pyomo.repn.tests import lp_diff
 
 from calliope import AttrDict
+from calliope.io import read_rich_yaml
 
 from .common.util import build_lp, build_test_model
 
 CALLIOPE_DIR: Path = importlib.resources.files("calliope")
-PLAN_MATH: AttrDict = AttrDict.from_yaml(CALLIOPE_DIR / "math" / "plan.yaml")
+PLAN_MATH: AttrDict = read_rich_yaml(CALLIOPE_DIR / "math" / "plan.yaml")
 
 
 @pytest.fixture(scope="class")
@@ -47,7 +48,7 @@ class TestBaseMath:
 
     @pytest.fixture(scope="class")
     def base_math(self):
-        return AttrDict.from_yaml(CALLIOPE_DIR / "math" / "plan.yaml")
+        return read_rich_yaml(CALLIOPE_DIR / "math" / "plan.yaml")
 
     @pytest.mark.parametrize(
         ("variable", "constraint", "overrides"),
@@ -248,7 +249,7 @@ class CustomMathExamples(ABC):
 
     @pytest.fixture(scope="class")
     def custom_math(self):
-        return AttrDict.from_yaml(self.CUSTOM_MATH_DIR / self.YAML_FILEPATH)
+        return read_rich_yaml(self.CUSTOM_MATH_DIR / self.YAML_FILEPATH)
 
     @pytest.fixture
     def build_and_compare(self, abs_filepath, compare_lps):

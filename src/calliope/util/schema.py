@@ -30,7 +30,7 @@ def update_then_validate_config(
 ) -> AttrDict:
     """Return an updated version of the configuration schema."""
     to_validate = deepcopy(config_dict[config_key])
-    to_validate.union(AttrDict(update_kwargs), allow_override=True)
+    to_validate.union(update_kwargs, allow_override=True)
     validate_dict(
         {"config": {config_key: to_validate}},
         CONFIG_SCHEMA,
@@ -70,7 +70,7 @@ def update_model_schema(
             "^[^_^\\d][\\w]*$"
         ]["properties"]
 
-    to_update.union(AttrDict(new_entries), allow_override=allow_override)
+    to_update.union(new_entries, allow_override=allow_override)
 
     validator = jsonschema.Draft202012Validator
     validator.META_SCHEMA["unevaluatedProperties"] = False

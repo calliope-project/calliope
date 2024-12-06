@@ -104,7 +104,6 @@ nav:
     - Model configuration: creating/config.md
     - Technologies: creating/techs.md
     - Nodes: creating/nodes.md
-    - Inheriting from templates: creating/templates.md
     - Indexed parameters: creating/parameters.md
     - Loading data tables: creating/data_tables.md
     - Scenarios and overrides: creating/scenarios.md
