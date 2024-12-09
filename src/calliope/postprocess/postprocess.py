@@ -11,7 +11,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def postprocess_model_results(
-    results: xr.Dataset, model_data: xr.Dataset
+    results: xr.Dataset, model_data: xr.Dataset, zero_threshold: float
 ) -> xr.Dataset:
     """Post-processing of model results.
 
@@ -22,11 +22,11 @@ def postprocess_model_results(
     Args:
         results (xarray.Dataset): Output from the solver backend.
         model_data (xarray.Dataset): Calliope model data.
+        zero_threshold (float): Numbers below this value will be assumed to be zero
 
     Returns:
         xarray.Dataset: input-results dataset.
     """
-    zero_threshold = model_data.config.solve.zero_threshold
     results["capacity_factor"] = capacity_factor(results, model_data)
     results["systemwide_capacity_factor"] = capacity_factor(
         results, model_data, systemwide=True

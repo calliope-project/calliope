@@ -25,20 +25,6 @@ def reset():
     importlib.reload(sys.modules[__name__])
 
 
-def update_then_validate_config(
-    config_key: str, config_dict: AttrDict, **update_kwargs
-) -> AttrDict:
-    """Return an updated version of the configuration schema."""
-    to_validate = deepcopy(config_dict[config_key])
-    to_validate.union(update_kwargs, allow_override=True)
-    validate_dict(
-        {"config": {config_key: to_validate}},
-        CONFIG_SCHEMA,
-        f"`{config_key}` configuration",
-    )
-    return to_validate
-
-
 def update_model_schema(
     top_level_property: Literal["nodes", "techs", "parameters"],
     new_entries: dict,
