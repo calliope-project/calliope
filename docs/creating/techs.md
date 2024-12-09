@@ -15,7 +15,7 @@ This establishes the basic characteristics in the optimisation model (decision v
 ??? info "Sharing configuration with templates"
 
     To share definitions between technologies and/or nodes, you can use configuration templates (the `template` key).
-    This allows a technology/node to inherit definitions from [`template` definitions](templates.md).
+    This allows a technology/node to inherit definitions from [`template` definitions](yaml.md#reusing-definitions-through-templates).
     Note that `template` is different to setting a `base_tech`.
     Setting a base_tech does not entail any configuration options being inherited;
     `base_tech` is only used when building the optimisation problem (i.e., in the `math`).

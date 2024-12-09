@@ -30,7 +30,7 @@ from calliope import config, exceptions
 from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
 from calliope.exceptions import warn as model_warn
-from calliope.io import load_config
+from calliope.io import load_config, to_yaml
 from calliope.preprocess.model_math import ORDERED_COMPONENTS_T, CalliopeMath
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
@@ -446,7 +446,7 @@ class BackendModelGenerator(ABC):
                 yaml_snippet_attrs[attr] = val
 
         if yaml_snippet_attrs:
-            add_attrs["yaml_snippet"] = AttrDict(yaml_snippet_attrs).to_yaml()
+            add_attrs["yaml_snippet"] = to_yaml(yaml_snippet_attrs)
 
         da.attrs = {
             "obj_type": obj_type,

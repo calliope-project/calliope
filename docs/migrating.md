@@ -181,10 +181,11 @@ This split means you can change configuration options on-the-fly if you are work
 `locations` (abbreviated to `locs` in the Calliope data dimensions) has been renamed to `nodes` (no abbreviation).
 This allows us to not require an abbreviation and is a disambiguation from the [pandas.DataFrame.loc][] and [xarray.DataArray.loc][] methods.
 
-### `parent` → `base_tech` + `template`
+### `parent` and `tech_groups` → `base_tech` and `templates`
 
-Technology inheritance has been unlinked from its abstract "base" technology.
-`template` allows for inheriting attributes from `templates` while `base_tech` is fixed to be one of [`demand`, `supply`, `conversion`, `transmission`, `storage`].
+Technology `parent` inheritance has been renamed to `base_tech`, which is fixed to be one of [`demand`, `supply`, `conversion`, `transmission`, `storage`].
+
+The `tech_groups` functionality has been removed in favour of a new, more flexible, `templates` functionality.
 
 === "v0.6"
 
@@ -309,7 +310,7 @@ Instead, links are defined as separate transmission technologies in `techs`, inc
     ```
 
 !!! note
-    You can use [`templates`](creating/templates.md) to minimise duplications in the new transmission technology definition.
+    You can use [`templates`](creating/yaml.md#reusing-definitions-through-templates) to minimise duplications in the new transmission technology definition.
 
 ### Renaming parameters/decision variables without core changes in function
 
@@ -746,8 +747,7 @@ This means you could define different output carriers for a `supply` technology,
 
 ### `templates` for nodes
 
-The new [`templates` key](creating/templates.md) can be applied to `nodes` as well as `techs`.
-This makes up for the [removal of grouping node names in keys by comma separation](#comma-separated-node-definitions).
+The new [`templates` key](creating/yaml.md#reusing-definitions-through-templates) makes up for the [removal of grouping node names in keys by comma separation](#comma-separated-node-definitions).
 
 So, to achieve this result:
 

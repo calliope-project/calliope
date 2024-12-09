@@ -1,0 +1,6 @@
+parameters,cost_flow_cap,cost_storage_cap,cost_area_use,cost_source_cap,cost_flow_in,cost_flow_out
+comment,USD per kW,USD per kWh storage capacity,USD per m2,USD per kW,USD per kWh,USD per kWh
+ccgt,750,,,,0.02,
+csp,1000,50,200,200,,0.002
+battery,,200,,,,
+region1_to_region2,200,,,,,0.002

@@ -124,6 +124,13 @@ class Init(ConfigBaseModel):
     calliope_version: str | None = Field(default=None)
     """Calliope framework version this model is intended for"""
 
+    broadcast_param_data: bool = Field(default=False)
+    """
+    If True, single data entries in YAML indexed parameters will be broadcast across all index items.
+    Otherwise, the number of data entries needs to match the number of index items.
+    Defaults to False to mitigate unexpected broadcasting when applying overrides.
+    """
+
     time_subset: tuple[datetime, datetime] | None = Field(default=None)
     """
     Subset of timesteps as an two-element list giving the **inclusive** range.

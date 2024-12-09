@@ -101,7 +101,7 @@ def build_lp(
     if isinstance(math_data, dict):
         for component_group, component_math in math_data.items():
             if isinstance(component_math, dict):
-                math_to_add.union(calliope.AttrDict({component_group: component_math}))
+                math_to_add.union({component_group: component_math})
             elif isinstance(component_math, list):
                 for name in component_math:
                     math_to_add.set_key(
@@ -111,7 +111,7 @@ def build_lp(
         obj = {
             "dummy_obj": {"equations": [{"expression": "1 + 1"}], "sense": "minimize"}
         }
-        math_to_add.union(calliope.AttrDict({"objectives": obj}))
+        math_to_add.union({"objectives": obj})
         obj_to_activate = "dummy_obj"
     else:
         obj_to_activate = list(math_to_add["objectives"].keys())[0]

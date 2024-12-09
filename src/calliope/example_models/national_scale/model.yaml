@@ -13,6 +13,7 @@ config:
     # What version of Calliope this model is intended for
     calliope_version: 0.7.0
     time_subset: ["2005-01-01", "2005-01-05"] # Subset of timesteps
+    broadcast_param_data: true  # allow single indexed parameter data entries to be broadcast across all index items, if there are multiple entries.
 
   build:
     ensure_feasibility: true # Switches on the "unmet demand" constraint
@@ -27,15 +28,28 @@ config:
 parameters:
   objective_cost_weights:
     data: 1
-    index: [monetary]
+    index: monetary
     dims: costs
   # `bigM` sets the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
   bigM: 1e6
+  cost_interest_rate:
+    data: 0.10
+    index: monetary
+    dims: costs
 # --8<-- [end:parameters]
 
+# --8<-- [start:data-tables]
 data_tables:
   time_varying_parameters:
     data: data_tables/time_varying_params.csv
     rows: timesteps
     columns: [comment, nodes, techs, parameters]
     drop: comment
+  cost_parameters:
+    data: data_tables/costs.csv
+    rows: techs
+    columns: [parameters, comment]
+    drop: comment
+    add_dims:
+      costs: monetary
+# --8<-- [end:data-tables]

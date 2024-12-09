@@ -18,7 +18,6 @@ In brief it is:
 * [**drop**](#selecting-dimension-values-and-dropping-dimensions): dimensions to drop from your rows/columns, e.g., a "comment" row.
 * [**add_dims**](#adding-dimensions): dimensions to add to the table after loading it in, with the corresponding value(s) to assign to the dimension index.
 * [**rename_dims**](#renaming-dimensions-on-load): dimension names to map from those defined in the data table (e.g `time`) to those used in the Calliope model (e.g. `timesteps`).
-* [**template**](#using-a-template): Reference to a [template](templates.md) from which to inherit common configuration options.
 
 When we refer to "dimensions", we mean the sets over which data is indexed in the model: `nodes`, `techs`, `timesteps`, `carriers`, `costs`.
 In addition, when loading from file, there is the _required_ dimension `parameters`.
@@ -271,7 +270,7 @@ In this section we will show some examples of loading data and provide the equiv
         cost_storage_cap.data: 150
     ```
 
-    1. To limit repetition, we have defined [templates](templates.md) for our costs.
+    1. To limit repetition, we have defined [templates](yaml.md#reusing-definitions-through-templates) for our costs.
 
 !!! info "See also"
     Our [data table loading tutorial][loading-tabular-data] has more examples of loading tabular data into your model.

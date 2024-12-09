@@ -1,3 +1,10 @@
+---
+costs:
+    file: "src/calliope/example_models/national_scale/data_tables/costs.csv"
+    header: [0, 1]
+    index_col: 0
+---
+
 # National Scale Example Model
 
 This example consists of two possible power supply technologies,
@@ -24,6 +31,29 @@ It does not contain much data, but the scaffolding with which to construct and r
 ```
 
 ## Model definition
+
+### Referencing tabular data
+
+As of Calliope v0.7.0 it is possible to load tabular data completely separately from the YAML model definition.
+To do this we reference data tables under the `data_tables` key:
+
+```yaml
+--8<-- "src/calliope/example_models/national_scale/model.yaml:data-tables"
+```
+
+In the Calliope national scale example model, we load both timeseries and cost data from file.
+As an example, the data in the cost CSV file looks like this:
+
+{{ read_csv(page.meta.costs.file, header=page.meta.costs.header, index_col=page.meta.costs.index_col) }}
+
+You'll notice that in each row there is reference to a technology, and in each column to a cost parameter and a comment on the units being used.
+Therefore, we reference `techs` in our data table _rows_, and `parameters` and `comment` in our data table _columns_.
+The `comment` information is metadata that we don't need in our Calliope model object, so we _drop_ it on loading the table.
+Since all the data refers to the one cost class `monetary`, we don't add that information in the CSV file, but instead add it on as a dimension when loading the file.
+Where there is no data for that combination of technology and cost parameter, the value is Not-a-Number (NaN) and this combination will be ignored on loading the table.
+
+!!! info
+    You can read more about loading data from file in [our dedicated tutorial][loading-tabular-data].
 
 ### Indexed parameters
 
@@ -110,23 +140,6 @@ The costs are more numerous as well, and include monetary costs for all relevant
 * carrier conversion capacity
 * variable operational and maintenance costs
 
-### Interlude: inheriting from templates
-
-You will notice that the above technologies _inherit_ `cost_dim_setter`.
-Templates allow us to avoid excessive repetition in our model definition.
-In this case, `cost_dim_setter` defines the dimension and index of costs, allowing us to keep our definition of technology costs to only defining `data`.
-By defining `data`, the technologies override the `null` setting applied by `cost_dim_setter`.
-We also use it to set the `interest_rate` for all technologies, which will be used to annualise any investment costs each technology defines.
-
-Technologies and nodes can inherit from anything defined in `templates`.
-items in `templates` can also inherit from each other, so you can create inheritance chains.
-
-`cost_dim_setter` looks like this:
-
-```yaml
---8<-- "src/calliope/example_models/national_scale/model_config/techs.yaml:cost-dim-setter"
-```
-
 ### Storage technologies
 
 The second location allows a limited amount of battery storage to be deployed to better balance the system.
@@ -184,8 +197,16 @@ Transmission technologies look different to other technologies, as they link the
 `free_transmission` allows local power transmission from any of the csp facilities to the nearest location.
 As the name suggests, it applies no cost or efficiency losses to this transmission.
 
+### Interlude: inheriting from templates
+
 We can see that those technologies which rely on `free_transmission` inherit a lot of this information from elsewhere in the model definition.
 `free_transmission` is defined in `templates`, which makes it inheritable.
+[Templates](../../creating/yaml.md#reusing-definitions-through-templates) allow us to avoid excessive repetition in our model definition.
+
+Technologies and nodes can inherit from anything defined in `templates`.
+items in `templates` can also inherit from each other, so you can create inheritance chains.
+
+The `free_transmission` template looks like this:
 
 ```yaml
 --8<-- "src/calliope/example_models/national_scale/model_config/techs.yaml:free-transmission"

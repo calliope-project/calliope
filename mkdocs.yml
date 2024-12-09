@@ -104,7 +104,6 @@ nav:
     - Model configuration: creating/config.md
     - Technologies: creating/techs.md
     - Nodes: creating/nodes.md
-    - Inheriting from templates: creating/templates.md
     - Indexed parameters: creating/parameters.md
     - Loading data tables: creating/data_tables.md
     - Scenarios and overrides: creating/scenarios.md
@@ -117,6 +116,7 @@ nav:
     - user_defined_math/index.md
     - user_defined_math/components.md
     - user_defined_math/syntax.md
+    - user_defined_math/helper_functions.md
     - user_defined_math/customise.md
     - Example additional math gallery:
       - user_defined_math/examples/index.md

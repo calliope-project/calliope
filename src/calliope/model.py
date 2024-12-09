@@ -24,7 +24,6 @@ from calliope.util.schema import (
     extract_from_schema,
     validate_dict,
 )
-from calliope.util.tools import climb_template_tree
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
@@ -92,18 +91,11 @@ class Model:
                 )
             self._init_from_model_data(model_definition)
         else:
-            if isinstance(model_definition, dict):
-                model_def_dict = AttrDict(model_definition)
-            else:
+            if not isinstance(model_definition, dict):
+                # Only file definitions allow relative files.
                 kwargs["def_path"] = str(model_definition)
-                model_def_dict = AttrDict.from_yaml(model_definition)
-
-            (model_def, applied_overrides) = preprocess.load_scenario_overrides(
-                model_def_dict, scenario, override_dict
-            )
-
-            self._init_from_model_def_dict(
-                model_def, applied_overrides, scenario, data_table_dfs, **kwargs
+            self._init_from_model_definition(
+                model_definition, scenario, override_dict, data_table_dfs, **kwargs
             )
 
         self._model_data.attrs["timestamp_model_creation"] = timestamp_model_creation
@@ -140,25 +132,29 @@ class Model:
         """Get solved status."""
         return self._is_solved
 
-    def _init_from_model_def_dict(
+    def _init_from_model_definition(
         self,
-        model_definition: calliope.AttrDict,
-        applied_overrides: str,
+        model_definition: dict | str | Path,
         scenario: str | None,
-        data_table_dfs: dict[str, pd.DataFrame] | None = None,
+        override_dict: dict | None,
+        data_table_dfs: dict[str, pd.DataFrame] | None,
         **kwargs,
     ) -> None:
         """Initialise the model using pre-processed YAML files and optional dataframes/dicts.
 
         Args:
             model_definition (calliope.AttrDict): preprocessed model configuration.
-            applied_overrides (str): overrides specified by users
             scenario (str | None): scenario specified by users
-            data_table_dfs (dict[str, pd.DataFrame] | None, optional): files with additional model information. Defaults to None.
-            **kwargs: Initialisation configuration overrides.
+            override_dict (dict | None): overrides to apply after scenarios.
+            data_table_dfs (dict[str, pd.DataFrame] | None): files with additional model information.
+            **kwargs: initialisation overrides.
         """
-        # First pass to check top-level keys are all good
-        validate_dict(model_definition, CONFIG_SCHEMA, "Model definition")
+        (model_def_full, applied_overrides) = preprocess.prepare_model_definition(
+            model_definition, scenario, override_dict
+        )
+        model_def_full.union({"config.init": kwargs}, allow_override=True)
+        # First pass to check top-level keys are all good. FIXME-config: remove after pydantic is ready
+        validate_dict(model_def_full, CONFIG_SCHEMA, "Model definition")
 
         log_time(
             LOGGER,
@@ -166,9 +162,8 @@ class Model:
             "model_run_creation",
             comment="Model: preprocessing stage 1 (model_run)",
         )
-
-        model_config = config.CalliopeConfig(**model_definition.pop("config"))
-        init_config = model_config.update({"init": kwargs}).init
+        model_config = config.CalliopeConfig(**model_def_full.pop("config"))
+        init_config = model_config.init
 
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
         attributes = {
@@ -178,15 +173,13 @@ class Model:
             "scenario": scenario,
             "defaults": param_metadata["default"],
         }
-        templates = model_definition.get("templates", AttrDict())
         data_tables: list[DataTable] = []
-        for table_name, table_dict in model_definition.pop("data_tables", {}).items():
-            table_dict, _ = climb_template_tree(table_dict, templates, table_name)
+        for table_name, table_dict in model_def_full.pop("data_tables", {}).items():
             data_tables.append(
                 DataTable(table_name, table_dict, data_table_dfs, init_config.def_path)
             )
         model_data_factory = ModelDataFactory(
-            init_config, model_definition, data_tables, attributes, param_metadata
+            init_config, model_def_full, data_tables, attributes, param_metadata
         )
         model_data_factory.build()
 
@@ -202,7 +195,7 @@ class Model:
         self._model_data.attrs["name"] = init_config.name
 
         # Unlike at the build and solve phases, we store the init config overrides in the main model config.
-        model_config.init = init_config
+        model_config.init = init_config  # FIXME-config: unnecessary?
         self.config = model_config
 
         log_time(

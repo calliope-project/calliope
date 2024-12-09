@@ -3,7 +3,6 @@ import pyparsing
 import pytest
 import xarray as xr
 
-from calliope.attrdict import AttrDict
 from calliope.backend import expression_parser, helper_functions, where_parser
 from calliope.exceptions import BackendError
 
@@ -12,10 +11,6 @@ from .common.util import check_error_or_warning
 SUB_EXPRESSION_CLASSIFIER = expression_parser.SUB_EXPRESSION_CLASSIFIER
 
 BASE_DIMS = ["nodes", "techs", "carriers", "costs", "timesteps"]
-
-
-def parse_yaml(yaml_string):
-    return AttrDict.from_yaml_string(yaml_string)
 
 
 @pytest.fixture
@@ -388,7 +383,7 @@ class TestParserElements:
             "[bar] in",  # missing set name
             "foo in [bar]",  # Wrong order of subset and set name
             "[foo=bar] in foo",  # comparison string in subset
-            "[inheritance(techs=a)] in foo"  # helper function in subset
+            "[defined(techs=[tech1, tech2], within=nodes, how=any)] in foo",  # helper function in subset
             "(bar) in foo",  # wrong brackets
         ],
     )
@@ -419,7 +414,7 @@ class TestParserMasking:
         [
             ("all_inf", "all_false"),
             ("config.foo=True", True),
-            ("inheritance(nodes=boo)", "nodes_inheritance_boo_bool"),
+            ("get_val_at_index(nodes=0)", "foo"),
         ],
     )
     def test_no_aggregation(

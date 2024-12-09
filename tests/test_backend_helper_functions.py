@@ -19,11 +19,6 @@ def where():
 
 
 @pytest.fixture(scope="class")
-def where_inheritance(where, parsing_kwargs):
-    return where["inheritance"](**parsing_kwargs)
-
-
-@pytest.fixture(scope="class")
 def where_any(where, parsing_kwargs):
     return where["any"](**parsing_kwargs)
 
@@ -63,6 +58,11 @@ def expression_default_if_empty(expression, parsing_kwargs):
     return expression["default_if_empty"](**parsing_kwargs)
 
 
+@pytest.fixture(scope="class")
+def expression_where(expression, parsing_kwargs):
+    return expression["where"](**parsing_kwargs)
+
+
 class TestAsArray:
     @pytest.fixture(scope="class")
     def parsing_kwargs(self, dummy_model_data):
@@ -95,7 +95,7 @@ class TestAsArray:
         return _is_defined
 
     @pytest.mark.parametrize(
-        ("string_type", "func_name"), [("where", "inheritance"), ("expression", "sum")]
+        ("string_type", "func_name"), [("where", "defined"), ("expression", "sum")]
     )
     def test_duplicate_name_exception(self, string_type, func_name):
         with pytest.raises(ValueError, match=rf".*{string_type}.*{func_name}.*"):
@@ -120,18 +120,6 @@ class TestAsArray:
                 return None
 
         assert all(func_name in helper_functions._registry[i] for i in string_types)
-
-    def test_nodes_inheritance(self, where_inheritance, dummy_model_data):
-        boo_bool = where_inheritance(nodes="boo")
-        assert boo_bool.equals(dummy_model_data.nodes_inheritance_boo_bool)
-
-    def test_techs_inheritance(self, where_inheritance, dummy_model_data):
-        boo_bool = where_inheritance(techs="boo")
-        assert boo_bool.equals(dummy_model_data.techs_inheritance_boo_bool)
-
-    def test_techs_and_nodes_inheritance(self, where_inheritance, dummy_model_data):
-        boo_bool = where_inheritance(techs="boo", nodes="boo")
-        assert boo_bool.equals(dummy_model_data.multi_inheritance_boo_bool)
 
     def test_any_not_exists(self, where_any):
         summed = where_any("foo", over="techs")
@@ -322,6 +310,66 @@ class TestAsArray:
             result, [[1.0, 1, 1.0, 3], [np.inf, 2.0, True, 1]]
         )
 
+    def test_expression_where_techs_only(self, expression_where, dummy_model_data):
+        """Test that applying where array masks expected values without affecting the array dimensions."""
+        where_array = xr.DataArray(
+            [True, True, False, False], coords={"techs": dummy_model_data.techs}
+        )
+        result = expression_where(dummy_model_data.only_techs, where_array)
+        np.testing.assert_equal(result.values, [np.nan, 1, np.nan, np.nan])
+
+    def test_expression_where_techs_add_nodes(self, expression_where, dummy_model_data):
+        """Test that applying where array masks expected values _and_ adds to the new array dimensions with a known dim."""
+        where_array = xr.DataArray(
+            [[True, True, False, False], [False, False, True, True]],
+            coords={"nodes": dummy_model_data.nodes, "techs": dummy_model_data.techs},
+        )
+        result = expression_where(dummy_model_data.only_techs, where_array)
+        assert result.nodes.equals(dummy_model_data.nodes)
+
+        expected = xr.DataArray(
+            [[np.nan, 1, np.nan, np.nan], [np.nan, np.nan, 2, 3]],
+            coords={"nodes": dummy_model_data.nodes, "techs": dummy_model_data.techs},
+        )
+        assert result.equals(expected.transpose(*result.dims))
+
+    def test_expression_where_techs_add_new_dim(
+        self, expression_where, dummy_model_data
+    ):
+        """Test that applying where array masks expected values _and_ adds to the new array dimensions with a new dim."""
+        where_array = xr.DataArray(
+            [[True, True, False, False], [False, False, True, True]],
+            coords={"new_dim": ["a", "b"], "techs": dummy_model_data.techs},
+        )
+        result = expression_where(dummy_model_data.only_techs, where_array)
+        assert "new_dim" not in dummy_model_data.coords
+        expected = xr.DataArray(
+            [[np.nan, 1, np.nan, np.nan], [np.nan, np.nan, 2, 3]],
+            coords={"new_dim": ["a", "b"], "techs": dummy_model_data.techs},
+        )
+        assert result.equals(expected.transpose(*result.dims))
+
+    def test_expression_where_no_shared_dim(self, expression_where, dummy_model_data):
+        """Test that applying where array with no shared dims combines dims in new array."""
+        where_array = xr.DataArray([True, False], coords={"new_dim": ["a", "b"]})
+        result = expression_where(dummy_model_data.only_techs, where_array)
+
+        expected = xr.DataArray(
+            [[np.nan, 1, 2, 3], [np.nan, np.nan, np.nan, np.nan]],
+            coords={"new_dim": ["a", "b"], "techs": dummy_model_data.techs},
+        )
+        assert result.equals(expected.transpose(*result.dims))
+
+    def test_expression_where_no_initial_dim(self, expression_where, dummy_model_data):
+        """Test that applying where array adds a dim where there wasn't one before."""
+        where_array = xr.DataArray(
+            [True, False], coords={"nodes": dummy_model_data.nodes}
+        )
+        result = expression_where(dummy_model_data.no_dims, where_array)
+
+        expected = xr.DataArray([2, np.nan], coords={"nodes": dummy_model_data.nodes})
+        assert result.equals(expected.transpose(*result.dims))
+
 
 class TestAsMathString:
     @pytest.fixture(scope="class")
@@ -331,18 +379,6 @@ class TestAsMathString:
             "return_type": "math_string",
             "equation_name": "foo",
         }
-
-    def test_techs_inheritance(self, where_inheritance):
-        assert where_inheritance(techs="boo") == r"\text{inherits(techs=boo)}"
-
-    def test_nodes_inheritance(self, where_inheritance):
-        assert where_inheritance(nodes="boo") == r"\text{inherits(nodes=boo)}"
-
-    def test_techs_and_nodes_inheritance(self, where_inheritance):
-        assert (
-            where_inheritance(nodes="boo", techs="bar")
-            == r"\text{inherits(nodes=boo,techs=bar)}"
-        )
 
     def test_any_not_exists(self, where_any):
         summed_string = where_any("foo", over="techs")
@@ -458,3 +494,16 @@ class TestAsMathString:
             r"\text{foo}", default=1.0
         )
         assert default_if_empty_string == r"(\text{foo}\vee{}1.0)"
+
+    def test_expression_where_no_dims(self, expression_where):
+        expression_where_string = expression_where(r"\text{foo}", r"\text{bar}")
+        assert expression_where_string == r"(\text{foo} \text{if } \text{bar} == True)"
+
+    def test_expression_where_with_dims(self, expression_where):
+        expression_where_string = expression_where(
+            r"\textbf{foo}_\text{techs}", r"\textit{bar}_\text{nodes}"
+        )
+        assert (
+            expression_where_string
+            == r"(\textbf{foo}_\text{techs} \text{if } \textit{bar}_\text{nodes} == True)"
+        )
