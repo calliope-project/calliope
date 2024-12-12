@@ -16,6 +16,7 @@ from typing_extensions import NotRequired, TypedDict
 from calliope import config
 from calliope.backend import expression_parser
 from calliope.exceptions import BackendError
+from calliope.util import tools
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
@@ -119,7 +120,9 @@ class ConfigOptionParser(EvalWhere):
         return rf"\text{{config.{self.config_option}}}"
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
-        config_val = getattr(self.eval_attrs["build_config"], self.config_option)
+        config_val = tools.get_dot_attr(
+            self.eval_attrs["build_config"], self.config_option
+        )
 
         if not isinstance(config_val, int | float | str | bool | np.bool_):
             raise BackendError(

@@ -83,7 +83,19 @@ def where(bool_operand, helper_function, data_var, comparison, subset):
 
 
 @pytest.fixture
-def eval_kwargs(dummy_pyomo_backend_model):
+def dummy_build_config():
+    return {
+        "foo": True,
+        "FOO": "baz",
+        "foo1": np.inf,
+        "bar": {"foobar": "baz"},
+        "a_b": 0,
+        "b_a": [1, 2],
+    }
+
+
+@pytest.fixture
+def eval_kwargs(dummy_pyomo_backend_model, dummy_build_config):
     return {
         "input_data": dummy_pyomo_backend_model.inputs,
         "backend_interface": dummy_pyomo_backend_model,
@@ -91,6 +103,7 @@ def eval_kwargs(dummy_pyomo_backend_model):
         "equation_name": "foo",
         "return_type": "array",
         "references": set(),
+        "build_config": dummy_build_config,
     }
 
 

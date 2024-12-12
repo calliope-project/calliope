@@ -258,7 +258,7 @@ class SolveSpores(ConfigBaseModel):
     score_cost_class: str = Field(default="score")
     """SPORES mode cost class to vary between iterations after the initial base run."""
 
-    slack_cost_group: str = Field(default=None)
+    slack_cost_group: str = Field(default="monetary")
     """SPORES mode cost class to keep below the given `slack` (usually "monetary")."""
 
     save_per_spore: bool = Field(default=False)

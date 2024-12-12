@@ -47,3 +47,27 @@ def listify(var: Any) -> list:
     else:
         var = [var]
     return var
+
+
+def get_dot_attr(var: Any, attr: str) -> Any:
+    """Get nested attributes in dot notation.
+
+    Works for nested objects (e.g., dictionaries, pydantic models).
+
+    Args:
+        var (Any): Object to extract nested attributes from.
+        attr (str): Name of the attribute (e.g., "foo.bar").
+
+    Returns:
+        Any: Value at the given location.
+    """
+    levels = attr.split(".", 1)
+
+    if isinstance(var, dict):
+        value = var[levels[0]]
+    else:
+        value = getattr(var, levels[0])
+
+    if len(levels) > 1:
+        value = get_dot_attr(value, levels[1])
+    return value

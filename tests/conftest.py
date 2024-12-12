@@ -33,8 +33,8 @@ def foreach(request):
 
 
 @pytest.fixture(scope="session")
-def config_defaults():
-    return AttrDict(config.CalliopeConfig().model_dump())
+def default_config():
+    return config.CalliopeConfig()
 
 
 @pytest.fixture(scope="session")
@@ -173,7 +173,7 @@ def dummy_model_math():
 
 
 @pytest.fixture(scope="module")
-def dummy_model_data(config_defaults, model_defaults):
+def dummy_model_data(model_defaults):
     coords = {
         dim: (
             ["foo", "bar"]
@@ -280,20 +280,6 @@ def dummy_model_data(config_defaults, model_defaults):
 
     for param in model_data.data_vars.values():
         param.attrs["is_result"] = 0
-    dummy_config = AttrDict(
-        {
-            "build": {
-                "foo": True,
-                "FOO": "baz",
-                "foo1": np.inf,
-                "bar": {"foobar": "baz"},
-                "a_b": 0,
-                "b_a": [1, 2],
-            }
-        }
-    )
-    dummy_config.union(config_defaults)
-    model_data.attrs["config"] = dummy_config
 
     model_data.attrs["defaults"] = AttrDict(
         {
@@ -345,8 +331,10 @@ def populate_backend_model(backend):
 
 
 @pytest.fixture(scope="module")
-def dummy_pyomo_backend_model(dummy_model_data, dummy_model_math):
-    backend = pyomo_backend_model.PyomoBackendModel(dummy_model_data, dummy_model_math)
+def dummy_pyomo_backend_model(dummy_model_data, dummy_model_math, default_config):
+    backend = pyomo_backend_model.PyomoBackendModel(
+        dummy_model_data, dummy_model_math, default_config.build
+    )
     return populate_backend_model(backend)
 
 

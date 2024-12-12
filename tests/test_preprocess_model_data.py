@@ -20,21 +20,20 @@ def model_def():
     model_def_override, _ = prepare_model_definition(
         model_def_path, scenario="simple_supply,empty_tech_node"
     )
-    return model_def_override, model_def_path
+    return model_def_override
 
 
 @pytest.fixture
-def init_config(config_defaults, model_def):
-    model_def_dict, _ = model_def
-    config_defaults.union(model_def_dict.pop("config"), allow_override=True)
+def init_config(default_config, model_def):
+    config_defaults = AttrDict(default_config.model_dump())
+    config_defaults.union(model_def.pop("config"), allow_override=True)
     return config_defaults["init"]
 
 
 @pytest.fixture
 def model_data_factory(model_def, init_config, model_defaults):
-    model_def_dict, _ = model_def
     return ModelDataFactory(
-        init_config, model_def_dict, [], {"foo": "bar"}, {"default": model_defaults}
+        init_config, model_def, [], {"foo": "bar"}, {"default": model_defaults}
     )
 
 
