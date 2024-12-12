@@ -606,8 +606,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         self,
         inputs: xr.Dataset,
         math: CalliopeMath,
-        instance: T,
         build_config: config.Build,
+        instance: T,
     ) -> None:
         """Abstract base class to build backend models that interface with solvers.
 

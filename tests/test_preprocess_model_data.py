@@ -25,9 +25,8 @@ def model_def():
 
 @pytest.fixture
 def init_config(default_config, model_def):
-    config_defaults = AttrDict(default_config.model_dump())
-    config_defaults.union(model_def.pop("config"), allow_override=True)
-    return config_defaults["init"]
+    updated_config = default_config.update(model_def["config"])
+    return updated_config.init
 
 
 @pytest.fixture
@@ -198,14 +197,10 @@ class TestModelData:
 
     @pytest.mark.parametrize(("unit", "expected"), [("m", 343834), ("km", 343.834)])
     def test_add_link_distances_no_da(
-        self,
-        mocker,
-        my_caplog,
-        model_data_factory_w_params: ModelDataFactory,
-        unit,
-        expected,
+        self, my_caplog, model_data_factory_w_params: ModelDataFactory, unit, expected
     ):
-        mocker.patch.object(ModelDataFactory, "config.distance_unit", return_value=unit)
+        new_config = model_data_factory_w_params.config.update({"distance_unit": unit})
+        model_data_factory_w_params.config = new_config
         model_data_factory_w_params.clean_data_from_undefined_members()
         model_data_factory_w_params.dataset["latitude"] = (
             pd.Series({"A": 51.507222, "B": 48.8567})
@@ -434,7 +429,8 @@ class TestModelData:
     def test_prepare_param_dict_no_broadcast_allowed(
         self, model_data_factory, param_data
     ):
-        model_data_factory.config.broadcast_param_data = False
+        new_config = model_data_factory.config.update({"broadcast_param_data": False})
+        model_data_factory.config = new_config
         param_dict = {"data": param_data, "index": [["foo"], ["bar"]], "dims": "foobar"}
         with pytest.raises(exceptions.ModelError) as excinfo:  # noqa: PT011, false positive
             model_data_factory._prepare_param_dict("foo", param_dict)

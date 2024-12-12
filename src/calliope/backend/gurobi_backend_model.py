@@ -56,7 +56,7 @@ class GurobiBackendModel(backend_model.BackendModel):
             raise ImportError(
                 "Install the `gurobipy` package to build the optimisation problem with the Gurobi backend."
             )
-        super().__init__(inputs, math, gurobipy.Model(), build_config)
+        super().__init__(inputs, math, build_config, gurobipy.Model())
         self._instance: gurobipy.Model
         self.shadow_prices = GurobiShadowPrices(self)
 

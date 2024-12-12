@@ -9,6 +9,14 @@ from calliope.backend import latex_backend_model
 from .common.util import check_error_or_warning
 
 
+@pytest.fixture
+def temp_dummy_latex_backend_model(dummy_model_data, dummy_model_math, default_config):
+    """Function scoped model definition to avoid cross-test contamination."""
+    return latex_backend_model.LatexBackendModel(
+        dummy_model_data, dummy_model_math, default_config.build
+    )
+
+
 class TestLatexBackendModel:
     def test_inputs(self, dummy_latex_backend_model, dummy_model_data):
         assert dummy_latex_backend_model.inputs.equals(dummy_model_data)
@@ -406,14 +414,9 @@ class TestLatexBackendModel:
             ),
         ],
     )
-    def test_generate_math_doc(
-        self, dummy_model_data, dummy_model_math, format, expected
-    ):
-        backend_model = latex_backend_model.LatexBackendModel(
-            dummy_model_data, dummy_model_math
-        )
-        backend_model._add_all_inputs_as_parameters()
-        backend_model.add_global_expression(
+    def test_generate_math_doc(self, temp_dummy_latex_backend_model, format, expected):
+        temp_dummy_latex_backend_model._add_all_inputs_as_parameters()
+        temp_dummy_latex_backend_model.add_global_expression(
             "expr",
             {
                 "equations": [{"expression": "no_dims + 2"}],
@@ -421,14 +424,11 @@ class TestLatexBackendModel:
                 "default": 0,
             },
         )
-        doc = backend_model.generate_math_doc(format=format)
+        doc = temp_dummy_latex_backend_model.generate_math_doc(format=format)
         assert doc == expected
 
-    def test_generate_math_doc_no_params(self, dummy_model_data, dummy_model_math):
-        backend_model = latex_backend_model.LatexBackendModel(
-            dummy_model_data, dummy_model_math
-        )
-        backend_model.add_global_expression(
+    def test_generate_math_doc_no_params(self, temp_dummy_latex_backend_model):
+        temp_dummy_latex_backend_model.add_global_expression(
             "expr",
             {
                 "equations": [{"expression": "1 + 2"}],
@@ -436,7 +436,7 @@ class TestLatexBackendModel:
                 "default": 0,
             },
         )
-        doc = backend_model.generate_math_doc(format="md")
+        doc = temp_dummy_latex_backend_model.generate_math_doc(format="md")
         assert doc == textwrap.dedent(
             r"""
 
@@ -457,12 +457,9 @@ class TestLatexBackendModel:
         )
 
     def test_generate_math_doc_mkdocs_features_tabs(
-        self, dummy_model_data, dummy_model_math
+        self, temp_dummy_latex_backend_model
     ):
-        backend_model = latex_backend_model.LatexBackendModel(
-            dummy_model_data, dummy_model_math
-        )
-        backend_model.add_global_expression(
+        temp_dummy_latex_backend_model.add_global_expression(
             "expr",
             {
                 "equations": [{"expression": "1 + 2"}],
@@ -470,7 +467,9 @@ class TestLatexBackendModel:
                 "default": 0,
             },
         )
-        doc = backend_model.generate_math_doc(format="md", mkdocs_features=True)
+        doc = temp_dummy_latex_backend_model.generate_math_doc(
+            format="md", mkdocs_features=True
+        )
         assert doc == textwrap.dedent(
             r"""
 
@@ -500,13 +499,10 @@ class TestLatexBackendModel:
         )
 
     def test_generate_math_doc_mkdocs_features_admonition(
-        self, dummy_model_data, dummy_model_math
+        self, temp_dummy_latex_backend_model
     ):
-        backend_model = latex_backend_model.LatexBackendModel(
-            dummy_model_data, dummy_model_math
-        )
-        backend_model._add_all_inputs_as_parameters()
-        backend_model.add_global_expression(
+        temp_dummy_latex_backend_model._add_all_inputs_as_parameters()
+        temp_dummy_latex_backend_model.add_global_expression(
             "expr",
             {
                 "equations": [{"expression": "no_dims + 1"}],
@@ -514,7 +510,9 @@ class TestLatexBackendModel:
                 "default": 0,
             },
         )
-        doc = backend_model.generate_math_doc(format="md", mkdocs_features=True)
+        doc = temp_dummy_latex_backend_model.generate_math_doc(
+            format="md", mkdocs_features=True
+        )
         assert doc == textwrap.dedent(
             r"""
 
@@ -558,13 +556,12 @@ class TestLatexBackendModel:
         )
 
     def test_generate_math_doc_mkdocs_features_not_in_md(
-        self, dummy_model_data, dummy_model_math
+        self, temp_dummy_latex_backend_model
     ):
-        backend_model = latex_backend_model.LatexBackendModel(
-            dummy_model_data, dummy_model_math
-        )
         with pytest.raises(exceptions.ModelError) as excinfo:
-            backend_model.generate_math_doc(format="rst", mkdocs_features=True)
+            temp_dummy_latex_backend_model.generate_math_doc(
+                format="rst", mkdocs_features=True
+            )
 
         assert check_error_or_warning(
             excinfo,
@@ -679,12 +676,9 @@ class TestLatexBackendModel:
         }
         assert refs == {"multi_dim_var"}
 
-    def test_param_type(self, dummy_model_data, dummy_model_math):
-        backend_model = latex_backend_model.LatexBackendModel(
-            dummy_model_data, dummy_model_math
-        )
-        backend_model._add_all_inputs_as_parameters()
-        backend_model.add_global_expression(
+    def test_param_type(self, temp_dummy_latex_backend_model):
+        temp_dummy_latex_backend_model._add_all_inputs_as_parameters()
+        temp_dummy_latex_backend_model.add_global_expression(
             "expr",
             {
                 "equations": [{"expression": "1 + flow_cap_max"}],
@@ -692,7 +686,7 @@ class TestLatexBackendModel:
                 "default": 0,
             },
         )
-        doc = backend_model.generate_math_doc(format="md")
+        doc = temp_dummy_latex_backend_model.generate_math_doc(format="md")
         assert doc == textwrap.dedent(
             r"""
 

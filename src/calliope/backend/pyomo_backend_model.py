@@ -69,7 +69,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             math (CalliopeMath): Calliope math.
             build_config: Build configuration options.
         """
-        super().__init__(inputs, math, pmo.block(), build_config)
+        super().__init__(inputs, math, build_config, pmo.block())
 
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()

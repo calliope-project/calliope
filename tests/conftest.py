@@ -339,14 +339,16 @@ def dummy_pyomo_backend_model(dummy_model_data, dummy_model_math, default_config
 
 
 @pytest.fixture(scope="module")
-def dummy_latex_backend_model(dummy_model_data, dummy_model_math):
-    backend = latex_backend_model.LatexBackendModel(dummy_model_data, dummy_model_math)
+def dummy_latex_backend_model(dummy_model_data, dummy_model_math, default_config):
+    backend = latex_backend_model.LatexBackendModel(
+        dummy_model_data, dummy_model_math, default_config.build
+    )
     return populate_backend_model(backend)
 
 
 @pytest.fixture(scope="class")
-def valid_latex_backend(dummy_model_data, dummy_model_math):
+def valid_latex_backend(dummy_model_data, dummy_model_math, default_config):
     backend = latex_backend_model.LatexBackendModel(
-        dummy_model_data, dummy_model_math, include="valid"
+        dummy_model_data, dummy_model_math, default_config.build, include="valid"
     )
     return populate_backend_model(backend)
