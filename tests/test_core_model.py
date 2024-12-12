@@ -69,9 +69,11 @@ class TestOperateMode:
         model.build(
             force=True,
             mode="operate",
-            operate_use_cap_results=True,
-            operate_window=request.param[0],
-            operate_horizon=request.param[1],
+            operate={
+                "use_cap_results": True,
+                "window": request.param[0],
+                "horizon": request.param[1],
+            },
         )
 
         with self.caplog_session(request) as caplog:
@@ -116,8 +118,8 @@ class TestOperateMode:
     def test_end_of_horizon(self, operate_model_and_log):
         """Check that increasingly shorter time horizons are logged as model rebuilds."""
         operate_model, log = operate_model_and_log
-        config = operate_model.backend.config.operate
-        if config.operate_window != config.operate_horizon:
+        config = operate_model.backend.config
+        if config.operate.window != config.operate.horizon:
             assert "Reaching the end of the timeseries." in log
         else:
             assert "Reaching the end of the timeseries." not in log

@@ -207,7 +207,7 @@ class Build(ConfigBaseModel):
 
     model_config = {
         "title": "build",
-        "extra": "allow",
+        "extra": "forbid",
         "revalidate_instances": "always",
     }
 
