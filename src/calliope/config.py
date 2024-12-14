@@ -5,14 +5,14 @@
 from collections.abc import Hashable
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Literal, Self, TypeVar
+from typing import Annotated, Literal, TypeVar
 
 import jsonref
 from pydantic import AfterValidator, BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
+from typing_extensions import Self
 
 from calliope.attrdict import AttrDict
-from calliope.util import tools
 
 MODES_T = Literal["plan", "operate", "spores"]
 CONFIG_T = Literal["init", "build", "solve"]
@@ -54,12 +54,15 @@ def hide_from_schema(to_hide: list[str]):
 class ConfigBaseModel(BaseModel):
     """A base class for creating pydantic models for Calliope configuration options."""
 
-    _kwargs: dict = {}
+    model_config = {
+        "extra": "forbid",
+        "frozen": True,
+        "revalidate_instances": "always",
+        "use_attribute_docstrings": True,
+    }
 
     def update(self, update_dict: dict, deep: bool = False) -> Self:
         """Return a new iteration of the model with updated fields.
-
-        Updates are validated and stored in the parent class in the `_kwargs` key.
 
         Args:
             update_dict (dict): Dictionary with which to update the base model.
@@ -74,12 +77,10 @@ class ConfigBaseModel(BaseModel):
             key_class = getattr(self, key)
             if isinstance(key_class, ConfigBaseModel):
                 new_dict[key] = key_class.update(val)
-                key_class._kwargs = val
             else:
                 new_dict[key] = val
         updated = super().model_copy(update=new_dict, deep=deep)
         updated.model_validate(updated)
-        self._kwargs = update_dict
         return updated
 
     def model_no_ref_schema(self) -> AttrDict:
@@ -93,30 +94,9 @@ class ConfigBaseModel(BaseModel):
         schema_dict.del_key("$defs")
         return schema_dict
 
-    @property
-    def applied_keyword_overrides(self) -> dict:
-        """Most recently applied keyword overrides used to update this configuration.
-
-        Returns:
-            dict: Description of applied overrides.
-        """
-        return self._kwargs
-
 
 class Init(ConfigBaseModel):
     """All configuration options used when initialising a Calliope model."""
-
-    model_config = {
-        "title": "init",
-        "extra": "forbid",
-        "frozen": True,
-        "json_schema_extra": hide_from_schema(["def_path"]),
-        "revalidate_instances": "always",
-        "use_attribute_docstrings": True,
-    }
-
-    def_path: Path = Field(default=".", repr=False, exclude=True)
-    """The path to the main model definition YAML file, if one has been used to instantiate the Calliope Model class."""
 
     name: str | None = Field(default=None)
     """Model name"""
@@ -142,7 +122,7 @@ class Init(ConfigBaseModel):
     time_resample: str | None = Field(default=None, pattern="^[0-9]+[a-zA-Z]")
     """Setting to adjust time resolution, e.g. '2h' for 2-hourly"""
 
-    time_cluster: Path | None = Field(default=None)
+    time_cluster: str | None = Field(default=None)
     """
     Setting to cluster the timeseries.
     Must be a path to a file where each date is linked to a representative date that also exists in the timeseries.
@@ -160,24 +140,16 @@ class Init(ConfigBaseModel):
     Automatically derived distances from lat/lon coordinates will be given in this unit.
     """
 
-    @model_validator(mode="before")
-    @classmethod
-    def abs_path(cls, data):
-        """Add model definition path."""
-        if data.get("time_cluster", None) is not None:
-            data["time_cluster"] = tools.relative_path(
-                data["def_path"], data["time_cluster"]
-            )
-        return data
-
 
 class BuildOperate(ConfigBaseModel):
     """Operate mode configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
     model_config = {
-        "title": "operate",
         "extra": "forbid",
-        "json_schema_extra": hide_from_schema(["start_window_idx"]),
+        "frozen": True,
+        "json_schema_extra": hide_from_schema(
+            ["start_window_idx"]
+        ),  # FIXME-remove, config should not be altered by our code
         "revalidate_instances": "always",
         "use_attribute_docstrings": True,
     }
@@ -204,12 +176,6 @@ class BuildOperate(ConfigBaseModel):
 
 class Build(ConfigBaseModel):
     """Base configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
-
-    model_config = {
-        "title": "build",
-        "extra": "forbid",
-        "revalidate_instances": "always",
-    }
 
     mode: MODES_T = Field(default="plan")
     """Mode in which to run the optimisation."""
@@ -267,7 +233,7 @@ class SolveSpores(ConfigBaseModel):
     If False, will consolidate all iterations into one dataset after completion of N iterations (defined by `number`) and save that one dataset.
     """
 
-    save_per_spore_path: Path | None = Field(default=None)
+    save_per_spore_path: str | None = Field(default=None)
     """If saving per spore, the path to save to."""
 
     skip_cost_op: bool = Field(default=False)
@@ -281,7 +247,7 @@ class SolveSpores(ConfigBaseModel):
                 raise ValueError(
                     "Must define `save_per_spore_path` if you want to save each SPORES result separately."
                 )
-            elif not self.save_per_spore_path.is_dir():
+            elif not Path(self.save_per_spore_path).is_dir():
                 raise ValueError("`save_per_spore_path` must be a directory.")
         return self
 
@@ -289,13 +255,7 @@ class SolveSpores(ConfigBaseModel):
 class Solve(ConfigBaseModel):
     """Base configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
-    model_config = {
-        "title": "solve",
-        "extra": "forbid",
-        "revalidate_instances": "always",
-    }
-
-    save_logs: Path | None = Field(default=None)
+    save_logs: str | None = Field(default=None)
     """If given, should be a path to a directory in which to save optimisation logs."""
 
     solver_io: str | None = Field(default=None)
@@ -322,7 +282,6 @@ class Solve(ConfigBaseModel):
 class CalliopeConfig(ConfigBaseModel):
     """Calliope configuration class."""
 
-    model_config = {"title": "config"}
     init: Init = Init()
     build: Build = Build()
     solve: Solve = Solve()

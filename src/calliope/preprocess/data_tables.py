@@ -53,7 +53,7 @@ class DataTable:
         table_name: str,
         data_table: DataTableDict,
         data_table_dfs: dict[str, pd.DataFrame] | None = None,
-        model_definition_path: Path = Path("."),
+        model_definition_path: str | Path | None = None,
     ):
         """Load and format a data table from file / in-memory object.
 

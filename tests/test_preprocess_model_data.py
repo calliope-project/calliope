@@ -15,11 +15,18 @@ from .common.util import check_error_or_warning
 
 
 @pytest.fixture
-def model_def():
-    model_def_path = Path(__file__).parent / "common" / "test_model" / "model.yaml"
+def model_path():
+    return Path(__file__).parent / "common" / "test_model" / "model.yaml"
+
+
+@pytest.fixture
+def model_def(model_path):
     model_def_override, _ = prepare_model_definition(
-        model_def_path, scenario="simple_supply,empty_tech_node"
+        model_path, scenario="simple_supply,empty_tech_node"
     )
+    # Erase data tables for simplicity
+    # FIXME: previous tests omitted this. Either update tests or remove the data_table from the test model.
+    model_def_override.del_key("data_tables")
     return model_def_override
 
 
@@ -30,9 +37,14 @@ def init_config(default_config, model_def):
 
 
 @pytest.fixture
-def model_data_factory(model_def, init_config, model_defaults):
+def model_data_factory(model_path, model_def, init_config, model_defaults):
     return ModelDataFactory(
-        init_config, model_def, [], {"foo": "bar"}, {"default": model_defaults}
+        init_config,
+        model_def,
+        model_path,
+        [],
+        {"foo": "bar"},
+        {"default": model_defaults},
     )
 
 

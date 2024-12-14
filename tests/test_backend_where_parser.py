@@ -248,7 +248,7 @@ class TestParserElements:
             parsed_[0].eval(**eval_kwargs)
 
     @pytest.mark.parametrize(
-        ("config_string", "type_"), [("config.b_a", "list"), ("config.bar", "AttrDict")]
+        ("config_string", "type_"), [("config.b_a", "list"), ("config.bar", "dict")]
     )
     def test_config_fail_datatype(
         self, config_option, eval_kwargs, config_string, type_

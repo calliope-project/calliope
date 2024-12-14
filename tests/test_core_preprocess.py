@@ -2,6 +2,7 @@ import warnings
 
 import pandas as pd
 import pytest
+from pydantic import ValidationError
 
 import calliope
 import calliope.exceptions as exceptions
@@ -60,11 +61,11 @@ class TestModelRun:
             return read_rich_yaml(f"config.init.time_subset: {param}")
 
         # should fail: one string in list
-        with pytest.raises(exceptions.ModelError):
+        with pytest.raises(ValidationError):
             build_model(override_dict=override(["2005-01"]), scenario="simple_supply")
 
         # should fail: three strings in list
-        with pytest.raises(exceptions.ModelError):
+        with pytest.raises(ValidationError):
             build_model(
                 override_dict=override(["2005-01-01", "2005-01-02", "2005-01-03"]),
                 scenario="simple_supply",
@@ -81,7 +82,7 @@ class TestModelRun:
         )
 
         # should fail: must be a list, not a string
-        with pytest.raises(exceptions.ModelError):
+        with pytest.raises(ValidationError):
             model = build_model(
                 override_dict=override("2005-01"), scenario="simple_supply"
             )
@@ -147,19 +148,15 @@ class TestModelRun:
 
 
 class TestChecks:
-    @pytest.mark.parametrize("top_level_key", ["init", "solve"])
+    @pytest.mark.parametrize(
+        "top_level_key", ["init", "build", "solve", "build.operate", "solve.spores"]
+    )
     def test_unrecognised_config_keys(self, top_level_key):
-        """Check that the only keys allowed in 'model' and 'run' are those in the
-        model defaults
-        """
+        """Check that no extra keys are allowed in the configuration."""
         override = {f"config.{top_level_key}.nonsensical_key": "random_string"}
 
-        with pytest.raises(exceptions.ModelError) as excinfo:
+        with pytest.raises(ValidationError):
             build_model(override_dict=override, scenario="simple_supply")
-        assert check_error_or_warning(
-            excinfo,
-            "Additional properties are not allowed ('nonsensical_key' was unexpected)",
-        )
 
     def test_model_version_mismatch(self):
         """Model config says config.init.calliope_version = 0.1, which is not what we

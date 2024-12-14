@@ -15,7 +15,6 @@ import calliope
 from calliope import backend, config, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
-from calliope.preprocess.data_tables import DataTable
 from calliope.preprocess.model_data import ModelDataFactory
 from calliope.util.logging import log_time
 from calliope.util.schema import (
@@ -41,7 +40,7 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
-    ATTRS_SAVED = ("applied_math", "config")
+    ATTRS_SAVED = ("applied_math", "config", "def_path")
 
     def __init__(
         self,
@@ -76,6 +75,7 @@ class Model:
         self.defaults: AttrDict
         self.applied_math: preprocess.CalliopeMath
         self.backend: BackendModel
+        self.def_path: str | None = None
         self._is_built: bool = False
         self._is_solved: bool = False
 
@@ -93,7 +93,7 @@ class Model:
         else:
             if not isinstance(model_definition, dict):
                 # Only file definitions allow relative files.
-                kwargs["def_path"] = str(model_definition)
+                self.def_path = str(model_definition)
             self._init_from_model_definition(
                 model_definition, scenario, override_dict, data_table_dfs, **kwargs
             )
@@ -163,23 +163,23 @@ class Model:
             comment="Model: preprocessing stage 1 (model_run)",
         )
         model_config = config.CalliopeConfig(**model_def_full.pop("config"))
-        init_config = model_config.init
 
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
         attributes = {
-            "calliope_version_defined": init_config.calliope_version,
+            "calliope_version_defined": model_config.init.calliope_version,
             "calliope_version_initialised": calliope.__version__,
             "applied_overrides": applied_overrides,
             "scenario": scenario,
             "defaults": param_metadata["default"],
         }
-        data_tables: list[DataTable] = []
-        for table_name, table_dict in model_def_full.pop("data_tables", {}).items():
-            data_tables.append(
-                DataTable(table_name, table_dict, data_table_dfs, init_config.def_path)
-            )
+        # FIXME-config: remove config input once model_def_full uses pydantic
         model_data_factory = ModelDataFactory(
-            init_config, model_def_full, data_tables, attributes, param_metadata
+            model_config.init,
+            model_def_full,
+            self.def_path,
+            data_table_dfs,
+            attributes,
+            param_metadata,
         )
         model_data_factory.build()
 
@@ -192,10 +192,7 @@ class Model:
             comment="Model: preprocessing stage 2 (model_data)",
         )
 
-        self._model_data.attrs["name"] = init_config.name
-
-        # Unlike at the build and solve phases, we store the init config overrides in the main model config.
-        model_config.init = init_config  # FIXME-config: unnecessary?
+        self._model_data.attrs["name"] = model_config.init.name
         self.config = model_config
 
         log_time(
@@ -220,7 +217,6 @@ class Model:
             )
         if "config" in model_data.attrs:
             self.config = config.CalliopeConfig(**model_data.attrs.pop("config"))
-            self.config.update(model_data.attrs.pop("config_kwarg_overrides"))
 
         self._model_data = model_data
 
@@ -260,26 +256,26 @@ class Model:
             comment="Model: backend build starting",
         )
 
-        build_config = self.config.update({"build": kwargs}).build
-        mode = build_config.mode
+        self.config = self.config.update({"build": kwargs})
+        mode = self.config.build.mode
         if mode == "operate":
             if not self._model_data.attrs["allow_operate_mode"]:
                 raise exceptions.ModelError(
                     "Unable to run this model in operate (i.e. dispatch) mode, probably because "
                     "there exist non-uniform timesteps (e.g. from time clustering)"
                 )
-            backend_input = self._prepare_operate_mode_inputs(build_config.operate)
+            backend_input = self._prepare_operate_mode_inputs(self.config.build.operate)
         else:
             backend_input = self._model_data
 
-        init_math_list = [] if build_config.ignore_mode_math else [mode]
+        init_math_list = [] if self.config.build.ignore_mode_math else [mode]
         end_math_list = [] if add_math_dict is None else [add_math_dict]
-        full_math_list = init_math_list + build_config.add_math + end_math_list
+        full_math_list = init_math_list + self.config.build.add_math + end_math_list
         LOGGER.debug(f"Math preprocessing | Loading math: {full_math_list}")
-        model_math = preprocess.CalliopeMath(full_math_list, self.config.init.def_path)
+        model_math = preprocess.CalliopeMath(full_math_list, self.def_path)
 
         self.backend = backend.get_model_backend(
-            build_config, backend_input, model_math
+            self.config.build, backend_input, model_math
         )
         self.backend.add_optimisation_components()
 
@@ -334,24 +330,23 @@ class Model:
         else:
             to_drop = []
 
-        solve_config = self.config.update({"solve": kwargs}).solve
-        # FIXME: find a way to avoid overcomplicated passing of settings between modes
-        mode = self.config.update(self.config.applied_keyword_overrides).build.mode
+        self.config = self.config.update({"solve": kwargs})
+
+        shadow_prices = self.config.solve.shadow_prices
+        self.backend.shadow_prices.track_constraints(shadow_prices)
+
+        mode = self.config.build.mode
         self._model_data.attrs["timestamp_solve_start"] = log_time(
             LOGGER,
             self._timings,
             "solve_start",
             comment=f"Optimisation model | starting model in {mode} mode.",
         )
-
-        shadow_prices = solve_config.shadow_prices
-        self.backend.shadow_prices.track_constraints(shadow_prices)
-
         if mode == "operate":
-            results = self._solve_operate(**solve_config.model_dump())
+            results = self._solve_operate(**self.config.solve.model_dump())
         else:
             results = self.backend._solve(
-                warmstart=warmstart, **solve_config.model_dump()
+                warmstart=warmstart, **self.config.solve.model_dump()
             )
 
         log_time(
@@ -393,12 +388,10 @@ class Model:
 
         self._is_solved = True
 
-    def run(self, force_rerun=False, **kwargs):
+    def run(self, force_rerun=False):
         """Run the model.
 
         If ``force_rerun`` is True, any existing results will be overwritten.
-
-        Additional kwargs are passed to the backend.
         """
         exceptions.warn(
             "`run()` is deprecated and will be removed in a "
@@ -412,11 +405,12 @@ class Model:
         """Save complete model data (inputs and, if available, results) to a NetCDF file at the given `path`."""
         saved_attrs = {}
         for attr in set(self.ATTRS_SAVED) & set(self.__dict__.keys()):
-            if not isinstance(getattr(self, attr), str | list | None):
+            if attr == "config":
+                saved_attrs[attr] = self.config.model_dump()
+            elif not isinstance(getattr(self, attr), str | list | None):
                 saved_attrs[attr] = dict(getattr(self, attr))
             else:
                 saved_attrs[attr] = getattr(self, attr)
-        saved_attrs["config_kwarg_overrides"] = self.config.applied_keyword_overrides
 
         io.save_netcdf(self._model_data, path, **saved_attrs)
 
@@ -509,7 +503,7 @@ class Model:
         """
         if self.backend.inputs.timesteps[0] != self._model_data.timesteps[0]:
             LOGGER.info("Optimisation model | Resetting model to first time window.")
-            self.build(force=True, **self.config.build.applied_keyword_overrides)
+            self.build(force=True)
 
         LOGGER.info("Optimisation model | Running first time window.")
 
@@ -536,7 +530,7 @@ class Model:
                     "Optimisation model | Reaching the end of the timeseries. "
                     "Re-building model with shorter time horizon."
                 )
-                build_kwargs = AttrDict(self.config.build.applied_keyword_overrides)
+                build_kwargs = AttrDict()
                 build_kwargs.set_key("operate.start_window_idx", idx + 1)
                 self.build(force=True, **build_kwargs)
             else:
