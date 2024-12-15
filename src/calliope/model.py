@@ -76,6 +76,7 @@ class Model:
         self.applied_math: preprocess.CalliopeMath
         self.backend: BackendModel
         self.def_path: str | None = None
+        self._start_window_idx: int = 0
         self._is_built: bool = False
         self._is_solved: bool = False
 
@@ -476,8 +477,8 @@ class Model:
         self._model_data.coords["horizonsteps"] = clipped_horizonsteps - self._TS_OFFSET
         sliced_inputs = self._model_data.sel(
             timesteps=slice(
-                self._model_data.windowsteps[operate_config.start_window_idx],
-                self._model_data.horizonsteps[operate_config.start_window_idx],
+                self._model_data.windowsteps[self._start_window_idx],
+                self._model_data.horizonsteps[self._start_window_idx],
             )
         )
         if operate_config.use_cap_results:
@@ -530,9 +531,8 @@ class Model:
                     "Optimisation model | Reaching the end of the timeseries. "
                     "Re-building model with shorter time horizon."
                 )
-                build_kwargs = AttrDict()
-                build_kwargs.set_key("operate.start_window_idx", idx + 1)
-                self.build(force=True, **build_kwargs)
+                self._start_window_idx = idx + 1
+                self.build(force=True)
             else:
                 self.backend._dataset.coords["timesteps"] = new_inputs.timesteps
                 self.backend.inputs.coords["timesteps"] = new_inputs.timesteps
@@ -549,6 +549,7 @@ class Model:
 
             step_results = self.backend._solve(warmstart=False, **solver_config)
 
+        self._start_window_idx = 0
         results_list.append(step_results.sel(timesteps=slice(windowstep, None)))
         results = xr.concat(results_list, dim="timesteps", combine_attrs="no_conflicts")
         results.attrs["termination_condition"] = ",".join(

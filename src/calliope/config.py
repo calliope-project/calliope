@@ -143,16 +143,6 @@ class Init(ConfigBaseModel):
 class BuildOperate(ConfigBaseModel):
     """Operate mode configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-        "json_schema_extra": hide_from_schema(
-            ["start_window_idx"]
-        ),  # FIXME-remove, config should not be altered within calliope our code
-        "revalidate_instances": "always",
-        "use_attribute_docstrings": True,
-    }
-
     window: str = Field(default="24h")
     """
     Operate mode rolling `window`, given as a pandas frequency string.
@@ -168,9 +158,6 @@ class BuildOperate(ConfigBaseModel):
 
     use_cap_results: bool = Field(default=False)
     """If the model already contains `plan` mode results, use those optimal capacities as input parameters to the `operate` mode run."""
-
-    start_window_idx: int = Field(default=0, repr=False, exclude=True)
-    """Which time window to build. This is used to track the window when re-building the model part way through solving in `operate` mode."""
 
 
 class Build(ConfigBaseModel):
