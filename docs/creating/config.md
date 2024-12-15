@@ -42,7 +42,7 @@ To test your model pipeline, `config.init.time_subset` is a good way to limit yo
     See our [time adjustment page](../advanced/time.md) for more details.
 
 !!! info "See also"
-    The full set of available configuration options is documented in the [configuration schema][model-configuration-schema].
+    The full set of available configuration options is documented in the [configuration schema](../reference/config_schema.md).
     This provides you with a description of each configuration option and the default which will be used if you do not provide a value.
 
 ## Deep-dive into some key configuration options
@@ -83,7 +83,7 @@ In `plan` mode, capacities are determined by the model, whereas in `operate` mod
 In `spores` mode, the model is first run in `plan` mode, then run `N` number of times to find alternative system configurations with similar monetary cost, but maximally different choice of technology capacity and location (node).
 
 In most cases, you will want to use the `plan` mode.
-In fact, you can use a set of results from using `plan` model to initialise both the `operate` (`config.build.operate_use_cap_results`) and `spores` modes.
+In fact, you can use a set of results from using `plan` model to initialise both the `operate` (`config.build.operate.use_cap_results`) and `spores` modes.
 
 ### `config.solve.solver`
 

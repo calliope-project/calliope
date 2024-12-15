@@ -156,7 +156,7 @@ nav:
       - reference/api/attrdict.md
       - reference/api/exceptions.md
       - reference/api/logging.md
-    - reference/config_schema.md
+    - Model configuration schema: reference/config_schema.md
     - reference/data_table_schema.md
     - reference/model_schema.md
     - reference/math_schema.md
