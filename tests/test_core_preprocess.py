@@ -95,7 +95,7 @@ class TestModelRun:
 
         assert check_error_or_warning(
             error,
-            "subset time range ['2005-03', '2005-04'] is outside the input data time range [2005-01-01 00:00:00, 2005-01-05 23:00:00]",
+            "subset time range ('2005-03', '2005-04') is outside the input data time range [2005-01-01 00:00:00, 2005-01-05 23:00:00]",
         )
 
         # should fail: time subset out of range of input data

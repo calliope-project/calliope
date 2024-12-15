@@ -3,7 +3,6 @@
 """Implements the Calliope configuration class."""
 
 from collections.abc import Hashable
-from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Literal, TypeVar
 
@@ -111,7 +110,7 @@ class Init(ConfigBaseModel):
     Defaults to False to mitigate unexpected broadcasting when applying overrides.
     """
 
-    time_subset: tuple[datetime, datetime] | None = Field(default=None)
+    time_subset: tuple[str, str] | None = Field(default=None)
     """
     Subset of timesteps as an two-element list giving the **inclusive** range.
     For example, ["2005-01", "2005-04"] will create a time subset from "2005-01-01 00:00:00" to "2005-04-31 23:59:59".
@@ -149,7 +148,7 @@ class BuildOperate(ConfigBaseModel):
         "frozen": True,
         "json_schema_extra": hide_from_schema(
             ["start_window_idx"]
-        ),  # FIXME-remove, config should not be altered by our code
+        ),  # FIXME-remove, config should not be altered within calliope our code
         "revalidate_instances": "always",
         "use_attribute_docstrings": True,
     }

@@ -151,7 +151,7 @@ class TestOperateMode:
 
 
 class TestBuild:
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def init_model(self):
         return build_model({}, "simple_supply,two_hours,investment_costs")
 
