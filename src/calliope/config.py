@@ -268,6 +268,14 @@ class Solve(ConfigBaseModel):
 class CalliopeConfig(ConfigBaseModel):
     """Calliope configuration class."""
 
+    model_config = {
+        "title": "Model configuration schema",
+        "extra": "forbid",
+        "frozen": True,
+        "revalidate_instances": "always",
+        "use_attribute_docstrings": True,
+    }
+
     init: Init = Init()
     build: Build = Build()
     solve: Solve = Solve()

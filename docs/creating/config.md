@@ -42,7 +42,7 @@ To test your model pipeline, `config.init.time_subset` is a good way to limit yo
     See our [time adjustment page](../advanced/time.md) for more details.
 
 !!! info "See also"
-    The full set of available configuration options is documented in the [configuration schema](../reference/config_schema.md).
+    The full set of available configuration options is documented in the [configuration schema][model-configuration-schema].
     This provides you with a description of each configuration option and the default which will be used if you do not provide a value.
 
 ## Deep-dive into some key configuration options
