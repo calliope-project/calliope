@@ -2,6 +2,7 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Implements the Calliope configuration class."""
 
+import logging
 from collections.abc import Hashable
 from pathlib import Path
 from typing import Annotated, Literal, TypeVar
@@ -15,6 +16,8 @@ from calliope.attrdict import AttrDict
 
 MODES_T = Literal["plan", "operate", "spores"]
 CONFIG_T = Literal["init", "build", "solve"]
+
+LOGGER = logging.getLogger(__name__)
 
 # ==
 # Taken from https://github.com/pydantic/pydantic-core/pull/820#issuecomment-1670475909
@@ -33,21 +36,6 @@ UniqueList = Annotated[
     Field(json_schema_extra={"uniqueItems": True}),
 ]
 # ==
-
-
-def hide_from_schema(to_hide: list[str]):
-    """Hide fields from the generated schema.
-
-    Args:
-        to_hide (list[str]): List of fields to hide.
-    """
-
-    def _hide_from_schema(schema: dict):
-        for hide in to_hide:
-            schema.get("properties", {}).pop(hide, None)
-        return schema
-
-    return _hide_from_schema
 
 
 class ConfigBaseModel(BaseModel):
@@ -71,12 +59,16 @@ class ConfigBaseModel(BaseModel):
             BaseModel: New model instance.
         """
         new_dict: dict = {}
-        # Iterate through dict to be updated and convert any sub-dicts into their respective pydantic model objects
-        for key, val in update_dict.items():
+        # Iterate through dict to be updated and convert any sub-dicts into their respective pydantic model objects.
+        # Wrapped in `AttrDict` to allow users to define dot notation nested configuration.
+        for key, val in AttrDict(update_dict).items():
             key_class = getattr(self, key)
             if isinstance(key_class, ConfigBaseModel):
                 new_dict[key] = key_class.update(val)
             else:
+                LOGGER.info(
+                    f"Updating {self.model_config["title"]} `{key}`: {key_class} -> {val}"
+                )
                 new_dict[key] = val
         updated = super().model_copy(update=new_dict, deep=deep)
         updated.model_validate(updated)
@@ -97,6 +89,7 @@ class ConfigBaseModel(BaseModel):
 class Init(ConfigBaseModel):
     """All configuration options used when initialising a Calliope model."""
 
+    model_config = {"title": "Model initialisation configuration"}
     name: str | None = Field(default=None)
     """Model name"""
 
@@ -143,6 +136,7 @@ class Init(ConfigBaseModel):
 class BuildOperate(ConfigBaseModel):
     """Operate mode configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
+    model_config = {"title": "Model build operate mode configuration"}
     window: str = Field(default="24h")
     """
     Operate mode rolling `window`, given as a pandas frequency string.
@@ -163,6 +157,7 @@ class BuildOperate(ConfigBaseModel):
 class Build(ConfigBaseModel):
     """Base configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
+    model_config = {"title": "Model build configuration"}
     mode: MODES_T = Field(default="plan")
     """Mode in which to run the optimisation."""
 
@@ -204,6 +199,7 @@ class Build(ConfigBaseModel):
 class SolveSpores(ConfigBaseModel):
     """SPORES configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
+    model_config = {"title": "Model solve SPORES mode configuration"}
     number: int = Field(default=3)
     """SPORES mode number of iterations after the initial base run."""
 
@@ -241,6 +237,7 @@ class SolveSpores(ConfigBaseModel):
 class Solve(ConfigBaseModel):
     """Base configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
+    model_config = {"title": "Model Solve Configuration"}
     save_logs: str | None = Field(default=None)
     """If given, should be a path to a directory in which to save optimisation logs."""
 
