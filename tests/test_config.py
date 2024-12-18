@@ -182,3 +182,42 @@ class TestUpdate:
         model.update(to_update)
 
         assert all(log_text in caplog.text for log_text in expected)
+
+
+class TestNoRefSchema:
+    @pytest.fixture(scope="module")
+    def config_model(self):
+        sub_model = pydantic.create_model(
+            "SubModel",
+            __base__=config.ConfigBaseModel,
+            model_config={"title": "TITLE"},
+            foo=(str, "bar"),
+            foobar=(int, 1),
+        )
+        model = pydantic.create_model(
+            "Model",
+            __base__=config.ConfigBaseModel,
+            model_config={"title": "TITLE 2"},
+            nested=(sub_model, sub_model()),
+        )
+        return model
+
+    def test_config_model_no_defs(self, config_model):
+        model = config_model()
+        json_schema = model.model_json_schema()
+        no_defs_json_schema = model.model_no_ref_schema()
+        assert "$defs" in json_schema
+        assert "$defs" not in no_defs_json_schema
+
+    def test_config_model_no_resolved_refs(self, config_model):
+        model = config_model()
+        json_schema = model.model_json_schema()
+        no_defs_json_schema = model.model_no_ref_schema()
+        assert json_schema["properties"]["nested"] == {
+            "$ref": "#/$defs/SubModel",
+            "default": {"foo": "bar", "foobar": 1},
+        }
+        assert (
+            no_defs_json_schema["properties"]["nested"]
+            == json_schema["$defs"]["SubModel"]
+        )
