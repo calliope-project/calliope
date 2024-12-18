@@ -50,22 +50,20 @@ class DataTable:
 
     def __init__(
         self,
-        model_config: dict,
         table_name: str,
         data_table: DataTableDict,
         data_table_dfs: dict[str, pd.DataFrame] | None = None,
-        model_definition_path: Path | None = None,
+        model_definition_path: str | Path | None = None,
     ):
         """Load and format a data table from file / in-memory object.
 
         Args:
-            model_config (dict): Model initialisation configuration dictionary.
             table_name (str): name of the data table.
             data_table (DataTableDict): Data table definition dictionary.
             data_table_dfs (dict[str, pd.DataFrame] | None, optional):
                 If given, a dictionary mapping table names in `data_table` to in-memory pandas DataFrames.
                 Defaults to None.
-            model_definition_path (Path | None, optional):
+            model_definition_path (Path, optional):
                 If given, the path to the model definition YAML file, relative to which data table filepaths will be set.
                 If None, relative data table filepaths will be considered relative to the current working directory.
                 Defaults to None.
@@ -74,7 +72,6 @@ class DataTable:
         self.input = data_table
         self.dfs = data_table_dfs if data_table_dfs is not None else dict()
         self.model_definition_path = model_definition_path
-        self.config = model_config
 
         self.columns = self._listify_if_defined("columns")
         self.index = self._listify_if_defined("rows")

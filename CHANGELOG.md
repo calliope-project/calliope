@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|changed| to ensure the model configuration always remains in sync with the results, `kwargs` in `model.build()` and `model.solve()` now directly affect `model.config`
+
 |changed| `template:` can now be used anywhere within YAML definition files, not just in the `nodes`, `techs` and `data_tables` sections.
 
 |changed| "An overview of the Calliope terminology" information admonition to remove self-references and improve understandability.
@@ -32,6 +34,8 @@ To achieve the same functionality as in `<v0.7.dev4`, the user must set the new 
 This change has occurred to avoid confusion between data "sources" and model energy "sources" (#673).
 
 ### Internal changes
+
+|changed| Model configuration now uses `pydantic`.
 
 |changed| Model definition reading is now defined in a single place (preprocess/model_definition.py).
 

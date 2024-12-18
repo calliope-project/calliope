@@ -50,5 +50,5 @@ overrides:
     techs.my_storage.flow_cap_per_storage_cap_min: 1
     config:
       build.mode: operate
-      solve.operate_window: 24
-      solve.operate_horizon: 24
+      solve.operate.window: 24
+      solve.operate.horizon: 24

@@ -30,7 +30,7 @@ class MathDocumentation:
         """
         self.name: str = model.name + " math"
         self.backend: LatexBackendModel = LatexBackendModel(
-            model._model_data, model.applied_math, include, **kwargs
+            model._model_data, model.applied_math, model.config.build, include
         )
         self.backend.add_optimisation_components()
 

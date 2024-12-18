@@ -5,6 +5,7 @@
 import itertools
 import logging
 from copy import deepcopy
+from pathlib import Path
 from typing import Literal
 
 import numpy as np
@@ -15,9 +16,10 @@ from typing_extensions import NotRequired, TypedDict
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
+from calliope.config import Init
 from calliope.preprocess import data_tables, time
 from calliope.util.schema import MODEL_SCHEMA, validate_dict
-from calliope.util.tools import listify
+from calliope.util.tools import listify, relative_path
 
 LOGGER = logging.getLogger(__name__)
 
@@ -70,9 +72,10 @@ class ModelDataFactory:
 
     def __init__(
         self,
-        model_config: dict,
-        model_definition: ModelDefinition,
-        data_tables: list[data_tables.DataTable],
+        init_config: Init,
+        model_definition: AttrDict,
+        definition_path: str | Path | None,
+        data_table_dfs: dict[str, pd.DataFrame] | None,
         attributes: dict,
         param_attributes: dict[str, dict],
     ):
@@ -81,17 +84,28 @@ class ModelDataFactory:
         This includes resampling/clustering timeseries data as necessary.
 
         Args:
-            model_config (dict): Model initialisation configuration (i.e., `config.init`).
+            init_config (Init): Model initialisation configuration (i.e., `config.init`).
             model_definition (ModelDefinition): Definition of model nodes and technologies, and their potential `templates`.
-            data_tables (list[data_tables.DataTable]): Pre-loaded data tables that will be used to initialise the dataset before handling definitions given in `model_definition`.
+            definition_path (Path, None): Path to the main model definition file. Defaults to None.
+            data_table_dfs: (dict[str, pd.DataFrame], None): Dataframes with model data. Defaults to None.
             attributes (dict): Attributes to attach to the model Dataset.
             param_attributes (dict[str, dict]): Attributes to attach to the generated model DataArrays.
         """
-        self.config: dict = model_config
+        self.config: Init = init_config
         self.model_definition: ModelDefinition = model_definition.copy()
         self.dataset = xr.Dataset(attrs=AttrDict(attributes))
         self.tech_data_from_tables = AttrDict()
-        self.init_from_data_tables(data_tables)
+        self.definition_path: str | Path | None = definition_path
+        tables = []
+        for table_name, table_dict in model_definition.get_key(
+            "data_tables", {}
+        ).items():
+            tables.append(
+                data_tables.DataTable(
+                    table_name, table_dict, data_table_dfs, self.definition_path
+                )
+            )
+        self.init_from_data_tables(tables)
 
         flipped_attributes: dict[str, dict] = dict()
         for key, val in param_attributes.items():
@@ -243,7 +257,7 @@ class ModelDataFactory:
             raise exceptions.ModelError(
                 "Must define at least one timeseries parameter in a Calliope model."
             )
-        time_subset = self.config.get("time_subset", None)
+        time_subset = self.config.time_subset
         if time_subset is not None:
             self.dataset = time.subset_timeseries(self.dataset, time_subset)
         self.dataset = time.add_inferred_time_params(self.dataset)
@@ -251,11 +265,13 @@ class ModelDataFactory:
         # By default, the model allows operate mode
         self.dataset.attrs["allow_operate_mode"] = 1
 
-        if self.config["time_resample"] is not None:
-            self.dataset = time.resample(self.dataset, self.config["time_resample"])
-        if self.config["time_cluster"] is not None:
+        if self.config.time_resample is not None:
+            self.dataset = time.resample(self.dataset, self.config.time_resample)
+        if self.config.time_cluster is not None:
             self.dataset = time.cluster(
-                self.dataset, self.config["time_cluster"], self.config["time_format"]
+                self.dataset,
+                relative_path(self.definition_path, self.config.time_cluster),
+                self.config.time_format,
             )
 
     def clean_data_from_undefined_members(self):
@@ -323,7 +339,7 @@ class ModelDataFactory:
                     self.dataset.longitude.sel(nodes=node2).item(),
                 )["s12"]
             distance_array = pd.Series(distances).rename_axis(index="techs").to_xarray()
-            if self.config["distance_unit"] == "km":
+            if self.config.distance_unit == "km":
                 distance_array /= 1000
         else:
             LOGGER.debug(
@@ -656,7 +672,7 @@ class ModelDataFactory:
         """
         to_add_numeric_dims = self._update_numeric_dims(to_add, id_)
         to_add_numeric_ts_dims = time.timeseries_to_datetime(
-            to_add_numeric_dims, self.config["time_format"], id_
+            to_add_numeric_dims, self.config.time_format, id_
         )
         self.dataset = xr.merge(
             [to_add_numeric_ts_dims, self.dataset],

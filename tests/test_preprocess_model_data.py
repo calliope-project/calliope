@@ -15,26 +15,36 @@ from .common.util import check_error_or_warning
 
 
 @pytest.fixture
-def model_def():
-    model_def_path = Path(__file__).parent / "common" / "test_model" / "model.yaml"
+def model_path():
+    return Path(__file__).parent / "common" / "test_model" / "model.yaml"
+
+
+@pytest.fixture
+def model_def(model_path):
     model_def_override, _ = prepare_model_definition(
-        model_def_path, scenario="simple_supply,empty_tech_node"
+        model_path, scenario="simple_supply,empty_tech_node"
     )
-    return model_def_override, model_def_path
+    # Erase data tables for simplicity
+    # FIXME: previous tests omitted this. Either update tests or remove the data_table from the test model.
+    model_def_override.del_key("data_tables")
+    return model_def_override
 
 
 @pytest.fixture
-def init_config(config_defaults, model_def):
-    model_def_dict, _ = model_def
-    config_defaults.union(model_def_dict.pop("config"), allow_override=True)
-    return config_defaults["init"]
+def init_config(default_config, model_def):
+    updated_config = default_config.update(model_def["config"])
+    return updated_config.init
 
 
 @pytest.fixture
-def model_data_factory(model_def, init_config, model_defaults):
-    model_def_dict, _ = model_def
+def model_data_factory(model_path, model_def, init_config, model_defaults):
     return ModelDataFactory(
-        init_config, model_def_dict, [], {"foo": "bar"}, {"default": model_defaults}
+        init_config,
+        model_def,
+        model_path,
+        [],
+        {"foo": "bar"},
+        {"default": model_defaults},
     )
 
 
@@ -201,8 +211,8 @@ class TestModelData:
     def test_add_link_distances_no_da(
         self, my_caplog, model_data_factory_w_params: ModelDataFactory, unit, expected
     ):
-        _default_distance_unit = model_data_factory_w_params.config["distance_unit"]
-        model_data_factory_w_params.config["distance_unit"] = unit
+        new_config = model_data_factory_w_params.config.update({"distance_unit": unit})
+        model_data_factory_w_params.config = new_config
         model_data_factory_w_params.clean_data_from_undefined_members()
         model_data_factory_w_params.dataset["latitude"] = (
             pd.Series({"A": 51.507222, "B": 48.8567})
@@ -217,7 +227,6 @@ class TestModelData:
         del model_data_factory_w_params.dataset["distance"]
 
         model_data_factory_w_params.add_link_distances()
-        model_data_factory_w_params.config["distance_unit"] = _default_distance_unit
         assert "Link distance matrix automatically computed" in my_caplog.text
         assert (
             model_data_factory_w_params.dataset["distance"].dropna("techs")
@@ -432,7 +441,8 @@ class TestModelData:
     def test_prepare_param_dict_no_broadcast_allowed(
         self, model_data_factory, param_data
     ):
-        model_data_factory.config.broadcast_param_data = False
+        new_config = model_data_factory.config.update({"broadcast_param_data": False})
+        model_data_factory.config = new_config
         param_dict = {"data": param_data, "index": [["foo"], ["bar"]], "dims": "foobar"}
         with pytest.raises(exceptions.ModelError) as excinfo:  # noqa: PT011, false positive
             model_data_factory._prepare_param_dict("foo", param_dict)
