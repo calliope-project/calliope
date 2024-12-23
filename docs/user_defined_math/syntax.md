@@ -52,13 +52,11 @@ Configuration options are any that are defined in `config.build`, where you can 
 
     1.  `get_val_at_index` is a [helper function](helper_functions.md#get_val_at_index)!
 
-1. Checking the `base_tech` of a technology (`storage`, `supply`, etc.) or its inheritance chain (if using `templates` and the `template` parameter).
+1. Checking the `base_tech` of a technology (`storage`, `supply`, etc.).
 
     ??? example "Examples"
 
         - If you want to create a decision variable across only `storage` technologies, you would include `base_tech=storage`.
-        - If you want to apply a constraint across only your own `rooftop_supply` technologies (e.g., you have defined `rooftop_supply` in `templates` and your technologies `pv` and `solar_thermal` define `#!yaml template: rooftop_supply`), you would include `inheritance(rooftop_supply)`.
-        Note that `base_tech=...` is a simple check for the given value of `base_tech`, while `inheritance()` is a [helper function](helper_functions.md) which can deal with finding techs/nodes using the same template, e.g. `pv` might inherit the `rooftop_supply` template which in turn might inherit the template `electricity_supply`.
 
 1. Subsetting a set.
 The sets available to subset are always [`nodes`, `techs`, `carriers`] + any additional sets defined by you in [`foreach`](#foreach-lists).
@@ -183,13 +181,13 @@ equations:
   - expression: flow_out <= $adjusted_flow_in
 sub_expressions:
   adjusted_flow_in:
-    - where: inheritance(storage)
+    - where: base_tech=storage
       # main expression becomes `flow_out <= flow_in * flow_eff`
       expression: flow_in * flow_eff
-    - where: inheritance(supply)
+    - where: base_tech=supply
       # main expression becomes `flow_out <= flow_in * flow_eff * parasitic_eff`
       expression: flow_in * flow_eff * parasitic_eff
-    - where: inheritance(conversion)
+    - where: base_tech=conversion
       # main expression becomes `flow_out <= flow_in * flow_eff * 0.3`
       expression: flow_in * flow_eff * 0.3
 ```

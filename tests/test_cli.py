@@ -7,7 +7,7 @@ import pytest  # noqa: F401
 from click.testing import CliRunner
 
 import calliope
-from calliope import AttrDict, cli
+from calliope import cli, io
 
 _MODEL_NATIONAL = (
     importlib_resources.files("calliope")
@@ -220,7 +220,7 @@ class TestCLI:
             )
             assert result.exit_code == 0
             assert os.path.isfile(out_file)
-            scenarios = AttrDict.from_yaml(out_file)
+            scenarios = io.read_rich_yaml(out_file)
             assert "scenario_0" not in scenarios["scenarios"]
             assert scenarios["scenarios"]["scenario_1"] == [
                 "cold_fusion",

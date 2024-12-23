@@ -32,7 +32,7 @@ We distinguish between:
 - the model **definition** (your representation of a physical system in YAML).
 
 Model configuration is everything under the top-level YAML key [`config`](config.md).
-Model definition is everything else, under the top-level YAML keys [`parameters`](parameters.md), [`techs`](techs.md), [`nodes`](nodes.md), [`templates`](templates.md), and [`data_tables`](data_tables.md).
+Model definition is everything else, under the top-level YAML keys [`parameters`](parameters.md), [`techs`](techs.md), [`nodes`](nodes.md), and [`data_tables`](data_tables.md).
 
 It is possible to define alternatives to the model configuration/definition that you can refer to when you initialise your model.
 These are defined under the top-level YAML keys [`scenarios` and `overrides`](scenarios.md).
@@ -81,5 +81,4 @@ The rest of this section discusses everything you need to know to set up a model
 - An overview of [YAML as it is used in Calliope](yaml.md) - though this comes first here, you can also safely skip it and refer back to it as a reference as questions arise when you go through the model configuration and definition examples.
 - More details on the [model configuration](config.md).
 - The key parts of the model definition, first, the [technologies](techs.md), then, the [nodes](nodes.md), the locations in space where technologies can be placed.
-- How to use [technology and node templates](templates.md) to reduce repetition in the model definition.
 - Other important features to be aware of when defining your model: defining [indexed parameters](parameters.md), i.e. parameter which are not indexed over technologies and nodes, [loading tabular data](data_tables.md), and defining [scenarios and overrides](scenarios.md).
