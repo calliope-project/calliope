@@ -1,6 +1,13 @@
-## 0.7.0.dev5 (Unreleased)
+## 0.7.0.dev5 (2024-12-04)
 
 ### User-facing changes
+
+|changed| "An overview of the Calliope terminology" information admonition to remove self-references and improve understandability.
+Now also includes a visual depiction of how the different defined components connect together (#699).
+
+|fixed| Area-based parameters have appropriate documented units of `area` rather than `area^2` (#701).
+
+|fixed| Technology capacity lower bound constraints so that `[cap-type]_min` (e.g., `flow_cap_min`) is not always enforced if the `purchased_units` variable is active (#643).
 
 |changed| Single data entries defined in YAML indexed parameters will not be automatically broadcast along indexed dimensions.
 To achieve the same functionality as in `<v0.7.dev4`, the user must set the new `init` configuration option `broadcast_param_data` to True (#615).
