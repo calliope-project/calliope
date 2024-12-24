@@ -146,7 +146,7 @@ class GurobiBackendModel(backend_model.BackendModel):
 
             if name == self.inputs.attrs["config"].build.objective:
                 self._instance.setObjective(expr.item(), sense=sense)
-
+                self.objective = name
                 self.log("objectives", name, "Objective activated.")
 
             return xr.DataArray(expr)
@@ -157,7 +157,8 @@ class GurobiBackendModel(backend_model.BackendModel):
         to_set = self.objectives[name]
         sense = self.OBJECTIVE_SENSE_DICT[to_set.attrs["sense"]]
         self._instance.setObjective(to_set.item(), sense=sense)
-        self.log("objectives", name, "Objective activated.")
+        self.objective = name
+        self.log("objectives", name, "Objective activated.", level="info")
 
     def get_parameter(  # noqa: D102, override
         self, name: str, as_backend_objs: bool = True

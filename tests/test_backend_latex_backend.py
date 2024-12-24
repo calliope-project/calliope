@@ -1,3 +1,4 @@
+import logging
 import textwrap
 
 import pytest
@@ -197,6 +198,21 @@ class TestLatexBackendModel:
         assert dummy_latex_backend_model.objectives["obj"].isnull().all()
         assert "obj" not in dummy_latex_backend_model.valid_component_names
         assert len(dummy_latex_backend_model.objectives.data_vars) == 1
+
+    def test_default_objective_set(self, dummy_latex_backend_model):
+        dummy_latex_backend_model.objective == "min_cost_optimisation"
+
+    def test_new_objective_set(self, dummy_latex_backend_model):
+        dummy_latex_backend_model.add_objective(
+            "foo", {"equations": [{"expression": "bigM"}], "sense": "minimise"}
+        )
+        dummy_latex_backend_model.set_objective("foo")
+        assert dummy_latex_backend_model.objective == "foo"
+
+    def test_new_objective_set_log(self, caplog, dummy_latex_backend_model):
+        caplog.set_level(logging.INFO)
+        dummy_latex_backend_model.set_objective("foo")
+        assert ":foo | Objective activated." in caplog.text
 
     def test_add_piecewise_constraint(self, dummy_latex_backend_model):
         dummy_latex_backend_model.add_parameter(

@@ -189,6 +189,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             if name == self.inputs.attrs["config"].build.objective:
                 text = "activated"
                 objective.activate()
+                self.objective = name
             else:
                 text = "deactivated"
                 objective.deactivate()
@@ -202,13 +203,12 @@ class PyomoBackendModel(backend_model.BackendModel):
     def set_objective(self, name: str) -> None:  # noqa: D102, override
         for obj_name, obj in self.objectives.items():
             if obj.item().active and obj_name != name:
-                self.log("objectives", obj_name, "Objective deactivated.")
+                self.log("objectives", obj_name, "Objective deactivated.", level="info")
                 obj.item().deactivate()
-            elif obj.item().active and obj_name == name:
-                self.log("objectives", obj_name, "Objective already activated.")
-            elif not obj.item().active and obj_name == name:
-                self.log("objectives", obj_name, "Objective activated.")
+            if obj_name == name:
                 obj.item().activate()
+                self.log("objectives", obj_name, "Objective activated.", level="info")
+        self.objective = name
 
     def get_parameter(  # noqa: D102, override
         self, name: str, as_backend_objs: bool = True

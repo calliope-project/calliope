@@ -320,7 +320,7 @@ class Model:
             backend_input = self._prepare_operate_mode_inputs(
                 start_window_idx, **backend_config
             )
-        if mode == "spores":
+        elif mode == "spores":
             backend_input = self._model_data.copy()
             if "spores_score" not in backend_input:
                 backend_input["spores_score"] = xr.DataArray(0).assign_attrs(

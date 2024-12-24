@@ -65,9 +65,6 @@ For this reason, `horizon` must always be equal to or larger than `window`.
 
 ## SPORES mode
 
-!!! warning
-    SPORES mode has not yet been re-implemented in Calliope v0.7.
-
 `SPORES` refers to Spatially-explicit Practically Optimal REsultS.
 This run mode allows a user to generate any number of alternative results which are within a certain range of the optimal cost.
 It follows on from previous work in the field of `modelling to generate alternatives` (MGA), with a particular emphasis on alternatives that vary maximally in the spatial dimension.
@@ -80,15 +77,9 @@ config.build.mode: spores
 config.solve:
     # The number of SPORES to generate:
     spores_number: 10
-    # The cost class to optimise against when generating SPORES:
-    spores_score_cost_class: spores_score
-    # The initial system cost to limit the SPORES to fit within:
-    spores_cost_max: .inf
-    # The cost class to constrain to be less than or equal to `spores_cost_max`:
-    spores_slack_cost_group: monetary
 parameters:
     # The fraction above the cost-optimal cost to set the maximum cost during SPORES:
-    slack: 0.1
+    spores_slack: 0.1
 ```
 
 You will now also need a `spores_score` cost class in your model.

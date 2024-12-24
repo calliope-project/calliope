@@ -69,6 +69,8 @@ class BackendModelGenerator(ABC):
     _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
     _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
     _PARAM_TYPE = extract_from_schema(MODEL_SCHEMA, "x-type")
+    objective: str
+    """Optimisation problem objective name."""
 
     def __init__(self, inputs: xr.Dataset, math: CalliopeMath, **kwargs):
         """Abstract base class to build a representation of the optimisation problem.
