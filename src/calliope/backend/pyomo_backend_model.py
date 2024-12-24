@@ -436,7 +436,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         else:
             self._apply_func(
                 self._update_pyomo_param,
-                parameter_da.notnull(),
+                new_values.notnull(),
                 1,
                 parameter_da,
                 new_values,

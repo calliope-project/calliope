@@ -146,7 +146,11 @@ properties:
             description: SPORES mode cost class to vary between iterations after the initial base run.
           spores_slack_cost_group:
             type: string
+            default: "monetary"
             description: SPORES mode cost class to keep below the given `slack` (usually "monetary").
+          spores_tracking_parameter:
+            type: ["null", string]
+            description: If given, a parameter name with which to filter technologies for consideration in SPORES scoring.
           spores_save_per_spore:
             type: boolean
             default: false
