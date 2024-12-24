@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -319,6 +320,16 @@ class Model:
             backend_input = self._prepare_operate_mode_inputs(
                 start_window_idx, **backend_config
             )
+        if mode == "spores":
+            backend_input = self._model_data.copy()
+            if "spores_score" not in backend_input:
+                backend_input["spores_score"] = xr.DataArray(0).assign_attrs(
+                    is_result=0
+                )
+            if "spores_cost_max" not in backend_input:
+                backend_input["spores_cost_max"] = xr.DataArray(np.inf).assign_attrs(
+                    is_result=0
+                )
         else:
             backend_input = self._model_data
 
@@ -648,6 +659,15 @@ class Model:
         Returns:
             xr.Dataset: Results dataset.
         """
+        LOGGER.info("Optimisation model | Resetting SPORES parameters.")
+        self.backend.update_parameter(
+            "spores_score", self.inputs.get("spores_score", xr.DataArray(0))
+        )
+        self.backend.update_parameter(
+            "spores_cost_max", self.inputs.get("spores_cost_max", xr.DataArray(np.inf))
+        )
+        self.backend.set_objective(self.backend.inputs.attrs["config"].build.objective)
+
         LOGGER.info("Optimisation model | Running baseline model.")
 
         if not solver_config["spores_skip_cost_op"]:
@@ -694,16 +714,8 @@ class Model:
         **solver_config,
     ):
         # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
-        constraining_cost = (
-            baseline_results.cost.where(self.inputs["spores_cost_max"].notnull())
-            .groupby("costs")
-            .sum(..., min_count=1)
-        )
+        constraining_cost = baseline_results.cost.groupby("costs").sum(..., min_count=1)
         self.backend.update_parameter("spores_cost_max", constraining_cost)
-        # Update the objective_cost_weights to reflect the ones defined for the SPORES mode
-        self.backend.update_parameter(
-            "objective_cost_weights", self.inputs.spores_objective_cost_weights
-        )
 
         # Filter for technologies of interest
         spores_techs = (
@@ -720,14 +732,14 @@ class Model:
         new_score = (
             # Where capacity was deployed more than the minimal relevant size, assign an integer penalty (score)
             previous_cap.where(previous_cap > min_relevant_size)
-            .clip(min=1000, max=1000)
+            .clip(min=1, max=1)
             .fillna(0)
             .where(spores_techs)
-            # Transform the score into a "cost" parameter
-            .expand_dims(costs=[solver_config["spores_score_cost_class"]])
-            .sum("carriers", min_count=1, skipna=True)
         )
-        previous_score = previous_results["cost_spores"]
-        new_score = new_score.broadcast_like(previous_score).fillna(0) + previous_score
+        new_score += self.backend.get_parameter(
+            "spores_score", as_backend_objs=False
+        ).fillna(0)
 
-        self.backend.update_parameter("cost_flow_cap", new_score)
+        self.backend.update_parameter("spores_score", new_score)
+
+        self.backend.set_objective("min_spores")

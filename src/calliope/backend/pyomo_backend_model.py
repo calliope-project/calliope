@@ -18,6 +18,7 @@ import pyomo.environ as pe  # type: ignore
 import pyomo.kernel as pmo  # type: ignore
 import xarray as xr
 from pyomo.common.tempfiles import TempfileManager  # type: ignore
+from pyomo.core import PyomoObject
 from pyomo.core.kernel.piecewise_library.transforms import (
     PiecewiseLinearFunction,
     PiecewiseValidationError,
@@ -197,6 +198,17 @@ class PyomoBackendModel(backend_model.BackendModel):
             return xr.DataArray(objective)
 
         self._add_component(name, objective_dict, _objective_setter, "objectives")
+
+    def set_objective(self, name: str) -> None:  # noqa: D102, override
+        for obj_name, obj in self.objectives.items():
+            if obj.item().active and obj_name != name:
+                self.log("objectives", obj_name, "Objective deactivated.")
+                obj.item().deactivate()
+            elif obj.item().active and obj_name == name:
+                self.log("objectives", obj_name, "Objective already activated.")
+            elif not obj.item().active and obj_name == name:
+                self.log("objectives", obj_name, "Objective activated.")
+                obj.item().activate()
 
     def get_parameter(  # noqa: D102, override
         self, name: str, as_backend_objs: bool = True
@@ -682,7 +694,10 @@ class PyomoBackendModel(backend_model.BackendModel):
         if eval_body:
             try:
                 expr = self._apply_func(
-                    lambda expr: expr(), expr_da.notnull(), 1, expr_da
+                    lambda expr: expr() if isinstance(expr, PyomoObject) else expr,
+                    expr_da.notnull(),
+                    1,
+                    expr_da,
                 )
             except ValueError:
                 expr = expr_da.astype(str)

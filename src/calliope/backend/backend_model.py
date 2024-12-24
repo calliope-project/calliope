@@ -60,6 +60,7 @@ class BackendModelGenerator(ABC):
         "default",
         "type",
         "title",
+        "sense",
         "math_repr",
         "original_dtype",
     ]
@@ -171,6 +172,14 @@ class BackendModelGenerator(ABC):
         Args:
             name (str): name of the objective.
             objective_dict (parsing.UnparsedObjective): Unparsed objective configuration dictionary.
+        """
+
+    @abstractmethod
+    def set_objective(self, name: str) -> None:
+        """Set a built objective to be the optimisation objective.
+
+        Args:
+            name (str): name of the objective.
         """
 
     def log(

@@ -38,43 +38,11 @@ overrides:
       spores_tracking_parameter: spores_tracker
       spores_number: 3
     parameters:
-      objective_cost_weights: # makes sure that a 'spores_score' class exists in the model and in the objective
-        data: [1, 0]
-        index: ["monetary", "spores_score"]
-      spores_objective_cost_weights:
-        data: [0, 1]
-        index: ["monetary", "spores_score"]
-        dims: costs
       spores_slack: 0.5
       spores_tracker: # defines which techs are going to be subject to the SPORES weighting process
         data: [true, true, true]
         index: [ccgt, csp, battery]
         dims: techs
-      spores_cost_max:
-        data: 1e6 # parameter used in the custom-math slack cost constraint. Initially very high (infinite)
-        index: ["monetary"]
-        dims: costs
-      cost_interest_rate:
-        data: [0.1, 1]
-        index: ["monetary", "spores_score"]
-        dims: costs
-
-    techs:
-        ccgt:
-            cost_flow_cap: {'data': [0], 'index': ['spores_score'], 'dims': 'costs'}
-            cost_flow_in: {'data': [0], 'index': ['spores_score'], 'dims': 'costs'}
-        csp:
-            cost_storage_cap: {'data': [0], 'index': ['spores_score'], 'dims': 'costs'}
-            cost_area_use: {'data': [0], 'index': ['spores_score'], 'dims': 'costs'}
-            cost_source_cap: {'data': [0], 'index': ['spores_score'], 'dims': 'costs'}
-            cost_flow_cap: {'data': [0], 'index': ['spores_score'], 'dims': 'costs'}
-            cost_flow_out: {'data': [0], 'index': ['spores_score'], 'dims': 'costs'}
-        battery:
-            cost_storage_cap: {'data': [0], 'index': ['spores_score'], 'dims': 'costs'}
-        region1_to_region2:
-            cost_flow_cap: {'data': [0], 'index': ['spores_score'], 'dims': 'costs'}
-            cost_flow_out: {'data': [0], 'index': ['spores_score'], 'dims': 'costs'}
-
 
   operate:
     config:
