@@ -154,7 +154,7 @@ class DataSource:
                     techs_incl_inheritance[tech].get("base_tech", None)
                     == "transmission"
                 ):
-                    self._raise_error(
+                    self._raise_warning(
                         "Cannot define transmission technology data over the `nodes` dimension"
                     )
                 else:
@@ -360,6 +360,12 @@ class DataSource:
         unique_index_names = set(tdf.index.names)
         if len(unique_index_names) != len(tdf.index.names):
             self._raise_error(f"Duplicate dimension names found: {tdf.index.names}")
+
+    def _raise_warning(self, message):
+        """Format warning message and then raise Calliope ModelWarning."""
+        raise exceptions.ModelWarning(
+            self.MESSAGE_TEMPLATE.format(name=self.name, message=message)
+        )
 
     def _raise_error(self, message):
         """Format error message and then raise Calliope ModelError."""
