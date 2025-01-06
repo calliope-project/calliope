@@ -5,6 +5,7 @@
 import logging
 from collections.abc import Hashable
 from pathlib import Path
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -363,9 +364,7 @@ class DataSource:
 
     def _raise_warning(self, message):
         """Format warning message and then raise Calliope ModelWarning."""
-        raise exceptions.ModelWarning(
-            self.MESSAGE_TEMPLATE.format(name=self.name, message=message)
-        )
+        warnings.warn(self.MESSAGE_TEMPLATE.format(name=self.name, message=message), exceptions.ModelWarning)
 
     def _raise_error(self, message):
         """Format error message and then raise Calliope ModelError."""
