@@ -83,14 +83,6 @@ class TestOperateMode:
 
         return model, log
 
-    @pytest.fixture(scope="class")
-    def rerun_operate_log(self, request, operate_model_and_log):
-        """Solve in operate mode a second time, to trigger new log messages."""
-        with self.caplog_session(request) as caplog:
-            with caplog.at_level(logging.INFO):
-                operate_model_and_log[0].solve(force=True)
-            return caplog.text
-
     def test_backend_build_mode(self, operate_model_and_log):
         """Verify that we have run in operate mode"""
         operate_model, _ = operate_model_and_log
@@ -110,6 +102,14 @@ class TestOperateMode:
         """We do not expect the first time window to need resetting on solving in operate mode for the first time."""
         _, log = operate_model_and_log
         assert "Resetting model to first time window." not in log
+
+    @pytest.fixture
+    def rerun_operate_log(self, request, operate_model_and_log):
+        """Solve in operate mode a second time, to trigger new log messages."""
+        with self.caplog_session(request) as caplog:
+            with caplog.at_level(logging.INFO):
+                operate_model_and_log[0].solve(force=True)
+            return caplog.text
 
     def test_reset_model_window(self, rerun_operate_log):
         """The backend model time window needs resetting back to the start on rerunning in operate mode."""
@@ -148,6 +148,15 @@ class TestOperateMode:
             calliope.exceptions.ModelError, match="Unable to run this model in op"
         ):
             m.build(mode="operate")
+
+    def test_build_operate_use_cap_results_error(self):
+        """Requesting to use capacity results should return an error if the model is not pre-solved."""
+        m = build_model({}, "simple_supply,operate,var_costs,investment_costs")
+        with pytest.raises(
+            calliope.exceptions.ModelError,
+            match="Cannot use plan mode capacity results in operate mode if a solution does not yet exist for the model.",
+        ):
+            m.build(mode="operate", operate={"use_cap_results": True})
 
 
 class TestBuild:

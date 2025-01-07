@@ -312,14 +312,14 @@ class Model:
             exceptions.ModelError: Cannot run the model if there are already results loaded, unless `force` is True.
             exceptions.ModelError: Some preprocessing steps will stop a run mode of "operate" from being possible.
         """
-        # Check that results exist and are non-empty
         if not self.is_built:
             raise exceptions.ModelError(
                 "You must build the optimisation problem (`.build()`) "
                 "before you can run it."
             )
 
-        if hasattr(self, "results"):
+        to_drop = []
+        if hasattr(self, "results"):  # Check that results exist and are non-empty
             if self.results.data_vars and not force:
                 raise exceptions.ModelError(
                     "This model object already has results. "
@@ -328,8 +328,6 @@ class Model:
                 )
             else:
                 to_drop = self.results.data_vars
-        else:
-            to_drop = []
 
         self.config = self.config.update({"solve": kwargs})
 

@@ -67,6 +67,19 @@ class TestIO:
         assert os.path.isfile(model_file)
 
     @pytest.mark.parametrize(
+        "kwargs",
+        [{"name": "foobar"}, {"calliope_version": "0.7.0", "time_resample": "2h"}],
+    )
+    def test_model_from_file_kwarg_error(self, model_file, kwargs):
+        """Passing kwargs when reading model dataset files should fail."""
+        model_data = calliope.io.read_netcdf(model_file)
+        with pytest.raises(
+            exceptions.ModelError,
+            match="Cannot apply initialisation configuration overrides when loading data from an xarray Dataset.",
+        ):
+            calliope.Model(model_data, **kwargs)
+
+    @pytest.mark.parametrize(
         ("attr", "expected_type", "expected_val"),
         [
             ("foo_true", bool, True),
