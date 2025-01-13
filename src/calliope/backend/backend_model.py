@@ -60,6 +60,7 @@ class BackendModelGenerator(ABC):
         "default",
         "type",
         "title",
+        "sense",
         "math_repr",
         "original_dtype",
     ]
@@ -68,6 +69,8 @@ class BackendModelGenerator(ABC):
     _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
     _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
     _PARAM_TYPE = extract_from_schema(MODEL_SCHEMA, "x-type")
+    objective: str
+    """Optimisation problem objective name."""
 
     def __init__(self, inputs: xr.Dataset, math: CalliopeMath, **kwargs):
         """Abstract base class to build a representation of the optimisation problem.
@@ -171,6 +174,14 @@ class BackendModelGenerator(ABC):
         Args:
             name (str): name of the objective.
             objective_dict (parsing.UnparsedObjective): Unparsed objective configuration dictionary.
+        """
+
+    @abstractmethod
+    def set_objective(self, name: str) -> None:
+        """Set a built objective to be the optimisation objective.
+
+        Args:
+            name (str): name of the objective.
         """
 
     def log(

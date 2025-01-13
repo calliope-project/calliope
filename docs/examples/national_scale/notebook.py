@@ -109,7 +109,7 @@ colors = model.inputs.color.to_series().to_dict()
 
 # %% [markdown]
 # #### Plotting flows
-# We do this by combinging in- and out-flows and separating demand from other technologies.
+# We do this by combining in- and out-flows and separating demand from other technologies.
 # First, we look at the aggregated result across all nodes, then we look at each node separately.
 
 # %%

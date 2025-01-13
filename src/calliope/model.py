@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -319,6 +320,16 @@ class Model:
             backend_input = self._prepare_operate_mode_inputs(
                 start_window_idx, **backend_config
             )
+        elif mode == "spores":
+            backend_input = self._model_data.copy()
+            if "spores_score" not in backend_input:
+                backend_input["spores_score"] = xr.DataArray(0).assign_attrs(
+                    is_result=0
+                )
+            if "spores_cost_max" not in backend_input:
+                backend_input["spores_cost_max"] = xr.DataArray(np.inf).assign_attrs(
+                    is_result=0
+                )
         else:
             backend_input = self._model_data
 
@@ -400,6 +411,8 @@ class Model:
 
         if run_mode == "operate":
             results = self._solve_operate(**solver_config)
+        elif run_mode == "spores":
+            results = self._solve_spores(**solver_config)
         else:
             results = self.backend._solve(warmstart=warmstart, **solver_config)
 
@@ -636,3 +649,97 @@ class Model:
 
         new_initial_storage = end_storage / self.inputs.storage_cap
         return new_initial_storage
+
+    def _solve_spores(self, **solver_config) -> xr.Dataset:
+        """Solve in spores (i.e. modelling to generate alternatives - MGA) mode.
+
+        Optimisation is undertaken iteratively after setting the total monetary cost of the system.
+        Technology "spores" costs are updated between iterations.
+
+        Returns:
+            xr.Dataset: Results dataset.
+        """
+        LOGGER.info("Optimisation model | Resetting SPORES parameters.")
+        self.backend.update_parameter(
+            "spores_score", self.inputs.get("spores_score", xr.DataArray(0))
+        )
+        self.backend.update_parameter(
+            "spores_cost_max", self.inputs.get("spores_cost_max", xr.DataArray(np.inf))
+        )
+        self.backend.set_objective(self.backend.inputs.attrs["config"].build.objective)
+
+        LOGGER.info("Optimisation model | Running baseline model.")
+
+        if not solver_config["spores_skip_cost_op"]:
+            baseline_results = self.backend._solve(warmstart=False, **solver_config)
+        else:
+            baseline_results = self.results.copy()
+
+        save_per_spore = (
+            Path(solver_config["spores_save_per_spore_path"])
+            if solver_config["spores_save_per_spore"]
+            else None
+        )
+
+        if save_per_spore is not None:
+            save_per_spore.mkdir(parents=True, exist_ok=True)
+            baseline_results.to_netcdf(save_per_spore / "baseline.nc")
+
+        results_list: list[xr.Dataset] = [baseline_results]
+        spore_range = range(1, solver_config["spores_number"] + 1)
+        for spore in spore_range:
+            LOGGER.info(f"Optimisation model | Running SPORE {spore}.")
+            self._spores_update_model(
+                baseline_results, results_list[-1], **solver_config
+            )
+
+            step_results = self.backend._solve(warmstart=False, **solver_config)
+            results_list.append(step_results)
+
+            if save_per_spore is not None:
+                step_results.to_netcdf(save_per_spore / f"spore_{spore}.nc")
+
+        spores_dim = pd.Index(["baseline", *spore_range], name="spores")
+        results = xr.concat(results_list, dim=spores_dim, combine_attrs="no_conflicts")
+        results.attrs["termination_condition"] = ",".join(
+            set(result.attrs["termination_condition"] for result in results_list)
+        )
+
+        return results
+
+    def _spores_update_model(
+        self,
+        baseline_results: xr.Dataset,
+        previous_results: xr.Dataset,
+        **solver_config,
+    ):
+        # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
+        constraining_cost = baseline_results.cost.groupby("costs").sum(..., min_count=1)
+        self.backend.update_parameter("spores_cost_max", constraining_cost)
+
+        # Filter for technologies of interest
+        spores_techs = (
+            self.inputs.get(solver_config["spores_tracking_parameter"], True).notnull()
+            & self.inputs.definition_matrix
+        )
+
+        # Look at capacity deployment in the previous iteration
+        previous_cap = previous_results["flow_cap"].where(spores_techs)
+
+        # Make sure that penalties are applied only to non-negligible deployments of capacity
+        min_relevant_size = 0.1 * previous_cap.max(["nodes", "techs"])
+
+        new_score = (
+            # Where capacity was deployed more than the minimal relevant size, assign an integer penalty (score)
+            previous_cap.where(previous_cap > min_relevant_size)
+            .clip(min=1, max=1)
+            .fillna(0)
+            .where(spores_techs)
+        )
+        new_score += self.backend.get_parameter(
+            "spores_score", as_backend_objs=False
+        ).fillna(0)
+
+        self.backend.update_parameter("spores_score", new_score)
+
+        self.backend.set_objective("min_spores")

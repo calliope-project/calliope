@@ -1,3 +1,5 @@
+import logging
+
 import gurobipy
 import pytest  # noqa: F401
 import xarray as xr
@@ -95,6 +97,31 @@ class TestNewBackend:
             "foo", {"equations": [eq], "sense": "minimise"}
         )
         assert "foo" in simple_supply_gurobi.backend.objectives
+
+    def test_default_objective_set(self, simple_supply_longnames):
+        obj = simple_supply_longnames.backend._instance.getObjective()
+
+        assert "flow_cap" in str(obj)
+        assert simple_supply_longnames.backend.objective == "min_cost_optimisation"
+
+    def test_new_objective_set(self, simple_supply_gurobi_func):
+        simple_supply_gurobi_func.backend.add_objective(
+            "foo", {"equations": [{"expression": "bigM"}], "sense": "minimise"}
+        )
+        simple_supply_gurobi_func.backend.set_objective("foo")
+        simple_supply_gurobi_func.backend.verbose_strings()
+        obj = simple_supply_gurobi_func.backend._instance.getObjective()
+        assert simple_supply_gurobi_func.backend.objective == "foo"
+
+        assert "flow_cap" not in str(obj)
+
+    def test_new_objective_set_log(self, caplog, simple_supply_gurobi_func):
+        caplog.set_level(logging.INFO)
+        simple_supply_gurobi_func.backend.add_objective(
+            "foo", {"equations": [{"expression": "bigM"}], "sense": "minimise"}
+        )
+        simple_supply_gurobi_func.backend.set_objective("foo")
+        assert ":foo | Objective activated." in caplog.text
 
     def test_object_string_representation(self, simple_supply_gurobi):
         assert (
