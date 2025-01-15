@@ -12,20 +12,17 @@ import pandas as pd
 import xarray as xr
 
 import calliope
-from calliope import backend, exceptions, io, preprocess
+from calliope import backend, config, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
-from calliope.preprocess.data_tables import DataTable
 from calliope.preprocess.model_data import ModelDataFactory
 from calliope.util.logging import log_time
 from calliope.util.schema import (
     CONFIG_SCHEMA,
     MODEL_SCHEMA,
     extract_from_schema,
-    update_then_validate_config,
     validate_dict,
 )
-from calliope.util.tools import relative_path
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
@@ -43,7 +40,7 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
-    ATTRS_SAVED = ("_def_path", "applied_math")
+    ATTRS_SAVED = ("applied_math", "config", "def_path")
 
     def __init__(
         self,
@@ -74,11 +71,12 @@ class Model:
             **kwargs: initialisation overrides.
         """
         self._timings: dict = {}
-        self.config: AttrDict
+        self.config: config.CalliopeConfig
         self.defaults: AttrDict
         self.applied_math: preprocess.CalliopeMath
-        self._def_path: str | None = None
         self.backend: BackendModel
+        self.def_path: str | None = None
+        self._start_window_idx: int = 0
         self._is_built: bool = False
         self._is_solved: bool = False
 
@@ -88,11 +86,15 @@ class Model:
             LOGGER, self._timings, "model_creation", comment="Model: initialising"
         )
         if isinstance(model_definition, xr.Dataset):
+            if kwargs:
+                raise exceptions.ModelError(
+                    "Cannot apply initialisation configuration overrides when loading data from an xarray Dataset."
+                )
             self._init_from_model_data(model_definition)
         else:
             if not isinstance(model_definition, dict):
                 # Only file definitions allow relative files.
-                self._def_path = str(model_definition)
+                self.def_path = str(model_definition)
             self._init_from_model_definition(
                 model_definition, scenario, override_dict, data_table_dfs, **kwargs
             )
@@ -133,7 +135,7 @@ class Model:
 
     def _init_from_model_definition(
         self,
-        model_definition: dict | str,
+        model_definition: dict | str | Path,
         scenario: str | None,
         override_dict: dict | None,
         data_table_dfs: dict[str, pd.DataFrame] | None,
@@ -152,7 +154,7 @@ class Model:
             model_definition, scenario, override_dict
         )
         model_def_full.union({"config.init": kwargs}, allow_override=True)
-        # First pass to check top-level keys are all good
+        # First pass to check top-level keys are all good. FIXME-config: remove after pydantic is ready
         validate_dict(model_def_full, CONFIG_SCHEMA, "Model definition")
 
         log_time(
@@ -161,34 +163,24 @@ class Model:
             "model_run_creation",
             comment="Model: preprocessing stage 1 (model_run)",
         )
-        model_config = AttrDict(extract_from_schema(CONFIG_SCHEMA, "default"))
-        model_config.union(model_def_full.pop("config"), allow_override=True)
-
-        init_config = update_then_validate_config("init", model_config)
-
-        if init_config["time_cluster"] is not None:
-            init_config["time_cluster"] = relative_path(
-                self._def_path, init_config["time_cluster"]
-            )
+        model_config = config.CalliopeConfig(**model_def_full.pop("config"))
 
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
         attributes = {
-            "calliope_version_defined": init_config["calliope_version"],
+            "calliope_version_defined": model_config.init.calliope_version,
             "calliope_version_initialised": calliope.__version__,
             "applied_overrides": applied_overrides,
             "scenario": scenario,
             "defaults": param_metadata["default"],
         }
-        data_tables: list[DataTable] = []
-        for table_name, table_dict in model_def_full.pop("data_tables", {}).items():
-            data_tables.append(
-                DataTable(
-                    init_config, table_name, table_dict, data_table_dfs, self._def_path
-                )
-            )
-
+        # FIXME-config: remove config input once model_def_full uses pydantic
         model_data_factory = ModelDataFactory(
-            init_config, model_def_full, data_tables, attributes, param_metadata
+            model_config.init,
+            model_def_full,
+            self.def_path,
+            data_table_dfs,
+            attributes,
+            param_metadata,
         )
         model_data_factory.build()
 
@@ -201,9 +193,9 @@ class Model:
             comment="Model: preprocessing stage 2 (model_data)",
         )
 
-        self._add_observed_dict("config", model_config)
+        self._model_data.attrs["name"] = model_config.init.name
+        self.config = model_config
 
-        self._model_data.attrs["name"] = init_config["name"]
         log_time(
             LOGGER,
             self._timings,
@@ -220,15 +212,14 @@ class Model:
             model_data (xr.Dataset):
                 Model dataset with input parameters as arrays and configuration stored in the dataset attributes dictionary.
         """
-        if "_def_path" in model_data.attrs:
-            self._def_path = model_data.attrs.pop("_def_path")
         if "applied_math" in model_data.attrs:
             self.applied_math = preprocess.CalliopeMath.from_dict(
                 model_data.attrs.pop("applied_math")
             )
+        if "config" in model_data.attrs:
+            self.config = config.CalliopeConfig(**model_data.attrs.pop("config"))
 
         self._model_data = model_data
-        self._add_model_data_methods()
 
         if self.results:
             self._is_solved = True
@@ -239,47 +230,6 @@ class Model:
             "model_data_loaded",
             comment="Model: loaded model_data",
         )
-
-    def _add_model_data_methods(self):
-        """Add observed data to `model`.
-
-        1. Filter model dataset to produce views on the input/results data
-        2. Add top-level configuration dictionaries simultaneously to the model data attributes and as attributes of this class.
-
-        """
-        self._add_observed_dict("config")
-
-    def _add_observed_dict(self, name: str, dict_to_add: dict | None = None) -> None:
-        """Add the same dictionary as property of model object and an attribute of the model xarray dataset.
-
-        Args:
-            name (str):
-                Name of dictionary which will be set as the model property name and
-                (if necessary) the dataset attribute name.
-            dict_to_add (dict | None, optional):
-                If given, set as both the model property and the dataset attribute,
-                otherwise set an existing dataset attribute as a model property of the
-                same name. Defaults to None.
-
-        Raises:
-            exceptions.ModelError: If `dict_to_add` is not given, it must be an attribute of model data.
-            TypeError: `dict_to_add` must be a dictionary.
-        """
-        if dict_to_add is None:
-            try:
-                dict_to_add = self._model_data.attrs[name]
-            except KeyError:
-                raise exceptions.ModelError(
-                    f"Expected the model property `{name}` to be a dictionary attribute of the model dataset. If you are loading the model from a NetCDF file, ensure it is a valid Calliope model."
-                )
-        if not isinstance(dict_to_add, dict):
-            raise TypeError(
-                f"Attempted to add dictionary property `{name}` to model, but received argument of type `{type(dict_to_add).__name__}`"
-            )
-        else:
-            dict_to_add = AttrDict(dict_to_add)
-        self._model_data.attrs[name] = dict_to_add
-        setattr(self, name, dict_to_add)
 
     def build(
         self, force: bool = False, add_math_dict: dict | None = None, **kwargs
@@ -307,30 +257,26 @@ class Model:
             comment="Model: backend build starting",
         )
 
-        backend_config = {**self.config["build"], **kwargs}
-        mode = backend_config["mode"]
+        self.config = self.config.update({"build": kwargs})
+        mode = self.config.build.mode
         if mode == "operate":
             if not self._model_data.attrs["allow_operate_mode"]:
                 raise exceptions.ModelError(
                     "Unable to run this model in operate (i.e. dispatch) mode, probably because "
                     "there exist non-uniform timesteps (e.g. from time clustering)"
                 )
-            start_window_idx = backend_config.pop("start_window_idx", 0)
-            backend_input = self._prepare_operate_mode_inputs(
-                start_window_idx, **backend_config
-            )
+            backend_input = self._prepare_operate_mode_inputs(self.config.build.operate)
         else:
             backend_input = self._model_data
 
-        init_math_list = [] if backend_config.get("ignore_mode_math") else [mode]
+        init_math_list = [] if self.config.build.ignore_mode_math else [mode]
         end_math_list = [] if add_math_dict is None else [add_math_dict]
-        full_math_list = init_math_list + backend_config["add_math"] + end_math_list
+        full_math_list = init_math_list + self.config.build.add_math + end_math_list
         LOGGER.debug(f"Math preprocessing | Loading math: {full_math_list}")
-        model_math = preprocess.CalliopeMath(full_math_list, self._def_path)
+        model_math = preprocess.CalliopeMath(full_math_list, self.def_path)
 
-        backend_name = backend_config.pop("backend")
         self.backend = backend.get_model_backend(
-            backend_name, backend_input, model_math, **backend_config
+            self.config.build, backend_input, model_math
         )
         self.backend.add_optimisation_components()
 
@@ -366,14 +312,14 @@ class Model:
             exceptions.ModelError: Cannot run the model if there are already results loaded, unless `force` is True.
             exceptions.ModelError: Some preprocessing steps will stop a run mode of "operate" from being possible.
         """
-        # Check that results exist and are non-empty
-        if not self._is_built:
+        if not self.is_built:
             raise exceptions.ModelError(
                 "You must build the optimisation problem (`.build()`) "
                 "before you can run it."
             )
 
-        if hasattr(self, "results"):
+        to_drop = []
+        if hasattr(self, "results"):  # Check that results exist and are non-empty
             if self.results.data_vars and not force:
                 raise exceptions.ModelError(
                     "This model object already has results. "
@@ -382,26 +328,25 @@ class Model:
                 )
             else:
                 to_drop = self.results.data_vars
-        else:
-            to_drop = []
 
-        run_mode = self.backend.inputs.attrs["config"]["build"]["mode"]
+        self.config = self.config.update({"solve": kwargs})
+
+        shadow_prices = self.config.solve.shadow_prices
+        self.backend.shadow_prices.track_constraints(shadow_prices)
+
+        mode = self.config.build.mode
         self._model_data.attrs["timestamp_solve_start"] = log_time(
             LOGGER,
             self._timings,
             "solve_start",
-            comment=f"Optimisation model | starting model in {run_mode} mode.",
+            comment=f"Optimisation model | starting model in {mode} mode.",
         )
-
-        solver_config = update_then_validate_config("solve", self.config, **kwargs)
-
-        shadow_prices = solver_config.get("shadow_prices", [])
-        self.backend.shadow_prices.track_constraints(shadow_prices)
-
-        if run_mode == "operate":
-            results = self._solve_operate(**solver_config)
+        if mode == "operate":
+            results = self._solve_operate(**self.config.solve.model_dump())
         else:
-            results = self.backend._solve(warmstart=warmstart, **solver_config)
+            results = self.backend._solve(
+                warmstart=warmstart, **self.config.solve.model_dump()
+            )
 
         log_time(
             LOGGER,
@@ -414,7 +359,7 @@ class Model:
         # Add additional post-processed result variables to results
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
             results = postprocess_results.postprocess_model_results(
-                results, self._model_data
+                results, self._model_data, self.config.solve.zero_threshold
             )
 
         log_time(
@@ -431,7 +376,6 @@ class Model:
         self._model_data = xr.merge(
             [results, self._model_data], compat="override", combine_attrs="no_conflicts"
         )
-        self._add_model_data_methods()
 
         self._model_data.attrs["timestamp_solve_complete"] = log_time(
             LOGGER,
@@ -443,12 +387,10 @@ class Model:
 
         self._is_solved = True
 
-    def run(self, force_rerun=False, **kwargs):
+    def run(self, force_rerun=False):
         """Run the model.
 
         If ``force_rerun`` is True, any existing results will be overwritten.
-
-        Additional kwargs are passed to the backend.
         """
         exceptions.warn(
             "`run()` is deprecated and will be removed in a "
@@ -462,7 +404,9 @@ class Model:
         """Save complete model data (inputs and, if available, results) to a NetCDF file at the given `path`."""
         saved_attrs = {}
         for attr in set(self.ATTRS_SAVED) & set(self.__dict__.keys()):
-            if not isinstance(getattr(self, attr), str | list | None):
+            if attr == "config":
+                saved_attrs[attr] = self.config.model_dump()
+            elif not isinstance(getattr(self, attr), str | list | None):
                 saved_attrs[attr] = dict(getattr(self, attr))
             else:
                 saved_attrs[attr] = getattr(self, attr)
@@ -504,28 +448,24 @@ class Model:
         return "\n".join(info_strings)
 
     def _prepare_operate_mode_inputs(
-        self, start_window_idx: int = 0, **config_kwargs
+        self, operate_config: config.BuildOperate
     ) -> xr.Dataset:
         """Slice the input data to just the length of operate mode time horizon.
 
         Args:
-            start_window_idx (int, optional):
-                Set the operate `window` to start at, based on integer index.
-                This is used when re-initialising the backend model for shorter time horizons close to the end of the model period.
-                Defaults to 0.
-            **config_kwargs: kwargs related to operate mode configuration.
+            operate_config (config.BuildOperate): operate mode configuration options.
 
         Returns:
             xr.Dataset: Slice of input data.
         """
-        window = config_kwargs["operate_window"]
-        horizon = config_kwargs["operate_horizon"]
         self._model_data.coords["windowsteps"] = pd.date_range(
             self.inputs.timesteps[0].item(),
             self.inputs.timesteps[-1].item(),
-            freq=window,
+            freq=operate_config.window,
         )
-        horizonsteps = self._model_data.coords["windowsteps"] + pd.Timedelta(horizon)
+        horizonsteps = self._model_data.coords["windowsteps"] + pd.Timedelta(
+            operate_config.horizon
+        )
         # We require an offset because pandas / xarray slicing is _inclusive_ of both endpoints
         # where we only want it to be inclusive of the left endpoint.
         # Except in the last time horizon, where we want it to include the right endpoint.
@@ -535,11 +475,11 @@ class Model:
         self._model_data.coords["horizonsteps"] = clipped_horizonsteps - self._TS_OFFSET
         sliced_inputs = self._model_data.sel(
             timesteps=slice(
-                self._model_data.windowsteps[start_window_idx],
-                self._model_data.horizonsteps[start_window_idx],
+                self._model_data.windowsteps[self._start_window_idx],
+                self._model_data.horizonsteps[self._start_window_idx],
             )
         )
-        if config_kwargs.get("operate_use_cap_results", False):
+        if operate_config.use_cap_results:
             to_parameterise = extract_from_schema(MODEL_SCHEMA, "x-operate-param")
             if not self._is_solved:
                 raise exceptions.ModelError(
@@ -562,10 +502,7 @@ class Model:
         """
         if self.backend.inputs.timesteps[0] != self._model_data.timesteps[0]:
             LOGGER.info("Optimisation model | Resetting model to first time window.")
-            self.build(
-                force=True,
-                **{"mode": "operate", **self.backend.inputs.attrs["config"]["build"]},
-            )
+            self.build(force=True)
 
         LOGGER.info("Optimisation model | Running first time window.")
 
@@ -592,11 +529,8 @@ class Model:
                     "Optimisation model | Reaching the end of the timeseries. "
                     "Re-building model with shorter time horizon."
                 )
-                self.build(
-                    force=True,
-                    start_window_idx=idx + 1,
-                    **self.backend.inputs.attrs["config"]["build"],
-                )
+                self._start_window_idx = idx + 1
+                self.build(force=True)
             else:
                 self.backend._dataset.coords["timesteps"] = new_inputs.timesteps
                 self.backend.inputs.coords["timesteps"] = new_inputs.timesteps
@@ -613,6 +547,7 @@ class Model:
 
             step_results = self.backend._solve(warmstart=False, **solver_config)
 
+        self._start_window_idx = 0
         results_list.append(step_results.sel(timesteps=slice(windowstep, None)))
         results = xr.concat(results_list, dim="timesteps", combine_attrs="no_conflicts")
         results.attrs["termination_condition"] = ",".join(

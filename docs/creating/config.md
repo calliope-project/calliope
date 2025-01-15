@@ -83,7 +83,7 @@ In `plan` mode, capacities are determined by the model, whereas in `operate` mod
 In `spores` mode, the model is first run in `plan` mode, then run `N` number of times to find alternative system configurations with similar monetary cost, but maximally different choice of technology capacity and location (node).
 
 In most cases, you will want to use the `plan` mode.
-In fact, you can use a set of results from using `plan` model to initialise both the `operate` (`config.build.operate_use_cap_results`) and `spores` modes.
+In fact, you can use a set of results from using `plan` model to initialise both the `operate` (`config.build.operate.use_cap_results`) and `spores` modes.
 
 ### `config.solve.solver`
 

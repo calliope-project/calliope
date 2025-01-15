@@ -26,17 +26,13 @@ from typing import (
 import numpy as np
 import xarray as xr
 
-from calliope import exceptions
+from calliope import config, exceptions
 from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
 from calliope.exceptions import warn as model_warn
 from calliope.io import load_config, to_yaml
 from calliope.preprocess.model_math import ORDERED_COMPONENTS_T, CalliopeMath
-from calliope.util.schema import (
-    MODEL_SCHEMA,
-    extract_from_schema,
-    update_then_validate_config,
-)
+from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
@@ -69,20 +65,20 @@ class BackendModelGenerator(ABC):
     _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
     _PARAM_TYPE = extract_from_schema(MODEL_SCHEMA, "x-type")
 
-    def __init__(self, inputs: xr.Dataset, math: CalliopeMath, **kwargs):
+    def __init__(
+        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config.Build
+    ):
         """Abstract base class to build a representation of the optimisation problem.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
             math (CalliopeMath): Calliope math.
-            **kwargs (Any): build configuration overrides.
+            build_config: Build configuration options.
         """
         self._dataset = xr.Dataset()
         self.inputs = inputs.copy()
         self.inputs.attrs = deepcopy(inputs.attrs)
-        self.inputs.attrs["config"]["build"] = update_then_validate_config(
-            "build", self.inputs.attrs["config"], **kwargs
-        )
+        self.config = build_config
         self.math: CalliopeMath = deepcopy(math)
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
@@ -200,6 +196,7 @@ class BackendModelGenerator(ABC):
             "equation_name": "",
             "backend_interface": self,
             "input_data": self.inputs,
+            "build_config": self.config,
             "helper_functions": helper_functions._registry["where"],
             "apply_where": True,
             "references": set(),
@@ -246,7 +243,7 @@ class BackendModelGenerator(ABC):
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
         self._add_all_inputs_as_parameters()
-        if self.inputs.attrs["config"]["build"]["pre_validate_math_strings"]:
+        if self.config.pre_validate_math_strings:
             self._validate_math_string_parsing()
         for components in typing.get_args(ORDERED_COMPONENTS_T):
             component = components.removesuffix("s")
@@ -399,7 +396,7 @@ class BackendModelGenerator(ABC):
             if param_name in self.parameters.keys():
                 continue
             elif (
-                self.inputs.attrs["config"]["build"]["mode"] != "operate"
+                self.config.mode != "operate"
                 and param_name
                 in extract_from_schema(MODEL_SCHEMA, "x-operate-param").keys()
             ):
@@ -606,7 +603,11 @@ class BackendModel(BackendModelGenerator, Generic[T]):
     """Calliope's backend model functionality."""
 
     def __init__(
-        self, inputs: xr.Dataset, math: CalliopeMath, instance: T, **kwargs
+        self,
+        inputs: xr.Dataset,
+        math: CalliopeMath,
+        build_config: config.Build,
+        instance: T,
     ) -> None:
         """Abstract base class to build backend models that interface with solvers.
 
@@ -614,9 +615,9 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             inputs (xr.Dataset): Calliope model data.
             math (CalliopeMath): Calliope math.
             instance (T): Interface model instance.
-            **kwargs: build configuration overrides.
+            build_config: Build configuration options.
         """
-        super().__init__(inputs, math, **kwargs)
+        super().__init__(inputs, math, build_config)
         self._instance = instance
         self.shadow_prices: ShadowPrices
         self._has_verbose_strings: bool = False

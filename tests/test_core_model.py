@@ -9,7 +9,6 @@ import calliope.backend
 import calliope.preprocess
 
 from .common.util import build_test_model as build_model
-from .common.util import check_error_or_warning
 
 LOGGER = "calliope.model"
 
@@ -31,40 +30,6 @@ class TestModel:
 
     def test_info_simple_model(self, simple_supply):
         simple_supply.info()
-
-    def test_update_observed_dict(self, national_scale_example):
-        national_scale_example.config.build["backend"] = "foo"
-        assert national_scale_example._model_data.attrs["config"].build.backend == "foo"
-
-    def test_add_observed_dict_from_model_data(
-        self, national_scale_example, dict_to_add
-    ):
-        national_scale_example._model_data.attrs["foo"] = dict_to_add
-        national_scale_example._add_observed_dict("foo")
-        assert national_scale_example.foo == dict_to_add
-        assert national_scale_example._model_data.attrs["foo"] == dict_to_add
-
-    def test_add_observed_dict_from_dict(self, national_scale_example, dict_to_add):
-        national_scale_example._add_observed_dict("bar", dict_to_add)
-        assert national_scale_example.bar == dict_to_add
-        assert national_scale_example._model_data.attrs["bar"] == dict_to_add
-
-    def test_add_observed_dict_not_available(self, national_scale_example):
-        with pytest.raises(calliope.exceptions.ModelError) as excinfo:
-            national_scale_example._add_observed_dict("baz")
-        assert check_error_or_warning(
-            excinfo,
-            "Expected the model property `baz` to be a dictionary attribute of the model dataset",
-        )
-        assert not hasattr(national_scale_example, "baz")
-
-    def test_add_observed_dict_not_dict(self, national_scale_example):
-        with pytest.raises(TypeError) as excinfo:
-            national_scale_example._add_observed_dict("baz", "bar")
-        assert check_error_or_warning(
-            excinfo,
-            "Attempted to add dictionary property `baz` to model, but received argument of type `str`",
-        )
 
 
 class TestOperateMode:
@@ -104,9 +69,11 @@ class TestOperateMode:
         model.build(
             force=True,
             mode="operate",
-            operate_use_cap_results=True,
-            operate_window=request.param[0],
-            operate_horizon=request.param[1],
+            operate={
+                "use_cap_results": True,
+                "window": request.param[0],
+                "horizon": request.param[1],
+            },
         )
 
         with self.caplog_session(request) as caplog:
@@ -116,20 +83,10 @@ class TestOperateMode:
 
         return model, log
 
-    @pytest.fixture(scope="class")
-    def rerun_operate_log(self, request, operate_model_and_log):
-        """Solve in operate mode a second time, to trigger new log messages."""
-        with self.caplog_session(request) as caplog:
-            with caplog.at_level(logging.INFO):
-                operate_model_and_log[0].solve(force=True)
-            return caplog.text
-
     def test_backend_build_mode(self, operate_model_and_log):
         """Verify that we have run in operate mode"""
         operate_model, _ = operate_model_and_log
-        assert (
-            operate_model.backend.inputs.attrs["config"]["build"]["mode"] == "operate"
-        )
+        assert operate_model.backend.config.mode == "operate"
 
     def test_operate_mode_success(self, operate_model_and_log):
         """Solving in operate mode should lead to an optimal solution."""
@@ -146,6 +103,14 @@ class TestOperateMode:
         _, log = operate_model_and_log
         assert "Resetting model to first time window." not in log
 
+    @pytest.fixture
+    def rerun_operate_log(self, request, operate_model_and_log):
+        """Solve in operate mode a second time, to trigger new log messages."""
+        with self.caplog_session(request) as caplog:
+            with caplog.at_level(logging.INFO):
+                operate_model_and_log[0].solve(force=True)
+            return caplog.text
+
     def test_reset_model_window(self, rerun_operate_log):
         """The backend model time window needs resetting back to the start on rerunning in operate mode."""
         assert "Resetting model to first time window." in rerun_operate_log
@@ -153,8 +118,8 @@ class TestOperateMode:
     def test_end_of_horizon(self, operate_model_and_log):
         """Check that increasingly shorter time horizons are logged as model rebuilds."""
         operate_model, log = operate_model_and_log
-        config = operate_model.backend.inputs.attrs["config"]["build"]
-        if config["operate_window"] != config["operate_horizon"]:
+        config = operate_model.backend.config
+        if config.operate.window != config.operate.horizon:
             assert "Reaching the end of the timeseries." in log
         else:
             assert "Reaching the end of the timeseries." not in log
@@ -184,9 +149,18 @@ class TestOperateMode:
         ):
             m.build(mode="operate")
 
+    def test_build_operate_use_cap_results_error(self):
+        """Requesting to use capacity results should return an error if the model is not pre-solved."""
+        m = build_model({}, "simple_supply,operate,var_costs,investment_costs")
+        with pytest.raises(
+            calliope.exceptions.ModelError,
+            match="Cannot use plan mode capacity results in operate mode if a solution does not yet exist for the model.",
+        ):
+            m.build(mode="operate", operate={"use_cap_results": True})
+
 
 class TestBuild:
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def init_model(self):
         return build_model({}, "simple_supply,two_hours,investment_costs")
 

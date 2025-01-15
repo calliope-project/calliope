@@ -15,19 +15,19 @@ from calliope.exceptions import BackendError
 from calliope.preprocess import CalliopeMath
 
 if TYPE_CHECKING:
+    from calliope import config
     from calliope.backend.backend_model import BackendModel
 
 
 def get_model_backend(
-    name: str, data: xr.Dataset, math: CalliopeMath, **kwargs
+    build_config: "config.Build", data: xr.Dataset, math: CalliopeMath
 ) -> "BackendModel":
     """Assign a backend using the given configuration.
 
     Args:
-        name (str): name of the backend to use.
+        build_config: Build configuration options.
         data (Dataset): model data for the backend.
         math (CalliopeMath): Calliope math.
-        **kwargs: backend keyword arguments corresponding to model.config.build.
 
     Raises:
         exceptions.BackendError: If invalid backend was requested.
@@ -35,10 +35,10 @@ def get_model_backend(
     Returns:
         BackendModel: Initialized backend object.
     """
-    match name:
+    match build_config.backend:
         case "pyomo":
-            return PyomoBackendModel(data, math, **kwargs)
+            return PyomoBackendModel(data, math, build_config)
         case "gurobi":
-            return GurobiBackendModel(data, math, **kwargs)
+            return GurobiBackendModel(data, math, build_config)
         case _:
-            raise BackendError(f"Incorrect backend '{name}' requested.")
+            raise BackendError(f"Incorrect backend '{build_config.backend}' requested.")
