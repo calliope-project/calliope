@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from calliope import io
 from calliope.attrdict import AttrDict
 from calliope.schemas.data_table_schema import DataTable
 
@@ -31,7 +32,7 @@ template: some_template
 
 @pytest.fixture
 def model_yaml_data_tables() -> AttrDict:
-    return AttrDict.from_yaml(
+    return io.read_rich_yaml(
         Path(__file__).parent
         / "common"
         / "national_scale_from_data_tables"
@@ -87,7 +88,7 @@ def test_add_dims_overlap(rows, columns, add_dims):
 
 def test_full_table_config(full_data_table_config):
     """Test a fully fledged data table configuration."""
-    DataTable(**AttrDict.from_yaml_string(full_data_table_config))
+    DataTable(**io.read_rich_yaml(full_data_table_config))
 
 
 def test_data_table_model(model_yaml_data_tables):

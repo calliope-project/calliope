@@ -410,7 +410,6 @@ class Model:
                 saved_attrs[attr] = dict(getattr(self, attr))
             else:
                 saved_attrs[attr] = getattr(self, attr)
-        saved_attrs["config_kwarg_overrides"] = self.config.applied_keyword_overrides
 
         io.save_netcdf(self._model_data, path, **saved_attrs)
 

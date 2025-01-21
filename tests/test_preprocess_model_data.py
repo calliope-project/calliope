@@ -209,12 +209,7 @@ class TestModelData:
 
     @pytest.mark.parametrize(("unit", "expected"), [("m", 343834), ("km", 343.834)])
     def test_add_link_distances_no_da(
-        self,
-        mocker,
-        my_caplog,
-        model_data_factory_w_params: ModelDataFactory,
-        unit,
-        expected,
+        self, my_caplog, model_data_factory_w_params: ModelDataFactory, unit, expected
     ):
         new_config = model_data_factory_w_params.config.update({"distance_unit": unit})
         model_data_factory_w_params.config = new_config

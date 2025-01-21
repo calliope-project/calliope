@@ -35,12 +35,8 @@ def hide_from_schema(to_hide: list[str]):
 class ConfigBaseModel(BaseModel):
     """A base class for creating pydantic models for Calliope configuration options."""
 
-    _kwargs: dict = {}
-
     def update(self, update_dict: dict, deep: bool = False) -> Self:
         """Return a new iteration of the model with updated fields.
-
-        Updates are validated and stored in the parent class in the `_kwargs` key.
 
         Args:
             update_dict (dict): Dictionary with which to update the base model.
@@ -55,12 +51,10 @@ class ConfigBaseModel(BaseModel):
             key_class = getattr(self, key)
             if isinstance(key_class, ConfigBaseModel):
                 new_dict[key] = key_class.update(val)
-                key_class._kwargs = val
             else:
                 new_dict[key] = val
         updated = super().model_copy(update=new_dict, deep=deep)
         updated.model_validate(updated)
-        self._kwargs = update_dict
         return updated
 
     def model_no_ref_schema(self) -> AttrDict:
@@ -73,15 +67,6 @@ class ConfigBaseModel(BaseModel):
         schema_dict = AttrDict(jsonref.replace_refs(schema_dict))
         schema_dict.del_key("$defs")
         return schema_dict
-
-    @property
-    def applied_keyword_overrides(self) -> dict:
-        """Most recently applied keyword overrides used to update this configuration.
-
-        Returns:
-            dict: Description of applied overrides.
-        """
-        return self._kwargs
 
 
 class Init(ConfigBaseModel):
