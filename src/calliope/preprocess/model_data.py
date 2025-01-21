@@ -5,6 +5,7 @@
 import itertools
 import logging
 from copy import deepcopy
+from pathlib import Path
 from typing import Literal
 
 import numpy as np
@@ -15,10 +16,10 @@ from typing_extensions import NotRequired, TypedDict
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
+from calliope.config import Init
 from calliope.preprocess import data_tables, time
-from calliope.schemas.config_schema import Init
 from calliope.util.schema import MODEL_SCHEMA, validate_dict
-from calliope.util.tools import climb_template_tree, listify
+from calliope.util.tools import listify, relative_path
 
 LOGGER = logging.getLogger(__name__)
 
@@ -72,8 +73,9 @@ class ModelDataFactory:
     def __init__(
         self,
         init_config: Init,
-        model_definition: ModelDefinition,
-        data_tables: list[data_tables.DataTable],
+        model_definition: AttrDict,
+        definition_path: str | Path | None,
+        data_table_dfs: dict[str, pd.DataFrame] | None,
         attributes: dict,
         param_attributes: dict[str, dict],
     ):
@@ -84,7 +86,8 @@ class ModelDataFactory:
         Args:
             init_config (Init): Model initialisation configuration (i.e., `config.init`).
             model_definition (ModelDefinition): Definition of model nodes and technologies, and their potential `templates`.
-            data_tables (list[data_tables.DataTable]): Pre-loaded data tables that will be used to initialise the dataset before handling definitions given in `model_definition`.
+            definition_path (Path, None): Path to the main model definition file. Defaults to None.
+            data_table_dfs: (dict[str, pd.DataFrame], None): Dataframes with model data. Defaults to None.
             attributes (dict): Attributes to attach to the model Dataset.
             param_attributes (dict[str, dict]): Attributes to attach to the generated model DataArrays.
         """
@@ -92,7 +95,17 @@ class ModelDataFactory:
         self.model_definition: ModelDefinition = model_definition.copy()
         self.dataset = xr.Dataset(attrs=AttrDict(attributes))
         self.tech_data_from_tables = AttrDict()
-        self.init_from_data_tables(data_tables)
+        self.definition_path: str | Path | None = definition_path
+        tables = []
+        for table_name, table_dict in model_definition.get_key(
+            "data_tables", {}
+        ).items():
+            tables.append(
+                data_tables.DataTable(
+                    table_name, table_dict, data_table_dfs, self.definition_path
+                )
+            )
+        self.init_from_data_tables(tables)
 
         flipped_attributes: dict[str, dict] = dict()
         for key, val in param_attributes.items():
@@ -149,8 +162,7 @@ class ModelDataFactory:
     def add_node_tech_data(self):
         """For each node, extract technology definitions and node-level parameters and convert them to arrays.
 
-        The node definition will first be updated according to any defined inheritance (via `template`),
-        before processing each defined tech (which will also be updated according to its inheritance tree).
+        The node definition will be updated with each defined tech (which will also be updated according to its inheritance tree).
 
         Node and tech definitions will be validated against the model definition schema here.
         """
@@ -257,7 +269,9 @@ class ModelDataFactory:
             self.dataset = time.resample(self.dataset, self.config.time_resample)
         if self.config.time_cluster is not None:
             self.dataset = time.cluster(
-                self.dataset, self.config.time_cluster, self.config.time_format
+                self.dataset,
+                relative_path(self.definition_path, self.config.time_cluster),
+                self.config.time_format,
             )
 
     def clean_data_from_undefined_members(self):
@@ -487,6 +501,13 @@ class ModelDataFactory:
             data = param_data["data"]
             index_items = [listify(idx) for idx in listify(param_data["index"])]
             dims = listify(param_data["dims"])
+            broadcast_param_data = self.config.broadcast_param_data
+            if not broadcast_param_data and len(listify(data)) != len(index_items):
+                raise exceptions.ModelError(
+                    f"{param_name} | Length mismatch between data ({data}) and index ({index_items}) for parameter definition. "
+                    "Check lengths of arrays or set `config.init.broadcast_param_data` to True "
+                    "to allow single data entries to be broadcast across all parameter index items."
+                )
         elif param_name in self.LOOKUP_PARAMS.keys():
             data = True
             index_items = [[i] for i in listify(param_data)]
@@ -510,7 +531,7 @@ class ModelDataFactory:
     ) -> AttrDict:
         """For a set of node/tech definitions, climb the inheritance tree to build a final definition dictionary.
 
-        For `techs` at `nodes`, the first step is to inherit the technology definition from `techs`, _then_ to climb `template` references.
+        For `techs` at `nodes`, they inherit the technology definition from `techs`.
 
         Base definitions will take precedence over inherited ones and more recent inherited definitions will take precedence over older ones.
 
@@ -534,11 +555,11 @@ class ModelDataFactory:
             AttrDict: Dictionary containing all active tech/node definitions with inherited parameters.
         """
         if connected_dims:
-            err_message_prefix = (
+            debug_message_prefix = (
                 ", ".join([f"({k}, {v})" for k, v in connected_dims.items()]) + ", "
             )
         else:
-            err_message_prefix = ""
+            debug_message_prefix = ""
 
         updated_defs = AttrDict()
         if dim_dict is None:
@@ -551,7 +572,7 @@ class ModelDataFactory:
                 base_def = self.model_definition["techs"]
                 if item_name not in base_def:
                     raise KeyError(
-                        f"{err_message_prefix}({dim_name}, {item_name}) | Reference to item not defined in base {dim_name}"
+                        f"{debug_message_prefix}({dim_name}, {item_name}) | Reference to item not defined in base {dim_name}"
                     )
 
                 item_base_def = deepcopy(base_def[item_name])
@@ -562,23 +583,15 @@ class ModelDataFactory:
                     item_base_def = _data_table_dict
             else:
                 item_base_def = item_def
-            templates = self.model_definition.get("templates", AttrDict())
-            updated_item_def, inheritance = climb_template_tree(
-                item_base_def, templates, item_name
-            )
 
-            if not updated_item_def.get("active", True):
+            if not item_base_def.get("active", True):
                 LOGGER.debug(
-                    f"{err_message_prefix}({dim_name}, {item_name}) | Deactivated."
+                    f"{debug_message_prefix}({dim_name}, {item_name}) | Deactivated."
                 )
                 self._deactivate_item(**{dim_name: item_name, **connected_dims})
                 continue
 
-            if inheritance is not None:
-                updated_item_def[f"{dim_name}_inheritance"] = ",".join(inheritance)
-                del updated_item_def["template"]
-
-            updated_defs[item_name] = updated_item_def
+            updated_defs[item_name] = item_base_def
 
         return updated_defs
 
@@ -640,12 +653,10 @@ class ModelDataFactory:
                 self._update_one_way_links(node_from_data, node_to_data)
 
             link_tech_dict.union(
-                AttrDict(
-                    {
-                        node_from: {link_name: node_from_data},
-                        node_to: {link_name: node_to_data},
-                    }
-                )
+                {
+                    node_from: {link_name: node_from_data},
+                    node_to: {link_name: node_to_data},
+                }
             )
 
         return link_tech_dict
@@ -740,7 +751,7 @@ class ModelDataFactory:
     def _raise_error_on_transmission_tech_def(
         self, tech_def_dict: AttrDict, node_name: str
     ):
-        """Do not allow any transmission techs are defined in the node-level tech dict.
+        """Do not allow any transmission techs to be defined in the node-level tech dict.
 
         Args:
             tech_def_dict (dict): Tech definition dict (after full inheritance) at a node.

@@ -11,6 +11,7 @@ from pathlib import Path
 from mkdocs.structure.files import File
 
 import calliope
+from calliope.io import read_rich_yaml
 from calliope.postprocess.math_documentation import MathDocumentation
 
 logger = logging.getLogger("mkdocs")
@@ -42,7 +43,7 @@ Those parameters which are defined over time (`timesteps`) in the expressions ca
 
 def on_files(files: list, config: dict, **kwargs):
     """Process documentation for pre-defined calliope math files."""
-    model_config = calliope.AttrDict.from_yaml(MODEL_PATH)
+    model_config = read_rich_yaml(MODEL_PATH)
 
     base_documentation = generate_base_math_documentation()
     write_file(

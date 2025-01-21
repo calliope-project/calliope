@@ -26,10 +26,10 @@ from pyomo.core.kernel.piecewise_library.transforms import (
 from pyomo.opt import SolverFactory  # type: ignore
 from pyomo.util.model_size import build_model_size_report  # type: ignore
 
+from calliope import config
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
 from calliope.preprocess import CalliopeMath
-from calliope.schemas import config_schema
 from calliope.util.logging import LogWriter
 
 from . import backend_model, parsing
@@ -60,7 +60,7 @@ class PyomoBackendModel(backend_model.BackendModel):
     """Pyomo-specific backend functionality."""
 
     def __init__(
-        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config_schema.Build
+        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config.Build
     ) -> None:
         """Pyomo solver interface class.
 
@@ -69,7 +69,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             math (CalliopeMath): Calliope math.
             build_config: Build configuration options.
         """
-        super().__init__(inputs, math, pmo.block(), build_config)
+        super().__init__(inputs, math, build_config, pmo.block())
 
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()

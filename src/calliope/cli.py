@@ -13,7 +13,7 @@ import traceback
 
 import click
 
-from calliope import AttrDict, Model, examples, read_netcdf
+from calliope import Model, examples, io, read_netcdf
 from calliope._version import __version__
 from calliope.exceptions import BackendError
 from calliope.util.generate_runs import generate
@@ -399,4 +399,4 @@ def generate_scenarios(
             }
         }
 
-        AttrDict(scenarios).to_yaml(out_file)
+        io.to_yaml(scenarios, path=out_file)

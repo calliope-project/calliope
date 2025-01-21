@@ -1,7 +1,8 @@
 import pandas as pd
 import pytest  # noqa: F401
 
-from calliope import AttrDict, exceptions
+from calliope import exceptions
+from calliope.io import read_rich_yaml
 
 from .common.util import build_test_model
 
@@ -14,7 +15,7 @@ class TestTimeFormat:
         """
 
         # should pass: changing datetime format from default
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             """
             config.init.time_format: "%d/%m/%Y %H:%M"
             data_tables:
@@ -30,7 +31,7 @@ class TestTimeFormat:
 
     def test_incorrect_date_format_one(self):
         # should fail: wrong dateformat input for one file
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             "data_tables.demand_elec.data: data_tables/demand_heat_diff_dateformat.csv"
         )
 
@@ -46,7 +47,7 @@ class TestTimeFormat:
 
     def test_incorrect_date_format_one_value_only(self):
         # should fail: one value wrong in file
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             "data_tables.test_demand_elec.data: data_tables/demand_heat_wrong_dateformat.csv"
         )
         # check in output error that it points to: 07/01/2005 10:00:00
@@ -151,7 +152,7 @@ class TestResampling:
     def test_15min_resampling_to_6h(self):
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             "data_tables.demand_elec.data: data_tables/demand_elec_15mins.csv"
         )
 
@@ -178,7 +179,7 @@ class TestResampling:
         """
         CSV has daily timeseries varying from 15min to 2h resolution, resample all to 2h
         """
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             "data_tables.demand_elec.data: data_tables/demand_elec_15T_to_2h.csv"
         )
 
@@ -212,7 +213,7 @@ class TestResampling:
     def test_different_ts_resolutions_resampling_to_6h(self):
         # The data is identical for '2005-01-01' and '2005-01-03' timesteps,
         # it is only different for '2005-01-02'
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             """
             data_tables:
                 demand_elec:

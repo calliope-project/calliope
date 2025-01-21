@@ -81,7 +81,7 @@ def update_model_schema(
             "^[^_^\\d][\\w]*$"
         ]["properties"]
 
-    to_update.union(AttrDict(new_entries), allow_override=allow_override)
+    to_update.union(new_entries, allow_override=allow_override)
 
     validator = jsonschema.Draft202012Validator
     validator.META_SCHEMA["unevaluatedProperties"] = False

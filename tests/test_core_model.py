@@ -69,9 +69,11 @@ class TestOperateMode:
         model.build(
             force=True,
             mode="operate",
-            operate_use_cap_results=True,
-            operate_window=request.param[0],
-            operate_horizon=request.param[1],
+            operate={
+                "use_cap_results": True,
+                "window": request.param[0],
+                "horizon": request.param[1],
+            },
         )
 
         with self.caplog_session(request) as caplog:
@@ -80,14 +82,6 @@ class TestOperateMode:
             log = caplog.text
 
         return model, log
-
-    @pytest.fixture(scope="class")
-    def rerun_operate_log(self, request, operate_model_and_log):
-        """Solve in operate mode a second time, to trigger new log messages."""
-        with self.caplog_session(request) as caplog:
-            with caplog.at_level(logging.INFO):
-                operate_model_and_log[0].solve(force=True)
-            return caplog.text
 
     def test_backend_build_mode(self, operate_model_and_log):
         """Verify that we have run in operate mode"""
@@ -109,6 +103,14 @@ class TestOperateMode:
         _, log = operate_model_and_log
         assert "Resetting model to first time window." not in log
 
+    @pytest.fixture
+    def rerun_operate_log(self, request, operate_model_and_log):
+        """Solve in operate mode a second time, to trigger new log messages."""
+        with self.caplog_session(request) as caplog:
+            with caplog.at_level(logging.INFO):
+                operate_model_and_log[0].solve(force=True)
+            return caplog.text
+
     def test_reset_model_window(self, rerun_operate_log):
         """The backend model time window needs resetting back to the start on rerunning in operate mode."""
         assert "Resetting model to first time window." in rerun_operate_log
@@ -116,8 +118,8 @@ class TestOperateMode:
     def test_end_of_horizon(self, operate_model_and_log):
         """Check that increasingly shorter time horizons are logged as model rebuilds."""
         operate_model, log = operate_model_and_log
-        config = operate_model.backend.config.operate
-        if config.operate_window != config.operate_horizon:
+        config = operate_model.backend.config
+        if config.operate.window != config.operate.horizon:
             assert "Reaching the end of the timeseries." in log
         else:
             assert "Reaching the end of the timeseries." not in log
@@ -147,9 +149,18 @@ class TestOperateMode:
         ):
             m.build(mode="operate")
 
+    def test_build_operate_use_cap_results_error(self):
+        """Requesting to use capacity results should return an error if the model is not pre-solved."""
+        m = build_model({}, "simple_supply,operate,var_costs,investment_costs")
+        with pytest.raises(
+            calliope.exceptions.ModelError,
+            match="Cannot use plan mode capacity results in operate mode if a solution does not yet exist for the model.",
+        ):
+            m.build(mode="operate", operate={"use_cap_results": True})
+
 
 class TestBuild:
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def init_model(self):
         return build_model({}, "simple_supply,two_hours,investment_costs")
 

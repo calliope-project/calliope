@@ -26,13 +26,12 @@ from typing import (
 import numpy as np
 import xarray as xr
 
-from calliope import exceptions
+from calliope import config, exceptions
 from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
 from calliope.exceptions import warn as model_warn
-from calliope.io import load_config
+from calliope.io import load_config, to_yaml
 from calliope.preprocess.model_math import ORDERED_COMPONENTS_T, CalliopeMath
-from calliope.schemas import config_schema
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 if TYPE_CHECKING:
@@ -67,7 +66,7 @@ class BackendModelGenerator(ABC):
     _PARAM_TYPE = extract_from_schema(MODEL_SCHEMA, "x-type")
 
     def __init__(
-        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config_schema.Build
+        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config.Build
     ):
         """Abstract base class to build a representation of the optimisation problem.
 
@@ -447,7 +446,7 @@ class BackendModelGenerator(ABC):
                 yaml_snippet_attrs[attr] = val
 
         if yaml_snippet_attrs:
-            add_attrs["yaml_snippet"] = AttrDict(yaml_snippet_attrs).to_yaml()
+            add_attrs["yaml_snippet"] = to_yaml(yaml_snippet_attrs)
 
         da.attrs = {
             "obj_type": obj_type,
@@ -607,8 +606,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         self,
         inputs: xr.Dataset,
         math: CalliopeMath,
+        build_config: config.Build,
         instance: T,
-        build_config: config_schema.Build,
     ) -> None:
         """Abstract base class to build backend models that interface with solvers.
 

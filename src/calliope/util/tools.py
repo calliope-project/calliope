@@ -2,20 +2,16 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Assorted helper tools."""
 
-from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import Any, TypeVar
 
 from typing_extensions import ParamSpec
-
-if TYPE_CHECKING:
-    from calliope import AttrDict
 
 P = ParamSpec("P")
 T = TypeVar("T")
 
 
-def relative_path(base_path_file: str | Path, path: str | Path) -> Path:
+def relative_path(base_path_file: str | Path | None, path: str | Path) -> Path:
     """Path standardization.
 
     If ``path`` is not absolute, it is interpreted as relative to the
@@ -53,53 +49,25 @@ def listify(var: Any) -> list:
     return var
 
 
-def climb_template_tree(
-    input_dict: "AttrDict",
-    templates: "AttrDict",
-    item_name: str | None = None,
-    inheritance: list | None = None,
-) -> tuple["AttrDict", list | None]:
-    """Follow the `template` references from model definition elements to `templates`.
+def get_dot_attr(var: Any, attr: str) -> Any:
+    """Get nested attributes in dot notation.
 
-    Model definition elements can inherit template entries (those in `templates`).
-    Template entries can also inherit each other, to create an inheritance chain.
-
-    This function will be called recursively until a definition dictionary without `template` is reached.
+    Works for nested objects (e.g., dictionaries, pydantic models).
 
     Args:
-        input_dict (AttrDict): Dictionary (possibly) containing `template`.
-        templates (AttrDict): Dictionary of available templates.
-        item_name (str | None, optional):
-            The current position in the inheritance tree.
-            If given, used only for a more expressive KeyError.
-            Defaults to None.
-        inheritance (list | None, optional):
-            A list of items that have been inherited (starting with the oldest).
-            If the first `input_dict` does not contain `template`, this will remain as None.
-            Defaults to None.
-
-    Raises:
-        KeyError: Must inherit from a named template item in `templates`.
+        var (Any): Object to extract nested attributes from.
+        attr (str): Name of the attribute (e.g., "foo.bar").
 
     Returns:
-        tuple[AttrDict, list | None]: Definition dictionary with inherited data and a list of the inheritance tree climbed to get there.
+        Any: Value at the given location.
     """
-    to_inherit = input_dict.get("template", None)
-    if to_inherit is None:
-        updated_input_dict = input_dict
-    elif to_inherit not in templates:
-        message = f"Cannot find `{to_inherit}` in template inheritance tree."
-        if item_name is not None:
-            message = f"{item_name} | {message}"
-        raise KeyError(message)
+    levels = attr.split(".", 1)
+
+    if isinstance(var, dict):
+        value = var[levels[0]]
     else:
-        base_def_dict, inheritance = climb_template_tree(
-            templates[to_inherit], templates, to_inherit, inheritance
-        )
-        updated_input_dict = deepcopy(base_def_dict)
-        updated_input_dict.union(input_dict, allow_override=True)
-        if inheritance is not None:
-            inheritance.append(to_inherit)
-        else:
-            inheritance = [to_inherit]
-    return updated_input_dict, inheritance
+        value = getattr(var, levels[0])
+
+    if len(levels) > 1:
+        value = get_dot_attr(value, levels[1])
+    return value

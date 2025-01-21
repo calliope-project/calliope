@@ -52,4 +52,30 @@ Which will add the new dimension `my_new_dim` to your model: `model.inputs.my_ne
 `foreach: [my_new_dim]`.
 
 !!! warning
-    The `parameter` section should not be used for large datasets (e.g., indexing over the time dimension) as it will have a high memory overhead on loading the data.
+    The `parameter` section should not be used for large datasets (e.g., indexing over the time dimension) as it will have a high memory overhead when loading the data.
+
+## Broadcasting data along indexed dimensions
+
+If you want to set the same data for all index items, you can set the `init` [configuration option](config.md) `broadcast_param_data` to True and then use a single value in `data`:
+
+=== "Without broadcasting"
+
+    ```yaml
+    my_indexed_param:
+      data: [1, 1, 1, 1]
+      index: [my_index_val1, my_index_val2, my_index_val3, my_index_val4]
+      dims: my_new_dim
+    ```
+
+=== "With broadcasting"
+
+    ```yaml
+    my_indexed_param:
+      data: 1  # All index items will take on this value
+      index: [my_index_val1, my_index_val2, my_index_val3, my_index_val4]
+      dims: my_new_dim
+    ```
+
+!!! warning
+    The danger of broadcasting is that you maybe update `index` as a scenario override without realising that the data will be broadcast over this new index.
+    E.g., if you start with `!#yaml {data: 1, index: monetary, dims: costs}` and update it with `!#yaml {index: [monetary, emissions]}` then the `data` value of `1` will be set for both `monetary` and `emissions` index values.

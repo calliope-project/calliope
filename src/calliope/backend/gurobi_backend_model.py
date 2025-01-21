@@ -14,11 +14,11 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from calliope import config
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
 from calliope.preprocess import CalliopeMath
-from calliope.schemas import config_schema
 
 if importlib.util.find_spec("gurobipy") is not None:
     import gurobipy
@@ -43,7 +43,7 @@ class GurobiBackendModel(backend_model.BackendModel):
     """gurobipy-specific backend functionality."""
 
     def __init__(
-        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config_schema.Build
+        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config.Build
     ) -> None:
         """Gurobi solver interface class.
 
@@ -56,7 +56,7 @@ class GurobiBackendModel(backend_model.BackendModel):
             raise ImportError(
                 "Install the `gurobipy` package to build the optimisation problem with the Gurobi backend."
             )
-        super().__init__(inputs, math, gurobipy.Model(), build_config)
+        super().__init__(inputs, math, build_config, gurobipy.Model())
         self._instance: gurobipy.Model
         self.shadow_prices = GurobiShadowPrices(self)
 

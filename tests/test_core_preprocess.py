@@ -2,10 +2,11 @@ import warnings
 
 import pandas as pd
 import pytest
+from pydantic import ValidationError
 
 import calliope
 import calliope.exceptions as exceptions
-from calliope.attrdict import AttrDict
+from calliope.io import read_rich_yaml
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
@@ -16,8 +17,8 @@ class TestModelRun:
         """Test creating a model from dict/AttrDict instead of from YAML"""
         model_dir = data_source_dir.parent
         model_location = model_dir / "model.yaml"
-        model_dict = AttrDict.from_yaml(model_location)
-        node_dict = AttrDict(
+        model_dict = calliope.io.read_rich_yaml(model_location)
+        node_dict = calliope.AttrDict(
             {
                 "nodes": {
                     "a": {"techs": {"test_supply_elec": {}, "test_demand_elec": {}}},
@@ -34,111 +35,9 @@ class TestModelRun:
         # test as dict
         calliope.Model(model_dict.as_dict())
 
-    @pytest.mark.filterwarnings(
-        "ignore:(?s).*(links, test_link_a_b_elec) | Deactivated:calliope.exceptions.ModelWarning"
-    )
-    def test_valid_scenarios(self, dummy_int):
-        """Test that valid scenario definition from overrides raises no error and results in applied scenario."""
-        override = AttrDict.from_yaml_string(
-            f"""
-            scenarios:
-                scenario_1: ['one', 'two']
-
-            overrides:
-                one:
-                    techs.test_supply_gas.flow_cap_max: {dummy_int}
-                two:
-                    techs.test_supply_elec.flow_cap_max: {dummy_int/2}
-
-            nodes:
-                a:
-                    techs:
-                        test_supply_gas:
-                        test_supply_elec:
-                        test_demand_elec:
-            """
-        )
-        model = build_model(override_dict=override, scenario="scenario_1")
-
-        assert (
-            model._model_data.sel(techs="test_supply_gas")["flow_cap_max"] == dummy_int
-        )
-        assert (
-            model._model_data.sel(techs="test_supply_elec")["flow_cap_max"]
-            == dummy_int / 2
-        )
-
-    def test_valid_scenario_of_scenarios(self, dummy_int):
-        """Test that valid scenario definition which groups scenarios and overrides raises
-        no error and results in applied scenario.
-        """
-        override = AttrDict.from_yaml_string(
-            f"""
-            scenarios:
-                scenario_1: ['one', 'two']
-                scenario_2: ['scenario_1', 'new_location']
-
-            overrides:
-                one:
-                    techs.test_supply_gas.flow_cap_max: {dummy_int}
-                two:
-                    techs.test_supply_elec.flow_cap_max: {dummy_int/2}
-                new_location:
-                    nodes.b.techs:
-                        test_supply_elec:
-
-            nodes:
-                a:
-                    techs:
-                        test_supply_gas:
-                        test_supply_elec:
-                        test_demand_elec:
-            """
-        )
-        model = build_model(override_dict=override, scenario="scenario_2")
-
-        assert (
-            model._model_data.sel(techs="test_supply_gas")["flow_cap_max"] == dummy_int
-        )
-        assert (
-            model._model_data.sel(techs="test_supply_elec")["flow_cap_max"]
-            == dummy_int / 2
-        )
-
-    def test_invalid_scenarios_dict(self):
-        """Test that invalid scenario definition raises appropriate error"""
-        override = AttrDict.from_yaml_string(
-            """
-            scenarios:
-                scenario_1:
-                    techs.foo.bar: 1
-            """
-        )
-        with pytest.raises(exceptions.ModelError) as excinfo:
-            build_model(override_dict=override, scenario="scenario_1")
-
-        assert check_error_or_warning(
-            excinfo, "(scenarios, scenario_1) | Unrecognised override name: techs."
-        )
-
-    def test_invalid_scenarios_str(self):
-        """Test that invalid scenario definition raises appropriate error"""
-        override = AttrDict.from_yaml_string(
-            """
-            scenarios:
-                scenario_1: 'foo'
-            """
-        )
-        with pytest.raises(exceptions.ModelError) as excinfo:
-            build_model(override_dict=override, scenario="scenario_1")
-
-        assert check_error_or_warning(
-            excinfo, "(scenarios, scenario_1) | Unrecognised override name: foo."
-        )
-
     def test_undefined_carriers(self):
         """Test that user has input either carrier or carrier_in/_out for each tech"""
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             """
             techs:
                 test_undefined_carrier:
@@ -159,14 +58,14 @@ class TestModelRun:
         """
 
         def override(param):
-            return AttrDict.from_yaml_string(f"config.init.time_subset: {param}")
+            return read_rich_yaml(f"config.init.time_subset: {param}")
 
         # should fail: one string in list
-        with pytest.raises(exceptions.ModelError):
+        with pytest.raises(ValidationError):
             build_model(override_dict=override(["2005-01"]), scenario="simple_supply")
 
         # should fail: three strings in list
-        with pytest.raises(exceptions.ModelError):
+        with pytest.raises(ValidationError):
             build_model(
                 override_dict=override(["2005-01-01", "2005-01-02", "2005-01-03"]),
                 scenario="simple_supply",
@@ -183,7 +82,7 @@ class TestModelRun:
         )
 
         # should fail: must be a list, not a string
-        with pytest.raises(exceptions.ModelError):
+        with pytest.raises(ValidationError):
             model = build_model(
                 override_dict=override("2005-01"), scenario="simple_supply"
             )
@@ -196,7 +95,7 @@ class TestModelRun:
 
         assert check_error_or_warning(
             error,
-            "subset time range ['2005-03', '2005-04'] is outside the input data time range [2005-01-01 00:00:00, 2005-01-05 23:00:00]",
+            "subset time range ('2005-03', '2005-04') is outside the input data time range [2005-01-01 00:00:00, 2005-01-05 23:00:00]",
         )
 
         # should fail: time subset out of range of input data
@@ -211,7 +110,7 @@ class TestModelRun:
         varying input data are consistent with each other
         """
         # should fail: wrong length of demand_heat csv vs demand_elec
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             "data_tables.demand_elec.data: data_tables/demand_heat_wrong_length.csv"
         )
         # check in output error that it points to: 07/01/2005 10:00:00
@@ -222,7 +121,7 @@ class TestModelRun:
         )
 
     def test_inconsistent_time_indices_passes_thanks_to_time_subsetting(self):
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             "data_tables.demand_elec.data: data_tables/demand_heat_wrong_length.csv"
         )
         # should pass: wrong length of demand_heat csv, but time subsetting removes the difference
@@ -249,19 +148,15 @@ class TestModelRun:
 
 
 class TestChecks:
-    @pytest.mark.parametrize("top_level_key", ["init", "solve"])
+    @pytest.mark.parametrize(
+        "top_level_key", ["init", "build", "solve", "build.operate", "solve.spores"]
+    )
     def test_unrecognised_config_keys(self, top_level_key):
-        """Check that the only keys allowed in 'model' and 'run' are those in the
-        model defaults
-        """
+        """Check that no extra keys are allowed in the configuration."""
         override = {f"config.{top_level_key}.nonsensical_key": "random_string"}
 
-        with pytest.raises(exceptions.ModelError) as excinfo:
+        with pytest.raises(ValidationError):
             build_model(override_dict=override, scenario="simple_supply")
-        assert check_error_or_warning(
-            excinfo,
-            "Additional properties are not allowed ('nonsensical_key' was unexpected)",
-        )
 
     def test_model_version_mismatch(self):
         """Model config says config.init.calliope_version = 0.1, which is not what we
@@ -278,7 +173,7 @@ class TestChecks:
 
     def test_unspecified_base_tech(self):
         """All technologies must specify a base_tech"""
-        override = AttrDict.from_yaml_string(
+        override = read_rich_yaml(
             """
             techs.test_supply_no_base_tech:
                     name: Supply tech
@@ -294,7 +189,7 @@ class TestChecks:
 
     def test_tech_as_base_tech(self):
         """All technologies must specify a base_tech"""
-        override1 = AttrDict.from_yaml_string(
+        override1 = read_rich_yaml(
             """
             techs.test_supply_tech_base_tech:
                 name: Supply tech

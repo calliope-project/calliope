@@ -62,7 +62,7 @@ However, we recommend to not use this solver where possible, since it performs r
 Indeed, our example models use the free and open source [CBC](#cbc) solver instead, but installing it on Windows requires an extra step.
 [CBC](#cbc) (open-source) or [Gurobi](#gurobi) (commercial) are recommended for large problems, and have been confirmed to work with Calliope.
 The following subsections provide additional detail on how to install a solver.
-This list is not exhaustive; any solvers [supported by Pyomo](https://pyomo.readthedocs.io/en/stable/solving_pyomo_models.html#supported-solvers) can be used.
+This list is not exhaustive; any solvers [supported by Pyomo](https://pyomo.readthedocs.io/en/latest/reference/topical/appsi/appsi.solvers.html) can be used.
 
 ### CBC
 

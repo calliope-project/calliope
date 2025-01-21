@@ -3,16 +3,9 @@
 """AttrDict implementation (a subclass of regular dict) used for managing model configuration."""
 
 import copy
-import io
 import logging
-from pathlib import Path
 
-import numpy as np
-import ruamel.yaml as ruamel_yaml
-from ruamel.yaml.scalarstring import walk_tree
 from typing_extensions import Self
-
-from calliope.util.tools import relative_path
 
 logger = logging.getLogger(__name__)
 
@@ -23,29 +16,6 @@ class __Missing:
 
 
 _MISSING = __Missing()
-
-
-def _yaml_load(src):
-    """Load YAML from a file object or path with useful parser errors."""
-    yaml = ruamel_yaml.YAML(typ="safe")
-    if not isinstance(src, str):
-        try:
-            src_name = src.name
-        except AttributeError:
-            src_name = "<yaml stringio>"
-        # Force-load file streams as that allows the parser to print
-        # much more context when it encounters an error
-        src = src.read()
-    else:
-        src_name = "<yaml string>"
-    try:
-        result = yaml.load(src)
-        if not isinstance(result, dict):
-            raise ValueError(f"Could not parse {src_name} as YAML")
-        return result
-    except ruamel_yaml.YAMLError:
-        logger.error(f"Parser error when reading YAML from {src_name}.")
-        raise
 
 
 class AttrDict(dict):
@@ -107,121 +77,6 @@ class AttrDict(dict):
                 self.set_key(k, v)
             else:
                 self.set_key(k, v)
-
-    @classmethod
-    def _resolve_imports(
-        cls,
-        loaded: Self,
-        resolve_imports: bool | str,
-        base_path: str | Path | None = None,
-        allow_override: bool = False,
-    ) -> Self:
-        if (
-            isinstance(resolve_imports, bool)
-            and resolve_imports is True
-            and "import" in loaded
-        ):
-            loaded_dict = loaded
-        elif (
-            isinstance(resolve_imports, str)
-            and resolve_imports + ".import" in loaded.keys_nested()
-        ):
-            loaded_dict = loaded.get_key(resolve_imports)
-        else:  # Return right away if no importing to be done
-            return loaded
-
-        # If we end up here, we have something to import
-        imports = loaded_dict.get_key("import")
-        if not isinstance(imports, list):
-            raise ValueError("`import` must be a list.")
-
-        for k in imports:
-            path = relative_path(base_path, k)
-            imported = cls.from_yaml(path)
-            # loaded is added to imported (i.e. it takes precedence)
-            imported.union(loaded_dict, allow_override=allow_override)
-            loaded_dict = imported
-        # 'import' key itself is no longer needed
-        loaded_dict.del_key("import")
-
-        if isinstance(resolve_imports, str):
-            loaded.set_key(resolve_imports, loaded_dict)
-        else:
-            loaded = loaded_dict
-
-        return loaded
-
-    @classmethod
-    def from_yaml(
-        cls,
-        filename: str | Path,
-        resolve_imports: bool | str = True,
-        allow_override: bool = False,
-    ) -> Self:
-        """Returns an AttrDict initialized from the given path or file path.
-
-        If `resolve_imports` is True, top-level `import:` statements
-        are resolved recursively.
-        If `resolve_imports` is False, top-level `import:` statements
-        are treated like any other key and not further processed.
-        If `resolve_imports` is a string, such as `foobar`, import
-        statements underneath that key are resolved, i.e. `foobar.import:`.
-        When resolving import statements, anything defined locally
-        overrides definitions in the imported file.
-
-        Args:
-            filename (str | Path): YAML file.
-            resolve_imports (bool | str, optional): top-level `import:` solving option.
-                Defaults to True.
-            allow_override (bool, optional): whether or not to allow overrides of already defined keys.
-                Defaults to False.
-
-        Returns:
-            Self: constructed AttrDict
-        """
-        filename = Path(filename)
-        loaded = cls(_yaml_load(filename.read_text(encoding="utf-8")))
-        loaded = cls._resolve_imports(
-            loaded, resolve_imports, filename, allow_override=allow_override
-        )
-        return loaded
-
-    @classmethod
-    def from_yaml_string(
-        cls,
-        string: str,
-        resolve_imports: bool | str = True,
-        allow_override: bool = False,
-    ) -> Self:
-        """Returns an AttrDict initialized from the given string.
-
-        Input string must be valid YAML.
-
-        If `resolve_imports` is True, top-level `import:` statements
-        are resolved recursively.
-        If `resolve_imports` is False, top-level `import:` statements
-        are treated like any other key and not further processed.
-        If `resolve_imports` is a string, such as `foobar`, import
-        statements underneath that key are resolved, i.e. `foobar.import:`.
-        When resolving import statements, anything defined locally
-        overrides definitions in the imported file.
-
-        Args:
-            string (str): Valid YAML string.
-            resolve_imports (bool | str, optional): top-level `import:` solving option.
-                Defaults to True.
-            allow_override (bool, optional): whether or not to allow overrides of already defined keys.
-                Defaults to False.
-
-        Returns:
-            calliope.AttrDict:
-
-        """
-        loaded = cls(_yaml_load(string))
-        loaded = cls._resolve_imports(
-            loaded, resolve_imports, allow_override=allow_override
-        )
-        return loaded
 
     def set_key(self, key, value):
         """Set the given ``key`` to the given ``value``.
@@ -329,40 +184,6 @@ class AttrDict(dict):
             d[k] = self.get_key(k)
         return d
 
-    def to_yaml(self, path: str | None = None) -> str:
-        """Return a serialised YAML string."""
-        result = self.copy()
-        yaml_ = ruamel_yaml.YAML()
-        yaml_.indent = 2
-        yaml_.block_seq_indent = 0
-        yaml_.sort_base_mapping_type_on_output = False
-
-        # Numpy objects should be converted to regular Python objects,
-        # so that they are properly displayed in the resulting YAML output
-        for k in result.keys_nested():
-            # Convert numpy numbers to regular python ones
-            v = result.get_key(k)
-            if isinstance(v, np.floating):
-                result.set_key(k, float(v))
-            elif isinstance(v, np.integer):
-                result.set_key(k, int(v))
-            # Lists are turned into seqs so that they are formatted nicely
-            elif isinstance(v, list):
-                result.set_key(k, yaml_.seq(v))
-
-        result = result.as_dict()
-
-        # handle multi-line strings.
-        walk_tree(result)
-
-        stream = io.StringIO()
-        yaml_.dump(result, stream)
-        yaml_str = stream.getvalue()
-        if path:
-            with open(path, "w") as f:
-                f.write(yaml_str)
-        return yaml_str
-
     def keys_nested(self, subkeys_as="list"):
         """Returns all keys in the AttrDict, including nested keys.
 
@@ -410,6 +231,8 @@ class AttrDict(dict):
         Raises:
             KeyError: `other` has an already defined key and `allow_override == False`
         """
+        if not isinstance(other, AttrDict):
+            other = AttrDict(other)
         self_keys = self.keys_nested()
         other_keys = other.keys_nested()
         if allow_replacement:

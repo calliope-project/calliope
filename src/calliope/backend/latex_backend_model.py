@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from calliope import config
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import ModelError
 from calliope.preprocess import CalliopeMath
@@ -305,19 +306,19 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self,
         inputs: xr.Dataset,
         math: CalliopeMath,
+        build_config: config.Build,
         include: Literal["all", "valid"] = "all",
-        **kwargs,
     ) -> None:
         """Interface to build a string representation of the mathematical formulation using LaTeX math notation.
 
         Args:
             inputs (xr.Dataset): model data.
             math (CalliopeMath): Calliope math.
+            build_config: Build configuration options.
             include (Literal["all", "valid"], optional):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
-            **kwargs: for the backend model generator.
         """
-        super().__init__(inputs, math, **kwargs)
+        super().__init__(inputs, math, build_config)
         self.include = include
 
     def add_parameter(  # noqa: D102, override
