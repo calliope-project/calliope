@@ -3,39 +3,20 @@
 """Implements the Calliope configuration class."""
 
 import logging
-from collections.abc import Hashable
 from pathlib import Path
-from typing import Annotated, Literal, TypeVar
+from typing import Literal
 
 import jsonref
-from pydantic import AfterValidator, BaseModel, Field, model_validator
-from pydantic_core import PydanticCustomError
+from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self
 
 from calliope.attrdict import AttrDict
+from calliope.schemas.attributes import UniqueList
 
 MODES_T = Literal["plan", "operate", "spores"]
 CONFIG_T = Literal["init", "build", "solve"]
 
 LOGGER = logging.getLogger(__name__)
-
-# ==
-# Taken from https://github.com/pydantic/pydantic-core/pull/820#issuecomment-1670475909
-T = TypeVar("T", bound=Hashable)
-
-
-def _validate_unique_list(v: list[T]) -> list[T]:
-    if len(v) != len(set(v)):
-        raise PydanticCustomError("unique_list", "List must be unique")
-    return v
-
-
-UniqueList = Annotated[
-    list[T],
-    AfterValidator(_validate_unique_list),
-    Field(json_schema_extra={"uniqueItems": True}),
-]
-# ==
 
 
 class ConfigBaseModel(BaseModel):

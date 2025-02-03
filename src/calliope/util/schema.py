@@ -5,13 +5,10 @@
 import importlib
 import re
 import sys
-from collections.abc import Hashable
 from copy import deepcopy
-from typing import Annotated, Literal, TypeVar
+from typing import Literal
 
 import jsonschema
-from pydantic import AfterValidator, Field
-from pydantic_core import PydanticCustomError
 
 from calliope.attrdict import AttrDict
 from calliope.exceptions import print_warnings_and_raise_errors
@@ -21,28 +18,6 @@ CONFIG_SCHEMA = load_config("config_schema.yaml")
 MODEL_SCHEMA = load_config("model_def_schema.yaml")
 DATA_TABLE_SCHEMA = load_config("data_table_schema.yaml")
 MATH_SCHEMA = load_config("math_schema.yaml")
-
-# Regular string pattern for most calliope attributes
-FIELD_REGEX = r"^[^_^\d][\w]*$"
-AttrStr = Annotated[str, Field(pattern=FIELD_REGEX)]
-
-# ==
-# Taken from https://github.com/pydantic/pydantic-core/pull/820#issuecomment-1670475909
-T = TypeVar("T", bound=Hashable)
-
-
-def _validate_unique_list(v: list[T]) -> list[T]:
-    if len(v) != len(set(v)):
-        raise PydanticCustomError("unique_list", "List must be unique")
-    return v
-
-
-UniqueList = Annotated[
-    list[T],
-    AfterValidator(_validate_unique_list),
-    Field(json_schema_extra={"uniqueItems": True}),
-]
-# ==
 
 
 def reset():
