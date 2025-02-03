@@ -15,13 +15,12 @@ from calliope.exceptions import BackendError
 from calliope.preprocess import CalliopeMath
 
 if TYPE_CHECKING:
-    from calliope import config
     from calliope.backend.backend_model import BackendModel
     from calliope.schemas import config_schema
 
 
 def get_model_backend(
-    build_config: "config.Build", data: xr.Dataset, math: CalliopeMath
+    build_config: "config_schema.Build", data: xr.Dataset, math: CalliopeMath
 ) -> "BackendModel":
     """Assign a backend using the given configuration.
 

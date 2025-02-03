@@ -5,17 +5,21 @@ import pydantic
 import pytest
 from pydantic_core import ValidationError
 
-from calliope import config
+from calliope.schemas import config_schema
 
 
 class TestUniqueList:
     @pytest.fixture(scope="module")
     def unique_list_model(self):
-        return pydantic.create_model("Model", unique_list=(config.UniqueList, ...))
+        return pydantic.create_model(
+            "Model", unique_list=(config_schema.UniqueList, ...)
+        )
 
     @pytest.fixture(scope="module")
     def unique_str_list_model(self):
-        return pydantic.create_model("Model", unique_list=(config.UniqueList[str], ...))
+        return pydantic.create_model(
+            "Model", unique_list=(config_schema.UniqueList[str], ...)
+        )
 
     @pytest.mark.parametrize(
         "valid_list",
@@ -55,7 +59,7 @@ class TestUpdate:
     def config_model_flat(self):
         return pydantic.create_model(
             "Model",
-            __base__=config.ConfigBaseModel,
+            __base__=config_schema.ConfigBaseModel,
             model_config={"title": "TITLE"},
             foo=(str, "bar"),
             foobar=(int, 1),
@@ -65,7 +69,7 @@ class TestUpdate:
     def config_model_nested(self, config_model_flat):
         return pydantic.create_model(
             "Model",
-            __base__=config.ConfigBaseModel,
+            __base__=config_schema.ConfigBaseModel,
             model_config={"title": "TITLE 2"},
             nested=(config_model_flat, config_model_flat()),
             top_level_foobar=(int, 10),
@@ -75,7 +79,7 @@ class TestUpdate:
     def config_model_double_nested(self, config_model_nested):
         return pydantic.create_model(
             "Model",
-            __base__=config.ConfigBaseModel,
+            __base__=config_schema.ConfigBaseModel,
             model_config={"title": "TITLE 3"},
             extra_nested=(config_model_nested, config_model_nested()),
         )
@@ -189,14 +193,14 @@ class TestNoRefSchema:
     def config_model(self):
         sub_model = pydantic.create_model(
             "SubModel",
-            __base__=config.ConfigBaseModel,
+            __base__=config_schema.ConfigBaseModel,
             model_config={"title": "TITLE"},
             foo=(str, "bar"),
             foobar=(int, 1),
         )
         model = pydantic.create_model(
             "Model",
-            __base__=config.ConfigBaseModel,
+            __base__=config_schema.ConfigBaseModel,
             model_config={"title": "TITLE 2"},
             nested=(sub_model, sub_model()),
         )

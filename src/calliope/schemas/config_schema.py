@@ -2,38 +2,51 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Implements the Calliope configuration class."""
 
-from datetime import datetime
+import logging
+from collections.abc import Hashable
 from pathlib import Path
-from typing import Literal, Self
+from typing import Annotated, Literal, TypeVar
 
 import jsonref
-from pydantic import BaseModel, Field, model_validator
+from pydantic import AfterValidator, BaseModel, Field, model_validator
+from pydantic_core import PydanticCustomError
+from typing_extensions import Self
 
 from calliope.attrdict import AttrDict
-from calliope.util import tools
-from calliope.util.schema import UniqueList
 
 MODES_T = Literal["plan", "operate", "spores"]
 CONFIG_T = Literal["init", "build", "solve"]
 
+LOGGER = logging.getLogger(__name__)
 
-def hide_from_schema(to_hide: list[str]):
-    """Hide fields from the generated schema.
+# ==
+# Taken from https://github.com/pydantic/pydantic-core/pull/820#issuecomment-1670475909
+T = TypeVar("T", bound=Hashable)
 
-    Args:
-        to_hide (list[str]): List of fields to hide.
-    """
 
-    def _hide_from_schema(schema: dict):
-        for hide in to_hide:
-            schema.get("properties", {}).pop(hide, None)
-        return schema
+def _validate_unique_list(v: list[T]) -> list[T]:
+    if len(v) != len(set(v)):
+        raise PydanticCustomError("unique_list", "List must be unique")
+    return v
 
-    return _hide_from_schema
+
+UniqueList = Annotated[
+    list[T],
+    AfterValidator(_validate_unique_list),
+    Field(json_schema_extra={"uniqueItems": True}),
+]
+# ==
 
 
 class ConfigBaseModel(BaseModel):
     """A base class for creating pydantic models for Calliope configuration options."""
+
+    model_config = {
+        "extra": "forbid",
+        "frozen": True,
+        "revalidate_instances": "always",
+        "use_attribute_docstrings": True,
+    }
 
     def update(self, update_dict: dict, deep: bool = False) -> Self:
         """Return a new iteration of the model with updated fields.
@@ -46,12 +59,16 @@ class ConfigBaseModel(BaseModel):
             BaseModel: New model instance.
         """
         new_dict: dict = {}
-        # Iterate through dict to be updated and convert any sub-dicts into their respective pydantic model objects
-        for key, val in update_dict.items():
+        # Iterate through dict to be updated and convert any sub-dicts into their respective pydantic model objects.
+        # Wrapped in `AttrDict` to allow users to define dot notation nested configuration.
+        for key, val in AttrDict(update_dict).items():
             key_class = getattr(self, key)
             if isinstance(key_class, ConfigBaseModel):
                 new_dict[key] = key_class.update(val)
             else:
+                LOGGER.info(
+                    f"Updating {self.model_config['title']} `{key}`: {key_class} -> {val}"
+                )
                 new_dict[key] = val
         updated = super().model_copy(update=new_dict, deep=deep)
         updated.model_validate(updated)
@@ -72,25 +89,21 @@ class ConfigBaseModel(BaseModel):
 class Init(ConfigBaseModel):
     """All configuration options used when initialising a Calliope model."""
 
-    model_config = {
-        "title": "init",
-        "extra": "forbid",
-        "frozen": True,
-        "json_schema_extra": hide_from_schema(["def_path"]),
-        "revalidate_instances": "always",
-        "use_attribute_docstrings": True,
-    }
-
-    def_path: Path = Field(default=".", repr=False, exclude=True)
-    """The path to the main model definition YAML file, if one has been used to instantiate the Calliope Model class."""
-
+    model_config = {"title": "Model initialisation configuration"}
     name: str | None = Field(default=None)
     """Model name"""
 
     calliope_version: str | None = Field(default=None)
     """Calliope framework version this model is intended for"""
 
-    time_subset: tuple[datetime, datetime] | None = Field(default=None)
+    broadcast_param_data: bool = Field(default=False)
+    """
+    If True, single data entries in YAML indexed parameters will be broadcast across all index items.
+    Otherwise, the number of data entries needs to match the number of index items.
+    Defaults to False to mitigate unexpected broadcasting when applying overrides.
+    """
+
+    time_subset: tuple[str, str] | None = Field(default=None)
     """
     Subset of timesteps as an two-element list giving the **inclusive** range.
     For example, ["2005-01", "2005-04"] will create a time subset from "2005-01-01 00:00:00" to "2005-04-31 23:59:59".
@@ -101,7 +114,7 @@ class Init(ConfigBaseModel):
     time_resample: str | None = Field(default=None, pattern="^[0-9]+[a-zA-Z]")
     """Setting to adjust time resolution, e.g. '2h' for 2-hourly"""
 
-    time_cluster: Path | None = Field(default=None)
+    time_cluster: str | None = Field(default=None)
     """
     Setting to cluster the timeseries.
     Must be a path to a file where each date is linked to a representative date that also exists in the timeseries.
@@ -119,28 +132,11 @@ class Init(ConfigBaseModel):
     Automatically derived distances from lat/lon coordinates will be given in this unit.
     """
 
-    @model_validator(mode="before")
-    @classmethod
-    def abs_path(cls, data):
-        """Add model definition path."""
-        if data.get("time_cluster", None) is not None:
-            data["time_cluster"] = tools.relative_path(
-                data["def_path"], data["time_cluster"]
-            )
-        return data
-
 
 class BuildOperate(ConfigBaseModel):
     """Operate mode configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
-    model_config = {
-        "title": "operate",
-        "extra": "forbid",
-        "json_schema_extra": hide_from_schema(["start_window_idx"]),
-        "revalidate_instances": "always",
-        "use_attribute_docstrings": True,
-    }
-
+    model_config = {"title": "Model build operate mode configuration"}
     window: str = Field(default="24h")
     """
     Operate mode rolling `window`, given as a pandas frequency string.
@@ -157,19 +153,11 @@ class BuildOperate(ConfigBaseModel):
     use_cap_results: bool = Field(default=False)
     """If the model already contains `plan` mode results, use those optimal capacities as input parameters to the `operate` mode run."""
 
-    start_window_idx: int = Field(default=0, repr=False, exclude=True)
-    """Which time window to build. This is used to track the window when re-building the model part way through solving in `operate` mode."""
-
 
 class Build(ConfigBaseModel):
     """Base configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
-    model_config = {
-        "title": "build",
-        "extra": "allow",
-        "revalidate_instances": "always",
-    }
-
+    model_config = {"title": "Model build configuration"}
     mode: MODES_T = Field(default="plan")
     """Mode in which to run the optimisation."""
 
@@ -211,13 +199,14 @@ class Build(ConfigBaseModel):
 class SolveSpores(ConfigBaseModel):
     """SPORES configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
+    model_config = {"title": "Model solve SPORES mode configuration"}
     number: int = Field(default=3)
     """SPORES mode number of iterations after the initial base run."""
 
     score_cost_class: str = Field(default="score")
     """SPORES mode cost class to vary between iterations after the initial base run."""
 
-    slack_cost_group: str = Field(default=None)
+    slack_cost_group: str = Field(default="monetary")
     """SPORES mode cost class to keep below the given `slack` (usually "monetary")."""
 
     save_per_spore: bool = Field(default=False)
@@ -226,7 +215,7 @@ class SolveSpores(ConfigBaseModel):
     If False, will consolidate all iterations into one dataset after completion of N iterations (defined by `number`) and save that one dataset.
     """
 
-    save_per_spore_path: Path | None = Field(default=None)
+    save_per_spore_path: str | None = Field(default=None)
     """If saving per spore, the path to save to."""
 
     skip_cost_op: bool = Field(default=False)
@@ -240,7 +229,7 @@ class SolveSpores(ConfigBaseModel):
                 raise ValueError(
                     "Must define `save_per_spore_path` if you want to save each SPORES result separately."
                 )
-            elif not self.save_per_spore_path.is_dir():
+            elif not Path(self.save_per_spore_path).is_dir():
                 raise ValueError("`save_per_spore_path` must be a directory.")
         return self
 
@@ -248,13 +237,8 @@ class SolveSpores(ConfigBaseModel):
 class Solve(ConfigBaseModel):
     """Base configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
-    model_config = {
-        "title": "solve",
-        "extra": "forbid",
-        "revalidate_instances": "always",
-    }
-
-    save_logs: Path | None = Field(default=None)
+    model_config = {"title": "Model Solve Configuration"}
+    save_logs: str | None = Field(default=None)
     """If given, should be a path to a directory in which to save optimisation logs."""
 
     solver_io: str | None = Field(default=None)
@@ -281,7 +265,14 @@ class Solve(ConfigBaseModel):
 class CalliopeConfig(ConfigBaseModel):
     """Calliope configuration class."""
 
-    model_config = {"title": "config"}
+    model_config = {
+        "title": "Model configuration schema",
+        "extra": "forbid",
+        "frozen": True,
+        "revalidate_instances": "always",
+        "use_attribute_docstrings": True,
+    }
+
     init: Init = Init()
     build: Build = Build()
     solve: Solve = Solve()

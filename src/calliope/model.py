@@ -12,10 +12,11 @@ import pandas as pd
 import xarray as xr
 
 import calliope
-from calliope import backend, config, exceptions, io, preprocess
+from calliope import backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess.model_data import ModelDataFactory
+from calliope.schemas import config_schema
 from calliope.util.logging import log_time
 from calliope.util.schema import (
     CONFIG_SCHEMA,
@@ -71,7 +72,7 @@ class Model:
             **kwargs: initialisation overrides.
         """
         self._timings: dict = {}
-        self.config: config.CalliopeConfig
+        self.config: config_schema.CalliopeConfig
         self.defaults: AttrDict
         self.applied_math: preprocess.CalliopeMath
         self.backend: BackendModel
@@ -163,7 +164,7 @@ class Model:
             "model_run_creation",
             comment="Model: preprocessing stage 1 (model_run)",
         )
-        model_config = config.CalliopeConfig(**model_def_full.pop("config"))
+        model_config = config_schema.CalliopeConfig(**model_def_full.pop("config"))
 
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
         attributes = {
@@ -217,7 +218,7 @@ class Model:
                 model_data.attrs.pop("applied_math")
             )
         if "config" in model_data.attrs:
-            self.config = config.CalliopeConfig(**model_data.attrs.pop("config"))
+            self.config = config_schema.CalliopeConfig(**model_data.attrs.pop("config"))
 
         self._model_data = model_data
 
@@ -448,7 +449,7 @@ class Model:
         return "\n".join(info_strings)
 
     def _prepare_operate_mode_inputs(
-        self, operate_config: config.BuildOperate
+        self, operate_config: config_schema.BuildOperate
     ) -> xr.Dataset:
         """Slice the input data to just the length of operate mode time horizon.
 

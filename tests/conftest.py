@@ -5,10 +5,10 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from calliope import config
 from calliope.attrdict import AttrDict
 from calliope.backend import latex_backend_model, pyomo_backend_model
 from calliope.preprocess import CalliopeMath
+from calliope.schemas import config_schema
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 from .common.util import build_test_model as build_model
@@ -34,7 +34,7 @@ def foreach(request):
 
 @pytest.fixture(scope="session")
 def default_config():
-    return config.CalliopeConfig()
+    return config_schema.CalliopeConfig()
 
 
 @pytest.fixture(scope="session")
