@@ -6,12 +6,10 @@ import logging
 from pathlib import Path
 from typing import Literal
 
-import jsonref
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
 from typing_extensions import Self
 
-from calliope.attrdict import AttrDict
-from calliope.schemas.attributes import UniqueList
+from calliope.schemas.attributes import CalliopeBaseModel, UniqueList
 
 MODES_T = Literal["plan", "operate", "spores"]
 CONFIG_T = Literal["init", "build", "solve"]
@@ -19,55 +17,7 @@ CONFIG_T = Literal["init", "build", "solve"]
 LOGGER = logging.getLogger(__name__)
 
 
-class ConfigBaseModel(BaseModel):
-    """A base class for creating pydantic models for Calliope configuration options."""
-
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-        "revalidate_instances": "always",
-        "use_attribute_docstrings": True,
-    }
-
-    def update(self, update_dict: dict, deep: bool = False) -> Self:
-        """Return a new iteration of the model with updated fields.
-
-        Args:
-            update_dict (dict): Dictionary with which to update the base model.
-            deep (bool, optional): Set to True to make a deep copy of the model. Defaults to False.
-
-        Returns:
-            BaseModel: New model instance.
-        """
-        new_dict: dict = {}
-        # Iterate through dict to be updated and convert any sub-dicts into their respective pydantic model objects.
-        # Wrapped in `AttrDict` to allow users to define dot notation nested configuration.
-        for key, val in AttrDict(update_dict).items():
-            key_class = getattr(self, key)
-            if isinstance(key_class, ConfigBaseModel):
-                new_dict[key] = key_class.update(val)
-            else:
-                LOGGER.info(
-                    f"Updating {self.model_config['title']} `{key}`: {key_class} -> {val}"
-                )
-                new_dict[key] = val
-        updated = super().model_copy(update=new_dict, deep=deep)
-        updated.model_validate(updated)
-        return updated
-
-    def model_no_ref_schema(self) -> AttrDict:
-        """Generate an AttrDict with the schema replacing $ref/$def for better readability.
-
-        Returns:
-            AttrDict: class schema.
-        """
-        schema_dict = AttrDict(super().model_json_schema())
-        schema_dict = AttrDict(jsonref.replace_refs(schema_dict))
-        schema_dict.del_key("$defs")
-        return schema_dict
-
-
-class Init(ConfigBaseModel):
+class Init(CalliopeBaseModel):
     """All configuration options used when initialising a Calliope model."""
 
     model_config = {"title": "Model initialisation configuration"}
@@ -114,7 +64,7 @@ class Init(ConfigBaseModel):
     """
 
 
-class BuildOperate(ConfigBaseModel):
+class BuildOperate(CalliopeBaseModel):
     """Operate mode configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
     model_config = {"title": "Model build operate mode configuration"}
@@ -135,7 +85,7 @@ class BuildOperate(ConfigBaseModel):
     """If the model already contains `plan` mode results, use those optimal capacities as input parameters to the `operate` mode run."""
 
 
-class Build(ConfigBaseModel):
+class Build(CalliopeBaseModel):
     """Base configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
     model_config = {"title": "Model build configuration"}
@@ -177,7 +127,7 @@ class Build(ConfigBaseModel):
     operate: BuildOperate = BuildOperate()
 
 
-class SolveSpores(ConfigBaseModel):
+class SolveSpores(CalliopeBaseModel):
     """SPORES configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
     model_config = {"title": "Model solve SPORES mode configuration"}
@@ -215,7 +165,7 @@ class SolveSpores(ConfigBaseModel):
         return self
 
 
-class Solve(ConfigBaseModel):
+class Solve(CalliopeBaseModel):
     """Base configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
     model_config = {"title": "Model Solve Configuration"}
@@ -243,16 +193,10 @@ class Solve(ConfigBaseModel):
     spores: SolveSpores = SolveSpores()
 
 
-class CalliopeConfig(ConfigBaseModel):
+class CalliopeConfig(CalliopeBaseModel):
     """Calliope configuration class."""
 
-    model_config = {
-        "title": "Model configuration schema",
-        "extra": "forbid",
-        "frozen": True,
-        "revalidate_instances": "always",
-        "use_attribute_docstrings": True,
-    }
+    model_config = {"title": "Model configuration schema"}
 
     init: Init = Init()
     build: Build = Build()

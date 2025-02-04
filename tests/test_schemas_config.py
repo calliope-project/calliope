@@ -46,7 +46,14 @@ class TestUniqueList:
             unique_list_model(unique_list=invalid_list)
 
     @pytest.mark.parametrize(
-        "invalid_list", [[1, 1, 2], ["foo", 1, "foo"], ["1", "foo", "foo"]]
+        "invalid_list",
+        [
+            [1, 1, 2],
+            [1, 1.0, 2, "2"],
+            ["foo", 1, "foo"],
+            ["1", "foo", "foo"],
+            [[1, 1, 2], [1, 1, 2], ["1", "foo", 3]],
+        ],
     )
     def test_not_unique_str_list(self, unique_list_model, invalid_list):
         "When there's a fixed type for list entries, they have to be unique when coerced to that type"
@@ -59,7 +66,7 @@ class TestUpdate:
     def config_model_flat(self):
         return pydantic.create_model(
             "Model",
-            __base__=config_schema.ConfigBaseModel,
+            __base__=config_schema.CalliopeBaseModel,
             model_config={"title": "TITLE"},
             foo=(str, "bar"),
             foobar=(int, 1),
@@ -69,7 +76,7 @@ class TestUpdate:
     def config_model_nested(self, config_model_flat):
         return pydantic.create_model(
             "Model",
-            __base__=config_schema.ConfigBaseModel,
+            __base__=config_schema.CalliopeBaseModel,
             model_config={"title": "TITLE 2"},
             nested=(config_model_flat, config_model_flat()),
             top_level_foobar=(int, 10),
@@ -79,7 +86,7 @@ class TestUpdate:
     def config_model_double_nested(self, config_model_nested):
         return pydantic.create_model(
             "Model",
-            __base__=config_schema.ConfigBaseModel,
+            __base__=config_schema.CalliopeBaseModel,
             model_config={"title": "TITLE 3"},
             extra_nested=(config_model_nested, config_model_nested()),
         )
@@ -193,14 +200,14 @@ class TestNoRefSchema:
     def config_model(self):
         sub_model = pydantic.create_model(
             "SubModel",
-            __base__=config_schema.ConfigBaseModel,
+            __base__=config_schema.CalliopeBaseModel,
             model_config={"title": "TITLE"},
             foo=(str, "bar"),
             foobar=(int, 1),
         )
         model = pydantic.create_model(
             "Model",
-            __base__=config_schema.ConfigBaseModel,
+            __base__=config_schema.CalliopeBaseModel,
             model_config={"title": "TITLE 2"},
             nested=(sub_model, sub_model()),
         )
