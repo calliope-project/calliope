@@ -33,7 +33,7 @@ _quiet = click.option(
     "--quiet",
     is_flag=True,
     default=False,
-    help="Be less verbose about what is happening, including hiding " "solver output.",
+    help="Be less verbose about what is happening, including hiding solver output.",
 )
 
 _pdb = click.option(
@@ -110,9 +110,7 @@ def print_end_time(start_time, msg="complete"):
     end_time = datetime.datetime.now()
     secs = round((end_time - start_time).total_seconds(), 1)
     tend = end_time.strftime(_time_format)
-    click.secho(
-        f"\nCalliope run {msg}. " f"Elapsed: {secs} seconds (time at exit: {tend})"
-    )
+    click.secho(f"\nCalliope run {msg}. Elapsed: {secs} seconds (time at exit: {tend})")
 
 
 def _get_version():

@@ -378,8 +378,8 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             )
 
         equation = {
-            "expression": rf"{ math_parts['y_expression']}\mathord{{=}}{ math_parts['y_values'] }",
-            "where": rf"{ math_parts['x_expression'] }\mathord{{=}}{math_parts['x_values']}",
+            "expression": rf"{math_parts['y_expression']}\mathord{{=}}{math_parts['y_values']}",
+            "where": rf"{math_parts['x_expression']}\mathord{{=}}{math_parts['x_values']}",
         }
         if "foreach" in constraint_dict:
             constraint_dict["foreach"].append("breakpoints")
