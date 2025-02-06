@@ -1,13 +1,13 @@
-"""Implements the data table configuration class."""
+"""Schema for data table definition."""
 
 from pydantic import BaseModel, model_validator
 from typing_extensions import Self
 
-from calliope.schemas.attributes import CnfStr, UniqueList
+from calliope.schemas.general import AttrStr, UniqueList
 from calliope.util.tools import listify
 
 
-class DataTable(BaseModel):
+class CalliopeDataTable(BaseModel):
     """Data table validation model."""
 
     data: str
@@ -15,32 +15,32 @@ class DataTable(BaseModel):
     Absolute or relative filepath.
     Relative paths are based on the model config file used to initialise the model.
     """
-    rows: None | CnfStr | UniqueList[CnfStr] = None
+    rows: None | AttrStr | UniqueList[AttrStr] = None
     """
     Names of dimensions defined row-wise.
     Each name should correspond to a column in your data that contains index items.
     These columns must be to the left of the columns containing your data.
     """
-    columns: None | CnfStr | UniqueList[CnfStr] = None
+    columns: None | AttrStr | UniqueList[AttrStr] = None
     """
     Names of dimensions defined column-wise.
     Each name should correspond to a row in your data that contains index items.
     These rows must be above the rows containing your data.
     """
-    select: None | dict[CnfStr, CnfStr | UniqueList[CnfStr]] = None
+    select: None | dict[AttrStr, AttrStr | UniqueList[AttrStr]] = None
     """
     Select one or more index item from a dimension.
     Selection takes place before `drop` and `add_dims`, so you can select a single
     value from a data dimension and then drop the dimension so it doesn't find its way
     through to the final dataset.
     """
-    drop: None | CnfStr | UniqueList[CnfStr] = None
+    drop: None | AttrStr | UniqueList[AttrStr] = None
     """
     Enables removing rows and/or columns that contain irrelevant data/metadata.
     These could include comments on the source of the data, the data license, or the parameter units.
     You can also drop a dimension and then reintroduce it in `add_dims`, but with different index items.
     """
-    add_dims: None | dict[CnfStr, CnfStr] = None
+    add_dims: None | dict[AttrStr, AttrStr] = None
     """
     Data dimensions to add after loading in the array.
     These allow you to use the same file to assign values to different parameters/dimension index items
@@ -48,14 +48,10 @@ class DataTable(BaseModel):
     or to add a dimension which would otherwise be a column containing the same information in each row
     (e.g., assigning the cost class to monetary for a file containing cost data).
     """
-    rename_dims: None | dict[CnfStr, CnfStr] = None
+    rename_dims: None | dict[AttrStr, AttrStr] = None
     """
     Mapping between dimension names in the data table being loaded to equivalent Calliope dimension names.
     For instance, the "time" column in the data table would need to be mapped to "timesteps": `{"time": "timesteps"}`.
-    """
-    template: None | CnfStr = None
-    """
-    Reference to a template from which to inherit common configuration options.
     """
 
     @model_validator(mode="after")

@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 from calliope import io
 from calliope.attrdict import AttrDict
-from calliope.schemas.data_table_schema import DataTable
+from calliope.schemas.data_table_schema import CalliopeDataTable
 
 from .common.util import check_error_or_warning
 
@@ -47,14 +47,14 @@ def model_yaml_data_tables() -> AttrDict:
 def test_path_not_provided(data_table):
     """Not providing the path should result in a failure."""
     with pytest.raises(ValidationError):
-        DataTable(**data_table)
+        CalliopeDataTable(**data_table)
 
 
 @pytest.mark.parametrize("data_table", [{"data": "foo"}])
 def test_incomplete_column_or_row(data_table):
     """Not providing either rows or columns is invalid."""
     with pytest.raises(ValidationError) as excinfo:
-        DataTable(**data_table)
+        CalliopeDataTable(**data_table)
     assert check_error_or_warning(
         excinfo, "Either row or columns must be defined for data_table."
     )
@@ -71,7 +71,7 @@ def test_incomplete_column_or_row(data_table):
 def test_row_column_overlap(rows, columns):
     """Rows and columns must not share any similar values."""
     with pytest.raises(ValidationError) as excinfo:
-        DataTable(data="foobar", rows=rows, columns=columns)
+        CalliopeDataTable(data="foobar", rows=rows, columns=columns)
     assert check_error_or_warning(excinfo, "Rows and columns must not overlap.")
 
 
@@ -80,7 +80,7 @@ def test_row_column_overlap(rows, columns):
 )
 def test_add_dims_overlap(rows, columns, add_dims):
     with pytest.raises(ValidationError) as excinfo:
-        DataTable(data="foo", rows=rows, columns=columns, add_dims=add_dims)
+        CalliopeDataTable(data="foo", rows=rows, columns=columns, add_dims=add_dims)
     assert check_error_or_warning(
         excinfo, "Added dimensions must not be in columns or rows."
     )
@@ -88,10 +88,10 @@ def test_add_dims_overlap(rows, columns, add_dims):
 
 def test_full_table_config(full_data_table_config):
     """Test a fully fledged data table configuration."""
-    DataTable(**io.read_rich_yaml(full_data_table_config))
+    CalliopeDataTable(**io.read_rich_yaml(full_data_table_config))
 
 
 def test_data_table_model(model_yaml_data_tables):
     """Data table validation must conform to expected usage."""
     for data_table in model_yaml_data_tables["data_tables"].values():
-        DataTable(**data_table)
+        CalliopeDataTable(**data_table)

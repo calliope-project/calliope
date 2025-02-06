@@ -1,6 +1,6 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-"""Implements the Calliope configuration class."""
+"""Schema for Calliope configuration definition."""
 
 import logging
 from pathlib import Path
@@ -9,10 +9,9 @@ from typing import Literal
 from pydantic import Field, model_validator
 from typing_extensions import Self
 
-from calliope.schemas.attributes import CalliopeBaseModel, UniqueList
+from calliope.schemas.general import CalliopeBaseModel, UniqueList
 
-MODES_T = Literal["plan", "operate", "spores"]
-CONFIG_T = Literal["init", "build", "solve"]
+Mode = Literal["plan", "operate", "spores"]
 
 LOGGER = logging.getLogger(__name__)
 
@@ -89,7 +88,7 @@ class Build(CalliopeBaseModel):
     """Base configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
     model_config = {"title": "Model build configuration"}
-    mode: MODES_T = Field(default="plan")
+    mode: Mode = Field(default="plan")
     """Mode in which to run the optimisation."""
 
     add_math: UniqueList[str] = Field(default=[])

@@ -36,7 +36,8 @@ UniqueList = Annotated[
 # ==
 NonEmptyList = Annotated[list[T], Len(min_length=1)]
 NonEmptyUniqueList = Annotated[UniqueList[T], Len(min_length=1)]
-CnfStr = Annotated[str, Field(pattern=r"^[^_^\d][\w]*$")]
+AttrStr = Annotated[str, Field(pattern=r"^[^_^\d][\w]*$")]
+NumericVal = Annotated[float, int, Field(allow_inf_nan=True)]
 
 
 class CalliopeBaseModel(BaseModel):
