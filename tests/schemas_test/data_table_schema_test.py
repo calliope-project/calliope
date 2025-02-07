@@ -9,7 +9,7 @@ from calliope import io
 from calliope.attrdict import AttrDict
 from calliope.schemas.data_table_schema import CalliopeDataTable
 
-from .common.util import check_error_or_warning
+from ..common.util import check_error_or_warning
 
 
 @pytest.fixture
@@ -33,7 +33,7 @@ template: some_template
 @pytest.fixture
 def model_yaml_data_tables() -> AttrDict:
     return io.read_rich_yaml(
-        Path(__file__).parent
+        Path(__file__).parent.parent
         / "common"
         / "national_scale_from_data_tables"
         / "model.yaml"

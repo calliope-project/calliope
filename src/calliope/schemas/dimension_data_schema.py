@@ -94,15 +94,12 @@ class CalliopeTech(CalliopeDimensionData):
     def check_base_tech_dependencies(self) -> Self:
         """Ensure technologies are defined correctly."""
         match self.base_tech:
-            case "conversion":
+            case "conversion" | "storage":
                 require = ["carrier_in", "carrier_out"]
                 exclude = ["link_from", "link_to"]
             case "demand":
                 require = ["carrier_in"]
                 exclude = ["carrier_out", "link_from", "link_to"]
-            case "storage":
-                require = ["carrier_in", "carrier_out"]
-                exclude = ["link_from", "link_to"]
             case "supply":
                 require = ["carrier_out"]
                 exclude = ["carrier_in", "link_from", "link_to"]
@@ -112,7 +109,7 @@ class CalliopeTech(CalliopeDimensionData):
             case _:
                 raise ValueError(f"Invalid 'base_tech'. Must be one of {BaseTech}.")
 
-        if not all([getattr(self, i) for i in require]) and any(
+        if not all([getattr(self, i) for i in require]) or any(
             [getattr(self, i) for i in exclude]
         ):
             raise ValueError(
