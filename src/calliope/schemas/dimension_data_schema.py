@@ -20,9 +20,9 @@ BaseTech = Literal["conversion", "demand", "storage", "supply", "transmission"]
 
 
 class EmptyDict(CalliopeBaseModel):
-    """Represents an empty dictionary.
+    """Empty dictionary schema.
 
-    For validating cases where only empty dicts OR fully defined data is allowed.
+    Allows validating cases where only empty dicts OR fully defined data is allowed.
     """
 
     model_config = {"title": "Empty dictionary"}
@@ -31,7 +31,7 @@ class EmptyDict(CalliopeBaseModel):
 class IndexedParam(CalliopeBaseModel):
     """Indexed parameter schema."""
 
-    model_config = {"title": "Indexed parameter"}
+    model_config = {"title": "Indexed parameter definition"}
 
     data: DataValue | NonEmptyList[DataValue]
     """
@@ -52,10 +52,19 @@ class IndexedParam(CalliopeBaseModel):
     """
 
 
+class CalliopeDimensionData(CalliopeBaseModel):
+    """Calliope's generic dimension data schema."""
+
+    model_config = {"title": "Generic dimension data", "extra": "allow"}
+
+    name: str | None = None
+    __pydantic_extra__: dict[AttrStr, IndexedParam | DataValue]
+
+
 class IndexedTechParam(IndexedParam):
     """Tech-specific parameter schema."""
 
-    model_config = {"title": "Indexed `tech` parameter"}
+    model_config = {"title": "Indexed `techs` parameter definition"}
 
     @field_validator("dims", mode="before")
     @classmethod
@@ -68,40 +77,47 @@ class IndexedTechParam(IndexedParam):
         return value
 
 
-class CalliopeTech(CalliopeBaseModel):
+class CalliopeTech(CalliopeDimensionData):
     """Calliope's technology dimension schema."""
 
-    model_config = {"title": "Technology dimension", "extra": "allow"}
+    model_config = {"title": "Technology dimension data"}
+
     active: bool = True
     base_tech: BaseTech
-    __pydantic_extra__: dict[AttrStr, IndexedTechParam | DataValue]
+    carrier_in: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
+    carrier_out: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
+    carrier_export: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
+    link_from: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
+    link_to: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
 
     @model_validator(mode="after")
     def check_base_tech_dependencies(self) -> Self:
         """Ensure technologies are defined correctly."""
         match self.base_tech:
             case "conversion":
-                required = ["carrier_in", "carrier_out"]
-                invalid = ["from", "to"]
+                require = ["carrier_in", "carrier_out"]
+                exclude = ["link_from", "link_to"]
             case "demand":
-                required = ["carrier_in"]
-                invalid = ["carrier_out", "from", "to"]
+                require = ["carrier_in"]
+                exclude = ["carrier_out", "link_from", "link_to"]
             case "storage":
-                required = ["carrier_in", "carrier_out"]
-                invalid = ["from", "to"]
+                require = ["carrier_in", "carrier_out"]
+                exclude = ["link_from", "link_to"]
             case "supply":
-                required = ["carrier_out"]
-                invalid = ["carrier_in", "from", "to"]
+                require = ["carrier_out"]
+                exclude = ["carrier_in", "link_from", "link_to"]
             case "transmission":
-                required = ["carrier_in", "carrier_out", "from", "to"]
-                invalid = []
+                require = ["carrier_in", "carrier_out", "link_from", "link_to"]
+                exclude = []
             case _:
-                raise ValueError(f"Invalid 'base_tech', must be one of {BaseTech}")
+                raise ValueError(f"Invalid 'base_tech'. Must be one of {BaseTech}.")
 
-        if not all([hasattr(self, i) for i in required]) or any(
-            [hasattr(self, i) for i in invalid]
+        if not all([getattr(self, i) for i in require]) and any(
+            [getattr(self, i) for i in exclude]
         ):
-            raise ValueError("Invalid 'base_tech' configuration.")
+            raise ValueError(
+                f"""Incorrect {self.base_tech} setup. Required: {require}. Invalid: {exclude}."""
+            )
 
         return self
 

@@ -2,7 +2,7 @@
 
 from calliope.schemas.config_schema import CalliopeConfig
 from calliope.schemas.data_table_schema import CalliopeDataTable
-from calliope.schemas.dimension_schema import (
+from calliope.schemas.dimension_data_schema import (
     CalliopeNode,
     CalliopeTech,
     DataValue,

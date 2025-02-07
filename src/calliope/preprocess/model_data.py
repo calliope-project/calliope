@@ -608,7 +608,7 @@ class ModelDataFactory:
                 self.dataset["carrier_out"].loc[item_ref] = np.nan
 
     def _links_to_node_format(self, active_node_dict: AttrDict) -> AttrDict:
-        """Process `transmission` techs into links by assigned them to the nodes defined by their `from` and `to` keys.
+        """Process `transmission` techs into links by assigned them to the nodes defined by their `link_from` and `link_to` keys.
 
         Args:
             active_node_dict (AttrDict):
@@ -633,7 +633,7 @@ class ModelDataFactory:
             LOGGER.debug("links | No links between nodes defined.")
 
         for link_name, link_data in active_link_techs.items():
-            node_from, node_to = link_data.pop("from"), link_data.pop("to")
+            node_from, node_to = link_data.pop("link_from"), link_data.pop("link_to")
             nodes_exists = all(
                 node in active_node_dict
                 or node in self.dataset.coords.get("nodes", xr.DataArray())
@@ -642,7 +642,7 @@ class ModelDataFactory:
 
             if not nodes_exists:
                 LOGGER.debug(
-                    f"(links, {link_name}) | Deactivated due to missing/deactivated `from` or `to` node."
+                    f"(links, {link_name}) | Deactivated due to missing/deactivated `link_from` or `link_to` node."
                 )
                 self._deactivate_item(techs=link_name)
                 continue
@@ -711,16 +711,18 @@ class ModelDataFactory:
         """Update functionality for one-way links.
 
         For one-way transmission links, delete option to have carrier outflow (imports)
-        at the `from` node and carrier inflow (exports) at the `to` node.
+        at the `link_from` node and carrier inflow (exports) at the `link_to` node.
 
         Deletions happen on the tech definition dictionaries in-place.
 
         Args:
-            node_from_data (dict): Link technology data dictionary at the `from` node.
-            node_to_data (dict): Link technology data dictionary at the `to` node.
+            node_from_data (dict): Link technology data dictionary at the `link_from` node.
+            node_to_data (dict): Link technology data dictionary at the `link_to` node.
         """
-        node_from_data.pop("carrier_out")  # cannot import carriers at the `from` node
-        node_to_data.pop("carrier_in")  # cannot export carrier at the `to` node
+        node_from_data.pop(
+            "carrier_out"
+        )  # cannot import carriers at the `link_from` node
+        node_to_data.pop("carrier_in")  # cannot export carrier at the `link_to` node
 
     @staticmethod
     def _update_numeric_dims(ds: xr.Dataset, id_: str) -> xr.Dataset:
@@ -769,5 +771,5 @@ class ModelDataFactory:
         if transmission_techs:
             raise exceptions.ModelError(
                 f"(nodes, {node_name}) | Transmission techs cannot be directly defined at nodes; "
-                f"they will be automatically assigned to nodes based on `to` and `from` parameters: {transmission_techs}"
+                f"they will be automatically assigned to nodes based on `link_to` and `link_from` parameters: {transmission_techs}"
             )

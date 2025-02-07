@@ -46,7 +46,7 @@ class DataTable:
     """Class for in memory data handling."""
 
     MESSAGE_TEMPLATE = "(data_tables, {name}) | {message}."
-    PARAMS_TO_INITIALISE_YAML = ["base_tech", "to", "from"]
+    PARAMS_TO_INITIALISE_YAML = ["base_tech", "link_to", "link_from"]
 
     def __init__(
         self,

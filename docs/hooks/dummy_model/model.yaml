@@ -14,8 +14,8 @@ nodes:
 
 techs:
   tech_transmission:
-    from: A
-    to: B
+    link_from: A
+    link_to: B
 
 data_tables:
   techs:

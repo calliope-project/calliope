@@ -85,14 +85,14 @@ Instead, you associate transmission technologies with nodes in `techs`:
 ```yaml
 techs:
   ac_transmission:
-    from: region1  # (1)!
-    to: region2
+    link_from: region1  # (1)!
+    link_to: region2
     flow_cap_max: 100
     ...
 ```
 
-1. The region you specify in `from` or `to` is interchangeable unless you set the parameter `one_way: true`.
-In that case, flow along the transmission line is only allowed from the `from` region to the `to` region.
+1. The region you specify in `link_from` or `link_to` is interchangeable unless you set the parameter `one_way: true`.
+In that case, flow along the transmission line is only allowed from the `link_from` region to the `link_to` region.
 
 ## Understanding tech-level parameters
 
@@ -103,7 +103,7 @@ There are _required_ parameters according to the technology `base_tech`:
 * `supply`: `base_tech` and `carrier_out`.
 * `demand`: `base_tech` and `carrier_in`.
 * `storage`: `base_tech` and `carrier_out` and `carrier_in`.
-* `transmission`: `base_tech` and `carrier_out`, `carrier_in`, `to`, and `from`.
+* `transmission`: `base_tech` and `carrier_out`, `carrier_in`, `link_to`, and `link_from`.
 * `conversion`: `base_tech` and `carrier_out` and `carrier_in`.
 
 For `storage` and `transmission`, it may seem like unnecessary repetition to define both `carrier_out` and `carrier_in` as they are likely the same value.
