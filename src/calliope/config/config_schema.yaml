@@ -1,4 +1,3 @@
-
 # yaml-language-server: $schema=https://json-schema.org/draft/2020-12/schema#
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
@@ -150,7 +149,7 @@ properties:
           spores_save_per_spore_path:
             type: string
             description: If saving per spore, the path to save to.
-          spores_skip_cost_op:
+          spores_skip_baseline_run:
             type: boolean
             default: false
             description: If the model already contains `plan` mode results, use those as the initial base run results and start with SPORES iterations immediately.

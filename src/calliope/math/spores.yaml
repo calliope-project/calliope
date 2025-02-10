@@ -8,7 +8,7 @@ constraints:
       relaxation to the system cost compared to the least-cost feasible option.
     foreach: [costs]
     equations:
-      - expression: sum(cost, over=[nodes, techs]) <= spores_cost_max * (1 + spores_slack)
+      - expression: sum(cost, over=[nodes, techs]) <= spores_baseline_cost * (1 + spores_slack)
 
 global_expressions:
   spores_score_cumulative:

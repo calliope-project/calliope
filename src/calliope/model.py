@@ -326,10 +326,10 @@ class Model:
                 backend_input["spores_score"] = xr.DataArray(0).assign_attrs(
                     is_result=0
                 )
-            if "spores_cost_max" not in backend_input:
-                backend_input["spores_cost_max"] = xr.DataArray(np.inf).assign_attrs(
-                    is_result=0
-                )
+            if "spores_baseline_cost" not in backend_input:
+                backend_input["spores_baseline_cost"] = xr.DataArray(
+                    np.inf
+                ).assign_attrs(is_result=0)
         else:
             backend_input = self._model_data
 
@@ -664,26 +664,34 @@ class Model:
             "spores_score", self.inputs.get("spores_score", xr.DataArray(0))
         )
         self.backend.update_parameter(
-            "spores_cost_max", self.inputs.get("spores_cost_max", xr.DataArray(np.inf))
+            "spores_baseline_cost",
+            self.inputs.get("spores_baseline_cost", xr.DataArray(np.inf)),
         )
         self.backend.set_objective(self.backend.inputs.attrs["config"].build.objective)
 
-        LOGGER.info("Optimisation model | Running baseline model.")
-
-        if not solver_config["spores_skip_cost_op"]:
+        if not solver_config["spores_skip_baseline_run"]:
+            LOGGER.info("Optimisation model | Running baseline model.")
             baseline_results = self.backend._solve(warmstart=False, **solver_config)
         else:
+            LOGGER.info("Optimisation model | Using existing baseline model results.")
             baseline_results = self.results.copy()
 
-        save_per_spore = (
-            Path(solver_config["spores_save_per_spore_path"])
-            if solver_config["spores_save_per_spore"]
-            else None
-        )
+        save_per_spore: Path | None = None
+        if solver_config["spores_save_per_spore"]:
+            if solver_config.get("spores_save_per_spore_path", None) is not None:
+                save_per_spore = Path(solver_config["spores_save_per_spore_path"])
+            else:
+                LOGGER.warning(
+                    "Optimisation model | Requested to save per SPORE but no path given, "
+                    "using `config.solve.spores_save_per_spore_path` so no result will be saved."
+                )
 
         if save_per_spore is not None:
             save_per_spore.mkdir(parents=True, exist_ok=True)
-            baseline_results.to_netcdf(save_per_spore / "baseline.nc")
+            LOGGER.info("Optimisation model | Saving SPORE baseline to file.")
+            baseline_results.assign_coords(spores="baseline").to_netcdf(
+                save_per_spore / "baseline.nc"
+            )
 
         results_list: list[xr.Dataset] = [baseline_results]
         spore_range = range(1, solver_config["spores_number"] + 1)
@@ -697,7 +705,10 @@ class Model:
             results_list.append(step_results)
 
             if save_per_spore is not None:
-                step_results.to_netcdf(save_per_spore / f"spore_{spore}.nc")
+                LOGGER.info(f"Optimisation model | Saving SPORE {spore} to file.")
+                step_results.assign_coords(spores=spore).to_netcdf(
+                    save_per_spore / f"spore_{spore}.nc"
+                )
 
         spores_dim = pd.Index(["baseline", *spore_range], name="spores")
         results = xr.concat(results_list, dim=spores_dim, combine_attrs="no_conflicts")
@@ -715,11 +726,13 @@ class Model:
     ):
         # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
         constraining_cost = baseline_results.cost.groupby("costs").sum(..., min_count=1)
-        self.backend.update_parameter("spores_cost_max", constraining_cost)
+        self.backend.update_parameter("spores_baseline_cost", constraining_cost)
 
         # Filter for technologies of interest
         spores_techs = (
-            self.inputs.get(solver_config["spores_tracking_parameter"], True).notnull()
+            self.inputs.get(
+                solver_config.get("spores_tracking_parameter", None), xr.DataArray(True)
+            ).notnull()
             & self.inputs.definition_matrix
         )
 

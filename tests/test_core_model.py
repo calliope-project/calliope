@@ -1,8 +1,11 @@
 import logging
 from contextlib import contextmanager
+from pathlib import Path
 
+import numpy.testing
 import pandas as pd
 import pytest
+import xarray as xr
 
 import calliope
 import calliope.backend
@@ -183,6 +186,205 @@ class TestOperateMode:
             calliope.exceptions.ModelError, match="Unable to run this model in op"
         ):
             m.build(mode="operate")
+
+
+class TestSporesMode:
+    @contextmanager
+    def caplog_session(self, request):
+        """caplog for class/session-scoped fixtures.
+
+        See https://github.com/pytest-dev/pytest/discussions/11177
+        """
+        request.node.add_report_section = lambda *args: None
+        logging_plugin = request.config.pluginmanager.getplugin("logging-plugin")
+        for _ in logging_plugin.pytest_runtest_setup(request.node):
+            yield pytest.LogCaptureFixture(request.node, _ispytest=True)
+
+    @pytest.fixture(scope="class")
+    def plan_model(self):
+        """Solve in plan mode for the same overrides, to check against operate mode model."""
+        model = build_model({}, "simple_supply,operate,var_costs,investment_costs")
+        model.build(mode="plan")
+        model.solve()
+        return model
+
+    @pytest.fixture(scope="class")
+    def spores_model_and_log(self, request):
+        """Iterate 2 times in SPORES mode."""
+        model = build_model(
+            # We include this config item as it should be ignored without a save path also added
+            {"config.solve.spores_save_per_spore": True},
+            "spores,investment_costs",
+        )
+        model.build(mode="spores")
+        with self.caplog_session(request) as caplog:
+            with caplog.at_level(logging.INFO):
+                model.solve()
+            log = caplog.text
+
+        return model, log
+
+    @pytest.fixture(scope="class")
+    def spores_model_skip_baseline_and_log(self, request):
+        """Iterate 2 times in SPORES mode having pre-computed the baseline results."""
+        model = build_model({}, "spores,investment_costs")
+        model.build(mode="plan")
+        model.solve()
+
+        model.build(mode="spores", force=True)
+        with self.caplog_session(request) as caplog:
+            with caplog.at_level(logging.INFO):
+                model.solve(spores_skip_baseline_run=True, force=True)
+            log = caplog.text
+
+        return model, log
+
+    @pytest.fixture(scope="class")
+    def spores_model_save_per_spore_and_log(self, tmp_path_factory, request):
+        """Iterate 2 times in SPORES mode and save to file each time."""
+        dir_path = tmp_path_factory.mktemp("outputs")
+        model = build_model(
+            {"config.solve.spores_save_per_spore_path": str(dir_path)},
+            "spores,investment_costs",
+        )
+        model.build(mode="spores")
+
+        with self.caplog_session(request) as caplog:
+            with caplog.at_level(logging.INFO):
+                model.solve(spores_save_per_spore=True)
+            log = caplog.text
+
+        return model, log
+
+    @pytest.fixture(scope="class")
+    def spores_model_with_tracker(self):
+        """Iterate 2 times in SPORES mode with a SPORES score tracking parameter."""
+        model = build_model({}, "spores,spores_tech_tracking,investment_costs")
+        model.build(mode="spores")
+        model.solve()
+
+        return model
+
+    @pytest.fixture(scope="class")
+    def rerun_spores_log(self, request, spores_model_and_log):
+        """Solve in spores mode a second time, to trigger new log messages."""
+        with self.caplog_session(request) as caplog:
+            with caplog.at_level(logging.INFO):
+                spores_model_and_log[0].solve(force=True)
+            return caplog.text
+
+    def test_backend_build_mode(self, spores_model_and_log):
+        """Verify that we have run in spores mode"""
+        spores_model, _ = spores_model_and_log
+        assert spores_model.backend.inputs.attrs["config"]["build"]["mode"] == "spores"
+
+    def test_spores_mode_success(self, spores_model_and_log):
+        """Solving in spores mode should lead to an optimal solution."""
+        spores_model, _ = spores_model_and_log
+        assert spores_model.results.attrs["termination_condition"] == "optimal"
+
+    def test_spores_mode_3_results(self, spores_model_and_log):
+        """Solving in spores mode should lead to 3 sets of results."""
+        spores_model, _ = spores_model_and_log
+        assert not set(spores_model.results.spores.values).symmetric_difference(
+            ["baseline", 1, 2]
+        )
+
+    def test_spores_scores(self, spores_model_and_log):
+        """All techs should have a spores score defined."""
+        spores_model, _ = spores_model_and_log
+        fill_gaps = ~spores_model._model_data.definition_matrix
+        assert (
+            spores_model._model_data.spores_score_cumulative.notnull() | fill_gaps
+        ).all()
+
+    def test_spores_caps(self, spores_model_and_log):
+        """There should be some changes in capacities between SPORES."""
+        spores_model, _ = spores_model_and_log
+        cap_diffs = spores_model.results.flow_cap.diff(dim="spores")
+        assert (cap_diffs != 0).any()
+
+    def test_spores_scores_never_decrease(self, spores_model_and_log):
+        """SPORES scores can never decrease."""
+        spores_model, _ = spores_model_and_log
+        assert (
+            spores_model._model_data.spores_score_cumulative.fillna(0).diff("spores")
+            >= 0
+        ).all()
+
+    def test_spores_scores_increasing_with_cap(self, spores_model_and_log):
+        """SPORES scores increase when a tech has a finite flow_cap in the previous iteration."""
+        spores_model, _ = spores_model_and_log
+        has_cap = spores_model.results.flow_cap > 0
+        spores_score_increased = (
+            spores_model._model_data.spores_score_cumulative.diff("spores") > 0
+        )
+        numpy.testing.assert_array_equal(
+            has_cap.shift(spores=1).sel(spores=[1, 2]), spores_score_increased
+        )
+
+    def test_use_tech_tracking(self, spores_model_with_tracker):
+        """Tech tracking leads to only having spores scores for test_supply_elec."""
+        sum_spores_score = (
+            spores_model_with_tracker._model_data.spores_score_cumulative.groupby(
+                "techs"
+            ).sum(...)
+        )
+        assert (sum_spores_score.sel(techs="test_supply_elec") > 0).all()
+        assert (sum_spores_score.drop_sel(techs="test_supply_elec") == 0).all()
+
+    def test_save_per_spore_file(self, spores_model_save_per_spore_and_log):
+        """There are 4 files saved if saving per SPORE."""
+        model, _ = spores_model_save_per_spore_and_log
+        out_dir = Path(model.config["solve"]["spores_save_per_spore_path"])
+        assert len(list(out_dir.glob("*.nc"))) == 3
+
+    @pytest.mark.parametrize("spore", ["baseline", 1, 2])
+    def test_save_per_spore(self, spores_model_save_per_spore_and_log, spore):
+        """We expect SPORES results to be saved to file once per iteration."""
+        model, _ = spores_model_save_per_spore_and_log
+        out_dir = Path(model.config["solve"]["spores_save_per_spore_path"])
+        filename = spore if spore == "baseline" else f"spore_{spore}"
+        result = xr.open_dataset((out_dir / filename).with_suffix(".nc"))
+        assert result.spores.item() == spore
+
+    @pytest.mark.parametrize("spore", ["baseline", 1, 2])
+    def test_save_per_spore_log(self, spores_model_save_per_spore_and_log, spore):
+        """We expect SPORES results saving to be logged."""
+        _, log = spores_model_save_per_spore_and_log
+        assert f"Saving SPORE {spore} to file." in log
+
+    def test_save_per_spore_without_path_log(self, spores_model_and_log):
+        """We expect appropriate logs when SPORES results will not be saved due to lack of path."""
+        _, log = spores_model_and_log
+
+        assert "Requested to save per SPORE but no path given" in log
+        assert "Saving SPORE" not in log
+
+    def test_do_not_save_per_spore(self, spores_model_skip_baseline_and_log):
+        """We expect appropriate logs when SPORES results will not be saved due to not requesting it."""
+        _, log = spores_model_skip_baseline_and_log
+
+        assert "Requested to save per SPORE but no path given" not in log
+        assert "Saving SPORE" not in log
+
+    def test_skip_baseline_log(self, spores_model_skip_baseline_and_log):
+        """Skipping baseline run should take existing results."""
+
+        _, log = spores_model_skip_baseline_and_log
+
+        assert "Using existing baseline model results." in log
+
+    def test_save_per_spore_skip_cost_op(
+        self, spores_model_and_log, spores_model_skip_baseline_and_log
+    ):
+        """Final result should be the same having skipped baseline."""
+
+        model_all_solved_together, _ = spores_model_and_log
+        model_baseline_solved_separately, _ = spores_model_skip_baseline_and_log
+        assert model_all_solved_together._model_data.flow_cap.equals(
+            model_baseline_solved_separately._model_data.flow_cap
+        )
 
 
 class TestBuild:
