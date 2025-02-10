@@ -1,11 +1,15 @@
-import importlib
-
 import pydantic
 import pytest
 
-from calliope.schemas.dimension_data_schema import CalliopeTech, IndexedParam
+from calliope.io import read_rich_yaml
+from calliope.preprocess import prepare_model_definition
+from calliope.schemas.dimension_data_schema import (
+    CalliopeNode,
+    CalliopeTech,
+    IndexedParam,
+)
 
-EXAMPLES_DIR = importlib.resources.files("calliope") / "example_models"
+from . import utils
 
 
 class TestIndexedParam:
@@ -48,38 +52,78 @@ class TestIndexedParam:
 
 class TestCalliopeTech:
     @pytest.mark.parametrize(
-        ("link_from", "link_to"),
-        [("error", None), (None, "error"), ("error1", "error2")],
+        "model_path", utils.EXAMPLE_MODELS + utils.COMMON_TEST_MODELS
     )
+    def test_example_model_techs(self, model_path):
+        """Test the example model technologies against the schema."""
+        model_def, _ = prepare_model_definition(model_path)
+        if "techs" in model_def:
+            for tech in model_def["techs"].values():
+                CalliopeTech(**tech)
+
+    @pytest.mark.parametrize("dims", ["techs", "nodes"])
+    def test_invalid_dims(self, dims):
+        """Technologies must not use 'techs' or 'nodes' in their indexed params."""
+        tech = read_rich_yaml(
+            f"""
+        name: 'Combined cycle gas turbine'
+        color: '#FDC97D'
+        base_tech: supply
+        carrier_out: power
+        foobar:
+          data: 0.10
+          index: monetary
+          dims: {dims}
+        """
+        )
+        with pytest.raises(pydantic.ValidationError, match="`dims` must not contain"):
+            CalliopeTech(**tech)
+
     @pytest.mark.parametrize(
-        ("base_tech", "carrier_in", "carrier_out"),
+        ("base_tech", "kwargs"),
         [
-            ("conversion", "gas", "elec"),
-            ("demand", "gas", None),
-            ("storage", "gas", "gas"),
-            ("supply", None, "gas"),
+            ("conversion", {"carrier_in": None, "carrier_out": None}),
+            ("conversion", {"carrier_in": "electricity", "carrier_out": None}),
+            ("storage", {"carrier_in": "electricity", "link_from": "location1"}),
+            ("storage", {"carrier_in": None, "carrier_out": "heat"}),
+            ("demand", {"carrier_in": None}),
+            ("demand", {"carrier_in": "electricity", "carrier_out": "heat"}),
+            ("supply", {"carrier_out": None}),
+            ("supply", {"carrier_in": "electricity", "carrier_out": "heat"}),
+            ("transmission", {"carrier_in": "electricity", "link_from": None}),
+            (
+                "transmission",
+                {
+                    "carrier_in": None,
+                    "carrier_out": "heat",
+                    "link_from": "A",
+                    "link_to": "B",
+                },
+            ),
         ],
     )
-    def test_non_transmission_link_error(
-        self, base_tech, carrier_in, carrier_out, link_from, link_to
-    ):
-        """Non-transmission technologies should not accept links."""
-        with pytest.raises(pydantic.ValidationError):
-            CalliopeTech(
-                base_tech=base_tech,
-                carrier_in=carrier_in,
-                carrier_out=carrier_out,
-                link_from=link_from,
-                link_to=link_to,
-            )
+    def test_invalid_base_tech_setup(self, base_tech, kwargs):
+        """Incomplete or invalid `base_tech` definitions should result in failure."""
+        with pytest.raises(
+            pydantic.ValidationError, match=f"Incorrect {base_tech} setup."
+        ):
+            CalliopeTech(base_tech=base_tech, **kwargs)
 
-    @pytest.mark.parametrize("base_tech", ["conversion", "storage"])
+
+class TestCalliopeNode:
     @pytest.mark.parametrize(
-        ("carrier_in", "carrier_out"), [(None, None), ("gas", None), (None, "gas")]
+        "model_path", utils.EXAMPLE_MODELS + utils.COMMON_TEST_MODELS
     )
-    def test_bi_directional_tech_error(self, base_tech, carrier_in, carrier_out):
-        """Bi-direcitonal techs need both carrier_in / out."""
-        with pytest.raises(pydantic.ValidationError):
-            CalliopeTech(
-                base_tech=base_tech, carrier_in=carrier_in, carrier_out=carrier_out
-            )
+    def test_example_models(self, model_path):
+        """Test the node schema against example and test model definitions."""
+        model_def, _ = prepare_model_definition(model_path)
+        if "nodes" in model_def:
+            for node in model_def["nodes"].values():
+                CalliopeNode(**node)
+
+    @pytest.mark.parametrize(("latitude", "longitude"), [(None, 30), (30, None)])
+    def test_dependent_definitions(self, latitude, longitude):
+        with pytest.raises(
+            pydantic.ValidationError, match="Invalid latitude/longitude definition."
+        ):
+            CalliopeNode(techs={}, latitude=latitude, longitude=longitude)

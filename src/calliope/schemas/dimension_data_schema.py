@@ -19,15 +19,6 @@ IndexValue = AttrStr | NumericVal
 BaseTech = Literal["conversion", "demand", "storage", "supply", "transmission"]
 
 
-class EmptyDict(CalliopeBaseModel):
-    """Empty dictionary schema.
-
-    Allows validating cases where only empty dicts OR fully defined data is allowed.
-    """
-
-    model_config = {"title": "Empty dictionary"}
-
-
 class IndexedParam(CalliopeBaseModel):
     """Indexed parameter schema."""
 
@@ -52,37 +43,37 @@ class IndexedParam(CalliopeBaseModel):
     """
 
 
-class CalliopeDimensionData(CalliopeBaseModel):
-    """Calliope's generic dimension data schema."""
-
-    model_config = {"title": "Generic dimension data", "extra": "allow"}
-
-    name: str | None = None
-    __pydantic_extra__: dict[AttrStr, IndexedParam | DataValue]
-
-
-class IndexedTechParam(IndexedParam):
+class IndexedTechNodeParam(IndexedParam):
     """Tech-specific parameter schema."""
 
     model_config = {"title": "Indexed `techs` parameter definition"}
 
     @field_validator("dims", mode="before")
     @classmethod
-    def _forbidden(
+    def check_dims(
         cls, value: AttrStr | NonEmptyUniqueList[AttrStr]
     ) -> AttrStr | NonEmptyUniqueList[AttrStr]:
-        forbidden = {"techs", "nodes"}
-        if any(set(listify(value)) & forbidden):
-            raise ValueError(f"Must not contain {forbidden}, found {value}.")
+        """Ensure dimensions do not refer to techs or nodes."""
+        forbidden = ["techs", "nodes"]
+        if any(set(listify(value)) & set(forbidden)):
+            raise ValueError(f"`dims` must not contain '{forbidden}', found '{value}'.")
         return value
 
 
-class CalliopeTech(CalliopeDimensionData):
+class DimensionData(CalliopeBaseModel):
+    """Calliope's generic dimension data schema."""
+
+    model_config = {"title": "Generic dimension data", "extra": "allow"}
+
+    active: bool = True
+    __pydantic_extra__: dict[AttrStr, IndexedTechNodeParam | DataValue]
+
+
+class CalliopeTech(DimensionData):
     """Calliope's technology dimension schema."""
 
     model_config = {"title": "Technology dimension data"}
 
-    active: bool = True
     base_tech: BaseTech
     carrier_in: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
     carrier_out: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
@@ -91,7 +82,7 @@ class CalliopeTech(CalliopeDimensionData):
     link_to: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
 
     @model_validator(mode="after")
-    def check_base_tech_dependencies(self) -> Self:
+    def check_base_tech(self) -> Self:
         """Ensure technologies are defined correctly."""
         match self.base_tech:
             case "conversion" | "storage":
@@ -115,21 +106,17 @@ class CalliopeTech(CalliopeDimensionData):
             raise ValueError(
                 f"""Incorrect {self.base_tech} setup. Required: {require}. Invalid: {exclude}."""
             )
-
         return self
 
 
-class CalliopeNode(CalliopeBaseModel):
+class CalliopeNode(DimensionData):
     """Calliope's node dimension schema."""
 
     model_config = {"title": "Node dimension", "extra": "allow"}
-    active: bool = True
+
     latitude: NumericVal | None = Field(default=None, ge=-90, le=90)
     longitude: NumericVal | None = Field(default=None, ge=-180, le=180)
-    techs: EmptyDict | dict[AttrStr, None | dict[AttrStr, DataValue | IndexedTechParam]]
-    available_area: NumericVal = Field(default=float("inf"))
-
-    __pydantic_extra__: dict[AttrStr, IndexedTechParam | DataValue]
+    techs: None | dict[AttrStr, None | dict[AttrStr, DataValue | dict]]
 
     @model_validator(mode="after")
     def check_dependent_definitions(self) -> Self:

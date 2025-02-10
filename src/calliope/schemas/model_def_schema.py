@@ -16,8 +16,8 @@ class CalliopeModelDef(CalliopeBaseModel):
 
     model_config = {"title": "Calliope Model Definition"}
 
-    parameters: dict[AttrStr, DataValue | IndexedParam]
+    parameters: dict[AttrStr, DataValue | IndexedParam] | None = None
     config: CalliopeConfig
     data_tables: dict[AttrStr, CalliopeDataTable] | None = None
-    nodes: dict[AttrStr, CalliopeNode]
-    techs: dict[AttrStr, CalliopeTech]
+    nodes: dict[AttrStr, CalliopeNode] | None = None
+    techs: dict[AttrStr, CalliopeTech] | None = None
