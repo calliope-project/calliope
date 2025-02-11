@@ -101,6 +101,10 @@ techs:
     base_tech: conversion
     carrier_in: gas
     carrier_out: heat
+    cost_flow_cap:
+      data: 30
+      index: [[monetary, heat]]
+      dims: [costs, carriers]
     flow_cap_max:
       data: 600
       index: heat
