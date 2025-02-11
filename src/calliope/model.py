@@ -16,14 +16,9 @@ from calliope import backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess.model_data import ModelDataFactory
-from calliope.schemas import config_schema
+from calliope.schemas import config_schema, model_def_schema
 from calliope.util.logging import log_time
-from calliope.util.schema import (
-    CONFIG_SCHEMA,
-    MODEL_SCHEMA,
-    extract_from_schema,
-    validate_dict,
-)
+from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
@@ -155,8 +150,8 @@ class Model:
             model_definition, scenario, override_dict
         )
         model_def_full.union({"config.init": kwargs}, allow_override=True)
-        # First pass to check top-level keys are all good. FIXME-config: remove after pydantic is ready
-        validate_dict(model_def_full, CONFIG_SCHEMA, "Model definition")
+        # Ensure model definition is correct
+        model_def_schema.CalliopeModelDef(**model_def_full)
 
         log_time(
             LOGGER,

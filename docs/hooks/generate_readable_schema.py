@@ -19,6 +19,7 @@ from calliope.util import schema
 
 TEMPDIR = tempfile.TemporaryDirectory()
 
+# FIXME-Ivan: should use pydantic models instead of YAML
 SCHEMAS = {
     "config_schema": config_schema.CalliopeConfig().model_no_ref_schema(),
     "model_schema": schema.MODEL_SCHEMA,

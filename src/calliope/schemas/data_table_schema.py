@@ -1,13 +1,13 @@
 """Schema for data table definition."""
 
-from pydantic import BaseModel, model_validator
+from pydantic import model_validator
 from typing_extensions import Self
 
-from calliope.schemas.general import AttrStr, UniqueList
+from calliope.schemas.general import AttrStr, CalliopeBaseModel, UniqueList
 from calliope.util.tools import listify
 
 
-class CalliopeDataTable(BaseModel):
+class CalliopeDataTable(CalliopeBaseModel):
     """Data table validation model."""
 
     data: str
@@ -57,8 +57,9 @@ class CalliopeDataTable(BaseModel):
     @model_validator(mode="after")
     def check_row_and_columns(self) -> Self:
         """Ensure users specify a valid data table shape."""
-        rows = set(listify(self.rows))
-        columns = set(listify(self.columns))
+        drop = set(listify(self.drop))
+        rows = set(listify(self.rows)) - drop
+        columns = set(listify(self.columns)) - drop
         if not rows and not columns:
             raise ValueError("Either row or columns must be defined for data_table.")
         elif rows & columns:

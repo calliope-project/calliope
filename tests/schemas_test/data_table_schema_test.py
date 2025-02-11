@@ -75,9 +75,7 @@ class TestCalliopeDataTable:
         """Test a fully fledged data table configuration."""
         CalliopeDataTable(**read_rich_yaml(full_data_table_config))
 
-    @pytest.mark.parametrize(
-        "model_path", utils.EXAMPLE_MODELS + utils.COMMON_TEST_MODELS
-    )
+    @pytest.mark.parametrize("model_path", utils.EXAMPLE_MODELS + utils.TEST_MODELS)
     def test_example_models(self, model_path):
         """Test the schema against example and test model definitions."""
         model_def, _ = prepare_model_definition(model_path)

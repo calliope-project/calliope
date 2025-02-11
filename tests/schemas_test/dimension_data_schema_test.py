@@ -9,6 +9,7 @@ from calliope.schemas.dimension_data_schema import (
     IndexedParam,
 )
 
+from ..test_core_util import check_error_or_warning
 from . import utils
 
 
@@ -46,14 +47,14 @@ class TestIndexedParam:
     )
     def test_invalid_definition(self, data, dims, index):
         """Catch common user mistakes."""
-        with pytest.raises(pydantic.ValidationError):
+        with pytest.raises(
+            pydantic.ValidationError, match="errors for Indexed parameter definition"
+        ):
             IndexedParam(data=data, dims=dims, index=index)
 
 
 class TestCalliopeTech:
-    @pytest.mark.parametrize(
-        "model_path", utils.EXAMPLE_MODELS + utils.COMMON_TEST_MODELS
-    )
+    @pytest.mark.parametrize("model_path", utils.EXAMPLE_MODELS + utils.TEST_MODELS)
     def test_example_model_techs(self, model_path):
         """Test the example model technologies against the schema."""
         model_def, _ = prepare_model_definition(model_path)
@@ -109,11 +110,25 @@ class TestCalliopeTech:
         ):
             CalliopeTech(base_tech=base_tech, **kwargs)
 
+    @pytest.mark.parametrize("base_tech", [None, 1, "foobar"])
+    def test_invalid_base_tech_name(self, base_tech):
+        """Incorrect `base_tech` settings should be detected."""
+        tech = read_rich_yaml(f"""
+        name: Supply tech
+        carrier_out: gas
+        base_tech: {base_tech}
+        flow_cap_max: 10
+        source_use_max: .inf
+        """)
+        with pytest.raises(pydantic.ValidationError) as error:
+            CalliopeTech(**tech)
+        check_error_or_warning(
+            error, ["error for Technology dimension data", "base_tech"]
+        )
+
 
 class TestCalliopeNode:
-    @pytest.mark.parametrize(
-        "model_path", utils.EXAMPLE_MODELS + utils.COMMON_TEST_MODELS
-    )
+    @pytest.mark.parametrize("model_path", utils.EXAMPLE_MODELS + utils.TEST_MODELS)
     def test_example_models(self, model_path):
         """Test the node schema against example and test model definitions."""
         model_def, _ = prepare_model_definition(model_path)
