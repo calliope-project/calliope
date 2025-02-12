@@ -76,13 +76,14 @@ class CalliopeBaseModel(BaseModel):
         updated.model_validate(updated)
         return updated
 
-    def model_no_ref_schema(self) -> AttrDict:
+    @classmethod
+    def model_no_ref_schema(cls) -> AttrDict:
         """Generate an AttrDict with the schema replacing $ref/$def for better readability.
 
         Returns:
             AttrDict: class schema.
         """
-        schema_dict = AttrDict(super().model_json_schema())
+        schema_dict = AttrDict(cls.model_json_schema())
         schema_dict = AttrDict(jsonref.replace_refs(schema_dict))
         schema_dict.del_key("$defs")
         return schema_dict

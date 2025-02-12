@@ -80,36 +80,6 @@ class TestCalliopeTech:
         with pytest.raises(pydantic.ValidationError, match="`dims` must not contain"):
             CalliopeTech(**tech)
 
-    @pytest.mark.parametrize(
-        ("base_tech", "kwargs"),
-        [
-            ("conversion", {"carrier_in": None, "carrier_out": None}),
-            ("conversion", {"carrier_in": "electricity", "carrier_out": None}),
-            ("storage", {"carrier_in": "electricity", "link_from": "location1"}),
-            ("storage", {"carrier_in": None, "carrier_out": "heat"}),
-            ("demand", {"carrier_in": None}),
-            ("demand", {"carrier_in": "electricity", "carrier_out": "heat"}),
-            ("supply", {"carrier_out": None}),
-            ("supply", {"carrier_in": "electricity", "carrier_out": "heat"}),
-            ("transmission", {"carrier_in": "electricity", "link_from": None}),
-            (
-                "transmission",
-                {
-                    "carrier_in": None,
-                    "carrier_out": "heat",
-                    "link_from": "A",
-                    "link_to": "B",
-                },
-            ),
-        ],
-    )
-    def test_invalid_base_tech_setup(self, base_tech, kwargs):
-        """Incomplete or invalid `base_tech` definitions should result in failure."""
-        with pytest.raises(
-            pydantic.ValidationError, match=f"Incorrect {base_tech} setup."
-        ):
-            CalliopeTech(base_tech=base_tech, **kwargs)
-
     @pytest.mark.parametrize("base_tech", [None, 1, "foobar"])
     def test_invalid_base_tech_name(self, base_tech):
         """Incorrect `base_tech` settings should be detected."""

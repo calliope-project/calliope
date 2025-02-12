@@ -14,6 +14,9 @@ nodes:
 
 techs:
   tech_transmission:
+    base_tech: transmission
+    carrier_in: foo
+    carrier_out: foo
     link_from: A
     link_to: B
 

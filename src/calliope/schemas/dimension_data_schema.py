@@ -74,39 +74,12 @@ class CalliopeTech(DimensionData):
 
     model_config = {"title": "Technology dimension data"}
 
-    base_tech: BaseTech
+    base_tech: BaseTech | None = None
     carrier_in: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
     carrier_out: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
     carrier_export: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
     link_from: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
     link_to: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
-
-    @model_validator(mode="after")
-    def check_base_tech(self) -> Self:
-        """Ensure technologies are defined correctly."""
-        match self.base_tech:
-            case "conversion" | "storage":
-                require = ["carrier_in", "carrier_out"]
-                exclude = ["link_from", "link_to"]
-            case "demand":
-                require = ["carrier_in"]
-                exclude = ["carrier_out", "link_from", "link_to"]
-            case "supply":
-                require = ["carrier_out"]
-                exclude = ["carrier_in", "link_from", "link_to"]
-            case "transmission":
-                require = ["carrier_in", "carrier_out", "link_from", "link_to"]
-                exclude = []
-            case _:
-                raise ValueError(f"Invalid 'base_tech'. Must be one of {BaseTech}.")
-
-        if not all([getattr(self, i) for i in require]) or any(
-            [getattr(self, i) for i in exclude]
-        ):
-            raise ValueError(
-                f"""Incorrect {self.base_tech} setup. Required: {require}. Invalid: {exclude}."""
-            )
-        return self
 
 
 class CalliopeNode(DimensionData):

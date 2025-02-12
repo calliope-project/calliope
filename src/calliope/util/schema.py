@@ -15,7 +15,6 @@ from calliope.exceptions import print_warnings_and_raise_errors
 from calliope.io import load_config
 
 MODEL_SCHEMA = load_config("model_def_schema.yaml")
-DATA_TABLE_SCHEMA = load_config("data_table_schema.yaml")
 MATH_SCHEMA = load_config("math_schema.yaml")
 
 

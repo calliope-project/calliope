@@ -14,17 +14,17 @@ from pathlib import Path
 import jsonschema2md
 from mkdocs.structure.files import File
 
-from calliope.schemas import config_schema
+from calliope.schemas import config_schema, data_table_schema
 from calliope.util import schema
 
 TEMPDIR = tempfile.TemporaryDirectory()
 
 # FIXME-Ivan: should use pydantic models instead of YAML
 SCHEMAS = {
-    "config_schema": config_schema.CalliopeConfig().model_no_ref_schema(),
+    "config_schema": config_schema.CalliopeConfig.model_no_ref_schema(),
     "model_schema": schema.MODEL_SCHEMA,
     "math_schema": schema.MATH_SCHEMA,
-    "data_table_schema": schema.DATA_TABLE_SCHEMA,
+    "data_table_schema": data_table_schema.CalliopeDataTable.model_json_schema(),
 }
 
 

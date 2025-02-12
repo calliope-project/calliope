@@ -40,7 +40,7 @@ class CalliopeDataTable(CalliopeBaseModel):
     These could include comments on the source of the data, the data license, or the parameter units.
     You can also drop a dimension and then reintroduce it in `add_dims`, but with different index items.
     """
-    add_dims: None | dict[AttrStr, AttrStr] = None
+    add_dims: None | dict[AttrStr, AttrStr | list[AttrStr]] = None
     """
     Data dimensions to add after loading in the array.
     These allow you to use the same file to assign values to different parameters/dimension index items
