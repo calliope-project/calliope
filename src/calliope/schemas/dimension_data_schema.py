@@ -15,7 +15,7 @@ from calliope.schemas.general import (
 from calliope.util.tools import listify
 
 DataValue = str | bool | NumericVal | None
-IndexValue = AttrStr | NumericVal
+IndexValue = str | NumericVal
 BaseTech = Literal["conversion", "demand", "storage", "supply", "transmission"]
 
 

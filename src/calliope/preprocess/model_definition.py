@@ -73,40 +73,39 @@ def _load_scenario_overrides(
     # The input files are allowed to override other model defaults
     model_def_with_overrides = model_def_dict.copy()
 
-    # First pass of applying override dict before applying scenarios,
-    # so that can override scenario definitions by override_dict
-    if isinstance(override_dict, str):
-        override_dict = read_rich_yaml(override_dict)
+    # Apply override_dict first so it can overwrite scenario definitions
+    overrides = AttrDict(override_dict)
+    model_def_with_overrides.union(
+        overrides, allow_override=True, allow_replacement=True
+    )
 
-    if isinstance(override_dict, dict):
-        override_dict = AttrDict(override_dict)
-        model_def_with_overrides.union(
-            override_dict, allow_override=True, allow_replacement=True
-        )
-
-    overrides = model_def_with_overrides.pop("overrides", {})
+    # Apply scenario overrides (with override_dict modifications if present)
+    scenario_overrides = model_def_with_overrides.pop("overrides", {})
     scenarios = model_def_with_overrides.pop("scenarios", {})
-
     if scenario is not None:
         applied_overrides = _load_overrides_from_scenario(
-            model_def_with_overrides, scenario, overrides, scenarios
+            model_def_with_overrides, scenario, scenario_overrides, scenarios
         )
         LOGGER.info(
             f"(scenarios, {scenario} ) | Applying the following overrides: {applied_overrides}."
         )
-        overrides_from_scenario = _combine_overrides(overrides, applied_overrides)
-
+        overrides_from_scenario = _combine_overrides(
+            scenario_overrides, applied_overrides
+        )
         model_def_with_overrides.union(
             overrides_from_scenario, allow_override=True, allow_replacement=True
         )
     else:
         applied_overrides = []
 
-    # Second pass of applying override dict after applying scenarios,
-    # so that scenario-based overrides are overridden by override_dict!
-    if override_dict is not None:
+    # Second pass of applying override_dict after applying scenarios,
+    # so it can overwrite scenarios (it has the highest priority)
+    if overrides:
+        # Remove scenarios/overrides since they were already applied.
+        overrides.pop("scenarios", None)
+        overrides.pop("overrides", None)
         model_def_with_overrides.union(
-            override_dict, allow_override=True, allow_replacement=True
+            overrides, allow_override=True, allow_replacement=True
         )
     if "locations" in model_def_with_overrides.keys():
         # TODO: remove in v0.7.1
@@ -123,7 +122,7 @@ def _load_scenario_overrides(
     return (model_def_with_overrides, ";".join(applied_overrides))
 
 
-def _combine_overrides(overrides: AttrDict, scenario_overrides: list[AttrDict]):
+def _combine_overrides(overrides: AttrDict, scenario_overrides: list[str]):
     combined_override_dict = AttrDict()
     for override in scenario_overrides:
         try:

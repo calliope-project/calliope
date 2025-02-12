@@ -195,9 +195,13 @@ def _run_setup_model(model_file, scenario, model_format, override_dict):
                 f'extension for "{model_file}". Set format explicitly with '
                 "--model_format."
             )
+    if isinstance(override_dict, str):
+        overrides = io.read_rich_yaml(override_dict)
+    else:
+        overrides = io.AttrDict()
 
     if model_format == "yaml":
-        model = Model(model_file, scenario=scenario, override_dict=override_dict)
+        model = Model(model_file, scenario=scenario, override_dict=overrides)
     elif model_format == "netcdf":
         if scenario is not None or override_dict is not None:
             raise ValueError(
