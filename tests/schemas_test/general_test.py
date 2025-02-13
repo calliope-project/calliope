@@ -275,3 +275,10 @@ class TestCalliopeBaseModel:
             no_defs_json_schema["properties"]["nested"]
             == json_schema["$defs"]["SubModel"]
         )
+
+    def test_config_model_flat_no_defs(self, config_model_flat):
+        """Calling `model_no_ref_schema` should not alter flat models."""
+        json_schema = config_model_flat.model_json_schema()
+        no_defs_schema = config_model_flat.model_no_ref_schema()
+
+        assert json_schema == no_defs_schema

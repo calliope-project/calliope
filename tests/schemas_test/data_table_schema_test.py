@@ -12,9 +12,9 @@ from . import utils
 
 
 class TestCalliopeDataTable:
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def full_data_table_config(self):
-        return """
+        return read_rich_yaml("""
     data: time_varying_df
     rows: timesteps
     columns: [comment, nodes, techs]
@@ -27,7 +27,7 @@ class TestCalliopeDataTable:
         costs: monetary
     rename_dims:
         location: nodes
-    """
+    """)
 
     @pytest.mark.parametrize(
         "data_table",
@@ -35,7 +35,7 @@ class TestCalliopeDataTable:
     )
     def test_path_not_provided(self, data_table):
         """Not providing the path should result in a failure."""
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError, match="validation error for Data table"):
             CalliopeDataTable(**data_table)
 
     @pytest.mark.parametrize("data_table", [{"data": "foo"}])
@@ -73,7 +73,7 @@ class TestCalliopeDataTable:
 
     def test_full_table_config(self, full_data_table_config):
         """Test a fully fledged data table configuration."""
-        CalliopeDataTable(**read_rich_yaml(full_data_table_config))
+        CalliopeDataTable(**full_data_table_config)
 
     @pytest.mark.parametrize("model_path", utils.EXAMPLE_MODELS + utils.TEST_MODELS)
     def test_example_models(self, model_path):
@@ -82,3 +82,16 @@ class TestCalliopeDataTable:
         if "data_tables" in model_def:
             for data_table_def in model_def["data_tables"].values():
                 CalliopeDataTable(**data_table_def)
+
+    @pytest.mark.parametrize(
+        ("rename_dims", "drop"),
+        [({"bar": "foo"}, None), ({"locations": "nodes"}, "nodes")],
+    )
+    def test_invalid_rename(self, rename_dims, drop, full_data_table_config):
+        """Renaming inexistent dimensions should be impossible."""
+        full_data_table_config.update({"drop": drop, "rename_dims": rename_dims})
+        with pytest.raises(
+            ValidationError,
+            match="Renamed dimensions must be in either rows or columns.",
+        ):
+            CalliopeDataTable(**full_data_table_config)
