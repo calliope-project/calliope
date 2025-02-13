@@ -124,6 +124,7 @@ class Build(CalliopeBaseModel):
     """
 
     operate: BuildOperate = BuildOperate()
+    """Operate mode specific configuration."""
 
 
 class SolveSpores(CalliopeBaseModel):

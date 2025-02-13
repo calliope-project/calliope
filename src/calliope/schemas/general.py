@@ -1,3 +1,5 @@
+# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
+# Licensed under the Apache 2.0 License (see LICENSE file).
 """Defines generic calliope configuration types."""
 
 import logging
@@ -85,5 +87,6 @@ class CalliopeBaseModel(BaseModel):
         """
         schema_dict = AttrDict(cls.model_json_schema())
         schema_dict = AttrDict(jsonref.replace_refs(schema_dict))
-        schema_dict.del_key("$defs")
+        if "$defs" in schema_dict:
+            schema_dict.del_key("$defs")
         return schema_dict

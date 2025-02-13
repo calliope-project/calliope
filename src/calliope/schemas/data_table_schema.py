@@ -1,3 +1,5 @@
+# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
+# Licensed under the Apache 2.0 License (see LICENSE file).
 """Schema for data table definition."""
 
 from pydantic import model_validator
@@ -8,7 +10,7 @@ from calliope.util.tools import listify
 
 
 class CalliopeDataTable(CalliopeBaseModel):
-    """Data table validation model."""
+    """Data table schema."""
 
     data: str
     """
