@@ -35,7 +35,7 @@ This change has occurred to avoid confusion between data "sources" and model ene
 
 ### Internal changes
 
-|changed| Model configuration now uses `pydantic`.
+|changed| Model configuration, data tables, techs/nodes data, math and general model definition now uses `pydantic`.
 
 |changed| Model definition reading is now defined in a single place (preprocess/model_definition.py).
 

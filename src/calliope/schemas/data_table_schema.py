@@ -12,6 +12,8 @@ from calliope.util.tools import listify
 class CalliopeDataTable(CalliopeBaseModel):
     """Data table schema."""
 
+    model_config = {"title": "Data table schema"}
+
     data: str
     """
     Absolute or relative filepath.
