@@ -1647,8 +1647,8 @@ class TestNewBackend:
 
         m = build_model(
             {
-                "config.build.operate_window": "12H",
-                "config.build.operate_horizon": "12H",
+                "config.build.operate_window": "12h",
+                "config.build.operate_horizon": "12h",
             },
             "simple_supply,two_hours,investment_costs",
         )
