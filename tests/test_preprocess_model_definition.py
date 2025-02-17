@@ -23,7 +23,7 @@ class TestScenarioOverrides:
                 one:
                     techs.test_supply_gas.flow_cap_max: {dummy_int}
                 two:
-                    techs.test_supply_elec.flow_cap_max: {dummy_int/2}
+                    techs.test_supply_elec.flow_cap_max: {dummy_int / 2}
 
             nodes:
                 a:
@@ -57,7 +57,7 @@ class TestScenarioOverrides:
                 one:
                     techs.test_supply_gas.flow_cap_max: {dummy_int}
                 two:
-                    techs.test_supply_elec.flow_cap_max: {dummy_int/2}
+                    techs.test_supply_elec.flow_cap_max: {dummy_int / 2}
                 new_location:
                     nodes.b.techs:
                         test_supply_elec:
