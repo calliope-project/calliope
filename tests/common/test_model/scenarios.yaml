@@ -378,8 +378,8 @@ overrides:
     config:
       init.time_subset: ["2005-01-01", "2005-01-01"]
       build.mode: spores
-      solve:
-        spores_number: 2
+      solve.spores:
+        number: 2
     parameters:
       spores_slack: 0.1
     nodes:
@@ -387,9 +387,9 @@ overrides:
       b.techs: { test_supply_elec, test_supply_plus }
 
   spores_tech_tracking:
-    config:
-      solve:
-        spores_tracking_parameter: spores_tracker
+    config.solve:
+      spores:
+        tracking_parameter: spores_tracker
     parameters:
       spores_tracker: # defines which techs are going to be subject to the SPORES weighting process
         data: [true]

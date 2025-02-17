@@ -75,8 +75,9 @@ As an example, if you wanted to generate 10 SPORES, all of which are within 10% 
 ```yaml
 config.build.mode: spores
 config.solve:
+    spores:
     # The number of SPORES to generate:
-    spores_number: 10
+    number: 10
 parameters:
     # The fraction above the cost-optimal cost to set the maximum cost during SPORES:
     spores_slack: 0.1

@@ -4,10 +4,11 @@
 
 import logging
 from collections.abc import Hashable
+from pathlib import Path
 from typing import Annotated, Literal, TypeVar
 
 import jsonref
-from pydantic import AfterValidator, BaseModel, DirectoryPath, Field
+from pydantic import AfterValidator, BaseModel, Field
 from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
@@ -202,7 +203,7 @@ class SolveSpores(ConfigBaseModel):
     number: int = Field(default=3)
     """SPORES mode number of iterations after the initial base run."""
 
-    save_per_spore_path: DirectoryPath | None = None
+    save_per_spore_path: Path | None = None
     """
     If None, the SPORES results will only be available in `calliope.Model.results` once all iterations (defined by `number`) have completed.
     If a path, as well as consolidating the SPORES results in `calliope.Model.results`, individual SPORES will be saved to file immediately after the iteration has completed.
@@ -219,7 +220,7 @@ class Solve(ConfigBaseModel):
     """Base configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
     model_config = {"title": "Model Solve Configuration"}
-    save_logs: str | None = None
+    save_logs: Path | None = None
     """If given, should be a path to a directory in which to save optimisation logs."""
 
     solver_io: str | None = None

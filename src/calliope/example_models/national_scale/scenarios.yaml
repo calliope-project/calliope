@@ -34,9 +34,9 @@ overrides:
     config.build:
       mode: spores
       ensure_feasibility: true
-    config.solve:
-      spores_tracking_parameter: spores_tracker
-      spores_number: 3
+    config.solve.spores:
+      tracking_parameter: spores_tracker
+      number: 3
     parameters:
       spores_slack: 0.5
       spores_tracker: # defines which techs are going to be subject to the SPORES weighting process

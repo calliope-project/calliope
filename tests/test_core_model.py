@@ -1,6 +1,5 @@
 import logging
 from contextlib import contextmanager
-from pathlib import Path
 
 import numpy.testing
 import pandas as pd
@@ -185,11 +184,7 @@ class TestSporesMode:
     @pytest.fixture(scope="class")
     def spores_model_and_log(self, request):
         """Iterate 2 times in SPORES mode."""
-        model = build_model(
-            # We include this config item as it should be ignored without a save path also added
-            {"config.solve.spores_save_per_spore": True},
-            "spores,investment_costs",
-        )
+        model = build_model({}, "spores,investment_costs")
         model.build(mode="spores")
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
@@ -208,7 +203,7 @@ class TestSporesMode:
         model.build(mode="spores", force=True)
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
-                model.solve(spores_skip_baseline_run=True, force=True)
+                model.solve(force=True, **{"spores.skip_baseline_run": True})
             log = caplog.text
 
         return model, log
@@ -217,15 +212,12 @@ class TestSporesMode:
     def spores_model_save_per_spore_and_log(self, tmp_path_factory, request):
         """Iterate 2 times in SPORES mode and save to file each time."""
         dir_path = tmp_path_factory.mktemp("outputs")
-        model = build_model(
-            {"config.solve.spores_save_per_spore_path": str(dir_path)},
-            "spores,investment_costs",
-        )
+        model = build_model({}, "spores,investment_costs")
         model.build(mode="spores")
 
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
-                model.solve(spores_save_per_spore=True)
+                model.solve(**{"spores.save_per_spore_path": dir_path})
             log = caplog.text
 
         return model, log
@@ -250,7 +242,7 @@ class TestSporesMode:
     def test_backend_build_mode(self, spores_model_and_log):
         """Verify that we have run in spores mode"""
         spores_model, _ = spores_model_and_log
-        assert spores_model.backend.inputs.attrs["config"]["build"]["mode"] == "spores"
+        assert spores_model.backend.config.mode == "spores"
 
     def test_spores_mode_success(self, spores_model_and_log):
         """Solving in spores mode should lead to an optimal solution."""
@@ -310,14 +302,14 @@ class TestSporesMode:
     def test_save_per_spore_file(self, spores_model_save_per_spore_and_log):
         """There are 4 files saved if saving per SPORE."""
         model, _ = spores_model_save_per_spore_and_log
-        out_dir = Path(model.config["solve"]["spores_save_per_spore_path"])
+        out_dir = model.config.solve.spores.save_per_spore_path
         assert len(list(out_dir.glob("*.nc"))) == 3
 
     @pytest.mark.parametrize("spore", ["baseline", 1, 2])
     def test_save_per_spore(self, spores_model_save_per_spore_and_log, spore):
         """We expect SPORES results to be saved to file once per iteration."""
         model, _ = spores_model_save_per_spore_and_log
-        out_dir = Path(model.config["solve"]["spores_save_per_spore_path"])
+        out_dir = model.config.solve.spores.save_per_spore_path
         filename = spore if spore == "baseline" else f"spore_{spore}"
         result = xr.open_dataset((out_dir / filename).with_suffix(".nc"))
         assert result.spores.item() == spore
@@ -328,18 +320,13 @@ class TestSporesMode:
         _, log = spores_model_save_per_spore_and_log
         assert f"Saving SPORE {spore} to file." in log
 
-    def test_save_per_spore_without_path_log(self, spores_model_and_log):
+    @pytest.mark.parametrize(
+        "spores_model", ["spores_model_and_log", "spores_model_skip_baseline_and_log"]
+    )
+    def test_save_per_spore_without_path_log(self, request, spores_model):
         """We expect appropriate logs when SPORES results will not be saved due to lack of path."""
-        _, log = spores_model_and_log
+        _, log = request.getfixturevalue(spores_model)
 
-        assert "Requested to save per SPORE but no path given" in log
-        assert "Saving SPORE" not in log
-
-    def test_do_not_save_per_spore(self, spores_model_skip_baseline_and_log):
-        """We expect appropriate logs when SPORES results will not be saved due to not requesting it."""
-        _, log = spores_model_skip_baseline_and_log
-
-        assert "Requested to save per SPORE but no path given" not in log
         assert "Saving SPORE" not in log
 
     def test_skip_baseline_log(self, spores_model_skip_baseline_and_log):

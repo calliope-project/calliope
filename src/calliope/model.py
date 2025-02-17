@@ -353,9 +353,9 @@ class Model:
             comment=f"Optimisation model | starting model in {mode} mode.",
         )
         if mode == "operate":
-            results = self._solve_operate(**self.config.solve.model_dump())
+            results = self._solve_operate(self.config.solve)
         elif mode == "spores":
-            results = self._solve_spores(**self.config.solve.model_dump())
+            results = self._solve_spores(self.config.solve)
         else:
             results = self.backend._solve(
                 warmstart=warmstart, **self.config.solve.model_dump()
@@ -504,7 +504,7 @@ class Model:
 
         return sliced_inputs
 
-    def _solve_operate(self, **solver_config) -> xr.Dataset:
+    def _solve_operate(self, solver_config: config.Solve) -> xr.Dataset:
         """Solve in operate (i.e. dispatch) mode.
 
         Optimisation is undertaken iteratively for slices of the timeseries, with
@@ -519,7 +519,9 @@ class Model:
 
         LOGGER.info("Optimisation model | Running first time window.")
 
-        step_results = self.backend._solve(warmstart=False, **solver_config)
+        step_results = self.backend._solve(
+            warmstart=False, **solver_config.model_dump()
+        )
 
         results_list = []
 
@@ -558,7 +560,9 @@ class Model:
                     self._recalculate_storage_initial(previous_step_results),
                 )
 
-            step_results = self.backend._solve(warmstart=False, **solver_config)
+            step_results = self.backend._solve(
+                warmstart=False, **solver_config.model_dump()
+            )
 
         self._start_window_idx = 0
         results_list.append(step_results.sel(timesteps=slice(windowstep, None)))
@@ -602,7 +606,7 @@ class Model:
             "spores_baseline_cost",
             self.inputs.get("spores_baseline_cost", xr.DataArray(np.inf)),
         )
-        self.backend.set_objective(self.backend.inputs.attrs["config"].build.objective)
+        self.backend.set_objective(self.config.build.objective)
 
         spores_config: config.SolveSpores = solver_config.spores
         if not spores_config.skip_baseline_run:
@@ -622,7 +626,7 @@ class Model:
             )
 
         results_list: list[xr.Dataset] = [baseline_results]
-        spore_range = range(1, solver_config["spores_number"] + 1)
+        spore_range = range(1, spores_config.number + 1)
         for spore in spore_range:
             LOGGER.info(f"Optimisation model | Running SPORE {spore}.")
             self._spores_update_model(baseline_results, results_list[-1], spores_config)
