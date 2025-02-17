@@ -49,8 +49,9 @@ overrides:
       init.time_subset: ["2005-01-01", "2005-01-10"]
       build:
         mode: operate
-        operate_window: 12h
-        operate_horizon: 24h
+        operate:
+          window: 12h
+          horizon: 24h
     nodes:
       region1.techs.ccgt.flow_cap: 30000
 

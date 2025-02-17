@@ -62,8 +62,6 @@ def _load_scenario_overrides(
         override_dict (dict | None, optional):
             Overrides to apply _after_ `scenario` overrides.
             Defaults to None.
-        **kwargs:
-            initialisation overrides.
 
     Returns:
         tuple[AttrDict, str]:

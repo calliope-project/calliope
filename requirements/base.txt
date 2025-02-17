@@ -4,6 +4,7 @@ geographiclib >= 2, < 3
 ipdb >= 0.13, < 0.14
 ipykernel < 7
 jinja2 >= 3, < 4
+jsonref >= 1.1, < 2
 jsonschema >= 4, < 5
 natsort >= 8, < 9
 netcdf4 >= 1.2, < 1.7
@@ -14,3 +15,4 @@ pyparsing >= 3.0, < 3.1
 ruamel.yaml >= 0.18, < 0.19
 typing-extensions >= 4, < 5
 xarray >= 2024.1, < 2024.4
+pydantic >= 2.9.2

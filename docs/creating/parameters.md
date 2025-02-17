@@ -52,7 +52,7 @@ Which will add the new dimension `my_new_dim` to your model: `model.inputs.my_ne
 `foreach: [my_new_dim]`.
 
 !!! warning
-    The `parameter` section should not be used for large datasets (e.g., indexing over the time dimension) as it will have a high memory overhead on loading the data.
+    The `parameter` section should not be used for large datasets (e.g., indexing over the time dimension) as it will have a high memory overhead when loading the data.
 
 ## Broadcasting data along indexed dimensions
 

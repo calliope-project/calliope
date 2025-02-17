@@ -340,9 +340,9 @@ Along with [changing the YAML hierarchy of model configuration](#model-and-run-�
 
 * `model.subset_time` → `config.init.time_subset`
 * `model.time: {function: resample, function_options: {'resolution': '6H'}}` → `config.init.time_resample`
-* `run.operation.window` → `config.build.operate_window`
-* `run.operation.horizon` → `config.build.operate_horizon`
-* `run.operation.use_cap_results` → `config.build.operate_use_cap_results`
+* `run.operation.window` → `config.build.operate.window`
+* `run.operation.horizon` → `config.build.operate.horizon`
+* `run.operation.use_cap_results` → `config.build.operate.use_cap_results`
 
 We have also moved some _data_ out of the configuration and into the [top-level `parameters` section](creating/parameters.md):
 
@@ -516,8 +516,8 @@ Therefore, `24H` is equivalent to `24` in v0.6 if you are using hourly resolutio
           init:
             time_resample: 6H
           build:
-            operate_window: 12H
-            operate_horizon: 24H
+            operate.window: 12H
+            operate.horizon: 24H
         ```
 
 !!! warning

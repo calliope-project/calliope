@@ -414,8 +414,8 @@ overrides:
     config.build.mode: operate
     config.init.time_subset: ["2005-01-01", "2005-01-02"]
     config.build.ensure_feasibility: true
-    config.build.operate_window: 6h
-    config.build.operate_horizon: 12h
+    config.build.operate.window: 6h
+    config.build.operate.horizon: 12h
 
   investment_costs:
     templates:

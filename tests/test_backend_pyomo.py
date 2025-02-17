@@ -1636,7 +1636,8 @@ class TestNewBackend:
         m = build_model({}, "simple_supply,two_hours,investment_costs")
         math = calliope.preprocess.CalliopeMath([mode])
 
-        backend = PyomoBackendModel(m.inputs, math, mode=mode)
+        build_config = m.config.build.update({"mode": mode})
+        backend = PyomoBackendModel(m.inputs, math, build_config)
 
         assert backend.math == math
 
@@ -1647,8 +1648,8 @@ class TestNewBackend:
 
         m = build_model(
             {
-                "config.build.operate_window": "12h",
-                "config.build.operate_horizon": "12h",
+                "config.build.operate.window": "12h",
+                "config.build.operate.horizon": "12h",
             },
             "simple_supply,two_hours,investment_costs",
         )
@@ -2270,7 +2271,9 @@ class TestValidateMathDict:
         def _validate_math(math_dict: dict):
             m = build_model({}, "simple_supply,investment_costs")
             math = calliope.preprocess.CalliopeMath(["plan", math_dict])
-            backend = calliope.backend.PyomoBackendModel(m._model_data, math)
+            backend = calliope.backend.PyomoBackendModel(
+                m._model_data, math, m.config.build
+            )
             backend._add_all_inputs_as_parameters()
             backend._validate_math_string_parsing()
 

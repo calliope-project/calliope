@@ -33,7 +33,7 @@ _quiet = click.option(
     "--quiet",
     is_flag=True,
     default=False,
-    help="Be less verbose about what is happening, including hiding " "solver output.",
+    help="Be less verbose about what is happening, including hiding solver output.",
 )
 
 _pdb = click.option(
@@ -110,9 +110,7 @@ def print_end_time(start_time, msg="complete"):
     end_time = datetime.datetime.now()
     secs = round((end_time - start_time).total_seconds(), 1)
     tend = end_time.strftime(_time_format)
-    click.secho(
-        f"\nCalliope run {msg}. " f"Elapsed: {secs} seconds (time at exit: {tend})"
-    )
+    click.secho(f"\nCalliope run {msg}. Elapsed: {secs} seconds (time at exit: {tend})")
 
 
 def _get_version():
@@ -278,9 +276,9 @@ def run(
         # Else run the model, then save outputs
         else:
             click.secho("Starting model run...")
-
+            kwargs = {}
             if save_logs:
-                model.config.set_key("solve.save_logs", save_logs)
+                kwargs["solve.save_logs"] = save_logs
 
             if save_csv is None and save_netcdf is None:
                 click.secho(
@@ -292,14 +290,13 @@ def run(
             # If save_netcdf is used, override the 'save_per_spore_path' to point to a
             # directory of the same name as the planned netcdf
 
-            if save_netcdf and model.config.solve.spores_save_per_spore:
-                model.config.set_key(
-                    "solve.spores_save_per_spore_path",
+            if save_netcdf and model.config.solve.spores.save_per_spore:
+                kwargs["solve.spores_save_per_spore_path"] = (
                     save_netcdf.replace(".nc", "/spore_{}.nc"),
                 )
 
             model.build()
-            model.solve()
+            model.solve(**kwargs)
             termination = model._model_data.attrs.get(
                 "termination_condition", "unknown"
             )

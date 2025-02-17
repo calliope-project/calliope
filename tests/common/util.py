@@ -95,9 +95,7 @@ def build_lp(
         math (dict | None, optional): All constraint/global expression/objective math to apply. Defaults to None.
         backend_name (Literal["pyomo"], optional): Backend to use to create the LP file. Defaults to "pyomo".
     """
-    math = calliope.preprocess.CalliopeMath(
-        ["plan", *model.config.build.get("add_math", [])]
-    )
+    math = calliope.preprocess.CalliopeMath(["plan", *model.config.build.add_math])
 
     math_to_add = calliope.AttrDict()
     if isinstance(math_data, dict):
