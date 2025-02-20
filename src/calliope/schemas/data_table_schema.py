@@ -65,7 +65,7 @@ class CalliopeDataTable(CalliopeBaseModel):
         rows = set(listify(self.rows)) - drop
         columns = set(listify(self.columns)) - drop
         if not rows and not columns:
-            raise ValueError("Either row or columns must be defined for data_table.")
+            raise ValueError("Either row or columns must be defined (and not dropped).")
         elif rows & columns:
             raise ValueError("Rows and columns must not overlap.")
 

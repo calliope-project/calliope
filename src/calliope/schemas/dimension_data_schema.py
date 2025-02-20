@@ -77,11 +77,30 @@ class CalliopeTech(DimensionData):
     model_config = {"title": "Technology dimension data"}
 
     base_tech: BaseTech | None = None
+    """
+    One of the abstract base classes, used to derive specific parameter defaults and
+    to activate technology-specific constraints.
+    """
     carrier_in: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
+    """
+    Carrier(s) consumed by this technology.
+    Only for `transmission`, `conversion`, `storage`, and `demand` technologies.
+    """
     carrier_out: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
+    """
+    Carrier(s) produced by this technology.
+    Only for `transmission`, `conversion`, `storage`, and `supply` technologies.
+    """
     carrier_export: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
+    """
+    Carrier(s) produced by this technology that can be exported out of the system
+    without having to go to a pre-defined `sink` (i.e., via a `demand` technology).
+    Must be a subset of `carrier_out`.
+    """
     link_from: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
+    """Connected start point. Only for `transmission` technologies."""
     link_to: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
+    """Connected end point. Only for `transmission` technologies."""
 
 
 class CalliopeNode(DimensionData):
@@ -90,8 +109,13 @@ class CalliopeNode(DimensionData):
     model_config = {"title": "Node dimension", "extra": "allow"}
 
     latitude: NumericVal | None = Field(default=None, ge=-90, le=90)
+    """Latitude (WGS84 / EPSG4326)."""
     longitude: NumericVal | None = Field(default=None, ge=-180, le=180)
+    """Longitude (WGS84 / EPSG4326)."""
     techs: None | dict[AttrStr, None | dict[AttrStr, DataValue | dict]]
+    """
+    Technologies present at this node. Also allows to override technology parameters.
+    """
 
     @model_validator(mode="after")
     def check_dependent_definitions(self) -> Self:

@@ -12,7 +12,7 @@ import calliope.preprocess
 def build_test_model_def(override_dict=None, scenario=None, model_file="model.yaml"):
     """Get the definition dictionary of a test model."""
     model_def, _ = calliope.preprocess.prepare_model_definition(
-        data=os.path.join(os.path.dirname(__file__), "test_model", model_file),
+        data=Path(__file__).parent / "test_model" / model_file,
         scenario=scenario,
         override_dict=override_dict,
     )

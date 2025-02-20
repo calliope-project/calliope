@@ -44,7 +44,7 @@ class TestCalliopeDataTable:
         with pytest.raises(ValidationError) as excinfo:
             CalliopeDataTable(**data_table)
         assert check_error_or_warning(
-            excinfo, "Either row or columns must be defined for data_table."
+            excinfo, "Either row or columns must be defined (and not dropped)."
         )
 
     @pytest.mark.parametrize(

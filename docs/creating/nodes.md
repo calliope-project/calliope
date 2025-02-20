@@ -36,7 +36,7 @@ In the above example, `node_flow_out_max` at `region1` could be used to create [
 ## Understanding node-level parameters
 
 `techs` is the only required parameter in a node.
-This can be an empty dictionary (`techs: {}`), which you may use if your node is just a junction for transmission technologies (which you [**do not define in the `techs` of a node**](techs.md#transmission-technologies) - rather, you define them as separate technologies that connect `link_from` one node `link_to` another node).
+This can be an empty dictionary (`techs: {}`), which you may use if your node is just a junction for transmission technologies (which you [**do not define in the `techs` of a node**](techs.md#transmission-technologies) - rather, you define them as separate technologies that connect a `link_from` node with a `link_to` node).
 
 !!! info "See also"
 

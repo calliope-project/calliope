@@ -35,11 +35,16 @@ UniqueList = Annotated[
     AfterValidator(_validate_unique_list),
     Field(json_schema_extra={"uniqueItems": True}),
 ]
+"""A list with no repeated values."""
 # ==
 NonEmptyList = Annotated[list[T], Len(min_length=1)]
+"""A list with at least one value in it."""
 NonEmptyUniqueList = Annotated[UniqueList[T], Len(min_length=1)]
+"""A list with at least one value in it and no repeated values."""
 AttrStr = Annotated[str, Field(pattern=r"^[^_^\d][\w]*$")]
+"""Single word string in snake_case (e.g., wind_offshore)."""
 NumericVal = Annotated[float, int, Field(allow_inf_nan=True)]
+"""Numerical integer or float value. Can be `nan` or infinite (`float(inf)`)."""
 
 
 class CalliopeBaseModel(BaseModel):

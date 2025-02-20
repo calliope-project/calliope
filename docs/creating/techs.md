@@ -92,7 +92,7 @@ techs:
 ```
 
 1. The region you specify in `link_from` or `link_to` is interchangeable unless you set the parameter `one_way: true`.
-In that case, flow along the transmission line is only allowed from the `link_from` region to the `link_to` region.
+In that case, flow along the transmission line is only allowed from the `link_from` node to the `link_to` node.
 
 ## Understanding tech-level parameters
 
