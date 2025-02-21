@@ -56,6 +56,7 @@ class BackendModelGenerator(ABC):
         "default",
         "type",
         "title",
+        "sense",
         "math_repr",
         "original_dtype",
     ]
@@ -64,6 +65,8 @@ class BackendModelGenerator(ABC):
     _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
     _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
     _PARAM_TYPE = extract_from_schema(MODEL_SCHEMA, "x-type")
+    objective: str
+    """Optimisation problem objective name."""
 
     def __init__(
         self, inputs: xr.Dataset, math: CalliopeMath, build_config: config.Build
@@ -167,6 +170,14 @@ class BackendModelGenerator(ABC):
         Args:
             name (str): name of the objective.
             objective_dict (parsing.UnparsedObjective): Unparsed objective configuration dictionary.
+        """
+
+    @abstractmethod
+    def set_objective(self, name: str) -> None:
+        """Set a built objective to be the optimisation objective.
+
+        Args:
+            name (str): name of the objective.
         """
 
     def log(
@@ -926,15 +937,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
 
     @abstractmethod
-    def _solve(
-        self,
-        solver: str,
-        solver_io: str | None = None,
-        solver_options: dict | None = None,
-        save_logs: str | None = None,
-        warmstart: bool = False,
-        **solve_config,
-    ) -> xr.Dataset:
+    def _solve(self, solve_config: config.Solve, warmstart: bool = False) -> xr.Dataset:
         """Optimise built model.
 
         If solution is optimal, interface objects (decision variables, global
@@ -942,17 +945,10 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         values at optimality.
 
         Args:
-            solver (str): Name of solver to optimise with.
-            solver_io (str | None, optional): If chosen solver has a python interface, set to "python" for potential
-                performance gains, otherwise should be left as None. Defaults to None.
-            solver_options (dict | None, optional): Solver options/parameters to pass directly to solver.
-                See solver documentation for available parameters that can be influenced. Defaults to None.
-            save_logs (str | None, optional): If given, solver logs and built LP file will be saved to this filepath.
-                Defaults to None.
+            solve_config: (config.Solve): Calliope Solve configuration object.
             warmstart (bool, optional): If True, and the chosen solver is capable of implementing it, an existing
                 optimal solution will be used to warmstart the next solve run.
                 Defaults to False.
-            **solve_config: solve configuration overrides.
 
         Returns:
             xr.Dataset: Dataset of decision variable values if the solution was optimal/feasible,

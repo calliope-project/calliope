@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Annotated, Literal, TypeVar
 
 import jsonref
-from pydantic import AfterValidator, BaseModel, Field, model_validator
+from pydantic import AfterValidator, BaseModel, Field
 from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
@@ -90,10 +90,10 @@ class Init(ConfigBaseModel):
     """All configuration options used when initialising a Calliope model."""
 
     model_config = {"title": "Model initialisation configuration"}
-    name: str | None = Field(default=None)
+    name: str | None = None
     """Model name"""
 
-    calliope_version: str | None = Field(default=None)
+    calliope_version: str | None = None
     """Calliope framework version this model is intended for"""
 
     broadcast_param_data: bool = Field(default=False)
@@ -103,7 +103,7 @@ class Init(ConfigBaseModel):
     Defaults to False to mitigate unexpected broadcasting when applying overrides.
     """
 
-    time_subset: tuple[str, str] | None = Field(default=None)
+    time_subset: tuple[str, str] | None = None
     """
     Subset of timesteps as an two-element list giving the **inclusive** range.
     For example, ["2005-01", "2005-04"] will create a time subset from "2005-01-01 00:00:00" to "2005-04-31 23:59:59".
@@ -114,7 +114,7 @@ class Init(ConfigBaseModel):
     time_resample: str | None = Field(default=None, pattern="^[0-9]+[a-zA-Z]")
     """Setting to adjust time resolution, e.g. '2h' for 2-hourly"""
 
-    time_cluster: str | None = Field(default=None)
+    time_cluster: str | None = None
     """
     Setting to cluster the timeseries.
     Must be a path to a file where each date is linked to a representative date that also exists in the timeseries.
@@ -203,45 +203,34 @@ class SolveSpores(ConfigBaseModel):
     number: int = Field(default=3)
     """SPORES mode number of iterations after the initial base run."""
 
-    score_cost_class: str = Field(default="score")
-    """SPORES mode cost class to vary between iterations after the initial base run."""
-
-    slack_cost_group: str = Field(default="monetary")
-    """SPORES mode cost class to keep below the given `slack` (usually "monetary")."""
-
-    save_per_spore: bool = Field(default=False)
+    save_per_spore_path: Path | None = None
     """
-    Whether or not to save the result of each SPORES mode run between iterations.
-    If False, will consolidate all iterations into one dataset after completion of N iterations (defined by `number`) and save that one dataset.
+    If None, the SPORES results will only be available in `calliope.Model.results` once all iterations (defined by `number`) have completed.
+    If a path, as well as consolidating the SPORES results in `calliope.Model.results`, individual SPORES will be saved to file immediately after the iteration has completed.
     """
 
-    save_per_spore_path: str | None = Field(default=None)
-    """If saving per spore, the path to save to."""
-
-    skip_cost_op: bool = Field(default=False)
+    skip_baseline_run: bool = Field(default=False)
     """If the model already contains `plan` mode results, use those as the initial base run results and start with SPORES iterations immediately."""
 
-    @model_validator(mode="after")
-    def require_save_per_spore_path(self) -> Self:
-        """Ensure that path is given if saving per spore."""
-        if self.save_per_spore:
-            if self.save_per_spore_path is None:
-                raise ValueError(
-                    "Must define `save_per_spore_path` if you want to save each SPORES result separately."
-                )
-            elif not Path(self.save_per_spore_path).is_dir():
-                raise ValueError("`save_per_spore_path` must be a directory.")
-        return self
+    tracking_parameter: str | None = None
+    """If given, an input parameter name with which to filter technologies for consideration in SPORES scoring."""
+
+    score_iteration_threshold_relative: float = Field(default=0.1, ge=0)
+    """A factor to apply to flow capacities above which they will increment the SPORES score.
+    E.g., if the previous iteration flow capacity was `100` then, with a threshold value of 0.1,
+    only capacities above `10` in the current iteration will cause the SPORES score to increase for that technology at that node.
+    If, say, the current iteration's capacity is `8` then the SPORES score will not change for that technology (as if it had no )
+    """
 
 
 class Solve(ConfigBaseModel):
     """Base configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
     model_config = {"title": "Model Solve Configuration"}
-    save_logs: str | None = Field(default=None)
+    save_logs: Path | None = None
     """If given, should be a path to a directory in which to save optimisation logs."""
 
-    solver_io: str | None = Field(default=None)
+    solver_io: str | None = None
     """
     Some solvers have different interfaces that perform differently.
     For instance, setting `solver_io="python"` when using the solver `gurobi` tends to reduce the time to send the optimisation problem to the solver.

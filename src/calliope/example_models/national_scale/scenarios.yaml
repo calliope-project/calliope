@@ -30,41 +30,20 @@ overrides:
         time_cluster: data_tables/cluster_days.csv
 
   spores:
-    config:
-      build.mode: spores
-      solve:
-        spores_score_cost_class: "spores_score"
-        spores_number: 3
+    config.init.broadcast_param_data: false
+    config.build:
+      mode: spores
+      ensure_feasibility: true
+    config.solve.spores:
+      tracking_parameter: spores_tracker
+      number: 3
     parameters:
-      # In SPORES mode, slack to apply when setting the upper limit on system `spores_slack_cost_group` costs.
-      # The constraint will limit the costs to `(spores_slack + 1) * sum(costs[cost=spores_slack_cost_group])`.
-      spores_slack: 0.1
-      objective_cost_weights:
-        data: [1, 0]
-        index: ["monetary", "spores_score"]
-      # In SPORES mode, the new objective function cost class weightings to apply after the initial base run.
-      spores_objective_cost_weights:
-        data: [1, 0]
-        index: [spores_score, monetary]
-        dims: costs
+      spores_slack: 0.5
+      spores_tracker: # defines which techs are going to be subject to the SPORES weighting process
+        data: [true, true, true]
+        index: [ccgt, csp, battery]
+        dims: techs
 
-    # FIXME: replace group constraint in SPORES mode
-    # group_constraints:
-    #    systemwide_cost_max.cost_max.monetary: 1e10  # very large, non-infinite value
-    templates:
-      cost_dim_setter:
-        cost_flow_cap:
-          index: [monetary, spores_score]
-          dims: costs
-        cost_interest_rate:
-          data: [0.10, 1]
-          index: [monetary, spores_score]
-          dims: costs
-    techs:
-      ccgt.cost_flow_cap.data: [750, 0]
-      csp.cost_flow_cap.data: [1000, 0]
-      battery.cost_flow_cap.data: [null, 0]
-      region1_to_region2.cost_flow_cap.data: [200, 0]
   operate:
     config:
       init.time_subset: ["2005-01-01", "2005-01-10"]

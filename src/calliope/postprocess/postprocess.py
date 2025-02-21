@@ -155,7 +155,7 @@ def clean_results(results, zero_threshold):
         comment = "Postprocessing: All values < {} set to 0 in {}".format(
             zero_threshold, ", ".join(threshold_applied)
         )
-        LOGGER.warn(comment)
+        LOGGER.warning(comment)
     else:
         comment = f"Postprocessing: zero threshold of {zero_threshold} not required"
         LOGGER.info(comment)
