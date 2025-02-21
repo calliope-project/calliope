@@ -240,26 +240,18 @@ class GurobiBackendModel(backend_model.BackendModel):
         else:
             return global_expression
 
-    def _solve(
-        self,
-        solver: str,
-        solver_io: str | None = None,
-        solver_options: dict | None = None,
-        save_logs: str | None = None,
-        warmstart: bool = False,
-        **solve_config,
-    ) -> xr.Dataset:
+    def _solve(self, solve_config: config.Solve, warmstart: bool = False) -> xr.Dataset:
         self._instance.resetParams()
 
-        if solver_options is not None:
-            for k, v in solver_options.items():
+        if solve_config.solver_options is not None:
+            for k, v in solve_config.solver_options.items():
                 self._instance.setParam(k, v)
 
         if not warmstart:
             self._instance.setParam("LPWarmStart", 0)
 
-        if save_logs is not None:
-            logdir = Path(save_logs)
+        if solve_config.save_logs is not None:
+            logdir = Path(solve_config.save_logs)
             self._instance.setParam("LogFile", (logdir / "gurobi.log").as_posix())
 
         self._instance.update()

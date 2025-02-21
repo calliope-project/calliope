@@ -204,14 +204,12 @@ class PyomoBackendModel(backend_model.BackendModel):
         self._add_component(name, objective_dict, _objective_setter, "objectives")
 
     def set_objective(self, name: str) -> None:  # noqa: D102, override
-        for obj_name, obj in self.objectives.items():
-            if obj.item().active and obj_name != name:
-                self.log("objectives", obj_name, "Objective deactivated.", level="info")
-                obj.item().deactivate()
-            if obj_name == name:
-                obj.item().activate()
-                self.log("objectives", obj_name, "Objective activated.", level="info")
+        self.objectives[self.objective].item().deactivate()
+        self.log("objectives", self.objective, "Objective deactivated.", level="info")
+
+        self.objectives[name].item().activate()
         self.objective = name
+        self.log("objectives", name, "Objective activated.", level="info")
 
     def get_parameter(  # noqa: D102, override
         self, name: str, as_backend_objs: bool = True
@@ -285,36 +283,30 @@ class PyomoBackendModel(backend_model.BackendModel):
         return global_expression
 
     def _solve(  # noqa: D102, override
-        self,
-        solver: str,
-        solver_io: str | None = None,
-        solver_options: dict | None = None,
-        save_logs: str | None = None,
-        warmstart: bool = False,
-        **solve_config,
+        self, solve_config: config.Solve, warmstart: bool = False
     ) -> xr.Dataset:
-        if solver == "cbc" and self.shadow_prices.is_active:
+        if solve_config.solver == "cbc" and self.shadow_prices.is_active:
             model_warn(
                 "Switching off shadow price tracker as constraint duals cannot be accessed from the CBC solver"
             )
             self.shadow_prices.deactivate()
-        opt = SolverFactory(solver, solver_io=solver_io)
+        opt = SolverFactory(solve_config.solver, solver_io=solve_config.solver_io)
 
-        if solver_options:
-            for k, v in solver_options.items():
+        if solve_config.solver_options:
+            for k, v in solve_config.solver_options.items():
                 opt.options[k] = v
 
         solve_kwargs = {}
-        if save_logs is not None:
+        if solve_config.save_logs is not None:
             solve_kwargs.update({"symbolic_solver_labels": True, "keepfiles": True})
-            logdir = Path(save_logs)
+            logdir = Path(solve_config.save_logs)
             logdir.mkdir(parents=True, exist_ok=True)
             TempfileManager.tempdir = logdir  # Sets log output dir
 
-        if warmstart and solver in ["glpk", "cbc"]:
+        if warmstart and solve_config.solver in ["glpk", "cbc"]:
             model_warn(
-                f"The chosen solver, {solver}, does not support warmstart, which may "
-                "impact performance."
+                f"The chosen solver, {solve_config.solver}, does not support warmstart, "
+                "which may impact performance."
             )
             warmstart = False
 

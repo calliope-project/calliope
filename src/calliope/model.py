@@ -357,9 +357,7 @@ class Model:
         elif mode == "spores":
             results = self._solve_spores(self.config.solve)
         else:
-            results = self.backend._solve(
-                warmstart=warmstart, **self.config.solve.model_dump()
-            )
+            results = self.backend._solve(self.config.solve, warmstart=warmstart)
 
         log_time(
             LOGGER,
@@ -510,6 +508,9 @@ class Model:
         Optimisation is undertaken iteratively for slices of the timeseries, with
         some data being passed between slices.
 
+        Args:
+            solver_config (config.Solve): Calliope Solver configuration object.
+
         Returns:
             xr.Dataset: Results dataset.
         """
@@ -519,9 +520,7 @@ class Model:
 
         LOGGER.info("Optimisation model | Running first time window.")
 
-        step_results = self.backend._solve(
-            warmstart=False, **solver_config.model_dump()
-        )
+        iteration_results = self.backend._solve(solver_config, warmstart=False)
 
         results_list = []
 
@@ -531,15 +530,17 @@ class Model:
                 f"Optimisation model | Running time window starting at {windowstep_as_string}."
             )
             results_list.append(
-                step_results.sel(timesteps=slice(None, windowstep - self._TS_OFFSET))
+                iteration_results.sel(
+                    timesteps=slice(None, windowstep - self._TS_OFFSET)
+                )
             )
-            previous_step_results = results_list[-1]
+            previous_iteration_results = results_list[-1]
             horizonstep = self._model_data.horizonsteps.sel(windowsteps=windowstep)
             new_inputs = self.inputs.sel(
                 timesteps=slice(windowstep, horizonstep)
             ).drop_vars(["horizonsteps", "windowsteps"], errors="ignore")
 
-            if len(new_inputs.timesteps) != len(step_results.timesteps):
+            if len(new_inputs.timesteps) != len(iteration_results.timesteps):
                 LOGGER.info(
                     "Optimisation model | Reaching the end of the timeseries. "
                     "Re-building model with shorter time horizon."
@@ -554,18 +555,16 @@ class Model:
                         self.backend.update_parameter(param_name, param_data)
                         self.backend.inputs[param_name] = param_data
 
-            if "storage" in step_results:
+            if "storage" in iteration_results:
                 self.backend.update_parameter(
                     "storage_initial",
-                    self._recalculate_storage_initial(previous_step_results),
+                    self._recalculate_storage_initial(previous_iteration_results),
                 )
 
-            step_results = self.backend._solve(
-                warmstart=False, **solver_config.model_dump()
-            )
+            iteration_results = self.backend._solve(solver_config, warmstart=False)
 
         self._start_window_idx = 0
-        results_list.append(step_results.sel(timesteps=slice(windowstep, None)))
+        results_list.append(iteration_results.sel(timesteps=slice(windowstep, None)))
         results = xr.concat(results_list, dim="timesteps", combine_attrs="no_conflicts")
         results.attrs["termination_condition"] = ",".join(
             set(result.attrs["termination_condition"] for result in results_list)
@@ -599,21 +598,18 @@ class Model:
             xr.Dataset: Results dataset.
         """
         LOGGER.info("Optimisation model | Resetting SPORES parameters.")
-        self.backend.update_parameter(
-            "spores_score", self.inputs.get("spores_score", xr.DataArray(0))
-        )
-        self.backend.update_parameter(
-            "spores_baseline_cost",
-            self.inputs.get("spores_baseline_cost", xr.DataArray(np.inf)),
-        )
+        for init_param in ["spores_score", "spores_baseline_cost"]:
+            default = xr.DataArray(self.inputs.attrs["defaults"][init_param])
+            self.backend.update_parameter(
+                init_param, self.inputs.get(init_param, default)
+            )
+
         self.backend.set_objective(self.config.build.objective)
 
         spores_config: config.SolveSpores = solver_config.spores
         if not spores_config.skip_baseline_run:
             LOGGER.info("Optimisation model | Running baseline model.")
-            baseline_results = self.backend._solve(
-                warmstart=False, **solver_config.model_dump()
-            )
+            baseline_results = self.backend._solve(solver_config, warmstart=False)
         else:
             LOGGER.info("Optimisation model | Using existing baseline model results.")
             baseline_results = self.results.copy()
@@ -625,20 +621,19 @@ class Model:
                 spores_config.save_per_spore_path / "baseline.nc"
             )
 
+        # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
         results_list: list[xr.Dataset] = [baseline_results]
         spore_range = range(1, spores_config.number + 1)
         for spore in spore_range:
             LOGGER.info(f"Optimisation model | Running SPORE {spore}.")
             self._spores_update_model(baseline_results, results_list[-1], spores_config)
 
-            step_results = self.backend._solve(
-                warmstart=False, **solver_config.model_dump()
-            )
-            results_list.append(step_results)
+            iteration_results = self.backend._solve(solver_config, warmstart=False)
+            results_list.append(iteration_results)
 
             if spores_config.save_per_spore_path is not None:
                 LOGGER.info(f"Optimisation model | Saving SPORE {spore} to file.")
-                step_results.assign_coords(spores=spore).to_netcdf(
+                iteration_results.assign_coords(spores=spore).to_netcdf(
                     spores_config.save_per_spore_path / f"spore_{spore}.nc"
                 )
 
@@ -672,7 +667,10 @@ class Model:
         previous_cap = previous_results["flow_cap"].where(spores_techs)
 
         # Make sure that penalties are applied only to non-negligible deployments of capacity
-        min_relevant_size = 0.1 * previous_cap.max(["nodes", "techs"])
+        min_relevant_size = (
+            spores_config.score_iteration_threshold_relative
+            * previous_cap.max(["nodes", "techs"])
+        )
 
         new_score = (
             # Where capacity was deployed more than the minimal relevant size, assign an integer penalty (score)
