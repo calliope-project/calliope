@@ -54,8 +54,8 @@ transmission_tech,lifetime,25
 transmission_tech,one_way,1.0
 transmission_tech,flow_cap_max,1.0
 transmission_tech,flow_cap_min,1.0
-transmission_tech,from,A
-transmission_tech,to,B
+transmission_tech,link_from,A
+transmission_tech,link_to,B
 demand_tech,sink_unit,per_cap
 conversion_tech,base_tech,conversion
 conversion_tech,cap_method,integer

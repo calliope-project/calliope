@@ -90,7 +90,6 @@ overrides:
       region1_3.techs.csp.area_use: 8487
 
     techs:
-      ac_transmission.flow_cap: 3231
       region1_to_region1_1.flow_cap: 9000
       region1_to_region1_2.active: false
       region1_to_region1_3.flow_cap: 2281

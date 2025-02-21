@@ -11,6 +11,7 @@ import pytest
 
 import calliope
 from calliope.io import read_rich_yaml
+from calliope.schemas.math_schema import CalliopeMathDef
 from calliope.util import schema
 from calliope.util.generate_runs import generate_runs
 from calliope.util.logging import log_time
@@ -190,13 +191,10 @@ class TestValidateDict:
         "dict_path", glob.glob(str(Path(calliope.__file__).parent / "math" / "*.yaml"))
     )
     def test_validate_math(self, base_math, dict_path):
-        math_schema = read_rich_yaml(
-            Path(calliope.__file__).parent / "config" / "math_schema.yaml"
-        )
-        to_validate = base_math.union(
+        base_math.union(
             read_rich_yaml(dict_path, allow_override=True), allow_override=True
         )
-        schema.validate_dict(to_validate, math_schema, "")
+        CalliopeMathDef(**base_math)
 
 
 class TestExtractFromSchema:

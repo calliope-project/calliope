@@ -158,8 +158,8 @@ templates:
   test_controller: {}
 
   test_transmission:
-    from: a
-    to: b
+    link_from: a
+    link_to: b
     template: test_controller
 
   test_transmission_elec:

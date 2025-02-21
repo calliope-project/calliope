@@ -14,11 +14,11 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from calliope import config
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
 from calliope.preprocess import CalliopeMath
+from calliope.schemas import config_schema
 
 if importlib.util.find_spec("gurobipy") is not None:
     import gurobipy
@@ -43,7 +43,7 @@ class GurobiBackendModel(backend_model.BackendModel):
     """gurobipy-specific backend functionality."""
 
     def __init__(
-        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config.Build
+        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config_schema.Build
     ) -> None:
         """Gurobi solver interface class.
 

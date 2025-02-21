@@ -46,12 +46,14 @@ class TestTimeFormat:
             build_test_model(override_dict=override3, scenario="simple_supply")
 
     def test_incorrect_date_format_one_value_only(self):
-        # should fail: one value wrong in file
+        """All time formatted values should be checked against the configured ISO."""
         override = read_rich_yaml(
-            "data_tables.test_demand_elec.data: data_tables/demand_heat_wrong_dateformat.csv"
+            "data_tables.demand_elec.data: data_tables/demand_heat_wrong_dateformat.csv"
         )
-        # check in output error that it points to: 07/01/2005 10:00:00
-        with pytest.raises(exceptions.ModelError):
+        with pytest.raises(
+            exceptions.ModelError,
+            match="Time data 02/01/2005 00:00 is not ISO8601 format",
+        ):
             build_test_model(override_dict=override, scenario="simple_conversion")
 
 

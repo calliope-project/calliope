@@ -12,10 +12,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from calliope import config
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import ModelError
 from calliope.preprocess import CalliopeMath
+from calliope.schemas import config_schema
 
 ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
 LOGGER = logging.getLogger(__name__)
@@ -306,7 +306,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self,
         inputs: xr.Dataset,
         math: CalliopeMath,
-        build_config: config.Build,
+        build_config: config_schema.Build,
         include: Literal["all", "valid"] = "all",
     ) -> None:
         """Interface to build a string representation of the mathematical formulation using LaTeX math notation.

@@ -7,7 +7,7 @@ Calliope is tested on Linux, macOS, and Windows.
 Running Calliope requires four things:
 
 1. The Python programming language, version {{ min_python_version }} to {{ max_python_version }}.
-2. A number of Python add-on modules including [Pyomo](https://www.pyomo.org/), [Pandas](https://pandas.pydata.org/) and [Xarray](https://xarray.dev/).
+2. A number of Python add-on modules including [Pyomo](https://www.pyomo.org/), [Pandas](https://pandas.pydata.org/) and [Xarray](https://docs.xarray.dev/).
 3. An optimisation solver: Calliope has been tested with CBC, GLPK, Gurobi, and CPLEX. Any other solver that is compatible with Pyomo should also work.
 4. The Calliope software itself.
 

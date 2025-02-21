@@ -270,7 +270,7 @@ We have changed the nesting structure for defining technology costs so they are 
 ### `links` → transmission links defined in `techs`
 
 The top-level key `links` no longer exists.
-Instead, links are defined as separate transmission technologies in `techs`, including `to`/`from` keys:
+Instead, links are defined as separate transmission technologies in `techs`, including `link_to`/`link_from` keys:
 
 === "v0.6"
 
@@ -298,13 +298,13 @@ Instead, links are defined as separate transmission technologies in `techs`, inc
     ```yaml
     techs:
       x1_to_x2_ac_transmission:
-        from: X1
-        to: X2
+        link_from: X1
+        link_to: X2
         base_tech: transmission
         flow_cap_max: 10
       x1_to_x2_dc_transmission:
-        from: X1
-        to: X2
+        link_from: X1
+        link_to: X2
         base_tech: transmission
         flow_cap_max: 5
     ```

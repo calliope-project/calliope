@@ -9,6 +9,16 @@ import calliope.backend
 import calliope.preprocess
 
 
+def build_test_model_def(override_dict=None, scenario=None, model_file="model.yaml"):
+    """Get the definition dictionary of a test model."""
+    model_def, _ = calliope.preprocess.prepare_model_definition(
+        data=Path(__file__).parent / "test_model" / model_file,
+        scenario=scenario,
+        override_dict=override_dict,
+    )
+    return model_def
+
+
 def build_test_model(
     override_dict=None,
     scenario=None,
@@ -16,6 +26,7 @@ def build_test_model(
     data_table_dfs=None,
     **init_kwargs,
 ):
+    """Get the Calliope model object of a test model."""
     return calliope.Model(
         os.path.join(os.path.dirname(__file__), "test_model", model_file),
         override_dict=override_dict,

@@ -28,7 +28,6 @@ class TestModelPreproccessing:
     def test_preprocess_urban_scale(self):
         calliope.examples.urban_scale()
 
-    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_preprocess_milp(self):
         calliope.examples.milp()
 
