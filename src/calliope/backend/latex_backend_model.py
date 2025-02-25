@@ -541,8 +541,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                     "yaml_snippet": da.attrs.get("yaml_snippet", None),
                 }
                 for name, da in sorted(getattr(self, objtype).data_vars.items())
-                if (objtype == "objectives" and name == self.objective)
-                or (objtype != "objectives" and "math_string" in da.attrs)
+                if ("math_string" in da.attrs)
                 or (objtype == "parameters" and da.attrs["references"])
             ]
             for objtype in [
@@ -557,6 +556,11 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         }
         if "parameters" in components and not components["parameters"]:
             del components["parameters"]
+        for objective in components.get("objectives", []):
+            if objective["name"] == self.objective:
+                objective["name"] += " (active)"
+            else:
+                objective["name"] += " (inactive)"
         return self._render(
             doc_template, mkdocs_features=mkdocs_features, components=components
         )

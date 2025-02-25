@@ -19,17 +19,9 @@ global_expressions:
 
 objectives:
   min_spores:
+    description: >-
+      SPORES score minimisation objective, activated for all iterations after the baseline optimisation.
+      The SPORES scores are applied to flow capacity for each technology at each node.
     equations:
-      - expression: sum(flow_cap * spores_score, over=[nodes, techs, carriers]) + $unmet_demand
-    sub_expressions:
-      unmet_demand:
-        - where: "config.ensure_feasibility=True"
-          expression: >-
-            sum(
-              sum(unmet_demand - unused_supply, over=[carriers, nodes])
-              * timestep_weights,
-              over=timesteps
-            ) * bigM
-        - where: "NOT config.ensure_feasibility=True"
-          expression: "0"
+      - expression: sum(flow_cap * spores_score, over=[nodes, techs, carriers])
     sense: minimise

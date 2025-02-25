@@ -5,12 +5,19 @@ overrides:
       time_cluster: cluster_days.csv
     config.build:
       add_math: ["storage_inter_cluster"]
+  spores:
+    config:
+      init.name: SPORES solve mode
+      build.mode: spores
+      solve.spores.number: 2
+    parameters:
+      spores_slack: 0.1
 
 config.init.name: base
 
 nodes:
-  A.techs: {demand_tech, conversion_tech, supply_tech, storage_tech}
-  B.techs: {demand_tech, conversion_tech, supply_tech, storage_tech}
+  A.techs: { demand_tech, conversion_tech, supply_tech, storage_tech }
+  B.techs: { demand_tech, conversion_tech, supply_tech, storage_tech }
 
 techs:
   tech_transmission:
