@@ -8,7 +8,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -263,16 +262,6 @@ class Model:
                     "there exist non-uniform timesteps (e.g. from time clustering)"
                 )
             backend_input = self._prepare_operate_mode_inputs(self.config.build.operate)
-        elif mode == "spores":
-            backend_input = self._model_data.copy()
-            if "spores_score" not in backend_input:
-                backend_input["spores_score"] = xr.DataArray(0).assign_attrs(
-                    is_result=0
-                )
-            if "spores_baseline_cost" not in backend_input:
-                backend_input["spores_baseline_cost"] = xr.DataArray(
-                    np.inf
-                ).assign_attrs(is_result=0)
         else:
             backend_input = self._model_data
 
