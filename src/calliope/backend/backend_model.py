@@ -26,12 +26,13 @@ from typing import (
 import numpy as np
 import xarray as xr
 
-from calliope import config, exceptions
+from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
 from calliope.exceptions import warn as model_warn
 from calliope.io import load_config, to_yaml
 from calliope.preprocess.model_math import ORDERED_COMPONENTS_T, CalliopeMath
+from calliope.schemas import config_schema
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 if TYPE_CHECKING:
@@ -69,7 +70,7 @@ class BackendModelGenerator(ABC):
     """Optimisation problem objective name."""
 
     def __init__(
-        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config.Build
+        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config_schema.Build
     ):
         """Abstract base class to build a representation of the optimisation problem.
 
@@ -617,7 +618,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         self,
         inputs: xr.Dataset,
         math: CalliopeMath,
-        build_config: config.Build,
+        build_config: config_schema.Build,
         instance: T,
     ) -> None:
         """Abstract base class to build backend models that interface with solvers.
@@ -937,7 +938,9 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         """
 
     @abstractmethod
-    def _solve(self, solve_config: config.Solve, warmstart: bool = False) -> xr.Dataset:
+    def _solve(
+        self, solve_config: config_schema.Solve, warmstart: bool = False
+    ) -> xr.Dataset:
         """Optimise built model.
 
         If solution is optimal, interface objects (decision variables, global
@@ -945,7 +948,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         values at optimality.
 
         Args:
-            solve_config: (config.Solve): Calliope Solve configuration object.
+            solve_config: (config_schema.Solve): Calliope Solve configuration object.
             warmstart (bool, optional): If True, and the chosen solver is capable of implementing it, an existing
                 optimal solution will be used to warmstart the next solve run.
                 Defaults to False.
@@ -1139,7 +1142,7 @@ class ShadowPrices:
         valid_constraints = shadow_prices.intersection(self.available_constraints)
         if invalid_constraints:
             model_warn(
-                f"Invalid constraints {invalid_constraints} in `config.solve.shadow_prices`. "
+                f"Invalid constraints {invalid_constraints} in `config_schema.solve.shadow_prices`. "
                 "Their shadow prices will not be tracked."
             )
         # Only actually activate shadow price tracking if at least one valid

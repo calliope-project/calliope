@@ -101,6 +101,10 @@ techs:
     base_tech: conversion
     carrier_in: gas
     carrier_out: heat
+    cost_flow_cap:
+      data: 30
+      index: [[monetary, heat]]
+      dims: [costs, carriers]
     flow_cap_max:
       data: 600
       index: heat
@@ -161,28 +165,28 @@ techs:
   # --8<-- [start:transmission]
 
   X1_to_X2:
-    from: X1
-    to: X2
+    link_from: X1
+    link_to: X2
     template: power_lines
     distance: 10
   X1_to_X3:
-    from: X1
-    to: X3
+    link_from: X1
+    link_to: X3
     template: power_lines
     distance: 5
   X1_to_N1:
-    from: X1
-    to: N1
+    link_from: X1
+    link_to: N1
     template: heat_pipes
     distance: 3
   N1_to_X2:
-    from: N1
-    to: X2
+    link_from: N1
+    link_to: X2
     template: heat_pipes
     distance: 3
   N1_to_X3:
-    from: N1
-    to: X3
+    link_from: N1
+    link_to: X3
     template: heat_pipes
     distance: 4
 

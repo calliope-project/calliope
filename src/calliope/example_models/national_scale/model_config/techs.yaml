@@ -88,8 +88,8 @@ techs:
   # --8<-- [start:transmission]
 
   region1_to_region2:
-    from: region1
-    to: region2
+    link_from: region1
+    link_to: region2
     name: "AC power transmission"
     color: "#8465A9"
     base_tech: transmission
@@ -100,16 +100,16 @@ techs:
     flow_cap_max: 10000
 
   region1_to_region1_1:
-    from: region1
-    to: region1_1
+    link_from: region1
+    link_to: region1_1
     template: free_transmission
   region1_to_region1_2:
-    from: region1
-    to: region1_2
+    link_from: region1
+    link_to: region1_2
     template: free_transmission
   region1_to_region1_3:
-    from: region1
-    to: region1_3
+    link_from: region1
+    link_to: region1_3
     template: free_transmission
 
   # --8<-- [end:transmission]

@@ -552,10 +552,11 @@ class TestModelData:
             for subdict in link_dict.values()
         )
         assert not any(
-            "to" in subdict["test_link_a_b_elec"] for subdict in link_dict.values()
+            "link_to" in subdict["test_link_a_b_elec"] for subdict in link_dict.values()
         )
         assert not any(
-            "from" in subdict["test_link_a_b_elec"] for subdict in link_dict.values()
+            "link_from" in subdict["test_link_a_b_elec"]
+            for subdict in link_dict.values()
         )
 
     def test_links_to_node_format_none_active(
@@ -760,7 +761,7 @@ class TestModelData:
             )
         assert check_error_or_warning(
             excinfo,
-            "(nodes, foo) | Transmission techs cannot be directly defined at nodes; they will be automatically assigned to nodes based on `to` and `from` parameters: ['tech2', 'tech3']",
+            "(nodes, foo) | Transmission techs cannot be directly defined at nodes; they will be automatically assigned to nodes based on `link_to` and `link_from` parameters: ['tech2', 'tech3']",
         )
 
 
@@ -947,7 +948,7 @@ class TestActiveFalse:
 
         # Ensure warnings were raised
         assert (
-            "(links, test_link_a_b_elec) | Deactivated due to missing/deactivated `from` or `to` node."
+            "(links, test_link_a_b_elec) | Deactivated due to missing/deactivated `link_from` or `link_to` node."
             in my_caplog.text
         )
         assert "(nodes, b) | Deactivated." in my_caplog.text

@@ -19,13 +19,13 @@ def relative_path(base_path_file: str | Path | None, path: str | Path) -> Path:
     """
     # Check if base_path_file is a string because it might be an AttrDict
     path = Path(path)
-    if path.is_absolute() or base_path_file is None:
+    if path.is_absolute():
         return path
     else:
-        base_path_file = Path(base_path_file)
-        if base_path_file.is_file():
-            base_path_file = base_path_file.parent
-        return base_path_file.absolute() / path
+        base_path = Path(base_path_file) if base_path_file is not None else Path.cwd()
+        if base_path.is_file():
+            base_path = base_path.parent
+        return base_path.absolute() / path
 
 
 def listify(var: Any) -> list:

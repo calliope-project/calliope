@@ -13,17 +13,13 @@ import pandas as pd
 import xarray as xr
 
 import calliope
-from calliope import backend, config, exceptions, io, preprocess
+from calliope import backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess.model_data import ModelDataFactory
+from calliope.schemas import config_schema, model_def_schema
 from calliope.util.logging import log_time
-from calliope.util.schema import (
-    CONFIG_SCHEMA,
-    MODEL_SCHEMA,
-    extract_from_schema,
-    validate_dict,
-)
+from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
@@ -72,7 +68,7 @@ class Model:
             **kwargs: initialisation overrides.
         """
         self._timings: dict = {}
-        self.config: config.CalliopeConfig
+        self.config: config_schema.CalliopeConfig
         self.defaults: AttrDict
         self.applied_math: preprocess.CalliopeMath
         self.backend: BackendModel
@@ -155,8 +151,8 @@ class Model:
             model_definition, scenario, override_dict
         )
         model_def_full.union({"config.init": kwargs}, allow_override=True)
-        # First pass to check top-level keys are all good. FIXME-config: remove after pydantic is ready
-        validate_dict(model_def_full, CONFIG_SCHEMA, "Model definition")
+        # Ensure model definition is correct
+        model_def_schema.CalliopeModelDef(**model_def_full)
 
         log_time(
             LOGGER,
@@ -164,7 +160,7 @@ class Model:
             "model_run_creation",
             comment="Model: preprocessing stage 1 (model_run)",
         )
-        model_config = config.CalliopeConfig(**model_def_full.pop("config"))
+        model_config = config_schema.CalliopeConfig(**model_def_full.pop("config"))
 
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
         attributes = {
@@ -218,7 +214,7 @@ class Model:
                 model_data.attrs.pop("applied_math")
             )
         if "config" in model_data.attrs:
-            self.config = config.CalliopeConfig(**model_data.attrs.pop("config"))
+            self.config = config_schema.CalliopeConfig(**model_data.attrs.pop("config"))
 
         self._model_data = model_data
 
@@ -459,7 +455,7 @@ class Model:
         return "\n".join(info_strings)
 
     def _prepare_operate_mode_inputs(
-        self, operate_config: config.BuildOperate
+        self, operate_config: config_schema.BuildOperate
     ) -> xr.Dataset:
         """Slice the input data to just the length of operate mode time horizon.
 
@@ -502,14 +498,14 @@ class Model:
 
         return sliced_inputs
 
-    def _solve_operate(self, solver_config: config.Solve) -> xr.Dataset:
+    def _solve_operate(self, solver_config: config_schema.Solve) -> xr.Dataset:
         """Solve in operate (i.e. dispatch) mode.
 
         Optimisation is undertaken iteratively for slices of the timeseries, with
         some data being passed between slices.
 
         Args:
-            solver_config (config.Solve): Calliope Solver configuration object.
+            solver_config (config_schema.Solve): Calliope Solver configuration object.
 
         Returns:
             xr.Dataset: Results dataset.
@@ -588,7 +584,7 @@ class Model:
         new_initial_storage = end_storage / self.inputs.storage_cap
         return new_initial_storage
 
-    def _solve_spores(self, solver_config: config.Solve) -> xr.Dataset:
+    def _solve_spores(self, solver_config: config_schema.Solve) -> xr.Dataset:
         """Solve in spores (i.e. modelling to generate alternatives - MGA) mode.
 
         Optimisation is undertaken iteratively after setting the total monetary cost of the system.
@@ -606,7 +602,7 @@ class Model:
 
         self.backend.set_objective(self.config.build.objective)
 
-        spores_config: config.SolveSpores = solver_config.spores
+        spores_config: config_schema.SolveSpores = solver_config.spores
         if not spores_config.skip_baseline_run:
             LOGGER.info("Optimisation model | Running baseline model.")
             baseline_results = self.backend._solve(solver_config, warmstart=False)
@@ -649,7 +645,7 @@ class Model:
         self,
         baseline_results: xr.Dataset,
         previous_results: xr.Dataset,
-        spores_config: config.SolveSpores,
+        spores_config: config_schema.SolveSpores,
     ):
         # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
         constraining_cost = baseline_results.cost.groupby("costs").sum(..., min_count=1)

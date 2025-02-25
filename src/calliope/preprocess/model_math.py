@@ -1,3 +1,5 @@
+# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
+# Licensed under the Apache 2.0 License (see LICENSE file).
 """Calliope math handling with interfaces for pre-defined and user-defined files."""
 
 import importlib.resources
@@ -9,7 +11,7 @@ from pathlib import Path
 from calliope.attrdict import AttrDict
 from calliope.exceptions import ModelError
 from calliope.io import read_rich_yaml
-from calliope.util.schema import MATH_SCHEMA, validate_dict
+from calliope.schemas.math_schema import CalliopeMathDef
 from calliope.util.tools import relative_path
 
 LOGGER = logging.getLogger(__name__)
@@ -108,7 +110,7 @@ class CalliopeMath:
 
     def validate(self) -> None:
         """Test current math and optional external math against the MATH schema."""
-        validate_dict(self.data, MATH_SCHEMA, "math")
+        CalliopeMathDef(**self.data)
         LOGGER.info("Math preprocessing | validated math against schema.")
 
     def _add_pre_defined_file(self, filename: str) -> None:

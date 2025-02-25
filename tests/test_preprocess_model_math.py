@@ -6,6 +6,7 @@ from pathlib import Path
 from random import shuffle
 
 import pytest
+from pydantic import ValidationError
 
 import calliope
 from calliope.exceptions import ModelError
@@ -176,7 +177,9 @@ class TestValidate:
     def test_validate_math_fail(self):
         """Invalid math keys must trigger a failure."""
         model_math = CalliopeMath([{"foo": "bar"}])
-        with pytest.raises(ModelError):
+        with pytest.raises(
+            ValidationError, match="validation error for Model math schema"
+        ):
             model_math.validate()
 
     def test_math_default(self, caplog, model_math_default):

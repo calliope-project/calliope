@@ -100,7 +100,7 @@ variables:
   storage:
     title: Virtual stored carrier
     description: >-
-      The virtual carrier stored by a `supply_plus` or `storage` technology in each timestep of a clustered day.
+      The virtual carrier stored by any technology using storage in each timestep of a clustered day.
       Stored carrier can be negative so long as it does not go below the carrier stored in `storage_inter_cluster`.
       Only together with `storage_inter_cluster` does this variable's values gain physical significance.
     unit: energy
@@ -110,7 +110,7 @@ variables:
   storage_inter_cluster:
     title: Virtual inter-cluster stored carrier
     description: >-
-      The virtual carrier stored by a `supply_plus` or `storage` technology between days of the entire timeseries.
+      The virtual carrier stored by any technology using storage between days of the entire timeseries.
       Only together with `storage` does this variable's values gain physical significance.
     foreach: [nodes, techs, datesteps]
     where: "include_storage=True OR base_tech=storage"

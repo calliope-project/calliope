@@ -545,16 +545,16 @@ class TestDataTableTechDict:
 
     def test_tech_dict_from_to_from(self, table_obj):
         df_dict = {
-            "from": {"foo1": "bar1", "foo2": "bar2"},
-            "to": {"foo1": "bar2", "foo3": "bar1"},
+            "link_from": {"foo1": "bar1", "foo2": "bar2"},
+            "link_to": {"foo1": "bar2", "foo3": "bar1"},
         }
         tech_dict, base_dict = table_obj(df_dict).tech_dict()
 
         assert tech_dict == {"foo1": {}, "foo2": {}, "foo3": {}}
         assert base_dict == {
-            "foo1": {"from": "bar1", "to": "bar2"},
-            "foo2": {"from": "bar2"},
-            "foo3": {"to": "bar1"},
+            "foo1": {"link_from": "bar1", "link_to": "bar2"},
+            "foo2": {"link_from": "bar2"},
+            "foo3": {"link_to": "bar1"},
         }
 
     def test_tech_dict_empty(self, table_obj):

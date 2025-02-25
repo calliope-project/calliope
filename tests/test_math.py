@@ -802,13 +802,13 @@ class TestNetImportShare(CustomMathExamples):
         },
         "techs": {
             "links_a_c_heat": {
-                "from": "a",
-                "to": "c",
+                "link_from": "a",
+                "link_to": "c",
                 "template": "test_transmission_heat",
             },
             "links_a_c_elec": {
-                "from": "a",
-                "to": "c",
+                "link_from": "a",
+                "link_to": "c",
                 "template": "test_transmission_elec",
             },
         },

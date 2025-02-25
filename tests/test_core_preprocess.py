@@ -45,11 +45,14 @@ class TestModelRun:
                     name: test
                     source_use_max: .inf
                     flow_cap_max: .inf
-            nodes.1.techs.test_undefined_carrier:
+            nodes.a.techs.test_undefined_carrier:
             """
         )
-        with pytest.raises(exceptions.ModelError):
+        with pytest.raises(exceptions.ModelError) as info:
             build_model(override_dict=override, scenario="simple_supply,one_day")
+        check_error_or_warning(
+            info, "Errors during validation of the tech definition at node `a`"
+        )
 
     def test_incorrect_subset_time(self):
         """If time_subset is a list, it must have two entries (start_time, end_time)
@@ -186,27 +189,6 @@ class TestChecks:
 
         with pytest.raises(exceptions.ModelError):
             build_model(override_dict=override, scenario="simple_supply,one_day")
-
-    def test_tech_as_base_tech(self):
-        """All technologies must specify a base_tech"""
-        override1 = read_rich_yaml(
-            """
-            techs.test_supply_tech_base_tech:
-                name: Supply tech
-                carrier_out: gas
-                base_tech: test_supply_elec
-                flow_cap_max: 10
-                source_use_max: .inf
-            nodes.b.techs.test_supply_tech_base_tech:
-            """
-        )
-
-        with pytest.raises(exceptions.ModelError) as error:
-            build_model(override_dict=override1, scenario="simple_supply,one_day")
-        assert check_error_or_warning(
-            error,
-            "Errors during validation of the tech definition at node `b` dictionary.",
-        )
 
     @pytest.mark.skip(
         reason="one_way doesn't work yet. We'll need to move this test to `model_data` once it does work."

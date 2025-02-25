@@ -133,14 +133,14 @@ To force unidirectionality for a given technology along a given link, you have t
 ```yaml
 techs:
   region1_to_region2:
-    from: region1
-    to: region2
+    link_from: region1
+    link_to: region2
     base_tech: transmission
     one_way: true
 ```
 
 This will only allow transmission from `region1` to `region2`.
-To swap the direction, `to` and `from` must be swapped.
+To swap the direction, `link_to` and `link_from` must be swapped.
 
 ## Per-distance transmission constraints
 

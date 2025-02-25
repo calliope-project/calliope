@@ -27,10 +27,10 @@ from pyomo.core.kernel.piecewise_library.transforms import (
 from pyomo.opt import SolverFactory  # type: ignore
 from pyomo.util.model_size import build_model_size_report  # type: ignore
 
-from calliope import config
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
 from calliope.preprocess import CalliopeMath
+from calliope.schemas import config_schema
 from calliope.util.logging import LogWriter
 
 from . import backend_model, parsing
@@ -61,7 +61,7 @@ class PyomoBackendModel(backend_model.BackendModel):
     """Pyomo-specific backend functionality."""
 
     def __init__(
-        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config.Build
+        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config_schema.Build
     ) -> None:
         """Pyomo solver interface class.
 
@@ -283,7 +283,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         return global_expression
 
     def _solve(  # noqa: D102, override
-        self, solve_config: config.Solve, warmstart: bool = False
+        self, solve_config: config_schema.Solve, warmstart: bool = False
     ) -> xr.Dataset:
         if solve_config.solver == "cbc" and self.shadow_prices.is_active:
             model_warn(

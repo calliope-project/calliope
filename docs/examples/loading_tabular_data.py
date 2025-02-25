@@ -77,8 +77,8 @@ calliope.set_log_verbosity("INFO", include_solver_output=False)
 #     base_tech: transmission
 #     carrier_in: electricity
 #     carrier_out: electricity
-#     from: A
-#     to: B
+#     link_from: A
+#     link_to: B
 #     flow_cap_max: 8
 #
 # nodes:
@@ -135,8 +135,8 @@ techs:
     base_tech: transmission
     carrier_in: electricity
     carrier_out: electricity
-    from: A
-    to: B
+    link_from: A
+    link_to: B
     flow_cap_max: 8
 
 nodes:
@@ -214,8 +214,8 @@ tech_data = pd.DataFrame(
         "demand_tech": {"base_tech": "demand"},
         "transmission_tech": {
             "base_tech": "transmission",
-            "from": "A",
-            "to": "B",
+            "link_from": "A",
+            "link_to": "B",
             "flow_cap_max": 8,
         },
     }
@@ -482,8 +482,8 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 #     base_tech: transmission
 #     carrier_in: electricity
 #     carrier_out: electricity
-#     from: A
-#     to: B
+#     link_from: A
+#     link_to: B
 #     flow_cap_max: 8
 #
 # nodes:
@@ -531,8 +531,8 @@ for variable_name, variable_data in model_from_yaml.results.data_vars.items():
 #     base_tech: transmission
 #     carrier_in: electricity
 #     carrier_out: electricity
-#     from: A
-#     to: B
+#     link_from: A
+#     link_to: B
 #     flow_cap_max: 8
 #
 # nodes:

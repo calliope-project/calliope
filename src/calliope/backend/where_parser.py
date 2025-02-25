@@ -13,9 +13,9 @@ import pyparsing as pp
 import xarray as xr
 from typing_extensions import NotRequired, TypedDict
 
-from calliope import config
 from calliope.backend import expression_parser
 from calliope.exceptions import BackendError
+from calliope.schemas import config_schema
 from calliope.util import tools
 
 if TYPE_CHECKING:
@@ -35,7 +35,7 @@ class EvalAttrs(TypedDict):
     helper_functions: dict[str, Callable]
     apply_where: NotRequired[bool]
     references: NotRequired[set]
-    build_config: config.Build
+    build_config: config_schema.Build
 
 
 class EvalWhere(expression_parser.EvalToArrayStr):

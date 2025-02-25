@@ -1,92 +1,21 @@
 # Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
 # Licensed under the Apache 2.0 License (see LICENSE file).
-"""Implements the Calliope configuration class."""
+"""Schema for Calliope configuration definition."""
 
 import logging
-from collections.abc import Hashable
 from pathlib import Path
-from typing import Annotated, Literal, TypeVar
+from typing import Literal
 
-import jsonref
-from pydantic import AfterValidator, BaseModel, Field
-from pydantic_core import PydanticCustomError
-from typing_extensions import Self
+from pydantic import Field
 
-from calliope.attrdict import AttrDict
+from calliope.schemas.general import CalliopeBaseModel, UniqueList
 
-MODES_T = Literal["plan", "operate", "spores"]
-CONFIG_T = Literal["init", "build", "solve"]
+Mode = Literal["plan", "operate", "spores"]
 
 LOGGER = logging.getLogger(__name__)
 
-# ==
-# Taken from https://github.com/pydantic/pydantic-core/pull/820#issuecomment-1670475909
-T = TypeVar("T", bound=Hashable)
 
-
-def _validate_unique_list(v: list[T]) -> list[T]:
-    if len(v) != len(set(v)):
-        raise PydanticCustomError("unique_list", "List must be unique")
-    return v
-
-
-UniqueList = Annotated[
-    list[T],
-    AfterValidator(_validate_unique_list),
-    Field(json_schema_extra={"uniqueItems": True}),
-]
-# ==
-
-
-class ConfigBaseModel(BaseModel):
-    """A base class for creating pydantic models for Calliope configuration options."""
-
-    model_config = {
-        "extra": "forbid",
-        "frozen": True,
-        "revalidate_instances": "always",
-        "use_attribute_docstrings": True,
-    }
-
-    def update(self, update_dict: dict, deep: bool = False) -> Self:
-        """Return a new iteration of the model with updated fields.
-
-        Args:
-            update_dict (dict): Dictionary with which to update the base model.
-            deep (bool, optional): Set to True to make a deep copy of the model. Defaults to False.
-
-        Returns:
-            BaseModel: New model instance.
-        """
-        new_dict: dict = {}
-        # Iterate through dict to be updated and convert any sub-dicts into their respective pydantic model objects.
-        # Wrapped in `AttrDict` to allow users to define dot notation nested configuration.
-        for key, val in AttrDict(update_dict).items():
-            key_class = getattr(self, key)
-            if isinstance(key_class, ConfigBaseModel):
-                new_dict[key] = key_class.update(val)
-            else:
-                LOGGER.info(
-                    f"Updating {self.model_config['title']} `{key}`: {key_class} -> {val}"
-                )
-                new_dict[key] = val
-        updated = super().model_copy(update=new_dict, deep=deep)
-        updated.model_validate(updated)
-        return updated
-
-    def model_no_ref_schema(self) -> AttrDict:
-        """Generate an AttrDict with the schema replacing $ref/$def for better readability.
-
-        Returns:
-            AttrDict: class schema.
-        """
-        schema_dict = AttrDict(super().model_json_schema())
-        schema_dict = AttrDict(jsonref.replace_refs(schema_dict))
-        schema_dict.del_key("$defs")
-        return schema_dict
-
-
-class Init(ConfigBaseModel):
+class Init(CalliopeBaseModel):
     """All configuration options used when initialising a Calliope model."""
 
     model_config = {"title": "Model initialisation configuration"}
@@ -133,7 +62,7 @@ class Init(ConfigBaseModel):
     """
 
 
-class BuildOperate(ConfigBaseModel):
+class BuildOperate(CalliopeBaseModel):
     """Operate mode configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
     model_config = {"title": "Model build operate mode configuration"}
@@ -154,11 +83,11 @@ class BuildOperate(ConfigBaseModel):
     """If the model already contains `plan` mode results, use those optimal capacities as input parameters to the `operate` mode run."""
 
 
-class Build(ConfigBaseModel):
+class Build(CalliopeBaseModel):
     """Base configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
     model_config = {"title": "Model build configuration"}
-    mode: MODES_T = Field(default="plan")
+    mode: Mode = Field(default="plan")
     """Mode in which to run the optimisation."""
 
     add_math: UniqueList[str] = Field(default=[])
@@ -194,9 +123,10 @@ class Build(ConfigBaseModel):
     """
 
     operate: BuildOperate = BuildOperate()
+    """Operate mode specific configuration."""
 
 
-class SolveSpores(ConfigBaseModel):
+class SolveSpores(CalliopeBaseModel):
     """SPORES configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
     model_config = {"title": "Model solve SPORES mode configuration"}
@@ -223,7 +153,7 @@ class SolveSpores(ConfigBaseModel):
     """
 
 
-class Solve(ConfigBaseModel):
+class Solve(CalliopeBaseModel):
     """Base configuration options used when solving a Calliope optimisation problem (`calliope.Model.solve`)."""
 
     model_config = {"title": "Model Solve Configuration"}
@@ -251,16 +181,10 @@ class Solve(ConfigBaseModel):
     spores: SolveSpores = SolveSpores()
 
 
-class CalliopeConfig(ConfigBaseModel):
+class CalliopeConfig(CalliopeBaseModel):
     """Calliope configuration class."""
 
-    model_config = {
-        "title": "Model configuration schema",
-        "extra": "forbid",
-        "frozen": True,
-        "revalidate_instances": "always",
-        "use_attribute_docstrings": True,
-    }
+    model_config = {"title": "Model configuration schema"}
 
     init: Init = Init()
     build: Build = Build()

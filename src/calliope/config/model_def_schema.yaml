@@ -230,28 +230,28 @@ properties:
           - oneOf:
             - required: ["base_tech", "carrier_in", "carrier_out"]
               not:
-                required: ["to", "from"]
+                required: ["link_to", "link_from"]
               properties:
                 base_tech: {const: conversion}
             - required: ["base_tech", "carrier_in"]
               not:
-                  required: ["carrier_out", "to", "from"]
+                  required: ["carrier_out", "link_to", "link_from"]
               properties:
                 base_tech: {const: demand}
 
             - required: ["base_tech", "carrier_in", "carrier_out"]
               not:
-                required: ["to", "from"]
+                required: ["link_to", "link_from"]
               properties:
                 base_tech: {const: storage}
 
             - required: ["base_tech", "carrier_out"]
               not:
-                  required: ["carrier_in", "to", "from"]
+                  required: ["carrier_in", "link_to", "link_from"]
               properties:
                 base_tech: {const: supply}
 
-            - required: ["base_tech", "from", "to", "carrier_in", "carrier_out"]
+            - required: ["base_tech", "link_from", "link_to", "carrier_in", "carrier_out"]
               properties:
                 base_tech: {const: transmission}
                 from:
@@ -836,7 +836,7 @@ properties:
             x-resample_method: first
             x-type: float
             title: One way transmission.
-            description: Forces a transmission technology to only move flow in one direction on the link, i.e. from `from` to `to`.
+            description: Forces a transmission technology to only move flow in one direction on the link, i.e. from `link_from` to `link_to`.
 
           distance:
             type: ["null", number]
