@@ -215,7 +215,7 @@ class SolveSpores(ConfigBaseModel):
     tracking_parameter: str | None = None
     """If given, an input parameter name with which to filter technologies for consideration in SPORES scoring."""
 
-    score_iteration_threshold_relative: float = Field(default=0.1, ge=0)
+    score_threhsold_factor: float = Field(default=0.1, ge=0)
     """A factor to apply to flow capacities above which they will increment the SPORES score.
     E.g., if the previous iteration flow capacity was `100` then, with a threshold value of 0.1,
     only capacities above `10` in the current iteration will cause the SPORES score to increase for that technology at that node.

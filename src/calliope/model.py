@@ -667,9 +667,8 @@ class Model:
         previous_cap = previous_results["flow_cap"].where(spores_techs)
 
         # Make sure that penalties are applied only to non-negligible deployments of capacity
-        min_relevant_size = (
-            spores_config.score_iteration_threshold_relative
-            * previous_cap.max(["nodes", "techs"])
+        min_relevant_size = spores_config.score_threhsold_factor * previous_cap.max(
+            ["nodes", "techs"]
         )
 
         new_score = (
