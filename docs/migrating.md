@@ -161,7 +161,7 @@ This split means you can change configuration options on-the-fly if you are work
       build:
         mode: plan
       solve:
-        solver: glpk
+        solver: cbc
     ```
 
 === "Python"
@@ -170,7 +170,7 @@ This split means you can change configuration options on-the-fly if you are work
     import calliope
     model = calliope.Model(time_subset=["2005-01", "2005-02"])
     model.build(mode="plan")
-    model.solve(solver="glpk")
+    model.solve(solver="cbc")
     ```
 
 !!! info "See also"
