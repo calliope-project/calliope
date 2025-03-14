@@ -149,7 +149,7 @@ class SolveSpores(CalliopeBaseModel):
     """A factor to apply to flow capacities above which they will increment the SPORES score.
     E.g., if the previous iteration flow capacity was `100` then, with a threshold value of 0.1,
     only capacities above `10` in the current iteration will cause the SPORES score to increase for that technology at that node.
-    If, say, the current iteration's capacity is `8` then the SPORES score will not change for that technology (as if it had no )
+    If, say, the current iteration's capacity is `8` then the SPORES score will not change for that technology so it will not be further penalised on the next iteration.
     """
 
 
