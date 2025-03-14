@@ -7,6 +7,7 @@ import pytest
 
 import calliope
 from calliope import exceptions
+from calliope.io import read_rich_yaml
 
 from .common.util import check_error_or_warning
 
@@ -27,7 +28,6 @@ class TestModelPreproccessing:
     def test_preprocess_urban_scale(self):
         calliope.examples.urban_scale()
 
-    @pytest.mark.filterwarnings("ignore:(?s).*Integer:calliope.exceptions.ModelWarning")
     def test_preprocess_milp(self):
         calliope.examples.milp()
 
@@ -400,7 +400,7 @@ class TestUrbanScaleExampleModelSenseChecks:
         data_tables = f"data_tables.pv_resource.select.scaler: {source_unit}"
         unit_override = {
             "techs.pv.source_unit": source_unit,
-            **calliope.AttrDict.from_yaml_string(data_tables),
+            **read_rich_yaml(data_tables),
         }
 
         model = calliope.examples.urban_scale(

@@ -54,7 +54,7 @@ max-complexity = 10
 
 # Ignore `E402` (import violations) and `F401` (unused imports) in all `__init__.py` files
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["E402", "F401"]
+"__init__.py" = ["E402", "F401", "D104"]
 "*.ipynb" = ["E402"]
 "tests/*" = ["D"]
 "docs/examples/*" = ["D"]
@@ -74,6 +74,10 @@ skip = 'tests/*.py,AUTHORS'
 count = ''
 quiet-level = 3
 ignore-words-list = "socio-economic"  # British english spelling that isn't covered by the inbuilt dictionary
+
+[tool.mypy]
+ignore_missing_imports = true
+files = "src/"
 
 [tool.setuptools.packages.find]
 where = ["src"]

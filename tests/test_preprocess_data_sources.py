@@ -6,14 +6,8 @@ import xarray as xr
 
 import calliope
 from calliope.preprocess import data_tables
-from calliope.util.schema import CONFIG_SCHEMA, extract_from_schema
 
 from .common.util import check_error_or_warning
-
-
-@pytest.fixture(scope="module")
-def init_config():
-    return calliope.AttrDict(extract_from_schema(CONFIG_SCHEMA, "default"))["init"]
 
 
 @pytest.fixture(scope="class")
@@ -39,12 +33,12 @@ def generate_data_table_dict(data_dir):
 
 class TestDataTableUtils:
     @pytest.fixture(scope="class")
-    def table_obj(self, init_config, generate_data_table_dict):
+    def table_obj(self, generate_data_table_dict):
         df = pd.Series({"bar": 0, "baz": 1})
         table_dict = generate_data_table_dict(
             "foo.csv", df, rows="test_row", columns=None
         )
-        ds = data_tables.DataTable(init_config, "ds_name", table_dict)
+        ds = data_tables.DataTable("ds_name", table_dict)
         ds.input["foo"] = ["foobar"]
         return ds
 
@@ -130,9 +124,9 @@ class TestDataTableInitOneLevel:
             "multi_row_multi_col_file.csv", df, rows="test_row", columns="test_col"
         )
 
-    def test_multi_row_no_col(self, init_config, multi_row_no_col_data):
+    def test_multi_row_no_col(self, multi_row_no_col_data):
         expected_df, table_dict = multi_row_no_col_data
-        ds = data_tables.DataTable(init_config, "ds_name", table_dict)
+        ds = data_tables.DataTable("ds_name", table_dict)
         test_param = ds.dataset["test_param"]
         assert not set(["test_row"]).symmetric_difference(test_param.dims)
         pd.testing.assert_series_equal(
@@ -147,9 +141,9 @@ class TestDataTableInitOneLevel:
             "multi_row_multi_col_data",
         ],
     )
-    def test_multi_row_one_col(self, init_config, request, data_table_ref):
+    def test_multi_row_one_col(self, request, data_table_ref):
         expected_df, table_dict = request.getfixturevalue(data_table_ref)
-        ds = data_tables.DataTable(init_config, "ds_name", table_dict)
+        ds = data_tables.DataTable("ds_name", table_dict)
         test_param = ds.dataset["test_param"]
         assert not set(["test_row", "test_col"]).symmetric_difference(test_param.dims)
         pd.testing.assert_series_equal(
@@ -164,14 +158,11 @@ class TestDataTableInitOneLevel:
             "multi_row_multi_col_data",
         ],
     )
-    def test_load_from_df(self, init_config, request, data_table_ref):
+    def test_load_from_df(self, request, data_table_ref):
         expected_df, table_dict = request.getfixturevalue(data_table_ref)
         table_dict["data"] = data_table_ref
         ds = data_tables.DataTable(
-            init_config,
-            "ds_name",
-            table_dict,
-            data_table_dfs={data_table_ref: expected_df},
+            "ds_name", table_dict, data_table_dfs={data_table_ref: expected_df}
         )
         test_param = ds.dataset["test_param"]
         assert not set(["test_row", "test_col"]).symmetric_difference(test_param.dims)
@@ -179,12 +170,12 @@ class TestDataTableInitOneLevel:
             test_param.to_series(), expected_df.stack(), check_names=False
         )
 
-    def test_load_from_df_must_be_df(self, init_config, multi_row_no_col_data):
+    def test_load_from_df_must_be_df(self, multi_row_no_col_data):
         expected_df, table_dict = multi_row_no_col_data
         table_dict["data"] = "foo"
         with pytest.raises(calliope.exceptions.ModelError) as excinfo:
             data_tables.DataTable(
-                init_config, "ds_name", table_dict, data_table_dfs={"foo": expected_df}
+                "ds_name", table_dict, data_table_dfs={"foo": expected_df}
             )
         assert check_error_or_warning(excinfo, "Data table must be a pandas DataFrame.")
 
@@ -237,9 +228,9 @@ class TestDataTableInitMultiLevel:
             columns=["test_col1", "test_col2"],
         )
 
-    def test_multi_row_no_col(self, init_config, multi_row_no_col_data):
+    def test_multi_row_no_col(self, multi_row_no_col_data):
         expected_df, table_dict = multi_row_no_col_data
-        ds = data_tables.DataTable(init_config, "ds_name", table_dict)
+        ds = data_tables.DataTable("ds_name", table_dict)
         test_param = ds.dataset["test_param"]
         assert not set(["test_row1", "test_row2"]).symmetric_difference(test_param.dims)
         pd.testing.assert_series_equal(
@@ -257,9 +248,9 @@ class TestDataTableInitMultiLevel:
             "multi_row_multi_col_data",
         ],
     )
-    def test_multi_row_one_col(self, init_config, request, data_table_ref):
+    def test_multi_row_one_col(self, request, data_table_ref):
         expected_df, table_dict = request.getfixturevalue(data_table_ref)
-        ds = data_tables.DataTable(init_config, "ds_name", table_dict)
+        ds = data_tables.DataTable("ds_name", table_dict)
         test_param = ds.dataset["test_param"]
         all_dims = table_dict["rows"] + table_dict["columns"]
         assert not set(all_dims).symmetric_difference(test_param.dims)
@@ -273,7 +264,7 @@ class TestDataTableInitMultiLevel:
 
 class TestDataTableSelectDropAdd:
     @pytest.fixture(scope="class")
-    def table_obj(self, init_config):
+    def table_obj(self):
         def _table_obj(**table_dict_kwargs):
             df = pd.DataFrame(
                 {
@@ -291,9 +282,7 @@ class TestDataTableSelectDropAdd:
                 "columns": "parameters",
                 **table_dict_kwargs,
             }
-            ds = data_tables.DataTable(
-                init_config, "ds_name", table_dict, data_table_dfs={"df": df}
-            )
+            ds = data_tables.DataTable("ds_name", table_dict, data_table_dfs={"df": df})
             return ds
 
         return _table_obj
@@ -357,7 +346,7 @@ class TestDataTableSelectDropAdd:
 
 class TestDataTableRenameDims:
     @pytest.fixture(scope="class")
-    def multi_row_one_col_data(self, data_dir, init_config, dummy_int):
+    def multi_row_one_col_data(self, data_dir, dummy_int):
         """Fixture to create the xarray dataset from the data table, including dimension name mapping."""
 
         def _multi_row_one_col_data(
@@ -377,7 +366,7 @@ class TestDataTableRenameDims:
                 "add_dims": {"parameters": "test_param"},
                 "rename_dims": mapping,
             }
-            ds = data_tables.DataTable(init_config, "ds_name", table_dict)
+            ds = data_tables.DataTable("ds_name", table_dict)
             return ds.dataset
 
         return _multi_row_one_col_data
@@ -416,7 +405,7 @@ class TestDataTableRenameDims:
 
 class TestDataTableMalformed:
     @pytest.fixture(scope="class")
-    def table_obj(self, init_config):
+    def table_obj(self):
         def _table_obj(**table_dict_kwargs):
             df = pd.DataFrame(
                 {
@@ -433,9 +422,7 @@ class TestDataTableMalformed:
                 "rows": ["test_row1", "test_row2"],
                 **table_dict_kwargs,
             }
-            ds = data_tables.DataTable(
-                init_config, "ds_name", table_dict, data_table_dfs={"df": df}
-            )
+            ds = data_tables.DataTable("ds_name", table_dict, data_table_dfs={"df": df})
             return ds
 
         return _table_obj
@@ -479,7 +466,7 @@ class TestDataTableMalformed:
 
 class TestDataTableLookupDictFromParam:
     @pytest.fixture(scope="class")
-    def table_obj(self, init_config):
+    def table_obj(self):
         df = pd.DataFrame(
             {
                 "FOO": {("foo1", "bar1"): 1, ("foo1", "bar2"): 1},
@@ -491,9 +478,7 @@ class TestDataTableLookupDictFromParam:
             "rows": ["techs", "carriers"],
             "columns": "parameters",
         }
-        ds = data_tables.DataTable(
-            init_config, "ds_name", table_dict, data_table_dfs={"df": df}
-        )
+        ds = data_tables.DataTable("ds_name", table_dict, data_table_dfs={"df": df})
         return ds
 
     @pytest.mark.parametrize(
@@ -518,13 +503,11 @@ class TestDataTableLookupDictFromParam:
 
 class TestDataTableTechDict:
     @pytest.fixture(scope="class")
-    def table_obj(self, init_config):
+    def table_obj(self):
         def _table_obj(df_dict, rows="techs"):
             df = pd.DataFrame(df_dict)
             table_dict = {"data": "df", "rows": rows, "columns": "parameters"}
-            ds = data_tables.DataTable(
-                init_config, "ds_name", table_dict, data_table_dfs={"df": df}
-            )
+            ds = data_tables.DataTable("ds_name", table_dict, data_table_dfs={"df": df})
             return ds
 
         return _table_obj
@@ -562,16 +545,16 @@ class TestDataTableTechDict:
 
     def test_tech_dict_from_to_from(self, table_obj):
         df_dict = {
-            "from": {"foo1": "bar1", "foo2": "bar2"},
-            "to": {"foo1": "bar2", "foo3": "bar1"},
+            "link_from": {"foo1": "bar1", "foo2": "bar2"},
+            "link_to": {"foo1": "bar2", "foo3": "bar1"},
         }
         tech_dict, base_dict = table_obj(df_dict).tech_dict()
 
         assert tech_dict == {"foo1": {}, "foo2": {}, "foo3": {}}
         assert base_dict == {
-            "foo1": {"from": "bar1", "to": "bar2"},
-            "foo2": {"from": "bar2"},
-            "foo3": {"to": "bar1"},
+            "foo1": {"link_from": "bar1", "link_to": "bar2"},
+            "foo2": {"link_from": "bar2"},
+            "foo3": {"link_to": "bar1"},
         }
 
     def test_tech_dict_empty(self, table_obj):
@@ -584,13 +567,11 @@ class TestDataTableTechDict:
 
 class TestDataTableNodeDict:
     @pytest.fixture(scope="class")
-    def table_obj(self, init_config):
+    def table_obj(self):
         def _table_obj(df_dict, rows=["nodes", "techs"]):
             df = pd.DataFrame(df_dict)
             table_dict = {"data": "df", "rows": rows, "columns": "parameters"}
-            ds = data_tables.DataTable(
-                init_config, "ds_name", table_dict, data_table_dfs={"df": df}
-            )
+            ds = data_tables.DataTable("ds_name", table_dict, data_table_dfs={"df": df})
             return ds
 
         return _table_obj

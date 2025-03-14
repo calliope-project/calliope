@@ -15,6 +15,8 @@ config:
   init:
     name: Test model
     time_subset: ["2005-01-01", "2005-01-02"]
+    broadcast_param_data: true
+
   build:
     mode: plan
   solve:
@@ -156,8 +158,8 @@ templates:
   test_controller: {}
 
   test_transmission:
-    from: a
-    to: b
+    link_from: a
+    link_to: b
     template: test_controller
 
   test_transmission_elec:

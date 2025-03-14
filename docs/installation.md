@@ -7,7 +7,7 @@ Calliope is tested on Linux, macOS, and Windows.
 Running Calliope requires four things:
 
 1. The Python programming language, version {{ min_python_version }} to {{ max_python_version }}.
-2. A number of Python add-on modules including [Pyomo](https://www.pyomo.org/), [Pandas](https://pandas.pydata.org/) and [Xarray](https://xarray.dev/).
+2. A number of Python add-on modules including [Pyomo](https://www.pyomo.org/), [Pandas](https://pandas.pydata.org/) and [Xarray](https://docs.xarray.dev/).
 3. An optimisation solver: Calliope has been tested with CBC, GLPK, Gurobi, and CPLEX. Any other solver that is compatible with Pyomo should also work.
 4. The Calliope software itself.
 
@@ -62,7 +62,7 @@ However, we recommend to not use this solver where possible, since it performs r
 Indeed, our example models use the free and open source [CBC](#cbc) solver instead, but installing it on Windows requires an extra step.
 [CBC](#cbc) (open-source) or [Gurobi](#gurobi) (commercial) are recommended for large problems, and have been confirmed to work with Calliope.
 The following subsections provide additional detail on how to install a solver.
-This list is not exhaustive; any solvers [supported by Pyomo](https://pyomo.readthedocs.io/en/stable/solving_pyomo_models.html#supported-solvers) can be used.
+This list is not exhaustive; any solvers [supported by Pyomo](https://pyomo.readthedocs.io/en/latest/reference/topical/appsi/appsi.solvers.html) can be used.
 
 ### CBC
 

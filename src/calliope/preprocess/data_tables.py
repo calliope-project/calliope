@@ -15,7 +15,6 @@ from typing_extensions import NotRequired, TypedDict
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.io import load_config
-from calliope.util.schema import DATA_TABLE_SCHEMA, validate_dict
 from calliope.util.tools import listify, relative_path
 
 LOGGER = logging.getLogger(__name__)
@@ -35,42 +34,37 @@ class DataTableDict(TypedDict):
     add_dims: NotRequired[dict[str, str | list[str]]]
     select: NotRequired[dict[str, str | bool | int]]
     drop: NotRequired[Hashable | list[Hashable]]
-    template: NotRequired[str]
 
 
 class DataTable:
     """Class for in memory data handling."""
 
     MESSAGE_TEMPLATE = "(data_tables, {name}) | {message}."
-    PARAMS_TO_INITIALISE_YAML = ["base_tech", "to", "from"]
+    PARAMS_TO_INITIALISE_YAML = ["base_tech", "link_to", "link_from"]
 
     def __init__(
         self,
-        model_config: dict,
         table_name: str,
         data_table: DataTableDict,
         data_table_dfs: dict[str, pd.DataFrame] | None = None,
-        model_definition_path: Path | None = None,
+        model_definition_path: str | Path | None = None,
     ):
         """Load and format a data table from file / in-memory object.
 
         Args:
-            model_config (dict): Model initialisation configuration dictionary.
             table_name (str): name of the data table.
-            data_table (DataTableDict): Data table definition dictionary.
+            data_table (DataTableDict): validated data table definition dictionary.
             data_table_dfs (dict[str, pd.DataFrame] | None, optional):
                 If given, a dictionary mapping table names in `data_table` to in-memory pandas DataFrames.
                 Defaults to None.
-            model_definition_path (Path | None, optional):
+            model_definition_path (Path, optional):
                 If given, the path to the model definition YAML file, relative to which data table filepaths will be set.
                 If None, relative data table filepaths will be considered relative to the current working directory.
                 Defaults to None.
         """
-        validate_dict(data_table, DATA_TABLE_SCHEMA, "data table")
         self.input = data_table
         self.dfs = data_table_dfs if data_table_dfs is not None else dict()
         self.model_definition_path = model_definition_path
-        self.config = model_config
 
         self.columns = self._listify_if_defined("columns")
         self.index = self._listify_if_defined("rows")
@@ -112,7 +106,7 @@ class DataTable:
         for param in self.PARAMS_TO_INITIALISE_YAML:
             if param in self.dataset:
                 base_tech_dict = self.dataset[param].to_dataframe().dropna().T.to_dict()
-                base_tech_data.union(AttrDict(base_tech_dict))
+                base_tech_data.union(base_tech_dict)
 
         return tech_dict, base_tech_data
 
@@ -126,7 +120,7 @@ class DataTable:
         Args:
             techs_incl_inheritance (AttrDict):
                 Technology definition dictionary which is a union of any YAML definition and the result of calling `self.tech_dict` across all data tables.
-                Technologies should have their entire definition inheritance chain resolved.
+                Technologies should have their definition inheritance resolved.
         """
         node_tech_vars = self.dataset[
             [
@@ -225,15 +219,13 @@ class DataTable:
             )
         else:
             lookup_dict.union(
-                AttrDict(
-                    self.dataset[param]
-                    .to_series()
-                    .reset_index(lookup_dim)
-                    .groupby("techs")
-                    .apply(__extract_data)
-                    .dropna()
-                    .to_dict()
-                )
+                self.dataset[param]
+                .to_series()
+                .reset_index(lookup_dim)
+                .groupby("techs")
+                .apply(__extract_data)
+                .dropna()
+                .to_dict()
             )
 
         return lookup_dict

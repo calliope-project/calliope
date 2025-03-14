@@ -14,29 +14,12 @@ from calliope.attrdict import AttrDict
 from calliope.exceptions import print_warnings_and_raise_errors
 from calliope.io import load_config
 
-CONFIG_SCHEMA = load_config("config_schema.yaml")
 MODEL_SCHEMA = load_config("model_def_schema.yaml")
-DATA_TABLE_SCHEMA = load_config("data_table_schema.yaml")
-MATH_SCHEMA = load_config("math_schema.yaml")
 
 
 def reset():
     """Reset all module-level schema to the pre-defined dictionaries."""
     importlib.reload(sys.modules[__name__])
-
-
-def update_then_validate_config(
-    config_key: str, config_dict: AttrDict, **update_kwargs
-) -> AttrDict:
-    """Return an updated version of the configuration schema."""
-    to_validate = deepcopy(config_dict[config_key])
-    to_validate.union(AttrDict(update_kwargs), allow_override=True)
-    validate_dict(
-        {"config": {config_key: to_validate}},
-        CONFIG_SCHEMA,
-        f"`{config_key}` configuration",
-    )
-    return to_validate
 
 
 def update_model_schema(
@@ -70,7 +53,7 @@ def update_model_schema(
             "^[^_^\\d][\\w]*$"
         ]["properties"]
 
-    to_update.union(AttrDict(new_entries), allow_override=allow_override)
+    to_update.union(new_entries, allow_override=allow_override)
 
     validator = jsonschema.Draft202012Validator
     validator.META_SCHEMA["unevaluatedProperties"] = False

@@ -10,6 +10,7 @@ import typing
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
+from copy import deepcopy
 from functools import partial
 from pathlib import Path
 from typing import (
@@ -28,7 +29,9 @@ import xarray as xr
 from calliope.attrdict import AttrDict
 from calliope.backend import parsing
 from calliope.exceptions import warn as model_warn
-from calliope.preprocess import ORDERED_COMPONENTS_T, CalliopeMath
+from calliope.io import to_yaml
+from calliope.preprocess.model_math import ORDERED_COMPONENTS_T, CalliopeMath
+from calliope.schemas import config_schema
 
 if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
@@ -56,16 +59,21 @@ class BackendModelGenerator(ABC):
         "original_dtype",
     ]
 
-    def __init__(self, inputs: xr.Dataset, math: CalliopeMath):
+    def __init__(
+        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config_schema.Build
+    ):
         """Abstract base class to build a representation of the optimisation problem.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
             math (CalliopeMath): Calliope math.
+            build_config: Build configuration options.
         """
         self._dataset = xr.Dataset()
-        self.inputs = inputs
-        self.math = math
+        self.inputs = inputs.copy()
+        self.inputs.attrs = deepcopy(inputs.attrs)
+        self.config = build_config
+        self.math: CalliopeMath = deepcopy(math)
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
     @abstractmethod
@@ -360,7 +368,7 @@ class BackendModelGenerator(ABC):
                 yaml_snippet_attrs[attr] = val
 
         if yaml_snippet_attrs:
-            add_attrs["yaml_snippet"] = AttrDict(yaml_snippet_attrs).to_yaml()
+            add_attrs["yaml_snippet"] = to_yaml(yaml_snippet_attrs)
 
         da.attrs = {
             "obj_type": obj_type,
@@ -512,7 +520,11 @@ class BackendModel(BackendModelGenerator, Generic[T]):
     """Calliope's backend model functionality."""
 
     def __init__(
-        self, inputs: xr.Dataset, math: CalliopeMath, instance: T, **kwargs
+        self,
+        inputs: xr.Dataset,
+        math: CalliopeMath,
+        build_config: config_schema.Build,
+        instance: T,
     ) -> None:
         """Abstract base class to build backend models that interface with solvers.
 
@@ -520,9 +532,9 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             inputs (xr.Dataset): Calliope model data.
             math (CalliopeMath): Calliope math.
             instance (T): Interface model instance.
-            **kwargs: build configuration overrides.
+            build_config: Build configuration options.
         """
-        super().__init__(inputs, math, **kwargs)
+        super().__init__(inputs, math, build_config)
         self._instance = instance
         self.shadow_prices: ShadowPrices
         self._has_verbose_strings: bool = False

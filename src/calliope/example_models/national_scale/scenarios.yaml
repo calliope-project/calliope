@@ -70,8 +70,9 @@ overrides:
       init.time_subset: ["2005-01-01", "2005-01-10"]
       build:
         mode: operate
-        operate_window: 12h
-        operate_horizon: 24h
+        operate:
+          window: 12h
+          horizon: 24h
     nodes:
       region1.techs.ccgt.flow_cap: 30000
 
@@ -89,7 +90,6 @@ overrides:
       region1_3.techs.csp.area_use: 8487
 
     techs:
-      ac_transmission.flow_cap: 3231
       region1_to_region1_1.flow_cap: 9000
       region1_to_region1_2.active: false
       region1_to_region1_3.flow_cap: 2281

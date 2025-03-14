@@ -10,7 +10,9 @@ import xarray as xr
 LOGGER = logging.getLogger(__name__)
 
 
-def postprocess_model_results(results: xr.Dataset, inputs: xr.Dataset) -> xr.Dataset:
+def postprocess_model_results(
+    results: xr.Dataset, inputs: xr.Dataset, zero_threshold: float
+) -> xr.Dataset:
     """Post-processing of model results.
 
     Adds additional post-processed result variables to the given model results
@@ -20,11 +22,11 @@ def postprocess_model_results(results: xr.Dataset, inputs: xr.Dataset) -> xr.Dat
     Args:
         results (xarray.Dataset): Output from the solver backend.
         inputs (xarray.Dataset): Calliope model data.
+        zero_threshold (float): Numbers below this value will be assumed to be zero
 
     Returns:
         xarray.Dataset: input-results dataset.
     """
-    zero_threshold = inputs.config.solve.zero_threshold
     results["capacity_factor"] = capacity_factor(results, inputs)
     results["systemwide_capacity_factor"] = capacity_factor(
         results, inputs, systemwide=True
@@ -115,7 +117,7 @@ def systemwide_levelised_cost(
     if total:
         # cost is the total cost of the system
         # flow_out is only the flow_out of supply and conversion technologies
-        allowed_techs = ("supply", "supply_plus", "conversion", "conversion_plus")
+        allowed_techs = ("supply", "conversion")
         valid_techs = inputs.base_tech.isin(allowed_techs)
         cost = cost.sum(dim="techs", min_count=1)
         flow_out = flow_out.sel(techs=valid_techs).sum(dim="techs", min_count=1)

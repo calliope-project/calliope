@@ -13,6 +13,7 @@ import xarray as xr
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import ModelError
 from calliope.preprocess import CalliopeMath
+from calliope.schemas import config_schema
 
 ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
 LOGGER = logging.getLogger(__name__)
@@ -303,19 +304,19 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self,
         inputs: xr.Dataset,
         math: CalliopeMath,
+        build_config: config_schema.Build,
         include: Literal["all", "valid"] = "all",
-        **kwargs,
     ) -> None:
         """Interface to build a string representation of the mathematical formulation using LaTeX math notation.
 
         Args:
             inputs (xr.Dataset): model data.
             math (CalliopeMath): Calliope math.
+            build_config: Build configuration options.
             include (Literal["all", "valid"], optional):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
-            **kwargs: for the backend model generator.
         """
-        super().__init__(inputs, math, **kwargs)
+        super().__init__(inputs, math, build_config)
         self.include = include
 
     def add_parameter(  # noqa: D102, override
@@ -368,8 +369,8 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             )
 
         equation = {
-            "expression": rf"{ math_parts['y_expression']}\mathord{{=}}{ math_parts['y_values'] }",
-            "where": rf"{ math_parts['x_expression'] }\mathord{{=}}{math_parts['x_values']}",
+            "expression": rf"{math_parts['y_expression']}\mathord{{=}}{math_parts['y_values']}",
+            "where": rf"{math_parts['x_expression']}\mathord{{=}}{math_parts['x_values']}",
         }
         if "foreach" in constraint_dict:
             constraint_dict["foreach"].append("breakpoints")

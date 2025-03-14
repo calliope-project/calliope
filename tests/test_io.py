@@ -1,12 +1,16 @@
 import os
 import tempfile
+from pathlib import Path
 
+import numpy as np
 import pytest  # noqa: F401
+import ruamel.yaml as ruamel_yaml
 import xarray as xr
 
 import calliope
 import calliope.io
 from calliope import exceptions
+from calliope.attrdict import AttrDict
 
 from .common.util import check_error_or_warning
 
@@ -61,6 +65,19 @@ class TestIO:
 
     def test_save_netcdf(self, model_file):
         assert os.path.isfile(model_file)
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [{"name": "foobar"}, {"calliope_version": "0.7.0", "time_resample": "2h"}],
+    )
+    def test_model_from_file_kwarg_error(self, model_file, kwargs):
+        """Passing kwargs when reading model dataset files should fail."""
+        model_data = calliope.io.read_netcdf(model_file)
+        with pytest.raises(
+            exceptions.ModelError,
+            match="Cannot apply initialisation configuration overrides when loading data from an xarray Dataset.",
+        ):
+            calliope.Model(model_data, **kwargs)
 
     @pytest.mark.parametrize(
         ("attr", "expected_type", "expected_val"),
@@ -182,10 +199,8 @@ class TestIO:
             with pytest.warns(exceptions.ModelWarning):
                 model.to_csv(out_path, dropna=False)
 
-    @pytest.mark.parametrize("attr", ["config"])
-    def test_dicts_as_model_attrs_and_property(self, model_from_file, attr):
-        assert attr in model_from_file._model_data.attrs.keys()
-        assert hasattr(model_from_file, attr)
+    def test_config_reload(self, model_from_file, model):
+        assert model_from_file.config.model_dump() == model.config.model_dump()
 
     def test_defaults_as_model_attrs_not_property(self, model_from_file):
         assert "defaults" in model_from_file._model_data.attrs.keys()
@@ -233,3 +248,193 @@ class TestIO:
             for i in ["0", "1", "2", "3"]:
                 assert os.path.isfile(os.path.join(tempdir, "output", f"spore_{i}.nc"))
             assert not os.path.isfile(os.path.join(tempdir, "output.nc"))
+
+
+class TestYaml:
+    TEST_TEXT = {
+        "simple_nested": """
+somekey.nested: 1
+anotherkey: 2
+""",
+        "triple_nested": """
+foo:
+    bar: 1
+    baz: 2
+    nested:
+        value: 5
+""",
+        "complex_commented": """
+# a comment
+a: 1
+b: 2
+# a comment about `c`
+c:  # a comment inline with `c`
+    x: foo  # a comment on foo
+
+    #
+    y: bar  #
+    z:
+        I: 1
+        II: 2
+d:
+""",
+        "nested_string": "a.b.c: 1\na.b.foo: 2\nb.a.c.bar: foo",
+    }
+
+    TEST_EXPECTED = {
+        "simple_nested": {"somekey": {"nested": 1}, "anotherkey": 2},
+        "triple_nested": {"foo": {"bar": 1, "baz": 2, "nested": {"value": 5}}},
+        "complex_commented": {
+            "a": 1,
+            "b": 2,
+            "c": {"x": "foo", "y": "bar", "z": {"I": 1, "II": 2}},
+            "d": None,
+        },
+        "nested_string": {
+            "a": {"b": {"c": 1, "foo": 2}},
+            "b": {"a": {"c": {"bar": "foo"}}},
+        },
+    }
+
+    @pytest.fixture(
+        params=["simple_nested", "triple_nested", "complex_commented", "nested_string"]
+    )
+    def test_group(self, request) -> str:
+        return request.param
+
+    @pytest.fixture
+    def yaml_text(self, test_group) -> str:
+        return self.TEST_TEXT[test_group]
+
+    @pytest.fixture
+    def expected_dict(self, test_group) -> dict:
+        return self.TEST_EXPECTED[test_group]
+
+    @pytest.fixture
+    def dummy_imported_file(self, tmp_path) -> Path:
+        file = tmp_path / "test_import.yaml"
+        text = """
+# Comment
+import_key_a.nested: 1
+import_key_b: 2
+import_key_c: [1, 2, 3]
+        """
+        file.write_text(text)
+        return file
+
+    def test_text_read(self, yaml_text, expected_dict):
+        """Loading from text strings should be correct."""
+        read = calliope.io.read_rich_yaml(yaml_text)
+        assert read == expected_dict
+
+    def test_file_read(self, test_group, yaml_text, expected_dict, tmp_path):
+        """Loading from files should be correct."""
+        file = tmp_path / f"{test_group}.yaml"
+        file.write_text(yaml_text)
+        read = calliope.io.read_rich_yaml(file)
+        assert read == expected_dict
+
+    @pytest.mark.parametrize(
+        "bad_import",
+        [
+            "import: ['somefile.yaml']\n",
+            "import: ['somefile.yaml', 'other_file.yaml']\n",
+        ],
+    )
+    def test_text_import_error(self, yaml_text, bad_import):
+        """Text inputs that attempt to import files should raise an error."""
+        with pytest.raises(
+            ValueError, match="Imports are not possible for non-file yaml inputs."
+        ):
+            calliope.io.read_rich_yaml(bad_import + yaml_text)
+
+    def test_import(self, test_group, yaml_text, dummy_imported_file):
+        """Imported files relative to the main file should load correctly."""
+        file = dummy_imported_file.parent / f"{test_group}_relative.yaml"
+        import_text = f"""
+import:
+    - {dummy_imported_file.name}
+"""
+        file.write_text(import_text + yaml_text)
+        d = calliope.io.read_rich_yaml(file)
+
+        assert "import_key_a.nested" in d.keys_nested()
+        assert d.get_key("import_key_b") == 2
+        assert d["import_key_c"] == [1, 2, 3]
+
+    def test_invalid_import_type_error(
+        self, test_group, yaml_text, dummy_imported_file
+    ):
+        file = dummy_imported_file.parent / f"{test_group}_invalid_import_type.yaml"
+        import_text = f"""import: {dummy_imported_file.name}\n"""
+        file.write_text(import_text + yaml_text)
+
+        with pytest.raises(ValueError) as excinfo:  # noqa: PT011, false positive
+            calliope.io.read_rich_yaml(file)
+        assert check_error_or_warning(excinfo, "`import` must be a list.")
+
+    def test_duplicate_dot_string_error(self):
+        """Duplicate entries should result in an error."""
+        yaml_string = "a.b.c: 1\na.b.c: 2"
+        with pytest.raises(ruamel_yaml.constructor.DuplicateKeyError):
+            calliope.io.read_rich_yaml(yaml_string)
+
+    def test_simple_invalid_yaml(self):
+        yaml_string = "1 this is not valid yaml"
+        with pytest.raises(ValueError) as excinfo:  # noqa: PT011, false positive
+            calliope.io.read_rich_yaml(yaml_string)
+        assert check_error_or_warning(excinfo, "Could not parse <yaml string> as YAML")
+
+    def test_parser_error(self):
+        with pytest.raises(ruamel_yaml.YAMLError):
+            calliope.io.read_rich_yaml(
+                """
+            foo: bar
+            baz: 1
+                - foobar
+                bar: baz
+
+            """
+            )
+
+    def test_as_dict_with_sublists(self):
+        """Lists should not be converted to AttrDict."""
+        d = calliope.io.read_rich_yaml("a: [{x: 1}, {y: 2}]")
+        dd = d.as_dict()
+        assert dd["a"][0]["x"] == 1
+        assert all([isinstance(dd["a"][0], dict), not isinstance(dd["a"][0], AttrDict)])
+
+    def test_replacement_null_from_file(self):
+        yaml_dict = calliope.io.read_rich_yaml(
+            """
+            A.B.C: 10
+            A.B:
+                E: 20
+            C: "foobar"
+        """
+        )
+        replacement = calliope.io.read_rich_yaml("C._REPLACE_: null")
+        yaml_dict.union(replacement, allow_override=True, allow_replacement=True)
+        assert yaml_dict.C is None
+
+    def test_to_yaml_roundtrip(self, expected_dict):
+        """Saving to a file should result in no data loss."""
+        yaml_text = calliope.io.to_yaml(expected_dict)
+        reloaded = calliope.io.read_rich_yaml(yaml_text)
+        assert reloaded == expected_dict
+
+    def test_to_yaml_complex(self, yaml_text):
+        """Saving to a file/string should handle special cases."""
+        yaml_dict = calliope.io.read_rich_yaml(yaml_text)
+        yaml_dict.set_key("numpy.some_int", np.int32(10))
+        yaml_dict.set_key("numpy.some_float", np.float64(0.5))
+        yaml_dict.a_list = [0, 1, 2]
+        with tempfile.TemporaryDirectory() as tempdir:
+            out_file = Path(tempdir) / "test.yaml"
+            calliope.io.to_yaml(yaml_dict, path=out_file)
+
+            result = out_file.read_text()
+
+            assert "some_int: 10" in result
+            assert "some_float: 0.5" in result
+            assert "a_list:\n- 0\n- 1\n- 2" in result

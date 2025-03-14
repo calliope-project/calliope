@@ -1,3 +1,5 @@
+# Copyright (C) since 2013 Calliope contributors listed in AUTHORS.
+# Licensed under the Apache 2.0 License (see LICENSE file).
 """Calliope math handling with interfaces for pre-defined and user-defined files."""
 
 import importlib.resources
@@ -10,6 +12,8 @@ from typing import Literal
 from calliope.attrdict import AttrDict
 from calliope.backend import parsing
 from calliope.exceptions import ModelError, print_warnings_and_raise_errors
+from calliope.io import read_rich_yaml
+from calliope.schemas.math_schema import CalliopeMathDef
 from calliope.util.schema import MATH_SCHEMA, validate_dict
 from calliope.util.tools import relative_path
 
@@ -143,6 +147,7 @@ class CalliopeMath:
                 errors=validation_errors,
             )
 
+        CalliopeMathDef(**self.data)
         LOGGER.info("Math preprocessing | validated math against schema.")
 
     def _add_pre_defined_file(self, filename: str) -> None:
@@ -201,7 +206,7 @@ class CalliopeMath:
 
     def _add_file(self, yaml_filepath: Path, name: str) -> None:
         try:
-            math = AttrDict.from_yaml(yaml_filepath, allow_override=True)
+            math = read_rich_yaml(yaml_filepath, allow_override=True)
         except FileNotFoundError:
             raise ModelError(
                 f"Math preprocessing | File does not exist: {yaml_filepath}"

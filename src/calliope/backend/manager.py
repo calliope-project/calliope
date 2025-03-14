@@ -18,6 +18,7 @@ from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.exceptions import BackendError
 from calliope.io import load_config
 from calliope.preprocess import CalliopeMath
+from calliope.schemas import config_schema
 from calliope.util.schema import update_then_validate_config
 
 if TYPE_CHECKING:
@@ -193,7 +194,7 @@ def prepare_math(user_math: dict, mode: str, ignore_mode_math: bool) -> Calliope
 
 
 def prepare_operate_mode_inputs(
-    data: xr.Dataset, start_window_idx: int = 0, **config_kwargs
+    data: xr.Dataset, start_window_idx: int, operate_config: config_schema.BuildOperate
 ) -> xr.Dataset:
     """Slice the input data to just the length of operate mode time horizon.
 
@@ -203,17 +204,15 @@ def prepare_operate_mode_inputs(
             Set the operate `window` to start at, based on integer index.
             This is used when re-initialising the backend model for shorter time horizons close to the end of the model period.
             Defaults to 0.
-        **config_kwargs: kwargs related to operate mode configuration.
+        operate_config (config_schema.BuildOperate): Operate mode configuration.
 
     Returns:
         xr.Dataset: Slice of input data.
     """
-    window = config_kwargs["operate_window"]
-    horizon = config_kwargs["operate_horizon"]
     data.coords["windowsteps"] = pd.date_range(
-        data.timesteps[0].item(), data.timesteps[-1].item(), freq=window
+        data.timesteps[0].item(), data.timesteps[-1].item(), freq=operate_config.window
     )
-    horizonsteps = data.coords["windowsteps"] + pd.Timedelta(horizon)
+    horizonsteps = data.coords["windowsteps"] + pd.Timedelta(operate_config.horizon)
     # We require an offset because pandas / xarray slicing is _inclusive_ of both endpoints
     # where we only want it to be inclusive of the left endpoint.
     # Except in the last time horizon, where we want it to include the right endpoint.

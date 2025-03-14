@@ -29,6 +29,7 @@ from pyomo.util.model_size import build_model_size_report  # type: ignore
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
 from calliope.preprocess import CalliopeMath
+from calliope.schemas import config_schema
 from calliope.util.logging import LogWriter
 
 from . import backend_model, parsing
@@ -58,15 +59,17 @@ COMPONENT_TRANSLATOR = {
 class PyomoBackendModel(backend_model.BackendModel):
     """Pyomo-specific backend functionality."""
 
-    def __init__(self, inputs: xr.Dataset, math: CalliopeMath, **kwargs) -> None:
+    def __init__(
+        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config_schema.Build
+    ) -> None:
         """Pyomo solver interface class.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
             math (CalliopeMath): Calliope math.
-            **kwargs: passed directly to the solver.
+            build_config: Build configuration options.
         """
-        super().__init__(inputs, math, pmo.block(), **kwargs)
+        super().__init__(inputs, math, build_config, pmo.block())
 
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()
@@ -169,7 +172,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         ) -> xr.DataArray:
             expr = element.evaluate_expression(self, references=references)
             objective = pmo.objective(expr.item(), sense=sense)
-            if name == self.inputs.attrs["config"].build.objective:
+            if name == self.config.objective:
                 text = "activated"
                 objective.activate()
             else:

@@ -9,6 +9,16 @@ import calliope.backend
 import calliope.preprocess
 
 
+def build_test_model_def(override_dict=None, scenario=None, model_file="model.yaml"):
+    """Get the definition dictionary of a test model."""
+    model_def, _ = calliope.preprocess.prepare_model_definition(
+        data=Path(__file__).parent / "test_model" / model_file,
+        scenario=scenario,
+        override_dict=override_dict,
+    )
+    return model_def
+
+
 def build_test_model(
     override_dict=None,
     scenario=None,
@@ -16,6 +26,7 @@ def build_test_model(
     data_table_dfs=None,
     **init_kwargs,
 ):
+    """Get the Calliope model object of a test model."""
     return calliope.Model(
         os.path.join(os.path.dirname(__file__), "test_model", model_file),
         override_dict=override_dict,
@@ -95,15 +106,13 @@ def build_lp(
         math (dict | None, optional): All constraint/global expression/objective math to apply. Defaults to None.
         backend_name (Literal["pyomo"], optional): Backend to use to create the LP file. Defaults to "pyomo".
     """
-    math = calliope.preprocess.CalliopeMath(
-        ["plan", *model.config.build.get("add_math", [])]
-    )
+    math = calliope.preprocess.CalliopeMath(["plan", *model.config.build.add_math])
 
     math_to_add = calliope.AttrDict()
     if isinstance(math_data, dict):
         for component_group, component_math in math_data.items():
             if isinstance(component_math, dict):
-                math_to_add.union(calliope.AttrDict({component_group: component_math}))
+                math_to_add.union({component_group: component_math})
             elif isinstance(component_math, list):
                 for name in component_math:
                     math_to_add.set_key(
@@ -113,7 +122,7 @@ def build_lp(
         obj = {
             "dummy_obj": {"equations": [{"expression": "1 + 1"}], "sense": "minimize"}
         }
-        math_to_add.union(calliope.AttrDict({"objectives": obj}))
+        math_to_add.union({"objectives": obj})
         obj_to_activate = "dummy_obj"
     else:
         obj_to_activate = list(math_to_add["objectives"].keys())[0]

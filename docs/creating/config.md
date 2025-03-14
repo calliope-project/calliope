@@ -41,6 +41,10 @@ To test your model pipeline, `config.init.time_subset` is a good way to limit yo
     Various capabilities are available to adjust the temporal resolution of a model on-the-fly, both by resampling or using externally-provided clustering.
     See our [time adjustment page](../advanced/time.md) for more details.
 
+!!! info "See also"
+    The full set of available configuration options is documented in the [configuration schema][model-configuration-schema].
+    This provides you with a description of each configuration option and the default which will be used if you do not provide a value.
+
 ## Deep-dive into some key configuration options
 
 ### `config.build.backend`
@@ -79,12 +83,12 @@ In `plan` mode, capacities are determined by the model, whereas in `operate` mod
 In `spores` mode, the model is first run in `plan` mode, then run `N` number of times to find alternative system configurations with similar monetary cost, but maximally different choice of technology capacity and location (node).
 
 In most cases, you will want to use the `plan` mode.
-In fact, you can use a set of results from using `plan` model to initialise both the `operate` (`config.build.operate_use_cap_results`) and `spores` modes.
+In fact, you can use a set of results from using `plan` model to initialise both the `operate` (`config.build.operate.use_cap_results`) and `spores` modes.
 
 ### `config.solve.solver`
 
 Possible options for solver include `glpk`, `gurobi`, `cplex`, and `cbc`.
-The interface to these solvers is done through the Pyomo library. Any [solver compatible with Pyomo](https://pyomo.readthedocs.io/en/6.5.0/solving_pyomo_models.html#supported-solvers) should work with Calliope.
+The interface to these solvers is done through the Pyomo library. Any [solver compatible with Pyomo](https://pyomo.readthedocs.io/en/latest/reference/topical/appsi/appsi.solvers.html) should work with Calliope.
 
 For solvers with which Pyomo provides more than one way to interface, the additional `solver_io` option can be used.
 In the case of Gurobi, for example, it is usually fastest to use the direct Python interface:

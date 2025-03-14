@@ -4,40 +4,8 @@
 
 # Note: --8<--start:'' and --8<--end:'' is used in tutorial documentation only
 
-# --8<-- [start:cost-dim-setter]
-templates:
-  cost_dim_setter:
-    cost_flow_cap:
-      data: null
-      index: monetary
-      dims: costs
-    cost_flow_in:
-      data: null
-      index: monetary
-      dims: costs
-    cost_flow_out:
-      data: null
-      index: monetary
-      dims: costs
-    cost_storage_cap:
-      data: null
-      index: monetary
-      dims: costs
-    cost_area_use:
-      data: null
-      index: monetary
-      dims: costs
-    cost_source_cap:
-      data: null
-      index: monetary
-      dims: costs
-    cost_interest_rate:
-      data: 0.10
-      index: monetary
-      dims: costs
-# --8<-- [end:cost-dim-setter]
-
 # --8<-- [start:free-transmission]
+templates:
   free_transmission:
     name: "Local power transmission"
     color: "#6783E3"
@@ -56,16 +24,12 @@ techs:
     name: "Combined cycle gas turbine"
     color: "#E37A72"
     base_tech: supply
-    template: cost_dim_setter
     carrier_out: power
     flow_out_eff: 0.5
     flow_cap_max: 40000 # kW
     flow_cap_max_systemwide: 100000 # kW
     flow_ramping: 0.8
     lifetime: 25
-
-    cost_flow_cap.data: 750 # USD per kW
-    cost_flow_in.data: 0.02 # USD per kWh
   # --8<-- [end:ccgt]
 
   # --8<-- [start:csp]
@@ -73,7 +37,6 @@ techs:
     name: "Concentrating solar power"
     color: "#F9CF22"
     base_tech: supply
-    template: cost_dim_setter
     carrier_out: power
     source_unit: per_area
     include_storage: True
@@ -85,12 +48,6 @@ techs:
     area_use_max: .inf
     flow_cap_max: 10000
     lifetime: 25
-
-    cost_storage_cap.data: 50
-    cost_area_use.data: 200
-    cost_source_cap.data: 200
-    cost_flow_cap.data: 1000
-    cost_flow_out.data: 0.002
   # --8<-- [end:csp]
 
   ##
@@ -101,7 +58,6 @@ techs:
     name: "Battery storage"
     color: "#3B61E3"
     base_tech: storage
-    template: cost_dim_setter
     carrier_in: power
     carrier_out: power
     flow_cap_max: 1000 # kW
@@ -112,8 +68,6 @@ techs:
     flow_in_eff: 0.95
     storage_loss: 0 # No loss over time assumed
     lifetime: 25
-
-    cost_storage_cap.data: 200 # USD per kWh storage capacity
   # --8<-- [end:battery]
 
   ##
@@ -134,31 +88,28 @@ techs:
   # --8<-- [start:transmission]
 
   region1_to_region2:
-    from: region1
-    to: region2
+    link_from: region1
+    link_to: region2
     name: "AC power transmission"
     color: "#8465A9"
     base_tech: transmission
-    template: cost_dim_setter
     carrier_in: power
     carrier_out: power
     flow_out_eff: 0.85
     lifetime: 25
-    cost_flow_cap.data: 200
-    cost_flow_out.data: 0.002
     flow_cap_max: 10000
 
   region1_to_region1_1:
-    from: region1
-    to: region1_1
+    link_from: region1
+    link_to: region1_1
     template: free_transmission
   region1_to_region1_2:
-    from: region1
-    to: region1_2
+    link_from: region1
+    link_to: region1_2
     template: free_transmission
   region1_to_region1_3:
-    from: region1
-    to: region1_3
+    link_from: region1
+    link_to: region1_3
     template: free_transmission
 
   # --8<-- [end:transmission]

@@ -25,6 +25,7 @@ import numpy as np
 import plotly.express as px
 
 import calliope
+from calliope.io import read_rich_yaml
 
 calliope.set_log_verbosity("INFO", include_solver_output=False)
 
@@ -80,7 +81,7 @@ new_params = f"""
       dims: "breakpoints"
 """
 print(new_params)
-new_params_as_dict = calliope.AttrDict.from_yaml_string(new_params)
+new_params_as_dict = read_rich_yaml(new_params)
 m = calliope.examples.national_scale(override_dict=new_params_as_dict)
 
 # %%
@@ -133,7 +134,7 @@ new_math = """
 # With our piecewise constraint defined, we can build our optimisation problem and inject this new math.
 
 # %%
-new_math_as_dict = calliope.AttrDict.from_yaml_string(new_math)
+new_math_as_dict = read_rich_yaml(new_math)
 m.build(add_math_dict=new_math_as_dict)
 
 # %% [markdown]

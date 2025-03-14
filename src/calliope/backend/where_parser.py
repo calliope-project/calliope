@@ -15,13 +15,14 @@ from typing_extensions import NotRequired, TypedDict
 
 from calliope.backend import expression_parser
 from calliope.exceptions import BackendError
+from calliope.schemas import config_schema
+from calliope.util import tools
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
 
 
 pp.ParserElement.enablePackrat()
-
 BOOLEANTYPE = np.bool_ | np.typing.NDArray[np.bool_]
 
 
@@ -34,6 +35,7 @@ class EvalAttrs(TypedDict):
     helper_functions: dict[str, Callable]
     apply_where: NotRequired[bool]
     references: NotRequired[set]
+    build_config: config_schema.Build
 
 
 class EvalWhere(expression_parser.EvalToArrayStr):
@@ -118,8 +120,8 @@ class ConfigOptionParser(EvalWhere):
         return rf"\text{{config.{self.config_option}}}"
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
-        config_val = (
-            self.eval_attrs["input_data"].attrs["config"].build[self.config_option]
+        config_val = tools.get_dot_attr(
+            self.eval_attrs["build_config"], self.config_option
         )
 
         if not isinstance(config_val, int | float | str | bool | np.bool_):

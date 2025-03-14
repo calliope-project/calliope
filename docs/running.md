@@ -25,7 +25,7 @@ The `calliope run` command takes the following options:
 * `--scenario={scenario}` and `--override_dict={yaml_string}`: Specify a scenario, or one or several overrides, to apply to the model, or apply specific overrides from a YAML string (see below for more information).
 * `--help`: Show all available options.
 
-Multiple options can be specified, for example, saving NetCDF, CSV, and HTML plots simultaneously.
+Multiple options can be specified, for example, saving NetCDF and CSV simultaneously.
 
 ```shell
 $ calliope run testmodel/model.yaml --save_netcdf=results.nc --save_csv=outputs

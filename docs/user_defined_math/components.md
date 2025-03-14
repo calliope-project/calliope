@@ -36,7 +36,7 @@ Without a `where` string, all valid members (according to the `definition_matrix
     If a value for a valid variable member is undefined in the referenced parameter, the decision variable will be unbounded for this member.
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
 1. It can take on a `default` value that will be used in math operations to avoid `NaN` values creeping in.
-The default value should be set such that it has no impact on the optimisation problem if it is included (most of the time, this means setting it to zero).
+The default value should be set such that it has no impact on the optimisation problem if it is included (most of the time, this means `NaN`).
 
 ## Global Expressions
 
@@ -63,7 +63,7 @@ Without a `where` string, all valid members (according to the `definition_matrix
 The equation expressions do _not_ have comparison operators; those are reserved for [constraints](#constraints)
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
 1. It can take on a `default` value that will be used in math operations to avoid `NaN` values creeping in.
-The default value should be set such that it has no impact on the optimisation problem if it is included (most of the time, this means setting it to zero).
+The default value should be set such that it has no impact on the optimisation problem if it is included (most of the time, this means `NaN`).
 
 ## Constraints
 

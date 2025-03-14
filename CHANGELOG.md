@@ -1,6 +1,20 @@
-## 0.7.0.dev5 (Unreleased)
+## 0.7.0.dev5 (2024-12-04)
 
 ### User-facing changes
+
+|changed| to ensure the model configuration always remains in sync with the results, `kwargs` in `model.build()` and `model.solve()` now directly affect `model.config`
+
+|changed| `template:` can now be used anywhere within YAML definition files, not just in the `nodes`, `techs` and `data_tables` sections.
+
+|changed| "An overview of the Calliope terminology" information admonition to remove self-references and improve understandability.
+Now also includes a visual depiction of how the different defined components connect together (#699).
+
+|fixed| Area-based parameters have appropriate documented units of `area` rather than `area^2` (#701).
+
+|fixed| Technology capacity lower bound constraints so that `[cap-type]_min` (e.g., `flow_cap_min`) is not always enforced if the `purchased_units` variable is active (#643).
+
+|changed| Single data entries defined in YAML indexed parameters will not be automatically broadcast along indexed dimensions.
+To achieve the same functionality as in `<v0.7.dev4`, the user must set the new `init` configuration option `broadcast_param_data` to True (#615).
 
 |changed| Helper functions are now documented on their own page within the "Defining your own math" section of the documentation (#698).
 
@@ -18,6 +32,18 @@
 
 |changed| `data_sources` -> `data_tables` and `data_sources.source` -> `data_tables.data`.
 This change has occurred to avoid confusion between data "sources" and model energy "sources" (#673).
+
+### Internal changes
+
+|changed| updated transmission technologies to/from -> link_to/link_from to avoid conflicts with protected `python` terminology.
+
+|changed| Model configuration, data tables, techs/nodes data, math and general model definition now uses `pydantic`.
+
+|changed| Model definition reading is now defined in a single place (preprocess/model_definition.py).
+
+|changed| Moved YAML reading/importing functionality out of `AttrDict`. It is now part of our `io` functionality.
+
+|fixed| Avoided gurobi 12.0 incompatibility with pyomo by setting the lower bound to v6.8.2.
 
 ## 0.7.0.dev4 (2024-09-10)
 
