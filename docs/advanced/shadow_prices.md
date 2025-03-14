@@ -17,10 +17,10 @@ If you [define any of your own math constraints](../user_defined_math/components
 !!! note
 
     * Not all solvers provide access to shadow prices.
-    For instance, we know that it is possible with Gurobi and GLPK, but not with CBC.
-    Since we cannot test all Pyomo-compatible solvers, you may run into issues depending on the solver you use.
+      For instance, we know that it is possible with Gurobi and GLPK, but not with CBC.
+      Since we cannot test all Pyomo-compatible solvers, you may run into issues depending on the solver you use.
     * You cannot access shadow prices if you have integer/binary variables in your model.
-    If you try to do so, you will receive a warning, and shadow price tracking will remain disabled.
+      If you try to do so, you will receive a warning, and shadow price tracking will remain disabled.
     * You can check the status of shadow price tracking with `model.backend.shadow_prices.is_active`.
 
 ## Shadow prices when using the command-line tool
