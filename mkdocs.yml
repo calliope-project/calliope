@@ -132,6 +132,7 @@ nav:
       - examples/milp/index.md
       - examples/milp/notebook.py
     - examples/loading_tabular_data.py
+    - examples/modes.py
     - examples/piecewise_constraints.py
     - examples/calliope_model_object.py
     - examples/calliope_logging.py

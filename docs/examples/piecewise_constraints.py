@@ -129,7 +129,7 @@ new_math = """
 """
 
 # %% [markdown]
-# # Building and checking the optimisation problem
+# # Building and checking the piecewise constraint
 #
 # With our piecewise constraint defined, we can build our optimisation problem and inject this new math.
 

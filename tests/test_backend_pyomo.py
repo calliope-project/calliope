@@ -1648,8 +1648,8 @@ class TestNewBackend:
 
         m = build_model(
             {
-                "config.build.operate.window": "12H",
-                "config.build.operate.horizon": "12H",
+                "config.build.operate.window": "12h",
+                "config.build.operate.horizon": "12h",
             },
             "simple_supply,two_hours,investment_costs",
         )
@@ -1842,6 +1842,29 @@ class TestNewBackend:
         )
         assert "foo" in simple_supply.backend.objectives
         assert not simple_supply.backend.objectives.foo.item().active
+
+    def test_default_objective_set(self, simple_supply):
+        assert simple_supply.backend.objectives.min_cost_optimisation.item().active
+        assert simple_supply.backend.objective == "min_cost_optimisation"
+
+    def test_new_objective_set(self, simple_supply_build_func):
+        simple_supply_build_func.backend.add_objective(
+            "foo", {"equations": [{"expression": "bigM"}], "sense": "minimise"}
+        )
+        simple_supply_build_func.backend.set_objective("foo")
+
+        assert simple_supply_build_func.backend.objectives.foo.item().active
+        assert not simple_supply_build_func.backend.objectives.min_cost_optimisation.item().active
+        assert simple_supply_build_func.backend.objective == "foo"
+
+    def test_new_objective_set_log(self, caplog, simple_supply_build_func):
+        caplog.set_level(logging.INFO)
+        simple_supply_build_func.backend.add_objective(
+            "foo", {"equations": [{"expression": "bigM"}], "sense": "minimise"}
+        )
+        simple_supply_build_func.backend.set_objective("foo")
+        assert ":foo | Objective activated." in caplog.text
+        assert ":min_cost_optimisation | Objective deactivated." in caplog.text
 
     @staticmethod
     def _is_fixed(val):
