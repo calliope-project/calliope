@@ -27,7 +27,7 @@ With the package manager installed, you can create a new environment called `cal
 Run the following command in a terminal or command-line window:
 
 ```shell
-mamba create -n calliope -c conda-forge/label/calliope_dev -c conda-forge calliope coin-or-cbc
+mamba create -n calliope -c conda-forge/label/calliope_dev -c conda-forge calliope
 ```
 
 !!! note
@@ -49,11 +49,9 @@ mamba activate calliope
 
 ## Updating an existing installation
 
-If following the recommended installation method above, the following command, assuming the mamba environment is active, will update Calliope to the newest version
-
-```bash
-mamba update -c conda-forge calliope
-```
+We recommend that if you want to update an existing installation, you re-create your environment from scratch.
+This will mitigate any possible unwanted updates to additional dependencies that you may have installed into your environment since you first created it.
+Therefore, run the same command found in the [recommended installation instructions](#recommended-installation-method) and say yes when prompted about whether you want to overwrite the existing environment.
 
 ## Choosing a solver
 
@@ -66,12 +64,12 @@ This list is not exhaustive; any solvers [supported by Pyomo](https://pyomo.read
 ### CBC
 
 [CBC](https://github.com/coin-or/Cbc) is our recommended option if you want a free and open-source solver.
-If you do not have it in your working environment (i.e. there is nothing listed when you call `conda list cbc`) then it can be installed by running `mamba install -c conda-forge coin-or-cbc`.
+If you do not have it in your working environment (i.e. there is nothing listed when you call `conda list cbc`) then it can be installed by running `mamba install conda-forge::coin-or-cbc`.
 
 ### GLPK
 
 [GLPK](https://anaconda.org/conda-forge/glpk) is free and open-source, but can take too much time and/or too much memory on larger problems.
-`GLPK` can be installed from `conda-forge` on all platforms: `mamba install -c conda-forge glpk`.
+`GLPK` can be installed from `conda-forge` on all platforms: `mamba install conda-forge::glpk`.
 Unlike [CBC](#cbc), it is possible to extract [shadow prices](./advanced/shadow_prices.md) from a model solved with GLPK, which is why you may with to use it instead of CBC.
 
 ### Gurobi

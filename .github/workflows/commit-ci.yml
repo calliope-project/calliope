@@ -33,6 +33,7 @@ jobs:
         create-args: >-
           -f requirements/dev.txt
           python=3.11
+          coin-or-cbc
           gurobi::gurobi
         post-cleanup: all
         cache-environment: true

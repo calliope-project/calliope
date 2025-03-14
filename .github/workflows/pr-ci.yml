@@ -52,6 +52,7 @@ jobs:
           -f requirements/dev.txt
           curl
           python=3.${{ matrix.py3version }}
+          coin-or-cbc
           gurobi::gurobi
         post-cleanup: all
         cache-environment: true

@@ -2,7 +2,7 @@ bottleneck >= 1
 click >= 8
 geographiclib >= 2
 ipdb >= 0.13
-ipykernel < 7
+ipykernel >= 6
 jinja2 >= 3
 jsonref >= 1.1
 jsonschema >= 4
