@@ -70,7 +70,7 @@ If you do not have it in your working environment (i.e. there is nothing listed 
 
 ### GLPK
 
-[GLPK](https://www.gnu.org/software/glpk/) is free and open-source, but can take too much time and/or too much memory on larger problems.
+[GLPK](https://anaconda.org/conda-forge/glpk) is free and open-source, but can take too much time and/or too much memory on larger problems.
 `GLPK` can be installed from `conda-forge` on all platforms: `mamba install -c conda-forge glpk`.
 Unlike [CBC](#cbc), it is possible to extract [shadow prices](./advanced/shadow_prices.md) from a model solved with GLPK, which is why you may with to use it instead of CBC.
 
