@@ -7,7 +7,7 @@ build:
     python: mambaforge-4.10
   jobs:
     post_create_environment:
-      - mamba install python=3.12 coin-or-cbc gurobi::gurobi --file requirements/dev.txt
+      - mamba install python=3.12 coin-or-cbc gurobi::gurobi --file requirements/base.txt --file requirements/dev.txt
       - pip install --no-deps .
       - python -m ipykernel install --user --name calliope_docs_build
 
