@@ -6,7 +6,7 @@
     To install the pre-release as a user:
 
     ```shell
-    mamba create -n calliope -c conda-forge/label/calliope_dev -c conda-forge calliope
+    mamba create -n calliope -c conda-forge conda-forge/label/calliope_dev::calliope
     ```
 
     Some functionality is not yet available in 0.7, notably:

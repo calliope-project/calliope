@@ -27,7 +27,7 @@ With the package manager installed, you can create a new environment called `cal
 Run the following command in a terminal or command-line window:
 
 ```shell
-mamba create -n calliope -c conda-forge/label/calliope_dev -c conda-forge calliope
+mamba create -n calliope -c conda-forge conda-forge/label/calliope_dev::calliope
 ```
 
 !!! note
@@ -46,12 +46,6 @@ mamba activate calliope
 
     Although possible, we do not recommend installing Calliope directly via `pip` (`pip install calliope`).
     Non-python binaries are not installed with `pip`, some of which are necessary for stable operation (e.g., `libnetcdf`).
-
-## Updating an existing installation
-
-We recommend that if you want to update an existing installation, you re-create your environment from scratch.
-This will mitigate any possible unwanted updates to additional dependencies that you may have installed into your environment since you first created it.
-Therefore, run the same command found in the [recommended installation instructions](#recommended-installation-method) and say yes when prompted about whether you want to overwrite the existing environment.
 
 ## Choosing a solver
 
