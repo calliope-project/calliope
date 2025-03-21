@@ -193,6 +193,21 @@ class TestSporesMode:
 
         return model, log
 
+    @pytest.fixture(
+        scope="class",
+        params=["integer", "relative_deployment", "random", "evolving_average"],
+    )
+    def spores_model_and_log_algorithms(self, request):
+        """Iterate 2 times in SPORES mode using different scoring algorithms."""
+        model = build_model({}, "spores,investment_costs")
+        model.build(mode="spores")
+        with self.caplog_session(request) as caplog:
+            with caplog.at_level(logging.INFO):
+                model.solve(**{"spores.scoring_algorithm": request.param})
+            log = caplog.text
+
+        return model, log
+
     @pytest.fixture(scope="class")
     def spores_model_skip_baseline_and_log(self, request):
         """Iterate 2 times in SPORES mode having pre-computed the baseline results."""
@@ -244,9 +259,9 @@ class TestSporesMode:
         spores_model, _ = spores_model_and_log
         assert spores_model.backend.config.mode == "spores"
 
-    def test_spores_mode_success(self, spores_model_and_log):
+    def test_spores_mode_success(self, spores_model_and_log_algorithms):
         """Solving in spores mode should lead to an optimal solution."""
-        spores_model, _ = spores_model_and_log
+        spores_model, _ = spores_model_and_log_algorithms
         assert spores_model.results.attrs["termination_condition"] == "optimal"
 
     def test_spores_mode_3_results(self, spores_model_and_log):

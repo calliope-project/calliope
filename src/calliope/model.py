@@ -5,9 +5,12 @@
 from __future__ import annotations
 
 import logging
+import random
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -611,7 +614,7 @@ class Model:
         spore_range = range(1, spores_config.number + 1)
         for spore in spore_range:
             LOGGER.info(f"Optimisation model | Running SPORE {spore}.")
-            self._spores_update_model(baseline_results, results_list[-1], spores_config)
+            self._spores_update_model(baseline_results, results_list, spores_config)
 
             iteration_results = self.backend._solve(solver_config, warmstart=False)
             results_list.append(iteration_results)
@@ -633,9 +636,86 @@ class Model:
     def _spores_update_model(
         self,
         baseline_results: xr.Dataset,
-        previous_results: xr.Dataset,
+        all_previous_results: list[xr.Dataset],
         spores_config: config_schema.SolveSpores,
     ):
+        def _score_integer() -> xr.DataArray:
+            # Look at capacity deployment in the previous iteration
+            previous_cap = latest_results["flow_cap"].where(spores_techs)
+
+            # Make sure that penalties are applied only to non-negligible deployments of capacity
+            min_relevant_size = spores_config.score_threshold_factor * previous_cap.max(
+                ["nodes", "techs"]
+            )
+
+            new_score = (
+                # Where capacity was deployed more than the minimal relevant size, assign an integer penalty (score)
+                previous_cap.where(previous_cap > min_relevant_size)
+                .clip(min=1, max=1)
+                .fillna(0)
+                .where(spores_techs)
+            )
+            return new_score
+
+        def _score_relative_deployment() -> xr.DataArray:
+            # Look at capacity deployment in the previous iteration
+            previous_cap = latest_results["flow_cap"].where(spores_techs)
+
+            # Look at capacity deployment in the previous iteration
+            relative_cap = previous_cap / self.inputs["flow_cap_max"].where(
+                spores_techs
+            )
+
+            # Make sure that penalties are applied only to non-negligible deployments of capacity
+            min_relevant_size = spores_config.score_threshold_factor * relative_cap
+
+            new_score = (
+                # Where capacity was deployed more than the minimal relevant size, assign the relative deployment as a penalty (score)
+                relative_cap.where(previous_cap > min_relevant_size)
+                .fillna(0)
+                .where(spores_techs)
+            )
+            return new_score.to_pandas()
+
+        def _score_random() -> xr.DataArray:
+            previous_cap = latest_results["flow_cap"].where(spores_techs)
+            new_score = (
+                previous_cap.fillna(0)
+                .where(previous_cap.isnull(), other=lambda x: random.random())
+                .where(spores_techs)
+            )
+
+            return new_score
+
+        def _score_evolving_average() -> xr.DataArray:
+            previous_cap = latest_results["flow_cap"]
+            evolving_average = sum(
+                results["flow_cap"] for results in all_previous_results
+            ) / len(all_previous_results)
+
+            relative_change = abs(evolving_average - previous_cap) / evolving_average
+            # first iteration
+            if relative_change.sum() == 0:
+                # first iteration
+                new_score = _score_integer()
+            else:
+                # If capacity is exactly the same as the average, we give the relative difference an arbitrarily small value
+                relative_change = (
+                    relative_change.clip(min=0.001)
+                    .where(relative_change != np.inf, other=0)
+                    .where(spores_techs)
+                )
+                new_score = relative_change**-1
+
+            return new_score
+
+        latest_results = all_previous_results[-1]
+        allowed_methods: dict[str, Callable[[], xr.DataArray]] = {
+            "integer": _score_integer,
+            "relative_deployment": _score_relative_deployment,
+            "random": _score_random,
+            "evolving_average": _score_evolving_average,
+        }
         # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
         constraining_cost = baseline_results.cost.groupby("costs").sum(..., min_count=1)
         self.backend.update_parameter("spores_baseline_cost", constraining_cost)
@@ -647,22 +727,8 @@ class Model:
             ).notnull()
             & self.inputs.definition_matrix
         )
+        new_score = allowed_methods[spores_config.scoring_algorithm]()
 
-        # Look at capacity deployment in the previous iteration
-        previous_cap = previous_results["flow_cap"].where(spores_techs)
-
-        # Make sure that penalties are applied only to non-negligible deployments of capacity
-        min_relevant_size = spores_config.score_threhsold_factor * previous_cap.max(
-            ["nodes", "techs"]
-        )
-
-        new_score = (
-            # Where capacity was deployed more than the minimal relevant size, assign an integer penalty (score)
-            previous_cap.where(previous_cap > min_relevant_size)
-            .clip(min=1, max=1)
-            .fillna(0)
-            .where(spores_techs)
-        )
         new_score += self.backend.get_parameter(
             "spores_score", as_backend_objs=False
         ).fillna(0)
