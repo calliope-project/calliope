@@ -5,9 +5,11 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -338,11 +340,11 @@ class Model:
             comment=f"Optimisation model | starting model in {mode} mode.",
         )
         if mode == "operate":
-            results = self._solve_operate(**self.config.solve.model_dump())
+            results = self._solve_operate(self.config.solve)
+        elif mode == "spores":
+            results = self._solve_spores(self.config.solve)
         else:
-            results = self.backend._solve(
-                warmstart=warmstart, **self.config.solve.model_dump()
-            )
+            results = self.backend._solve(self.config.solve, warmstart=warmstart)
 
         log_time(
             LOGGER,
@@ -487,11 +489,14 @@ class Model:
 
         return sliced_inputs
 
-    def _solve_operate(self, **solver_config) -> xr.Dataset:
+    def _solve_operate(self, solver_config: config_schema.Solve) -> xr.Dataset:
         """Solve in operate (i.e. dispatch) mode.
 
         Optimisation is undertaken iteratively for slices of the timeseries, with
         some data being passed between slices.
+
+        Args:
+            solver_config (config_schema.Solve): Calliope Solver configuration object.
 
         Returns:
             xr.Dataset: Results dataset.
@@ -502,7 +507,7 @@ class Model:
 
         LOGGER.info("Optimisation model | Running first time window.")
 
-        step_results = self.backend._solve(warmstart=False, **solver_config)
+        iteration_results = self.backend._solve(solver_config, warmstart=False)
 
         results_list = []
 
@@ -512,15 +517,17 @@ class Model:
                 f"Optimisation model | Running time window starting at {windowstep_as_string}."
             )
             results_list.append(
-                step_results.sel(timesteps=slice(None, windowstep - self._TS_OFFSET))
+                iteration_results.sel(
+                    timesteps=slice(None, windowstep - self._TS_OFFSET)
+                )
             )
-            previous_step_results = results_list[-1]
+            previous_iteration_results = results_list[-1]
             horizonstep = self._model_data.horizonsteps.sel(windowsteps=windowstep)
             new_inputs = self.inputs.sel(
                 timesteps=slice(windowstep, horizonstep)
             ).drop_vars(["horizonsteps", "windowsteps"], errors="ignore")
 
-            if len(new_inputs.timesteps) != len(step_results.timesteps):
+            if len(new_inputs.timesteps) != len(iteration_results.timesteps):
                 LOGGER.info(
                     "Optimisation model | Reaching the end of the timeseries. "
                     "Re-building model with shorter time horizon."
@@ -535,16 +542,16 @@ class Model:
                         self.backend.update_parameter(param_name, param_data)
                         self.backend.inputs[param_name] = param_data
 
-            if "storage" in step_results:
+            if "storage" in iteration_results:
                 self.backend.update_parameter(
                     "storage_initial",
-                    self._recalculate_storage_initial(previous_step_results),
+                    self._recalculate_storage_initial(previous_iteration_results),
                 )
 
-            step_results = self.backend._solve(warmstart=False, **solver_config)
+            iteration_results = self.backend._solve(solver_config, warmstart=False)
 
         self._start_window_idx = 0
-        results_list.append(step_results.sel(timesteps=slice(windowstep, None)))
+        results_list.append(iteration_results.sel(timesteps=slice(windowstep, None)))
         results = xr.concat(results_list, dim="timesteps", combine_attrs="no_conflicts")
         results.attrs["termination_condition"] = ",".join(
             set(result.attrs["termination_condition"] for result in results_list)
@@ -567,3 +574,186 @@ class Model:
 
         new_initial_storage = end_storage / self.inputs.storage_cap
         return new_initial_storage
+
+    def _solve_spores(self, solver_config: config_schema.Solve) -> xr.Dataset:
+        """Solve in spores (i.e. modelling to generate alternatives - MGA) mode.
+
+        Optimisation is undertaken iteratively after setting the total monetary cost of the system.
+        Technology "spores" costs are updated between iterations.
+
+        Returns:
+            xr.Dataset: Results dataset.
+        """
+        LOGGER.info("Optimisation model | Resetting SPORES parameters.")
+        for init_param in ["spores_score", "spores_baseline_cost"]:
+            default = xr.DataArray(self.inputs.attrs["defaults"][init_param])
+            self.backend.update_parameter(
+                init_param, self.inputs.get(init_param, default)
+            )
+
+        self.backend.set_objective(self.config.build.objective)
+
+        spores_config: config_schema.SolveSpores = solver_config.spores
+        if not spores_config.skip_baseline_run:
+            LOGGER.info("Optimisation model | Running baseline model.")
+            baseline_results = self.backend._solve(solver_config, warmstart=False)
+        else:
+            LOGGER.info("Optimisation model | Using existing baseline model results.")
+            baseline_results = self.results.copy()
+
+        if spores_config.save_per_spore_path is not None:
+            spores_config.save_per_spore_path.mkdir(parents=True, exist_ok=True)
+            LOGGER.info("Optimisation model | Saving SPORE baseline to file.")
+            baseline_results.assign_coords(spores="baseline").to_netcdf(
+                spores_config.save_per_spore_path / "baseline.nc"
+            )
+
+        # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
+        results_list: list[xr.Dataset] = [baseline_results]
+        spore_range = range(1, spores_config.number + 1)
+        LOGGER.info(
+            f"Optimisation model | Running SPORES with `{spores_config.scoring_algorithm}` scoring algorithm."
+        )
+        for spore in spore_range:
+            LOGGER.info(f"Optimisation model | Running SPORE {spore}.")
+            self._spores_update_model(baseline_results, results_list, spores_config)
+
+            iteration_results = self.backend._solve(solver_config, warmstart=False)
+            results_list.append(iteration_results)
+
+            if spores_config.save_per_spore_path is not None:
+                LOGGER.info(f"Optimisation model | Saving SPORE {spore} to file.")
+                iteration_results.assign_coords(spores=spore).to_netcdf(
+                    spores_config.save_per_spore_path / f"spore_{spore}.nc"
+                )
+
+        spores_dim = pd.Index(["baseline", *spore_range], name="spores")
+        results = xr.concat(results_list, dim=spores_dim, combine_attrs="no_conflicts")
+        results.attrs["termination_condition"] = ",".join(
+            set(result.attrs["termination_condition"] for result in results_list)
+        )
+
+        return results
+
+    def _spores_update_model(
+        self,
+        baseline_results: xr.Dataset,
+        all_previous_results: list[xr.Dataset],
+        spores_config: config_schema.SolveSpores,
+    ):
+        """Assign SPORES scores for the next iteration of the model run.
+
+        Algorithms applied are based on those introduced in <https://doi.org/10.1016/j.apenergy.2023.121002>.
+
+        Args:
+            baseline_results (xr.Dataset): The initial results (before applying SPORES scoring)
+            all_previous_results (list[xr.Dataset]):
+                A list of all previous iterations.
+                 This includes the baseline results, which will be the first item in the list.
+            spores_config (config_schema.SolveSpores):
+                The SPORES configuration.
+        """
+
+        def _score_integer() -> xr.DataArray:
+            """Integer scoring algorithm."""
+            previous_cap = latest_results["flow_cap"].where(spores_techs)
+
+            # Make sure that penalties are applied only to non-negligible deployments of capacity
+            min_relevant_size = spores_config.score_threshold_factor * previous_cap.max(
+                ["nodes", "techs"]
+            )
+
+            new_score = (
+                # Where capacity was deployed more than the minimal relevant size, assign an integer penalty (score)
+                previous_cap.where(previous_cap > min_relevant_size)
+                .clip(min=1, max=1)
+                .fillna(0)
+                .where(spores_techs)
+            )
+            return new_score
+
+        def _score_relative_deployment() -> xr.DataArray:
+            """Relative deployment scoring algorithm."""
+            previous_cap = latest_results["flow_cap"]
+            if (
+                "flow_cap_max" not in self.inputs
+                or (self.inputs["flow_cap_max"].where(spores_techs) == np.inf).any()
+            ):
+                raise exceptions.BackendError(
+                    "Cannot score SPORES with `relative_deployment` when `flow_cap_max` is undefined for some or all tracked technologies."
+                )
+            relative_cap = previous_cap / self.inputs["flow_cap_max"]
+
+            new_score = (
+                # Make sure that penalties are applied only to non-negligible relative capacities
+                relative_cap.where(relative_cap > spores_config.score_threshold_factor)
+                .fillna(0)
+                .where(spores_techs)
+            )
+            return new_score
+
+        def _score_random() -> xr.DataArray:
+            """Random scoring algorithm."""
+            previous_cap = latest_results["flow_cap"].where(spores_techs)
+            new_score = (
+                previous_cap.fillna(0)
+                .where(previous_cap.isnull(), other=np.random.rand(*previous_cap.shape))
+                .where(spores_techs)
+            )
+
+            return new_score
+
+        def _score_evolving_average() -> xr.DataArray:
+            """Evolving average scoring algorithm."""
+            previous_cap = latest_results["flow_cap"]
+            evolving_average = sum(
+                results["flow_cap"] for results in all_previous_results
+            ) / len(all_previous_results)
+
+            relative_change = abs(evolving_average - previous_cap) / evolving_average
+            # first iteration
+            if relative_change.sum() == 0:
+                # first iteration
+                new_score = _score_integer()
+            else:
+                # If capacity is exactly the same as the average, we give the relative difference an arbitrarily small value
+                # which will give it a _large_ score since we take the reciprocal of the change.
+                cleaned_relative_change = (
+                    relative_change.clip(min=0.001).fillna(0).where(spores_techs)
+                )
+                # Any zero values that make their way through to the scoring are kept as zero after taking the reciprocal.
+                new_score = (cleaned_relative_change**-1).where(
+                    cleaned_relative_change > 0, other=0
+                )
+
+            return new_score
+
+        latest_results = all_previous_results[-1]
+        allowed_methods: dict[
+            config_schema.SPORES_SCORING_OPTIONS, Callable[[], xr.DataArray]
+        ] = {
+            "integer": _score_integer,
+            "relative_deployment": _score_relative_deployment,
+            "random": _score_random,
+            "evolving_average": _score_evolving_average,
+        }
+        # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
+        constraining_cost = baseline_results.cost.groupby("costs").sum(..., min_count=1)
+        self.backend.update_parameter("spores_baseline_cost", constraining_cost)
+
+        # Filter for technologies of interest
+        spores_techs = (
+            self.inputs.get(
+                spores_config.tracking_parameter, xr.DataArray(True)
+            ).notnull()
+            & self.inputs.definition_matrix
+        )
+        new_score = allowed_methods[spores_config.scoring_algorithm]()
+
+        new_score += self.backend.get_parameter(
+            "spores_score", as_backend_objs=False
+        ).fillna(0)
+
+        self.backend.update_parameter("spores_score", new_score)
+
+        self.backend.set_objective("min_spores")

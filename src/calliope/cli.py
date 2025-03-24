@@ -10,6 +10,7 @@ import pstats
 import shutil
 import sys
 import traceback
+from pathlib import Path
 
 import click
 
@@ -291,13 +292,14 @@ def run(
                     fg="red",
                     bold=True,
                 )
-            # If save_netcdf is used, override the 'save_per_spore_path' to point to a
-            # directory of the same name as the planned netcdf
 
-            if save_netcdf and model.config.solve.spores.save_per_spore:
-                kwargs["solve.spores_save_per_spore_path"] = (
-                    save_netcdf.replace(".nc", "/spore_{}.nc"),
-                )
+            if (
+                save_netcdf
+                and model.config.solve.spores.save_per_spore_path is not None
+            ):
+                # If save_netcdf is used, override the 'save_per_spore_path' to point to
+                # a directory of the same name as the planned netcdf
+                kwargs["solve.spores.save_per_spore_path"] = (Path(save_netcdf).parent,)
 
             model.build()
             model.solve(**kwargs)
