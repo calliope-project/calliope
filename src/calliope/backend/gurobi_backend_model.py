@@ -42,13 +42,6 @@ COMPONENT_TRANSLATOR = {
 class GurobiBackendModel(backend_model.BackendModel):
     """gurobipy-specific backend functionality."""
 
-    OBJECTIVE_SENSE_DICT = {
-        "minimize": gurobipy.GRB.MINIMIZE,
-        "minimise": gurobipy.GRB.MINIMIZE,
-        "maximize": gurobipy.GRB.MAXIMIZE,
-        "maximise": gurobipy.GRB.MAXIMIZE,
-    }
-
     def __init__(
         self, inputs: xr.Dataset, math: CalliopeMath, build_config: config_schema.Build
     ) -> None:
@@ -140,7 +133,7 @@ class GurobiBackendModel(backend_model.BackendModel):
     def add_objective(  # noqa: D102, override
         self, name: str, objective_dict: parsing.UnparsedObjective
     ) -> None:
-        sense = self.OBJECTIVE_SENSE_DICT[objective_dict["sense"]]
+        sense = self._objective_sense_dict[objective_dict["sense"]]
 
         def _objective_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -158,7 +151,7 @@ class GurobiBackendModel(backend_model.BackendModel):
 
     def set_objective(self, name: str) -> None:  # noqa: D102, override
         to_set = self.objectives[name]
-        sense = self.OBJECTIVE_SENSE_DICT[to_set.attrs["sense"]]
+        sense = self._objective_sense_dict[to_set.attrs["sense"]]
         self._instance.setObjective(to_set.item(), sense=sense)
         self.objective = name
         self.log("objectives", name, "Objective activated.", level="info")
@@ -239,6 +232,16 @@ class GurobiBackendModel(backend_model.BackendModel):
                     )
         else:
             return global_expression
+
+    @property
+    def _objective_sense_dict(self) -> dict[str, int]:
+        """Dictionary to translate objective sense to gurobi constants."""
+        return {
+            "minimize": gurobipy.GRB.MINIMIZE,
+            "minimise": gurobipy.GRB.MINIMIZE,
+            "maximize": gurobipy.GRB.MAXIMIZE,
+            "maximise": gurobipy.GRB.MAXIMIZE,
+        }
 
     def _solve(
         self, solve_config: config_schema.Solve, warmstart: bool = False
