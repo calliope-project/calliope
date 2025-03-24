@@ -1,3 +1,11 @@
+## 0.7.0.dev6
+
+### User-facing changes
+
+|changed| coin-or-cbc is now available cross-platform on conda-forge and so is the recommended open-source solver to install a user environment with.
+
+|changed| Upper bound pins for dependencies removed where possible, to minimise clashes when using calliope as a dependency in a project.
+
 ## 0.7.0.dev5 (2024-12-04)
 
 ### User-facing changes

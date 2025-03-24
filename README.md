@@ -37,7 +37,7 @@ Calliope comes with several built-in analysis and visualisation tools. Having so
 
 ## Quick start
 
-Calliope can run on Windows, macOS and Linux. Installing it is quickest with the `mamba` package manager by running a single command: `mamba create -c conda-forge -n calliope calliope`.
+Calliope can run on Windows, macOS and Linux. Installing it is quickest with the `mamba` package manager by running a single command: `mamba create -n calliope -c conda-forge conda-forge/label/calliope_dev::calliope`.
 
 See the documentation for more [information on installing](https://calliope.readthedocs.io/en/stable/user/installation.html).
 
