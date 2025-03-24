@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import logging
-import random
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -612,6 +611,9 @@ class Model:
         # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
         results_list: list[xr.Dataset] = [baseline_results]
         spore_range = range(1, spores_config.number + 1)
+        LOGGER.info(
+            f"Optimisation model | Running SPORES with `{spores_config.scoring_algorithm}` scoring algorithm."
+        )
         for spore in spore_range:
             LOGGER.info(f"Optimisation model | Running SPORE {spore}.")
             self._spores_update_model(baseline_results, results_list, spores_config)
@@ -639,8 +641,21 @@ class Model:
         all_previous_results: list[xr.Dataset],
         spores_config: config_schema.SolveSpores,
     ):
+        """Assign SPORES scores for the next iteration of the model run.
+
+        Algorithms applied are based on those introduced in <https://doi.org/10.1016/j.apenergy.2023.121002>.
+
+        Args:
+            baseline_results (xr.Dataset): The initial results (before applying SPORES scoring)
+            all_previous_results (list[xr.Dataset]):
+                A list of all previous iterations.
+                 This includes the baseline results, which will be the first item in the list.
+            spores_config (config_schema.SolveSpores):
+                The SPORES configuration.
+        """
+
         def _score_integer() -> xr.DataArray:
-            # Look at capacity deployment in the previous iteration
+            """Integer scoring algorithm."""
             previous_cap = latest_results["flow_cap"].where(spores_techs)
 
             # Make sure that penalties are applied only to non-negligible deployments of capacity
@@ -658,36 +673,33 @@ class Model:
             return new_score
 
         def _score_relative_deployment() -> xr.DataArray:
-            # Look at capacity deployment in the previous iteration
+            """Relative deployment scoring algorithm."""
             previous_cap = latest_results["flow_cap"].where(spores_techs)
-
-            # Look at capacity deployment in the previous iteration
             relative_cap = previous_cap / self.inputs["flow_cap_max"].where(
                 spores_techs
             )
 
-            # Make sure that penalties are applied only to non-negligible deployments of capacity
-            min_relevant_size = spores_config.score_threshold_factor * relative_cap
-
             new_score = (
-                # Where capacity was deployed more than the minimal relevant size, assign the relative deployment as a penalty (score)
-                relative_cap.where(previous_cap > min_relevant_size)
+                # Make sure that penalties are applied only to non-negligible relative capacities
+                relative_cap.where(relative_cap > spores_config.score_threshold_factor)
                 .fillna(0)
                 .where(spores_techs)
             )
-            return new_score.to_pandas()
+            return new_score
 
         def _score_random() -> xr.DataArray:
+            """Random scoring algorithm."""
             previous_cap = latest_results["flow_cap"].where(spores_techs)
             new_score = (
                 previous_cap.fillna(0)
-                .where(previous_cap.isnull(), other=lambda x: random.random())
+                .where(previous_cap.isnull(), other=np.random.rand(*previous_cap.shape))
                 .where(spores_techs)
             )
 
             return new_score
 
         def _score_evolving_average() -> xr.DataArray:
+            """Evolving average scoring algorithm."""
             previous_cap = latest_results["flow_cap"]
             evolving_average = sum(
                 results["flow_cap"] for results in all_previous_results
@@ -700,17 +712,21 @@ class Model:
                 new_score = _score_integer()
             else:
                 # If capacity is exactly the same as the average, we give the relative difference an arbitrarily small value
-                relative_change = (
-                    relative_change.clip(min=0.001)
-                    .where(relative_change != np.inf, other=0)
-                    .where(spores_techs)
+                # which will give it a _large_ score since we take the reciprocal of the change.
+                cleaned_relative_change = (
+                    relative_change.clip(min=0.001).fillna(0).where(spores_techs)
                 )
-                new_score = relative_change**-1
+                # Any zero values that make their way through to the scoring are kept as zero after taking the reciprocal.
+                new_score = (cleaned_relative_change**-1).where(
+                    cleaned_relative_change > 0, other=0
+                )
 
             return new_score
 
         latest_results = all_previous_results[-1]
-        allowed_methods: dict[str, Callable[[], xr.DataArray]] = {
+        allowed_methods: dict[
+            config_schema.SPORES_SCORING_OPTIONS, Callable[[], xr.DataArray]
+        ] = {
             "integer": _score_integer,
             "relative_deployment": _score_relative_deployment,
             "random": _score_random,

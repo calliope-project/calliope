@@ -14,6 +14,10 @@ Mode = Literal["plan", "operate", "spores"]
 
 LOGGER = logging.getLogger(__name__)
 
+SPORES_SCORING_OPTIONS = Literal[
+    "integer", "relative_deployment", "random", "evolving_average"
+]
+
 
 class Init(CalliopeBaseModel):
     """All configuration options used when initialising a Calliope model."""
@@ -131,10 +135,11 @@ class SolveSpores(CalliopeBaseModel):
 
     model_config = {"title": "Model solve SPORES mode configuration"}
 
-    scoring_algorithm: Literal[
-        "integer", "relative_deployment", "random", "evolving_average"
-    ] = "integer"
-    """Algorithm to apply to update the SPORES score between iterations."""
+    scoring_algorithm: SPORES_SCORING_OPTIONS = "integer"
+    """
+    Algorithm to apply to update the SPORES score between iterations.
+    For more information on each option, see [Lombardi et al. (2023)](https://doi.org/10.1016/j.apenergy.2023.121002).
+    """
 
     number: int = Field(default=3)
     """SPORES mode number of iterations after the initial base run."""

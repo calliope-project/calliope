@@ -161,6 +161,29 @@ def plot_capacity(results: xr.Dataset, **plotly_kwargs) -> go.Figure:
 
 
 # %% [markdown]
+# ### Using different `spores` scoring algorithms.
+#
+# We make a number of scoring algorithms accessible out-of-the-box, based on those we present in [Lombardi et al. (2023)](https://doi.org/10.1016/j.apenergy.2023.121002).
+# You can call them on solving the model.
+# Here, we'll compare the result on `flow_cap` from running each.
+
+# %%
+# We subset to the same time range as operate/plan mode
+model_spores = calliope.examples.national_scale(
+    scenario="spores", time_subset=["2005-01-01", "2005-01-10"]
+)
+model_spores.build()
+
+spores_results = []
+for algorithm in ["integer", "evolving_average", "random", "relative_deployment"]:
+    model_spores.solve(**{"spores.scoring_algorithm": algorithm}, force=True)
+    spores_results.append(model_spores.results.expand_dims(algorithm=[algorithm]))
+
+spores_results_da = xr.concat(spores_results, dim="algorithm")
+
+spores_results_da.flow_cap.to_series().dropna().unstack("spores")
+
+# %% [markdown]
 # ## `plan` vs `operate`
 # Here, we compare flows over the 10 days.
 # Note how flows do not match as the rolling horizon makes it difficult to make the correct storage charge/discharge decisions.
@@ -188,3 +211,17 @@ fig_flows_plan.update_layout(title="Plan mode capacities")
 # %%
 fig_flows_spores = plot_capacity(model_spores.results, facet_col="spores")
 fig_flows_spores.update_layout(title="SPORES mode capacities")
+
+# %% [markdown]
+# ## Comparing `spores` scoring algorithms
+# Here, we compare installed capacities between the different SPORES runs.
+
+# %%
+fig_flows_spores = plot_capacity(
+    spores_results_da, facet_col="spores", facet_row="algorithm"
+)
+fig_flows_spores.update_layout(
+    title="SPORES mode capacities using different scoring algorithms",
+    autosize=False,
+    height=800,
+)

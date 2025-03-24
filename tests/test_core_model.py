@@ -237,12 +237,15 @@ class TestSporesMode:
 
         return model, log
 
-    @pytest.fixture(scope="class")
-    def spores_model_with_tracker(self):
+    @pytest.fixture(
+        scope="class",
+        params=["integer", "relative_deployment", "random", "evolving_average"],
+    )
+    def spores_model_with_tracker(self, request):
         """Iterate 2 times in SPORES mode with a SPORES score tracking parameter."""
         model = build_model({}, "spores,spores_tech_tracking,investment_costs")
         model.build(mode="spores")
-        model.solve()
+        model.solve(**{"spores.scoring_algorithm": request.param})
 
         return model
 
@@ -264,36 +267,47 @@ class TestSporesMode:
         spores_model, _ = spores_model_and_log_algorithms
         assert spores_model.results.attrs["termination_condition"] == "optimal"
 
-    def test_spores_mode_3_results(self, spores_model_and_log):
+    def test_spores_mode_3_results(self, spores_model_and_log_algorithms):
         """Solving in spores mode should lead to 3 sets of results."""
-        spores_model, _ = spores_model_and_log
+        spores_model, _ = spores_model_and_log_algorithms
         assert not set(spores_model.results.spores.values).symmetric_difference(
             ["baseline", 1, 2]
         )
 
-    def test_spores_scores(self, spores_model_and_log):
+    def test_spores_scores(self, spores_model_and_log_algorithms):
         """All techs should have a spores score defined."""
-        spores_model, _ = spores_model_and_log
+        spores_model, _ = spores_model_and_log_algorithms
         fill_gaps = ~spores_model._model_data.definition_matrix
         assert (
             spores_model._model_data.spores_score_cumulative.notnull() | fill_gaps
         ).all()
 
-    def test_spores_caps(self, spores_model_and_log):
+    def test_spores_caps(self, spores_model_and_log_algorithms):
         """There should be some changes in capacities between SPORES."""
-        spores_model, _ = spores_model_and_log
+        spores_model, _ = spores_model_and_log_algorithms
         cap_diffs = spores_model.results.flow_cap.diff(dim="spores")
         assert (cap_diffs != 0).any()
 
-    def test_spores_scores_never_decrease(self, spores_model_and_log):
-        """SPORES scores can never decrease."""
+    def test_spores_algo_log(self, spores_model_and_log_algorithms):
+        """The scoring algorithm being used should be logged correctly."""
+        model, log = spores_model_and_log_algorithms
+        assert (
+            f"Running SPORES with `{model.config.solve.spores.scoring_algorithm}` scoring algorithm."
+            in log
+        )
+
+    def test_spores_scores_never_decrease_integer_algo(self, spores_model_and_log):
+        """SPORES scores can never decrease.
+
+        This is not true for all algorithms (e.g. random scoring) so we test with integer scoring.
+        """
         spores_model, _ = spores_model_and_log
         assert (
             spores_model._model_data.spores_score_cumulative.fillna(0).diff("spores")
             >= 0
         ).all()
 
-    def test_spores_scores_increasing_with_cap(self, spores_model_and_log):
+    def test_spores_scores_increasing_with_cap_integer_algo(self, spores_model_and_log):
         """SPORES scores increase when a tech has a finite flow_cap in the previous iteration."""
         spores_model, _ = spores_model_and_log
         has_cap = spores_model.results.flow_cap > 0
