@@ -2,6 +2,10 @@
 
 ### User-facing changes
 
+|new| working SPORES mode, upgraded from v0.6 to include a selection of scoring algorithms.
+
+|new| backend `set_objective` method, to switch between pre-defined objectives.
+
 |changed| coin-or-cbc is now available cross-platform on conda-forge and so is the recommended open-source solver to install a user environment with.
 
 |changed| Upper bound pins for dependencies removed where possible, to minimise clashes when using calliope as a dependency in a project.
