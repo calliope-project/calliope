@@ -1,6 +1,7 @@
 import logging
 from contextlib import contextmanager
 
+import numpy as np
 import numpy.testing
 import pandas as pd
 import pytest
@@ -375,6 +376,20 @@ class TestSporesMode:
         assert model_all_solved_together._model_data.flow_cap.equals(
             model_baseline_solved_separately._model_data.flow_cap
         )
+
+    def test_spores_relative_deployment_needs_max_param(self):
+        """Can only run the `relative_deployment` algorithm if all techs have flow_cap_max."""
+        model = build_model(
+            {"techs.test_supply_elec.flow_cap_max": np.inf},
+            "spores,spores_tech_tracking,investment_costs",
+        )
+        model.build(mode="spores")
+
+        with pytest.raises(
+            calliope.exceptions.BackendError,
+            match="Cannot score SPORES with `relative_deployment`",
+        ):
+            model.solve(**{"spores.scoring_algorithm": "relative_deployment"})
 
 
 class TestBuild:

@@ -674,10 +674,15 @@ class Model:
 
         def _score_relative_deployment() -> xr.DataArray:
             """Relative deployment scoring algorithm."""
-            previous_cap = latest_results["flow_cap"].where(spores_techs)
-            relative_cap = previous_cap / self.inputs["flow_cap_max"].where(
-                spores_techs
-            )
+            previous_cap = latest_results["flow_cap"]
+            if (
+                "flow_cap_max" not in self.inputs
+                or (self.inputs["flow_cap_max"].where(spores_techs) == np.inf).any()
+            ):
+                raise exceptions.BackendError(
+                    "Cannot score SPORES with `relative_deployment` when `flow_cap_max` is undefined for some or all tracked technologies."
+                )
+            relative_cap = previous_cap / self.inputs["flow_cap_max"]
 
             new_score = (
                 # Make sure that penalties are applied only to non-negligible relative capacities
