@@ -69,7 +69,7 @@ jobs:
 
     - name: run tests without coverage
       if: matrix.os != 'ubuntu-latest' || matrix.py3version != '12'
-      run: pytest
+      run: pytest --no-cov
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4
