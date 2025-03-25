@@ -591,11 +591,15 @@ class TestUpdateParameter:
             "built_model_func" + model_suffix
         )
         # TODO: update once we have a `get_objective` method that is backend-agnostic
-        if isinstance(model.backend, calliope.backend.GurobiBackendModel):
+        if isinstance(
+            model.backend, calliope.backend.gurobi_backend_model.GurobiBackendModel
+        ):
             objective_string = str(
                 model.backend.objectives.min_cost_optimisation.item()
             )
-        elif isinstance(model.backend, calliope.backend.PyomoBackendModel):
+        elif isinstance(
+            model.backend, calliope.backend.pyomo_backend_model.PyomoBackendModel
+        ):
             objective_string = str(
                 model.backend.objectives.min_cost_optimisation.item().expr
             )
