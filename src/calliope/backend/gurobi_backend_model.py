@@ -42,12 +42,22 @@ COMPONENT_TRANSLATOR = {
 class GurobiBackendModel(backend_model.BackendModel):
     """gurobipy-specific backend functionality."""
 
-    OBJECTIVE_SENSE_DICT = {
-        "minimize": gurobipy.GRB.MINIMIZE,
-        "minimise": gurobipy.GRB.MINIMIZE,
-        "maximize": gurobipy.GRB.MAXIMIZE,
-        "maximise": gurobipy.GRB.MAXIMIZE,
-    }
+    OBJECTIVE_SENSE_DICT: dict[str, int]
+    if importlib.util.find_spec("gurobipy") is not None:
+        OBJECTIVE_SENSE_DICT = {
+            "minimize": gurobipy.GRB.MINIMIZE,
+            "minimise": gurobipy.GRB.MINIMIZE,
+            "maximize": gurobipy.GRB.MAXIMIZE,
+            "maximise": gurobipy.GRB.MAXIMIZE,
+        }
+    else:
+        # As of Gurobi v11, these are the correct integer values for the above constants
+        OBJECTIVE_SENSE_DICT = {
+            "minimize": 1,
+            "minimise": 1,
+            "maximize": -1,
+            "maximise": -1,
+        }
 
     def __init__(
         self, inputs: xr.Dataset, math: CalliopeMath, build_config: config_schema.Build

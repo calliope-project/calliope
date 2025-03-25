@@ -9,7 +9,6 @@ from calliope.backend.latex_backend_model import (
     ALLOWED_MATH_FILE_FORMATS,
     LatexBackendModel,
 )
-from calliope.backend.parsing import ParsedBackendComponent
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.exceptions import BackendError
 from calliope.preprocess import CalliopeMath
