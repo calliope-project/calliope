@@ -6,6 +6,7 @@ import pytest  # noqa: F401
 import xarray as xr
 
 import calliope
+import calliope.backend
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning
@@ -591,15 +592,11 @@ class TestUpdateParameter:
             "built_model_func" + model_suffix
         )
         # TODO: update once we have a `get_objective` method that is backend-agnostic
-        if isinstance(
-            model.backend, calliope.backend.gurobi_backend_model.GurobiBackendModel
-        ):
+        if isinstance(model.backend, calliope.backend.GurobiBackendModel):
             objective_string = str(
                 model.backend.objectives.min_cost_optimisation.item()
             )
-        elif isinstance(
-            model.backend, calliope.backend.pyomo_backend_model.PyomoBackendModel
-        ):
+        elif isinstance(model.backend, calliope.backend.PyomoBackendModel):
             objective_string = str(
                 model.backend.objectives.min_cost_optimisation.item().expr
             )

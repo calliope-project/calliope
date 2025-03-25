@@ -4,11 +4,12 @@ from typing import TYPE_CHECKING
 
 import xarray as xr
 
-from calliope.backend import gurobi_backend_model, pyomo_backend_model
+from calliope.backend.gurobi_backend_model import GurobiBackendModel
 from calliope.backend.latex_backend_model import (
     ALLOWED_MATH_FILE_FORMATS,
     LatexBackendModel,
 )
+from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.exceptions import BackendError
 from calliope.preprocess import CalliopeMath
 
@@ -35,8 +36,8 @@ def get_model_backend(
     """
     match build_config.backend:
         case "pyomo":
-            return pyomo_backend_model.PyomoBackendModel(data, math, build_config)
+            return PyomoBackendModel(data, math, build_config)
         case "gurobi":
-            return gurobi_backend_model.GurobiBackendModel(data, math, build_config)
+            return GurobiBackendModel(data, math, build_config)
         case _:
             raise BackendError(f"Incorrect backend '{build_config.backend}' requested.")

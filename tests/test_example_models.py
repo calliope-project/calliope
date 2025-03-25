@@ -71,8 +71,7 @@ class TestNationalScaleExampleModelSenseChecks:
             model = request.getfixturevalue(request.param)
 
             solve_kwargs = {"solver": solver}
-            if solver_io:
-                solve_kwargs["solver_io"] = solver_io
+            solve_kwargs["solver_io"] = solver_io
 
             model.solve(force=True, **solve_kwargs)
 
@@ -480,6 +479,7 @@ class TestUrbanScaleExampleModelSenseChecks:
 
         assert float(model.results.cost.sum()) == approx(540.780779)
 
+    @pytest.mark.time_intensive
     def test_operate_example_results(self):
         model = calliope.examples.operate(time_subset=["2005-07-01", "2005-07-04"])
 
