@@ -46,7 +46,7 @@ jobs:
 
     - name: run tests without coverage and without time intensive tests
       if: github.ref != 'refs/heads/main'
-      run: pytest --no-cov -m "not time_intensive"
+      run: pytest --no-cov -m 'not time_intensive' -n 'not needs_gurobi_license'
 
     - name: run tests with coverage
       if: github.ref == 'refs/heads/main'
