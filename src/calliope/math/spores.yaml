@@ -1,10 +1,58 @@
 import:
   - plan.yaml
 
+parameters:
+  spores_baseline_cost:
+    description: >-
+      The baseline optimal cost of the system used to set the maximum cost constraint when undertaking SPORES analysis.
+      This usually only applies to `monetary` cost, but could be applied to other non-SPORES costs as necessary.
+    default: .inf
+    type: float
+  spores_slack:
+    description: >-
+      The amount of slack in the maximum cost constraint applied in SPORES mode.
+      This is a fraction that is applied to the baseline cost, e.g., `0.1` would be used to set a maximum cost constraint of `spores_baseline_cost * 1.1`
+    default: 0
+    type: float
+  spores_score:
+    description: >-
+      The per-tech & per-node SPORES score used to penalise technologies at nodes that have appeared in previous SPORES iterations.
+    default: 0
+    type: float
+
 constraints:
-  cost_sum_max:
+  total_system_cost_max:
+    description: >
+      Limit total system _monetary_ cost in SPORES mode.
+      Applies a maximum relaxation to the system cost compared to the least-cost feasible option.
+    foreach: [costs]
+    where: "[monetary] in costs"
     equations:
-      - expression: sum(cost[costs=$slack_cost_group], over=[nodes, techs]) <= spores_cost_max * (1 + spores_slack)
-    slices:
-      slack_cost_group:
-        - expression: spores_slack_cost_group
+      - expression: sum(cost, over=[nodes, techs]) <= spores_baseline_cost * (1 + spores_slack)
+
+global_expressions:
+  spores_score_cumulative:
+    description: Track SPORES score to include in the model results
+    foreach: [nodes, techs, carriers]
+    equations:
+      - expression: spores_score
+
+objectives:
+  min_spores:
+    description: >-
+      SPORES score minimisation objective, activated for all iterations after the baseline optimisation.
+      The SPORES scores are applied to flow capacity for each technology at each node.
+    equations:
+      - expression: sum(flow_cap * spores_score, over=[nodes, techs, carriers]) + $unmet_demand
+    sub_expressions:
+      unmet_demand:
+        - where: "config.ensure_feasibility=True"
+          expression: >-
+            sum(
+              sum(unmet_demand - unused_supply, over=[carriers, nodes])
+              * timestep_weights,
+              over=timesteps
+            ) * bigM
+        - where: "NOT config.ensure_feasibility=True"
+          expression: "0"
+    sense: minimise

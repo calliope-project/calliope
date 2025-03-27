@@ -312,12 +312,13 @@ class Model:
             "solve_start",
             comment=f"Optimisation model | starting model in {mode} mode.",
         )
+        # TODO: point to backend manager
         if mode == "operate":
-            results = self._solve_operate(**self.config.solve.model_dump())
+            results = self._solve_operate(self.config.solve)
+        elif mode == "spores":
+            results = self._solve_spores(self.config.solve)
         else:
-            results = self.backend._solve(
-                warmstart=warmstart, **self.config.solve.model_dump()
-            )
+            results = self.backend._solve(self.config.solve, warmstart=warmstart)
 
         log_time(
             LOGGER,

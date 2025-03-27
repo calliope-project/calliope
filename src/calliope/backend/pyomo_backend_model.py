@@ -18,6 +18,7 @@ import pyomo.environ as pe  # type: ignore
 import pyomo.kernel as pmo  # type: ignore
 import xarray as xr
 from pyomo.common.tempfiles import TempfileManager  # type: ignore
+from pyomo.core import PyomoObject
 from pyomo.core.kernel.piecewise_library.transforms import (
     PiecewiseLinearFunction,
     PiecewiseValidationError,
@@ -175,6 +176,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             if name == self.config.objective:
                 text = "activated"
                 objective.activate()
+                self.objective = name
             else:
                 text = "deactivated"
                 objective.deactivate()
@@ -184,6 +186,14 @@ class PyomoBackendModel(backend_model.BackendModel):
             return xr.DataArray(objective)
 
         self._add_component(name, objective_dict, _objective_setter, "objectives")
+
+    def set_objective(self, name: str) -> None:  # noqa: D102, override
+        self.objectives[self.objective].item().deactivate()
+        self.log("objectives", self.objective, "Objective deactivated.", level="info")
+
+        self.objectives[name].item().activate()
+        self.objective = name
+        self.log("objectives", name, "Objective activated.", level="info")
 
     def get_parameter(  # noqa: D102, override
         self, name: str, as_backend_objs: bool = True
@@ -255,36 +265,30 @@ class PyomoBackendModel(backend_model.BackendModel):
         return global_expression
 
     def _solve(  # noqa: D102, override
-        self,
-        solver: str,
-        solver_io: str | None = None,
-        solver_options: dict | None = None,
-        save_logs: str | None = None,
-        warmstart: bool = False,
-        **solve_config,
+        self, solve_config: config_schema.Solve, warmstart: bool = False
     ) -> xr.Dataset:
-        if solver == "cbc" and self.shadow_prices.is_active:
+        if solve_config.solver == "cbc" and self.shadow_prices.is_active:
             model_warn(
                 "Switching off shadow price tracker as constraint duals cannot be accessed from the CBC solver"
             )
             self.shadow_prices.deactivate()
-        opt = SolverFactory(solver, solver_io=solver_io)
+        opt = SolverFactory(solve_config.solver, solver_io=solve_config.solver_io)
 
-        if solver_options:
-            for k, v in solver_options.items():
+        if solve_config.solver_options:
+            for k, v in solve_config.solver_options.items():
                 opt.options[k] = v
 
         solve_kwargs = {}
-        if save_logs is not None:
+        if solve_config.save_logs is not None:
             solve_kwargs.update({"symbolic_solver_labels": True, "keepfiles": True})
-            logdir = Path(save_logs)
+            logdir = Path(solve_config.save_logs)
             logdir.mkdir(parents=True, exist_ok=True)
             TempfileManager.tempdir = logdir  # Sets log output dir
 
-        if warmstart and solver in ["glpk", "cbc"]:
+        if warmstart and solve_config.solver in ["glpk", "cbc"]:
             model_warn(
-                f"The chosen solver, {solver}, does not support warmstart, which may "
-                "impact performance."
+                f"The chosen solver, {solve_config.solver}, does not support warmstart, "
+                "which may impact performance."
             )
             warmstart = False
 
@@ -419,7 +423,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         else:
             self._apply_func(
                 self._update_pyomo_param,
-                parameter_da.notnull(),
+                new_values.notnull(),
                 1,
                 parameter_da,
                 new_values,
@@ -665,7 +669,10 @@ class PyomoBackendModel(backend_model.BackendModel):
         if eval_body:
             try:
                 expr = self._apply_func(
-                    lambda expr: expr(), expr_da.notnull(), 1, expr_da
+                    lambda expr: expr() if isinstance(expr, PyomoObject) else expr,
+                    expr_da.notnull(),
+                    1,
+                    expr_da,
                 )
             except ValueError:
                 expr = expr_da.astype(str)

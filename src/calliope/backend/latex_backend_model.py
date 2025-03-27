@@ -468,6 +468,12 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             equations=equation_strings,
             sense=sense_dict[objective_dict["sense"]],
         )
+        if name == self.config.objective:
+            self.objective = name
+
+    def set_objective(self, name: str):  # noqa: D102, override
+        self.objective = name
+        self.log("objectives", name, "Objective activated.", level="info")
 
     def _create_obj_list(
         self, key: str, component_type: backend_model._COMPONENTS_T
@@ -526,7 +532,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                     "yaml_snippet": da.attrs.get("yaml_snippet", None),
                 }
                 for name, da in sorted(getattr(self, objtype).data_vars.items())
-                if "math_string" in da.attrs
+                if ("math_string" in da.attrs)
                 or (objtype == "parameters" and da.attrs["references"])
             ]
             for objtype in [
@@ -541,6 +547,11 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         }
         if "parameters" in components and not components["parameters"]:
             del components["parameters"]
+        for objective in components.get("objectives", []):
+            if objective["name"] == self.objective:
+                objective["name"] += " (active)"
+            else:
+                objective["name"] += " (inactive)"
         return self._render(
             doc_template, mkdocs_features=mkdocs_features, components=components
         )

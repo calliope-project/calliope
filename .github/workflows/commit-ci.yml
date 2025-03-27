@@ -44,9 +44,9 @@ jobs:
     - name: Install jupyter kernel
       run: python -m ipykernel install --user --name calliope
 
-    - name: run tests without coverage
+    - name: run tests without coverage and without time intensive tests
       if: github.ref != 'refs/heads/main'
-      run: pytest
+      run: pytest --no-cov -m 'not time_intensive' -m 'not needs_gurobi_license'
 
     - name: run tests with coverage
       if: github.ref == 'refs/heads/main'

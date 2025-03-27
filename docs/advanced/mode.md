@@ -65,30 +65,19 @@ For this reason, `horizon` must always be equal to or larger than `window`.
 
 ## SPORES mode
 
-!!! warning
-    SPORES mode has not yet been re-implemented in Calliope v0.7.
-
 `SPORES` refers to Spatially-explicit Practically Optimal REsultS.
 This run mode allows a user to generate any number of alternative results which are within a certain range of the optimal cost.
 It follows on from previous work in the field of `modelling to generate alternatives` (MGA), with a particular emphasis on alternatives that vary maximally in the spatial dimension.
-This run mode was developed for and implemented in a [study on the future Italian energy system](https://doi.org/10.1016/j.joule.2020.08.002).
+This run mode was developed for and first implemented in a [study on the future Italian energy system](https://doi.org/10.1016/j.joule.2020.08.002). We later expanded it to enable greater [computational efficiency and versatility](https://doi.org/10.1016/j.apenergy.2023.121002) in what kind of alternative results are prioritised.
 
 As an example, if you wanted to generate 10 SPORES, all of which are within 10% of the optimal system cost, you would define the following in your model configuration:
 
 ```yaml
 config.build.mode: spores
-config.solve:
-    # The number of SPORES to generate:
-    spores_number: 10
-    # The cost class to optimise against when generating SPORES:
-    spores_score_cost_class: spores_score
-    # The initial system cost to limit the SPORES to fit within:
-    spores_cost_max: .inf
-    # The cost class to constrain to be less than or equal to `spores_cost_max`:
-    spores_slack_cost_group: monetary
-parameters:
-    # The fraction above the cost-optimal cost to set the maximum cost during SPORES:
-    slack: 0.1
+# The number of SPORES to generate:
+config.solve.spores.number: 10:
+# The fraction above the cost-optimal cost to set the maximum cost during SPORES:
+parameters.spores_slack: 0.1
 ```
 
 You will now also need a `spores_score` cost class in your model.
@@ -128,3 +117,6 @@ techs:
 !!! note
     We ourselves use and recommend using `spores_score` to define the cost class that you will now optimise against.
     However, it is user-defined, allowing you to choose any terminology that best fits your use case.
+
+To get a glimpse of how the results generated via SPORES compare to simple cost optimisation, check out our documentation
+on [comparing run modes](../examples/modes.py).

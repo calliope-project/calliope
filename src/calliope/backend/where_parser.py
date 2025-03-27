@@ -464,21 +464,18 @@ def comparison_parser(
 
 
 def subset_parser(
-    generic_identifier: pp.ParserElement,
-    evaluatable_identifier: pp.ParserElement,
-    number: pp.ParserElement,
+    generic_identifier: pp.ParserElement, *subset_items: pp.ParserElement
 ) -> pp.ParserElement:
     """Parsing grammar to process subsets.
 
     Args:
         generic_identifier (pp.ParserElement): generic identifier parser
-        evaluatable_identifier (pp.ParserElement): evaluatable identifier parser.
-        number (pp.ParserElement): number parser.
+        *subset_items (pp.ParserElement): parsers that can be included in the subset list; will be matched in the order provided.
 
     Returns:
         pp.ParserElement: subset parser.
     """
-    subset = pp.Group(pp.delimited_list(number | evaluatable_identifier))
+    subset = pp.Group(pp.delimited_list(pp.MatchFirst(subset_items)))
     subset_expression = (
         pp.Suppress("[")
         + subset
@@ -552,5 +549,7 @@ def generate_where_string_parser() -> pp.ParserElement:
         config_option,
         data_var,
     )
-    subset = subset_parser(generic_identifier, evaluatable_string, number)
+    subset = subset_parser(
+        generic_identifier, config_option, number, evaluatable_string
+    )
     return where_parser(bool_operand, helper_function, data_var, comparison, subset)

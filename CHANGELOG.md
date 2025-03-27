@@ -1,18 +1,38 @@
-## 0.7.0.dev6
+## 0.7.0.dev6 (2025-03-24)
 
 ### User-facing changes
 
-|changed| coin-or-cbc is now available cross-platform on conda-forge and so is the recommended open-source solver to install a user environment with.
+|new| working SPORES mode, upgraded from v0.6 to include a selection of scoring algorithms (#716).
 
-|changed| Upper bound pins for dependencies removed where possible, to minimise clashes when using calliope as a dependency in a project.
+|new| backend `set_objective` method, to switch between pre-defined objectives (#716).
+
+|changed| |backwards-incompatible| `from` and `to` parameters (to define start and end point of a transmission link) are now `link_from` and `link_to` (#717).
+
+|changed| |backwards-incompatible| `operate` and `spores` mode configuration options are now nested within the main configuration (e.g., `build.operate_window` is now `build.operate.window` and `solve.spores_number` is now `solve.spores.number`) (#704).
+
+|changed| coin-or-cbc is now available cross-platform on conda-forge and so is the recommended open-source solver to install a user environment with (#744).
+
+|changed| Upper bound pins for dependencies removed where possible, to minimise clashes when using calliope as a dependency in a project (#744).
+
+|changed| |backwards-incompatible| to ensure the model configuration always remains in sync with the results, `kwargs` in `model.build()` and `model.solve()` now directly affect `model.config` (#704)
+
+|changed| `template:` can now be used anywhere within YAML definition files, not just in the `nodes`, `techs` and `data_tables` sections (#719).
+
+|changed| Removed `inheritance` math helper function since we use `base_tech` for abstract base technologies and templates are now applied too early to be available later (#719).
+To refer to template inheritance, set a parameter within a template as all children will share the same value.
+
+### Internal changes
+
+|changed| Moved to using `pydantic` to document and validate our configuration, rather than JSON schema (#704, #717).
+
+|changed| As with base dependencies, moved to pinning lower bound only for development dependencies (#744).
+
+|changed| Curtailed `calliope.AttrDict` relevance, with I/O moved to `calliope.io` and attribute access moved to `pydantic` models.
+`AttrDict` is still used to merge overrides and templates into the model definition dictionary, before creating the `pydantic` models.
 
 ## 0.7.0.dev5 (2024-12-04)
 
 ### User-facing changes
-
-|changed| to ensure the model configuration always remains in sync with the results, `kwargs` in `model.build()` and `model.solve()` now directly affect `model.config`
-
-|changed| `template:` can now be used anywhere within YAML definition files, not just in the `nodes`, `techs` and `data_tables` sections.
 
 |changed| "An overview of the Calliope terminology" information admonition to remove self-references and improve understandability.
 Now also includes a visual depiction of how the different defined components connect together (#699).
