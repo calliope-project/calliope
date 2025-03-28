@@ -11,7 +11,6 @@ import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
-from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 LOGGER = logging.getLogger(__name__)
 
@@ -19,7 +18,7 @@ LOGGER = logging.getLogger(__name__)
 def add_inferred_time_params(model_data: xr.Dataset):
     """Add timestep_resolution.
 
-    Done by ooking at the time difference between timestep n and timestep n + 1 for all timesteps.
+    Done by looking at the time difference between timestep n and timestep n + 1 for all timesteps.
     Last timestep has no n + 1, so will be NaT (not a time), we ffill this.
     Time resolution is saved in hours (i.e. nanoseconds / 3600e6)
     """
@@ -84,57 +83,6 @@ def subset_timeseries(ds: xr.Dataset, time_subset: list[str]) -> xr.Dataset:
         ds = ds.sel(**{dim_name: slice(*time_subset)})
         _check_missing_data(ds, dim_name)
     return ds
-
-
-def resample(data: xr.Dataset, resolution: str) -> xr.Dataset:
-    """Function to resample timeseries data.
-
-    Transforms the input resolution (e.g. 1h), to the given resolution (e.g. 2h).
-
-    Args:
-        data (xarray.Dataset): Calliope model data, containing only timeseries data variables.
-        resolution (str):
-            time resolution of the output data, given in Pandas time frequency format.
-            E.g. 1h = 1 hour, 1W = 1 week, 1M = 1 month, 1T = 1 minute.
-            Multiples allowed.
-
-    Returns:
-        xarray.Dataset:
-            `data` resampled according to `resolution`.
-
-    """
-    resample_kwargs = {"indexer": {"timesteps": resolution}, "skipna": True}
-    data_non_ts = data.drop_dims("timesteps")
-    data_ts = data.drop_vars(data_non_ts.data_vars)
-    data_ts_resampled = data_ts.resample(**resample_kwargs).first(keep_attrs=True)
-    resampling_methods = extract_from_schema(MODEL_SCHEMA, "x-resample_method")
-
-    for var_name, var_data in data_ts.data_vars.items():
-        resampler = var_data.resample(**resample_kwargs)
-        if var_name == "timestep_resolution":
-            method = "sum"
-        elif var_name in resampling_methods:
-            method = resampling_methods.get(var_name, None)
-        elif var_data.dtype.kind in ["f", "i"]:
-            method = "mean"
-        else:
-            method = "first"
-
-        if method == "sum":
-            method_kwargs = {"min_count": 1}
-        else:
-            method_kwargs = {}
-
-        data_ts_resampled[var_name] = getattr(resampler, method)(
-            keep_attrs=True, **method_kwargs
-        )
-        LOGGER.debug(
-            f"Time Resampling | {var_name} | resampling function used: {method}"
-        )
-
-    data_new = xr.merge([data_non_ts, data_ts_resampled])
-
-    return data_new
 
 
 def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
