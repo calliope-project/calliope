@@ -179,22 +179,23 @@ class Objective(MathComponent):
     optimisation."""
 
 
-class CalliopeMathDef(CalliopeBaseModel):
-    """Calliope mathematical definition.
+class ModeMath(CalliopeBaseModel):
+    """Mathematical definition of a Calliope mode.
 
-    All options available to formulate math to use in solving an optimisation problem
-    with Calliope.
+    Contains mathematical programming components available for optimising with Calliope.
+    Modes can contain partial definitions if they are meant to be layered on top of another mode.
+    E.g.: layering 'plan' and 'operate'.
     """
 
     model_config = {"title": "Model math schema"}
 
+    variables: dict[AttrStr, Variable]
+    """All decision variables to include in the optimisation problem."""
+    global_expressions: dict[AttrStr, GlobalExpression] | None = None
+    """All global expressions that can be applied to the optimisation problem."""
     constraints: dict[AttrStr, Constraint]
     """All constraints to apply to the optimisation problem."""
     piecewise_constraints: dict[AttrStr, PiecewiseConstraint] | None = None
     """All _piecewise_ constraints to apply to the optimisation problem."""
-    global_expressions: dict[AttrStr, GlobalExpression] | None = None
-    """All global expressions that can be applied to the optimisation problem."""
-    variables: dict[AttrStr, Variable]
-    """All decision variables to include in the optimisation problem."""
     objectives: dict[AttrStr, Objective]
     """Possible objectives to apply to the optimisation problem."""

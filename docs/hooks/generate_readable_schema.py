@@ -23,7 +23,7 @@ TEMPDIR = tempfile.TemporaryDirectory()
 SCHEMAS = {
     "config_schema": config_schema.CalliopeConfig.model_no_ref_schema(),
     "model_schema": schema.MODEL_SCHEMA,
-    "math_schema": math_schema.CalliopeMathDef.model_no_ref_schema(),
+    "math_schema": math_schema.ModeMath.model_no_ref_schema(),
     "data_table_schema": data_table_schema.CalliopeDataTable.model_no_ref_schema(),
 }
 

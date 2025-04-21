@@ -11,7 +11,7 @@ from pathlib import Path
 from calliope.attrdict import AttrDict
 from calliope.exceptions import ModelError
 from calliope.io import read_rich_yaml
-from calliope.schemas.math_schema import CalliopeMathDef
+from calliope.schemas.math_schema import ModeMath
 from calliope.util.tools import relative_path
 
 LOGGER = logging.getLogger(__name__)
@@ -110,7 +110,7 @@ class CalliopeMath:
 
     def validate(self) -> None:
         """Test current math and optional external math against the MATH schema."""
-        CalliopeMathDef(**self.data)
+        ModeMath(**self.data)
         LOGGER.info("Math preprocessing | validated math against schema.")
 
     def _add_pre_defined_file(self, filename: str) -> None:
