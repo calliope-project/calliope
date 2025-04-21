@@ -76,7 +76,7 @@ class CalliopeBaseModel(BaseModel):
                 new_dict[key] = key_class.update(val)
             else:
                 LOGGER.info(
-                    f"Updating {self.model_config['title']} `{key}`: {key_class} -> {val}"
+                    f"Updating {self.__class__.__name__} `{key}`: {key_class} -> {val}"
                 )
                 new_dict[key] = val
         updated = super().model_copy(update=new_dict, deep=deep)
