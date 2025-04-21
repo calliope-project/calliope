@@ -11,6 +11,7 @@ from calliope.schemas.dimension_data_schema import (
     IndexedParam,
 )
 from calliope.schemas.general import AttrStr, CalliopeBaseModel
+from calliope.schemas.math_schema import ModeMath
 
 
 class CalliopeModelDef(CalliopeBaseModel):
@@ -23,3 +24,4 @@ class CalliopeModelDef(CalliopeBaseModel):
     data_tables: dict[AttrStr, CalliopeDataTable] | None = None
     nodes: dict[AttrStr, CalliopeNode] | None = None
     techs: dict[AttrStr, CalliopeTech] | None = None
+    math: dict[AttrStr, ModeMath]

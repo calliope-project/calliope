@@ -11,7 +11,7 @@ from pydantic import ValidationError
 import calliope
 from calliope.exceptions import ModelError
 from calliope.io import read_rich_yaml, to_yaml
-from calliope.preprocess import CalliopeMath
+from calliope.preprocess import CalliopeMath, model_math
 
 
 @pytest.fixture
@@ -186,3 +186,19 @@ class TestValidate:
         with caplog.at_level(logging.INFO):
             model_math_default.validate()
         assert "Math preprocessing | validated math against schema." in caplog.messages
+
+
+class TestLoadMathModes:
+    INTERNAL_MODES = ["plan", "operate", "spores", "storage_inter_cluster"]
+
+    @pytest.fixture(scope="class")
+    def math_modes(self, def_path, user_math_path):
+        return model_math.load_math_modes(def_path, {"foo": user_math_path})
+
+    def test_loaded_names(self, math_modes):
+        """Loaded modes should contain both user defined and internal math."""
+        assert not math_modes.keys() - set(self.INTERNAL_MODES + ["foo"])
+
+    def test_loaded_user_data(self, math_modes, user_math):
+        """User math should be stored as expected and be valid."""
+        assert math_modes["foo"] == model_math.ModeMath.model_validate(user_math)

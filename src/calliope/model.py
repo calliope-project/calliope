@@ -142,16 +142,15 @@ class Model:
         """Initialise the model using pre-processed YAML files and optional dataframes/dicts.
 
         Args:
-            model_definition (calliope.AttrDict): preprocessed model configuration.
+            model_definition (dict | str | Path): preprocessed model configuration.
             scenario (str | None): scenario specified by users
             override_dict (dict | None): overrides to apply after scenarios.
             data_table_dfs (dict[str, pd.DataFrame] | None): files with additional model information.
             **kwargs: initialisation overrides.
         """
         (model_def_full, applied_overrides) = preprocess.prepare_model_definition(
-            model_definition, scenario, override_dict
+            model_definition, scenario, override_dict, **kwargs
         )
-        model_def_full.union({"config.init": kwargs}, allow_override=True)
         # Ensure model definition is correct
         model_def_schema.CalliopeModelDef(**model_def_full)
 

@@ -177,3 +177,38 @@ class CalliopeMath:
         self.add(math)
         self.history.append(name)
         LOGGER.info(f"Math preprocessing | added file '{name}'.")
+
+
+def _load_internal_math() -> AttrDict:
+    """Load standard Calliope math modes."""
+    internal_math = AttrDict()
+    dir = Path(str(importlib.resources.files("calliope") / "math")).glob("*.yaml")
+    for file in dir:
+        internal_math[file.stem] = ModeMath(**read_rich_yaml(file, allow_override=True))
+    return internal_math
+
+
+def _load_user_math(
+    model_def_path: str | Path, user_files: typing.Mapping[str, Path | str]
+) -> AttrDict:
+    """Load user defined math modes."""
+    user_math = AttrDict()
+    for name, file in user_files.items():
+        path = relative_path(model_def_path, file)
+        user_math[name] = ModeMath(**read_rich_yaml(path))
+    return user_math
+
+
+def load_math_modes(
+    model_def_path: str | Path | None, user_files: typing.Mapping[str, Path | str]
+) -> AttrDict:
+    """Load and combine internal and user math files."""
+    internal_math = _load_internal_math()
+    if user_files:
+        if model_def_path is None:
+            raise ModelError(
+                "Extra modes can only be defined through file-based instantiations."
+            )
+        user_math = _load_user_math(model_def_path, user_files)
+        internal_math.union(user_math)
+    return internal_math

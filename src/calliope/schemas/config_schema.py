@@ -8,7 +8,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from calliope.schemas.general import CalliopeBaseModel, UniqueList
+from calliope.schemas.general import AttrStr, CalliopeBaseModel, UniqueList
 
 Mode = Literal["plan", "operate", "spores"]
 
@@ -63,6 +63,13 @@ class Init(CalliopeBaseModel):
     """
     Unit of transmission link `distance` (m - metres, km - kilometres).
     Automatically derived distances from lat/lon coordinates will be given in this unit.
+    """
+
+    extra_math: dict[AttrStr, str] = Field(default={})
+    """
+    Dictionary of references to files which contain additional mathematical formulations in the form {'mode_name': 'file/path/math.yaml'}.
+    Ensure the file type is given as a suffix (".yaml" or ".yml").
+    Relative paths will be assumed to be relative to the model definition file given when creating a calliope Model (`calliope.Model(model_definition=...)`)
     """
 
 
