@@ -18,7 +18,7 @@ from calliope import backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess.model_data import ModelDataFactory
-from calliope.schemas import config_schema, model_def_schema
+from calliope.schemas import config_schema
 from calliope.util.logging import log_time
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
@@ -148,18 +148,16 @@ class Model:
             data_table_dfs (dict[str, pd.DataFrame] | None): files with additional model information.
             **kwargs: initialisation overrides.
         """
-        (model_def_full, applied_overrides) = preprocess.prepare_model_definition(
-            model_definition, scenario, override_dict, **kwargs
-        )
-        # Ensure model definition is correct
-        model_def_schema.CalliopeModelDef(**model_def_full)
-
         log_time(
             LOGGER,
             self._timings,
             "model_run_creation",
             comment="Model: preprocessing stage 1 (model_run)",
         )
+        (model_def_full, applied_overrides) = preprocess.prepare_model_definition(
+            model_definition, scenario, override_dict, **kwargs
+        )
+
         model_config = config_schema.CalliopeConfig(**model_def_full.pop("config"))
 
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}

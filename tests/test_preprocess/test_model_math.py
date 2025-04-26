@@ -1,5 +1,6 @@
 """Test the model math handler."""
 
+import importlib.resources
 import logging
 from copy import deepcopy
 from pathlib import Path
@@ -190,16 +191,20 @@ class TestValidate:
 
 
 class TestLoadMathModes:
-    INTERNAL_MODES = ["plan", "operate", "spores", "storage_inter_cluster"]
-
     @pytest.fixture(scope="class")
-    def math_modes(self, def_path, user_math_path):
-        return model_math.load_math_modes(def_path, {"foo": user_math_path})
+    def loaded_math(self, def_path, user_math_path):
+        extra = {"operate": None, "foo": user_math_path}
+        return model_math.load_math_modes(def_path, "plan", extra)
 
-    def test_loaded_names(self, math_modes):
-        """Loaded modes should contain both user defined and internal math."""
-        assert not math_modes.keys() - set(self.INTERNAL_MODES + ["foo"])
+    def test_loaded_names(self, loaded_math):
+        """Loaded math should contain both user defined and internal files."""
+        assert not loaded_math.keys() - {"plan", "operate", "foo"}
 
-    def test_loaded_user_data(self, math_modes, user_math):
-        """User math should be stored as expected and be valid."""
-        assert math_modes["foo"] == model_math.ModeMath.model_validate(user_math)
+    def test_loaded_internal_math(self, loaded_math):
+        """Internal math should be stored as expected."""
+        operate_file = importlib.resources.files("calliope") / "math/operate.yaml"
+        assert loaded_math["operate"] == read_rich_yaml(operate_file)
+
+    def test_loaded_user_math(self, loaded_math, user_math):
+        """User math should be stored as expected."""
+        assert loaded_math["foo"] == user_math

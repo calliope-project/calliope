@@ -179,36 +179,53 @@ class CalliopeMath:
         LOGGER.info(f"Math preprocessing | added file '{name}'.")
 
 
-def _load_internal_math() -> AttrDict:
+def _read_math_file(path: Path | str) -> AttrDict:
+    """Load a Calliope math file."""
+    return read_rich_yaml(path)
+
+
+def _load_internal_math(math_to_add: str) -> AttrDict:
     """Load standard Calliope math modes."""
-    internal_math = AttrDict()
-    dir = Path(str(importlib.resources.files("calliope") / "math")).glob("*.yaml")
-    for file in dir:
-        internal_math[file.stem] = ModeMath(**read_rich_yaml(file, allow_override=True))
-    return internal_math
+    file = importlib.resources.files("calliope") / "math" / f"{math_to_add}.yaml"
+    return _read_math_file(str(file))
 
 
-def _load_user_math(
-    model_def_path: str | Path, user_files: typing.Mapping[str, Path | str]
-) -> AttrDict:
+def _load_user_math(math_to_add: str, model_def_path: str | Path | None) -> AttrDict:
     """Load user defined math modes."""
-    user_math = AttrDict()
-    for name, file in user_files.items():
-        path = relative_path(model_def_path, file)
-        user_math[name] = ModeMath(**read_rich_yaml(path))
-    return user_math
+    if model_def_path is None:
+        raise ModelError(
+            "Extra math can only be defined when loading model definition files."
+        )
+    file = relative_path(model_def_path, math_to_add)
+    return _read_math_file(file)
+
+
+def _load_math_from_string(
+    math_to_add: str, model_def_path: str | Path | None = None
+) -> AttrDict:
+    """Loads math distinguishing between pre-definied math and user-defined math."""
+    if not math_to_add.endswith((".yaml", ".yml")):
+        math = _load_internal_math(math_to_add)
+    else:
+        math = _load_user_math(math_to_add, model_def_path)
+    return math
 
 
 def load_math_modes(
-    model_def_path: str | Path | None, user_files: typing.Mapping[str, Path | str]
-) -> AttrDict:
+    model_def_path: str | Path | None,
+    base_math: str,
+    extra_math: typing.Mapping[str, str | None],
+) -> typing.Mapping[str, AttrDict]:
     """Load and combine internal and user math files."""
-    internal_math = _load_internal_math()
-    if user_files:
-        if model_def_path is None:
+    math = {"base": _load_math_from_string(base_math, model_def_path)}
+    for name, path in extra_math.items():
+        if name == "base":
             raise ModelError(
-                "Extra modes can only be defined through file-based instantiations."
+                "Math mode name 'base' is protected. Please choose a different name."
             )
-        user_math = _load_user_math(model_def_path, user_files)
-        internal_math.union(user_math)
-    return internal_math
+        elif path:
+            math[name] = _load_math_from_string(path, model_def_path)
+        else:
+            math[name] = _load_math_from_string(name)
+
+    return math

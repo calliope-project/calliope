@@ -65,11 +65,19 @@ class Init(CalliopeBaseModel):
     Automatically derived distances from lat/lon coordinates will be given in this unit.
     """
 
-    extra_math: dict[AttrStr, str] = Field(default={})
+    base_math: AttrStr = Field(default="plan")
     """
-    Dictionary of references to files which contain additional mathematical formulations in the form {'mode_name': 'file/path/math.yaml'}.
-    Ensure the file type is given as a suffix (".yaml" or ".yml").
-    Relative paths will be assumed to be relative to the model definition file given when creating a calliope Model (`calliope.Model(model_definition=...)`)
+    Base math formulation, where all other math will be applied.
+    Can be either Calliope's 'plan' formulation, or a path to a user file.
+    Relative paths are assumed to be relative to the model definition file.
+    """
+
+    extra_math: dict[AttrStr, str | None] = Field(default={})
+    """
+    Additional mathematical formulations that may be applied on top of the base math.
+    If referring to an pre-defined Calliope math file, do not append the reference with ".yaml" (e.g., 'operate').
+    If referring to your own math file, ensure the file type is given as a suffix (".yaml" or ".yml").
+    Relative paths are assumed to be relative to the model definition file.
     """
 
 

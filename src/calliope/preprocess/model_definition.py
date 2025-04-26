@@ -9,6 +9,7 @@ from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.io import read_rich_yaml, to_yaml
 from calliope.preprocess.model_math import load_math_modes
+from calliope.schemas import config_schema, model_def_schema
 from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
@@ -51,9 +52,15 @@ def prepare_model_definition(
     model_def = TemplateSolver(model_def).resolved_data
     model_def.union({"config.init": kwargs}, allow_override=True)
 
-    # Fetch the math definition
-    extra_math = model_def.get_key("config.init.extra_math", {})
-    model_def["math"] = load_math_modes(path, extra_math)
+    # Pre-fill config. defaults and fetch the math definition
+    config = config_schema.CalliopeConfig(**model_def["config"])
+    model_def["math"] = load_math_modes(
+        path, config.init.base_math, config.init.extra_math
+    )
+
+    # Validate
+    # TODO-Ivan: should this return the schema object?
+    model_def_schema.CalliopeModelDef(**model_def)
 
     return model_def, applied_overrides
 
