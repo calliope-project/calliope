@@ -107,7 +107,8 @@ class TestMathLoading:
     @pytest.fixture(scope="class")
     def predefined_mode_data(self, pre_defined_mode):
         path = Path(calliope.__file__).parent / "math" / f"{pre_defined_mode}.yaml"
-        math = read_rich_yaml(path)
+        # TODO-Ivan: consider disallowing overrides once math can be layered
+        math = read_rich_yaml(path, allow_override=True)
         return math
 
     def test_predefined_add(self, model_math_w_mode, predefined_mode_data):
@@ -147,11 +148,11 @@ class TestMathLoading:
 
     def test_repr(self, model_math_w_mode):
         expected_repr_content = """Calliope math definition dictionary with:
-    4 decision variable(s)
-    0 global expression(s)
-    9 constraint(s)
+    19 decision variable(s)
+    12 global expression(s)
+    54 constraint(s)
     0 piecewise constraint(s)
-    0 objective(s)
+    1 objective(s)
         """
         assert expected_repr_content == str(model_math_w_mode)
 
