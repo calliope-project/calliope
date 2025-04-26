@@ -132,7 +132,7 @@ def build_lp(
 
     model.build(
         add_math_dict=math.data,
-        ignore_mode_math=True,
+        ignore_base_math=True,
         objective=obj_to_activate,
         add_math=[],
         pre_validate_math_strings=False,

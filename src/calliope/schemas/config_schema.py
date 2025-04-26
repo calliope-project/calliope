@@ -68,7 +68,7 @@ class Init(CalliopeBaseModel):
     base_math: AttrStr = Field(default="plan")
     """
     Base math formulation, where all other math will be applied.
-    Can be either Calliope's 'plan' formulation, or a path to a user file.
+    Can be either Calliope's 'plan' formulation, or a path to a user file that completely re-defines the math.
     Relative paths are assumed to be relative to the model definition file.
     """
 
@@ -117,10 +117,10 @@ class Build(CalliopeBaseModel):
     Relative paths will be assumed to be relative to the model definition file given when creating a calliope Model (`calliope.Model(model_definition=...)`)
     """
 
-    ignore_mode_math: bool = Field(default=False)
+    ignore_base_math: bool = Field(default=False)
     """
-    If True, do not initialise the mathematical formulation with the pre-defined math for the given run `mode`.
-    This option can be used to completely re-define the Calliope mathematical formulation.
+    If True, do not initialise the mathematical formulation with the math given in `config.init.base_math`.
+    This option is useful when comparing multiple distinct formulations.
     """
 
     backend: Literal["pyomo", "gurobi"] = Field(default="pyomo")

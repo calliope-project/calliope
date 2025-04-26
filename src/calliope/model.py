@@ -109,7 +109,7 @@ class Model:
     @property
     def name(self):
         """Get the model name."""
-        return self._model_data.attrs["name"]
+        return self._def.config.init.name
 
     @property
     def config(self) -> config_schema.CalliopeConfig:
@@ -157,7 +157,7 @@ class Model:
             LOGGER,
             self._timings,
             "model_run_creation",
-            comment="Model: preprocessing stage 1 (model_run)",
+            comment="Model: preprocessing stage 1 (definition)",
         )
         (model_def_full, applied_overrides) = preprocess.prepare_model_definition(
             model_definition, scenario, override_dict, **kwargs
@@ -165,6 +165,12 @@ class Model:
 
         self._def = model_def_schema.CalliopeModelDef(**model_def_full)
 
+        log_time(
+            LOGGER,
+            self._timings,
+            "model_data_creation",
+            comment="Model: preprocessing stage 2 (data)",
+        )
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
         attributes = {
             "calliope_version_defined": self._def.config.init.calliope_version,
@@ -185,15 +191,6 @@ class Model:
         model_data_factory.build()
 
         self._model_data = model_data_factory.dataset
-
-        log_time(
-            LOGGER,
-            self._timings,
-            "model_data_creation",
-            comment="Model: preprocessing stage 2 (model_data)",
-        )
-
-        self._model_data.attrs["name"] = self._def.config.init.name
 
         log_time(
             LOGGER,
@@ -270,7 +267,7 @@ class Model:
         else:
             backend_input = self._model_data
 
-        init_math_list = [] if self.config.build.ignore_mode_math else [mode]
+        init_math_list = [] if self.config.build.ignore_base_math else [mode]
         end_math_list = [] if add_math_dict is None else [add_math_dict]
         full_math_list = init_math_list + self.config.build.add_math + end_math_list
         LOGGER.debug(f"Math preprocessing | Loading math: {full_math_list}")

@@ -398,7 +398,7 @@ class TestBuild:
         return build_model({}, "simple_supply,two_hours,investment_costs")
 
     def test_ignore_mode_math(self, init_model):
-        init_model.build(ignore_mode_math=True, force=True)
+        init_model.build(ignore_base_math=True, force=True)
         assert all(
             var.obj_type == "parameters"
             for var in init_model.backend._dataset.data_vars.values()
@@ -416,7 +416,7 @@ class TestBuild:
         new_var = {
             "variables": {"foo": {"active": True, "bounds": {"min": -1, "max": 1}}}
         }
-        init_model.build(add_math_dict=new_var, ignore_mode_math=True, force=True)
+        init_model.build(add_math_dict=new_var, ignore_base_math=True, force=True)
         assert set(init_model.backend.variables) == {"foo"}
 
 
