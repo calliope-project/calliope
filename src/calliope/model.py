@@ -18,7 +18,7 @@ from calliope import backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess.model_data import ModelDataFactory
-from calliope.schemas import config_schema
+from calliope.schemas import config_schema, model_def_schema
 from calliope.util.logging import log_time
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
@@ -38,7 +38,7 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
-    ATTRS_SAVED = ("applied_math", "config", "def_path")
+    ATTRS_SAVED = ("applied_math", "_def", "def_path")
 
     def __init__(
         self,
@@ -69,10 +69,10 @@ class Model:
             **kwargs: initialisation overrides.
         """
         self._timings: dict = {}
-        self.config: config_schema.CalliopeConfig
         self.defaults: AttrDict
         self.applied_math: preprocess.CalliopeMath
         self.backend: BackendModel
+        self._def: model_def_schema.CalliopeModelDef
         self.def_path: str | None = None
         self._start_window_idx: int = 0
         self._is_built: bool = False
@@ -110,6 +110,11 @@ class Model:
     def name(self):
         """Get the model name."""
         return self._model_data.attrs["name"]
+
+    @property
+    def config(self) -> config_schema.CalliopeConfig:
+        """Get model configuration values."""
+        return self._def.config
 
     @property
     def inputs(self):
@@ -158,11 +163,11 @@ class Model:
             model_definition, scenario, override_dict, **kwargs
         )
 
-        model_config = config_schema.CalliopeConfig(**model_def_full.pop("config"))
+        self._def = model_def_schema.CalliopeModelDef(**model_def_full)
 
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
         attributes = {
-            "calliope_version_defined": model_config.init.calliope_version,
+            "calliope_version_defined": self._def.config.init.calliope_version,
             "calliope_version_initialised": calliope.__version__,
             "applied_overrides": applied_overrides,
             "scenario": scenario,
@@ -170,7 +175,7 @@ class Model:
         }
         # FIXME-config: remove config input once model_def_full uses pydantic
         model_data_factory = ModelDataFactory(
-            model_config.init,
+            self._def.config.init,
             model_def_full,
             self.def_path,
             data_table_dfs,
@@ -188,8 +193,7 @@ class Model:
             comment="Model: preprocessing stage 2 (model_data)",
         )
 
-        self._model_data.attrs["name"] = model_config.init.name
-        self.config = model_config
+        self._model_data.attrs["name"] = self._def.config.init.name
 
         log_time(
             LOGGER,
@@ -211,8 +215,10 @@ class Model:
             self.applied_math = preprocess.CalliopeMath.from_dict(
                 model_data.attrs.pop("applied_math")
             )
-        if "config" in model_data.attrs:
-            self.config = config_schema.CalliopeConfig(**model_data.attrs.pop("config"))
+        if "_def" in model_data.attrs:
+            self._def = model_def_schema.CalliopeModelDef(
+                **model_data.attrs.pop("_def")
+            )
 
         self._model_data = model_data
 
@@ -252,7 +258,7 @@ class Model:
             comment="Model: backend build starting",
         )
 
-        self.config = self.config.update({"build": kwargs})
+        self._def = self._def.update({"config.build": kwargs})
         mode = self.config.build.mode
         if mode == "operate":
             if not self._model_data.attrs["allow_operate_mode"]:
@@ -324,10 +330,9 @@ class Model:
             else:
                 to_drop = self.results.data_vars
 
-        self.config = self.config.update({"solve": kwargs})
+        self._def = self._def.update({"config.solve": kwargs})
 
-        shadow_prices = self.config.solve.shadow_prices
-        self.backend.shadow_prices.track_constraints(shadow_prices)
+        self.backend.shadow_prices.track_constraints(self.config.solve.shadow_prices)
 
         mode = self.config.build.mode
         self._model_data.attrs["timestamp_solve_start"] = log_time(
@@ -399,8 +404,8 @@ class Model:
         """Save complete model data (inputs and, if available, results) to a NetCDF file at the given `path`."""
         saved_attrs = {}
         for attr in set(self.ATTRS_SAVED) & set(self.__dict__.keys()):
-            if attr == "config":
-                saved_attrs[attr] = self.config.model_dump()
+            if attr == "_def":
+                saved_attrs[attr] = self._def.model_dump()
             elif not isinstance(getattr(self, attr), str | list | None):
                 saved_attrs[attr] = dict(getattr(self, attr))
             else:
