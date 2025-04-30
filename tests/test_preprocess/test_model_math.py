@@ -1,6 +1,5 @@
 """Test the model math handler."""
 
-import importlib.resources
 import logging
 from copy import deepcopy
 from pathlib import Path
@@ -13,6 +12,7 @@ import calliope
 from calliope.exceptions import ModelError
 from calliope.io import read_rich_yaml, to_yaml
 from calliope.preprocess import CalliopeMath, model_math
+from calliope.schemas import config_schema
 
 
 @pytest.fixture
@@ -191,20 +191,30 @@ class TestValidate:
 
 
 class TestLoadMathModes:
+    @pytest.fixture(scope="class", params=["default", "w_extra"])
+    def math_config(self, request, user_math_path):
+        config = config_schema.InitMath().model_dump()
+        if request.param == "w_extra":
+            config["extra"] = {"user_math": user_math_path}
+        return config_schema.InitMath(**config)
+
     @pytest.fixture(scope="class")
-    def loaded_math(self, def_path, user_math_path):
-        extra = {"operate": None, "foo": user_math_path}
-        return model_math.load_math_modes(def_path, "plan", extra)
+    def math_data(self, math_config, def_path):
+        return model_math.initialise_math(math_config, def_path)
 
-    def test_loaded_names(self, loaded_math):
+    def test_loaded_internal(self, math_data, math_config):
         """Loaded math should contain both user defined and internal files."""
-        assert not loaded_math.keys() - {"plan", "operate", "foo"}
+        assert not math_data.keys() - (
+            set(math_config.pre_defined) | math_config.extra.keys()
+        )
 
-    def test_loaded_internal_math(self, loaded_math):
-        """Internal math should be stored as expected."""
-        operate_file = importlib.resources.files("calliope") / "math/operate.yaml"
-        assert loaded_math["operate"] == read_rich_yaml(operate_file)
+    def test_pre_defined_load(self, math_data, math_config):
+        """Internal files should be loaded correctly."""
+        for filename in math_config.pre_defined:
+            expected = model_math._load_internal_math(filename)
+            math_data[filename] == expected
 
-    def test_loaded_user_math(self, loaded_math, user_math):
-        """User math should be stored as expected."""
-        assert loaded_math["foo"] == user_math
+    def test_extra_load(self, math_data, math_config, user_math):
+        """Extra math should be loaded with no alterations."""
+        if math_config.extra:
+            assert math_data["user_math"] == user_math

@@ -11,6 +11,7 @@ from pathlib import Path
 from calliope.attrdict import AttrDict
 from calliope.exceptions import ModelError
 from calliope.io import read_rich_yaml
+from calliope.schemas.config_schema import InitMath
 from calliope.schemas.math_schema import ModeMath
 from calliope.util.tools import relative_path
 
@@ -179,53 +180,65 @@ class CalliopeMath:
         LOGGER.info(f"Math preprocessing | added file '{name}'.")
 
 
-def _read_math_file(path: Path | str) -> AttrDict:
-    """Load a Calliope math file."""
-    return read_rich_yaml(path)
-
-
 def _load_internal_math(math_to_add: str) -> AttrDict:
     """Load standard Calliope math modes."""
     file = importlib.resources.files("calliope") / "math" / f"{math_to_add}.yaml"
-    return _read_math_file(str(file))
+    return read_rich_yaml(str(file), allow_override=True)  # TODO-Ivan: remove
 
 
 def _load_user_math(math_to_add: str, model_def_path: str | Path | None) -> AttrDict:
     """Load user defined math modes."""
-    if model_def_path is None:
-        raise ModelError(
-            "Extra math can only be defined when loading model definition files."
-        )
     file = relative_path(model_def_path, math_to_add)
-    return _read_math_file(file)
+    return read_rich_yaml(str(file))
 
 
-def _load_math_from_string(
-    math_to_add: str, model_def_path: str | Path | None = None
+def initialise_math(
+    math_config: InitMath, model_def_path: str | Path | None = None
 ) -> AttrDict:
-    """Loads math distinguishing between pre-definied math and user-defined math."""
-    if not math_to_add.endswith((".yaml", ".yml")):
-        math = _load_internal_math(math_to_add)
-    else:
-        math = _load_user_math(math_to_add, model_def_path)
-    return math
+    """Loads and combines internal and user math files into a unified dataset.
+
+    Args:
+        math_config (InitMath): math initialisation configuration.
+        model_def_path (str | Path | None): Path to the model definition directory.
+
+    Returns:
+        AttrDict: dataset with individual math options.
+    """
+    LOGGER.info(
+        f"Math preprocessing | initialising pre-defined {math_config.pre_defined}."
+    )
+    math_formulation = AttrDict(
+        {name: _load_internal_math(name) for name in math_config.pre_defined}
+    )
+    if math_config.extra:
+        LOGGER.info(
+            f"Math preprocessing | initialising extras {list(math_config.extra.keys())}."
+        )
+        for name, path in math_config.extra.items():
+            math_formulation.union({name: _load_user_math(path, model_def_path)})
+
+    return math_formulation
 
 
-def load_math_modes(
-    model_def_path: str | Path | None,
-    base_math: str,
-    extra_math: typing.Mapping[str, str | None],
-) -> typing.Mapping[str, AttrDict]:
-    """Load and combine internal and user math files."""
-    math = {"base": _load_math_from_string(base_math, model_def_path)}
-    for name, path in extra_math.items():
-        if name == "base":
-            raise ModelError(
-                "Math mode name 'base' is protected. Please choose a different name."
-            )
-        elif path:
-            math[name] = _load_math_from_string(path, model_def_path)
-        else:
-            math[name] = _load_math_from_string(name)
+def build_applied_math(math_dict: AttrDict, names: list[str]) -> AttrDict:
+    """Construct a validated math dictionary, applying the requested math in order.
 
+    Args:
+        math_dict (AttrDict): initialised math dataset.
+        names (list[str]): Names of the math to apply in order.
+
+    Raises:
+        ModelError: a given name was not found in the math dictionary.
+
+    Returns:
+        AttrDict: validated math object.
+    """
+    LOGGER.info(f"Math preprocessing | building applied math with {names}.")
+    math = AttrDict()
+    for name in names:
+        try:
+            math.union(math_dict[name], allow_override=True)
+        except KeyError:
+            raise ModelError(f"Requested math '{name}' was not initialised.")
+    ModeMath(**math)  # TODO-Ivan: respect defaults!
     return math

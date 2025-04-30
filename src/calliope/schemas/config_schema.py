@@ -19,6 +19,22 @@ SPORES_SCORING_OPTIONS = Literal[
 ]
 
 
+class InitMath(CalliopeBaseModel):
+    """Defines the math to add to the model.
+
+    Files will be loaded in the following order: base -> mode -> extra.
+    """
+
+    base: AttrStr = "plan"
+    """Name of the math file to build on top of.
+    Must be in either `pre_defined` or `extra`.
+    """
+    pre_defined: UniqueList = Field(default=["plan", "operate", "spores"])
+    "Pre-defined Calliope math files to include."
+    extra: dict[AttrStr, str] = Field(default={})
+    "Dictionary with the names and paths of additional math files."
+
+
 class Init(CalliopeBaseModel):
     """All configuration options used when initialising a Calliope model."""
 
@@ -65,20 +81,8 @@ class Init(CalliopeBaseModel):
     Automatically derived distances from lat/lon coordinates will be given in this unit.
     """
 
-    base_math: AttrStr = Field(default="plan")
-    """
-    Base math formulation, where all other math will be applied.
-    Can be either Calliope's 'plan' formulation, or a path to a user file that completely re-defines the math.
-    Relative paths are assumed to be relative to the model definition file.
-    """
-
-    extra_math: dict[AttrStr, str | None] = Field(default={})
-    """
-    Additional mathematical formulations that may be applied on top of the base math.
-    If referring to an pre-defined Calliope math file, do not append the reference with ".yaml" (e.g., 'operate').
-    If referring to your own math file, ensure the file type is given as a suffix (".yaml" or ".yml").
-    Relative paths are assumed to be relative to the model definition file.
-    """
+    math: InitMath = InitMath()
+    """Math initialisation options."""
 
 
 class BuildOperate(CalliopeBaseModel):

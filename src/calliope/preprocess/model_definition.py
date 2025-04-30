@@ -8,7 +8,7 @@ from pathlib import Path
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.io import read_rich_yaml, to_yaml
-from calliope.preprocess.model_math import load_math_modes
+from calliope.preprocess.model_math import initialise_math
 from calliope.schemas import config_schema, model_def_schema
 from calliope.util.tools import listify
 
@@ -40,10 +40,10 @@ def prepare_model_definition(
     # Identify the instantiation case
     if isinstance(model_definition, dict):
         raw_data = AttrDict(model_definition)
-        path = None
+        definition_path = None
     else:
         raw_data = read_rich_yaml(model_definition)
-        path = model_definition
+        definition_path = model_definition
 
     # Apply overrides and similar modifications 'on top' of the given definition
     model_def, applied_overrides = _load_scenario_overrides(
@@ -54,9 +54,7 @@ def prepare_model_definition(
 
     # Pre-fill config. defaults and fetch the math definition
     config = config_schema.CalliopeConfig(**model_def["config"])
-    model_def["math"] = load_math_modes(
-        path, config.init.base_math, config.init.extra_math
-    )
+    model_def["math"] = initialise_math(config.init.math, definition_path)
 
     # Validate
     # TODO-Ivan: should this return the schema object?
