@@ -169,7 +169,7 @@ def generate_custom_math_documentation(
 
     full_del = []
     expr_del = []
-    for component_group, component_group_dict in model.applied_math.data.items():
+    for component_group, component_group_dict in model.applied_math.items():
         for name, component_dict in component_group_dict.items():
             if name in base_documentation.math.data[component_group]:
                 if not component_dict.get("active", True):

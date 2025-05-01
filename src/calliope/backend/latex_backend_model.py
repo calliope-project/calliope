@@ -12,9 +12,9 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from calliope.attrdict import AttrDict
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import ModelError
-from calliope.preprocess import CalliopeMath
 from calliope.schemas import config_schema
 
 ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
@@ -305,7 +305,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     def __init__(
         self,
         inputs: xr.Dataset,
-        math: CalliopeMath,
+        math: AttrDict,
         build_config: config_schema.Build,
         include: Literal["all", "valid"] = "all",
     ) -> None:
@@ -313,7 +313,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
         Args:
             inputs (xr.Dataset): model data.
-            math (CalliopeMath): Calliope math.
+            math (AttrDict): Calliope math.
             build_config: Build configuration options.
             include (Literal["all", "valid"], optional):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".

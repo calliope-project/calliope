@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import xarray as xr
 
+from calliope.attrdict import AttrDict
 from calliope.backend.gurobi_backend_model import GurobiBackendModel
 from calliope.backend.latex_backend_model import (
     ALLOWED_MATH_FILE_FORMATS,
@@ -11,7 +12,6 @@ from calliope.backend.latex_backend_model import (
 )
 from calliope.backend.pyomo_backend_model import PyomoBackendModel
 from calliope.exceptions import BackendError
-from calliope.preprocess import CalliopeMath
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
@@ -19,14 +19,14 @@ if TYPE_CHECKING:
 
 
 def get_model_backend(
-    build_config: "config_schema.Build", data: xr.Dataset, math: CalliopeMath
+    build_config: "config_schema.Build", data: xr.Dataset, math: AttrDict
 ) -> "BackendModel":
     """Assign a backend using the given configuration.
 
     Args:
         build_config: Build configuration options.
         data (Dataset): model data for the backend.
-        math (CalliopeMath): Calliope math.
+        math (AttrDict): Calliope math.
 
     Raises:
         exceptions.BackendError: If invalid backend was requested.

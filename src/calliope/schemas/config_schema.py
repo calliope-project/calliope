@@ -110,21 +110,23 @@ class Build(CalliopeBaseModel):
     """Base configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
     model_config = {"title": "Model build configuration"}
-    mode: Mode = Field(default="plan")
-    """Mode in which to run the optimisation."""
 
-    add_math: UniqueList[str] = Field(default=[])
+    mode: Mode = Field(default="plan")
+    """Mode in which to run the optimisation.
+    Triggers additional processing and appends additional math formulations.
+    Math order: base -> mode
     """
-    List of references to files which contain additional mathematical formulations to be applied on top of or instead of the base mode math.
-    If referring to an pre-defined Calliope math file (see documentation for available files), do not append the reference with ".yaml".
-    If referring to your own math file, ensure the file type is given as a suffix (".yaml" or ".yml").
-    Relative paths will be assumed to be relative to the model definition file given when creating a calliope Model (`calliope.Model(model_definition=...)`)
+
+    extra_math: UniqueList[str] = Field(default=[])
+    """
+    List of additional math to be applied on top of the base mode math and mode math.
+    Math order: base -> mode -> extra
     """
 
     ignore_base_math: bool = Field(default=False)
     """
-    If True, do not initialise the mathematical formulation with the math given in `config.init.base_math`.
-    This option is useful when comparing multiple distinct formulations.
+    If True, do not initialise the base mathematical formulation with the math given in `config.init.math.base`.
+    This option may be useful when comparing multiple distinct formulations.
     """
 
     backend: Literal["pyomo", "gurobi"] = Field(default="pyomo")

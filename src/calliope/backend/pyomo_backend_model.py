@@ -27,9 +27,9 @@ from pyomo.core.kernel.piecewise_library.transforms import (
 from pyomo.opt import SolverFactory  # type: ignore
 from pyomo.util.model_size import build_model_size_report  # type: ignore
 
+from calliope.attrdict import AttrDict
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
-from calliope.preprocess import CalliopeMath
 from calliope.schemas import config_schema
 from calliope.util.logging import LogWriter
 
@@ -61,13 +61,13 @@ class PyomoBackendModel(backend_model.BackendModel):
     """Pyomo-specific backend functionality."""
 
     def __init__(
-        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config_schema.Build
+        self, inputs: xr.Dataset, math: AttrDict, build_config: config_schema.Build
     ) -> None:
         """Pyomo solver interface class.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
-            math (CalliopeMath): Calliope math.
+            math (AttrDict): Calliope math.
             build_config: Build configuration options.
         """
         super().__init__(inputs, math, build_config, pmo.block())
@@ -468,7 +468,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 )
                 continue
 
-            existing_bound_param = self.math.data.get_key(
+            existing_bound_param = self.math.get_key(
                 f"variables.{name}.bounds.{bound_name}", None
             )
             if existing_bound_param in self.parameters:

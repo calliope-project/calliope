@@ -39,6 +39,7 @@ class Model:
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
     ATTRS_SAVED = ("applied_math", "_def", "def_path")
+    # TODO-Ivan: check if def_path is still needed
 
     def __init__(
         self,
@@ -70,7 +71,7 @@ class Model:
         """
         self._timings: dict = {}
         self.defaults: AttrDict
-        self.applied_math: preprocess.CalliopeMath
+        self.applied_math: AttrDict
         self.backend: BackendModel
         self._def: model_def_schema.CalliopeModelDef
         self.def_path: str | None = None
@@ -209,9 +210,7 @@ class Model:
                 Model dataset with input parameters as arrays and configuration stored in the dataset attributes dictionary.
         """
         if "applied_math" in model_data.attrs:
-            self.applied_math = preprocess.CalliopeMath.from_dict(
-                model_data.attrs.pop("applied_math")
-            )
+            self.applied_math = AttrDict(model_data.attrs.pop("applied_math"))
         if "_def" in model_data.attrs:
             self._def = model_def_schema.CalliopeModelDef(
                 **model_data.attrs.pop("_def")
@@ -267,18 +266,20 @@ class Model:
         else:
             backend_input = self._model_data
 
-        init_math_list = [] if self.config.build.ignore_base_math else [mode]
-        end_math_list = [] if add_math_dict is None else [add_math_dict]
-        full_math_list = init_math_list + self.config.build.add_math + end_math_list
-        LOGGER.debug(f"Math preprocessing | Loading math: {full_math_list}")
-        model_math = preprocess.CalliopeMath(full_math_list, self.def_path)
+        math_names = []
+        if not self.config.build.ignore_base_math:
+            math_names.append(self.config.init.math.base)
+        if mode != "plan":  # TODO-Ivan: default should be None
+            math_names.append(mode)
+        math_names += self.config.build.extra_math
 
+        self.applied_math = preprocess.build_applied_math(
+            self._def.math, math_names, add_math_dict
+        )
         self.backend = backend.get_model_backend(
-            self.config.build, backend_input, model_math
+            self.config.build, backend_input, self.applied_math
         )
         self.backend.add_optimisation_components()
-
-        self.applied_math = model_math
 
         self._model_data.attrs["timestamp_build_complete"] = log_time(
             LOGGER,

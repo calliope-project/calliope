@@ -31,7 +31,7 @@ from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
 from calliope.exceptions import warn as model_warn
 from calliope.io import load_config, to_yaml
-from calliope.preprocess.model_math import ORDERED_COMPONENTS_T, CalliopeMath
+from calliope.preprocess.model_math import ORDERED_COMPONENTS_T
 from calliope.schemas import config_schema
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
@@ -70,24 +70,23 @@ class BackendModelGenerator(ABC):
     """Optimisation problem objective name."""
 
     def __init__(
-        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config_schema.Build
+        self, inputs: xr.Dataset, math: AttrDict, build_config: config_schema.Build
     ):
         """Abstract base class to build a representation of the optimisation problem.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
-            math (CalliopeMath): Calliope math.
+            math (AttrDict): Calliope math.
             build_config: Build configuration options.
         """
         self._dataset = xr.Dataset()
         self.inputs = inputs.copy()
         self.inputs.attrs = deepcopy(inputs.attrs)
         self.config = build_config
-        self.math: CalliopeMath = deepcopy(math)
+        self.math: AttrDict = deepcopy(math)
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
         self._check_inputs()
-        self.math.validate()
 
     @abstractmethod
     def add_parameter(
@@ -235,7 +234,7 @@ class BackendModelGenerator(ABC):
         """
         validation_errors: dict = dict()
         for component_group in typing.get_args(ORDERED_COMPONENTS_T):
-            for name, dict_ in self.math.data[component_group].items():
+            for name, dict_ in self.math[component_group].items():
                 parsed = parsing.ParsedBackendComponent(component_group, name, dict_)
                 parsed.parse_top_level_where(errors="ignore")
                 parsed.parse_equations(self.valid_component_names, errors="ignore")
@@ -259,7 +258,7 @@ class BackendModelGenerator(ABC):
             self._validate_math_string_parsing()
         for components in typing.get_args(ORDERED_COMPONENTS_T):
             component = components.removesuffix("s")
-            for name, dict_ in self.math.data[components].items():
+            for name, dict_ in self.math[components].items():
                 start = time.time()
                 getattr(self, f"add_{component}")(name, dict_)
                 end = time.time() - start
@@ -296,8 +295,8 @@ class BackendModelGenerator(ABC):
         """
         references: set[str] = set()
 
-        if name not in self.math.data[component_type]:
-            self.math.add(AttrDict({f"{component_type}.{name}": component_dict}))
+        if name not in self.math[component_type]:
+            self.math.union({f"{component_type}.{name}": component_dict})
 
         if break_early and not component_dict.get("active", True):
             self.log(
@@ -606,7 +605,7 @@ class BackendModelGenerator(ABC):
         in_math = set(
             name
             for component in ["variables", "global_expressions"]
-            for name in self.math.data[component]
+            for name in self.math[component]
         )
         return in_data.union(in_math)
 
@@ -617,7 +616,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
     def __init__(
         self,
         inputs: xr.Dataset,
-        math: CalliopeMath,
+        math: AttrDict,
         build_config: config_schema.Build,
         instance: T,
     ) -> None:
@@ -625,7 +624,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
 
         Args:
             inputs (xr.Dataset): Calliope model data.
-            math (CalliopeMath): Calliope math.
+            math (AttrDict): Calliope math.
             instance (T): Interface model instance.
             build_config: Build configuration options.
         """
@@ -1025,7 +1024,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             refs = [k for k in getattr(self, component).data_vars if k in references]
             for ref in refs:
                 self.delete_component(ref, component)
-                dict_ = self.math.data[component][ref]
+                dict_ = self.math[component][ref]
                 getattr(self, "add_" + component.removesuffix("s"))(ref, dict_)
 
     def _get_component(self, name: str, component_group: str) -> xr.DataArray:

@@ -14,16 +14,17 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from calliope.attrdict import AttrDict
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
-from calliope.preprocess import CalliopeMath
 from calliope.schemas import config_schema
 
 if importlib.util.find_spec("gurobipy") is not None:
     import gurobipy
 
 T = TypeVar("T")
+# TODO-Ivan: below seems to be repated in several files? Fix.
 _COMPONENTS_T = Literal[
     "variables", "constraints", "objectives", "parameters", "global_expressions"
 ]
@@ -60,13 +61,13 @@ class GurobiBackendModel(backend_model.BackendModel):
         }
 
     def __init__(
-        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config_schema.Build
+        self, inputs: xr.Dataset, math: AttrDict, build_config: config_schema.Build
     ) -> None:
         """Gurobi solver interface class.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
-            math (CalliopeMath): Calliope math.
+            math (AttrDict): Calliope math.
             build_config: Build configuration options.
         """
         if importlib.util.find_spec("gurobipy") is None:
@@ -403,7 +404,7 @@ class GurobiBackendModel(backend_model.BackendModel):
                 )
                 continue
 
-            existing_bound_param = self.math.data.get_key(
+            existing_bound_param = self.math.get_key(
                 f"variables.{name}.bounds.{bound_name}", None
             )
             if existing_bound_param in self.parameters:
