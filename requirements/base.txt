@@ -15,4 +15,4 @@ pyparsing >= 3.2
 ruamel.yaml >= 0.18
 typing-extensions >= 4
 xarray >= 2024.1, < 2024.4 # pinned while https://github.com/pydata/xarray/issues/9755 is open
-pydantic >= 2.9.2
+pydantic >= 2.9.2, < 2.11 # pinned until v2.11.4 is available
