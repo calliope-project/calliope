@@ -150,7 +150,7 @@ By defining just a data value, the resulting parameter will only be indexed over
 By using the indexed parameter format, you can add new dimensions.
 We saw this above with `costs`, but you can add _any_ dimension _except_ `nodes`.
 
-!!! examples
+!!! example
 
     ```yaml
     techs:

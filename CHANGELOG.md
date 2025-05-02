@@ -1,3 +1,11 @@
+## 0.7.0.dev7
+
+### User-facing changes
+
+|new| documentation on SPORES-specific configuration options (#750, #752).
+
+|fixed| SPORES mode models not being appropriately serialised on saving to NetCDF (#751, #752).
+
 ## 0.7.0.dev6 (2025-03-24)
 
 ### User-facing changes

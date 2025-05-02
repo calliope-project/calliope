@@ -604,13 +604,14 @@ class Model:
         if spores_config.save_per_spore_path is not None:
             spores_config.save_per_spore_path.mkdir(parents=True, exist_ok=True)
             LOGGER.info("Optimisation model | Saving SPORE baseline to file.")
-            baseline_results.assign_coords(spores="baseline").to_netcdf(
-                spores_config.save_per_spore_path / "baseline.nc"
+            io.save_netcdf(
+                baseline_results.assign_coords(spores="baseline"),
+                spores_config.save_per_spore_path / "baseline.nc",
             )
 
         # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
         results_list: list[xr.Dataset] = [baseline_results]
-        spore_range = range(1, spores_config.number + 1)
+        spore_range = [str(i) for i in range(1, spores_config.number + 1)]
         LOGGER.info(
             f"Optimisation model | Running SPORES with `{spores_config.scoring_algorithm}` scoring algorithm."
         )
@@ -623,8 +624,9 @@ class Model:
 
             if spores_config.save_per_spore_path is not None:
                 LOGGER.info(f"Optimisation model | Saving SPORE {spore} to file.")
-                iteration_results.assign_coords(spores=spore).to_netcdf(
-                    spores_config.save_per_spore_path / f"spore_{spore}.nc"
+                io.save_netcdf(
+                    iteration_results.assign_coords(spores=spore),
+                    spores_config.save_per_spore_path / f"spore_{spore}.nc",
                 )
 
         spores_dim = pd.Index(["baseline", *spore_range], name="spores")

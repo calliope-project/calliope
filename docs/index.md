@@ -11,7 +11,6 @@
 
     Some functionality is not yet available in 0.7, notably:
 
-    * `spores` mode
     * Plotting (see the [example notebooks](examples/index.md) for sample code on making plots directly with Plotly)
 
     To see a full list of changes, read our [page on migrating between v0.6 and v0.7](migrating.md).

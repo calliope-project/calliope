@@ -263,6 +263,21 @@ class TestSporesMode:
         spores_model, _ = spores_model_and_log
         assert spores_model.backend.config.mode == "spores"
 
+    def test_io_save(self, spores_model_and_log, tmp_path):
+        """Verify that we have run in spores mode"""
+        spores_model, _ = spores_model_and_log
+        filepath = tmp_path / "test_io_save.nc"
+        spores_model.to_netcdf(filepath)
+        assert filepath.exists()
+
+    def test_io_load(self, spores_model_and_log, tmp_path):
+        """Verify that we have run in spores mode"""
+        spores_model, _ = spores_model_and_log
+        filepath = tmp_path / "test_io_load.nc"
+        spores_model.to_netcdf(filepath)
+        new_model = calliope.read_netcdf(filepath)
+        xr.testing.assert_allclose(spores_model._model_data, new_model._model_data)
+
     def test_spores_mode_success(self, spores_model_and_log_algorithms):
         """Solving in spores mode should lead to an optimal solution."""
         spores_model, _ = spores_model_and_log_algorithms
@@ -272,7 +287,7 @@ class TestSporesMode:
         """Solving in spores mode should lead to 3 sets of results."""
         spores_model, _ = spores_model_and_log_algorithms
         assert not set(spores_model.results.spores.values).symmetric_difference(
-            ["baseline", 1, 2]
+            ["baseline", "1", "2"]
         )
 
     def test_spores_scores(self, spores_model_and_log_algorithms):
@@ -316,7 +331,7 @@ class TestSporesMode:
             spores_model._model_data.spores_score_cumulative.diff("spores") > 0
         )
         numpy.testing.assert_array_equal(
-            has_cap.shift(spores=1).sel(spores=[1, 2]), spores_score_increased
+            has_cap.shift(spores=1).sel(spores=["1", "2"]), spores_score_increased
         )
 
     def test_use_tech_tracking(self, spores_model_with_tracker):
@@ -335,7 +350,7 @@ class TestSporesMode:
         out_dir = model.config.solve.spores.save_per_spore_path
         assert len(list(out_dir.glob("*.nc"))) == 3
 
-    @pytest.mark.parametrize("spore", ["baseline", 1, 2])
+    @pytest.mark.parametrize("spore", ["baseline", "1", "2"])
     def test_save_per_spore(self, spores_model_save_per_spore_and_log, spore):
         """We expect SPORES results to be saved to file once per iteration."""
         model, _ = spores_model_save_per_spore_and_log
@@ -344,7 +359,7 @@ class TestSporesMode:
         result = xr.open_dataset((out_dir / filename).with_suffix(".nc"))
         assert result.spores.item() == spore
 
-    @pytest.mark.parametrize("spore", ["baseline", 1, 2])
+    @pytest.mark.parametrize("spore", ["baseline", "1", "2"])
     def test_save_per_spore_log(self, spores_model_save_per_spore_and_log, spore):
         """We expect SPORES results saving to be logged."""
         _, log = spores_model_save_per_spore_and_log
