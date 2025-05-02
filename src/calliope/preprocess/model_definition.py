@@ -57,7 +57,7 @@ def prepare_model_definition(
     model_def["math"] = initialise_math(config.init.math, definition_path)
 
     # Validate
-    # TODO-Ivan: should this return the schema object?
+    # TODO: returned object should be CalliopeModelDef
     model_def_schema.CalliopeModelDef(**model_def)
 
     return model_def, applied_overrides

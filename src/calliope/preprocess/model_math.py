@@ -27,7 +27,7 @@ ORDERED_COMPONENTS_T = typing.Literal[
 def _load_internal_math(math_to_add: str) -> AttrDict:
     """Load standard Calliope math modes."""
     file = importlib.resources.files("calliope") / "math" / f"{math_to_add}.yaml"
-    return read_rich_yaml(str(file), allow_override=True)  # TODO-Ivan: remove
+    return read_rich_yaml(str(file))
 
 
 def _load_user_math(math_to_add: str, model_def_path: str | Path | None) -> AttrDict:
@@ -79,7 +79,7 @@ def build_applied_math(
     names = []
     if not config.build.ignore_base_math:
         names.append(config.init.math.base)
-    if config.build.mode != "plan":  # TODO-Ivan: default should be None?
+    if config.build.mode != "plan":  # TODO-Ivan: default should be "base"?
         names.append(config.build.mode)
     names += config.build.extra_math
 
