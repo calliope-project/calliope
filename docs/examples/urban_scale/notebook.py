@@ -256,7 +256,7 @@ df_capacity = (
 )
 df_capacity_coords = pd.merge(df_coords, df_capacity, left_on="nodes", right_on="nodes")
 
-fig = px.line_mapbox(
+fig = px.line_map(
     df_capacity_coords,
     lat="latitude",
     lon="longitude",
@@ -267,10 +267,10 @@ fig = px.line_mapbox(
     height=300,
 )
 fig.update_layout(
-    mapbox_style="open-street-map",
-    mapbox_zoom=11,
-    mapbox_center_lat=df_coords.latitude.mean(),
-    mapbox_center_lon=df_coords.longitude.mean(),
+    map_style="open-street-map",
+    map_zoom=11,
+    map_center_lat=df_coords.latitude.mean(),
+    map_center_lon=df_coords.longitude.mean(),
     margin={"r": 0, "t": 0, "l": 0, "b": 0},
     hoverdistance=50,
 )

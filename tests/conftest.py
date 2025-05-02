@@ -7,8 +7,7 @@ import xarray as xr
 
 from calliope.attrdict import AttrDict
 from calliope.backend import latex_backend_model, pyomo_backend_model
-from calliope.preprocess import CalliopeMath
-from calliope.schemas import config_schema
+from calliope.schemas import config_schema, math_schema
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 from .common.util import build_test_model as build_model
@@ -160,16 +159,7 @@ def simple_conversion_plus():
 
 @pytest.fixture(scope="module")
 def dummy_model_math():
-    math = {
-        "data": {
-            "constraints": {},
-            "variables": {},
-            "global_expressions": {},
-            "objectives": {},
-        },
-        "history": [],
-    }
-    return CalliopeMath.from_dict(math)
+    return AttrDict(math_schema.MathSchema().model_dump())
 
 
 @pytest.fixture(scope="module")

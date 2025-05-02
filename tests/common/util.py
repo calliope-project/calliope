@@ -1,22 +1,11 @@
 import os
 from pathlib import Path
-from typing import Literal
 
 import xarray as xr
 
 import calliope
 import calliope.backend
-import calliope.preprocess
-
-
-def build_test_model_def(override_dict=None, scenario=None, model_file="model.yaml"):
-    """Get the definition dictionary of a test model."""
-    model_def, _ = calliope.preprocess.prepare_model_definition(
-        model_definition=Path(__file__).parent / "test_model" / model_file,
-        scenario=scenario,
-        override_dict=override_dict,
-    )
-    return model_def
+from calliope import preprocess
 
 
 def build_test_model(
@@ -93,7 +82,6 @@ def build_lp(
     model: calliope.Model,
     outfile: str | Path,
     math_data: dict[str, dict | list] | None = None,
-    backend_name: Literal["pyomo"] = "pyomo",
 ) -> "calliope.backend.backend_model.BackendModel":
     """
     Write a barebones LP file with which to compare in tests.
@@ -104,9 +92,8 @@ def build_lp(
         model (calliope.Model): Calliope model.
         outfile (str | Path): Path to LP file.
         math (dict | None, optional): All constraint/global expression/objective math to apply. Defaults to None.
-        backend_name (Literal["pyomo"], optional): Backend to use to create the LP file. Defaults to "pyomo".
     """
-    math = calliope.preprocess.CalliopeMath(["plan", *model.config.build.add_math])
+    math = preprocess.build_applied_math(model.config, model._def.math)
 
     math_to_add = calliope.AttrDict()
     if isinstance(math_data, dict):
@@ -116,7 +103,7 @@ def build_lp(
             elif isinstance(component_math, list):
                 for name in component_math:
                     math_to_add.set_key(
-                        f"{component_group}.{name}", math.data[component_group][name]
+                        f"{component_group}.{name}", math[component_group][name]
                     )
     if math_data is None or "objectives" not in math_to_add.keys():
         obj = {
@@ -126,15 +113,15 @@ def build_lp(
         obj_to_activate = "dummy_obj"
     else:
         obj_to_activate = list(math_to_add["objectives"].keys())[0]
-    del math.data["constraints"]
-    del math.data["objectives"]
-    math.add(math_to_add)
+    del math["constraints"]
+    del math["objectives"]
+    math.union(math_to_add, allow_override=True)
 
     model.build(
-        add_math_dict=math.data,
+        add_math_dict=math,
         ignore_base_math=True,
         objective=obj_to_activate,
-        add_math=[],
+        extra_math=[],
         pre_validate_math_strings=False,
     )
 

@@ -277,7 +277,12 @@ class CustomMathExamples(ABC):
                 overrides = {}
 
             model = build_test_model(
-                {"config.build.add_math": [abs_filepath], **overrides}, scenario
+                {
+                    "config.init.math.extra": {"user_math": abs_filepath},
+                    "config.build.extra_math": ["user_math"],
+                    **overrides,
+                },
+                scenario,
             )
 
             compare_lps(model, custom_math, filename)

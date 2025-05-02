@@ -10,8 +10,8 @@ from pathlib import Path
 from calliope.attrdict import AttrDict
 from calliope.exceptions import ModelError
 from calliope.io import read_rich_yaml
-from calliope.schemas.config_schema import InitMath
-from calliope.schemas.math_schema import ModeMath
+from calliope.schemas.config_schema import CalliopeConfig, InitMath
+from calliope.schemas.math_schema import MathSchema
 from calliope.util.tools import relative_path
 
 LOGGER = logging.getLogger(__name__)
@@ -61,13 +61,13 @@ def initialise_math(
 
 
 def build_applied_math(
-    init_math: dict, names: list[str], add_math: dict | None = None
+    config: CalliopeConfig, init_math: dict, add_math: dict | None = None
 ) -> AttrDict:
     """Construct a validated math dictionary, applying the requested math in order.
 
     Args:
+        config (CalliopeConfig): Calliope configuration.
         init_math (dict): initialised math dataset.
-        names (list[str]): names of the math to apply in order.
         add_math (dict | None, optional): additional math to apply at the end. Defaults to None.
 
     Raises:
@@ -76,6 +76,13 @@ def build_applied_math(
     Returns:
         AttrDict: constructed and validated math dataset.
     """
+    names = []
+    if not config.build.ignore_base_math:
+        names.append(config.init.math.base)
+    if config.build.mode != "plan":  # TODO-Ivan: default should be None?
+        names.append(config.build.mode)
+    names += config.build.extra_math
+
     LOGGER.info(f"Math build | building applied math with {names}.")
     math = AttrDict()
     for name in names:
@@ -87,5 +94,4 @@ def build_applied_math(
         LOGGER.info("Math build | appending additional math.")
         math.union(add_math, allow_override=True)
 
-    ModeMath(**math)  # TODO-Ivan: respect defaults!
-    return math
+    return AttrDict(MathSchema(**math).model_dump())

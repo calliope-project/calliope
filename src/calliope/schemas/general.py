@@ -80,8 +80,7 @@ class CalliopeBaseModel(BaseModel):
                 )
                 new_dict[key] = val
         updated = super().model_copy(update=new_dict, deep=deep)
-        updated.model_validate(updated)
-        return updated
+        return updated.model_validate(updated)
 
     @classmethod
     def model_no_ref_schema(cls) -> AttrDict:

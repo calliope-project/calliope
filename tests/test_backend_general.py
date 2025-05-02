@@ -282,6 +282,7 @@ class TestGetters:
             "description",
             "yaml_snippet",
             "coords_in_name",
+            "title",
         }
 
         assert not expected_keys.symmetric_difference(constraint.attrs.keys())

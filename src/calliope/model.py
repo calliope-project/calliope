@@ -266,15 +266,8 @@ class Model:
         else:
             backend_input = self._model_data
 
-        math_names = []
-        if not self.config.build.ignore_base_math:
-            math_names.append(self.config.init.math.base)
-        if mode != "plan":  # TODO-Ivan: default should be None
-            math_names.append(mode)
-        math_names += self.config.build.extra_math
-
         self.applied_math = preprocess.build_applied_math(
-            self._def.math, math_names, add_math_dict
+            self.config, self._def.math, add_math_dict
         )
         self.backend = backend.get_model_backend(
             self.config.build, backend_input, self.applied_math

@@ -11,7 +11,7 @@ from pyomo.core.kernel.piecewise_library.transforms import piecewise_sos2
 import calliope
 import calliope.backend
 import calliope.exceptions as exceptions
-import calliope.preprocess
+from calliope import preprocess
 from calliope.backend import PyomoBackendModel
 
 from .common.util import build_test_model as build_model
@@ -1634,7 +1634,7 @@ class TestNewBackend:
     def test_add_run_mode_custom_math(self, caplog, mode):
         caplog.set_level(logging.DEBUG)
         m = build_model({}, "simple_supply,two_hours,investment_costs")
-        math = calliope.preprocess.CalliopeMath([mode])
+        math = preprocess.build_applied_math(m.config, m._def.math)
 
         build_config = m.config.build.update({"mode": mode})
         backend = PyomoBackendModel(m.inputs, math, build_config)
@@ -1656,9 +1656,9 @@ class TestNewBackend:
         m.build(mode="operate", add_math_dict=custom_math)
 
         # operate mode set it to false, then our math set it back to active
-        assert m.applied_math.data.constraints.force_zero_area_use.active
+        assert m.applied_math.constraints.force_zero_area_use.active
         # operate mode set it to false and our math did not override that
-        assert not m.applied_math.data.variables.storage_cap.active
+        assert not m.applied_math.variables.storage_cap.active
 
     def test_new_build_get_variable(self, simple_supply):
         """Check a decision variable has the correct data type and has all expected attributes."""
@@ -2270,7 +2270,7 @@ class TestValidateMathDict:
     def validate_math(self):
         def _validate_math(math_dict: dict):
             m = build_model({}, "simple_supply,investment_costs")
-            math = calliope.preprocess.CalliopeMath(["plan", math_dict])
+            math = preprocess.build_applied_math(m.config, m._def.math, math_dict)
             backend = calliope.backend.PyomoBackendModel(
                 m._model_data, math, m.config.build
             )
