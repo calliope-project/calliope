@@ -38,8 +38,7 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
-    ATTRS_SAVED = ("applied_math", "_def", "def_path")
-    # TODO-Ivan: check if def_path is still needed
+    ATTRS_SAVED = ("applied_math", "_def")
 
     def __init__(
         self,
@@ -74,7 +73,6 @@ class Model:
         self.applied_math: AttrDict
         self.backend: BackendModel
         self._def: model_def_schema.CalliopeModelDef
-        self.def_path: str | None = None
         self._start_window_idx: int = 0
         self._is_built: bool = False
         self._is_solved: bool = False
@@ -91,9 +89,6 @@ class Model:
                 )
             self._init_from_model_data(model_definition)
         else:
-            if not isinstance(model_definition, dict):
-                # Only file definitions allow relative files.
-                self.def_path = str(model_definition)
             self._init_from_model_definition(
                 model_definition, scenario, override_dict, data_table_dfs, **kwargs
             )
@@ -180,11 +175,12 @@ class Model:
             "scenario": scenario,
             "defaults": param_metadata["default"],
         }
-        # FIXME-config: remove config input once model_def_full uses pydantic
+
+        def_path = None if isinstance(model_definition, dict) else str(model_definition)
         model_data_factory = ModelDataFactory(
             self._def.config.init,
             model_def_full,
-            self.def_path,
+            def_path,
             data_table_dfs,
             attributes,
             param_metadata,
