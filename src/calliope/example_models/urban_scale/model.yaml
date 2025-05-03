@@ -19,7 +19,7 @@ config:
         additional_math: "additional_math.yaml"
 
   build:
-    mode: plan # Choices: plan, operate
+    mode: base # Choices: base, operate
     ensure_feasibility: true # Switching on unmet demand
     extra_math: ["additional_math"]
 

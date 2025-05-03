@@ -10,7 +10,7 @@ from pydantic import Field
 
 from calliope.schemas.general import AttrStr, CalliopeBaseModel, UniqueList
 
-Mode = Literal["plan", "operate", "spores"]
+Mode = Literal["base", "operate", "spores"]
 
 LOGGER = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class InitMath(CalliopeBaseModel):
 
     base: AttrStr = "plan"
     """Name of the math file to build on top of.
-    Must be in either `pre_defined` or `extra`.
+    Can be any name in either `pre_defined` or `extra`.
     """
     pre_defined: UniqueList = Field(default=["plan", "operate", "spores"])
     "Pre-defined Calliope math files to include."
@@ -40,10 +40,10 @@ class Init(CalliopeBaseModel):
 
     model_config = {"title": "Model initialisation configuration"}
     name: str | None = None
-    """Model name"""
+    """Model name."""
 
     calliope_version: str | None = None
-    """Calliope framework version this model is intended for"""
+    """Calliope framework version this model is intended for."""
 
     broadcast_param_data: bool = Field(default=False)
     """
@@ -103,7 +103,7 @@ class BuildOperate(CalliopeBaseModel):
     """
 
     use_cap_results: bool = Field(default=False)
-    """If the model already contains `plan` mode results, use those optimal capacities as input parameters to the `operate` mode run."""
+    """If the model already contains `plan` results, use those optimal capacities as input parameters to the `operate` mode run."""
 
 
 class Build(CalliopeBaseModel):
@@ -111,7 +111,7 @@ class Build(CalliopeBaseModel):
 
     model_config = {"title": "Model build configuration"}
 
-    mode: Mode = Field(default="plan")
+    mode: Mode = Field(default="base")
     """Mode in which to run the optimisation.
     Triggers additional processing and appends additional math formulations.
     Math order: base -> mode
@@ -172,7 +172,7 @@ class SolveSpores(CalliopeBaseModel):
     """
 
     skip_baseline_run: bool = Field(default=False)
-    """If the model already contains `plan` mode results, use those as the initial base run results and start with SPORES iterations immediately."""
+    """If the model already contains `plan` results, use those as the initial base run results and start with SPORES iterations immediately."""
 
     tracking_parameter: str | None = None
     """If given, an input parameter name with which to filter technologies for consideration in SPORES scoring."""

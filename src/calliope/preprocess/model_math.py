@@ -79,7 +79,7 @@ def build_applied_math(
     names = []
     if not config.build.ignore_base_math:
         names.append(config.init.math.base)
-    if config.build.mode != "plan":  # TODO-Ivan: default should be "base"?
+    if config.build.mode != "base":
         names.append(config.build.mode)
     names += config.build.extra_math
 

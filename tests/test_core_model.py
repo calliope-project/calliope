@@ -48,10 +48,10 @@ class TestOperateMode:
             yield pytest.LogCaptureFixture(request.node, _ispytest=True)
 
     @pytest.fixture(scope="class")
-    def plan_model(self):
-        """Solve in plan mode for the same overrides, to check against operate mode model."""
+    def base_model(self):
+        """Solve in base mode for the same overrides, to check against operate mode model."""
         model = build_model({}, "simple_supply,operate,var_costs,investment_costs")
-        model.build(mode="plan")
+        model.build(mode="base")
         model.solve()
         return model
 
@@ -59,7 +59,7 @@ class TestOperateMode:
         scope="class", params=[("6h", "12h"), ("12h", "12h"), ("16h", "20h")]
     )
     def operate_model_and_log(self, request):
-        """Solve in plan mode, then use plan mode results to set operate mode inputs, then solve in operate mode.
+        """Solve in base mode, then use results to set operate mode inputs, then solve in operate mode.
 
         Three different operate/horizon windows chosen:
         ("6h", "12h"): Both window and horizon fit completely into the model time range (48hr)
@@ -67,7 +67,7 @@ class TestOperateMode:
         ("16h", "20h"): Neither window or horizon fit completely into the model time range (48hr)
         """
         model = build_model({}, "simple_supply,operate,var_costs,investment_costs")
-        model.build(mode="plan")
+        model.build(mode="base")
         model.solve()
         model.build(
             force=True,
@@ -96,10 +96,10 @@ class TestOperateMode:
         operate_model, _ = operate_model_and_log
         assert operate_model.results.attrs["termination_condition"] == "optimal"
 
-    def test_use_cap_results(self, plan_model, operate_model_and_log):
-        """Operate mode uses plan mode outputs as inputs."""
+    def test_use_cap_results(self, base_model, operate_model_and_log):
+        """Operate mode uses base mode outputs as inputs."""
         operate_model, _ = operate_model_and_log
-        assert plan_model.results.flow_cap.equals(operate_model.inputs.flow_cap)
+        assert base_model.results.flow_cap.equals(operate_model.inputs.flow_cap)
 
     def test_not_reset_model_window(self, operate_model_and_log):
         """We do not expect the first time window to need resetting on solving in operate mode for the first time."""
@@ -157,7 +157,7 @@ class TestOperateMode:
         m = build_model({}, "simple_supply,operate,var_costs,investment_costs")
         with pytest.raises(
             calliope.exceptions.ModelError,
-            match="Cannot use plan mode capacity results in operate mode if a solution does not yet exist for the model.",
+            match="Cannot use base mode capacity results in operate mode if a solution does not yet exist for the model.",
         ):
             m.build(mode="operate", operate={"use_cap_results": True})
 
@@ -176,9 +176,9 @@ class TestSporesMode:
 
     @pytest.fixture(scope="class")
     def plan_model(self):
-        """Solve in plan mode for the same overrides, to check against operate mode model."""
+        """Solve in base mode for the same overrides, to check against operate mode model."""
         model = build_model({}, "simple_supply,operate,var_costs,investment_costs")
-        model.build(mode="plan")
+        model.build(mode="base")
         model.solve()
         return model
 
@@ -213,7 +213,7 @@ class TestSporesMode:
     def spores_model_skip_baseline_and_log(self, request):
         """Iterate 2 times in SPORES mode having pre-computed the baseline results."""
         model = build_model({}, "spores,investment_costs")
-        model.build(mode="plan")
+        model.build(mode="base")
         model.solve()
 
         model.build(mode="spores", force=True)

@@ -1630,7 +1630,7 @@ class TestNewBackend:
     def temp_path(self, tmpdir_factory):
         return tmpdir_factory.mktemp("custom_math")
 
-    @pytest.mark.parametrize("mode", ["operate", "plan"])
+    @pytest.mark.parametrize("mode", ["operate", "base"])
     def test_add_run_mode_custom_math(self, caplog, mode):
         caplog.set_level(logging.DEBUG)
         m = build_model({}, "simple_supply,two_hours,investment_costs")
