@@ -636,7 +636,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
     def add_piecewise_constraint(  # noqa: D102, override
         self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraint
     ) -> None:
-        if "breakpoints" in constraint_dict.get("foreach", []):
+        if "breakpoints" in constraint_dict["foreach"]:
             raise BackendError(
                 f"(piecewise_constraints, {name}) | `breakpoints` dimension should not be in `foreach`. "
                 "Instead, index `x_values` and `y_values` parameters over `breakpoints`."
