@@ -334,6 +334,7 @@ class TestAdders:
                 {"expression": "sum(flow_out, over=[nodes, timesteps]) >= 100"}
             ],
             "where": "carrier_out",  # <- no error is raised because of this
+            "active": True,
         }
         constraint_name = "constraint-without-nan"
 
@@ -355,6 +356,7 @@ class TestAdders:
             "foreach": ["techs", "carriers"],
             "equations": [{"expression": "sum(flow_out, over=[nodes, timesteps])"}],
             "where": "carrier_out",  # <- no error is raised because of this
+            "active": True,
         }
         expression_name = "expression-without-nan"
 
@@ -379,6 +381,7 @@ class TestAdders:
             # as 'nodes' is not listed here, the constraint will have excess dimensions
             "foreach": ["techs", "carriers"],
             "equations": [{"expression": "flow_cap >= 100"}],
+            "active": True,
         }
         constraint_name = "constraint-with-excess-dimensions"
 
@@ -401,6 +404,7 @@ class TestAdders:
             # as 'nodes' is not listed here, the constraint will have excess dimensions
             "foreach": ["techs", "carriers"],
             "equations": [{"expression": "flow_cap + 1"}],
+            "active": True,
         }
         expr_name = "expr-with-excess-dimensions"
 
@@ -423,6 +427,7 @@ class TestAdders:
             "foreach": ["nodes", "techs"],
             "where": "True",
             "equations": [{"expression": eq, "where": "False"}],
+            "active": True,
         }
         adder("foo", constr_dict)
 
@@ -445,7 +450,7 @@ class TestAdders:
     def test_add_allnull_var(self, solved_model_func):
         """If `where` string resolves to False in all array elements, the component won't be built."""
         solved_model_func.backend.add_variable(
-            "foo", {"foreach": ["nodes"], "where": "False"}
+            "foo", {"foreach": ["nodes"], "where": "False", "active": True}
         )
         assert "foo" not in solved_model_func.backend._dataset.data_vars.keys()
 
@@ -453,7 +458,7 @@ class TestAdders:
         """If `where` string resolves to False in all array elements, the component won't be built."""
         eq = {"expression": "bigM", "where": "False"}
         solved_model_func.backend.add_objective(
-            "foo", {"equations": [eq, eq], "sense": "minimise"}
+            "foo", {"equations": [eq, eq], "sense": "minimise", "active": True}
         )
         assert "foo" not in solved_model_func.backend._dataset.data_vars.keys()
 
@@ -462,7 +467,7 @@ class TestAdders:
         eq = {"expression": "bigM", "where": "True"}
         with pytest.raises(calliope.exceptions.BackendError) as excinfo:
             solved_model_func.backend.add_objective(
-                "foo", {"equations": [eq, eq], "sense": "minimise"}
+                "foo", {"equations": [eq, eq], "sense": "minimise", "active": True}
             )
         assert check_error_or_warning(
             excinfo,
@@ -719,6 +724,7 @@ class TestPiecewiseConstraints:
             "y_values": "piecewise_y",
             "y_expression": "source_cap",
             "description": "FOO",
+            "active": True,
         }
 
     @pytest.fixture(scope="class")

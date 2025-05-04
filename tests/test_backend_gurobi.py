@@ -92,9 +92,9 @@ class TestNewBackend:
         )
 
     def test_add_valid_obj(self, simple_supply_gurobi):
-        eq = {"expression": "bigM", "where": "True"}
+        eq = {"expression": "bigM", "where": "True", "active": True}
         simple_supply_gurobi.backend.add_objective(
-            "foo", {"equations": [eq], "sense": "minimise"}
+            "foo", {"equations": [eq], "sense": "minimise", "active": True}
         )
         assert "foo" in simple_supply_gurobi.backend.objectives
 
@@ -106,7 +106,12 @@ class TestNewBackend:
 
     def test_new_objective_set(self, simple_supply_gurobi_func):
         simple_supply_gurobi_func.backend.add_objective(
-            "foo", {"equations": [{"expression": "bigM"}], "sense": "minimise"}
+            "foo",
+            {
+                "equations": [{"expression": "bigM"}],
+                "sense": "minimise",
+                "active": True,
+            },
         )
         simple_supply_gurobi_func.backend.set_objective("foo")
         simple_supply_gurobi_func.backend.verbose_strings()
@@ -118,7 +123,12 @@ class TestNewBackend:
     def test_new_objective_set_log(self, caplog, simple_supply_gurobi_func):
         caplog.set_level(logging.INFO)
         simple_supply_gurobi_func.backend.add_objective(
-            "foo", {"equations": [{"expression": "bigM"}], "sense": "minimise"}
+            "foo",
+            {
+                "equations": [{"expression": "bigM"}],
+                "sense": "minimise",
+                "active": True,
+            },
         )
         simple_supply_gurobi_func.backend.set_objective("foo")
         assert ":foo | Objective activated." in caplog.text
@@ -355,6 +365,7 @@ class TestPiecewiseConstraints:
             "y_values": "piecewise_y",
             "y_expression": "source_cap",
             "description": "FOO",
+            "active": True,
         }
 
     @pytest.fixture(scope="class")

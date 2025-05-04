@@ -1756,7 +1756,7 @@ class TestNewBackend:
 
     def test_add_allnull_var(self, simple_supply):
         simple_supply.backend.add_variable(
-            "foo", {"foreach": ["nodes"], "where": "False"}
+            "foo", {"foreach": ["nodes"], "where": "False", "active": True}
         )
         assert "foo" not in simple_supply.backend._instance.variables.keys()
 
@@ -1770,6 +1770,7 @@ class TestNewBackend:
             "foreach": ["nodes", "techs"],
             "where": "True",
             "equations": [{"expression": eq, "where": "False"}],
+            "active": True,
         }
         adder("foo", constr_dict)
 
@@ -1796,6 +1797,7 @@ class TestNewBackend:
             "equations": [
                 {"expression": "sum(flow_out, over=[nodes, timesteps]) >= 100"}
             ],
+            "active": True,
             # "where": "carrier_out",  # <- no error would be raised with this uncommented
         }
         constraint_name = "constraint-with-nan"
@@ -1838,7 +1840,7 @@ class TestNewBackend:
     def test_add_valid_obj(self, simple_supply):
         eq = {"expression": "bigM", "where": "True"}
         simple_supply.backend.add_objective(
-            "foo", {"equations": [eq], "sense": "minimise"}
+            "foo", {"equations": [eq], "sense": "minimise", "active": True}
         )
         assert "foo" in simple_supply.backend.objectives
         assert not simple_supply.backend.objectives.foo.item().active
@@ -1849,7 +1851,12 @@ class TestNewBackend:
 
     def test_new_objective_set(self, simple_supply_build_func):
         simple_supply_build_func.backend.add_objective(
-            "foo", {"equations": [{"expression": "bigM"}], "sense": "minimise"}
+            "foo",
+            {
+                "equations": [{"expression": "bigM"}],
+                "sense": "minimise",
+                "active": True,
+            },
         )
         simple_supply_build_func.backend.set_objective("foo")
 
@@ -1860,7 +1867,12 @@ class TestNewBackend:
     def test_new_objective_set_log(self, caplog, simple_supply_build_func):
         caplog.set_level(logging.INFO)
         simple_supply_build_func.backend.add_objective(
-            "foo", {"equations": [{"expression": "bigM"}], "sense": "minimise"}
+            "foo",
+            {
+                "equations": [{"expression": "bigM"}],
+                "sense": "minimise",
+                "active": True,
+            },
         )
         simple_supply_build_func.backend.set_objective("foo")
         assert ":foo | Objective activated." in caplog.text
@@ -2067,6 +2079,7 @@ class TestPiecewiseConstraints:
             "y_values": "piecewise_y",
             "y_expression": "sum(flow_in, over=timesteps)",
             "description": "FOO",
+            "active": True,
         }
 
     @pytest.fixture(scope="class")

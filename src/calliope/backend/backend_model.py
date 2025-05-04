@@ -298,7 +298,7 @@ class BackendModelGenerator(ABC):
         if name not in self.math[component_type]:
             self.math.union({f"{component_type}.{name}": component_dict})
 
-        if break_early and not component_dict.get("active", True):
+        if break_early and not component_dict["active"]:
             self.log(
                 component_type, name, "Component deactivated and therefore not built."
             )
