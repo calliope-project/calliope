@@ -42,6 +42,7 @@ class TestLatexBackendModel:
                 "foreach": ["nodes", "techs"],
                 "where": "with_inf",
                 "bounds": {"min": 0, "max": 1},
+                "domain": "real",
             },
         )
         # some null values might be introduced by the foreach array, so we just check the upper bound
@@ -63,6 +64,7 @@ class TestLatexBackendModel:
                 "foreach": ["nodes", "techs"],
                 "where": "False",
                 "bounds": {"min": 0, "max": 1},
+                "domain": "real",
             },
         )
         # some null values might be introduced by the foreach array, so we just check the upper bound

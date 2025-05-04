@@ -136,11 +136,11 @@ class GurobiBackendModel(backend_model.BackendModel):
         domain_dict = {"real": gurobipy.GRB.CONTINUOUS, "integer": gurobipy.GRB.INTEGER}
 
         def _variable_setter(where: xr.DataArray, references: set):
-            domain_type = domain_dict[variable_dict.get("domain", "real")]
+            domain_type = domain_dict[variable_dict["domain"]]
 
             bounds = variable_dict["bounds"]
-            lb = self._get_variable_bound(bounds["min"], name, references, -np.inf)
-            ub = self._get_variable_bound(bounds["max"], name, references, np.inf)
+            lb = self._get_variable_bound(bounds["min"], name, references)
+            ub = self._get_variable_bound(bounds["max"], name, references)
             var = self._apply_func(
                 self._instance.addVar, where, 1, lb, ub, vtype=domain_type
             )

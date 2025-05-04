@@ -441,7 +441,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             var_da
         )
 
-        domain = domain_dict[variable_dict.get("domain", "real")]
+        domain = domain_dict[variable_dict["domain"]]
         lb, ub = self._get_variable_bounds_string(
             name, variable_dict["bounds"], bound_refs
         )

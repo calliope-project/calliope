@@ -295,9 +295,12 @@ def populate_backend_model(backend):
             "foreach": ["nodes", "techs"],
             "where": "with_inf",
             "bounds": {"min": -np.inf, "max": np.inf},
+            "domain": "real",
         },
     )
-    backend.add_variable("no_dim_var", {"bounds": {"min": -1, "max": 1}})
+    backend.add_variable(
+        "no_dim_var", {"bounds": {"min": -1, "max": 1}, "domain": "real"}
+    )
     backend.add_global_expression(
         "multi_dim_expr",
         {

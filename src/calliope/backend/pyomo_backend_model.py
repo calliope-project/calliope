@@ -159,7 +159,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         domain_dict = {"real": pmo.RealSet, "integer": pmo.IntegerSet}
 
         def _variable_setter(where, references):
-            domain_type = domain_dict[variable_dict.get("domain", "real")]
+            domain_type = domain_dict[variable_dict["domain"]]
             bounds = variable_dict["bounds"]
             lb = self._get_variable_bound(bounds["min"], name, references)
             ub = self._get_variable_bound(bounds["max"], name, references)
