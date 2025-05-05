@@ -5,11 +5,9 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -31,7 +29,9 @@ LOGGER = logging.getLogger(__name__)
 def read_netcdf(path):
     """Return a Model object reconstructed from model data in a NetCDF file."""
     model_data = io.read_netcdf(path)
-    return Model(model_definition=model_data)
+    model = Model(model_definition=model_data["inputs"])
+    model.results = model_data["results"]
+    return model
 
 
 class Model:
@@ -71,6 +71,7 @@ class Model:
         self._timings: dict = {}
         self.config: config_schema.CalliopeConfig
         self.defaults: AttrDict
+        self.user_math: AttrDict
         self.applied_math: preprocess.CalliopeMath
         self.backend: BackendModel
         self.def_path: str | None = None
@@ -97,9 +98,9 @@ class Model:
                 model_definition, scenario, override_dict, data_table_dfs, **kwargs
             )
 
-        self._model_data.attrs["timestamp_model_creation"] = timestamp_model_creation
-        version_def = self._model_data.attrs["calliope_version_defined"]
-        version_init = self._model_data.attrs["calliope_version_initialised"]
+        self.inputs.attrs["timestamp_model_creation"] = timestamp_model_creation
+        version_def = self.inputs.attrs["calliope_version_defined"]
+        version_init = self.inputs.attrs["calliope_version_initialised"]
         if version_def is not None and not version_init.startswith(version_def):
             exceptions.warn(
                 f"Model configuration specifies calliope version {version_def}, "
@@ -109,17 +110,7 @@ class Model:
     @property
     def name(self):
         """Get the model name."""
-        return self._model_data.attrs["name"]
-
-    @property
-    def inputs(self):
-        """Get model input data."""
-        return self._model_data.filter_by_attrs(is_result=0)
-
-    @property
-    def results(self):
-        """Get model result data."""
-        return self._model_data.filter_by_attrs(is_result=1)
+        return self.inputs.attrs["name"]
 
     @property
     def is_built(self):
@@ -182,7 +173,7 @@ class Model:
         )
         model_data_factory.build()
 
-        self._model_data = model_data_factory.dataset
+        self.inputs = model_data_factory.dataset
 
         log_time(
             LOGGER,
@@ -248,39 +239,24 @@ class Model:
                 "This model object already has a built optimisation problem. Use model.build(force=True) "
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
-        self._model_data.attrs["timestamp_build_start"] = log_time(
+        self.inputs.attrs["timestamp_build_start"] = log_time(
             LOGGER,
             self._timings,
             "build_start",
             comment="Model: backend build starting",
         )
+        math_dict = self.user_math.copy()
+        if add_math_dict is not None:
+            math_dict.union(add_math_dict)
 
-        self.config = self.config.update({"build": kwargs})
-        mode = self.config.build.mode
-        if mode == "operate":
-            if not self._model_data.attrs["allow_operate_mode"]:
-                raise exceptions.ModelError(
-                    "Unable to run this model in operate (i.e. dispatch) mode, probably because "
-                    "there exist non-uniform timesteps (e.g. from time clustering)"
-                )
-            backend_input = self._prepare_operate_mode_inputs(self.config.build.operate)
-        else:
-            backend_input = self._model_data
-
-        init_math_list = [] if self.config.build.ignore_mode_math else [mode]
-        end_math_list = [] if add_math_dict is None else [add_math_dict]
-        full_math_list = init_math_list + self.config.build.add_math + end_math_list
-        LOGGER.debug(f"Math preprocessing | Loading math: {full_math_list}")
-        model_math = preprocess.CalliopeMath(full_math_list, self.def_path)
-
-        self.backend = backend.get_model_backend(
-            self.config.build, backend_input, model_math
+        self.backend = backend.manager.get_backend_model(
+            self.inputs, math_dict, **kwargs
         )
         self.backend.add_optimisation_components()
 
-        self.applied_math = model_math
+        self.applied_math = self.backend.math
 
-        self._model_data.attrs["timestamp_build_complete"] = log_time(
+        self.inputs.attrs["timestamp_build_complete"] = log_time(
             LOGGER,
             self._timings,
             "build_complete",
@@ -316,7 +292,6 @@ class Model:
                 "before you can run it."
             )
 
-        to_drop = []
         if hasattr(self, "results"):  # Check that results exist and are non-empty
             if self.results.data_vars and not force:
                 raise exceptions.ModelError(
@@ -324,8 +299,6 @@ class Model:
                     "Use model.solve(force=True) to force"
                     "the results to be overwritten with a new run."
                 )
-            else:
-                to_drop = self.results.data_vars
 
         self.config = self.config.update({"solve": kwargs})
 
@@ -339,6 +312,7 @@ class Model:
             "solve_start",
             comment=f"Optimisation model | starting model in {mode} mode.",
         )
+        # TODO: point to backend manager
         if mode == "operate":
             results = self._solve_operate(self.config.solve)
         elif mode == "spores":
@@ -368,7 +342,7 @@ class Model:
             comment="Postprocessing: ended",
         )
 
-        self._model_data = self._model_data.drop_vars(to_drop)
+        self.results = results
 
         self._model_data.attrs.update(results.attrs)
         self._model_data = xr.merge(
@@ -409,7 +383,8 @@ class Model:
             else:
                 saved_attrs[attr] = getattr(self, attr)
 
-        io.save_netcdf(self._model_data, path, **saved_attrs)
+        io.save_netcdf(self.inputs, "inputs", path, **saved_attrs)
+        io.save_netcdf(self.results, "results", path)
 
     def to_csv(
         self, path: str | Path, dropna: bool = True, allow_overwrite: bool = False
@@ -427,7 +402,12 @@ class Model:
                 Defaults to False.
 
         """
-        io.save_csv(self._model_data, path, dropna, allow_overwrite)
+        io.save_csv(self.inputs, "inputs", path, dropna, allow_overwrite)
+
+        if self.results:
+            io.save_csv(self.results, "results", path, dropna, allow_overwrite)
+        else:
+            exceptions.warn("No results available, saving inputs only.")
 
     def info(self) -> str:
         """Generate basic description of the model, combining its name and a rough indication of the model size.
@@ -438,322 +418,9 @@ class Model:
         info_strings = []
         model_name = self.name
         info_strings.append(f"Model name:   {model_name}")
-        msize = dict(self._model_data.dims)
-        msize_exists = self._model_data.definition_matrix.sum()
+        msize = dict(self.inputs.dims)
+        msize_exists = self.inputs.definition_matrix.sum()
         info_strings.append(
             f"Model size:   {msize} ({msize_exists.item()} valid node:tech:carrier combinations)"
         )
         return "\n".join(info_strings)
-
-    def _prepare_operate_mode_inputs(
-        self, operate_config: config_schema.BuildOperate
-    ) -> xr.Dataset:
-        """Slice the input data to just the length of operate mode time horizon.
-
-        Args:
-            operate_config (config.BuildOperate): operate mode configuration options.
-
-        Returns:
-            xr.Dataset: Slice of input data.
-        """
-        self._model_data.coords["windowsteps"] = pd.date_range(
-            self.inputs.timesteps[0].item(),
-            self.inputs.timesteps[-1].item(),
-            freq=operate_config.window,
-        )
-        horizonsteps = self._model_data.coords["windowsteps"] + pd.Timedelta(
-            operate_config.horizon
-        )
-        # We require an offset because pandas / xarray slicing is _inclusive_ of both endpoints
-        # where we only want it to be inclusive of the left endpoint.
-        # Except in the last time horizon, where we want it to include the right endpoint.
-        clipped_horizonsteps = horizonsteps.clip(
-            max=self._model_data.timesteps[-1] + self._TS_OFFSET
-        ).drop_vars("timesteps")
-        self._model_data.coords["horizonsteps"] = clipped_horizonsteps - self._TS_OFFSET
-        sliced_inputs = self._model_data.sel(
-            timesteps=slice(
-                self._model_data.windowsteps[self._start_window_idx],
-                self._model_data.horizonsteps[self._start_window_idx],
-            )
-        )
-        if operate_config.use_cap_results:
-            to_parameterise = extract_from_schema(MODEL_SCHEMA, "x-operate-param")
-            if not self._is_solved:
-                raise exceptions.ModelError(
-                    "Cannot use plan mode capacity results in operate mode if a solution does not yet exist for the model."
-                )
-            for parameter in to_parameterise.keys():
-                if parameter in self._model_data:
-                    self._model_data[parameter].attrs["is_result"] = 0
-
-        return sliced_inputs
-
-    def _solve_operate(self, solver_config: config_schema.Solve) -> xr.Dataset:
-        """Solve in operate (i.e. dispatch) mode.
-
-        Optimisation is undertaken iteratively for slices of the timeseries, with
-        some data being passed between slices.
-
-        Args:
-            solver_config (config_schema.Solve): Calliope Solver configuration object.
-
-        Returns:
-            xr.Dataset: Results dataset.
-        """
-        if self.backend.inputs.timesteps[0] != self._model_data.timesteps[0]:
-            LOGGER.info("Optimisation model | Resetting model to first time window.")
-            self.build(force=True)
-
-        LOGGER.info("Optimisation model | Running first time window.")
-
-        iteration_results = self.backend._solve(solver_config, warmstart=False)
-
-        results_list = []
-
-        for idx, windowstep in enumerate(self._model_data.windowsteps[1:]):
-            windowstep_as_string = windowstep.dt.strftime("%Y-%m-%d %H:%M:%S").item()
-            LOGGER.info(
-                f"Optimisation model | Running time window starting at {windowstep_as_string}."
-            )
-            results_list.append(
-                iteration_results.sel(
-                    timesteps=slice(None, windowstep - self._TS_OFFSET)
-                )
-            )
-            previous_iteration_results = results_list[-1]
-            horizonstep = self._model_data.horizonsteps.sel(windowsteps=windowstep)
-            new_inputs = self.inputs.sel(
-                timesteps=slice(windowstep, horizonstep)
-            ).drop_vars(["horizonsteps", "windowsteps"], errors="ignore")
-
-            if len(new_inputs.timesteps) != len(iteration_results.timesteps):
-                LOGGER.info(
-                    "Optimisation model | Reaching the end of the timeseries. "
-                    "Re-building model with shorter time horizon."
-                )
-                self._start_window_idx = idx + 1
-                self.build(force=True)
-            else:
-                self.backend._dataset.coords["timesteps"] = new_inputs.timesteps
-                self.backend.inputs.coords["timesteps"] = new_inputs.timesteps
-                for param_name, param_data in new_inputs.data_vars.items():
-                    if "timesteps" in param_data.dims:
-                        self.backend.update_parameter(param_name, param_data)
-                        self.backend.inputs[param_name] = param_data
-
-            if "storage" in iteration_results:
-                self.backend.update_parameter(
-                    "storage_initial",
-                    self._recalculate_storage_initial(previous_iteration_results),
-                )
-
-            iteration_results = self.backend._solve(solver_config, warmstart=False)
-
-        self._start_window_idx = 0
-        results_list.append(iteration_results.sel(timesteps=slice(windowstep, None)))
-        results = xr.concat(results_list, dim="timesteps", combine_attrs="no_conflicts")
-        results.attrs["termination_condition"] = ",".join(
-            set(result.attrs["termination_condition"] for result in results_list)
-        )
-
-        return results
-
-    def _recalculate_storage_initial(self, results: xr.Dataset) -> xr.DataArray:
-        """Calculate the initial level of storage devices for a new operate mode time slice.
-
-        Based on storage levels at the end of the previous time slice.
-
-        Args:
-            results (xr.Dataset): Results from the previous time slice.
-
-        Returns:
-            xr.DataArray: `storage_initial` values for the new time slice.
-        """
-        end_storage = results.storage.isel(timesteps=-1).drop_vars("timesteps")
-
-        new_initial_storage = end_storage / self.inputs.storage_cap
-        return new_initial_storage
-
-    def _solve_spores(self, solver_config: config_schema.Solve) -> xr.Dataset:
-        """Solve in spores (i.e. modelling to generate alternatives - MGA) mode.
-
-        Optimisation is undertaken iteratively after setting the total monetary cost of the system.
-        Technology "spores" costs are updated between iterations.
-
-        Returns:
-            xr.Dataset: Results dataset.
-        """
-        LOGGER.info("Optimisation model | Resetting SPORES parameters.")
-        for init_param in ["spores_score", "spores_baseline_cost"]:
-            default = xr.DataArray(self.inputs.attrs["defaults"][init_param])
-            self.backend.update_parameter(
-                init_param, self.inputs.get(init_param, default)
-            )
-
-        self.backend.set_objective(self.config.build.objective)
-
-        spores_config: config_schema.SolveSpores = solver_config.spores
-        if not spores_config.skip_baseline_run:
-            LOGGER.info("Optimisation model | Running baseline model.")
-            baseline_results = self.backend._solve(solver_config, warmstart=False)
-        else:
-            LOGGER.info("Optimisation model | Using existing baseline model results.")
-            baseline_results = self.results.copy()
-
-        if spores_config.save_per_spore_path is not None:
-            spores_config.save_per_spore_path.mkdir(parents=True, exist_ok=True)
-            LOGGER.info("Optimisation model | Saving SPORE baseline to file.")
-            baseline_results.assign_coords(spores="baseline").to_netcdf(
-                spores_config.save_per_spore_path / "baseline.nc"
-            )
-
-        # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
-        results_list: list[xr.Dataset] = [baseline_results]
-        spore_range = range(1, spores_config.number + 1)
-        LOGGER.info(
-            f"Optimisation model | Running SPORES with `{spores_config.scoring_algorithm}` scoring algorithm."
-        )
-        for spore in spore_range:
-            LOGGER.info(f"Optimisation model | Running SPORE {spore}.")
-            self._spores_update_model(baseline_results, results_list, spores_config)
-
-            iteration_results = self.backend._solve(solver_config, warmstart=False)
-            results_list.append(iteration_results)
-
-            if spores_config.save_per_spore_path is not None:
-                LOGGER.info(f"Optimisation model | Saving SPORE {spore} to file.")
-                iteration_results.assign_coords(spores=spore).to_netcdf(
-                    spores_config.save_per_spore_path / f"spore_{spore}.nc"
-                )
-
-        spores_dim = pd.Index(["baseline", *spore_range], name="spores")
-        results = xr.concat(results_list, dim=spores_dim, combine_attrs="no_conflicts")
-        results.attrs["termination_condition"] = ",".join(
-            set(result.attrs["termination_condition"] for result in results_list)
-        )
-
-        return results
-
-    def _spores_update_model(
-        self,
-        baseline_results: xr.Dataset,
-        all_previous_results: list[xr.Dataset],
-        spores_config: config_schema.SolveSpores,
-    ):
-        """Assign SPORES scores for the next iteration of the model run.
-
-        Algorithms applied are based on those introduced in <https://doi.org/10.1016/j.apenergy.2023.121002>.
-
-        Args:
-            baseline_results (xr.Dataset): The initial results (before applying SPORES scoring)
-            all_previous_results (list[xr.Dataset]):
-                A list of all previous iterations.
-                 This includes the baseline results, which will be the first item in the list.
-            spores_config (config_schema.SolveSpores):
-                The SPORES configuration.
-        """
-
-        def _score_integer() -> xr.DataArray:
-            """Integer scoring algorithm."""
-            previous_cap = latest_results["flow_cap"].where(spores_techs)
-
-            # Make sure that penalties are applied only to non-negligible deployments of capacity
-            min_relevant_size = spores_config.score_threshold_factor * previous_cap.max(
-                ["nodes", "techs"]
-            )
-
-            new_score = (
-                # Where capacity was deployed more than the minimal relevant size, assign an integer penalty (score)
-                previous_cap.where(previous_cap > min_relevant_size)
-                .clip(min=1, max=1)
-                .fillna(0)
-                .where(spores_techs)
-            )
-            return new_score
-
-        def _score_relative_deployment() -> xr.DataArray:
-            """Relative deployment scoring algorithm."""
-            previous_cap = latest_results["flow_cap"]
-            if (
-                "flow_cap_max" not in self.inputs
-                or (self.inputs["flow_cap_max"].where(spores_techs) == np.inf).any()
-            ):
-                raise exceptions.BackendError(
-                    "Cannot score SPORES with `relative_deployment` when `flow_cap_max` is undefined for some or all tracked technologies."
-                )
-            relative_cap = previous_cap / self.inputs["flow_cap_max"]
-
-            new_score = (
-                # Make sure that penalties are applied only to non-negligible relative capacities
-                relative_cap.where(relative_cap > spores_config.score_threshold_factor)
-                .fillna(0)
-                .where(spores_techs)
-            )
-            return new_score
-
-        def _score_random() -> xr.DataArray:
-            """Random scoring algorithm."""
-            previous_cap = latest_results["flow_cap"].where(spores_techs)
-            new_score = (
-                previous_cap.fillna(0)
-                .where(previous_cap.isnull(), other=np.random.rand(*previous_cap.shape))
-                .where(spores_techs)
-            )
-
-            return new_score
-
-        def _score_evolving_average() -> xr.DataArray:
-            """Evolving average scoring algorithm."""
-            previous_cap = latest_results["flow_cap"]
-            evolving_average = sum(
-                results["flow_cap"] for results in all_previous_results
-            ) / len(all_previous_results)
-
-            relative_change = abs(evolving_average - previous_cap) / evolving_average
-            # first iteration
-            if relative_change.sum() == 0:
-                # first iteration
-                new_score = _score_integer()
-            else:
-                # If capacity is exactly the same as the average, we give the relative difference an arbitrarily small value
-                # which will give it a _large_ score since we take the reciprocal of the change.
-                cleaned_relative_change = (
-                    relative_change.clip(min=0.001).fillna(0).where(spores_techs)
-                )
-                # Any zero values that make their way through to the scoring are kept as zero after taking the reciprocal.
-                new_score = (cleaned_relative_change**-1).where(
-                    cleaned_relative_change > 0, other=0
-                )
-
-            return new_score
-
-        latest_results = all_previous_results[-1]
-        allowed_methods: dict[
-            config_schema.SPORES_SCORING_OPTIONS, Callable[[], xr.DataArray]
-        ] = {
-            "integer": _score_integer,
-            "relative_deployment": _score_relative_deployment,
-            "random": _score_random,
-            "evolving_average": _score_evolving_average,
-        }
-        # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
-        constraining_cost = baseline_results.cost.groupby("costs").sum(..., min_count=1)
-        self.backend.update_parameter("spores_baseline_cost", constraining_cost)
-
-        # Filter for technologies of interest
-        spores_techs = (
-            self.inputs.get(
-                spores_config.tracking_parameter, xr.DataArray(True)
-            ).notnull()
-            & self.inputs.definition_matrix
-        )
-        new_score = allowed_methods[spores_config.scoring_algorithm]()
-
-        new_score += self.backend.get_parameter(
-            "spores_score", as_backend_objs=False
-        ).fillna(0)
-
-        self.backend.update_parameter("spores_score", new_score)
-
-        self.backend.set_objective("min_spores")

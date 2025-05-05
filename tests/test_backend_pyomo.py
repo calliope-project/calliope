@@ -2274,7 +2274,7 @@ class TestValidateMathDict:
             backend = calliope.backend.PyomoBackendModel(
                 m._model_data, math, m.config.build
             )
-            backend._add_all_inputs_as_parameters()
+            backend._add_all_parameters()
             backend._validate_math_string_parsing()
 
         return _validate_math

@@ -1,7 +1,5 @@
 # --8<-- [start:import]
 import: # Import other files from paths relative to this file, or absolute paths
-  - "model_config/techs.yaml"
-  - "model_config/locations.yaml"
   - "scenarios.yaml"
 # --8<-- [end:import]
 
@@ -13,7 +11,7 @@ config:
     calliope_version: 0.7.0
     # Time series data path - can either be a path relative to this file, or an absolute path
     time_subset: ["2005-07-01", "2005-07-02"] # Subset of timesteps
-    broadcast_param_data: true  # allow single indexed parameter data entries to be broadcast across all index items, if there are multiple entries.
+    broadcast_param_data: true # allow single indexed parameter data entries to be broadcast across all index items, if there are multiple entries.
 
   build:
     mode: plan # Choices: plan, operate
@@ -23,6 +21,11 @@ config:
   solve:
     solver: cbc
 # --8<-- [end:config]
+
+model:
+  import:
+    - "model_config/techs.yaml"
+    - "model_config/locations.yaml"
 
 # --8<-- [start:parameters]
 parameters:
@@ -36,33 +39,65 @@ parameters:
     data: 0.10
     index: monetary
     dims: costs
-# --8<-- [end:parameters]
+  # --8<-- [end:parameters]
 
-# --8<-- [start:data-tables]
-data_tables:
-  demand:
-    data: data_tables/demand.csv
-    rows: timesteps
-    columns: [techs, nodes]
-    add_dims:
-      parameters: sink_use_equals
-  pv_resource:
-    data: data_tables/pv_resource.csv
-    rows: timesteps
-    columns: [comment, scaler]
-    add_dims:
-      parameters: source_use_equals
-      techs: pv
-    select:
-      scaler: per_area
-    drop: [comment, scaler]
-  export_power:
-    data: data_tables/export_power.csv
-    rows: timesteps
-    columns: nodes
-    add_dims:
-      parameters: cost_export
-      techs: chp
-      costs: monetary
-      carriers: electricity
-# --8<-- [end:data-tables]
+  # --8<-- [start:parameters]
+  parameters:
+    objective_cost_weights:
+      data: 1
+      index: monetary
+      dims: costs
+    # `bigM` sets the scale of unmet demand, which cannot be too high, otherwise the optimisation will not converge
+    bigM: 1e6
+  # --8<-- [end:parameters]
+
+  # --8<-- [start:data-sources]
+  data_tables:
+    demand:
+      source: data_tables/demand.csv
+      rows: timesteps
+      columns: [techs, nodes]
+      add_dims:
+        parameters: sink_use_equals
+    pv_resource:
+      source: data_tables/pv_resource.csv
+      rows: timesteps
+      columns: [comment, scaler]
+      add_dims:
+        parameters: source_use_equals
+        techs: pv
+      select:
+        scaler: per_area
+      drop: [comment, scaler]
+    export_power:
+      source: data_tables/export_power.csv
+      rows: timesteps
+      columns: nodes
+      add_dims:
+        parameters: cost_export
+        techs: chp
+        costs: monetary
+        carriers: electricity
+  # --8<-- [end:data-sources]
+
+math:
+  parameters:
+    heat_to_power_ratio:
+      type: float
+      default: .nan
+
+  constraints:
+    link_chp_outputs:
+      description: Fix the relationship between heat and electricity output
+      foreach: [nodes, techs, timesteps]
+      where: "[chp] in techs"
+      equations:
+        - expression: flow_out[carriers=electricity] * heat_to_power_ratio == flow_out[carriers=heat]
+
+    balance_conversion:
+      # Remove the link between CHP inflow and heat outflow (now dealt with in `link_chp_outputs`)
+      equations:
+        - where: "NOT [chp] in techs"
+          expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
+        - where: "[chp] in techs"
+          expression: flow_out_inc_eff[carriers=electricity] == sum(flow_in_inc_eff, over=carriers)
