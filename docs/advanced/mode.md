@@ -148,7 +148,7 @@ To mitigate this, you can _save results per SPORE run_ to capture results up to 
 
 The `baseline` run does not set any SPORES scores or a system cost slack.
 It is equivalent to running the model in [plan](#plan-mode) mode.
-If you already a model with baseline results, you need not re-run that optimisation.
+If you already have a model with baseline results, you don't need to re-run that optimisation.
 Instead, you can _skip the baseline run_.
 
 !!! example
