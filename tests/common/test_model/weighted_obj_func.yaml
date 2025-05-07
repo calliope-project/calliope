@@ -3,7 +3,7 @@ config:
     name: Cost capacity constraint test model
     time_subset: ["2005-01-01", "2005-01-01"]
   build:
-    mode: plan
+    mode: base
   solve:
     solver: cbc
 

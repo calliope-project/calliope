@@ -8,7 +8,7 @@ config:
 
   build:
     ensure_feasibility: true # Switches on the "unmet demand" constraint
-    mode: plan # Choices: plan, operate
+    mode: base # Choices: base, operate
 
   solve:
     solver: cbc

@@ -4,7 +4,7 @@ config:
     time_subset: ["2005-01-01 00:00", "2005-01-01 01:00"]
 
   build:
-    mode: plan
+    mode: base
     ensure_feasibility: true
   solve:
     solver: cbc

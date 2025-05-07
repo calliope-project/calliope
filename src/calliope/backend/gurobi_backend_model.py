@@ -14,16 +14,17 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from calliope.attrdict import AttrDict
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
-from calliope.preprocess import CalliopeMath
 from calliope.schemas import config_schema
 
 if importlib.util.find_spec("gurobipy") is not None:
     import gurobipy
 
 T = TypeVar("T")
+# TODO-Ivan: below seems to be repated in several files? Fix.
 _COMPONENTS_T = Literal[
     "variables", "constraints", "objectives", "parameters", "global_expressions"
 ]
@@ -60,13 +61,13 @@ class GurobiBackendModel(backend_model.BackendModel):
         }
 
     def __init__(
-        self, inputs: xr.Dataset, math: CalliopeMath, build_config: config_schema.Build
+        self, inputs: xr.Dataset, math: AttrDict, build_config: config_schema.Build
     ) -> None:
         """Gurobi solver interface class.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
-            math (CalliopeMath): Calliope math.
+            math (AttrDict): Calliope math.
             build_config: Build configuration options.
         """
         if importlib.util.find_spec("gurobipy") is None:
@@ -135,11 +136,11 @@ class GurobiBackendModel(backend_model.BackendModel):
         domain_dict = {"real": gurobipy.GRB.CONTINUOUS, "integer": gurobipy.GRB.INTEGER}
 
         def _variable_setter(where: xr.DataArray, references: set):
-            domain_type = domain_dict[variable_dict.get("domain", "real")]
+            domain_type = domain_dict[variable_dict["domain"]]
 
             bounds = variable_dict["bounds"]
-            lb = self._get_variable_bound(bounds["min"], name, references, -np.inf)
-            ub = self._get_variable_bound(bounds["max"], name, references, np.inf)
+            lb = self._get_variable_bound(bounds["min"], name, references)
+            ub = self._get_variable_bound(bounds["max"], name, references)
             var = self._apply_func(
                 self._instance.addVar, where, 1, lb, ub, vtype=domain_type
             )
@@ -403,7 +404,7 @@ class GurobiBackendModel(backend_model.BackendModel):
                 )
                 continue
 
-            existing_bound_param = self.math.data.get_key(
+            existing_bound_param = self.math.get_key(
                 f"variables.{name}.bounds.{bound_name}", None
             )
             if existing_bound_param in self.parameters:

@@ -214,7 +214,6 @@ class AttrDict(dict):
         other: Self | dict,
         allow_override: bool = False,
         allow_replacement: bool = False,
-        allow_subdict_override_with_none: bool = False,
     ):
         """In-place merge with another AttrDict.
 
@@ -224,9 +223,6 @@ class AttrDict(dict):
                 already defined keys. Defaults to False.
             allow_replacement (bool, optional): allow "_REPLACE_" key to replace an
                 entire sub-dict. Defaults to False.
-            allow_subdict_override_with_none (bool, optional): if False, keys in the
-                form `this.that: None` in `other` will be ignored if subdicts exist in
-                self like `this.that.foo: 1`, rather than wiping them. Defaults to False.
 
         Raises:
             KeyError: `other` has an already defined key and `allow_override == False`

@@ -5,7 +5,7 @@ config:
   init:
     name: Minimal test model
   build:
-    mode: plan
+    mode: base
   solve:
     solver: cbc
 

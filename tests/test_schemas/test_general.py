@@ -10,7 +10,7 @@ from calliope.schemas import general
 class TestUniqueList:
     @pytest.fixture(scope="class")
     def pydantic_model(self):
-        return pydantic.create_model("Model", unique_list=(general.UniqueList, ...))
+        return pydantic.create_model("TestModel", unique_list=(general.UniqueList, ...))
 
     @pytest.mark.parametrize(
         "valid_list",
@@ -56,7 +56,7 @@ class TestNonEmptyList:
     @pytest.fixture(scope="class")
     def pydantic_model(self):
         return pydantic.create_model(
-            "Model", non_empty_list=(general.NonEmptyList, ...)
+            "TestModel", non_empty_list=(general.NonEmptyList, ...)
         )
 
     def test_invalid_input(self, pydantic_model):
@@ -69,7 +69,7 @@ class TestNonEmptyUniqueList:
     @pytest.fixture(scope="class")
     def pydantic_model(self):
         return pydantic.create_model(
-            "Model", non_empty_unique_list=(general.NonEmptyUniqueList, ...)
+            "TestModel", non_empty_unique_list=(general.NonEmptyUniqueList, ...)
         )
 
     @pytest.mark.parametrize(
@@ -83,7 +83,7 @@ class TestNonEmptyUniqueList:
 class TestAttrStr:
     @pytest.fixture(scope="class")
     def pydantic_model(self):
-        return pydantic.create_model("Model", attrstr=(general.AttrStr, ...))
+        return pydantic.create_model("TestModel", attrstr=(general.AttrStr, ...))
 
     @pytest.mark.parametrize(
         "invalid_input", [1, "1thing", "with spaces", "111992", None, True]
@@ -96,7 +96,7 @@ class TestAttrStr:
 class TestNumveriVal:
     @pytest.fixture(scope="class")
     def pydantic_model(self):
-        return pydantic.create_model("Model", numeric_val=(general.NumericVal, ...))
+        return pydantic.create_model("TestModel", numeric_val=(general.NumericVal, ...))
 
     @pytest.mark.parametrize("invalid_input", [[1, 2], "foobar", None])
     def test_invalid_input(self, pydantic_model, invalid_input):
@@ -108,9 +108,8 @@ class TestCalliopeBaseModel:
     @pytest.fixture(scope="module")
     def config_model_flat(self):
         return pydantic.create_model(
-            "Model",
+            "TestModel1",
             __base__=general.CalliopeBaseModel,
-            model_config={"title": "TITLE"},
             foo=(str, "bar"),
             foobar=(int, 1),
         )
@@ -118,9 +117,8 @@ class TestCalliopeBaseModel:
     @pytest.fixture(scope="module")
     def config_model_nested(self, config_model_flat):
         return pydantic.create_model(
-            "Model",
+            "TestModel2",
             __base__=general.CalliopeBaseModel,
-            model_config={"title": "TITLE 2"},
             nested=(config_model_flat, config_model_flat()),
             top_level_foobar=(int, 10),
         )
@@ -128,9 +126,8 @@ class TestCalliopeBaseModel:
     @pytest.fixture(scope="module")
     def config_model_double_nested(self, config_model_nested):
         return pydantic.create_model(
-            "Model",
+            "TestModel3",
             __base__=general.CalliopeBaseModel,
-            model_config={"title": "TITLE 3"},
             extra_nested=(config_model_nested, config_model_nested()),
         )
 
@@ -198,35 +195,38 @@ class TestCalliopeBaseModel:
         assert model.model_dump() == model_dict
 
     @pytest.mark.parametrize(
-        "to_update",
+        ("to_update", "level"),
         [
-            {"extra_nested.nested.foobar": "foo"},
-            {"extra_nested.top_level_foobar": "foo"},
+            ({"extra_nested.nested.foobar": "foo"}, 1),
+            ({"extra_nested.top_level_foobar": "foo"}, 2),
         ],
     )
     def test_update_extra_nested_validation_error(
-        self, config_model_double_nested, to_update
+        self, config_model_double_nested, to_update, level
     ):
         model = config_model_double_nested()
 
         with pytest.raises(
-            pydantic.ValidationError, match="1 validation error for TITLE"
+            pydantic.ValidationError, match=f"1 validation error for TestModel{level}"
         ):
             model.update(to_update)
 
     @pytest.mark.parametrize(
         ("to_update", "expected"),
         [
-            ({"extra_nested.nested.foobar": 2}, ["Updating TITLE `foobar`: 1 -> 2"]),
+            (
+                {"extra_nested.nested.foobar": 2},
+                ["Updating TestModel1 `foobar`: 1 -> 2"],
+            ),
             (
                 {"extra_nested.top_level_foobar": 2},
-                ["Updating TITLE 2 `top_level_foobar`: 10 -> 2"],
+                ["Updating TestModel2 `top_level_foobar`: 10 -> 2"],
             ),
             (
                 {"extra_nested.nested.foobar": 2, "extra_nested.top_level_foobar": 3},
                 [
-                    "Updating TITLE `foobar`: 1 -> 2",
-                    "Updating TITLE 2 `top_level_foobar`: 10 -> 3",
+                    "Updating TestModel1 `foobar`: 1 -> 2",
+                    "Updating TestModel2 `top_level_foobar`: 10 -> 3",
                 ],
             ),
         ],
@@ -242,16 +242,16 @@ class TestCalliopeBaseModel:
     @pytest.fixture(scope="module")
     def config_model_submodel(self):
         sub_model = pydantic.create_model(
-            "SubModel",
+            "TestSubModel",
             __base__=general.CalliopeBaseModel,
-            model_config={"title": "TITLE"},
+            # model_config={"title": "TITLE"},
             foo=(str, "bar"),
             foobar=(int, 1),
         )
         model = pydantic.create_model(
-            "Model",
+            "TestModel",
             __base__=general.CalliopeBaseModel,
-            model_config={"title": "TITLE 2"},
+            # model_config={"title": "TITLE 2"},
             nested=(sub_model, sub_model()),
         )
         return model
@@ -268,12 +268,12 @@ class TestCalliopeBaseModel:
         json_schema = model.model_json_schema()
         no_defs_json_schema = model.model_no_ref_schema()
         assert json_schema["properties"]["nested"] == {
-            "$ref": "#/$defs/SubModel",
+            "$ref": "#/$defs/TestSubModel",
             "default": {"foo": "bar", "foobar": 1},
         }
         assert (
             no_defs_json_schema["properties"]["nested"]
-            == json_schema["$defs"]["SubModel"]
+            == json_schema["$defs"]["TestSubModel"]
         )
 
     def test_config_model_flat_no_defs(self, config_model_flat):

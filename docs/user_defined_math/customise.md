@@ -18,7 +18,7 @@ The other elements of the `storage_max` constraints have not changed (`foreach`,
 
 !!! note
 
-    If you prefer to start from scratch with your math, you can ask Calliope to _not_ load the pre-defined math for your chosen run mode by setting `#!yaml config.build.ignore_mode_math: true`.
+    If you prefer to start from scratch with your math, you can ask Calliope to _not_ load the pre-defined math for your chosen run mode by setting `#!yaml config.build.ignore_base_math: true`.
 
 When defining your model, you can reference any number of YAML files containing the math you want to add in `config.build`.
 The paths are relative to your main model configuration file:
