@@ -1,5 +1,11 @@
 ## 0.7.0.dev7
 
+### User-facing changes
+
+|new| documentation on SPORES-specific configuration options (#750, #752).
+
+|fixed| SPORES mode models not being appropriately serialised on saving to NetCDF (#751, #752).
+
 ### Internal changes
 
 |changed| Pinned upper bound of pydantic to < 2.11 while we await v2.11.4 to become available on conda forge (#753).
