@@ -264,14 +264,14 @@ class TestSporesMode:
         assert spores_model.backend.config.mode == "spores"
 
     def test_io_save(self, spores_model_and_log, tmp_path):
-        """Verify that we have run in spores mode"""
+        """Verify that we can save a model with SPORES results to file."""
         spores_model, _ = spores_model_and_log
         filepath = tmp_path / "test_io_save.nc"
         spores_model.to_netcdf(filepath)
         assert filepath.exists()
 
     def test_io_load(self, spores_model_and_log, tmp_path):
-        """Verify that we have run in spores mode"""
+        """Verify that we can load a model with SPORES results from file."""
         spores_model, _ = spores_model_and_log
         filepath = tmp_path / "test_io_load.nc"
         spores_model.to_netcdf(filepath)
@@ -355,8 +355,7 @@ class TestSporesMode:
         """We expect SPORES results to be saved to file once per iteration."""
         model, _ = spores_model_save_per_spore_and_log
         out_dir = model.config.solve.spores.save_per_spore_path
-        filename = spore if spore == "baseline" else f"spore_{spore}"
-        result = xr.open_dataset((out_dir / filename).with_suffix(".nc"))
+        result = xr.open_dataset((out_dir / f"spore_{spore}").with_suffix(".nc"))
         assert result.spores.item() == spore
 
     @pytest.mark.parametrize("spore", ["baseline", "1", "2"])

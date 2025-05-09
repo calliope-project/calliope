@@ -141,8 +141,8 @@ To mitigate this, you can _save results per SPORE run_ to capture results up to 
 
 !!! note
     - The `save_per_spore_path` directory path will be considered as relative to the current working directory unless given as an absolute path.
-    - Even if you choose to save results per SPORE, the results will also be stored in memory.
-      Following the successful completion of all SPORES runs, results will be available in the `model.results` dataset.
+    - Even if you choose to save results per SPORE, they will also be stored in memory.
+      Then, following the successful completion of all SPORES runs, all results will be concatenated and available in the `model.results` dataset.
 
 ### Skipping the baseline optimisation run
 

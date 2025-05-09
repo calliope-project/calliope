@@ -209,6 +209,8 @@ class PyomoBackendModel(backend_model.BackendModel):
 
         self.objectives[name].item().activate()
         self.objective = name
+        self.config = self.config.update({"objective": name})
+
         self.log("objectives", name, "Objective activated.", level="info")
 
     def get_parameter(  # noqa: D102, override
