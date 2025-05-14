@@ -648,8 +648,7 @@ class Model:
             return None
 
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
-            results.attrs.update(self._model_data.attrs)
-            results.attrs["timestamp_solve_complete"] = log_time(
+            timestamp_solve_complete = log_time(
                 LOGGER,
                 self._timings,
                 "solve_complete",
@@ -664,7 +663,10 @@ class Model:
             LOGGER.info(f"Optimisation model | Saving SPORE {spore} to file.")
 
             io.save_netcdf(
-                results.assign_coords(spores=spore),
+                results.expand_dims(spores=[spore]).assign_attrs(
+                    **self._model_data.attrs,
+                    **{"timestamp_solve_complete": timestamp_solve_complete},
+                ),
                 spores_config.save_per_spore_path / f"spore_{spore}.nc",
             )
         else:

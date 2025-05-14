@@ -225,15 +225,21 @@ class TestSporesMode:
         return model, log
 
     @pytest.fixture(scope="class")
-    def spores_model_save_per_spore_and_log(self, tmp_path_factory, request):
+    def spores_save_per_spore_path(self, tmp_path_factory):
+        return tmp_path_factory.mktemp("outputs")
+
+    @pytest.fixture(scope="class")
+    def spores_model_save_per_spore_and_log(self, spores_save_per_spore_path, request):
         """Iterate 2 times in SPORES mode and save to file each time."""
-        dir_path = tmp_path_factory.mktemp("outputs")
+
         model = build_model({}, "spores,investment_costs")
         model.build(mode="spores")
 
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
-                model.solve(**{"spores.save_per_spore_path": dir_path})
+                model.solve(
+                    **{"spores.save_per_spore_path": spores_save_per_spore_path}
+                )
             log = caplog.text
 
         return model, log
@@ -344,19 +350,35 @@ class TestSporesMode:
         assert (sum_spores_score.sel(techs="test_supply_elec") > 0).all()
         assert (sum_spores_score.drop_sel(techs="test_supply_elec") == 0).all()
 
-    def test_save_per_spore_file(self, spores_model_save_per_spore_and_log):
+    @pytest.mark.usefixtures("spores_model_save_per_spore_and_log")
+    def test_save_per_spore_file(self, spores_save_per_spore_path):
         """There are 4 files saved if saving per SPORE."""
-        model, _ = spores_model_save_per_spore_and_log
-        out_dir = model.config.solve.spores.save_per_spore_path
-        assert len(list(out_dir.glob("*.nc"))) == 3
+        assert len(list(spores_save_per_spore_path.glob("*.nc"))) == 3
 
+    @pytest.mark.usefixtures("spores_model_save_per_spore_and_log")
     @pytest.mark.parametrize("spore", ["baseline", "1", "2"])
-    def test_save_per_spore(self, spores_model_save_per_spore_and_log, spore):
+    def test_save_per_spore_check_spore(self, spores_save_per_spore_path, spore):
         """We expect SPORES results to be saved to file once per iteration."""
-        model, _ = spores_model_save_per_spore_and_log
-        out_dir = model.config.solve.spores.save_per_spore_path
-        result = xr.open_dataset((out_dir / f"spore_{spore}").with_suffix(".nc"))
-        assert result.spores.item() == spore
+
+        result = calliope.read_netcdf(
+            (spores_save_per_spore_path / f"spore_{spore}").with_suffix(".nc")
+        )
+        assert result._model_data.spores.item() == spore
+
+    @pytest.mark.usefixtures("spores_model_save_per_spore_and_log")
+    @pytest.mark.parametrize("spore", ["baseline", "1", "2"])
+    def test_save_per_spore_compare_results(
+        self, spores_save_per_spore_path, spore, spores_model_and_log
+    ):
+        """We expect SPORES results saved per iteration to have the same results as those stored in memory."""
+
+        result = calliope.read_netcdf(
+            (spores_save_per_spore_path / f"spore_{spore}").with_suffix(".nc")
+        )
+        xr.testing.assert_equal(
+            result.results.sel(spores=spore),
+            spores_model_and_log[0].results.sel(spores=spore),
+        )
 
     @pytest.mark.parametrize("spore", ["baseline", "1", "2"])
     def test_save_per_spore_log(self, spores_model_save_per_spore_and_log, spore):
