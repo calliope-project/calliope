@@ -623,7 +623,7 @@ class Model:
             iteration_results = self.backend._solve(solver_config, warmstart=False)
             results_list.append(iteration_results)
 
-            self._spores_save_model(baseline_results, spores_config, spore)
+            self._spores_save_model(iteration_results, spores_config, spore)
 
         spores_dim = pd.Index(["baseline", *spore_range], name="spores")
         results = xr.concat(results_list, dim=spores_dim, combine_attrs="no_conflicts")
