@@ -125,8 +125,6 @@ def _cli_start(debug, quiet):
     """
     if debug:
         click.secho(_get_version())
-
-    if debug:
         verbosity = "debug"
         log_solver = True
     else:
