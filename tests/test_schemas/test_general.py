@@ -110,7 +110,7 @@ class TestCalliopeBaseModel:
         return pydantic.create_model(
             "Model",
             __base__=general.CalliopeBaseModel,
-            model_config={"title": "TITLE"},
+            __config__={"title": "TITLE"},
             foo=(str, "bar"),
             foobar=(int, 1),
         )
@@ -120,7 +120,7 @@ class TestCalliopeBaseModel:
         return pydantic.create_model(
             "Model",
             __base__=general.CalliopeBaseModel,
-            model_config={"title": "TITLE 2"},
+            __config__={"title": "TITLE 2"},
             nested=(config_model_flat, config_model_flat()),
             top_level_foobar=(int, 10),
         )
@@ -130,7 +130,7 @@ class TestCalliopeBaseModel:
         return pydantic.create_model(
             "Model",
             __base__=general.CalliopeBaseModel,
-            model_config={"title": "TITLE 3"},
+            __config__={"title": "TITLE 3"},
             extra_nested=(config_model_nested, config_model_nested()),
         )
 
@@ -244,14 +244,14 @@ class TestCalliopeBaseModel:
         sub_model = pydantic.create_model(
             "SubModel",
             __base__=general.CalliopeBaseModel,
-            model_config={"title": "TITLE"},
+            __config__={"title": "TITLE"},
             foo=(str, "bar"),
             foobar=(int, 1),
         )
         model = pydantic.create_model(
             "Model",
             __base__=general.CalliopeBaseModel,
-            model_config={"title": "TITLE 2"},
+            __config__={"title": "TITLE 2"},
             nested=(sub_model, sub_model()),
         )
         return model
