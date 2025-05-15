@@ -160,5 +160,33 @@ Instead, you can _skip the baseline run_.
     model = calliope.read_netcdf(...)
 
     model.build(mode="spores")
-    model.solve(spores={"skip_baseline_run": True, "number": 10})
+    model.solve(spores={"continue_from_latest_results": True, "number": 10})
+    ```
+
+### Continuing from an existing set of SPORES
+
+You may also have a set of SPORES results that you want to continue.
+This may be because your run was killed by the machine due to insufficient resources or because you want to continue iterating on your results.
+It may also be because you want to update the SPORE objective from this point onwards.
+
+You can do so by _continuing from the most recent results_.
+
+!!! example
+
+    ```py
+    import calliope
+
+    # This model already has results from running in `plan` mode.
+    model = calliope.Model(...)
+
+    model.build(mode="spores")
+    model.solve(spores={"number": 5}) # `model.results` will now have 5 SPORES run results
+
+    # If you want to update parameters that link to the SPORES objective, you can do so here
+    # model.backend.update_parameter(...)
+
+    # `model.results` will now have an additional 5 SPORES run results (6-10)
+    model.solve(spores={"continue_from_latest_results": True, "number": 10})
+
+
     ```
