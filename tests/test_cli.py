@@ -1,4 +1,5 @@
 import os
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -195,14 +196,17 @@ class TestCLI:
             assert os.path.isfile(os.path.join(tempdir, "test.sh.array.sh"))
 
     def test_debug(self):
-        runner = CliRunner()
-        result = runner.invoke(cli.run, ["foo.yaml", "--debug"])
-        assert result.exit_code == 1
-        assert "Traceback (most recent call last)" in result.output
+        """Trackeback should only be printed in debug mode."""
+        # FIXME: revert back to CliRunner when error handling is made consistent with terminal output
+        # See https://github.com/pallets/click/issues/2682
+        shell_cmd = "calliope run foo.yaml"
+        result = subprocess.run(shell_cmd, shell=True, capture_output=True)
+        assert result.returncode == 1
+        assert not result.stderr
 
-        result = runner.invoke(cli.run, ["foo.yaml"])
-        assert result.exit_code == 1
-        assert "Traceback (most recent call last)" not in result.output
+        result = subprocess.run(shell_cmd + " --debug", shell=True, capture_output=True)
+        assert result.returncode == 1
+        assert "Traceback (most recent call last)" in result.stderr.decode()
 
     def test_generate_scenarios(self):
         runner = CliRunner()

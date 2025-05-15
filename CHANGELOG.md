@@ -8,7 +8,6 @@
 
 ### Internal changes
 
-|changed| Pinned upper bound of pydantic to < 2.11 while we await v2.11.4 to become available on conda forge (#753).
 
 ## 0.7.0.dev6 (2025-03-24)
 
