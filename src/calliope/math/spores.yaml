@@ -6,10 +6,10 @@ constraints:
     description: >
       Limit total system _monetary_ cost in SPORES mode.
       Applies a maximum relaxation to the system cost compared to the least-cost feasible option.
-    foreach: [costs]
-    where: "[monetary] in costs"
     equations:
-      - expression: sum(cost, over=[nodes, techs]) <= spores_baseline_cost * (1 + spores_slack)
+      - expression: >-
+          sum(sum(cost, over=[nodes, techs]) * objective_cost_weights, over=costs)
+          ) <= sum(spores_baseline_cost * objective_cost_weights, over=costs) * (1 + spores_slack)
 
 global_expressions:
   spores_score_cumulative:
