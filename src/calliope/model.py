@@ -596,14 +596,33 @@ class Model:
         self.backend.set_objective(self.config.build.objective)
 
         spores_config: config_schema.SolveSpores = solver_config.spores
-        if not spores_config.skip_baseline_run:
+
+        latest_spore: int = 0
+        if not spores_config.continue_from_latest_results:
             LOGGER.info("Optimisation model | Running baseline model.")
             baseline_results = self.backend._solve(solver_config, warmstart=False)
-            self._spores_save_model(baseline_results, spores_config, "baseline")
-
+            self._spores_save_model(baseline_results, spores_config, 0)
+        elif "spores" in self.results.dims:
+            latest_spore = self.results.spores.max().item()
+            LOGGER.info(
+                f"Optimisation model | Restarting SPORES from SPORE {latest_spore} results."
+            )
+            baseline_results = self.results.sel(spores=latest_spore).drop("spores")
+            self.backend.update_parameter(
+                "spores_score", baseline_results.spores_score_cumulative
+            )
         else:
             LOGGER.info("Optimisation model | Using existing baseline model results.")
             baseline_results = self.results.copy()
+        if latest_spore >= spores_config.number:
+            raise exceptions.ModelError(
+                f"Cannot restart SPORES from SPORE {latest_spore} as it is greater or equal "
+                f"to the configured number of SPORES to run ({spores_config.number})."
+            )
+
+        spore_range: list[int] = [
+            i for i in range(latest_spore + 1, spores_config.number + 1)
+        ]
 
         # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
         constraining_cost = baseline_results.cost.groupby("costs").sum(..., min_count=1)
@@ -611,7 +630,7 @@ class Model:
         self.backend.set_objective("min_spores")
         # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
         results_list: list[xr.Dataset] = [baseline_results]
-        spore_range: list[str] = [str(i) for i in range(1, spores_config.number + 1)]
+
         LOGGER.info(
             f"Optimisation model | Running SPORES with `{spores_config.scoring_algorithm}` scoring algorithm."
         )
@@ -625,23 +644,29 @@ class Model:
 
             self._spores_save_model(iteration_results, spores_config, spore)
 
-        spores_dim = pd.Index(["baseline", *spore_range], name="spores")
+        spores_dim = pd.Index([latest_spore, *spore_range], name="spores")
         results = xr.concat(results_list, dim=spores_dim, combine_attrs="no_conflicts")
         results.attrs["termination_condition"] = ",".join(
             set(result.attrs["termination_condition"] for result in results_list)
         )
+        if latest_spore > 0 and spores_config.continue_from_latest_results:
+            results = xr.concat(
+                [self.results, results.drop_sel(spores=latest_spore)],
+                dim="spores",
+                combine_attrs="no_conflicts",
+            )
 
         return results
 
     def _spores_save_model(
-        self, results: xr.Dataset, spores_config: config_schema.SolveSpores, spore: str
+        self, results: xr.Dataset, spores_config: config_schema.SolveSpores, spore: int
     ) -> None:
         """Save results per SPORE.
 
         Args:
             results (xr.Dataset): Results to save.
             spores_config (config_schema.SolveSpores): SPORES configuration.
-            spore (str): Spore number / name.
+            spore (int): Spore number.
 
         """
         if spores_config.save_per_spore_path is None:
