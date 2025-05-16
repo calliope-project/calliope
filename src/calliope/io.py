@@ -114,7 +114,7 @@ def _serialise(attrs: dict) -> None:
 def _deserialise(attrs: dict) -> None:
     """Convert troublesome datatypes in xarray attribute dictionaries from their stored data type to the data types expected by Calliope.
 
-    This will tackle dictionaries (from string), booleans (from int), None (form string), and sets (from list).
+    This will tackle dictionaries (from string), booleans (from int), None (from string), and sets (from list).
 
     Args:
         attrs (dict):
