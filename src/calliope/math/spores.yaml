@@ -9,7 +9,7 @@ constraints:
     equations:
       - expression: >-
           sum(sum(cost, over=[nodes, techs]) * objective_cost_weights, over=costs)
-          ) <= sum(spores_baseline_cost * objective_cost_weights, over=costs) * (1 + spores_slack)
+          <= sum(spores_baseline_cost * objective_cost_weights, over=costs) * (1 + spores_slack)
 
 global_expressions:
   spores_score_cumulative:
