@@ -535,7 +535,7 @@ class BackendModelGenerator(ABC):
         return da
 
     def _raise_error_on_preexistence(self, key: str, obj_type: ALL_COMPONENTS_T):
-        """Detect if preexistance errors are present the dataset.
+        """Detect if preexistence errors are present in the dataset.
 
         We do not allow any overlap of backend object names since they all have to
         co-exist in the backend dataset. I.e., users cannot overwrite any backend
