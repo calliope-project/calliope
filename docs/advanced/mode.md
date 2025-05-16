@@ -75,48 +75,90 @@ As an example, if you wanted to generate 10 SPORES, all of which are within 10% 
 ```yaml
 config.build.mode: spores
 # The number of SPORES to generate:
-config.solve.spores.number: 10:
+config.solve.spores.number: 10
 # The fraction above the cost-optimal cost to set the maximum cost during SPORES:
 parameters.spores_slack: 0.1
 ```
 
-You will now also need a `spores_score` cost class in your model.
-The `spores_score` is the cost class against which the model optimises in the generation of SPORES.
-The recommended approach is to initialise it in your model definition for all technologies and locations that you want to limit within the scope of finding alternatives.
-Technologies at locations with higher scores will be penalised in the objective function, so are less likely to be chosen.
-In the [national scale example model](../examples/national_scale/index.md), this would look something like:
-
-```yaml
-templates:
-  add_spores_score:
-    template: cost_dim_setter
-    cost_flow_cap:
-      data: [null, null]
-      index: ["monetary", "spores_score"]
-      dims: costs
-    cost_interest_rate:
-      data: [0.1, 1]
-      index: ["monetary", "spores_score"]
-      dims: costs
-
-techs:
-  ccgt:
-    template: add_spores_score
-    cost_flow_cap.data: [750, 0]
-  csp:
-    template: add_spores_score
-    cost_flow_cap.data: [1000, 0]
-  battery:
-    template: add_spores_score
-    cost_flow_cap.data: [null, 0]
-  region1_to_region2:
-    template: add_spores_score
-    cost_flow_cap.data: [10000, 0]
-```
-
-!!! note
-    We ourselves use and recommend using `spores_score` to define the cost class that you will now optimise against.
-    However, it is user-defined, allowing you to choose any terminology that best fits your use case.
-
 To get a glimpse of how the results generated via SPORES compare to simple cost optimisation, check out our documentation
 on [comparing run modes](../examples/modes.py).
+
+### Limiting the search for alternatives to specific technologies
+
+By default, all technologies at all nodes will be subject to SPORES scoring.
+This means that they are all equally likely to be removed from the system when generating alternative system designs.
+You may want to instead focus on specific technologies when searching for alternatives.
+To do so, set a _tracking parameter_.
+This will be a parameter you set to `True` for all technologies that you want SPORES scores to be applied to.
+Any technology _not_ being tracked will not be penalised in the optimisation for having a non-zero capacity.
+
+!!! example
+
+    ```yaml
+    config.solve.spores.tracking_parameter: my_tracking_parameter
+    parameters:
+      my_tracking_parameter: # defines which techs are going to be subject to SPORES scoring
+        data: [true, true, true]
+        index: [ccgt, csp, battery]
+        dims: techs
+    ```
+
+    Or, at the technology level:
+
+    ```yaml
+    config.solve.spores.tracking_parameter: my_tracking_parameter
+    techs:
+      ccgt:
+        my_tracking_parameter: true
+      csp:
+        my_tracking_parameter: true
+      battery:
+        my_tracking_parameter: true
+      pv:
+        my_tracking_parameter: false # will not be tracked
+    ```
+
+### Saving results per SPORE
+
+Optimisation runs can be resource intensive.
+You should not lose all your results if the optimisation fails part way through your SPORES runs.
+To mitigate this, you can _save results per SPORE run_ to capture results up to any point of failure.
+
+!!! example
+
+    ```yaml
+    config.build.mode: spores
+    # The number of SPORES to generate:
+    config.solve.spores:
+      number: 10
+      save_per_spore_path: results/spores
+    # The fraction above the cost-optimal cost to set the maximum cost during SPORES:
+    parameters.spores_slack: 0.1
+    ```
+
+    Here, 11 result files will be present in the results, 1 for the baseline (non-SPORES) run + 10 SPORES runs.
+    Each SPORE run will be labelled `spore_<run number>.nc`, e.g. `results/spores/spore_10.nc`.
+
+!!! note
+    - The `save_per_spore_path` directory path will be considered as relative to the current working directory unless given as an absolute path.
+    - Even if you choose to save results per SPORE, they will also be stored in memory.
+      Then, following the successful completion of all SPORES runs, all results will be concatenated and available in the `model.results` dataset.
+
+### Skipping the baseline optimisation run
+
+The `baseline` run does not set any SPORES scores or a system cost slack.
+It is equivalent to running the model in [plan](#plan-mode) mode.
+If you already have a model with baseline results, you don't need to re-run that optimisation.
+Instead, you can _skip the baseline run_.
+
+!!! example
+
+    ```py
+    import calliope
+
+    # This model already has results from running in `plan` mode.
+    model = calliope.read_netcdf(...)
+
+    model.build(mode="spores")
+    model.solve(spores={"skip_baseline_run": True, "number": 10})
+    ```
