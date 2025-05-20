@@ -627,14 +627,15 @@ class Model:
             self._spores_update_model(results_list, spores_config)
 
             iteration_results = self.backend._solve(solver_config, warmstart=False)
+            self._spores_save_model(iteration_results, spores_config, spore)
+
             if not iteration_results:
                 exceptions.warn(
                     f"Stopping SPORES run after SPORE {spore} due to model infeasibility."
                 )
                 break
-            results_list.append(iteration_results)
 
-            self._spores_save_model(iteration_results, spores_config, spore)
+            results_list.append(iteration_results)
 
         spores_dim = pd.Index(
             ["baseline", *spore_range[: len(results_list) - 1]], name="spores"
