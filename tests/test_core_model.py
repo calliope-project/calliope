@@ -308,9 +308,7 @@ class TestSporesMode:
             model.backend.get_parameter(
                 "spores_baseline_cost", as_backend_objs=False
             ).item()
-            == simple_supply_and_supply_plus._model_data.attrs[
-                "objective_function_value"
-            ]
+            == simple_supply_and_supply_plus._model_data["min_cost_optimisation"].item()
         )
 
     @pytest.mark.filterwarnings(

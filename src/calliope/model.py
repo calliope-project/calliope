@@ -558,9 +558,6 @@ class Model:
         results.attrs["termination_condition"] = ",".join(
             set(result.attrs["termination_condition"] for result in results_list)
         )
-        results.attrs["objective_function_value"] = sum(
-            result.attrs["objective_function_value"] for result in results_list
-        )
         return results
 
     def _recalculate_storage_initial(self, results: xr.Dataset) -> xr.DataArray:
@@ -615,7 +612,7 @@ class Model:
             )
 
         # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
-        constraining_cost = baseline_results.attrs["objective_function_value"]
+        constraining_cost = baseline_results[self.config.build.objective]
         self.backend.update_parameter("spores_baseline_cost", constraining_cost)
         self.backend.set_objective("min_spores")
         # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
@@ -646,7 +643,6 @@ class Model:
         results.attrs["termination_condition"] = ",".join(
             set(result.attrs["termination_condition"] for result in results_list)
         )
-        results.attrs["objective_function_value"] = constraining_cost
 
         return results
 

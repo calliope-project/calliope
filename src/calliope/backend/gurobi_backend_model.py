@@ -226,29 +226,28 @@ class GurobiBackendModel(backend_model.BackendModel):
         )
         return xr.Dataset({"lb": lb, "ub": ub}, attrs=variable.attrs)
 
-    def get_global_expression(  # noqa: D102, override
-        self, name: str, as_backend_objs: bool = True, eval_body: bool = False
+    def _get_expression(  # noqa: D102, override
+        self,
+        name: str,
+        as_backend_objs,
+        eval_body,
+        component_type: Literal["global_expressions", "objectives"],
     ) -> xr.DataArray:
-        global_expression = self.global_expressions.get(name, None)
-        if global_expression is None:
-            raise KeyError(f"Unknown global_expression: {name}")
-        if isinstance(global_expression, xr.DataArray) and not as_backend_objs:
+        expression = getattr(self, component_type).get(name, None)
+        if expression is None:
+            raise KeyError(f"Unknown {component_type.removesuffix('s')}: {name}")
+        if isinstance(expression, xr.DataArray) and not as_backend_objs:
             if not eval_body:
-                return global_expression.astype(str).where(global_expression.notnull())
+                return expression.astype(str).where(expression.notnull())
             else:
                 try:
                     return self._apply_func(
-                        self._from_gurobi_expr,
-                        global_expression.notnull(),
-                        1,
-                        global_expression,
+                        self._from_gurobi_expr, expression.notnull(), 1, expression
                     )
                 except AttributeError:
-                    return global_expression.astype(str).where(
-                        global_expression.notnull()
-                    )
+                    return expression.astype(str).where(expression.notnull())
         else:
-            return global_expression
+            return expression
 
     def _solve(
         self, solve_config: config_schema.Solve, warmstart: bool = False
@@ -274,12 +273,9 @@ class GurobiBackendModel(backend_model.BackendModel):
 
         if termination == gurobipy.GRB.OPTIMAL:
             results = self.load_results()
-            objective_function_value = self.objectives[self.objective].item().getValue()
-
         else:
             model_warn("Model solution was non-optimal.", _class=BackendWarning)
             results = xr.Dataset()
-            objective_function_value = None
 
         termination = [
             i
@@ -287,8 +283,6 @@ class GurobiBackendModel(backend_model.BackendModel):
             if not i.startswith("_") and getattr(gurobipy.GRB.Status, i) == termination
         ][0].lower()
         results.attrs["termination_condition"] = str(termination)
-
-        results.attrs["objective_function_value"] = objective_function_value
 
         return results
 

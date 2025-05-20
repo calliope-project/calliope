@@ -273,16 +273,20 @@ class PyomoBackendModel(backend_model.BackendModel):
         )
         return xr.Dataset({"lb": lb, "ub": ub}, attrs=variable.attrs)
 
-    def get_global_expression(  # noqa: D102, override
-        self, name: str, as_backend_objs: bool = True, eval_body: bool = False
+    def _get_expression(  # noqa: D102, override
+        self,
+        name: str,
+        as_backend_objs,
+        eval_body,
+        component_type: Literal["global_expressions", "objectives"],
     ) -> xr.DataArray:
-        global_expression = self.global_expressions.get(name, None)
-        if global_expression is None:
-            raise KeyError(f"Unknown global_expression: {name}")
+        expression = getattr(self, component_type).get(name, None)
+        if expression is None:
+            raise KeyError(f"Unknown {component_type.removesuffix('s')}: {name}")
         if not as_backend_objs:
-            global_expression = self._from_pyomo_expr(global_expression, eval_body)
+            expression = self._from_pyomo_expr(expression, eval_body)
 
-        return global_expression
+        return expression
 
     def _solve(  # noqa: D102, override
         self, solve_config: config_schema.Solve, warmstart: bool = False
@@ -324,7 +328,6 @@ class PyomoBackendModel(backend_model.BackendModel):
         if pe.TerminationCondition.to_solver_status(termination) == pe.SolverStatus.ok:
             self._instance.load_solution(results.solution[0])
             results = self.load_results()
-            objective_function_value = self.objectives[self.objective].item()()
         else:
             self._solve_logger.critical("Problem status:")
             for line in str(results.problem[0]).split("\n"):
@@ -335,10 +338,8 @@ class PyomoBackendModel(backend_model.BackendModel):
 
             model_warn("Model solution was non-optimal.", _class=BackendWarning)
             results = xr.Dataset()
-            objective_function_value = None
 
         results.attrs["termination_condition"] = str(termination)
-        results.attrs["objective_function_value"] = objective_function_value
         return results
 
     def verbose_strings(self) -> None:  # noqa: D102, override
