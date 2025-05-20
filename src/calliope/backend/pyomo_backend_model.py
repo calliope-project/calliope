@@ -324,6 +324,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         if pe.TerminationCondition.to_solver_status(termination) == pe.SolverStatus.ok:
             self._instance.load_solution(results.solution[0])
             results = self.load_results()
+            objective_function_value = self.objectives[self.objective].item()()
         else:
             self._solve_logger.critical("Problem status:")
             for line in str(results.problem[0]).split("\n"):
@@ -334,8 +335,10 @@ class PyomoBackendModel(backend_model.BackendModel):
 
             model_warn("Model solution was non-optimal.", _class=BackendWarning)
             results = xr.Dataset()
-        results.attrs["termination_condition"] = str(termination)
+            objective_function_value = None
 
+        results.attrs["termination_condition"] = str(termination)
+        results.attrs["objective_function_value"] = objective_function_value
         return results
 
     def verbose_strings(self) -> None:  # noqa: D102, override

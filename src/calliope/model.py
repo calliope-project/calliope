@@ -605,8 +605,15 @@ class Model:
             LOGGER.info("Optimisation model | Using existing baseline model results.")
             baseline_results = self.results.copy()
 
+        if not baseline_results:
+            raise exceptions.ModelError(
+                "Cannot run SPORES without baseline results. "
+                "This issue may be caused by an infeasible baseline model."
+                "Ensure your baseline model can solve successfully by running it in `plan` mode."
+            )
+
         # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
-        constraining_cost = baseline_results.cost.groupby("costs").sum(..., min_count=1)
+        constraining_cost = baseline_results.attrs["objective_function_value"]
         self.backend.update_parameter("spores_baseline_cost", constraining_cost)
         self.backend.set_objective("min_spores")
         # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
@@ -626,10 +633,11 @@ class Model:
             self._spores_save_model(iteration_results, spores_config, spore)
 
         spores_dim = pd.Index(["baseline", *spore_range], name="spores")
-        results = xr.concat(results_list, dim=spores_dim, combine_attrs="no_conflicts")
+        results = xr.concat(results_list, dim=spores_dim, combine_attrs="drop")
         results.attrs["termination_condition"] = ",".join(
             set(result.attrs["termination_condition"] for result in results_list)
         )
+        results.attrs["objective_function_value"] = constraining_cost
 
         return results
 
@@ -663,10 +671,9 @@ class Model:
             LOGGER.info(f"Optimisation model | Saving SPORE {spore} to file.")
 
             io.save_netcdf(
-                results.expand_dims(spores=[spore]).assign_attrs(
-                    **self._model_data.attrs,
-                    **{"timestamp_solve_complete": timestamp_solve_complete},
-                ),
+                results.expand_dims(spores=[spore])
+                .assign_attrs(**self._model_data.attrs)
+                .assign_attrs(timestamp_solve_complete=timestamp_solve_complete),
                 spores_config.save_per_spore_path / f"spore_{spore}.nc",
             )
         else:

@@ -87,6 +87,7 @@ After instantiating the [calliope.Model][] object, and before calling the `build
 The pre-processed inputs are all held in the xarray Dataset `model.inputs`.
 
 After the model has been solved, an xarray Dataset containing results (`model.results`) can be accessed.
+There are also high-level attributes available (`model.results.attrs`), including the objective function value (`model.results.attrs["objective_function_value"]`).
 At this point, the model can be saved with either [calliope.Model.to_csv][] or [calliope.Model.to_netcdf][], which saves all inputs and results, and is equivalent to the corresponding `--save` options of the command-line tool.
 
 !!! example

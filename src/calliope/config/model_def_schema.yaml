@@ -1,4 +1,3 @@
-
 # yaml-language-server: $schema=https://json-schema.org/draft/2020-12/schema#
 
 $schema: https://json-schema.org/draft/2020-12/schema#
@@ -192,7 +191,7 @@ properties:
         description: >-
           The baseline optimal cost of the system used to set the maximum cost constraint when undertaking SPORES analysis.
           This usually only applies to `monetary` cost, but could be applied to other non-SPORES costs as necessary.
-        $ref: "#/$defs/TechCostNullNumber"
+        oneOf: *simple_number
         default: .inf
         x-type: float
       spores_slack:
@@ -228,40 +227,47 @@ properties:
         allOf:
           - required: ["base_tech"]
           - oneOf:
-            - required: ["base_tech", "carrier_in", "carrier_out"]
-              not:
-                required: ["link_to", "link_from"]
-              properties:
-                base_tech: {const: conversion}
-            - required: ["base_tech", "carrier_in"]
-              not:
+              - required: ["base_tech", "carrier_in", "carrier_out"]
+                not:
+                  required: ["link_to", "link_from"]
+                properties:
+                  base_tech: {const: conversion}
+              - required: ["base_tech", "carrier_in"]
+                not:
                   required: ["carrier_out", "link_to", "link_from"]
-              properties:
-                base_tech: {const: demand}
+                properties:
+                  base_tech: {const: demand}
 
-            - required: ["base_tech", "carrier_in", "carrier_out"]
-              not:
-                required: ["link_to", "link_from"]
-              properties:
-                base_tech: {const: storage}
+              - required: ["base_tech", "carrier_in", "carrier_out"]
+                not:
+                  required: ["link_to", "link_from"]
+                properties:
+                  base_tech: {const: storage}
 
-            - required: ["base_tech", "carrier_out"]
-              not:
+              - required: ["base_tech", "carrier_out"]
+                not:
                   required: ["carrier_in", "link_to", "link_from"]
-              properties:
-                base_tech: {const: supply}
+                properties:
+                  base_tech: {const: supply}
 
-            - required: ["base_tech", "link_from", "link_to", "carrier_in", "carrier_out"]
-              properties:
-                base_tech: {const: transmission}
-                from:
-                  title: Starting node.
-                  description: The resulting link technology will have `flow_out` == `import` and `flow_in` == `export` at this node.
-                  type: string
-                to:
-                  title: Ending node.
-                  description: The resulting link technology will have `flow_out` == `import` and `flow_in` == `export` at this node.
-                  type: string
+              - required:
+                  [
+                    "base_tech",
+                    "link_from",
+                    "link_to",
+                    "carrier_in",
+                    "carrier_out",
+                  ]
+                properties:
+                  base_tech: {const: transmission}
+                  from:
+                    title: Starting node.
+                    description: The resulting link technology will have `flow_out` == `import` and `flow_in` == `export` at this node.
+                    type: string
+                  to:
+                    title: Ending node.
+                    description: The resulting link technology will have `flow_out` == `import` and `flow_in` == `export` at this node.
+                    type: string
 
         patternProperties: &pattern_def
           '^(cost_[\w]+)$':
@@ -636,7 +642,7 @@ properties:
             x-type: float
             title: Storage loss rate
             description: >-
-               Rate of storage loss per hour, used to calculate lost stored flow as `(1 - storage_loss)^hours_per_timestep`.
+              Rate of storage loss per hour, used to calculate lost stored flow as `(1 - storage_loss)^hours_per_timestep`.
             x-unit: $\frac{\text{fraction}}{\text{hour}}$.
 
           cyclic_storage:
@@ -683,7 +689,7 @@ properties:
             $ref: "#/$defs/TechParamNullNumber"
             default: 0
             x-type: float
-            title:  Minimum number of purchased units
+            title: Minimum number of purchased units
             description: >-
               Limits the lower bound of units purchased if `cap_method` is `integer`.
             x-unit: integer.
@@ -1011,10 +1017,7 @@ properties:
       '^[^_^\d][\w]*$':
         type: object
         title: A named node.
-        dependentRequired": {
-          latitude: ["longitude"],
-          longitude: ["latitude"]
-        }
+        dependentRequired": {latitude: ["longitude"], longitude: ["latitude"]}
 
         patternProperties: *pattern_def
         unevaluatedProperties: *uneval_def

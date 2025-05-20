@@ -274,9 +274,12 @@ class GurobiBackendModel(backend_model.BackendModel):
 
         if termination == gurobipy.GRB.OPTIMAL:
             results = self.load_results()
+            objective_function_value = self.objectives[self.objective].item().getValue()
+
         else:
             model_warn("Model solution was non-optimal.", _class=BackendWarning)
             results = xr.Dataset()
+            objective_function_value = None
 
         termination = [
             i
@@ -284,6 +287,8 @@ class GurobiBackendModel(backend_model.BackendModel):
             if not i.startswith("_") and getattr(gurobipy.GRB.Status, i) == termination
         ][0].lower()
         results.attrs["termination_condition"] = str(termination)
+
+        results.attrs["objective_function_value"] = objective_function_value
 
         return results
 
