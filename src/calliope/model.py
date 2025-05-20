@@ -628,11 +628,18 @@ class Model:
             self._spores_update_model(results_list, spores_config)
 
             iteration_results = self.backend._solve(solver_config, warmstart=False)
+            if not iteration_results:
+                exceptions.warn(
+                    f"Stopping SPORES run after SPORE {spore} due to model infeasibility."
+                )
+                break
             results_list.append(iteration_results)
 
             self._spores_save_model(iteration_results, spores_config, spore)
 
-        spores_dim = pd.Index(["baseline", *spore_range], name="spores")
+        spores_dim = pd.Index(
+            ["baseline", *spore_range[: len(results_list) - 1]], name="spores"
+        )
         results = xr.concat(results_list, dim=spores_dim, combine_attrs="drop")
         results.attrs["termination_condition"] = ",".join(
             set(result.attrs["termination_condition"] for result in results_list)

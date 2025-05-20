@@ -313,6 +313,30 @@ class TestSporesMode:
             ]
         )
 
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Model solution was non-optimal:calliope.exceptions.BackendWarning"
+    )
+    def test_spores_break_on_infeasible(self):
+        """No matter how SPORES are initiated, the constraining cost (pre application of slack) should be the plan mode objective function value."""
+        model = build_model({}, self.SPORES_OVERRIDES)
+        # Add a negation, which makes the problem infeasible due to it being a minimisation problem that goes to minus infinity.
+        infeasible_expression = (
+            "sum(flow_cap * -1 * spores_score, over=[nodes, techs, carriers])"
+        )
+        model.build(
+            add_math_dict={
+                "objectives.min_spores.equations": [
+                    {"expression": infeasible_expression}
+                ]
+            }
+        )
+        with pytest.warns(
+            calliope.exceptions.ModelWarning, match="Stopping SPORES run after SPORE 1"
+        ):
+            model.solve()
+        # We still get results, up to the point of infeasibility
+        assert not set(model.results.spores.values).symmetric_difference(["baseline"])
+
     def test_spores_mode_3_results(self, spores_model_and_log_algorithms):
         """Solving in spores mode should lead to 3 sets of results."""
         spores_model, _ = spores_model_and_log_algorithms
