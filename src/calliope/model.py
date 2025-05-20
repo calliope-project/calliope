@@ -626,7 +626,7 @@ class Model:
         if not baseline_results:
             raise exceptions.ModelError(
                 "Cannot run SPORES without baseline results. "
-                "This issue may be caused by an infeasible baseline model."
+                "This issue may be caused by an infeasible baseline model. "
                 "Ensure your baseline model can solve successfully by running it in `plan` mode."
             )
 
@@ -646,17 +646,18 @@ class Model:
             self._spores_update_model(results_list, spores_config)
 
             iteration_results = self.backend._solve(solver_config, warmstart=False)
+            self._spores_save_model(iteration_results, spores_config, spore)
+
             if not iteration_results:
                 exceptions.warn(
                     f"Stopping SPORES run after SPORE {spore} due to model infeasibility."
                 )
                 break
+
             results_list.append(iteration_results)
 
-            self._spores_save_model(iteration_results, spores_config, spore)
-
         spores_dim = pd.Index(
-            ["baseline", *spore_range[: len(results_list) - 1]], name="spores"
+            [latest_spore, *spore_range[: len(results_list) - 1]], name="spores"
         )
         results = xr.concat(results_list, dim=spores_dim, combine_attrs="drop")
         if latest_spore > 0 and spores_config.continue_from_latest_results:

@@ -222,7 +222,7 @@ class TestSporesMode:
     def spores_model_continue_from_spores_and_log(self, request, spores_model_and_log):
         """Iterate 2 times in SPORES mode having pre-computed the baseline results."""
 
-        model = build_model({}, "spores,investment_costs")
+        model = build_model({}, self.SPORES_OVERRIDES)
         model.build(mode="spores")
         model.solve()
         with self.caplog_session(request) as caplog:
@@ -273,6 +273,22 @@ class TestSporesMode:
                 spores_model_and_log[0].solve(force=True)
             return caplog.text
 
+    @pytest.fixture
+    def spores_infeasible_model(self):
+        model = build_model({}, self.SPORES_OVERRIDES)
+        # Add a negation, which makes the problem infeasible due to it being a minimisation problem that goes to minus infinity.
+        infeasible_expression = (
+            "sum(flow_cap * -1 * spores_score, over=[nodes, techs, carriers])"
+        )
+        model.build(
+            add_math_dict={
+                "objectives.min_spores.equations": [
+                    {"expression": infeasible_expression}
+                ]
+            }
+        )
+        return model
+
     def test_backend_build_mode(self, spores_model_and_log):
         """Verify that we have run in spores mode"""
         spores_model, _ = spores_model_and_log
@@ -306,13 +322,14 @@ class TestSporesMode:
             calliope.exceptions.ModelError,
             match="Cannot run SPORES without baseline results.",
         ):
-            model.solve(spores={"skip_baseline_run": True})
+            model.solve(spores={"continue_from_latest_results": True})
 
     @pytest.mark.parametrize(
         "fixture",
         [
             "spores_model_and_log",
-            "spores_model_skip_baseline_and_log",
+            "spores_model_continue_from_spores_and_log",
+            "spores_model_continue_from_plan_and_log",
             "spores_model_save_per_spore_and_log",
         ],
     )
@@ -331,26 +348,17 @@ class TestSporesMode:
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Model solution was non-optimal:calliope.exceptions.BackendWarning"
     )
-    def test_spores_break_on_infeasible(self):
-        """No matter how SPORES are initiated, the constraining cost (pre application of slack) should be the plan mode objective function value."""
-        model = build_model({}, self.SPORES_OVERRIDES)
-        # Add a negation, which makes the problem infeasible due to it being a minimisation problem that goes to minus infinity.
-        infeasible_expression = (
-            "sum(flow_cap * -1 * spores_score, over=[nodes, techs, carriers])"
-        )
-        model.build(
-            add_math_dict={
-                "objectives.min_spores.equations": [
-                    {"expression": infeasible_expression}
-                ]
-            }
-        )
+    def test_spores_break_on_infeasible(self, spores_infeasible_model):
+        """On infeasibility, stop running and warn."""
+
         with pytest.warns(
             calliope.exceptions.ModelWarning, match="Stopping SPORES run after SPORE 1"
         ):
-            model.solve()
+            spores_infeasible_model.solve()
         # We still get results, up to the point of infeasibility
-        assert not set(model.results.spores.values).symmetric_difference(["baseline"])
+        assert not set(
+            spores_infeasible_model.results.spores.values
+        ).symmetric_difference([0])
 
     def test_spores_mode_3_results(self, spores_model_and_log_algorithms):
         """Solving in spores mode should lead to 3 sets of results."""
@@ -463,6 +471,21 @@ class TestSporesMode:
         _, log = request.getfixturevalue(spores_model)
 
         assert "Saving SPORE" not in log
+
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Model solution was non-optimal:calliope.exceptions.BackendWarning"
+    )
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Stopping SPORES run after SPORE 1:calliope.exceptions.ModelWarning"
+    )
+    def test_save_per_spore_infeasible(self, caplog, tmp_path, spores_infeasible_model):
+        """An infeasible SPORES objective should lead to no saved result file."""
+
+        with caplog.at_level(logging.INFO):
+            spores_infeasible_model.solve(spores={"save_per_spore_path": tmp_path})
+        assert "No SPORE 1 results to save to file." in caplog.text
+        assert (tmp_path / "spore_0.nc").exists()
+        assert not (tmp_path / "spore_1.nc").exists()
 
     def test_skip_baseline_log(self, spores_model_continue_from_plan_and_log):
         """Skipping baseline run should take existing results."""
