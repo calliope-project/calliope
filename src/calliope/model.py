@@ -554,11 +554,10 @@ class Model:
 
         self._start_window_idx = 0
         results_list.append(iteration_results.sel(timesteps=slice(windowstep, None)))
-        results = xr.concat(results_list, dim="timesteps", combine_attrs="no_conflicts")
+        results = xr.concat(results_list, dim="timesteps", combine_attrs="drop")
         results.attrs["termination_condition"] = ",".join(
             set(result.attrs["termination_condition"] for result in results_list)
         )
-
         return results
 
     def _recalculate_storage_initial(self, results: xr.Dataset) -> xr.DataArray:
@@ -624,8 +623,15 @@ class Model:
             i for i in range(latest_spore + 1, spores_config.number + 1)
         ]
 
+        if not baseline_results:
+            raise exceptions.ModelError(
+                "Cannot run SPORES without baseline results. "
+                "This issue may be caused by an infeasible baseline model."
+                "Ensure your baseline model can solve successfully by running it in `plan` mode."
+            )
+
         # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
-        constraining_cost = baseline_results.cost.groupby("costs").sum(..., min_count=1)
+        constraining_cost = baseline_results[self.config.build.objective]
         self.backend.update_parameter("spores_baseline_cost", constraining_cost)
         self.backend.set_objective("min_spores")
         # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
@@ -640,21 +646,28 @@ class Model:
             self._spores_update_model(results_list, spores_config)
 
             iteration_results = self.backend._solve(solver_config, warmstart=False)
+            if not iteration_results:
+                exceptions.warn(
+                    f"Stopping SPORES run after SPORE {spore} due to model infeasibility."
+                )
+                break
             results_list.append(iteration_results)
 
             self._spores_save_model(iteration_results, spores_config, spore)
 
-        spores_dim = pd.Index([latest_spore, *spore_range], name="spores")
-        results = xr.concat(results_list, dim=spores_dim, combine_attrs="no_conflicts")
-        results.attrs["termination_condition"] = ",".join(
-            set(result.attrs["termination_condition"] for result in results_list)
+        spores_dim = pd.Index(
+            ["baseline", *spore_range[: len(results_list) - 1]], name="spores"
         )
+        results = xr.concat(results_list, dim=spores_dim, combine_attrs="drop")
         if latest_spore > 0 and spores_config.continue_from_latest_results:
             results = xr.concat(
                 [self.results, results.drop_sel(spores=latest_spore)],
                 dim="spores",
                 combine_attrs="no_conflicts",
             )
+        results.attrs["termination_condition"] = ",".join(
+            set(result.attrs["termination_condition"] for result in results_list)
+        )
 
         return results
 
@@ -688,10 +701,9 @@ class Model:
             LOGGER.info(f"Optimisation model | Saving SPORE {spore} to file.")
 
             io.save_netcdf(
-                results.expand_dims(spores=[spore]).assign_attrs(
-                    **self._model_data.attrs,
-                    **{"timestamp_solve_complete": timestamp_solve_complete},
-                ),
+                results.expand_dims(spores=[spore])
+                .assign_attrs(**self._model_data.attrs)
+                .assign_attrs(timestamp_solve_complete=timestamp_solve_complete),
                 spores_config.save_per_spore_path / f"spore_{spore}.nc",
             )
         else:
@@ -717,7 +729,9 @@ class Model:
                 The SPORES configuration.
         """
 
-        def _score_integer(spores_techs: xr.DataArray) -> xr.DataArray:
+        def _score_integer(
+            spores_techs: xr.DataArray, old_score: xr.DataArray
+        ) -> xr.DataArray:
             """Integer scoring algorithm."""
             previous_cap = latest_results["flow_cap"].where(spores_techs)
 
@@ -733,9 +747,11 @@ class Model:
                 .fillna(0)
                 .where(spores_techs)
             )
-            return new_score
+            return new_score + old_score
 
-        def _score_relative_deployment(spores_techs: xr.DataArray) -> xr.DataArray:
+        def _score_relative_deployment(
+            spores_techs: xr.DataArray, old_score: xr.DataArray
+        ) -> xr.DataArray:
             """Relative deployment scoring algorithm."""
             previous_cap = latest_results["flow_cap"]
             if (
@@ -753,9 +769,11 @@ class Model:
                 .fillna(0)
                 .where(spores_techs)
             )
-            return new_score
+            return new_score + old_score
 
-        def _score_random(spores_techs: xr.DataArray) -> xr.DataArray:
+        def _score_random(
+            spores_techs: xr.DataArray, old_score: xr.DataArray
+        ) -> xr.DataArray:
             """Random scoring algorithm."""
             previous_cap = latest_results["flow_cap"].where(spores_techs)
             new_score = (
@@ -764,9 +782,11 @@ class Model:
                 .where(spores_techs)
             )
 
-            return new_score
+            return new_score + old_score
 
-        def _score_evolving_average(spores_techs: xr.DataArray) -> xr.DataArray:
+        def _score_evolving_average(
+            spores_techs: xr.DataArray, old_score: xr.DataArray
+        ) -> xr.DataArray:
             """Evolving average scoring algorithm."""
             previous_cap = latest_results["flow_cap"]
             evolving_average = sum(
@@ -774,10 +794,10 @@ class Model:
             ) / len(all_previous_results)
 
             relative_change = abs(evolving_average - previous_cap) / evolving_average
-            # first iteration
+
             if relative_change.sum() == 0:
                 # first iteration
-                new_score = _score_integer(spores_techs)
+                new_score = _score_integer(spores_techs, old_score)
             else:
                 # If capacity is exactly the same as the average, we give the relative difference an arbitrarily small value
                 # which will give it a _large_ score since we take the reciprocal of the change.
@@ -789,11 +809,13 @@ class Model:
                     cleaned_relative_change > 0, other=0
                 )
 
+            # We don't add on the old score in this algorithm
             return new_score
 
         latest_results = all_previous_results[-1]
         allowed_methods: dict[
-            config_schema.SPORES_SCORING_OPTIONS, Callable[[xr.DataArray], xr.DataArray]
+            config_schema.SPORES_SCORING_OPTIONS,
+            Callable[[xr.DataArray, xr.DataArray], xr.DataArray],
         ] = {
             "integer": _score_integer,
             "relative_deployment": _score_relative_deployment,
@@ -808,10 +830,11 @@ class Model:
             ).notnull()
             & self.inputs.definition_matrix
         )
-        new_score = allowed_methods[spores_config.scoring_algorithm](spores_techs)
-
-        new_score += self.backend.get_parameter(
+        old_score = self.backend.get_parameter(
             "spores_score", as_backend_objs=False
         ).fillna(0)
+        new_score = allowed_methods[spores_config.scoring_algorithm](
+            spores_techs, old_score
+        )
 
         self.backend.update_parameter("spores_score", new_score)

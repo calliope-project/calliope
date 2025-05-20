@@ -163,6 +163,8 @@ class TestOperateMode:
 
 
 class TestSporesMode:
+    SPORES_OVERRIDES = "spores,two_hours,simple_supply_and_supply_plus,investment_costs"
+
     @contextmanager
     def caplog_session(self, request):
         """caplog for class/session-scoped fixtures.
@@ -175,17 +177,9 @@ class TestSporesMode:
             yield pytest.LogCaptureFixture(request.node, _ispytest=True)
 
     @pytest.fixture(scope="class")
-    def plan_model(self):
-        """Solve in plan mode for the same overrides, to check against operate mode model."""
-        model = build_model({}, "simple_supply,operate,var_costs,investment_costs")
-        model.build(mode="plan")
-        model.solve()
-        return model
-
-    @pytest.fixture(scope="class")
     def spores_model_and_log(self, request):
         """Iterate 2 times in SPORES mode."""
-        model = build_model({}, "spores,investment_costs")
+        model = build_model({}, self.SPORES_OVERRIDES)
         model.build(mode="spores")
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
@@ -200,7 +194,7 @@ class TestSporesMode:
     )
     def spores_model_and_log_algorithms(self, request):
         """Iterate 2 times in SPORES mode using different scoring algorithms."""
-        model = build_model({}, "spores,investment_costs")
+        model = build_model({}, self.SPORES_OVERRIDES)
         model.build(mode="spores")
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
@@ -212,7 +206,7 @@ class TestSporesMode:
     @pytest.fixture(scope="class")
     def spores_model_continue_from_plan_and_log(self, request):
         """Iterate 2 times in SPORES mode having pre-computed the baseline results."""
-        model = build_model({}, "spores,investment_costs")
+        model = build_model({}, self.SPORES_OVERRIDES)
         model.build(mode="plan")
         model.solve()
 
@@ -249,7 +243,7 @@ class TestSporesMode:
     def spores_model_save_per_spore_and_log(self, spores_save_per_spore_path, request):
         """Iterate 2 times in SPORES mode and save to file each time."""
 
-        model = build_model({}, "spores,investment_costs")
+        model = build_model({}, self.SPORES_OVERRIDES)
         model.build(mode="spores")
 
         with self.caplog_session(request) as caplog:
@@ -265,7 +259,7 @@ class TestSporesMode:
     )
     def spores_model_with_tracker(self, request):
         """Iterate 2 times in SPORES mode with a SPORES score tracking parameter."""
-        model = build_model({}, "spores,spores_tech_tracking,investment_costs")
+        model = build_model({}, f"{self.SPORES_OVERRIDES},spores_tech_tracking")
         model.build(mode="spores")
         model.solve(spores={"scoring_algorithm": request.param})
 
@@ -303,6 +297,60 @@ class TestSporesMode:
         """Solving in spores mode should lead to an optimal solution."""
         spores_model, _ = spores_model_and_log_algorithms
         assert spores_model.results.attrs["termination_condition"] == "optimal"
+
+    def test_spores_fail_without_baseline(self):
+        """You can't have SPORES without some initial, baseline results to work with."""
+        model = build_model({}, self.SPORES_OVERRIDES)
+        model.build()
+        with pytest.raises(
+            calliope.exceptions.ModelError,
+            match="Cannot run SPORES without baseline results.",
+        ):
+            model.solve(spores={"skip_baseline_run": True})
+
+    @pytest.mark.parametrize(
+        "fixture",
+        [
+            "spores_model_and_log",
+            "spores_model_skip_baseline_and_log",
+            "spores_model_save_per_spore_and_log",
+        ],
+    )
+    def test_spores_constraining_cost_is_baseline_obj(
+        self, request, simple_supply_and_supply_plus, fixture
+    ):
+        """No matter how SPORES are initiated, the constraining cost (pre application of slack) should be the plan mode objective function value."""
+        model, _ = request.getfixturevalue(fixture)
+        assert (
+            model.backend.get_parameter(
+                "spores_baseline_cost", as_backend_objs=False
+            ).item()
+            == simple_supply_and_supply_plus._model_data["min_cost_optimisation"].item()
+        )
+
+    @pytest.mark.filterwarnings(
+        "ignore:(?s).*Model solution was non-optimal:calliope.exceptions.BackendWarning"
+    )
+    def test_spores_break_on_infeasible(self):
+        """No matter how SPORES are initiated, the constraining cost (pre application of slack) should be the plan mode objective function value."""
+        model = build_model({}, self.SPORES_OVERRIDES)
+        # Add a negation, which makes the problem infeasible due to it being a minimisation problem that goes to minus infinity.
+        infeasible_expression = (
+            "sum(flow_cap * -1 * spores_score, over=[nodes, techs, carriers])"
+        )
+        model.build(
+            add_math_dict={
+                "objectives.min_spores.equations": [
+                    {"expression": infeasible_expression}
+                ]
+            }
+        )
+        with pytest.warns(
+            calliope.exceptions.ModelWarning, match="Stopping SPORES run after SPORE 1"
+        ):
+            model.solve()
+        # We still get results, up to the point of infeasibility
+        assert not set(model.results.spores.values).symmetric_difference(["baseline"])
 
     def test_spores_mode_3_results(self, spores_model_and_log_algorithms):
         """Solving in spores mode should lead to 3 sets of results."""
@@ -475,7 +523,7 @@ class TestSporesMode:
         """Can only run the `relative_deployment` algorithm if all techs have flow_cap_max."""
         model = build_model(
             {"techs.test_supply_elec.flow_cap_max": np.inf},
-            "spores,spores_tech_tracking,investment_costs",
+            f"{self.SPORES_OVERRIDES},spores_tech_tracking",
         )
         model.build(mode="spores")
 

@@ -484,7 +484,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self.objective = name
         self.log("objectives", name, "Objective activated.", level="info")
 
-    def _create_obj_list(
+    def _create_obj_list(  # noqa: D102, override
         self, key: str, component_type: backend_model._COMPONENTS_T
     ) -> None:
         return None
