@@ -554,11 +554,13 @@ class Model:
 
         self._start_window_idx = 0
         results_list.append(iteration_results.sel(timesteps=slice(windowstep, None)))
-        results = xr.concat(results_list, dim="timesteps", combine_attrs="no_conflicts")
+        results = xr.concat(results_list, dim="timesteps", combine_attrs="drop")
         results.attrs["termination_condition"] = ",".join(
             set(result.attrs["termination_condition"] for result in results_list)
         )
-
+        results.attrs["objective_function_value"] = sum(
+            result.attrs["objective_function_value"] for result in results_list
+        )
         return results
 
     def _recalculate_storage_initial(self, results: xr.Dataset) -> xr.DataArray:
