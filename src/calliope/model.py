@@ -626,7 +626,7 @@ class Model:
         if not baseline_results:
             raise exceptions.ModelError(
                 "Cannot run SPORES without baseline results. "
-                "This issue may be caused by an infeasible baseline model. "
+                "This issue may be caused by an infeasible baseline model."
                 "Ensure your baseline model can solve successfully by running it in `plan` mode."
             )
 
@@ -636,7 +636,6 @@ class Model:
         self.backend.set_objective("min_spores")
         # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
         results_list: list[xr.Dataset] = [baseline_results]
-
         LOGGER.info(
             f"Optimisation model | Running SPORES with `{spores_config.scoring_algorithm}` scoring algorithm."
         )
@@ -744,7 +743,7 @@ class Model:
             new_score = (
                 # Where capacity was deployed more than the minimal relevant size, assign an integer penalty (score)
                 previous_cap.where(previous_cap > min_relevant_size)
-                .clip(min=1, max=1)
+                .clip(min=1000, max=1000)
                 .fillna(0)
                 .where(spores_techs)
             )
@@ -779,7 +778,10 @@ class Model:
             previous_cap = latest_results["flow_cap"].where(spores_techs)
             new_score = (
                 previous_cap.fillna(0)
-                .where(previous_cap.isnull(), other=np.random.rand(*previous_cap.shape))
+                .where(
+                    previous_cap.isnull(),
+                    other=np.random.choice([0, 1000], size=(previous_cap.shape)),
+                )
                 .where(spores_techs)
             )
 

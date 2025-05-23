@@ -314,7 +314,7 @@ Instead, links are defined as separate transmission technologies in `techs`, inc
 
 ### Renaming parameters/decision variables without core changes in function
 
-You may have a already noticed new parameter names being referenced in examples of other changes.
+You may have already noticed new parameter names being referenced in examples of other changes.
 We have renamed parameters to improve clarity in their function and to make it clear that although Calliope is designed to model energy systems, its flow representation is suitable for modelling any kind of flow (water, waste, etc.).
 
 Here are the main changes to parameter/decision variable names that are not linked to changes in functionality (those are detailed elsewhere on this page):

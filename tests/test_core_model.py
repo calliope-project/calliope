@@ -219,7 +219,7 @@ class TestSporesMode:
         return model, log
 
     @pytest.fixture(scope="class")
-    def spores_model_continue_from_spores_and_log(self, request, spores_model_and_log):
+    def spores_model_continue_from_spores_and_log(self, request):
         """Iterate 2 times in SPORES mode having pre-computed the baseline results."""
 
         model = build_model({}, self.SPORES_OVERRIDES)

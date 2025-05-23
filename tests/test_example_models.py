@@ -14,7 +14,7 @@ from .common.util import check_error_or_warning
 approx = pytest.approx
 
 
-class TestModelPreproccessing:
+class TestModelPreprocessing:
     def test_preprocess_national_scale(self):
         calliope.examples.national_scale()
 
