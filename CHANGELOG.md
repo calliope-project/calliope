@@ -1,5 +1,17 @@
 ## 0.7.0.dev7
 
+### User-facing changes
+
+|new| documentation on SPORES-specific configuration options (#750, #752).
+
+|fixed| SPORES mode models not being appropriately serialised on saving to NetCDF (#751, #752).
+
+|new| backend `get_objective` method, similar to `get_global_expression` etc. (#761)
+
+|new| arrays in model results containing the objective function value of solved models.
+Arrays have the name of the corresponding objective in math.
+E.g., `model.results.min_cost_optimisation` will give the objective function value for the base math objective.
+
 ### Internal changes
 
 

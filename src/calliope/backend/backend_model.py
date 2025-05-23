@@ -805,14 +805,13 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             xr.Dataset: Contains the arrays for upper ("ub", a.k.a. "max") and lower ("lb", a.k.a. "min") variable bounds.
         """
 
-    @abstractmethod
     def get_global_expression(
-        self, name: str, as_backend_objs: bool = True, eval_body: bool = True
+        self, name: str, as_backend_objs: bool = True, eval_body: bool = False
     ) -> xr.DataArray:
         """Extract global expression array from backend dataset.
 
         Args:
-            name (str): Name of global expression
+            name (str): Name of global expression.
             as_backend_objs (bool, optional): TODO: hide this and create a method to edit expressions that handles differences in interface APIs.
                 If True, will keep the array entries as backend interface objects,
                 which can be updated to update the underlying model.
@@ -820,14 +819,71 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 If the model has not been successfully optimised, expression values will all be provided as strings.
                 Defaults to True.
             eval_body (bool, optional):
-                If True and as_backend_objs is False, will attempt to evaluate the expression.
+                If True and `as_backend_objs is False`, will attempt to evaluate the expression.
                 If the model has been optimised, this attempt will produce a numeric value.
                 If the model has not yet been optimised, this attempt will fall back on the same as
                 if `eval_body` was set to False, i.e. a string representation of the linear expression.
-                Defaults to True.
+                Defaults to False.
 
         Returns:
             xr.DataArray: global expression array.
+        """
+        return self._get_expression(
+            name, as_backend_objs, eval_body, "global_expressions"
+        )
+
+    def get_objective(
+        self, name: str, as_backend_objs: bool = True, eval_body: bool = False
+    ) -> xr.DataArray:
+        """Extract objective from backend dataset.
+
+        Args:
+            name (str): Name of objective.
+            as_backend_objs (bool, optional): TODO: hide this and create a method to edit expressions that handles differences in interface APIs.
+                If True, will keep the array entries as backend interface objects,
+                which can be updated to update the underlying model.
+                Otherwise, objective values are given directly.
+                If the model has not been successfully optimised, the objective will be provided as a string.
+                Defaults to True.
+            eval_body (bool, optional):
+                If True and `as_backend_objs` is False, will attempt to evaluate the objective.
+                If the model has been optimised, this attempt will produce a numeric value.
+                If the model has not yet been optimised, this attempt will fall back on the same as
+                if `eval_body` was set to False, i.e. a string representation of the linear expression.
+                Defaults to False.
+
+        Returns:
+            xr.DataArray: objective array.
+        """
+        return self._get_expression(name, as_backend_objs, eval_body, "objectives")
+
+    @abstractmethod
+    def _get_expression(
+        self,
+        name: str,
+        as_backend_objs: bool,
+        eval_body: bool,
+        component_type: Literal["global_expressions", "objectives"],
+    ):
+        """Extract an array of expressions from the backend dataset.
+
+        Args:
+            name (str): Name of expression array.
+            as_backend_objs (bool): TODO: hide this and create a method to edit expressions that handles differences in interface APIs.
+                If True, will keep the array entries as backend interface objects,
+                which can be updated to update the underlying model.
+                Otherwise, expression values are given directly.
+                If the model has not been successfully optimised, the expression will be provided as a string.
+            eval_body (bool):
+                If True and `as_backend_objs` is False, will attempt to evaluate the expression.
+                If the model has been optimised, this attempt will produce a numeric value.
+                If the model has not yet been optimised, this attempt will fall back on the same as
+                if `eval_body` was set to False, i.e. a string representation of the linear expression.
+            component_type: (["global_expressions", "objectives"]):
+                Type of expression to be accessed.
+
+        Returns:
+            xr.DataArray: expression array.
         """
 
     @abstractmethod
@@ -986,6 +1042,13 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             for name_, expr in self.global_expressions.items()
             if expr.notnull().any()
         }
+        all_objectives = {
+            name_: _drop_attrs(
+                self.get_objective(name_, as_backend_objs=False, eval_body=True)
+            )
+            for name_, expr in self.objectives.items()
+            if expr.notnull().any()
+        }
 
         all_shadow_prices = {
             f"shadow_price_{constraint}": self.shadow_prices.get(constraint)
@@ -993,7 +1056,12 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         }
 
         results = xr.Dataset(
-            {**all_variables, **all_global_expressions, **all_shadow_prices}
+            {
+                **all_variables,
+                **all_global_expressions,
+                **all_shadow_prices,
+                **all_objectives,
+            }
         ).astype(float)
 
         return results

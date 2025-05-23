@@ -376,15 +376,11 @@ overrides:
 
   spores:
     config:
-      init.time_subset: ["2005-01-01", "2005-01-01"]
       build.mode: spores
       solve.spores:
         number: 2
     parameters:
       spores_slack: 0.1
-    nodes:
-      a.techs: { test_supply_elec, test_supply_plus }
-      b.techs: { test_supply_elec, test_supply_plus }
 
   spores_tech_tracking:
     config.solve:
