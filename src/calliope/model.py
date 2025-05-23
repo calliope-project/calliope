@@ -719,7 +719,7 @@ class Model:
             new_score = (
                 # Where capacity was deployed more than the minimal relevant size, assign an integer penalty (score)
                 previous_cap.where(previous_cap > min_relevant_size)
-                .clip(min=1, max=1)
+                .clip(min=1000, max=1000)
                 .fillna(0)
                 .where(spores_techs)
             )
@@ -754,7 +754,10 @@ class Model:
             previous_cap = latest_results["flow_cap"].where(spores_techs)
             new_score = (
                 previous_cap.fillna(0)
-                .where(previous_cap.isnull(), other=np.random.rand(*previous_cap.shape))
+                .where(
+                    previous_cap.isnull(),
+                    other=np.random.choice([0, 1000], size=(previous_cap.shape)),
+                )
                 .where(spores_techs)
             )
 
