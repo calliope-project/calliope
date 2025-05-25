@@ -263,6 +263,27 @@ class TestGetters:
             .all()
         )
 
+    def test_get_global_objective_as_str(self, solved_model_cls):
+        """Resolving backend objectives produces strings."""
+        obj = solved_model_cls.backend.get_objective(
+            "min_cost_optimisation", as_backend_objs=False
+        )
+        assert isinstance(obj.item(), str)
+
+    def test_get_objective_as_val(self, solved_model_cls):
+        """Evaluating backend objective of solved models produces the objective function value in the optimal solution."""
+        obj = solved_model_cls.backend.get_objective(
+            "min_cost_optimisation", as_backend_objs=False, eval_body=True
+        )
+        assert isinstance(obj.item(), float)
+
+    def test_get_objective_as_vals_no_solve(self, built_model_cls_longnames):
+        """Evaluating backend objective of built but not solved models produces their string representation."""
+        obj = built_model_cls_longnames.backend.get_objective(
+            "min_cost_optimisation", as_backend_objs=False, eval_body=True
+        )
+        assert isinstance(obj.item(), str)
+
     def test_timeseries_dtype(self, built_model_cls_longnames):
         """Getting verbose strings leads to the timeseries being stringified then converted back to datetime."""
         expr = built_model_cls_longnames.backend.get_global_expression(

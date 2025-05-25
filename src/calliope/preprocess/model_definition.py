@@ -185,9 +185,9 @@ def _load_overrides_from_scenario(
     return list(scenario_overrides)
 
 
-def _log_overrides(init_model_def: AttrDict, overriden_model_def: AttrDict) -> None:
+def _log_overrides(init_model_def: AttrDict, overridden_model_def: AttrDict) -> None:
     init_model_def_flat = init_model_def.as_dict_flat()
-    for key, val in overriden_model_def.as_dict_flat().items():
+    for key, val in overridden_model_def.as_dict_flat().items():
         if key in init_model_def_flat and init_model_def_flat[key] != val:
             message = (
                 f"Override applied to `{key}`: {init_model_def_flat[key]} -> {val}"

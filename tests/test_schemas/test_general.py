@@ -110,6 +110,7 @@ class TestCalliopeBaseModel:
         return pydantic.create_model(
             "TestModel1",
             __base__=general.CalliopeBaseModel,
+            __config__={"title": "TITLE"},
             foo=(str, "bar"),
             foobar=(int, 1),
         )
@@ -119,6 +120,7 @@ class TestCalliopeBaseModel:
         return pydantic.create_model(
             "TestModel2",
             __base__=general.CalliopeBaseModel,
+            __config__={"title": "TITLE 2"},
             nested=(config_model_flat, config_model_flat()),
             top_level_foobar=(int, 10),
         )
@@ -128,6 +130,7 @@ class TestCalliopeBaseModel:
         return pydantic.create_model(
             "TestModel3",
             __base__=general.CalliopeBaseModel,
+            __config__={"title": "TITLE 3"},
             extra_nested=(config_model_nested, config_model_nested()),
         )
 
@@ -195,20 +198,18 @@ class TestCalliopeBaseModel:
         assert model.model_dump() == model_dict
 
     @pytest.mark.parametrize(
-        ("to_update", "level"),
+        "to_update",
         [
-            ({"extra_nested.nested.foobar": "foo"}, 1),
-            ({"extra_nested.top_level_foobar": "foo"}, 2),
+            {"extra_nested.nested.foobar": "foo"},
+            {"extra_nested.top_level_foobar": "foo"},
         ],
     )
     def test_update_extra_nested_validation_error(
-        self, config_model_double_nested, to_update, level
+        self, config_model_double_nested, to_update
     ):
         model = config_model_double_nested()
 
-        with pytest.raises(
-            pydantic.ValidationError, match=f"1 validation error for TestModel{level}"
-        ):
+        with pytest.raises(pydantic.ValidationError, match="1 validation error"):
             model.update(to_update)
 
     @pytest.mark.parametrize(
@@ -244,14 +245,14 @@ class TestCalliopeBaseModel:
         sub_model = pydantic.create_model(
             "TestSubModel",
             __base__=general.CalliopeBaseModel,
-            # model_config={"title": "TITLE"},
+            __config__={"title": "TITLE"},
             foo=(str, "bar"),
             foobar=(int, 1),
         )
         model = pydantic.create_model(
             "TestModel",
             __base__=general.CalliopeBaseModel,
-            # model_config={"title": "TITLE 2"},
+            __config__={"title": "TITLE 2"},
             nested=(sub_model, sub_model()),
         )
         return model

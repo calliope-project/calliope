@@ -1,12 +1,30 @@
 constraints:
   total_system_cost_max:
     description: >
-      Limit total system _monetary_ cost in SPORES mode.
-      Applies a maximum relaxation to the system cost compared to the least-cost feasible option.
-    foreach: [costs]
-    where: "[monetary] in costs"
+      Limit total system cost in SPORES mode.
+      Applies a maximum relaxation to the system cost compared to the least-cost objective function value.
     equations:
-      - expression: sum(cost, over=[nodes, techs]) <= spores_baseline_cost * (1 + spores_slack)
+      # NOTE: LHS expressions are an exact match to the `min_cost_optimisation` objective expression.
+      - where: "any(cost, over=[nodes, techs, costs])"
+        expression: >-
+          sum(
+            sum(cost, over=[nodes, techs])
+            * objective_cost_weights,
+            over=costs
+          ) + $unmet_demand <= spores_baseline_cost * (1 + spores_slack)
+      - where: "NOT any(cost, over=[nodes, techs, costs])"
+        expression: $unmet_demand <= spores_baseline_cost * (1 + spores_slack)
+    sub_expressions:
+      unmet_demand:
+        - where: "config.ensure_feasibility=True"
+          expression: >-
+            sum(
+              sum(unmet_demand - unused_supply, over=[carriers, nodes])
+              * timestep_weights,
+              over=timesteps
+            ) * bigM
+        - where: "NOT config.ensure_feasibility=True"
+          expression: "0"
 
 global_expressions:
   spores_score_cumulative:
