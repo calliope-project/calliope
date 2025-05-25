@@ -1,11 +1,15 @@
 """Test the model math handler."""
 
+import logging
+from pathlib import Path
+
 import pytest
 
 import calliope
+from calliope import exceptions
 from calliope.io import to_yaml
 from calliope.preprocess import model_math
-from calliope.schemas import config_schema
+from calliope.schemas import config_schema, math_schema
 
 
 @pytest.fixture(scope="module")
@@ -31,7 +35,7 @@ def user_math_path(def_path, user_math):
     return "custom-math.yaml"
 
 
-class TestLoadMathModes:
+class TestInitMath:
     @pytest.fixture(scope="class", params=["default", "w_extra"])
     def math_config(self, request, user_math_path):
         config = config_schema.InitMath().model_dump()
@@ -59,3 +63,79 @@ class TestLoadMathModes:
         """Extra math should be loaded with no alterations."""
         if math_config.extra:
             assert math_data["user_math"] == user_math
+
+
+class TestBuildMath:
+    @pytest.fixture(scope="class")
+    def test_model(self):
+        """Simulate users adding extra math using the urban example model."""
+        calliope_dir = Path(calliope.__file__).parent
+        additional = calliope_dir / "example_models/urban_scale/additional_math.yaml"
+        alternative_base = calliope_dir / "math/plan.yaml"
+
+        return calliope.examples.urban_scale(
+            override_dict={
+                "config": {
+                    "init.math": {
+                        "base": "plan",
+                        "pre_defined": ["plan", "operate"],
+                        "extra": {
+                            "additional_math": str(additional.absolute()),
+                            "alternative_base": str(alternative_base.absolute()),
+                        },
+                    },
+                    "build": {"mode": "base", "extra_math": []},
+                }
+            }
+        )
+
+    @pytest.fixture(scope="class")
+    def config(self, test_model):
+        return test_model.config
+
+    @pytest.fixture(scope="class")
+    def math_options(self, test_model):
+        return test_model._def.math
+
+    @pytest.mark.parametrize(
+        ("math_order", "config_update"),
+        [
+            # Default
+            (["plan"], {}),
+            # Default and extra
+            (["plan", "additional_math"], {"build.extra_math": ["additional_math"]}),
+            # Default, mode and extra
+            (
+                ["plan", "operate", "additional_math"],
+                {"build": {"mode": "operate", "extra_math": ["additional_math"]}},
+            ),
+            # Alternative base, mode and extra
+            (
+                ["alternative_base", "operate", "additional_math"],
+                {
+                    "init.math.base": "alternative_base",
+                    "build": {"mode": "operate", "extra_math": ["additional_math"]},
+                },
+            ),
+        ],
+    )
+    def test_build_math(self, caplog, config, math_options, math_order, config_update):
+        """Math builds must respect the order: base -> mode -> extra."""
+        math = calliope.AttrDict()
+        for i in math_order:
+            math.union(math_options[i], allow_override=True)
+        expected_math = math_schema.MathSchema(**math).model_dump()
+        new_config = config.update(config_update)
+        with caplog.at_level(logging.INFO):
+            built_math = model_math.build_applied_math(new_config, math_options)
+        assert expected_math == built_math
+        assert str(math_order) in caplog.text
+
+    def test_math_name_error(self, config, math_options):
+        """Incorrect math name errors must be user-friendly."""
+        wrong_config = config.update({"build.extra_math": ["foobar_fail"]})
+        with pytest.raises(
+            exceptions.ModelError,
+            match="Requested math 'foobar_fail' was not initialised.",
+        ):
+            model_math.build_applied_math(wrong_config, math_options)
