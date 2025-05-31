@@ -4,7 +4,6 @@ from pathlib import Path
 import xarray as xr
 
 import calliope
-import calliope.backend
 from calliope import preprocess
 
 
@@ -82,7 +81,7 @@ def build_lp(
     model: calliope.Model,
     outfile: str | Path,
     math_data: dict[str, dict | list] | None = None,
-) -> "calliope.backend.backend_model.BackendModel":
+) -> None:
     """
     Write a barebones LP file with which to compare in tests.
     All model parameters and variables will be loaded automatically, as well as a dummy objective if one isn't provided as part of `math`.
@@ -138,4 +137,3 @@ def build_lp(
 
     # reintroduce the trailing newline since both Pyomo and file formatters love them.
     Path(outfile).write_text("\n".join(stripped_lines) + "\n")
-    return model.backend

@@ -24,15 +24,15 @@ ORDERED_COMPONENTS_T = typing.Literal[
 ]
 
 
-def _load_internal_math(math_to_add: str) -> AttrDict:
+def _load_internal_math(filename: str) -> AttrDict:
     """Load standard Calliope math modes."""
-    file = importlib.resources.files("calliope") / "math" / f"{math_to_add}.yaml"
+    file = importlib.resources.files("calliope") / "math" / f"{filename}.yaml"
     return read_rich_yaml(str(file))
 
 
-def _load_user_math(math_to_add: str, model_def_path: str | Path | None) -> AttrDict:
+def _load_user_math(file_path: str, model_def_path: str | Path | None) -> AttrDict:
     """Load user defined math modes."""
-    file = relative_path(model_def_path, math_to_add)
+    file = relative_path(model_def_path, file_path)
     return read_rich_yaml(str(file))
 
 
