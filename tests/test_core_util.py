@@ -11,7 +11,7 @@ import pytest
 
 import calliope
 from calliope.io import read_rich_yaml
-from calliope.schemas.math_schema import CalliopeMathDef
+from calliope.schemas.math_schema import MathSchema
 from calliope.util import schema
 from calliope.util.generate_runs import generate_runs
 from calliope.util.logging import log_time
@@ -194,7 +194,7 @@ class TestValidateDict:
         base_math.union(
             read_rich_yaml(dict_path, allow_override=True), allow_override=True
         )
-        CalliopeMathDef(**base_math)
+        MathSchema(**base_math)
 
 
 class TestExtractFromSchema:

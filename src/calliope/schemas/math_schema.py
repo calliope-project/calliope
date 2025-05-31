@@ -9,72 +9,37 @@ from pydantic import Field
 from calliope.schemas.general import AttrStr, CalliopeBaseModel, NumericVal, UniqueList
 
 
-class EquationItem(CalliopeBaseModel):
-    """Equation item schema.
+class ExpressionItem(CalliopeBaseModel):
+    """Schema for equations, subexpressions and slices."""
 
-    Equations may define conditions (`where`) defining on which index items in the
-    product of sets (`foreach`) they will be applied. Conditions must be set up such
-    that a maximum of one equation can be applied per index item.
-    """
-
-    where: str | None = None
-    """Condition to determine whether the accompanying expression is built.
-    At all if `foreach` is not given, or for specific index items within the product
-    of the sets given by `foreach`."""
+    where: str = "True"
+    """Condition to determine whether the accompanying expression is built."""
     expression: str
-    """Equation expression valid for this component in the form LHS OPERATOR RHS, where
-    LHS and RHS are math expressions and OPERATOR is one of [==, <=, >=]."""
-
-
-class SubExpressionItem(CalliopeBaseModel):
-    """Sub-expression item schema.
-
-    Math sub-expressions which are used to replace any instances in which they are
-    referenced in a component's equations. They must be referenced by their
-    name preceded with the "$" symbol, e.g., `foo` in `$foo == 1` or `$foo + 1`.
+    """Expression for this component.
+    - Equations: LHS OPERATOR RHS, where LHS and RHS are math expressions and OPERATOR is one of [==, <=, >=].
+    - Subexpressions: be one term or a combination of terms using the operators [+, -, *, /, **].
+    - Slices: a list of set items or a call to a helper function.
     """
-
-    where: str | None = None
-    """Condition to determine whether the accompanying sub-expression is built."""
-    expression: str
-    """Math sub-expression which can be one term or a combination of terms using the
-    operators [+, -, *, /, **]."""
-
-
-class SliceItem(CalliopeBaseModel):
-    """Slice item schema.
-
-    Array index slices which are used to replace any instances in which they are
-    referenced in a component's equations or sub-expressions. They must be referenced
-    by their name preceded with the "$" symbol, e.g., `foo` in `flow_out_eff[techs=$foo]`.
-    """
-
-    where: str | None = None
-    """Condition to determine whether the accompanying index slice is built."""
-    expression: str
-    """Index slice expression, such as a list of set items or a call to a helper
-    function."""
 
 
 class MathComponent(CalliopeBaseModel):
     """Generic math component class."""
 
-    title: str | None = None
+    title: str = ""
     """The component long name, for use in visualisation."""
-    description: str | None = None
+    description: str = ""
     """A verbose description of the component."""
     active: bool = Field(default=True)
-    """If False, this component will be ignored entirely at the optimisation problem
-    build phase."""
+    """If False, this component will be ignored during the build phase."""
 
 
 class MathIndexedComponent(MathComponent):
     """Generic indexed component class."""
 
-    foreach: UniqueList[AttrStr] | None = None
+    foreach: UniqueList[AttrStr] = Field(default=[])
     """Sets (a.k.a. dimensions) of the model over which the math formulation component
     will be built."""
-    where: str | None = None
+    where: str = "True"
     """Top-level condition to determine whether the component exists in this
     optimisation problem. At all if `foreach` is not given, or for specific index items
     within the product of the sets given by `foreach`."""
@@ -83,11 +48,11 @@ class MathIndexedComponent(MathComponent):
 class Constraint(MathIndexedComponent):
     """Schema for named constraints."""
 
-    equations: list[EquationItem]
+    equations: list[ExpressionItem]
     """Constraint math equations."""
-    sub_expressions: dict[AttrStr, list[SubExpressionItem]] | None = None
+    sub_expressions: dict[AttrStr, list[ExpressionItem]] = Field(default={})
     """Constraint named sub-expressions."""
-    slices: dict[AttrStr, list[SliceItem]] | None = None
+    slices: dict[AttrStr, list[ExpressionItem]] = Field(default={})
     """Constraint named index slices."""
 
 
@@ -119,15 +84,15 @@ class GlobalExpression(MathIndexedComponent):
     be defined above `B`.
     """
 
-    unit: str | None = None
+    unit: str = ""
     """Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)."""
     default: NumericVal | None = None
     """If set, will be the default value for the expression."""
-    equations: list[EquationItem]
+    equations: list[ExpressionItem]
     """Global expression math equations."""
-    sub_expressions: dict[AttrStr, list[SubExpressionItem]] | None = None
+    sub_expressions: dict[AttrStr, list[ExpressionItem]] = Field(default={})
     """Global expression named sub-expressions."""
-    slices: dict[AttrStr, list[SliceItem]] | None = None
+    slices: dict[AttrStr, list[ExpressionItem]] = Field(default={})
     """Global expression named index slices."""
 
 
@@ -138,9 +103,9 @@ class Bounds(CalliopeBaseModel):
     a single value that is applied across all decision variable index items.
     """
 
-    max: AttrStr | NumericVal | None = None
+    max: AttrStr | NumericVal
     """Decision variable upper bound, either as a reference to an input parameter or as a number."""
-    min: AttrStr | NumericVal | None = None
+    min: AttrStr | NumericVal
     """Decision variable lower bound, either as a reference to an input parameter or as a number."""
 
 
@@ -151,7 +116,7 @@ class Variable(MathIndexedComponent):
     objective for it to exist in the optimisation problem that is sent to the solver.
     """
 
-    unit: str | None = None
+    unit: str = ""
     """Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)."""
     default: NumericVal | None = None
     """If set, will be the default value for the variable."""
@@ -168,33 +133,34 @@ class Objective(MathComponent):
     will be activated for the optimisation problem.
     """
 
-    equations: list[EquationItem]
+    equations: list[ExpressionItem]
     """Objective math equations."""
-    sub_expressions: dict[AttrStr, list[SubExpressionItem]] | None = None
+    sub_expressions: dict[AttrStr, list[ExpressionItem]] = Field(default={})
     """Objective named sub-expressions."""
-    slices: dict[AttrStr, list[SliceItem]] | None = None
+    slices: dict[AttrStr, list[ExpressionItem]] = Field(default={})
     """Objective named index slices."""
     sense: Literal["minimise", "maximise", "minimize", "maximize"]
     """Whether the objective function should be minimised or maximised in the
     optimisation."""
 
 
-class CalliopeMathDef(CalliopeBaseModel):
-    """Calliope mathematical definition.
+class MathSchema(CalliopeBaseModel):
+    """Mathematical definition of Calliope math.
 
-    All options available to formulate math to use in solving an optimisation problem
-    with Calliope.
+    Contains mathematical programming components available for optimising with Calliope.
+    Can contain partial definitions if they are meant to be layered on top of another.
+    E.g.: layering 'plan' and 'operate' math.
     """
 
     model_config = {"title": "Model math schema"}
 
-    constraints: dict[AttrStr, Constraint]
-    """All constraints to apply to the optimisation problem."""
-    piecewise_constraints: dict[AttrStr, PiecewiseConstraint] | None = None
-    """All _piecewise_ constraints to apply to the optimisation problem."""
-    global_expressions: dict[AttrStr, GlobalExpression] | None = None
-    """All global expressions that can be applied to the optimisation problem."""
-    variables: dict[AttrStr, Variable]
+    variables: dict[AttrStr, Variable] = Field(default={})
     """All decision variables to include in the optimisation problem."""
-    objectives: dict[AttrStr, Objective]
+    global_expressions: dict[AttrStr, GlobalExpression] = Field(default={})
+    """All global expressions that can be applied to the optimisation problem."""
+    constraints: dict[AttrStr, Constraint] = Field(default={})
+    """All constraints to apply to the optimisation problem."""
+    piecewise_constraints: dict[AttrStr, PiecewiseConstraint] = Field(default={})
+    """All _piecewise_ constraints to apply to the optimisation problem."""
+    objectives: dict[AttrStr, Objective] = Field(default={})
     """Possible objectives to apply to the optimisation problem."""
