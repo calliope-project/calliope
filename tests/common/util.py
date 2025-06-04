@@ -1,10 +1,8 @@
 import os
-from pathlib import Path
 
 import xarray as xr
 
 import calliope
-from calliope import preprocess
 
 
 def build_test_model(
@@ -75,65 +73,3 @@ def check_variable_exists(
         var_exists = var_exists.sel(**slices)
 
     return var_exists.any()
-
-
-def build_lp(
-    model: calliope.Model,
-    outfile: str | Path,
-    math_data: dict[str, dict | list] | None = None,
-) -> None:
-    """
-    Write a barebones LP file with which to compare in tests.
-    All model parameters and variables will be loaded automatically, as well as a dummy objective if one isn't provided as part of `math`.
-    Everything else to be added to the LP file must be defined in `math`.
-
-    Args:
-        model (calliope.Model): Calliope model.
-        outfile (str | Path): Path to LP file.
-        math (dict | None, optional): All constraint/global expression/objective math to apply. Defaults to None.
-    """
-    math = preprocess.build_applied_math(model.math_priority, model._def.math)
-
-    math_to_add = calliope.AttrDict()
-    if isinstance(math_data, dict):
-        for component_group, component_math in math_data.items():
-            if isinstance(component_math, dict):
-                math_to_add.union({component_group: component_math})
-            elif isinstance(component_math, list):
-                for name in component_math:
-                    math_to_add.set_key(
-                        f"{component_group}.{name}", math[component_group][name]
-                    )
-    if math_data is None or "objectives" not in math_to_add.keys():
-        obj = {
-            "dummy_obj": {"equations": [{"expression": "1 + 1"}], "sense": "minimize"}
-        }
-        math_to_add.union({"objectives": obj})
-        obj_to_activate = "dummy_obj"
-    else:
-        obj_to_activate = list(math_to_add["objectives"].keys())[0]
-    del math["constraints"]
-    del math["objectives"]
-    math.union(math_to_add, allow_override=True)
-
-    model.build(
-        add_math_dict=math,
-        ignore_base_math=True,
-        objective=obj_to_activate,
-        extra_math=[],
-        pre_validate_math_strings=False,
-    )
-
-    model.backend.verbose_strings()
-
-    model.backend.to_lp(str(outfile))
-
-    # strip trailing whitespace from `outfile` after the fact,
-    # so it can be reliably compared other files in future
-    with Path(outfile).open("r") as f:
-        stripped_lines = []
-        while line := f.readline():
-            stripped_lines.append(line.rstrip())
-
-    # reintroduce the trailing newline since both Pyomo and file formatters love them.
-    Path(outfile).write_text("\n".join(stripped_lines) + "\n")

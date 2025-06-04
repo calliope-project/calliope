@@ -15,51 +15,13 @@ CALLIOPE_DIR: Path = importlib.resources.files("calliope")
 PLAN_MATH: AttrDict = io.read_rich_yaml(CALLIOPE_DIR / "math" / "plan.yaml")
 
 
-@pytest.fixture(scope="class")
-def compare_lps(tmpdir_factory):
-    def _compare_lps(model, custom_math, filename):
-        lp_file = filename + ".lp"
-        generated_file = Path(tmpdir_factory.mktemp("lp_files")) / lp_file
-        util.build_lp(model, generated_file, custom_math)
-        expected_file = Path(__file__).parent / "common" / "lp_files" / lp_file
-        # Pyomo diff ignores trivial numeric differences (10 == 10.0)
-        # But it does not ignore a re-ordering of components
-        diff_ordered = lp_diff.load_and_compare_lp_baseline(
-            generated_file.as_posix(), expected_file.as_posix()
-        )
-        # Our unordered comparison ignores component ordering but cannot handle
-        # trivial differences in numerics (as everything is a string to it)
-        diff_unordered = _diff_files(generated_file, expected_file)
-
-        # If one of the above matches across the board, we're good to go.
-        assert diff_ordered == ([], []) or not diff_unordered
-
-    return _compare_lps
-
-
-@pytest.fixture(scope="module")
-def barebones_math_file(tmp_path_factory) -> str:
-    """Write a barebones calliope math file.
-
-    Setup:
-    - No constraints.
-    - All variables and expressions in `plan.yaml`.
-    - A standard dummy objective.
-    """
-    math = AttrDict({k: PLAN_MATH[k] for k in {"variables", "global_expressions"}})
+def prune_math(applied_math: dict):
+    math = AttrDict({k: applied_math[k] for k in {"variables", "global_expressions"}})
     math.set_key(
         "objectives.dummy_obj",
         {"equations": [{"expression": "1 + 1"}], "sense": "minimize"},
     )
-    barebones_path = tmp_path_factory.mktemp("barebones") / "barebones.yaml"
-    io.to_yaml(math, barebones_path)
-    return str(barebones_path)
-
-
-def _diff_files(file1, file2):
-    file1_lines = file1.read_text().split("\n")
-    file2_lines = file2.read_text().split("\n")
-    return set(file1_lines).symmetric_difference(file2_lines)
+    return math
 
 
 def build_lp_file(
@@ -90,6 +52,12 @@ def build_lp_file(
     Path(outfile).write_text("\n".join(stripped_lines) + "\n")
 
 
+def _diff_files(file1, file2):
+    file1_lines = file1.read_text().split("\n")
+    file2_lines = file2.read_text().split("\n")
+    return set(file1_lines).symmetric_difference(file2_lines)
+
+
 def compare_lps_new(generated_lp: Path):
     expected_file = Path(__file__).parent / "common" / "lp_files" / generated_lp.name
     diff_ordered = lp_diff.load_and_compare_lp_baseline(
@@ -109,6 +77,20 @@ class TestBaseMath:
     def lp_temp_path(self, tmp_path_factory):
         """Use a single temp. location to make manual checks easier."""
         return tmp_path_factory.mktemp("lp_files")
+
+    @pytest.fixture(scope="class")
+    def barebones_math_file(self, tmp_path_factory) -> str:
+        """Write a barebones calliope math file.
+
+        Setup:
+        - No constraints.
+        - All variables and expressions in `plan.yaml`.
+        - A standard dummy objective.
+        """
+        math = prune_math(PLAN_MATH)
+        barebones_path = tmp_path_factory.mktemp("barebones") / "barebones.yaml"
+        io.to_yaml(math, barebones_path)
+        return str(barebones_path)
 
     @pytest.fixture(scope="class")
     def init_math_config(self, barebones_math_file):
@@ -346,41 +328,79 @@ class CustomMathExamples(ABC):
     def custom_math(self):
         return io.read_rich_yaml(self.CUSTOM_MATH_DIR / self.YAML_FILEPATH)
 
+    @pytest.fixture(scope="class")
+    def full_applied_math(self, custom_math):
+        math_dataset = {"plan": PLAN_MATH, "user_math": custom_math}
+        return model_math.build_applied_math(["plan", "user_math"], math_dataset)
+
+    @pytest.fixture(scope="class")
+    def barebones_math_file(self, tmp_path_factory, full_applied_math) -> str:
+        """Write a barebones calliope math file.
+
+        Setup:
+        - No constraints.
+        - All variables and expressions in `plan.yaml`.
+        - A standard dummy objective.
+        """
+        math = prune_math(full_applied_math)
+        barebones_path = tmp_path_factory.mktemp("barebones") / "barebones.yaml"
+        io.to_yaml(math, barebones_path)
+        return str(barebones_path)
+
+    @pytest.fixture(scope="class")
+    def lp_temp_path(self, tmp_path_factory):
+        """Use a single temp. location to make manual checks easier."""
+        return tmp_path_factory.mktemp(
+            f"lp_files_{self.YAML_FILEPATH.removesuffix('.yaml')}"
+        )
+
     @pytest.fixture
-    def build_and_compare(self, abs_filepath, compare_lps):
+    def build_and_compare(self, full_applied_math, barebones_math_file, lp_temp_path):
         def _build_and_compare(
             filename: str,
             scenario: str,
             overrides: dict | None = None,
             components: dict[list[str]] | None = None,
         ):
+            custom_math = {}
             if components is not None:
                 for component_group, component_list in components.items():
                     for component in component_list:
                         self.TEST_REGISTER.add(f"{component_group}.{component}")
 
                 custom_math = {
-                    k: v
+                    k: {name: full_applied_math[k][name] for name in v}
                     for k, v in components.items()
                     if k not in ["variables", "global_expressions"]
                 }
             else:
                 self.TEST_REGISTER.add(f"constraints.{filename}")
-                custom_math = {"constraints": [filename]}
+                custom_math = {
+                    "constraints": {
+                        filename: full_applied_math["constraints"][filename]
+                    }
+                }
 
             if overrides is None:
                 overrides = {}
 
+            objective = "dummy_obj"
+            if "objectives" in custom_math:
+                objective = list(custom_math["objectives"].keys())[0]
+
             model = util.build_test_model(
                 {
-                    "config.init.math.extra": {"user_math": abs_filepath},
-                    "config.build.extra_math": ["user_math"],
+                    "config.init.math": {
+                        "base": "barebones",
+                        "extra": {"barebones": barebones_math_file},
+                    },
                     **overrides,
                 },
                 scenario,
             )
-
-            compare_lps(model, custom_math, filename)
+            lp_file = lp_temp_path / f"{filename}.lp"
+            build_lp_file(model, custom_math, lp_file, objective)
+            compare_lps_new(lp_file)
 
         return _build_and_compare
 
