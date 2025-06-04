@@ -273,11 +273,11 @@ class Model:
         else:
             backend_input = self._model_data
 
-        self.applied_math = preprocess.build_applied_math(
+        applied_math = preprocess.build_applied_math(
             self.math_priority, self._def.math, add_math_dict
         )
         self.backend = backend.get_model_backend(
-            self.config.build, backend_input, self.applied_math
+            self.config.build, backend_input, applied_math
         )
         self.backend.add_optimisation_components()
 
@@ -287,6 +287,7 @@ class Model:
             "build_complete",
             comment="Model: backend build complete",
         )
+        self.applied_math = applied_math
         self._is_built = True
 
     def solve(self, force: bool = False, warmstart: bool = False, **kwargs) -> None:
