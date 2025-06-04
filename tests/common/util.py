@@ -92,7 +92,7 @@ def build_lp(
         outfile (str | Path): Path to LP file.
         math (dict | None, optional): All constraint/global expression/objective math to apply. Defaults to None.
     """
-    math = preprocess.build_applied_math(model.config, model._def.math)
+    math = preprocess.build_applied_math(model.math_priority, model._def.math)
 
     math_to_add = calliope.AttrDict()
     if isinstance(math_data, dict):

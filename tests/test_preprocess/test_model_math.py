@@ -98,44 +98,34 @@ class TestBuildMath:
         return test_model._def.math
 
     @pytest.mark.parametrize(
-        ("math_order", "config_update"),
+        "math_order",
         [
             # Default
-            (["plan"], {}),
+            ["plan"],
             # Default and extra
-            (["plan", "additional_math"], {"build.extra_math": ["additional_math"]}),
+            ["plan", "additional_math"],
             # Default, mode and extra
-            (
-                ["plan", "operate", "additional_math"],
-                {"build": {"mode": "operate", "extra_math": ["additional_math"]}},
-            ),
+            ["plan", "operate", "additional_math"],
             # Alternative base, mode and extra
-            (
-                ["alternative_base", "operate", "additional_math"],
-                {
-                    "init.math.base": "alternative_base",
-                    "build": {"mode": "operate", "extra_math": ["additional_math"]},
-                },
-            ),
+            ["alternative_base", "operate", "additional_math"],
         ],
     )
-    def test_build_math(self, caplog, config, math_options, math_order, config_update):
+    def test_build_math(self, caplog, math_options, math_order):
         """Math builds must respect the order: base -> mode -> extra."""
         math = calliope.AttrDict()
         for i in math_order:
             math.union(math_options[i], allow_override=True)
         expected_math = math_schema.MathSchema(**math).model_dump()
-        new_config = config.update(config_update)
         with caplog.at_level(logging.INFO):
-            built_math = model_math.build_applied_math(new_config, math_options)
+            built_math = model_math.build_applied_math(math_order, math_options)
         assert expected_math == built_math
         assert str(math_order) in caplog.text
 
-    def test_math_name_error(self, config, math_options):
+    def test_math_name_error(self, math_options):
         """Incorrect math name errors must be user-friendly."""
-        wrong_config = config.update({"build.extra_math": ["foobar_fail"]})
+        wrong_names = ["foobar_fail"]
         with pytest.raises(
             exceptions.ModelError,
             match="Requested math 'foobar_fail' was not initialised.",
         ):
-            model_math.build_applied_math(wrong_config, math_options)
+            model_math.build_applied_math(wrong_names, math_options)

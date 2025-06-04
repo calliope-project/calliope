@@ -12,7 +12,6 @@ import calliope
 import calliope.backend
 import calliope.exceptions as exceptions
 from calliope import preprocess
-from calliope.backend import PyomoBackendModel
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, check_variable_exists
@@ -1630,17 +1629,6 @@ class TestNewBackend:
     def temp_path(self, tmpdir_factory):
         return tmpdir_factory.mktemp("custom_math")
 
-    @pytest.mark.parametrize("mode", ["operate", "base"])
-    def test_add_run_mode_custom_math(self, caplog, mode):
-        caplog.set_level(logging.DEBUG)
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-        math = preprocess.build_applied_math(m.config, m._def.math)
-
-        build_config = m.config.build.update({"mode": mode})
-        backend = PyomoBackendModel(m.inputs, math, build_config)
-
-        assert backend.math == math
-
     def test_add_run_mode_custom_math_before_build(self, caplog):
         """Run mode math is applied before anything else."""
         caplog.set_level(logging.DEBUG)
@@ -2283,7 +2271,9 @@ class TestValidateMathDict:
     def validate_math(self):
         def _validate_math(math_dict: dict):
             m = build_model({}, "simple_supply,investment_costs")
-            math = preprocess.build_applied_math(m.config, m._def.math, math_dict)
+            math = preprocess.build_applied_math(
+                m.math_priority, m._def.math, math_dict
+            )
             backend = calliope.backend.PyomoBackendModel(
                 m._model_data, math, m.config.build
             )

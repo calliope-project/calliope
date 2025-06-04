@@ -10,7 +10,7 @@ from pathlib import Path
 from calliope.attrdict import AttrDict
 from calliope.exceptions import ModelError
 from calliope.io import read_rich_yaml
-from calliope.schemas.config_schema import CalliopeConfig, InitMath
+from calliope.schemas.config_schema import InitMath
 from calliope.schemas.math_schema import MathSchema
 from calliope.util.tools import relative_path
 
@@ -61,14 +61,14 @@ def initialise_math(
 
 
 def build_applied_math(
-    config: CalliopeConfig, init_math: dict, add_math: dict | None = None
+    priority: list[str], math_dataset: dict, overwrite: dict | None = None
 ) -> AttrDict:
     """Construct a validated math dictionary, applying the requested math in order.
 
     Args:
-        config (CalliopeConfig): Calliope configuration.
-        init_math (dict): initialised math dataset.
-        add_math (dict | None, optional): additional math to apply at the end. Defaults to None.
+        priority (list[str]): name of the math to apply in order of priority (lower->upper).
+        math_dataset (dict): initialised math dataset.
+        overwrite (dict | None, optional): additional math to apply at the end. Defaults to None.
 
     Raises:
         ModelError: a given name was not found in the math dictionary.
@@ -76,22 +76,15 @@ def build_applied_math(
     Returns:
         AttrDict: constructed and validated math dataset.
     """
-    names = []
-    if not config.build.ignore_base_math:
-        names.append(config.init.math.base)
-    if config.build.mode != "base":
-        names.append(config.build.mode)
-    names += config.build.extra_math
-
-    LOGGER.info(f"Math build | building applied math with {names}.")
+    LOGGER.info(f"Math build | building applied math with {priority}.")
     math = AttrDict()
-    for name in names:
+    for name in priority:
         try:
-            math.union(init_math[name], allow_override=True)
+            math.union(math_dataset[name], allow_override=True)
         except KeyError:
             raise ModelError(f"Requested math '{name}' was not initialised.")
-    if add_math:
+    if overwrite:
         LOGGER.info("Math build | appending additional math.")
-        math.union(add_math, allow_override=True)
+        math.union(overwrite, allow_override=True)
 
     return AttrDict(MathSchema(**math).model_dump())

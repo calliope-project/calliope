@@ -134,6 +134,17 @@ class Model:
         """Get solved status."""
         return self._is_solved
 
+    @property
+    def math_priority(self):
+        """Order of math formulations, with the last overwriting previous ones."""
+        names = []
+        if not self.config.build.ignore_base_math:
+            names.append(self.config.init.math.base)
+        if self.config.build.mode != "base":
+            names.append(self.config.build.mode)
+        names += self.config.build.extra_math
+        return names
+
     def _init_from_model_definition(
         self,
         model_definition: dict | str | Path,
@@ -265,7 +276,7 @@ class Model:
             backend_input = self._model_data
 
         self.applied_math = preprocess.build_applied_math(
-            self.config, self._def.math, add_math_dict
+            self.math_priority, self._def.math, add_math_dict
         )
         self.backend = backend.get_model_backend(
             self.config.build, backend_input, self.applied_math
