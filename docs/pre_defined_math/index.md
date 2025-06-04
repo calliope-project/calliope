@@ -7,15 +7,15 @@ The pre-defined math for your chosen run [mode](../creating/config.md#configbuil
 We have also pre-defined some additional math, which you can _optionally_ load into your model.
 For instance, the [inter-cluster storage][inter-cluster-storage-math] math allows you to track storage levels in technologies more accurately when you are using timeseries clustering in your model.
 
-To load optional, pre-defined math on top of the base math, you can reference it by name (_without_ the file extension) in your model configuration:
+To load optional, pre-defined math on top of the base math, you can reference it by name in your model configuration:
 
 ```yaml
 config:
   build:
-    add_math: [storage_inter_cluster]
+    extra_math: [storage_inter_cluster]
 ```
 
-If you are running in the `plan` run mode, this will first apply all the [`plan`][base-math] pre-defined math, then the [`storage_inter_cluster`][inter-cluster-storage-math] pre-defined math.
+If you are running in the `base` run mode, this will first apply all the [`base`][base-math] pre-defined math, then the [`storage_inter_cluster`][inter-cluster-storage-math] pre-defined math.
 All pre-defined math YAML files can be found in [`math` directory of the Calliope source code](https://github.com/calliope-project/calliope/blob/main/src/calliope/math/storage_inter_cluster.yaml).
 
 If you want to introduce new constraints, decision variables, or objectives, you can do so as part of the collection of YAML files describing your model.

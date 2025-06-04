@@ -10,7 +10,7 @@ config:
     name: 'My energy model'
     time_subset: ['2005-01-01', '2005-01-05']
   build:
-    mode: plan
+    mode: base
   solve:
     solver: cbc
 ```
@@ -78,12 +78,12 @@ It has a very high cost associated with its use, so it will only appear when abs
 ### `config.build.mode`
 
 In the `build` section we have `mode`.
-A model can run in `plan`, `operate`, or `spores` mode.
-In `plan` mode, capacities are determined by the model, whereas in `operate` mode, capacities are fixed and the system is operated with a receding horizon control algorithm.
-In `spores` mode, the model is first run in `plan` mode, then run `N` number of times to find alternative system configurations with similar monetary cost, but maximally different choice of technology capacity and location (node).
+A model can run in `base`, `operate`, or `spores` mode.
+In `base` mode, capacities are determined by the model, whereas in `operate` mode, capacities are fixed and the system is operated with a receding horizon control algorithm.
+In `spores` mode, the model is first run in `base` mode, then run `N` number of times to find alternative system configurations with similar monetary cost, but maximally different choice of technology capacity and location (node).
 
-In most cases, you will want to use the `plan` mode.
-In fact, you can use a set of results from using `plan` model to initialise both the `operate` (`config.build.operate.use_cap_results`) and `spores` modes.
+In most cases, you will want to use the `base` mode.
+In fact, you can use a set of results from using `base` model to initialise both the `operate` (`config.build.operate.use_cap_results`) and `spores` modes.
 
 ### `config.solve.solver`
 

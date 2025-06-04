@@ -68,7 +68,7 @@ def on_files(files: list, config: dict, **kwargs):
             textwrap.dedent(
                 f"""
             Pre-defined additional math to apply {custom_documentation.name} __on top of__ the [base mathematical formulation][base-math].
-            This math is _only_ applied if referenced in the `config.init.add_math` list as `{override}`.
+            This math is _only_ applied if referenced in the `config.build.extra_math` list as `{override}`.
             """
             ),
             custom_documentation,

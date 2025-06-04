@@ -1,10 +1,12 @@
-# Adding your own math to a model
+# Adding your own extra math to a model
 
 Once you understand the [math components](components.md) and the [formulation syntax](syntax.md), you'll be ready to introduce your own math to a model.
 
 You can find examples of additional math that we have put together in our [math example gallery](examples/index.md).
 
-Whenever you introduce your own math, it will be applied on top of the pre-defined math for your chosen run [mode](../creating/config.md#configbuildmode).
+Whenever you introduce your own extra math, it will be applied on top of the pre-defined math for your chosen run [mode](../creating/config.md#configbuildmode).
+The order of priority is **base math -> mode -> extra math**.
+
 Therefore, you can override the pre-defined math as well as add new math.
 For example, you may want to introduce a timeseries parameter to the pre-defined `storage_max` constraint to limit maximum storage capacity on a per-timestep basis:
 
@@ -16,25 +18,25 @@ storage_max:
 
 The other elements of the `storage_max` constraints have not changed (`foreach`, `where`, ...), so we do not need to define them again when adding our own twist on the pre-defined math.
 
-!!! note
-
-    If you prefer to start from scratch with your math, you can ask Calliope to _not_ load the pre-defined math for your chosen run mode by setting `#!yaml config.build.ignore_base_math: true`.
-
-When defining your model, you can reference any number of YAML files containing the math you want to add in `config.build`.
-The paths are relative to your main model configuration file:
+When defining your model, you can reference any number of YAML files containing the math you want to add in `config.init.math`.
+Both absolute paths and paths relative to `model.yaml` are valid.
 
 ```yaml
 config:
-  build:
-    add_math: [my_new_math_1.yaml, my_new_math_2.yaml]
+  init:
+    math:
+      extra:
+        my_new_math_1: "my_new_math_1.yaml"
+        my_new_math_2: "/home/your_name/Documents/my_new_math_2.yaml"
 ```
 
-You can also define a mixture of your own math and the [pre-defined math](../pre_defined_math/index.md):
+You can then add this math during `build` by specifying it in `config.build.extra_math`.
+It is even possible to define a mixture of your math and other [pre-defined math](../pre_defined_math/index.md):
 
 ```yaml
 config:
   build:
-    add_math: [my_new_math_1.yaml, storage_inter_cluster, my_new_math_2.md]
+    extra_math: [my_new_math_1, storage_inter_cluster, my_new_math_2]
 ```
 
 Finally, when working in an interactive Python session, you can add math as a dictionary at build time:
@@ -43,11 +45,28 @@ Finally, when working in an interactive Python session, you can add math as a di
 model.build(add_math_dict={...})
 ```
 
-This will be applied after the pre-defined mode math and any math from file listed in `config.build.add_math`.
+This will be applied after the pre-defined mode math and any extra math listed in `config.build.extra_math`.
 
 !!! note
 
     When working in an interactive Python session, you can view the final math dictionary that has been applied to build the optimisation problem by inspecting `model.applied_math` after a successful call to `model.build()`.
+
+## Re-defining Calliope's pre-defined base math
+
+If you prefer to start from scratch with your math, you can ask Callipe to use it as the base of the problem.
+This will tell Calliope to overwrite *all* of our pre-defined `base` math with your file.
+
+```yaml
+config:
+  init:
+    math:
+      base: "my_new_base_math"
+      extra: {my_new_base_math: your/base_math_file.yaml}
+```
+
+!!! danger
+
+    Modes and other pre-defined options such as `operate` and `spores` might not work as expected!
 
 ## Adding your parameters to the YAML schema
 

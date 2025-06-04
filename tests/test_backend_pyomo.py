@@ -1523,7 +1523,7 @@ class TestClusteringConstraints:
         override = {
             "config.init.time_subset": ["2005-01-01", "2005-01-04"],
             "config.init.time_cluster": "data_tables/cluster_days.csv",
-            "config.build.add_math": (
+            "config.build.extra_math": (
                 ["storage_inter_cluster"] if storage_inter_cluster else []
             ),
             "config.build.cyclic_storage": cyclic,

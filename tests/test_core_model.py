@@ -501,13 +501,6 @@ class TestBuild:
     def init_model(self):
         return build_model({}, "simple_supply,two_hours,investment_costs")
 
-    def test_ignore_mode_math(self, init_model):
-        init_model.build(ignore_base_math=True, force=True)
-        assert all(
-            var.obj_type == "parameters"
-            for var in init_model.backend._dataset.data_vars.values()
-        )
-
     def test_add_math_dict_with_mode_math(self, init_model):
         init_model.build(
             add_math_dict={"constraints": {"system_balance": {"active": False}}},
@@ -515,13 +508,6 @@ class TestBuild:
         )
         assert len(init_model.backend.constraints) > 0
         assert "system_balance" not in init_model.backend.constraints
-
-    def test_add_math_dict_ignore_mode_math(self, init_model):
-        new_var = {
-            "variables": {"foo": {"active": True, "bounds": {"min": -1, "max": 1}}}
-        }
-        init_model.build(add_math_dict=new_var, ignore_base_math=True, force=True)
-        assert set(init_model.backend.variables) == {"foo"}
 
 
 class TestSolve:

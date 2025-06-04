@@ -123,12 +123,6 @@ class Build(CalliopeBaseModel):
     Math order: base -> mode -> extra
     """
 
-    ignore_base_math: bool = Field(default=False)
-    """
-    If True, do not initialise the base mathematical formulation with the math given in `config.init.math.base`.
-    This option may be useful when comparing multiple distinct formulations.
-    """
-
     backend: Literal["pyomo", "gurobi"] = Field(default="pyomo")
     """Module with which to build the optimisation problem."""
 
