@@ -48,10 +48,10 @@ class TestOperateMode:
             yield pytest.LogCaptureFixture(request.node, _ispytest=True)
 
     @pytest.fixture(scope="class")
-    def plan_model(self):
-        """Solve in plan mode for the same overrides, to check against operate mode model."""
+    def base_model(self):
+        """Solve in base mode for the same overrides, to check against operate mode model."""
         model = build_model({}, "simple_supply,operate,var_costs,investment_costs")
-        model.build(mode="plan")
+        model.build(mode="base")
         model.solve()
         return model
 
@@ -59,7 +59,7 @@ class TestOperateMode:
         scope="class", params=[("6h", "12h"), ("12h", "12h"), ("16h", "20h")]
     )
     def operate_model_and_log(self, request):
-        """Solve in plan mode, then use plan mode results to set operate mode inputs, then solve in operate mode.
+        """Solve in base mode, then use results to set operate mode inputs, then solve in operate mode.
 
         Three different operate/horizon windows chosen:
         ("6h", "12h"): Both window and horizon fit completely into the model time range (48hr)
@@ -67,7 +67,7 @@ class TestOperateMode:
         ("16h", "20h"): Neither window or horizon fit completely into the model time range (48hr)
         """
         model = build_model({}, "simple_supply,operate,var_costs,investment_costs")
-        model.build(mode="plan")
+        model.build(mode="base")
         model.solve()
         model.build(
             force=True,
@@ -96,10 +96,10 @@ class TestOperateMode:
         operate_model, _ = operate_model_and_log
         assert operate_model.results.attrs["termination_condition"] == "optimal"
 
-    def test_use_cap_results(self, plan_model, operate_model_and_log):
-        """Operate mode uses plan mode outputs as inputs."""
+    def test_use_cap_results(self, base_model, operate_model_and_log):
+        """Operate mode uses base mode outputs as inputs."""
         operate_model, _ = operate_model_and_log
-        assert plan_model.results.flow_cap.equals(operate_model.inputs.flow_cap)
+        assert base_model.results.flow_cap.equals(operate_model.inputs.flow_cap)
 
     def test_not_reset_model_window(self, operate_model_and_log):
         """We do not expect the first time window to need resetting on solving in operate mode for the first time."""
@@ -157,7 +157,7 @@ class TestOperateMode:
         m = build_model({}, "simple_supply,operate,var_costs,investment_costs")
         with pytest.raises(
             calliope.exceptions.ModelError,
-            match="Cannot use plan mode capacity results in operate mode if a solution does not yet exist for the model.",
+            match="Cannot use base mode capacity results in operate mode if a solution does not yet exist for the model.",
         ):
             m.build(mode="operate", operate={"use_cap_results": True})
 
@@ -207,7 +207,7 @@ class TestSporesMode:
     def spores_model_skip_baseline_and_log(self, request):
         """Iterate 2 times in SPORES mode having pre-computed the baseline results."""
         model = build_model({}, self.SPORES_OVERRIDES)
-        model.build(mode="plan")
+        model.build(mode="base")
         model.solve()
 
         model.build(mode="spores", force=True)
@@ -501,13 +501,6 @@ class TestBuild:
     def init_model(self):
         return build_model({}, "simple_supply,two_hours,investment_costs")
 
-    def test_ignore_mode_math(self, init_model):
-        init_model.build(ignore_mode_math=True, force=True)
-        assert all(
-            var.obj_type == "parameters"
-            for var in init_model.backend._dataset.data_vars.values()
-        )
-
     def test_add_math_dict_with_mode_math(self, init_model):
         init_model.build(
             add_math_dict={"constraints": {"system_balance": {"active": False}}},
@@ -515,13 +508,6 @@ class TestBuild:
         )
         assert len(init_model.backend.constraints) > 0
         assert "system_balance" not in init_model.backend.constraints
-
-    def test_add_math_dict_ignore_mode_math(self, init_model):
-        new_var = {
-            "variables": {"foo": {"active": True, "bounds": {"min": -1, "max": 1}}}
-        }
-        init_model.build(add_math_dict=new_var, ignore_mode_math=True, force=True)
-        assert set(init_model.backend.variables) == {"foo"}
 
 
 class TestSolve:

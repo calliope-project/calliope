@@ -11,8 +11,7 @@ from pyomo.core.kernel.piecewise_library.transforms import piecewise_sos2
 import calliope
 import calliope.backend
 import calliope.exceptions as exceptions
-import calliope.preprocess
-from calliope.backend import PyomoBackendModel
+from calliope import preprocess
 
 from .common.util import build_test_model as build_model
 from .common.util import check_error_or_warning, check_variable_exists
@@ -1524,7 +1523,7 @@ class TestClusteringConstraints:
         override = {
             "config.init.time_subset": ["2005-01-01", "2005-01-04"],
             "config.init.time_cluster": "data_tables/cluster_days.csv",
-            "config.build.add_math": (
+            "config.build.extra_math": (
                 ["storage_inter_cluster"] if storage_inter_cluster else []
             ),
             "config.build.cyclic_storage": cyclic,
@@ -1630,17 +1629,6 @@ class TestNewBackend:
     def temp_path(self, tmpdir_factory):
         return tmpdir_factory.mktemp("custom_math")
 
-    @pytest.mark.parametrize("mode", ["operate", "plan"])
-    def test_add_run_mode_custom_math(self, caplog, mode):
-        caplog.set_level(logging.DEBUG)
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-        math = calliope.preprocess.CalliopeMath([mode])
-
-        build_config = m.config.build.update({"mode": mode})
-        backend = PyomoBackendModel(m.inputs, math, build_config)
-
-        assert backend.math == math
-
     def test_add_run_mode_custom_math_before_build(self, caplog):
         """Run mode math is applied before anything else."""
         caplog.set_level(logging.DEBUG)
@@ -1656,9 +1644,9 @@ class TestNewBackend:
         m.build(mode="operate", add_math_dict=custom_math)
 
         # operate mode set it to false, then our math set it back to active
-        assert m.applied_math.data.constraints.force_zero_area_use.active
+        assert m.applied_math.constraints.force_zero_area_use.active
         # operate mode set it to false and our math did not override that
-        assert not m.applied_math.data.variables.storage_cap.active
+        assert not m.applied_math.variables.storage_cap.active
 
     def test_new_build_get_variable(self, simple_supply):
         """Check a decision variable has the correct data type and has all expected attributes."""
@@ -1756,7 +1744,7 @@ class TestNewBackend:
 
     def test_add_allnull_var(self, simple_supply):
         simple_supply.backend.add_variable(
-            "foo", {"foreach": ["nodes"], "where": "False"}
+            "foo", {"foreach": ["nodes"], "where": "False", "active": True}
         )
         assert "foo" not in simple_supply.backend._instance.variables.keys()
 
@@ -1770,6 +1758,7 @@ class TestNewBackend:
             "foreach": ["nodes", "techs"],
             "where": "True",
             "equations": [{"expression": eq, "where": "False"}],
+            "active": True,
         }
         adder("foo", constr_dict)
 
@@ -1796,6 +1785,7 @@ class TestNewBackend:
             "equations": [
                 {"expression": "sum(flow_out, over=[nodes, timesteps]) >= 100"}
             ],
+            "active": True,
             # "where": "carrier_out",  # <- no error would be raised with this uncommented
         }
         constraint_name = "constraint-with-nan"
@@ -1838,7 +1828,7 @@ class TestNewBackend:
     def test_add_valid_obj(self, simple_supply):
         eq = {"expression": "bigM", "where": "True"}
         simple_supply.backend.add_objective(
-            "foo", {"equations": [eq], "sense": "minimise"}
+            "foo", {"equations": [eq], "sense": "minimise", "active": True}
         )
         assert "foo" in simple_supply.backend.objectives
         assert not simple_supply.backend.objectives.foo.item().active
@@ -1849,7 +1839,12 @@ class TestNewBackend:
 
     def test_new_objective_set(self, simple_supply_build_func):
         simple_supply_build_func.backend.add_objective(
-            "foo", {"equations": [{"expression": "bigM"}], "sense": "minimise"}
+            "foo",
+            {
+                "equations": [{"expression": "bigM"}],
+                "sense": "minimise",
+                "active": True,
+            },
         )
         simple_supply_build_func.backend.set_objective("foo")
 
@@ -1860,7 +1855,12 @@ class TestNewBackend:
     def test_new_objective_set_log(self, caplog, simple_supply_build_func):
         caplog.set_level(logging.INFO)
         simple_supply_build_func.backend.add_objective(
-            "foo", {"equations": [{"expression": "bigM"}], "sense": "minimise"}
+            "foo",
+            {
+                "equations": [{"expression": "bigM"}],
+                "sense": "minimise",
+                "active": True,
+            },
         )
         simple_supply_build_func.backend.set_objective("foo")
         assert ":foo | Objective activated." in caplog.text
@@ -2067,6 +2067,7 @@ class TestPiecewiseConstraints:
             "y_values": "piecewise_y",
             "y_expression": "sum(flow_in, over=timesteps)",
             "description": "FOO",
+            "active": True,
         }
 
     @pytest.fixture(scope="class")
@@ -2270,7 +2271,9 @@ class TestValidateMathDict:
     def validate_math(self):
         def _validate_math(math_dict: dict):
             m = build_model({}, "simple_supply,investment_costs")
-            math = calliope.preprocess.CalliopeMath(["plan", math_dict])
+            math = preprocess.build_applied_math(
+                m.math_priority, m._def.math, math_dict
+            )
             backend = calliope.backend.PyomoBackendModel(
                 m._model_data, math, m.config.build
             )

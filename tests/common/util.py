@@ -1,22 +1,8 @@
 import os
-from pathlib import Path
-from typing import Literal
 
 import xarray as xr
 
 import calliope
-import calliope.backend
-import calliope.preprocess
-
-
-def build_test_model_def(override_dict=None, scenario=None, model_file="model.yaml"):
-    """Get the definition dictionary of a test model."""
-    model_def, _ = calliope.preprocess.prepare_model_definition(
-        data=Path(__file__).parent / "test_model" / model_file,
-        scenario=scenario,
-        override_dict=override_dict,
-    )
-    return model_def
 
 
 def build_test_model(
@@ -87,68 +73,3 @@ def check_variable_exists(
         var_exists = var_exists.sel(**slices)
 
     return var_exists.any()
-
-
-def build_lp(
-    model: calliope.Model,
-    outfile: str | Path,
-    math_data: dict[str, dict | list] | None = None,
-    backend_name: Literal["pyomo"] = "pyomo",
-) -> "calliope.backend.backend_model.BackendModel":
-    """
-    Write a barebones LP file with which to compare in tests.
-    All model parameters and variables will be loaded automatically, as well as a dummy objective if one isn't provided as part of `math`.
-    Everything else to be added to the LP file must be defined in `math`.
-
-    Args:
-        model (calliope.Model): Calliope model.
-        outfile (str | Path): Path to LP file.
-        math (dict | None, optional): All constraint/global expression/objective math to apply. Defaults to None.
-        backend_name (Literal["pyomo"], optional): Backend to use to create the LP file. Defaults to "pyomo".
-    """
-    math = calliope.preprocess.CalliopeMath(["plan", *model.config.build.add_math])
-
-    math_to_add = calliope.AttrDict()
-    if isinstance(math_data, dict):
-        for component_group, component_math in math_data.items():
-            if isinstance(component_math, dict):
-                math_to_add.union({component_group: component_math})
-            elif isinstance(component_math, list):
-                for name in component_math:
-                    math_to_add.set_key(
-                        f"{component_group}.{name}", math.data[component_group][name]
-                    )
-    if math_data is None or "objectives" not in math_to_add.keys():
-        obj = {
-            "dummy_obj": {"equations": [{"expression": "1 + 1"}], "sense": "minimize"}
-        }
-        math_to_add.union({"objectives": obj})
-        obj_to_activate = "dummy_obj"
-    else:
-        obj_to_activate = list(math_to_add["objectives"].keys())[0]
-    del math.data["constraints"]
-    del math.data["objectives"]
-    math.add(math_to_add)
-
-    model.build(
-        add_math_dict=math.data,
-        ignore_mode_math=True,
-        objective=obj_to_activate,
-        add_math=[],
-        pre_validate_math_strings=False,
-    )
-
-    model.backend.verbose_strings()
-
-    model.backend.to_lp(str(outfile))
-
-    # strip trailing whitespace from `outfile` after the fact,
-    # so it can be reliably compared other files in future
-    with Path(outfile).open("r") as f:
-        stripped_lines = []
-        while line := f.readline():
-            stripped_lines.append(line.rstrip())
-
-    # reintroduce the trailing newline since both Pyomo and file formatters love them.
-    Path(outfile).write_text("\n".join(stripped_lines) + "\n")
-    return model.backend

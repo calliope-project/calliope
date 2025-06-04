@@ -12,9 +12,9 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from calliope.attrdict import AttrDict
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import ModelError
-from calliope.preprocess import CalliopeMath
 from calliope.schemas import config_schema
 
 ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
@@ -305,7 +305,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     def __init__(
         self,
         inputs: xr.Dataset,
-        math: CalliopeMath,
+        math: AttrDict,
         build_config: config_schema.Build,
         include: Literal["all", "valid"] = "all",
     ) -> None:
@@ -313,7 +313,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
         Args:
             inputs (xr.Dataset): model data.
-            math (CalliopeMath): Calliope math.
+            math (AttrDict): Calliope math.
             build_config: Build configuration options.
             include (Literal["all", "valid"], optional):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
@@ -441,7 +441,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             var_da
         )
 
-        domain = domain_dict[variable_dict.get("domain", "real")]
+        domain = domain_dict[variable_dict["domain"]]
         lb, ub = self._get_variable_bounds_string(
             name, variable_dict["bounds"], bound_refs
         )
@@ -485,12 +485,12 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self.log("objectives", name, "Objective activated.", level="info")
 
     def _create_obj_list(  # noqa: D102, override
-        self, key: str, component_type: backend_model._COMPONENTS_T
+        self, key: str, component_type: backend_model.ALL_COMPONENTS_T
     ) -> None:
         return None
 
     def delete_component(  # noqa: D102, override
-        self, key: str, component_type: backend_model._COMPONENTS_T
+        self, key: str, component_type: backend_model.ALL_COMPONENTS_T
     ) -> None:
         if key in self._dataset and self._dataset[key].obj_type == component_type:
             del self._dataset[key]

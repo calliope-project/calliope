@@ -3,13 +3,13 @@
 Calliope can leverage different methods to solve your optimisation problem.
 By default, it is designed to find a system configuration with the lowest combined cost to invest in and then operate technologies, with complete knowledge of what the future holds.
 This is a method that is known as "perfect foresight" optimisation.
-We refer to it in our model as [`plan` mode](../advanced/mode.md#plan-mode).
+We refer to it in our model as [`base` mode](../advanced/mode.md#base-mode).
 
-In addition to perfect foresight optimisation, we have a [receding horizon "operate" optimisation mode](../advanced/mode.md#operate-mode) and [our "spores" mode](../advanced/mode.md#spores-mode) to generate alternative system configurations that are within a small deviation of the optimal cost that is computed in `plan` mode. Read on to find out more about each of these run modes.
+In addition to perfect foresight optimisation, we have a [receding horizon "operate" optimisation mode](../advanced/mode.md#operate-mode) and [our "spores" mode](../advanced/mode.md#spores-mode) to generate alternative system configurations that are within a small deviation of the optimal cost that is computed in `base` mode. Read on to find out more about each of these run modes.
 
-## Plan mode
+## Base mode
 
-In `plan` mode, the user defines upper and lower boundaries for technology capacities and the model decides on an optimal system configuration.
+In `base` mode, the user defines upper and lower boundaries for technology capacities and the model decides on an optimal system configuration.
 In this configuration, the total cost of investing in technologies and then using them to meet demand in every _timestep_ (e.g., every hour) is as low as possible.
 
 We scale investment costs so they are equivalent to time-varying (e.g., fuel and maintenance) costs by using _annualisation_.
@@ -41,7 +41,7 @@ Are your storage devices used appropriately when
 
 To specify a valid `operate` mode model, capacities for all technologies at all locations must be defined.
 This can be done by specifying `flow_cap`, `storage_cap`, `area_use`, `source_cap`, and `purchased_units` as _input parameters_.
-These will not clash with the decision variables of the same name that are found in `plan` mode as `operate` mode will deactivate those decision variables.
+These will not clash with the decision variables of the same name that are found in `base` mode as `operate` mode will deactivate those decision variables.
 
 Operate mode runs a model with a receding horizon control algorithm.
 This requires two additional configuration options to be defined:
@@ -147,7 +147,7 @@ To mitigate this, you can _save results per SPORE run_ to capture results up to 
 ### Skipping the baseline optimisation run
 
 The `baseline` run does not set any SPORES scores or a system cost slack.
-It is equivalent to running the model in [plan](#plan-mode) mode.
+It is equivalent to running the model in [`base`](#base-mode) mode.
 If you already have a model with baseline results, you don't need to re-run that optimisation.
 Instead, you can _skip the baseline run_.
 
@@ -156,7 +156,7 @@ Instead, you can _skip the baseline run_.
     ```py
     import calliope
 
-    # This model already has results from running in `plan` mode.
+    # This model already has results from running in `base` mode.
     model = calliope.read_netcdf(...)
 
     model.build(mode="spores")

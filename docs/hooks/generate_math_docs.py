@@ -68,7 +68,7 @@ def on_files(files: list, config: dict, **kwargs):
             textwrap.dedent(
                 f"""
             Pre-defined additional math to apply {custom_documentation.name} __on top of__ the [base mathematical formulation][base-math].
-            This math is _only_ applied if referenced in the `config.init.add_math` list as `{override}`.
+            This math is _only_ applied if referenced in the `config.build.extra_math` list as `{override}`.
             """
             ),
             custom_documentation,
@@ -169,15 +169,15 @@ def generate_custom_math_documentation(
 
     full_del = []
     expr_del = []
-    for component_group, component_group_dict in model.applied_math.data.items():
+    for component_group, component_group_dict in model.applied_math.items():
         for name, component_dict in component_group_dict.items():
-            if name in base_documentation.math.data[component_group]:
+            if name in base_documentation.math[component_group]:
                 if not component_dict.get("active", True):
                     expr_del.append(name)
                     component_dict["description"] = "|REMOVED|"
                     component_dict["active"] = True
                 elif (
-                    base_documentation.math.data[component_group].get(name, {})
+                    base_documentation.math[component_group].get(name, {})
                     != component_dict
                 ):
                     _add_to_description(component_dict, "|UPDATED|")
