@@ -8,7 +8,7 @@ import importlib
 import logging
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Literal, SupportsFloat, TypeVar, overload
+from typing import Any, Literal, SupportsFloat, overload
 
 import numpy as np
 import pandas as pd
@@ -16,18 +16,13 @@ import xarray as xr
 
 from calliope.attrdict import AttrDict
 from calliope.backend import backend_model, parsing
+from calliope.backend.backend_model import ALL_COMPONENTS_T
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
 from calliope.schemas import config_schema
 
 if importlib.util.find_spec("gurobipy") is not None:
     import gurobipy
-
-T = TypeVar("T")
-# TODO-Ivan: below seems to be repated in several files? Fix.
-_COMPONENTS_T = Literal[
-    "variables", "constraints", "objectives", "parameters", "global_expressions"
-]
 
 LOGGER = logging.getLogger(__name__)
 
@@ -322,10 +317,10 @@ class GurobiBackendModel(backend_model.BackendModel):
             raise ValueError("File extension must be `.lp`")
         self._instance.write(str(path))
 
-    def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+    def _create_obj_list(self, key: str, component_type: ALL_COMPONENTS_T) -> None:
         pass
 
-    def delete_component(self, key: str, component_type: _COMPONENTS_T) -> None:
+    def delete_component(self, key: str, component_type: ALL_COMPONENTS_T) -> None:
         """Delete object from the backend model object linked to a component.
 
         Args:

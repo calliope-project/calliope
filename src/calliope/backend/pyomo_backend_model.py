@@ -10,7 +10,7 @@ from abc import ABC
 from collections.abc import Iterable
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
-from typing import Any, Literal, SupportsFloat, TypeVar, overload
+from typing import Any, Literal, SupportsFloat, overload
 
 import numpy as np
 import pandas as pd
@@ -28,22 +28,12 @@ from pyomo.opt import SolverFactory  # type: ignore
 from pyomo.util.model_size import build_model_size_report  # type: ignore
 
 from calliope.attrdict import AttrDict
+from calliope.backend import backend_model, parsing
+from calliope.backend.backend_model import ALL_COMPONENTS_T
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
 from calliope.schemas import config_schema
 from calliope.util.logging import LogWriter
-
-from . import backend_model, parsing
-
-T = TypeVar("T")
-_COMPONENTS_T = Literal[
-    "variables",
-    "constraints",
-    "piecewise_constraints",
-    "objectives",
-    "parameters",
-    "global_expressions",
-]
 
 LOGGER = logging.getLogger(__name__)
 
@@ -366,7 +356,7 @@ class PyomoBackendModel(backend_model.BackendModel):
     def to_lp(self, path: str | Path) -> None:  # noqa: D102, override
         self._instance.write(str(path), format="lp", symbolic_solver_labels=True)
 
-    def _create_obj_list(self, key: str, component_type: _COMPONENTS_T) -> None:
+    def _create_obj_list(self, key: str, component_type: ALL_COMPONENTS_T) -> None:
         """Attach an empty pyomo kernel list object to the pyomo model object.
 
         Args:
@@ -388,7 +378,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             )()
 
     def delete_component(  # noqa: D102, override
-        self, key: str, component_type: _COMPONENTS_T
+        self, key: str, component_type: ALL_COMPONENTS_T
     ) -> None:
         component_dict = getattr(self._instance, component_type)
         if key in component_dict:

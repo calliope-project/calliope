@@ -485,12 +485,12 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self.log("objectives", name, "Objective activated.", level="info")
 
     def _create_obj_list(  # noqa: D102, override
-        self, key: str, component_type: backend_model._COMPONENTS_T
+        self, key: str, component_type: backend_model.ALL_COMPONENTS_T
     ) -> None:
         return None
 
     def delete_component(  # noqa: D102, override
-        self, key: str, component_type: backend_model._COMPONENTS_T
+        self, key: str, component_type: backend_model.ALL_COMPONENTS_T
     ) -> None:
         if key in self._dataset and self._dataset[key].obj_type == component_type:
             del self._dataset[key]
