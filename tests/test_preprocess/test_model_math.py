@@ -69,7 +69,7 @@ class TestInitMath:
         config = config_schema.InitMath()
         config = config.update({"extra": {"plan": user_math_path}})
         with pytest.raises(
-            exceptions.ModelWarning, match="Overwritting pre-defined 'plan' math."
+            exceptions.ModelWarning, match="Overwriting pre-defined 'plan' math."
         ):
             model_math.initialise_math(config, def_path)
 
