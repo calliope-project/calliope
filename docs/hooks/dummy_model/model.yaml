@@ -3,8 +3,6 @@ overrides:
     config.init:
       name: inter-cluster storage
       time_cluster: cluster_days.csv
-      math:
-        pre_defined: ["plan", "storage_inter_cluster"]
     config.build:
       extra_math: ["storage_inter_cluster"]
   spores:

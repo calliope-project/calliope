@@ -27,10 +27,8 @@ class InitMath(CalliopeBaseModel):
 
     base: AttrStr = "plan"
     """Name of the math file to build on top of.
-    Can be any name in either `pre_defined` or `extra`.
+    Can be any pre-defined math file or user-defined `extra` file.
     """
-    pre_defined: UniqueList = Field(default=["plan", "operate", "spores"])
-    "Pre-defined Calliope math files to include."
     extra: dict[AttrStr, str] = Field(default={})
     "Dictionary with the names and paths of additional math files."
 

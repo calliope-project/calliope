@@ -2,19 +2,20 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Calliope math handling with interfaces for pre-defined and user-defined files."""
 
-import importlib.resources
 import logging
 import typing
+from importlib import resources
 from pathlib import Path
 
 from calliope.attrdict import AttrDict
-from calliope.exceptions import ModelError
+from calliope.exceptions import ModelError, ModelWarning
 from calliope.io import read_rich_yaml
 from calliope.schemas.config_schema import InitMath
 from calliope.schemas.math_schema import MathSchema
 from calliope.util.tools import relative_path
 
 LOGGER = logging.getLogger(__name__)
+PRE_DEFINED_MATH = ["plan", "operate", "spores", "storage_inter_cluster"]
 ORDERED_COMPONENTS_T = typing.Literal[
     "variables",
     "global_expressions",
@@ -26,7 +27,7 @@ ORDERED_COMPONENTS_T = typing.Literal[
 
 def _load_internal_math(filename: str) -> AttrDict:
     """Load standard Calliope math modes."""
-    file = importlib.resources.files("calliope") / "math" / f"{filename}.yaml"
+    file = resources.files("calliope") / "math" / f"{filename}.yaml"
     return read_rich_yaml(str(file))
 
 
@@ -48,13 +49,16 @@ def initialise_math(
     Returns:
         AttrDict: dataset with individual math options.
     """
-    LOGGER.info(f"Math init | loading pre-defined {math_config.pre_defined}.")
+    LOGGER.info("Math init | loading pre-defined math.")
+
     math_dataset = AttrDict(
-        {name: _load_internal_math(name) for name in math_config.pre_defined}
+        {name: _load_internal_math(name) for name in PRE_DEFINED_MATH}
     )
     if math_config.extra:
         LOGGER.info(f"Math init | loading extras {list(math_config.extra.keys())}.")
         for name, path in math_config.extra.items():
+            if name in PRE_DEFINED_MATH:
+                raise ModelWarning(f"Overwriting pre-defined '{name}' math.")
             math_dataset.union({name: _load_user_math(path, model_def_path)})
 
     return math_dataset

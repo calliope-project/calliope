@@ -50,12 +50,12 @@ class TestInitMath:
     def test_loaded_internal(self, math_data, math_config):
         """Loaded math should contain both user defined and internal files."""
         assert not math_data.keys() - (
-            set(math_config.pre_defined) | math_config.extra.keys()
+            set(model_math.PRE_DEFINED_MATH) | math_config.extra.keys()
         )
 
-    def test_pre_defined_load(self, math_data, math_config):
+    def test_pre_defined_load(self, math_data):
         """Internal files should be loaded correctly."""
-        for filename in math_config.pre_defined:
+        for filename in model_math.PRE_DEFINED_MATH:
             expected = model_math._load_internal_math(filename)
             math_data[filename] == expected
 
@@ -63,6 +63,15 @@ class TestInitMath:
         """Extra math should be loaded with no alterations."""
         if math_config.extra:
             assert math_data["user_math"] == user_math
+
+    def test_overwrite_warning(self, user_math_path, def_path):
+        """Users should be warned when overwritting pre-defined math."""
+        config = config_schema.InitMath()
+        config = config.update({"extra": {"plan": user_math_path}})
+        with pytest.raises(
+            exceptions.ModelWarning, match="Overwritting pre-defined 'plan' math."
+        ):
+            model_math.initialise_math(config, def_path)
 
 
 class TestBuildMath:
@@ -78,7 +87,6 @@ class TestBuildMath:
                 "config": {
                     "init.math": {
                         "base": "plan",
-                        "pre_defined": ["plan", "operate"],
                         "extra": {
                             "additional_math": str(additional.absolute()),
                             "alternative_base": str(alternative_base.absolute()),
