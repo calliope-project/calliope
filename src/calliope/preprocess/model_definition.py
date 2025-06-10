@@ -21,7 +21,7 @@ def prepare_model_definition(
     override_dict: dict | None = None,
     **kwargs,
 ) -> tuple[AttrDict, str]:
-    """Arrange model definition data folloging our standardised order of priority.
+    """Arrange model definition data following our standardised order of priority.
 
     Should always be called when defining calliope models from configuration files.
     The order of priority is:
