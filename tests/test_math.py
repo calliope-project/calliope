@@ -95,7 +95,8 @@ class TestBaseMath:
     @pytest.fixture(scope="class")
     def init_math_config(self, barebones_math_file):
         return {
-            "math": {"base": "barebones", "extra": {"barebones": barebones_math_file}}
+            "base_math": "barebones",
+            "extra_math": {"barebones": barebones_math_file},
         }
 
     @pytest.mark.parametrize(
@@ -390,9 +391,9 @@ class CustomMathExamples(ABC):
 
             model = util.build_test_model(
                 {
-                    "config.init.math": {
-                        "base": "barebones",
-                        "extra": {"barebones": barebones_math_file},
+                    "config.init": {
+                        "base_math": "barebones",
+                        "extra_math": {"barebones": barebones_math_file},
                     },
                     **overrides,
                 },

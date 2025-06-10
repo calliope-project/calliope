@@ -10,7 +10,6 @@ from pathlib import Path
 from calliope.attrdict import AttrDict
 from calliope.exceptions import ModelError, ModelWarning
 from calliope.io import read_rich_yaml
-from calliope.schemas.config_schema import InitMath
 from calliope.schemas.math_schema import MathSchema
 from calliope.util.tools import relative_path
 
@@ -38,13 +37,17 @@ def _load_user_math(file_path: str, model_def_path: str | Path | None) -> AttrDi
 
 
 def initialise_math(
-    math_config: InitMath, model_def_path: str | Path | None = None
+    extra_math: dict[str, str] | None = None, model_def_path: str | Path | None = None
 ) -> AttrDict:
     """Loads and combines internal and user math files into a unified dataset.
 
     Args:
-        math_config (InitMath): math initialisation configuration.
-        model_def_path (str | Path | None): Path to the model definition directory.
+        base_math (str): name of the file to use as base.
+        extra_math (dict[str, str] | None, optional): names and paths to extra math. Defaults to None.
+        model_def_path (str | Path | None, optional): Path to the model definition. Defaults to None.
+
+    Raises:
+        ModelWarning: pre-defined file has been overwritten.
 
     Returns:
         AttrDict: dataset with individual math options.
@@ -54,9 +57,9 @@ def initialise_math(
     math_dataset = AttrDict(
         {name: _load_internal_math(name) for name in PRE_DEFINED_MATH}
     )
-    if math_config.extra:
-        LOGGER.info(f"Math init | loading extras {list(math_config.extra.keys())}.")
-        for name, path in math_config.extra.items():
+    if extra_math:
+        LOGGER.info(f"Math init | loading extras {list(extra_math.keys())}.")
+        for name, path in extra_math.items():
             if name in PRE_DEFINED_MATH:
                 raise ModelWarning(f"Overwriting pre-defined '{name}' math.")
             math_dataset.union({name: _load_user_math(path, model_def_path)})

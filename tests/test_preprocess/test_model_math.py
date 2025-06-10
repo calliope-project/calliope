@@ -9,7 +9,7 @@ import calliope
 from calliope import exceptions
 from calliope.io import to_yaml
 from calliope.preprocess import model_math
-from calliope.schemas import config_schema, math_schema
+from calliope.schemas import math_schema
 
 
 @pytest.fixture(scope="module")
@@ -37,20 +37,20 @@ def user_math_path(def_path, user_math):
 
 class TestInitMath:
     @pytest.fixture(scope="class", params=["default", "w_extra"])
-    def math_config(self, request, user_math_path):
-        config = config_schema.InitMath().model_dump()
+    def extra_math(self, request, user_math_path):
+        extra = {}
         if request.param == "w_extra":
-            config["extra"] = {"user_math": user_math_path}
-        return config_schema.InitMath(**config)
+            extra["user_math"] = user_math_path
+        return extra
 
     @pytest.fixture(scope="class")
-    def math_data(self, math_config, def_path):
-        return model_math.initialise_math(math_config, def_path)
+    def math_data(self, extra_math, def_path):
+        return model_math.initialise_math(extra_math, def_path)
 
-    def test_loaded_internal(self, math_data, math_config):
+    def test_loaded_internal(self, math_data, extra_math):
         """Loaded math should contain both user defined and internal files."""
         assert not math_data.keys() - (
-            set(model_math.PRE_DEFINED_MATH) | math_config.extra.keys()
+            set(model_math.PRE_DEFINED_MATH) | extra_math.keys()
         )
 
     def test_pre_defined_load(self, math_data):
@@ -59,19 +59,18 @@ class TestInitMath:
             expected = model_math._load_internal_math(filename)
             math_data[filename] == expected
 
-    def test_extra_load(self, math_data, math_config, user_math):
+    def test_extra_load(self, math_data, extra_math, user_math):
         """Extra math should be loaded with no alterations."""
-        if math_config.extra:
+        if extra_math:
             assert math_data["user_math"] == user_math
 
     def test_overwrite_warning(self, user_math_path, def_path):
         """Users should be warned when overwritting pre-defined math."""
-        config = config_schema.InitMath()
-        config = config.update({"extra": {"plan": user_math_path}})
+        extra_math = {"plan": user_math_path}
         with pytest.raises(
             exceptions.ModelWarning, match="Overwriting pre-defined 'plan' math."
         ):
-            model_math.initialise_math(config, def_path)
+            model_math.initialise_math(extra_math, def_path)
 
 
 class TestBuildMath:
@@ -85,9 +84,9 @@ class TestBuildMath:
         return calliope.examples.urban_scale(
             override_dict={
                 "config": {
-                    "init.math": {
-                        "base": "plan",
-                        "extra": {
+                    "init": {
+                        "base_math": "plan",
+                        "extra_math": {
                             "additional_math": str(additional.absolute()),
                             "alternative_base": str(alternative_base.absolute()),
                         },

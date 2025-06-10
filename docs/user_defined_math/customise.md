@@ -18,16 +18,15 @@ storage_max:
 
 The other elements of the `storage_max` constraints have not changed (`foreach`, `where`, ...), so we do not need to define them again when adding our own twist on the pre-defined math.
 
-When defining your model, you can reference any number of YAML files containing the math you want to add in `config.init.math`.
+When defining your model, you can reference any number of YAML files containing the math you want to add in `config.init.extra_math`.
 Both absolute paths and paths relative to `model.yaml` are valid.
 
 ```yaml
 config:
   init:
-    math:
-      extra:
-        my_new_math_1: "my_new_math_1.yaml"
-        my_new_math_2: "/home/your_name/Documents/my_new_math_2.yaml"
+    extra_math:
+      my_new_math_1: "my_new_math_1.yaml"
+      my_new_math_2: "/home/your_name/Documents/my_new_math_2.yaml"
 ```
 
 You can then add this math during `build` by specifying it in `config.build.extra_math`.
@@ -59,9 +58,8 @@ This will tell Calliope to overwrite *all* of our pre-defined `base` math with y
 ```yaml
 config:
   init:
-    math:
-      base: "my_new_base_math"
-      extra: {my_new_base_math: your/base_math_file.yaml}
+    base_math: "my_new_base_math"
+    extra_math: {my_new_base_math: your/base_math_file.yaml}
 ```
 
 !!! danger

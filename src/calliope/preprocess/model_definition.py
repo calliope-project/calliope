@@ -54,7 +54,7 @@ def prepare_model_definition(
 
     # Pre-fill config. defaults and fetch the math definition
     config = config_schema.CalliopeConfig(**model_def["config"])
-    model_def["math"] = initialise_math(config.init.math, definition_path)
+    model_def["math"] = initialise_math(config.init.extra_math, definition_path)
 
     # Validate
     # TODO: returned object should be CalliopeModelDef

@@ -2,7 +2,7 @@
 
 ### User-facing changes
 
-|new| all math is defined at init in `config.init.math`, with the option to completely replace `plan.yaml` as the base mode (#763, #739).
+|new| all math is defined during init and then stored in `model._def.math`, with the option to completely replace `plan.yaml` as the base mode (#763, #739).
 
 |new| documentation on SPORES-specific configuration options (#750, #752).
 

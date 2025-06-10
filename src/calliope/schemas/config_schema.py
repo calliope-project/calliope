@@ -19,20 +19,6 @@ SPORES_SCORING_OPTIONS = Literal[
 ]
 
 
-class InitMath(CalliopeBaseModel):
-    """Defines the math to add to the model.
-
-    Files will be loaded in the following order: base -> mode -> extra.
-    """
-
-    base: AttrStr = "plan"
-    """Name of the math file to build on top of.
-    Can be any pre-defined math file or user-defined `extra` file.
-    """
-    extra: dict[AttrStr, str] = Field(default={})
-    "Dictionary with the names and paths of additional math files."
-
-
 class Init(CalliopeBaseModel):
     """All configuration options used when initialising a Calliope model."""
 
@@ -79,8 +65,13 @@ class Init(CalliopeBaseModel):
     Automatically derived distances from lat/lon coordinates will be given in this unit.
     """
 
-    math: InitMath = InitMath()
-    """Math initialisation options."""
+    base_math: AttrStr = "plan"
+    """Name of the math file to build on top of.
+    Can be any pre-defined math file or user-defined file in `extra_math`.
+    """
+
+    extra_math: dict[AttrStr, str] = Field(default={})
+    "Dictionary with the names and paths of additional math files."
 
 
 class BuildOperate(CalliopeBaseModel):

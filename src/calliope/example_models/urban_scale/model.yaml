@@ -14,9 +14,8 @@ config:
     # Time series data path - can either be a path relative to this file, or an absolute path
     time_subset: ["2005-07-01", "2005-07-02"] # Subset of timesteps
     broadcast_param_data: true  # allow single indexed parameter data entries to be broadcast across all index items, if there are multiple entries.
-    math:
-      extra:
-        additional_math: "additional_math.yaml"
+    extra_math:
+      additional_math: "additional_math.yaml"
 
   build:
     mode: base # Choices: base, operate

@@ -137,7 +137,7 @@ class Model:
     @property
     def math_priority(self):
         """Order of math formulations, with the last overwriting previous ones."""
-        names = [self.config.init.math.base]
+        names = [self.config.init.base_math]
         if self.config.build.mode != "base":
             names.append(self.config.build.mode)
         names += self.config.build.extra_math
