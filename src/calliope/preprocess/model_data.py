@@ -27,7 +27,7 @@ DATA_T = float | int | bool | str | None | list[float | int | bool | str | None]
 
 
 class Param(TypedDict):
-    """Uniform dictionairy for parameters."""
+    """Uniform dictionary for parameters."""
 
     data: DATA_T
     index: list[list[str]]
