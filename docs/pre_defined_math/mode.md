@@ -1,11 +1,11 @@
-# Run modes
+# Build modes
 
 Calliope can leverage different methods to solve your optimisation problem.
 By default, it is designed to find a system configuration with the lowest combined cost to invest in and then operate technologies, with complete knowledge of what the future holds.
 This is a method that is known as "perfect foresight" optimisation.
-We refer to it in our model as [`base` mode](../advanced/mode.md#base-mode).
+We refer to it in our model as [`base` mode](#base-mode).
 
-In addition to perfect foresight optimisation, we have a [receding horizon "operate" optimisation mode](../advanced/mode.md#operate-mode) and [our "spores" mode](../advanced/mode.md#spores-mode) to generate alternative system configurations that are within a small deviation of the optimal cost that is computed in `base` mode. Read on to find out more about each of these run modes.
+In addition to perfect foresight optimisation, we have a [receding horizon "operate" optimisation mode](../pre_defined_math/mode.md#operate-mode) and [our "spores" mode](../pre_defined_math/mode.md#spores-mode) to generate alternative system configurations that are within a small deviation of the optimal cost that is computed in `base` mode. Read on to find out more about each of these run modes.
 
 ## Base mode
 

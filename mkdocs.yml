@@ -141,7 +141,6 @@ nav:
     - advanced/index.md
     - advanced/time.md
     - advanced/scripts.md
-    - advanced/mode.md
     - advanced/solver.md
     - advanced/backend_choice.md
     - advanced/backend_interface.md

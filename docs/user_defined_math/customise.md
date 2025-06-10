@@ -1,13 +1,15 @@
-# Adding your own extra math to a model
+# Adding your own math to a model
 
 Once you understand the [math components](components.md) and the [formulation syntax](syntax.md), you'll be ready to introduce your own math to a model.
 
-You can find examples of additional math that we have put together in our [math example gallery](examples/index.md).
+!!! info
+    You can find examples of additional math that we have put together in our [math example gallery](examples/index.md).
 
-Whenever you introduce your own extra math, it will be applied on top of the pre-defined math for your chosen run [mode](../creating/config.md#configbuildmode).
-The order of priority is **base math -> mode -> extra math**.
+Whenever you introduce your own math, it can either be _added_ on top of our [pre-defined math](../pre_defined_math/index.md) or _replace_ it entirely.
 
-Therefore, you can override the pre-defined math as well as add new math.
+## Adding extra math
+
+The simplest way to add math is to extend Calliope's pre-existing formulation by defining a new **extra math** option.
 For example, you may want to introduce a timeseries parameter to the pre-defined `storage_max` constraint to limit maximum storage capacity on a per-timestep basis:
 
 ```yaml
@@ -16,7 +18,7 @@ storage_max:
     - expression: storage <= storage_cap * time_varying_parameter
 ```
 
-The other elements of the `storage_max` constraints have not changed (`foreach`, `where`, ...), so we do not need to define them again when adding our own twist on the pre-defined math.
+This will not change other elements of the `storage_max` constraints (`foreach`, `where`, ...), so we do not need to define them again when adding our own twist on the pre-defined math.
 
 When defining your model, you can reference any number of YAML files containing the math you want to add in `config.init.extra_math`.
 Both absolute paths and paths relative to `model.yaml` are valid.
@@ -38,6 +40,9 @@ config:
     extra_math: [my_new_math_1, storage_inter_cluster, my_new_math_2]
 ```
 
+???+ tip
+    Always remember Calliope's strict order of priority: **base math -> mode -> extra math**.
+
 Finally, when working in an interactive Python session, you can add math as a dictionary at build time:
 
 ```python
@@ -47,13 +52,11 @@ model.build(add_math_dict={...})
 This will be applied after the pre-defined mode math and any extra math listed in `config.build.extra_math`.
 
 !!! note
-
     When working in an interactive Python session, you can view the final math dictionary that has been applied to build the optimisation problem by inspecting `model.applied_math` after a successful call to `model.build()`.
 
 ## Re-defining Calliope's pre-defined base math
 
-If you prefer to start from scratch with your math, you can ask Callipe to use it as the base of the problem.
-This will tell Calliope to overwrite *all* of our pre-defined `base` math with your file.
+If you prefer to start from scratch with your math, you can ask Callipe to completely replace our pre-defined **base math** with your own.
 
 ```yaml
 config:
@@ -62,8 +65,9 @@ config:
     extra_math: {my_new_base_math: your/base_math_file.yaml}
 ```
 
-!!! danger
+This will tell Calliope to overwrite _all_ of our pre-defined `base` math with your file.
 
+!!! danger
     Modes and other pre-defined options such as `operate` and `spores` might not work as expected!
 
 ## Adding your parameters to the YAML schema
@@ -109,12 +113,10 @@ This is usually one of `float` or `str`.
 * x-operate-param (bool): If True, this parameter's schema data will only be loaded into the optimisation problem if running in "operate" mode.
 
 !!! note
-
     Schema attributes which start with `x-` are Calliope-specific.
     They are not used at all for YAML validation and instead get picked up by us using the utility function [calliope.util.schema.extract_from_schema][].
 
 !!! warning
-
     The schema is updated in-place so your edits to it will remain active as long as you are running in the same session.
     You can reset your updates to the schema and return to the pre-defined schema by calling [`calliope.util.schema.reset()`][calliope.util.schema.reset]
 
@@ -137,7 +139,6 @@ You can then convert this to a PDF or HTML page using your renderer of choice.
 We recommend you only use HTML as the equations can become too long for a PDF page.
 
 !!! note
-
     You can add interactive elements to your documentation, if you are planning to host them online using MKDocs.
     This includes tabs to flip between rich-text math and the input YAML snippet, and dropdown lists for math component cross-references.
     Just set the `mkdocs_features` argument to `True` in `math_documentation.write`.

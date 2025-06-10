@@ -5,13 +5,13 @@ overrides:
       time_cluster: cluster_days.csv
     config.build:
       extra_math: ["storage_inter_cluster"]
-  spores:
-    config:
-      init.name: SPORES solve mode
-      build.mode: spores
-      solve.spores.number: 2
-    parameters:
-      spores_slack: 0.1
+  # spores:
+  #   config:
+  #     init.name: SPORES solve mode
+  #     build.mode: spores
+  #     solve.spores.number: 2
+  #   parameters:
+  #     spores_slack: 0.1
 
 config.init.name: base
 

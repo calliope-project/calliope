@@ -92,7 +92,7 @@ class BuildOperate(CalliopeBaseModel):
     """
 
     use_cap_results: bool = Field(default=False)
-    """If the model already contains `plan` results, use those optimal capacities as input parameters to the `operate` mode run."""
+    """If the model already contains `base` results, use those optimal capacities as input parameters to the `operate` mode run."""
 
 
 class Build(CalliopeBaseModel):
@@ -155,7 +155,7 @@ class SolveSpores(CalliopeBaseModel):
     """
 
     skip_baseline_run: bool = Field(default=False)
-    """If the model already contains `plan` results, use those as the initial base run results and start with SPORES iterations immediately."""
+    """If the model already contains `base` results, use those as the initial base run results and start with SPORES iterations immediately."""
 
     tracking_parameter: str | None = None
     """If given, an input parameter name with which to filter technologies for consideration in SPORES scoring."""
