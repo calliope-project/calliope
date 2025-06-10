@@ -63,18 +63,22 @@ def on_files(files: list, config: dict, **kwargs):
         custom_documentation = generate_custom_math_documentation(
             base_documentation, override
         )
-        write_file(
-            f"{override}.yaml",
-            textwrap.dedent(
+        if "mode" in model_config.get_key(f"overrides.{override}.config.init.name"):
+            text = textwrap.dedent(
                 f"""
-            Pre-defined additional math to apply {custom_documentation.name} __on top of__ the [base mathematical formulation][base-math].
-            This math is _only_ applied if referenced in the `config.build.extra_math` list as `{override}`.
+            Pre-defined **mode math** to apply {custom_documentation.name} __on top of__ the [base mathematical formulation][base-math].
+            This math is _only_ applied when `config.build.mode` is set to `"{override}"`.
             """
-            ),
-            custom_documentation,
-            files,
-            config,
-        )
+            )
+        else:
+            text = textwrap.dedent(
+                f"""
+            Pre-defined **extra math** to apply {custom_documentation.name} __on top of__ the [base mathematical formulation][base-math].
+            This math is _only_ applied if referenced in the `config.build.extra_math` list as `"{override}"`.
+            """
+            )
+
+        write_file(f"{override}.yaml", text, custom_documentation, files, config)
 
     return files
 
