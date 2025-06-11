@@ -159,7 +159,7 @@ This split means you can change configuration options on-the-fly if you are work
       init:
         time_subset: ["2005-01", "2005-02"]
       build:
-        mode: plan
+        mode: base
       solve:
         solver: cbc
     ```
@@ -169,7 +169,7 @@ This split means you can change configuration options on-the-fly if you are work
     ```python
     import calliope
     model = calliope.Model(time_subset=["2005-01", "2005-02"])
-    model.build(mode="plan")
+    model.build(mode="base")
     model.solve(solver="cbc")
     ```
 

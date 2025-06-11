@@ -7,8 +7,7 @@ import xarray as xr
 
 from calliope.attrdict import AttrDict
 from calliope.backend import latex_backend_model, pyomo_backend_model
-from calliope.preprocess import CalliopeMath
-from calliope.schemas import config_schema
+from calliope.schemas import config_schema, math_schema
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 from .common.util import build_test_model as build_model
@@ -160,16 +159,7 @@ def simple_conversion_plus():
 
 @pytest.fixture(scope="module")
 def dummy_model_math():
-    math = {
-        "data": {
-            "constraints": {},
-            "variables": {},
-            "global_expressions": {},
-            "objectives": {},
-        },
-        "history": [],
-    }
-    return CalliopeMath.from_dict(math)
+    return AttrDict(math_schema.MathSchema().model_dump())
 
 
 @pytest.fixture(scope="module")
@@ -305,15 +295,21 @@ def populate_backend_model(backend):
             "foreach": ["nodes", "techs"],
             "where": "with_inf",
             "bounds": {"min": -np.inf, "max": np.inf},
+            "domain": "real",
+            "active": True,
         },
     )
-    backend.add_variable("no_dim_var", {"bounds": {"min": -1, "max": 1}})
+    backend.add_variable(
+        "no_dim_var",
+        {"bounds": {"min": -1, "max": 1}, "domain": "real", "active": True},
+    )
     backend.add_global_expression(
         "multi_dim_expr",
         {
             "foreach": ["nodes", "techs"],
             "where": "all_true",
             "equations": [{"expression": "multi_dim_var * all_true"}],
+            "active": True,
         },
     )
     backend.add_constraint(
@@ -325,6 +321,7 @@ def populate_backend_model(backend):
                     "expression": "sum(multi_dim_expr, over=[nodes, techs]) + no_dim_var <= 2"
                 }
             ],
+            "active": True,
         },
     )
     return backend

@@ -259,7 +259,7 @@ df_capacity = (
 )
 df_capacity_coords = pd.merge(df_coords, df_capacity, left_on="nodes", right_on="nodes")
 
-fig = px.line_mapbox(
+fig = px.line_map(
     df_capacity_coords,
     lat="latitude",
     lon="longitude",

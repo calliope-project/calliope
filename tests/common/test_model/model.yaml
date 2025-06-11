@@ -18,7 +18,7 @@ config:
     broadcast_param_data: true
 
   build:
-    mode: plan
+    mode: base
   solve:
     solver: cbc
 

@@ -8,40 +8,57 @@ from pathlib import Path
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.io import read_rich_yaml, to_yaml
+from calliope.preprocess.model_math import initialise_math
+from calliope.schemas import config_schema, model_def_schema
 from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
 
 
 def prepare_model_definition(
-    data: str | Path | dict,
+    model_definition: str | Path | dict,
     scenario: str | None = None,
     override_dict: dict | None = None,
+    **kwargs,
 ) -> tuple[AttrDict, str]:
-    """Arrange model definition data folloging our standardised order of priority.
+    """Arrange model definition data following our standardised order of priority.
 
     Should always be called when defining calliope models from configuration files.
     The order of priority is:
 
-    - override_dict > scenarios > data section > template
+    - init_kwargs > override_dict > scenarios > data section > template
 
     Args:
-        data (str | Path | dict): model data file or dictionary.
+        model_definition (str | Path | dict): model data file or dictionary.
         scenario (str | None, optional): scenario to run. Defaults to None.
         override_dict (dict | None, optional): additional overrides. Defaults to None.
+        **kwargs: Initialisation overrides.
 
     Returns:
-        tuple[AttrDict, str]: _description_
+        tuple[AttrDict, str]: fully defined setup
     """
-    if isinstance(data, dict):
-        model_def = AttrDict(data)
+    # Identify the instantiation case
+    if isinstance(model_definition, dict):
+        raw_data = AttrDict(model_definition)
+        definition_path = None
     else:
-        model_def = read_rich_yaml(data)
+        raw_data = read_rich_yaml(model_definition)
+        definition_path = model_definition
+
+    # Apply overrides and similar modifications 'on top' of the given definition
     model_def, applied_overrides = _load_scenario_overrides(
-        model_def, scenario, override_dict
+        raw_data, scenario, override_dict
     )
-    template_solver = TemplateSolver(model_def)
-    model_def = template_solver.resolved_data
+    model_def = TemplateSolver(model_def).resolved_data
+    model_def.union({"config.init": kwargs}, allow_override=True)
+
+    # Pre-fill config. defaults and fetch the math definition
+    config = config_schema.CalliopeConfig(**model_def["config"])
+    model_def["math"] = initialise_math(config.init.extra_math, definition_path)
+
+    # Validate
+    # TODO: returned object should be CalliopeModelDef
+    model_def_schema.CalliopeModelDef(**model_def)
 
     return model_def, applied_overrides
 

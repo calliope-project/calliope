@@ -23,3 +23,4 @@ class CalliopeModelDef(CalliopeBaseModel):
     data_tables: dict[AttrStr, CalliopeDataTable] | None = None
     nodes: dict[AttrStr, CalliopeNode] | None = None
     techs: dict[AttrStr, CalliopeTech] | None = None
+    math: dict[AttrStr, dict]

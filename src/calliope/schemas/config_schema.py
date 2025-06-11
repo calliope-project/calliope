@@ -8,9 +8,9 @@ from typing import Literal
 
 from pydantic import Field
 
-from calliope.schemas.general import CalliopeBaseModel, UniqueList
+from calliope.schemas.general import AttrStr, CalliopeBaseModel, UniqueList
 
-Mode = Literal["plan", "operate", "spores"]
+Mode = Literal["base", "operate", "spores"]
 
 LOGGER = logging.getLogger(__name__)
 
@@ -24,10 +24,10 @@ class Init(CalliopeBaseModel):
 
     model_config = {"title": "Model initialisation configuration"}
     name: str | None = None
-    """Model name"""
+    """Model name."""
 
     calliope_version: str | None = None
-    """Calliope framework version this model is intended for"""
+    """Calliope framework version this model is intended for."""
 
     broadcast_param_data: bool = Field(default=False)
     """
@@ -65,6 +65,14 @@ class Init(CalliopeBaseModel):
     Automatically derived distances from lat/lon coordinates will be given in this unit.
     """
 
+    base_math: AttrStr = "plan"
+    """Name of the math file to build on top of.
+    Can be any pre-defined math file or user-defined file in `extra_math`.
+    """
+
+    extra_math: dict[AttrStr, str] = Field(default={})
+    "Dictionary with the names and paths of additional math files."
+
 
 class BuildOperate(CalliopeBaseModel):
     """Operate mode configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
@@ -84,28 +92,24 @@ class BuildOperate(CalliopeBaseModel):
     """
 
     use_cap_results: bool = Field(default=False)
-    """If the model already contains `plan` mode results, use those optimal capacities as input parameters to the `operate` mode run."""
+    """If the model already contains `base` results, use those optimal capacities as input parameters to the `operate` mode run."""
 
 
 class Build(CalliopeBaseModel):
     """Base configuration options used when building a Calliope optimisation problem (`calliope.Model.build`)."""
 
     model_config = {"title": "Model build configuration"}
-    mode: Mode = Field(default="plan")
-    """Mode in which to run the optimisation."""
 
-    add_math: UniqueList[str] = Field(default=[])
-    """
-    List of references to files which contain additional mathematical formulations to be applied on top of or instead of the base mode math.
-    If referring to an pre-defined Calliope math file (see documentation for available files), do not append the reference with ".yaml".
-    If referring to your own math file, ensure the file type is given as a suffix (".yaml" or ".yml").
-    Relative paths will be assumed to be relative to the model definition file given when creating a calliope Model (`calliope.Model(model_definition=...)`)
+    mode: Mode = Field(default="base")
+    """Mode in which to run the optimisation.
+    Triggers additional processing and appends additional math formulations.
+    Math order: base -> mode
     """
 
-    ignore_mode_math: bool = Field(default=False)
+    extra_math: UniqueList[str] = Field(default=[])
     """
-    If True, do not initialise the mathematical formulation with the pre-defined math for the given run `mode`.
-    This option can be used to completely re-define the Calliope mathematical formulation.
+    List of additional math to be applied on top of the base mode math and mode math.
+    Math order: base -> mode -> extra
     """
 
     backend: Literal["pyomo", "gurobi"] = Field(default="pyomo")

@@ -1,6 +1,3 @@
-import:
-  - plan.yaml
-
 constraints:
   total_system_cost_max:
     description: >

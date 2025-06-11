@@ -4,10 +4,10 @@ overrides:
       name: inter-cluster storage
       time_cluster: cluster_days.csv
     config.build:
-      add_math: ["storage_inter_cluster"]
+      extra_math: ["storage_inter_cluster"]
   spores:
     config:
-      init.name: SPORES solve mode
+      init.name: SPORES mode
       build.mode: spores
       solve.spores.number: 2
     parameters:
