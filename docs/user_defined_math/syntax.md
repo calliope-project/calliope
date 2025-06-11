@@ -10,7 +10,7 @@ You then populate the subset with any number of [equation expressions](#equation
 
 !!! info "See also"
 
-    Reference for the allowed key-value pairs in your additional math YAML file is available in the [reference section of the documentation][math-formulation-schema].
+    Reference for the allowed key-value pairs in your additional math YAML file is available in the [reference section of the documentation][model-definition-schema].
 
 ## foreach lists
 

@@ -702,7 +702,7 @@ Instead, data table filepaths should always be relative to the `model.yaml` file
 * We have removed `run.relax_constraint` alongside [removing group constraints](#group-constraints).
 * We have removed `model.file_allowed`, which many users will not even know existed (it was a largely internal configuration option)!
 Instead, it is possible to index any parameter over the time dimension.
-It is up to you to ensure the math formulation is set up to handle this change, which may require [tweaking existing math](user_defined_math/customise.md#introducing-additional-math-to-your-model).
+It is up to you to ensure the math formulation is set up to handle this change, which may require [tweaking existing math](user_defined_math/customise.md#adding-your-own-math-to-a-model).
 * With the [removal of time clustering](#clustering), we have removed `model.random_seed` and `model.time` options.
 
 ### Plotting
