@@ -44,7 +44,7 @@ import calliope
 calliope.set_log_verbosity("INFO", include_solver_output=False)
 
 # %% [markdown]
-# ## Running in `plan` mode.
+# ## Running in 'plan' mode.
 
 # %%
 # We subset to the same time range as operate mode
@@ -53,7 +53,7 @@ model_plan.build()
 model_plan.solve()
 
 # %% [markdown]
-# ## Running in `operate` mode.
+# ## Running in 'operate' mode.
 
 # %%
 model_operate = calliope.examples.national_scale(scenario="operate")
@@ -70,7 +70,7 @@ model_operate.inputs[["flow_cap", "storage_cap", "area_use"]]
 model_operate.results
 
 # %% [markdown]
-# ## Running in `spores` mode.
+# ## Running in 'spores' mode.
 
 # %%
 # We subset to the same time range as operate/plan mode
@@ -184,7 +184,7 @@ spores_results_da = xr.concat(spores_results, dim="algorithm")
 spores_results_da.flow_cap.to_series().dropna().unstack("spores")
 
 # %% [markdown]
-# ## `plan` vs `operate`
+# ## 'plan' vs 'operate'
 # Here, we compare flows over the 10 days.
 # Note how flows do not match as the rolling horizon makes it difficult to make the correct storage charge/discharge decisions.
 
@@ -200,7 +200,7 @@ fig_flows_operate = plot_flows(model_operate.results)
 fig_flows_operate.update_layout(title="Operate mode flows")
 
 # %% [markdown]
-# ## `plan` vs `spores`
+# ## 'plan' vs 'spores'
 # Here, we compare installed capacities between the baseline run (== `plan` mode) and the SPORES.
 # Note how the baseline SPORE is the same as `plan` mode and then results deviate considerably.
 
@@ -213,7 +213,7 @@ fig_flows_spores = plot_capacity(model_spores.results, facet_col="spores")
 fig_flows_spores.update_layout(title="SPORES mode capacities")
 
 # %% [markdown]
-# ## Comparing `spores` scoring algorithms
+# ## Comparing 'spores' scoring algorithms
 # Here, we compare installed capacities between the different SPORES runs.
 
 # %%

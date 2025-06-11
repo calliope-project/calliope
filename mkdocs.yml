@@ -112,7 +112,6 @@ nav:
   - Troubleshooting: troubleshooting.md
   - Pre-defined math:
     - index: pre_defined_math/index.md
-    - pre_defined_math/mode.md
   - Defining your own math:
     - user_defined_math/index.md
     - user_defined_math/components.md
