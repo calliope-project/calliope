@@ -91,12 +91,12 @@ The exact extent of this is as-yet untested.
 Solution time increases more than linearly with the number of decision variables.
 As it splits the model into temporal chunks, `operate` mode can help to alleviate solution time of big problems.
 This is clearly at the expense of fixing technology capacities.
-However, one solution is to use a heavily time clustered `plan` mode to get indicative model capacities.
+However, one solution is to use a heavily time clustered `base` mode to get indicative model capacities.
 Then, run `operate` mode with these capacities to get a higher resolution operation strategy.
 If necessary, this process could be iterated.
 
 !!! info "See also"
-    [Documentation on `operate` mode](advanced/mode.md#operate-mode)
+    [Documentation on `operate` mode](pre_defined_math/mode.md#operate-mode)
 
 ## Influence of solver choice on speed
 

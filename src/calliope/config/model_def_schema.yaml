@@ -408,7 +408,7 @@ properties:
             title: Rated flow capacity.
             description: >-
               Sets `flow_cap` to a parameter in operate mode.
-              NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+              NOTE: this parameter cannot be used with `plan` as it clashes with the decision variable of the same name.
             x-unit: power.
 
           flow_cap_max:
@@ -548,7 +548,7 @@ properties:
             title: Area used.
             description: >-
               Sets `area_use` to a parameter in operate mode.
-              NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+              NOTE: this parameter cannot be used with `plan` as it clashes with the decision variable of the same name.
             x-unit: $\text{area}$.
 
           area_use_max:
@@ -586,7 +586,7 @@ properties:
             title: Rated storage capacity.
             description: >-
               Sets `storage_cap` to a parameter in operate mode.
-              NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+              NOTE: this parameter cannot be used with `plan` as it clashes with the decision variable of the same name.
             x-unit: $\text{area}$.
 
           storage_cap_max:
@@ -682,7 +682,7 @@ properties:
             title: Number of purchased units.
             description: >-
               Sets `purchased_units` to a parameter in operate mode.
-              NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+              NOTE: this parameter cannot be used with `plan` as it clashes with the decision variable of the same name.
             x-unit: integer
 
           purchased_units_min:
@@ -813,7 +813,7 @@ properties:
             title: Installed source consumption capacity.
             description: >-
               Sets `source_cap` to a parameter in operate mode.
-              NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+              NOTE: this parameter cannot be used with `plan` as it clashes with the decision variable of the same name.
             x-unit: power.
 
           source_cap_max:

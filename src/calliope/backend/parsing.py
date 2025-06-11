@@ -30,6 +30,7 @@ class UnparsedEquation(TypedDict):
 
     where: NotRequired[str]
     expression: str
+    active: bool
 
 
 class UnparsedConstraint(TypedDict):
@@ -41,6 +42,7 @@ class UnparsedConstraint(TypedDict):
     equations: Required[list[UnparsedEquation]]
     sub_expressions: NotRequired[dict[str, list[UnparsedEquation]]]
     slices: NotRequired[dict[str, list[UnparsedEquation]]]
+    active: bool
 
 
 class UnparsedPiecewiseConstraint(TypedDict):
@@ -53,6 +55,7 @@ class UnparsedPiecewiseConstraint(TypedDict):
     x_values: Required[str]
     y_expression: Required[str]
     y_values: Required[str]
+    active: bool
 
 
 class UnparsedExpression(UnparsedConstraint):
@@ -67,8 +70,6 @@ class UnparsedVariableBound(TypedDict):
 
     min: str
     max: str
-    equals: str
-    scale: NotRequired[str]
 
 
 class UnparsedVariable(TypedDict):
@@ -81,6 +82,7 @@ class UnparsedVariable(TypedDict):
     where: str
     domain: NotRequired[str]
     bounds: UnparsedVariableBound
+    active: bool
 
 
 class UnparsedObjective(TypedDict):
@@ -90,6 +92,7 @@ class UnparsedObjective(TypedDict):
     equations: Required[list[UnparsedEquation]]
     sub_expressions: NotRequired[dict[str, list[UnparsedEquation]]]
     sense: str
+    active: bool
 
 
 UNPARSED_DICTS = (

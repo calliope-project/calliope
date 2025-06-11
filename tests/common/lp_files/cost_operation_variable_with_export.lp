@@ -48,4 +48,3 @@ bounds
    0 <= variables(flow_out)(a__test_supply_gas__gas__2005_01_01_00_00) <= +inf
    0 <= variables(flow_out)(a__test_supply_gas__gas__2005_01_01_01_00) <= +inf
 end
-

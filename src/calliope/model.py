@@ -38,7 +38,7 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
-    ATTRS_SAVED = ("applied_math", "config", "def_path")
+    ATTRS_SAVED = ("applied_math", "_def")
 
     def __init__(
         self,
@@ -69,11 +69,10 @@ class Model:
             **kwargs: initialisation overrides.
         """
         self._timings: dict = {}
-        self.config: config_schema.CalliopeConfig
         self.defaults: AttrDict
-        self.applied_math: preprocess.CalliopeMath
+        self.applied_math: AttrDict
         self.backend: BackendModel
-        self.def_path: str | None = None
+        self._def: model_def_schema.CalliopeModelDef
         self._start_window_idx: int = 0
         self._is_built: bool = False
         self._is_solved: bool = False
@@ -90,9 +89,6 @@ class Model:
                 )
             self._init_from_model_data(model_definition)
         else:
-            if not isinstance(model_definition, dict):
-                # Only file definitions allow relative files.
-                self.def_path = str(model_definition)
             self._init_from_model_definition(
                 model_definition, scenario, override_dict, data_table_dfs, **kwargs
             )
@@ -111,7 +107,12 @@ class Model:
     @property
     def name(self):
         """Get the model name."""
-        return self._model_data.attrs["name"]
+        return self._def.config.init.name
+
+    @property
+    def config(self) -> config_schema.CalliopeConfig:
+        """Get model configuration values."""
+        return self._def.config
 
     @property
     def inputs(self):
@@ -133,6 +134,15 @@ class Model:
         """Get solved status."""
         return self._is_solved
 
+    @property
+    def math_priority(self):
+        """Order of math formulations, with the last overwriting previous ones."""
+        names = [self.config.init.base_math]
+        if self.config.build.mode != "base":
+            names.append(self.config.build.mode)
+        names += self.config.build.extra_math
+        return names
+
     def _init_from_model_definition(
         self,
         model_definition: dict | str | Path,
@@ -144,40 +154,44 @@ class Model:
         """Initialise the model using pre-processed YAML files and optional dataframes/dicts.
 
         Args:
-            model_definition (calliope.AttrDict): preprocessed model configuration.
+            model_definition (dict | str | Path): preprocessed model configuration.
             scenario (str | None): scenario specified by users
             override_dict (dict | None): overrides to apply after scenarios.
             data_table_dfs (dict[str, pd.DataFrame] | None): files with additional model information.
             **kwargs: initialisation overrides.
         """
-        (model_def_full, applied_overrides) = preprocess.prepare_model_definition(
-            model_definition, scenario, override_dict
-        )
-        model_def_full.union({"config.init": kwargs}, allow_override=True)
-        # Ensure model definition is correct
-        model_def_schema.CalliopeModelDef(**model_def_full)
-
         log_time(
             LOGGER,
             self._timings,
             "model_run_creation",
-            comment="Model: preprocessing stage 1 (model_run)",
+            comment="Model: preprocessing stage 1 (definition)",
         )
-        model_config = config_schema.CalliopeConfig(**model_def_full.pop("config"))
+        (model_def_full, applied_overrides) = preprocess.prepare_model_definition(
+            model_definition, scenario, override_dict, **kwargs
+        )
 
+        self._def = model_def_schema.CalliopeModelDef(**model_def_full)
+
+        log_time(
+            LOGGER,
+            self._timings,
+            "model_data_creation",
+            comment="Model: preprocessing stage 2 (data)",
+        )
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
         attributes = {
-            "calliope_version_defined": model_config.init.calliope_version,
+            "calliope_version_defined": self._def.config.init.calliope_version,
             "calliope_version_initialised": calliope.__version__,
             "applied_overrides": applied_overrides,
             "scenario": scenario,
             "defaults": param_metadata["default"],
         }
-        # FIXME-config: remove config input once model_def_full uses pydantic
+
+        def_path = None if isinstance(model_definition, dict) else str(model_definition)
         model_data_factory = ModelDataFactory(
-            model_config.init,
+            self._def.config.init,
             model_def_full,
-            self.def_path,
+            def_path,
             data_table_dfs,
             attributes,
             param_metadata,
@@ -185,16 +199,6 @@ class Model:
         model_data_factory.build()
 
         self._model_data = model_data_factory.dataset
-
-        log_time(
-            LOGGER,
-            self._timings,
-            "model_data_creation",
-            comment="Model: preprocessing stage 2 (model_data)",
-        )
-
-        self._model_data.attrs["name"] = model_config.init.name
-        self.config = model_config
 
         log_time(
             LOGGER,
@@ -213,11 +217,11 @@ class Model:
                 Model dataset with input parameters as arrays and configuration stored in the dataset attributes dictionary.
         """
         if "applied_math" in model_data.attrs:
-            self.applied_math = preprocess.CalliopeMath.from_dict(
-                model_data.attrs.pop("applied_math")
+            self.applied_math = AttrDict(model_data.attrs.pop("applied_math"))
+        if "_def" in model_data.attrs:
+            self._def = model_def_schema.CalliopeModelDef(
+                **model_data.attrs.pop("_def")
             )
-        if "config" in model_data.attrs:
-            self.config = config_schema.CalliopeConfig(**model_data.attrs.pop("config"))
 
         self._model_data = model_data
 
@@ -257,7 +261,7 @@ class Model:
             comment="Model: backend build starting",
         )
 
-        self.config = self.config.update({"build": kwargs})
+        self._def = self._def.update({"config.build": kwargs})
         mode = self.config.build.mode
         if mode == "operate":
             if not self._model_data.attrs["allow_operate_mode"]:
@@ -269,18 +273,13 @@ class Model:
         else:
             backend_input = self._model_data
 
-        init_math_list = [] if self.config.build.ignore_mode_math else [mode]
-        end_math_list = [] if add_math_dict is None else [add_math_dict]
-        full_math_list = init_math_list + self.config.build.add_math + end_math_list
-        LOGGER.debug(f"Math preprocessing | Loading math: {full_math_list}")
-        model_math = preprocess.CalliopeMath(full_math_list, self.def_path)
-
+        applied_math = preprocess.build_applied_math(
+            self.math_priority, self._def.math, add_math_dict
+        )
         self.backend = backend.get_model_backend(
-            self.config.build, backend_input, model_math
+            self.config.build, backend_input, applied_math
         )
         self.backend.add_optimisation_components()
-
-        self.applied_math = model_math
 
         self._model_data.attrs["timestamp_build_complete"] = log_time(
             LOGGER,
@@ -288,6 +287,7 @@ class Model:
             "build_complete",
             comment="Model: backend build complete",
         )
+        self.applied_math = applied_math
         self._is_built = True
 
     def solve(self, force: bool = False, warmstart: bool = False, **kwargs) -> None:
@@ -329,10 +329,9 @@ class Model:
             else:
                 to_drop = self.results.data_vars
 
-        self.config = self.config.update({"solve": kwargs})
+        self._def = self._def.update({"config.solve": kwargs})
 
-        shadow_prices = self.config.solve.shadow_prices
-        self.backend.shadow_prices.track_constraints(shadow_prices)
+        self.backend.shadow_prices.track_constraints(self.config.solve.shadow_prices)
 
         mode = self.config.build.mode
         self._model_data.attrs["timestamp_solve_start"] = log_time(
@@ -404,8 +403,8 @@ class Model:
         """Save complete model data (inputs and, if available, results) to a NetCDF file at the given `path`."""
         saved_attrs = {}
         for attr in set(self.ATTRS_SAVED) & set(self.__dict__.keys()):
-            if attr == "config":
-                saved_attrs[attr] = self.config.model_dump()
+            if attr == "_def":
+                saved_attrs[attr] = self._def.model_dump()
             elif not isinstance(getattr(self, attr), str | list | None):
                 saved_attrs[attr] = dict(getattr(self, attr))
             else:
@@ -483,7 +482,7 @@ class Model:
             to_parameterise = extract_from_schema(MODEL_SCHEMA, "x-operate-param")
             if not self._is_solved:
                 raise exceptions.ModelError(
-                    "Cannot use plan mode capacity results in operate mode if a solution does not yet exist for the model."
+                    "Cannot use base mode capacity results in operate mode if a solution does not yet exist for the model."
                 )
             for parameter in to_parameterise.keys():
                 if parameter in self._model_data:

@@ -183,4 +183,4 @@ Any excess stored energy would result in double the excess the following year, a
 
 !!! note
     Cyclic storage also functions when [time clustering](time.md#time-clustering), if allowing storage to be tracked between clusters.
-    However, it cannot be used in [`operate` run mode](mode.md#operate-mode).
+    However, it cannot be used in [`operate` mode](../pre_defined_math/mode.md#operate-mode).
