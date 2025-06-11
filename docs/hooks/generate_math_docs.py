@@ -127,7 +127,7 @@ def write_file(
         if isinstance(idx, dict) and set(idx.keys()) == {"Pre-defined math"}
     ][0]
 
-    nav_reference["Pre-defined math"].append(output_file.as_posix())
+    nav_reference["Pre-defined math"].insert(-2, output_file.as_posix())
 
     title = math_documentation.name
     math_doc = math_documentation.write(format="md", mkdocs_features=True)
