@@ -204,7 +204,7 @@ class TestSporesMode:
         return model, log
 
     @pytest.fixture(scope="class")
-    def spores_model_skip_baseline_and_log(self, request):
+    def spores_model_continue_from_plan_and_log(self, request):
         """Iterate 2 times in SPORES mode having pre-computed the baseline results."""
         model = build_model({}, self.SPORES_OVERRIDES)
         model.build(mode="base")
@@ -213,7 +213,24 @@ class TestSporesMode:
         model.build(mode="spores", force=True)
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
-                model.solve(force=True, spores={"skip_baseline_run": True})
+                model.solve(force=True, spores={"continue_from_latest_results": True})
+            log = caplog.text
+
+        return model, log
+
+    @pytest.fixture(scope="class")
+    def spores_model_continue_from_spores_and_log(self, request):
+        """Iterate 2 times in SPORES mode having pre-computed the baseline results."""
+
+        model = build_model({}, self.SPORES_OVERRIDES)
+        model.build(mode="spores")
+        model.solve()
+        with self.caplog_session(request) as caplog:
+            with caplog.at_level(logging.INFO):
+                model.solve(
+                    force=True,
+                    spores={"continue_from_latest_results": True, "number": 4},
+                )
             log = caplog.text
 
         return model, log
@@ -305,13 +322,14 @@ class TestSporesMode:
             calliope.exceptions.ModelError,
             match="Cannot run SPORES without baseline results.",
         ):
-            model.solve(spores={"skip_baseline_run": True})
+            model.solve(spores={"continue_from_latest_results": True})
 
     @pytest.mark.parametrize(
         "fixture",
         [
             "spores_model_and_log",
-            "spores_model_skip_baseline_and_log",
+            "spores_model_continue_from_spores_and_log",
+            "spores_model_continue_from_plan_and_log",
             "spores_model_save_per_spore_and_log",
         ],
     )
@@ -340,13 +358,13 @@ class TestSporesMode:
         # We still get results, up to the point of infeasibility
         assert not set(
             spores_infeasible_model.results.spores.values
-        ).symmetric_difference(["baseline"])
+        ).symmetric_difference([0])
 
     def test_spores_mode_3_results(self, spores_model_and_log_algorithms):
         """Solving in spores mode should lead to 3 sets of results."""
         spores_model, _ = spores_model_and_log_algorithms
         assert not set(spores_model.results.spores.values).symmetric_difference(
-            ["baseline", "1", "2"]
+            [0, 1, 2]
         )
 
     def test_spores_scores(self, spores_model_and_log_algorithms):
@@ -371,26 +389,31 @@ class TestSporesMode:
             in log
         )
 
-    def test_spores_scores_never_decrease_integer_algo(self, spores_model_and_log):
+    @pytest.mark.parametrize(
+        "fixture", ["spores_model_and_log", "spores_model_continue_from_spores_and_log"]
+    )
+    def test_spores_scores_never_decrease_integer_algo(self, request, fixture):
         """SPORES scores can never decrease.
 
         This is not true for all algorithms (e.g. random scoring) so we test with integer scoring.
         """
-        spores_model, _ = spores_model_and_log
+        model, _ = request.getfixturevalue(fixture)
         assert (
-            spores_model._model_data.spores_score_cumulative.fillna(0).diff("spores")
-            >= 0
+            model._model_data.spores_score_cumulative.fillna(0).diff("spores") >= 0
         ).all()
 
-    def test_spores_scores_increasing_with_cap_integer_algo(self, spores_model_and_log):
+    @pytest.mark.parametrize(
+        "fixture", ["spores_model_and_log", "spores_model_continue_from_spores_and_log"]
+    )
+    def test_spores_scores_increasing_with_cap_integer_algo(self, request, fixture):
         """SPORES scores increase when a tech has a finite flow_cap in the previous iteration."""
-        spores_model, _ = spores_model_and_log
-        has_cap = spores_model.results.flow_cap > 0
+        model, _ = request.getfixturevalue(fixture)
+        has_cap = model.results.flow_cap > 0
         spores_score_increased = (
-            spores_model._model_data.spores_score_cumulative.diff("spores") > 0
+            model._model_data.spores_score_cumulative.diff("spores") > 0
         )
         numpy.testing.assert_array_equal(
-            has_cap.shift(spores=1).sel(spores=["1", "2"]), spores_score_increased
+            has_cap.shift(spores=1).drop_sel(spores=0), spores_score_increased
         )
 
     def test_use_tech_tracking(self, spores_model_with_tracker):
@@ -409,7 +432,7 @@ class TestSporesMode:
         assert len(list(spores_save_per_spore_path.glob("*.nc"))) == 3
 
     @pytest.mark.usefixtures("spores_model_save_per_spore_and_log")
-    @pytest.mark.parametrize("spore", ["baseline", "1", "2"])
+    @pytest.mark.parametrize("spore", [0, 1, 2])
     def test_save_per_spore_check_spore(self, spores_save_per_spore_path, spore):
         """We expect SPORES results to be saved to file once per iteration."""
 
@@ -419,7 +442,7 @@ class TestSporesMode:
         assert result._model_data.spores.item() == spore
 
     @pytest.mark.usefixtures("spores_model_save_per_spore_and_log")
-    @pytest.mark.parametrize("spore", ["baseline", "1", "2"])
+    @pytest.mark.parametrize("spore", [0, 1, 2])
     def test_save_per_spore_compare_results(
         self, spores_save_per_spore_path, spore, spores_model_and_log
     ):
@@ -433,14 +456,15 @@ class TestSporesMode:
             spores_model_and_log[0].results.sel(spores=spore),
         )
 
-    @pytest.mark.parametrize("spore", ["baseline", "1", "2"])
+    @pytest.mark.parametrize("spore", [0, 1, 2])
     def test_save_per_spore_log(self, spores_model_save_per_spore_and_log, spore):
         """We expect SPORES results saving to be logged."""
         _, log = spores_model_save_per_spore_and_log
         assert f"Saving SPORE {spore} to file." in log
 
     @pytest.mark.parametrize(
-        "spores_model", ["spores_model_and_log", "spores_model_skip_baseline_and_log"]
+        "spores_model",
+        ["spores_model_and_log", "spores_model_continue_from_plan_and_log"],
     )
     def test_save_per_spore_without_path_log(self, request, spores_model):
         """We expect appropriate logs when SPORES results will not be saved due to lack of path."""
@@ -460,26 +484,63 @@ class TestSporesMode:
         with caplog.at_level(logging.INFO):
             spores_infeasible_model.solve(spores={"save_per_spore_path": tmp_path})
         assert "No SPORE 1 results to save to file." in caplog.text
-        assert (tmp_path / "spore_baseline.nc").exists()
+        assert (tmp_path / "spore_0.nc").exists()
         assert not (tmp_path / "spore_1.nc").exists()
 
-    def test_skip_baseline_log(self, spores_model_skip_baseline_and_log):
+    def test_continue_from_latest_log(self, spores_model_continue_from_plan_and_log):
         """Skipping baseline run should take existing results."""
 
-        _, log = spores_model_skip_baseline_and_log
+        _, log = spores_model_continue_from_plan_and_log
 
         assert "Using existing baseline model results." in log
 
-    def test_save_per_spore_skip_cost_op(
-        self, spores_model_and_log, spores_model_skip_baseline_and_log
+    def test_skip_cost_op_same_result(
+        self, spores_model_and_log, spores_model_continue_from_plan_and_log
     ):
         """Final result should be the same having skipped baseline."""
 
         model_all_solved_together, _ = spores_model_and_log
-        model_baseline_solved_separately, _ = spores_model_skip_baseline_and_log
+        model_baseline_solved_separately, _ = spores_model_continue_from_plan_and_log
         assert model_all_solved_together._model_data.flow_cap.equals(
             model_baseline_solved_separately._model_data.flow_cap
         )
+
+    def test_continue_from_spores_log(self, spores_model_continue_from_spores_and_log):
+        """Skipping baseline run should take existing results."""
+
+        _, log = spores_model_continue_from_spores_and_log
+
+        assert "Restarting SPORES from SPORE 2 results." in log
+
+    def test_continue_from_spores_same_initial_data(
+        self, spores_model_and_log, spores_model_continue_from_spores_and_log
+    ):
+        """Initial runs should be passed through."""
+
+        model_all_solved_together, _ = spores_model_and_log
+        model_additional_spores, _ = spores_model_continue_from_spores_and_log
+        assert model_all_solved_together._model_data.flow_cap.equals(
+            model_additional_spores._model_data.flow_cap.sel(spores=[0, 1, 2])
+        )
+
+    def test_continue_from_spores_more_results(
+        self, spores_model_continue_from_spores_and_log
+    ):
+        """On continuing, there should be more results."""
+
+        model, _ = spores_model_continue_from_spores_and_log
+        assert not set(model.results.spores.values).symmetric_difference(
+            [0, 1, 2, 3, 4]
+        )
+
+    def test_continue_from_spores_number_not_big_enough(self, spores_model_and_log):
+        """On continuing, the SPORES number selected needs to be higher than the current SPORE."""
+
+        model, _ = spores_model_and_log
+        with pytest.raises(
+            calliope.exceptions.ModelError, match="Cannot restart SPORES from SPORE 2"
+        ):
+            model.solve(force=True, spores={"continue_from_latest_results": True})
 
     def test_spores_relative_deployment_needs_max_param(self):
         """Can only run the `relative_deployment` algorithm if all techs have flow_cap_max."""
