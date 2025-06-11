@@ -112,7 +112,7 @@ However, doing so makes it much easier to process your model definition in Calli
 ### Pre-defined parameters
 
 There is a long list of pre-defined parameters that we use in our [base math][base-math].
-These are listed in full with descriptions and units in our [model definition reference page][math-formulation-schema].
+These are listed in full with descriptions and units in our [model definition reference page][model-definition-schema].
 These parameters come with strict types, default values, and other attributes used in internal Calliope processing.
 Therefore they should always be your first port of call.
 However, if you want to add your own parameters, that is also possible.

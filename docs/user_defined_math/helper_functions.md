@@ -14,7 +14,7 @@ So, `any(cost, over=[nodes, techs])` will check if there is at least one non-NaN
 
 ## defined
 
-Similar to [any](syntax.md#any), using `defined(..., within=...)` in a `where` string allows you to check for non-NaN values along dimensions.
+Similar to [any](#any), using `defined(..., within=...)` in a `where` string allows you to check for non-NaN values along dimensions.
 In the case of `defined`, you can check if e.g., certain technologies have been defined within the nodes or certain carriers are defined within a group of techs or nodes.
 
 So, for the definition:
