@@ -14,7 +14,7 @@ from pathlib import Path
 
 import click
 
-from calliope import Model, examples, io, read_netcdf
+from calliope import examples, io, read_netcdf, read_yaml
 from calliope._version import __version__
 from calliope.exceptions import BackendError
 from calliope.util.generate_runs import generate
@@ -198,7 +198,7 @@ def _run_setup_model(model_file, scenario, model_format, override_dict):
         overrides = io.AttrDict()
 
     if model_format == "yaml":
-        model = Model(model_file, scenario=scenario, override_dict=overrides)
+        model = read_yaml(model_file, scenario=scenario, override_dict=overrides)
     elif model_format == "netcdf":
         if scenario is not None or override_dict is not None:
             raise ValueError(
@@ -301,9 +301,7 @@ def run(
 
             model.build()
             model.solve(**kwargs)
-            termination = model._model_data.attrs.get(
-                "termination_condition", "unknown"
-            )
+            termination = model.attrs.get("termination_condition", "unknown")
 
             if save_csv:
                 click.secho(f"Saving CSV results to directory: {save_csv}")

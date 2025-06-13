@@ -45,7 +45,7 @@ class TestChecks:
             assert check_warn
         elif on is True:
             assert not check_warn
-        assert m._model_data.attrs["config"].build.cyclic_storage is False
+        assert m.attrs["config"].build.cyclic_storage is False
 
     @pytest.mark.parametrize(
         "param", [("flow_eff"), ("source_eff"), ("flow_out_parasitic_eff")]
@@ -58,7 +58,7 @@ class TestChecks:
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
         )
-        assert "timesteps" in m._model_data[param].dims
+        assert "timesteps" in m.inputs[param].dims
 
         with pytest.warns(exceptions.ModelWarning):
             m.build()  # will fail to complete run if there's a problem
@@ -257,14 +257,12 @@ class TestChecks:
             assert check_error_or_warning(
                 warning, "Source capacity constraint defined and set to infinity"
             )
-            assert np.isinf(
-                m._model_data.source_cap.loc["a", "test_supply_plus"].item()
-            )
+            assert np.isinf(m.results.source_cap.loc["a", "test_supply_plus"].item())
         elif on is True:
             assert not check_error_or_warning(
                 warning, "Source capacity constraint defined and set to infinity"
             )
-            assert m._model_data.source_cap.loc["a", "test_supply_plus"].item() == 1e6
+            assert m.results.source_cap.loc["a", "test_supply_plus"].item() == 1e6
 
     @pytest.mark.parametrize("on", [True, False])
     def test_operate_storage_initial(self, on):
@@ -281,16 +279,12 @@ class TestChecks:
             m.build()
         if on is False:
             assert check_error_or_warning(warning, "Initial stored carrier not defined")
-            assert (
-                m._model_data.storage_initial.loc["a", "test_supply_plus"].item() == 0
-            )
+            assert m.results.storage_initial.loc["a", "test_supply_plus"].item() == 0
         elif on is True:
             assert not check_error_or_warning(
                 warning, "Initial stored carrier not defined"
             )
-            assert (
-                m._model_data.storage_initial.loc["a", "test_supply_plus"].item() == 0.5
-            )
+            assert m.results.storage_initial.loc["a", "test_supply_plus"].item() == 0.5
 
 
 @pytest.mark.skip(reason="to be reimplemented by comparison to LP files")
@@ -428,8 +422,8 @@ class TestBalanceConstraints:
         )
         m3.build()
         assert (
-            m3._model_data.storage_initial.to_series().dropna()
-            > m3._model_data.storage_discharge_depth.to_series().dropna()
+            m3.inputs.storage_initial.to_series().dropna()
+            > m3.inputs.storage_discharge_depth.to_series().dropna()
         ).all()
 
     def test_storage_initial_constraint(self, simple_storage):
@@ -1771,7 +1765,7 @@ class TestNewBackend:
         del simple_supply.backend._dataset["foo"]
 
     def test_add_allnull_param_with_shape(self, simple_supply):
-        nan_array = simple_supply._model_data.flow_cap_max.where(lambda x: x < 0)
+        nan_array = simple_supply.inputs.flow_cap_max.where(lambda x: x < 0)
         simple_supply.backend.add_parameter("foo", nan_array)
 
         assert "foo" not in simple_supply.backend._instance.parameters.keys()
@@ -2272,10 +2266,10 @@ class TestValidateMathDict:
         def _validate_math(math_dict: dict):
             m = build_model({}, "simple_supply,investment_costs")
             math = preprocess.build_applied_math(
-                m.math_priority, m._def.math, math_dict
+                m.math_priority, m.attrs.model_def.math, math_dict
             )
             backend = calliope.backend.PyomoBackendModel(
-                m._model_data, math, m.config.build
+                m.inputs, math, m.config.build, m.attrs.defaults
             )
             backend._add_all_inputs_as_parameters()
             backend._validate_math_string_parsing()

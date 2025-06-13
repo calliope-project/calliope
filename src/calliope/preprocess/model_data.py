@@ -76,7 +76,6 @@ class ModelDataFactory:
         model_definition: AttrDict,
         definition_path: str | Path | None,
         data_table_dfs: dict[str, pd.DataFrame] | None,
-        attributes: dict,
         param_attributes: dict[str, dict],
     ):
         """Take a Calliope model definition dictionary and convert it into an xarray Dataset, ready for constraint generation.
@@ -93,7 +92,7 @@ class ModelDataFactory:
         """
         self.config: Init = init_config
         self.model_definition: ModelDefinition = model_definition.copy()
-        self.dataset = xr.Dataset(attrs=AttrDict(attributes))
+        self.dataset = xr.Dataset()
         self.tech_data_from_tables = AttrDict()
         self.definition_path: str | Path | None = definition_path
         tables = []

@@ -74,8 +74,22 @@ class CalliopeBaseModel(BaseModel):
             key_class = getattr(self, key)
             if isinstance(key_class, CalliopeBaseModel):
                 new_dict[key] = key_class.update(val)
+            elif (
+                isinstance(key_class, dict)
+                and isinstance(val, dict)
+                and all(isinstance(k, CalliopeBaseModel) for k in key_class.values())
+            ):
+                # Special case for our dict[AttrStr, type[CalliopeBaseModel]] instances,
+                # where we append to the dict rather than risk having it entirely replaced.
+                key_class_dict = {k: v.model_dump() for k, v in key_class.items()}
+                new_dict[key] = key_class_dict | val
+                LOGGER.debug(
+                    f"Adding keys to {self.__class__.__name__} `{key}`: {sorted(val)}"
+                )
+            elif key_class == val:
+                continue
             else:
-                LOGGER.info(
+                LOGGER.debug(
                     f"Updating {self.__class__.__name__} `{key}`: {key_class} -> {val}"
                 )
                 new_dict[key] = val
