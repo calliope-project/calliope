@@ -307,6 +307,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         inputs: xr.Dataset,
         math: AttrDict,
         build_config: config_schema.Build,
+        defaults: dict,
         include: Literal["all", "valid"] = "all",
     ) -> None:
         """Interface to build a string representation of the mathematical formulation using LaTeX math notation.
@@ -314,11 +315,12 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         Args:
             inputs (xr.Dataset): model data.
             math (AttrDict): Calliope math.
-            build_config: Build configuration options.
+            build_config (config_schema.Build): Build configuration options.
+            defaults (dict): Parameter defaults.
             include (Literal["all", "valid"], optional):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
         """
-        super().__init__(inputs, math, build_config)
+        super().__init__(inputs, math, build_config, defaults)
         self.include = include
 
     def add_parameter(  # noqa: D102, override

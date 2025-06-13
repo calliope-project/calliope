@@ -146,7 +146,7 @@ class TestOperateMode:
         """Cannot build in operate mode if the `allow_operate_mode` attribute is False"""
 
         m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m._model_data.attrs["allow_operate_mode"] = False
+        m.attrs = m.attrs.update({"allow_operate_mode": False})
         with pytest.raises(
             calliope.exceptions.ModelError, match="Unable to run this model in op"
         ):
@@ -290,7 +290,7 @@ class TestSporesMode:
         filepath = tmp_path / "test_io_load.nc"
         spores_model.to_netcdf(filepath)
         new_model = calliope.read_netcdf(filepath)
-        xr.testing.assert_allclose(spores_model._model_data, new_model._model_data)
+        xr.testing.assert_allclose(spores_model.results, new_model.results)
 
     def test_spores_mode_success(self, spores_model_and_log_algorithms):
         """Solving in spores mode should lead to an optimal solution."""
@@ -324,7 +324,7 @@ class TestSporesMode:
             model.backend.get_parameter(
                 "spores_baseline_cost", as_backend_objs=False
             ).item()
-            == simple_supply_and_supply_plus._model_data["min_cost_optimisation"].item()
+            == simple_supply_and_supply_plus.results["min_cost_optimisation"].item()
         )
 
     @pytest.mark.filterwarnings(
@@ -352,9 +352,9 @@ class TestSporesMode:
     def test_spores_scores(self, spores_model_and_log_algorithms):
         """All techs should have a spores score defined."""
         spores_model, _ = spores_model_and_log_algorithms
-        fill_gaps = ~spores_model._model_data.definition_matrix
+        fill_gaps = ~spores_model.inputs.definition_matrix
         assert (
-            spores_model._model_data.spores_score_cumulative.notnull() | fill_gaps
+            spores_model.results.spores_score_cumulative.notnull() | fill_gaps
         ).all()
 
     def test_spores_caps(self, spores_model_and_log_algorithms):
@@ -378,8 +378,7 @@ class TestSporesMode:
         """
         spores_model, _ = spores_model_and_log
         assert (
-            spores_model._model_data.spores_score_cumulative.fillna(0).diff("spores")
-            >= 0
+            spores_model.results.spores_score_cumulative.fillna(0).diff("spores") >= 0
         ).all()
 
     def test_spores_scores_increasing_with_cap_integer_algo(self, spores_model_and_log):
@@ -387,7 +386,7 @@ class TestSporesMode:
         spores_model, _ = spores_model_and_log
         has_cap = spores_model.results.flow_cap > 0
         spores_score_increased = (
-            spores_model._model_data.spores_score_cumulative.diff("spores") > 0
+            spores_model.results.spores_score_cumulative.diff("spores") > 0
         )
         numpy.testing.assert_array_equal(
             has_cap.shift(spores=1).sel(spores=["1", "2"]), spores_score_increased
@@ -396,7 +395,7 @@ class TestSporesMode:
     def test_use_tech_tracking(self, spores_model_with_tracker):
         """Tech tracking leads to only having spores scores for test_supply_elec."""
         sum_spores_score = (
-            spores_model_with_tracker._model_data.spores_score_cumulative.groupby(
+            spores_model_with_tracker.results.spores_score_cumulative.groupby(
                 "techs"
             ).sum(...)
         )
@@ -415,7 +414,7 @@ class TestSporesMode:
         result = calliope.read_netcdf(
             (spores_save_per_spore_path / f"spore_{spore}").with_suffix(".nc")
         )
-        assert result._model_data.spores.item() == spore
+        assert result.results.spores.item() == spore
 
     @pytest.mark.usefixtures("spores_model_save_per_spore_and_log")
     @pytest.mark.parametrize("spore", ["baseline", "1", "2"])
@@ -476,8 +475,8 @@ class TestSporesMode:
 
         model_all_solved_together, _ = spores_model_and_log
         model_baseline_solved_separately, _ = spores_model_skip_baseline_and_log
-        assert model_all_solved_together._model_data.flow_cap.equals(
-            model_baseline_solved_separately._model_data.flow_cap
+        assert model_all_solved_together.results.flow_cap.equals(
+            model_baseline_solved_separately.results.flow_cap
         )
 
     def test_spores_relative_deployment_needs_max_param(self):

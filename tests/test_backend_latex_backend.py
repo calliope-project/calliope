@@ -14,7 +14,10 @@ from .common.util import check_error_or_warning
 def temp_dummy_latex_backend_model(dummy_model_data, dummy_model_math, default_config):
     """Function scoped model definition to avoid cross-test contamination."""
     return latex_backend_model.LatexBackendModel(
-        dummy_model_data, dummy_model_math, default_config.build
+        dummy_model_data,
+        dummy_model_math,
+        default_config.build,
+        dummy_model_data.attrs["defaults"],
     )
 
 

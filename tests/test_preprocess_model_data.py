@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from calliope import AttrDict, exceptions
+from calliope import AttrDict, exceptions, io
 from calliope.preprocess import prepare_model_definition
 from calliope.preprocess.model_data import ModelDataFactory
 
@@ -22,7 +22,9 @@ def model_path():
 @pytest.fixture
 def model_def(model_path):
     model_def_override, _ = prepare_model_definition(
-        model_path, scenario="simple_supply,empty_tech_node"
+        io.read_rich_yaml(model_path),
+        scenario="simple_supply,empty_tech_node",
+        definition_path=model_path,
     )
     # Erase data tables for simplicity
     # FIXME: previous tests omitted this. Either update tests or remove the data_table from the test model.
@@ -39,12 +41,7 @@ def init_config(default_config, model_def):
 @pytest.fixture
 def model_data_factory(model_path, model_def, init_config, model_defaults):
     return ModelDataFactory(
-        init_config,
-        model_def,
-        model_path,
-        [],
-        {"foo": "bar"},
-        {"default": model_defaults},
+        init_config, model_def, model_path, [], {"default": model_defaults}
     )
 
 
@@ -933,7 +930,7 @@ class TestActiveFalse:
         model = build_model(overrides, "simple_storage,two_hours,investment_costs")
 
         # Ensure what should be gone is gone
-        assert "test_storage" not in model._model_data.coords["techs"].values
+        assert "test_storage" not in model.inputs.coords["techs"].values
 
         # Ensure warnings were raised
         assert "(techs, test_storage) | Deactivated" in my_caplog.text
@@ -944,7 +941,7 @@ class TestActiveFalse:
         model = build_model(overrides, "simple_storage,two_hours,investment_costs")
 
         # Ensure what should be gone is gone
-        assert "b" not in model._model_data.coords["nodes"].values
+        assert "b" not in model.inputs.coords["nodes"].values
 
         # Ensure warnings were raised
         assert (
@@ -959,9 +956,9 @@ class TestActiveFalse:
 
         # Ensure what should be gone is gone
         assert not (
-            model._model_data.definition_matrix.sel(
-                techs="test_storage", nodes="b"
-            ).any(["carriers"])
+            model.inputs.definition_matrix.sel(techs="test_storage", nodes="b").any(
+                ["carriers"]
+            )
         )
         assert "(nodes, b), (techs, test_storage) | Deactivated" in my_caplog.text
 
@@ -970,5 +967,5 @@ class TestActiveFalse:
         model = build_model(overrides, "simple_storage,two_hours,investment_costs")
 
         # Ensure what should be gone is gone
-        assert not (model._model_data.base_tech == "transmission").any()
+        assert not (model.inputs.base_tech == "transmission").any()
         assert "(techs, test_link_a_b_elec) | Deactivated." in my_caplog.text

@@ -5,17 +5,15 @@
 import importlib
 from pathlib import Path
 
-from calliope.model import Model
+from calliope.model import read_yaml
 
 _EXAMPLE_MODEL_DIR = Path(importlib.resources.files("calliope") / "example_models")
 
 
 def national_scale(*args, **kwargs):
     """Returns the built-in national-scale example model."""
-    return Model(
-        model_definition=_EXAMPLE_MODEL_DIR / "national_scale" / "model.yaml",
-        *args,
-        **kwargs,
+    return read_yaml(
+        _EXAMPLE_MODEL_DIR / "national_scale" / "model.yaml", *args, **kwargs
     )
 
 
@@ -31,11 +29,7 @@ def time_resampling(*args, **kwargs):
 
 def urban_scale(*args, **kwargs):
     """Returns the built-in urban-scale example model."""
-    return Model(
-        model_definition=_EXAMPLE_MODEL_DIR / "urban_scale" / "model.yaml",
-        *args,
-        **kwargs,
-    )
+    return read_yaml(_EXAMPLE_MODEL_DIR / "urban_scale" / "model.yaml", *args, **kwargs)
 
 
 def milp(*args, **kwargs):

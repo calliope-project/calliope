@@ -230,6 +230,7 @@ def dummy_backend_interface(dummy_model_data, dummy_model_math, default_config):
                     dummy_model_data,
                     dummy_model_math,
                     default_config.build,
+                    defaults=dummy_model_data.attrs["defaults"],
                     instance=None,
                 )
 

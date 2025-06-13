@@ -4,11 +4,9 @@ import pytest
 from pydantic import ValidationError
 
 from calliope.io import read_rich_yaml
-from calliope.preprocess import prepare_model_definition
 from calliope.schemas.data_table_schema import CalliopeDataTable
 
 from ..common.util import check_error_or_warning
-from . import utils
 
 
 class TestCalliopeDataTable:
@@ -75,10 +73,8 @@ class TestCalliopeDataTable:
         """Test a fully fledged data table configuration."""
         CalliopeDataTable(**full_data_table_config)
 
-    @pytest.mark.parametrize("model_path", utils.EXAMPLE_MODELS + utils.TEST_MODELS)
-    def test_example_models(self, model_path):
+    def test_example_models(self, model_def):
         """Test the schema against example and test model definitions."""
-        model_def, _ = prepare_model_definition(model_path)
         if "data_tables" in model_def:
             for data_table_def in model_def["data_tables"].values():
                 CalliopeDataTable(**data_table_def)

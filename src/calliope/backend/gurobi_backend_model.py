@@ -56,20 +56,25 @@ class GurobiBackendModel(backend_model.BackendModel):
         }
 
     def __init__(
-        self, inputs: xr.Dataset, math: AttrDict, build_config: config_schema.Build
+        self,
+        inputs: xr.Dataset,
+        math: AttrDict,
+        build_config: config_schema.Build,
+        defaults: dict,
     ) -> None:
         """Gurobi solver interface class.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
             math (AttrDict): Calliope math.
-            build_config: Build configuration options.
+            build_config (config_schema.Build): Build configuration options.
+            defaults (dict): Parameter defaults.
         """
         if importlib.util.find_spec("gurobipy") is None:
             raise ImportError(
                 "Install the `gurobipy` package to build the optimisation problem with the Gurobi backend."
             )
-        super().__init__(inputs, math, build_config, gurobipy.Model())
+        super().__init__(inputs, math, build_config, defaults, gurobipy.Model())
         self._instance: gurobipy.Model
         self.shadow_prices = GurobiShadowPrices(self)
 
@@ -358,9 +363,7 @@ class GurobiBackendModel(backend_model.BackendModel):
 
         self.delete_component(name, "parameters")
         self.add_parameter(
-            name,
-            new_parameter_da,
-            default=self.inputs.attrs["defaults"].get(name, np.nan),
+            name, new_parameter_da, default=self.defaults.get(name, np.nan)
         )
 
         refs_to_update = self._find_all_references(parameter_da.attrs["references"])

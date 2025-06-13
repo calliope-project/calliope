@@ -2,7 +2,6 @@ import pydantic
 import pytest
 
 from calliope.io import read_rich_yaml
-from calliope.preprocess import prepare_model_definition
 from calliope.schemas.dimension_data_schema import (
     CalliopeNode,
     CalliopeTech,
@@ -10,7 +9,6 @@ from calliope.schemas.dimension_data_schema import (
 )
 
 from ..test_core_util import check_error_or_warning
-from . import utils
 
 
 class TestIndexedParam:
@@ -54,10 +52,8 @@ class TestIndexedParam:
 
 
 class TestCalliopeTech:
-    @pytest.mark.parametrize("model_path", utils.EXAMPLE_MODELS + utils.TEST_MODELS)
-    def test_example_model_techs(self, model_path):
+    def test_example_model_techs(self, model_def):
         """Test the example model technologies against the schema."""
-        model_def, _ = prepare_model_definition(model_path)
         if "techs" in model_def:
             for tech in model_def["techs"].values():
                 CalliopeTech(**tech)
@@ -98,10 +94,8 @@ class TestCalliopeTech:
 
 
 class TestCalliopeNode:
-    @pytest.mark.parametrize("model_path", utils.EXAMPLE_MODELS + utils.TEST_MODELS)
-    def test_example_models(self, model_path):
+    def test_example_models(self, model_def):
         """Test the node schema against example and test model definitions."""
-        model_def, _ = prepare_model_definition(model_path)
         if "nodes" in model_def:
             for node in model_def["nodes"].values():
                 CalliopeNode(**node)

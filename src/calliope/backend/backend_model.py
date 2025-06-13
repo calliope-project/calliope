@@ -4,10 +4,11 @@
 
 from __future__ import annotations
 
+import functools
 import logging
 import time
 import typing
-from abc import ABC, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from copy import deepcopy
@@ -29,6 +30,7 @@ import xarray as xr
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
+from calliope.exceptions import BackendError
 from calliope.exceptions import warn as model_warn
 from calliope.io import load_config, to_yaml
 from calliope.preprocess.model_math import ORDERED_COMPONENTS_T
@@ -38,8 +40,6 @@ from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
 
-from calliope.exceptions import BackendError
-
 T = TypeVar("T")
 ALL_COMPONENTS_T = Literal["parameters", ORDERED_COMPONENTS_T]
 
@@ -47,7 +47,22 @@ ALL_COMPONENTS_T = Literal["parameters", ORDERED_COMPONENTS_T]
 LOGGER = logging.getLogger(__name__)
 
 
-class BackendModelGenerator(ABC):
+def add_new_component(func):
+    """When calling wrapped adder methods, store the math updates in the backend dataset."""
+
+    @functools.wraps(func)
+    def func_wrapper(self, name, component_dict):
+        component_type = func.__name__.removeprefix("add_") + "s"
+        if name not in self.math[component_type]:
+            self._dataset.attrs["applied_math"].union(
+                {f"{component_type}.{name}": component_dict}
+            )
+        return func(self, name, component_dict)
+
+    return func_wrapper
+
+
+class BackendModelGenerator(ABC, metaclass=ABCMeta):
     """Helper class for backends."""
 
     LID_COMPONENTS: tuple[ALL_COMPONENTS_T, ...] = typing.get_args(ALL_COMPONENTS_T)
@@ -70,20 +85,25 @@ class BackendModelGenerator(ABC):
     """Optimisation problem objective name."""
 
     def __init__(
-        self, inputs: xr.Dataset, math: AttrDict, build_config: config_schema.Build
+        self,
+        inputs: xr.Dataset,
+        math: AttrDict,
+        build_config: config_schema.Build,
+        defaults: dict,
     ):
         """Abstract base class to build a representation of the optimisation problem.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
             math (AttrDict): Calliope math.
-            build_config: Build configuration options.
+            build_config (config_schema.Build): Build configuration options.
+            defaults (dict): Parameter defaults.
         """
-        self._dataset = xr.Dataset()
+        self._dataset = xr.Dataset(attrs={"applied_math": AttrDict()})
         self.inputs = inputs.copy()
-        self.inputs.attrs = deepcopy(inputs.attrs)
         self.config = build_config
         self.math: AttrDict = deepcopy(math)
+        self.defaults: dict = deepcopy(defaults)
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
         self._check_inputs()
@@ -209,6 +229,7 @@ class BackendModelGenerator(ABC):
             "input_data": self.inputs,
             "build_config": self.config,
             "helper_functions": helper_functions._registry["where"],
+            "defaults": self.defaults,
             "apply_where": True,
             "references": set(),
         }
@@ -294,9 +315,6 @@ class BackendModelGenerator(ABC):
             parsing.ParsedBackendComponent | None: parsed component. None if the break_early condition was met.
         """
         references: set[str] = set()
-
-        if name not in self.math[component_type]:
-            self.math.union({f"{component_type}.{name}": component_dict})
 
         if break_early and not component_dict["active"]:
             self.log(
@@ -403,7 +421,7 @@ class BackendModelGenerator(ABC):
         ).data_vars.items():
             default_val = param_data.attrs.get("default", np.nan)
             self.add_parameter(param_name, param_data, default_val)
-        for param_name, default_val in self.inputs.attrs["defaults"].items():
+        for param_name, default_val in self.defaults.items():
             if param_name in self.parameters.keys():
                 continue
             elif (
@@ -618,6 +636,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         inputs: xr.Dataset,
         math: AttrDict,
         build_config: config_schema.Build,
+        defaults: dict,
         instance: T,
     ) -> None:
         """Abstract base class to build backend models that interface with solvers.
@@ -625,13 +644,29 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         Args:
             inputs (xr.Dataset): Calliope model data.
             math (AttrDict): Calliope math.
+            build_config (config_schema.Build): Build configuration options.
+            defaults (dict): Parameter defaults.
             instance (T): Interface model instance.
-            build_config: Build configuration options.
         """
-        super().__init__(inputs, math, build_config)
+        super().__init__(inputs, math, build_config, defaults)
         self._instance = instance
         self.shadow_prices: ShadowPrices
         self._has_verbose_strings: bool = False
+        for func in [
+            f"add_{component.removesuffix('s')}"
+            for component in typing.get_args(ORDERED_COMPONENTS_T)
+        ]:
+            if func in self.__dict__:
+                setattr(self, func, add_new_component(self.__dict__[func]))
+
+    def __init_subclass__(cls, **kwargs):
+        """When calling wrapped adder methods, store the math updates in the backend dataset."""
+        for func in [
+            f"add_{component.removesuffix('s')}"
+            for component in typing.get_args(ORDERED_COMPONENTS_T)
+        ]:
+            if func in cls.__dict__:
+                setattr(cls, func, add_new_component(cls.__dict__[func]))
 
     def add_piecewise_constraint(  # noqa: D102, override
         self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraint
@@ -1060,7 +1095,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 **all_global_expressions,
                 **all_shadow_prices,
                 **all_objectives,
-            }
+            },
+            attrs=self._dataset.attrs,
         ).astype(float)
 
         return results
