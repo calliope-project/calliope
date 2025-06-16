@@ -7,16 +7,18 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
-from calliope import backend, exceptions, io, preprocess
+from calliope import _version, backend, exceptions, io, preprocess
+from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess.model_data import ModelDataFactory
-from calliope.schemas import attributes, config_schema
+from calliope.schemas import config_schema, math_schema
+from calliope.schemas.attrs_schema import CalliopeAttrs
 from calliope.util.logging import log_time
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
@@ -36,9 +38,7 @@ def read_netcdf(path: str | Path) -> Model:
         Model: Calliope Model instance.
     """
     model_data = io.read_netcdf(path)
-    return Model.from_datasets(
-        model_data["inputs"], model_data["attrs"].attrs, model_data["results"]
-    )
+    return Model(model_data["inputs"], model_data["attrs"].attrs, model_data["results"])
 
 
 def read_yaml(
@@ -82,60 +82,54 @@ class Model:
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
 
-    def __init__(self) -> None:
+    def __init__(
+        self, inputs: xr.Dataset, attrs: dict, results: xr.Dataset | None = None
+    ) -> None:
         """Returns an empty Model.
-
-        See Also:
-        `calliope.Model.from_dict`: Initialise from a model YAML loaded into memory.
-        `calliope.Model.from_datasets`: Initialise from model data loaded into memory.
-        `calliope.read_yaml`: Read from YAML definition.
-        `calliope.read_netcdf`: Read from a calliope model saved to NetCDF.
-        """
-        self.inputs = xr.Dataset()
-        self.results = xr.Dataset()
-        self.backend: BackendModel
-        self.attrs = attributes.CalliopeModelAttrs()
-        self._start_window_idx: int = 0
-        self._is_built: bool = False
-        self._is_solved: bool = False
-
-        log_time(
-            LOGGER, self.attrs.timings, "model_creation", comment="Model: initialising"
-        )
-
-    @classmethod
-    def from_datasets(
-        cls, inputs: xr.Dataset, attrs: dict, results: xr.Dataset | None = None
-    ) -> Self:
-        """Return a Model object reconstructed from model data in a NetCDF file.
 
         Args:
             inputs (xr.Dataset): Input dataset.
             attrs (dict):
                 Model attribute dictionary.
-                The result of calling `calliope.Model.attrs.model_dump()` on a built model.
+                The result of calling `calliope.Model._attrs.model_dump()` on a built model.
             results (xr.Dataset | None, optional):
                 If given, the results dataset. Defaults to None.
 
-        Returns:
-            Self: Initialised Calliope Model.
+        See Also:
+            `calliope.Model.from_dict`: Initialise from a model YAML loaded into memory.
+            `calliope.Model.from_datasets`: Initialise from model data loaded into memory.
+            `calliope.read_yaml`: Read from YAML definition.
+            `calliope.read_netcdf`: Read from a calliope model saved to NetCDF.
         """
-        model = cls()
-        model.attrs = model.attrs.update(attrs)
+        self.inputs = inputs
+        self.results = xr.Dataset() if results is None else results
+        self.backend: BackendModel
+        self._attrs = CalliopeAttrs(**attrs)
+        self._start_window_idx: int = 0
+        self._is_built: bool = False
+        self._is_solved: bool = False if results is None else True
 
-        model.inputs = inputs
-
-        if results is not None and results:
-            model.results = results
-            model._is_solved = True
-
+        self._check_versions()
         log_time(
-            LOGGER,
-            model.attrs.timings,
-            "model_data_loaded",
-            comment="Model: loaded model_data",
+            LOGGER, self._attrs.timings, "model_creation", comment="Model: initialising"
         )
-        return model
+
+    def _check_versions(self) -> None:
+        """Check the initialised and defined calliope version."""
+        version_def = self._attrs.model_def.config.init.calliope_version
+        version_init = self._attrs.calliope_version_initialised
+
+        if not _version.__version__.startswith(version_init):
+            exceptions.warn(
+                f"Model was initialised with calliope version {version_init}, "
+                f"but you are running {_version.__version__}. Proceed with caution!"
+            )
+
+        if version_def is not None and not version_init.startswith(version_def):
+            exceptions.warn(
+                f"Model configuration specifies calliope version {version_def}, "
+                f"but you are running {version_init}. Proceed with caution!"
+            )
 
     @classmethod
     def from_dict(
@@ -147,68 +141,88 @@ class Model:
         definition_path: Path | None = None,
         **kwargs,
     ):
-        """Return a Model object reconstructed from model data in a NetCDF file."""
-        model = cls()
-        log_time(
-            LOGGER,
-            model.attrs.timings,
-            "model_run_creation",
-            comment="Model: preprocessing stage 1 (definition)",
-        )
+        """Return a Model object reconstructed from a model definition dictionary loaded into memory.
+
+        Args:
+            model_definition (dict): Model definition YAML loaded into memory.
+            scenario (str | None, optional):
+                Comma delimited string of pre-defined `scenarios` to apply to the model.
+                Defaults to None.
+            override_dict (dict | None, optional):
+                Additional overrides to apply to `config`.
+                These will be applied *after* applying any defined `scenario` overrides.
+                Defaults to None.
+            data_table_dfs (dict[str, pd.DataFrame] | None, optional):
+                Model definition `data_table` entries can reference in-memory pandas DataFrames.
+                The referenced data must be supplied here as a dictionary of those DataFrames.
+                Defaults to None.None.
+            definition_path (Path | None): If given, the path relative to which all path references in `model_definition` will be taken.
+            **kwargs: initialisation overrides.
+        """
         (model_def_full, applied_overrides) = preprocess.prepare_model_definition(
             model_definition, scenario, override_dict, definition_path, **kwargs
         )
-
-        model.attrs = model.attrs.update({"model_def": model_def_full})
-
-        log_time(
-            LOGGER,
-            model.attrs.timings,
-            "model_data_creation",
-            comment="Model: preprocessing stage 2 (data)",
-        )
+        attrs = CalliopeAttrs(model_def=model_def_full)
         param_metadata = {"default": extract_from_schema(MODEL_SCHEMA, "default")}
         attributes = {
             "applied_overrides": applied_overrides,
             "scenario": scenario,
             "defaults": param_metadata["default"],
+            "timings": {},
         }
-        model.attrs = model.attrs.update(attributes)
+        attrs = attrs.update(attributes)
+
+        log_time(
+            LOGGER,
+            attrs.timings,
+            "model_data_creation",
+            comment="Model: preprocessing stage 2 (data)",
+        )
 
         def_path = str(definition_path)
         model_data_factory = ModelDataFactory(
-            model.attrs.model_def.config.init,
-            model_def_full,
+            model_def_full.config.init,
+            AttrDict(attrs.model_def.model_dump()),
             def_path,
             data_table_dfs,
             param_metadata,
         )
         model_data_factory.build()
 
-        model.inputs = model_data_factory.dataset
+        inputs = model_data_factory.dataset
 
-        attrs = list(model_data_factory.dataset.attrs.keys())
-        model.attrs = model.attrs.update(
-            {k: model_data_factory.dataset.attrs.pop(k) for k in attrs}
+        inputs_attrs = list(model_data_factory.dataset.attrs.keys())
+        attrs = attrs.update(
+            {k: model_data_factory.dataset.attrs.pop(k) for k in inputs_attrs}
         )
 
         log_time(
             LOGGER,
-            model.attrs.timings,
+            attrs.timings,
             "model_preprocessing_complete",
             comment="Model: preprocessing complete",
         )
-        return model
+        return cls(inputs, attrs.model_dump())
 
     @property
     def name(self) -> str | None:
         """Get the model name."""
-        return self.attrs.model_def.config.init.name
+        return self._attrs.model_def.config.init.name
 
     @property
     def config(self) -> config_schema.CalliopeConfig:
         """Get model configuration values."""
-        return self.attrs.model_def.config
+        return self._attrs.model_def.config
+
+    @property
+    def timings(self) -> dict[str, float]:
+        """Get timings of steps in the model."""
+        return self._attrs.timings
+
+    @property
+    def termination_condition(self) -> str | None:
+        """Get optimisation termination condition, which indicates whether the optimisation problem solved to optimality (`optimal`) or not (e.g. `unbounded`, `infeasible`)."""
+        return self._attrs.termination_condition
 
     @property
     def is_built(self) -> bool:
@@ -228,6 +242,11 @@ class Model:
             names.append(self.config.build.mode)
         names += self.config.build.extra_math
         return names
+
+    @property
+    def applied_math(self) -> math_schema.MathSchema:
+        """Math that has been applied to the model."""
+        return self._attrs.applied_math
 
     def build(
         self, force: bool = False, add_math_dict: dict | None = None, **kwargs
@@ -249,17 +268,14 @@ class Model:
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
         log_time(
-            LOGGER,
-            self.attrs.timings,
-            "build_start",
-            comment="Model: backend build starting",
+            LOGGER, self.timings, "build_start", comment="Model: backend build starting"
         )
 
-        self.attrs = self.attrs.update({"model_def": {"config.build": kwargs}})
+        self._attrs = self._attrs.update({"model_def": {"config.build": kwargs}})
 
         mode = self.config.build.mode
         if mode == "operate":
-            if not self.attrs.allow_operate_mode:
+            if not self._attrs.allow_operate_mode:
                 raise exceptions.ModelError(
                     "Unable to run this model in operate (i.e. dispatch) mode, probably because "
                     "there exist non-uniform timesteps (e.g. from time clustering)"
@@ -269,17 +285,17 @@ class Model:
             backend_input = self.inputs
 
         applied_math = preprocess.build_applied_math(
-            self.math_priority, self.attrs.model_def.math, add_math_dict
+            self.math_priority, self._attrs.model_def.math, add_math_dict
         )
         self.backend = backend.get_model_backend(
-            self.config.build, backend_input, applied_math, self.attrs.defaults
+            self.config.build, backend_input, applied_math, self._attrs.defaults
         )
         self.backend.add_optimisation_components()
-        self.attrs = self.attrs.update({"applied_math": applied_math})
+        self._attrs = self._attrs.update({"applied_math": applied_math})
 
         log_time(
             LOGGER,
-            self.attrs.timings,
+            self.timings,
             "build_complete",
             comment="Model: backend build complete",
         )
@@ -322,17 +338,14 @@ class Model:
                 "the results to be overwritten with a new run."
             )
 
-        self.attrs = self.attrs.update({"model_def": {"config.solve": kwargs}})
-        self.inputs = self.inputs.assign_attrs(
-            model_def=self.attrs.model_def.model_dump()
-        )
+        self._attrs = self._attrs.update({"model_def": {"config.solve": kwargs}})
 
         self.backend.shadow_prices.track_constraints(self.config.solve.shadow_prices)
 
         mode = self.config.build.mode
         log_time(
             LOGGER,
-            self.attrs.timings,
+            self.timings,
             "solve_start",
             comment=f"Optimisation model | starting model in {mode} mode.",
         )
@@ -345,7 +358,7 @@ class Model:
 
         log_time(
             LOGGER,
-            self.attrs.timings,
+            self.timings,
             "solver_exit",
             time_since_solve_start=True,
             comment="Backend: solver finished running",
@@ -356,12 +369,14 @@ class Model:
             results = postprocess_results.postprocess_model_results(
                 results, self.inputs, self.config.solve.zero_threshold
             )
-        attrs = list(results.attrs.keys())
-        self.attrs = self.attrs.update({k: results.attrs.pop(k) for k in attrs})
+        result_attrs = list(results.attrs.keys())
+        self._attrs = self._attrs.update(
+            {k: results.attrs.pop(k) for k in result_attrs}
+        )
 
         log_time(
             LOGGER,
-            self.attrs.timings,
+            self.timings,
             "postprocess_complete",
             time_since_solve_start=True,
             comment="Postprocessing: ended",
@@ -369,7 +384,7 @@ class Model:
 
         log_time(
             LOGGER,
-            self.attrs.timings,
+            self.timings,
             "solve_complete",
             time_since_solve_start=True,
             comment="Backend: model solve completed",
@@ -395,7 +410,7 @@ class Model:
         """Save complete model data (inputs and, if available, results) to a NetCDF file at the given `path`."""
         io.save_netcdf(self.inputs, "inputs", "w", path)
         io.save_netcdf(self.results, "results", "a", path)
-        io.save_netcdf(xr.Dataset(attrs=self.attrs.model_dump()), "attrs", "a", path)
+        io.save_netcdf(xr.Dataset(attrs=self._attrs.model_dump()), "attrs", "a", path)
 
     def to_csv(
         self, path: str | Path, dropna: bool = True, allow_overwrite: bool = False
@@ -420,7 +435,7 @@ class Model:
         else:
             exceptions.warn("No results available, saving inputs only.")
 
-        io.to_yaml(self.attrs.model_dump(), path=Path(path) / "attrs.yaml")
+        io.to_yaml(self._attrs.model_dump(), path=Path(path) / "attrs.yaml")
 
     def info(self) -> str:
         """Generate basic description of the model, combining its name and a rough indication of the model size.
@@ -578,7 +593,7 @@ class Model:
         """
         LOGGER.info("Optimisation model | Resetting SPORES parameters.")
         for init_param in ["spores_score", "spores_baseline_cost"]:
-            default = xr.DataArray(self.attrs["defaults"][init_param])
+            default = xr.DataArray(self._attrs["defaults"][init_param])
             self.backend.update_parameter(
                 init_param, self.inputs.get(init_param, default)
             )
@@ -653,9 +668,9 @@ class Model:
             return None
 
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
-            timestamp_solve_complete = log_time(
+            log_time(
                 LOGGER,
-                self.attrs.timings,
+                self.timings,
                 "solve_complete",
                 time_since_solve_start=True,
                 comment=f"Optimisation model | SPORE {spore} complete",
@@ -668,13 +683,13 @@ class Model:
             LOGGER.info(f"Optimisation model | Saving SPORE {spore} to file.")
 
             io.save_netcdf(
-                results.expand_dims(spores=[spore])
-                .assign_attrs(**self.attrs)
-                .assign_attrs(timestamp_solve_complete=timestamp_solve_complete),
+                results.expand_dims(spores=[spore]),
                 "results",
                 "w",
                 spores_config.save_per_spore_path / f"spore_{spore}.nc",
             )
+            io.save_netcdf(self._attrs.model_dump(), "attrs", "a")
+
         else:
             LOGGER.info(
                 "Optimisation model | Infeasible or unbounded problem | "

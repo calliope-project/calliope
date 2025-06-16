@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import functools
 import logging
 import time
 import typing
@@ -45,21 +44,6 @@ ALL_COMPONENTS_T = Literal["parameters", ORDERED_COMPONENTS_T]
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-def add_new_component(func):
-    """When calling wrapped adder methods, store the math updates in the backend dataset."""
-
-    @functools.wraps(func)
-    def func_wrapper(self, name, component_dict):
-        component_type = func.__name__.removeprefix("add_") + "s"
-        if name not in self.math[component_type]:
-            self._dataset.attrs["applied_math"].union(
-                {f"{component_type}.{name}": component_dict}
-            )
-        return func(self, name, component_dict)
-
-    return func_wrapper
 
 
 class BackendModelGenerator(ABC, metaclass=ABCMeta):
@@ -380,6 +364,8 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         self._add_to_dataset(
             name, component_da, component_type, component_dict, references
         )
+        if name not in self.math[component_type]:
+            self._dataset.attrs["applied_math"].union(component_dict)
 
         return parsed_component
 
@@ -416,9 +402,7 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             model_data (xr.Dataset): Input model data.
             defaults (dict): Parameter defaults.
         """
-        for param_name, param_data in self.inputs.filter_by_attrs(
-            is_result=0
-        ).data_vars.items():
+        for param_name, param_data in self.inputs.data_vars.items():
             default_val = param_data.attrs.get("default", np.nan)
             self.add_parameter(param_name, param_data, default_val)
         for param_name, default_val in self.defaults.items():
@@ -434,7 +418,6 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
                 "parameters", param_name, "Component not defined; using default value."
             )
             self.add_parameter(param_name, xr.DataArray(np.nan), default_val)
-            self.parameters[param_name].attrs["is_result"] = 0
         LOGGER.info("Optimisation Model | parameters | Generated.")
 
     @staticmethod
@@ -652,21 +635,6 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         self._instance = instance
         self.shadow_prices: ShadowPrices
         self._has_verbose_strings: bool = False
-        for func in [
-            f"add_{component.removesuffix('s')}"
-            for component in typing.get_args(ORDERED_COMPONENTS_T)
-        ]:
-            if func in self.__dict__:
-                setattr(self, func, add_new_component(self.__dict__[func]))
-
-    def __init_subclass__(cls, **kwargs):
-        """When calling wrapped adder methods, store the math updates in the backend dataset."""
-        for func in [
-            f"add_{component.removesuffix('s')}"
-            for component in typing.get_args(ORDERED_COMPONENTS_T)
-        ]:
-            if func in cls.__dict__:
-                setattr(cls, func, add_new_component(cls.__dict__[func]))
 
     def add_piecewise_constraint(  # noqa: D102, override
         self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraint

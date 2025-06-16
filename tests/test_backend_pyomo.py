@@ -2266,10 +2266,10 @@ class TestValidateMathDict:
         def _validate_math(math_dict: dict):
             m = build_model({}, "simple_supply,investment_costs")
             math = preprocess.build_applied_math(
-                m.math_priority, m.attrs.model_def.math, math_dict
+                m.math_priority, m._attrs.model_def.math, math_dict
             )
             backend = calliope.backend.PyomoBackendModel(
-                m.inputs, math, m.config.build, m.attrs.defaults
+                m.inputs, math, m.config.build, m._attrs.defaults
             )
             backend._add_all_inputs_as_parameters()
             backend._validate_math_string_parsing()

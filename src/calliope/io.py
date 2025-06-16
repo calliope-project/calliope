@@ -28,7 +28,9 @@ YAML_INDENT = 2
 YAML_BLOCK_SEQUENCE_INDENT = 0
 
 
-def read_netcdf(path: str | Path) -> dict[Literal["inputs", "results"], xr.Dataset]:
+def read_netcdf(
+    path: str | Path,
+) -> dict[Literal["inputs", "results", "attrs"], xr.Dataset]:
     """Read model_data from NetCDF file."""
     datasets: dict[Literal["inputs", "results", "attrs"], xr.Dataset] = {}
     for group in ["inputs", "results", "attrs"]:

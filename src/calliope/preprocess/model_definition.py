@@ -21,7 +21,7 @@ def prepare_model_definition(
     override_dict: dict | None = None,
     definition_path: Path | None = None,
     **kwargs,
-) -> tuple[AttrDict, str]:
+) -> tuple[model_def_schema.CalliopeModelDef, str]:
     """Arrange model definition data following our standardised order of priority.
 
     Should always be called when defining calliope models from configuration files.
@@ -51,8 +51,7 @@ def prepare_model_definition(
     model_def["math"] = initialise_math(config.init.extra_math, definition_path)
 
     # Validate
-    # TODO: returned object should be CalliopeModelDef
-    model_def_schema.CalliopeModelDef(**model_def)
+    model_def = model_def_schema.CalliopeModelDef(**model_def)
 
     return model_def, applied_overrides
 

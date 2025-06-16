@@ -146,7 +146,7 @@ class TestOperateMode:
         """Cannot build in operate mode if the `allow_operate_mode` attribute is False"""
 
         m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.attrs = m.attrs.update({"allow_operate_mode": False})
+        m._attrs = m._attrs.update({"allow_operate_mode": False})
         with pytest.raises(
             calliope.exceptions.ModelError, match="Unable to run this model in op"
         ):

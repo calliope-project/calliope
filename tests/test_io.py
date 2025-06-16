@@ -89,21 +89,12 @@ class TestIO:
         var_attrs = [
             getattr(model, ds)[var].attrs for ds, var in vars_to_add_attrs.items()
         ]
-        for attrs in [model.attrs.model_dump(), *var_attrs]:
+        for attrs in [model._attrs.model_dump(), *var_attrs]:
             assert isinstance(attrs[attr], expected_type)
             if expected_val is None:
                 assert attrs[attr] is None
             else:
                 assert attrs[attr] == expected_val
-
-    @pytest.mark.parametrize(
-        "serialised_list",
-        ["serialised_bools", "serialised_nones", "serialised_dicts", "serialised_sets"],
-    )
-    @pytest.mark.parametrize("model_name", ["model", "model_from_file"])
-    def test_serialised_list_popped(self, request, serialised_list, model_name):
-        model = request.getfixturevalue(model_name)
-        assert serialised_list not in model.attrs.keys()
 
     @pytest.mark.parametrize(
         ("serialisation_list_name", "list_elements"),
@@ -195,7 +186,7 @@ class TestIO:
         assert model_from_file.config.model_dump() == model.config.model_dump()
 
     def test_defaults_as_model_attrs_not_property(self, model_from_file):
-        assert "defaults" in model_from_file.attrs.keys()
+        assert len(model_from_file._attrs.defaults) > 0
         assert not hasattr(model_from_file, "defaults")
 
     @pytest.mark.parametrize("attr", ["results", "inputs"])
