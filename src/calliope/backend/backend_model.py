@@ -365,7 +365,9 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             name, component_da, component_type, component_dict, references
         )
         if name not in self.math[component_type]:
-            self._dataset.attrs["applied_math"].union(component_dict)
+            self._dataset.attrs["applied_math"].union(
+                {f"{component_type}.{name}": component_dict}
+            )
 
         return parsed_component
 
