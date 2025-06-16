@@ -309,6 +309,7 @@ properties:
               Only `transmission`, `conversion`, `storage`, and `demand` technologies can define this parameter
             x-type: float
             oneOf:
+              - type: "null"
               - type: string
               - type: array
                 uniqueItems: true
@@ -321,6 +322,7 @@ properties:
               Only `transmission`, `conversion`, `storage`, and `supply` technologies can define this parameter
             x-type: float
             oneOf:
+              - type: "null"
               - type: string
               - type: array
                 uniqueItems: true
@@ -334,6 +336,7 @@ properties:
               Must be a subset of `carrier_out`.
             x-type: float
             oneOf:
+              - type: "null"
               - type: string
               - type: array
                 uniqueItems: true

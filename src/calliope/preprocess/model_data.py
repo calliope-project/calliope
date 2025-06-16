@@ -76,7 +76,6 @@ class ModelDataFactory:
         model_definition: AttrDict,
         definition_path: str | Path | None,
         data_table_dfs: dict[str, pd.DataFrame] | None,
-        attributes: dict,
         param_attributes: dict[str, dict],
     ):
         """Take a Calliope model definition dictionary and convert it into an xarray Dataset, ready for constraint generation.
@@ -93,7 +92,7 @@ class ModelDataFactory:
         """
         self.config: Init = init_config
         self.model_definition: ModelDefinition = model_definition.copy()
-        self.dataset = xr.Dataset(attrs=AttrDict(attributes))
+        self.dataset = xr.Dataset()
         self.tech_data_from_tables = AttrDict()
         self.definition_path: str | Path | None = definition_path
         tables = []
@@ -151,8 +150,7 @@ class ModelDataFactory:
             for param, lookup_dim in self.LOOKUP_PARAMS.items():
                 lookup_dict = data_table.lookup_dict_from_param(param, lookup_dim)
                 self.tech_data_from_tables.union(lookup_dict)
-                if lookup_dict:
-                    data_table.drop(param)
+                data_table.drop(param)
 
         for data_table in data_tables:
             self._add_to_dataset(
@@ -508,7 +506,7 @@ class ModelDataFactory:
                     "Check lengths of arrays or set `config.init.broadcast_param_data` to True "
                     "to allow single data entries to be broadcast across all parameter index items."
                 )
-        elif param_name in self.LOOKUP_PARAMS.keys():
+        elif param_name in self.LOOKUP_PARAMS.keys() and param_data is not None:
             data = True
             index_items = [[i] for i in listify(param_data)]
             dims = [self.LOOKUP_PARAMS[param_name]]

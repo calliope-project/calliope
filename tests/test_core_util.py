@@ -111,19 +111,14 @@ class TestGenerateRuns:
 
 
 class TestPandasExport:
-    @pytest.fixture(scope="module")
-    def model(self):
-        return calliope.examples.national_scale()
+    MODEL = calliope.examples.national_scale()
 
     @pytest.mark.parametrize(
-        "variable_name",
-        sorted(
-            [i for i in calliope.examples.national_scale()._model_data.data_vars.keys()]
-        ),
+        "variable_name", sorted([i for i in MODEL.inputs.data_vars.keys()])
     )
-    def test_data_variables_can_be_exported_to_pandas(self, model, variable_name):
-        if model.inputs[variable_name].shape:
-            model.inputs[variable_name].to_dataframe()
+    def test_data_variables_can_be_exported_to_pandas(self, variable_name):
+        if self.MODEL.inputs[variable_name].shape:
+            self.MODEL.inputs[variable_name].to_dataframe()
         else:
             pass
 

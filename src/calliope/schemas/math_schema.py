@@ -154,13 +154,15 @@ class MathSchema(CalliopeBaseModel):
 
     model_config = {"title": "Model math schema"}
 
-    variables: dict[AttrStr, Variable] = Field(default={})
+    variables: dict[AttrStr, Variable] = Field(default_factory=dict)
     """All decision variables to include in the optimisation problem."""
-    global_expressions: dict[AttrStr, GlobalExpression] = Field(default={})
+    global_expressions: dict[AttrStr, GlobalExpression] = Field(default_factory=dict)
     """All global expressions that can be applied to the optimisation problem."""
-    constraints: dict[AttrStr, Constraint] = Field(default={})
+    constraints: dict[AttrStr, Constraint] = Field(default_factory=dict)
     """All constraints to apply to the optimisation problem."""
-    piecewise_constraints: dict[AttrStr, PiecewiseConstraint] = Field(default={})
+    piecewise_constraints: dict[AttrStr, PiecewiseConstraint] = Field(
+        default_factory=dict
+    )
     """All _piecewise_ constraints to apply to the optimisation problem."""
-    objectives: dict[AttrStr, Objective] = Field(default={})
+    objectives: dict[AttrStr, Objective] = Field(default_factory=dict)
     """Possible objectives to apply to the optimisation problem."""
