@@ -233,7 +233,7 @@ class TestCalliopeBaseModel:
         ],
     )
     def test_logging(self, caplog, config_model_double_nested, to_update, expected):
-        caplog.set_level(logging.INFO)
+        caplog.set_level(logging.DEBUG)
 
         model = config_model_double_nested()
         model.update(to_update)

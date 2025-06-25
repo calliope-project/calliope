@@ -92,7 +92,7 @@ class TestNewBackend:
         )
 
     def test_add_valid_obj(self, simple_supply_gurobi):
-        eq = {"expression": "bigM", "where": "True", "active": True}
+        eq = {"expression": "bigM", "where": "True"}
         simple_supply_gurobi.backend.add_objective(
             "foo", {"equations": [eq], "sense": "minimise", "active": True}
         )
@@ -234,7 +234,7 @@ class TestNewBackend:
             "flow_cap_max", xr.DataArray(0)
         )
         simple_supply_gurobi_func.solve(force=True)
-        assert simple_supply_gurobi_func.results.termination_condition != "optimal"
+        assert simple_supply_gurobi_func.attrs.termination_condition != "optimal"
         with pytest.raises(exceptions.BackendError) as excinfo:
             simple_supply_gurobi_func.backend.fix_variable("flow_cap")
 

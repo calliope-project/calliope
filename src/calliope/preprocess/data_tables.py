@@ -292,7 +292,7 @@ class DataTable:
         else:
             tdf = df
 
-        if self.input["select"] is not None:
+        if self.input.get("select", None) is not None:
             selector = tuple(
                 (
                     listify(self.input["select"][name])
@@ -303,10 +303,10 @@ class DataTable:
             )
             tdf = tdf.loc[selector]
 
-        if self.input["drop"] is not None:
+        if self.input.get("drop", None) is not None:
             tdf = tdf.droplevel(self.input["drop"])
 
-        if self.input["add_dims"] is not None:
+        if self.input.get("add_dims", None) is not None:
             for dim_name, index_items in self.input["add_dims"].items():
                 index_items = listify(index_items)
                 tdf = pd.concat(

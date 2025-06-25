@@ -34,9 +34,10 @@ class TestIO:
             "foo_list": ["foo", "bar"],
             "foo_list_1_item": ["foo"],
         }
-        model.inputs = model.inputs.assign_attrs(**attrs)
         model.build()
         model.solve()
+
+        model.inputs.attrs = attrs
 
         for ds, var in vars_to_add_attrs.items():
             getattr(model, ds)[var] = getattr(model, ds)[var].assign_attrs(**attrs)
@@ -89,7 +90,7 @@ class TestIO:
         var_attrs = [
             getattr(model, ds)[var].attrs for ds, var in vars_to_add_attrs.items()
         ]
-        for attrs in [model._attrs.model_dump(), *var_attrs]:
+        for attrs in [model.inputs.attrs, *var_attrs]:
             assert isinstance(attrs[attr], expected_type)
             if expected_val is None:
                 assert attrs[attr] is None
@@ -100,11 +101,8 @@ class TestIO:
         ("serialisation_list_name", "list_elements"),
         [
             ("serialised_bools", ["foo_true", "foo_false"]),
-            ("serialised_nones", ["foo_none", "scenario"]),
-            (
-                "serialised_dicts",
-                ["foo_dict", "foo_attrdict", "defaults", "_def", "applied_math"],
-            ),
+            ("serialised_nones", ["foo_none"]),
+            ("serialised_dicts", ["foo_dict", "foo_attrdict"]),
             ("serialised_sets", ["foo_set", "foo_set_1_item"]),
             ("serialised_single_element_list", ["foo_list_1_item", "foo_set_1_item"]),
         ],
@@ -183,10 +181,13 @@ class TestIO:
                 model.to_csv(out_path, dropna=False)
 
     def test_config_reload(self, model_from_file, model):
-        assert model_from_file.config.model_dump() == model.config.model_dump()
+        assert (
+            model_from_file.attrs.model_def.config.model_dump()
+            == model.attrs.model_def.config.model_dump()
+        )
 
     def test_defaults_as_model_attrs_not_property(self, model_from_file):
-        assert len(model_from_file._attrs.defaults) > 0
+        assert len(model_from_file.attrs.defaults) > 0
         assert not hasattr(model_from_file, "defaults")
 
     @pytest.mark.parametrize("attr", ["results", "inputs"])

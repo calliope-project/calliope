@@ -28,13 +28,13 @@ def model_def(model_path):
     )
     # Erase data tables for simplicity
     # FIXME: previous tests omitted this. Either update tests or remove the data_table from the test model.
-    model_def_override.del_key("data_tables")
-    return model_def_override
+    model_def_override.data_tables.root = {}
+    return AttrDict(model_def_override.model_dump(exclude_defaults=True))
 
 
 @pytest.fixture
 def init_config(default_config, model_def):
-    updated_config = default_config.update(model_def["config"])
+    updated_config = default_config.update(model_def.config)
     return updated_config.init
 
 
@@ -284,10 +284,6 @@ class TestModelData:
 
         model_data_factory.assign_input_attr()
 
-        assert all(
-            var.attrs["is_result"] is False
-            for var in model_data_factory.dataset.data_vars.values()
-        )
         assert model_data_factory.dataset["storage_cap_max"].attrs["default"] == np.inf
         assert "default" not in model_data_factory.dataset["bar"].attrs
 

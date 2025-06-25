@@ -40,18 +40,18 @@ def prepare_model_definition(
         tuple[AttrDict, str]: fully defined setup
     """
     # Apply overrides and similar modifications 'on top' of the given definition
-    model_def, applied_overrides = _load_scenario_overrides(
+    model_def_dict, applied_overrides = _load_scenario_overrides(
         model_definition, scenario, override_dict
     )
-    model_def = TemplateSolver(model_def).resolved_data
-    model_def.union({"config.init": kwargs}, allow_override=True)
+    model_def_dict = TemplateSolver(model_def_dict).resolved_data
+    model_def_dict.union({"config.init": kwargs}, allow_override=True)
 
     # Pre-fill config. defaults and fetch the math definition
-    config = config_schema.CalliopeConfig(**model_def["config"])
-    model_def["math"] = initialise_math(config.init.extra_math, definition_path)
+    config = config_schema.CalliopeConfig(**model_def_dict["config"])
+    model_def_dict["math"] = initialise_math(config.init.extra_math, definition_path)
 
     # Validate
-    model_def = model_def_schema.CalliopeModelDef(**model_def)
+    model_def = model_def_schema.CalliopeModelDef(**model_def_dict)
 
     return model_def, applied_overrides
 

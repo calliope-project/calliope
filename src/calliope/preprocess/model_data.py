@@ -379,10 +379,10 @@ class ModelDataFactory:
             self.dataset["color"] = self.dataset["color"].fillna(new_color_array)
 
     def assign_input_attr(self):
-        """All input parameters need to be assigned the `is_result=False` attribute to be able to filter the arrays in the calliope.Model object."""
+        """Assign the the available parameter metadata as attributes to each input parameter array."""
         for var_name, var_data in self.dataset.data_vars.items():
             self.dataset[var_name] = var_data.assign_attrs(
-                is_result=False, **self.param_attrs.get(var_name, {})
+                **self.param_attrs.get(var_name, {})
             )
 
     def _get_relevant_node_refs(self, techs_dict: AttrDict, node: str) -> list[str]:

@@ -94,7 +94,7 @@ class TestOperateMode:
     def test_operate_mode_success(self, operate_model_and_log):
         """Solving in operate mode should lead to an optimal solution."""
         operate_model, _ = operate_model_and_log
-        assert operate_model.results.attrs["termination_condition"] == "optimal"
+        assert operate_model.attrs.termination_condition == "optimal"
 
     def test_use_cap_results(self, base_model, operate_model_and_log):
         """Operate mode uses base mode outputs as inputs."""
@@ -146,7 +146,7 @@ class TestOperateMode:
         """Cannot build in operate mode if the `allow_operate_mode` attribute is False"""
 
         m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m._attrs = m._attrs.update({"allow_operate_mode": False})
+        m.attrs = m.attrs.update({"allow_operate_mode": False})
         with pytest.raises(
             calliope.exceptions.ModelError, match="Unable to run this model in op"
         ):
@@ -295,7 +295,7 @@ class TestSporesMode:
     def test_spores_mode_success(self, spores_model_and_log_algorithms):
         """Solving in spores mode should lead to an optimal solution."""
         spores_model, _ = spores_model_and_log_algorithms
-        assert spores_model.results.attrs["termination_condition"] == "optimal"
+        assert spores_model.attrs.termination_condition == "optimal"
 
     def test_spores_fail_without_baseline(self):
         """You can't have SPORES without some initial, baseline results to work with."""
@@ -367,7 +367,7 @@ class TestSporesMode:
         """The scoring algorithm being used should be logged correctly."""
         model, log = spores_model_and_log_algorithms
         assert (
-            f"Running SPORES with `{model.config.solve.spores.scoring_algorithm}` scoring algorithm."
+            f"Running SPORES with `{model.attrs.model_def.config.solve.spores.scoring_algorithm}` scoring algorithm."
             in log
         )
 

@@ -40,10 +40,6 @@ def postprocess_model_results(
 
     results = clean_results(results, zero_threshold)
 
-    for var_data in results.data_vars.values():
-        if "is_result" not in var_data.attrs.keys():
-            var_data.attrs["is_result"] = 1
-
     return results
 
 

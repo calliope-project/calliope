@@ -293,7 +293,8 @@ def run(
 
             if (
                 save_netcdf
-                and model.config.solve.spores.save_per_spore_path is not None
+                and model.attrs.model_def.config.solve.spores.save_per_spore_path
+                is not None
             ):
                 # If save_netcdf is used, override the 'save_per_spore_path' to point to
                 # a directory of the same name as the planned netcdf
@@ -301,7 +302,7 @@ def run(
 
             model.build()
             model.solve(**kwargs)
-            termination = model._attrs.termination_condition
+            termination = model.attrs.termination_condition
 
             if save_csv:
                 click.secho(f"Saving CSV results to directory: {save_csv}")

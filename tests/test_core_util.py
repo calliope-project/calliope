@@ -1,4 +1,3 @@
-import datetime
 import glob
 import logging
 from pathlib import Path
@@ -52,15 +51,15 @@ class TestLogging:
         )
 
     def test_timing_log(self):
-        timings = {"model_creation": datetime.datetime.now()}
+        timings = {}
         logger = logging.getLogger("calliope.testlogger")
 
         # TODO: capture logging output and check that comment is in string
         log_time(logger, timings, "test", comment="test_comment", level="info")
-        assert isinstance(timings["test"], datetime.datetime)
+        assert isinstance(timings["test"], float)
 
         log_time(logger, timings, "test2", comment=None, level="info")
-        assert isinstance(timings["test2"], datetime.datetime)
+        assert isinstance(timings["test2"], float)
 
         # TODO: capture logging output and check that time_since_solve_start is in the string
         log_time(

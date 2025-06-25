@@ -2,17 +2,15 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Schema for Calliope model definition."""
 
-from pydantic import Field
-
 from calliope.schemas.config_schema import CalliopeConfig
-from calliope.schemas.data_table_schema import CalliopeDataTable
+from calliope.schemas.data_table_schema import CalliopeDataTables
 from calliope.schemas.dimension_data_schema import (
-    CalliopeNode,
-    CalliopeTech,
-    DataValue,
-    IndexedParam,
+    CalliopeNodes,
+    CalliopeParams,
+    CalliopeTechs,
 )
-from calliope.schemas.general import AttrStr, CalliopeBaseModel
+from calliope.schemas.general import CalliopeBaseModel
+from calliope.schemas.math_schema import CalliopeInputMath
 
 
 class CalliopeModelDef(CalliopeBaseModel):
@@ -20,9 +18,9 @@ class CalliopeModelDef(CalliopeBaseModel):
 
     model_config = {"title": "Calliope Model Definition"}
 
-    parameters: dict[AttrStr, DataValue | IndexedParam] = Field(default_factory=dict)
+    parameters: CalliopeParams = CalliopeParams()
     config: CalliopeConfig = CalliopeConfig()
-    data_tables: dict[AttrStr, CalliopeDataTable] = Field(default_factory=dict)
-    nodes: dict[AttrStr, CalliopeNode] = Field(default_factory=dict)
-    techs: dict[AttrStr, CalliopeTech] = Field(default_factory=dict)
-    math: dict[AttrStr, dict] = Field(default_factory=dict)
+    data_tables: CalliopeDataTables = CalliopeDataTables()
+    nodes: CalliopeNodes = CalliopeNodes()
+    techs: CalliopeTechs = CalliopeTechs()
+    math: CalliopeInputMath = CalliopeInputMath()

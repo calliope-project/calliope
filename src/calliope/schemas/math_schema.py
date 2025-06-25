@@ -6,7 +6,14 @@ from typing import Literal
 
 from pydantic import Field
 
-from calliope.schemas.general import AttrStr, CalliopeBaseModel, NumericVal, UniqueList
+from calliope.schemas.general import (
+    AttrStr,
+    CalliopeBaseModel,
+    CalliopeDictModel,
+    CalliopeListModel,
+    NumericVal,
+    UniqueList,
+)
 
 
 class ExpressionItem(CalliopeBaseModel):
@@ -29,14 +36,14 @@ class MathComponent(CalliopeBaseModel):
     """The component long name, for use in visualisation."""
     description: str = ""
     """A verbose description of the component."""
-    active: bool = Field(default=True)
+    active: bool = True
     """If False, this component will be ignored during the build phase."""
 
 
 class MathIndexedComponent(MathComponent):
     """Generic indexed component class."""
 
-    foreach: UniqueList[AttrStr] = Field(default=[])
+    foreach: UniqueList[AttrStr] = Field(default_factory=list)
     """Sets (a.k.a. dimensions) of the model over which the math formulation component
     will be built."""
     where: str = "True"
@@ -45,14 +52,26 @@ class MathIndexedComponent(MathComponent):
     within the product of the sets given by `foreach`."""
 
 
+class Equations(CalliopeListModel):
+    """List of equations that can be updated when a parent pydantic model is updated."""
+
+    root: list[ExpressionItem] = Field(default_factory=list)
+
+
+class SubEquations(CalliopeDictModel):
+    """Dictionary of sub-equations that can be updated when a parent pydantic model is updated."""
+
+    root: dict[AttrStr, Equations] = Field(default_factory=dict)
+
+
 class Constraint(MathIndexedComponent):
     """Schema for named constraints."""
 
-    equations: list[ExpressionItem]
+    equations: Equations
     """Constraint math equations."""
-    sub_expressions: dict[AttrStr, list[ExpressionItem]] = Field(default={})
+    sub_expressions: SubEquations = SubEquations()
     """Constraint named sub-expressions."""
-    slices: dict[AttrStr, list[ExpressionItem]] = Field(default={})
+    slices: SubEquations = SubEquations()
     """Constraint named index slices."""
 
 
@@ -63,13 +82,13 @@ class PiecewiseConstraint(MathIndexedComponent):
     values at specified breakpoints.
     """
 
-    x_expression: str
+    x_expression: str = ""
     """X variable name whose values are assigned at each breakpoint."""
-    y_expression: str
+    y_expression: str = ""
     """Y variable name whose values are assigned at each breakpoint."""
-    x_values: str
+    x_values: str = ""
     """X parameter name containing data, indexed over the `breakpoints` dimension."""
-    y_values: str
+    y_values: str = ""
     """Y parameter name containing data, indexed over the `breakpoints` dimension."""
 
 
@@ -88,11 +107,11 @@ class GlobalExpression(MathIndexedComponent):
     """Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)."""
     default: NumericVal | None = None
     """If set, will be the default value for the expression."""
-    equations: list[ExpressionItem]
+    equations: Equations
     """Global expression math equations."""
-    sub_expressions: dict[AttrStr, list[ExpressionItem]] = Field(default={})
+    sub_expressions: SubEquations = SubEquations()
     """Global expression named sub-expressions."""
-    slices: dict[AttrStr, list[ExpressionItem]] = Field(default={})
+    slices: SubEquations = SubEquations()
     """Global expression named index slices."""
 
 
@@ -120,7 +139,7 @@ class Variable(MathIndexedComponent):
     """Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)."""
     default: NumericVal | None = None
     """If set, will be the default value for the variable."""
-    domain: Literal["real", "integer"] = Field(default="real")
+    domain: Literal["real", "integer"] = "real"
     """Allowed values that the decision variable can take.
     Either real (a.k.a. continuous) or integer."""
     bounds: Bounds
@@ -133,15 +152,45 @@ class Objective(MathComponent):
     will be activated for the optimisation problem.
     """
 
-    equations: list[ExpressionItem]
+    equations: Equations
     """Objective math equations."""
-    sub_expressions: dict[AttrStr, list[ExpressionItem]] = Field(default={})
+    sub_expressions: SubEquations = SubEquations()
     """Objective named sub-expressions."""
-    slices: dict[AttrStr, list[ExpressionItem]] = Field(default={})
+    slices: SubEquations = SubEquations()
     """Objective named index slices."""
     sense: Literal["minimise", "maximise", "minimize", "maximize"]
     """Whether the objective function should be minimised or maximised in the
     optimisation."""
+
+
+class Variables(CalliopeDictModel):
+    """Calliope model variables dictionary."""
+
+    root: dict[AttrStr, Variable] = Field(default_factory=dict)
+
+
+class GlobalExpressions(CalliopeDictModel):
+    """Calliope model global_expressions dictionary."""
+
+    root: dict[AttrStr, GlobalExpression] = Field(default_factory=dict)
+
+
+class Constraints(CalliopeDictModel):
+    """Calliope model constraints dictionary."""
+
+    root: dict[AttrStr, Constraint] = Field(default_factory=dict)
+
+
+class PiecewiseConstraints(CalliopeDictModel):
+    """Calliope model piecewise_constraints dictionary."""
+
+    root: dict[AttrStr, PiecewiseConstraint] = Field(default_factory=dict)
+
+
+class Objectives(CalliopeDictModel):
+    """Calliope model objectives dictionary."""
+
+    root: dict[AttrStr, Objective] = Field(default_factory=dict)
 
 
 class MathSchema(CalliopeBaseModel):
@@ -154,15 +203,19 @@ class MathSchema(CalliopeBaseModel):
 
     model_config = {"title": "Model math schema"}
 
-    variables: dict[AttrStr, Variable] = Field(default_factory=dict)
+    variables: Variables = Variables()
     """All decision variables to include in the optimisation problem."""
-    global_expressions: dict[AttrStr, GlobalExpression] = Field(default_factory=dict)
+    global_expressions: GlobalExpressions = GlobalExpressions()
     """All global expressions that can be applied to the optimisation problem."""
-    constraints: dict[AttrStr, Constraint] = Field(default_factory=dict)
+    constraints: Constraints = Constraints()
     """All constraints to apply to the optimisation problem."""
-    piecewise_constraints: dict[AttrStr, PiecewiseConstraint] = Field(
-        default_factory=dict
-    )
+    piecewise_constraints: PiecewiseConstraints = PiecewiseConstraints()
     """All _piecewise_ constraints to apply to the optimisation problem."""
-    objectives: dict[AttrStr, Objective] = Field(default_factory=dict)
+    objectives: Objectives = Objectives()
     """Possible objectives to apply to the optimisation problem."""
+
+
+class CalliopeInputMath(CalliopeDictModel):
+    """Calliope input math dictionary."""
+
+    root: dict[AttrStr, CalliopeDictModel] = Field(default_factory=dict)

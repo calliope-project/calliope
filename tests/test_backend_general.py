@@ -99,11 +99,11 @@ class TestOptimality:
     def test_optimal(self, solved_model_cls):
         """Solved model is optimal."""
         assert hasattr(solved_model_cls, "results")
-        assert solved_model_cls.attrs["termination_condition"] == "optimal"
+        assert solved_model_cls.attrs.termination_condition == "optimal"
 
     def test_solve_non_optimal(self, infeasible_model_cls):
         """Infeasible models have no results"""
-        assert infeasible_model_cls.attrs["termination_condition"] == "infeasible"
+        assert infeasible_model_cls.attrs.termination_condition == "infeasible"
         assert not infeasible_model_cls.results.data_vars
 
 
@@ -171,7 +171,6 @@ class TestGetters:
         """Check a parameter has all expected attributes."""
         assert parameter.attrs == {
             "obj_type": "parameters",
-            "is_result": 0,
             "original_dtype": "float64",
             "references": {"flow_in_inc_eff"},
             "coords_in_name": False,

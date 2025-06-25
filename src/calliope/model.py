@@ -17,7 +17,7 @@ from calliope import _version, backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess.model_data import ModelDataFactory
-from calliope.schemas import config_schema, math_schema
+from calliope.schemas import config_schema
 from calliope.schemas.attrs_schema import CalliopeAttrs
 from calliope.util.logging import log_time
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
@@ -91,7 +91,7 @@ class Model:
             inputs (xr.Dataset): Input dataset.
             attrs (dict):
                 Model attribute dictionary.
-                The result of calling `calliope.Model._attrs.model_dump()` on a built model.
+                The result of calling `calliope.Model.attrs.model_dump()` on a built model.
             results (xr.Dataset | None, optional):
                 If given, the results dataset. Defaults to None.
 
@@ -104,20 +104,20 @@ class Model:
         self.inputs = inputs
         self.results = xr.Dataset() if results is None else results
         self.backend: BackendModel
-        self._attrs = CalliopeAttrs(**attrs)
+        self.attrs = CalliopeAttrs(**attrs)
         self._start_window_idx: int = 0
         self._is_built: bool = False
         self._is_solved: bool = False if results is None else True
 
         self._check_versions()
         log_time(
-            LOGGER, self._attrs.timings, "model_creation", comment="Model: initialising"
+            LOGGER, self.attrs.timings, "model_creation", comment="Model: initialising"
         )
 
     def _check_versions(self) -> None:
         """Check the initialised and defined calliope version."""
-        version_def = self._attrs.model_def.config.init.calliope_version
-        version_init = self._attrs.calliope_version_initialised
+        version_def = self.attrs.model_def.config.init.calliope_version
+        version_init = self.attrs.calliope_version_initialised
 
         if not _version.__version__.startswith(version_init):
             exceptions.warn(
@@ -182,7 +182,7 @@ class Model:
         def_path = str(definition_path)
         model_data_factory = ModelDataFactory(
             model_def_full.config.init,
-            AttrDict(attrs.model_def.model_dump()),
+            AttrDict(attrs.model_def.model_dump(exclude_defaults=True)),
             def_path,
             data_table_dfs,
             param_metadata,
@@ -207,22 +207,7 @@ class Model:
     @property
     def name(self) -> str | None:
         """Get the model name."""
-        return self._attrs.model_def.config.init.name
-
-    @property
-    def config(self) -> config_schema.CalliopeConfig:
-        """Get model configuration values."""
-        return self._attrs.model_def.config
-
-    @property
-    def timings(self) -> dict[str, float]:
-        """Get timings of steps in the model."""
-        return self._attrs.timings
-
-    @property
-    def termination_condition(self) -> str | None:
-        """Get optimisation termination condition, which indicates whether the optimisation problem solved to optimality (`optimal`) or not (e.g. `unbounded`, `infeasible`)."""
-        return self._attrs.termination_condition
+        return self.attrs.model_def.config.init.name
 
     @property
     def is_built(self) -> bool:
@@ -237,16 +222,11 @@ class Model:
     @property
     def math_priority(self) -> list[str]:
         """Order of math formulations, with the last overwriting previous ones."""
-        names = [self.config.init.base_math]
-        if self.config.build.mode != "base":
-            names.append(self.config.build.mode)
-        names += self.config.build.extra_math
+        names = [self.attrs.model_def.config.init.base_math]
+        if self.attrs.model_def.config.build.mode != "base":
+            names.append(self.attrs.model_def.config.build.mode)
+        names += self.attrs.model_def.config.build.extra_math
         return names
-
-    @property
-    def applied_math(self) -> math_schema.MathSchema:
-        """Math that has been applied to the model."""
-        return self._attrs.applied_math
 
     def build(
         self, force: bool = False, add_math_dict: dict | None = None, **kwargs
@@ -268,34 +248,42 @@ class Model:
                 "to force the existing optimisation problem to be overwritten with a new one."
             )
         log_time(
-            LOGGER, self.timings, "build_start", comment="Model: backend build starting"
+            LOGGER,
+            self.attrs.timings,
+            "build_start",
+            comment="Model: backend build starting",
         )
 
-        self._attrs = self._attrs.update({"model_def": {"config.build": kwargs}})
+        self.attrs = self.attrs.update({"model_def": {"config.build": kwargs}})
 
-        mode = self.config.build.mode
+        mode = self.attrs.model_def.config.build.mode
         if mode == "operate":
-            if not self._attrs.allow_operate_mode:
+            if not self.attrs.allow_operate_mode:
                 raise exceptions.ModelError(
                     "Unable to run this model in operate (i.e. dispatch) mode, probably because "
                     "there exist non-uniform timesteps (e.g. from time clustering)"
                 )
-            backend_input = self._prepare_operate_mode_inputs(self.config.build.operate)
+            backend_input = self._prepare_operate_mode_inputs(
+                self.attrs.model_def.config.build.operate
+            )
         else:
             backend_input = self.inputs
 
         applied_math = preprocess.build_applied_math(
-            self.math_priority, self._attrs.model_def.math, add_math_dict
+            self.math_priority, self.attrs.model_def.math.model_dump(), add_math_dict
         )
         self.backend = backend.get_model_backend(
-            self.config.build, backend_input, applied_math, self._attrs.defaults
+            self.attrs.model_def.config.build,
+            backend_input,
+            applied_math,
+            self.attrs.defaults,
         )
         self.backend.add_optimisation_components()
-        self._attrs = self._attrs.update({"applied_math": applied_math})
+        self.attrs = self.attrs.update({"applied_math": applied_math})
 
         log_time(
             LOGGER,
-            self.timings,
+            self.attrs.timings,
             "build_complete",
             comment="Model: backend build complete",
         )
@@ -338,27 +326,31 @@ class Model:
                 "the results to be overwritten with a new run."
             )
 
-        self._attrs = self._attrs.update({"model_def": {"config.solve": kwargs}})
+        self.attrs = self.attrs.update({"model_def": {"config.solve": kwargs}})
 
-        self.backend.shadow_prices.track_constraints(self.config.solve.shadow_prices)
+        self.backend.shadow_prices.track_constraints(
+            self.attrs.model_def.config.solve.shadow_prices
+        )
 
-        mode = self.config.build.mode
+        mode = self.attrs.model_def.config.build.mode
         log_time(
             LOGGER,
-            self.timings,
+            self.attrs.timings,
             "solve_start",
             comment=f"Optimisation model | starting model in {mode} mode.",
         )
         if mode == "operate":
-            results = self._solve_operate(self.config.solve)
+            results = self._solve_operate(self.attrs.model_def.config.solve)
         elif mode == "spores":
-            results = self._solve_spores(self.config.solve)
+            results = self._solve_spores(self.attrs.model_def.config.solve)
         else:
-            results = self.backend._solve(self.config.solve, warmstart=warmstart)
+            results = self.backend._solve(
+                self.attrs.model_def.config.solve, warmstart=warmstart
+            )
 
         log_time(
             LOGGER,
-            self.timings,
+            self.attrs.timings,
             "solver_exit",
             time_since_solve_start=True,
             comment="Backend: solver finished running",
@@ -367,16 +359,14 @@ class Model:
         # Add additional post-processed result variables to results
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
             results = postprocess_results.postprocess_model_results(
-                results, self.inputs, self.config.solve.zero_threshold
+                results, self.inputs, self.attrs.model_def.config.solve.zero_threshold
             )
         result_attrs = list(results.attrs.keys())
-        self._attrs = self._attrs.update(
-            {k: results.attrs.pop(k) for k in result_attrs}
-        )
+        self.attrs = self.attrs.update({k: results.attrs.pop(k) for k in result_attrs})
 
         log_time(
             LOGGER,
-            self.timings,
+            self.attrs.timings,
             "postprocess_complete",
             time_since_solve_start=True,
             comment="Postprocessing: ended",
@@ -384,7 +374,7 @@ class Model:
 
         log_time(
             LOGGER,
-            self.timings,
+            self.attrs.timings,
             "solve_complete",
             time_since_solve_start=True,
             comment="Backend: model solve completed",
@@ -410,7 +400,7 @@ class Model:
         """Save complete model data (inputs and, if available, results) to a NetCDF file at the given `path`."""
         io.save_netcdf(self.inputs, "inputs", "w", path)
         io.save_netcdf(self.results, "results", "a", path)
-        io.save_netcdf(xr.Dataset(attrs=self._attrs.model_dump()), "attrs", "a", path)
+        io.save_netcdf(xr.Dataset(attrs=self.attrs.model_dump()), "attrs", "a", path)
 
     def to_csv(
         self, path: str | Path, dropna: bool = True, allow_overwrite: bool = False
@@ -435,7 +425,7 @@ class Model:
         else:
             exceptions.warn("No results available, saving inputs only.")
 
-        io.to_yaml(self._attrs.model_dump(), path=Path(path) / "attrs.yaml")
+        io.to_yaml(self.attrs.model_dump(), path=Path(path) / "attrs.yaml")
 
     def info(self) -> str:
         """Generate basic description of the model, combining its name and a rough indication of the model size.
@@ -562,7 +552,11 @@ class Model:
         results_list.append(iteration_results.sel(timesteps=slice(windowstep, None)))
         results = xr.concat(results_list, dim="timesteps", combine_attrs="drop")
         results.attrs["termination_condition"] = ",".join(
-            set(result.attrs["termination_condition"] for result in results_list)
+            set(
+                result.attrs["termination_condition"]
+                for result in results_list
+                if "termination_condition" in result.attrs
+            )
         )
         return results
 
@@ -593,12 +587,12 @@ class Model:
         """
         LOGGER.info("Optimisation model | Resetting SPORES parameters.")
         for init_param in ["spores_score", "spores_baseline_cost"]:
-            default = xr.DataArray(self._attrs["defaults"][init_param])
+            default = xr.DataArray(self.attrs.defaults[init_param])
             self.backend.update_parameter(
                 init_param, self.inputs.get(init_param, default)
             )
 
-        self.backend.set_objective(self.config.build.objective)
+        self.backend.set_objective(self.attrs.model_def.config.build.objective)
 
         spores_config: config_schema.SolveSpores = solver_config.spores
         if not spores_config.skip_baseline_run:
@@ -618,7 +612,9 @@ class Model:
             )
 
         # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
-        constraining_cost = baseline_results[self.config.build.objective]
+        constraining_cost = baseline_results[
+            self.attrs.model_def.config.build.objective
+        ]
         self.backend.update_parameter("spores_baseline_cost", constraining_cost)
         self.backend.set_objective("min_spores")
         # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
@@ -648,7 +644,11 @@ class Model:
         )
         results = xr.concat(results_list, dim=spores_dim, combine_attrs="drop")
         results.attrs["termination_condition"] = ",".join(
-            set(result.attrs["termination_condition"] for result in results_list)
+            set(
+                result.attrs["termination_condition"]
+                for result in results_list
+                if "termination_condition" in result.attrs
+            )
         )
 
         return results
@@ -670,25 +670,23 @@ class Model:
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
             log_time(
                 LOGGER,
-                self.timings,
+                self.attrs.timings,
                 "solve_complete",
                 time_since_solve_start=True,
                 comment=f"Optimisation model | SPORE {spore} complete",
             )
             results = postprocess_results.postprocess_model_results(
-                results, self.inputs, self.config.solve.zero_threshold
+                results, self.inputs, self.attrs.model_def.config.solve.zero_threshold
             )
 
             spores_config.save_per_spore_path.mkdir(parents=True, exist_ok=True)
             LOGGER.info(f"Optimisation model | Saving SPORE {spore} to file.")
+            outpath = spores_config.save_per_spore_path / f"spore_{spore}.nc"
 
+            io.save_netcdf(results.expand_dims(spores=[spore]), "results", "w", outpath)
             io.save_netcdf(
-                results.expand_dims(spores=[spore]),
-                "results",
-                "w",
-                spores_config.save_per_spore_path / f"spore_{spore}.nc",
+                xr.Dataset(attrs=self.attrs.model_dump()), "attrs", "a", outpath
             )
-            io.save_netcdf(self._attrs.model_dump(), "attrs", "a")
 
         else:
             LOGGER.info(

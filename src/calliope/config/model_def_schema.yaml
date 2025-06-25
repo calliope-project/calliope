@@ -1020,25 +1020,12 @@ properties:
       '^[^_^\d][\w]*$':
         type: object
         title: A named node.
-        dependentRequired": {latitude: ["longitude"], longitude: ["latitude"]}
 
         patternProperties: *pattern_def
         unevaluatedProperties: *uneval_def
         properties:
           active:
             $ref: "#/$defs/ActiveDef"
-          latitude:
-            type: number
-            x-type: float
-            title: Latitude (WGS84 / EPSG4326).
-            minimum: -90
-            maximum: 90
-          longitude:
-            type: number
-            x-type: float
-            title: Longitude (WGS84 / EPSG4326).
-            minimum: -180
-            maximum: 180
           available_area:
             type: number
             x-type: float
