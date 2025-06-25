@@ -55,7 +55,7 @@ Each technology must specify an abstract base technology and its carrier (`carri
 Specifying a `color` and a `name` is optional but useful when you want to [visualise or otherwise report your results](../analysing.md).
 
 The rest of the data for the technology is used in the optimisation problem: to set constraints and to link the technology to the objective function (via costs).
-In the above example, we have a capacity limit `flow_cap_max`, conversion efficiency `flow_out_eff`, the life time (used in [levelised cost calculations](./reference/api/postprocess.md)), and the resource available for consumption `source_use_max`.
+In the above example, we have a capacity limit `flow_cap_max`, conversion efficiency `flow_out_eff`, the life time (used in [levelised cost calculations](../reference/api/postprocess.md)), and the resource available for consumption `source_use_max`.
 In the above example, the source is set to infinite via `inf`.
 
 The parameters starting with `costs_` give costs for the technology.
