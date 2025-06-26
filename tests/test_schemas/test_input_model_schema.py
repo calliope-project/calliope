@@ -22,10 +22,7 @@ TEST_MODELS = [
 ]
 
 
-@pytest.fixture(scope="module", params=EXAMPLE_MODELS + TEST_MODELS)
-def model_def(request):
+@pytest.mark.parametrize("model_path", EXAMPLE_MODELS + TEST_MODELS)
+def test_prepare_example_models(model_path):
     """Test the node schema against example and test model definitions."""
-    model_def, _ = prepare_model_definition(
-        read_rich_yaml(request.param), definition_path=request.param
-    )
-    return model_def
+    prepare_model_definition(read_rich_yaml(model_path), definition_path=model_path)

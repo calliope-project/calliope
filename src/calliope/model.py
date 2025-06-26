@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, get_args
 
 import numpy as np
 import pandas as pd
@@ -109,10 +109,17 @@ class Model:
         self.inputs = inputs
         self.results = xr.Dataset() if results is None else results
         self.backend: BackendModel
+        self.definition = model_def_schema.CalliopeModelDef(
+            **kwargs.get("definition", {})
+        )
+        self.config = config_schema.CalliopeConfig(**kwargs.get("config", {}))
+        self.math = math_schema.CalliopeInputMath(**kwargs.get("math", {}))
+        self.attrs = attrs_schema.CalliopeAttrs(**kwargs.get("attrs", {}))
+        self.applied_math = math_schema.MathSchema(**kwargs.get("applied_math", {}))
+
         self._start_window_idx: int = 0
         self._is_built: bool = False
         self._is_solved: bool = False if results is None else True
-        self._all_attrs = attrs_schema.CalliopeModelAttrs(**kwargs)
 
         self._check_versions()
         log_time(
@@ -201,56 +208,6 @@ class Model:
         return cls(inputs, **def_dict.model_dump())
 
     @property
-    def definition(self) -> model_def_schema.CalliopeModelDef:
-        """Model definition."""
-        return getattr(self._all_attrs, "definition")
-
-    @definition.setter
-    def definition(self, value: model_def_schema.CalliopeModelDef):
-        """Model definition."""
-        self._all_attrs.definition = value
-
-    @property
-    def config(self) -> config_schema.CalliopeConfig:
-        """Config."""
-        return getattr(self._all_attrs, "config")
-
-    @config.setter
-    def config(self, value: config_schema.CalliopeConfig):
-        """Config."""
-        self._all_attrs.config = value
-
-    @property
-    def math(self) -> math_schema.CalliopeInputMath:
-        """Input math."""
-        return getattr(self._all_attrs, "math")
-
-    @math.setter
-    def math(self, value: math_schema.CalliopeInputMath):
-        """Input math."""
-        self._all_attrs.math = value
-
-    @property
-    def attrs(self) -> attrs_schema.CalliopeAttrs:
-        """Attrs."""
-        return getattr(self._all_attrs, "attrs")
-
-    @attrs.setter
-    def attrs(self, value: attrs_schema.CalliopeAttrs):
-        """Attrs."""
-        self._all_attrs.attrs = value
-
-    @property
-    def applied_math(self) -> math_schema.MathSchema:
-        """applied_math."""
-        return getattr(self._all_attrs, "applied_math")
-
-    @applied_math.setter
-    def applied_math(self, value: math_schema.MathSchema):
-        """applied_math."""
-        self._all_attrs.applied_math = value
-
-    @property
     def name(self) -> str | None:
         """Get the model name."""
         return self.config.init.name
@@ -273,6 +230,11 @@ class Model:
             names.append(self.config.build.mode)
         names += self.config.build.extra_math
         return names
+
+    @property
+    def _all_attrs(self) -> dict:
+        """Dump of all class pydantic model attributes as a single dictionary."""
+        return {k: getattr(self, k).model_dump() for k in get_args(self._SAVE_ATTRS_T)}
 
     def build(
         self, force: bool = False, add_math_dict: dict | None = None, **kwargs
@@ -442,9 +404,7 @@ class Model:
         """Save complete model data (inputs and, if available, results) to a NetCDF file at the given `path`."""
         io.save_netcdf(self.inputs, "inputs", "w", path)
         io.save_netcdf(self.results, "results", "a", path)
-        io.save_netcdf(
-            xr.Dataset(attrs=self._all_attrs.model_dump()), "attrs", "a", path
-        )
+        io.save_netcdf(xr.Dataset(attrs=self._all_attrs), "attrs", "a", path)
 
     def to_csv(
         self, path: str | Path, dropna: bool = True, allow_overwrite: bool = False
@@ -469,7 +429,7 @@ class Model:
         else:
             exceptions.warn("No results available, saving inputs only.")
 
-        io.to_yaml(self.attrs.model_dump(), path=Path(path) / "attrs.yaml")
+        io.to_yaml(self._all_attrs, path=Path(path) / "attrs.yaml")
 
     def info(self) -> str:
         """Generate basic description of the model, combining its name and a rough indication of the model size.
@@ -726,9 +686,7 @@ class Model:
             outpath = spores_config.save_per_spore_path / f"spore_{spore}.nc"
 
             io.save_netcdf(results.expand_dims(spores=[spore]), "results", "w", outpath)
-            io.save_netcdf(
-                xr.Dataset(attrs=self._all_attrs.model_dump()), "attrs", "a", outpath
-            )
+            io.save_netcdf(xr.Dataset(attrs=self._all_attrs), "attrs", "a", outpath)
 
         else:
             LOGGER.info(

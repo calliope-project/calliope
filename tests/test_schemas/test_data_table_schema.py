@@ -73,12 +73,6 @@ class TestCalliopeDataTable:
         """Test a fully fledged data table configuration."""
         CalliopeDataTable(**full_data_table_config)
 
-    def test_example_models(self, model_def):
-        """Test the schema against example and test model definitions."""
-        if "data_tables" in model_def:
-            for data_table_def in model_def["data_tables"].values():
-                CalliopeDataTable(**data_table_def)
-
     @pytest.mark.parametrize(
         ("rename_dims", "drop"),
         [({"bar": "foo"}, None), ({"locations": "nodes"}, "nodes")],

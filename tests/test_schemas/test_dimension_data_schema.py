@@ -52,12 +52,6 @@ class TestIndexedParam:
 
 
 class TestCalliopeTech:
-    def test_example_model_techs(self, model_def):
-        """Test the example model technologies against the schema."""
-        if "techs" in model_def:
-            for tech in model_def["techs"].values():
-                CalliopeTech(**tech)
-
     @pytest.mark.parametrize("dims", ["techs", "nodes"])
     def test_invalid_dims(self, dims):
         """Technologies must not use 'techs' or 'nodes' in their indexed params."""
@@ -94,12 +88,6 @@ class TestCalliopeTech:
 
 
 class TestCalliopeNode:
-    def test_example_models(self, model_def):
-        """Test the node schema against example and test model definitions."""
-        if "nodes" in model_def:
-            for node in model_def["nodes"].values():
-                CalliopeNode(**node)
-
     @pytest.mark.parametrize(("latitude", "longitude"), [(None, 30), (30, None)])
     def test_dependent_definitions(self, latitude, longitude):
         with pytest.raises(

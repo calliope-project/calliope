@@ -5,13 +5,6 @@
 from pydantic import Field
 
 from calliope import _version
-from calliope.schemas import (
-    attrs_schema,
-    config_schema,
-    general,
-    math_schema,
-    model_def_schema,
-)
 from calliope.schemas.general import CalliopeBaseModel
 
 
@@ -40,14 +33,3 @@ class CalliopeAttrs(CalliopeBaseModel):
 
     termination_condition: str | None = None
     """Indicates whether the optimisation problem solved to optimality (`optimal`) or not (e.g. `unbounded`, `infeasible`)."""
-
-
-class CalliopeModelAttrs(general.CalliopeBaseModel):
-    """All Calliope attributes."""
-
-    model_config = {"frozen": False}
-    definition: model_def_schema.CalliopeModelDef = model_def_schema.CalliopeModelDef()
-    config: config_schema.CalliopeConfig = config_schema.CalliopeConfig()
-    math: math_schema.CalliopeInputMath = math_schema.CalliopeInputMath()
-    attrs: attrs_schema.CalliopeAttrs = attrs_schema.CalliopeAttrs()
-    applied_math: math_schema.MathSchema = math_schema.MathSchema()
