@@ -9,18 +9,37 @@ from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.io import read_rich_yaml, to_yaml
 from calliope.preprocess.model_math import initialise_math
-from calliope.schemas import config_schema, model_def_schema
+from calliope.schemas import (
+    config_schema,
+    general,
+    math_schema,
+    model_def_schema,
+    runtime_attrs_schema,
+)
+from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
 
 
+class CalliopeInputs(general.CalliopeBaseModel):
+    """All Calliope attributes."""
+
+    definition: model_def_schema.CalliopeModelDef = model_def_schema.CalliopeModelDef()
+    config: config_schema.CalliopeConfig = config_schema.CalliopeConfig()
+    math: math_schema.CalliopeMath = math_schema.CalliopeMath()
+    runtime: runtime_attrs_schema.CalliopeRuntime = (
+        runtime_attrs_schema.CalliopeRuntime()
+    )
+
+
 def prepare_model_definition(
-    model_definition: str | Path | dict,
+    model_definition: dict,
     scenario: str | None = None,
     override_dict: dict | None = None,
+    definition_path: Path | None = None,
     **kwargs,
-) -> tuple[AttrDict, str]:
+) -> CalliopeInputs:
     """Arrange model definition data following our standardised order of priority.
 
     Should always be called when defining calliope models from configuration files.
@@ -32,35 +51,33 @@ def prepare_model_definition(
         model_definition (str | Path | dict): model data file or dictionary.
         scenario (str | None, optional): scenario to run. Defaults to None.
         override_dict (dict | None, optional): additional overrides. Defaults to None.
+        definition_path (Path | None): If given, path relative to which referenced files will be loaded.
         **kwargs: Initialisation overrides.
 
     Returns:
         tuple[AttrDict, str]: fully defined setup
     """
-    # Identify the instantiation case
-    if isinstance(model_definition, dict):
-        raw_data = AttrDict(model_definition)
-        definition_path = None
-    else:
-        raw_data = read_rich_yaml(model_definition)
-        definition_path = model_definition
-
     # Apply overrides and similar modifications 'on top' of the given definition
-    model_def, applied_overrides = _load_scenario_overrides(
-        raw_data, scenario, override_dict
+    model_def_dict, applied_overrides = _load_scenario_overrides(
+        model_definition, scenario, override_dict
     )
-    model_def = TemplateSolver(model_def).resolved_data
-    model_def.union({"config.init": kwargs}, allow_override=True)
+    model_def_dict = TemplateSolver(model_def_dict).resolved_data
+    model_def_dict.union({"config.init": kwargs}, allow_override=True)
 
-    # Pre-fill config. defaults and fetch the math definition
-    config = config_schema.CalliopeConfig(**model_def["config"])
-    model_def["math"] = initialise_math(config.init.extra_math, definition_path)
+    # Validate the model definition and generate pydantic models
+    config = model_def_dict.pop("config")
+    definition = model_def_dict
+    math = initialise_math(config.init.get("extra_math"), definition_path)
 
-    # Validate
-    # TODO: returned object should be CalliopeModelDef
-    model_def_schema.CalliopeModelDef(**model_def)
+    runtime = {
+        "applied_overrides": applied_overrides,
+        "scenario": scenario,
+        "defaults": extract_from_schema(MODEL_SCHEMA, "default"),
+    }
 
-    return model_def, applied_overrides
+    return CalliopeInputs(
+        config=config, definition=definition, math={"init": math}, runtime=runtime
+    )
 
 
 def _load_scenario_overrides(

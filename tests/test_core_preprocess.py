@@ -30,10 +30,10 @@ class TestModelRun:
         for src in model_dict["data_tables"].values():
             src["data"] = (model_dir / src["data"]).as_posix()
         # test as AttrDict
-        calliope.Model(model_dict)
+        calliope.Model.from_dict(model_dict)
 
         # test as dict
-        calliope.Model(model_dict.as_dict())
+        calliope.Model.from_dict(model_dict.as_dict())
 
     def test_undefined_carriers(self):
         """Test that user has input either carrier or carrier_in/_out for each tech"""
