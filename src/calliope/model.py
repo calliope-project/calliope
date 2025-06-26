@@ -17,7 +17,12 @@ from calliope import _version, backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess.model_data import ModelDataFactory
-from calliope.schemas import attrs_schema, config_schema, math_schema, model_def_schema
+from calliope.schemas import (
+    config_schema,
+    math_schema,
+    model_def_schema,
+    runtime_attrs_schema,
+)
 from calliope.util.logging import log_time
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
@@ -82,7 +87,7 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
-    _SAVE_ATTRS_T = Literal["definition", "config", "math", "applied_math", "attrs"]
+    _SAVE_ATTRS_T = Literal["definition", "config", "math", "runtime"]
 
     def __init__(
         self,
@@ -90,16 +95,16 @@ class Model:
         results: xr.Dataset | None = None,
         **kwargs: dict[_SAVE_ATTRS_T, dict],
     ) -> None:
-        """Returns an empty Model.
+        """Returns a instantiated Calliope Model.
 
         Args:
             inputs (xr.Dataset): Input dataset.
-            attrs (dict):
-                Model attribute dictionary.
-                The result of calling `calliope.Model.attrs.model_dump()` on a built model.
             results (xr.Dataset | None, optional):
                 If given, the results dataset. Defaults to None.
-            **kwargs (dict[_SAVE_ATTRS_T, dict]): Model attributes & properties
+            **kwargs (dict[_SAVE_ATTRS_T, dict]):
+                Model attributes & properties.
+                Any of _SAVE_ATTRS_T that are not given here will be initialised with default values.
+
         See Also:
             `calliope.Model.from_dict`: Initialise from a model YAML loaded into memory.
             `calliope.Model.from_datasets`: Initialise from model data loaded into memory.
@@ -113,9 +118,8 @@ class Model:
             **kwargs.get("definition", {})
         )
         self.config = config_schema.CalliopeConfig(**kwargs.get("config", {}))
-        self.math = math_schema.CalliopeInputMath(**kwargs.get("math", {}))
-        self.attrs = attrs_schema.CalliopeAttrs(**kwargs.get("attrs", {}))
-        self.applied_math = math_schema.MathSchema(**kwargs.get("applied_math", {}))
+        self.math = math_schema.CalliopeMath(**kwargs.get("math", {}))
+        self.runtime = runtime_attrs_schema.CalliopeRuntime(**kwargs.get("runtime", {}))
 
         self._start_window_idx: int = 0
         self._is_built: bool = False
@@ -123,13 +127,16 @@ class Model:
 
         self._check_versions()
         log_time(
-            LOGGER, self.attrs.timings, "model_creation", comment="Model: initialising"
+            LOGGER,
+            self.runtime.timings,
+            "model_creation",
+            comment="Model: initialising",
         )
 
     def _check_versions(self) -> None:
         """Check the initialised and defined calliope version."""
         version_def = self.config.init.calliope_version
-        version_init = self.attrs.calliope_version_initialised
+        version_init = self.runtime.calliope_version_initialised
 
         if not _version.__version__.startswith(version_init):
             exceptions.warn(
@@ -177,31 +184,30 @@ class Model:
 
         log_time(
             LOGGER,
-            def_dict.attrs.timings,
+            def_dict.runtime.timings,
             "model_data_creation",
             comment="Model: preprocessing stage 2 (data)",
         )
 
-        def_path = str(definition_path)
         model_data_factory = ModelDataFactory(
             def_dict.config.init,
             AttrDict(def_dict.definition.model_dump(exclude_defaults=True)),
-            def_path,
+            definition_path,
             data_table_dfs,
-            {"default": def_dict.attrs.defaults},
+            {"default": def_dict.runtime.defaults},
         )
         model_data_factory.build()
 
         inputs = model_data_factory.dataset
 
         inputs_attrs = list(model_data_factory.dataset.attrs.keys())
-        def_dict.attrs = def_dict.attrs.update(
-            {k: model_data_factory.dataset.attrs.pop(k) for k in inputs_attrs}
-        )
+        to_update = {k: model_data_factory.dataset.attrs.pop(k) for k in inputs_attrs}
+
+        def_dict = def_dict.update({"runtime": to_update})
 
         log_time(
             LOGGER,
-            def_dict.attrs.timings,
+            def_dict.runtime.timings,
             "model_preprocessing_complete",
             comment="Model: preprocessing complete",
         )
@@ -231,8 +237,7 @@ class Model:
         names += self.config.build.extra_math
         return names
 
-    @property
-    def _all_attrs(self) -> dict:
+    def _dump_all_attrs(self) -> dict:
         """Dump of all class pydantic model attributes as a single dictionary."""
         return {k: getattr(self, k).model_dump() for k in get_args(self._SAVE_ATTRS_T)}
 
@@ -257,7 +262,7 @@ class Model:
             )
         log_time(
             LOGGER,
-            self.attrs.timings,
+            self.runtime.timings,
             "build_start",
             comment="Model: backend build starting",
         )
@@ -266,7 +271,7 @@ class Model:
 
         mode = self.config.build.mode
         if mode == "operate":
-            if not self.attrs.allow_operate_mode:
+            if not self.runtime.allow_operate_mode:
                 raise exceptions.ModelError(
                     "Unable to run this model in operate (i.e. dispatch) mode, probably because "
                     "there exist non-uniform timesteps (e.g. from time clustering)"
@@ -276,17 +281,17 @@ class Model:
             backend_input = self.inputs
 
         applied_math = preprocess.build_applied_math(
-            self.math_priority, self.math.model_dump(), add_math_dict
+            self.math_priority, self.math.init.model_dump(), add_math_dict
         )
         self.backend = backend.get_model_backend(
-            self.config.build, backend_input, applied_math, self.attrs.defaults
+            self.config.build, backend_input, applied_math, self.runtime.defaults
         )
         self.backend.add_optimisation_components()
-        self.applied_math = self.applied_math.update(applied_math)
+        self.math = self.math.update({"build": applied_math})
 
         log_time(
             LOGGER,
-            self.attrs.timings,
+            self.runtime.timings,
             "build_complete",
             comment="Model: backend build complete",
         )
@@ -336,7 +341,7 @@ class Model:
         mode = self.config.build.mode
         log_time(
             LOGGER,
-            self.attrs.timings,
+            self.runtime.timings,
             "solve_start",
             comment=f"Optimisation model | starting model in {mode} mode.",
         )
@@ -349,7 +354,7 @@ class Model:
 
         log_time(
             LOGGER,
-            self.attrs.timings,
+            self.runtime.timings,
             "solver_exit",
             time_since_solve_start=True,
             comment="Backend: solver finished running",
@@ -361,16 +366,14 @@ class Model:
                 results, self.inputs, self.config.solve.zero_threshold
             )
 
-        self.applied_math = self.applied_math.update(
-            results.attrs.pop("applied_math", {})
-        )
-        self.attrs = self.attrs.update(
+        self.math = self.math.update({"build": results.attrs.pop("applied_math", {})})
+        self.runtime = self.runtime.update(
             {"termination_condition": results.attrs.pop("termination_condition")}
         )
 
         log_time(
             LOGGER,
-            self.attrs.timings,
+            self.runtime.timings,
             "postprocess_complete",
             time_since_solve_start=True,
             comment="Postprocessing: ended",
@@ -378,7 +381,7 @@ class Model:
 
         log_time(
             LOGGER,
-            self.attrs.timings,
+            self.runtime.timings,
             "solve_complete",
             time_since_solve_start=True,
             comment="Backend: model solve completed",
@@ -404,7 +407,7 @@ class Model:
         """Save complete model data (inputs and, if available, results) to a NetCDF file at the given `path`."""
         io.save_netcdf(self.inputs, "inputs", "w", path)
         io.save_netcdf(self.results, "results", "a", path)
-        io.save_netcdf(xr.Dataset(attrs=self._all_attrs), "attrs", "a", path)
+        io.save_netcdf(xr.Dataset(attrs=self._dump_all_attrs()), "attrs", "a", path)
 
     def to_csv(
         self, path: str | Path, dropna: bool = True, allow_overwrite: bool = False
@@ -429,7 +432,7 @@ class Model:
         else:
             exceptions.warn("No results available, saving inputs only.")
 
-        io.to_yaml(self._all_attrs, path=Path(path) / "attrs.yaml")
+        io.to_yaml(self._dump_all_attrs(), path=Path(path) / "attrs.yaml")
 
     def info(self) -> str:
         """Generate basic description of the model, combining its name and a rough indication of the model size.
@@ -672,7 +675,7 @@ class Model:
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
             log_time(
                 LOGGER,
-                self.attrs.timings,
+                self.runtime.timings,
                 "solve_complete",
                 time_since_solve_start=True,
                 comment=f"Optimisation model | SPORE {spore} complete",
@@ -686,7 +689,9 @@ class Model:
             outpath = spores_config.save_per_spore_path / f"spore_{spore}.nc"
 
             io.save_netcdf(results.expand_dims(spores=[spore]), "results", "w", outpath)
-            io.save_netcdf(xr.Dataset(attrs=self._all_attrs), "attrs", "a", outpath)
+            io.save_netcdf(
+                xr.Dataset(attrs=self._dump_all_attrs()), "attrs", "a", outpath
+            )
 
         else:
             LOGGER.info(

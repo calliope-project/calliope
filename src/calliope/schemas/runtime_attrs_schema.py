@@ -8,8 +8,8 @@ from calliope import _version
 from calliope.schemas.general import CalliopeBaseModel
 
 
-class CalliopeAttrs(CalliopeBaseModel):
-    """Calliope model definition."""
+class CalliopeRuntime(CalliopeBaseModel):
+    """Calliope runtime model attributes."""
 
     model_config = {"title": "Calliope Model Attributes"}
 

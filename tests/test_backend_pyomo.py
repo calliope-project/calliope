@@ -1638,9 +1638,9 @@ class TestNewBackend:
         m.build(mode="operate", add_math_dict=custom_math)
 
         # operate mode set it to false, then our math set it back to active
-        assert m.applied_math.constraints["force_zero_area_use"].active
+        assert m.math.build.constraints["force_zero_area_use"].active
         # operate mode set it to false and our math did not override that
-        assert not m.applied_math.variables["storage_cap"].active
+        assert not m.math.build.variables["storage_cap"].active
 
     def test_new_build_get_variable(self, simple_supply):
         """Check a decision variable has the correct data type and has all expected attributes."""
@@ -2266,10 +2266,10 @@ class TestValidateMathDict:
         def _validate_math(math_dict: dict):
             m = build_model({}, "simple_supply,investment_costs")
             math = preprocess.build_applied_math(
-                m.math_priority, m.math.model_dump(), math_dict
+                m.math_priority, m.math.init.model_dump(), math_dict
             )
             backend = calliope.backend.PyomoBackendModel(
-                m.inputs, math, m.config.build, m.attrs.defaults
+                m.inputs, math, m.config.build, m.runtime.defaults
             )
             backend._add_all_inputs_as_parameters()
             backend._validate_math_string_parsing()

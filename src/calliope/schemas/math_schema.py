@@ -219,3 +219,10 @@ class CalliopeInputMath(CalliopeDictModel):
     """Calliope input math dictionary."""
 
     root: dict[AttrStr, CalliopeDictModel] = Field(default_factory=dict)
+
+
+class CalliopeMath(CalliopeBaseModel):
+    """Calliope math attribute container."""
+
+    init: CalliopeInputMath = CalliopeInputMath()
+    build: MathSchema = MathSchema()

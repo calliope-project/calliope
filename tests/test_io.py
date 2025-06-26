@@ -184,7 +184,7 @@ class TestIO:
         assert model_from_file.config.model_dump() == model.config.model_dump()
 
     def test_defaults_as_model_attrs_not_property(self, model_from_file):
-        assert len(model_from_file.attrs.defaults) > 0
+        assert len(model_from_file.runtime.defaults) > 0
         assert not hasattr(model_from_file, "defaults")
 
     @pytest.mark.parametrize("attr", ["results", "inputs"])

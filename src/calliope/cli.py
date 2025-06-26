@@ -301,7 +301,7 @@ def run(
 
             model.build()
             model.solve(**kwargs)
-            termination = model.attrs.termination_condition
+            termination = model.runtime.termination_condition
 
             if save_csv:
                 click.secho(f"Saving CSV results to directory: {save_csv}")

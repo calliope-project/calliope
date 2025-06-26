@@ -77,7 +77,7 @@ class TestClustering:
         return build_test_model(scenario="simple_supply", **cluster_init)
 
     def test_no_operate_mode_allowed(self, clustered_model):
-        assert clustered_model.attrs.allow_operate_mode == 0
+        assert clustered_model.runtime.allow_operate_mode == 0
 
     def test_cluster_numbers(self, clustered_model):
         assert (
@@ -147,7 +147,7 @@ class TestResamplingAndCluster:
         )
 
         assert dtindex.equals(model.inputs.timesteps.to_index())
-        assert model.attrs.allow_operate_mode == 0
+        assert model.runtime.allow_operate_mode == 0
 
 
 class TestResampling:
@@ -174,7 +174,7 @@ class TestResampling:
         )
 
         assert dtindex.equals(model.inputs.timesteps.to_index())
-        assert model.attrs.allow_operate_mode == 1
+        assert model.runtime.allow_operate_mode == 1
 
     def test_15min_to_2h_resampling_to_2h(self):
         """

@@ -102,7 +102,7 @@ class TestBuildMath:
 
     @pytest.fixture(scope="class")
     def math_options(self, test_model: calliope.Model):
-        return test_model.math.model_dump()
+        return test_model.math.init.model_dump()
 
     @pytest.mark.parametrize(
         "math_order",

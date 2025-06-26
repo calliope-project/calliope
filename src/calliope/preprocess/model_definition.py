@@ -10,11 +10,11 @@ from calliope.attrdict import AttrDict
 from calliope.io import read_rich_yaml, to_yaml
 from calliope.preprocess.model_math import initialise_math
 from calliope.schemas import (
-    attrs_schema,
     config_schema,
     general,
     math_schema,
     model_def_schema,
+    runtime_attrs_schema,
 )
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 from calliope.util.tools import listify
@@ -25,11 +25,12 @@ LOGGER = logging.getLogger(__name__)
 class CalliopeInputs(general.CalliopeBaseModel):
     """All Calliope attributes."""
 
-    model_config = {"frozen": False}
     definition: model_def_schema.CalliopeModelDef = model_def_schema.CalliopeModelDef()
     config: config_schema.CalliopeConfig = config_schema.CalliopeConfig()
-    math: math_schema.CalliopeInputMath = math_schema.CalliopeInputMath()
-    attrs: attrs_schema.CalliopeAttrs = attrs_schema.CalliopeAttrs()
+    math: math_schema.CalliopeMath = math_schema.CalliopeMath()
+    runtime: runtime_attrs_schema.CalliopeRuntime = (
+        runtime_attrs_schema.CalliopeRuntime()
+    )
 
 
 def prepare_model_definition(
@@ -68,13 +69,15 @@ def prepare_model_definition(
     definition = model_def_dict
     math = initialise_math(config.init.get("extra_math"), definition_path)
 
-    attrs = {
+    runtime = {
         "applied_overrides": applied_overrides,
         "scenario": scenario,
         "defaults": extract_from_schema(MODEL_SCHEMA, "default"),
     }
 
-    return CalliopeInputs(config=config, definition=definition, math=math, attrs=attrs)
+    return CalliopeInputs(
+        config=config, definition=definition, math={"init": math}, runtime=runtime
+    )
 
 
 def _load_scenario_overrides(

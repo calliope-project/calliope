@@ -277,10 +277,6 @@ class TestModelData:
         model_data_factory.dataset["storage_cap_max"] = simple_da
         model_data_factory.dataset["bar"] = timeseries_da
         assert model_data_factory.dataset.data_vars
-        assert not any(
-            "is_result" in var.attrs
-            for var in model_data_factory.dataset.data_vars.values()
-        )
 
         model_data_factory.assign_input_attr()
 

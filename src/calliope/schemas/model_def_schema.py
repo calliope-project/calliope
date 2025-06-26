@@ -2,7 +2,6 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Schema for Calliope model definition."""
 
-from calliope.schemas.config_schema import CalliopeConfig
 from calliope.schemas.data_table_schema import CalliopeDataTables
 from calliope.schemas.dimension_data_schema import (
     CalliopeNodes,
@@ -10,7 +9,6 @@ from calliope.schemas.dimension_data_schema import (
     CalliopeTechs,
 )
 from calliope.schemas.general import CalliopeBaseModel
-from calliope.schemas.math_schema import CalliopeInputMath
 
 
 class CalliopeModelDef(CalliopeBaseModel):
@@ -19,8 +17,6 @@ class CalliopeModelDef(CalliopeBaseModel):
     model_config = {"title": "Calliope Model Definition"}
 
     parameters: CalliopeParams = CalliopeParams()
-    config: CalliopeConfig = CalliopeConfig()
     data_tables: CalliopeDataTables = CalliopeDataTables()
     nodes: CalliopeNodes = CalliopeNodes()
     techs: CalliopeTechs = CalliopeTechs()
-    math: CalliopeInputMath = CalliopeInputMath()

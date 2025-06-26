@@ -234,7 +234,7 @@ class TestNewBackend:
             "flow_cap_max", xr.DataArray(0)
         )
         simple_supply_gurobi_func.solve(force=True)
-        assert simple_supply_gurobi_func.attrs.termination_condition != "optimal"
+        assert simple_supply_gurobi_func.runtime.termination_condition != "optimal"
         with pytest.raises(exceptions.BackendError) as excinfo:
             simple_supply_gurobi_func.backend.fix_variable("flow_cap")
 

@@ -32,9 +32,9 @@ class MathDocumentation:
         self.name: str = "math" if model.name is None else model.name + " math"
         self.backend: LatexBackendModel = LatexBackendModel(
             model.inputs,
-            AttrDict(model.applied_math.model_dump()),
+            AttrDict(model.math.build.model_dump()),
             model.config.build,
-            model.attrs.defaults,
+            model.runtime.defaults,
             include,
         )
         self.backend.add_optimisation_components()
