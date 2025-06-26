@@ -5,7 +5,7 @@ import typing
 from pathlib import Path
 from typing import Literal, overload
 
-from calliope import AttrDict
+from calliope.attrdict import AttrDict
 from calliope.backend import ALLOWED_MATH_FILE_FORMATS, LatexBackendModel
 from calliope.model import Model
 
@@ -32,8 +32,8 @@ class MathDocumentation:
         self.name: str = "math" if model.name is None else model.name + " math"
         self.backend: LatexBackendModel = LatexBackendModel(
             model.inputs,
-            AttrDict(model.attrs.applied_math.model_dump()),
-            model.attrs.model_def.config.build,
+            AttrDict(model.applied_math.model_dump()),
+            model.config.build,
             model.attrs.defaults,
             include,
         )

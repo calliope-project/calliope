@@ -5,21 +5,20 @@
 from pydantic import Field
 
 from calliope import _version
+from calliope.schemas import (
+    attrs_schema,
+    config_schema,
+    general,
+    math_schema,
+    model_def_schema,
+)
 from calliope.schemas.general import CalliopeBaseModel
-from calliope.schemas.math_schema import MathSchema
-from calliope.schemas.model_def_schema import CalliopeModelDef
 
 
 class CalliopeAttrs(CalliopeBaseModel):
     """Calliope model definition."""
 
     model_config = {"title": "Calliope Model Attributes"}
-
-    model_def: CalliopeModelDef = CalliopeModelDef()
-    """Full model definition (except any data table contents)"""
-
-    applied_math: MathSchema = MathSchema()
-    """Math applied when building or updating the optimisation problem."""
 
     applied_overrides: str | None = None
     """Overrides applied when initialising the model."""
@@ -41,3 +40,14 @@ class CalliopeAttrs(CalliopeBaseModel):
 
     termination_condition: str | None = None
     """Indicates whether the optimisation problem solved to optimality (`optimal`) or not (e.g. `unbounded`, `infeasible`)."""
+
+
+class CalliopeModelAttrs(general.CalliopeBaseModel):
+    """All Calliope attributes."""
+
+    model_config = {"frozen": False}
+    definition: model_def_schema.CalliopeModelDef = model_def_schema.CalliopeModelDef()
+    config: config_schema.CalliopeConfig = config_schema.CalliopeConfig()
+    math: math_schema.CalliopeInputMath = math_schema.CalliopeInputMath()
+    attrs: attrs_schema.CalliopeAttrs = attrs_schema.CalliopeAttrs()
+    applied_math: math_schema.MathSchema = math_schema.MathSchema()

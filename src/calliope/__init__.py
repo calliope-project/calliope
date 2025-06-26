@@ -2,7 +2,7 @@
 
 from rich import pretty
 
-from calliope import examples, exceptions
+from calliope import examples
 from calliope._version import __version__
 from calliope.attrdict import AttrDict
 from calliope.model import Model, read_netcdf, read_yaml

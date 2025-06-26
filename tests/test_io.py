@@ -181,10 +181,7 @@ class TestIO:
                 model.to_csv(out_path, dropna=False)
 
     def test_config_reload(self, model_from_file, model):
-        assert (
-            model_from_file.attrs.model_def.config.model_dump()
-            == model.attrs.model_def.config.model_dump()
-        )
+        assert model_from_file.config.model_dump() == model.config.model_dump()
 
     def test_defaults_as_model_attrs_not_property(self, model_from_file):
         assert len(model_from_file.attrs.defaults) > 0

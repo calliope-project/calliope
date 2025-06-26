@@ -367,7 +367,7 @@ class TestSporesMode:
         """The scoring algorithm being used should be logged correctly."""
         model, log = spores_model_and_log_algorithms
         assert (
-            f"Running SPORES with `{model.attrs.model_def.config.solve.spores.scoring_algorithm}` scoring algorithm."
+            f"Running SPORES with `{model.config.solve.spores.scoring_algorithm}` scoring algorithm."
             in log
         )
 

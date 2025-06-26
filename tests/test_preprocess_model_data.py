@@ -21,14 +21,14 @@ def model_path():
 
 @pytest.fixture
 def model_def(model_path):
-    model_def_override, _ = prepare_model_definition(
+    model_def_override = prepare_model_definition(
         io.read_rich_yaml(model_path),
         scenario="simple_supply,empty_tech_node",
         definition_path=model_path,
     )
     # Erase data tables for simplicity
     # FIXME: previous tests omitted this. Either update tests or remove the data_table from the test model.
-    model_def_override.data_tables.root = {}
+    model_def_override.definition.data_tables.root = {}
     return AttrDict(model_def_override.model_dump(exclude_defaults=True))
 
 
@@ -41,7 +41,7 @@ def init_config(default_config, model_def):
 @pytest.fixture
 def model_data_factory(model_path, model_def, init_config, model_defaults):
     return ModelDataFactory(
-        init_config, model_def, model_path, [], {"default": model_defaults}
+        init_config, model_def.definition, model_path, [], {"default": model_defaults}
     )
 
 

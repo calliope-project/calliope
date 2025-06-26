@@ -293,8 +293,7 @@ def run(
 
             if (
                 save_netcdf
-                and model.attrs.model_def.config.solve.spores.save_per_spore_path
-                is not None
+                and model.config.solve.spores.save_per_spore_path is not None
             ):
                 # If save_netcdf is used, override the 'save_per_spore_path' to point to
                 # a directory of the same name as the planned netcdf

@@ -9,7 +9,8 @@ from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.io import read_rich_yaml, to_yaml
 from calliope.preprocess.model_math import initialise_math
-from calliope.schemas import config_schema, model_def_schema
+from calliope.schemas import attrs_schema
+from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ def prepare_model_definition(
     override_dict: dict | None = None,
     definition_path: Path | None = None,
     **kwargs,
-) -> tuple[model_def_schema.CalliopeModelDef, str]:
+) -> attrs_schema.CalliopeModelAttrs:
     """Arrange model definition data following our standardised order of priority.
 
     Should always be called when defining calliope models from configuration files.
@@ -46,14 +47,20 @@ def prepare_model_definition(
     model_def_dict = TemplateSolver(model_def_dict).resolved_data
     model_def_dict.union({"config.init": kwargs}, allow_override=True)
 
-    # Pre-fill config. defaults and fetch the math definition
-    config = config_schema.CalliopeConfig(**model_def_dict["config"])
-    model_def_dict["math"] = initialise_math(config.init.extra_math, definition_path)
+    # Validate the model definition and generate pydantic models
+    config = model_def_dict.pop("config")
+    definition = model_def_dict
+    math = initialise_math(config.init.get("extra_math"), definition_path)
 
-    # Validate
-    model_def = model_def_schema.CalliopeModelDef(**model_def_dict)
+    attrs = {
+        "applied_overrides": applied_overrides,
+        "scenario": scenario,
+        "defaults": extract_from_schema(MODEL_SCHEMA, "default"),
+    }
 
-    return model_def, applied_overrides
+    return attrs_schema.CalliopeModelAttrs(
+        config=config, definition=definition, math=math, attrs=attrs
+    )
 
 
 def _load_scenario_overrides(
