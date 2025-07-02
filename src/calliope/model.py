@@ -130,6 +130,7 @@ class Model:
         self._is_solved: bool = False if results is None else True
 
         self._check_versions()
+
         log_time(
             LOGGER,
             self.runtime.timings,
@@ -196,6 +197,7 @@ class Model:
         model_data_factory = ModelDataFactory(
             def_dict.config.init,
             AttrDict(def_dict.definition.model_dump(exclude_defaults=True)),
+            def_dict.math.init,
             definition_path,
             data_table_dfs,
             {"default": def_dict.runtime.defaults},
@@ -203,6 +205,8 @@ class Model:
         model_data_factory.build()
 
         inputs = model_data_factory.dataset
+
+        def_dict = def_dict.update({"math.build": model_data_factory.math.model_dump()})
 
         inputs_attrs = list(model_data_factory.dataset.attrs.keys())
         to_update = {k: model_data_factory.dataset.attrs.pop(k) for k in inputs_attrs}
@@ -231,15 +235,6 @@ class Model:
     def is_solved(self) -> bool:
         """Get solved status."""
         return self._is_solved
-
-    @property
-    def math_priority(self) -> list[str]:
-        """Order of math formulations, with the last overwriting previous ones."""
-        names = [self.config.init.base_math]
-        if self.config.build.mode != "base":
-            names.append(self.config.build.mode)
-        names += self.config.build.extra_math
-        return names
 
     def dump_all_attrs(self) -> dict:
         """Dump of all class pydantic model attributes as a single dictionary."""
@@ -272,8 +267,9 @@ class Model:
         )
 
         self.config = self.config.update({"build": kwargs})
+        build_math = self.math.build.update(add_math_dict)
 
-        mode = self.config.build.mode
+        mode = self.config.init.mode
         if mode == "operate":
             if not self.runtime.allow_operate_mode:
                 raise exceptions.ModelError(
@@ -284,14 +280,14 @@ class Model:
         else:
             backend_input = self.inputs
 
-        applied_math = preprocess.build_applied_math(
-            self.math_priority, self.math.init.model_dump(), add_math_dict
-        )
         self.backend = backend.get_model_backend(
-            self.config.build, backend_input, applied_math, self.runtime.defaults
+            self.config.build,
+            backend_input,
+            AttrDict(build_math.model_dump()),
+            self.runtime.defaults,
         )
         self.backend.add_optimisation_components()
-        self.math = self.math.update({"build": applied_math})
+        self.math = self.math.update({"build": build_math})
 
         log_time(
             LOGGER,
@@ -342,7 +338,7 @@ class Model:
 
         self.backend.shadow_prices.track_constraints(self.config.solve.shadow_prices)
 
-        mode = self.config.build.mode
+        mode = self.config.init.mode
         log_time(
             LOGGER,
             self.runtime.timings,

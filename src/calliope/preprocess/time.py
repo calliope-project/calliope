@@ -11,7 +11,6 @@ import pandas as pd
 import xarray as xr
 
 from calliope import exceptions
-from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 LOGGER = logging.getLogger(__name__)
 
@@ -86,13 +85,17 @@ def subset_timeseries(ds: xr.Dataset, time_subset: list[str]) -> xr.Dataset:
     return ds
 
 
-def resample(data: xr.Dataset, resolution: str) -> xr.Dataset:
+def resample(data: xr.Dataset, dim: str, resolution: str) -> xr.Dataset:
     """Function to resample timeseries data.
 
     Transforms the input resolution (e.g. 1h), to the given resolution (e.g. 2h).
 
     Args:
         data (xarray.Dataset): Calliope model data, containing only timeseries data variables.
+        dim (str):
+            Name of the dimension to resample. This should be a time dimension, e.g.
+            "timesteps" or "datesteps". It is assumed that the dimension contains datetime values
+            and that the values are in ascending order.
         resolution (str):
             time resolution of the output data, given in Pandas time frequency format.
             E.g. 1h = 1 hour, 1W = 1 week, 1M = 1 month, 1T = 1 minute.
@@ -103,18 +106,18 @@ def resample(data: xr.Dataset, resolution: str) -> xr.Dataset:
             `data` resampled according to `resolution`.
 
     """
-    resample_kwargs = {"indexer": {"timesteps": resolution}, "skipna": True}
-    data_non_ts = data.drop_dims("timesteps")
+    resample_kwargs = {"indexer": {dim: resolution}, "skipna": True}
+    data_non_ts = data.drop_dims(dim)
     data_ts = data.drop_vars(data_non_ts.data_vars)
     data_ts_resampled = data_ts.resample(**resample_kwargs).first(keep_attrs=True)
-    resampling_methods = extract_from_schema(MODEL_SCHEMA, "x-resample_method")
 
     for var_name, var_data in data_ts.data_vars.items():
         resampler = var_data.resample(**resample_kwargs)
+        resample_method = var_data.attrs.get("resample_method")
         if var_name == "timestep_resolution":
             method = "sum"
-        elif var_name in resampling_methods:
-            method = resampling_methods.get(var_name, None)
+        elif resample_method is not None:
+            method = resample_method
         elif var_data.dtype.kind in ["f", "i"]:
             method = "mean"
         else:

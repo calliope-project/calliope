@@ -1,3 +1,49 @@
+parameters:
+  area_use:
+    default: .inf
+    type: float
+    title: Area used.
+    description: >-
+      Sets `area_use` to a parameter in operate mode.
+      NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+    unit: $\text{area}^{2}$.
+
+  storage_cap:
+    default: .inf
+    type: float
+    title: Rated storage capacity.
+    description: >-
+      Sets `storage_cap` to a parameter in operate mode.
+      NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+    unit: $\text{area}^{2}$.
+
+  purchased_units:
+    default: .inf
+    type: float
+    title: Number of purchased units.
+    description: >-
+      Sets `purchased_units` to a parameter in operate mode.
+      NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+    unit: integer
+
+  source_cap:
+    default: .inf
+    type: float
+    title: Installed source consumption capacity.
+    description: >-
+      Sets `source_cap` to a parameter in operate mode.
+      NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+    unit: power.
+
+  flow_cap:
+    default: .inf
+    type: float
+    title: Rated flow capacity.
+    description: >-
+      Sets `flow_cap` to a parameter in operate mode.
+      NOTE: this parameter cannot be used in `plan` mode as it clashes with the decision variable of the same name.
+    unit: power.
+
 constraints:
   flow_capacity_per_storage_capacity_min.active: false
   flow_capacity_per_storage_capacity_max.active: false

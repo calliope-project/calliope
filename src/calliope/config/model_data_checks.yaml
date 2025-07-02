@@ -38,6 +38,9 @@ fail:
   - where: (storage_cap_max OR storage_cap_min) AND storage_cap_per_unit
     message: Cannot define both `storage_cap_per_unit` and `storage_cap_max`/`storage_cap_min`
 
+  - where: latitude < -90 OR latitude > 90 OR longitude < -180 OR longitude > 180
+    message: Node latitude/longitude must be specified in WGS84 / EPSG4326 format.
+
 warn:
   - where: cyclic_storage=True AND (base_tech=storage OR include_storage=True) AND config.mode=operate
     message: >-

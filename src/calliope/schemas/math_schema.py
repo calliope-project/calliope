@@ -40,6 +40,35 @@ class MathComponent(CalliopeBaseModel):
     """If False, this component will be ignored during the build phase."""
 
 
+class Dim(MathComponent):
+    """Schema for named dimension."""
+
+    type: Literal["string", "datetime", "integer", "float"]
+    subset: list[str | int | float] | None = None
+    resample: str | None = None
+    ordered: bool = False
+
+
+class Parameter(MathComponent):
+    """Schema for named parameter."""
+
+    default: float | int = float("nan")
+    type: Literal["integer", "float"]
+    resample_method: Literal["mean", "sum", "first"] = "first"
+    unit: str = ""
+
+
+class Lookup(MathComponent):
+    """Schema for named lookup arrays."""
+
+    default: str | float | int | bool | None = None
+    type: Literal["integer", "float", "string", "bool"]
+    resample_method: Literal["mean", "sum", "first"] = "first"
+    unit: str = ""
+    one_of: list | None = None
+    dim_to_bool: str | None = None
+
+
 class MathIndexedComponent(MathComponent):
     """Generic indexed component class."""
 
@@ -163,6 +192,24 @@ class Objective(MathComponent):
     optimisation."""
 
 
+class Dims(CalliopeDictModel):
+    """Calliope model dimensions dictionary."""
+
+    root: dict[AttrStr, Dim] = Field(default_factory=dict)
+
+
+class Parameters(CalliopeDictModel):
+    """Calliope model parameters dictionary."""
+
+    root: dict[AttrStr, Parameter] = Field(default_factory=dict)
+
+
+class Lookups(CalliopeDictModel):
+    """Calliope model lookup dictionary."""
+
+    root: dict[AttrStr, Lookup] = Field(default_factory=dict)
+
+
 class Variables(CalliopeDictModel):
     """Calliope model variables dictionary."""
 
@@ -203,6 +250,12 @@ class MathSchema(CalliopeBaseModel):
 
     model_config = {"title": "Model math schema"}
 
+    dims: Dims = Dims()
+    """All dimensions to include in the optimisation problem."""
+    parameters: Parameters = Parameters()
+    """All parameters to include in the optimisation problem."""
+    lookups: Lookups = Lookups()
+    """All lookups to include in the optimisation problem."""
     variables: Variables = Variables()
     """All decision variables to include in the optimisation problem."""
     global_expressions: GlobalExpressions = GlobalExpressions()

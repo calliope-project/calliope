@@ -69,7 +69,7 @@ def initialise_math(
 
 def build_applied_math(
     priority: list[str], math_dataset: dict, overwrite: dict | None = None
-) -> AttrDict:
+) -> MathSchema:
     """Construct a validated math dictionary, applying the requested math in order.
 
     Args:
@@ -94,4 +94,4 @@ def build_applied_math(
         LOGGER.info("Math build | appending additional math.")
         math.union(overwrite, allow_override=True)
 
-    return AttrDict(MathSchema(**math).model_dump())
+    return MathSchema(**math)

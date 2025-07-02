@@ -16,7 +16,8 @@ from typing_extensions import NotRequired, TypedDict
 
 from calliope import exceptions
 from calliope.attrdict import AttrDict
-from calliope.preprocess import data_tables, time
+from calliope.preprocess import data_tables, model_math, time
+from calliope.schemas import math_schema
 from calliope.schemas.config_schema import Init
 from calliope.util.schema import MODEL_SCHEMA, validate_dict
 from calliope.util.tools import listify, relative_path
@@ -24,6 +25,14 @@ from calliope.util.tools import listify, relative_path
 LOGGER = logging.getLogger(__name__)
 
 DATA_T = float | int | bool | str | None | list[float | int | bool | str | None]
+
+DTYPE_OPTIONS = {
+    "string": pd.StringDtype,
+    "float": pd.Float32Dtype,
+    "bool": bool,
+    "datetime": np.datetime64,
+    "int": pd.Int32Dtype,
+}
 
 
 class Param(TypedDict):
@@ -49,13 +58,6 @@ LOGGER = logging.getLogger(__name__)
 class ModelDataFactory:
     """Model data production class."""
 
-    # TODO: move into yaml syntax and have it be updatable
-    LOOKUP_PARAMS = {
-        "carrier_in": "carriers",
-        "carrier_out": "carriers",
-        "carrier_export": "carriers",
-    }
-
     # Output of: sns.color_palette('cubehelix', 10).as_hex()
     _DEFAULT_PALETTE = [
         "#19122b",
@@ -74,6 +76,7 @@ class ModelDataFactory:
         self,
         init_config: Init,
         model_definition: AttrDict,
+        math: math_schema.MathSchema,
         definition_path: str | Path | None,
         data_table_dfs: dict[str, pd.DataFrame] | None,
         param_attributes: dict[str, dict],
@@ -83,8 +86,9 @@ class ModelDataFactory:
         This includes resampling/clustering timeseries data as necessary.
 
         Args:
-            init_config (Init): Model initialisation configuration (i.e., `config.init`).
+            init_config (Init): Model initialisation configuration (i.e., `config`).
             model_definition (ModelDefinition): Definition of model nodes and technologies, and their potential `templates`.
+            math (math_schema.MathSchema): Math schema to apply to the model.
             definition_path (Path, None): Path to the main model definition file. Defaults to None.
             data_table_dfs: (dict[str, pd.DataFrame], None): Dataframes with model data. Defaults to None.
             attributes (dict): Attributes to attach to the model Dataset.
@@ -95,6 +99,9 @@ class ModelDataFactory:
         self.dataset = xr.Dataset()
         self.tech_data_from_tables = AttrDict()
         self.definition_path: str | Path | None = definition_path
+
+        self.math = model_math.build_applied_math(self.math_priority, math.model_dump())
+
         tables = []
         for table_name, table_dict in model_definition.get_key(
             "data_tables", {}
@@ -123,6 +130,15 @@ class ModelDataFactory:
         self.update_time_dimension_and_params()
         self.assign_input_attr()
 
+    @property
+    def math_priority(self) -> list[str]:
+        """Order of math formulations, with the last overwriting previous ones."""
+        names = [self.config.base_math]
+        if self.config.mode != "base":
+            names.append(self.config.mode)
+        names += self.config.apply_math
+        return names
+
     def init_from_data_tables(self, data_tables: list[data_tables.DataTable]):
         """Initialise the model definition and dataset using data loaded from file / in-memory objects.
 
@@ -147,10 +163,12 @@ class ModelDataFactory:
                 self.model_definition.get("nodes", AttrDict()), allow_override=True
             )
             self.model_definition["nodes"] = node_dict
-            for param, lookup_dim in self.LOOKUP_PARAMS.items():
-                lookup_dict = data_table.lookup_dict_from_param(param, lookup_dim)
-                self.tech_data_from_tables.union(lookup_dict)
-                data_table.drop(param)
+            for param, param_config in self.math.lookups.root.items():
+                lookup_dim = param_config.dim_to_bool
+                if lookup_dim is not None:
+                    lookup_dict = data_table.lookup_dict_from_param(param, lookup_dim)
+                    self.tech_data_from_tables.union(lookup_dict)
+                    data_table.drop(param)
 
         for data_table in data_tables:
             self._add_to_dataset(
@@ -251,20 +269,18 @@ class ModelDataFactory:
 
     def update_time_dimension_and_params(self):
         """If resampling/clustering is requested in the initialisation config, apply it here."""
-        if "timesteps" not in self.dataset:
+        if not any(dim.dtype.kind == "M" for dim in self.dataset.coords.values()):
             raise exceptions.ModelError(
                 "Must define at least one timeseries parameter in a Calliope model."
             )
-        time_subset = self.config.time_subset
-        if time_subset is not None:
-            self.dataset = time.subset_timeseries(self.dataset, time_subset)
+        self._subset_dims()
+        self._resample_dims()
+
         self.dataset = time.add_inferred_time_params(self.dataset)
 
         # By default, the model allows operate mode
         self.dataset.attrs["allow_operate_mode"] = 1
 
-        if self.config.time_resample is not None:
-            self.dataset = time.resample(self.dataset, self.config.time_resample)
         if self.config.time_cluster is not None:
             self.dataset = time.cluster(
                 self.dataset,
@@ -274,41 +290,40 @@ class ModelDataFactory:
 
     def clean_data_from_undefined_members(self):
         """Generate the `definition_matrix` array and use it to strip out any dimension items that are NaN in all arrays and any arrays that are NaN in all index positions."""
-        def_matrix = (
-            self.dataset.carrier_in.notnull() | self.dataset.carrier_out.notnull()
-        )
+        self._update_dtypes()
+        ds = self.dataset
+        def_matrix = ds.carrier_in | ds.carrier_out
         # NaNing values where they are irrelevant requires definition_matrix to be boolean
-        for var_name, var_data in self.dataset.data_vars.items():
+        for var_name, var_data in ds.data_vars.items():
             non_dims = set(def_matrix.dims).difference(var_data.dims)
-            self.dataset[var_name] = var_data.where(def_matrix.any(non_dims))
+            var_updated = var_data.where(def_matrix.any(non_dims))
+            ds[var_name] = (
+                var_updated
+                if var_data.dtype.kind != "b"
+                else var_updated.fillna(False).astype(bool)
+            )
 
         # dropping index values where they are irrelevant requires definition_matrix to be NaN where False
-        self.dataset["definition_matrix"] = def_matrix.where(def_matrix)
+        ds["definition_matrix"] = def_matrix.where(def_matrix)
 
         for dim in def_matrix.dims:
-            orig_dim_vals = set(self.dataset.coords[dim].data)
-            self.dataset = self.dataset.dropna(
-                dim, how="all", subset=["definition_matrix"]
-            )
-            deleted_dim_vals = orig_dim_vals.difference(
-                set(self.dataset.coords[dim].data)
-            )
+            orig_dim_vals = set(ds.coords[dim].data)
+            ds = ds.dropna(dim, how="all", subset=["definition_matrix"])
+            deleted_dim_vals = orig_dim_vals.difference(set(ds.coords[dim].data))
             if deleted_dim_vals:
                 LOGGER.debug(
                     f"Deleting {dim} values as they are not defined anywhere in the model: {deleted_dim_vals}"
                 )
 
         # The boolean version of definition_matrix is what we keep
-        self.dataset["definition_matrix"] = def_matrix
+        ds["definition_matrix"] = def_matrix
 
         vars_to_delete = [
-            var_name
-            for var_name, var in self.dataset.data_vars.items()
-            if var.isnull().all()
+            var_name for var_name, var in ds.data_vars.items() if var.isnull().all()
         ]
         if vars_to_delete:
             LOGGER.debug(f"Deleting empty parameters: {vars_to_delete}")
-        self.dataset = self.dataset.drop_vars(vars_to_delete)
+        self.dataset = ds.drop_vars(vars_to_delete)
 
     def add_link_distances(self):
         """If latitude/longitude are provided but distances between nodes have not been computed, compute them now.
@@ -503,17 +518,21 @@ class ModelDataFactory:
             if not broadcast_param_data and len(listify(data)) != len(index_items):
                 raise exceptions.ModelError(
                     f"{param_name} | Length mismatch between data ({data}) and index ({index_items}) for parameter definition. "
-                    "Check lengths of arrays or set `config.init.broadcast_param_data` to True "
+                    "Check lengths of arrays or set `config.broadcast_param_data` to True "
                     "to allow single data entries to be broadcast across all parameter index items."
                 )
-        elif param_name in self.LOOKUP_PARAMS.keys() and param_data is not None:
+        elif (
+            param_name in self.math.lookups.root
+            and self.math.lookups[param_name].dim_to_bool is not None
+            and param_data is not None
+        ):
             data = True
             index_items = [[i] for i in listify(param_data)]
-            dims = [self.LOOKUP_PARAMS[param_name]]
+            dims = [self.math.lookups[param_name].dim_to_bool]
         else:
             if isinstance(param_data, list):
                 raise ValueError(
-                    f"{param_name} | Cannot pass parameter data as a list unless the parameter is one of the pre-defined lookup arrays: {list(self.LOOKUP_PARAMS.keys())}."
+                    f"{param_name} | Cannot pass parameter data as a list unless the parameter is one of the pre-defined lookup arrays."
                 )
             data = param_data
             index_items = [[]]
@@ -601,9 +620,9 @@ class ModelDataFactory:
             self.dataset = self.dataset.drop_sel(**item_ref)
         else:
             if "carrier_in" in self.dataset:
-                self.dataset["carrier_in"].loc[item_ref] = np.nan
+                self.dataset["carrier_in"].loc[item_ref] = False
             if "carrier_out" in self.dataset:
-                self.dataset["carrier_out"].loc[item_ref] = np.nan
+                self.dataset["carrier_out"].loc[item_ref] = False
 
     def _links_to_node_format(self, active_node_dict: AttrDict) -> AttrDict:
         """Process `transmission` techs into links by assigned them to the nodes defined by their `link_from` and `link_to` keys.
@@ -662,18 +681,15 @@ class ModelDataFactory:
     def _add_to_dataset(self, to_add: xr.Dataset, id_: str):
         """Add new data to the central class dataset.
 
-        Before being added, any dimensions with the `steps` suffix will be cast to datetime dtype.
+        Before being added, dimension and parameters types will be handled.
 
         Args:
             to_add (xr.Dataset): Dataset to merge into the central dataset.
             id_ (str): ID of dataset being added, to use in log messages
         """
-        to_add_numeric_dims = self._update_numeric_dims(to_add, id_)
-        to_add_numeric_ts_dims = time.timeseries_to_datetime(
-            to_add_numeric_dims, self.config.time_format, id_
-        )
+        to_add_update_dim_dtype = self._update_dims(to_add, id_)
         self.dataset = xr.merge(
-            [to_add_numeric_ts_dims, self.dataset],
+            [to_add_update_dim_dtype, self.dataset],
             combine_attrs="no_conflicts",
             compat="override",
         ).fillna(self.dataset)
@@ -722,8 +738,31 @@ class ModelDataFactory:
         )  # cannot import carriers at the `link_from` node
         node_to_data.pop("carrier_in")  # cannot export carrier at the `link_to` node
 
-    @staticmethod
-    def _update_numeric_dims(ds: xr.Dataset, id_: str) -> xr.Dataset:
+    def _update_dtypes(self):
+        ds = self.dataset
+        for var_name, var_data in ds.data_vars.items():
+            dtype_str = (
+                self.math.parameters[var_name].type
+                if var_name in self.math.parameters.root
+                else self.math.lookups[var_name].type
+                if var_name in self.math.lookups.root
+                else None
+            )
+            if dtype_str not in [None, "bool"]:
+                dtype = DTYPE_OPTIONS[dtype_str]
+                ds[var_name] = var_data.astype(dtype)
+                LOGGER.debug(f"Updating non-NaN values of `{var_name}` to {dtype} type")
+            elif dtype_str == "bool":
+                dtype = DTYPE_OPTIONS[dtype_str]
+                LOGGER.debug(f"Updating all values of `{var_name}` to {dtype} type")
+                ds[var_name] = var_data.fillna(False).astype(dtype)
+            else:
+                LOGGER.warning(
+                    f"Parameter/lookup `{var_name}` not defined in model math; cannot infer type."
+                )
+        self.dataset = ds
+
+    def _update_dims(self, ds: xr.Dataset, id_: str) -> xr.Dataset:
         """Try coercing all dimension data of the input dataset to a numeric data type.
 
         Any dimensions where _all_ its data is potentially numeric will be returned with all data coerced to numeric.
@@ -737,16 +776,71 @@ class ModelDataFactory:
         Returns:
             xr.Dataset: Input `ds` with numeric coordinates.
         """
-        for dim_name in ds.dims:
-            try:
-                ds.coords[dim_name] = pd.to_numeric(ds.coords[dim_name].to_index())
-                LOGGER.debug(
-                    f"{id_} | Updating `{dim_name}` dimension index values to numeric type."
+        for dim_name, dim_vals in ds.coords.items():
+            dtype = (
+                self.math.dims[dim_name].type
+                if dim_name in self.math.dims.root
+                else None
+            )
+            if dtype is None:
+                LOGGER.warning(
+                    f"Dimension `{dim_name}` not defined in model math; cannot infer type."
                 )
-            except ValueError:
-                continue
-
+            elif dtype == "datetime":
+                ds.coords[dim_name] = time._datetime_index(
+                    dim_vals.to_index(), self.config.time_format
+                )
+            else:
+                ds.coords[dim_name] = dim_vals.astype(DTYPE_OPTIONS[dtype])
         return ds
+
+    def _subset_dims(self):
+        """Subset all timeseries dimensions according to an input slice of start and end times.
+
+        Args:
+            ds (xr.Dataset): Dataset containing timeseries data to subset.
+            time_subset (list[str]): List of length 2, containing start and end times to subset on.
+
+        Returns:
+            xr.Dataset: Input `ds` with subset timeseries coordinates.
+        """
+        ds = self.dataset
+        for dim_name, dim_vals in self.dataset.coords.items():
+            subset = self.math.dims[dim_name].subset
+            is_ordered = self.math.dims[dim_name].ordered
+            if subset is None:
+                continue
+            if dim_vals.dtype.kind == "M":
+                time._check_time_subset(dim_vals.to_index(), subset)
+            if is_ordered:
+                selector = slice(*subset)
+            else:
+                selector = subset
+
+            ds_subset = self.dataset.sel(**{dim_name: selector})
+
+            ds_subset_vars = ds_subset[
+                [k for k, v in ds_subset.data_vars.items() if dim_name in v.dims]
+            ]
+            is_missing = (
+                ds_subset_vars.notnull().any(dim_name)
+                & ~ds_subset_vars.notnull().all(dim_name)
+            ).to_dataframe()
+            missing_data = is_missing[is_missing].stack()
+            if not missing_data.empty:
+                exceptions.warn(
+                    f"Possibly missing data on the {dim_name} dimension for:\n{missing_data}"
+                )
+            ds = ds_subset
+        self.dataset = ds
+
+    def _resample_dims(self):
+        ds = self.dataset
+        for dim_name in self.dataset.coords:
+            resampler = self.math.dims[dim_name].resample
+            if resampler is not None:
+                ds = time.resample(ds, dim_name, resampler)
+        self.dataset = ds
 
     def _raise_error_on_transmission_tech_def(
         self, tech_def_dict: AttrDict, node_name: str

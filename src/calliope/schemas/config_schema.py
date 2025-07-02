@@ -4,11 +4,17 @@
 
 import logging
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field
 
-from calliope.schemas.general import AttrStr, CalliopeBaseModel, UniqueList
+from calliope.schemas.general import (
+    AttrStr,
+    CalliopeBaseModel,
+    CalliopeDictModel,
+    NonEmptyList,
+    UniqueList,
+)
 
 Mode = Literal["base", "operate", "spores"]
 
@@ -17,6 +23,22 @@ LOGGER = logging.getLogger(__name__)
 SPORES_SCORING_OPTIONS = Literal[
     "integer", "relative_deployment", "random", "evolving_average"
 ]
+
+
+class Subsets(CalliopeDictModel):
+    """Dimension subsets."""
+
+    root: dict[AttrStr, NonEmptyList[str | int | float] | None] = Field(
+        default_factory=dict
+    )
+
+
+class Resamples(CalliopeDictModel):
+    """Dimension resampling settings."""
+
+    root: dict[
+        AttrStr, Annotated[str, Field(pattern=r"^[^_^\d][\w]*$")] | None | int
+    ] = Field(default_factory=dict)
 
 
 class Init(CalliopeBaseModel):
@@ -36,7 +58,7 @@ class Init(CalliopeBaseModel):
     Defaults to False to mitigate unexpected broadcasting when applying overrides.
     """
 
-    time_subset: tuple[str, str] | None = None
+    subset: Subsets = Subsets()
     """
     Subset of timesteps as an two-element list giving the **inclusive** range.
     For example, ["2005-01", "2005-04"] will create a time subset from "2005-01-01 00:00:00" to "2005-04-31 23:59:59".
@@ -44,8 +66,8 @@ class Init(CalliopeBaseModel):
     Strings must be ISO8601-compatible, i.e. of the form `YYYY-mm-dd HH:MM:SS` (e.g, '2005-01 ', '2005-01-01', '2005-01-01 00:00', ...)
     """
 
-    time_resample: str | None = Field(default=None, pattern="^[0-9]+[a-zA-Z]")
-    """Setting to adjust time resolution, e.g. '2h' for 2-hourly"""
+    resample: Resamples = Resamples()
+    """Setting to adjust datetime dimension resolution, e.g. '2h' for 2-hourly"""
 
     time_cluster: str | None = None
     """
@@ -72,6 +94,24 @@ class Init(CalliopeBaseModel):
 
     extra_math: dict[AttrStr, str] = Field(default={})
     "Dictionary with the names and paths of additional math files."
+
+    mode: Mode = Field(default="base")
+    """Mode in which to run the optimisation.
+    Triggers additional processing and appends additional math formulations.
+    Math order: base -> mode
+    """
+
+    apply_math: UniqueList[str] = Field(default=[])
+    """
+    List of additional math to be applied on top of the base mode math and mode math.
+    Math order: base -> mode -> extra
+    """
+
+    pre_validate_math_strings: bool = Field(default=True)
+    """
+    If true, the Calliope math definition will be scanned for parsing errors _before_ undertaking the much more expensive operation of building the optimisation problem.
+    You can switch this off (e.g., if you know there are no parsing errors) to reduce overall build time.
+    """
 
 
 class BuildOperate(CalliopeBaseModel):
@@ -100,18 +140,6 @@ class Build(CalliopeBaseModel):
 
     model_config = {"title": "Model build configuration"}
 
-    mode: Mode = Field(default="base")
-    """Mode in which to run the optimisation.
-    Triggers additional processing and appends additional math formulations.
-    Math order: base -> mode
-    """
-
-    extra_math: UniqueList[str] = Field(default=[])
-    """
-    List of additional math to be applied on top of the base mode math and mode math.
-    Math order: base -> mode -> extra
-    """
-
     backend: Literal["pyomo", "gurobi"] = Field(default="pyomo")
     """Module with which to build the optimisation problem."""
 
@@ -123,12 +151,6 @@ class Build(CalliopeBaseModel):
 
     objective: str = Field(default="min_cost_optimisation")
     """Name of internal objective function to use, from those defined in the pre-defined math and any applied additional math."""
-
-    pre_validate_math_strings: bool = Field(default=True)
-    """
-    If true, the Calliope math definition will be scanned for parsing errors _before_ undertaking the much more expensive operation of building the optimisation problem.
-    You can switch this off (e.g., if you know there are no parsing errors) to reduce overall build time.
-    """
 
     operate: BuildOperate = BuildOperate()
     """Operate mode specific configuration."""
