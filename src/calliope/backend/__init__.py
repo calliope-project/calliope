@@ -19,10 +19,7 @@ if TYPE_CHECKING:
 
 
 def get_model_backend(
-    build_config: "config_schema.Build",
-    data: xr.Dataset,
-    math: AttrDict,
-    defaults: dict,
+    build_config: "config_schema.Build", data: xr.Dataset, math: AttrDict
 ) -> "BackendModel":
     """Assign a backend using the given configuration.
 
@@ -40,8 +37,8 @@ def get_model_backend(
     """
     match build_config.backend:
         case "pyomo":
-            return PyomoBackendModel(data, math, build_config, defaults)
+            return PyomoBackendModel(data, math, build_config)
         case "gurobi":
-            return GurobiBackendModel(data, math, build_config, defaults)
+            return GurobiBackendModel(data, math, build_config)
         case _:
             raise BackendError(f"Incorrect backend '{build_config.backend}' requested.")

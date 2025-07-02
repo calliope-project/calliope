@@ -34,7 +34,6 @@ from calliope.exceptions import warn as model_warn
 from calliope.io import load_config, to_yaml
 from calliope.preprocess.model_math import ORDERED_COMPONENTS_T
 from calliope.schemas import config_schema
-from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
@@ -61,19 +60,11 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         "original_dtype",
     ]
 
-    _PARAM_TITLES = extract_from_schema(MODEL_SCHEMA, "title")
-    _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
-    _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
-    _PARAM_TYPE = extract_from_schema(MODEL_SCHEMA, "x-type")
     objective: str
     """Optimisation problem objective name."""
 
     def __init__(
-        self,
-        inputs: xr.Dataset,
-        math: AttrDict,
-        build_config: config_schema.Build,
-        defaults: dict,
+        self, inputs: xr.Dataset, math: AttrDict, build_config: config_schema.Build
     ):
         """Abstract base class to build a representation of the optimisation problem.
 
@@ -81,20 +72,19 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             inputs (xr.Dataset): Calliope model data.
             math (AttrDict): Calliope math.
             build_config (config_schema.Build): Build configuration options.
-            defaults (dict): Parameter defaults.
         """
         self._dataset = xr.Dataset(attrs={"applied_math": AttrDict()})
-        self.inputs = inputs.copy()
         self.config = build_config
         self.math: AttrDict = deepcopy(math)
-        self.defaults: dict = deepcopy(defaults)
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
+
+        self.inputs = self._add_default_inputs(inputs)
 
         self._check_inputs()
 
     @abstractmethod
     def add_parameter(
-        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
+        self, parameter_name: str, parameter_values: xr.DataArray
     ) -> None:
         """Add input parameter to backend model in-place.
 
@@ -203,6 +193,21 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             f"Optimisation model | {component_type}:{component_name} | {message}"
         )
 
+    def _add_default_inputs(self, inputs: xr.Dataset):
+        """Add default inputs to the model inputs dataset.
+
+        Args:
+            inputs (xr.Dataset): Model input data.
+
+        Returns:
+            xr.Dataset: Model input data with defaults added.
+        """
+        defaults = {
+            k: xr.DataArray(v["default"], attrs=v)
+            for k, v in {**self.math["parameters"], **self.math["lookups"]}.items()
+        }
+        return inputs.assign(defaults)
+
     def _check_inputs(self):
         data_checks = load_config("model_data_checks.yaml")
         check_results = {"fail": [], "warn": []}
@@ -213,7 +218,6 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             "input_data": self.inputs,
             "build_config": self.config,
             "helper_functions": helper_functions._registry["where"],
-            "defaults": self.defaults,
             "apply_where": True,
             "references": set(),
         }
@@ -402,24 +406,10 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
 
         Args:
             model_data (xr.Dataset): Input model data.
-            defaults (dict): Parameter defaults.
         """
         for param_name, param_data in self.inputs.data_vars.items():
-            default_val = param_data.attrs.get("default", np.nan)
-            self.add_parameter(param_name, param_data, default_val)
-        for param_name, default_val in self.defaults.items():
-            if param_name in self.parameters.keys():
-                continue
-            elif (
-                self.config.mode != "operate"
-                and param_name
-                in extract_from_schema(MODEL_SCHEMA, "x-operate-param").keys()
-            ):
-                continue
-            self.log(
-                "parameters", param_name, "Component not defined; using default value."
-            )
-            self.add_parameter(param_name, xr.DataArray(np.nan), default_val)
+            self.add_parameter(param_name, param_data)
+
         LOGGER.info("Optimisation Model | parameters | Generated.")
 
     @staticmethod
@@ -621,7 +611,6 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         inputs: xr.Dataset,
         math: AttrDict,
         build_config: config_schema.Build,
-        defaults: dict,
         instance: T,
     ) -> None:
         """Abstract base class to build backend models that interface with solvers.
@@ -630,10 +619,9 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             inputs (xr.Dataset): Calliope model data.
             math (AttrDict): Calliope math.
             build_config (config_schema.Build): Build configuration options.
-            defaults (dict): Parameter defaults.
             instance (T): Interface model instance.
         """
-        super().__init__(inputs, math, build_config, defaults)
+        super().__init__(inputs, math, build_config)
         self._instance = instance
         self.shadow_prices: ShadowPrices
         self._has_verbose_strings: bool = False

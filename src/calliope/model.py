@@ -200,7 +200,6 @@ class Model:
             def_dict.math.init,
             definition_path,
             data_table_dfs,
-            {"default": def_dict.runtime.defaults},
         )
         model_data_factory.build()
 
@@ -281,10 +280,7 @@ class Model:
             backend_input = self.inputs
 
         self.backend = backend.get_model_backend(
-            self.config.build,
-            backend_input,
-            AttrDict(build_math.model_dump()),
-            self.runtime.defaults,
+            self.config.build, backend_input, AttrDict(build_math.model_dump())
         )
         self.backend.add_optimisation_components()
         self.math = self.math.update({"build": build_math})

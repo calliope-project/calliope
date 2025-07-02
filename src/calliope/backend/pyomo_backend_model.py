@@ -51,11 +51,7 @@ class PyomoBackendModel(backend_model.BackendModel):
     """Pyomo-specific backend functionality."""
 
     def __init__(
-        self,
-        inputs: xr.Dataset,
-        math: AttrDict,
-        build_config: config_schema.Build,
-        defaults: dict,
+        self, inputs: xr.Dataset, math: AttrDict, build_config: config_schema.Build
     ) -> None:
         """Pyomo solver interface class.
 
@@ -65,7 +61,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             build_config (config_schema.Build): Build configuration options.
             defaults (dict): Parameter defaults.
         """
-        super().__init__(inputs, math, build_config, defaults, pmo.block())
+        super().__init__(inputs, math, build_config, pmo.block())
 
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()
@@ -78,7 +74,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         self.shadow_prices = PyomoShadowPrices(self._instance.dual, self)
 
     def add_parameter(  # noqa: D102, override
-        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
+        self, parameter_name: str, parameter_values: xr.DataArray
     ) -> None:
         self._raise_error_on_preexistence(parameter_name, "parameters")
         if parameter_values.isnull().all():
@@ -98,15 +94,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 name=parameter_name,
             )
 
-        attrs = {
-            "title": self._PARAM_TITLES.get(parameter_name, None),
-            "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
-            "unit": self._PARAM_UNITS.get(parameter_name, None),
-            "default": default,
-            "original_dtype": parameter_values.dtype.name,
-        }
-
-        self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
+        self._add_to_dataset(parameter_name, parameter_da, "parameters", {})
 
     def add_constraint(  # noqa: D102, override
         self, name: str, constraint_dict: parsing.UnparsedConstraint
@@ -433,9 +421,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 self.inputs[name] = new_input_da
 
             self.delete_component(name, "parameters")
-            self.add_parameter(
-                name, self.inputs[name], default=self.defaults.get(name, np.nan)
-            )
+            self.add_parameter(name, self.inputs[name])
             self._rebuild_references(refs_to_update)
             if self._has_verbose_strings:
                 self.verbose_strings()

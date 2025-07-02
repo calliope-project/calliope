@@ -76,10 +76,9 @@ class ModelDataFactory:
         self,
         init_config: Init,
         model_definition: AttrDict,
-        math: math_schema.MathSchema,
+        math: math_schema.CalliopeInputMath,
         definition_path: str | Path | None,
         data_table_dfs: dict[str, pd.DataFrame] | None,
-        param_attributes: dict[str, dict],
     ):
         """Take a Calliope model definition dictionary and convert it into an xarray Dataset, ready for constraint generation.
 
@@ -92,7 +91,6 @@ class ModelDataFactory:
             definition_path (Path, None): Path to the main model definition file. Defaults to None.
             data_table_dfs: (dict[str, pd.DataFrame], None): Dataframes with model data. Defaults to None.
             attributes (dict): Attributes to attach to the model Dataset.
-            param_attributes (dict[str, dict]): Attributes to attach to the generated model DataArrays.
         """
         self.config: Init = init_config
         self.model_definition: ModelDefinition = model_definition.copy()
@@ -112,13 +110,6 @@ class ModelDataFactory:
                 )
             )
         self.init_from_data_tables(tables)
-
-        flipped_attributes: dict[str, dict] = dict()
-        for key, val in param_attributes.items():
-            for subkey, subval in val.items():
-                flipped_attributes.setdefault(subkey, {})
-                flipped_attributes[subkey][key] = subval
-        self.param_attrs = flipped_attributes
 
     def build(self):
         """Build dataset from model definition."""
@@ -395,10 +386,12 @@ class ModelDataFactory:
 
     def assign_input_attr(self):
         """Assign the the available parameter metadata as attributes to each input parameter array."""
+        all_attrs = {
+            **self.math.parameters.model_dump(),
+            **self.math.lookups.model_dump(),
+        }
         for var_name, var_data in self.dataset.data_vars.items():
-            self.dataset[var_name] = var_data.assign_attrs(
-                **self.param_attrs.get(var_name, {})
-            )
+            self.dataset[var_name] = var_data.assign_attrs(all_attrs.get(var_name, {}))
 
     def _get_relevant_node_refs(self, techs_dict: AttrDict, node: str) -> list[str]:
         """Get all references to parameters made in technologies at nodes.

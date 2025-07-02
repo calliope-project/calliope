@@ -36,7 +36,6 @@ class EvalAttrs(TypedDict):
     apply_where: NotRequired[bool]
     references: NotRequired[set]
     build_config: config_schema.Build
-    defaults: dict
 
 
 class EvalWhere(expression_parser.EvalToArrayStr):
@@ -202,8 +201,9 @@ class DataVarParser(EvalWhere):
 
         Return default value as an array if var does not exist.
         """
-        default = self.eval_attrs["defaults"].get(self.data_var)
-        var = source_dataset.get(self.data_var, xr.DataArray(default))
+        breakpoint()
+        var = source_dataset[self.data_var]
+        default = var.attrs["default"]
         if default is not None:
             var = var.fillna(default)
         return var
