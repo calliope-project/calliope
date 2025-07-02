@@ -9,28 +9,11 @@ from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.io import read_rich_yaml, to_yaml
 from calliope.preprocess.model_math import initialise_math
-from calliope.schemas import (
-    config_schema,
-    general,
-    math_schema,
-    model_def_schema,
-    runtime_attrs_schema,
-)
+from calliope.schemas import CalliopeInputs
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 from calliope.util.tools import listify
 
 LOGGER = logging.getLogger(__name__)
-
-
-class CalliopeInputs(general.CalliopeBaseModel):
-    """All Calliope attributes."""
-
-    definition: model_def_schema.CalliopeModelDef = model_def_schema.CalliopeModelDef()
-    config: config_schema.CalliopeConfig = config_schema.CalliopeConfig()
-    math: math_schema.CalliopeMath = math_schema.CalliopeMath()
-    runtime: runtime_attrs_schema.CalliopeRuntime = (
-        runtime_attrs_schema.CalliopeRuntime()
-    )
 
 
 def prepare_model_definition(
@@ -65,19 +48,22 @@ def prepare_model_definition(
     model_def_dict.union({"config.init": kwargs}, allow_override=True)
 
     # Validate the model definition and generate pydantic models
+
     config = model_def_dict.pop("config")
     definition = model_def_dict
     math = initialise_math(config.init.get("extra_math"), definition_path)
 
-    runtime = {
-        "applied_overrides": applied_overrides,
-        "scenario": scenario,
-        "defaults": extract_from_schema(MODEL_SCHEMA, "default"),
+    inputs = {
+        "config": config,
+        "definition": definition,
+        "math": {"init": math},
+        "runtime": {
+            "applied_overrides": applied_overrides,
+            "scenario": scenario,
+            "defaults": extract_from_schema(MODEL_SCHEMA, "default"),
+        },
     }
-
-    return CalliopeInputs(
-        config=config, definition=definition, math={"init": math}, runtime=runtime
-    )
+    return CalliopeInputs(**inputs)
 
 
 def _load_scenario_overrides(

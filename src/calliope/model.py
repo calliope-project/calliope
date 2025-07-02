@@ -114,12 +114,16 @@ class Model:
         self.inputs = inputs
         self.results = xr.Dataset() if results is None else results
         self.backend: BackendModel
-        self.definition = model_def_schema.CalliopeModelDef(
-            **kwargs.get("definition", {})
+        self.definition = model_def_schema.CalliopeModelDef.model_validate(
+            kwargs.get("definition", {})
         )
-        self.config = config_schema.CalliopeConfig(**kwargs.get("config", {}))
-        self.math = math_schema.CalliopeMath(**kwargs.get("math", {}))
-        self.runtime = runtime_attrs_schema.CalliopeRuntime(**kwargs.get("runtime", {}))
+        self.config = config_schema.CalliopeConfig.model_validate(
+            kwargs.get("config", {})
+        )
+        self.math = math_schema.CalliopeMath.model_validate(kwargs.get("math", {}))
+        self.runtime = runtime_attrs_schema.CalliopeRuntime.model_validate(
+            kwargs.get("runtime", {})
+        )
 
         self._start_window_idx: int = 0
         self._is_built: bool = False

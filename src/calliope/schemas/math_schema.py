@@ -82,13 +82,13 @@ class PiecewiseConstraint(MathIndexedComponent):
     values at specified breakpoints.
     """
 
-    x_expression: str = ""
+    x_expression: str
     """X variable name whose values are assigned at each breakpoint."""
-    y_expression: str = ""
+    y_expression: str
     """Y variable name whose values are assigned at each breakpoint."""
-    x_values: str = ""
+    x_values: str
     """X parameter name containing data, indexed over the `breakpoints` dimension."""
-    y_values: str = ""
+    y_values: str
     """Y parameter name containing data, indexed over the `breakpoints` dimension."""
 
 
