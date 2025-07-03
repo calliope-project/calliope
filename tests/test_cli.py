@@ -17,10 +17,6 @@ _MODEL_NATIONAL = (
     / "model.yaml"
 ).as_posix()
 
-_MINIMAL_TEST_MODEL = (
-    Path(__file__).parent / "common" / "test_model" / "model.yaml"
-).as_posix()
-
 
 class TestCLI:
     def test_new(self):
@@ -235,12 +231,12 @@ class TestCLI:
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Model solution was non-optimal:calliope.exceptions.BackendWarning"
     )
-    def test_no_success_exit_code_when_infeasible(self):
+    def test_no_success_exit_code_when_infeasible(self, minimal_test_model_path):
         runner = CliRunner()
         result = runner.invoke(
             cli.run,
             [
-                _MINIMAL_TEST_MODEL,
+                minimal_test_model_path,
                 "--scenario=simple_supply",  # without these, the model cannot run
                 "--override_dict={techs.test_supply_elec.flow_cap_max: 1}",  # elec supply too low
             ],
@@ -250,12 +246,14 @@ class TestCLI:
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Model solution was non-optimal:calliope.exceptions.BackendWarning"
     )
-    def test_success_exit_code_when_infeasible_and_demanded(self):
+    def test_success_exit_code_when_infeasible_and_demanded(
+        self, minimal_test_model_path
+    ):
         runner = CliRunner()
         result = runner.invoke(
             cli.run,
             [
-                _MINIMAL_TEST_MODEL,
+                minimal_test_model_path,
                 "--no_fail_when_infeasible",
                 "--scenario=simple_supply",  # without these, the model cannot run
                 "--override_dict={techs.test_supply_elec.flow_cap_max: 1}",  # elec supply too low

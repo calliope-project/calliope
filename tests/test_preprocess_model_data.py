@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -15,16 +14,11 @@ from .common.util import check_error_or_warning
 
 
 @pytest.fixture
-def model_path():
-    return Path(__file__).parent / "common" / "test_model" / "model.yaml"
-
-
-@pytest.fixture
-def model_def(model_path):
+def model_def(minimal_test_model_path):
     model_def_override = prepare_model_definition(
-        io.read_rich_yaml(model_path),
+        io.read_rich_yaml(minimal_test_model_path),
         scenario="simple_supply,empty_tech_node",
-        definition_path=model_path,
+        definition_path=minimal_test_model_path,
     )
     # Erase data tables for simplicity
     # FIXME: previous tests omitted this. Either update tests or remove the data_table from the test model.
@@ -39,9 +33,13 @@ def init_config(default_config, model_def):
 
 
 @pytest.fixture
-def model_data_factory(model_path, model_def, init_config, model_defaults):
+def model_data_factory(minimal_test_model_path, model_def, init_config, model_defaults):
     return ModelDataFactory(
-        init_config, model_def.definition, model_path, [], {"default": model_defaults}
+        init_config,
+        model_def.definition,
+        minimal_test_model_path,
+        [],
+        {"default": model_defaults},
     )
 
 

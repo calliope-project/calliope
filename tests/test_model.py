@@ -1,4 +1,5 @@
 import logging
+import typing
 from contextlib import contextmanager
 
 import numpy as np
@@ -10,29 +11,139 @@ import xarray as xr
 import calliope
 import calliope.backend
 import calliope.preprocess
+from calliope.model import Model, read_netcdf, read_yaml
+from calliope.schemas.general import CalliopeBaseModel
 
 from .common.util import build_test_model as build_model
 
 LOGGER = "calliope.model"
 
 
-class TestModel:
-    @pytest.fixture(scope="module")
-    def national_scale_example(self):
-        model = calliope.examples.national_scale(
-            time_subset=["2005-01-01", "2005-01-01"]
+@pytest.fixture(scope="class")
+def model_from_yaml(minimal_test_model_path):
+    return read_yaml(minimal_test_model_path)
+
+
+@pytest.fixture(scope="class")
+def model_from_netcdf(tmp_path_factory, model_from_yaml):
+    save_path = tmp_path_factory.mktemp("dir") / "model.nc"
+    model_from_yaml.to_netcdf(save_path)
+    return read_netcdf(save_path)
+
+
+@pytest.fixture(scope="class")
+def model_from_dict(model_from_yaml, minimal_test_model_path):
+    dict_def = {
+        "config": model_from_yaml.config.model_dump(),
+        **model_from_yaml.definition.model_dump(),
+    }
+    return Model.from_dict(dict_def, definition_path=minimal_test_model_path)
+
+
+@pytest.fixture(scope="class")
+def model_from_datasets(model_from_yaml):
+    return Model(model_from_yaml.inputs, **model_from_yaml.dump_all_attrs())
+
+
+@pytest.fixture(scope="class")
+def model_from_datasets_with_results(model_from_yaml):
+    return Model(
+        model_from_yaml.inputs,
+        results=model_from_yaml.inputs,
+        **model_from_yaml.dump_all_attrs(),
+    )
+
+
+class TestModelInit:
+    MODELS = [
+        "model_from_yaml",
+        "model_from_netcdf",
+        "model_from_dict",
+        "model_from_datasets",
+    ]
+
+    @pytest.mark.parametrize("model_name", MODELS)
+    def test_model_inputs(
+        self, request: pytest.FixtureRequest, model_from_yaml: Model, model_name
+    ):
+        """Check that the model inputs are the same as the model loaded from YAML."""
+        model: Model = request.getfixturevalue(model_name)
+        assert model.inputs.equals(model_from_yaml.inputs)
+
+        assert not model.results
+
+    @pytest.mark.parametrize("model_name", MODELS)
+    @pytest.mark.parametrize("attr_name", typing.get_args(Model._SAVE_ATTRS_T))
+    def test_model_attrs(
+        self,
+        request: pytest.FixtureRequest,
+        model_from_yaml: Model,
+        model_name: str,
+        attr_name: str,
+    ):
+        """Check that the model attributes are the same as the attributes of the model loaded from YAML."""
+        model: Model = request.getfixturevalue(model_name)
+        attr = getattr(model, attr_name)
+        orig_attr = getattr(model_from_yaml, attr_name)
+        assert isinstance(attr, CalliopeBaseModel)
+
+        # We _know_ that timing data will be different
+        if hasattr(attr, "timings"):
+            attr.update({"timings": {}}) == orig_attr.update({"timings": {}})
+        else:
+            assert attr == orig_attr
+
+    @pytest.mark.parametrize("model_name", MODELS)
+    def test_model_creation_timing(self, request, model_name):
+        """Check that the expected model creation timings are set."""
+        model: Model = request.getfixturevalue(model_name)
+        assert not set(model.runtime.timings.keys()).symmetric_difference(
+            ["model_creation", "model_data_creation", "model_preprocessing_complete"]
         )
-        return model
 
-    @pytest.fixture(params=[dict, calliope.AttrDict])
-    def dict_to_add(self, request):
-        return request.param({"a": {"b": 1}})
+    @pytest.mark.parametrize("model_name", MODELS)
+    def test_model_name(self, request, model_name):
+        """Check that the model name is extracted from the init config correctly."""
+        model: Model = request.getfixturevalue(model_name)
+        assert model.name == "Test model"
 
-    def test_info(self, national_scale_example):
-        national_scale_example.info()
+    def test_model_init_with_results(self, model_from_datasets_with_results):
+        """Check that initialising a model with results works."""
+        model = model_from_datasets_with_results
 
-    def test_info_simple_model(self, simple_supply):
-        simple_supply.info()
+        # We have just set results array as the input array so we assert that they're equal here.
+        assert model.inputs == model.results
+        assert model.is_solved
+
+
+class TestModelBuild:
+    @pytest.fixture
+    def init_model(self):
+        return build_model({}, "simple_supply,two_hours,investment_costs")
+
+    def test_add_math_dict_with_mode_math(self, init_model):
+        init_model.build(
+            add_math_dict={"constraints": {"system_balance": {"active": False}}},
+            force=True,
+        )
+        assert len(init_model.backend.constraints) > 0
+        assert "system_balance" not in init_model.backend.constraints
+
+
+class TestModelSolve:
+    def test_solve_before_build(self):
+        m = build_model({}, "simple_supply,two_hours,investment_costs")
+        with pytest.raises(
+            calliope.exceptions.ModelError, match="You must build the optimisation"
+        ):
+            m.solve()
+
+    def test_solve_after_solve(self, simple_supply):
+        with pytest.raises(
+            calliope.exceptions.ModelError,
+            match="This model object already has results.",
+        ):
+            simple_supply.solve()
 
 
 class TestOperateMode:
@@ -289,7 +400,7 @@ class TestSporesMode:
         spores_model, _ = spores_model_and_log
         filepath = tmp_path / "test_io_load.nc"
         spores_model.to_netcdf(filepath)
-        new_model = calliope.read_netcdf(filepath)
+        new_model = read_netcdf(filepath)
         xr.testing.assert_allclose(spores_model.results, new_model.results)
 
     def test_spores_mode_success(self, spores_model_and_log_algorithms):
@@ -411,7 +522,7 @@ class TestSporesMode:
     def test_save_per_spore_check_spore(self, spores_save_per_spore_path, spore):
         """We expect SPORES results to be saved to file once per iteration."""
 
-        result = calliope.read_netcdf(
+        result = read_netcdf(
             (spores_save_per_spore_path / f"spore_{spore}").with_suffix(".nc")
         )
         assert result.results.spores.item() == spore
@@ -423,7 +534,7 @@ class TestSporesMode:
     ):
         """We expect SPORES results saved per iteration to have the same results as those stored in memory."""
 
-        result = calliope.read_netcdf(
+        result = read_netcdf(
             (spores_save_per_spore_path / f"spore_{spore}").with_suffix(".nc")
         )
         xr.testing.assert_equal(
@@ -492,33 +603,3 @@ class TestSporesMode:
             match="Cannot score SPORES with `relative_deployment`",
         ):
             model.solve(spores={"scoring_algorithm": "relative_deployment"})
-
-
-class TestBuild:
-    @pytest.fixture
-    def init_model(self):
-        return build_model({}, "simple_supply,two_hours,investment_costs")
-
-    def test_add_math_dict_with_mode_math(self, init_model):
-        init_model.build(
-            add_math_dict={"constraints": {"system_balance": {"active": False}}},
-            force=True,
-        )
-        assert len(init_model.backend.constraints) > 0
-        assert "system_balance" not in init_model.backend.constraints
-
-
-class TestSolve:
-    def test_solve_before_build(self):
-        m = build_model({}, "simple_supply,two_hours,investment_costs")
-        with pytest.raises(
-            calliope.exceptions.ModelError, match="You must build the optimisation"
-        ):
-            m.solve()
-
-    def test_solve_after_solve(self, simple_supply):
-        with pytest.raises(
-            calliope.exceptions.ModelError,
-            match="This model object already has results.",
-        ):
-            simple_supply.solve()

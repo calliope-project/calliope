@@ -241,7 +241,7 @@ class Model:
         names += self.config.build.extra_math
         return names
 
-    def _dump_all_attrs(self) -> dict:
+    def dump_all_attrs(self) -> dict:
         """Dump of all class pydantic model attributes as a single dictionary."""
         return {k: getattr(self, k).model_dump() for k in get_args(self._SAVE_ATTRS_T)}
 
@@ -411,7 +411,7 @@ class Model:
         """Save complete model data (inputs and, if available, results) to a NetCDF file at the given `path`."""
         io.save_netcdf(self.inputs, "inputs", "w", path)
         io.save_netcdf(self.results, "results", "a", path)
-        io.save_netcdf(xr.Dataset(attrs=self._dump_all_attrs()), "attrs", "a", path)
+        io.save_netcdf(xr.Dataset(attrs=self.dump_all_attrs()), "attrs", "a", path)
 
     def to_csv(
         self, path: str | Path, dropna: bool = True, allow_overwrite: bool = False
@@ -436,7 +436,7 @@ class Model:
         else:
             exceptions.warn("No results available, saving inputs only.")
 
-        io.to_yaml(self._dump_all_attrs(), path=Path(path) / "attrs.yaml")
+        io.to_yaml(self.dump_all_attrs(), path=Path(path) / "attrs.yaml")
 
     def info(self) -> str:
         """Generate basic description of the model, combining its name and a rough indication of the model size.
@@ -694,7 +694,7 @@ class Model:
 
             io.save_netcdf(results.expand_dims(spores=[spore]), "results", "w", outpath)
             io.save_netcdf(
-                xr.Dataset(attrs=self._dump_all_attrs()), "attrs", "a", outpath
+                xr.Dataset(attrs=self.dump_all_attrs()), "attrs", "a", outpath
             )
 
         else:

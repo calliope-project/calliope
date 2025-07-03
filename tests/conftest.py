@@ -21,6 +21,11 @@ def dummy_int() -> int:
     return 0xDEADBEEF
 
 
+@pytest.fixture(scope="session")
+def minimal_test_model_path():
+    return (Path(__file__).parent / "common" / "test_model" / "model.yaml").as_posix()
+
+
 @pytest.fixture(
     scope="session",
     params=set(
