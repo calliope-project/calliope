@@ -6,6 +6,8 @@ import pytest
 
 from calliope.schemas import general
 
+LOGGER = "calliope.schemas.general"
+
 
 class TestUniqueList:
     @pytest.fixture(scope="class")
@@ -226,7 +228,7 @@ class TestCalliopeDictModel:
 
     def test_log_message_on_adding_dict_entry(self, caplog, dict_str_model):
         """Ensure that a log message is generated when adding a new entry to the CalliopeDictModel."""
-        with caplog.at_level(logging.DEBUG):
+        with caplog.at_level(logging.DEBUG, logger=LOGGER):
             updated_model = dict_str_model.update({"key3": "value3"})
         assert "Adding TestModel entry: `key3`" in caplog.text
 
@@ -345,6 +347,7 @@ class TestCalliopeBaseModel:
             __base__=general.CalliopeBaseModel,
             __config__={"title": "TITLE"},
             nested_list_field=(list_model, list_model()),
+            nested_config=(config_model_flat, config_model_flat()),
             other_field=(str, "default_value"),
         )
         dict_model = pydantic.create_model(
@@ -448,7 +451,8 @@ class TestCalliopeBaseModel:
                     "nested_list_field": [
                         {"foo": "value1", "foobar": 2},
                         {"foo": "value2", "foobar": 4},
-                    ]
+                    ],
+                    "nested_config": {"foo": "new_value1", "foobar": 1},
                 },
                 "key2": {"other_field": "value3"},
             },
@@ -459,7 +463,10 @@ class TestCalliopeBaseModel:
         new_model = model.update(
             {
                 "dict_field": {
-                    "key1": {"nested_list_field": [{"foo": "new_value1"}]},
+                    "key1": {
+                        "nested_list_field": [{"foo": "new_value1"}],
+                        "nested_config": {"foo": "new_value1"},
+                    },
                     "key3": {},
                 },
                 "list_field": [{}, {"foo": "new_value3", "foobar": 8}],
@@ -469,10 +476,19 @@ class TestCalliopeBaseModel:
             "dict_field": {
                 "key1": {
                     "nested_list_field": [{"foo": "new_value1", "foobar": 1}],
+                    "nested_config": {"foo": "new_value1", "foobar": 1},
                     "other_field": "default_value",
                 },
-                "key2": {"nested_list_field": [], "other_field": "value3"},
-                "key3": {"nested_list_field": [], "other_field": "default_value"},
+                "key2": {
+                    "nested_list_field": [],
+                    "nested_config": {"foo": "bar", "foobar": 1},
+                    "other_field": "value3",
+                },
+                "key3": {
+                    "nested_list_field": [],
+                    "nested_config": {"foo": "bar", "foobar": 1},
+                    "other_field": "default_value",
+                },
             },
             "list_field": [
                 {"foo": "bar", "foobar": 1},
@@ -504,12 +520,32 @@ class TestCalliopeBaseModel:
         ],
     )
     def test_logging(self, caplog, config_model_double_nested, to_update, expected):
-        caplog.set_level(logging.DEBUG)
-
         model = config_model_double_nested()
-        model.update(to_update)
+        with caplog.at_level(logging.DEBUG, logger=LOGGER):
+            model.update(to_update)
 
         assert all(log_text in caplog.text for log_text in expected)
+
+    def test_logging_no_update_on_same_val(
+        self, caplog, config_model_nested_with_dict_and_list_models
+    ):
+        """Ensure that no log message is generated when updating a value to the same value."""
+
+        model = config_model_nested_with_dict_and_list_models(
+            dict_field={
+                "key1": {"nested_config": {"foo": "value1", "foobar": 1}},
+                "key2": {"other_field": "value3"},
+            },
+            list_field=[{"foo": "value3", "foobar": 6}],
+        )
+        with caplog.at_level(logging.DEBUG, logger=LOGGER):
+            model.update(
+                {
+                    "dict_field.key1.nested_config.foo": "value1",
+                    "dict_field.key2.other_field": "value3",
+                }
+            )
+        assert not caplog.text
 
     def test_config_model_no_defs(self, config_model_nested):
         model = config_model_nested()
