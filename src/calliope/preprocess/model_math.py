@@ -81,7 +81,7 @@ def build_applied_math(
         ModelError: a given name was not found in the math dictionary.
 
     Returns:
-        MathSchema: constructed and validated math dataset.
+        AttrDict: constructed and validated math dataset.
     """
     LOGGER.info(f"Math build | building applied math with {priority}.")
     math = AttrDict()
