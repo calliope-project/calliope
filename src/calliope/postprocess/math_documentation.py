@@ -5,6 +5,7 @@ import typing
 from pathlib import Path
 from typing import Literal, overload
 
+from calliope.attrdict import AttrDict
 from calliope.backend import ALLOWED_MATH_FILE_FORMATS, LatexBackendModel
 from calliope.model import Model
 
@@ -28,9 +29,13 @@ class MathDocumentation:
                 which at least one "where" case is valid ("valid"). Defaults to "all".
             **kwargs: kwargs for the LaTeX backend.
         """
-        self.name: str = model.name + " math"
+        self.name: str = "math" if model.name is None else model.name + " math"
         self.backend: LatexBackendModel = LatexBackendModel(
-            model._model_data, model.applied_math, model.config.build, include
+            model.inputs,
+            AttrDict(model.math.build.model_dump()),
+            model.config.build,
+            model.runtime.defaults,
+            include,
         )
         self.backend.add_optimisation_components()
 
