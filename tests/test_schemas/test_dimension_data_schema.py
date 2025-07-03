@@ -30,7 +30,7 @@ class TestIndexedParam:
         IndexedParam(data=data, dims=dims, index=index)
 
     def test_broadcasted_definition(self):
-        """Broadcasted definitons should be possible."""
+        """Broadcasted definitions should be possible."""
         IndexedParam(data=1, dims="my_dim", index=["i1", "i2", "i3", "i4"])
 
     @pytest.mark.parametrize(
