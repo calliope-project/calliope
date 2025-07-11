@@ -92,8 +92,9 @@ class Model:
     def __init__(
         self,
         inputs: xr.Dataset,
+        attrs: dict[_SAVE_ATTRS_T, dict],
         results: xr.Dataset | None = None,
-        **kwargs: dict[_SAVE_ATTRS_T, dict],
+        **kwargs,
     ) -> None:
         """Returns a instantiated Calliope Model.
 
@@ -101,9 +102,11 @@ class Model:
             inputs (xr.Dataset): Input dataset.
             results (xr.Dataset | None, optional):
                 If given, the results dataset. Defaults to None.
-            **kwargs (dict[_SAVE_ATTRS_T, dict]):
+            attrs (dict[_SAVE_ATTRS_T, dict]):
                 Model attributes & properties.
                 Any of _SAVE_ATTRS_T that are not given here will be initialised with default values.
+            **kwargs:
+                initialisation keyword arguments
 
         See Also:
             `calliope.Model.from_dict`: Initialise from a model YAML loaded into memory.
@@ -111,25 +114,34 @@ class Model:
             `calliope.read_yaml`: Read from YAML definition.
             `calliope.read_netcdf`: Read from a calliope model saved to NetCDF.
         """
-        self.inputs = inputs
         self.results = xr.Dataset() if results is None else results
         self.backend: BackendModel
         self.definition = model_def_schema.CalliopeModelDef.model_validate(
-            kwargs.get("definition", {})
+            attrs.get("definition", {})
         )
         self.config = config_schema.CalliopeConfig.model_validate(
-            kwargs.get("config", {})
+            attrs.get("config", {})
         )
-        self.math = math_schema.CalliopeMath.model_validate(kwargs.get("math", {}))
+        self.math = math_schema.CalliopeMath.model_validate(attrs.get("math", {}))
         self.runtime = runtime_attrs_schema.CalliopeRuntime.model_validate(
-            kwargs.get("runtime", {})
+            attrs.get("runtime", {})
         )
 
         self._start_window_idx: int = 0
         self._is_built: bool = False
         self._is_solved: bool = False if results is None else True
 
+        self.config = self.config.update({"init": kwargs})
         self._check_versions()
+
+        model_data_factory = ModelDataFactory(
+            self.config.init, inputs, self.math.init, None, None
+        )
+
+        model_data_factory.clean()
+        self.inputs = model_data_factory.dataset
+
+        self.math = self.math.update({"build": model_data_factory.math.model_dump()})
 
         log_time(
             LOGGER,
@@ -183,21 +195,20 @@ class Model:
             definition_path (Path | None): If given, the path relative to which all path references in `model_definition` will be taken.
             **kwargs: initialisation overrides.
         """
-        def_dict = preprocess.prepare_model_definition(
+        model_def = preprocess.prepare_model_definition(
             model_definition, scenario, override_dict, definition_path, **kwargs
         )
 
         log_time(
             LOGGER,
-            def_dict.runtime.timings,
+            model_def.runtime.timings,
             "model_data_creation",
             comment="Model: preprocessing stage 2 (data)",
         )
-
         model_data_factory = ModelDataFactory(
-            def_dict.config.init,
-            AttrDict(def_dict.definition.model_dump(exclude_defaults=True)),
-            def_dict.math.init,
+            model_def.config.init,
+            AttrDict(model_def.definition.model_dump(exclude_defaults=True)),
+            model_def.math.init,
             definition_path,
             data_table_dfs,
         )
@@ -205,20 +216,18 @@ class Model:
 
         inputs = model_data_factory.dataset
 
-        def_dict = def_dict.update({"math.build": model_data_factory.math.model_dump()})
-
         inputs_attrs = list(model_data_factory.dataset.attrs.keys())
         to_update = {k: model_data_factory.dataset.attrs.pop(k) for k in inputs_attrs}
 
-        def_dict = def_dict.update({"runtime": to_update})
+        model_def = model_def.update({"runtime": to_update})
 
         log_time(
             LOGGER,
-            def_dict.runtime.timings,
+            model_def.runtime.timings,
             "model_preprocessing_complete",
             comment="Model: preprocessing complete",
         )
-        return cls(inputs, **def_dict.model_dump())
+        return cls(inputs=inputs, attrs=model_def.model_dump())
 
     @property
     def name(self) -> str | None:
@@ -266,7 +275,7 @@ class Model:
         )
 
         self.config = self.config.update({"build": kwargs})
-        build_math = self.math.build.update(add_math_dict)
+        build_math = self.math.build.update(add_math_dict if add_math_dict else {})
 
         mode = self.config.init.mode
         if mode == "operate":
@@ -280,10 +289,12 @@ class Model:
             backend_input = self.inputs
 
         self.backend = backend.get_model_backend(
-            self.config.build, backend_input, AttrDict(build_math.model_dump())
+            self.config.build.update({"mode": mode}),
+            backend_input,
+            AttrDict(build_math.model_dump()),
         )
         self.backend.add_optimisation_components()
-        self.math = self.math.update({"build": build_math})
+        self.math = self.math.update({"build": build_math.model_dump()})
 
         log_time(
             LOGGER,

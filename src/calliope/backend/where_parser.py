@@ -189,7 +189,9 @@ class DataVarParser(EvalWhere):
         """Mask by setting all (NaN | INF/-INF) to False, otherwise True."""
         var = source_dataset.get(self.data_var, xr.DataArray(np.nan))
         if data_var_type == "parameters":
-            if self.data_var not in self.eval_attrs["input_data"]:
+            if self.eval_attrs["input_data"][self.data_var].attrs.get(
+                "from_default", False
+            ):
                 return xr.DataArray(np.False_)
             else:
                 return var.notnull() & (var != np.inf) & (var != -np.inf)
@@ -201,9 +203,8 @@ class DataVarParser(EvalWhere):
 
         Return default value as an array if var does not exist.
         """
-        breakpoint()
         var = source_dataset[self.data_var]
-        default = var.attrs["default"]
+        default = var.attrs.get("default", None)
         if default is not None:
             var = var.fillna(default)
         return var

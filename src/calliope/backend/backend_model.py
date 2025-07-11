@@ -203,8 +203,9 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             xr.Dataset: Model input data with defaults added.
         """
         defaults = {
-            k: xr.DataArray(v["default"], attrs=v)
+            k: xr.DataArray(v["default"], attrs=v).assign_attrs(from_default=True)
             for k, v in {**self.math["parameters"], **self.math["lookups"]}.items()
+            if k not in inputs.data_vars
         }
         return inputs.assign(defaults)
 
@@ -235,36 +236,11 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             check_results["warn"], check_results["fail"]
         )
 
-    def _validate_math_string_parsing(self) -> None:
-        """Validate that `expression` and `where` strings of the math dictionary can be successfully parsed.
-
-        NOTE: strings are not checked for evaluation validity.
-        Evaluation issues will be raised only on adding a component to the backend.
-        """
-        validation_errors: dict = dict()
-        for component_group in typing.get_args(ORDERED_COMPONENTS_T):
-            for name, dict_ in self.math[component_group].items():
-                parsed = parsing.ParsedBackendComponent(component_group, name, dict_)
-                parsed.parse_top_level_where(errors="ignore")
-                parsed.parse_equations(self.valid_component_names, errors="ignore")
-                if not parsed._is_valid:
-                    validation_errors[f"{component_group}:{name}"] = parsed._errors
-
-        if validation_errors:
-            exceptions.print_warnings_and_raise_errors(
-                during="math string parsing (marker indicates where parsing stopped, but may not point to the root cause of the issue)",
-                errors=validation_errors,
-            )
-
-        LOGGER.info("Optimisation Model | Validated math strings.")
-
     def add_optimisation_components(self) -> None:
         """Parse math and inputs and set optimisation problem."""
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
         self._add_all_inputs_as_parameters()
-        if self.config.pre_validate_math_strings:
-            self._validate_math_string_parsing()
         for components in typing.get_args(ORDERED_COMPONENTS_T):
             component = components.removesuffix("s")
             for name, dict_ in self.math[components].items():
@@ -322,6 +298,9 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             references=references,
         )
         if break_early and not top_level_where.any():
+            self._add_to_dataset(
+                name, xr.DataArray(np.nan), component_type, component_dict, references
+            )
             return parsed_component
 
         self._create_obj_list(name, component_type)
@@ -363,6 +342,9 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
 
         if break_early and component_da.isnull().all():
             self.delete_component(name, component_type)
+            self._add_to_dataset(
+                name, component_da, component_type, component_dict, references
+            )
             return parsed_component
 
         self._add_to_dataset(

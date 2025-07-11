@@ -567,6 +567,13 @@ lookups:
     description: One of 'continuous' (LP model) or 'integer' (integer/binary unit capacity).
     one_of: [continuous, integer]
 
+  cluster_first_timestep:
+    type: bool
+    default: false
+    title: Cluster first timestep.
+    description: >-
+      If true, the timestep is the first in the given clustered day.
+
   definition_matrix:
     type: bool
     description: >-

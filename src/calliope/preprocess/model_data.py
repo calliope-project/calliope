@@ -75,7 +75,7 @@ class ModelDataFactory:
     def __init__(
         self,
         init_config: Init,
-        model_definition: AttrDict,
+        model_definition: AttrDict | xr.Dataset,
         math: math_schema.CalliopeInputMath,
         definition_path: str | Path | None,
         data_table_dfs: dict[str, pd.DataFrame] | None,
@@ -93,15 +93,19 @@ class ModelDataFactory:
             attributes (dict): Attributes to attach to the model Dataset.
         """
         self.config: Init = init_config
-        self.model_definition: ModelDefinition = model_definition.copy()
-        self.dataset = xr.Dataset()
+        if isinstance(model_definition, dict):
+            self.model_definition: ModelDefinition = model_definition.copy()
+            self.dataset = xr.Dataset()
+        elif isinstance(model_definition, xr.Dataset):
+            self.model_definition: ModelDefinition = AttrDict()
+            self.dataset = model_definition
         self.tech_data_from_tables = AttrDict()
         self.definition_path: str | Path | None = definition_path
 
         self.math = model_math.build_applied_math(self.math_priority, math.model_dump())
 
         tables = []
-        for table_name, table_dict in model_definition.get_key(
+        for table_name, table_dict in self.model_definition.get_key(
             "data_tables", {}
         ).items():
             tables.append(
@@ -109,12 +113,16 @@ class ModelDataFactory:
                     table_name, table_dict, data_table_dfs, self.definition_path
                 )
             )
-        self.init_from_data_tables(tables)
+        if tables:
+            self.init_from_data_tables(tables)
 
     def build(self):
         """Build dataset from model definition."""
         self.add_node_tech_data()
         self.add_top_level_params()
+
+    def clean(self):
+        """Clean built dataset."""
         self.clean_data_from_undefined_members()
         self.add_colors()
         self.add_link_distances()

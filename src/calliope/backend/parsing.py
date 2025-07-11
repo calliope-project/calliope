@@ -315,7 +315,6 @@ class ParsedBackendEquation:
                 input_data=backend_interface.inputs,
                 backend_interface=backend_interface,
                 build_config=backend_interface.config,
-                defaults=backend_interface.defaults,
                 references=references if references is not None else set(),
                 apply_where=True,
             )

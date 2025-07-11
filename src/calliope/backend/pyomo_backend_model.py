@@ -94,7 +94,9 @@ class PyomoBackendModel(backend_model.BackendModel):
                 name=parameter_name,
             )
 
-        self._add_to_dataset(parameter_name, parameter_da, "parameters", {})
+        self._add_to_dataset(
+            parameter_name, parameter_da, "parameters", parameter_da.attrs
+        )
 
     def add_constraint(  # noqa: D102, override
         self, name: str, constraint_dict: parsing.UnparsedConstraint
