@@ -2,6 +2,7 @@ from itertools import chain, combinations
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 import xarray as xr
 
@@ -166,7 +167,16 @@ def dummy_model_math():
 def dummy_model_data(model_defaults):
     coords = {
         dim: (
-            ["foo", "bar"]
+            pd.to_datetime(
+                [
+                    "2000-01-01 00:00",
+                    "2000-01-01 01:00",
+                    "2000-01-01 02:00",
+                    "2000-01-01 03:00",
+                ]
+            )
+            if dim == "timesteps"
+            else ["foo", "bar"]
             if dim != "techs"
             else ["foobar", "foobaz", "barfoo", "bazfoo"]
         )
@@ -261,6 +271,8 @@ def dummy_model_data(model_defaults):
                     ["bazfoo", np.nan, np.nan, np.nan],
                 ],
             ),
+            "timeseries_data": (["timesteps"], [1, 1, 1, 1]),
+            "timeseries_nodes_data": (["nodes", "timesteps"], np.ones((2, 4))),
         },
         attrs={"scenarios": ["foo"]},
     )

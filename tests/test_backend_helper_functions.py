@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 import xarray as xr
 
@@ -61,6 +62,16 @@ def expression_default_if_empty(expression, parsing_kwargs):
 @pytest.fixture(scope="class")
 def expression_where(expression, parsing_kwargs):
     return expression["where"](**parsing_kwargs)
+
+
+@pytest.fixture(scope="class")
+def expression_group_datetime(expression, parsing_kwargs):
+    return expression["group_datetime"](**parsing_kwargs)
+
+
+@pytest.fixture(scope="class")
+def expression_sum_next_n(expression, parsing_kwargs):
+    return expression["sum_next_n"](**parsing_kwargs)
 
 
 class TestAsArray:
@@ -270,9 +281,12 @@ class TestAsArray:
             "Trying to select items on the dimension techs from the lookup_techs_no_match lookup array, but no matches found.",
         )
 
-    @pytest.mark.parametrize(("idx", "expected"), [(0, "foo"), (1, "bar"), (-1, "bar")])
+    @pytest.mark.parametrize(
+        ("idx", "expected"),
+        [(0, "2000-01-01 00:00"), (1, "2000-01-01 01:00"), (-1, "2000-01-01 03:00")],
+    )
     def test_get_val_at_index(self, expression_get_val_at_index, idx, expected):
-        assert expression_get_val_at_index(timesteps=idx) == expected
+        assert expression_get_val_at_index(timesteps=idx) == pd.to_datetime(expected)
 
     @pytest.mark.parametrize("mapping", [{}, {"foo": 1, "bar": 1}])
     def test_get_val_at_index_not_one_mapping(
@@ -368,6 +382,53 @@ class TestAsArray:
         result = expression_where(dummy_model_data.no_dims, where_array)
 
         expected = xr.DataArray([2, np.nan], coords={"nodes": dummy_model_data.nodes})
+        assert result.equals(expected.transpose(*result.dims))
+
+    def test_expression_group_datetime_date(
+        self, expression_group_datetime, dummy_model_data
+    ):
+        expected = xr.DataArray([4], coords={"date": ["2000-01-01"]})
+        result = expression_group_datetime(
+            dummy_model_data.timeseries_data, "timesteps", "date"
+        )
+        assert result.equals(expected)
+
+    def test_expression_group_datetime_hour(
+        self, expression_group_datetime, dummy_model_data
+    ):
+        expected = xr.DataArray([1, 1, 1, 1], coords={"hour": [0, 1, 2, 3]})
+        result = expression_group_datetime(
+            dummy_model_data.timeseries_data, "timesteps", "hour"
+        )
+        assert result.equals(expected)
+
+    def test_expression_group_datetime_multidim(
+        self, expression_group_datetime, dummy_model_data
+    ):
+        expected = xr.DataArray(
+            np.ones((2, 4)),
+            coords={"nodes": dummy_model_data.nodes, "hour": [0, 1, 2, 3]},
+        )
+        result = expression_group_datetime(
+            dummy_model_data.timeseries_nodes_data, "timesteps", "hour"
+        )
+        assert result.equals(expected.transpose(*result.dims))
+
+    def test_expression_sum_next_n_onedim(
+        self, expression_sum_next_n, dummy_model_data
+    ):
+        expected = xr.DataArray([1, 3, 5, 3], coords=dummy_model_data.only_techs.coords)
+        result = expression_sum_next_n(dummy_model_data.only_techs, "techs", 2)
+        assert result.equals(expected)
+
+    def test_expression_sum_next_n_multidim(
+        self, expression_sum_next_n, dummy_model_data
+    ):
+        expected = xr.DataArray(
+            [[1.0, 1.0, 4.0, 3.0], [np.inf, 3, 1, np.nan]],
+            coords=dummy_model_data.with_inf.coords,
+        )
+        result = expression_sum_next_n(dummy_model_data.with_inf, "techs", 2)
         assert result.equals(expected.transpose(*result.dims))
 
 
@@ -506,4 +567,40 @@ class TestAsMathString:
         assert (
             expression_where_string
             == r"(\textbf{foo}_\text{techs} \text{if } \textit{bar}_\text{nodes} == True)"
+        )
+
+    def test_expression_group_datetime_hour(self, expression_group_datetime):
+        expression_group_datetime_string = expression_group_datetime(
+            r"\textbf{foo}_\text{timestep}", "timesteps", "date"
+        )
+        assert (
+            expression_group_datetime_string
+            == r"\sum\limits_{\substack{\text{timestep} \in \text{timesteps} \text{ if } \text{date}(\text{timestep}) = \text{d}}} (\textbf{foo}_\text{timestep})"
+        )
+
+    def test_expression_group_datetime_multidim(self, expression_group_datetime):
+        expression_group_datetime_string = expression_group_datetime(
+            r"\textbf{foo}_\text{timestep,node}", "timesteps", "date"
+        )
+        assert (
+            expression_group_datetime_string
+            == r"\sum\limits_{\substack{\text{timestep} \in \text{timesteps} \text{ if } \text{date}(\text{timestep}) = \text{d}}} (\textbf{foo}_\text{timestep,node})"
+        )
+
+    def test_expression_sum_next_n_onedim(self, expression_sum_next_n):
+        expression_sum_next_n_string = expression_sum_next_n(
+            r"\textbf{foo}_\text{timestep}", "timesteps", 4
+        )
+        assert (
+            expression_sum_next_n_string
+            == r"\sum\limits_{\text{t}=\text{timestep}}^{\text{timestep}+4} (\textbf{foo}_\text{t})"
+        )
+
+    def test_expression_sum_next_n_multidim(self, expression_sum_next_n):
+        expression_sum_next_n_string = expression_sum_next_n(
+            r"\textbf{foo}_\text{timestep,node}", "timesteps", 4
+        )
+        assert (
+            expression_sum_next_n_string
+            == r"\sum\limits_{\text{t}=\text{timestep}}^{\text{timestep}+4} (\textbf{foo}_\text{t,node})"
         )
