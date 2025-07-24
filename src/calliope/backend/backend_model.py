@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
 
 T = TypeVar("T")
-ALL_COMPONENTS_T = Literal["parameters", ORDERED_COMPONENTS_T]
+ALL_COMPONENTS_T = Literal["parameters", "lookups", ORDERED_COMPONENTS_T]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -78,9 +78,28 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         self.math: AttrDict = deepcopy(math)
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
-        self.inputs = self._add_default_inputs(inputs)
+        self.inputs = self._add_inputs(inputs)
 
         self._check_inputs()
+
+    def add_lookup(self, lookup_name: str, lookup_values: xr.DataArray) -> None:
+        """Add input lookup array to backend model in-place.
+
+        This directly passes a copy of the input lookup array to the backend.
+
+        Args:
+            lookup_name (str): Name of lookup.
+            lookup_values (xr.DataArray): Array of lookup values.
+        """
+        self._raise_error_on_preexistence(lookup_name, "lookups")
+
+        if lookup_values.isnull().all():
+            self.log(
+                "lookups", lookup_name, "Component not added; no data found in array."
+            )
+            lookup_values = lookup_values.astype(float)
+
+        self._add_to_dataset(lookup_name, lookup_values, "lookups", lookup_values.attrs)
 
     @abstractmethod
     def add_parameter(
@@ -193,7 +212,7 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             f"Optimisation model | {component_type}:{component_name} | {message}"
         )
 
-    def _add_default_inputs(self, inputs: xr.Dataset):
+    def _add_inputs(self, inputs: xr.Dataset):
         """Add default inputs to the model inputs dataset.
 
         Args:
@@ -202,12 +221,22 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         Returns:
             xr.Dataset: Model input data with defaults added.
         """
-        defaults = {
-            k: xr.DataArray(v["default"], attrs=v).assign_attrs(from_default=True)
-            for k, v in {**self.math["parameters"], **self.math["lookups"]}.items()
-            if k not in inputs.data_vars
-        }
-        return inputs.assign(defaults)
+        new_inputs = xr.Dataset()
+        for obj_type in ["parameters", "lookups", "dims"]:
+            for name, config in self.math[obj_type].items():
+                attrs: dict = {"obj_type": obj_type}
+                if name not in inputs:
+                    attrs |= {"from_default": True, **config}
+                    data = xr.DataArray(config.get("default", np.nan))
+                else:
+                    data = inputs[name]
+
+                if obj_type == "dims":
+                    new_inputs.coords[name] = data.assign_attrs(**attrs)
+                else:
+                    new_inputs[name] = data.assign_attrs(**attrs)
+
+        return new_inputs
 
     def _check_inputs(self):
         data_checks = load_config("model_data_checks.yaml")
@@ -240,7 +269,7 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         """Parse math and inputs and set optimisation problem."""
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
-        self._add_all_inputs_as_parameters()
+        self._add_all_inputs_as_parameters_or_lookups()
         for components in typing.get_args(ORDERED_COMPONENTS_T):
             component = components.removesuffix("s")
             for name, dict_ in self.math[components].items():
@@ -380,7 +409,7 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             BackendError: Cannot overwrite object of same name and type.
         """
 
-    def _add_all_inputs_as_parameters(self) -> None:
+    def _add_all_inputs_as_parameters_or_lookups(self) -> None:
         """Add all parameters to backend dataset in-place.
 
         If model data does not include a parameter, their default values will be added here
@@ -389,10 +418,13 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         Args:
             model_data (xr.Dataset): Input model data.
         """
-        for param_name, param_data in self.inputs.data_vars.items():
-            self.add_parameter(param_name, param_data)
+        for name, data in self.inputs.data_vars.items():
+            if data.obj_type == "parameters":
+                self.add_parameter(name, data)
+            elif data.obj_type == "lookups":
+                self.add_lookup(name, data)
 
-        LOGGER.info("Optimisation Model | parameters | Generated.")
+        LOGGER.info("Optimisation Model | parameters/lookups | Generated.")
 
     @staticmethod
     def _clean_arrays(*args) -> None:
@@ -554,6 +586,11 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
     def parameters(self):
         """Slice of backend dataset to show only built parameters."""
         return self._dataset.filter_by_attrs(obj_type="parameters")
+
+    @property
+    def lookups(self):
+        """Slice of backend dataset to show only built lookup arrays."""
+        return self._dataset.filter_by_attrs(obj_type="lookups")
 
     @property
     def global_expressions(self):
