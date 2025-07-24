@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|fixed| Evaluating results of Gurobi global expressions containing pure decision variables / parameters (#780).
+
 |fixed| Timeseries capacity factor accounts for time resolution (#762).
 
 |fixed| Levelised cost accounts for energy that is generated and exported (`flow_export`) (#767).
