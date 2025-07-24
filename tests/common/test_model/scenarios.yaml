@@ -49,8 +49,26 @@ overrides:
           techs: test_supply_plus
 
     nodes:
-      a.techs.test_supply_elec:
-      b.techs.test_supply_elec:
+      a.techs: {test_supply_elec, test_supply_plus}
+      b.techs: {test_supply_elec, test_supply_plus}
+
+  simple_supply_spores_ready:
+    # a version with an inefficient alternative for spores to switch between
+    techs:
+      test_supply_elec_ineff:
+        template: test_controller
+        name: Less efficient supply tech
+        carrier_out: electricity
+        base_tech: supply
+        flow_cap_max: 10
+        source_use_max: .inf
+        flow_out_eff: 0.8
+      test_link_a_b_heat.active: false
+
+    nodes:
+      a.techs: {test_supply_elec, test_supply_elec_ineff}
+      b.techs: {test_supply_elec, test_supply_elec_ineff}
+
 
   supply_and_supply_plus_milp:
     data_tables:
@@ -380,7 +398,7 @@ overrides:
       solve.spores:
         number: 2
     parameters:
-      spores_slack: 0.1
+      spores_slack: 0.3
 
   spores_tech_tracking:
     config.solve:

@@ -537,22 +537,22 @@ class GurobiBackendModel(backend_model.BackendModel):
         return val.x  # type: ignore
 
     @staticmethod
-    def _from_gurobi_expr(val: gurobipy.LinExpr, *, eval_body: bool = False) -> Any:
+    def _from_gurobi_expr(val: gurobipy.LinExpr | gurobipy.Var | float) -> Any:
         """Evaluate Gurobi expression object.
 
         Args:
-            val (gurobipy.LinExpr): expression object to be evaluated
-            eval_body (bool, optional):
-                If True, attempt to evaluate the expression object, which will produce a numeric value.
-                This will only succeed if the backend model has been successfully optimised,
-                otherwise a string representation of the linear expression will be returned
-                (same as eval_body=False). Defaults to False.
+            val (gurobipy.LinExpr | gurobipy.Var | float): expression object to be evaluated; could be an expression, decision variable, or simple number.
 
         Returns:
             Any: If the input is nullable, return np.nan, otherwise a numeric value
             (eval_body=True and problem is optimised) or a string.
         """
-        return val.getValue()
+        if isinstance(val, gurobipy.LinExpr):
+            return val.getValue()
+        elif isinstance(val, gurobipy.Var):
+            return val.x  # type: ignore
+        else:
+            return val
 
 
 class GurobiShadowPrices(backend_model.ShadowPrices):
