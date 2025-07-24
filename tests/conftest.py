@@ -102,6 +102,16 @@ def simple_supply_and_supply_plus():
 
 
 @pytest.fixture(scope="session")
+def simple_supply_spores_ready():
+    m = build_model(
+        {}, "var_costs,simple_supply_spores_ready,two_hours,investment_costs"
+    )
+    m.build()
+    m.solve()
+    return m
+
+
+@pytest.fixture(scope="session")
 def simple_storage():
     m = build_model({}, "simple_storage,two_hours,investment_costs")
     m.build()
