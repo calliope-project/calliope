@@ -44,8 +44,6 @@ class Dim(MathComponent):
     """Schema for named dimension."""
 
     type: Literal["string", "datetime", "integer", "float"]
-    subset: list[str | int | float] | None = None
-    resample: str | None = None
     ordered: bool = False
 
 

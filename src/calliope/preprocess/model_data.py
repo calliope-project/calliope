@@ -806,11 +806,12 @@ class ModelDataFactory:
             xr.Dataset: Input `ds` with subset timeseries coordinates.
         """
         ds = self.dataset
-        for dim_name, dim_vals in self.dataset.coords.items():
-            subset = self.math.dims[dim_name].subset
-            is_ordered = self.math.dims[dim_name].ordered
-            if subset is None:
+        for dim_name, subset in self.config.subset.root.items():
+            if subset is None or dim_name not in ds.coords:
                 continue
+            is_ordered = self.math.dims[dim_name].ordered
+            dim_vals = ds.coords[dim_name]
+
             if dim_vals.dtype.kind == "M":
                 time._check_time_subset(dim_vals.to_index(), subset)
             if is_ordered:
@@ -820,27 +821,19 @@ class ModelDataFactory:
 
             ds_subset = self.dataset.sel(**{dim_name: selector})
 
-            ds_subset_vars = ds_subset[
-                [k for k, v in ds_subset.data_vars.items() if dim_name in v.dims]
-            ]
-            is_missing = (
-                ds_subset_vars.notnull().any(dim_name)
-                & ~ds_subset_vars.notnull().all(dim_name)
-            ).to_dataframe()
-            missing_data = is_missing[is_missing].stack()
-            if not missing_data.empty:
-                exceptions.warn(
-                    f"Possibly missing data on the {dim_name} dimension for:\n{missing_data}"
-                )
             ds = ds_subset
         self.dataset = ds
 
     def _resample_dims(self):
         ds = self.dataset
-        for dim_name in self.dataset.coords:
-            resampler = self.math.dims[dim_name].resample
-            if resampler is not None:
-                ds = time.resample(ds, dim_name, resampler)
+        for dim_name, resampler in self.config.resample.root.items():
+            if resampler is None or dim_name not in ds.coords:
+                continue
+            if ds.coords[dim_name].dtype.kind != "M":
+                raise exceptions.ModelError(
+                    f"Cannot resample a non-datetime dimension, received `{dim_name}`"
+                )
+            ds = time.resample(ds, dim_name, resampler)
         self.dataset = ds
 
     def _raise_error_on_transmission_tech_def(

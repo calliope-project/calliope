@@ -109,7 +109,12 @@ def resample(data: xr.Dataset, dim: str, resolution: str) -> xr.Dataset:
     resample_kwargs = {"indexer": {dim: resolution}, "skipna": True}
     data_non_ts = data.drop_dims(dim)
     data_ts = data.drop_vars(data_non_ts.data_vars)
-    data_ts_resampled = data_ts.resample(**resample_kwargs).first(keep_attrs=True)
+    try:
+        data_ts_resampled = data_ts.resample(**resample_kwargs).first(keep_attrs=True)
+    except ValueError:
+        raise exceptions.ModelError(
+            f"Unknown `{dim}` resampling frequency: {resolution}"
+        )
 
     for var_name, var_data in data_ts.data_vars.items():
         resampler = var_data.resample(**resample_kwargs)

@@ -4,7 +4,7 @@
 
 import logging
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Literal
 
 from pydantic import Field
 
@@ -36,9 +36,7 @@ class Subsets(CalliopeDictModel):
 class Resamples(CalliopeDictModel):
     """Dimension resampling settings."""
 
-    root: dict[
-        AttrStr, Annotated[str, Field(pattern=r"^[^_^\d][\w]*$")] | None | int
-    ] = Field(default_factory=dict)
+    root: dict[AttrStr, str | None] = Field(default_factory=dict)
 
 
 class Init(CalliopeBaseModel):
