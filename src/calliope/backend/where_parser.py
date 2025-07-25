@@ -36,7 +36,6 @@ class EvalAttrs(TypedDict):
     apply_where: NotRequired[bool]
     references: NotRequired[set]
     build_config: config_schema.Build
-    defaults: dict
 
 
 class EvalWhere(expression_parser.EvalToArrayStr):
@@ -163,47 +162,47 @@ class DataVarParser(EvalWhere):
             TypeError: Cannot work with math components of type `constraint` or `objective`.
             TypeError: Cannot check array contents (`apply_where=False`) of `variable` or `global_expression` math components.
         """
-        backend_interface = self.eval_attrs["backend_interface"]
         self.eval_attrs["references"].add(self.data_var)
-        if self.data_var in backend_interface._dataset.data_vars.keys():
-            data_var_type = backend_interface._dataset[self.data_var].attrs["obj_type"]
-        else:
-            data_var_type = "parameters"
-
-        if data_var_type not in ["parameters", "global_expressions", "variables"]:
-            raise TypeError(
-                f"Cannot check values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
-                f"Received {data_var_type.removesuffix('s')}: `{self.data_var}`."
+        try:
+            return self.eval_attrs["input_data"][self.data_var].attrs["obj_type"]
+        except KeyError:
+            pass
+        try:
+            return (
+                self.eval_attrs["backend_interface"]
+                ._dataset[self.data_var]
+                .attrs["obj_type"]
             )
-        apply_where = self.eval_attrs.get("apply_where", True)
-        if data_var_type != "parameters" and not apply_where:
-            raise TypeError(
-                f"Can only check for existence of values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
-                "These arrays cannot be used for comparison with expected values. "
-                f"Received `{self.data_var}`."
-            )
-        return data_var_type
+        except KeyError:
+            return "unknown"
 
     def _data_var_exists(
-        self, source_dataset: xr.Dataset, data_var_type: str
+        self, source_dataset: xr.Dataset, resolve_contents: bool
     ) -> xr.DataArray:
         """Mask by setting all (NaN | INF/-INF) to False, otherwise True."""
         var = source_dataset.get(self.data_var, xr.DataArray(np.nan))
-        if data_var_type == "parameters":
-            if self.data_var not in self.eval_attrs["input_data"]:
+        is_bool = var.dtype.kind == "b"
+        if resolve_contents:
+            if self.eval_attrs["input_data"][self.data_var].attrs.get(
+                "from_default", False
+            ):
                 return xr.DataArray(np.False_)
+            elif is_bool:
+                return var
             else:
                 return var.notnull() & (var != np.inf) & (var != -np.inf)
+        elif is_bool:
+            return var
         else:
             return var.notnull()
 
-    def _data_var_with_default(self, source_dataset: xr.Dataset) -> xr.DataArray:
+    def _data_var_with_default(self) -> xr.DataArray:
         """Access data var and fill with default values.
 
         Return default value as an array if var does not exist.
         """
-        default = self.eval_attrs["defaults"].get(self.data_var)
-        var = source_dataset.get(self.data_var, xr.DataArray(default))
+        var = self.eval_attrs["input_data"][self.data_var]
+        default = var.attrs.get("default", None)
         if default is not None:
             var = var.fillna(default)
         return var
@@ -225,15 +224,32 @@ class DataVarParser(EvalWhere):
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         data_var_type = self._preprocess()
-        if data_var_type == "parameters":
-            source_dataset = self.eval_attrs["input_data"]
-        else:
-            source_dataset = self.eval_attrs["backend_interface"]._dataset
-
         if self.eval_attrs.get("apply_where", True):
-            return self._data_var_exists(source_dataset, data_var_type)
+            if data_var_type in ["parameters", "lookups", "dims"]:
+                return self._data_var_exists(
+                    self.eval_attrs["input_data"], resolve_contents=True
+                )
+            elif data_var_type in ["variables", "global_expressions"]:
+                return self._data_var_exists(
+                    self.eval_attrs["backend_interface"]._dataset,
+                    resolve_contents=False,
+                )
+            elif data_var_type == "unknown":
+                return xr.DataArray(np.False_)
+            else:
+                raise TypeError(
+                    f"Cannot check values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
+                    f"Received {data_var_type.removesuffix('s')}: `{self.data_var}`."
+                )
         else:
-            return self._data_var_with_default(source_dataset)
+            if data_var_type not in ["lookups", "parameters", "dims"]:
+                raise TypeError(
+                    f"Can only check for existence of values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
+                    "These arrays cannot be used for comparison with expected values. "
+                    f"Received `{self.data_var}`."
+                )
+
+            return self._data_var_with_default()
 
 
 class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):

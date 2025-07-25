@@ -56,11 +56,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         }
 
     def __init__(
-        self,
-        inputs: xr.Dataset,
-        math: AttrDict,
-        build_config: config_schema.Build,
-        defaults: dict,
+        self, inputs: xr.Dataset, math: AttrDict, build_config: config_schema.Build
     ) -> None:
         """Gurobi solver interface class.
 
@@ -68,18 +64,17 @@ class GurobiBackendModel(backend_model.BackendModel):
             inputs (xr.Dataset): Calliope model data.
             math (AttrDict): Calliope math.
             build_config (config_schema.Build): Build configuration options.
-            defaults (dict): Parameter defaults.
         """
         if importlib.util.find_spec("gurobipy") is None:
             raise ImportError(
                 "Install the `gurobipy` package to build the optimisation problem with the Gurobi backend."
             )
-        super().__init__(inputs, math, build_config, defaults, gurobipy.Model())
+        super().__init__(inputs, math, build_config, gurobipy.Model())
         self._instance: gurobipy.Model
         self.shadow_prices = GurobiShadowPrices(self)
 
     def add_parameter(  # noqa: D102, override
-        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
+        self, parameter_name: str, parameter_values: xr.DataArray
     ) -> None:
         self._raise_error_on_preexistence(parameter_name, "parameters")
 
@@ -92,14 +87,9 @@ class GurobiBackendModel(backend_model.BackendModel):
             )
             parameter_da = parameter_da.astype(float)
 
-        attrs = {
-            "title": self._PARAM_TITLES.get(parameter_name, None),
-            "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
-            "unit": self._PARAM_UNITS.get(parameter_name, None),
-            "default": default,
-            "original_dtype": parameter_values.dtype.name,
-        }
-        self._add_to_dataset(parameter_name, parameter_da, "parameters", attrs)
+        self._add_to_dataset(
+            parameter_name, parameter_da, "parameters", parameter_da.attrs
+        )
 
     def add_constraint(  # noqa: D102, override
         self, name: str, constraint_dict: parsing.UnparsedConstraint
@@ -181,7 +171,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         if parameter is None:
             raise KeyError(f"Unknown parameter: {name}")
 
-        return parameter.astype(parameter.original_dtype)
+        return parameter.astype(parameter.attrs["type"])
 
     @overload
     def get_constraint(  # noqa: D102, override
@@ -362,9 +352,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         self.inputs[name] = new_parameter_da
 
         self.delete_component(name, "parameters")
-        self.add_parameter(
-            name, new_parameter_da, default=self.defaults.get(name, np.nan)
-        )
+        self.add_parameter(name, new_parameter_da)
 
         refs_to_update = self._find_all_references(parameter_da.attrs["references"])
 
