@@ -538,7 +538,7 @@ class Model:
             new_inputs = self.inputs.sel(
                 timesteps=slice(windowstep, horizonstep)
             ).drop_vars(["horizonsteps", "windowsteps"], errors="ignore")
-
+            new_ts = new_inputs.timesteps.copy()
             if len(new_inputs.timesteps) != len(iteration_results.timesteps):
                 LOGGER.info(
                     "Optimisation model | Reaching the end of the timeseries. "
@@ -547,10 +547,13 @@ class Model:
                 self._start_window_idx = idx + 1
                 self.build(force=True)
             else:
-                self.backend._dataset.coords["timesteps"] = new_inputs.timesteps
-                self.backend.inputs.coords["timesteps"] = new_inputs.timesteps
+                new_inputs.coords["timesteps"] = self.backend.inputs.coords["timesteps"]
                 for param_name, param_data in new_inputs.data_vars.items():
-                    if "timesteps" in param_data.dims:
+                    if (
+                        "timesteps" in param_data.dims
+                        and param_name in self.backend.parameters
+                        and not param_data.equals(self.backend.inputs[param_name])
+                    ):
                         self.backend.update_parameter(param_name, param_data)
                         self.backend.inputs[param_name] = param_data
 
@@ -561,6 +564,7 @@ class Model:
                 )
 
             iteration_results = self.backend._solve(solver_config, warmstart=False)
+            iteration_results.coords["timesteps"] = new_ts
 
         self._start_window_idx = 0
         results_list.append(iteration_results.sel(timesteps=slice(windowstep, None)))
@@ -587,7 +591,9 @@ class Model:
         """
         end_storage = results.storage.isel(timesteps=-1).drop_vars("timesteps")
 
-        new_initial_storage = end_storage / self.inputs.storage_cap
+        new_initial_storage = end_storage / self.inputs.storage_cap.where(
+            lambda x: x > 0
+        )
         return new_initial_storage
 
     def _solve_spores(self, solver_config: config_schema.Solve) -> xr.Dataset:
@@ -601,9 +607,8 @@ class Model:
         """
         LOGGER.info("Optimisation model | Resetting SPORES parameters.")
         for init_param in ["spores_score", "spores_baseline_cost"]:
-            default = xr.DataArray(self.backend.defaults[init_param])
             self.backend.update_parameter(
-                init_param, self.inputs.get(init_param, default)
+                init_param, self.backend.inputs[init_param].attrs["default"]
             )
 
         self.backend.set_objective(self.config.build.objective)

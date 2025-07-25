@@ -79,7 +79,6 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
         self.inputs = self._add_inputs(inputs)
-
         self._check_inputs()
 
     def add_lookup(self, lookup_name: str, lookup_values: xr.DataArray) -> None:
@@ -458,6 +457,8 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         yaml_snippet_attrs = {}
         add_attrs = {}
         for attr, val in unparsed_dict.items():
+            if attr == "yaml_snippet":
+                continue
             if attr in self._COMPONENT_ATTR_METADATA:
                 add_attrs[attr] = val
             else:

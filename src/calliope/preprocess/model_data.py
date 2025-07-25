@@ -805,24 +805,23 @@ class ModelDataFactory:
         Returns:
             xr.Dataset: Input `ds` with subset timeseries coordinates.
         """
-        ds = self.dataset
+        selectors = {}
+
         for dim_name, subset in self.config.subset.root.items():
-            if subset is None or dim_name not in ds.coords:
+            if subset is None or dim_name not in self.dataset.coords:
                 continue
             is_ordered = self.math.dims[dim_name].ordered
-            dim_vals = ds.coords[dim_name]
+            dim_vals = self.dataset.coords[dim_name]
 
             if dim_vals.dtype.kind == "M":
                 time._check_time_subset(dim_vals.to_index(), subset)
+
             if is_ordered:
-                selector = slice(*subset)
+                selectors[dim_name] = slice(*subset)
             else:
-                selector = subset
+                selectors[dim_name] = subset
 
-            ds_subset = self.dataset.sel(**{dim_name: selector})
-
-            ds = ds_subset
-        self.dataset = ds
+        self.dataset = self.dataset.sel(**selectors)
 
     def _resample_dims(self):
         ds = self.dataset

@@ -209,9 +209,9 @@ class PyomoBackendModel(backend_model.BackendModel):
         param_as_vals = self._apply_func(
             self._from_pyomo_param, parameter.notnull(), 1, parameter
         )
-        orig_dtype = parameter.original_dtype
-        self.log("parameters", name, f"Converting Pyomo object to {orig_dtype} dtype.")
-        return param_as_vals.astype(orig_dtype).where(param_as_vals.notnull())
+        return param_as_vals.astype(parameter.attrs["type"]).where(
+            param_as_vals.notnull()
+        )
 
     @overload
     def get_constraint(  # noqa: D102, override

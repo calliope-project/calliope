@@ -181,13 +181,18 @@ class DataVarParser(EvalWhere):
     ) -> xr.DataArray:
         """Mask by setting all (NaN | INF/-INF) to False, otherwise True."""
         var = source_dataset.get(self.data_var, xr.DataArray(np.nan))
+        is_bool = var.dtype.kind == "b"
         if resolve_contents:
             if self.eval_attrs["input_data"][self.data_var].attrs.get(
                 "from_default", False
             ):
                 return xr.DataArray(np.False_)
+            elif is_bool:
+                return var
             else:
                 return var.notnull() & (var != np.inf) & (var != -np.inf)
+        elif is_bool:
+            return var
         else:
             return var.notnull()
 
