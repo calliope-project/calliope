@@ -742,7 +742,7 @@ class GroupDatetime(ParsingHelperFunction):
             over (str): dimension name over which to group
             group (str): datetime grouper.
                 Any xarray/pandas datetime grouper options
-                datetime grouper options include 'date', 'day', 'dayofweek', 'dayofyear', 'hour', 'month', 'week', 'weekday', 'weekofyear', 'year'.
+                datetime grouper options include 'date', 'dayofweek', 'month', etc.
 
 
         Returns:
@@ -752,33 +752,56 @@ class GroupDatetime(ParsingHelperFunction):
         Note:
             - The array is returned with the `over` dimension replaced by the name of the grouper.
               So, if you select to resample to monthly, the returned array will include the `month` dimension.
-            - the `date` grouper will return the date as a string in ISO8601 format (e.g. "2025-01-01").
+            - the `date`/`time` groupers will return the date/time as a string in ISO8601 format (e.g. "2025-01-01"/"01:00:00").
               All other groupers will return integer values (e.g. month 1, 2, 3, etc.).
 
         Examples:
-            One common use-case is to set a collate N timesteps beyond a given timestep to apply a constraint to it
-            (e.g., demand must be less than X in the next 24 hours):
+            One common use-case is to allow demand to be met at any point on a given date.
+            For such a demand tech, the daily demand should be indexed over `date`, e.g.:
 
-            For such a demand tech, the portion of its demand that is flexible should be separated from `sink_use_equals` to e.g.,
-            a `sink_use_flexible` timeseries parameter which we will use in the DSR constraint:
+            sink_use_equals_daily.csv
+            ```
+            date,sink_use_equals_daily
+            2000-01-01,10
+            2000-01-02,15
+            ...
+            ```
 
+            Then, to set the daily flow into the demand tech to those values:
             ```yaml
             constraints:
-                4hr_demand_side_response:
-                    foreach: ["nodes", "techs", "carriers", "timesteps"]
-                    where: "carrier_in AND sink_use_flexible AND timesteps<=get_val_at_index(timesteps=-24)"
+                daily_demand:
+                    foreach: [nodes, techs, carriers, date]
+                    where: sink_use_equals_daily
                     equations:
-                        - expression: sum_next_n(flow_in, timesteps, 4) == sum_next_n(sink_use_flexible, timesteps, 4)"
+                        - expression: "group_datetime(flow_in, timesteps, date) == sink_use_equals_daily"
+            ```
+
+            Similarly, a monthly maximum resource to a supply technology might be used, to simulate e.g. biofuel feedstock availability:
+
+            source_use_max_monthly.csv
+            ```
+            month,source_use_max_monthly
+            1,10
+            2,15
+            ...
+            ```
+
+            Then, to set the daily flow into the demand tech to those values:
+            ```yaml
+            constraints:
+                daily_demand:
+                    foreach: [nodes, techs, carriers, month]
+                    where: source_use_max_monthly
+                    equations:
+                        - expression: "group_datetime(flow_in, timesteps, month) <= source_use_max_monthly"
             ```
         """
         # We can't apply typical xarray rolling window functionality
         grouped: dict[str | int, xr.DataArray] = {}
-        grouper = array[over].groupby(getattr(array[over].dt, group))
+        dtype = str if group in ["date", "time"] else int
+        grouper = array[over].groupby(getattr(array[over].dt, group).astype(dtype))
         for group_name, group_items in grouper:
-            if group == "date":
-                group_name = str(group_name)
-            else:
-                group_name = int(group_name)
             grouped[group_name] = array.sel(**{over: group_items}).sum(
                 over, min_count=1, skipna=True
             )

@@ -393,6 +393,18 @@ class TestAsArray:
         )
         assert result.equals(expected)
 
+    def test_expression_group_datetime_time(
+        self, expression_group_datetime, dummy_model_data
+    ):
+        expected = xr.DataArray(
+            [1, 1, 1, 1],
+            coords={"time": ["00:00:00", "01:00:00", "02:00:00", "03:00:00"]},
+        )
+        result = expression_group_datetime(
+            dummy_model_data.timeseries_data, "timesteps", "time"
+        )
+        assert result.equals(expected)
+
     def test_expression_group_datetime_hour(
         self, expression_group_datetime, dummy_model_data
     ):
