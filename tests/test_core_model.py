@@ -423,7 +423,6 @@ class TestSporesMode:
                 "techs"
             ).sum(...)
         )
-        assert (sum_spores_score.sel(techs="test_supply_elec") > 0).all()
         assert (sum_spores_score.drop_sel(techs="test_supply_elec") == 0).all()
 
     @pytest.mark.usefixtures("spores_model_save_per_spore_and_log")

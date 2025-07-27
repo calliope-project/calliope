@@ -74,8 +74,9 @@ def capacity_factor(results, model_data, systemwide=False):
         capacity_factors = (prod_sum / (cap_sum * time_sum)).fillna(0)
     else:
         capacity_factors = (
-            results["flow_out"] / flow_cap.where(lambda x: x > 0)
-        ).fillna(0)
+            results["flow_out"]
+            / (flow_cap.where(lambda x: x > 0) * model_data.timestep_resolution)
+        ).where(results["flow_out"].notnull())
 
     return capacity_factors
 
@@ -91,13 +92,12 @@ def systemwide_levelised_cost(
 
     The weight of timesteps is considered when computing levelised costs:
 
-    * costs are already multiplied by weight in the constraints, and not
-      further adjusted here.
+    * costs are already multiplied by weight in the constraints, and not further adjusted here.
 
-    * production is not multiplied by weight in the constraints, so scaled
-      by weight here to be consistent with costs. CAUTION: this scaling
-      is temporary during levelised cost computation - the actual
-      costs in the results remain untouched.
+    * production (`flow_out` + `flow_export`) is not multiplied by weight in the constraints,
+      so scaled by weight here to be consistent with costs.
+      CAUTION: this scaling is temporary during levelised cost computation -
+      the actual costs in the results remain untouched.
 
     Args:
         results (xarray.Dataset): Model results.
@@ -110,28 +110,23 @@ def systemwide_levelised_cost(
         xr.DataArray: Array of levelised costs.
     """
     # Here we scale production by timestep weight
-    flow_out = results["flow_out"] * model_data.timestep_weights
     cost = results["cost"].sum(dim="nodes", min_count=1)
-    flow_out = (results["flow_out"] * model_data.timestep_weights).sum(
-        dim=["timesteps", "nodes"], min_count=1
-    )
+    generation = (
+        (results["flow_out"] + results.get("flow_export", xr.DataArray(0)).fillna(0))
+        * model_data.timestep_weights
+    ).sum(dim=["timesteps", "nodes"], min_count=1)
 
     if total:
-        # cost is the total cost of the system
-        # flow_out is only the flow_out of supply and conversion technologies
+        # `cost` is the total cost of the system
+        # `generation`` is only the generation of supply and conversion technologies
         allowed_techs = ("supply", "conversion")
         valid_techs = model_data.base_tech.isin(allowed_techs)
         cost = cost.sum(dim="techs", min_count=1)
-        flow_out = flow_out.sel(techs=valid_techs).sum(dim="techs", min_count=1)
+        generation = generation.sel(techs=valid_techs).sum(dim="techs", min_count=1)
 
-    levelised_cost = []
+    levelised_cost = cost / generation.where(lambda x: x > 0)
 
-    for carrier in flow_out["carriers"].values:
-        levelised_cost.append(
-            cost / flow_out.loc[{"carriers": carrier}].where(lambda x: x > 0)
-        )
-
-    return xr.concat(levelised_cost, dim="carriers")
+    return levelised_cost
 
 
 def clean_results(results, zero_threshold):

@@ -14,7 +14,7 @@ So, `any(cost, over=[nodes, techs])` will check if there is at least one non-NaN
 
 ## defined
 
-Similar to [any](syntax.md#any), using `defined(..., within=...)` in a `where` string allows you to check for non-NaN values along dimensions.
+Similar to [any](#any), using `defined(..., within=...)` in a `where` string allows you to check for non-NaN values along dimensions.
 In the case of `defined`, you can check if e.g., certain technologies have been defined within the nodes or certain carriers are defined within a group of techs or nodes.
 
 So, for the definition:
@@ -96,3 +96,24 @@ If the `<condition>` has any dimensions not present in `<math_component>`, `<mat
 !!! note
     `Where` gets referred to a lot in Calliope math.
     It always means the same thing: applying [xarray.DataArray.where][].
+
+## group_datetime
+
+When working with timeseries data, you may need to constrain a variable over a time period (e.g. hours, days, weeks).
+For instance, a demand may be flexible to be met at any point in a day provided the total daily demand is met.
+Or, you may need to constrain the amount of resource a thermal power plant can use each month.
+To achieve this, you can use the `group_datetime(<math_component>, <datetime_dimension>, <grouping_period>)` helper function.
+
+For example, `group_datetime(flow_in, timesteps, date)` will return the `flow_in` decision variable summed over dates.
+It will therefore be indexed over `[techs, nodes, carriers, date]` instead of `[techs, nodes, carriers, timesteps]` and you will need to account for this accordingly in your math expression.
+
+!!! note
+    Only a summation over the given period is possible with this helper function.
+    If you want to get e.g., a maximum value per month then you will need to create a new decision variable indexed over `months` and then create a constraint per timestep per month that will effectively set that decision variable to the maximum value over all timesteps in the month.
+    This can be quite memory intensive if you want to achieve it for days/weeks as you will be indexing over timesteps * days / weeks, which is a very large array.
+
+## sum_next_n
+
+Use the `sum_next_n(<math_component>, <dimension>, <rolling_horizon_window>)` to sum over a rolling window in a given dimension.
+This can be useful in demand-side management constraints, where demand can be shifted within a limited window, e.g. 4 hours.
+It can also be useful in tracking startup/shutdown periods when optimising with unit commitment.

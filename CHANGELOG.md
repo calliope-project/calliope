@@ -2,6 +2,12 @@
 
 ### User-facing changes
 
+|new| helper functions to enable periodic and rolling window summations of decision variables (#777).
+
+|fixed| Timeseries capacity factor accounts for time resolution (#762).
+
+|fixed| Levelised cost accounts for energy that is generated and exported (`flow_export`) (#767).
+
 |new| all math is defined during init and then stored in `model._def.math`, with the option to completely replace `plan.yaml` as the base mode (#763, #739).
 
 |new| documentation on SPORES-specific configuration options (#750, #752).

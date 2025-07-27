@@ -55,7 +55,7 @@ Each technology must specify an abstract base technology and its carrier (`carri
 Specifying a `color` and a `name` is optional but useful when you want to [visualise or otherwise report your results](../analysing.md).
 
 The rest of the data for the technology is used in the optimisation problem: to set constraints and to link the technology to the objective function (via costs).
-In the above example, we have a capacity limit `flow_cap_max`, conversion efficiency `flow_out_eff`, the life time (used in levelised cost calculations), and the resource available for consumption `source_use_max`.
+In the above example, we have a capacity limit `flow_cap_max`, conversion efficiency `flow_out_eff`, the life time (used in [levelised cost calculations](../reference/api/postprocess.md)), and the resource available for consumption `source_use_max`.
 In the above example, the source is set to infinite via `inf`.
 
 The parameters starting with `costs_` give costs for the technology.
@@ -112,7 +112,7 @@ However, doing so makes it much easier to process your model definition in Calli
 ### Pre-defined parameters
 
 There is a long list of pre-defined parameters that we use in our [base math][base-math].
-These are listed in full with descriptions and units in our [model definition reference page][math-formulation-schema].
+These are listed in full with descriptions and units in our [model definition reference page][model-definition-schema].
 These parameters come with strict types, default values, and other attributes used in internal Calliope processing.
 Therefore they should always be your first port of call.
 However, if you want to add your own parameters, that is also possible.
