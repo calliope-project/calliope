@@ -97,6 +97,18 @@ If the `<condition>` has any dimensions not present in `<math_component>`, `<mat
     `Where` gets referred to a lot in Calliope math.
     It always means the same thing: applying [xarray.DataArray.where][].
 
+## group_sum
+
+Summing over a group of one or more dimension members may be necessary when setting constraints.
+For instance, if setting upper flow limits on groups of transmission lines into / out of a set of nodes.
+Combining the [`where`](#where) and [`sum`](#sum) helper functions could be used to achieve this but can create very undesirably large arrays in memory.
+`group_sum(<math_component>, <groupby_array>, <group_dimension>)` allows you to define a `groupby` array matching dimension members to groups (e.g. `(node, tech)` combinations to a members of a new `my_groups` dimension) and sum over those dimensions to create a new dimension over which the array is indexed (here: `my_groups`).
+Once completed, this helper function will return the math component indexed over its original dimensions - the groupby dimensions + the new grouper dimension (e.g., `[techs, nodes, carriers, timesteps]` -> `[my_groups, carriers, timesteps]`).
+You will need to account for this accordingly in you math `foreach` and other expression components.
+
+!!! note
+    If you want to sum over a time period on a datetime dimension, consider using the `group_datetime` convenience helper function.
+
 ## group_datetime
 
 When working with timeseries data, you may need to constrain a variable over a time period (e.g. hours, days, weeks).
