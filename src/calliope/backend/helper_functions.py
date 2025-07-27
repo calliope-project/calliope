@@ -13,6 +13,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 from calliope.exceptions import BackendError
@@ -105,7 +106,11 @@ class ParsingHelperFunction(ABC):
             _registry[allowed][cls.NAME] = cls
 
     @staticmethod
-    def _add_to_iterator(instring: str, iterator_converter: dict[str, str]) -> str:
+    def _update_iterator(
+        instring: str,
+        iterator_converter: dict[str, str],
+        method: Literal["add", "replace"],
+    ) -> str:
         r"""Utility function for generating latex strings in multiple helper functions.
 
         Find an iterator in the iterator substring of the component string
@@ -117,8 +122,8 @@ class ParsingHelperFunction(ABC):
             instring (str): String in which the iterator substring can be found.
             iterator_converter (dict[str, str]):
                 key: the iterator to search for.
-                val: The new string to **append** to the iterator name.
-
+                val: The new string to **append** to the iterator name (if method = add) or **replace**.
+            method (Literal[add, replace]): Whether to add to the iterator or replace it entirely
         Returns:
             str: `instring`, but with `iterator` replaced with `iterator + new_string`
         """
@@ -128,7 +133,11 @@ class ParsingHelperFunction(ABC):
             new_iterator_list = []
             for it in iterator_list:
                 if it in iterator_converter:
-                    it += iterator_converter[it]
+                    it = (
+                        it + iterator_converter[it]
+                        if method == "add"
+                        else iterator_converter[it]
+                    )
                 new_iterator_list.append(it)
 
             return matched.group(1) + ",".join(new_iterator_list) + matched.group(3)
@@ -415,7 +424,7 @@ class SelectFromLookupArrays(ParsingHelperFunction):
             (iterator := dim.removesuffix("s")): rf"={array}[{iterator}]"
             for dim, array in lookup_arrays.items()
         }
-        array = self._add_to_iterator(array, new_strings)
+        array = self._update_iterator(array, new_strings, "add")
         return array
 
     def as_array(
@@ -580,7 +589,7 @@ class Roll(ParsingHelperFunction):
         new_strings = {
             k.removesuffix("s"): f"{-1 * int(v):+d}" for k, v in roll_kwargs.items()
         }
-        component = self._add_to_iterator(array, new_strings)
+        component = self._update_iterator(array, new_strings, "add")
         return component
 
     def as_array(self, array: xr.DataArray, **roll_kwargs: int) -> xr.DataArray:
@@ -707,3 +716,168 @@ class Where(ParsingHelperFunction):
             condition = self._input_data[condition.name]
 
         return array.where(condition.fillna(False).astype(bool))
+
+
+class GroupDatetime(ParsingHelperFunction):
+    """Apply a summation over a datetime group on a datetime dimension in math expressions."""
+
+    NAME = "group_datetime"
+    #:
+    ALLOWED_IN = ["expression"]
+
+    ignore_where = True
+
+    def as_math_string(self, array: str, over: str, group: str) -> str:  # noqa: D102, override
+        overstring = self._instr(over)
+        foreach_string = rf"{overstring} \text{{ if }} \text{{{group}}}(\text{{{over.removesuffix('s')}}}) = \text{{{group[0]}}}"
+        overstring = rf"\substack{{{foreach_string}}}"
+
+        return rf"\sum\limits_{{{overstring}}} ({array})"
+
+    def as_array(self, array: xr.DataArray, over: str, group: str) -> xr.DataArray:
+        """Sum an expression array over the given dimension(s).
+
+        Args:
+            array (xr.DataArray): expression array
+            over (str): dimension name over which to group
+            group (str): datetime grouper.
+                Any xarray/pandas datetime grouper options
+                datetime grouper options include 'date', 'dayofweek', 'month', etc.
+
+
+        Returns:
+            xr.DataArray:
+                Array with datetime dimension aggregated over the grouper.
+
+        Note:
+            - The array is returned with the `over` dimension replaced by the name of the grouper.
+              So, if you select to resample to monthly, the returned array will include the `month` dimension.
+            - the `date`/`time` groupers will return the date/time as a string in ISO8601 format (e.g. "2025-01-01"/"01:00:00").
+              All other groupers will return integer values (e.g. month 1, 2, 3, etc.).
+
+        Examples:
+            One common use-case is to allow demand to be met at any point on a given date.
+            For such a demand tech, the daily demand should be indexed over `date`, e.g.:
+
+            sink_use_equals_daily.csv
+            ```
+            date,sink_use_equals_daily
+            2000-01-01,10
+            2000-01-02,15
+            ...
+            ```
+
+            Then, to set the daily flow into the demand tech to those values:
+            ```yaml
+            constraints:
+                daily_demand:
+                    foreach: [nodes, techs, carriers, date]
+                    where: sink_use_equals_daily
+                    equations:
+                        - expression: "group_datetime(flow_in, timesteps, date) == sink_use_equals_daily"
+            ```
+
+            Similarly, a monthly maximum resource to a supply technology might be used, to simulate e.g. biofuel feedstock availability:
+
+            source_use_max_monthly.csv
+            ```
+            month,source_use_max_monthly
+            1,10
+            2,15
+            ...
+            ```
+
+            Then, to set the daily flow into the demand tech to those values:
+            ```yaml
+            constraints:
+                daily_demand:
+                    foreach: [nodes, techs, carriers, month]
+                    where: source_use_max_monthly
+                    equations:
+                        - expression: "group_datetime(flow_in, timesteps, month) <= source_use_max_monthly"
+            ```
+        """
+        # We can't apply typical xarray rolling window functionality
+        grouped: dict[str | int, xr.DataArray] = {}
+        dtype = str if group in ["date", "time"] else int
+        grouper = array[over].groupby(getattr(array[over].dt, group).astype(dtype))
+        for group_name, group_items in grouper:
+            grouped[group_name] = array.sel(**{over: group_items}).sum(
+                over, min_count=1, skipna=True
+            )
+        array = xr.concat(grouped.values(), dim=pd.Index(grouped.keys(), name=group))
+        return array
+
+
+class SumNextN(ParsingHelperFunction):
+    """Sum the next N items in an array.
+
+    Works best for ordered arrays (datetime, integer) and is equivalent to a summation over a rolling window.
+    """
+
+    #:
+    NAME = "sum_next_n"
+    #:
+    ALLOWED_IN = ["expression"]
+
+    def as_math_string(self, array: str, over: str, N: int) -> str:  # noqa: D102, override
+        over_singular = rf"\text{{{over.removesuffix('s')}}}"
+        new_iterator = over[0]
+        updated_iterator_array = self._update_iterator(
+            array, {over.removesuffix("s"): new_iterator}, "replace"
+        )
+
+        return rf"\sum\limits_{{\text{{{new_iterator}}}={over_singular}}}^{{{over_singular}+{N}}} ({updated_iterator_array})"
+
+    def as_array(self, array: xr.DataArray, over: str, N: int) -> xr.DataArray:
+        """Sum values from current up to N from current on the dimension `over`.
+
+        Works best for ordered arrays (datetime, integer).
+
+
+        Args:
+            array (xr.DataArray): Math component array.
+            over (str): Dimension over which to sum
+            N (int): number of items beyond the current value to sum from
+
+        Returns:
+            xr.DataArray:
+                Returns the input array with the condition applied,
+                including having been broadcast across any new dimensions provided by the condition.
+
+        Note:
+            - The rolling window does not wrap around to the start of the set when reaching the end.
+              That is, if you have N = 4 then for a dimension of length T, at T - 1 it will sum over dimension positions (T - 1, T), not (T - 1, T, 0, 1).
+            - You will find that this over-constrains the model unless you limit the constraint (using the `where` string) to only apply over `len(over) - N`.
+              This is linked to the abovementioned lack of wrapping.
+              E.g. `where: timesteps<=get_val_at_index(timesteps=-24)` if N == 24.
+            - This function is based on an integer number of steps from the current step.
+              For datetime dimensions like `timesteps`, you will (a) need to be using a regular time frequency (e.g. hourly) and (b) update `N` to reflect the resolution of your time dimension
+              (N = 4 in if time_resample=`1h` -> N = 2 if time_resample=`2h`).
+
+        Examples:
+            One common use-case is to collate N timesteps beyond a given timestep to apply a constraint to it
+            (e.g., demand must be less than X in the next 24 hours):
+
+            For such a demand tech, the portion of its demand that is flexible should be separated from `sink_use_equals` to e.g.,
+            a `sink_use_flexible` timeseries parameter which we will use in the DSR constraint:
+
+            ```yaml
+            constraints:
+                4hr_demand_side_response:
+                    foreach: ["nodes", "techs", "carriers", "timesteps"]
+                    where: "carrier_in AND sink_use_flexible AND timesteps<=get_val_at_index(timesteps=-24)"
+                    equations:
+                        - expression: sum_next_n(flow_in, timesteps, 4) == sum_next_n(sink_use_flexible, timesteps, 4)"
+            ```
+        """
+        # We cannot use the xarray rolling window method as it doesn't like operating on Python objects, which our optimisation problem components are.
+        results: list[xr.DataArray] = []
+        for i in range(len(self._input_data.coords[over])):
+            results.append(
+                array.isel(**{over: slice(i, i + int(N))}).sum(over, min_count=1)
+            )
+        final_array = xr.concat(
+            results, dim=self._input_data.coords[over]
+        ).broadcast_like(array)
+        return final_array
