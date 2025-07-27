@@ -1,5 +1,6 @@
 import logging
 from itertools import product
+from typing import Literal
 
 import numpy as np
 import pyomo.core as po
@@ -153,12 +154,12 @@ class TestChecks:
         if constr == "equals":
             assert check_error_or_warning(warning, _warnings)
         else:
-            assert ~check_error_or_warning(warning, _warnings)
+            assert not check_error_or_warning(warning, _warnings)
 
-    @pytest.mark.parametrize("source_unit", [("absolute"), ("per_cap"), ("per_area")])
-    def test_operate_source_unit_without_area_use(self, source_unit):
-        """Different source unit affects the capacities which are set to infinite"""
-        m = build_model(
+    def _build_operate_source_unit_without_area_use(
+        self, source_unit: Literal["absolute", "per_cap", "per_area"]
+    ):
+        model = build_model(
             {
                 "techs.test_supply_elec": {
                     "constraints": {
@@ -170,49 +171,55 @@ class TestChecks:
             },
             "simple_supply_and_supply_plus,operate,investment_costs",
         )
+        model.build()
 
+    def test_operate_source_unit_without_area_use_absolute(self):
+        """When absolute is requested, only one warning should fire."""
+        wanted = [
+            "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)"
+        ]
+        not_wanted = [
+            "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+            "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+            "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+        ]
         with pytest.warns(exceptions.ModelWarning) as warning:
-            # per_area without a source_cap will cause an error, which we have to catch here
-            if source_unit == "per_area":
-                with pytest.raises(exceptions.ModelError) as error:
-                    m.build()
-            else:
-                m.build()
+            self._build_operate_source_unit_without_area_use("absolute")
+        assert check_error_or_warning(warning, wanted)
+        assert not check_error_or_warning(warning, not_wanted)
 
-        if source_unit == "absolute":
-            _warnings = [
-                "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)"
-            ]
-            not_warnings = [
-                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-                "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-                "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-            ]
-        elif source_unit == "per_area":
-            _warnings = [
-                "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_area`"
-            ]
-            not_warnings = [
-                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_cap`",
-                "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-                "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-            ]
-            # per_area without a source_cap will cause an error
-            check_error_or_warning(
-                error,
-                "Operate mode: User must define a finite area_use "
-                "(via area_use_equals or area_use_max) for 0::test_supply_elec",
-            )
-        elif source_unit == "per_cap":
-            _warnings = []
-            not_warnings = [
-                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_cap`",
-                "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-                "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-                "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-            ]
-        assert check_error_or_warning(warning, _warnings)
-        assert not check_error_or_warning(warning, not_warnings)
+    def test_operate_source_unit_without_area_use_per_cap(self):
+        """No warnings should occur in the per_cap case."""
+        not_wanted = [
+            "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_cap`",
+            "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+            "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+            "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+        ]
+        with pytest.warns(exceptions.ModelWarning) as warning:
+            self._build_operate_source_unit_without_area_use("per_cap")
+        assert not check_error_or_warning(warning, not_wanted)
+
+    def test_operate_source_unit_without_area_use_per_area(self):
+        """The per_area case should raise an error and one warning."""
+        wanted = [
+            "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_area`"
+        ]
+        not_wanted = [
+            "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_cap`",
+            "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+            "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+        ]
+        with pytest.raises(exceptions.ModelError) as error:
+            with pytest.warns(exceptions.ModelWarning) as warning:
+                self._build_operate_source_unit_without_area_use("per_area")
+        assert check_error_or_warning(
+            error,
+            "Operate mode: User must define a finite area_use "
+            "(via area_use_equals or area_use_max) for 0::test_supply_elec",
+        )
+        assert check_error_or_warning(warning, wanted)
+        assert not check_error_or_warning(warning, not_wanted)
 
     def test_operate_storage(self, param):
         """Can't violate storage capacity constraints in the definition of a technology"""
