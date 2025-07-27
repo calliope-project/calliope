@@ -1,9 +1,9 @@
 import datetime
 import glob
+import importlib.resources
 import logging
 from pathlib import Path
 
-import importlib_resources
 import jsonschema
 import numpy as np
 import pandas as pd
@@ -18,9 +18,11 @@ from calliope.util.logging import log_time
 
 from .common.util import check_error_or_warning
 
-_EXAMPLES_DIR = importlib_resources.files("calliope") / "example_models"
-_MODEL_NATIONAL = (_EXAMPLES_DIR / "national_scale" / "model.yaml").as_posix()
-_MODEL_URBAN = (_EXAMPLES_DIR / "urban_scale" / "model.yaml").as_posix()
+with importlib.resources.as_file(importlib.resources.files("calliope")) as f:
+    _MODEL_NATIONAL = (
+        f / "example_models" / "national_scale" / "model.yaml"
+    ).as_posix()
+    _MODEL_URBAN = (f / "example_models" / "urban_scale" / "model.yaml").as_posix()
 
 
 class TestLogging:

@@ -1,21 +1,19 @@
+import importlib.resources
 import os
 import subprocess
 import tempfile
 from pathlib import Path
 
-import importlib_resources
 import pytest  # noqa: F401
 from click.testing import CliRunner
 
 import calliope
 from calliope import cli, io
 
-_MODEL_NATIONAL = (
-    importlib_resources.files("calliope")
-    / "example_models"
-    / "national_scale"
-    / "model.yaml"
-).as_posix()
+with importlib.resources.as_file(importlib.resources.files("calliope")) as f:
+    _MODEL_NATIONAL = (
+        f / "example_models" / "national_scale" / "model.yaml"
+    ).as_posix()
 
 _MINIMAL_TEST_MODEL = (
     Path(__file__).parent / "common" / "test_model" / "model.yaml"
