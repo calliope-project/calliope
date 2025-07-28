@@ -17,8 +17,8 @@ from .common.util import check_error_or_warning
 
 class TestIO:
     @pytest.fixture(scope="module")
-    def vars_to_add_attrs(self):
-        return ["source_use_max", "flow_cap"]
+    def vars_to_add_attrs(self) -> dict:
+        return {"inputs": "source_use_max", "results": "flow_cap"}
 
     @pytest.fixture(scope="module")
     def model(self, vars_to_add_attrs):
@@ -34,50 +34,39 @@ class TestIO:
             "foo_list": ["foo", "bar"],
             "foo_list_1_item": ["foo"],
         }
-        model._model_data = model._model_data.assign_attrs(**attrs)
         model.build()
         model.solve()
 
-        for var in vars_to_add_attrs:
-            model._model_data[var] = model._model_data[var].assign_attrs(**attrs)
+        model.inputs.attrs = attrs
+
+        for ds, var in vars_to_add_attrs.items():
+            getattr(model, ds)[var] = getattr(model, ds)[var].assign_attrs(**attrs)
 
         return model
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(scope="class")
     def model_file(self, tmpdir_factory, model):
         out_path = tmpdir_factory.mktemp("data").join("model.nc")
         model.to_netcdf(out_path)
         return out_path
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(scope="class")
     def model_from_file(self, model_file):
         return calliope.read_netcdf(model_file)
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(scope="class")
     def model_from_file_no_processing(self, model_file):
-        return xr.open_dataset(model_file)
+        return xr.open_dataset(model_file, group="inputs")
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(scope="class")
     def model_csv_dir(self, tmpdir_factory, model):
-        out_path = tmpdir_factory.mktemp("data")
-        model.to_csv(os.path.join(out_path, "csvs"))
-        return os.path.join(out_path, "csvs")
+        parent_path = tmpdir_factory.mktemp("data")
+        out_path = parent_path / "csvs"
+        model.to_csv(out_path)
+        return out_path
 
     def test_save_netcdf(self, model_file):
         assert os.path.isfile(model_file)
-
-    @pytest.mark.parametrize(
-        "kwargs",
-        [{"name": "foobar"}, {"calliope_version": "0.7.0", "time_resample": "2h"}],
-    )
-    def test_model_from_file_kwarg_error(self, model_file, kwargs):
-        """Passing kwargs when reading model dataset files should fail."""
-        model_data = calliope.io.read_netcdf(model_file)
-        with pytest.raises(
-            exceptions.ModelError,
-            match="Cannot apply initialisation configuration overrides when loading data from an xarray Dataset.",
-        ):
-            calliope.Model(model_data, **kwargs)
 
     @pytest.mark.parametrize(
         ("attr", "expected_type", "expected_val"),
@@ -98,8 +87,10 @@ class TestIO:
         self, request, attr, expected_type, expected_val, model_name, vars_to_add_attrs
     ):
         model = request.getfixturevalue(model_name)
-        var_attrs = [model._model_data[var].attrs for var in vars_to_add_attrs]
-        for attrs in [model._model_data.attrs, *var_attrs]:
+        var_attrs = [
+            getattr(model, ds)[var].attrs for ds, var in vars_to_add_attrs.items()
+        ]
+        for attrs in [model.inputs.attrs, *var_attrs]:
             assert isinstance(attrs[attr], expected_type)
             if expected_val is None:
                 assert attrs[attr] is None
@@ -107,23 +98,11 @@ class TestIO:
                 assert attrs[attr] == expected_val
 
     @pytest.mark.parametrize(
-        "serialised_list",
-        ["serialised_bools", "serialised_nones", "serialised_dicts", "serialised_sets"],
-    )
-    @pytest.mark.parametrize("model_name", ["model", "model_from_file"])
-    def test_serialised_list_popped(self, request, serialised_list, model_name):
-        model = request.getfixturevalue(model_name)
-        assert serialised_list not in model._model_data.attrs.keys()
-
-    @pytest.mark.parametrize(
         ("serialisation_list_name", "list_elements"),
         [
             ("serialised_bools", ["foo_true", "foo_false"]),
-            ("serialised_nones", ["foo_none", "scenario"]),
-            (
-                "serialised_dicts",
-                ["foo_dict", "foo_attrdict", "defaults", "_def", "applied_math"],
-            ),
+            ("serialised_nones", ["foo_none"]),
+            ("serialised_dicts", ["foo_dict", "foo_attrdict"]),
             ("serialised_sets", ["foo_set", "foo_set_1_item"]),
             ("serialised_single_element_list", ["foo_list_1_item", "foo_set_1_item"]),
         ],
@@ -153,7 +132,9 @@ class TestIO:
             with pytest.raises(FileExistsError):
                 model.to_csv(out_path)
 
-    def test_save_csv_dir_can_exist_if_overwrite_true(self, model, model_csv_dir):
+    def test_save_csv_dir_can_exist_if_overwrite_true(
+        self, model: calliope.Model, model_csv_dir
+    ):
         model.to_csv(model_csv_dir, allow_overwrite=True)
 
     @pytest.mark.parametrize(
@@ -203,7 +184,7 @@ class TestIO:
         assert model_from_file.config.model_dump() == model.config.model_dump()
 
     def test_defaults_as_model_attrs_not_property(self, model_from_file):
-        assert "defaults" in model_from_file._model_data.attrs.keys()
+        assert len(model_from_file.runtime.defaults) > 0
         assert not hasattr(model_from_file, "defaults")
 
     @pytest.mark.parametrize("attr", ["results", "inputs"])

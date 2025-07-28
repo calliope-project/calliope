@@ -1,4 +1,3 @@
-import datetime
 import glob
 import importlib.resources
 import logging
@@ -54,15 +53,15 @@ class TestLogging:
         )
 
     def test_timing_log(self):
-        timings = {"model_creation": datetime.datetime.now()}
+        timings = {}
         logger = logging.getLogger("calliope.testlogger")
 
         # TODO: capture logging output and check that comment is in string
         log_time(logger, timings, "test", comment="test_comment", level="info")
-        assert isinstance(timings["test"], datetime.datetime)
+        assert isinstance(timings["test"], float)
 
         log_time(logger, timings, "test2", comment=None, level="info")
-        assert isinstance(timings["test2"], datetime.datetime)
+        assert isinstance(timings["test2"], float)
 
         # TODO: capture logging output and check that time_since_solve_start is in the string
         log_time(
@@ -113,19 +112,14 @@ class TestGenerateRuns:
 
 
 class TestPandasExport:
-    @pytest.fixture(scope="module")
-    def model(self):
-        return calliope.examples.national_scale()
+    MODEL = calliope.examples.national_scale()
 
     @pytest.mark.parametrize(
-        "variable_name",
-        sorted(
-            [i for i in calliope.examples.national_scale()._model_data.data_vars.keys()]
-        ),
+        "variable_name", sorted([i for i in MODEL.inputs.data_vars.keys()])
     )
-    def test_data_variables_can_be_exported_to_pandas(self, model, variable_name):
-        if model.inputs[variable_name].shape:
-            model.inputs[variable_name].to_dataframe()
+    def test_data_variables_can_be_exported_to_pandas(self, variable_name):
+        if self.MODEL.inputs[variable_name].shape:
+            self.MODEL.inputs[variable_name].to_dataframe()
         else:
             pass
 
