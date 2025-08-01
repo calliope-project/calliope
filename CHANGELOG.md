@@ -26,6 +26,7 @@ E.g., `model.results.min_cost_optimisation` will give the objective function val
 
 ### Internal changes
 
+|fixed| SPORES tests to vary capacities of costed technologies rather than be able to simply vary the capacity of a free heat transmission technology between SPORES (#782).
 
 ## 0.7.0.dev6 (2025-03-24)
 
