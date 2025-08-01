@@ -6,8 +6,6 @@
 
 |changed| SOS2 piecewise cost example in docs to explicitly include the new decision variable in the investment cost `where` string (see #525).
 
-|new| helper functions to enable periodic and rolling window summations of decision variables (#777).
-
 |fixed| Timeseries capacity factor accounts for time resolution (#762).
 
 |fixed| Levelised cost accounts for energy that is generated and exported (`flow_export`) (#767).
