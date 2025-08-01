@@ -96,8 +96,11 @@ m.inputs.cost_steps
 # We create the piecewise constraint by linking decision variables to the piecewise curve we have created.
 # In this example, we need:
 # 1. a new decision variable for investment costs that can take on the value defined by the curve at a given value of `flow_cap`;
-# 1. to link that decision variable to our total cost calculation; and
+# 1. to link that decision variable to our total cost calculation by injecting it into the `cost_investment_flow_cap` expression; and
 # 1. to define the piecewise constraint.
+#
+# Note that we _replace_ the CSP investment cost related to its `flow_cap` here.
+# So, although the technology still has a `cost_flow_cap` associated with it in the input data, this parameter will now have no effect.
 
 # %%
 new_math = """
@@ -112,6 +115,7 @@ new_math = """
       default: 0
   global_expressions:
     cost_investment_flow_cap:
+      where: (flow_cap AND (cost_flow_cap OR cost_flow_cap_per_distance)) OR piecewise_cost_investment
       equations:
         - expression: "$cost_sum * flow_cap"
           where: "NOT [csp] in techs"
