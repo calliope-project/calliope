@@ -64,6 +64,13 @@ class TestNewBackend:
             .all()
         )
 
+    def test_from_global_expression_fails_on_str_type(self, simple_supply_gurobi):
+        """Gurobi backend fails if it finds a string in an expression array."""
+        with pytest.raises(
+            TypeError, match="Cannot convert Gurobi object of type <class 'str'>"
+        ):
+            simple_supply_gurobi.backend._from_gurobi_expr("foo")
+
     def test_new_build_get_constraint(self, simple_supply_gurobi):
         constr = simple_supply_gurobi.backend.get_constraint("system_balance")
         assert (
