@@ -2,9 +2,9 @@
 
 ### User-facing changes
 
-|changed| SOS2 piecewise cost example in docs to explicitly include the new decision variable in the investment cost `where` string (see #525).
+|new| helper functions to enable summation over single-/multi-dimension groups and rolling window summations of math expression components (#735, #777).
 
-|new| helper functions to enable periodic and rolling window summations of decision variables (#777).
+|changed| SOS2 piecewise cost example in docs to explicitly include the new decision variable in the investment cost `where` string (see #525).
 
 |fixed| Timeseries capacity factor accounts for time resolution (#762).
 

@@ -65,6 +65,11 @@ def expression_where(expression, parsing_kwargs):
 
 
 @pytest.fixture(scope="class")
+def expression_group_sum(expression, parsing_kwargs):
+    return expression["group_sum"](**parsing_kwargs)
+
+
+@pytest.fixture(scope="class")
 def expression_group_datetime(expression, parsing_kwargs):
     return expression["group_datetime"](**parsing_kwargs)
 
@@ -384,6 +389,43 @@ class TestAsArray:
         expected = xr.DataArray([2, np.nan], coords={"nodes": dummy_model_data.nodes})
         assert result.equals(expected.transpose(*result.dims))
 
+    @pytest.mark.parametrize(
+        ("groupings", "expected"),
+        [
+            (["group_1", np.nan, "group_1", "group_2"], [[2, 3], [np.inf, np.nan]]),
+            (["group_1", "group_1", "group_2", "group_2"], [[1, 4], [np.inf, 1]]),
+        ],
+    )
+    def test_expression_group_sum_one_dim(
+        self, expression_group_sum, dummy_model_data, groupings, expected
+    ):
+        groupby = xr.DataArray(
+            groupings, coords={"techs": dummy_model_data.with_inf.techs}
+        ).where(lambda x: x != "nan")
+        expected_da = xr.DataArray(
+            expected,
+            coords={
+                "nodes": dummy_model_data.with_inf.nodes,
+                "new_dim": pd.Index(["group_1", "group_2"]),
+            },
+        )
+        result = expression_group_sum(dummy_model_data.with_inf, groupby, "new_dim")
+        assert result.equals(expected_da.broadcast_like(result))
+
+    def test_expression_group_sum_multi_dim(
+        self, expression_group_sum, dummy_model_data
+    ):
+        groupings = [
+            ["group_1", np.nan, "group_1", "group_2"],
+            [np.nan, "group_1", "group_1", "group_2"],
+        ]
+        groupby = xr.DataArray(
+            groupings, coords=dummy_model_data.with_inf.coords
+        ).where(lambda x: x != "nan")
+        expected_da = xr.DataArray([5, 3], coords={"new_dim": ["group_1", "group_2"]})
+        result = expression_group_sum(dummy_model_data.with_inf, groupby, "new_dim")
+        assert result.equals(expected_da)
+
     def test_expression_group_datetime_date(
         self, expression_group_datetime, dummy_model_data
     ):
@@ -579,6 +621,28 @@ class TestAsMathString:
         assert (
             expression_where_string
             == r"(\textbf{foo}_\text{techs} \text{if } \textit{bar}_\text{nodes} == True)"
+        )
+
+    def test_expression_group_sum_onedim(self, expression_group_sum):
+        expression_group_sum_string = expression_group_sum(
+            r"\textbf{foo}_\text{tech,node,carrier}",
+            r"\textit{bar}_\text{tech}",
+            "new_dim",
+        )
+        assert (
+            expression_group_sum_string
+            == r"\sum\limits_{\substack{\text{tech} \in \text{techs} \\ \text{ if } \textit{bar}_\text{tech} = \text{new_dim}}} (\textbf{foo}_\text{tech,node,carrier})"
+        )
+
+    def test_expression_group_sum_multidim(self, expression_group_sum):
+        expression_group_sum_string = expression_group_sum(
+            r"\textbf{foo}_\text{tech,node,carrier}",
+            r"\textit{bar}_\text{tech,node}",
+            "new_dim",
+        )
+        assert (
+            expression_group_sum_string
+            == r"\sum\limits_{\substack{\text{tech} \in \text{techs} \\ \text{node} \in \text{nodes} \\ \text{ if } \textit{bar}_\text{tech,node} = \text{new_dim}}} (\textbf{foo}_\text{tech,node,carrier})"
         )
 
     def test_expression_group_datetime_hour(self, expression_group_datetime):
