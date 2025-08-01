@@ -785,8 +785,8 @@ class GroupSum(ParsingHelperFunction):
             ```yaml
             parameters:
               # You may prefer to define this in a CSV file or when referring to the techs within the `nodes` model definition.
-              group_techs_and_nodes:
-                data: [group_1, group_1, group_2, group_2]
+              power_plant_groups:
+                data: [low_emission_plant, low_emission_plant, high_emission_plant, high_emission_plant]
                 index: [
                   [tech_1, node_1],
                   [tech_2, node_1],
@@ -798,19 +798,19 @@ class GroupSum(ParsingHelperFunction):
             2. Define a set of outflow limits:
             ```yaml
             parameters:
-              node_tech_limits:
-                data: [10, 20]
-                index: [group_1, group_2]
-                dims: [grouped_node_techs]
+              emission_limits:
+                data: [20, 10]
+                index: [low_emission_plant, high_emission_plant]
+                dims: [emission_groups]
             ```
             3. Define the math to link the two, using `group_sum`:
             ```yaml
             constraints:
-              node_tech_group_max:
-                foreach: [grouped_node_techs, carriers, timesteps]
-                where: node_tech_limits
+              node_tech_emission_group_max:
+                foreach: [emission_groups, carriers, timesteps]
+                where: emission_limits
                 equations:
-                  - expression: group_sum(flow_out, group_techs_and_nodes, grouped_node_techs) <= node_tech_limits
+                  - expression: group_sum(flow_out, group_techs_and_nodes, emission_groups) <= emission_limits
             ```
         """
         # We can't apply typical xarray rolling window functionality
