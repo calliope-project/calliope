@@ -27,11 +27,13 @@ The [Calligraph companion tool](https://calligraph.readthedocs.io/) allows inter
 
 Visualising with Calligraph:
 
-<video src="https://spontaneous-choux-e05fa1.netlify.app/calligraph.mp4" width=500>
+<video controls>
+    <source src="https://spontaneous-choux-e05fa1.netlify.app/calligraph.mp4" type="video/mp4">
+</video>
 
 Visualising with Plotly:
 
-<object type="text/html" data="img/plotly_frontpage_timeseries.html" width="500px" height="400px"></object>
+<object type="text/html" data="img/plotly_frontpage_timeseries.html" width="100%" height="400px"></object>
 
 A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials.
 Calliope takes these files, constructs an optimisation problem, solves it, and reports results in the form of [xarray Datasets](https://docs.xarray.dev/en/v2022.03.0/user-guide/data-structures.html#dataset) which in turn can easily be converted into [Pandas data structures](https://pandas.pydata.org/pandas-docs/version/1.5/user_guide/dsintro.html#dsintro) for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
