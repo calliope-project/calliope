@@ -15,12 +15,11 @@ from calliope.exceptions import (
     print_warnings_and_raise_errors,
 )
 from calliope.io import read_rich_yaml
-from calliope.schemas import config_schema
 from calliope.schemas.math_schema import MathSchema
 from calliope.util.tools import relative_path
 
 LOGGER = logging.getLogger(__name__)
-PRE_DEFINED_MATH = ["plan", "operate", "spores", "storage_inter_cluster"]
+PRE_DEFINED_MATH = ["base", "plan", "operate", "spores", "storage_inter_cluster"]
 ORDERED_COMPONENTS_T = typing.Literal[
     "variables",
     "global_expressions",
@@ -107,15 +106,6 @@ def build_applied_math(
     if validate:
         _validate_math_string_parsing(math_model)
     return math_model
-
-
-def _math_priority(config: config_schema.Init) -> list[str]:
-    """Order of math formulations, with the last overwriting previous ones."""
-    names = [config.base_math]
-    if config.mode != "base":
-        names.append(config.mode)
-    names += config.apply_math
-    return names
 
 
 def _validate_math_string_parsing(math_model: MathSchema) -> None:

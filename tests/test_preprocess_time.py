@@ -17,7 +17,7 @@ class TestTimeFormat:
         # should pass: changing datetime format from default
         override = read_rich_yaml(
             """
-            config.init.time_format: "%d/%m/%Y %H:%M"
+            config.init.datetime_format: "%d/%m/%Y %H:%M"
             data_tables:
                 demand_elec.data: data_tables/demand_heat_diff_dateformat.csv
                 demand_heat.data: data_tables/demand_heat_diff_dateformat.csv
@@ -40,7 +40,7 @@ class TestTimeFormat:
 
     def test_incorrect_date_format_multi(self):
         # should fail: wrong dateformat input for all files
-        override3 = {"config.init.time_format": "%d/%m/%Y %H:%M"}
+        override3 = {"config.init.datetime_format": "%d/%m/%Y %H:%M"}
 
         with pytest.raises(exceptions.ModelError):
             build_test_model(override_dict=override3, scenario="simple_supply")
@@ -72,7 +72,7 @@ class TestClustering:
                     "demand_elec.data": "data_tables/demand_heat_diff_dateformat.csv"
                 }
             }
-            cluster_init["time_format"] = "%d/%m/%Y %H:%M"
+            cluster_init["datetime_format"] = "%d/%m/%Y %H:%M"
 
         return build_test_model(scenario="simple_supply", **cluster_init)
 

@@ -73,7 +73,7 @@ class Init(CalliopeBaseModel):
     Must be a path to a file where each date is linked to a representative date that also exists in the timeseries.
     """
 
-    time_format: str = Field(default="ISO8601")
+    datetime_format: str = Field(default="ISO8601")
     """
     Timestamp format of all time series data when read from file.
     'ISO8601' means '%Y-%m-%d %H:%M:%S'.
@@ -85,24 +85,24 @@ class Init(CalliopeBaseModel):
     Automatically derived distances from lat/lon coordinates will be given in this unit.
     """
 
-    base_math: AttrStr = "plan"
-    """Name of the math file to build on top of.
-    Can be any pre-defined math file or user-defined file in `extra_math`.
-    """
-
-    extra_math: dict[AttrStr, str] = Field(default={})
-    "Dictionary with the names and paths of additional math files."
-
     mode: Mode = Field(default="base")
     """Mode in which to run the optimisation.
     Triggers additional processing and appends additional math formulations.
     Math order: base -> mode
     """
 
-    apply_math: UniqueList[str] = Field(default=[])
+    extra_math: UniqueList[str] = Field(default=[])
     """
-    List of additional math to be applied on top of the base mode math and mode math.
+    List of math entries to be applied on top of the `base` math and `mode` math.
     Math order: base -> mode -> extra
+    """
+
+    load_user_math: dict = Field(default={})
+    """Dictionary with the names and paths of additional math files to add to the available math entries.
+    Some math entry names are linked to specific functionality, so re-defining them here will overwrite the pre-defined math.:
+    - `spores`/`operate`: replaces the respective pre-defined mode math.
+    - `base`: replaces the pre-defined base math (which is also the `plan` mode math).
+    - `storage_inter_cluster`: replaces the pre-defined storage inter-cluster math.
     """
 
     pre_validate_math_strings: bool = Field(default=True)
@@ -128,9 +128,6 @@ class BuildOperate(CalliopeBaseModel):
     See [here](https://pandas.pydata.org/docs/user_guide/timeseries.html#offset-aliases) for a list of frequency aliases.
     Must be ≥ `window`
     """
-
-    use_cap_results: bool = Field(default=False)
-    """If the model already contains `base` results, use those optimal capacities as input parameters to the `operate` mode run."""
 
 
 class Build(CalliopeBaseModel):

@@ -24,7 +24,6 @@ from calliope.schemas import (
     runtime_attrs_schema,
 )
 from calliope.util.logging import log_time
-from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 if TYPE_CHECKING:
     from calliope.backend.backend_model import BackendModel
@@ -488,16 +487,6 @@ class Model:
                 self.inputs.horizonsteps[self._start_window_idx],
             )
         )
-        if operate_config.use_cap_results:
-            to_parameterise = extract_from_schema(MODEL_SCHEMA, "x-operate-param")
-            if not self._is_solved:
-                raise exceptions.ModelError(
-                    "Cannot use base mode capacity results in operate mode if a solution does not yet exist for the model."
-                )
-            for parameter in to_parameterise.keys():
-                if parameter in self.results:
-                    self.inputs[parameter] = self.results[parameter]
-
         return sliced_inputs
 
     def _solve_operate(self, solver_config: config_schema.Solve) -> xr.Dataset:

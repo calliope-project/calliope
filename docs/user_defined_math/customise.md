@@ -26,17 +26,17 @@ Both absolute paths and paths relative to `model.yaml` are valid.
 ```yaml
 config:
   init:
-    extra_math:
+    load_user_math:
       my_new_math_1: "my_new_math_1.yaml"
       my_new_math_2: "/home/your_name/Documents/my_new_math_2.yaml"
 ```
 
-You can then add this math during `build` by specifying it in `config.build.extra_math`.
+You can then select which math to apply in this model run by specifying it in `config.init.extra_math`.
 It is even possible to define a mixture of your math and other [pre-defined math](../pre_defined_math/index.md):
 
 ```yaml
 config:
-  build:
+  init:
     extra_math: [my_new_math_1, storage_inter_cluster, my_new_math_2]
 ```
 
@@ -49,23 +49,30 @@ Finally, when working in an interactive Python session, you can add math as a di
 model.build(add_math_dict={...})
 ```
 
-This will be applied after the pre-defined mode math and any extra math listed in `config.build.extra_math`.
+This will be applied after the pre-defined mode math and any extra math listed in `config.init.extra_math`.
 
 !!! note
-    When working in an interactive Python session, you can view the final math dictionary that has been applied to build the optimisation problem by inspecting `model.applied_math` after a successful call to `model.build()`.
+    When working in an interactive Python session, you can view the final math dictionary that has been applied to build the optimisation problem by inspecting `model.math.build` at any point.
 
 ## Re-defining Calliope's pre-defined base math
 
-If you prefer to start from scratch with your math, you can ask Callipe to completely replace our pre-defined **base math** with your own.
+If you prefer to start from scratch with your math, you can ask Calliope to completely replace our pre-defined **base math** with your own.
 
 ```yaml
 config:
   init:
-    base_math: "my_new_base_math"
-    extra_math: {my_new_base_math: your/base_math_file.yaml}
+    load_user_math: {base: your/base_math_file.yaml}
 ```
 
 This will tell Calliope to overwrite _all_ of our pre-defined `base` math with your file.
+
+You can similarly replace _mode_ math like that used in `operate` mode:
+
+```yaml
+config:
+  init:
+    load_user_math: {operate: your/operate_math_file.yaml}
+```
 
 !!! danger
     Modes and other pre-defined options such as `operate` and `spores` might not work as expected!

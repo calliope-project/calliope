@@ -132,10 +132,10 @@ class ModelDataFactory:
     @property
     def math_priority(self) -> list[str]:
         """Order of math formulations, with the last overwriting previous ones."""
-        names = [self.config.base_math]
+        names = ["base"]
         if self.config.mode != "base":
             names.append(self.config.mode)
-        names += self.config.apply_math
+        names += self.config.extra_math
         return names
 
     def init_from_data_tables(self, data_tables: list[data_tables.DataTable]):
@@ -283,7 +283,7 @@ class ModelDataFactory:
             self.dataset = time.cluster(
                 self.dataset,
                 relative_path(self.definition_path, self.config.time_cluster),
-                self.config.time_format,
+                self.config.datetime_format,
             )
 
     def clean_data_from_undefined_members(self):
@@ -788,7 +788,7 @@ class ModelDataFactory:
                 )
             elif dtype == "datetime":
                 ds.coords[dim_name] = time._datetime_index(
-                    dim_vals.to_index(), self.config.time_format
+                    dim_vals.to_index(), self.config.datetime_format
                 )
             else:
                 ds.coords[dim_name] = dim_vals.astype(DTYPE_OPTIONS[dtype])
