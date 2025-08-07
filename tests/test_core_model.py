@@ -369,7 +369,6 @@ class TestSporesMode:
         cap_diffs = spores_model.results.flow_cap.sel(spores=order_dim).diff(
             dim="spores"
         )
-        breakpoint()
         assert (cap_diffs != 0).any()
 
     def test_spores_algo_log(self, spores_model_and_log_algorithms):
