@@ -166,8 +166,6 @@ class TestSporesMode:
     SPORES_OVERRIDES = (
         "spores,var_costs,two_hours,simple_supply_spores_ready,investment_costs"
     )
-    # Set the global numpy random seed to avoid occasional (random!) test failures with the "random" scoring algorithm.
-    np.random.seed(0)
 
     @contextmanager
     def caplog_session(self, request):
@@ -371,6 +369,7 @@ class TestSporesMode:
         cap_diffs = spores_model.results.flow_cap.sel(spores=order_dim).diff(
             dim="spores"
         )
+        breakpoint()
         assert (cap_diffs != 0).any()
 
     def test_spores_algo_log(self, spores_model_and_log_algorithms):
