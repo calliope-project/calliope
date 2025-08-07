@@ -810,7 +810,7 @@ class GroupSum(ParsingHelperFunction):
                 foreach: [emission_groups, carriers, timesteps]
                 where: emission_limits
                 equations:
-                  - expression: group_sum(flow_out, group_techs_and_nodes, emission_groups) <= emission_limits
+                  - expression: group_sum(flow_out, power_plant_groups, emission_groups) <= emission_limits
             ```
         """
         # We can't apply typical xarray rolling window functionality
