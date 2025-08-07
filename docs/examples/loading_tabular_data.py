@@ -147,7 +147,7 @@ nodes:
     demand_tech:
 """
 )
-model_from_yaml = calliope.Model(model_def)
+model_from_yaml = calliope.Model.from_dict(model_def)
 
 # %% [markdown]
 # We can look at some of the tabular data we have ended up with.
@@ -354,7 +354,7 @@ nodes:
   B.techs: {supply_tech, demand_tech}
 """
 )
-model_from_data_tables = calliope.Model(model_def)
+model_from_data_tables = calliope.Model.from_dict(model_def)
 
 # %% [markdown]
 # ### Loading directly from in-memory dataframes
@@ -392,7 +392,7 @@ nodes:
   B.techs: {supply_tech, demand_tech}
 """
 )
-model_from_data_tables = calliope.Model(
+model_from_data_tables = calliope.Model.from_dict(
     model_def,
     data_table_dfs={
         "tech_data_df": tech_data,
@@ -626,7 +626,7 @@ nodes:
   B.techs: {supply_tech, demand_tech}
 """
 )
-model_from_data_tables_w_override = calliope.Model(model_def)
+model_from_data_tables_w_override = calliope.Model.from_dict(model_def)
 
 # Let's compare the two after overriding `flow_cap_max`
 flow_cap_old = model_from_data_tables.inputs.flow_cap_max.to_series().dropna()
@@ -712,7 +712,7 @@ nodes:
       active: false
 """
 )
-model_from_data_tables_w_deactivations = calliope.Model(model_def)
+model_from_data_tables_w_deactivations = calliope.Model.from_dict(model_def)
 
 # Let's compare the two after overriding `flow_cap_max`
 definition_matrix_old = (

@@ -8,6 +8,7 @@ import os
 from copy import deepcopy
 from io import StringIO
 from pathlib import Path
+from typing import Literal
 
 # We import netCDF4 before xarray to mitigate a numpy warning:
 # https://github.com/pydata/xarray/issues/7259
@@ -17,7 +18,6 @@ import pandas as pd
 import ruamel.yaml as ruamel_yaml
 import xarray as xr
 
-from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.util.tools import listify, relative_path
 
@@ -28,23 +28,23 @@ YAML_INDENT = 2
 YAML_BLOCK_SEQUENCE_INDENT = 0
 
 
-def read_netcdf(path):
+def read_netcdf(
+    path: str | Path,
+) -> dict[Literal["inputs", "results", "attrs"], xr.Dataset]:
     """Read model_data from NetCDF file."""
-    with xr.open_dataset(path) as model_data:
-        model_data.load()
-
-    _deserialise(model_data.attrs)
-    for var in model_data.data_vars.values():
-        _deserialise(var.attrs)
-
-    # Convert empty strings back to np.NaN
-    # TODO: revert when this issue is solved: https://github.com/pydata/xarray/issues/1647
-    # which it might be once this is merged: https://github.com/pydata/xarray/pull/7869
-    for var_name, var_array in model_data.data_vars.items():
-        if var_array.dtype.kind in ["U", "O"]:
-            model_data[var_name] = var_array.where(lambda x: x != "")
-
-    return model_data
+    datasets: dict[Literal["inputs", "results", "attrs"], xr.Dataset] = {}
+    for group in ["inputs", "results", "attrs"]:
+        try:
+            with xr.open_dataset(path, group=group) as model_data:
+                model_data.load()
+        except OSError:
+            datasets[group] = xr.Dataset()
+            continue
+        _deserialise(model_data.attrs)
+        for var in model_data.data_vars.values():
+            _deserialise(var.attrs)
+        datasets[group] = model_data
+    return datasets
 
 
 def _pop_serialised_list(
@@ -133,7 +133,13 @@ def _deserialise(attrs: dict) -> None:
         attrs[attr] = set(attrs[attr])
 
 
-def save_netcdf(model_data, path, **kwargs):
+def save_netcdf(
+    model_data: xr.Dataset,
+    group_name: str,
+    mode: Literal["a", "w"],
+    path: str | Path,
+    **kwargs,
+):
     """Save the model to a netCDF file."""
     original_model_data_attrs = deepcopy(model_data.attrs)
     for key, value in kwargs.items():
@@ -151,10 +157,16 @@ def save_netcdf(model_data, path, **kwargs):
         )
         for k, v in model_data.data_vars.items()
     }
-
     try:
-        model_data.to_netcdf(path, format="netCDF4", encoding=encoding)
-        model_data.close()  # Force-close NetCDF file after writing
+        model_data.to_netcdf(
+            path,
+            mode=mode,
+            format="netCDF4",
+            engine="netcdf4",
+            encoding=encoding,
+            group=group_name,
+        )
+        model_data.close()
     finally:  # Revert model_data.attrs back
         model_data.attrs = original_model_data_attrs
         for var in model_data.data_vars.values():
@@ -163,6 +175,7 @@ def save_netcdf(model_data, path, **kwargs):
 
 def save_csv(
     model_data: xr.Dataset,
+    group_name: Literal["inputs", "results"],
     path: str | Path,
     dropna: bool = True,
     allow_overwrite: bool = False,
@@ -175,6 +188,7 @@ def save_csv(
 
     Args:
         model_data (xr.Dataset): Calliope model data.
+        group_name (Literal["inputs", "results"]): which of input or output data the `model_data` represents.
         path (str | Path): Directory to which the CSV files will be saved
         dropna (bool, optional):
             If True, drop all NaN values in the data series before saving to file.
@@ -187,21 +201,8 @@ def save_csv(
     path = Path(path)
     path.mkdir(parents=True, exist_ok=allow_overwrite)
 
-    # a MILP model which optimises to within the MIP gap, but does not fully
-    # converge on the LP relaxation, may return as 'feasible', not 'optimal'
-    if "termination_condition" not in model_data.attrs or model_data.attrs[
-        "termination_condition"
-    ] in ["optimal", "feasible"]:
-        data_vars = model_data.data_vars
-    else:
-        data_vars = model_data.filter_by_attrs(is_result=0).data_vars
-        exceptions.warn(
-            "Model termination condition was not optimal, saving inputs only."
-        )
-
-    for var_name, var in data_vars.items():
-        in_out = "results" if var.attrs["is_result"] else "inputs"
-        out_path = path / f"{in_out}_{var_name}.csv"
+    for var_name, var in model_data.items():
+        out_path = path / f"{group_name}_{var_name}.csv"
         if not var.shape:
             series = pd.Series(var.item())
             keep_index = False
@@ -309,6 +310,8 @@ def to_yaml(data: AttrDict | dict, path: None | str | Path = None) -> str:
         # Lists are turned into seqs so that they are formatted nicely
         elif isinstance(v, list):
             result.set_key(k, yaml_.seq(v))
+        elif isinstance(v, Path):
+            result.set_key(k, str(v))
 
     result = result.as_dict()
 

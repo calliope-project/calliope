@@ -51,16 +51,21 @@ class PyomoBackendModel(backend_model.BackendModel):
     """Pyomo-specific backend functionality."""
 
     def __init__(
-        self, inputs: xr.Dataset, math: AttrDict, build_config: config_schema.Build
+        self,
+        inputs: xr.Dataset,
+        math: AttrDict,
+        build_config: config_schema.Build,
+        defaults: dict,
     ) -> None:
         """Pyomo solver interface class.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
             math (AttrDict): Calliope math.
-            build_config: Build configuration options.
+            build_config (config_schema.Build): Build configuration options.
+            defaults (dict): Parameter defaults.
         """
-        super().__init__(inputs, math, build_config, pmo.block())
+        super().__init__(inputs, math, build_config, defaults, pmo.block())
 
         self._instance.parameters = pmo.parameter_dict()
         self._instance.variables = pmo.variable_dict()
@@ -429,9 +434,7 @@ class PyomoBackendModel(backend_model.BackendModel):
 
             self.delete_component(name, "parameters")
             self.add_parameter(
-                name,
-                self.inputs[name],
-                default=self.inputs.attrs["defaults"].get(name, np.nan),
+                name, self.inputs[name], default=self.defaults.get(name, np.nan)
             )
             self._rebuild_references(refs_to_update)
             if self._has_verbose_strings:

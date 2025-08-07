@@ -157,7 +157,7 @@ m.backend.get_piecewise_constraint("csp_piecewise_costs").to_series().dropna()
 m.solve()
 
 # %% [markdown]
-# The results are stored in `m._model_data` and can be accessed by the public property `m.results`
+# The results are stored in an array that can be accessed from `m.results`.
 
 # %% [markdown]
 # ## Analysing the outputs

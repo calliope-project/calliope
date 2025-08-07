@@ -2,15 +2,13 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Schema for Calliope model definition."""
 
-from calliope.schemas.config_schema import CalliopeConfig
-from calliope.schemas.data_table_schema import CalliopeDataTable
+from calliope.schemas.data_table_schema import CalliopeDataTables
 from calliope.schemas.dimension_data_schema import (
-    CalliopeNode,
-    CalliopeTech,
-    DataValue,
-    IndexedParam,
+    CalliopeNodes,
+    CalliopeParams,
+    CalliopeTechs,
 )
-from calliope.schemas.general import AttrStr, CalliopeBaseModel
+from calliope.schemas.general import CalliopeBaseModel
 
 
 class CalliopeModelDef(CalliopeBaseModel):
@@ -18,9 +16,7 @@ class CalliopeModelDef(CalliopeBaseModel):
 
     model_config = {"title": "Calliope Model Definition"}
 
-    parameters: dict[AttrStr, DataValue | IndexedParam] | None = None
-    config: CalliopeConfig
-    data_tables: dict[AttrStr, CalliopeDataTable] | None = None
-    nodes: dict[AttrStr, CalliopeNode] | None = None
-    techs: dict[AttrStr, CalliopeTech] | None = None
-    math: dict[AttrStr, dict]
+    parameters: CalliopeParams = CalliopeParams()
+    data_tables: CalliopeDataTables = CalliopeDataTables()
+    nodes: CalliopeNodes = CalliopeNodes()
+    techs: CalliopeTechs = CalliopeTechs()

@@ -39,22 +39,16 @@ print(m.info())
 # %% [markdown]
 # ## Model data
 #
-# `m._model_data` is an xarray Dataset, a hidden property of the Model as you are expected to access the data via the public property `inputs`
+# `m.inputs` and `m.results` are xarray Datasets.
 
 # %%
 m.inputs
 
 # %% [markdown]
-# Until we solve the model, `inputs` is the same as `_model_data`
+# Until we solve the model, `results` is empty.
 
 # %%
-m._model_data
-
-# %% [markdown]
-# We can find the same PV `flow_cap_max` data as seen in `m._model_run`
-
-# %%
-m._model_data.flow_cap_max.sel(techs="pv").to_series().dropna()
+m.results
 
 # %% [markdown]
 # # Building and checking the optimisation problem
@@ -120,7 +114,7 @@ m.backend.get_parameter("flow_cap_max", as_backend_objs=False).sel(
 m.solve()
 
 # %% [markdown]
-# The results are stored in `m._model_data` and can be accessed by the public property `m.results`
+# The results can now be accessed by the public property `m.results`
 
 # %%
 m.results
@@ -135,14 +129,16 @@ m.backend.get_variable("flow_cap", as_backend_objs=False).to_series().dropna()
 # # Save
 
 # %%
-# We can save at any point, which will dump the entire m._model_data to file.
-# NetCDF is recommended, as it retains most of the data and can be reloaded into a Calliope model at a later date.
+# We can save at any point, which will dump the entire model to file.
+# NetCDF is recommended, as it retains the model data _and_ attributes and can be reloaded into a Calliope model at a later date.
 
 
 output_path = Path(".") / "outputs" / "4_calliope_model_object"
 output_path.mkdir(parents=True, exist_ok=True)
 
-m.to_netcdf(output_path / "example.nc")  # Saves a single file
+m.to_netcdf(
+    output_path / "example.nc"
+)  # Saves a single file with two groups: `inputs` and `results`
 m.to_csv(
     output_path / "csv_files", allow_overwrite=True
 )  # Saves a file for each xarray DataArray

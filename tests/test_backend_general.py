@@ -133,14 +133,11 @@ class TestOptimality:
     def test_optimal(self, solved_model_cls):
         """Solved model is optimal."""
         assert hasattr(solved_model_cls, "results")
-        assert solved_model_cls._model_data.attrs["termination_condition"] == "optimal"
+        assert solved_model_cls.runtime.termination_condition == "optimal"
 
     def test_solve_non_optimal(self, infeasible_model_cls):
         """Infeasible models have no results"""
-        assert (
-            infeasible_model_cls._model_data.attrs["termination_condition"]
-            == "infeasible"
-        )
+        assert infeasible_model_cls.runtime.termination_condition == "infeasible"
         assert not infeasible_model_cls.results.data_vars
 
 
@@ -208,7 +205,6 @@ class TestGetters:
         """Check a parameter has all expected attributes."""
         assert parameter.attrs == {
             "obj_type": "parameters",
-            "is_result": 0,
             "original_dtype": "float64",
             "references": {"flow_in_inc_eff"},
             "coords_in_name": False,
@@ -521,7 +517,7 @@ class TestAdders:
 
     def test_add_allnull_param_with_shape(self, solved_model_func):
         """If parameter is Null in all array elements, the component will still be added to the backend dataset in case it is filled by another parameter later."""
-        nan_array = solved_model_func._model_data.flow_cap_max.where(lambda x: x < 0)
+        nan_array = solved_model_func.inputs.flow_cap_max.where(lambda x: x < 0)
         solved_model_func.backend.add_parameter("foo", nan_array)
 
         # We keep it in the dataset since it might be fillna'd by another param later.
