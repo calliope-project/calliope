@@ -40,7 +40,7 @@ The default value should be set such that it has no impact on the optimisation p
 
 ## Global Expressions
 
-Global expressions are those combinations of decision variables and input parameters that you want access to in multiple constraints / objectives in the model.
+Global expressions are those combinations of decision variables and input parameters (_and_ other global expressions!) that you want access to in multiple constraints / objectives in the model.
 You will also receive the result of the global expression as a numeric value in your optimisation results, without having to do any additional post-processing.
 
 For instance, total costs are global expressions as the cost associated with a technology is not a _constraint_, but rather a linear combination of decision variables and parameters (e.g., `storage_cap * cost_storage_cap`).
@@ -64,6 +64,13 @@ The equation expressions do _not_ have comparison operators; those are reserved 
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
 1. It can take on a `default` value that will be used in math operations to avoid `NaN` values creeping in.
 The default value should be set such that it has no impact on the optimisation problem if it is included (most of the time, this means `NaN`).
+1. It can have an `order` defined to reprioritise its addition to the optimisation problem.
+   This is often necessary when adding new global expressions that you will use in other global expressions since they will need to be defined _before_ the other global expressions that refer to them.
+   For instance, if tracking a new cost as a global expression (say, `cost_operation_monthly`), you will want to add it to the overall `cost` global expression so it is tracked in the objective.
+   This means `cost_operation_monthly` has to be higher in the order of global expressions than `cost`.
+   But, because you defined it as user-defined math, it will be _appended_ to the set of global expressions by default.
+   To bring its order higher you can define `order` as a suitably small number.
+   Usually, a negative number is used (e.g. `-1`) to ensure you move it to before _all_ pre-defined global expressions.
 
 ## Constraints
 

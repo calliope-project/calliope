@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|new| Math global expressions have an `order` option to allow user-defined math to be reordered relative to pre-defined math (#773).
+
 |new| helper functions to enable summation over single-/multi-dimension groups and rolling window summations of math expression components (#735, #777).
 
 |fixed| Evaluating results of Gurobi global expressions containing pure decision variables / parameters (#780).
