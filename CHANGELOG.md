@@ -35,6 +35,8 @@ E.g., if there are results for 4 SPORES, the run can be continued for 6 more ite
 
 |fixed| SPORES tests to vary capacities of costed technologies rather than be able to simply vary the capacity of a free heat transmission technology between SPORES (#782).
 
+|fixed| Randomly failing tests that rely on random sampling from the core code, by setting a global test suite random seed (#789).
+
 ## 0.7.0.dev6 (2025-03-24)
 
 ### User-facing changes

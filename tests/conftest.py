@@ -15,6 +15,9 @@ from .common.util import build_test_model as build_model
 
 ALL_DIMS = {"nodes", "techs", "carriers", "costs", "timesteps"}
 
+# Set the global numpy random seed to avoid occasional (random!) test failures when random sampling is used in the core code.
+np.random.seed(0)
+
 
 @pytest.fixture(scope="session")
 def dummy_int() -> int:
