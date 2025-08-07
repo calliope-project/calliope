@@ -9,9 +9,7 @@
     mamba create -n calliope -c conda-forge conda-forge/label/calliope_dev::calliope
     ```
 
-    Some functionality is not yet available in 0.7, notably:
-
-    * Plotting (see the [example notebooks](examples/index.md) for sample code on making plots directly with Plotly)
+    Visualisation of results has moved to a separate tool, [Calligraph](https://calligraph.readthedocs.io/).
 
     To see a full list of changes, read our [page on migrating between v0.6 and v0.7](migrating.md).
 
@@ -25,9 +23,15 @@
 Calliope focuses on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data).
 Its primary focus is on planning energy systems at scales ranging from urban districts to entire continents.
 In an optional operational mode it can also test a pre-defined system under different operational conditions.
-Calliope's built-in tools allow interactive exploration of results.
+The [Calligraph companion tool](https://calligraph.readthedocs.io/) allows interactive exploration of results.
 
-<object type="text/html" data="img/plotly_frontpage_timeseries.html" width="100%" height="400px"></object>
+Visualising with Calligraph:
+
+<video src="https://spontaneous-choux-e05fa1.netlify.app/calligraph.mp4" width=500>
+
+Visualising with Plotly:
+
+<object type="text/html" data="img/plotly_frontpage_timeseries.html" width="500px" height="400px"></object>
 
 A model based on Calliope consists of a collection of text files (in YAML and CSV formats) that define the technologies, locations and resource potentials.
 Calliope takes these files, constructs an optimisation problem, solves it, and reports results in the form of [xarray Datasets](https://docs.xarray.dev/en/v2022.03.0/user-guide/data-structures.html#dataset) which in turn can easily be converted into [Pandas data structures](https://pandas.pydata.org/pandas-docs/version/1.5/user_guide/dsintro.html#dsintro) for easy analysis with Calliope's built-in tools or the standard Python data analysis stack.
