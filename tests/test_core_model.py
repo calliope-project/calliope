@@ -166,6 +166,8 @@ class TestSporesMode:
     SPORES_OVERRIDES = (
         "spores,var_costs,two_hours,simple_supply_spores_ready,investment_costs"
     )
+    # Set the global numpy random seed to avoid occasional (random!) test failures with the "random" scoring algorithm.
+    np.random.seed(0)
 
     @contextmanager
     def caplog_session(self, request):
@@ -198,6 +200,7 @@ class TestSporesMode:
         """Iterate 2 times in SPORES mode using different scoring algorithms."""
         model = build_model({}, self.SPORES_OVERRIDES)
         model.build(mode="spores")
+
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
                 model.solve(spores={"scoring_algorithm": request.param})

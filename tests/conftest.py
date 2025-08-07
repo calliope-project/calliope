@@ -22,12 +22,6 @@ def dummy_int() -> int:
     return 0xDEADBEEF
 
 
-@pytest.fixture(autouse=True)
-def global_random_seed():
-    """Set the global numpy random seed to avoid occasional (random!) test failures where we rely on np.random in the core code."""
-    np.random.seed(0)
-
-
 @pytest.fixture(
     scope="session",
     params=set(
