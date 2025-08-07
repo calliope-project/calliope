@@ -34,6 +34,9 @@ DTYPE_OPTIONS = {
     "int": pd.Int32Dtype,
 }
 
+DATETIME_DTYPE = "M"
+"""Numpy type kind for datetime arrays"""
+
 
 class Param(TypedDict):
     """Uniform dictionairy for parameters."""
@@ -93,28 +96,25 @@ class ModelDataFactory:
             attributes (dict): Attributes to attach to the model Dataset.
         """
         self.config: Init = init_config
+        self.math = model_math.build_applied_math(self.math_priority, math.model_dump())
+        self.definition_path: str | Path | None = definition_path
+        self.tech_data_from_tables = AttrDict()
+
+        tables = []
+
         if isinstance(model_definition, dict):
             self.model_definition: ModelDefinition = model_definition.copy()
             self.dataset = xr.Dataset()
+            for table, table_dict in model_definition.get("data_tables", {}).items():
+                tables.append(
+                    data_tables.DataTable(
+                        table, table_dict, data_table_dfs, self.definition_path
+                    )
+                )
+            self.init_from_data_tables(tables)
         elif isinstance(model_definition, xr.Dataset):
             self.model_definition: ModelDefinition = AttrDict()
             self.dataset = model_definition
-        self.tech_data_from_tables = AttrDict()
-        self.definition_path: str | Path | None = definition_path
-
-        self.math = model_math.build_applied_math(self.math_priority, math.model_dump())
-
-        tables = []
-        for table_name, table_dict in self.model_definition.get_key(
-            "data_tables", {}
-        ).items():
-            tables.append(
-                data_tables.DataTable(
-                    table_name, table_dict, data_table_dfs, self.definition_path
-                )
-            )
-        if tables:
-            self.init_from_data_tables(tables)
 
     def build(self):
         """Build dataset from model definition."""
@@ -268,7 +268,9 @@ class ModelDataFactory:
 
     def update_time_dimension_and_params(self):
         """If resampling/clustering is requested in the initialisation config, apply it here."""
-        if not any(dim.dtype.kind == "M" for dim in self.dataset.coords.values()):
+        if not any(
+            dim.dtype.kind == DATETIME_DTYPE for dim in self.dataset.coords.values()
+        ):
             raise exceptions.ModelError(
                 "Must define at least one timeseries parameter in a Calliope model."
             )
@@ -276,9 +278,6 @@ class ModelDataFactory:
         self._resample_dims()
 
         self.dataset = time.add_inferred_time_params(self.dataset)
-
-        # By default, the model allows operate mode
-        self.dataset.attrs["allow_operate_mode"] = 1
 
         if self.config.time_cluster is not None:
             self.dataset = time.cluster(
@@ -743,9 +742,9 @@ class ModelDataFactory:
         ds = self.dataset
         for var_name, var_data in ds.data_vars.items():
             dtype_str = (
-                self.math.parameters[var_name].type
+                self.math.parameters[var_name].dtype
                 if var_name in self.math.parameters.root
-                else self.math.lookups[var_name].type
+                else self.math.lookups[var_name].dtype
                 if var_name in self.math.lookups.root
                 else None
             )
@@ -779,8 +778,8 @@ class ModelDataFactory:
         """
         for dim_name, dim_vals in ds.coords.items():
             dtype = (
-                self.math.dims[dim_name].type
-                if dim_name in self.math.dims.root
+                self.math.dimensions[dim_name].dtype
+                if dim_name in self.math.dimensions.root
                 else None
             )
             if dtype is None:
@@ -810,10 +809,10 @@ class ModelDataFactory:
         for dim_name, subset in self.config.subset.root.items():
             if subset is None or dim_name not in self.dataset.coords:
                 continue
-            is_ordered = self.math.dims[dim_name].ordered
+            is_ordered = self.math.dimensions[dim_name].ordered
             dim_vals = self.dataset.coords[dim_name]
 
-            if dim_vals.dtype.kind == "M":
+            if dim_vals.dtype.kind == DATETIME_DTYPE:
                 time._check_time_subset(dim_vals.to_index(), subset)
 
             if is_ordered:
@@ -828,7 +827,7 @@ class ModelDataFactory:
         for dim_name, resampler in self.config.resample.root.items():
             if resampler is None or dim_name not in ds.coords:
                 continue
-            if ds.coords[dim_name].dtype.kind != "M":
+            if ds.coords[dim_name].dtype.kind != DATETIME_DTYPE:
                 raise exceptions.ModelError(
                     f"Cannot resample a non-datetime dimension, received `{dim_name}`"
                 )

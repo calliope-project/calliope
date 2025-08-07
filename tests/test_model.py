@@ -254,10 +254,10 @@ class TestOperateMode:
         )
 
     def test_build_operate_not_allowed_build(self):
-        """Cannot build in operate mode if the `allow_operate_mode` attribute is False"""
+        """Cannot build in operate mode if time clustering is in use."""
 
         m = build_model({}, "simple_supply,two_hours,investment_costs")
-        m.runtime = m.runtime.update({"allow_operate_mode": False})
+        m.config = m.config.update({"init.time_cluster": "foo.yaml"})
         with pytest.raises(
             calliope.exceptions.ModelError, match="Unable to run this model in op"
         ):

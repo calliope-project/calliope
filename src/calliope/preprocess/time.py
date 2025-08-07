@@ -178,8 +178,6 @@ def cluster(data: xr.Dataset, clustering_file: str | Path, time_format: str):
     )
     data_new.coords["datesteps"] = representative_days.index.rename("datesteps")
     data_new.coords["clusters"] = np.unique(data_new["timestep_cluster"].values)
-    # Clustering no longer permits operational mode
-    data_new.attrs["allow_operate_mode"] = 0
     _lookup_clusters(data_new, grouper)
 
     return data_new

@@ -279,11 +279,6 @@ class Model:
 
         mode = self.config.init.mode
         if mode == "operate":
-            if not self.runtime.allow_operate_mode:
-                raise exceptions.ModelError(
-                    "Unable to run this model in operate (i.e. dispatch) mode, probably because "
-                    "there exist non-uniform timesteps (e.g. from time clustering)"
-                )
             backend_input = self._prepare_operate_mode_inputs(self.config.build.operate)
         else:
             backend_input = self.inputs
@@ -468,6 +463,10 @@ class Model:
         Returns:
             xr.Dataset: Slice of input data.
         """
+        if self.config.init.time_cluster is not None:
+            raise exceptions.ModelError(
+                "Unable to run this model in operate (i.e. dispatch) mode because time clustering is in use"
+            )
         self.inputs.coords["windowsteps"] = pd.date_range(
             self.inputs.timesteps[0].item(),
             self.inputs.timesteps[-1].item(),

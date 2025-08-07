@@ -40,10 +40,10 @@ class MathComponent(CalliopeBaseModel):
     """If False, this component will be ignored during the build phase."""
 
 
-class Dim(MathComponent):
+class Dimension(MathComponent):
     """Schema for named dimension."""
 
-    type: Literal["string", "datetime", "integer", "float"]
+    dtype: Literal["string", "datetime", "integer", "float"]
     ordered: bool = False
 
 
@@ -51,7 +51,7 @@ class Parameter(MathComponent):
     """Schema for named parameter."""
 
     default: float | int = float("nan")
-    type: Literal["integer", "float"]
+    dtype: Literal["integer", "float"]
     resample_method: Literal["mean", "sum", "first"] = "first"
     unit: str = ""
 
@@ -60,7 +60,7 @@ class Lookup(MathComponent):
     """Schema for named lookup arrays."""
 
     default: str | float | int | bool | None = None
-    type: Literal["integer", "float", "string", "bool"]
+    dtype: Literal["integer", "float", "string", "bool", "datetime"]
     resample_method: Literal["mean", "sum", "first"] = "first"
     unit: str = ""
     one_of: list | None = None
@@ -190,10 +190,10 @@ class Objective(MathComponent):
     optimisation."""
 
 
-class Dims(CalliopeDictModel):
+class Dimensions(CalliopeDictModel):
     """Calliope model dimensions dictionary."""
 
-    root: dict[AttrStr, Dim] = Field(default_factory=dict)
+    root: dict[AttrStr, Dimension] = Field(default_factory=dict)
 
 
 class Parameters(CalliopeDictModel):
@@ -248,7 +248,7 @@ class MathSchema(CalliopeBaseModel):
 
     model_config = {"title": "Model math schema"}
 
-    dims: Dims = Dims()
+    dimensions: Dimensions = Dimensions()
     """All dimensions to include in the optimisation problem."""
     parameters: Parameters = Parameters()
     """All parameters to include in the optimisation problem."""
