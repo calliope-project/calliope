@@ -380,12 +380,7 @@ class TestSporesMode:
     def test_spores_caps(self, spores_model_and_log_algorithms):
         """There should be some changes in capacities between SPORES."""
         spores_model, _ = spores_model_and_log_algorithms
-        n_spores = spores_model.config.solve.spores.number
-        # as the spores dim is strings, it isn't ordered as one would expect
-        order_dim = ["baseline"] + [f"{i}" for i in range(1, n_spores + 1)]
-        cap_diffs = spores_model.results.flow_cap.sel(spores=order_dim).diff(
-            dim="spores"
-        )
+        cap_diffs = spores_model.results.flow_cap.diff(dim="spores")
         assert (cap_diffs != 0).any()
 
     def test_spores_algo_log(self, spores_model_and_log_algorithms):
