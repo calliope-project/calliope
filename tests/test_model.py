@@ -309,6 +309,7 @@ class TestSporesMode:
         """Iterate 2 times in SPORES mode using different scoring algorithms."""
         model = build_model({}, self.SPORES_OVERRIDES)
         model.build(mode="spores")
+
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
                 model.solve(spores={"scoring_algorithm": request.param})

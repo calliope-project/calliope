@@ -155,10 +155,8 @@ class TestChecks:
         else:
             assert ~check_error_or_warning(warning, _warnings)
 
-    @pytest.mark.parametrize("source_unit", [("absolute"), ("per_cap"), ("per_area")])
-    def test_operate_source_unit_without_area_use(self, source_unit):
-        """Different source unit affects the capacities which are set to infinite"""
-        m = build_model(
+    def _model_operate_source_unit_without_area(source_unit: str):
+        return build_model(
             {
                 "techs.test_supply_elec": {
                     "constraints": {
@@ -171,46 +169,61 @@ class TestChecks:
             "simple_supply_and_supply_plus,operate,investment_costs",
         )
 
+    def test_operate_source_unit_without_area_use_absolute(self):
+        m = self._model_operate_source_unit_without_area("absolute")
+
         with pytest.warns(exceptions.ModelWarning) as warning:
-            # per_area without a source_cap will cause an error, which we have to catch here
-            if source_unit == "per_area":
-                with pytest.raises(exceptions.ModelError) as error:
-                    m.build()
-            else:
+            m.build()
+
+        _warnings = [
+            "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)"
+        ]
+        not_warnings = [
+            "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+            "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+            "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+        ]
+
+        assert check_error_or_warning(warning, _warnings)
+        assert not check_error_or_warning(warning, not_warnings)
+
+    def test_operate_source_unit_without_area_use_per_cap(self):
+        m = self._model_operate_source_unit_without_area("per_cap")
+
+        with pytest.warns(exceptions.ModelWarning) as warning:
+            m.build()
+
+        _warnings = []
+        not_warnings = [
+            "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_cap`",
+            "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+            "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+            "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+        ]
+
+        assert check_error_or_warning(warning, _warnings)
+        assert not check_error_or_warning(warning, not_warnings)
+
+    def test_operate_source_unit_without_area_use_per_area(self):
+        m = self._model_operate_source_unit_without_area("per_area")
+
+        with pytest.raises(exceptions.ModelError) as error:
+            with pytest.warns(exceptions.ModelWarning) as warning:
                 m.build()
 
-        if source_unit == "absolute":
-            _warnings = [
-                "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)"
-            ]
-            not_warnings = [
-                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-                "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-                "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-            ]
-        elif source_unit == "per_area":
-            _warnings = [
-                "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_area`"
-            ]
-            not_warnings = [
-                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_cap`",
-                "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-                "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-            ]
-            # per_area without a source_cap will cause an error
-            check_error_or_warning(
-                error,
-                "Operate mode: User must define a finite area_use "
-                "(via area_use_equals or area_use_max) for 0::test_supply_elec",
-            )
-        elif source_unit == "per_cap":
-            _warnings = []
-            not_warnings = [
-                "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_cap`",
-                "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-                "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-                "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
-            ]
+        _warnings = [
+            "Flow capacity constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_area`"
+        ]
+        not_warnings = [
+            "Area use constraint removed from 0::test_supply_elec as force_source is applied and source is linked to flow using `per_cap`",
+            "Flow capacity constraint removed from 0::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+            "Flow capacity constraint removed from 1::test_demand_elec as force_source is applied and source is not linked to flow (source_unit = `absolute`)",
+        ]
+        check_error_or_warning(
+            error,
+            "Operate mode: User must define a finite area_use "
+            "(via area_use_equals or area_use_max) for 0::test_supply_elec",
+        )
         assert check_error_or_warning(warning, _warnings)
         assert not check_error_or_warning(warning, not_warnings)
 
