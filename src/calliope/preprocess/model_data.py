@@ -163,7 +163,7 @@ class ModelDataFactory:
             )
             self.model_definition["nodes"] = node_dict
             for param, param_config in self.math.lookups.root.items():
-                lookup_dim = param_config.dim_to_bool
+                lookup_dim = param_config.pivot_values_to_dim
                 if lookup_dim is not None:
                     lookup_dict = data_table.lookup_dict_from_param(param, lookup_dim)
                     self.tech_data_from_tables.union(lookup_dict)
@@ -523,16 +523,16 @@ class ModelDataFactory:
                 )
         elif (
             param_name in self.math.lookups.root
-            and self.math.lookups[param_name].dim_to_bool is not None
+            and self.math.lookups[param_name].pivot_values_to_dim is not None
             and param_data is not None
         ):
             data = True
             index_items = [[i] for i in listify(param_data)]
-            dims = [self.math.lookups[param_name].dim_to_bool]
+            dims = [self.math.lookups[param_name].pivot_values_to_dim]
         else:
             if isinstance(param_data, list):
                 raise ValueError(
-                    f"{param_name} | Cannot pass parameter data as a list unless the parameter is one of the pre-defined lookup arrays."
+                    f"{param_name} | Cannot pass un-indexed parameter data. Received: {param_data}."
                 )
             data = param_data
             index_items = [[]]

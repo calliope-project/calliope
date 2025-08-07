@@ -3,22 +3,27 @@ dims:
     title: "Energy / commodity carriers"
     dtype: string
     ordered: false
+    iterator: carrier
   costs:
     title: "Cost classes"
     dtype: string
     ordered: false
+    iterator: cost
   nodes:
     title: "Geographic spatial nodes"
     dtype: string
     ordered: false
+    iterator: node
   techs:
     title: "Technologies"
     dtype: string
     ordered: false
+    iterator: tech
   timesteps:
     title: "Time steps"
     dtype: datetime
     ordered: true
+    iterator: timestep
 
 parameters:
   area_use_max:
@@ -544,21 +549,21 @@ lookups:
       Carrier(s) consumed by this technology.
       Only `transmission`, `conversion`, `storage`, and `demand` technologies can define this parameter
     dtype: bool
-    dim_to_bool: carriers
+    pivot_values_to_dim: carriers
 
   carrier_out:
     description: >-
       Carrier(s) produced by this technology.
       Only `transmission`, `conversion`, `storage`, and `supply` technologies can define this parameter
     dtype: bool
-    dim_to_bool: carriers
+    pivot_values_to_dim: carriers
 
   carrier_export:
     description: >-
       Carrier(s) produced by this technology that can be exported out of the system boundaries without having to go to a pre-defined `sink` (i.e., via a `demand` technology).
       Must be a subset of `carrier_out`.
     dtype: bool
-    dim_to_bool: carriers
+    pivot_values_to_dim: carriers
 
   cap_method:
     dtype: string

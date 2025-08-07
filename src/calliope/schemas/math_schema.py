@@ -44,27 +44,42 @@ class Dimension(MathComponent):
     """Schema for named dimension."""
 
     dtype: Literal["string", "datetime", "integer", "float"]
+    """The dimension items data type"""
     ordered: bool = False
+    """If True, the order of the dimension items is meaningful (e.g. chronological time)."""
+    iterator: str
+    """The name of the iterator to use in the LaTeX math formulation for this dimension."""
 
 
 class Parameter(MathComponent):
     """Schema for named parameter."""
 
     default: float | int = float("nan")
+    """The default value for the parameter, if not set in the data."""
     dtype: Literal["integer", "float"]
+    """The parameter data type."""
     resample_method: Literal["mean", "sum", "first"] = "first"
+    """If resampling is applied over any of the parameter's dimensions, the method to use to aggregate the data."""
     unit: str = ""
+    """The unit of the parameter, e.g. 'kW', 'm', 'kg', 'energy', 'power', ..."""
 
 
 class Lookup(MathComponent):
     """Schema for named lookup arrays."""
 
     default: str | float | int | bool | None = None
+    """The default value for the lookup, if not set in the data."""
     dtype: Literal["integer", "float", "string", "bool", "datetime"]
+    """The lookup data type."""
     resample_method: Literal["mean", "sum", "first"] = "first"
-    unit: str = ""
+    """If resampling is applied over any of the lookup's dimensions, the method to use to aggregate the data."""
     one_of: list | None = None
-    dim_to_bool: str | None = None
+    """If given, the lookup values must be one of these items."""
+    pivot_values_to_dim: str | None = None
+    """If given, the lookup will be pivoted such that its values become the index of a new dimension and its new values are boolean, True where the index values match the old values.
+    For instance, if the lookup starts out indexed over `techs` with values of `[electricity, gas]` and `pivot_values_to_dim: carriers`,
+    then the lookup will be converted to a boolean array with the dimensions ['techs', 'carriers'].
+    """
 
 
 class MathIndexedComponent(MathComponent):
