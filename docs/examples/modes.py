@@ -202,7 +202,7 @@ fig_flows_operate.update_layout(title="Operate mode flows")
 # %% [markdown]
 # ## 'plan' vs 'spores'
 # Here, we compare installed capacities between the baseline run (== `plan` mode) and the SPORES.
-# Note how the baseline SPORE is the same as `plan` mode and then results deviate considerably.
+# Note how the `0` SPORE is the same as `plan` mode and then results deviate considerably.
 
 # %%
 fig_flows_plan = plot_capacity(model_plan.results)
