@@ -2,6 +2,10 @@
 
 ### User-facing changes
 
+|fixed| Evaluating results of Gurobi global expressions containing pure decision variables / parameters (#780).
+
+|changed| SOS2 piecewise cost example in docs to explicitly include the new decision variable in the investment cost `where` string (see #525).
+
 |new| helper functions to enable periodic and rolling window summations of decision variables (#777).
 
 |fixed| Timeseries capacity factor accounts for time resolution (#762).
@@ -29,6 +33,7 @@ E.g., if there are results for 4 SPORES, the run can be continued for 6 more ite
 
 ### Internal changes
 
+|fixed| SPORES tests to vary capacities of costed technologies rather than be able to simply vary the capacity of a free heat transmission technology between SPORES (#782).
 
 ## 0.7.0.dev6 (2025-03-24)
 
