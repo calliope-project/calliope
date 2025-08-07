@@ -154,7 +154,7 @@ class SolveSpores(CalliopeBaseModel):
     If a path, as well as consolidating the SPORES results in `calliope.Model.results`, individual SPORES will be saved to file immediately after the iteration has completed.
     """
 
-    continue_from_latest_results: bool = Field(default=False)
+    use_latest_results: bool = Field(default=False)
     """
     If the model already contains `plan` mode results, use them as the baseline results and start with SPORES iterations immediately.
     If the model already contains `spores` mode results, use the most recent results and continue with the remaining SPORES iterations immediately.

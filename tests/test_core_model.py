@@ -215,7 +215,7 @@ class TestSporesMode:
         model.build(mode="spores", force=True)
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
-                model.solve(force=True, spores={"continue_from_latest_results": True})
+                model.solve(force=True, spores={"use_latest_results": True})
             log = caplog.text
 
         return model, log
@@ -230,8 +230,7 @@ class TestSporesMode:
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
                 model.solve(
-                    force=True,
-                    spores={"continue_from_latest_results": True, "number": 4},
+                    force=True, spores={"use_latest_results": True, "number": 4}
                 )
             log = caplog.text
 
@@ -324,7 +323,7 @@ class TestSporesMode:
             calliope.exceptions.ModelError,
             match="Cannot run SPORES without baseline results.",
         ):
-            model.solve(spores={"continue_from_latest_results": True})
+            model.solve(spores={"use_latest_results": True})
 
     @pytest.mark.parametrize(
         "fixture",
@@ -546,7 +545,7 @@ class TestSporesMode:
         with pytest.raises(
             calliope.exceptions.ModelError, match="Cannot restart SPORES from SPORE 2"
         ):
-            model.solve(force=True, spores={"continue_from_latest_results": True})
+            model.solve(force=True, spores={"use_latest_results": True})
 
     def test_spores_relative_deployment_needs_max_param(self):
         """Can only run the `relative_deployment` algorithm if all techs have flow_cap_max."""

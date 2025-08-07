@@ -596,7 +596,7 @@ class Model:
         spores_config: config_schema.SolveSpores = solver_config.spores
 
         latest_spore: int = 0
-        if not spores_config.continue_from_latest_results:
+        if not spores_config.use_latest_results:
             LOGGER.info("Optimisation model | Running baseline model.")
             baseline_results = self.backend._solve(solver_config, warmstart=False)
             self._spores_save_model(baseline_results, spores_config, 0)
@@ -658,7 +658,7 @@ class Model:
             [latest_spore, *spore_range[: len(results_list) - 1]], name="spores"
         )
         results = xr.concat(results_list, dim=spores_dim, combine_attrs="drop")
-        if latest_spore > 0 and spores_config.continue_from_latest_results:
+        if latest_spore > 0 and spores_config.use_latest_results:
             results = xr.concat(
                 [self.results, results.drop_sel(spores=latest_spore)],
                 dim="spores",

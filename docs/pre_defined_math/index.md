@@ -190,20 +190,20 @@ Instead, you can _skip the baseline run_.
     model = calliope.read_netcdf(...)
 
     model.build(mode="spores")
-    model.solve(spores={"continue_from_latest_results": True, "number": 10})
+    model.solve(spores={"use_latest_results": True, "number": 10})
     ```
 
 ### Continuing from an existing set of SPORES
 
-You may also have a set of SPORES results that you want to continue.
-This may be because your run was killed by the machine due to insufficient resources or because you want to continue iterating on your results.
-It may also be because you want to update the SPORE objective from this point onwards.
-
+You may already have a set of SPORES results and want to create more.
 You can do so by _continuing from the most recent results_.
+This is useful to further explore the option space, restart a run that was stopped prematurely, or to update the SPORE objective from this point onwards.
 
 !!! example
 
-    ```py
+    1. Extending from 5 to 10 SPORES.
+
+    ```python
     import calliope
 
     # This model already has results from running in `plan` mode.
@@ -212,11 +212,54 @@ You can do so by _continuing from the most recent results_.
     model.build(mode="spores")
     model.solve(spores={"number": 5}) # `model.results` will now have 5 SPORES run results
 
-    # If you want to update parameters that link to the SPORES objective, you can do so here
-    # model.backend.update_parameter(...)
+    # `model.results` will now have an additional 5 SPORES run results (6-10)
+    model.solve(spores={"use_latest_results": True, "number": 10})
+    ```
+
+    2. Extending from 5 to 10 SPORES and updating the cost slack and SPORES algorithm.
+
+    ```python
+    import calliope
+    import xarray as xr
+
+    # This model already has results from running in `plan` mode.
+    model = calliope.Model(...)
+
+    model.build(mode="spores")
+    model.solve(spores={"number": 5}) # `model.results` will now have 5 SPORES run results
+
+    model.backend.update_parameter("spores_slack", xr.DataArray(0.3))
 
     # `model.results` will now have an additional 5 SPORES run results (6-10)
-    model.solve(spores={"continue_from_latest_results": True, "number": 10})
+    model.solve(spores={"use_latest_results": True, "number": 10, "scoring_algorithm": "random"})
+    ```
 
+    3. Restarting after premature failure, assuming [results were being saved per SPORE](#saving-results-per-spore).
 
+    ```python
+    import calliope
+    import xarray as xr
+
+    # Load the model from scratch to get access to input data
+    m_init = calliope.Model(...)
+
+    # We need the baseline results to have the cost optimal solution available to apply a slack to.
+    m_baseline = calliope.read_netcdf("/path/to/spore/runs/spore_0.nc")
+    # We then just take the most recent SPORE run to continue from.
+    m_most_recent = calliope.read_netcdf("/path/to/spore/runs/spore_3.nc")
+
+    # We then merge everything into the initialised (unsolved) model
+    m_init._model_data = xr.merge(
+        [
+            m_init._model_data,
+            m_baseline._model_data,
+            m_most_recent._model_data
+        ],
+        combine_attrs="override"
+    )
+    m_init._model_data.attrs = m_most_recent._model_data.attrs
+
+    # Then we run with updated SPORE run
+    m_init.build()
+    m_init.solve(spores={"use_latest_results": True}, force=True)
     ```

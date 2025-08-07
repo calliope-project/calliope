@@ -26,10 +26,10 @@ E.g., `model.results.min_cost_optimisation` will give the objective function val
 
 |changed| SPORES mode `baseline` run renamed to `0` and `spores` array dimension set to an integer dtype
 
-|changed| SPORES configuration option `skip_baseline_run` renamed to `continue_from_latest_results`
+|changed| SPORES configuration option `skip_baseline_run` renamed to `use_latest_results`
 
-|new| `config.solve.spores.continue_from_latest_results` allows for running from existing baseline (e.g. `plan` mode) results _and_ for continuing a set of SPORES runs.
-E.g., if there are results for 4 SPORES, the run can be continued for 6 more iterations by setting `spores.continue_from_latest_results` and updating `spores.number` to `10` (4 + 6).
+|new| `config.solve.spores.use_latest_results` allows for running from existing baseline (e.g. `plan` mode) results _and_ for continuing a set of SPORES runs.
+E.g., if there are results for 4 SPORES, the run can be continued for 6 more iterations by setting `spores.use_latest_results` and updating `spores.number` to `10` (4 + 6).
 
 ### Internal changes
 

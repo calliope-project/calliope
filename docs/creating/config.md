@@ -85,7 +85,7 @@ A model can run in `base`, `operate`, or `spores` mode.
 * In `spores` mode, the model is first run in `base` mode, then run `N` number of times to find alternative system configurations with similar monetary cost, but maximally different choice of technology capacity and location (node).
 
 In most cases, you will want to use the `base` mode.
-In fact, you can use a set of results from models run in `base` mode to initialise both the `operate` (via`config.build.operate.use_cap_results`) and `spores` (via `config.solve.spores.continue_from_latest_results`) modes.
+In fact, you can use a set of results from models run in `base` mode to initialise both the `operate` (via`config.build.operate.use_cap_results`) and `spores` (via `config.solve.spores.use_latest_results`) modes.
 
 !!! warning
 
