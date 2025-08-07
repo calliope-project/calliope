@@ -9,9 +9,7 @@
     mamba create -n calliope -c conda-forge conda-forge/label/calliope_dev::calliope
     ```
 
-    Some functionality is not yet available in 0.7, notably:
-
-    * Plotting (see the [example notebooks](examples/index.md) for sample code on making plots directly with Plotly)
+    Visualisation of results has moved to a separate tool, [Calligraph](https://calligraph.readthedocs.io/).
 
     To see a full list of changes, read our [page on migrating between v0.6 and v0.7](migrating.md).
 
@@ -25,7 +23,15 @@
 Calliope focuses on flexibility, high spatial and temporal resolution, the ability to execute many runs based on the same base model, and a clear separation of framework (code) and model (data).
 Its primary focus is on planning energy systems at scales ranging from urban districts to entire continents.
 In an optional operational mode it can also test a pre-defined system under different operational conditions.
-Calliope's built-in tools allow interactive exploration of results.
+The [Calligraph companion tool](https://calligraph.readthedocs.io/) allows interactive exploration of results.
+
+Visualising with Calligraph:
+
+<video controls>
+    <source src="https://spontaneous-choux-e05fa1.netlify.app/calligraph.mp4" type="video/mp4">
+</video>
+
+Visualising with Plotly:
 
 <object type="text/html" data="img/plotly_frontpage_timeseries.html" width="100%" height="400px"></object>
 

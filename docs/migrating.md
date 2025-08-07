@@ -707,13 +707,11 @@ It is up to you to ensure the math formulation is set up to handle this change, 
 
 ### Plotting
 
-It is now no longer possible to plot natively with Calliope.
+Visualisation has moved to a separate tool, [Calligraph](https://calligraph.readthedocs.io/).
 We made this decision due to the wide variety of visualisations that we saw being created outside our plotting module.
 It has proven impossible to keep our plotting methods agile given the almost infinite tweaks that libraries like [matplotlib](https://matplotlib.org/) and [plotly](https://plotly.com/) allow.
 
 If you want to achieve some of the same plots that were possible with the Calliope v0.6 plotting module, see our [example notebooks](examples/index.md).
-
-At a later stage, we are planning for a separate visualisation module that will provide similar functionality to the formerly-included plotting.
 
 ### Clustering
 
