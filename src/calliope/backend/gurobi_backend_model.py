@@ -245,7 +245,7 @@ class GurobiBackendModel(backend_model.BackendModel):
                     return self._apply_func(
                         self._from_gurobi_expr, expression.notnull(), 1, expression
                     )
-                except AttributeError:
+                except (AttributeError, TypeError):
                     return expression.astype(str).where(expression.notnull())
         else:
             return expression
@@ -540,22 +540,27 @@ class GurobiBackendModel(backend_model.BackendModel):
         return val.x  # type: ignore
 
     @staticmethod
-    def _from_gurobi_expr(val: gurobipy.LinExpr, *, eval_body: bool = False) -> Any:
-        """Evaluate Gurobi expression object.
+    def _from_gurobi_expr(
+        val: gurobipy.LinExpr | gurobipy.Var | float,
+    ) -> int | float | None:
+        """Evaluate Gurobi object in an expression array.
 
         Args:
-            val (gurobipy.LinExpr): expression object to be evaluated
-            eval_body (bool, optional):
-                If True, attempt to evaluate the expression object, which will produce a numeric value.
-                This will only succeed if the backend model has been successfully optimised,
-                otherwise a string representation of the linear expression will be returned
-                (same as eval_body=False). Defaults to False.
+            val (gurobipy.LinExpr | gurobipy.Var | float): object to be evaluated; could be an expression, decision variable, or simple number stored in the global expression array.
 
         Returns:
-            Any: If the input is nullable, return np.nan, otherwise a numeric value
-            (eval_body=True and problem is optimised) or a string.
+            (int | float | None): the evaluated result.
         """
-        return val.getValue()
+        if isinstance(val, gurobipy.LinExpr):
+            return val.getValue()
+        elif isinstance(val, gurobipy.Var):
+            return val.x  # type: ignore
+        elif isinstance(val, int | float):
+            return val
+        else:
+            raise TypeError(
+                f"Cannot convert Gurobi object of type {type(val)} to a numeric value."
+            )
 
 
 class GurobiShadowPrices(backend_model.ShadowPrices):

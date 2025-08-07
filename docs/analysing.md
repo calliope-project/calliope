@@ -11,7 +11,8 @@ Whatever software you prefer to use for data processing, either the NetCDF or CS
 A model which solved successfully has two primary [xarray.Dataset][]s with data of interest:
 
 * `model.inputs`: contains all input data, such as renewable resource capacity factors
-* `model.results`: contains all results data, such as dispatch decisions and installed capacities
+* `model.results`: contains all results data, such as dispatch decisions and installed capacities.
+  It also includes [results calculated in postprocessing](./reference/api/postprocess.md), such as levelised cost of electricity (LCOE) and capacity factor.
 
 Both of these are [xarray.Dataset][]s and can be further processed with Python.
 

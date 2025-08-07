@@ -2,6 +2,7 @@ from itertools import chain, combinations
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 import xarray as xr
 
@@ -118,6 +119,16 @@ def simple_supply_and_supply_plus():
 
 
 @pytest.fixture(scope="session")
+def simple_supply_spores_ready():
+    m = build_model(
+        {}, "var_costs,simple_supply_spores_ready,two_hours,investment_costs"
+    )
+    m.build()
+    m.solve()
+    return m
+
+
+@pytest.fixture(scope="session")
 def simple_storage():
     m = build_model({}, "simple_storage,two_hours,investment_costs")
     m.build()
@@ -182,7 +193,16 @@ def dummy_model_math():
 def dummy_model_data():
     coords = {
         dim: (
-            ["foo", "bar"]
+            pd.to_datetime(
+                [
+                    "2000-01-01 00:00",
+                    "2000-01-01 01:00",
+                    "2000-01-01 02:00",
+                    "2000-01-01 03:00",
+                ]
+            )
+            if dim == "timesteps"
+            else ["foo", "bar"]
             if dim != "techs"
             else ["foobar", "foobaz", "barfoo", "bazfoo"]
         )
@@ -277,6 +297,8 @@ def dummy_model_data():
                     ["bazfoo", np.nan, np.nan, np.nan],
                 ],
             ),
+            "timeseries_data": (["timesteps"], [1, 1, 1, 1]),
+            "timeseries_nodes_data": (["nodes", "timesteps"], np.ones((2, 4))),
         },
         attrs={"scenarios": ["foo"]},
     )
