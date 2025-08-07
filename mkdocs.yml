@@ -34,6 +34,9 @@ extra_css:
   - css/extra.css
 plugins:
   - search
+  - exclude-search:
+      exclude:
+        - examples/*
   - autorefs
   - macros:
       module_name: docs/hooks/macros
