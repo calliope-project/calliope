@@ -34,13 +34,12 @@ from calliope.exceptions import warn as model_warn
 from calliope.io import load_config, to_yaml
 from calliope.preprocess.model_math import ORDERED_COMPONENTS_T
 from calliope.schemas import config_schema
-from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
 
 T = TypeVar("T")
-ALL_COMPONENTS_T = Literal["parameters", ORDERED_COMPONENTS_T]
+ALL_COMPONENTS_T = Literal["parameters", "lookups", ORDERED_COMPONENTS_T]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -61,19 +60,11 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         "original_dtype",
     ]
 
-    _PARAM_TITLES = extract_from_schema(MODEL_SCHEMA, "title")
-    _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
-    _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
-    _PARAM_TYPE = extract_from_schema(MODEL_SCHEMA, "x-type")
     objective: str
     """Optimisation problem objective name."""
 
     def __init__(
-        self,
-        inputs: xr.Dataset,
-        math: AttrDict,
-        build_config: config_schema.Build,
-        defaults: dict,
+        self, inputs: xr.Dataset, math: AttrDict, build_config: config_schema.Build
     ):
         """Abstract base class to build a representation of the optimisation problem.
 
@@ -81,20 +72,37 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             inputs (xr.Dataset): Calliope model data.
             math (AttrDict): Calliope math.
             build_config (config_schema.Build): Build configuration options.
-            defaults (dict): Parameter defaults.
         """
         self._dataset = xr.Dataset(attrs={"applied_math": AttrDict()})
-        self.inputs = inputs.copy()
         self.config = build_config
         self.math: AttrDict = deepcopy(math)
-        self.defaults: dict = deepcopy(defaults)
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
+        self.inputs = self._add_inputs(inputs)
         self._check_inputs()
+
+    def add_lookup(self, lookup_name: str, lookup_values: xr.DataArray) -> None:
+        """Add input lookup array to backend model in-place.
+
+        This directly passes a copy of the input lookup array to the backend.
+
+        Args:
+            lookup_name (str): Name of lookup.
+            lookup_values (xr.DataArray): Array of lookup values.
+        """
+        self._raise_error_on_preexistence(lookup_name, "lookups")
+
+        if lookup_values.isnull().all():
+            self.log(
+                "lookups", lookup_name, "Component not added; no data found in array."
+            )
+            lookup_values = lookup_values.astype(float)
+
+        self._add_to_dataset(lookup_name, lookup_values, "lookups", lookup_values.attrs)
 
     @abstractmethod
     def add_parameter(
-        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
+        self, parameter_name: str, parameter_values: xr.DataArray
     ) -> None:
         """Add input parameter to backend model in-place.
 
@@ -203,6 +211,32 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             f"Optimisation model | {component_type}:{component_name} | {message}"
         )
 
+    def _add_inputs(self, inputs: xr.Dataset):
+        """Add default inputs to the model inputs dataset.
+
+        Args:
+            inputs (xr.Dataset): Model input data.
+
+        Returns:
+            xr.Dataset: Model input data with defaults added.
+        """
+        new_inputs = xr.Dataset()
+        for obj_type in ["parameters", "lookups", "dims"]:
+            for name, config in self.math[obj_type].items():
+                attrs: dict = {"obj_type": obj_type}
+                if name not in inputs:
+                    attrs |= {"from_default": True, **config}
+                    data = xr.DataArray(config.get("default", np.nan))
+                else:
+                    data = inputs[name]
+
+                if obj_type == "dims":
+                    new_inputs.coords[name] = data.assign_attrs(**attrs)
+                else:
+                    new_inputs[name] = data.assign_attrs(**attrs)
+
+        return new_inputs
+
     def _check_inputs(self):
         data_checks = load_config("model_data_checks.yaml")
         check_results = {"fail": [], "warn": []}
@@ -213,7 +247,6 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             "input_data": self.inputs,
             "build_config": self.config,
             "helper_functions": helper_functions._registry["where"],
-            "defaults": self.defaults,
             "apply_where": True,
             "references": set(),
         }
@@ -231,36 +264,11 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             check_results["warn"], check_results["fail"]
         )
 
-    def _validate_math_string_parsing(self) -> None:
-        """Validate that `expression` and `where` strings of the math dictionary can be successfully parsed.
-
-        NOTE: strings are not checked for evaluation validity.
-        Evaluation issues will be raised only on adding a component to the backend.
-        """
-        validation_errors: dict = dict()
-        for component_group in typing.get_args(ORDERED_COMPONENTS_T):
-            for name, dict_ in self.math[component_group].items():
-                parsed = parsing.ParsedBackendComponent(component_group, name, dict_)
-                parsed.parse_top_level_where(errors="ignore")
-                parsed.parse_equations(self.valid_component_names, errors="ignore")
-                if not parsed._is_valid:
-                    validation_errors[f"{component_group}:{name}"] = parsed._errors
-
-        if validation_errors:
-            exceptions.print_warnings_and_raise_errors(
-                during="math string parsing (marker indicates where parsing stopped, but may not point to the root cause of the issue)",
-                errors=validation_errors,
-            )
-
-        LOGGER.info("Optimisation Model | Validated math strings.")
-
     def add_optimisation_components(self) -> None:
         """Parse math and inputs and set optimisation problem."""
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
-        self._add_all_inputs_as_parameters()
-        if self.config.pre_validate_math_strings:
-            self._validate_math_string_parsing()
+        self._add_all_inputs_as_parameters_or_lookups()
         for components in typing.get_args(ORDERED_COMPONENTS_T):
             component = components.removesuffix("s")
             for name, dict_ in self.math[components].items():
@@ -318,6 +326,9 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             references=references,
         )
         if break_early and not top_level_where.any():
+            self._add_to_dataset(
+                name, xr.DataArray(np.nan), component_type, component_dict, references
+            )
             return parsed_component
 
         self._create_obj_list(name, component_type)
@@ -359,6 +370,9 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
 
         if break_early and component_da.isnull().all():
             self.delete_component(name, component_type)
+            self._add_to_dataset(
+                name, component_da, component_type, component_dict, references
+            )
             return parsed_component
 
         self._add_to_dataset(
@@ -394,7 +408,7 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             BackendError: Cannot overwrite object of same name and type.
         """
 
-    def _add_all_inputs_as_parameters(self) -> None:
+    def _add_all_inputs_as_parameters_or_lookups(self) -> None:
         """Add all parameters to backend dataset in-place.
 
         If model data does not include a parameter, their default values will be added here
@@ -402,25 +416,14 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
 
         Args:
             model_data (xr.Dataset): Input model data.
-            defaults (dict): Parameter defaults.
         """
-        for param_name, param_data in self.inputs.data_vars.items():
-            default_val = param_data.attrs.get("default", np.nan)
-            self.add_parameter(param_name, param_data, default_val)
-        for param_name, default_val in self.defaults.items():
-            if param_name in self.parameters.keys():
-                continue
-            elif (
-                self.config.mode != "operate"
-                and param_name
-                in extract_from_schema(MODEL_SCHEMA, "x-operate-param").keys()
-            ):
-                continue
-            self.log(
-                "parameters", param_name, "Component not defined; using default value."
-            )
-            self.add_parameter(param_name, xr.DataArray(np.nan), default_val)
-        LOGGER.info("Optimisation Model | parameters | Generated.")
+        for name, data in self.inputs.data_vars.items():
+            if data.obj_type == "parameters":
+                self.add_parameter(name, data)
+            elif data.obj_type == "lookups":
+                self.add_lookup(name, data)
+
+        LOGGER.info("Optimisation Model | parameters/lookups | Generated.")
 
     @staticmethod
     def _clean_arrays(*args) -> None:
@@ -454,6 +457,8 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         yaml_snippet_attrs = {}
         add_attrs = {}
         for attr, val in unparsed_dict.items():
+            if attr == "yaml_snippet":
+                continue
             if attr in self._COMPONENT_ATTR_METADATA:
                 add_attrs[attr] = val
             else:
@@ -584,6 +589,11 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         return self._dataset.filter_by_attrs(obj_type="parameters")
 
     @property
+    def lookups(self):
+        """Slice of backend dataset to show only built lookup arrays."""
+        return self._dataset.filter_by_attrs(obj_type="lookups")
+
+    @property
     def global_expressions(self):
         """Slice of backend dataset to show only built global expressions."""
         return self._dataset.filter_by_attrs(obj_type="global_expressions")
@@ -621,7 +631,6 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         inputs: xr.Dataset,
         math: AttrDict,
         build_config: config_schema.Build,
-        defaults: dict,
         instance: T,
     ) -> None:
         """Abstract base class to build backend models that interface with solvers.
@@ -630,10 +639,9 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             inputs (xr.Dataset): Calliope model data.
             math (AttrDict): Calliope math.
             build_config (config_schema.Build): Build configuration options.
-            defaults (dict): Parameter defaults.
             instance (T): Interface model instance.
         """
-        super().__init__(inputs, math, build_config, defaults)
+        super().__init__(inputs, math, build_config)
         self._instance = instance
         self.shadow_prices: ShadowPrices
         self._has_verbose_strings: bool = False

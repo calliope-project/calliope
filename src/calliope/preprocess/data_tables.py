@@ -15,12 +15,11 @@ from typing_extensions import NotRequired, TypedDict
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.io import load_config
-from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 from calliope.util.tools import listify, relative_path
 
 LOGGER = logging.getLogger(__name__)
 
-DTYPE_OPTIONS = {"str": str, "float": float}
+
 AXIS_T = Literal["columns", "index"]
 
 
@@ -66,7 +65,6 @@ class DataTable:
         self.input = data_table
         self.dfs = data_table_dfs if data_table_dfs is not None else dict()
         self.model_definition_path = model_definition_path
-
         self.columns = self._listify_if_defined("columns")
         self.index = self._listify_if_defined("rows")
         self._name = table_name
@@ -315,8 +313,6 @@ class DataTable:
         self._check_processed_tdf(tdf)
         self._check_for_protected_params(tdf)
 
-        tdf = tdf.groupby("parameters", group_keys=False).apply(self._update_dtypes)
-
         if tdf.index.names == ["parameters"]:  # unindexed parameters
             ds = xr.Dataset(tdf.to_dict())
         else:
@@ -432,13 +428,3 @@ class DataTable:
                 f"Trying to set names for {axis} but names in the file do no match names provided |"
                 f" in file: {loaded_names} | defined: {defined_names}"
             )
-
-    def _update_dtypes(self, tdf_group):
-        dtypes = extract_from_schema(MODEL_SCHEMA, "x-type")
-        if tdf_group.name in dtypes and dtypes[tdf_group.name] in DTYPE_OPTIONS:
-            dtype = dtypes[tdf_group.name]
-            self._log(
-                f"Updating non-NaN values of parameter `{tdf_group.name}` to {dtype} type"
-            )
-            tdf_group = tdf_group.astype(dtype)
-        return tdf_group

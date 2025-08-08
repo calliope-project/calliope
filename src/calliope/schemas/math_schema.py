@@ -40,6 +40,48 @@ class MathComponent(CalliopeBaseModel):
     """If False, this component will be ignored during the build phase."""
 
 
+class Dimension(MathComponent):
+    """Schema for named dimension."""
+
+    dtype: Literal["string", "datetime", "integer", "float"]
+    """The dimension items data type"""
+    ordered: bool = False
+    """If True, the order of the dimension items is meaningful (e.g. chronological time)."""
+    iterator: str
+    """The name of the iterator to use in the LaTeX math formulation for this dimension."""
+
+
+class Parameter(MathComponent):
+    """Schema for named parameter."""
+
+    default: float | int = float("nan")
+    """The default value for the parameter, if not set in the data."""
+    dtype: Literal["integer", "float"]
+    """The parameter data type."""
+    resample_method: Literal["mean", "sum", "first"] = "first"
+    """If resampling is applied over any of the parameter's dimensions, the method to use to aggregate the data."""
+    unit: str = ""
+    """The unit of the parameter, e.g. 'kW', 'm', 'kg', 'energy', 'power', ..."""
+
+
+class Lookup(MathComponent):
+    """Schema for named lookup arrays."""
+
+    default: str | float | int | bool | None = None
+    """The default value for the lookup, if not set in the data."""
+    dtype: Literal["integer", "float", "string", "bool", "datetime"]
+    """The lookup data type."""
+    resample_method: Literal["mean", "sum", "first"] = "first"
+    """If resampling is applied over any of the lookup's dimensions, the method to use to aggregate the data."""
+    one_of: list | None = None
+    """If given, the lookup values must be one of these items."""
+    pivot_values_to_dim: str | None = None
+    """If given, the lookup will be pivoted such that its values become the index of a new dimension and its new values are boolean, True where the index values match the old values.
+    For instance, if the lookup starts out indexed over `techs` with values of `[electricity, gas]` and `pivot_values_to_dim: carriers`,
+    then the lookup will be converted to a boolean array with the dimensions ['techs', 'carriers'].
+    """
+
+
 class MathIndexedComponent(MathComponent):
     """Generic indexed component class."""
 
@@ -163,6 +205,24 @@ class Objective(MathComponent):
     optimisation."""
 
 
+class Dimensions(CalliopeDictModel):
+    """Calliope model dimensions dictionary."""
+
+    root: dict[AttrStr, Dimension] = Field(default_factory=dict)
+
+
+class Parameters(CalliopeDictModel):
+    """Calliope model parameters dictionary."""
+
+    root: dict[AttrStr, Parameter] = Field(default_factory=dict)
+
+
+class Lookups(CalliopeDictModel):
+    """Calliope model lookup dictionary."""
+
+    root: dict[AttrStr, Lookup] = Field(default_factory=dict)
+
+
 class Variables(CalliopeDictModel):
     """Calliope model variables dictionary."""
 
@@ -203,6 +263,12 @@ class MathSchema(CalliopeBaseModel):
 
     model_config = {"title": "Model math schema"}
 
+    dimensions: Dimensions = Dimensions()
+    """All dimensions to include in the optimisation problem."""
+    parameters: Parameters = Parameters()
+    """All parameters to include in the optimisation problem."""
+    lookups: Lookups = Lookups()
+    """All lookups to include in the optimisation problem."""
     variables: Variables = Variables()
     """All decision variables to include in the optimisation problem."""
     global_expressions: GlobalExpressions = GlobalExpressions()
