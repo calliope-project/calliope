@@ -149,7 +149,7 @@ def generate_base_math_documentation() -> MathDocumentation:
     Returns:
         MathDocumentation: model math documentation with latex backend.
     """
-    model = calliope.Model(model_definition=MODEL_PATH)
+    model = calliope.read_yaml(file=MODEL_PATH)
     model.build()
     return MathDocumentation(model)
 
@@ -168,12 +168,12 @@ def generate_custom_math_documentation(
     Returns:
         MathDocumentation: model math documentation with latex backend.
     """
-    model = calliope.Model(model_definition=MODEL_PATH, scenario=override)
+    model = calliope.read_yaml(file=MODEL_PATH, scenario=override)
     model.build()
 
     full_del = []
     expr_del = []
-    for component_group, component_group_dict in model.applied_math.items():
+    for component_group, component_group_dict in model.math.build.model_dump().items():
         for name, component_dict in component_group_dict.items():
             if name in base_documentation.math[component_group]:
                 if not component_dict.get("active", True):

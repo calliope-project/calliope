@@ -26,7 +26,7 @@ fail:
   - where: carrier_export and not any(carrier_out, over=nodes)
     message: "Export carriers must be one of the technology outflow carriers."
 
-  - where: storage_initial<0 OR storage_initial>1
+  - where: storage_initial and (storage_initial<0 OR storage_initial>1)
     message: "storage_initial is a fraction, requiring values within the interval [0, 1]."
 
   - where: integer_dispatch=True AND NOT cap_method=integer

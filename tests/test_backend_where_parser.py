@@ -103,6 +103,7 @@ def eval_kwargs(dummy_pyomo_backend_model, dummy_build_config):
         "equation_name": "foo",
         "return_type": "array",
         "references": set(),
+        "defaults": dummy_pyomo_backend_model.defaults,
         "build_config": dummy_build_config,
     }
 
@@ -125,7 +126,7 @@ class TestParserElements:
         self, data_var, dummy_model_data, data_var_string, expected, eval_kwargs
     ):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
-        default = dummy_model_data.attrs["defaults"][expected]
+        default = eval_kwargs["defaults"][expected]
         assert (
             parsed_[0]
             .eval(apply_where=False, **eval_kwargs)

@@ -22,4 +22,4 @@ class TestFutureWarnings:
             )
 
         assert check_error_or_warning(warning, "`locations` has been renamed")
-        assert set(model._model_data.nodes.values) == {"a", "b"}
+        assert set(model.inputs.nodes.values) == {"a", "b"}

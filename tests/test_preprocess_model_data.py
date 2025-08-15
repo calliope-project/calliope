@@ -1,12 +1,11 @@
 import logging
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
 
-from calliope import AttrDict, exceptions
+from calliope import AttrDict, exceptions, io
 from calliope.preprocess import prepare_model_definition
 from calliope.preprocess.model_data import ModelDataFactory
 
@@ -15,35 +14,31 @@ from .common.util import check_error_or_warning
 
 
 @pytest.fixture
-def model_path():
-    return Path(__file__).parent / "common" / "test_model" / "model.yaml"
-
-
-@pytest.fixture
-def model_def(model_path):
-    model_def_override, _ = prepare_model_definition(
-        model_path, scenario="simple_supply,empty_tech_node"
+def model_def(minimal_test_model_path):
+    model_def_override = prepare_model_definition(
+        io.read_rich_yaml(minimal_test_model_path),
+        scenario="simple_supply,empty_tech_node",
+        definition_path=minimal_test_model_path,
     )
     # Erase data tables for simplicity
     # FIXME: previous tests omitted this. Either update tests or remove the data_table from the test model.
-    model_def_override.del_key("data_tables")
-    return model_def_override
+    model_def_override.definition.data_tables.root = {}
+    return AttrDict(model_def_override.model_dump(exclude_defaults=True))
 
 
 @pytest.fixture
 def init_config(default_config, model_def):
-    updated_config = default_config.update(model_def["config"])
+    updated_config = default_config.update(model_def.config)
     return updated_config.init
 
 
 @pytest.fixture
-def model_data_factory(model_path, model_def, init_config, model_defaults):
+def model_data_factory(minimal_test_model_path, model_def, init_config, model_defaults):
     return ModelDataFactory(
         init_config,
-        model_def,
-        model_path,
+        model_def.definition,
+        minimal_test_model_path,
         [],
-        {"foo": "bar"},
         {"default": model_defaults},
     )
 
@@ -80,8 +75,6 @@ class TestModelData:
 
     def test_model_data_init(self, model_data_factory: ModelDataFactory):
         assert model_data_factory.param_attrs["flow_in_eff"] == {"default": 1.0}
-
-        assert model_data_factory.dataset.attrs == {"foo": "bar"}
 
     def test_add_node_tech_data(self, model_data_factory_w_params: ModelDataFactory):
         assert set(model_data_factory_w_params.dataset.nodes.values) == {"a", "b", "c"}
@@ -282,17 +275,9 @@ class TestModelData:
         model_data_factory.dataset["storage_cap_max"] = simple_da
         model_data_factory.dataset["bar"] = timeseries_da
         assert model_data_factory.dataset.data_vars
-        assert not any(
-            "is_result" in var.attrs
-            for var in model_data_factory.dataset.data_vars.values()
-        )
 
         model_data_factory.assign_input_attr()
 
-        assert all(
-            var.attrs["is_result"] is False
-            for var in model_data_factory.dataset.data_vars.values()
-        )
         assert model_data_factory.dataset["storage_cap_max"].attrs["default"] == np.inf
         assert "default" not in model_data_factory.dataset["bar"].attrs
 
@@ -933,7 +918,7 @@ class TestActiveFalse:
         model = build_model(overrides, "simple_storage,two_hours,investment_costs")
 
         # Ensure what should be gone is gone
-        assert "test_storage" not in model._model_data.coords["techs"].values
+        assert "test_storage" not in model.inputs.coords["techs"].values
 
         # Ensure warnings were raised
         assert "(techs, test_storage) | Deactivated" in my_caplog.text
@@ -944,7 +929,7 @@ class TestActiveFalse:
         model = build_model(overrides, "simple_storage,two_hours,investment_costs")
 
         # Ensure what should be gone is gone
-        assert "b" not in model._model_data.coords["nodes"].values
+        assert "b" not in model.inputs.coords["nodes"].values
 
         # Ensure warnings were raised
         assert (
@@ -959,9 +944,9 @@ class TestActiveFalse:
 
         # Ensure what should be gone is gone
         assert not (
-            model._model_data.definition_matrix.sel(
-                techs="test_storage", nodes="b"
-            ).any(["carriers"])
+            model.inputs.definition_matrix.sel(techs="test_storage", nodes="b").any(
+                ["carriers"]
+            )
         )
         assert "(nodes, b), (techs, test_storage) | Deactivated" in my_caplog.text
 
@@ -970,5 +955,5 @@ class TestActiveFalse:
         model = build_model(overrides, "simple_storage,two_hours,investment_costs")
 
         # Ensure what should be gone is gone
-        assert not (model._model_data.base_tech == "transmission").any()
+        assert not (model.inputs.base_tech == "transmission").any()
         assert "(techs, test_link_a_b_elec) | Deactivated." in my_caplog.text

@@ -219,7 +219,9 @@ def equation_slice_obj(slice_parser, where_string_parser):
 
 
 @pytest.fixture
-def dummy_backend_interface(dummy_model_data, dummy_model_math, default_config):
+def dummy_backend_interface(
+    dummy_model_data, dummy_model_math, default_config, model_defaults
+):
     # ignore the need to define the abstract methods from backend_model.BackendModel
     with patch.multiple(backend_model.BackendModel, __abstractmethods__=set()):
 
@@ -230,15 +232,16 @@ def dummy_backend_interface(dummy_model_data, dummy_model_math, default_config):
                     dummy_model_data,
                     dummy_model_math,
                     default_config.build,
+                    defaults=model_defaults,
                     instance=None,
                 )
 
                 self._dataset = dummy_model_data.copy(deep=True)
                 self._dataset["with_inf"] = self._dataset["with_inf"].fillna(
-                    dummy_model_data.attrs["defaults"]["with_inf"]
+                    model_defaults["with_inf"]
                 )
                 self._dataset["only_techs"] = self._dataset["only_techs"].fillna(
-                    dummy_model_data.attrs["defaults"]["only_techs"]
+                    model_defaults["only_techs"]
                 )
 
     return DummyBackendModel()

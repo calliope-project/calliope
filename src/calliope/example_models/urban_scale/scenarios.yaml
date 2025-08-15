@@ -52,7 +52,7 @@ overrides:
       build:
         mode: operate
         operate:
-          window: 2h
+          window: 12h
           horizon: 48h
 
     nodes:

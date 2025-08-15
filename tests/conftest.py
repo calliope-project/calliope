@@ -25,6 +25,11 @@ def dummy_int() -> int:
     return 0xDEADBEEF
 
 
+@pytest.fixture(scope="session")
+def minimal_test_model_path():
+    return (Path(__file__).parent / "common" / "test_model" / "model.yaml").as_posix()
+
+
 @pytest.fixture(
     scope="session",
     params=set(
@@ -42,7 +47,18 @@ def default_config():
 
 @pytest.fixture(scope="session")
 def model_defaults():
-    return AttrDict(extract_from_schema(MODEL_SCHEMA, "default"))
+    inbuilt_defaults = extract_from_schema(MODEL_SCHEMA, "default")
+
+    return AttrDict(
+        {
+            "all_inf": np.inf,
+            "all_nan": np.nan,
+            "with_inf": 100,
+            "only_techs": 5,
+            "no_dims": 0,
+            **inbuilt_defaults,
+        }
+    )
 
 
 @pytest.fixture(scope="session")
@@ -177,7 +193,7 @@ def dummy_model_math():
 
 
 @pytest.fixture(scope="module")
-def dummy_model_data(model_defaults):
+def dummy_model_data():
     coords = {
         dim: (
             pd.to_datetime(
@@ -293,19 +309,6 @@ def dummy_model_data(model_defaults):
     for k in ["lookup_multi_dim_nodes", "lookup_multi_dim_techs", "lookup_techs"]:
         model_data[k] = model_data[k].where(model_data[k] != "nan")
 
-    for param in model_data.data_vars.values():
-        param.attrs["is_result"] = 0
-
-    model_data.attrs["defaults"] = AttrDict(
-        {
-            "all_inf": np.inf,
-            "all_nan": np.nan,
-            "with_inf": 100,
-            "only_techs": 5,
-            "no_dims": 0,
-            **model_defaults,
-        }
-    )
     # This value is set on the parameter directly to ensure it finds its way through to the LaTex math.
     model_data.no_dims.attrs["default"] = 0
 
@@ -353,24 +356,40 @@ def populate_backend_model(backend):
 
 
 @pytest.fixture(scope="module")
-def dummy_pyomo_backend_model(dummy_model_data, dummy_model_math, default_config):
+def dummy_pyomo_backend_model(
+    dummy_model_data, dummy_model_math, default_config, model_defaults
+):
     backend = pyomo_backend_model.PyomoBackendModel(
-        dummy_model_data, dummy_model_math, default_config.build
+        dummy_model_data,
+        dummy_model_math,
+        default_config.build,
+        defaults=model_defaults,
     )
     return populate_backend_model(backend)
 
 
 @pytest.fixture(scope="module")
-def dummy_latex_backend_model(dummy_model_data, dummy_model_math, default_config):
+def dummy_latex_backend_model(
+    dummy_model_data, dummy_model_math, default_config, model_defaults
+):
     backend = latex_backend_model.LatexBackendModel(
-        dummy_model_data, dummy_model_math, default_config.build
+        dummy_model_data,
+        dummy_model_math,
+        default_config.build,
+        defaults=model_defaults,
     )
     return populate_backend_model(backend)
 
 
 @pytest.fixture(scope="class")
-def valid_latex_backend(dummy_model_data, dummy_model_math, default_config):
+def valid_latex_backend(
+    dummy_model_data, dummy_model_math, default_config, model_defaults
+):
     backend = latex_backend_model.LatexBackendModel(
-        dummy_model_data, dummy_model_math, default_config.build, include="valid"
+        dummy_model_data,
+        dummy_model_math,
+        default_config.build,
+        defaults=model_defaults,
+        include="valid",
     )
     return populate_backend_model(backend)
