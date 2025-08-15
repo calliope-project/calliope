@@ -35,13 +35,8 @@ class TestScenarioOverrides:
         )
         model = build_model(override_dict=override, scenario="scenario_1")
 
-        assert (
-            model._model_data.sel(techs="test_supply_gas")["flow_cap_max"] == dummy_int
-        )
-        assert (
-            model._model_data.sel(techs="test_supply_elec")["flow_cap_max"]
-            == dummy_int / 2
-        )
+        assert model.inputs.flow_cap_max.sel(techs="test_supply_gas") == dummy_int
+        assert model.inputs.flow_cap_max.sel(techs="test_supply_elec") == dummy_int / 2
 
     def test_valid_scenario_of_scenarios(self, dummy_int):
         """Test that valid scenario definition which groups scenarios and overrides raises
@@ -72,13 +67,8 @@ class TestScenarioOverrides:
         )
         model = build_model(override_dict=override, scenario="scenario_2")
 
-        assert (
-            model._model_data.sel(techs="test_supply_gas")["flow_cap_max"] == dummy_int
-        )
-        assert (
-            model._model_data.sel(techs="test_supply_elec")["flow_cap_max"]
-            == dummy_int / 2
-        )
+        assert model.inputs.flow_cap_max.sel(techs="test_supply_gas") == dummy_int
+        assert model.inputs.flow_cap_max.sel(techs="test_supply_elec") == dummy_int / 2
 
     def test_invalid_scenarios_dict(self):
         """Test that invalid scenario definition raises appropriate error"""

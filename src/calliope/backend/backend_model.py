@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import time
 import typing
-from abc import ABC, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from copy import deepcopy
@@ -29,6 +29,7 @@ import xarray as xr
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.backend import helper_functions, parsing
+from calliope.exceptions import BackendError
 from calliope.exceptions import warn as model_warn
 from calliope.io import load_config, to_yaml
 from calliope.preprocess.model_math import ORDERED_COMPONENTS_T
@@ -38,8 +39,6 @@ from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 if TYPE_CHECKING:
     from calliope.backend.parsing import T as Tp
 
-from calliope.exceptions import BackendError
-
 T = TypeVar("T")
 ALL_COMPONENTS_T = Literal["parameters", ORDERED_COMPONENTS_T]
 
@@ -47,7 +46,7 @@ ALL_COMPONENTS_T = Literal["parameters", ORDERED_COMPONENTS_T]
 LOGGER = logging.getLogger(__name__)
 
 
-class BackendModelGenerator(ABC):
+class BackendModelGenerator(ABC, metaclass=ABCMeta):
     """Helper class for backends."""
 
     LID_COMPONENTS: tuple[ALL_COMPONENTS_T, ...] = typing.get_args(ALL_COMPONENTS_T)
@@ -70,20 +69,25 @@ class BackendModelGenerator(ABC):
     """Optimisation problem objective name."""
 
     def __init__(
-        self, inputs: xr.Dataset, math: AttrDict, build_config: config_schema.Build
+        self,
+        inputs: xr.Dataset,
+        math: AttrDict,
+        build_config: config_schema.Build,
+        defaults: dict,
     ):
         """Abstract base class to build a representation of the optimisation problem.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
             math (AttrDict): Calliope math.
-            build_config: Build configuration options.
+            build_config (config_schema.Build): Build configuration options.
+            defaults (dict): Parameter defaults.
         """
-        self._dataset = xr.Dataset()
+        self._dataset = xr.Dataset(attrs={"applied_math": AttrDict()})
         self.inputs = inputs.copy()
-        self.inputs.attrs = deepcopy(inputs.attrs)
         self.config = build_config
         self.math: AttrDict = deepcopy(math)
+        self.defaults: dict = deepcopy(defaults)
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
         self._check_inputs()
@@ -209,6 +213,7 @@ class BackendModelGenerator(ABC):
             "input_data": self.inputs,
             "build_config": self.config,
             "helper_functions": helper_functions._registry["where"],
+            "defaults": self.defaults,
             "apply_where": True,
             "references": set(),
         }
@@ -295,9 +300,6 @@ class BackendModelGenerator(ABC):
         """
         references: set[str] = set()
 
-        if name not in self.math[component_type]:
-            self.math.union({f"{component_type}.{name}": component_dict})
-
         if break_early and not component_dict["active"]:
             self.log(
                 component_type, name, "Component deactivated and therefore not built."
@@ -362,6 +364,10 @@ class BackendModelGenerator(ABC):
         self._add_to_dataset(
             name, component_da, component_type, component_dict, references
         )
+        if name not in self.math[component_type]:
+            self._dataset.attrs["applied_math"].union(
+                {f"{component_type}.{name}": component_dict}
+            )
 
         return parsed_component
 
@@ -398,12 +404,10 @@ class BackendModelGenerator(ABC):
             model_data (xr.Dataset): Input model data.
             defaults (dict): Parameter defaults.
         """
-        for param_name, param_data in self.inputs.filter_by_attrs(
-            is_result=0
-        ).data_vars.items():
+        for param_name, param_data in self.inputs.data_vars.items():
             default_val = param_data.attrs.get("default", np.nan)
             self.add_parameter(param_name, param_data, default_val)
-        for param_name, default_val in self.inputs.attrs["defaults"].items():
+        for param_name, default_val in self.defaults.items():
             if param_name in self.parameters.keys():
                 continue
             elif (
@@ -416,7 +420,6 @@ class BackendModelGenerator(ABC):
                 "parameters", param_name, "Component not defined; using default value."
             )
             self.add_parameter(param_name, xr.DataArray(np.nan), default_val)
-            self.parameters[param_name].attrs["is_result"] = 0
         LOGGER.info("Optimisation Model | parameters | Generated.")
 
     @staticmethod
@@ -618,6 +621,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         inputs: xr.Dataset,
         math: AttrDict,
         build_config: config_schema.Build,
+        defaults: dict,
         instance: T,
     ) -> None:
         """Abstract base class to build backend models that interface with solvers.
@@ -625,10 +629,11 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         Args:
             inputs (xr.Dataset): Calliope model data.
             math (AttrDict): Calliope math.
+            build_config (config_schema.Build): Build configuration options.
+            defaults (dict): Parameter defaults.
             instance (T): Interface model instance.
-            build_config: Build configuration options.
         """
-        super().__init__(inputs, math, build_config)
+        super().__init__(inputs, math, build_config, defaults)
         self._instance = instance
         self.shadow_prices: ShadowPrices
         self._has_verbose_strings: bool = False
@@ -1060,7 +1065,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 **all_global_expressions,
                 **all_shadow_prices,
                 **all_objectives,
-            }
+            },
+            attrs=self._dataset.attrs,
         ).astype(float)
 
         return results

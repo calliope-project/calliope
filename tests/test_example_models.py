@@ -1,12 +1,10 @@
 import shutil
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pytest
 
 import calliope
-from calliope import exceptions
 from calliope.io import read_rich_yaml
 
 from .common.util import check_error_or_warning
@@ -46,7 +44,7 @@ class TestNationalScaleExampleModelSenseChecks:
             index_col=0,
             header=[0, 1, 2, 3],
         )
-        model = calliope.Model(
+        model = calliope.read_yaml(
             Path(__file__).parent
             / "common"
             / "national_scale_from_data_tables"
@@ -155,191 +153,6 @@ class TestNationalScaleExampleModelOperate:
 
     def test_nationalscale_example_results_cbc(self):
         self.example_tester()
-
-
-@pytest.mark.skip(
-    reason="SPORES mode will fail until the cost max group constraint can be reproduced"
-)
-class TestNationalScaleExampleModelSpores:
-    def example_tester(self, solver="cbc", solver_io=None):
-        model = calliope.examples.national_scale(
-            time_subset=["2005-01-01", "2005-01-03"], scenario="spores"
-        )
-        solve_kwargs = {"solver": solver}
-        if solver_io:
-            solve_kwargs["solver_io"] = solver_io
-
-        model.build()
-
-        # The initial state of the objective cost class scores should be monetary: 1, spores_score: 0
-        assert (
-            model.backend.parameters.objective_cost_weights["monetary"].item().value
-            == 1
-        )
-        assert (
-            model.backend.parameters.objective_cost_weights["spores_score"].item().value
-            == 0
-        )
-
-        model.solve(**solve_kwargs)
-        # Expecting three spores + first optimal run
-        assert np.allclose(model.results.spores, [0, 1, 2, 3])
-
-        costs = model.results.cost.sum(["nodes", "techs"])
-        slack_cost = model.backend.parameters.cost_max.item().value
-
-        # First run is the optimal run, everything else is coming up against the slack cost
-        assert costs.loc[{"spores": 0, "costs": "monetary"}] * (
-            1 + model.inputs.spores_slack
-        ) == approx(slack_cost)
-        assert all(
-            costs.loc[{"spores": slice(1, None), "costs": "monetary"}]
-            <= slack_cost * 1.0001
-        )
-
-        # In each iteration, the spores_score has to increase
-        assert all(costs.diff("spores").loc[{"costs": "spores_score"}] >= 0)
-
-        # The final state of the objective cost class scores should be monetary: 0, spores_score: 1
-        assert (
-            model.backend.parameters.objective_cost_weights["monetary"].item().value
-            == 0
-        )
-        assert (
-            model.backend.parameters.objective_cost_weights["spores_score"].item().value
-            == 1
-        )
-        return model._model_data
-
-    def test_nationalscale_example_results_cbc(self):
-        self.example_tester()
-
-    @pytest.mark.needs_gurobi_license
-    @pytest.mark.filterwarnings(
-        "ignore:(?s).*`gurobi_persistent`.*:calliope.exceptions.ModelWarning"
-    )
-    @pytest.mark.filterwarnings(
-        "ignore:(?s).*Updating the Pyomo parameter.*:calliope.exceptions.ModelWarning"
-    )
-    def test_nationalscale_example_results_gurobi(self):
-        pytest.importorskip("gurobipy")
-        gurobi_data = self.example_tester(solver="gurobi", solver_io="python")
-        gurobi_persistent_data = self.example_tester(
-            solver="gurobi_persistent", solver_io="python"
-        )
-        assert np.allclose(gurobi_data.flow_cap, gurobi_persistent_data.flow_cap)
-        assert np.allclose(gurobi_data.cost, gurobi_persistent_data.cost)
-
-    @pytest.fixture
-    def base_model_data(self):
-        model = calliope.examples.national_scale(
-            time_subset=["2005-01-01", "2005-01-03"], scenario="spores"
-        )
-
-        model.build()
-        model.solve(solver="cbc")
-
-        return model._model_data
-
-    @pytest.mark.parametrize("init_spore", [0, 1, 2])
-    def test_nationalscale_skip_cost_op_spores(self, base_model_data, init_spore):
-        spores_model = calliope.Model(
-            config=None, model_data=base_model_data.loc[{"spores": [init_spore + 1]}]
-        )
-        spores_model._model_data.coords["spores"] = [init_spore]
-
-        spores_model.run_config["spores_options"]["skip_cost_op"] = True
-
-        spores_model.build()
-        spores_model.solve(force=True)
-
-        assert set(spores_model.results.spores.values) == set(range(init_spore, 4))
-        assert base_model_data.loc[{"spores": slice(init_spore + 1, None)}].equals(
-            spores_model._model_data.loc[{"spores": slice(init_spore + 1, None)}]
-        )
-
-    def test_fail_with_spores_as_input_dim(self, base_model_data):
-        spores_model = calliope.Model(
-            config=None, model_data=base_model_data.loc[{"spores": [0, 1]}]
-        )
-        spores_model.build()
-        with pytest.raises(exceptions.ModelError) as excinfo:
-            spores_model.solve(force=True)
-        assert check_error_or_warning(
-            excinfo, "Cannot run SPORES with a SPORES dimension in any input"
-        )
-
-    @pytest.fixture
-    def spores_with_override(self):
-        def _spores_with_override(override_dict):
-            result_without_override = self.example_tester()
-            result_with_override = self.example_tester(**override_dict)
-            assert result_without_override.flow_cap.round(5).equals(
-                result_with_override.flow_cap.round(5)
-            )
-            assert (
-                result_without_override.cost.sel(costs="spores_score")
-                .round(5)
-                .to_series()
-                .drop("region1::ccgt", level="loc_techs_cost")
-                .equals(
-                    result_with_override.cost.sel(costs="spores_score")
-                    .round(5)
-                    .to_series()
-                    .drop("region1::ccgt", level="loc_techs_cost")
-                )
-            )
-            assert (
-                result_without_override.cost.sel(
-                    costs="spores_score", loc_techs_cost="region1::ccgt"
-                ).sum()
-                > 0
-            )
-            return result_with_override, result_without_override
-
-        return _spores_with_override
-
-    @pytest.mark.parametrize("override", ("flow_cap_min"))
-    def test_ignore_forced_flow_cap_spores(self, spores_with_override, override):
-        # the national scale model always maxes out CCGT in the first 3 SPORES.
-        # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
-        # This enables us to test our functionality that only *additional* capacity is scored.
-        override_dict = {f"locations.region1.techs.ccgt.{override}": 30000}
-        result_with_override, _ = spores_with_override(override_dict)
-        assert (
-            result_with_override.cost.sel(
-                costs="spores_score", loc_techs_cost="region1::ccgt"
-            ).sum()
-            == 0
-        )
-
-    def test_ignore_forced_flow_cap_spores_some_ccgt_score(self, spores_with_override):
-        # the national scale model always maxes out CCGT in the first 3 SPORES.
-        # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
-        # This enables us to test our functionality that only *additional* capacity is scored.
-        override_dict = {"locations.region1.techs.ccgt.flow_cap_min": 15000}
-        result_with_override, _ = spores_with_override(override_dict)
-        assert (
-            result_with_override.cost.sel(
-                costs="spores_score", loc_techs_cost="region1::ccgt"
-            ).sum()
-            > 0
-        )
-
-    def test_ignore_forced_flow_cap_spores_no_double_counting(
-        self, spores_with_override
-    ):
-        # the national scale model always maxes out CCGT in the first 3 SPORES.
-        # So we can force its minimum/exact capacity without influencing other tech SPORE scores.
-        # This enables us to test our functionality that only *additional* capacity is scored.
-        override_dict = {"locations.region1.techs.ccgt.flow_cap_min": 15000}
-        result_with_override, _ = spores_with_override(override_dict)
-        assert (
-            result_with_override.cost.sel(
-                costs="spores_score", loc_techs_cost="region1::ccgt"
-            ).sum()
-            == 0
-        )
 
 
 class TestNationalScaleResampledExampleModelSenseChecks:

@@ -10,6 +10,7 @@ from typing_extensions import Self
 from calliope.schemas.general import (
     AttrStr,
     CalliopeBaseModel,
+    CalliopeDictModel,
     NonEmptyList,
     NonEmptyUniqueList,
     NumericVal,
@@ -68,7 +69,9 @@ class DimensionData(CalliopeBaseModel):
     model_config = {"title": "Generic dimension data", "extra": "allow"}
 
     active: bool = True
-    __pydantic_extra__: dict[AttrStr, IndexedTechNodeParam | DataValue]
+    __pydantic_extra__: dict[
+        AttrStr, IndexedTechNodeParam | DataValue | NonEmptyList[DataValue]
+    ]
 
 
 class CalliopeTech(DimensionData):
@@ -81,26 +84,6 @@ class CalliopeTech(DimensionData):
     One of the abstract base classes, used to derive specific parameter defaults and
     to activate technology-specific constraints.
     """
-    carrier_in: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
-    """
-    Carrier(s) consumed by this technology.
-    Only for `transmission`, `conversion`, `storage`, and `demand` technologies.
-    """
-    carrier_out: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
-    """
-    Carrier(s) produced by this technology.
-    Only for `transmission`, `conversion`, `storage`, and `supply` technologies.
-    """
-    carrier_export: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
-    """
-    Carrier(s) produced by this technology that can be exported out of the system
-    without having to go to a pre-defined `sink` (i.e., via a `demand` technology).
-    Must be a subset of `carrier_out`.
-    """
-    link_from: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
-    """Connected start point. Only for `transmission` technologies."""
-    link_to: AttrStr | NonEmptyUniqueList[AttrStr] | None = None
-    """Connected end point. Only for `transmission` technologies."""
 
 
 class CalliopeNode(DimensionData):
@@ -125,3 +108,21 @@ class CalliopeNode(DimensionData):
                 f"Invalid latitude/longitude definition. Types must match, found ({self.latitude}, {self.longitude})."
             )
         return self
+
+
+class CalliopeParams(CalliopeDictModel):
+    """Calliope Parameters dictionary."""
+
+    root: dict[AttrStr, DataValue | IndexedParam] = Field(default_factory=dict)
+
+
+class CalliopeTechs(CalliopeDictModel):
+    """Calliope Techs dictionary."""
+
+    root: dict[AttrStr, CalliopeTech | None] = Field(default_factory=dict)
+
+
+class CalliopeNodes(CalliopeDictModel):
+    """Calliope Nodes dictionary."""
+
+    root: dict[AttrStr, CalliopeNode] = Field(default_factory=dict)

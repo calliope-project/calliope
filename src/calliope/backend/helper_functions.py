@@ -128,7 +128,7 @@ class ParsingHelperFunction(ABC):
             str: `instring`, but with `iterator` replaced with `iterator + new_string`
         """
 
-        def _replace_in_iterator(matched):
+        def __replace_in_iterator(matched):
             iterator_list = matched.group(2).split(",")
             new_iterator_list = []
             for it in iterator_list:
@@ -142,7 +142,30 @@ class ParsingHelperFunction(ABC):
 
             return matched.group(1) + ",".join(new_iterator_list) + matched.group(3)
 
-        return re.sub(r"(_\\text{)([^{}]*?)(})", _replace_in_iterator, instring)
+        return re.sub(r"(_\\text{)([^{}]*?)(})", __replace_in_iterator, instring)
+
+    @staticmethod
+    def _get_dims_from_iterators(instring: str) -> list[str]:
+        """For a given math string describing a math component, extract the iterators and return the dimensions (a.k.a., sets) that they are members of.
+
+        Args:
+            instring (str): string describing a math component.
+
+        Returns:
+            list[str]: List of dimensions over which the math component is iterating.
+
+        Note:
+            the iterator -> dimension conversion is very simple (appends an `s`) so it won't work with math components that have already have `_update_iterator` applied.
+        """
+
+        def __extract_dims(matched) -> str:
+            iterators = matched.group(2)
+            # Split on `,`, add 's' back in to singular iterators to refer to dimension names,
+            # then rejoin `,` as we must return a string.
+            return ",".join([i + "s" for i in iterators.split(",")])
+
+        dims = re.sub(r"^.*(_\\text{)([^{}]*?)(})", __extract_dims, instring)
+        return dims.split(",")
 
     @staticmethod
     def _instr(dim: str) -> str:
@@ -718,6 +741,97 @@ class Where(ParsingHelperFunction):
         return array.where(condition.fillna(False).astype(bool))
 
 
+class GroupSum(ParsingHelperFunction):
+    """Apply a summation over an array grouping."""
+
+    #:
+    NAME = "group_sum"
+    #:
+    ALLOWED_IN = ["expression"]
+
+    ignore_where = True
+
+    def as_math_string(self, array: str, groupby: str, group_dim: str) -> str:  # noqa: D102, override
+        group_dim_singular = group_dim.removesuffix("s")
+        sum_lim_string = rf"\text{{ if }} {groupby} = \text{{{group_dim_singular}}}"
+        over = [self._instr(i) for i in self._get_dims_from_iterators(groupby)]
+        foreach_string = r" \\ ".join([*over, sum_lim_string])
+        overstring = rf"\substack{{{foreach_string}}}"
+        return rf"\sum\limits_{{{overstring}}} ({array})"
+
+    def as_array(
+        self, array: xr.DataArray, groupby: xr.DataArray, group_dim: str
+    ) -> xr.DataArray:
+        """Sum an array over the given groupings.
+
+        Args:
+            array (xr.DataArray): expression array
+            groupby (xr.DataArray): Array with which to group the array.
+            group_dim (str): Name of dimension that the `groupby` values are members of.
+                This will become a new dimension over which the array is indexed once grouping is complete.
+
+        Returns:
+            xr.DataArray:
+                Array with dimension(s) aggregated over the `groupby`.
+
+        Note:
+            - The array is returned with all dimensions over which `groupby` is indexed replaced by a new dimension named by `group_dim`.
+            - To groupby datetime periods (weeks, months, dates, etc.), consider using `group_datetime` for convenience, as you do not need to define a separate `groupby` array.
+
+        Examples:
+            To get the sum over an ad-hoc combination of techs at nodes, e.g. to limit their overall outflow in any given timestep, you would do the following:
+
+            1. Define an array linking node-tech combinations with a group:
+            ```yaml
+            parameters:
+              # You may prefer to define this in a CSV file or when referring to the techs within the `nodes` model definition.
+              power_plant_groups:
+                data: [low_emission_plant, low_emission_plant, high_emission_plant, high_emission_plant]
+                index: [
+                  [tech_1, node_1],
+                  [tech_2, node_1],
+                  [tech_1, node_2],
+                  [tech_2, node_2],
+                ]
+                dims: [techs, nodes]
+            ```
+            2. Define a set of outflow limits:
+            ```yaml
+            parameters:
+              emission_limits:
+                data: [20, 10]
+                index: [low_emission_plant, high_emission_plant]
+                dims: [emission_groups]
+            ```
+            3. Define the math to link the two, using `group_sum`:
+            ```yaml
+            constraints:
+              node_tech_emission_group_max:
+                foreach: [emission_groups, carriers, timesteps]
+                where: emission_limits
+                equations:
+                  - expression: group_sum(flow_out, power_plant_groups, emission_groups) <= emission_limits
+            ```
+        """
+        # We can't apply typical xarray rolling window functionality
+        grouped: dict[str | int, xr.DataArray] = {}
+
+        if self._backend_interface is not None:
+            groupby = self._input_data[groupby.name]
+
+        grouping_dims = groupby.dims
+        groups = array.stack(_stacked=grouping_dims).groupby(
+            groupby.stack(_stacked=grouping_dims)
+        )
+        for group_name, array_subset in groups:
+            grouped[group_name] = array_subset.sum("_stacked", min_count=1, skipna=True)
+
+        array = xr.concat(
+            grouped.values(), dim=pd.Index(grouped.keys(), name=group_dim)
+        )
+        return array
+
+
 class GroupDatetime(ParsingHelperFunction):
     """Apply a summation over a datetime group on a datetime dimension in math expressions."""
 
@@ -797,15 +911,16 @@ class GroupDatetime(ParsingHelperFunction):
                         - expression: "group_datetime(flow_in, timesteps, month) <= source_use_max_monthly"
             ```
         """
-        # We can't apply typical xarray rolling window functionality
-        grouped: dict[str | int, xr.DataArray] = {}
         dtype = str if group in ["date", "time"] else int
-        grouper = array[over].groupby(getattr(array[over].dt, group).astype(dtype))
-        for group_name, group_items in grouper:
-            grouped[group_name] = array.sel(**{over: group_items}).sum(
-                over, min_count=1, skipna=True
-            )
-        array = xr.concat(grouped.values(), dim=pd.Index(grouped.keys(), name=group))
+        group_sum_helper = GroupSum(
+            return_type=self._return_type,
+            equation_name=self._equation_name,
+            input_data=self._input_data,
+        )
+        array = group_sum_helper(
+            array, getattr(array[over].dt, group).astype(dtype), group
+        )
+
         return array
 
 
