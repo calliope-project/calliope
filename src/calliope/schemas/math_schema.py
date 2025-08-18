@@ -59,7 +59,7 @@ class Equations(CalliopeListModel):
 
 
 class SubExpressions(CalliopeDictModel):
-    """Dictionary of sub-equations that can be updated when a parent pydantic model is updated."""
+    """Dictionary of sub-expressions that can be updated when a parent pydantic model is updated."""
 
     root: dict[AttrStr, Equations] = Field(default_factory=dict)
 
