@@ -58,7 +58,7 @@ class Equations(CalliopeListModel):
     root: list[ExpressionItem] = Field(default_factory=list)
 
 
-class SubEquations(CalliopeDictModel):
+class SubExpressions(CalliopeDictModel):
     """Dictionary of sub-equations that can be updated when a parent pydantic model is updated."""
 
     root: dict[AttrStr, Equations] = Field(default_factory=dict)
@@ -69,9 +69,9 @@ class Constraint(MathIndexedComponent):
 
     equations: Equations
     """Constraint math equations."""
-    sub_expressions: SubEquations = SubEquations()
+    sub_expressions: SubExpressions = SubExpressions()
     """Constraint named sub-expressions."""
-    slices: SubEquations = SubEquations()
+    slices: SubExpressions = SubExpressions()
     """Constraint named index slices."""
 
 
@@ -109,9 +109,9 @@ class GlobalExpression(MathIndexedComponent):
     """If set, will be the default value for the expression."""
     equations: Equations
     """Global expression math equations."""
-    sub_expressions: SubEquations = SubEquations()
+    sub_expressions: SubExpressions = SubExpressions()
     """Global expression named sub-expressions."""
-    slices: SubEquations = SubEquations()
+    slices: SubExpressions = SubExpressions()
     """Global expression named index slices."""
 
 
@@ -154,13 +154,15 @@ class Objective(MathComponent):
 
     equations: Equations
     """Objective math equations."""
-    sub_expressions: SubEquations = SubEquations()
+    sub_expressions: SubExpressions = SubExpressions()
     """Objective named sub-expressions."""
-    slices: SubEquations = SubEquations()
+    slices: SubExpressions = SubExpressions()
     """Objective named index slices."""
     sense: Literal["minimise", "maximise", "minimize", "maximize"]
     """Whether the objective function should be minimised or maximised in the
     optimisation."""
+    foreach: UniqueList[AttrStr] = Field(default_factory=list, frozen=True)
+    """Objectives are always adimensional."""
 
 
 class Variables(CalliopeDictModel):

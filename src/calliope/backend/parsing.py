@@ -507,12 +507,12 @@ class ParsedBackendComponent(ParsedBackendEquation):
 
         # Initialise switches
         self._is_valid: bool = True
-        self._is_active: bool = self._unparsed.get(
-            "active", True
-        )  # TODO-Ivan: fail if not present
+        # FIXME: should not set default to respect the schema
+        self._is_active: bool = self._unparsed.get("active", True)
 
         # Add objects that are used by shared functions
-        self.sets: list[str] = unparsed_data.get("foreach", [])  # type:ignore TODO-Ivan: below should fail if not present
+        # FIXME: should not set default to respect the schema
+        self.sets: list[str] = unparsed_data.get("foreach", [])  # type:ignore
 
     def get_parsing_position(self):
         """Create "." separated list from tracked strings."""

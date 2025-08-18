@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|changed| |backwards-incompatible| `where:` now uses `==` for equality comparisons (previously `=`).
+
 |changed| |backwards-incompatible| YAML files are loaded with `calliope.read_yaml(...)` instead of `calliope.Model(...)`.
 
 |changed| |backwards-incompatible| In-memory dictionaries are loaded with `calliope.Model.from_dict(...)` instead of `calliope.Model(...)`.
