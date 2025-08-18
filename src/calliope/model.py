@@ -597,19 +597,16 @@ class Model:
             xr.Dataset: Results dataset.
         """
         LOGGER.info("Optimisation model | Resetting SPORES parameters.")
-        for init_param in ["spores_score", "spores_baseline_cost"]:
-            default = xr.DataArray(self.backend.defaults[init_param])
-            self.backend.update_parameter(
-                init_param, self.inputs.get(init_param, default)
-            )
-
-        self.backend.set_objective(self.config.build.objective)
+        self.backend.update_parameter(
+            "spores_score", self.backend.defaults["spores_score"]
+        )
 
         spores_config: config_schema.SolveSpores = solver_config.spores
 
         latest_spore: int = 0
         if not spores_config.use_latest_results:
             LOGGER.info("Optimisation model | Running baseline model.")
+            self.backend.set_objective(self.config.build.objective)
             baseline_results = self.backend._solve(solver_config, warmstart=False)
             self._spores_save_model(baseline_results, spores_config, 0)
         elif "spores" in self.results.dims:
@@ -617,13 +614,14 @@ class Model:
             LOGGER.info(
                 f"Optimisation model | Restarting SPORES from SPORE {latest_spore} results."
             )
-            baseline_results = self.results.sel(spores=latest_spore).drop("spores")
+            baseline_results = self.results.sel(spores=latest_spore).drop_vars("spores")
             self.backend.update_parameter(
                 "spores_score", baseline_results.spores_score_cumulative
             )
         else:
             LOGGER.info("Optimisation model | Using existing baseline model results.")
             baseline_results = self.results.copy()
+
         if latest_spore >= spores_config.number:
             raise exceptions.ModelError(
                 f"Cannot restart SPORES from SPORE {latest_spore} as it is greater or equal "
@@ -641,9 +639,15 @@ class Model:
                 "Ensure your baseline model can solve successfully by running it in `plan` mode."
             )
 
-        # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
-        constraining_cost = baseline_results[self.config.build.objective]
+        base_cost_default = self.backend.defaults["spores_baseline_cost"]
+        constraining_cost = baseline_results.get(
+            "spores_baseline_cost_tracked", self.inputs.get("spores_baseline_cost")
+        )
+        if not constraining_cost or constraining_cost == base_cost_default:
+            # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
+            constraining_cost = baseline_results[self.config.build.objective]
         self.backend.update_parameter("spores_baseline_cost", constraining_cost)
+
         self.backend.set_objective("min_spores")
         # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
         results_list: list[xr.Dataset] = [baseline_results]
@@ -720,6 +724,10 @@ class Model:
             io.save_netcdf(
                 xr.Dataset(attrs=self.dump_all_attrs()), "attrs", "a", outpath
             )
+            if spore == 0:
+                io.save_netcdf(
+                    self.inputs.expand_dims(spores=[spore]), "inputs", "a", outpath
+                )
 
         else:
             LOGGER.info(

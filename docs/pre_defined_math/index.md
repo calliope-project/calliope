@@ -243,23 +243,15 @@ This is useful to further explore the option space, restart a run that was stopp
     # Load the model from scratch to get access to input data
     m_init = calliope.Model(...)
 
-    # We need the baseline results to have the cost optimal solution available to apply a slack to.
-    m_baseline = calliope.read_netcdf("/path/to/spore/runs/spore_0.nc")
-    # We then just take the most recent SPORE run to continue from.
+    # Load the most recent SPORE run to continue from.
     m_most_recent = calliope.read_netcdf("/path/to/spore/runs/spore_3.nc")
 
-    # We then merge everything into the initialised (unsolved) model
-    m_init._model_data = xr.merge(
-        [
-            m_init._model_data,
-            m_baseline._model_data,
-            m_most_recent._model_data
-        ],
-        combine_attrs="override"
+    # Create a new calliope model that merges the input and results data
+    m_rerun = calliope.Model(
+        inputs=m_init.inputs, results=m_most_recent.results, **m_most_recent.dump_all_attrs()
     )
-    m_init._model_data.attrs = m_most_recent._model_data.attrs
 
-    # Then we run with updated SPORE run
-    m_init.build()
-    m_init.solve(spores={"use_latest_results": True}, force=True)
+    # Run use the latest SPORE results as the starting point
+    m_rerun.build()
+    m_rerun.solve(spores={"use_latest_results": True}, force=True)
     ```

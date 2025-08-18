@@ -451,12 +451,13 @@ class TestSporesMode:
     ):
         """No matter how SPORES are initiated, the constraining cost (pre application of slack) should be the plan mode objective function value."""
         model, _ = request.getfixturevalue(fixture)
-        assert (
-            model.backend.get_parameter(
-                "spores_baseline_cost", as_backend_objs=False
-            ).item()
-            == simple_supply_spores_ready.results["min_cost_optimisation"].item()
-        )
+        baseline = model.backend.get_parameter(
+            "spores_baseline_cost", as_backend_objs=False
+        ).item()
+        optimisation_cost = simple_supply_spores_ready.results[
+            "min_cost_optimisation"
+        ].item()
+        assert baseline == optimisation_cost
 
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Model solution was non-optimal:calliope.exceptions.BackendWarning"
@@ -512,11 +513,7 @@ class TestSporesMode:
         """
         model, _ = request.getfixturevalue(fixture)
         assert (
-<<<<<<<< HEAD:tests/test_core_model.py
-            model._model_data.spores_score_cumulative.fillna(0).diff("spores") >= 0
-========
-            spores_model.results.spores_score_cumulative.fillna(0).diff("spores") >= 0
->>>>>>>> main:tests/test_model.py
+            model.results.spores_score_cumulative.fillna(0).diff("spores") >= 0
         ).all()
 
     @pytest.mark.parametrize(
@@ -527,11 +524,7 @@ class TestSporesMode:
         model, _ = request.getfixturevalue(fixture)
         has_cap = model.results.flow_cap > 0
         spores_score_increased = (
-<<<<<<<< HEAD:tests/test_core_model.py
-            model._model_data.spores_score_cumulative.diff("spores") > 0
-========
-            spores_model.results.spores_score_cumulative.diff("spores") > 0
->>>>>>>> main:tests/test_model.py
+            model.results.spores_score_cumulative.diff("spores") > 0
         )
         numpy.testing.assert_array_equal(
             has_cap.shift(spores=1).drop_sel(spores=0), spores_score_increased
@@ -620,15 +613,9 @@ class TestSporesMode:
         """Final result should be the same having skipped baseline."""
 
         model_all_solved_together, _ = spores_model_and_log
-<<<<<<<< HEAD:tests/test_core_model.py
         model_baseline_solved_separately, _ = spores_model_continue_from_plan_and_log
-        assert model_all_solved_together._model_data.flow_cap.equals(
-            model_baseline_solved_separately._model_data.flow_cap
-========
-        model_baseline_solved_separately, _ = spores_model_skip_baseline_and_log
         assert model_all_solved_together.results.flow_cap.equals(
             model_baseline_solved_separately.results.flow_cap
->>>>>>>> main:tests/test_model.py
         )
 
     def test_continue_from_spores_log(self, spores_model_continue_from_spores_and_log):
@@ -645,8 +632,8 @@ class TestSporesMode:
 
         model_all_solved_together, _ = spores_model_and_log
         model_additional_spores, _ = spores_model_continue_from_spores_and_log
-        assert model_all_solved_together._model_data.flow_cap.equals(
-            model_additional_spores._model_data.flow_cap.sel(spores=[0, 1, 2])
+        assert model_all_solved_together.results.flow_cap.equals(
+            model_additional_spores.results.flow_cap.sel(spores=[0, 1, 2])
         )
 
     def test_continue_from_spores_more_results(
