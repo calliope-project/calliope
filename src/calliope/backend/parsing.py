@@ -507,10 +507,12 @@ class ParsedBackendComponent(ParsedBackendEquation):
 
         # Initialise switches
         self._is_valid: bool = True
-        self._is_active: bool = self._unparsed.get("active", True)
+        self._is_active: bool = self._unparsed.get(
+            "active", True
+        )  # TODO-Ivan: fail if not present
 
         # Add objects that are used by shared functions
-        self.sets: list[str] = unparsed_data.get("foreach", [])  # type:ignore
+        self.sets: list[str] = unparsed_data.get("foreach", [])  # type:ignore TODO-Ivan: below should fail if not present
 
     def get_parsing_position(self):
         """Create "." separated list from tracked strings."""
@@ -536,7 +538,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 Collected parsing errors can be raised directly or ignored.
                 If errors exist and are ignored, the parsed component cannot be successfully evaluated. Defaults to "raise".
         """
-        top_level_where = self.parse_where_string(self._unparsed.get("where", "True"))
+        top_level_where = self.parse_where_string(
+            self._unparsed.get("where", "True")
+        )  # TODO-Ivan: should fail if not present
 
         if errors == "raise":
             self.raise_caught_errors()
@@ -643,7 +647,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
 
         return parsed
 
-    def parse_where_string(self, where_string: str = "True") -> pp.ParseResults:
+    def parse_where_string(
+        self, where_string: str = "True"
+    ) -> pp.ParseResults:  # TODO-Ivan: no default (set by schema)?
         """Parse a "where" string of the form "CONDITION OPERATOR CONDITION".
 
         The operator can be "and"/"or"/"not and"/"not or".

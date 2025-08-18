@@ -120,11 +120,11 @@ objectives:
         - where: "NOT any(cost, over=[nodes, techs, costs])"
           expression: "0"
       unmet_demand:
-        - where: "config.ensure_feasibility=True"
+        - where: "config.ensure_feasibility==True"
           expression: >
             sum(sum(unmet_demand - unused_supply, over=[carriers, nodes])
             * timestep_weights, over=timesteps) * bigM
-        - where: "NOT config.ensure_feasibility=True"
+        - where: "NOT config.ensure_feasibility==True"
           expression: "0"
       cost_fuel_distribution_sum:
         - where: "cost_var_fuel_distribution"
