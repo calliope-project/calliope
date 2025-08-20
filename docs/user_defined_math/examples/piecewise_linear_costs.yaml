@@ -51,4 +51,5 @@ global_expressions:
           default_if_empty(cost_investment_storage_cap, 0) +
           default_if_empty(cost_investment_source_cap, 0) +
           default_if_empty(cost_investment_area_use, 0) +
+          default_if_empty(cost_investment_purchase, 0) +
           default_if_empty(piecewise_cost_investment, 0)
