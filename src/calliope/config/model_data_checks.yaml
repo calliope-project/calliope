@@ -2,7 +2,7 @@ fail:
   - where: not base_tech
     message: An abstract `base_tech` must be defined for every technology at every node.
 
-  - where: not base_tech=transmission and (distance or flow_in_eff_per_distance or flow_out_eff_per_distance or cost_flow_cap_per_distance or cost_purchase_per_distance)
+  - where: not base_tech==transmission and (distance or flow_in_eff_per_distance or flow_out_eff_per_distance or cost_flow_cap_per_distance or cost_purchase_per_distance)
     message: Only transmission technologies can define `distance` or `..._per_distance` parameters.
 
   - where: cost_flow_cap<0 AND not flow_cap_max
@@ -17,7 +17,7 @@ fail:
   - where: cost_source_cap<0 AND not source_use_max
     message: Cannot have a negative `cost_source_cap` as there is an unset corresponding `source_use_max` constraint
 
-  - where: source_use_equals=inf or sink_use_equals=inf
+  - where: source_use_equals==inf or sink_use_equals==inf
     message: "Cannot include infinite values in `source_use_equals`/`sink_use_equals`"
 
   - where: (any(latitude, over=nodes) or any(longitude, over=nodes)) and not (latitude or longitude)
@@ -29,7 +29,7 @@ fail:
   - where: storage_initial and (storage_initial<0 OR storage_initial>1)
     message: "storage_initial is a fraction, requiring values within the interval [0, 1]."
 
-  - where: integer_dispatch=True AND NOT cap_method=integer
+  - where: integer_dispatch==True AND NOT cap_method==integer
     message: Cannot use the integer `integer_dispatch` unless the technology is using an integer unit capacities (`cap_method=integer`).
 
   - where: (flow_cap_max OR flow_cap_min) AND flow_cap_per_unit
@@ -39,7 +39,7 @@ fail:
     message: Cannot define both `storage_cap_per_unit` and `storage_cap_max`/`storage_cap_min`
 
 warn:
-  - where: cyclic_storage=True AND (base_tech=storage OR include_storage=True) AND config.mode=operate
+  - where: cyclic_storage==True AND (base_tech==storage OR include_storage==True) AND config.mode==operate
     message: >-
       Cyclic storage should be switched off in operate mode.
       Since the parameter defaults to True, make sure you explicitly set `cyclic_storage: false` for all your technologies with storage.

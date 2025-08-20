@@ -2302,7 +2302,7 @@ class TestValidateMathDict:
             ("1 == 1", "True"),
             (
                 "sum(flow_out * flow_out_eff, over=[nodes, carriers, techs, timesteps]) <= .inf",
-                "base_tech=supply and flow_out_eff>0",
+                "base_tech==supply and flow_out_eff>0",
             ),
         ],
     )

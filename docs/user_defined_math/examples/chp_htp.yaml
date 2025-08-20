@@ -93,7 +93,7 @@ constraints:
     equations:
       - where: NOT turbine_type
         expression: sum(flow_out_inc_eff, over=carriers) == sum(flow_in_inc_eff, over=carriers)
-      - where: turbine_type=backpressure AND NOT boiler_eff
+      - where: turbine_type==backpressure AND NOT boiler_eff
         expression: flow_out_inc_eff[carriers=electricity] == sum(flow_in_inc_eff, over=carriers)
 # ~~
 
@@ -104,7 +104,7 @@ constraints:
       Set the extraction line for combined heat and power plants with extraction
       turbines. `power_loss_factor` is also referred to as simply `cv`.
     foreach: [nodes, techs, timesteps]
-    where: turbine_type=extraction
+    where: turbine_type==extraction
     equations:
       - expression: >
           flow_out[carriers=electricity]
@@ -118,7 +118,7 @@ constraints:
       `power_to_heat_ratio` is also referred to as the `backpressure ratio`
       or simply `cb`.
     foreach: [nodes, techs, timesteps]
-    where: turbine_type=extraction
+    where: turbine_type==extraction
     equations:
       - expression: >
           flow_out[carriers=electricity] >=
@@ -135,7 +135,7 @@ constraints:
       (e.g., via a boiler). `power_to_heat_ratio` is also referred to as the
       `backpressure ratio` or simply `cb`.
     foreach: [nodes, techs, timesteps]
-    where: turbine_type=backpressure AND boiler_eff
+    where: turbine_type==backpressure AND boiler_eff
     equations:
       - expression: >
           flow_out[carriers=electricity] <=
@@ -148,7 +148,7 @@ constraints:
       `heat_eff` is the boiler efficiency. `power_to_heat_ratio` is also
       referred to as the `backpressure ratio` or simply `cb`.
     foreach: [nodes, techs, timesteps]
-    where: turbine_type=backpressure AND boiler_eff
+    where: turbine_type==backpressure AND boiler_eff
     equations:
       - expression: >-
           flow_out[carriers=heat]
@@ -167,7 +167,7 @@ constraints:
       extraction turbines. `power_to_heat_ratio` is also referred to as the
       `backpressure ratio` or simply `cb`.
     foreach: [nodes, techs, timesteps]
-    where: turbine_type=backpressure AND NOT boiler_eff
+    where: turbine_type==backpressure AND NOT boiler_eff
     equations:
       - expression: >
           flow_out[carriers=electricity] ==
