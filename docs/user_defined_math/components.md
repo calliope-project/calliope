@@ -66,11 +66,41 @@ The equation expressions do _not_ have comparison operators; those are reserved 
 The default value should be set such that it has no impact on the optimisation problem if it is included (most of the time, this means `NaN`).
 1. It can have an `order` defined to reprioritise its addition to the optimisation problem.
    This is often necessary when adding new global expressions that you will use in other global expressions since they will need to be defined _before_ the other global expressions that refer to them.
-   For instance, if tracking a new cost as a global expression (say, `cost_operation_monthly`), you will want to add it to the overall `cost` global expression so it is tracked in the objective.
-   This means `cost_operation_monthly` has to be higher in the order of global expressions than `cost`.
-   But, because you defined it as user-defined math, it will be _appended_ to the set of global expressions by default.
-   To bring its order higher you can define `order` as a suitably small number.
-   Usually, a negative number is used (e.g. `-1`) to ensure you move it to before _all_ pre-defined global expressions.
+
+??? example "Re-ordering global expressions"
+    If tracking a new cost as a global expression - `cost_operation_monthly` - we will want to add it to the overall  `cost` global expression so it is tracked in the objective:
+
+    ```yaml
+    global_expressions:
+      # Add our new expression.
+      cost_operation_monthly:
+        ...
+
+      # Add our new expression to the overall `cost` expression.
+      # This only requires updating the where string and main equation in `cost`; the rest will be inherited from the   pre-defined math.
+      cost:
+        where: "cost_operation_monthly OR cost_investment_annualised OR cost_operation_variable OR cost_operation_fixed"
+        equations:
+          - expression: >-
+            default_if_empty(cost_investment_annualised, 0) +
+            $cost_operation_sum +
+            default_if_empty(cost_operation_fixed, 0) +
+            default_if_empty(cost_operation_monthly, 0)
+    ```
+
+    For `cost` to know that `cost_operation_monthly` exists, the latter needs to be defined first.
+    Although we have defined `cost_operation_monthly` in the above example, because `cost` is being _updated_ from the pre-defined math, its order will reflect its position in the  pre-defined math, i.e. higher than `cost_operation_monthly`.
+    To bring the order of `cost_operation_monthly` higher we can define `order` as a suitably small number.
+    Usually, a negative number is used (e.g. `-1`) to ensure we move it to before _all_ pre-defined global expressions:
+
+    ```yaml
+    global_expressions:
+      cost_operation_monthly:
+        order: -1
+        ...
+      cost:
+        ...
+    ```
 
 ## Constraints
 
