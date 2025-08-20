@@ -682,6 +682,7 @@ class TestDemandSharePerTimestepDecision(CustomMathExamples):
 
 class TestPiecewiseCosts(CustomMathExamples):
     YAML_FILEPATH = "piecewise_linear_costs.yaml"
+    EXTRA_MATH = ["milp"]
 
     def test_piecewise(self, build_and_compare):
         overrides = {
@@ -710,7 +711,7 @@ class TestPiecewiseCosts(CustomMathExamples):
             overrides,
             components={
                 "constraints": ["piecewise_costs"],
-                "variables": ["purchased_units", "piecewise_cost_investment"],
+                "variables": ["piecewise_cost_investment"],
                 "global_expressions": ["cost_investment"],
             },
         )
