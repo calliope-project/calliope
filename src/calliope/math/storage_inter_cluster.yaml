@@ -8,15 +8,15 @@ constraints:
   balance_supply_with_storage:
     sub_expressions:
       storage_previous_step: &storage_previous_step
-        - where: timesteps=get_val_at_index(timesteps=0) AND NOT cyclic_storage=True
+        - where: timesteps==get_val_at_index(timesteps=0) AND NOT cyclic_storage==True
           expression: storage_initial * storage_cap
         - where: >-
             (
-              (timesteps=get_val_at_index(timesteps=0) AND cyclic_storage=True)
-              OR NOT timesteps=get_val_at_index(timesteps=0)
+              (timesteps==get_val_at_index(timesteps=0) AND cyclic_storage==True)
+              OR NOT timesteps==get_val_at_index(timesteps=0)
             ) AND NOT lookup_cluster_last_timestep
           expression: (1 - storage_loss) ** roll(timestep_resolution, timesteps=1) * roll(storage, timesteps=1)
-        - where: lookup_cluster_last_timestep AND NOT (timesteps=get_val_at_index(timesteps=0) AND NOT cyclic_storage=True)
+        - where: lookup_cluster_last_timestep AND NOT (timesteps==get_val_at_index(timesteps=0) AND NOT cyclic_storage==True)
           expression: "0"
 
   balance_storage:
@@ -34,7 +34,7 @@ constraints:
     description: >-
       Set the upper bound of a `storage` technology's stored carrier within a clustered day
     foreach: [nodes, techs, timesteps]
-    where: "include_storage=True OR base_tech=storage"
+    where: "include_storage==True OR base_tech==storage"
     equations:
       - expression: storage <= storage_intra_cluster_max[clusters=$cluster]
     slices: &timestep_cluster_slice
@@ -45,7 +45,7 @@ constraints:
     description: >-
       Set the lower bound of a `storage` technology's stored carrier within a clustered day
     foreach: [nodes, techs, timesteps]
-    where: "include_storage=True OR base_tech=storage"
+    where: "include_storage==True OR base_tech==storage"
     equations:
       - expression: storage >= storage_intra_cluster_min[clusters=$cluster]
     slices: *timestep_cluster_slice
@@ -54,7 +54,7 @@ constraints:
     description: >-
       Set the upper bound of a `storage` technology's stored carrier across all days in the timeseries.
     foreach: [nodes, techs, datesteps]
-    where: "include_storage=True OR base_tech=storage"
+    where: "include_storage==True OR base_tech==storage"
     equations:
       - expression: storage_inter_cluster + storage_intra_cluster_max[clusters=$cluster] <= storage_cap
     slices: &datestep_cluster_slice
@@ -65,7 +65,7 @@ constraints:
     description: >-
       Set the lower bound of a `storage` technology's stored carrier across all days in the timeseries.
     foreach: [nodes, techs, datesteps]
-    where: "include_storage=True OR base_tech=storage"
+    where: "include_storage==True OR base_tech==storage"
     equations:
       - expression: storage_inter_cluster * ((1 - storage_loss) ** 24) + storage_intra_cluster_min[clusters=$cluster] >= 0
     slices: *datestep_cluster_slice
@@ -77,19 +77,19 @@ constraints:
       according to the previous day's representative storage fluctuations
       and the excess stored carrier available from all days up to this day.
     foreach: [nodes, techs, datesteps]
-    where: "include_storage=True OR base_tech=storage"
+    where: "include_storage==True OR base_tech==storage"
     equations:
       - expression: storage_inter_cluster == $storage_previous_step + $storage_intra
     sub_expressions:
       storage_previous_step:
-        - where: datesteps=get_val_at_index(datesteps=0) AND NOT cyclic_storage=True
+        - where: datesteps==get_val_at_index(datesteps=0) AND NOT cyclic_storage==True
           expression: storage_initial
-        - where: (datesteps=get_val_at_index(datesteps=0) AND cyclic_storage=True) OR NOT datesteps=get_val_at_index(datesteps=0)
+        - where: (datesteps==get_val_at_index(datesteps=0) AND cyclic_storage==True) OR NOT datesteps==get_val_at_index(datesteps=0)
           expression: ((1 - storage_loss) ** 24) * roll(storage_inter_cluster, datesteps=1)
       storage_intra:
-        - where: datesteps=get_val_at_index(datesteps=0) AND NOT cyclic_storage=True
+        - where: datesteps==get_val_at_index(datesteps=0) AND NOT cyclic_storage==True
           expression: "0"
-        - where: NOT (datesteps=get_val_at_index(datesteps=0) AND NOT cyclic_storage=True)
+        - where: NOT (datesteps==get_val_at_index(datesteps=0) AND NOT cyclic_storage==True)
           expression: storage[timesteps=$final_step]
     slices:
       final_step:
@@ -112,7 +112,7 @@ variables:
       The virtual carrier stored by any technology using storage between days of the entire timeseries.
       Only together with `storage` does this variable's values gain physical significance.
     foreach: [nodes, techs, datesteps]
-    where: "include_storage=True OR base_tech=storage"
+    where: "include_storage==True OR base_tech==storage"
     bounds:
       min: 0
       max: .inf
@@ -123,7 +123,7 @@ variables:
       Virtual variable to limit the maximum value of `storage` in a given representative day.
     unit: energy
     foreach: [nodes, techs, clusters]
-    where: "include_storage=True OR base_tech=storage"
+    where: "include_storage==True OR base_tech==storage"
     bounds:
       min: -.inf
       max: .inf
@@ -134,7 +134,7 @@ variables:
       Virtual variable to limit the minimum value of `storage` in a given representative day.
     unit: energy
     foreach: [nodes, techs, clusters]
-    where: "include_storage=True OR base_tech=storage"
+    where: "include_storage==True OR base_tech==storage"
     bounds:
       min: -.inf
       max: .inf
