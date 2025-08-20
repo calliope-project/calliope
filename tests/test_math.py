@@ -12,16 +12,35 @@ from calliope.preprocess import model_math
 from .common import util
 
 CALLIOPE_DIR: Path = importlib.resources.files("calliope")
-PLAN_MATH: AttrDict = io.read_rich_yaml(CALLIOPE_DIR / "math" / "plan.yaml")
 
 
-def prune_math(build_math: dict):
-    math = AttrDict({k: build_math[k] for k in {"variables", "global_expressions"}})
-    math.set_key(
+# FIXME: ideally, this should be taken from Model.math after init.
+# This should be fixed once math construction is moved to the init stage.
+def create_full_math(internal_math: list[str], custom_math: dict = None):
+    """Simulates the creation of the full math object."""
+    math_dataset = {
+        name: io.read_rich_yaml(CALLIOPE_DIR / "math" / f"{name}.yaml")
+        for name in internal_math
+    }
+    if custom_math:
+        math_dataset["custom_math"] = custom_math
+    return model_math.build_applied_math(list(math_dataset.keys()), math_dataset)
+
+
+def create_pruned_math_file(math: dict, filepath: str | Path):
+    """Create a barebones calliope math file.
+
+    Setup:
+    - No constraints.
+    - All variables and expressions in `math`.
+    - A standard dummy objective.
+    """
+    pruned_math = AttrDict({k: math[k] for k in {"variables", "global_expressions"}})
+    pruned_math.set_key(
         "objectives.dummy_obj",
         {"equations": [{"expression": "1 + 1"}], "sense": "minimize"},
     )
-    return math
+    io.to_yaml(pruned_math, filepath)
 
 
 def build_lp_file(
@@ -79,21 +98,17 @@ class TestBaseMath:
         return tmp_path_factory.mktemp("lp_files")
 
     @pytest.fixture(scope="class")
-    def barebones_math_file(self, tmp_path_factory) -> str:
-        """Write a barebones calliope math file.
-
-        Setup:
-        - No constraints.
-        - All variables and expressions in `plan.yaml`.
-        - A standard dummy objective.
-        """
-        math = prune_math(PLAN_MATH)
-        barebones_path = tmp_path_factory.mktemp("barebones") / "barebones.yaml"
-        io.to_yaml(math, barebones_path)
-        return str(barebones_path)
+    def full_math(self):
+        return create_full_math(["plan"])
 
     @pytest.fixture(scope="class")
-    def init_math_config(self, barebones_math_file):
+    def barebones_math_file(self, full_math, tmp_path_factory) -> str:
+        filepath = tmp_path_factory.mktemp("barebones") / "barebones.yaml"
+        create_pruned_math_file(full_math, filepath)
+        return str(filepath)
+
+    @pytest.fixture(scope="class")
+    def barebones_config(self, barebones_math_file):
         return {
             "base_math": "barebones",
             "extra_math": {"barebones": barebones_math_file},
@@ -113,7 +128,7 @@ class TestBaseMath:
         ],
     )
     def test_capacity_variables_and_bounds(
-        self, lp_temp_path, init_math_config, variable, constraint, overrides
+        self, full_math, lp_temp_path, barebones_config, variable, constraint, overrides
     ):
         """Check that variables are initiated with the appropriate bounds,
         and that the lower bound is updated from zero via a separate constraint if required.
@@ -135,7 +150,7 @@ class TestBaseMath:
             }
         }
         custom_math = AttrDict(
-            {constraint_full: PLAN_MATH.get_key(constraint_full), **custom_objective}
+            {constraint_full: full_math.get_key(constraint_full), **custom_objective}
         )
         model = util.build_test_model(
             {
@@ -145,83 +160,83 @@ class TestBaseMath:
                 **overrides,
             },
             "simple_supply,two_hours,investment_costs",
-            **init_math_config,
+            **barebones_config,
         )
         # compare_lps(model, custom_math, variable)
         lp_file = lp_temp_path / (variable + ".lp")
         build_lp_file(model, custom_math, lp_file, objective="foo")
         compare_lps_new(lp_file)
 
-    def test_storage_max(self, lp_temp_path, init_math_config):
+    def test_storage_max(self, full_math, lp_temp_path, barebones_config):
         self.TEST_REGISTER.add("constraints.storage_max")
         model = util.build_test_model(
-            scenario="simple_storage,two_hours,investment_costs", **init_math_config
+            scenario="simple_storage,two_hours,investment_costs", **barebones_config
         )
         custom_math = {
-            "constraints": {"storage_max": PLAN_MATH.constraints.storage_max}
+            "constraints": {"storage_max": full_math.constraints.storage_max}
         }
         lp_file = lp_temp_path / "storage_max.lp"
         build_lp_file(model, custom_math, lp_file)
         compare_lps_new(lp_file)
 
-    def test_flow_out_max(self, lp_temp_path, init_math_config):
+    def test_flow_out_max(self, full_math, lp_temp_path, barebones_config):
         self.TEST_REGISTER.add("constraints.flow_out_max")
         model = util.build_test_model(
-            {}, "simple_supply,two_hours,investment_costs", **init_math_config
+            {}, "simple_supply,two_hours,investment_costs", **barebones_config
         )
 
         custom_math = {
-            "constraints": {"flow_out_max": PLAN_MATH.constraints.flow_out_max}
+            "constraints": {"flow_out_max": full_math.constraints.flow_out_max}
         }
         lp_file = lp_temp_path / "flow_out_max.lp"
         build_lp_file(model, custom_math, lp_file)
         compare_lps_new(lp_file)
 
-    def test_balance_conversion(self, lp_temp_path, init_math_config):
+    def test_balance_conversion(self, full_math, lp_temp_path, barebones_config):
         self.TEST_REGISTER.add("constraints.balance_conversion")
 
         model = util.build_test_model(
-            scenario="simple_conversion,two_hours,investment_costs", **init_math_config
+            scenario="simple_conversion,two_hours,investment_costs", **barebones_config
         )
         custom_math = {
             "constraints": {
-                "balance_conversion": PLAN_MATH.constraints.balance_conversion
+                "balance_conversion": full_math.constraints.balance_conversion
             }
         }
         lp_file = lp_temp_path / "balance_conversion.lp"
         build_lp_file(model, custom_math, lp_file)
         compare_lps_new(lp_file)
 
-    def test_source_max(self, lp_temp_path, init_math_config):
+    def test_source_max(self, full_math, lp_temp_path, barebones_config):
         self.TEST_REGISTER.add("constraints.source_max")
         model = util.build_test_model(
             {},
             "simple_supply_plus,resample_two_days,investment_costs",
-            **init_math_config,
+            **barebones_config,
         )
         custom_math = {
-            "constraints": {"my_constraint": PLAN_MATH.constraints.source_max}
+            "constraints": {"my_constraint": full_math.constraints.source_max}
         }
         lp_file = lp_temp_path / "source_max.lp"
         build_lp_file(model, custom_math, lp_file)
         compare_lps_new(lp_file)
 
-    def test_balance_transmission(self, lp_temp_path, init_math_config):
+    def test_balance_transmission(self, full_math, lp_temp_path, barebones_config):
         """Test with the electricity transmission tech being one way only, while the heat transmission tech is the default two-way."""
         self.TEST_REGISTER.add("constraints.balance_transmission")
         model = util.build_test_model(
             {"techs.test_link_a_b_elec.one_way": True},
             "simple_conversion,two_hours",
-            **init_math_config,
+            **barebones_config,
         )
         custom_math = {
-            "constraints": {"my_constraint": PLAN_MATH.constraints.balance_transmission}
+            "constraints": {"my_constraint": full_math.constraints.balance_transmission}
         }
         lp_file = lp_temp_path / "balance_transmission.lp"
         build_lp_file(model, custom_math, lp_file)
         compare_lps_new(lp_file)
 
-    def test_balance_storage(self, lp_temp_path, init_math_config):
+    def test_balance_storage(self, full_math, lp_temp_path, barebones_config):
         """Test balance storage with one tech having and one tech not having per-tech cyclic storage."""
         self.TEST_REGISTER.add("constraints.balance_storage")
         model = util.build_test_model(
@@ -230,17 +245,17 @@ class TestBaseMath:
                 "nodes.b.techs.test_storage.cyclic_storage": False,
             },
             "simple_storage,two_hours",
-            **init_math_config,
+            **barebones_config,
         )
         custom_math = {
-            "constraints": {"my_constraint": PLAN_MATH.constraints.balance_storage}
+            "constraints": {"my_constraint": full_math.constraints.balance_storage}
         }
         lp_file = lp_temp_path / "balance_storage.lp"
         build_lp_file(model, custom_math, lp_file)
         compare_lps_new(lp_file)
 
     @pytest.mark.parametrize("with_export", [True, False])
-    def test_cost_operation_variable(self, lp_temp_path, init_math_config, with_export):
+    def test_cost_operation_variable(self, lp_temp_path, barebones_config, with_export):
         """Test variable costs in the objective."""
         self.TEST_REGISTER.add("global_expressions.cost_operation_variable")
         override = {
@@ -279,7 +294,7 @@ class TestBaseMath:
         model = util.build_test_model(
             override,
             "conversion_and_conversion_plus,var_costs,two_hours",
-            **init_math_config,
+            **barebones_config,
         )
         custom_math = {
             # need the expression defined in a constraint/objective for it to appear in the LP file bounds
@@ -331,30 +346,14 @@ class CustomMathExamples(ABC):
         return io.read_rich_yaml(self.CUSTOM_MATH_DIR / self.YAML_FILEPATH)
 
     @pytest.fixture(scope="class")
-    def full_applied_math(
-        self, custom_math
-    ):  # TODO-Ivan: rename to full_build_math for clarity
-        internal_math = ["plan"] + self.EXTRA_MATH
-        math_dataset = {
-            name: io.read_rich_yaml(CALLIOPE_DIR / "math" / f"{name}.yaml")
-            for name in internal_math
-        }
-        math_dataset["custom_math"] = custom_math
-        return model_math.build_applied_math(list(math_dataset.keys()), math_dataset)
+    def full_math(self, custom_math):
+        return create_full_math(["plan"] + self.EXTRA_MATH, custom_math)
 
     @pytest.fixture(scope="class")
-    def barebones_math_file(self, tmp_path_factory, full_applied_math) -> str:
-        """Write a barebones calliope math file.
-
-        Setup:
-        - No constraints.
-        - All variables and expressions in `plan.yaml`.
-        - A standard dummy objective.
-        """
-        math = prune_math(full_applied_math)
-        barebones_path = tmp_path_factory.mktemp("barebones") / "barebones.yaml"
-        io.to_yaml(math, barebones_path)
-        return str(barebones_path)
+    def barebones_math_file(self, tmp_path_factory, full_math) -> str:
+        filepath = tmp_path_factory.mktemp("barebones") / "barebones.yaml"
+        create_pruned_math_file(full_math, filepath)
+        return str(filepath)
 
     @pytest.fixture(scope="class")
     def lp_temp_path(self, tmp_path_factory):
@@ -364,7 +363,7 @@ class CustomMathExamples(ABC):
         )
 
     @pytest.fixture
-    def build_and_compare(self, full_applied_math, barebones_math_file, lp_temp_path):
+    def build_and_compare(self, full_math, barebones_math_file, lp_temp_path):
         def _build_and_compare(
             filename: str,
             scenario: str,
@@ -378,16 +377,14 @@ class CustomMathExamples(ABC):
                         self.TEST_REGISTER.add(f"{component_group}.{component}")
 
                 custom_math = {
-                    k: {name: full_applied_math[k][name] for name in v}
+                    k: {name: full_math[k][name] for name in v}
                     for k, v in components.items()
                     if k not in ["variables", "global_expressions"]
                 }
             else:
                 self.TEST_REGISTER.add(f"constraints.{filename}")
                 custom_math = {
-                    "constraints": {
-                        filename: full_applied_math["constraints"][filename]
-                    }
+                    "constraints": {filename: full_math["constraints"][filename]}
                 }
 
             if overrides is None:
