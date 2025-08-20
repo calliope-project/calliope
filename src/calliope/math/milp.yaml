@@ -324,7 +324,6 @@ constraints:
 
   # Modified
 
-
   flow_out_max:
     description: >-
       Set the upper bound of a technology's outflow.

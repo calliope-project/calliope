@@ -161,6 +161,8 @@ class Objective(MathComponent):
     sense: Literal["minimise", "maximise", "minimize", "maximize"]
     """Whether the objective function should be minimised or maximised in the
     optimisation."""
+    foreach: UniqueList[AttrStr] = Field(default_factory=list, frozen=True)
+    """Objective functions must be adimensional."""
 
 
 class Variables(CalliopeDictModel):
