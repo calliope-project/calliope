@@ -2,7 +2,9 @@
 
 ### User-facing changes
 
-|changed| |backwards-incompatible| `where:` now uses `==` for equality comparisons (previously `=`).
+|new| Math global expressions have an `order` option to allow user-defined math to be reordered relative to pre-defined math (#773).
+
+|changed| |backwards-incompatible| `where:` now uses `==` for equality comparisons (previously `=`) (#728).
 
 |changed| |backwards-incompatible| YAML files are loaded with `calliope.read_yaml(...)` instead of `calliope.Model(...)`.
 

@@ -40,7 +40,7 @@ The default value should be set such that it has no impact on the optimisation p
 
 ## Global Expressions
 
-Global expressions are those combinations of decision variables and input parameters that you want access to in multiple constraints / objectives in the model.
+Global expressions are those combinations of decision variables and input parameters (_and_ other global expressions!) that you want access to in multiple constraints / objectives in the model.
 You will also receive the result of the global expression as a numeric value in your optimisation results, without having to do any additional post-processing.
 
 For instance, total costs are global expressions as the cost associated with a technology is not a _constraint_, but rather a linear combination of decision variables and parameters (e.g., `storage_cap * cost_storage_cap`).
@@ -64,6 +64,43 @@ The equation expressions do _not_ have comparison operators; those are reserved 
 1. It can be deactivated so that it does not appear in the built optimisation problem by setting `active: false`.
 1. It can take on a `default` value that will be used in math operations to avoid `NaN` values creeping in.
 The default value should be set such that it has no impact on the optimisation problem if it is included (most of the time, this means `NaN`).
+1. It can have an `order` defined to reprioritise its addition to the optimisation problem.
+   This is often necessary when adding new global expressions that you will use in other global expressions since they will need to be defined _before_ the other global expressions that refer to them.
+
+??? example "Re-ordering global expressions"
+    If tracking a new cost as a global expression - `cost_operation_monthly` - we will want to add it to the overall  `cost` global expression so it is tracked in the objective:
+
+    ```yaml
+    global_expressions:
+      # Add our new expression.
+      cost_operation_monthly:
+        ...
+
+      # Add our new expression to the overall `cost` expression.
+      # This only requires updating the where string and main equation in `cost`; the rest will be inherited from the   pre-defined math.
+      cost:
+        where: "cost_operation_monthly OR cost_investment_annualised OR cost_operation_variable OR cost_operation_fixed"
+        equations:
+          - expression: >-
+            default_if_empty(cost_investment_annualised, 0) +
+            $cost_operation_sum +
+            default_if_empty(cost_operation_fixed, 0) +
+            default_if_empty(cost_operation_monthly, 0)
+    ```
+
+    For `cost` to know that `cost_operation_monthly` exists, the latter needs to be defined first.
+    Although we have defined `cost_operation_monthly` in the above example, because `cost` is being _updated_ from the pre-defined math, its order will reflect its position in the  pre-defined math, i.e. higher than `cost_operation_monthly`.
+    To bring the order of `cost_operation_monthly` higher we can define `order` as a suitably small number.
+    Usually, a negative number is used (e.g. `-1`) to ensure we move it to before _all_ pre-defined global expressions:
+
+    ```yaml
+    global_expressions:
+      cost_operation_monthly:
+        order: -1
+        ...
+      cost:
+        ...
+    ```
 
 ## Constraints
 
