@@ -7,7 +7,7 @@ from pathlib import Path
 
 from calliope.model import read_yaml
 
-_EXAMPLE_MODEL_DIR = Path(importlib.resources.files("calliope") / "example_models")
+_EXAMPLE_MODEL_DIR = Path(importlib.resources.files("calliope")) / "example_models"
 
 
 def national_scale(*args, **kwargs):

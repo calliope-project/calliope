@@ -702,7 +702,7 @@ class TestPiecewiseCosts(CustomMathExamples):
             overrides,
             components={
                 "constraints": ["piecewise_costs"],
-                "variables": ["piecewise_cost_investment"],
+                "variables": ["purchased_units", "piecewise_cost_investment"],
                 "global_expressions": ["cost_investment"],
             },
         )
