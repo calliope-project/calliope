@@ -89,17 +89,19 @@ def compare_lps_new(generated_lp: Path):
     assert diff_ordered == ([], []) or not diff_unordered
 
 
-class TestBaseMath:
-    TEST_REGISTER: set = set()
+class InternalMathFiles(ABC):
+    FILENAME: str
+    TEST_REGISTER: set
+    EXTRA_MATH: list
 
     @pytest.fixture(scope="class")
     def lp_temp_path(self, tmp_path_factory):
         """Use a single temp. location to make manual checks easier."""
-        return tmp_path_factory.mktemp("lp_files")
+        return tmp_path_factory.mktemp(f"lp_files_{self.FILENAME}")
 
     @pytest.fixture(scope="class")
     def full_math(self):
-        return create_full_math(["plan"])
+        return create_full_math(["plan"] + self.EXTRA_MATH)
 
     @pytest.fixture(scope="class")
     def barebones_math_file(self, full_math, tmp_path_factory) -> str:
@@ -114,58 +116,20 @@ class TestBaseMath:
             "extra_math": {"barebones": barebones_math_file},
         }
 
-    @pytest.mark.parametrize(
-        ("variable", "constraint", "overrides"),
-        [
-            ("flow_cap", "flow_capacity_minimum", {}),
-            (
-                "storage_cap",
-                "storage_capacity_minimum",
-                {"techs.test_supply_elec.include_storage": True},
-            ),
-            ("area_use", "area_use_minimum", {}),
-            ("source_cap", "source_capacity_minimum", {}),
-        ],
-    )
-    def test_capacity_variables_and_bounds(
-        self, full_math, lp_temp_path, barebones_config, variable, constraint, overrides
-    ):
-        """Check that variables are initiated with the appropriate bounds,
-        and that the lower bound is updated from zero via a separate constraint if required.
-        """
-        constraint_full = f"constraints.{constraint}"
-        self.TEST_REGISTER.add(f"variables.{variable}")
-        self.TEST_REGISTER.add(constraint_full)
-        # Custom objective ensures that all variables appear in the LP file.
-        # Variables not found in either an objective or constraint will never appear in the LP.
-        sum_in_objective = "[nodes]" if variable != "flow_cap" else "[nodes, carriers]"
-        custom_objective = {
-            "objectives.foo": {
-                "equations": [
-                    {
-                        "expression": f"sum({variable}[techs=test_supply_elec], over={sum_in_objective})"
-                    }
-                ],
-                "sense": "minimise",
-            }
-        }
-        custom_math = AttrDict(
-            {constraint_full: full_math.get_key(constraint_full), **custom_objective}
-        )
-        model = util.build_test_model(
-            {
-                f"nodes.b.techs.test_supply_elec.{variable}_max": 100,
-                f"nodes.a.techs.test_supply_elec.{variable}_min": 1,
-                f"nodes.a.techs.test_supply_elec.{variable}_max": np.nan,
-                **overrides,
-            },
-            "simple_supply,two_hours,investment_costs",
-            **barebones_config,
-        )
-        # compare_lps(model, custom_math, variable)
-        lp_file = lp_temp_path / (variable + ".lp")
-        build_lp_file(model, custom_math, lp_file, objective="foo")
-        compare_lps_new(lp_file)
+    @pytest.mark.order(-1)
+    @pytest.mark.xfail(reason="math tests are not fully defined yet")
+    def test_all_math_registered(self):
+        """If all the math has been evaluated, `file_math` should be empty."""
+        file_math = model_math._load_internal_math(self.FILENAME)
+        for key in self.TEST_REGISTER:
+            file_math.del_key(key)
+        assert not file_math
+
+
+class TestBaseMath(InternalMathFiles):
+    FILENAME = "plan"
+    TEST_REGISTER = set()
+    EXTRA_MATH = []
 
     def test_storage_max(self, full_math, lp_temp_path, barebones_config):
         self.TEST_REGISTER.add("constraints.storage_max")
@@ -314,13 +278,64 @@ class TestBaseMath:
         build_lp_file(model, custom_math, lp_file, objective="foo")
         compare_lps_new(lp_file)
 
-    @pytest.mark.xfail(reason="not all base math is in the test config dict yet")
-    def test_all_math_registered(self):
-        """After running all the previous tests in the class, the base_math dict should be empty, i.e. all math has been tested"""
-        plan_math = model_math._load_internal_math("plan")
-        for key in self.TEST_REGISTER:
-            plan_math.del_key(key)
-        assert not plan_math
+
+class TestMILPMath(InternalMathFiles):
+    FILENAME = "milp"
+    TEST_REGISTER = set()
+    EXTRA_MATH = [FILENAME]
+
+    @pytest.mark.parametrize(
+        ("variable", "constraint", "overrides"),
+        [
+            ("flow_cap", "flow_capacity_minimum", {}),
+            (
+                "storage_cap",
+                "storage_capacity_minimum",
+                {"techs.test_supply_elec.include_storage": True},
+            ),
+            ("area_use", "area_use_minimum", {}),
+            ("source_cap", "source_capacity_minimum", {}),
+        ],
+    )
+    def test_capacity_variables_and_bounds(
+        self, full_math, lp_temp_path, barebones_config, variable, constraint, overrides
+    ):
+        """Check that variables are initiated with the appropriate bounds,
+        and that the lower bound is updated from zero via a separate constraint if required.
+        """
+        constraint_full = f"constraints.{constraint}"
+        self.TEST_REGISTER.add(f"variables.{variable}")
+        self.TEST_REGISTER.add(constraint_full)
+        # Custom objective ensures that all variables appear in the LP file.
+        # Variables not found in either an objective or constraint will never appear in the LP.
+        sum_in_objective = "[nodes]" if variable != "flow_cap" else "[nodes, carriers]"
+        custom_objective = {
+            "objectives.foo": {
+                "equations": [
+                    {
+                        "expression": f"sum({variable}[techs=test_supply_elec], over={sum_in_objective})"
+                    }
+                ],
+                "sense": "minimise",
+            }
+        }
+        custom_math = AttrDict(
+            {constraint_full: full_math.get_key(constraint_full), **custom_objective}
+        )
+        model = util.build_test_model(
+            {
+                f"nodes.b.techs.test_supply_elec.{variable}_max": 100,
+                f"nodes.a.techs.test_supply_elec.{variable}_min": 1,
+                f"nodes.a.techs.test_supply_elec.{variable}_max": np.nan,
+                **overrides,
+            },
+            "simple_supply,two_hours,investment_costs",
+            **barebones_config,
+        )
+        # compare_lps(model, custom_math, variable)
+        lp_file = lp_temp_path / (variable + ".lp")
+        build_lp_file(model, custom_math, lp_file, objective="foo")
+        compare_lps_new(lp_file)
 
 
 class CustomMathExamples(ABC):
