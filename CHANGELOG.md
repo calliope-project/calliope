@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|changed| MILP math formulation now has its own file (`milp.yaml`), which can be requested via `extra_math`.
+
 |new| Math global expressions have an `order` option to allow user-defined math to be reordered relative to pre-defined math (#773).
 
 |changed| |backwards-incompatible| `where:` now uses `==` for equality comparisons (previously `=`) (#728).

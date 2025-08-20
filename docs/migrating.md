@@ -374,11 +374,13 @@ Investment costs are split out into the component caused by annual operation and
 
 ### Explicitly triggering MILP and storage decision variables/constraints
 
+For easier extensibility, the mixed-integer formulation of Calliope is now an [extra math option](./pre_defined_math/index.md).
+
 In v0.6, we inferred that a mixed-integer linear model was desired based on the user defining certain parameters.
 For example, defining `units_max` would trigger the integer `units` decision variable.
 Defining the `purchase` cost parameter would trigger the binary `purchased` decision variable.
 
-Now, you need to explicitly set the method using `cap_method`:
+Now, you need to explicitly set the method using `cap_method` and enable the mixed-integer math:
 
 === "v0.6"
 
@@ -398,6 +400,9 @@ Now, you need to explicitly set the method using `cap_method`:
 === "v0.7"
 
     ```yaml
+    config:
+      build:
+        extra_math: ["milp"]  # Adjusts the model formulation to be MILP friendly
     techs:
       supply_tech:
         units_max: 4
