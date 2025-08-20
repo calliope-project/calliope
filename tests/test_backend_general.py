@@ -67,6 +67,40 @@ def solved_model_cls(backend) -> calliope.Model:
     return m
 
 
+@pytest.fixture(scope="class")
+def solved_model_cls_multi_type_global_expression(backend) -> calliope.Model:
+    new_global_expression = {
+        "global_expressions.multi_type": {
+            "foreach": ["nodes", "techs", "carriers"],
+            "equations": [
+                {  # expression
+                    "where": "[test_demand_elec] in techs and [a] in nodes",
+                    "expression": "1 + flow_cap",
+                },
+                {  # decision variable
+                    "where": "[test_supply_elec] in techs and [a] in nodes",
+                    "expression": "flow_cap",
+                },
+                {  # simple numeric
+                    "where": "[test_demand_elec] in techs and [b] in nodes",
+                    "expression": "1",
+                },
+                {  # mutable parameter
+                    "where": "[test_supply_elec] in techs and [b] in nodes",
+                    "expression": "flow_cap_max",
+                },
+            ],
+        }
+    }
+    m = build_model(
+        {"techs.test_link_a_b_heat.active": False},
+        "simple_supply,two_hours,investment_costs",
+    )
+    m.build(backend=backend, add_math_dict=new_global_expression)
+    m.solve()
+    return m
+
+
 @pytest.fixture
 def built_model_func_updated_cost_flow_cap(backend, dummy_int: int) -> calliope.Model:
     m = build_model({}, "simple_supply,two_hours,investment_costs")
@@ -245,6 +279,31 @@ class TestGetters:
         assert (
             expr.to_series().dropna().apply(lambda x: isinstance(x, float | int)).all()
         )
+
+    def test_get_global_expression_as_vals_multitype(
+        self, solved_model_cls_multi_type_global_expression
+    ):
+        """Evaluating backend global expressions of solved models produces their values in the optimal solution, no matter the type of the object."""
+
+        expr = (
+            solved_model_cls_multi_type_global_expression.backend.get_global_expression(
+                "multi_type", as_backend_objs=False, eval_body=True
+            )
+        ).dropna("techs", how="all")
+        expected = (
+            pd.Series(
+                {
+                    ("a", "test_demand_elec", "electricity"): 6.0,  # flow_cap + 1
+                    ("a", "test_supply_elec", "electricity"): 5.0,  # flow_cap
+                    ("b", "test_demand_elec", "electricity"): 1.0,  # numeric 1
+                    ("b", "test_supply_elec", "electricity"): 10.0,  # flow_cap_max
+                }
+            )
+            .rename_axis(index=["nodes", "techs", "carriers"])
+            .to_xarray()
+            .broadcast_like(expr)
+        )
+        assert expr.equals(expected)
 
     def test_get_global_expression_as_vals_no_solve(self, built_model_cls_longnames):
         """Evaluating backend global expressions of built but not solved models produces their string representation."""

@@ -96,3 +96,36 @@ If the `<condition>` has any dimensions not present in `<math_component>`, `<mat
 !!! note
     `Where` gets referred to a lot in Calliope math.
     It always means the same thing: applying [xarray.DataArray.where][].
+
+## group_sum
+
+Summing over a group of one or more dimension members in a memory-efficient way may be necessary when setting constraints.
+For instance, if setting upper flow limits on groups of transmission lines into / out of a set of nodes, or limiting outflow from different types of power plants.
+`group_sum(<math_component>, <groupby_array>, <group_dimension>)` allows you to sum over groups of dimension members in a math component.
+In the `groupby_array`, you match math component dimension members to members of a new `group_dimension` (e.g. `(node, tech)` combinations to types of `polluting_power_plants`: `(GBR, ocgt): high_particulate_emissions`, `(FRA, ccgt): low_particulate_emissions`).
+Once completed, this helper function will return the math component indexed over its original dimensions _minus_ the groupby dimensions _plus_ the new grouper dimension (e.g., `[techs, nodes, carriers, timesteps]` → `[polluting_power_plants, carriers, timesteps]`).
+You will need to account for this accordingly in you math `foreach` and other expression components.
+
+!!! note
+    If you want to sum over a time period on a datetime dimension, consider using the `group_datetime` convenience helper function.
+
+## group_datetime
+
+When working with timeseries data, you may need to constrain a variable over a time period (e.g. hours, days, weeks).
+For instance, a demand may be flexible to be met at any point in a day provided the total daily demand is met.
+Or, you may need to constrain the amount of resource a thermal power plant can use each month.
+To achieve this, you can use the `group_datetime(<math_component>, <datetime_dimension>, <grouping_period>)` helper function.
+
+For example, `group_datetime(flow_in, timesteps, date)` will return the `flow_in` decision variable summed over dates.
+It will therefore be indexed over `[techs, nodes, carriers, date]` instead of `[techs, nodes, carriers, timesteps]` and you will need to account for this accordingly in your math expression.
+
+!!! note
+    Only a summation over the given period is possible with this helper function.
+    If you want to get e.g., a maximum value per month then you will need to create a new decision variable indexed over `months` and then create a constraint per timestep per month that will effectively set that decision variable to the maximum value over all timesteps in the month.
+    This can be quite memory intensive if you want to achieve it for days/weeks as you will be indexing over timesteps * days / weeks, which is a very large array.
+
+## sum_next_n
+
+Use the `sum_next_n(<math_component>, <dimension>, <rolling_horizon_window>)` to sum over a rolling window in a given dimension.
+This can be useful in demand-side management constraints, where demand can be shifted within a limited window, e.g. 4 hours.
+It can also be useful in tracking startup/shutdown periods when optimising with unit commitment.

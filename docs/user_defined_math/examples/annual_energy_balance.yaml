@@ -68,7 +68,7 @@ constraints:
       Limit total flow out of the system into a sink that is not pinned
       by `sink_use_equals`.
     foreach: [techs]
-    where: base_tech=demand AND annual_sink_max
+    where: base_tech==demand AND annual_sink_max
     equations:
       - expression: >
           sum(flow_in, over=[nodes, carriers, timesteps]) <= annual_sink_max

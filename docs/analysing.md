@@ -11,7 +11,8 @@ Whatever software you prefer to use for data processing, either the NetCDF or CS
 A model which solved successfully has two primary [xarray.Dataset][]s with data of interest:
 
 * `model.inputs`: contains all input data, such as renewable resource capacity factors
-* `model.results`: contains all results data, such as dispatch decisions and installed capacities
+* `model.results`: contains all results data, such as dispatch decisions and installed capacities.
+  It also includes [results calculated in postprocessing](./reference/api/postprocess.md), such as levelised cost of electricity (LCOE) and capacity factor.
 
 Both of these are [xarray.Dataset][]s and can be further processed with Python.
 
@@ -40,3 +41,11 @@ Once loaded, the input and results data can be accessed as above (i.e., `solved_
 
 !!! info "See also"
     The [xarray][] documentation should be consulted for further information on dealing with Datasets.
+
+## Visualisation
+
+You can visualise Calliope results with:
+
+* Calligraph: See [the Calligraph documentation](https://calligraph.readthedocs.io/).
+* Python: Refer to the [example notebooks](examples/index.md) for some ideas on how to visualise directly within Python.
+* Any tool: Save your model results to CSV or NetCDF ([calliope.Model.to_csv][] or [calliope.Model.to_netcdf][]), then further process and analyse them elsewhere.

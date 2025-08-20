@@ -274,7 +274,9 @@ class TestOperateMode:
 
 
 class TestSporesMode:
-    SPORES_OVERRIDES = "spores,two_hours,simple_supply_and_supply_plus,investment_costs"
+    SPORES_OVERRIDES = (
+        "spores,var_costs,two_hours,simple_supply_spores_ready,investment_costs"
+    )
 
     @contextmanager
     def caplog_session(self, request):
@@ -307,6 +309,7 @@ class TestSporesMode:
         """Iterate 2 times in SPORES mode using different scoring algorithms."""
         model = build_model({}, self.SPORES_OVERRIDES)
         model.build(mode="spores")
+
         with self.caplog_session(request) as caplog:
             with caplog.at_level(logging.INFO):
                 model.solve(spores={"scoring_algorithm": request.param})
@@ -427,7 +430,7 @@ class TestSporesMode:
         ],
     )
     def test_spores_constraining_cost_is_baseline_obj(
-        self, request, simple_supply_and_supply_plus, fixture
+        self, request, simple_supply_spores_ready, fixture
     ):
         """No matter how SPORES are initiated, the constraining cost (pre application of slack) should be the plan mode objective function value."""
         model, _ = request.getfixturevalue(fixture)
@@ -435,7 +438,7 @@ class TestSporesMode:
             model.backend.get_parameter(
                 "spores_baseline_cost", as_backend_objs=False
             ).item()
-            == simple_supply_and_supply_plus.results["min_cost_optimisation"].item()
+            == simple_supply_spores_ready.results["min_cost_optimisation"].item()
         )
 
     @pytest.mark.filterwarnings(
@@ -471,7 +474,12 @@ class TestSporesMode:
     def test_spores_caps(self, spores_model_and_log_algorithms):
         """There should be some changes in capacities between SPORES."""
         spores_model, _ = spores_model_and_log_algorithms
-        cap_diffs = spores_model.results.flow_cap.diff(dim="spores")
+        n_spores = spores_model.config.solve.spores.number
+        # as the spores dim is strings, it isn't ordered as one would expect
+        order_dim = ["baseline"] + [f"{i}" for i in range(1, n_spores + 1)]
+        cap_diffs = spores_model.results.flow_cap.sel(spores=order_dim).diff(
+            dim="spores"
+        )
         assert (cap_diffs != 0).any()
 
     def test_spores_algo_log(self, spores_model_and_log_algorithms):

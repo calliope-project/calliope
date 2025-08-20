@@ -258,7 +258,7 @@ class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):
     OP_TRANSLATOR = {
         "<=": r"\mathord{\leq}",
         ">=": r"\mathord{\geq}",
-        "=": r"\mathord{=}",
+        "==": r"\mathord{==}",
         "<": r"\mathord{<}",
         ">": r"\mathord{>}",
     }
@@ -286,7 +286,7 @@ class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):
                 comparison = lhs < rhs
             case ">":
                 comparison = lhs > rhs
-            case "=":
+            case "==":
                 comparison = lhs == rhs
         return xr.DataArray(comparison)
 
@@ -462,7 +462,7 @@ def comparison_parser(
         pp.ParserElement:
             Parser which will return a bool/boolean array as a result of the comparison.
     """
-    comparison_operators = pp.oneOf(["<", ">", "=", ">=", "<="])
+    comparison_operators = pp.oneOf(["<", ">", "==", ">=", "<="])
     comparison_expression = (
         (config_option | data_var)
         + comparison_operators

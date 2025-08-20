@@ -129,8 +129,8 @@ m.backend.get_variable("flow_cap", as_backend_objs=False).to_series().dropna()
 # # Save
 
 # %%
-# We can save at any point, which will dump the entire m._model_data to file.
-# NetCDF is recommended, as it retains most of the data and can be reloaded into a Calliope model at a later date.
+# We can save at any point, which will dump the entire model to file.
+# NetCDF is recommended, as it retains the model data _and_ attributes and can be reloaded into a Calliope model at a later date.
 
 
 output_path = Path(".") / "outputs" / "4_calliope_model_object"
