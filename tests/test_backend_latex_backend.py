@@ -437,7 +437,7 @@ class TestLatexBackendModel:
         ],
     )
     def test_generate_math_doc(self, temp_dummy_latex_backend_model, format, expected):
-        temp_dummy_latex_backend_model._add_all_inputs_as_parameters()
+        temp_dummy_latex_backend_model._load_inputs()
         temp_dummy_latex_backend_model.add_global_expression(
             "expr",
             {
@@ -523,7 +523,7 @@ class TestLatexBackendModel:
     def test_generate_math_doc_mkdocs_features_admonition(
         self, temp_dummy_latex_backend_model
     ):
-        temp_dummy_latex_backend_model._add_all_inputs_as_parameters()
+        temp_dummy_latex_backend_model._load_inputs()
         temp_dummy_latex_backend_model.add_global_expression(
             "expr",
             {
@@ -699,7 +699,7 @@ class TestLatexBackendModel:
         assert refs == {"multi_dim_var"}
 
     def test_param_type(self, temp_dummy_latex_backend_model):
-        temp_dummy_latex_backend_model._add_all_inputs_as_parameters()
+        temp_dummy_latex_backend_model._load_inputs()
         temp_dummy_latex_backend_model.add_global_expression(
             "expr",
             {

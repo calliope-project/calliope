@@ -268,7 +268,7 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         """Parse math and inputs and set optimisation problem."""
         # The order of adding components matters!
         # 1. Variables, 2. Global Expressions, 3. Constraints, 4. Objectives
-        self._add_all_inputs_as_parameters_or_lookups()
+        self._load_inputs()
         for components in typing.get_args(ORDERED_COMPONENTS_T):
             component = components.removesuffix("s")
             for name, dict_ in self.math[components].items():
@@ -408,7 +408,7 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             BackendError: Cannot overwrite object of same name and type.
         """
 
-    def _add_all_inputs_as_parameters_or_lookups(self) -> None:
+    def _load_inputs(self) -> None:
         """Add all parameters to backend dataset in-place.
 
         If model data does not include a parameter, their default values will be added here
