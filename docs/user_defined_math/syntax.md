@@ -12,7 +12,7 @@ You then populate the subset with any number of [equation expressions](#equation
 
     Reference for the allowed key-value pairs in your additional math YAML file is available in the [reference section of the documentation][model-definition-schema].
 
-## foreach lists
+## `foreach` lists
 
 If the math component is indexed over dimensions (a.k.a. "sets" - e.g., `techs`, `nodes`, `timesteps`), then you need to define a `foreach` list of those sets.
 If the component is dimensionless, no `foreach` list needs to be defined.
@@ -40,15 +40,15 @@ When checking the existence of an input parameter it is possible to first sum it
     1.  `any` is a [helper function](helper_functions.md#any)!
 
 1. Checking the value of a configuration option or an input parameter.
-Checks can use any of the operators: `>`, `<`, `=`, `<=`, `>=`.
+Checks can use any of the operators: `>`, `<`, `==`, `<=`, `>=`.
 Configuration options are any that are defined in `config.build`, where you can define your own options to access in the `where` string.
 
     ??? example annotate "Examples"
 
-        - If you want to apply a constraint only if the configuration option `config.build.mode` is _operate_, you would include `config.mode=operate`.
+        - If you want to apply a constraint only if the configuration option `config.build.mode` is _operate_, you would include `config.mode==operate`.
         - If you want to apply a constraint across all `nodes` and `techs`, but only where the `flow_eff` parameter is less than 0.5, you would include `flow_eff<0.5`.
-        - If you want to apply a constraint only for the first timestep in your timeseries, you would include `timesteps=get_val_at_index(dim=timesteps, idx=0)`. (1)
-        - If you want to apply a constraint only for the last timestep in your timeseries, you would include `timesteps=get_val_at_index(dim=timesteps, idx=-1)`.
+        - If you want to apply a constraint only for the first timestep in your timeseries, you would include `timesteps==get_val_at_index(dim=timesteps, idx=0)`. (1)
+        - If you want to apply a constraint only for the last timestep in your timeseries, you would include `timesteps==get_val_at_index(dim=timesteps, idx=-1)`.
 
     1.  `get_val_at_index` is a [helper function](helper_functions.md#get_val_at_index)!
 
@@ -56,7 +56,7 @@ Configuration options are any that are defined in `config.build`, where you can 
 
     ??? example "Examples"
 
-        - If you want to create a decision variable across only `storage` technologies, you would include `base_tech=storage`.
+        - If you want to create a decision variable across only `storage` technologies, you would include `base_tech==storage`.
 
 1. Subsetting a set.
 The sets available to subset are always [`nodes`, `techs`, `carriers`] + any additional sets defined by you in [`foreach`](#foreach-lists).
@@ -75,9 +75,9 @@ These statements will be combined first.
 
 ??? example "Examples"
 
-    - If you want to apply a constraint for `storage` technologies if the configuration option `cyclic_storage` is activated and it is the last timestep of the series: `base_tech=storage and cyclic_storage=True and timesteps=get_val_at_index(dim=timesteps, idx=-1)`.
-    - If you want to create a decision variable for the input carriers of conversion technologies: `carrier_in and base_tech=conversion`
-    - If you want to apply a constraint if the parameter `source_unit` is `energy_per_area` or the parameter `area_use_per_flow_cap` is defined: `source_unit=energy_per_area or area_use_per_flow_cap`.
+    - If you want to apply a constraint for `storage` technologies if the configuration option `cyclic_storage` is activated and it is the last timestep of the series: `base_tech=storage and cyclic_storage==True and timesteps==get_val_at_index(dim=timesteps, idx=-1)`.
+    - If you want to create a decision variable for the input carriers of conversion technologies: `carrier_in and base_tech==conversion`
+    - If you want to apply a constraint if the parameter `source_unit` is `energy_per_area` or the parameter `area_use_per_flow_cap` is defined: `source_unit==energy_per_area or area_use_per_flow_cap`.
     - If you want to apply a constraint if the parameter `flow_out_eff` is less than or equal to 0.5 and `source_use` has been defined, or `flow_out_eff` is greater than 0.9 and `source_use` has not been defined: `(flow_out_eff<=0.5 and source_use) or (flow_out_eff>0.9 and not source_use)`.
 
 Combining `foreach` and `where` will create an n-dimensional boolean array.
@@ -150,7 +150,7 @@ equations:
     equations:
       - where: flow_eff > 0
         expression: flow_out / flow_out_eff == flow_in
-      - where: flow_eff = 0
+      - where: flow_eff == 0
         expression: flow_out == 0
     ```
 
@@ -181,13 +181,13 @@ equations:
   - expression: flow_out <= $adjusted_flow_in
 sub_expressions:
   adjusted_flow_in:
-    - where: base_tech=storage
+    - where: base_tech==storage
       # main expression becomes `flow_out <= flow_in * flow_eff`
       expression: flow_in * flow_eff
-    - where: base_tech=supply
+    - where: base_tech==supply
       # main expression becomes `flow_out <= flow_in * flow_eff * parasitic_eff`
       expression: flow_in * flow_eff * parasitic_eff
-    - where: base_tech=conversion
+    - where: base_tech==conversion
       # main expression becomes `flow_out <= flow_in * flow_eff * 0.3`
       expression: flow_in * flow_eff * 0.3
 ```
