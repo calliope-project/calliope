@@ -65,8 +65,6 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
     _PARAM_DESCRIPTIONS = extract_from_schema(MODEL_SCHEMA, "description")
     _PARAM_UNITS = extract_from_schema(MODEL_SCHEMA, "x-unit")
     _PARAM_TYPE = extract_from_schema(MODEL_SCHEMA, "x-type")
-    objective: str
-    """Optimisation problem objective name."""
 
     def __init__(
         self,
@@ -90,7 +88,18 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         self.defaults: dict = deepcopy(defaults)
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
+        self._objective: str = self.config.objective
+
         self._check_inputs()
+
+    @property
+    def objective(self) -> str:
+        """Optimisation problem objective name."""
+        return self._objective
+
+    @objective.setter
+    def objective(self, value: str):
+        self._objective = value
 
     @abstractmethod
     def add_parameter(
@@ -366,7 +375,7 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         )
         if name not in self.math[component_type]:
             self._dataset.attrs["applied_math"].union(
-                {f"{component_type}.{name}": component_dict}
+                {f"{component_type}.{name}": component_dict}, allow_override=True
             )
 
         return parsed_component
@@ -1098,7 +1107,9 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             refs = [k for k in getattr(self, component).data_vars if k in references]
             for ref in refs:
                 self.delete_component(ref, component)
-                dict_ = self.math[component][ref]
+                input_math = self.math[component]
+                applied_math = self._dataset.attrs["applied_math"][component]
+                dict_ = input_math.get(ref, {}) | applied_math.get(ref, {})
                 getattr(self, "add_" + component.removesuffix("s"))(ref, dict_)
 
     def _get_component(self, name: str, component_group: str) -> xr.DataArray:

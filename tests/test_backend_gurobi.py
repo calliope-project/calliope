@@ -34,6 +34,20 @@ class TestNewBackend:
         m.solve()
         return m
 
+    @pytest.fixture
+    def simple_supply_gurobi_func_new_objective(self, simple_supply_gurobi_func):
+        simple_supply_gurobi_func.backend.add_objective(
+            "foo",
+            {
+                "equations": [{"expression": "bigM"}],
+                "sense": "minimise",
+                "active": True,
+            },
+        )
+        simple_supply_gurobi_func.backend.set_objective("foo")
+        simple_supply_gurobi_func.backend.verbose_strings()
+        return simple_supply_gurobi_func
+
     def test_new_build_get_variable(self, simple_supply_gurobi):
         var = simple_supply_gurobi.backend.get_variable("flow_cap")
         assert (
@@ -111,21 +125,24 @@ class TestNewBackend:
         assert "flow_cap" in str(obj)
         assert simple_supply_longnames.backend.objective == "min_cost_optimisation"
 
-    def test_new_objective_set(self, simple_supply_gurobi_func):
-        simple_supply_gurobi_func.backend.add_objective(
-            "foo",
-            {
-                "equations": [{"expression": "bigM"}],
-                "sense": "minimise",
-                "active": True,
-            },
-        )
-        simple_supply_gurobi_func.backend.set_objective("foo")
-        simple_supply_gurobi_func.backend.verbose_strings()
-        obj = simple_supply_gurobi_func.backend._instance.getObjective()
-        assert simple_supply_gurobi_func.backend.objective == "foo"
+    def test_new_objective_set(self, simple_supply_gurobi_func_new_objective):
+        assert simple_supply_gurobi_func_new_objective.backend.objective == "foo"
 
-        assert "flow_cap" not in str(obj)
+    def test_new_objective_value(self, simple_supply_gurobi_func_new_objective):
+        obj = simple_supply_gurobi_func_new_objective.backend._instance.getObjective()
+        assert str(obj) == "1000.0"
+
+    def test_new_objective_set_update(
+        self, simple_supply_gurobi_func_new_objective, dummy_int
+    ):
+        simple_supply_gurobi_func_new_objective.backend.update_parameter(
+            "bigM", xr.DataArray(dummy_int)
+        )
+        obj_expr = simple_supply_gurobi_func_new_objective.backend.get_objective("foo")
+        assert obj_expr == dummy_int
+
+        obj = simple_supply_gurobi_func_new_objective.backend._instance.getObjective()
+        assert str(obj) == str(float(dummy_int))
 
     def test_new_objective_set_log(self, caplog, simple_supply_gurobi_func):
         caplog.set_level(logging.INFO)

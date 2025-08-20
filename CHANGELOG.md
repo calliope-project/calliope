@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|fixed| Updates to the expression underlying the Gurobi backend objective function make their way through to the objective function before solving (#797).
+
 |changed| |backwards-incompatible| `where:` now uses `==` for equality comparisons (previously `=`).
 
 |changed| |backwards-incompatible| YAML files are loaded with `calliope.read_yaml(...)` instead of `calliope.Model(...)`.

@@ -479,8 +479,6 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             equations=equation_strings,
             sense=sense_dict[objective_dict["sense"]],
         )
-        if name == self.config.objective:
-            self.objective = name
 
     def set_objective(self, name: str):  # noqa: D102, override
         self.objective = name
