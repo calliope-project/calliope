@@ -1108,7 +1108,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             for ref in refs:
                 self.delete_component(ref, component)
                 input_math = self.math[component]
-                applied_math = self._dataset.attrs["applied_math"][component]
+                applied_math = self._dataset.attrs["applied_math"].get(component, {})
                 dict_ = input_math.get(ref, {}) | applied_math.get(ref, {})
                 getattr(self, "add_" + component.removesuffix("s"))(ref, dict_)
 
