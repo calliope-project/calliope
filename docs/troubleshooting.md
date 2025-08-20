@@ -215,7 +215,7 @@ This will tell you if any of the syntax is malformed, although it cannot tell yo
 
 There are private attributes of the Calliope `Model` object that you can access to gain additional insights into your model runs.
 
-* For all data in one place (i.e., the combination of `inputs` and `results`), the dataset `model._model_data`.
+* For the entire loaded model definition, the pydantic model `model._def`.
 * For the built backend objects (e.g., Pyomo objects) in an array format, the dataset `model.backend._dataset`.
 
 !!! info

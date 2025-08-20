@@ -902,7 +902,7 @@ def sliced_param_or_var_parser(
 
     E.g. "source_use_max[node, tech]".
 
-    If a parameter, must be a data variable in the Model._model_data xarray dataset.
+    If a parameter, must be a data variable in the Model.inputs xarray dataset.
 
     If a variable, must be an optimisation problem decision variable.
 

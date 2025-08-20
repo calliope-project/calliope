@@ -4,6 +4,25 @@
 
 |new| Math global expressions have an `order` option to allow user-defined math to be reordered relative to pre-defined math (#773).
 
+|changed| |backwards-incompatible| `where:` now uses `==` for equality comparisons (previously `=`) (#728).
+
+|changed| |backwards-incompatible| YAML files are loaded with `calliope.read_yaml(...)` instead of `calliope.Model(...)`.
+
+|changed| |backwards-incompatible| In-memory dictionaries are loaded with `calliope.Model.from_dict(...)` instead of `calliope.Model(...)`.
+
+|new| In-memory xarray datasets are loaded with `calliope.Model(...)`, e.g. `calliope.Model(inputs=input_array, attrs=attributes)`.
+
+|changed| Model attributes are _not_ stored in the input/results arrays (e.g. `model.inputs.attrs`) but are available directly from the model object:
+
+- `model.definition` = the loaded model data definition
+- `model.config` = the loaded model configuration
+- `model.runtime` = runtime attributes, like timing logs
+- `model.math` = initialised and applied math
+
+They can all be dumped to a single attribute dictionary with `calliope.Model.dump_all_attrs()`
+
+|new| Model attributes are saved to a `attrs.yaml` YAML file when storing data using `calliope.Model.to_csv`.
+
 |new| helper functions to enable summation over single-/multi-dimension groups and rolling window summations of math expression components (#735, #777).
 
 |fixed| Evaluating results of Gurobi global expressions containing pure decision variables / parameters (#780).
@@ -31,6 +50,16 @@ E.g., `model.results.min_cost_optimisation` will give the objective function val
 |fixed| SPORES tests to vary capacities of costed technologies rather than be able to simply vary the capacity of a free heat transmission technology between SPORES (#782).
 
 |fixed| Randomly failing tests that rely on random sampling from the core code, by setting a global test suite random seed (#789).
+
+|new| `pydantic.RootModel` used for storing model definition dictionaries with arbitrary keys (`techs`, `nodes`, etc.).
+
+|new| Add `rich` as a dev dependency for much more readable repr strings of our pydantic models.
+
+|changed| Separate `inputs` and `results` into separate datasets rather than filtered views on the same `_model_data`, private dataset.
+Accordingly, Remove `is_result` array attribute and save to separate NetCDF "groups"
+
+|changed| Removed all `attributes` from `_model_data.attrs`, storing them instead in pydantic model objects attached to the main calliope model object.
+On saving to file, attributes are stored in the `attrs` of an empty dataset as a distinct NetCDF "group".
 
 ## 0.7.0.dev6 (2025-03-24)
 

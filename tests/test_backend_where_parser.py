@@ -103,6 +103,7 @@ def eval_kwargs(dummy_pyomo_backend_model, dummy_build_config):
         "equation_name": "foo",
         "return_type": "array",
         "references": set(),
+        "defaults": dummy_pyomo_backend_model.defaults,
         "build_config": dummy_build_config,
     }
 
@@ -125,7 +126,7 @@ class TestParserElements:
         self, data_var, dummy_model_data, data_var_string, expected, eval_kwargs
     ):
         parsed_ = data_var.parse_string(data_var_string, parse_all=True)
-        default = dummy_model_data.attrs["defaults"][expected]
+        default = eval_kwargs["defaults"][expected]
         assert (
             parsed_[0]
             .eval(apply_where=False, **eval_kwargs)
@@ -319,7 +320,7 @@ class TestParserElements:
     def test_comparison_parser_data_var(
         self, comparison, eval_kwargs, var_string, comparison_val, n_true
     ):
-        comparison_string = f"{var_string}={comparison_val}"
+        comparison_string = f"{var_string}=={comparison_val}"
         parsed_ = comparison.parse_string(comparison_string, parse_all=True)
         evaluated_ = parsed_[0].eval(**eval_kwargs)
         assert evaluated_.dtype.kind == "b"
@@ -327,7 +328,7 @@ class TestParserElements:
 
     @pytest.mark.parametrize(
         ("operator", "comparison_val", "n_true"),
-        [("=", ".inf", 1), ("<", 3, 4), ("<=", 3, 5), (">", 1, 5), (">=", 1, 8)],
+        [("==", ".inf", 1), ("<", 3, 4), ("<=", 3, 5), (">", 1, 5), (">=", 1, 8)],
     )
     def test_comparison_parser_data_var_different_ops(
         self, comparison, eval_kwargs, operator, comparison_val, n_true
@@ -352,7 +353,7 @@ class TestParserElements:
     def test_comparison_parser_model_config(
         self, comparison, eval_kwargs, config_string, comparison_val, expected_true
     ):
-        comparison_string = f"{config_string}={comparison_val}"
+        comparison_string = f"{config_string}=={comparison_val}"
         parsed_ = comparison.parse_string(comparison_string, parse_all=True)
         evaluated_ = parsed_[0].eval(**eval_kwargs)
         assert evaluated_ if expected_true else not evaluated_
@@ -360,13 +361,13 @@ class TestParserElements:
     @pytest.mark.parametrize(
         "comparison_string",
         [
-            "1=1",
-            "config.foo==bar",
-            "all_inf=__type__",
-            "$foo=bar",
-            "foo=$bar",
-            "foo=config.bar",
-            "config.foo=_bar",
+            "1==1",
+            "config.foo=bar",
+            "all_inf==__type__",
+            "$foo==bar",
+            "foo==$bar",
+            "foo==config.bar",
+            "config.foo==_bar",
         ],
     )
     def test_comparison_malformed_string(self, comparison, comparison_string):
@@ -395,7 +396,7 @@ class TestParserElements:
             "[bar] infoo",  # missing whitespace
             "[bar] in",  # missing set name
             "foo in [bar]",  # Wrong order of subset and set name
-            "[foo=bar] in foo",  # comparison string in subset
+            "[foo==bar] in foo",  # comparison string in subset
             "[defined(techs=[tech1, tech2], within=nodes, how=any)] in foo",  # helper function in subset
             "(bar) in foo",  # wrong brackets
         ],
@@ -411,7 +412,7 @@ class TestParserElements:
             ("data_var", "foo", "DATA_VAR:foo"),
             ("config_option", "config.bar", "CONFIG:bar"),
             ("bool_operand", "TRUE", "BOOL:true"),
-            ("comparison", "config.bar=True", "CONFIG:bar=BOOL:true"),
+            ("comparison", "config.bar==True", "CONFIG:bar==BOOL:true"),
             ("subset", "[foo, 1] in foos", "SUBSET:foos[STRING:foo, NUM:1]"),
         ],
     )
@@ -426,7 +427,7 @@ class TestParserMasking:
         ("instring", "expected"),
         [
             ("all_inf", "all_false"),
-            ("config.foo=True", True),
+            ("config.foo==True", True),
             ("get_val_at_index(nodes=0)", "foo"),
         ],
     )
@@ -442,11 +443,11 @@ class TestParserMasking:
     @pytest.mark.parametrize(
         ("instring", "expected_true"),
         [
-            ("config.foo=True and config.a_b=0", True),
-            ("config.foo=False And config.a_b=0", False),
-            ("config.foo=True AND config.a_b=1", False),
-            ("config.foo=False and config.a_b=1", False),
-            ("config.foo=1  and  config.a_b=0", True),
+            ("config.foo==True and config.a_b==0", True),
+            ("config.foo==False And config.a_b==0", False),
+            ("config.foo==True AND config.a_b==1", False),
+            ("config.foo==False and config.a_b==1", False),
+            ("config.foo==1  and  config.a_b==0", True),
         ],
     )
     def test_where_string_and(self, parse_where_string, instring, expected_true):
@@ -456,11 +457,11 @@ class TestParserMasking:
     @pytest.mark.parametrize(
         ("instring", "expected_true"),
         [
-            ("config.foo=True or config.a_b=0", True),
-            ("config.foo=False Or config.a_b=0", True),
-            ("config.foo=True OR config.a_b=1", True),
-            ("config.foo=False or config.a_b=1", False),
-            ("config.foo=1 or config.a_b=0", True),
+            ("config.foo==True or config.a_b==0", True),
+            ("config.foo==False Or config.a_b==0", True),
+            ("config.foo==True OR config.a_b==1", True),
+            ("config.foo==False or config.a_b==1", False),
+            ("config.foo==1 or config.a_b==0", True),
         ],
     )
     def test_where_string_or(self, parse_where_string, instring, expected_true):
@@ -470,11 +471,11 @@ class TestParserMasking:
     @pytest.mark.parametrize(
         ("instring", "expected_true"),
         [
-            ("not config.foo=True", False),
-            ("Not config.foo=False and config.a_b=0", True),
-            ("config.foo=True and NOT config.a_b=1", True),
-            ("not config.foo=False and not config.a_b=1", True),
-            ("config.foo=False or not config.a_b=0", False),
+            ("not config.foo==True", False),
+            ("Not config.foo==False and config.a_b==0", True),
+            ("config.foo==True and NOT config.a_b==1", True),
+            ("not config.foo==False and not config.a_b==1", True),
+            ("config.foo==False or not config.a_b==0", False),
         ],
     )
     def test_where_string_not(self, parse_where_string, instring, expected_true):
@@ -533,11 +534,11 @@ class TestParserMasking:
     @pytest.mark.parametrize(
         ("instring", "expected"),
         [
-            ("all_inf and all_nan or config.foo=True", "all_true"),
-            ("all_inf and (all_nan or config.foo=True)", "all_false"),
-            ("not all_inf and not config.foo=False ", "all_true"),
+            ("all_inf and all_nan or config.foo==True", "all_true"),
+            ("all_inf and (all_nan or config.foo==True)", "all_false"),
+            ("not all_inf and not config.foo==False ", "all_true"),
             (
-                "(all_inf=inf and with_inf) or (config.foo=True and all_nan)",
+                "(all_inf==inf and with_inf) or (config.foo==True and all_nan)",
                 "with_inf_as_bool",
             ),
         ],
@@ -561,8 +562,8 @@ class TestParserMasking:
             "and all_inf",
             "with_inf not and all_inf",
             "with_inf and or all_inf",
-            "config.foo=True and and config.foo=True",
-            "config.foo=True andnot all_inf",
+            "config.foo==True and and config.foo==True",
+            "config.foo==True andnot all_inf",
         ],
     )
     def test_where_malformed(self, where, instring):
@@ -589,8 +590,8 @@ class TestAsMathString:
             ("comparison", "config.foo>1", r"\text{config.foo}\mathord{>}\text{1}"),
             (
                 "comparison",
-                "with_inf=True",
-                r"\textit{with_inf}_\text{node,tech}\mathord{=}\text{true}",
+                "with_inf==True",
+                r"\textit{with_inf}_\text{node,tech}\mathord{==}\text{true}",
             ),
             ("subset", "[foo, bar] in foos", r"\text{foo} \in \text{[foo,bar]}"),
             ("where", "NOT no_dims", r"\neg (\exists (\textit{no_dims}))"),

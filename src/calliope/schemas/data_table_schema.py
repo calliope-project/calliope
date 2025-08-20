@@ -2,10 +2,15 @@
 # Licensed under the Apache 2.0 License (see LICENSE file).
 """Schema for data table definition."""
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from typing_extensions import Self
 
-from calliope.schemas.general import AttrStr, CalliopeBaseModel, UniqueList
+from calliope.schemas.general import (
+    AttrStr,
+    CalliopeBaseModel,
+    CalliopeDictModel,
+    UniqueList,
+)
 from calliope.util.tools import listify
 
 
@@ -79,3 +84,9 @@ class CalliopeDataTable(CalliopeBaseModel):
                     "Renamed dimensions must be in either rows or columns."
                 )
         return self
+
+
+class CalliopeDataTables(CalliopeDictModel):
+    """Calliope input data table dictionary."""
+
+    root: dict[AttrStr, CalliopeDataTable] = Field(default_factory=dict)

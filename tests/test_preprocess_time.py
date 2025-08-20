@@ -77,11 +77,11 @@ class TestClustering:
         return build_test_model(scenario="simple_supply", **cluster_init)
 
     def test_no_operate_mode_allowed(self, clustered_model):
-        assert clustered_model._model_data.attrs["allow_operate_mode"] == 0
+        assert clustered_model.runtime.allow_operate_mode == 0
 
     def test_cluster_numbers(self, clustered_model):
         assert (
-            clustered_model._model_data.clusters.to_index()
+            clustered_model.inputs.clusters.to_index()
             .symmetric_difference([0, 1])
             .empty
         )
@@ -97,7 +97,7 @@ class TestClustering:
         expected.index = pd.to_datetime(expected.index)
 
         pd.testing.assert_series_equal(
-            clustered_model._model_data.timestep_cluster.to_series(),
+            clustered_model.inputs.timestep_cluster.to_series(),
             expected,
             check_names=False,
         )
@@ -108,7 +108,7 @@ class TestClustering:
             name="datesteps",
         )
         pd.testing.assert_index_equal(
-            clustered_model._model_data.datesteps.to_index(), expected
+            clustered_model.inputs.datesteps.to_index(), expected
         )
 
     @pytest.mark.parametrize(
@@ -121,7 +121,7 @@ class TestClustering:
         ],
     )
     def test_cluster_has_lookup_arrays(self, clustered_model, var):
-        assert var in clustered_model._model_data.data_vars
+        assert var in clustered_model.inputs.data_vars
 
 
 class TestResamplingAndCluster:
@@ -146,8 +146,8 @@ class TestResamplingAndCluster:
             ]
         )
 
-        assert dtindex.equals(model._model_data.timesteps.to_index())
-        assert model._model_data.attrs["allow_operate_mode"] == 0
+        assert dtindex.equals(model.inputs.timesteps.to_index())
+        assert model.runtime.allow_operate_mode == 0
 
 
 class TestResampling:
@@ -159,7 +159,6 @@ class TestResampling:
         )
 
         model = build_test_model(override, scenario="simple_supply", time_resample="6h")
-        data = model._model_data
 
         dtindex = pd.DatetimeIndex(
             [
@@ -174,8 +173,8 @@ class TestResampling:
             ]
         )
 
-        assert dtindex.equals(data.timesteps.to_index())
-        assert data.attrs["allow_operate_mode"] == 1
+        assert dtindex.equals(model.inputs.timesteps.to_index())
+        assert model.runtime.allow_operate_mode == 1
 
     def test_15min_to_2h_resampling_to_2h(self):
         """
@@ -188,7 +187,6 @@ class TestResampling:
         model = build_test_model(
             override, scenario="simple_supply,one_day", time_resample="2h"
         )
-        data = model._model_data
 
         dtindex = pd.DatetimeIndex(
             [
@@ -207,7 +205,7 @@ class TestResampling:
             ]
         )
 
-        assert dtindex.equals(data.timesteps.to_index())
+        assert dtindex.equals(model.inputs.timesteps.to_index())
 
     @pytest.mark.filterwarnings(
         "ignore:(?s).*Possibly missing data on the timesteps dimension*:calliope.exceptions.ModelWarning"

@@ -36,6 +36,7 @@ class EvalAttrs(TypedDict):
     apply_where: NotRequired[bool]
     references: NotRequired[set]
     build_config: config_schema.Build
+    defaults: dict
 
 
 class EvalWhere(expression_parser.EvalToArrayStr):
@@ -201,7 +202,7 @@ class DataVarParser(EvalWhere):
 
         Return default value as an array if var does not exist.
         """
-        default = source_dataset.attrs["defaults"].get(self.data_var)
+        default = self.eval_attrs["defaults"].get(self.data_var)
         var = source_dataset.get(self.data_var, xr.DataArray(default))
         if default is not None:
             var = var.fillna(default)
@@ -241,7 +242,7 @@ class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):
     OP_TRANSLATOR = {
         "<=": r"\mathord{\leq}",
         ">=": r"\mathord{\geq}",
-        "=": r"\mathord{=}",
+        "==": r"\mathord{==}",
         "<": r"\mathord{<}",
         ">": r"\mathord{>}",
     }
@@ -269,7 +270,7 @@ class ComparisonParser(EvalWhere, expression_parser.EvalComparisonOp):
                 comparison = lhs < rhs
             case ">":
                 comparison = lhs > rhs
-            case "=":
+            case "==":
                 comparison = lhs == rhs
         return xr.DataArray(comparison)
 
@@ -445,7 +446,7 @@ def comparison_parser(
         pp.ParserElement:
             Parser which will return a bool/boolean array as a result of the comparison.
     """
-    comparison_operators = pp.oneOf(["<", ">", "=", ">=", "<="])
+    comparison_operators = pp.oneOf(["<", ">", "==", ">=", "<="])
     comparison_expression = (
         (config_option | data_var)
         + comparison_operators

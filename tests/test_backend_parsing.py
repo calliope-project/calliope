@@ -9,15 +9,18 @@ import xarray as xr
 
 import calliope
 from calliope.backend import backend_model, expression_parser, parsing, where_parser
+from calliope.schemas import math_schema
 
 from .common.util import check_error_or_warning
 
 BASE_DIMS = {"carriers", "nodes", "techs"}
 
 
-def string_to_dict(yaml_string):
+def string_to_dict(yaml_string, schema: math_schema.CalliopeBaseModel):
+    """Convert a YAML string to its validated equivalent."""
     yaml_loader = yaml.YAML(typ="safe", pure=True)
-    return yaml_loader.load(StringIO(yaml_string))
+    validated = schema.model_validate(yaml_loader.load(StringIO(yaml_string)))
+    return validated.model_dump()
 
 
 @pytest.fixture
@@ -28,7 +31,7 @@ def component_obj():
     equations:
         - expression: 1 == 1
     """
-    variable_data = string_to_dict(setup_string)
+    variable_data = string_to_dict(setup_string, math_schema.Constraint)
     return parsing.ParsedBackendComponent("constraints", "foo", variable_data)
 
 
@@ -114,7 +117,7 @@ def parsed_sub_expression_dict(component_obj, sub_expression_parser):
         bar: [{bars}]
         """
 
-        sub_expressions = string_to_dict(setup_string)
+        sub_expressions = string_to_dict(setup_string, math_schema.SubExpressions)
 
         return parse_sub_expressions_and_slices(
             sub_expression_parser, sub_expressions, "sub_expressions", component_obj
@@ -133,7 +136,7 @@ def parsed_slice_dict(component_obj, slice_parser):
         tech2: [{techs2}]
         """
 
-        slices = string_to_dict(setup_string)
+        slices = string_to_dict(setup_string, math_schema.SubExpressions)
 
         return parse_sub_expressions_and_slices(
             slice_parser, slices, "slices", component_obj
@@ -176,7 +179,9 @@ def obj_with_sub_expressions_and_slices():
             """
 
         return parsing.ParsedBackendComponent(
-            "constraints", "my_constraint", string_to_dict(string_)
+            "constraints",
+            "my_constraint",
+            string_to_dict(string_, math_schema.Constraint),
         )
 
     return _obj_with_sub_expressions_and_slices
@@ -219,7 +224,9 @@ def equation_slice_obj(slice_parser, where_string_parser):
 
 
 @pytest.fixture
-def dummy_backend_interface(dummy_model_data, dummy_model_math, default_config):
+def dummy_backend_interface(
+    dummy_model_data, dummy_model_math, default_config, model_defaults
+):
     # ignore the need to define the abstract methods from backend_model.BackendModel
     with patch.multiple(backend_model.BackendModel, __abstractmethods__=set()):
 
@@ -230,15 +237,16 @@ def dummy_backend_interface(dummy_model_data, dummy_model_math, default_config):
                     dummy_model_data,
                     dummy_model_math,
                     default_config.build,
+                    defaults=model_defaults,
                     instance=None,
                 )
 
                 self._dataset = dummy_model_data.copy(deep=True)
                 self._dataset["with_inf"] = self._dataset["with_inf"].fillna(
-                    dummy_model_data.attrs["defaults"]["with_inf"]
+                    model_defaults["with_inf"]
                 )
                 self._dataset["only_techs"] = self._dataset["only_techs"].fillna(
-                    dummy_model_data.attrs["defaults"]["only_techs"]
+                    model_defaults["only_techs"]
                 )
 
     return DummyBackendModel()
@@ -257,7 +265,7 @@ def evaluatable_component_obj(valid_component_names):
         slices:
             tech: [{{expression: barfoo, where: "[bar] in nodes"}}]
         """
-        sub_expression_dict = string_to_dict(setup_string)
+        sub_expression_dict = string_to_dict(setup_string, math_schema.Constraint)
 
         class DummyParsedBackendComponent(parsing.ParsedBackendComponent):
             def __init__(self, dict_):

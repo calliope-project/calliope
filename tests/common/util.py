@@ -13,7 +13,7 @@ def build_test_model(
     **init_kwargs,
 ):
     """Get the Calliope model object of a test model."""
-    return calliope.Model(
+    return calliope.read_yaml(
         os.path.join(os.path.dirname(__file__), "test_model", model_file),
         override_dict=override_dict,
         scenario=scenario,
