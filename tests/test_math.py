@@ -15,8 +15,8 @@ CALLIOPE_DIR: Path = importlib.resources.files("calliope")
 PLAN_MATH: AttrDict = io.read_rich_yaml(CALLIOPE_DIR / "math" / "plan.yaml")
 
 
-def prune_math(applied_math: dict):
-    math = AttrDict({k: applied_math[k] for k in {"variables", "global_expressions"}})
+def prune_math(build_math: dict):
+    math = AttrDict({k: build_math[k] for k in {"variables", "global_expressions"}})
     math.set_key(
         "objectives.dummy_obj",
         {"equations": [{"expression": "1 + 1"}], "sense": "minimize"},
@@ -310,6 +310,7 @@ class TestBaseMath:
 
 class CustomMathExamples(ABC):
     TEST_REGISTER: set = set()
+    EXTRA_MATH: list = []
 
     #: source of all example math files
     CUSTOM_MATH_DIR = (
@@ -330,9 +331,16 @@ class CustomMathExamples(ABC):
         return io.read_rich_yaml(self.CUSTOM_MATH_DIR / self.YAML_FILEPATH)
 
     @pytest.fixture(scope="class")
-    def full_applied_math(self, custom_math):
-        math_dataset = {"plan": PLAN_MATH, "user_math": custom_math}
-        return model_math.build_applied_math(["plan", "user_math"], math_dataset)
+    def full_applied_math(
+        self, custom_math
+    ):  # TODO-Ivan: rename to full_build_math for clarity
+        internal_math = ["plan"] + self.EXTRA_MATH
+        math_dataset = {
+            name: io.read_rich_yaml(CALLIOPE_DIR / "math" / f"{name}.yaml")
+            for name in internal_math
+        }
+        math_dataset["custom_math"] = custom_math
+        return model_math.build_applied_math(list(math_dataset.keys()), math_dataset)
 
     @pytest.fixture(scope="class")
     def barebones_math_file(self, tmp_path_factory, full_applied_math) -> str:
@@ -745,6 +753,7 @@ class TestSOS2PiecewiseCosts(CustomMathExamples):
 
 class TestPiecewiseEfficiency(CustomMathExamples):
     YAML_FILEPATH = "piecewise_linear_efficiency.yaml"
+    EXTRA_MATH = ["milp"]
 
     def test_piecewise(self, build_and_compare):
         overrides = {
@@ -849,6 +858,7 @@ class TestFuelDist(CustomMathExamples):
 
 class TestUptimeDowntime(CustomMathExamples):
     YAML_FILEPATH = "uptime_downtime_limits.yaml"
+    EXTRA_MATH = ["milp"]
 
     @pytest.mark.filterwarnings(
         "ignore:(?s).*defines unrecognised constraint `capacity_factor:calliope.exceptions.ModelWarning"
