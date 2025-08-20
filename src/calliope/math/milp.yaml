@@ -371,6 +371,7 @@ global_expressions:
     default: 0
     foreach: [nodes, techs, costs]
     where: cost_purchase AND purchased_units
+    order: -1
     equations:
       - where: base_tech==transmission
         expression: (cost_purchase + cost_purchase_per_distance * distance) * purchased_units * 0.5
