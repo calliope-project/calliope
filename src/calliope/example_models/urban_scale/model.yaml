@@ -18,7 +18,7 @@ config:
     apply_math: ["additional_math"]
 
   build:
-    mode: base # Choices: base, operate
+    mode: base # Choices: base, operate, spores
     ensure_feasibility: true # Switching on unmet demand
 
   solve:
