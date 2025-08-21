@@ -272,7 +272,10 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             self._validate_math_string_parsing()
         for components in typing.get_args(ORDERED_COMPONENTS_T):
             component = components.removesuffix("s")
-            for name, dict_ in self.math[components].items():
+            ordered_items = sorted(
+                self.math[components].items(), key=lambda item: item[1].get("order", 0)
+            )
+            for name, dict_ in ordered_items:
                 start = time.time()
                 getattr(self, f"add_{component}")(name, dict_)
                 end = time.time() - start

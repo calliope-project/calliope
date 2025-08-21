@@ -4,7 +4,7 @@
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from calliope.schemas.general import (
     AttrStr,
@@ -113,6 +113,8 @@ class GlobalExpression(MathIndexedComponent):
     """Global expression named sub-expressions."""
     slices: SubExpressions = SubExpressions()
     """Global expression named index slices."""
+    order: int
+    """Order in which to apply this global expression relative to all others, if different to its definition order."""
 
 
 class Bounds(CalliopeBaseModel):
@@ -215,6 +217,24 @@ class MathSchema(CalliopeBaseModel):
     """All _piecewise_ constraints to apply to the optimisation problem."""
     objectives: Objectives = Objectives()
     """Possible objectives to apply to the optimisation problem."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def set_expr_order(cls, data: dict) -> dict:
+        """Set the position of the global expression in the order of application.
+
+        Args:
+            data (dict): Raw global expression data dictionary.
+
+        Returns:
+            dict: `data` with the `order` field set even if not given in the input.
+        """
+        grp = data.get("global_expressions", {})
+        if not isinstance(grp, dict):
+            return data
+        for default_order, key in enumerate(grp.keys()):
+            grp[key]["order"] = grp[key].get("order", default_order)
+        return data
 
 
 class CalliopeInputMath(CalliopeDictModel):

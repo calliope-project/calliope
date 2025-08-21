@@ -1939,6 +1939,53 @@ class TestNewBackend:
         assert dir.exists()
         assert any(file.suffixes == [".pyomo", ".lp"] for file in dir.glob("*"))
 
+    @pytest.mark.parametrize(
+        ("order", "expected_in_expr"), [(-1, True), (None, False), (100, False)]
+    )
+    def test_add_reordered_global_expression(self, dummy_int, order, expected_in_expr):
+        """Adding a new global expression with an appropriately small order should be added before a pre-defined global expression."""
+        updated_math = {
+            "global_expressions": {
+                "new_expr": {
+                    "foreach": ["nodes", "techs", "costs"],
+                    "where": "cost_new",
+                    "equations": [{"expression": "source_cap * cost_new"}],
+                },
+                # cost_investment_source_cap exists in the pre-defined math.
+                "cost_investment_source_cap": {
+                    "where": "source_cap",
+                    "equations": [
+                        {
+                            "expression": "default_if_empty(cost_source_cap, 0) * source_cap + default_if_empty(new_expr, 0)"
+                        }
+                    ],
+                },
+            }
+        }
+        if order is not None:
+            updated_math["global_expressions"]["new_expr"]["order"] = order
+        new_cost = {"data": dummy_int, "index": "monetary", "dims": "costs"}
+        m = build_model(
+            {"techs.test_supply_elec.cost_new": new_cost},
+            "simple_supply,two_hours,investment_costs",
+        )
+        m.build(
+            add_math_dict=updated_math, backend="pyomo", pre_validate_math_strings=False
+        )
+        m.backend.verbose_strings()
+
+        new_expr_present = (
+            m.backend.get_global_expression(
+                "cost_investment_source_cap", as_backend_objs=False
+            )
+            .to_series()
+            .dropna()
+            .str.contains(
+                "parameters[cost_new][test_supply_elec, monetary]", regex=False
+            )
+        )
+        assert (new_expr_present == expected_in_expr).all()
+
 
 class TestVerboseStrings:
     @pytest.fixture(scope="class")
