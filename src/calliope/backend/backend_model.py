@@ -88,18 +88,9 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         self.defaults: dict = deepcopy(defaults)
         self._solve_logger = logging.getLogger(__name__ + ".<solve>")
 
-        self._objective: str = self.config.objective
+        self.objective: str = self.config.objective
 
         self._check_inputs()
-
-    @property
-    def objective(self) -> str:
-        """Optimisation problem objective name."""
-        return self._objective
-
-    @objective.setter
-    def objective(self, value: str):
-        self._objective = value
 
     @abstractmethod
     def add_parameter(
