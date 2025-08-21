@@ -1639,3 +1639,74 @@ global_expressions:
   # --8<-- [end:expression]
 
 piecewise_constraints: {}
+
+checks:
+  must_have_base:
+    where: not base_tech
+    message: An abstract `base_tech` must be defined for every technology at every node.
+    errors: raise
+
+  distance_only_for_transmission:
+    where: not base_tech==transmission and (distance or flow_in_eff_per_distance or flow_out_eff_per_distance or cost_flow_cap_per_distance or cost_purchase_per_distance)
+    message: Only transmission technologies can define `distance` or `..._per_distance` parameters.
+    errors: raise
+
+  unbounded_flow_cap_cost:
+    where: cost_flow_cap<0 AND not flow_cap_max
+    message: Cannot have a negative `cost_flow_cap` as there is an unset corresponding `flow_cap_max` constraint
+    errors: raise
+
+  unbounded_storage_cap_cost:
+    where: cost_storage_cap<0 AND not storage_cap_max
+    message: Cannot have a negative `cost_storage_cap` as there is an unset corresponding `storage_cap_max` constraint
+    errors: raise
+
+  unbounded_area_use_cost:
+    where: cost_area_use<0 AND not area_use_max
+    message: Cannot have a negative `cost_area_use` as there is an unset corresponding `area_use_max` constraint
+    errors: raise
+
+  unbounded_source_use_cost:
+    where: cost_source_cap<0 AND not source_use_max
+    message: Cannot have a negative `cost_source_cap` as there is an unset corresponding `source_use_max` constraint
+    errors: raise
+
+  finite_source_use:
+    where: source_use_equals==inf or sink_use_equals==inf
+    message: "Cannot include infinite values in `source_use_equals`/`sink_use_equals`"
+    errors: raise
+
+  all_or_nothing_lat_lon:
+    where: (any(latitude, over=nodes) or any(longitude, over=nodes)) and not (latitude or longitude)
+    message: "Must define node latitude and longitude for _all_ nodes or _no_ nodes."
+    errors: raise
+
+  export_only_for_outflows:
+    where: carrier_export and not any(carrier_out, over=nodes)
+    message: "Export carriers must be one of the technology outflow carriers."
+    errors: raise
+
+  storage_initial_max:
+    where: storage_initial and (storage_initial<0 OR storage_initial>1)
+    message: "storage_initial is a fraction, requiring values within the interval [0, 1]."
+    errors: raise
+
+  unit_commitment_only_for_units:
+    where: integer_dispatch==True AND NOT cap_method==integer
+    message: Cannot use the integer `integer_dispatch` unless the technology is using an integer unit capacities (`cap_method=integer`).
+    errors: raise
+
+  conflicting_flow_caps:
+    where: (flow_cap_max OR flow_cap_min) AND flow_cap_per_unit
+    message: Cannot define both `flow_cap_per_unit` and `flow_cap_max`/`flow_cap_min`
+    errors: raise
+
+  conflicting_storage_caps:
+    where: (storage_cap_max OR storage_cap_min) AND storage_cap_per_unit
+    message: Cannot define both `storage_cap_per_unit` and `storage_cap_max`/`storage_cap_min`
+    errors: raise
+
+  lat_lons_out_of_range:
+    where: latitude < -90 OR latitude > 90 OR longitude < -180 OR longitude > 180
+    message: Node latitude/longitude must be specified in WGS84 / EPSG4326 format.
+    errors: warn

@@ -76,7 +76,10 @@ class GurobiBackendModel(backend_model.BackendModel):
         self.shadow_prices = GurobiShadowPrices(self)
 
     def add_parameter(  # noqa: D102, override
-        self, parameter_name: str, parameter_values: xr.DataArray
+        self,
+        parameter_name: str,
+        parameter_values: xr.DataArray,
+        definition: math_schema.Parameter,
     ) -> None:
         self._raise_error_on_preexistence(parameter_name, "parameters")
 
@@ -87,14 +90,14 @@ class GurobiBackendModel(backend_model.BackendModel):
                 parameter_name,
                 "Component not added; no data found in array.",
             )
-            parameter_da = parameter_da.astype(float)
+            parameter_da = xr.DataArray(np.nan, attrs=parameter_values.attrs)
 
         self._add_to_dataset(
-            parameter_name, parameter_da, "parameters", parameter_da.attrs
+            parameter_name, parameter_da, "parameters", definition.model_dump()
         )
 
     def add_constraint(  # noqa: D102, override
-        self, name: str, constraint_def: math_schema.Constraint
+        self, name: str, definition: math_schema.Constraint
     ) -> None:
         def _constraint_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -104,10 +107,10 @@ class GurobiBackendModel(backend_model.BackendModel):
 
             return to_fill
 
-        self._add_component(name, constraint_def, _constraint_setter, "constraints")
+        self._add_component(name, definition, _constraint_setter, "constraints")
 
     def add_global_expression(  # noqa: D102, override
-        self, name: str, expression_def: math_schema.GlobalExpression
+        self, name: str, definition: math_schema.GlobalExpression
     ) -> None:
         def _expression_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -118,19 +121,17 @@ class GurobiBackendModel(backend_model.BackendModel):
             self._clean_arrays(expr)
             return to_fill
 
-        self._add_component(
-            name, expression_def, _expression_setter, "global_expressions"
-        )
+        self._add_component(name, definition, _expression_setter, "global_expressions")
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_def: math_schema.Variable
+        self, name: str, definition: math_schema.Variable
     ) -> None:
         domain_dict = {"real": gurobipy.GRB.CONTINUOUS, "integer": gurobipy.GRB.INTEGER}
 
         def _variable_setter(where: xr.DataArray, references: set):
-            domain_type = domain_dict[variable_def.domain]
+            domain_type = domain_dict[definition.domain]
 
-            bounds = variable_def.bounds
+            bounds = definition.bounds
             lb = self._get_variable_bound(bounds.min, name, references)
             ub = self._get_variable_bound(bounds.max, name, references)
             var = self._apply_func(
@@ -138,12 +139,12 @@ class GurobiBackendModel(backend_model.BackendModel):
             )
             return var.fillna(value=np.nan)
 
-        self._add_component(name, variable_def, _variable_setter, "variables")
+        self._add_component(name, definition, _variable_setter, "variables")
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_def: math_schema.Objective
+        self, name: str, definition: math_schema.Objective
     ) -> None:
-        sense = self.OBJECTIVE_SENSE_DICT[objective_def.sense]
+        sense = self.OBJECTIVE_SENSE_DICT[definition.sense]
 
         def _objective_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -157,7 +158,7 @@ class GurobiBackendModel(backend_model.BackendModel):
 
             return xr.DataArray(expr)
 
-        self._add_component(name, objective_def, _objective_setter, "objectives")
+        self._add_component(name, definition, _objective_setter, "objectives")
 
     def set_objective(self, name: str) -> None:  # noqa: D102, override
         to_set = self.objectives[name]
@@ -173,7 +174,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         if parameter is None:
             raise KeyError(f"Unknown parameter: {name}")
 
-        return parameter.astype(parameter.attrs["type"])
+        return parameter
 
     @overload
     def get_constraint(  # noqa: D102, override
@@ -354,7 +355,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         self.inputs[name] = new_parameter_da
 
         self.delete_component(name, "parameters")
-        self.add_parameter(name, new_parameter_da)
+        self.add_parameter(name, new_parameter_da, self.math.parameters[name])
 
         refs_to_update = self._find_all_references(parameter_da.attrs["references"])
 

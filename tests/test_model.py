@@ -1,5 +1,4 @@
 import logging
-import typing
 from contextlib import contextmanager
 
 import numpy as np
@@ -12,6 +11,7 @@ import calliope
 import calliope.backend
 import calliope.preprocess
 from calliope.model import Model, read_netcdf, read_yaml
+from calliope.schemas import CalliopeAttrs
 from calliope.schemas.general import CalliopeBaseModel
 
 from .common.util import build_test_model as build_model
@@ -73,7 +73,7 @@ class TestModelInit:
         assert not model.results
 
     @pytest.mark.parametrize("model_name", MODELS)
-    @pytest.mark.parametrize("attr_name", typing.get_args(Model._SAVE_ATTRS_T))
+    @pytest.mark.parametrize("attr_name", CalliopeAttrs.model_fields.keys())
     def test_model_attrs(
         self,
         request: pytest.FixtureRequest,

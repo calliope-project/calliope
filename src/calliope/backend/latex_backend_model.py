@@ -5,11 +5,9 @@ from __future__ import annotations
 import logging
 import re
 import textwrap
-from typing import Any, Literal
+from typing import Literal
 
 import jinja2
-import numpy as np
-import pandas as pd
 import xarray as xr
 
 from calliope.backend import backend_model, parsing
@@ -107,7 +105,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     * {{ ref }}
     {% endfor %}
     {% endif %}
-    {% if equation.unit is not none %}
+    {% if equation.unit != "" %}
 
     **Unit**: {{ equation.unit }}
     {% endif %}
@@ -186,7 +184,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     \end{itemize}
     {% endfor %}
     {% endif %}
-    {% if equation.unit is not none %}
+    {% if equation.unit != "" %}
 
     \textbf{Unit}: {{ equation.unit }}
     {% endif %}
@@ -262,7 +260,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {{ "    " if mkdocs_features else "" }}* [{{ ref }}](#{{ ref }})
     {% endfor %}
     {% endif %}
-    {% if equation.unit is not none %}
+    {% if equation.unit != "" %}
 
     **Unit**: {{ equation.unit }}
     {% endif %}
@@ -318,22 +316,27 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 Defines whether to include all possible math equations ("all") or only those for which at least one index item in the "where" string is valid ("valid"). Defaults to "all".
         """
         super().__init__(inputs, math, build_config)
+
+        if include not in ["all", "valid"]:
+            raise ValueError(f"Invalid `include` option: {include}")
+
         self.include = include
 
     def add_parameter(  # noqa: D102, override
-        self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
+        self,
+        parameter_name: str,
+        parameter_values: xr.DataArray,
+        definition: math_schema.Parameter,
     ) -> None:
-        attrs = parameter_values.attrs | {
+        attrs = definition.model_dump() | {
             "math_repr": rf"\textit{{{parameter_name}}}"
             + self._dims_to_var_string(parameter_values)
         }
-        if pd.notna(default):
-            attrs["default"] = default
 
         self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
 
     def add_constraint(  # noqa: D102, override
-        self, name: str, constraint_def: math_schema.Constraint
+        self, name: str, definition: math_schema.Constraint
     ) -> None:
         equation_strings: list = []
 
@@ -344,7 +347,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             return where.where(where)
 
         parsed_component = self._add_component(
-            name, constraint_def, _constraint_setter, "constraints", break_early=False
+            name, definition, _constraint_setter, "constraints", break_early=False
         )
 
         self._generate_math_string(
@@ -352,7 +355,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_piecewise_constraint(  # noqa: D102, override
-        self, name: str, constraint_def: math_schema.PiecewiseConstraint
+        self, name: str, definition: math_schema.PiecewiseConstraint
     ) -> None:
         non_where_refs: set = set()
 
@@ -361,7 +364,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
         math_parts = {}
         for val in ["x_expression", "y_expression", "x_values", "y_values"]:
-            val_name = constraint_def[val]
+            val_name = definition[val]
             parsed_val = parsing.ParsedBackendComponent(
                 "piecewise_constraints",
                 name,
@@ -379,8 +382,8 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             "where": rf"{math_parts['x_expression']}\mathord{{=}}{math_parts['x_values']}",
         }
 
-        constraint_def_with_breakpoints = constraint_def.update(
-            {"foreach": constraint_def.foreach + ["breakpoints"]}
+        constraint_def_with_breakpoints = definition.update(
+            {"foreach": definition.foreach + ["breakpoints"]}
         )
 
         parsed_component = self._add_component(
@@ -396,7 +399,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_global_expression(  # noqa: D102, override
-        self, name: str, expression_def: math_schema.GlobalExpression
+        self, name: str, definition: math_schema.GlobalExpression
     ) -> None:
         equation_strings: list = []
 
@@ -408,7 +411,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
         parsed_component = self._add_component(
             name,
-            expression_def,
+            definition,
             _expression_setter,
             "global_expressions",
             break_early=False,
@@ -423,7 +426,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_def: math_schema.Variable
+        self, name: str, definition: math_schema.Variable
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
         bound_refs: set = set()
@@ -432,15 +435,15 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             return where.where(where)
 
         parsed_component = self._add_component(
-            name, variable_def, _variable_setter, "variables", break_early=False
+            name, definition, _variable_setter, "variables", break_early=False
         )
         var_da = self.variables[name]
         var_da.attrs["math_repr"] = rf"\textbf{{{name}}}" + self._dims_to_var_string(
             var_da
         )
 
-        domain = domain_dict[variable_def.domain]
-        lb, ub = self._get_variable_bounds_string(name, variable_def.bounds, bound_refs)
+        domain = domain_dict[definition.domain]
+        lb, ub = self._get_variable_bounds_string(name, definition.bounds, bound_refs)
         self._update_references(name, bound_refs.difference(name))
 
         self._generate_math_string(
@@ -448,7 +451,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_def: math_schema.Objective
+        self, name: str, definition: math_schema.Objective
     ) -> None:
         sense_dict = {
             "minimize": r"\min{}",
@@ -464,14 +467,14 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             self._add_latex_strings(where, element, equation_strings, references)
 
         parsed_component = self._add_component(
-            name, objective_def, _objective_setter, "objectives", break_early=False
+            name, definition, _objective_setter, "objectives", break_early=False
         )
 
         self._generate_math_string(
             parsed_component,
             self.objectives[name],
             equations=equation_strings,
-            sense=sense_dict[objective_def.sense],
+            sense=sense_dict[definition.sense],
         )
         if name == self.config.objective:
             self.objective = name
@@ -532,13 +535,13 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                     ),
                     "uses": sorted(list(uses[name] - set([name]))),
                     "default": da.attrs.get("default", None),
-                    "type": da.attrs.get("type", None),
-                    "unit": da.attrs.get("unit", None),
+                    "dtype": da.attrs.get("dtype", None),
+                    "unit": da.attrs.get("unit", ""),
                     "yaml_snippet": da.attrs.get("yaml_snippet", None),
                 }
                 for name, da in sorted(getattr(self, objtype).data_vars.items())
                 if ("math_string" in da.attrs)
-                or (objtype == "parameters" and da.attrs["references"])
+                or (objtype in ["parameters", "lookups"] and da.attrs["references"])
             ]
             for objtype in [
                 "objectives",
@@ -547,16 +550,20 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 "global_expressions",
                 "variables",
                 "parameters",
+                "lookups",
             ]
             if getattr(self, objtype).data_vars
         }
         if "parameters" in components and not components["parameters"]:
             del components["parameters"]
+        if "lookups" in components and not components["lookups"]:
+            del components["lookups"]
         for objective in components.get("objectives", []):
             if objective["name"] == self.objective:
                 objective["name"] += " (active)"
             else:
                 objective["name"] += " (inactive)"
+
         return self._render(
             doc_template, mkdocs_features=mkdocs_features, components=components
         )

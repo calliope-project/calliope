@@ -56,7 +56,7 @@ class Parameter(MathComponent):
 
     default: float | int = float("nan")
     """The default value for the parameter, if not set in the data."""
-    dtype: Literal["integer", "float"]
+    dtype: Literal["integer", "float"] = "float"
     """The parameter data type."""
     resample_method: Literal["mean", "sum", "first"] = "first"
     """If resampling is applied over any of the parameter's dimensions, the method to use to aggregate the data."""
@@ -67,7 +67,7 @@ class Parameter(MathComponent):
 class Lookup(MathComponent):
     """Schema for named lookup arrays."""
 
-    default: str | float | int | bool | None = None
+    default: str | float | int | bool = float("nan")
     """The default value for the lookup, if not set in the data."""
     dtype: Literal["integer", "float", "string", "bool", "datetime"]
     """The lookup data type."""
@@ -166,7 +166,7 @@ class GlobalExpression(MathIndexedComponent, MathEquationComponent):
 
     unit: str = ""
     """Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)."""
-    default: NumericVal | None = None
+    default: NumericVal = float("nan")
     """If set, will be the default value for the expression."""
     order: int = 0
     """Order in which to apply this global expression relative to all others, if different to its definition order."""
@@ -194,7 +194,7 @@ class Variable(MathIndexedComponent):
 
     unit: str = ""
     """Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)."""
-    default: NumericVal | None = None
+    default: NumericVal = float("nan")
     """If set, will be the default value for the variable."""
     domain: Literal["real", "integer"] = "real"
     """Allowed values that the decision variable can take.
@@ -237,6 +237,17 @@ class Objective(MathComponent, MathEquationComponent):
     def where(self) -> str:
         """Dummy property to satisfy type hinting."""
         return "True"
+
+
+class Check(CalliopeBaseModel):
+    """Schema for input data checks."""
+
+    where: str
+    """Top-level condition to check"""
+    message: str
+    """Message to display when the `where` array returns True, if raising or warning on error."""
+    errors: Literal["raise", "warn", "ignore"] = "raise"
+    """How to respond to any instances in which the `where` array returns True."""
 
 
 class Dimensions(CalliopeDictModel):
@@ -287,6 +298,12 @@ class Objectives(CalliopeDictModel):
     root: dict[AttrStr, Objective] = Field(default_factory=dict)
 
 
+class Checks(CalliopeDictModel):
+    """Calliope math checks dictionary."""
+
+    root: dict[AttrStr, Check] = Field(default_factory=dict)
+
+
 class CalliopeBuildMath(CalliopeBaseModel):
     """Mathematical definition of Calliope math.
 
@@ -313,6 +330,8 @@ class CalliopeBuildMath(CalliopeBaseModel):
     """All _piecewise_ constraints to apply to the optimisation problem."""
     objectives: Objectives = Objectives()
     """Possible objectives to apply to the optimisation problem."""
+    checks: Checks = Checks()
+    """Checks to apply before building the optimisation problem."""
 
 
 class CalliopeInputMath(CalliopeDictModel):

@@ -73,9 +73,6 @@ class TestModelData:
         da.coords["timesteps"] = da.coords["timesteps"].astype("M")
         return da
 
-    def test_model_data_init(self, model_data_factory: ModelDataFactory):
-        assert model_data_factory.param_attrs["flow_in_eff"] == {"default": 1.0}
-
     def test_add_node_tech_data(self, model_data_factory_w_params: ModelDataFactory):
         assert set(model_data_factory_w_params.dataset.nodes.values) == {"a", "b", "c"}
         assert set(model_data_factory_w_params.dataset.techs.values) == {

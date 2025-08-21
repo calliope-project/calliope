@@ -343,10 +343,13 @@ class TestEquationParserElements:
         self, unsliced_param_with_obj_names, eval_kwargs, string_val
     ):
         parsed_ = unsliced_param_with_obj_names.parse_string(string_val, parse_all=True)
+        default = eval_kwargs["input_data"][string_val].attrs["default"]
         assert (
             parsed_[0]
             .eval(**eval_kwargs)
-            .equals(eval_kwargs["backend_interface"]._dataset[string_val])
+            .equals(
+                eval_kwargs["backend_interface"]._dataset[string_val].fillna(default)
+            )
         )
 
     def test_unsliced_param_references(

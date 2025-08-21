@@ -28,7 +28,7 @@ variables:
       Relative share of demand that a given technology must meet per node.
     unit: fraction
     foreach: [nodes, techs]
-    where: NOT config.mode==operate AND decide_demand_share
+    where: decide_demand_share
     bounds:
       min: 0
       max: .inf

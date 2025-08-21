@@ -181,18 +181,10 @@ class DataVarParser(EvalWhere):
     ) -> xr.DataArray:
         """Mask by setting all (NaN | INF/-INF) to False, otherwise True."""
         var = source_dataset.get(self.data_var, xr.DataArray(np.nan))
-        is_bool = var.dtype.kind == "b"
-        if resolve_contents:
-            if self.eval_attrs["input_data"][self.data_var].attrs.get(
-                "from_default", False
-            ):
-                return xr.DataArray(np.False_)
-            elif is_bool:
-                return var
-            else:
-                return var.notnull() & (var != np.inf) & (var != -np.inf)
-        elif is_bool:
+        if var.dtype.kind == "b":
             return var
+        elif resolve_contents:
+            return var.notnull() & (var != np.inf) & (var != -np.inf)
         else:
             return var.notnull()
 
@@ -224,7 +216,9 @@ class DataVarParser(EvalWhere):
 
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         data_var_type = self._preprocess()
-        if self.eval_attrs.get("apply_where", True):
+        if data_var_type == "unknown":
+            return xr.DataArray(np.False_)
+        elif self.eval_attrs.get("apply_where", True):
             if data_var_type in ["parameters", "lookups", "dimensions"]:
                 return self._data_var_exists(
                     self.eval_attrs["input_data"], resolve_contents=True
@@ -234,8 +228,6 @@ class DataVarParser(EvalWhere):
                     self.eval_attrs["backend_interface"]._dataset,
                     resolve_contents=False,
                 )
-            elif data_var_type == "unknown":
-                return xr.DataArray(np.False_)
             else:
                 raise TypeError(
                     f"Cannot check values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "

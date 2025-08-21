@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 import time
 import typing
@@ -29,7 +30,7 @@ from calliope import exceptions
 from calliope.backend import helper_functions, parsing
 from calliope.exceptions import BackendError
 from calliope.exceptions import warn as model_warn
-from calliope.io import load_config, to_yaml
+from calliope.io import to_yaml
 from calliope.preprocess.model_math import ORDERED_COMPONENTS_T
 from calliope.schemas import config_schema, math_schema
 
@@ -42,8 +43,55 @@ ALL_COMPONENTS_T = Literal["parameters", "lookups", ORDERED_COMPONENTS_T]
 
 LOGGER = logging.getLogger(__name__)
 
+VALIDATE_METHODS = [
+    "add_constraint",
+    "add_global_expression",
+    "add_variable",
+    "add_piecewise_constraint",
+    "add_objective",
+    "add_parameter",
+    "add_lookup",
+]
+"""Methods whose input definitions will be validated when adding components."""
 
-class BackendModelGenerator(ABC, metaclass=ABCMeta):
+
+def validate_on_adding_component(func) -> Callable:
+    """Decorator to validate the component definition when adding a new component as a dictionary.
+
+    Args:
+        func (Callable): The function with a definition to validate.
+    """
+
+    def validator(*args, **kwargs):
+        sig = inspect.signature(func)
+        bound_args = sig.bind_partial(*args, **kwargs)
+        bound_args.apply_defaults()
+        component_def = bound_args.arguments["definition"]
+
+        validator = typing.get_type_hints(func)["definition"]
+
+        if not isinstance(component_def, validator):
+            bound_args.arguments["definition"] = validator.model_validate(component_def)
+        return func(*bound_args.args, **bound_args.kwargs)
+
+    return validator
+
+
+class SelectiveWrappingMeta(ABCMeta):
+    """Metaclass to selectively wrap methods in concrete classes inheriting from the backend ABC."""
+
+    def __new__(mcs, name, bases, namespace):
+        """Wrap methods in all new instances of the class."""
+        cls = super().__new__(mcs, name, bases, namespace)
+
+        for method_name in VALIDATE_METHODS:
+            if method_name in namespace:
+                original = getattr(cls, method_name)
+                setattr(cls, method_name, validate_on_adding_component(original))
+        return cls
+
+
+class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
     """Helper class for backends."""
 
     LID_COMPONENTS: tuple[ALL_COMPONENTS_T, ...] = typing.get_args(ALL_COMPONENTS_T)
@@ -51,11 +99,12 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         "description",
         "unit",
         "default",
-        "type",
+        "dtype",
         "title",
         "sense",
         "math_repr",
-        "original_dtype",
+        "active",
+        "resample_method",
     ]
 
     objective: str
@@ -83,7 +132,12 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         self.inputs = self._add_inputs(inputs)
         self._check_inputs()
 
-    def add_lookup(self, lookup_name: str, lookup_values: xr.DataArray) -> None:
+    def add_lookup(
+        self,
+        lookup_name: str,
+        lookup_values: xr.DataArray,
+        definition: math_schema.Lookup,
+    ) -> None:
         """Add input lookup array to backend model in-place.
 
         This directly passes a copy of the input lookup array to the backend.
@@ -91,6 +145,7 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         Args:
             lookup_name (str): Name of lookup.
             lookup_values (xr.DataArray): Array of lookup values.
+            definition (math_schema.Lookup): Lookup math definition.
         """
         self._raise_error_on_preexistence(lookup_name, "lookups")
 
@@ -100,11 +155,16 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             )
             lookup_values = lookup_values.astype(float)
 
-        self._add_to_dataset(lookup_name, lookup_values, "lookups", lookup_values.attrs)
+        self._add_to_dataset(
+            lookup_name, lookup_values, "lookups", definition.model_dump()
+        )
 
     @abstractmethod
     def add_parameter(
-        self, parameter_name: str, parameter_values: xr.DataArray
+        self,
+        parameter_name: str,
+        parameter_values: xr.DataArray,
+        definition: math_schema.Parameter,
     ) -> None:
         """Add input parameter to backend model in-place.
 
@@ -115,13 +175,11 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         Args:
             parameter_name (str): Name of parameter.
             parameter_values (xr.DataArray): Array of parameter values.
-            default (Any, optional):
-                Default value to fill NaN entries in parameter values array.
-                Defaults to np.nan.
+            definition (math_schema.Parameter): Parameter math definition.
         """
 
     @abstractmethod
-    def add_constraint(self, name: str, constraint_def: math_schema.Constraint) -> None:
+    def add_constraint(self, name: str, definition: math_schema.Constraint) -> None:
         """Add constraint equation to backend model in-place.
 
         Resulting backend dataset entries will be constraint objects.
@@ -129,13 +187,13 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         Args:
             name (str):
                 Name of the constraint
-            constraint_def (math_schema.Constraint):
+            definition (math_schema.Constraint):
                 Constraint configuration dictionary, ready to be parsed and then evaluated.
         """
 
     @abstractmethod
     def add_piecewise_constraint(
-        self, name: str, constraint_def: math_schema.PiecewiseConstraint
+        self, name: str, definition: math_schema.PiecewiseConstraint
     ) -> None:
         """Add piecewise constraint equation to backend model in-place.
 
@@ -144,13 +202,13 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         Args:
             name (str):
                 Name of the piecewise constraint
-            constraint_def (math_schema.PiecewiseConstraint):
+            definition (math_schema.PiecewiseConstraint):
                 Piecewise constraint configuration dictionary, ready to be parsed and then evaluated.
         """
 
     @abstractmethod
     def add_global_expression(
-        self, name: str, expression_def: math_schema.GlobalExpression
+        self, name: str, definition: math_schema.GlobalExpression
     ) -> None:
         """Add global expression (arithmetic combination of parameters and/or decision variables) to backend model in-place.
 
@@ -158,29 +216,29 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
 
         Args:
             name (str): name of the global expression
-            expression_def (math_schema.GlobalExpression): Global expression configuration dictionary, ready to be parsed and then evaluated.
+            definition (math_schema.GlobalExpression): Global expression configuration dictionary, ready to be parsed and then evaluated.
         """
 
     @abstractmethod
-    def add_variable(self, name: str, variable_def: math_schema.Variable) -> None:
+    def add_variable(self, name: str, definition: math_schema.Variable) -> None:
         """Add decision variable to backend model in-place.
 
         Resulting backend dataset entries will be decision variable objects.
 
         Args:
             name (str): name of the variable.
-            variable_def (math_schema.Variable): Variable configuration dictionary.
+            definition (math_schema.Variable): Variable configuration dictionary.
         """
 
     @abstractmethod
-    def add_objective(self, name: str, objective_def: math_schema.Objective) -> None:
+    def add_objective(self, name: str, definition: math_schema.Objective) -> None:
         """Add objective arithmetic to backend model in-place.
 
         Resulting backend dataset entry will be a single, unindexed objective object.
 
         Args:
             name (str): name of the objective.
-            objective_def (math_schema.Objective): Unparsed objective configuration dictionary.
+            definition (math_schema.Objective): Unparsed objective configuration dictionary.
         """
 
     @abstractmethod
@@ -222,13 +280,9 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         new_inputs = xr.Dataset()
         for obj_type in ["parameters", "lookups", "dimensions"]:
             for name, config in self.math[obj_type].root.items():
-                attrs: dict = {"obj_type": obj_type}
-                if name not in inputs:
-                    attrs |= {"from_default": True, **config.model_dump()}
-                    data = xr.DataArray(config.default)
-                else:
-                    data = inputs[name]
-
+                attrs: dict = {"obj_type": obj_type, **config.model_dump()}
+                default = config.default if obj_type == "lookups" else np.nan
+                data = inputs.get(name, xr.DataArray(default))
                 if obj_type == "dimensions":
                     new_inputs.coords[name] = data.assign_attrs(**attrs)
                 else:
@@ -237,11 +291,10 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         return new_inputs
 
     def _check_inputs(self):
-        data_checks = load_config("model_data_checks.yaml")
-        check_results = {"fail": [], "warn": []}
+        data_checks = self.math.checks
+        check_results = {"raise": [], "warn": []}
         parser_ = parsing.where_parser.generate_where_string_parser()
         eval_kwargs = {
-            "equation_name": "",
             "backend_interface": self,
             "input_data": self.inputs,
             "build_config": self.config,
@@ -249,18 +302,16 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             "apply_where": True,
             "references": set(),
         }
-        for check_type, check_list in check_results.items():
-            for check in data_checks[check_type]:
-                parsed_ = parser_.parse_string(check["where"], parse_all=True)
-                failed = (
-                    parsed_[0].eval("array", **eval_kwargs)
-                    & self.inputs.definition_matrix
-                )
-                if failed.any():
-                    check_list.append(check["message"])
+        for name, check in data_checks.root.items():
+            if check.errors == "ignore":
+                continue
+            parsed_ = parser_.parse_string(check.where, parse_all=True)
+            evaluated = parsed_[0].eval("array", equation_name=name, **eval_kwargs)
+            if evaluated.any() and (evaluated & self.inputs.definition_matrix).any():
+                data_checks[check.errors].append(check.message)
 
         exceptions.print_warnings_and_raise_errors(
-            check_results["warn"], check_results["fail"]
+            check_results["warn"], check_results["raise"]
         )
 
     def add_optimisation_components(self) -> None:
@@ -328,62 +379,51 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
             references=references,
         )
         if break_early and not top_level_where.any():
-            self._add_to_dataset(
-                name,
-                xr.DataArray(np.nan),
-                component_type,
-                component_def.model_dump(),
-                references,
-            )
-            return parsed_component
+            component_da = xr.DataArray(np.nan)
 
-        self._create_obj_list(name, component_type)
-
-        equations = parsed_component.parse_equations(self.valid_component_names)
-        if not equations:
-            component_da = component_setter(
-                parsed_component.drop_dims_not_in_foreach(top_level_where), references
-            )
         else:
-            component_da = (
-                xr.DataArray()
-                .where(parsed_component.drop_dims_not_in_foreach(top_level_where))
-                .astype(np.dtype("O"))
-            )
-        for element in equations:
-            where = element.evaluate_where(
-                self, initial_where=top_level_where, references=references
-            )
-            if break_early and not where.any():
-                continue
+            self._create_obj_list(name, component_type)
+            equations = parsed_component.parse_equations(self.valid_component_names)
 
-            where = parsed_component.drop_dims_not_in_foreach(where)
+            if not equations:
+                component_da = component_setter(
+                    parsed_component.drop_dims_not_in_foreach(top_level_where),
+                    references,
+                )
+            else:
+                component_da = (
+                    xr.DataArray()
+                    .where(parsed_component.drop_dims_not_in_foreach(top_level_where))
+                    .astype(np.dtype("O"))
+                )
+            for element in equations:
+                where = element.evaluate_where(
+                    self, initial_where=top_level_where, references=references
+                )
+                if break_early and not where.any():
+                    continue
 
-            if component_da.where(where).notnull().any():
-                if component_da.shape:
-                    overlap = component_da.where(where).to_series().dropna().index
-                    substring = (
-                        f"trying to set two equations for the same index:\n{overlap}"
-                    )
-                else:
-                    substring = "trying to set two equations for the same component."
+                where = parsed_component.drop_dims_not_in_foreach(where)
 
+                if component_da.where(where).notnull().any():
+                    if component_da.shape:
+                        overlap = component_da.where(where).to_series().dropna().index
+                        substring = f"trying to set two equations for the same index:\n{overlap}"
+                    else:
+                        substring = (
+                            "trying to set two equations for the same component."
+                        )
+
+                    self.delete_component(name, component_type)
+                    raise BackendError(f"{element.name} | {substring}")
+
+                to_fill = component_setter(element, where, references)
+                component_da = component_da.fillna(to_fill)
+
+            if break_early and component_da.isnull().all():
                 self.delete_component(name, component_type)
-                raise BackendError(f"{element.name} | {substring}")
-
-            to_fill = component_setter(element, where, references)
-            component_da = component_da.fillna(to_fill)
-
-        if break_early and component_da.isnull().all():
-            self.delete_component(name, component_type)
-            self._add_to_dataset(
-                name,
-                component_da,
-                component_type,
-                component_def.model_dump(),
-                references,
-            )
-            return parsed_component
+                # simplify the component since it's empty
+                component_da = xr.DataArray(np.nan)
 
         self._add_to_dataset(
             name, component_da, component_type, component_def.model_dump(), references
@@ -429,9 +469,9 @@ class BackendModelGenerator(ABC, metaclass=ABCMeta):
         """
         for name, data in self.inputs.data_vars.items():
             if data.obj_type == "parameters":
-                self.add_parameter(name, data)
+                self.add_parameter(name, data, self.math.parameters[name])
             elif data.obj_type == "lookups":
-                self.add_lookup(name, data)
+                self.add_lookup(name, data, self.math.lookups[name])
 
         LOGGER.info("Optimisation Model | parameters/lookups | Generated.")
 
@@ -657,9 +697,9 @@ class BackendModel(BackendModelGenerator, Generic[T]):
         self._has_verbose_strings: bool = False
 
     def add_piecewise_constraint(  # noqa: D102, override
-        self, name: str, constraint_def: parsing.UnparsedPiecewiseConstraint
+        self, name: str, definition: math_schema.PiecewiseConstraint
     ) -> None:
-        if "breakpoints" in constraint_def.foreach:
+        if "breakpoints" in definition.foreach:
             raise BackendError(
                 f"(piecewise_constraints, {name}) | `breakpoints` dimension should not be in `foreach`. "
                 "Instead, index `x_values` and `y_values` parameters over `breakpoints`."
@@ -670,8 +710,8 @@ class BackendModel(BackendModelGenerator, Generic[T]):
             vals = []
             for axis in ["x", "y"]:
                 dummy_expression_dict = {
-                    "equations": [{"expression": constraint_def[f"{axis}_expression"]}],
-                    "foreach": constraint_def.foreach,
+                    "equations": [{"expression": definition[f"{axis}_expression"]}],
+                    "foreach": definition.foreach,
                 }
                 parsed_component = parsing.ParsedBackendComponent(
                     "piecewise_constraints",
@@ -682,7 +722,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 expression_da = eq[0].evaluate_expression(
                     self, where=where, references=references
                 )
-                val_name = constraint_def[f"{axis}_values"]
+                val_name = definition[f"{axis}_values"]
                 val_da = self.get_parameter(val_name)
                 if "breakpoints" not in val_da.dims:
                     raise BackendError(
@@ -692,6 +732,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 references.add(val_name)
                 expressions.append(expression_da)
                 vals.extend([*val_da.to_dataset("breakpoints").data_vars.values()])
+
             try:
                 return self._apply_func(
                     self._to_piecewise_constraint,
@@ -708,7 +749,7 @@ class BackendModel(BackendModelGenerator, Generic[T]):
                 )
 
         self._add_component(
-            name, constraint_def, _constraint_setter, "piecewise_constraints"
+            name, definition, _constraint_setter, "piecewise_constraints"
         )
 
     @abstractmethod
