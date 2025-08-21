@@ -246,58 +246,11 @@ properties:
           active:
             $ref: "#/$defs/ActiveDef"
 
-          base_tech:
-            type: string
-            x-type: str
-            enum: [demand, supply, conversion, storage, transmission]
-            title: Abstract base technology name.
-            description: Should be the name of one of the abstract base classes, from which some initial parameter defaults will be derived and with which certain base math will be triggered.
-
           color:
             type: ["null", string]
             default: .nan
             description: Color that can be used when plotting results.
             x-type: str
-
-          carrier_in:
-            description: >-
-              Carrier(s) consumed by this technology.
-              Only `transmission`, `conversion`, `storage`, and `demand` technologies can define this parameter
-            x-type: float
-            oneOf:
-              - type: "null"
-              - type: string
-              - type: array
-                uniqueItems: true
-                minItems: 2
-                items:
-                  type: string
-
-          carrier_out:
-            description: >-
-              Carrier(s) produced by this technology.
-              Only `transmission`, `conversion`, `storage`, and `supply` technologies can define this parameter
-            x-type: float
-            oneOf:
-              - type: "null"
-              - type: string
-              - type: array
-                uniqueItems: true
-                minItems: 2
-                items:
-                  type: string
-
-          carrier_export:
-            description: >-
-              Carrier(s) produced by this technology that can be exported out of the system boundaries without having to go to a pre-defined `sink` (i.e., via a `demand` technology).
-              Must be a subset of `carrier_out`.
-            x-type: float
-            oneOf:
-              - type: "null"
-              - type: string
-              - type: array
-                uniqueItems: true
-                minItems: 2
 
           name:
             type: ["null", string]
@@ -306,37 +259,6 @@ properties:
             title: Technology long-name.
             description: Long name of technology, which can be used in post-processing (e.g., plotting).
             default: .nan
-
-          cap_method:
-            type: string
-            default: continuous
-            x-resample_method: first
-            x-type: str
-            title: Capacity method switch.
-            description: One of 'continuous' (LP model) or 'integer' (integer/binary unit capacity).
-            enum: [continuous, integer]
-
-          sink_unit:
-            type: string
-            default: absolute
-            x-resample_method: first
-            x-type: str
-            title: Sink unit
-            description: >-
-              Sets the unit of `Sink` to either `absolute` (unit: `energy`), `per_area` (unit: `energy/area`), or `per_cap` (unit: `energy/power`).
-              `per_area` uses the `area_use` decision variable to scale the sink while `per_cap` uses the `flow_cap` decision variable.
-            enum: [absolute, per_area, per_cap]
-
-          source_unit:
-            type: string
-            default: absolute
-            x-resample_method: first
-            x-type: str
-            title: Source unit
-            description: >-
-              Sets the unit of `Source` to either `absolute` (unit: `energy`), `per_area` (unit: `energy/area`), or `per_cap` (unit: `energy/power`).
-              `per_area` uses the `area_use` decision variable to scale the source while `per_cap` uses the `flow_cap` decision variable.
-            enum: [absolute, per_area, per_cap]
 
   nodes:
     type: object

@@ -12,10 +12,9 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from calliope.attrdict import AttrDict
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import ModelError
-from calliope.schemas import config_schema
+from calliope.schemas import config_schema, math_schema
 
 ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
 LOGGER = logging.getLogger(__name__)
@@ -305,7 +304,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     def __init__(
         self,
         inputs: xr.Dataset,
-        math: AttrDict,
+        math: math_schema.CalliopeBuildMath,
         build_config: config_schema.Build,
         include: Literal["all", "valid"] = "all",
     ) -> None:
@@ -324,13 +323,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     def add_parameter(  # noqa: D102, override
         self, parameter_name: str, parameter_values: xr.DataArray, default: Any = np.nan
     ) -> None:
-        attrs = {
-            "title": self._PARAM_TITLES.get(parameter_name, None),
-            "description": self._PARAM_DESCRIPTIONS.get(parameter_name, None),
-            "unit": self._PARAM_UNITS.get(parameter_name, None),
-            "type": self._PARAM_TYPE.get(parameter_name, None),
+        attrs = parameter_values.attrs | {
             "math_repr": rf"\textit{{{parameter_name}}}"
-            + self._dims_to_var_string(parameter_values),
+            + self._dims_to_var_string(parameter_values)
         }
         if pd.notna(default):
             attrs["default"] = default
@@ -338,7 +333,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         self._add_to_dataset(parameter_name, parameter_values, "parameters", attrs)
 
     def add_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedConstraint
+        self, name: str, constraint_def: math_schema.Constraint
     ) -> None:
         equation_strings: list = []
 
@@ -349,7 +344,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             return where.where(where)
 
         parsed_component = self._add_component(
-            name, constraint_dict, _constraint_setter, "constraints", break_early=False
+            name, constraint_def, _constraint_setter, "constraints", break_early=False
         )
 
         self._generate_math_string(
@@ -357,7 +352,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_piecewise_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedPiecewiseConstraint
+        self, name: str, constraint_def: math_schema.PiecewiseConstraint
     ) -> None:
         non_where_refs: set = set()
 
@@ -366,11 +361,13 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
         math_parts = {}
         for val in ["x_expression", "y_expression", "x_values", "y_values"]:
-            val_name = constraint_dict[val]
+            val_name = constraint_def[val]
             parsed_val = parsing.ParsedBackendComponent(
                 "piecewise_constraints",
                 name,
-                {"equations": [{"expression": val_name}]},  # type: ignore
+                math_schema.GlobalExpression.model_validate(
+                    {"equations": [{"expression": val_name}]}
+                ),
             )
             eq = parsed_val.parse_equations(self.valid_component_names)
             math_parts[val] = eq[0].evaluate_expression(
@@ -381,13 +378,14 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             "expression": rf"{math_parts['y_expression']}\mathord{{=}}{math_parts['y_values']}",
             "where": rf"{math_parts['x_expression']}\mathord{{=}}{math_parts['x_values']}",
         }
-        if "foreach" in constraint_dict:
-            constraint_dict["foreach"].append("breakpoints")
-        else:
-            constraint_dict["foreach"] = ["breakpoints"]
+
+        constraint_def_with_breakpoints = constraint_def.update(
+            {"foreach": constraint_def.foreach + ["breakpoints"]}
+        )
+
         parsed_component = self._add_component(
             name,
-            constraint_dict,
+            constraint_def_with_breakpoints,
             _constraint_setter,
             "piecewise_constraints",
             break_early=False,
@@ -398,7 +396,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_global_expression(  # noqa: D102, override
-        self, name: str, expression_dict: parsing.UnparsedExpression
+        self, name: str, expression_def: math_schema.GlobalExpression
     ) -> None:
         equation_strings: list = []
 
@@ -410,7 +408,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
         parsed_component = self._add_component(
             name,
-            expression_dict,
+            expression_def,
             _expression_setter,
             "global_expressions",
             break_early=False,
@@ -425,7 +423,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_dict: parsing.UnparsedVariable
+        self, name: str, variable_def: math_schema.Variable
     ) -> None:
         domain_dict = {"real": r"\mathbb{R}\;", "integer": r"\mathbb{Z}\;"}
         bound_refs: set = set()
@@ -434,17 +432,15 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             return where.where(where)
 
         parsed_component = self._add_component(
-            name, variable_dict, _variable_setter, "variables", break_early=False
+            name, variable_def, _variable_setter, "variables", break_early=False
         )
         var_da = self.variables[name]
         var_da.attrs["math_repr"] = rf"\textbf{{{name}}}" + self._dims_to_var_string(
             var_da
         )
 
-        domain = domain_dict[variable_dict["domain"]]
-        lb, ub = self._get_variable_bounds_string(
-            name, variable_dict["bounds"], bound_refs
-        )
+        domain = domain_dict[variable_def.domain]
+        lb, ub = self._get_variable_bounds_string(name, variable_def.bounds, bound_refs)
         self._update_references(name, bound_refs.difference(name))
 
         self._generate_math_string(
@@ -452,7 +448,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         )
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_dict: parsing.UnparsedObjective
+        self, name: str, objective_def: math_schema.Objective
     ) -> None:
         sense_dict = {
             "minimize": r"\min{}",
@@ -468,14 +464,14 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
             self._add_latex_strings(where, element, equation_strings, references)
 
         parsed_component = self._add_component(
-            name, objective_dict, _objective_setter, "objectives", break_early=False
+            name, objective_def, _objective_setter, "objectives", break_early=False
         )
 
         self._generate_math_string(
             parsed_component,
             self.objectives[name],
             equations=equation_strings,
-            sense=sense_dict[objective_dict["sense"]],
+            sense=sense_dict[objective_def.sense],
         )
         if name == self.config.objective:
             self.objective = name
@@ -637,15 +633,17 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
         return jinja_env.from_string(template).render(**kwargs)
 
     def _get_variable_bounds_string(
-        self, name: str, bounds: parsing.UnparsedVariableBound, references: set
+        self, name: str, bounds: math_schema.Bounds, references: set
     ) -> tuple[dict[str, str], ...]:
         """Convert variable upper and lower bounds into math string expressions."""
-        bound_dict: parsing.UnparsedConstraint = {
-            "equations": [
-                {"expression": f"{bounds['min']} <= {name}"},
-                {"expression": f"{name} <= {bounds['max']}"},
-            ]
-        }
+        bound_dict = math_schema.Constraint.model_validate(
+            {
+                "equations": [
+                    {"expression": f"{bounds.min} <= {name}"},
+                    {"expression": f"{name} <= {bounds.max}"},
+                ]
+            }
+        )
         parsed_bounds = parsing.ParsedBackendComponent("constraints", name, bound_dict)
         equations = parsed_bounds.parse_equations(self.valid_component_names)
         return tuple(

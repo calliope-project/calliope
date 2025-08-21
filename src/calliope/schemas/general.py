@@ -140,6 +140,10 @@ class CalliopeBaseModel(BaseModel):
         "use_attribute_docstrings": True,
     }
 
+    def __getitem__(self, item):
+        """Allow attribute access via item lookup."""
+        return getattr(self, item)
+
     def update(self, update_dict: dict, deep: bool = False) -> Self:
         """Return a new iteration of the model with updated fields.
 

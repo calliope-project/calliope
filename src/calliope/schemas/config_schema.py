@@ -91,13 +91,13 @@ class Init(CalliopeBaseModel):
     Math order: base -> mode
     """
 
-    extra_math: UniqueList[str] = Field(default=[])
+    extra_math: UniqueList[str] = Field(default_factory=list)
     """
     List of math entries to be applied on top of the `base` math and `mode` math.
     Math order: base -> mode -> extra
     """
 
-    load_user_math: dict = Field(default={})
+    math_paths: dict = Field(default_factory=dict)
     """Dictionary with the names and paths of additional math files to add to the available math entries.
     Some math entry names are linked to specific functionality, so re-defining them here will overwrite the pre-defined math.:
     - `spores`/`operate`: replaces the respective pre-defined mode math.
@@ -198,7 +198,7 @@ class Solve(CalliopeBaseModel):
     For instance, setting `solver_io="python"` when using the solver `gurobi` tends to reduce the time to send the optimisation problem to the solver.
     """
 
-    solver_options: dict = Field(default={})
+    solver_options: dict = Field(default_factory=dict)
     """Any solver options, as key-value pairs, to pass to the chosen solver"""
 
     solver: str = Field(default="cbc")
@@ -207,7 +207,7 @@ class Solve(CalliopeBaseModel):
     zero_threshold: float = Field(default=1e-10)
     """On postprocessing the optimisation results, values smaller than this threshold will be considered as optimisation artefacts and will be set to zero."""
 
-    shadow_prices: UniqueList[str] = Field(default=[])
+    shadow_prices: UniqueList[str] = Field(default_factory=list)
     """Names of model constraints."""
 
     spores: SolveSpores = SolveSpores()

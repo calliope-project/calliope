@@ -27,12 +27,11 @@ from pyomo.core.kernel.piecewise_library.transforms import (
 from pyomo.opt import SolverFactory  # type: ignore
 from pyomo.util.model_size import build_model_size_report  # type: ignore
 
-from calliope.attrdict import AttrDict
 from calliope.backend import backend_model, parsing
 from calliope.backend.backend_model import ALL_COMPONENTS_T
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
-from calliope.schemas import config_schema
+from calliope.schemas import config_schema, math_schema
 from calliope.util.logging import LogWriter
 
 LOGGER = logging.getLogger(__name__)
@@ -51,7 +50,10 @@ class PyomoBackendModel(backend_model.BackendModel):
     """Pyomo-specific backend functionality."""
 
     def __init__(
-        self, inputs: xr.Dataset, math: AttrDict, build_config: config_schema.Build
+        self,
+        inputs: xr.Dataset,
+        math: math_schema.CalliopeBuildMath,
+        build_config: config_schema.Build,
     ) -> None:
         """Pyomo solver interface class.
 
@@ -99,7 +101,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         )
 
     def add_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedConstraint
+        self, name: str, constraint_def: math_schema.Constraint
     ) -> None:
         def _constraint_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -119,10 +121,10 @@ class PyomoBackendModel(backend_model.BackendModel):
 
             return to_fill
 
-        self._add_component(name, constraint_dict, _constraint_setter, "constraints")
+        self._add_component(name, constraint_def, _constraint_setter, "constraints")
 
     def add_global_expression(  # noqa: D102, override
-        self, name: str, expression_dict: parsing.UnparsedExpression
+        self, name: str, expression_def: math_schema.GlobalExpression
     ) -> None:
         def _expression_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -135,17 +137,17 @@ class PyomoBackendModel(backend_model.BackendModel):
             return to_fill
 
         self._add_component(
-            name, expression_dict, _expression_setter, "global_expressions"
+            name, expression_def, _expression_setter, "global_expressions"
         )
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_dict: parsing.UnparsedVariable
+        self, name: str, variable_def: math_schema.Variable
     ) -> None:
         domain_dict = {"real": pmo.RealSet, "integer": pmo.IntegerSet}
 
         def _variable_setter(where, references):
-            domain_type = domain_dict[variable_dict["domain"]]
-            bounds = variable_dict["bounds"]
+            domain_type = domain_dict[variable_def.domain]
+            bounds = variable_def.bounds
             lb = self._get_variable_bound(bounds["min"], name, references)
             ub = self._get_variable_bound(bounds["max"], name, references)
             var = self._apply_func(
@@ -160,14 +162,14 @@ class PyomoBackendModel(backend_model.BackendModel):
             var.attrs = {}
             return var
 
-        self._add_component(name, variable_dict, _variable_setter, "variables")
+        self._add_component(name, variable_def, _variable_setter, "variables")
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_dict: parsing.UnparsedObjective
+        self, name: str, objective_def: math_schema.Objective
     ) -> None:
         sense_dict = {"minimize": 1, "minimise": 1, "maximize": -1, "maximise": -1}
 
-        sense = sense_dict[objective_dict["sense"]]
+        sense = sense_dict[objective_def.sense]
 
         def _objective_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -186,7 +188,7 @@ class PyomoBackendModel(backend_model.BackendModel):
             self._instance.objectives[name].append(objective)
             return xr.DataArray(objective)
 
-        self._add_component(name, objective_dict, _objective_setter, "objectives")
+        self._add_component(name, objective_def, _objective_setter, "objectives")
 
     def set_objective(self, name: str) -> None:  # noqa: D102, override
         self.objectives[self.objective].item().deactivate()
@@ -455,9 +457,7 @@ class PyomoBackendModel(backend_model.BackendModel):
                 )
                 continue
 
-            existing_bound_param = self.math.get_key(
-                f"variables.{name}.bounds.{bound_name}", None
-            )
+            existing_bound_param = self.math.variables[name].bounds[bound_name]
             if existing_bound_param in self.parameters:
                 raise BackendError(
                     "Cannot update variable bounds that have been set by parameters. "

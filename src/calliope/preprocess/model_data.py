@@ -90,7 +90,7 @@ class ModelDataFactory:
         Args:
             init_config (Init): Model initialisation configuration (i.e., `config`).
             model_definition (ModelDefinition): Definition of model nodes and technologies, and their potential `templates`.
-            math (math_schema.MathSchema): Math schema to apply to the model.
+            math (math_schema.CalliopeInputMath): Math schema to apply to the model.
             definition_path (Path, None): Path to the main model definition file. Defaults to None.
             data_table_dfs: (dict[str, pd.DataFrame], None): Dataframes with model data. Defaults to None.
             attributes (dict): Attributes to attach to the model Dataset.

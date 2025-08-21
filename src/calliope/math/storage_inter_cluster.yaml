@@ -2,6 +2,19 @@
 # Although the pattern of storage fluctuations is fixed for all days linked to a specific representative day,
 # an excess or deficit of stored carrier can exist at the end of each of these days and can be utilised by the next representative day in the timeseries.
 
+dimensions:
+  clusters:
+    title: "Date clusters"
+    dtype: integer
+    ordered: true
+    iterator: cluster
+
+  datesteps:
+    title: "Date steps"
+    dtype: datetime
+    ordered: true
+    iterator: datestep
+
 lookups:
   timestep_cluster:
     description: The cluster to which each timestep belongs.

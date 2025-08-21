@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, get_args
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -17,12 +17,7 @@ from calliope import _version, backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
 from calliope.postprocess import postprocess as postprocess_results
 from calliope.preprocess.model_data import ModelDataFactory
-from calliope.schemas import (
-    config_schema,
-    math_schema,
-    model_def_schema,
-    runtime_attrs_schema,
-)
+from calliope.schemas import CalliopeAttrs, config_schema
 from calliope.util.logging import log_time
 
 if TYPE_CHECKING:
@@ -86,12 +81,11 @@ class Model:
     """A Calliope Model."""
 
     _TS_OFFSET = pd.Timedelta(1, unit="nanoseconds")
-    _SAVE_ATTRS_T = Literal["definition", "config", "math", "runtime"]
 
     def __init__(
         self,
         inputs: xr.Dataset,
-        attrs: dict[_SAVE_ATTRS_T, dict],
+        attrs: CalliopeAttrs,
         results: xr.Dataset | None = None,
         **kwargs,
     ) -> None:
@@ -101,7 +95,7 @@ class Model:
             inputs (xr.Dataset): Input dataset.
             results (xr.Dataset | None, optional):
                 If given, the results dataset. Defaults to None.
-            attrs (dict[_SAVE_ATTRS_T, dict]):
+            attrs (CalliopeAttrs):
                 Model attributes & properties.
                 Any of _SAVE_ATTRS_T that are not given here will be initialised with default values.
             **kwargs:
@@ -115,16 +109,11 @@ class Model:
         """
         self.results = xr.Dataset() if results is None else results
         self.backend: BackendModel
-        self.definition = model_def_schema.CalliopeModelDef.model_validate(
-            attrs.get("definition", {})
-        )
-        self.config = config_schema.CalliopeConfig.model_validate(
-            attrs.get("config", {})
-        )
-        self.math = math_schema.CalliopeMath.model_validate(attrs.get("math", {}))
-        self.runtime = runtime_attrs_schema.CalliopeRuntime.model_validate(
-            attrs.get("runtime", {})
-        )
+
+        self.definition = attrs.definition
+        self.config = attrs.config
+        self.math = attrs.math
+        self.runtime = attrs.runtime
 
         self._start_window_idx: int = 0
         self._is_built: bool = False
@@ -226,7 +215,7 @@ class Model:
             "model_preprocessing_complete",
             comment="Model: preprocessing complete",
         )
-        return cls(inputs=inputs, attrs=model_def.model_dump())
+        return cls(inputs=inputs, attrs=model_def)
 
     @property
     def name(self) -> str | None:
@@ -243,9 +232,19 @@ class Model:
         """Get solved status."""
         return self._is_solved
 
+    @property
+    def all_attrs(self) -> CalliopeAttrs:
+        """Get all model attributes as a CalliopeAttrs object."""
+        return CalliopeAttrs(
+            **{
+                k: getattr(self, k).model_dump()
+                for k in CalliopeAttrs.model_fields.keys()
+            }
+        )
+
     def dump_all_attrs(self) -> dict:
         """Dump of all class pydantic model attributes as a single dictionary."""
-        return {k: getattr(self, k).model_dump() for k in get_args(self._SAVE_ATTRS_T)}
+        return self.all_attrs.model_dump()
 
     def build(
         self, force: bool = False, add_math_dict: dict | None = None, **kwargs
@@ -283,9 +282,7 @@ class Model:
             backend_input = self.inputs
 
         self.backend = backend.get_model_backend(
-            self.config.build.update({"mode": mode}),
-            backend_input,
-            AttrDict(build_math.model_dump()),
+            self.config.build.update({"mode": mode}), backend_input, build_math
         )
         self.backend.add_optimisation_components()
         self.math = self.math.update({"build": build_math.model_dump()})
@@ -367,7 +364,7 @@ class Model:
                 results, self.inputs, self.config.solve.zero_threshold
             )
 
-        self.math = self.math.update({"build": results.attrs.pop("applied_math", {})})
+        self.math = self.math.update({"build": self.backend.new_math.model_dump()})
         self.runtime = self.runtime.update(
             {"termination_condition": results.attrs.pop("termination_condition")}
         )
@@ -690,7 +687,10 @@ class Model:
 
             io.save_netcdf(results.expand_dims(spores=[spore]), "results", "w", outpath)
             io.save_netcdf(
-                xr.Dataset(attrs=self.dump_all_attrs()), "attrs", "a", outpath
+                xr.Dataset(attrs=self.dump_all_attrs().model_dump()),
+                "attrs",
+                "a",
+                outpath,
             )
 
         else:

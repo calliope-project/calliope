@@ -13,10 +13,10 @@ from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 import pyparsing as pp
 import xarray as xr
-from typing_extensions import NotRequired, Required, TypedDict
 
 from calliope import exceptions
 from calliope.backend import expression_parser, helper_functions, where_parser
+from calliope.schemas import math_schema
 
 if TYPE_CHECKING:
     from calliope.backend import backend_model
@@ -24,85 +24,14 @@ if TYPE_CHECKING:
 
 TRUE_ARRAY = xr.DataArray(True)
 
-
-class UnparsedEquation(TypedDict):
-    """Unparsed equation type hint class."""
-
-    where: NotRequired[str]
-    expression: str
-    active: bool
-
-
-class UnparsedConstraint(TypedDict):
-    """Unparsed constraint type hint class."""
-
-    description: NotRequired[str]
-    foreach: NotRequired[list]
-    where: NotRequired[str]
-    equations: Required[list[UnparsedEquation]]
-    sub_expressions: NotRequired[dict[str, list[UnparsedEquation]]]
-    slices: NotRequired[dict[str, list[UnparsedEquation]]]
-    active: bool
-
-
-class UnparsedPiecewiseConstraint(TypedDict):
-    """Unparsed piecewise constraint type hint class."""
-
-    description: NotRequired[str]
-    foreach: NotRequired[list]
-    where: NotRequired[str]
-    x_expression: Required[str]
-    x_values: Required[str]
-    y_expression: Required[str]
-    y_values: Required[str]
-    active: bool
-
-
-class UnparsedExpression(UnparsedConstraint):
-    """Unparsed expression type hint class."""
-
-    title: NotRequired[str]
-    unit: NotRequired[str]
-
-
-class UnparsedVariableBound(TypedDict):
-    """Unparsed variable bounds type hint class."""
-
-    min: str
-    max: str
-
-
-class UnparsedVariable(TypedDict):
-    """Unparsed variable checker class."""
-
-    title: NotRequired[str]
-    description: NotRequired[str]
-    unit: NotRequired[str]
-    foreach: list[str]
-    where: str
-    domain: NotRequired[str]
-    bounds: UnparsedVariableBound
-    active: bool
-
-
-class UnparsedObjective(TypedDict):
-    """Unparsed model objective checker."""
-
-    description: NotRequired[str]
-    equations: Required[list[UnparsedEquation]]
-    sub_expressions: NotRequired[dict[str, list[UnparsedEquation]]]
-    sense: str
-    active: bool
-
-
-UNPARSED_DICTS = (
-    UnparsedConstraint
-    | UnparsedVariable
-    | UnparsedExpression
-    | UnparsedObjective
-    | UnparsedPiecewiseConstraint
+MATH_DEFS = (
+    math_schema.Constraint
+    | math_schema.Variable
+    | math_schema.GlobalExpression
+    | math_schema.Objective
+    | math_schema.PiecewiseConstraint
 )
-T = TypeVar("T", bound=UNPARSED_DICTS)
+T = TypeVar("T", bound=MATH_DEFS)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -493,7 +422,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 the group to which the optimisation problem component belongs.
         """
         self.name = f"{group}:{name}"
-        self._unparsed: dict = dict(unparsed_data)
+        self._unparsed = unparsed_data
 
         self.where: list[pp.ParseResults] = []
         self.equations: list[ParsedBackendEquation] = []
@@ -506,12 +435,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
 
         # Initialise switches
         self._is_valid: bool = True
-        # FIXME: should not set default to respect the schema
-        self._is_active: bool = self._unparsed.get("active", True)
 
         # Add objects that are used by shared functions
-        # FIXME: should not set default to respect the schema
-        self.sets: list[str] = unparsed_data.get("foreach", [])  # type:ignore
+        self.sets: list[str] = unparsed_data.foreach
 
     def get_parsing_position(self):
         """Create "." separated list from tracked strings."""
@@ -537,9 +463,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 Collected parsing errors can be raised directly or ignored.
                 If errors exist and are ignored, the parsed component cannot be successfully evaluated. Defaults to "raise".
         """
-        top_level_where = self.parse_where_string(
-            self._unparsed.get("where", "True")
-        )  # TODO-Ivan: should fail if not present
+        top_level_where = self.parse_where_string(self._unparsed.where)
 
         if errors == "raise":
             self.raise_caught_errors()
@@ -566,12 +490,9 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 List of parsed equations ready to be evaluated.
                 The length of the list depends on the product of provided equations and sub-expression/slice references.
         """
-        equation_expression_list: list[UnparsedEquation]
-        equation_expression_list = self._unparsed.get("equations", [])
-
         equations = self.generate_expression_list(
             expression_parser=self.equation_expression_parser(valid_component_names),
-            expression_list=equation_expression_list,
+            expression_list=self._unparsed.equations,
             expression_group="equations",
             id_prefix=self.name,
         )
@@ -585,7 +506,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 expression_group="sub_expressions",
                 id_prefix=c_name,
             )
-            for c_name, c_list in self._unparsed.get("sub_expressions", {}).items()
+            for c_name, c_list in self._unparsed.sub_expressions.root.items()
         }
         slice_dict = {
             idx_name: self.generate_expression_list(
@@ -596,7 +517,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
                 expression_group="slices",
                 id_prefix=idx_name,
             )
-            for idx_name, idx_list in self._unparsed.get("slices", {}).items()
+            for idx_name, idx_list in self._unparsed.slices.root.items()
         }
 
         if errors == "raise":
@@ -669,7 +590,7 @@ class ParsedBackendComponent(ParsedBackendEquation):
     def generate_expression_list(
         self,
         expression_parser: pp.ParserElement,
-        expression_list: list[UnparsedEquation],
+        expression_list: math_schema.Equations,
         expression_group: Literal["equations", "sub_expressions", "slices"],
         id_prefix: str = "",
     ) -> list[ParsedBackendEquation]:
@@ -706,11 +627,11 @@ class ParsedBackendComponent(ParsedBackendEquation):
         for idx, expression_data in enumerate(expression_list):
             self._tracker.update({k: v.format(id=idx) for k, v in to_track.items()})
 
-            parsed_where = self.parse_where_string(expression_data.get("where", "True"))
+            parsed_where = self.parse_where_string(expression_data.where)
 
             self._tracker["expr_or_where"] = "expression"
             parsed_expression = self._parse_string(
-                expression_parser, expression_data["expression"]
+                expression_parser, expression_data.expression
             )
             if len(parsed_expression) > 0:
                 parsed_equation_list.append(

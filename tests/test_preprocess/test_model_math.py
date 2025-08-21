@@ -122,7 +122,7 @@ class TestBuildMath:
         math = calliope.AttrDict()
         for i in math_order:
             math.union(math_options[i], allow_override=True)
-        expected_math = math_schema.MathSchema(**math).model_dump()
+        expected_math = math_schema.CalliopeBuildMath(**math).model_dump()
         with caplog.at_level(logging.INFO):
             built_math = model_math.build_applied_math(math_order, math_options)
         assert expected_math == built_math

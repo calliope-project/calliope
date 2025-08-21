@@ -26,7 +26,7 @@ Both absolute paths and paths relative to `model.yaml` are valid.
 ```yaml
 config:
   init:
-    load_user_math:
+    math_paths:
       my_new_math_1: "my_new_math_1.yaml"
       my_new_math_2: "/home/your_name/Documents/my_new_math_2.yaml"
 ```
@@ -61,7 +61,7 @@ If you prefer to start from scratch with your math, you can ask Calliope to comp
 ```yaml
 config:
   init:
-    load_user_math: {base: your/base_math_file.yaml}
+    math_paths: {base: your/base_math_file.yaml}
 ```
 
 This will tell Calliope to overwrite _all_ of our pre-defined `base` math with your file.
@@ -71,7 +71,7 @@ You can similarly replace _mode_ math like that used in `operate` mode:
 ```yaml
 config:
   init:
-    load_user_math: {operate: your/operate_math_file.yaml}
+    math_paths: {operate: your/operate_math_file.yaml}
 ```
 
 !!! danger

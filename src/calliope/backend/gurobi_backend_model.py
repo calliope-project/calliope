@@ -14,12 +14,11 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from calliope.attrdict import AttrDict
 from calliope.backend import backend_model, parsing
 from calliope.backend.backend_model import ALL_COMPONENTS_T
 from calliope.exceptions import BackendError, BackendWarning
 from calliope.exceptions import warn as model_warn
-from calliope.schemas import config_schema
+from calliope.schemas import config_schema, math_schema
 
 if importlib.util.find_spec("gurobipy") is not None:
     import gurobipy
@@ -56,13 +55,16 @@ class GurobiBackendModel(backend_model.BackendModel):
         }
 
     def __init__(
-        self, inputs: xr.Dataset, math: AttrDict, build_config: config_schema.Build
+        self,
+        inputs: xr.Dataset,
+        math: math_schema.CalliopeBuildMath,
+        build_config: config_schema.Build,
     ) -> None:
         """Gurobi solver interface class.
 
         Args:
             inputs (xr.Dataset): Calliope model data.
-            math (AttrDict): Calliope math.
+            math (math_schema.CalliopeBuildMath): Calliope math.
             build_config (config_schema.Build): Build configuration options.
         """
         if importlib.util.find_spec("gurobipy") is None:
@@ -92,7 +94,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         )
 
     def add_constraint(  # noqa: D102, override
-        self, name: str, constraint_dict: parsing.UnparsedConstraint
+        self, name: str, constraint_def: math_schema.Constraint
     ) -> None:
         def _constraint_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -102,10 +104,10 @@ class GurobiBackendModel(backend_model.BackendModel):
 
             return to_fill
 
-        self._add_component(name, constraint_dict, _constraint_setter, "constraints")
+        self._add_component(name, constraint_def, _constraint_setter, "constraints")
 
     def add_global_expression(  # noqa: D102, override
-        self, name: str, expression_dict: parsing.UnparsedExpression
+        self, name: str, expression_def: math_schema.GlobalExpression
     ) -> None:
         def _expression_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -117,31 +119,31 @@ class GurobiBackendModel(backend_model.BackendModel):
             return to_fill
 
         self._add_component(
-            name, expression_dict, _expression_setter, "global_expressions"
+            name, expression_def, _expression_setter, "global_expressions"
         )
 
     def add_variable(  # noqa: D102, override
-        self, name: str, variable_dict: parsing.UnparsedVariable
+        self, name: str, variable_def: math_schema.Variable
     ) -> None:
         domain_dict = {"real": gurobipy.GRB.CONTINUOUS, "integer": gurobipy.GRB.INTEGER}
 
         def _variable_setter(where: xr.DataArray, references: set):
-            domain_type = domain_dict[variable_dict["domain"]]
+            domain_type = domain_dict[variable_def.domain]
 
-            bounds = variable_dict["bounds"]
-            lb = self._get_variable_bound(bounds["min"], name, references)
-            ub = self._get_variable_bound(bounds["max"], name, references)
+            bounds = variable_def.bounds
+            lb = self._get_variable_bound(bounds.min, name, references)
+            ub = self._get_variable_bound(bounds.max, name, references)
             var = self._apply_func(
                 self._instance.addVar, where, 1, lb, ub, vtype=domain_type
             )
             return var.fillna(value=np.nan)
 
-        self._add_component(name, variable_dict, _variable_setter, "variables")
+        self._add_component(name, variable_def, _variable_setter, "variables")
 
     def add_objective(  # noqa: D102, override
-        self, name: str, objective_dict: parsing.UnparsedObjective
+        self, name: str, objective_def: math_schema.Objective
     ) -> None:
-        sense = self.OBJECTIVE_SENSE_DICT[objective_dict["sense"]]
+        sense = self.OBJECTIVE_SENSE_DICT[objective_def.sense]
 
         def _objective_setter(
             element: parsing.ParsedBackendEquation, where: xr.DataArray, references: set
@@ -155,7 +157,7 @@ class GurobiBackendModel(backend_model.BackendModel):
 
             return xr.DataArray(expr)
 
-        self._add_component(name, objective_dict, _objective_setter, "objectives")
+        self._add_component(name, objective_def, _objective_setter, "objectives")
 
     def set_objective(self, name: str) -> None:  # noqa: D102, override
         to_set = self.objectives[name]
@@ -389,9 +391,7 @@ class GurobiBackendModel(backend_model.BackendModel):
                 )
                 continue
 
-            existing_bound_param = self.math.get_key(
-                f"variables.{name}.bounds.{bound_name}", None
-            )
+            existing_bound_param = self.math.variables[name].bounds[bound_name]
             if existing_bound_param in self.parameters:
                 raise BackendError(
                     "Cannot update variable bounds that have been set by parameters. "

@@ -1,4 +1,4 @@
-dims:
+dimensions:
   carriers:
     title: "Energy / commodity carriers"
     dtype: string

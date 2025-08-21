@@ -225,7 +225,7 @@ class DataVarParser(EvalWhere):
     def as_array(self) -> xr.DataArray:  # noqa: D102, override
         data_var_type = self._preprocess()
         if self.eval_attrs.get("apply_where", True):
-            if data_var_type in ["parameters", "lookups", "dims"]:
+            if data_var_type in ["parameters", "lookups", "dimensions"]:
                 return self._data_var_exists(
                     self.eval_attrs["input_data"], resolve_contents=True
                 )
@@ -242,7 +242,7 @@ class DataVarParser(EvalWhere):
                     f"Received {data_var_type.removesuffix('s')}: `{self.data_var}`."
                 )
         else:
-            if data_var_type not in ["lookups", "parameters", "dims"]:
+            if data_var_type not in ["lookups", "parameters", "dimensions"]:
                 raise TypeError(
                     f"Can only check for existence of values in {data_var_type.removesuffix('s')} arrays in math `where` strings. "
                     "These arrays cannot be used for comparison with expected values. "

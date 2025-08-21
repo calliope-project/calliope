@@ -189,7 +189,7 @@ def simple_conversion_plus():
 
 @pytest.fixture(scope="module")
 def dummy_model_math():
-    return AttrDict(math_schema.MathSchema().model_dump())
+    return AttrDict(math_schema.CalliopeMath().model_dump())
 
 
 @pytest.fixture(scope="module")

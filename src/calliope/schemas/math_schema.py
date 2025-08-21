@@ -106,15 +106,19 @@ class SubExpressions(CalliopeDictModel):
     root: dict[AttrStr, Equations] = Field(default_factory=dict)
 
 
-class Constraint(MathIndexedComponent):
-    """Schema for named constraints."""
+class MathEquationComponent(CalliopeBaseModel):
+    """Components necessary to generate math expressions."""
 
     equations: Equations
-    """Constraint math equations."""
+    """Math equation expressions and where strings."""
     sub_expressions: SubExpressions = SubExpressions()
-    """Constraint named sub-expressions."""
+    """Named sub-expressions."""
     slices: SubExpressions = SubExpressions()
-    """Constraint named index slices."""
+    """Named index slices."""
+
+
+class Constraint(MathIndexedComponent, MathEquationComponent):
+    """Schema for named constraints."""
 
 
 class PiecewiseConstraint(MathIndexedComponent):
@@ -133,8 +137,23 @@ class PiecewiseConstraint(MathIndexedComponent):
     y_values: str
     """Y parameter name containing data, indexed over the `breakpoints` dimension."""
 
+    @property
+    def equations(self) -> Equations:
+        """Dummy property to satisfy type hinting."""
+        return Equations()
 
-class GlobalExpression(MathIndexedComponent):
+    @property
+    def sub_expressions(self) -> SubExpressions:
+        """Dummy property to satisfy type hinting."""
+        return SubExpressions()
+
+    @property
+    def slices(self) -> SubExpressions:
+        """Dummy property to satisfy type hinting."""
+        return SubExpressions()
+
+
+class GlobalExpression(MathIndexedComponent, MathEquationComponent):
     """Schema for named global expressions.
 
     Can be used to combine parameters and variables and then used in one or more
@@ -149,12 +168,6 @@ class GlobalExpression(MathIndexedComponent):
     """Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)."""
     default: NumericVal | None = None
     """If set, will be the default value for the expression."""
-    equations: Equations
-    """Global expression math equations."""
-    sub_expressions: SubExpressions = SubExpressions()
-    """Global expression named sub-expressions."""
-    slices: SubExpressions = SubExpressions()
-    """Global expression named index slices."""
 
 
 class Bounds(CalliopeBaseModel):
@@ -186,25 +199,42 @@ class Variable(MathIndexedComponent):
     Either real (a.k.a. continuous) or integer."""
     bounds: Bounds
 
+    @property
+    def equations(self) -> Equations:
+        """Dummy property to satisfy type hinting."""
+        return Equations()
 
-class Objective(MathComponent):
+    @property
+    def sub_expressions(self) -> SubExpressions:
+        """Dummy property to satisfy type hinting."""
+        return SubExpressions()
+
+    @property
+    def slices(self) -> SubExpressions:
+        """Dummy property to satisfy type hinting."""
+        return SubExpressions()
+
+
+class Objective(MathComponent, MathEquationComponent):
     """Schema for optimisation problem objectives.
 
     Only one objective, the one referenced in model configuration `build.objective`
     will be activated for the optimisation problem.
     """
 
-    equations: Equations
-    """Objective math equations."""
-    sub_expressions: SubExpressions = SubExpressions()
-    """Objective named sub-expressions."""
-    slices: SubExpressions = SubExpressions()
-    """Objective named index slices."""
     sense: Literal["minimise", "maximise", "minimize", "maximize"]
     """Whether the objective function should be minimised or maximised in the
     optimisation."""
-    foreach: UniqueList[AttrStr] = Field(default_factory=list, frozen=True)
-    """Objectives are always adimensional."""
+
+    @property
+    def foreach(self) -> UniqueList[AttrStr]:
+        """Objectives are always adimensional."""
+        return []
+
+    @property
+    def where(self) -> str:
+        """Dummy property to satisfy type hinting."""
+        return "True"
 
 
 class Dimensions(CalliopeDictModel):
@@ -255,7 +285,7 @@ class Objectives(CalliopeDictModel):
     root: dict[AttrStr, Objective] = Field(default_factory=dict)
 
 
-class MathSchema(CalliopeBaseModel):
+class CalliopeBuildMath(CalliopeBaseModel):
     """Mathematical definition of Calliope math.
 
     Contains mathematical programming components available for optimising with Calliope.
@@ -293,4 +323,4 @@ class CalliopeMath(CalliopeBaseModel):
     """Calliope math attribute container."""
 
     init: CalliopeInputMath = CalliopeInputMath()
-    build: MathSchema = MathSchema()
+    build: CalliopeBuildMath = CalliopeBuildMath()
