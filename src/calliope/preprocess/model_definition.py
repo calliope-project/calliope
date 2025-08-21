@@ -8,8 +8,8 @@ from pathlib import Path
 from calliope import exceptions
 from calliope.attrdict import AttrDict
 from calliope.io import read_rich_yaml, to_yaml
-from calliope.preprocess.model_math import initialise_math
-from calliope.schemas import CalliopeInputs
+from calliope.preprocess.model_math import initialise_math_paths, load_math
+from calliope.schemas import CalliopeAttrs
 from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 from calliope.util.tools import listify
 
@@ -22,7 +22,7 @@ def prepare_model_definition(
     override_dict: dict | None = None,
     definition_path: Path | None = None,
     **kwargs,
-) -> CalliopeInputs:
+) -> CalliopeAttrs:
     """Arrange model definition data following our standardised order of priority.
 
     Should always be called when defining calliope models from configuration files.
@@ -51,7 +51,10 @@ def prepare_model_definition(
 
     config = model_def_dict.pop("config")
     definition = model_def_dict
-    math = initialise_math(config.init.get("extra_math"), definition_path)
+    config.init["math_paths"] = initialise_math_paths(
+        config.init.get("math_paths"), definition_path
+    )
+    math = load_math(config.init["math_paths"])
 
     inputs = {
         "config": config,
@@ -63,7 +66,7 @@ def prepare_model_definition(
             "defaults": extract_from_schema(MODEL_SCHEMA, "default"),
         },
     }
-    return CalliopeInputs(**inputs)
+    return CalliopeAttrs(**inputs)
 
 
 def _load_scenario_overrides(

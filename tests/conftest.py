@@ -189,7 +189,7 @@ def simple_conversion_plus():
 
 @pytest.fixture(scope="module")
 def dummy_model_math():
-    return AttrDict(math_schema.MathSchema().model_dump())
+    return AttrDict(math_schema.CalliopeMath().model_dump())
 
 
 @pytest.fixture(scope="module")
@@ -316,7 +316,7 @@ def dummy_model_data():
 
 
 def populate_backend_model(backend):
-    backend._add_all_inputs_as_parameters()
+    backend._load_inputs()
     backend.add_variable(
         "multi_dim_var",
         {

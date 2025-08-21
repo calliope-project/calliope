@@ -40,6 +40,48 @@ class MathComponent(CalliopeBaseModel):
     """If False, this component will be ignored during the build phase."""
 
 
+class Dimension(MathComponent):
+    """Schema for named dimension."""
+
+    dtype: Literal["string", "datetime", "integer", "float"]
+    """The dimension items data type"""
+    ordered: bool = False
+    """If True, the order of the dimension items is meaningful (e.g. chronological time)."""
+    iterator: str
+    """The name of the iterator to use in the LaTeX math formulation for this dimension."""
+
+
+class Parameter(MathComponent):
+    """Schema for named parameter."""
+
+    default: float | int = float("nan")
+    """The default value for the parameter, if not set in the data."""
+    dtype: Literal["integer", "float"]
+    """The parameter data type."""
+    resample_method: Literal["mean", "sum", "first"] = "first"
+    """If resampling is applied over any of the parameter's dimensions, the method to use to aggregate the data."""
+    unit: str = ""
+    """The unit of the parameter, e.g. 'kW', 'm', 'kg', 'energy', 'power', ..."""
+
+
+class Lookup(MathComponent):
+    """Schema for named lookup arrays."""
+
+    default: str | float | int | bool | None = None
+    """The default value for the lookup, if not set in the data."""
+    dtype: Literal["integer", "float", "string", "bool", "datetime"]
+    """The lookup data type."""
+    resample_method: Literal["mean", "sum", "first"] = "first"
+    """If resampling is applied over any of the lookup's dimensions, the method to use to aggregate the data."""
+    one_of: list | None = None
+    """If given, the lookup values must be one of these items."""
+    pivot_values_to_dim: str | None = None
+    """If given, the lookup will be pivoted such that its values become the index of a new dimension and its new values are boolean, True where the index values match the old values.
+    For instance, if the lookup starts out indexed over `techs` with values of `[electricity, gas]` and `pivot_values_to_dim: carriers`,
+    then the lookup will be converted to a boolean array with the dimensions ['techs', 'carriers'].
+    """
+
+
 class MathIndexedComponent(MathComponent):
     """Generic indexed component class."""
 
@@ -64,15 +106,19 @@ class SubExpressions(CalliopeDictModel):
     root: dict[AttrStr, Equations] = Field(default_factory=dict)
 
 
-class Constraint(MathIndexedComponent):
-    """Schema for named constraints."""
+class MathEquationComponent(CalliopeBaseModel):
+    """Components necessary to generate math expressions."""
 
     equations: Equations
-    """Constraint math equations."""
+    """Math equation expressions and where strings."""
     sub_expressions: SubExpressions = SubExpressions()
-    """Constraint named sub-expressions."""
+    """Named sub-expressions."""
     slices: SubExpressions = SubExpressions()
-    """Constraint named index slices."""
+    """Named index slices."""
+
+
+class Constraint(MathIndexedComponent, MathEquationComponent):
+    """Schema for named constraints."""
 
 
 class PiecewiseConstraint(MathIndexedComponent):
@@ -91,8 +137,23 @@ class PiecewiseConstraint(MathIndexedComponent):
     y_values: str
     """Y parameter name containing data, indexed over the `breakpoints` dimension."""
 
+    @property
+    def equations(self) -> Equations:
+        """Dummy property to satisfy type hinting."""
+        return Equations()
 
-class GlobalExpression(MathIndexedComponent):
+    @property
+    def sub_expressions(self) -> SubExpressions:
+        """Dummy property to satisfy type hinting."""
+        return SubExpressions()
+
+    @property
+    def slices(self) -> SubExpressions:
+        """Dummy property to satisfy type hinting."""
+        return SubExpressions()
+
+
+class GlobalExpression(MathIndexedComponent, MathEquationComponent):
     """Schema for named global expressions.
 
     Can be used to combine parameters and variables and then used in one or more
@@ -107,12 +168,6 @@ class GlobalExpression(MathIndexedComponent):
     """Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)."""
     default: NumericVal | None = None
     """If set, will be the default value for the expression."""
-    equations: Equations
-    """Global expression math equations."""
-    sub_expressions: SubExpressions = SubExpressions()
-    """Global expression named sub-expressions."""
-    slices: SubExpressions = SubExpressions()
-    """Global expression named index slices."""
     order: int
     """Order in which to apply this global expression relative to all others, if different to its definition order."""
 
@@ -146,25 +201,60 @@ class Variable(MathIndexedComponent):
     Either real (a.k.a. continuous) or integer."""
     bounds: Bounds
 
+    @property
+    def equations(self) -> Equations:
+        """Dummy property to satisfy type hinting."""
+        return Equations()
 
-class Objective(MathComponent):
+    @property
+    def sub_expressions(self) -> SubExpressions:
+        """Dummy property to satisfy type hinting."""
+        return SubExpressions()
+
+    @property
+    def slices(self) -> SubExpressions:
+        """Dummy property to satisfy type hinting."""
+        return SubExpressions()
+
+
+class Objective(MathComponent, MathEquationComponent):
     """Schema for optimisation problem objectives.
 
     Only one objective, the one referenced in model configuration `build.objective`
     will be activated for the optimisation problem.
     """
 
-    equations: Equations
-    """Objective math equations."""
-    sub_expressions: SubExpressions = SubExpressions()
-    """Objective named sub-expressions."""
-    slices: SubExpressions = SubExpressions()
-    """Objective named index slices."""
     sense: Literal["minimise", "maximise", "minimize", "maximize"]
     """Whether the objective function should be minimised or maximised in the
     optimisation."""
-    foreach: UniqueList[AttrStr] = Field(default_factory=list, frozen=True)
-    """Objectives are always adimensional."""
+
+    @property
+    def foreach(self) -> UniqueList[AttrStr]:
+        """Objectives are always adimensional."""
+        return []
+
+    @property
+    def where(self) -> str:
+        """Dummy property to satisfy type hinting."""
+        return "True"
+
+
+class Dimensions(CalliopeDictModel):
+    """Calliope model dimensions dictionary."""
+
+    root: dict[AttrStr, Dimension] = Field(default_factory=dict)
+
+
+class Parameters(CalliopeDictModel):
+    """Calliope model parameters dictionary."""
+
+    root: dict[AttrStr, Parameter] = Field(default_factory=dict)
+
+
+class Lookups(CalliopeDictModel):
+    """Calliope model lookup dictionary."""
+
+    root: dict[AttrStr, Lookup] = Field(default_factory=dict)
 
 
 class Variables(CalliopeDictModel):
@@ -197,7 +287,7 @@ class Objectives(CalliopeDictModel):
     root: dict[AttrStr, Objective] = Field(default_factory=dict)
 
 
-class MathSchema(CalliopeBaseModel):
+class CalliopeBuildMath(CalliopeBaseModel):
     """Mathematical definition of Calliope math.
 
     Contains mathematical programming components available for optimising with Calliope.
@@ -207,6 +297,12 @@ class MathSchema(CalliopeBaseModel):
 
     model_config = {"title": "Model math schema"}
 
+    dimensions: Dimensions = Dimensions()
+    """All dimensions to include in the optimisation problem."""
+    parameters: Parameters = Parameters()
+    """All parameters to include in the optimisation problem."""
+    lookups: Lookups = Lookups()
+    """All lookups to include in the optimisation problem."""
     variables: Variables = Variables()
     """All decision variables to include in the optimisation problem."""
     global_expressions: GlobalExpressions = GlobalExpressions()
@@ -247,4 +343,4 @@ class CalliopeMath(CalliopeBaseModel):
     """Calliope math attribute container."""
 
     init: CalliopeInputMath = CalliopeInputMath()
-    build: MathSchema = MathSchema()
+    build: CalliopeBuildMath = CalliopeBuildMath()

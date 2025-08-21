@@ -7,7 +7,7 @@ from calliope.schemas import (
 )
 
 
-class CalliopeInputs(general.CalliopeBaseModel):
+class CalliopeAttrs(general.CalliopeBaseModel):
     """All Calliope attributes."""
 
     definition: model_def_schema.CalliopeModelDef = model_def_schema.CalliopeModelDef()

@@ -37,7 +37,6 @@ from collections.abc import Callable, Iterable, Iterator
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 import numpy as np
-import pandas as pd
 import pyparsing as pp
 import xarray as xr
 from typing_extensions import NotRequired, TypedDict, Unpack
@@ -785,12 +784,8 @@ class EvalUnslicedComponent(EvalToArrayStr):
                 self.name, as_backend_objs=False
             )
         else:
-            try:
-                evaluated = backend_interface._dataset[self.name]
-            except KeyError:
-                evaluated = xr.DataArray(self.name, attrs={"obj_type": "string"})
-        if "default" in evaluated.attrs and pd.notna(evaluated.attrs["default"]):
-            evaluated = evaluated.fillna(evaluated.attrs["default"])
+            evaluated = backend_interface._dataset[self.name]
+        evaluated = evaluated.fillna(evaluated.attrs["default"])
 
         self.eval_attrs["references"].add(self.name)
         return evaluated
