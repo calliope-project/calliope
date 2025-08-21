@@ -4,6 +4,8 @@
 
 |changed| MILP math formulation now has its own file (`milp.yaml`), which can be requested via `extra_math` (#749).
 
+|fixed| Updates to the expression underlying the Gurobi backend objective function make their way through to the objective function before solving (#797).
+
 |new| Math global expressions have an `order` option to allow user-defined math to be reordered relative to pre-defined math (#773).
 
 |changed| |backwards-incompatible| `where:` now uses `==` for equality comparisons (previously `=`) (#728).
@@ -46,6 +48,13 @@ They can all be dumped to a single attribute dictionary with `calliope.Model.dum
 |new| arrays in model results containing the objective function value of solved models.
 Arrays have the name of the corresponding objective in math.
 E.g., `model.results.min_cost_optimisation` will give the objective function value for the base math objective.
+
+|changed| SPORES mode `baseline` run renamed to `0` and `spores` array dimension set to an integer dtype
+
+|changed| SPORES configuration option `skip_baseline_run` renamed to `use_latest_results`
+
+|new| `config.solve.spores.use_latest_results` allows for running from existing baseline (e.g. `plan` mode) results _and_ for continuing a set of SPORES runs.
+E.g., if there are results for 4 SPORES, the run can be continued for 6 more iterations by setting `spores.use_latest_results` and updating `spores.number` to `10` (4 + 6).
 
 ### Internal changes
 

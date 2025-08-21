@@ -158,7 +158,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         ) -> xr.DataArray:
             expr = element.evaluate_expression(self, references=references)
 
-            if name == self.config.objective:
+            if name == self.objective:
                 self._instance.setObjective(expr.item(), sense=sense)
                 self.objective = name
                 self.log("objectives", name, "Objective activated.")
@@ -171,6 +171,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         to_set = self.objectives[name]
         sense = self.OBJECTIVE_SENSE_DICT[to_set.attrs["sense"]]
         self._instance.setObjective(to_set.item(), sense=sense)
+        self._instance.update()
         self.objective = name
         self.log("objectives", name, "Objective activated.", level="info")
 

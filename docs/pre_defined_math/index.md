@@ -190,5 +190,68 @@ Instead, you can _skip the baseline run_.
     model = calliope.read_netcdf(...)
 
     model.build(mode="spores")
-    model.solve(spores={"skip_baseline_run": True, "number": 10})
+    model.solve(spores={"use_latest_results": True, "number": 10})
+    ```
+
+### Continuing from an existing set of SPORES
+
+You may already have a set of SPORES results and want to create more.
+You can do so by _continuing from the most recent results_.
+This is useful to further explore the option space, restart a run that was stopped prematurely, or to update the SPORE objective from this point onwards.
+
+!!! example
+
+    1. Extending from 5 to 10 SPORES.
+
+    ```python
+    import calliope
+
+    # This model already has results from running in `plan` mode.
+    model = calliope.Model(...)
+
+    model.build(mode="spores")
+    model.solve(spores={"number": 5}) # `model.results` will now have 5 SPORES run results
+
+    # `model.results` will now have an additional 5 SPORES run results (6-10)
+    model.solve(spores={"use_latest_results": True, "number": 10})
+    ```
+
+    2. Extending from 5 to 10 SPORES and updating the cost slack and SPORES algorithm.
+
+    ```python
+    import calliope
+    import xarray as xr
+
+    # This model already has results from running in `plan` mode.
+    model = calliope.Model(...)
+
+    model.build(mode="spores")
+    model.solve(spores={"number": 5}) # `model.results` will now have 5 SPORES run results
+
+    model.backend.update_parameter("spores_slack", xr.DataArray(0.3))
+
+    # `model.results` will now have an additional 5 SPORES run results (6-10)
+    model.solve(spores={"use_latest_results": True, "number": 10, "scoring_algorithm": "random"})
+    ```
+
+    3. Restarting after premature failure, assuming [results were being saved per SPORE](#saving-results-per-spore).
+
+    ```python
+    import calliope
+    import xarray as xr
+
+    # Load the model from scratch to get access to input data
+    m_init = calliope.Model(...)
+
+    # Load the most recent SPORE run to continue from.
+    m_most_recent = calliope.read_netcdf("/path/to/spore/runs/spore_3.nc")
+
+    # Create a new calliope model that merges the input and results data
+    m_rerun = calliope.Model(
+        inputs=m_init.inputs, results=m_most_recent.results, **m_most_recent.dump_all_attrs()
+    )
+
+    # Run use the latest SPORE results as the starting point
+    m_rerun.build()
+    m_rerun.solve(spores={"use_latest_results": True}, force=True)
     ```

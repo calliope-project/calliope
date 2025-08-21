@@ -213,8 +213,7 @@ class TestLatexBackendModel:
         assert len(dummy_latex_backend_model.objectives.data_vars) == 1
 
     def test_default_objective_set(self, dummy_latex_backend_model):
-        # Dummy backend model has no objective initially
-        assert not hasattr(dummy_latex_backend_model, "objective")
+        assert dummy_latex_backend_model.objective == "min_cost_optimisation"
 
     def test_new_objective_set(self, dummy_latex_backend_model):
         dummy_latex_backend_model.add_objective(
