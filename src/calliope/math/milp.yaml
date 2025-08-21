@@ -77,54 +77,34 @@ variables:
   # Modified
 
   flow_cap:
-    title: Technology flow (a.k.a. nominal) capacity
     description: >-
       A technology's flow capacity, also known as its nominal or nameplate capacity.
-    default: 0
-    unit: power
-    foreach: [nodes, techs, carriers]
+      Minimum is set to 0 and handled in a distinct constraint to handle the integer purchase variable.
     bounds:
-      min: 0  # set in a distinct constraint to handle the integer purchase variable
-      max: flow_cap_max
+      min: 0
 
   area_use:
-    title: Area utilisation
     description: >-
       The area in space utilised directly (e.g., solar PV panels)
       or indirectly (e.g., biofuel crops) by a technology.
-    default: 0
-    unit: area
-    foreach: [nodes, techs]
-    where: "(area_use_min OR area_use_max OR area_use_per_flow_cap OR sink_unit==per_area OR source_unit==per_area)"
+      Minimum is set to 0 and handled in a distinct constraint to handle the integer purchase variable.
     bounds:
-      min: 0 # set in a distinct constraint to handle the integer purchase variable
-      max: area_use_max
+      min: 0
 
   source_cap:
-    title: Source flow capacity
     description: >-
       The upper limit on a flow that can be consumed from outside the system boundaries
       by a `supply` technology in each timestep.
-    default: 0
-    unit: power
-    foreach: [nodes, techs]
-    where: "base_tech==supply"
+      Minimum is set to 0 and handled in a distinct constraint to handle the integer purchase variable.
     bounds:
-      min: 0 # set in a distinct constraint to handle the integer purchase variable
-      max: source_cap_max
+      min: 0
 
   storage_cap:
-    title: Stored carrier capacity
     description: >-
-      The upper limit on a carrier that can
-      be stored by a technology in any timestep.
-    default: 0
-    unit: energy
-    foreach: [nodes, techs]
-    where: "include_storage==True OR base_tech==storage"
+      The upper limit on a carrier that can be stored by a technology in any timestep.
+      Minimum is set to 0 and handled in a distinct constraint to handle the integer purchase variable.
     bounds:
-      min: 0  # set in a distinct constraint to handle the integer purchase variable
-      max: storage_cap_max
+      min: 0
 
 
 constraints:
@@ -326,27 +306,18 @@ constraints:
 
   flow_out_max:
     description: >-
-      Set the upper bound of a technology's outflow.
-    foreach: [nodes, techs, carriers, timesteps]
+      Set the upper bound of a continuous technology's outflow.
     where: "carrier_out AND NOT operating_units"
-    equations:
-      - expression: flow_out <= flow_cap * timestep_resolution * flow_out_parasitic_eff
 
   flow_out_min:
     description: >-
-      Set the lower bound of a technology's outflow.
-    foreach: [nodes, techs, carriers, timesteps]
+      Set the lower bound of a continuous technology's outflow.
     where: "flow_out_min_relative AND NOT operating_units"
-    equations:
-      - expression: flow_out >= flow_cap * timestep_resolution * flow_out_min_relative
 
   flow_in_max:
     description: >-
-      Set the upper bound of a technology's inflow.
-    foreach: [nodes, techs, carriers, timesteps]
+      Set the upper bound of a continuous technology's inflow.
     where: "carrier_in AND NOT operating_units"
-    equations:
-      - expression: flow_in <= flow_cap * timestep_resolution
 
 global_expressions:
 
@@ -373,9 +344,6 @@ global_expressions:
     description: >-
       The installation costs of a technology, including those linked to the nameplate capacity,
       land use, storage size, and binary/integer unit purchase.
-    default: 0
-    unit: cost
-    foreach: [nodes, techs, costs]
     where: >-
       cost_investment_flow_cap OR cost_investment_storage_cap OR cost_investment_source_cap OR
       cost_investment_area_use OR cost_investment_purchase
