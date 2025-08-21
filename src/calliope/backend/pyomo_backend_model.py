@@ -184,10 +184,9 @@ class PyomoBackendModel(backend_model.BackendModel):
         ) -> xr.DataArray:
             expr = element.evaluate_expression(self, references=references)
             objective = pmo.objective(expr.item(), sense=sense)
-            if name == self.config.objective:
+            if name == self.objective:
                 text = "activated"
                 objective.activate()
-                self.objective = name
             else:
                 text = "deactivated"
                 objective.deactivate()

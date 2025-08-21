@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|fixed| Updates to the expression underlying the Gurobi backend objective function make their way through to the objective function before solving (#797).
+
 |new| Math global expressions have an `order` option to allow user-defined math to be reordered relative to pre-defined math (#773).
 
 |changed| |backwards-incompatible| `where:` now uses `==` for equality comparisons (previously `=`) (#728).
