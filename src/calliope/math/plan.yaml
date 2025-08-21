@@ -294,15 +294,6 @@ constraints:
     equations:
       - expression: flow_out >= flow_export
 
-  flow_export_max:
-    description: >-
-      Set the upper bound of a technology's carrier export,
-      for any technologies that can export carriers out of the system.
-    foreach: [nodes, techs, carriers, timesteps]
-    where: "flow_export AND export_max"
-    equations:
-      - expression: flow_export <= export_max
-
   ramping_up:
     description: >-
       Set the upper bound on a technology's ability to ramp outflow up
@@ -392,8 +383,8 @@ variables:
     foreach: [nodes, techs, carriers, timesteps]
     where: "carrier_export"
     bounds:
-      min: 0
-      max: .inf
+      min: export_min
+      max: export_max
 
   area_use:
     title: Area utilisation

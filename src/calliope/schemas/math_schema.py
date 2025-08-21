@@ -126,7 +126,7 @@ class Bounds(CalliopeBaseModel):
 
     max: AttrStr | NumericVal = float("inf")
     """Decision variable upper bound, either as a reference to an input parameter or as a number."""
-    min: AttrStr | NumericVal = 0
+    min: AttrStr | NumericVal = float("-inf")
     """Decision variable lower bound, either as a reference to an input parameter or as a number."""
 
 

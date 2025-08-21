@@ -348,18 +348,6 @@ constraints:
     equations:
       - expression: flow_in <= flow_cap * timestep_resolution
 
-  flow_export_max:
-    description: >-
-      Set the upper bound of a technology's carrier export,
-      for any technologies that can export carriers out of the system.
-    foreach: [nodes, techs, carriers, timesteps]
-    where: "flow_export AND export_max"
-    equations:
-      - where: "operating_units"
-        expression: flow_export <= export_max * operating_units
-      - where: "NOT operating_units"
-        expression: flow_export <= export_max
-
 global_expressions:
 
   # MILP specific
