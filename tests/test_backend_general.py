@@ -645,7 +645,7 @@ class TestUpdateParameter:
         expected = solved_model_func.backend.get_parameter(
             "source_eff", as_backend_objs=False
         )
-        assert expected.equals(updated_param.fillna)
+        assert expected.equals(updated_param)
 
     @pytest.mark.parametrize("model_suffix", ["_longnames", "_updated_cost_flow_cap"])
     @pytest.mark.parametrize(

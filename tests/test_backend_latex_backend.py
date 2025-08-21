@@ -6,6 +6,7 @@ import xarray as xr
 
 from calliope import exceptions
 from calliope.backend import latex_backend_model
+from calliope.schemas import math_schema
 
 from .common.util import check_error_or_warning
 
@@ -689,7 +690,7 @@ class TestLatexBackendModel:
         assert rendered == expected
 
     def test_get_variable_bounds_string(self, dummy_latex_backend_model):
-        bounds = {"min": 1, "max": 2e6}
+        bounds = math_schema.Bounds.model_validate({"min": 1, "max": 2e6})
         refs = set()
         lb, ub = dummy_latex_backend_model._get_variable_bounds_string(
             "multi_dim_var", bounds, refs
@@ -705,7 +706,7 @@ class TestLatexBackendModel:
         temp_dummy_latex_backend_model.add_global_expression(
             "expr",
             {
-                "equations": [{"expression": "1 + flow_cap_max"}],
+                "equations": [{"expression": "1 + with_inf"}],
                 "description": "foobar",
                 "default": 0,
             },
@@ -722,21 +723,21 @@ class TestLatexBackendModel:
 
             **Uses**:
 
-            * [flow_cap_max](#flow_cap_max)
+            * [with_inf](#with_inf)
 
             **Default**: 0
 
             $$
             \begin{array}{l}
-                \quad 1 + \textit{flow\_cap\_max}\\
+                \quad 1 + \textit{with\_inf}\\
             \end{array}
             $$
 
             ## Parameters
 
-            ### flow_cap_max
+            ### with_inf
 
-            Limits `flow_cap` to a maximum.
+            With infinity values.
 
             **Used in**:
 

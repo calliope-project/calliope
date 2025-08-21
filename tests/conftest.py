@@ -318,6 +318,7 @@ def dummy_model_math(dummy_model_data):
         k: {"dtype": dtype_translator[v], "iterator": k.removesuffix("s")}
         for k, v in dim_dtypes.items()
     }
+    params["with_inf"].update({"description": "With infinity values."})
     return math_schema.CalliopeBuildMath.model_validate(
         {"parameters": params, "lookups": lookups, "dimensions": dims}
     )

@@ -174,7 +174,7 @@ class GurobiBackendModel(backend_model.BackendModel):
         if parameter is None:
             raise KeyError(f"Unknown parameter: {name}")
 
-        return parameter
+        return parameter.astype(float)
 
     @overload
     def get_constraint(  # noqa: D102, override

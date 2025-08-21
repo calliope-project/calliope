@@ -45,7 +45,8 @@ class TestInitMath:
 
     @pytest.fixture(scope="class")
     def math_data(self, extra_math, def_path):
-        return model_math.initialise_math(extra_math, def_path)
+        math_paths = model_math.initialise_math_paths(extra_math, def_path)
+        return model_math.load_math(math_paths)
 
     def test_loaded_internal(self, math_data, extra_math):
         """Loaded math should contain both user defined and internal files."""

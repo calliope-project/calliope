@@ -77,7 +77,7 @@ def expression_generator():
         expression_dict = {"expression": parse_string}
         if where_string is not None:
             expression_dict["where"] = where_string
-        return expression_dict
+        return math_schema.ExpressionItem.model_validate(expression_dict)
 
     return _expression_generator
 
@@ -224,9 +224,7 @@ def equation_slice_obj(slice_parser, where_string_parser):
 
 
 @pytest.fixture
-def dummy_backend_interface(
-    dummy_model_data, dummy_model_math, default_config, model_defaults
-):
+def dummy_backend_interface(dummy_model_data, dummy_model_math, default_config):
     # ignore the need to define the abstract methods from backend_model.BackendModel
     with patch.multiple(backend_model.BackendModel, __abstractmethods__=set()):
 
@@ -237,17 +235,10 @@ def dummy_backend_interface(
                     dummy_model_data,
                     dummy_model_math,
                     default_config.build,
-                    defaults=model_defaults,
                     instance=None,
                 )
 
                 self._dataset = dummy_model_data.copy(deep=True)
-                self._dataset["with_inf"] = self._dataset["with_inf"].fillna(
-                    model_defaults["with_inf"]
-                )
-                self._dataset["only_techs"] = self._dataset["only_techs"].fillna(
-                    model_defaults["only_techs"]
-                )
 
     return DummyBackendModel()
 

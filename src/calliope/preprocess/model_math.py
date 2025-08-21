@@ -33,7 +33,7 @@ ORDERED_COMPONENTS_T = typing.Literal[
 def initialise_math_paths(
     extra_math: dict[str, str] | None = None, model_def_path: str | Path | None = None
 ) -> AttrDict:
-    """Loads and combines internal and user math files into a unified dataset.
+    """Combines internal and user math file paths into a unified dictionary.
 
     Args:
         extra_math (dict[str, str] | None, optional): names and paths to extra math. Defaults to None.
@@ -43,7 +43,7 @@ def initialise_math_paths(
         ModelWarning: pre-defined file has been overwritten.
 
     Returns:
-        AttrDict: dataset with individual math options.
+        AttrDict: dataset with individual math paths.
     """
     LOGGER.info("Math init | loading pre-defined math.")
 
@@ -56,7 +56,7 @@ def initialise_math_paths(
                 raise ModelWarning(
                     f"Math init | Overwriting pre-defined '{name}' math with {path}."
                 )
-            math_dataset.union({name: relative_path(path, model_def_path)})
+            math_dataset.union({name: relative_path(model_def_path, path)})
 
     return math_dataset
 

@@ -212,7 +212,7 @@ class PyomoBackendModel(backend_model.BackendModel):
         param_as_vals = self._apply_func(
             self._from_pyomo_param, parameter.notnull(), 1, parameter
         )
-        return param_as_vals.where(param_as_vals.notnull())
+        return param_as_vals.where(param_as_vals.notnull()).astype(float)
 
     @overload
     def get_constraint(  # noqa: D102, override
