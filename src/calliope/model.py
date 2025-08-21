@@ -591,22 +591,40 @@ class Model:
             xr.Dataset: Results dataset.
         """
         LOGGER.info("Optimisation model | Resetting SPORES parameters.")
-        for init_param in ["spores_score", "spores_baseline_cost"]:
-            self.backend.update_parameter(
-                init_param, self.backend.inputs[init_param].attrs["default"]
-            )
-
-        self.backend.set_objective(self.config.build.objective)
+        self.backend.update_parameter(
+            "spores_score", self.backend.defaults["spores_score"]
+        )
 
         spores_config: config_schema.SolveSpores = solver_config.spores
-        if not spores_config.skip_baseline_run:
-            LOGGER.info("Optimisation model | Running baseline model.")
-            baseline_results = self.backend._solve(solver_config, warmstart=False)
-            self._spores_save_model(baseline_results, spores_config, "baseline")
 
+        latest_spore: int = 0
+        if not spores_config.use_latest_results:
+            LOGGER.info("Optimisation model | Running baseline model.")
+            self.backend.set_objective(self.config.build.objective)
+            baseline_results = self.backend._solve(solver_config, warmstart=False)
+            self._spores_save_model(baseline_results, spores_config, 0)
+        elif "spores" in self.results.dims:
+            latest_spore = self.results.spores.max().item()
+            LOGGER.info(
+                f"Optimisation model | Restarting SPORES from SPORE {latest_spore} results."
+            )
+            baseline_results = self.results.sel(spores=latest_spore).drop_vars("spores")
+            self.backend.update_parameter(
+                "spores_score", baseline_results.spores_score_cumulative
+            )
         else:
             LOGGER.info("Optimisation model | Using existing baseline model results.")
             baseline_results = self.results.copy()
+
+        if latest_spore >= spores_config.number:
+            raise exceptions.ModelError(
+                f"Cannot restart SPORES from SPORE {latest_spore} as it is greater or equal "
+                f"to the configured number of SPORES to run ({spores_config.number})."
+            )
+
+        spore_range: list[int] = [
+            i for i in range(latest_spore + 1, spores_config.number + 1)
+        ]
 
         if not baseline_results:
             raise exceptions.ModelError(
@@ -615,13 +633,18 @@ class Model:
                 "Ensure your baseline model can solve successfully by running it in `plan` mode."
             )
 
-        # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
-        constraining_cost = baseline_results[self.config.build.objective]
+        base_cost_default = self.backend.defaults["spores_baseline_cost"]
+        constraining_cost = baseline_results.get(
+            "spores_baseline_cost_tracked", self.inputs.get("spores_baseline_cost")
+        )
+        if not constraining_cost or constraining_cost == base_cost_default:
+            # Update the slack-cost backend parameter based on the calculated minimum feasible system design cost
+            constraining_cost = baseline_results[self.config.build.objective]
         self.backend.update_parameter("spores_baseline_cost", constraining_cost)
+
         self.backend.set_objective("min_spores")
         # We store the results from each iteration in the `results_list` to later concatenate into a single dataset.
         results_list: list[xr.Dataset] = [baseline_results]
-        spore_range: list[str] = [str(i) for i in range(1, spores_config.number + 1)]
         LOGGER.info(
             f"Optimisation model | Running SPORES with `{spores_config.scoring_algorithm}` scoring algorithm."
         )
@@ -642,9 +665,15 @@ class Model:
             results_list.append(iteration_results)
 
         spores_dim = pd.Index(
-            ["baseline", *spore_range[: len(results_list) - 1]], name="spores"
+            [latest_spore, *spore_range[: len(results_list) - 1]], name="spores"
         )
         results = xr.concat(results_list, dim=spores_dim, combine_attrs="drop")
+        if latest_spore > 0 and spores_config.use_latest_results:
+            results = xr.concat(
+                [self.results, results.drop_sel(spores=latest_spore)],
+                dim="spores",
+                combine_attrs="no_conflicts",
+            )
         results.attrs["termination_condition"] = ",".join(
             set(
                 result.attrs["termination_condition"]
@@ -656,14 +685,14 @@ class Model:
         return results
 
     def _spores_save_model(
-        self, results: xr.Dataset, spores_config: config_schema.SolveSpores, spore: str
+        self, results: xr.Dataset, spores_config: config_schema.SolveSpores, spore: int
     ) -> None:
         """Save results per SPORE.
 
         Args:
             results (xr.Dataset): Results to save.
             spores_config (config_schema.SolveSpores): SPORES configuration.
-            spore (str): Spore number / name.
+            spore (int): Spore number.
 
         """
         if spores_config.save_per_spore_path is None:
@@ -692,6 +721,10 @@ class Model:
                 "a",
                 outpath,
             )
+            if spore == 0:
+                io.save_netcdf(
+                    self.inputs.expand_dims(spores=[spore]), "inputs", "a", outpath
+                )
 
         else:
             LOGGER.info(

@@ -52,6 +52,11 @@ global_expressions:
     equations:
       - expression: spores_score
 
+  spores_baseline_cost_tracked:
+    description: Track SPORES baseline cost to include in the model results
+    equations:
+      - expression: spores_baseline_cost
+
 objectives:
   min_spores:
     description: >-
