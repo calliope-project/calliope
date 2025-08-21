@@ -32,6 +32,9 @@ class TestModelPreprocessing:
     def test_preprocess_operate(self):
         calliope.examples.operate()
 
+    def test_preprocess_operate_milp(self):
+        calliope.examples.operate_milp()
+
 
 class TestNationalScaleExampleModelSenseChecks:
     @pytest.fixture(scope="class")
@@ -310,3 +313,17 @@ class TestUrbanScaleExampleModelSenseChecks:
             model.results.timesteps
             == pd.date_range("2005-07", "2005-07-04 23:00:00", freq="h")
         )
+
+    @pytest.mark.time_intensive
+    def test_operate_milp_results(self):
+        """Ensure mixing operate and MILP math works adequately."""
+        model = calliope.examples.operate_milp(time_subset=["2005-01-01", "2005-01-01"])
+
+        model.build()
+        model.solve()
+
+        assert model.results.flow_out.sum("timesteps").sel(
+            carriers="heat", techs="chp", nodes="X1"
+        ) == approx(4234.869616)
+        assert model.results.flow_export.sum() == approx(309.77935138)
+        assert model.results.cost.sum() == approx(8471.15341812)

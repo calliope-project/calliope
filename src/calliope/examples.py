@@ -40,3 +40,8 @@ def milp(*args, **kwargs):
 def operate(*args, **kwargs):
     """Returns the built-in urban-scale example model in operate mode."""
     return urban_scale(scenario="operate", *args, **kwargs)
+
+
+def operate_milp(*args, **kwargs):
+    """Returns the built-in urban-scale example model in operate mode with MILP constraints enabled."""
+    return urban_scale(scenario="operate,milp", *args, **kwargs)
