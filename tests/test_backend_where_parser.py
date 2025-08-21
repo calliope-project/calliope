@@ -103,7 +103,6 @@ def eval_kwargs(dummy_pyomo_backend_model, dummy_build_config):
         "equation_name": "foo",
         "return_type": "array",
         "references": set(),
-        "defaults": dummy_pyomo_backend_model.defaults,
         "build_config": dummy_build_config,
     }
 

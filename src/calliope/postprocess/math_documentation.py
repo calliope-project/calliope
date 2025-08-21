@@ -34,7 +34,6 @@ class MathDocumentation:
             model.inputs,
             AttrDict(model.math.build.model_dump()),
             model.config.build,
-            model.runtime.defaults,
             include,
         )
         self.backend.add_optimisation_components()

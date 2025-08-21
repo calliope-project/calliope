@@ -592,7 +592,7 @@ class Model:
         """
         LOGGER.info("Optimisation model | Resetting SPORES parameters.")
         self.backend.update_parameter(
-            "spores_score", self.backend.defaults["spores_score"]
+            "spores_score", self.math.build.parameters["spores_score"].default
         )
 
         spores_config: config_schema.SolveSpores = solver_config.spores
@@ -633,7 +633,7 @@ class Model:
                 "Ensure your baseline model can solve successfully by running it in `plan` mode."
             )
 
-        base_cost_default = self.backend.defaults["spores_baseline_cost"]
+        base_cost_default = self.math.build.parameters["spores_baseline_cost"].default
         constraining_cost = baseline_results.get(
             "spores_baseline_cost_tracked", self.inputs.get("spores_baseline_cost")
         )

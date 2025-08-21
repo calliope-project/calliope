@@ -15,7 +15,6 @@ def test_valid_model_backend(simple_supply, valid_backend):
         build_config,
         simple_supply.inputs,
         AttrDict(simple_supply.math.build.model_dump()),
-        simple_supply.runtime.defaults,
     )
     assert isinstance(backend_obj, BackendModel)
 
@@ -29,5 +28,4 @@ def test_invalid_model_backend(spam, simple_supply):
             invalid_config,
             simple_supply.inputs,
             AttrDict(simple_supply.math.build.model_dump()),
-            simple_supply.runtime.defaults,
         )

@@ -6,10 +6,8 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from calliope.attrdict import AttrDict
 from calliope.backend import latex_backend_model, pyomo_backend_model
 from calliope.schemas import config_schema, math_schema
-from calliope.util.schema import MODEL_SCHEMA, extract_from_schema
 
 from .common.util import build_test_model as build_model
 
@@ -43,22 +41,6 @@ def foreach(request):
 @pytest.fixture(scope="session")
 def default_config():
     return config_schema.CalliopeConfig()
-
-
-@pytest.fixture(scope="session")
-def model_defaults():
-    inbuilt_defaults = extract_from_schema(MODEL_SCHEMA, "default")
-
-    return AttrDict(
-        {
-            "all_inf": np.inf,
-            "all_nan": np.nan,
-            "with_inf": 100,
-            "only_techs": 5,
-            "no_dims": 0,
-            **inbuilt_defaults,
-        }
-    )
 
 
 @pytest.fixture(scope="session")
@@ -380,9 +362,7 @@ def populate_backend_model(backend):
 
 
 @pytest.fixture(scope="module")
-def dummy_pyomo_backend_model(
-    dummy_model_data, dummy_model_math, default_config, model_defaults
-):
+def dummy_pyomo_backend_model(dummy_model_data, dummy_model_math, default_config):
     backend = pyomo_backend_model.PyomoBackendModel(
         dummy_model_data, dummy_model_math, default_config.build
     )
@@ -390,9 +370,7 @@ def dummy_pyomo_backend_model(
 
 
 @pytest.fixture(scope="module")
-def dummy_latex_backend_model(
-    dummy_model_data, dummy_model_math, default_config, model_defaults
-):
+def dummy_latex_backend_model(dummy_model_data, dummy_model_math, default_config):
     backend = latex_backend_model.LatexBackendModel(
         dummy_model_data, dummy_model_math, default_config.build
     )
@@ -400,9 +378,7 @@ def dummy_latex_backend_model(
 
 
 @pytest.fixture(scope="class")
-def valid_latex_backend(
-    dummy_model_data, dummy_model_math, default_config, model_defaults
-):
+def valid_latex_backend(dummy_model_data, dummy_model_math, default_config):
     backend = latex_backend_model.LatexBackendModel(
         dummy_model_data, dummy_model_math, default_config.build, include="valid"
     )

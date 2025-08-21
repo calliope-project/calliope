@@ -20,7 +20,7 @@ class TestGlobalExpressions:
             }
         }
         # Validate the schema
-        validated_math = math_schema.MathSchema(**math)
+        validated_math = math_schema.CalliopeBuildMath(**math)
         # Check the order of global expressions
         assert validated_math.global_expressions["expr0"].order == 0
         assert validated_math.global_expressions["expr1"].order == 2

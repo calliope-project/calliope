@@ -183,10 +183,6 @@ class TestIO:
     def test_config_reload(self, model_from_file, model):
         assert model_from_file.config.model_dump() == model.config.model_dump()
 
-    def test_defaults_as_model_attrs_not_property(self, model_from_file):
-        assert len(model_from_file.runtime.defaults) > 0
-        assert not hasattr(model_from_file, "defaults")
-
     @pytest.mark.parametrize("attr", ["results", "inputs"])
     def test_filtered_dataset_as_property(self, model_from_file, attr):
         assert hasattr(model_from_file, attr)

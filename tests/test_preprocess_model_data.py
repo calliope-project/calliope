@@ -33,13 +33,9 @@ def init_config(default_config, model_def):
 
 
 @pytest.fixture
-def model_data_factory(minimal_test_model_path, model_def, init_config, model_defaults):
+def model_data_factory(minimal_test_model_path, model_def, init_config):
     return ModelDataFactory(
-        init_config,
-        model_def.definition,
-        minimal_test_model_path,
-        [],
-        {"default": model_defaults},
+        init_config, model_def.definition, minimal_test_model_path, []
     )
 
 
