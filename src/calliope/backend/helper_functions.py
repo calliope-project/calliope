@@ -968,7 +968,7 @@ class SumNextN(ParsingHelperFunction):
               E.g. `where: timesteps<=get_val_at_index(timesteps=-24)` if N == 24.
             - This function is based on an integer number of steps from the current step.
               For datetime dimensions like `timesteps`, you will (a) need to be using a regular time frequency (e.g. hourly) and (b) update `N` to reflect the resolution of your time dimension
-              (N = 4 in if time_resample=`1h` -> N = 2 if time_resample=`2h`).
+              (N = 4 in if resample.timesteps=`1h` -> N = 2 if resample.timesteps=`2h`).
 
         Examples:
             One common use-case is to collate N timesteps beyond a given timestep to apply a constraint to it

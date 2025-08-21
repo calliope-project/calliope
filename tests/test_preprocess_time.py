@@ -63,8 +63,8 @@ class TestClustering:
     )
     def clustered_model(self, request):
         cluster_init = {
-            "time_subset": ["2005-01-01", "2005-01-04"],
-            "time_cluster": f"data_tables/{request.param}.csv",
+            "subset": {"timesteps": ["2005-01-01", "2005-01-04"]},
+            "resample": {"timesteps": f"data_tables/{request.param}.csv"},
         }
         if "diff_dateformat" in request.param:
             cluster_init["override_dict"] = {
@@ -125,8 +125,8 @@ class TestResamplingAndCluster:
     def test_resampling_to_6h_then_clustering(self):
         model = build_test_model(
             scenario="simple_supply",
-            time_subset=["2005-01-01", "2005-01-04"],
-            time_resample="6h",
+            subset={"timesteps": ["2005-01-01", "2005-01-04"]},
+            resample={"timesteps": "6h"},
             time_cluster="data_tables/cluster_days.csv",
         )
 
@@ -154,7 +154,9 @@ class TestResampling:
             "data_tables.demand_elec.data: data_tables/demand_elec_15mins.csv"
         )
 
-        model = build_test_model(override, scenario="simple_supply", time_resample="6h")
+        model = build_test_model(
+            override, scenario="simple_supply", resample={"timesteps": "6h"}
+        )
 
         dtindex = pd.DatetimeIndex(
             [
@@ -180,7 +182,7 @@ class TestResampling:
         )
 
         model = build_test_model(
-            override, scenario="simple_supply,one_day", time_resample="2h"
+            override, scenario="simple_supply,one_day", resample={"timesteps": "2h"}
         )
 
         dtindex = pd.DatetimeIndex(
@@ -226,7 +228,9 @@ class TestResampling:
             """
         )
 
-        model = build_test_model(override, scenario="simple_supply", time_resample="6h")
+        model = build_test_model(
+            override, scenario="simple_supply", resample={"timesteps": "6h"}
+        )
 
         dtindex = pd.DatetimeIndex(
             [

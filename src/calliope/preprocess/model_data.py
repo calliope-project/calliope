@@ -799,7 +799,6 @@ class ModelDataFactory:
 
         Args:
             ds (xr.Dataset): Dataset containing timeseries data to subset.
-            time_subset (list[str]): List of length 2, containing start and end times to subset on.
 
         Returns:
             xr.Dataset: Input `ds` with subset timeseries coordinates.

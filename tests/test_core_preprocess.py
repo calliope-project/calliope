@@ -61,7 +61,7 @@ class TestModelRun:
         """
 
         def override(param):
-            return read_rich_yaml(f"config.init.time_subset: {param}")
+            return read_rich_yaml(f"config.init.subset.timesteps: {param}")
 
         # should fail: one string in list
         with pytest.raises(ValidationError):
@@ -137,7 +137,10 @@ class TestModelRun:
         be inferred to be 1 hour
         """
         override1 = {
-            "config.init.time_subset": ["2005-01-01 00:00:00", "2005-01-01 00:00:00"]
+            "config.init.subset.timesteps": [
+                "2005-01-01 00:00:00",
+                "2005-01-01 00:00:00",
+            ]
         }
         # check in output error that it points to: 07/01/2005 10:00:00
         with pytest.warns(exceptions.ModelWarning) as warn_info:
@@ -203,7 +206,7 @@ class TestChecks:
             "links.N1,X3.techs.heat_pipes.switches.one_way": True,
         }
         m = calliope.examples.urban_scale(
-            override_dict=override, time_subset=["2005-01-01", "2005-01-01"]
+            override_dict=override, subset={"timesteps": ["2005-01-01", "2005-01-01"]}
         )
         m.build()
         removed_prod_links = [
@@ -231,7 +234,7 @@ class TestChecks:
         storage_inter_cluster
         """
         override = {
-            "config.init.time_subset": ["2005-01-01", "2005-01-04"],
+            "config.init.subset.timesteps": ["2005-01-01", "2005-01-04"],
             "config.init.time_cluster": "data_tables/cluster_days.csv",
             "config.build.cyclic_storage": True,
         }
@@ -246,7 +249,7 @@ class TestChecks:
     )
     def test_storage_inter_cluster_vs_storage_discharge_depth(self):
         """Check that the storage_inter_cluster is not used together with storage_discharge_depth"""
-        override = {"config.init.time_subset": ["2005-01-01", "2005-01-04"]}
+        override = {"config.init.subset.timesteps": ["2005-01-01", "2005-01-04"]}
         with pytest.raises(exceptions.ModelError) as error:
             build_model(override, "clustering,simple_storage,storage_discharge_depth")
 

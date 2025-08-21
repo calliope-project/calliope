@@ -413,20 +413,20 @@ overrides:
   empty_tech_node:
     nodes.c.techs:
   one_day:
-    config.init.time_subset: ["2005-01-01", "2005-01-01"]
+    config.init.subset.timesteps: ["2005-01-01", "2005-01-01"]
 
   two_hours:
-    config.init.time_subset: ["2005-01-01 00:00:00", "2005-01-01 01:00:00"]
+    config.init.subset.timesteps: ["2005-01-01 00:00:00", "2005-01-01 01:00:00"]
 
   resample_two_days:
     config:
       init:
-        time_subset: ["2005-01-01", "2005-01-02"]
-        time_resample: 24h
+        subset.timesteps: ["2005-01-01", "2005-01-02"]
+        resample.timesteps: 24h
 
   operate:
     config.build.mode: operate
-    config.init.time_subset: ["2005-01-01", "2005-01-02"]
+    config.init.subset.timesteps: ["2005-01-01", "2005-01-02"]
     config.build.ensure_feasibility: true
     config.build.operate.window: 6h
     config.build.operate.horizon: 12h

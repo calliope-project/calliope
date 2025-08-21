@@ -9,11 +9,15 @@ This default resolution can be adjusted by specifying time resolution adjustment
 ```yaml
 config:
   init:
-    time_resample: 6H
+    resample:
+      timesteps: 6h
 ```
 
 In the above example, this would resample all time series data to 6-hourly timesteps.
 Any [pandas-compatible rule describing the target resolution][pandas.DataFrame.resample] can be used.
+
+!!! note
+    Other dimensions can also be resampled, if they have a `datetime` type.
 
 ## Time clustering
 

@@ -48,7 +48,9 @@ calliope.set_log_verbosity("INFO", include_solver_output=False)
 
 # %%
 # We subset to the same time range as operate mode
-model_plan = calliope.examples.national_scale(time_subset=["2005-01-01", "2005-01-10"])
+model_plan = calliope.examples.national_scale(
+    subset={"timesteps": ["2005-01-01", "2005-01-10"]}
+)
 model_plan.build()
 model_plan.solve()
 
@@ -75,7 +77,7 @@ model_operate.results
 # %%
 # We subset to the same time range as operate/plan mode
 model_spores = calliope.examples.national_scale(
-    scenario="spores", time_subset=["2005-01-01", "2005-01-10"]
+    scenario="spores", subset={"timesteps": ["2005-01-01", "2005-01-10"]}
 )
 model_spores.build()
 model_spores.solve()
@@ -170,7 +172,7 @@ def plot_capacity(results: xr.Dataset, **plotly_kwargs) -> go.Figure:
 # %%
 # We subset to the same time range as operate/plan mode
 model_spores = calliope.examples.national_scale(
-    scenario="spores", time_subset=["2005-01-01", "2005-01-10"]
+    scenario="spores", subset={"timesteps": ["2005-01-01", "2005-01-10"]}
 )
 model_spores.build()
 

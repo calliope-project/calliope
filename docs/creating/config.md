@@ -8,7 +8,7 @@ This includes for example the choice of solver with which to actually solve the 
 config:
   init:
     name: 'My energy model'
-    time_subset: ['2005-01-01', '2005-01-05']
+    subset.timesteps: ['2005-01-01', '2005-01-05']
   build:
     mode: base
   solve:
@@ -26,7 +26,7 @@ You do this by providing additional keyword arguments on calling `calliope.Model
 
 ```python
 # Overriding `config.init` items in `calliope.Model`
-model = calliope.Model("path/to/model.yaml", time_subset=["2005-01", "2005-02"])
+model = calliope.Model("path/to/model.yaml", subset={"timesteps": ["2005-01", "2005-02"]})
 # Overriding `config.build` items in `calliope.Model.build`
 model.build(ensure_feasibility=True)
 # Overriding `config.solve` items in `calliope.Model.solve`
@@ -35,7 +35,7 @@ model.solve(save_logs="path/to/logs/dir")
 
 None of the configuration options are _required_ as there is a default value for them all, but you will likely want to set `init.name`, `init.calliope_version`, `build.mode`, and `solve.solver`.
 
-To test your model pipeline, `config.init.time_subset` is a good way to limit your model size by slicing the time dimension to a smaller range.
+To test your model pipeline, `config.init.subset.timesteps` is a good way to limit your model size by slicing the time dimension to a smaller range.
 
 !!! note
     Various capabilities are available to adjust the temporal resolution of a model on-the-fly, both by resampling or using externally-provided clustering.

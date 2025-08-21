@@ -50,7 +50,7 @@ class TestNationalScaleExampleModelSenseChecks:
             / "national_scale_from_data_tables"
             / "model.yaml",
             data_table_dfs={"time_varying_df": df},
-            time_subset=["2005-01-01", "2005-01-01"],
+            subset={"timesteps": ["2005-01-01", "2005-01-01"]},
         )
         model.build()
         return model
@@ -58,7 +58,7 @@ class TestNationalScaleExampleModelSenseChecks:
     @pytest.fixture(scope="class")
     def nat_model(self):
         model = calliope.examples.national_scale(
-            time_subset=["2005-01-01", "2005-01-01"]
+            subset={"timesteps": ["2005-01-01", "2005-01-01"]}
         )
         model.build()
         return model
@@ -141,7 +141,7 @@ class TestNationalScaleExampleModelSenseChecks:
 class TestNationalScaleExampleModelOperate:
     def example_tester(self):
         model = calliope.examples.national_scale(
-            time_subset=["2005-01-01", "2005-01-03"], scenario="operate"
+            subset={"timesteps": ["2005-01-01", "2005-01-03"]}, scenario="operate"
         )
         model.build()
         model.solve()
@@ -162,7 +162,7 @@ class TestNationalScaleResampledExampleModelSenseChecks:
             solve_kwargs["solver_io"] = solver_io
 
         model = calliope.examples.time_resampling(
-            time_subset=["2005-01-01", "2005-01-01"]
+            subset={"timesteps": ["2005-01-01", "2005-01-01"]}
         )
         model.build()
         model.solve(**solve_kwargs)
@@ -216,7 +216,8 @@ class TestUrbanScaleExampleModelSenseChecks:
         }
 
         model = calliope.examples.urban_scale(
-            override_dict=unit_override, time_subset=["2005-07-01", "2005-07-01"]
+            override_dict=unit_override,
+            subset={"timesteps": ["2005-07-01", "2005-07-01"]},
         )
 
         solve_kwargs = {"solver": solver}
@@ -268,7 +269,9 @@ class TestUrbanScaleExampleModelSenseChecks:
         self.example_tester("per_cap", solver="gurobi", solver_io="python")
 
     def test_milp_example_results(self):
-        model = calliope.examples.milp(time_subset=["2005-01-01", "2005-01-01"])
+        model = calliope.examples.milp(
+            subset={"timesteps": ["2005-01-01", "2005-01-01"]}
+        )
         model.build()
         model.solve(solver_options={"mipgap": 0.001})
 
@@ -294,7 +297,9 @@ class TestUrbanScaleExampleModelSenseChecks:
 
     @pytest.mark.time_intensive
     def test_operate_example_results(self):
-        model = calliope.examples.operate(time_subset=["2005-07-01", "2005-07-04"])
+        model = calliope.examples.operate(
+            subset={"timesteps": ["2005-07-01", "2005-07-04"]}
+        )
 
         model.build()
         model.solve()
