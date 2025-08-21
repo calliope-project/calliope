@@ -523,6 +523,15 @@ properties:
               limit maximum outflow / inflow / outflow - inflow (technology base class dependent) to a fraction of maximum capacity, which increases by that fraction at each timestep.
             x-unit: $\frac{\text{fraction}}{\text{hour}}$.
 
+          export_min:
+            $ref: "#/$defs/TechParamNullNumber"
+            default: 0
+            x-type: float
+            title: Minimum allowed carrier export
+            description: >-
+              If `carrier_export` is defined, force a minimum export of produced carrier for a technology.
+            x-unit: power.
+
           export_max:
             $ref: "#/$defs/TechParamNullNumber"
             default: .inf

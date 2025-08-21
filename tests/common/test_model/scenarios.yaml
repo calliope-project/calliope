@@ -102,6 +102,7 @@ overrides:
     templates.test_transmission.active: false
 
   supply_purchase:
+    config.build.extra_math: ["milp"]
     nodes:
       a:
         techs:
@@ -120,6 +121,7 @@ overrides:
     templates.test_transmission.active: false
 
   supply_milp:
+    config.build.extra_math: ["milp"]
     techs:
       test_supply_elec:
         cap_method: integer
@@ -198,6 +200,7 @@ overrides:
     templates.test_transmission.active: false
 
   conversion_plus_milp:
+    config.build.extra_math: ["milp"]
     data_tables:
       demand_heat:
         data: data_tables/demand_heat.csv
@@ -227,6 +230,7 @@ overrides:
     templates.test_transmission.active: false
 
   conversion_milp:
+    config.build.extra_math: ["milp"]
     data_tables:
       demand_heat:
         data: data_tables/demand_heat.csv
@@ -363,6 +367,7 @@ overrides:
         storage_discharge_depth: 0.8
 
   storage_milp:
+    config.build.extra_math: ["milp"]
     nodes:
       a:
         techs:

@@ -1,4 +1,9 @@
 overrides:
+  milp:
+    config:
+      init.name: mixed integer linear programming
+      build:
+        extra_math: ["milp"]
   storage_inter_cluster:
     config.init:
       name: inter-cluster storage

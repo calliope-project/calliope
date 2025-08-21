@@ -14,7 +14,7 @@ from calliope.schemas.math_schema import MathSchema
 from calliope.util.tools import relative_path
 
 LOGGER = logging.getLogger(__name__)
-PRE_DEFINED_MATH = ["plan", "operate", "spores", "storage_inter_cluster"]
+PRE_DEFINED_MATH = ["plan", "operate", "spores", "storage_inter_cluster", "milp"]
 ORDERED_COMPONENTS_T = typing.Literal[
     "variables",
     "global_expressions",

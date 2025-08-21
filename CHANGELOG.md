@@ -2,6 +2,8 @@
 
 ### User-facing changes
 
+|changed| MILP math formulation now has its own file (`milp.yaml`), which can be requested via `extra_math` (#749).
+
 |fixed| Updates to the expression underlying the Gurobi backend objective function make their way through to the objective function before solving (#797).
 
 |new| Math global expressions have an `order` option to allow user-defined math to be reordered relative to pre-defined math (#773).

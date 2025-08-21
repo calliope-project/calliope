@@ -67,7 +67,7 @@ class SubExpressions(CalliopeDictModel):
 class Constraint(MathIndexedComponent):
     """Schema for named constraints."""
 
-    equations: Equations
+    equations: Equations = Equations()
     """Constraint math equations."""
     sub_expressions: SubExpressions = SubExpressions()
     """Constraint named sub-expressions."""
@@ -107,7 +107,7 @@ class GlobalExpression(MathIndexedComponent):
     """Generalised unit of the component (e.g., length, time, quantity_per_hour, ...)."""
     default: NumericVal | None = None
     """If set, will be the default value for the expression."""
-    equations: Equations
+    equations: Equations = Equations()
     """Global expression math equations."""
     sub_expressions: SubExpressions = SubExpressions()
     """Global expression named sub-expressions."""
@@ -124,9 +124,9 @@ class Bounds(CalliopeBaseModel):
     a single value that is applied across all decision variable index items.
     """
 
-    max: AttrStr | NumericVal
+    max: AttrStr | NumericVal = float("inf")
     """Decision variable upper bound, either as a reference to an input parameter or as a number."""
-    min: AttrStr | NumericVal
+    min: AttrStr | NumericVal = float("-inf")
     """Decision variable lower bound, either as a reference to an input parameter or as a number."""
 
 
@@ -144,7 +144,7 @@ class Variable(MathIndexedComponent):
     domain: Literal["real", "integer"] = "real"
     """Allowed values that the decision variable can take.
     Either real (a.k.a. continuous) or integer."""
-    bounds: Bounds
+    bounds: Bounds = Bounds()
 
 
 class Objective(MathComponent):
