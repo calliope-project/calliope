@@ -13,7 +13,7 @@ config:
     # What version of Calliope this model is intended for
     calliope_version: 0.7.0
     broadcast_param_data: true  # allow single indexed parameter data entries to be broadcast across all index items, if there are multiple entries.
-    mode: base # Choices: base, operate
+    mode: base # Choices: base, operate, spores
 
   build:
     ensure_feasibility: true # Switches on the "unmet demand" constraint
