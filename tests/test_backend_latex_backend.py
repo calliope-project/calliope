@@ -359,6 +359,8 @@ class TestLatexBackendModel:
                     \end{itemize}
 
                     \textbf{Default}: 0
+
+                    \textbf{Type}: integer
                     \end{document}"""
                 ),
             ),
@@ -399,6 +401,8 @@ class TestLatexBackendModel:
                     * expr
 
                     **Default**: 0
+
+                    **Type**: integer
                     """
                 ),
             ),
@@ -434,6 +438,8 @@ class TestLatexBackendModel:
                     * [expr](#expr)
 
                     **Default**: 0
+
+                    **Type**: integer
                     """
                 ),
             ),
@@ -577,6 +583,8 @@ class TestLatexBackendModel:
                         * [expr](#expr)
 
                     **Default**: 0
+
+                    **Type**: integer
                     """
         )
 
@@ -729,7 +737,7 @@ class TestLatexBackendModel:
 
             $$
             \begin{array}{l}
-                \quad 1 + \textit{with\_inf}\\
+                \quad 1 + \textit{with\_inf}_\text{node,tech}\\
             \end{array}
             $$
 
@@ -743,9 +751,9 @@ class TestLatexBackendModel:
 
             * [expr](#expr)
 
-            **Unit**: power.
+            **Unit**: power
 
-            **Default**: inf
+            **Default**: 100
 
             **Type**: float
             """

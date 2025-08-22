@@ -1641,14 +1641,8 @@ class TestNewBackend:
         caplog.set_level(logging.DEBUG)
         custom_math = {"constraints": {"force_zero_area_use": {"active": True}}}
 
-        m = build_model(
-            {
-                "config.build.operate.window": "12h",
-                "config.build.operate.horizon": "12h",
-            },
-            "simple_supply,two_hours,investment_costs",
-        )
-        m.build(mode="operate", add_math_dict=custom_math)
+        m = build_model({}, "simple_supply,two_hours,investment_costs", mode="operate")
+        m.build(operate={"window": "12h", "horizon": "12h"}, add_math_dict=custom_math)
 
         # operate mode set it to false, then our math set it back to active
         assert m.math.build.constraints["force_zero_area_use"].active

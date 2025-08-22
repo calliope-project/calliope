@@ -30,7 +30,6 @@ from calliope import exceptions
 from calliope.backend import helper_functions, parsing
 from calliope.exceptions import BackendError
 from calliope.exceptions import warn as model_warn
-from calliope.io import to_yaml
 from calliope.preprocess.model_math import ORDERED_COMPONENTS_T
 from calliope.schemas import config_schema, math_schema
 
@@ -308,7 +307,7 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
             parsed_ = parser_.parse_string(check.where, parse_all=True)
             evaluated = parsed_[0].eval("array", equation_name=name, **eval_kwargs)
             if evaluated.any() and (evaluated & self.inputs.definition_matrix).any():
-                data_checks[check.errors].append(check.message)
+                check_results[check.errors].append(check.message)
 
         exceptions.print_warnings_and_raise_errors(
             check_results["warn"], check_results["raise"]
@@ -504,25 +503,14 @@ class BackendModelGenerator(ABC, metaclass=SelectiveWrappingMeta):
                 All referenced objects will have their "references" attribute updated with this object's name.
                 Defaults to None.
         """
-        yaml_snippet_attrs = {}
-        add_attrs = {}
-        for attr, val in attrs.items():
-            if attr == "yaml_snippet":
-                continue
-            if attr in self._COMPONENT_ATTR_METADATA:
-                add_attrs[attr] = val
-            else:
-                yaml_snippet_attrs[attr] = val
-
-        if yaml_snippet_attrs:
-            add_attrs["yaml_snippet"] = to_yaml(yaml_snippet_attrs)
-
-        da.attrs = {
-            "obj_type": obj_type,
-            "references": set(),
-            "coords_in_name": False,
-            **add_attrs,  # type: ignore
-        }
+        da.attrs.update(
+            {
+                "obj_type": obj_type,
+                "references": set(),
+                "coords_in_name": False,
+                **attrs,  # type: ignore
+            }
+        )
         self._dataset[name] = da
         if references is not None:
             self._update_references(name, references)

@@ -12,6 +12,7 @@ import xarray as xr
 
 from calliope.backend import backend_model, parsing
 from calliope.exceptions import ModelError
+from calliope.io import to_yaml
 from calliope.schemas import config_schema, math_schema
 
 ALLOWED_MATH_FILE_FORMATS = Literal["tex", "rst", "md"]
@@ -85,7 +86,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     {{ equation.name }}
     {{ "^" * equation.name|length }}
-    {% if equation.description is not none %}
+    {% if equation.description != "" %}
 
     {{ equation.description }}
     {% endif %}
@@ -113,9 +114,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     **Default**: {{ equation.default }}
     {% endif %}
-    {% if equation.type is not none %}
+    {% if equation.dtype is not none %}
 
-    **Type**: {{ equation.type }}
+    **Type**: {{ equation.dtype }}
     {% endif %}
     {% if equation.expression != "" %}
 
@@ -162,7 +163,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {% for equation in equations %}
 
     \paragraph{ {{ equation.name }} }
-    {% if equation.description is not none %}
+    {% if equation.description != "" %}
 
     {{ equation.description }}
     {% endif %}
@@ -192,9 +193,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     \textbf{Default}: {{ equation.default }}
     {% endif %}
-    {% if equation.type is not none %}
+    {% if equation.dtype is not none %}
 
-    \textbf{Type}: {{ equation.type }}
+    \textbf{Type}: {{ equation.dtype }}
     {% endif %}
     {% if equation.expression != "" %}
 
@@ -232,7 +233,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
     {% for equation in equations %}
 
     ### {{ equation.name }}
-    {% if equation.description is not none %}
+    {% if equation.description != "" %}
 
     {{ equation.description }}
     {% endif %}
@@ -268,9 +269,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
 
     **Default**: {{ equation.default }}
     {% endif %}
-    {% if equation.type is not none %}
+    {% if equation.dtype is not none %}
 
-    **Type**: {{ equation.type }}
+    **Type**: {{ equation.dtype }}
     {% endif %}
     {% if equation.expression != "" %}
     {% if mkdocs_features and yaml_snippet is not none%}
@@ -529,7 +530,7 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                 {
                     "expression": da.attrs.get("math_string", ""),
                     "name": name,
-                    "description": da.attrs.get("description", None),
+                    "description": da.attrs.get("description", ""),
                     "used_in": sorted(
                         list(da.attrs.get("references", set()) - set([name]))
                     ),
@@ -537,7 +538,9 @@ class LatexBackendModel(backend_model.BackendModelGenerator):
                     "default": da.attrs.get("default", None),
                     "dtype": da.attrs.get("dtype", None),
                     "unit": da.attrs.get("unit", ""),
-                    "yaml_snippet": da.attrs.get("yaml_snippet", None),
+                    "yaml_snippet": to_yaml(
+                        self.math[objtype][name].model_dump(exclude_defaults=True)
+                    ),
                 }
                 for name, da in sorted(getattr(self, objtype).data_vars.items())
                 if ("math_string" in da.attrs)
