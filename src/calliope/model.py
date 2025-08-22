@@ -15,7 +15,7 @@ import xarray as xr
 
 from calliope import _version, backend, exceptions, io, preprocess
 from calliope.attrdict import AttrDict
-from calliope.postprocess import postprocess as postprocess_results
+from calliope.postprocess import postprocess_results
 from calliope.preprocess.model_data import ModelDataFactory
 from calliope.schemas import (
     config_schema,
@@ -366,9 +366,7 @@ class Model:
 
         # Add additional post-processed result variables to results
         if results.attrs["termination_condition"] in ["optimal", "feasible"]:
-            results = postprocess_results.postprocess_model_results(
-                results, self.inputs, self.config.solve.zero_threshold
-            )
+            results = postprocess_results(results, self.inputs, self.config)
 
         self.math = self.math.update({"build": results.attrs.pop("applied_math", {})})
         self.runtime = self.runtime.update(
@@ -712,9 +710,7 @@ class Model:
                 time_since_solve_start=True,
                 comment=f"Optimisation model | SPORE {spore} complete",
             )
-            results = postprocess_results.postprocess_model_results(
-                results, self.inputs, self.config.solve.zero_threshold
-            )
+            results = postprocess_results(results, self.inputs, self.config)
 
             spores_config.save_per_spore_path.mkdir(parents=True, exist_ok=True)
             LOGGER.info(f"Optimisation model | Saving SPORE {spore} to file.")

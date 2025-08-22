@@ -190,6 +190,9 @@ class Solve(CalliopeBaseModel):
     solver: str = Field(default="cbc")
     """Solver to use. Any solvers that have Pyomo interfaces can be used. Refer to the Pyomo documentation for the latest list."""
 
+    enable_postprocessing: bool = False
+    """Whether or not to run postprocessing functions."""
+
     zero_threshold: float = Field(default=1e-10)
     """On postprocessing the optimisation results, values smaller than this threshold will be considered as optimisation artefacts and will be set to zero."""
 
